@@ -6,24 +6,52 @@ class SpaceHelper {
     private static var onSpaceChange: ((Int) -> Void)?
     private static var wallpaperCache: [String: Int] = [:]
     private static var isFirstRun = true
+    private static var isProcessing = false
     
     static func startMonitoring(onChange: @escaping (Int) -> Void) {
         onSpaceChange = onChange
         
-        // Start a timer to check for space changes
-        Timer.scheduledTimer(withTimeInterval: 0.5, repeats: true) { _ in
-            if let currentSpace = getCurrentSpaceNumber() {
-                if currentSpace != lastKnownSpace || isFirstRun {
-                    lastKnownSpace = currentSpace
-                    isFirstRun = false
-                    onChange(currentSpace)
-                }
-            }
+        // Monitor space changes using distributed notifications
+        DistributedNotificationCenter.default().addObserver(
+            forName: NSNotification.Name("com.apple.spaces.switchedSpaces"),
+            object: nil,
+            queue: .main
+        ) { _ in
+            detectSpaceChange()
         }
+        
+        // Also monitor window layout changes
+        NSWorkspace.shared.notificationCenter.addObserver(
+            forName: NSWorkspace.activeSpaceDidChangeNotification,
+            object: nil,
+            queue: .main
+        ) { _ in
+            detectSpaceChange()
+        }
+        
+        // Initial detection
+        detectSpaceChange()
     }
     
     static func stopMonitoring() {
+        DistributedNotificationCenter.default().removeObserver(self)
+        NSWorkspace.shared.notificationCenter.removeObserver(self)
         onSpaceChange = nil
+    }
+    
+    private static func detectSpaceChange() {
+        guard !isProcessing else { return }
+        isProcessing = true
+        
+        if let spaceNumber = getCurrentSpaceNumber() {
+            if spaceNumber != lastKnownSpace || isFirstRun {
+                lastKnownSpace = spaceNumber
+                isFirstRun = false
+                onSpaceChange?(spaceNumber)
+            }
+        }
+        
+        isProcessing = false
     }
     
     static func getCurrentSpaceNumber() -> Int? {
@@ -47,14 +75,12 @@ class SpaceHelper {
                 if wallpaperCache[uuid] == nil {
                     let nextSpace = wallpaperCache.count + 1
                     wallpaperCache[uuid] = nextSpace
-                    print("New wallpaper detected: \(uuid) -> Space \(nextSpace)")
                 }
                 
                 return wallpaperCache[uuid]
             }
         }
         
-        // If we can't find the wallpaper window, return the last known space
         return lastKnownSpace
     }
     

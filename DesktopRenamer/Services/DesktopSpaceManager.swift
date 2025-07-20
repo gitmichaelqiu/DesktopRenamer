@@ -56,11 +56,24 @@ class DesktopSpaceManager: ObservableObject {
     }
     
     private func handleSpaceChange(_ newSpaceId: Int) {
+        // Always handle on main thread
+        if !Thread.isMainThread {
+            DispatchQueue.main.async { [weak self] in
+                self?.handleSpaceChange(newSpaceId)
+            }
+            return
+        }
+        
         guard !isUpdating else { return }
         isUpdating = true
         
         if isValidSpaceNumber(newSpaceId) {
-            updateSpaceId(newSpaceId)
+            // Only update if the space actually changed
+            if currentSpaceId != newSpaceId {
+                currentSpaceId = newSpaceId
+                ensureSpaceExists(newSpaceId)
+                objectWillChange.send()
+            }
         } else {
             print("Invalid space number received: \(newSpaceId)")
         }
@@ -70,16 +83,6 @@ class DesktopSpaceManager: ObservableObject {
     
     private func isValidSpaceNumber(_ number: Int) -> Bool {
         return number > 0 && number <= maxSpaceNumber
-    }
-    
-    private func updateSpaceId(_ newId: Int) {
-        guard isValidSpaceNumber(newId) else { return }
-        
-        if currentSpaceId != newId {
-            currentSpaceId = newId
-            ensureSpaceExists(newId)
-            objectWillChange.send()
-        }
     }
     
     private func ensureSpaceExists(_ spaceId: Int) {
