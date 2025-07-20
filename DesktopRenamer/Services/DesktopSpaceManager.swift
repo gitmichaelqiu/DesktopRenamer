@@ -7,10 +7,16 @@ class DesktopSpaceManager: ObservableObject {
     
     private let userDefaults = UserDefaults.standard
     private let spacesKey = "DesktopSpaces"
+    private var isUpdating = false
     
     init() {
         loadSavedSpaces()
         startSpaceMonitoring()
+        
+        // Initial update
+        DispatchQueue.main.async {
+            self.updateCurrentSpace()
+        }
     }
     
     private func loadSavedSpaces() {
@@ -33,18 +39,29 @@ class DesktopSpaceManager: ObservableObject {
             name: NSWorkspace.activeSpaceDidChangeNotification,
             object: nil
         )
-        updateCurrentSpace()
     }
     
     @objc private func activeSpaceDidChange() {
-        updateCurrentSpace()
+        DispatchQueue.main.async {
+            self.updateCurrentSpace()
+        }
+    }
+    
+    func refreshCurrentSpace() {
+        DispatchQueue.main.async {
+            self.updateCurrentSpace()
+        }
     }
     
     private func updateCurrentSpace() {
+        guard !isUpdating else { return }
+        isUpdating = true
+        
         // Get the current space number using CGWindowListCopyWindowInfo
         let options = CGWindowListOption(arrayLiteral: .optionOnScreenOnly)
         let windowList = CGWindowListCopyWindowInfo(options, kCGNullWindowID) as? [[String: Any]] ?? []
         
+        var found = false
         for window in windowList {
             if let owner = window[kCGWindowOwnerName as String] as? String,
                owner == "Dock",
@@ -53,12 +70,22 @@ class DesktopSpaceManager: ObservableObject {
                 if let spaceNumber = name.components(separatedBy: CharacterSet.decimalDigits.inverted)
                     .joined()
                     .first.map({ Int(String($0)) }) ?? nil {
-                    currentSpaceId = spaceNumber
-                    ensureSpaceExists(spaceNumber)
+                    if currentSpaceId != spaceNumber {
+                        currentSpaceId = spaceNumber
+                        ensureSpaceExists(spaceNumber)
+                    }
+                    found = true
                     break
                 }
             }
         }
+        
+        // If we couldn't find the space number, keep the current one
+        if !found {
+            print("Could not detect space number, keeping current: \(currentSpaceId)")
+        }
+        
+        isUpdating = false
     }
     
     private func ensureSpaceExists(_ spaceId: Int) {
@@ -77,6 +104,9 @@ class DesktopSpaceManager: ObservableObject {
             desktopSpaces.append(newSpace)
             saveSpaces()
         }
+        
+        // Force a UI update
+        objectWillChange.send()
     }
     
     func getSpaceName(_ spaceId: Int) -> String {

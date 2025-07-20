@@ -1,10 +1,12 @@
 import SwiftUI
 import Combine
+import AppKit
 
 class StatusBarController {
     private var statusItem: NSStatusItem
     private var popover: NSPopover
     @ObservedObject private var spaceManager: DesktopSpaceManager
+    private var cancellables = Set<AnyCancellable>()
     
     init(spaceManager: DesktopSpaceManager) {
         self.spaceManager = spaceManager
@@ -13,18 +15,43 @@ class StatusBarController {
         popover = NSPopover()
         
         setupMenuBar()
+        
+        // Initial update
+        updateStatusBarTitle()
+        
+        // Subscribe to changes
+        setupObservers()
+    }
+    
+    private func setupObservers() {
+        // Observe current space ID changes
+        spaceManager.$currentSpaceId
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] _ in
+                self?.updateStatusBarTitle()
+            }
+            .store(in: &cancellables)
+        
+        // Observe desktop spaces array changes
+        spaceManager.$desktopSpaces
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] _ in
+                self?.updateStatusBarTitle()
+            }
+            .store(in: &cancellables)
+    }
+    
+    private func updateStatusBarTitle() {
+        if let button = statusItem.button {
+            let name = spaceManager.getSpaceName(spaceManager.currentSpaceId)
+            button.title = name
+        }
     }
     
     private func setupMenuBar() {
         if let button = statusItem.button {
-            button.title = spaceManager.getSpaceName(spaceManager.currentSpaceId)
+            button.title = "Loading..."  // Initial state
         }
-        
-        spaceManager.$currentSpaceId.sink { [weak self] newId in
-            if let button = self?.statusItem.button {
-                button.title = self?.spaceManager.getSpaceName(newId) ?? "Desktop \(newId)"
-            }
-        }.store(in: &cancellables)
         
         setupMenu()
     }
@@ -39,12 +66,23 @@ class StatusBarController {
         
         menu.addItem(NSMenuItem.separator())
         
+        // Add refresh option
+        let refreshItem = NSMenuItem(title: "Refresh", action: #selector(refreshSpaces), keyEquivalent: "")
+        refreshItem.target = self
+        menu.addItem(refreshItem)
+        
+        menu.addItem(NSMenuItem.separator())
+        
         // Add quit option
         let quitItem = NSMenuItem(title: "Quit", action: #selector(quitApp), keyEquivalent: "q")
         quitItem.target = self
         menu.addItem(quitItem)
         
         statusItem.menu = menu
+    }
+    
+    @objc private func refreshSpaces() {
+        spaceManager.refreshCurrentSpace()
     }
     
     @objc private func renameCurrentSpace() {
@@ -59,20 +97,20 @@ class StatusBarController {
         alert.addButton(withTitle: "OK")
         alert.addButton(withTitle: "Cancel")
         
+        NSApp.activate(ignoringOtherApps: true)
         input.becomeFirstResponder()
         
         let response = alert.runModal()
         if response == .alertFirstButtonReturn {
             let newName = input.stringValue
             spaceManager.renameSpace(spaceManager.currentSpaceId, to: newName)
+            updateStatusBarTitle()  // Force update the title
         }
     }
     
     @objc private func quitApp() {
         NSApplication.shared.terminate(nil)
     }
-    
-    private var cancellables = Set<AnyCancellable>()
 }
 
 struct StatusBarView: View {
