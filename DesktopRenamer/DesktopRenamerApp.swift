@@ -6,12 +6,16 @@
 //
 
 import SwiftUI
+import Combine
 
 @main
 struct DesktopRenamerApp: App {
     var body: some Scene {
-        WindowGroup {
-            ContentView()
+        MenuBarExtra {
+            StatusBarView()
+        } label: {
+            Text(verbatim: "")
         }
+        .menuBarExtraStyle(.window)
     }
 }
