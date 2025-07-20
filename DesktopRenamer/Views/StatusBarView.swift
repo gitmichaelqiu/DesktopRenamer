@@ -126,14 +126,14 @@ class StatusBarController {
         let menu = NSMenu()
         
         // Add rename option for current space
-        let renameItem = NSMenuItem(title: "Rename Current Space", action: #selector(renameCurrentSpace), keyEquivalent: "r")
+        let renameItem = NSMenuItem(title: "Rename Current Space", action: #selector(renameCurrentSpace), keyEquivalent: "e")
         renameItem.target = self
         menu.addItem(renameItem)
         
         menu.addItem(NSMenuItem.separator())
         
         // Add refresh option
-        let refreshItem = NSMenuItem(title: "Refresh", action: #selector(refreshSpaces), keyEquivalent: "")
+        let refreshItem = NSMenuItem(title: "Refresh", action: #selector(refreshSpaces), keyEquivalent: "r")
         refreshItem.target = self
         menu.addItem(refreshItem)
         
