@@ -2,6 +2,71 @@ import SwiftUI
 import Combine
 import AppKit
 
+class RenameViewController: NSViewController {
+    private var spaceManager: DesktopSpaceManager
+    private var completion: () -> Void
+    private var textField: NSTextField!
+    
+    init(spaceManager: DesktopSpaceManager, completion: @escaping () -> Void) {
+        self.spaceManager = spaceManager
+        self.completion = completion
+        super.init(nibName: nil, bundle: nil)
+    }
+    
+    required init?(coder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
+    }
+    
+    override func loadView() {
+        // Create the main view
+        let view = NSView(frame: NSRect(x: 0, y: 0, width: 240, height: 80))
+        
+        // Create and configure the text field
+        textField = NSTextField(frame: NSRect(x: 20, y: 40, width: 200, height: 24))
+        textField.stringValue = spaceManager.getSpaceName(spaceManager.currentSpaceId)
+        textField.placeholderString = "Enter space name"
+        textField.delegate = self
+        view.addSubview(textField)
+        
+        // Create the label
+        let label = NSTextField(labelWithString: "Rename Desktop \(spaceManager.currentSpaceId)")
+        label.frame = NSRect(x: 20, y: 15, width: 200, height: 17)
+        label.textColor = .secondaryLabelColor
+        view.addSubview(label)
+        
+        self.view = view
+    }
+    
+    override func viewDidAppear() {
+        super.viewDidAppear()
+        view.window?.makeFirstResponder(textField)
+    }
+}
+
+extension RenameViewController: NSTextFieldDelegate {
+    func control(_ control: NSControl, textView: NSTextView, doCommandBy commandSelector: Selector) -> Bool {
+        if commandSelector == #selector(NSResponder.insertNewline(_:)) {
+            // Handle Enter key
+            handleRename()
+            return true
+        } else if commandSelector == #selector(NSResponder.cancelOperation(_:)) {
+            // Handle Escape key
+            dismiss(nil)
+            return true
+        }
+        return false
+    }
+    
+    private func handleRename() {
+        let newName = textField.stringValue.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !newName.isEmpty {
+            spaceManager.renameSpace(spaceManager.currentSpaceId, to: newName)
+        }
+        dismiss(nil)
+        completion()
+    }
+}
+
 class StatusBarController {
     private var statusItem: NSStatusItem
     private var popover: NSPopover
@@ -13,6 +78,7 @@ class StatusBarController {
         
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
         popover = NSPopover()
+        popover.behavior = .transient
         
         setupMenuBar()
         
@@ -86,26 +152,20 @@ class StatusBarController {
     }
     
     @objc private func renameCurrentSpace() {
-        let alert = NSAlert()
-        alert.messageText = "Rename Space"
-        alert.informativeText = "Enter a new name for Desktop \(spaceManager.currentSpaceId):"
+        guard let button = statusItem.button else { return }
         
-        let input = NSTextField(frame: NSRect(x: 0, y: 0, width: 200, height: 24))
-        input.stringValue = spaceManager.getSpaceName(spaceManager.currentSpaceId)
-        alert.accessoryView = input
+        // Close the menu
+        statusItem.menu?.cancelTracking()
         
-        alert.addButton(withTitle: "OK")
-        alert.addButton(withTitle: "Cancel")
-        
-        NSApp.activate(ignoringOtherApps: true)
-        input.becomeFirstResponder()
-        
-        let response = alert.runModal()
-        if response == .alertFirstButtonReturn {
-            let newName = input.stringValue
-            spaceManager.renameSpace(spaceManager.currentSpaceId, to: newName)
-            updateStatusBarTitle()  // Force update the title
+        // Configure the popover
+        let renameVC = RenameViewController(spaceManager: spaceManager) { [weak self] in
+            self?.popover.performClose(nil)
+            self?.updateStatusBarTitle()
         }
+        popover.contentViewController = renameVC
+        
+        // Show the popover
+        popover.show(relativeTo: button.bounds, of: button, preferredEdge: .minY)
     }
     
     @objc private func quitApp() {

@@ -58,6 +58,51 @@ class SpaceHelper {
         return lastKnownSpace
     }
     
+    static func showAlert(title: String, message: String, defaultText: String, completion: @escaping (String?) -> Void) {
+        DispatchQueue.main.async {
+            let alert = NSAlert()
+            alert.messageText = title
+            alert.informativeText = message
+            
+            // Create input field
+            let input = NSTextField(frame: NSRect(x: 0, y: 0, width: 200, height: 24))
+            input.stringValue = defaultText
+            alert.accessoryView = input
+            
+            alert.addButton(withTitle: "OK")
+            alert.addButton(withTitle: "Cancel")
+            
+            // Create a window to host the alert
+            let window = NSWindow(
+                contentRect: NSRect(x: 0, y: 0, width: 100, height: 100),
+                styleMask: [.titled],
+                backing: .buffered,
+                defer: false
+            )
+            
+            // Position the window in the center of the current screen
+            if let screen = NSScreen.main {
+                let centerX = screen.frame.midX - (window.frame.width / 2)
+                let centerY = screen.frame.midY - (window.frame.height / 2)
+                window.setFrameOrigin(NSPoint(x: centerX, y: centerY))
+            }
+            
+            // Make the window stay in the current space
+            window.collectionBehavior = [.moveToActiveSpace]
+            
+            // Run the alert as a sheet on our temporary window
+            window.makeKeyAndOrderFront(nil)
+            alert.beginSheetModal(for: window) { response in
+                let result = response == .alertFirstButtonReturn ? input.stringValue : nil
+                window.close()
+                completion(result)
+            }
+            
+            // Focus the input field
+            window.makeFirstResponder(input)
+        }
+    }
+    
     static func debugPrintWindowInfo() {
         // Get all windows
         let options = CGWindowListOption(arrayLiteral: .optionOnScreenOnly)
