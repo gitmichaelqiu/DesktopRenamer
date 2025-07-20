@@ -111,16 +111,4 @@ class StatusBarController {
     @objc private func quitApp() {
         NSApplication.shared.terminate(nil)
     }
-}
-
-struct StatusBarView: View {
-    @StateObject private var spaceManager = DesktopSpaceManager()
-    @State private var statusBarController: StatusBarController?
-    
-    var body: some View {
-        EmptyView()
-            .onAppear {
-                statusBarController = StatusBarController(spaceManager: spaceManager)
-            }
-    }
 } 

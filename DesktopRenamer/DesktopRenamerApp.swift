@@ -10,12 +10,18 @@ import Combine
 
 @main
 struct DesktopRenamerApp: App {
+    @StateObject private var spaceManager = DesktopSpaceManager()
+    @State private var statusBarController: StatusBarController?
+    
     var body: some Scene {
-        MenuBarExtra {
-            StatusBarView()
-        } label: {
-            Text(verbatim: "")
+        WindowGroup {
+            EmptyView()
+                .hidden()
+                .onAppear {
+                    statusBarController = StatusBarController(spaceManager: spaceManager)
+                }
         }
-        .menuBarExtraStyle(.window)
+        .windowStyle(.hiddenTitleBar)
+        .defaultSize(width: 0, height: 0)
     }
 }
