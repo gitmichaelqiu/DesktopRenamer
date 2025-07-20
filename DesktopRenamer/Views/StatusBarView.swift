@@ -67,11 +67,12 @@ extension RenameViewController: NSTextFieldDelegate {
     }
 }
 
-class StatusBarController {
+class StatusBarController: NSObject {
     private var statusItem: NSStatusItem
     private var popover: NSPopover
     @ObservedObject private var spaceManager: DesktopSpaceManager
     private var cancellables = Set<AnyCancellable>()
+    private var settingsWindowController: NSWindowController?  // Changed to window controller
     
     init(spaceManager: DesktopSpaceManager) {
         self.spaceManager = spaceManager
@@ -79,6 +80,8 @@ class StatusBarController {
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
         popover = NSPopover()
         popover.behavior = .transient
+        
+        super.init()
         
         setupMenuBar()
         
@@ -139,6 +142,13 @@ class StatusBarController {
         
         menu.addItem(NSMenuItem.separator())
         
+        // Add settings option
+        let settingsItem = NSMenuItem(title: "Settings...", action: #selector(showSettings), keyEquivalent: ",")
+        settingsItem.target = self
+        menu.addItem(settingsItem)
+        
+        menu.addItem(NSMenuItem.separator())
+        
         // Add quit option
         let quitItem = NSMenuItem(title: "Quit", action: #selector(quitApp), keyEquivalent: "q")
         quitItem.target = self
@@ -168,7 +178,45 @@ class StatusBarController {
         popover.show(relativeTo: button.bounds, of: button, preferredEdge: .minY)
     }
     
+    @objc private func showSettings() {
+        if let windowController = settingsWindowController {
+            windowController.showWindow(nil)
+            NSApp.activate(ignoringOtherApps: true)
+            return
+        }
+        
+        // Create settings window
+        let window = NSWindow(
+            contentRect: NSRect(x: 0, y: 0, width: 300, height: 150),
+            styleMask: [.titled, .closable],
+            backing: .buffered,
+            defer: false
+        )
+        window.title = "Desktop Renamer Settings"
+        window.center()
+        
+        // Create and set the settings view controller
+        let settingsVC = SettingsViewController(spaceManager: spaceManager)
+        window.contentViewController = settingsVC
+        
+        // Create window controller
+        let windowController = NSWindowController(window: window)
+        settingsWindowController = windowController
+        
+        // Show the window
+        windowController.showWindow(nil)
+        NSApp.activate(ignoringOtherApps: true)
+    }
+    
     @objc private func quitApp() {
         NSApplication.shared.terminate(nil)
+    }
+}
+
+extension StatusBarController: NSWindowDelegate {
+    func windowWillClose(_ notification: Notification) {
+        if notification.object as? NSWindow == settingsWindowController?.window {
+            settingsWindowController = nil
+        }
     }
 } 

@@ -6,7 +6,7 @@ class DesktopSpaceManager: ObservableObject {
     @Published var desktopSpaces: [DesktopSpace] = []
     
     private let userDefaults = UserDefaults.standard
-    private let spacesKey = "DesktopSpaces"
+    private let spacesKey = "com.desktoprenamer.spaces"  // Unique key for storing space names
     private var isUpdating = false
     private let maxSpaceNumber = 99  // Reasonable limit for number of spaces
     
@@ -33,6 +33,25 @@ class DesktopSpaceManager: ObservableObject {
     private func saveSpaces() {
         if let data = try? JSONEncoder().encode(desktopSpaces) {
             userDefaults.set(data, forKey: spacesKey)
+            userDefaults.synchronize()  // Ensure changes are saved immediately
+        }
+    }
+    
+    func resetAllNames() {
+        DispatchQueue.main.async { [weak self] in
+            guard let self = self else { return }
+            
+            // Clear all custom names
+            self.desktopSpaces.removeAll()
+            self.saveSpaces()
+            
+            // Force refresh current space
+            if let currentSpace = SpaceHelper.getCurrentSpaceNumber() {
+                self.handleSpaceChange(currentSpace)
+            }
+            
+            // Notify observers
+            self.objectWillChange.send()
         }
     }
     
