@@ -68,12 +68,6 @@ class DesktopSpaceManager: ObservableObject {
         isUpdating = false
     }
     
-    func refreshCurrentSpace() {
-        if let spaceNumber = SpaceHelper.getCurrentSpaceNumber() {
-            handleSpaceChange(spaceNumber)
-        }
-    }
-    
     private func isValidSpaceNumber(_ number: Int) -> Bool {
         return number > 0 && number <= maxSpaceNumber
     }
