@@ -149,9 +149,17 @@ class SettingsViewController: NSTabViewController {
         // Create tab view items
         let generalTab = NSTabViewItem(viewController: GeneralSettingsViewController(spaceManager: spaceManager))
         generalTab.label = "General"
+        if let image = NSImage(systemSymbolName: "gearshape", accessibilityDescription: "General Settings") {
+            image.isTemplate = true  // Ensures proper appearance in dark mode
+            generalTab.image = image
+        }
         
         let aboutTab = NSTabViewItem(viewController: AboutViewController())
         aboutTab.label = "About"
+        if let image = NSImage(systemSymbolName: "info.circle", accessibilityDescription: "About") {
+            image.isTemplate = true  // Ensures proper appearance in dark mode
+            aboutTab.image = image
+        }
         
         // Add tabs
         self.addTabViewItem(generalTab)
