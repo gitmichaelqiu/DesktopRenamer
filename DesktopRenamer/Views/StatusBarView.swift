@@ -72,7 +72,7 @@ class StatusBarController: NSObject {
     private var popover: NSPopover
     @ObservedObject private var spaceManager: DesktopSpaceManager
     private var cancellables = Set<AnyCancellable>()
-    private var settingsWindowController: NSWindowController?  // Changed to window controller
+    private var settingsWindowController: NSWindowController?
     
     init(spaceManager: DesktopSpaceManager) {
         self.spaceManager = spaceManager
@@ -84,12 +84,13 @@ class StatusBarController: NSObject {
         super.init()
         
         setupMenuBar()
-        
-        // Initial update
         updateStatusBarTitle()
-        
-        // Subscribe to changes
         setupObservers()
+    }
+    
+    deinit {
+        // Ensure dock icon is hidden when app quits
+        NSApp.setActivationPolicy(.accessory)
     }
     
     private func setupObservers() {
@@ -168,6 +169,9 @@ class StatusBarController: NSObject {
     }
     
     @objc private func showSettings() {
+        // Show dock icon when opening settings
+        NSApp.setActivationPolicy(.regular)
+        
         if let windowController = settingsWindowController {
             windowController.showWindow(nil)
             NSApp.activate(ignoringOtherApps: true)
@@ -176,12 +180,12 @@ class StatusBarController: NSObject {
         
         // Create settings window
         let window = NSWindow(
-            contentRect: NSRect(x: 0, y: 0, width: 300, height: 150),
+            contentRect: NSRect(x: 0, y: 0, width: 400, height: 300),
             styleMask: [.titled, .closable],
             backing: .buffered,
             defer: false
         )
-        window.title = "Desktop Renamer Settings"
+        window.title = "Desktop Renamer"
         window.center()
         
         // Create and set the settings view controller
@@ -190,6 +194,7 @@ class StatusBarController: NSObject {
         
         // Create window controller
         let windowController = NSWindowController(window: window)
+        windowController.window?.delegate = self
         settingsWindowController = windowController
         
         // Show the window
@@ -205,6 +210,10 @@ class StatusBarController: NSObject {
 extension StatusBarController: NSWindowDelegate {
     func windowWillClose(_ notification: Notification) {
         if notification.object as? NSWindow == settingsWindowController?.window {
+            // Hide dock icon when closing settings
+            DispatchQueue.main.async {
+                NSApp.setActivationPolicy(.accessory)
+            }
             settingsWindowController = nil
         }
     }
