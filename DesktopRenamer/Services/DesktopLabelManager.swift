@@ -10,7 +10,7 @@ class DesktopLabelManager: ObservableObject {
     }
     
     private var currentWindow: DesktopLabelWindow?
-    private var prevSpace: Int? = nil
+    private var createdWindows: [Int: Bool] = [:]
     private weak var spaceManager: DesktopSpaceManager?
     
     init(spaceManager: DesktopSpaceManager) {
@@ -37,7 +37,6 @@ class DesktopLabelManager: ObservableObject {
         
         // Initial setup
         if isEnabled {
-            prevSpace = SpaceHelper.getCurrentSpaceNumber()
             handleSpaceChange()
         }
     }
@@ -56,10 +55,34 @@ class DesktopLabelManager: ObservableObject {
     func updateLabel(for spaceId: Int, name: String) {
         DispatchQueue.main.async {
             if self.isEnabled {
-                if let window = self.currentWindow {
-                    window.updateName(name)
-                } else {
-                    self.createWindow(for: spaceId, name: name)
+                // if let window = self.currentWindow {
+                //     window.updateName(name)
+                // } else {
+                //     self.createWindow(for: spaceId, name: name)
+                // }
+
+                // print(self.prevSpace)
+                // print(SpaceHelper.getCurrentSpaceNumber())
+                // print(self.prevSpace == SpaceHelper.getCurrentSpaceNumber())
+
+                // if self.getChanges() {
+                    // self.createWindow(for: spaceId, name: name)
+                // } else {
+                    // self.currentWindow?.updateName(name)
+                // }
+                // print(spaceId)
+
+                if spaceId == SpaceHelper.getCurrentSpaceNumber() {
+                    if self.createdWindows[spaceId] ?? false {
+                        // window has been created
+                        // self.currentWindow?.updateName(name)
+                        print(spaceId)
+                        print("skip")
+                    } else {
+                        // window has not been created
+                        self.createdWindows[spaceId] = true
+                        self.createWindow(for: spaceId, name: name)
+                    }
                 }
             }
         }
@@ -68,7 +91,7 @@ class DesktopLabelManager: ObservableObject {
     private func createWindow(for spaceId: Int, name: String) {
         // Remove existing window if any
         print("Create window")
-        removeWindow()
+        // removeWindow()
         
         // Create new window
         let window = DesktopLabelWindow(spaceId: spaceId, name: name)
@@ -99,13 +122,9 @@ class DesktopLabelManager: ObservableObject {
             return
         }
 
-        print(prevSpace)
-        print(currentSpace)
-        print(prevSpace == currentSpace)
-        
         let name = spaceManager.getSpaceName(currentSpace)
         updateLabel(for: currentSpace, name: name)
-        prevSpace = SpaceHelper.getCurrentSpaceNumber()
+        // prevSpace = SpaceHelper.getCurrentSpaceNumber()
     }
     
     // @objc private func handleScreenChange() {
