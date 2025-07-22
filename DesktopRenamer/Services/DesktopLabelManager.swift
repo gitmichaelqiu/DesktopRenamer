@@ -10,6 +10,7 @@ class DesktopLabelManager: ObservableObject {
     }
     
     private var currentWindow: DesktopLabelWindow?
+    private var prevSpace: Int? = nil
     private weak var spaceManager: DesktopSpaceManager?
     
     init(spaceManager: DesktopSpaceManager) {
@@ -22,7 +23,7 @@ class DesktopLabelManager: ObservableObject {
             object: nil,
             queue: .main
         ) { _ in
-            self?.handleSpaceChange()
+            self.handleSpaceChange()
         }
         
         // Also monitor window layout changes
@@ -31,11 +32,12 @@ class DesktopLabelManager: ObservableObject {
             object: nil,
             queue: .main
         ) { _ in
-            self?.handleScreenChange()
+            self.handleSpaceChange()
         }
         
         // Initial setup
         if isEnabled {
+            prevSpace = SpaceHelper.getCurrentSpaceNumber()
             handleSpaceChange()
         }
     }
@@ -65,6 +67,7 @@ class DesktopLabelManager: ObservableObject {
     
     private func createWindow(for spaceId: Int, name: String) {
         // Remove existing window if any
+        print("Create window")
         removeWindow()
         
         // Create new window
@@ -87,22 +90,31 @@ class DesktopLabelManager: ObservableObject {
     }
     
     @objc private func handleSpaceChange() {
+        // let name = spaceManager.getSpaceName(currentSpace)
+        // debug
+        // updateLabel(for: currentSpace, name: )
+
         guard let spaceManager = spaceManager,
               let currentSpace = SpaceHelper.getCurrentSpaceNumber() else {
             return
         }
+
+        print(prevSpace)
+        print(currentSpace)
+        print(prevSpace == currentSpace)
         
         let name = spaceManager.getSpaceName(currentSpace)
         updateLabel(for: currentSpace, name: name)
+        prevSpace = SpaceHelper.getCurrentSpaceNumber()
     }
     
-    @objc private func handleScreenChange() {
-        // Update window position if needed
-        if let window = currentWindow,
-           let screen = NSScreen.main {
-            let centerX = screen.frame.midX - (103 / 2)
-            let y = screen.frame.maxY - 31 - 5
-            window.setFrameOrigin(NSPoint(x: centerX, y: y))
-        }
-    }
+    // @objc private func handleScreenChange() {
+    //     // Update window position if needed
+    //     if let window = currentWindow,
+    //        let screen = NSScreen.main {
+    //         let centerX = screen.frame.midX - (103 / 2)
+    //         let y = screen.frame.maxY - 31 - 5
+    //         window.setFrameOrigin(NSPoint(x: centerX, y: y))
+    //     }
+    // }
 } 
