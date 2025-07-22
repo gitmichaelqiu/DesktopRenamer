@@ -15,31 +15,22 @@ class DesktopLabelManager: ObservableObject {
     init(spaceManager: DesktopSpaceManager) {
         self.spaceManager = spaceManager
         self.isEnabled = UserDefaults.standard.bool(forKey: "DesktopLabelEnabled")
-        
-        // Observe space changes
-        NotificationCenter.default.addObserver(
-            forName: NSWorkspace.activeSpaceDidChangeNotification,
-            object: nil,
-            queue: .main
-        ) { [weak self] _ in
-            self?.handleSpaceChange()
-        }
-        
-        // Also monitor distributed notifications for space changes
+
+        // Monitor space changes using distributed notifications
         DistributedNotificationCenter.default().addObserver(
             forName: NSNotification.Name("com.apple.spaces.switchedSpaces"),
             object: nil,
             queue: .main
-        ) { [weak self] _ in
+        ) { _ in
             self?.handleSpaceChange()
         }
         
-        // Observe screen changes
+        // Also monitor window layout changes
         NSWorkspace.shared.notificationCenter.addObserver(
-            forName: NSApplication.didChangeScreenParametersNotification,
+            forName: NSWorkspace.activeSpaceDidChangeNotification,
             object: nil,
             queue: .main
-        ) { [weak self] _ in
+        ) { _ in
             self?.handleScreenChange()
         }
         
