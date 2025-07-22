@@ -55,29 +55,9 @@ class DesktopLabelManager: ObservableObject {
     func updateLabel(for spaceId: Int, name: String) {
         DispatchQueue.main.async {
             if self.isEnabled {
-                // if let window = self.currentWindow {
-                //     window.updateName(name)
-                // } else {
-                //     self.createWindow(for: spaceId, name: name)
-                // }
-
-                // print(self.prevSpace)
-                // print(SpaceHelper.getCurrentSpaceNumber())
-                // print(self.prevSpace == SpaceHelper.getCurrentSpaceNumber())
-
-                // if self.getChanges() {
-                    // self.createWindow(for: spaceId, name: name)
-                // } else {
-                    // self.currentWindow?.updateName(name)
-                // }
-                // print(spaceId)
-
                 if spaceId == SpaceHelper.getCurrentSpaceNumber() {
                     if self.createdWindows[spaceId] ?? false {
                         // window has been created
-                        // self.currentWindow?.updateName(name)
-                        print(spaceId)
-                        print("skip")
                     } else {
                         // window has not been created
                         self.createdWindows[spaceId] = true
@@ -90,7 +70,6 @@ class DesktopLabelManager: ObservableObject {
     
     private func createWindow(for spaceId: Int, name: String) {
         // Remove existing window if any
-        print("Create window")
         // removeWindow()
         
         // Create new window
@@ -113,10 +92,6 @@ class DesktopLabelManager: ObservableObject {
     }
     
     @objc private func handleSpaceChange() {
-        // let name = spaceManager.getSpaceName(currentSpace)
-        // debug
-        // updateLabel(for: currentSpace, name: )
-
         guard let spaceManager = spaceManager,
               let currentSpace = SpaceHelper.getCurrentSpaceNumber() else {
             return
@@ -124,16 +99,5 @@ class DesktopLabelManager: ObservableObject {
 
         let name = spaceManager.getSpaceName(currentSpace)
         updateLabel(for: currentSpace, name: name)
-        // prevSpace = SpaceHelper.getCurrentSpaceNumber()
     }
-    
-    // @objc private func handleScreenChange() {
-    //     // Update window position if needed
-    //     if let window = currentWindow,
-    //        let screen = NSScreen.main {
-    //         let centerX = screen.frame.midX - (103 / 2)
-    //         let y = screen.frame.maxY - 31 - 5
-    //         window.setFrameOrigin(NSPoint(x: centerX, y: y))
-    //     }
-    // }
 } 

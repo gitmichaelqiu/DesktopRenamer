@@ -9,13 +9,13 @@ class DesktopLabelWindow: NSWindow {
         
         // Create the label
         label = NSTextField(labelWithString: name)
-        label.font = .systemFont(ofSize: 13, weight: .medium)
+        label.font = .systemFont(ofSize: 50, weight: .medium)
         label.textColor = .white
         label.alignment = .center
-        label.frame = NSRect(x: 0, y: 0, width: 103, height: 31)
+        label.frame = NSRect(x: 0, y: 0, width: 400, height: 300)
         
         // Create a visual effect view for the background
-        let visualEffect = NSVisualEffectView(frame: NSRect(x: 0, y: 0, width: 103, height: 31))
+        let visualEffect = NSVisualEffectView(frame: NSRect(x: 0, y: 0, width: 400, height: 300))
         visualEffect.material = .hudWindow
         visualEffect.state = .active
         visualEffect.wantsLayer = true
@@ -26,7 +26,7 @@ class DesktopLabelWindow: NSWindow {
         
         // Initialize window with panel behavior
         super.init(
-            contentRect: NSRect(x: 0, y: 0, width: 103, height: 31),
+            contentRect: NSRect(x: 0, y: 0, width: 400, height: 300),
             styleMask: [.borderless, .nonactivatingPanel],
             backing: .buffered,
             defer: true  // Changed to true to prevent automatic display
