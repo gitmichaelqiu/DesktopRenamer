@@ -43,11 +43,14 @@ class AboutViewController: NSViewController {
 
 class GeneralSettingsViewController: NSViewController {
     private let spaceManager: DesktopSpaceManager
+    private let labelManager: DesktopLabelManager
     private var launchAtLoginButton: NSButton!
+    private var showLabelsButton: NSButton!
     private var resetButton: NSButton!
     
-    init(spaceManager: DesktopSpaceManager) {
+    init(spaceManager: DesktopSpaceManager, labelManager: DesktopLabelManager) {
         self.spaceManager = spaceManager
+        self.labelManager = labelManager
         super.init(nibName: nil, bundle: nil)
     }
     
@@ -64,8 +67,14 @@ class GeneralSettingsViewController: NSViewController {
         launchAtLoginButton.state = getLaunchAtLoginState()
         view.addSubview(launchAtLoginButton)
         
+        // Show labels checkbox
+        showLabelsButton = NSButton(checkboxWithTitle: "Show desktop labels", target: self, action: #selector(toggleLabels))
+        showLabelsButton.frame = NSRect(x: 20, y: 230, width: 200, height: 20)
+        showLabelsButton.state = labelManager.isEnabled ? .on : .off
+        view.addSubview(showLabelsButton)
+        
         // Reset names button
-        resetButton = NSButton(frame: NSRect(x: 20, y: 220, width: 200, height: 32))
+        resetButton = NSButton(frame: NSRect(x: 20, y: 180, width: 200, height: 32))
         resetButton.title = "Reset All Desktop Names"
         resetButton.bezelStyle = .rounded
         resetButton.target = self
@@ -107,6 +116,11 @@ class GeneralSettingsViewController: NSViewController {
         }
     }
     
+    @objc private func toggleLabels() {
+        labelManager.toggleEnabled()
+        showLabelsButton.state = labelManager.isEnabled ? .on : .off
+    }
+    
     @objc private func resetNames() {
         resetButton.isEnabled = false
         
@@ -138,26 +152,28 @@ class GeneralSettingsViewController: NSViewController {
 
 class SettingsViewController: NSTabViewController {
     private let spaceManager: DesktopSpaceManager
+    private let labelManager: DesktopLabelManager
     
-    init(spaceManager: DesktopSpaceManager) {
+    init(spaceManager: DesktopSpaceManager, labelManager: DesktopLabelManager) {
         self.spaceManager = spaceManager
+        self.labelManager = labelManager
         super.init(nibName: nil, bundle: nil)
         
         // Set tab style
         self.tabStyle = .toolbar
         
         // Create tab view items
-        let generalTab = NSTabViewItem(viewController: GeneralSettingsViewController(spaceManager: spaceManager))
+        let generalTab = NSTabViewItem(viewController: GeneralSettingsViewController(spaceManager: spaceManager, labelManager: labelManager))
         generalTab.label = "General"
         if let image = NSImage(systemSymbolName: "gearshape", accessibilityDescription: "General Settings") {
-            image.isTemplate = true  // Ensures proper appearance in dark mode
+            image.isTemplate = true
             generalTab.image = image
         }
         
         let aboutTab = NSTabViewItem(viewController: AboutViewController())
         aboutTab.label = "About"
         if let image = NSImage(systemSymbolName: "info.circle", accessibilityDescription: "About") {
-            image.isTemplate = true  // Ensures proper appearance in dark mode
+            image.isTemplate = true
             aboutTab.image = image
         }
         
