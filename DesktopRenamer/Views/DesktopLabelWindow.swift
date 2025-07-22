@@ -54,7 +54,7 @@ class DesktopLabelWindow: NSWindow {
         // Position the window at the top center of the screen
         if let screen = NSScreen.main {
             let centerX = screen.frame.midX - (103 / 2)
-            let y = screen.frame.maxY - 31 - 5
+            let y = 1.5 * screen.frame.maxY
             self.setFrameOrigin(NSPoint(x: centerX, y: y))
         }
         
