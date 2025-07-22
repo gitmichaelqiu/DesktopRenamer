@@ -58,6 +58,7 @@ class DesktopLabelManager: ObservableObject {
                 if spaceId == SpaceHelper.getCurrentSpaceNumber() {
                     if self.createdWindows[spaceId] ?? false {
                         // window has been created
+                        self.currentWindow?.updateName(name)
                     } else {
                         // window has not been created
                         self.createdWindows[spaceId] = true
