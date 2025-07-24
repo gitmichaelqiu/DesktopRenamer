@@ -81,8 +81,12 @@ class DesktopLabelManager: ObservableObject {
     }
     
     private func removeWindow() {
-        currentWindow?.close()
+        guard let windowToRemove = currentWindow else { return }
+        windowToRemove.orderOut(nil)
+
+        let spaceIdToRemove = windowToRemove.spaceId
         currentWindow = nil
+        createdWindows.removeValue(forKey: spaceIdToRemove)
     }
     
     private func updateLabelsVisibility() {

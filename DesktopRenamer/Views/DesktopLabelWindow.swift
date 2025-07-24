@@ -3,7 +3,7 @@ import Combine
 
 class DesktopLabelWindow: NSWindow {
     private let label: NSTextField
-    private let spaceId: Int
+    public let spaceId: Int
     private var cancellables = Set<AnyCancellable>()
     private let spaceManager: DesktopSpaceManager
     
