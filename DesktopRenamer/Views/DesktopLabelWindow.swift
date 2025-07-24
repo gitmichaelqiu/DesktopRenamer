@@ -1,11 +1,15 @@
 import Cocoa
+import Combine
 
 class DesktopLabelWindow: NSWindow {
     private let label: NSTextField
     private let spaceId: Int
+    private var cancellables = Set<AnyCancellable>()
+    private let spaceManager: DesktopSpaceManager
     
-    init(spaceId: Int, name: String) {
+    init(spaceId: Int, name: String, spaceManager: DesktopSpaceManager) {
         self.spaceId = spaceId
+        self.spaceManager = spaceManager
         
         // Create the label
         label = NSTextField(labelWithString: name)
@@ -64,6 +68,15 @@ class DesktopLabelWindow: NSWindow {
         self.standardWindowButton(.closeButton)?.isHidden = true
         self.standardWindowButton(.miniaturizeButton)?.isHidden = true
         self.standardWindowButton(.zoomButton)?.isHidden = true
+        
+        // Observe space name changes
+        spaceManager.$desktopSpaces
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] _ in
+                guard let self = self else { return }
+                self.updateName(self.spaceManager.getSpaceName(self.spaceId))
+            }
+            .store(in: &cancellables)
     }
     
     override var canBecomeKey: Bool {
