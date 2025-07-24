@@ -74,7 +74,8 @@ class DesktopLabelManager: ObservableObject {
         // removeWindow()
         
         // Create new window
-        let window = DesktopLabelWindow(spaceId: spaceId, name: name)
+        guard let spaceManager = spaceManager else { return }
+        let window = DesktopLabelWindow(spaceId: spaceId, name: name, spaceManager: spaceManager)
         currentWindow = window
         window.orderFront(nil)
     }
