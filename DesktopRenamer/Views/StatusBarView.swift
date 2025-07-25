@@ -197,7 +197,7 @@ class StatusBarController: NSObject {
             backing: .buffered,
             defer: false
         )
-        window.title = "Desktop Renamer"
+        window.title = "DesktopRenamer"
         window.center()
         
         // Create and set the settings view controller

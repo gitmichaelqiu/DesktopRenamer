@@ -6,7 +6,7 @@ class AboutViewController: NSViewController {
         let view = NSView(frame: NSRect(x: 0, y: 0, width: 400, height: 300))
         
         // App name
-        let nameLabel = NSTextField(labelWithString: "Desktop Renamer")
+        let nameLabel = NSTextField(labelWithString: "DesktopRenamer")
         nameLabel.font = .systemFont(ofSize: 20, weight: .bold)
         nameLabel.frame = NSRect(x: 20, y: 260, width: 360, height: 24)
         nameLabel.alignment = .center
@@ -23,14 +23,14 @@ class AboutViewController: NSViewController {
         }
         
         // Description
-        let descriptionLabel = NSTextField(wrappingLabelWithString: "Desktop Renamer allows you to give custom names to your macOS desktop spaces, making it easier to identify and organize your workspaces.")
+        let descriptionLabel = NSTextField(wrappingLabelWithString: "DesktopRenamer allows you to give custom names to your macOS desktop spaces, making it easier to identify and organize your workspaces.")
         descriptionLabel.frame = NSRect(x: 20, y: 160, width: 360, height: 60)
         descriptionLabel.alignment = .center
         view.addSubview(descriptionLabel)
         
         // Copyright
         let year = Calendar.current.component(.year, from: Date())
-        let copyrightLabel = NSTextField(labelWithString: "© \(year) Desktop Renamer")
+        let copyrightLabel = NSTextField(labelWithString: "© \(year) DesktopRenamer")
         copyrightLabel.font = .systemFont(ofSize: 12)
         copyrightLabel.textColor = .secondaryLabelColor
         copyrightLabel.frame = NSRect(x: 20, y: 20, width: 360, height: 17)
