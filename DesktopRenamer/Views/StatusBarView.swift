@@ -71,11 +71,13 @@ class StatusBarController: NSObject {
     private var statusItem: NSStatusItem
     private var popover: NSPopover
     @ObservedObject private var spaceManager: DesktopSpaceManager
+    private let labelManager: DesktopLabelManager
     private var cancellables = Set<AnyCancellable>()
     private var settingsWindowController: NSWindowController?
     
     init(spaceManager: DesktopSpaceManager) {
         self.spaceManager = spaceManager
+        self.labelManager = DesktopLabelManager(spaceManager: spaceManager)
         
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
         popover = NSPopover()
@@ -97,16 +99,26 @@ class StatusBarController: NSObject {
         // Observe current space ID changes
         spaceManager.$currentSpaceId
             .receive(on: DispatchQueue.main)
-            .sink { [weak self] _ in
+            .sink { [weak self] spaceId in
                 self?.updateStatusBarTitle()
+                // Update label for current space
+                if let name = self?.spaceManager.getSpaceName(spaceId) {
+                    self?.labelManager.updateLabel(for: spaceId, name: name)
+                }
             }
             .store(in: &cancellables)
         
         // Observe desktop spaces array changes
         spaceManager.$desktopSpaces
             .receive(on: DispatchQueue.main)
-            .sink { [weak self] _ in
+            .sink { [weak self] spaces in
                 self?.updateStatusBarTitle()
+                // Update all labels
+                for space in spaces {
+                    if let name = self?.spaceManager.getSpaceName(space.id) {
+                        self?.labelManager.updateLabel(for: space.id, name: name)
+                    }
+                }
             }
             .store(in: &cancellables)
     }
@@ -185,11 +197,11 @@ class StatusBarController: NSObject {
             backing: .buffered,
             defer: false
         )
-        window.title = "Desktop Renamer"
+        window.title = "DesktopRenamer"
         window.center()
         
         // Create and set the settings view controller
-        let settingsVC = SettingsViewController(spaceManager: spaceManager)
+        let settingsVC = SettingsViewController(spaceManager: spaceManager, labelManager: labelManager)
         window.contentViewController = settingsVC
         
         // Create window controller
@@ -218,3 +230,4 @@ extension StatusBarController: NSWindowDelegate {
         }
     }
 } 
+ 
