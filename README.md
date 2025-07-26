@@ -18,7 +18,7 @@
 
 ## Easy to Install
 
-You do **NOT** have to disable *SIP* or things like that. All you need to do is:
+You do **NOT** have to disable *SIP* or things like that. Your macOS must be at least **macOS 13.0 Ventura**. All you need to do is:
 
 1. Download the package from [Releases](https://github.com/gitmichaelqiu/DesktopRenamer/releases/)
 2. Drag the app to the *Applications* folder
