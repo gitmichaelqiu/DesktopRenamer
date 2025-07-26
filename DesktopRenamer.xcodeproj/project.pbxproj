@@ -35,16 +35,6 @@
 			path = DesktopRenamer;
 			sourceTree = "<group>";
 		};
-		466CC6532E2C883D002F4BB2 /* DesktopRenamerTests */ = {
-			isa = PBXFileSystemSynchronizedRootGroup;
-			path = DesktopRenamerTests;
-			sourceTree = "<group>";
-		};
-		466CC65D2E2C883D002F4BB2 /* DesktopRenamerUITests */ = {
-			isa = PBXFileSystemSynchronizedRootGroup;
-			path = DesktopRenamerUITests;
-			sourceTree = "<group>";
-		};
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -76,8 +66,6 @@
 			isa = PBXGroup;
 			children = (
 				466CC6442E2C883C002F4BB2 /* DesktopRenamer */,
-				466CC6532E2C883D002F4BB2 /* DesktopRenamerTests */,
-				466CC65D2E2C883D002F4BB2 /* DesktopRenamerUITests */,
 				466CC6432E2C883C002F4BB2 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -130,9 +118,6 @@
 			dependencies = (
 				466CC6522E2C883D002F4BB2 /* PBXTargetDependency */,
 			);
-			fileSystemSynchronizedGroups = (
-				466CC6532E2C883D002F4BB2 /* DesktopRenamerTests */,
-			);
 			name = DesktopRenamerTests;
 			packageProductDependencies = (
 			);
@@ -152,9 +137,6 @@
 			);
 			dependencies = (
 				466CC65C2E2C883D002F4BB2 /* PBXTargetDependency */,
-			);
-			fileSystemSynchronizedGroups = (
-				466CC65D2E2C883D002F4BB2 /* DesktopRenamerUITests */,
 			);
 			name = DesktopRenamerUITests;
 			packageProductDependencies = (
@@ -392,6 +374,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = NO;
 				CODE_SIGN_ENTITLEMENTS = DesktopRenamer/DesktopRenamer.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
@@ -399,6 +382,7 @@
 				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.utilities";
 				INFOPLIST_KEY_LSUIElement = YES;
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -419,6 +403,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = NO;
 				CODE_SIGN_ENTITLEMENTS = DesktopRenamer/DesktopRenamer.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
@@ -426,6 +411,7 @@
 				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.utilities";
 				INFOPLIST_KEY_LSUIElement = YES;
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
 				LD_RUNPATH_SEARCH_PATHS = (
