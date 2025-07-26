@@ -1,18 +1,20 @@
-# DesktopRenamer
+<h1 align="center">
+  <img src="/DesktopRenamer/Assets.xcassets/AppIcon.appiconset/DesktopRenamer-macOS-Default-512x512@1x.png" width="30%" alt=""/>  
+  <p align="center">DesktopRenamer</p>
+</h1>
 
-![](/DesktopRenamer/Assets.xcassets/AppIcon.appiconset/DesktopRenamer-macOS-Default-512x512@1x.png)  
+<p align="center">
+  <b>DesktopRenamer</b> is a macOS menubar app that shows your <b>customized</b> name of the current desktop.
+</p>
 
----
+<p align="center">
+  <img src="/DesktopRenamer/Resources/Demo_1_Menubar.png" width="50%" ><br>
+  <i>Rename the desktop label in menubar</i>
+</p>
 
-DesktopRenamer is a macOS menubar app that shows your **customized** name of the current desktop.
-
-![](/DesktopRenamer/Resources/Demo_1_Menubar.png)
-
-*How can you rename the desktop?*
-
-![](/DesktopRenamer/Resources/Demo_2_DLW.png)
-
-***DesktopLabelWindow** will be shown when entering Mission Control*
+<p align="center">
+  <img src="/DesktopRenamer/Resources/Demo_2_DLW.png" width="50%"><br>
+  <I><b>DesktopLabelWindow</b> will be shown when entering Mission Control</i>
 
 ## Easy to Install
 
