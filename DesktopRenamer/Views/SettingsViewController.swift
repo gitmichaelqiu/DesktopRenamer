@@ -30,7 +30,7 @@ class AboutViewController: NSViewController {
         
         // Copyright
         let year = Calendar.current.component(.year, from: Date())
-        let copyrightLabel = NSTextField(labelWithString: "© \(year) DesktopRenamer")
+        let copyrightLabel = NSTextField(labelWithString: "© \(year) Michael Yicheng Qiu")
         copyrightLabel.font = .systemFont(ofSize: 12)
         copyrightLabel.textColor = .secondaryLabelColor
         copyrightLabel.frame = NSRect(x: 20, y: 20, width: 360, height: 17)
