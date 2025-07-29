@@ -4,28 +4,48 @@ import ServiceManagement
 class AboutViewController: NSViewController {
     override func loadView() {
         let view = NSView(frame: NSRect(x: 0, y: 0, width: 400, height: 300))
-        
+
+        // Add app icon
+        let iconImageView = NSImageView()
+        iconImageView.translatesAutoresizingMaskIntoConstraints = false
+        if let icon = NSImage(named: "AppIcon") {
+            iconImageView.image = icon
+            iconImageView.imageScaling = .scaleProportionallyUpOrDown
+            iconImageView.wantsLayer = true
+            iconImageView.layer?.cornerRadius = 10
+            iconImageView.layer?.masksToBounds = true
+        } else {
+            iconImageView.image = NSImage(systemSymbolName: "app.fill", accessibilityDescription: "App Icon")
+            iconImageView.imageScaling = .scaleProportionallyUpOrDown
+            iconImageView.wantsLayer = true
+            iconImageView.layer?.cornerRadius = 10
+            iconImageView.layer?.masksToBounds = true
+        }
+        view.addSubview(iconImageView)
+
         // App name
         let nameLabel = NSTextField(labelWithString: "DesktopRenamer")
         nameLabel.font = .systemFont(ofSize: 20, weight: .bold)
-        nameLabel.frame = NSRect(x: 20, y: 260, width: 360, height: 24)
         nameLabel.alignment = .center
+        nameLabel.translatesAutoresizingMaskIntoConstraints = false
         view.addSubview(nameLabel)
         
         // Version
+        var versionLabel: NSTextField?
         if let version = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String {
-            let versionLabel = NSTextField(labelWithString: "Version \(version)")
-            versionLabel.font = .systemFont(ofSize: 13)
-            versionLabel.textColor = .secondaryLabelColor
-            versionLabel.frame = NSRect(x: 20, y: 240, width: 360, height: 17)
-            versionLabel.alignment = .center
-            view.addSubview(versionLabel)
+            let vLabel = NSTextField(labelWithString: "Version \(version)")
+            vLabel.font = .systemFont(ofSize: 13)
+            vLabel.textColor = .secondaryLabelColor
+            vLabel.alignment = .center
+            vLabel.translatesAutoresizingMaskIntoConstraints = false
+            view.addSubview(vLabel)
+            versionLabel = vLabel
         }
         
         // Description
         let descriptionLabel = NSTextField(wrappingLabelWithString: "DesktopRenamer allows you to give custom names to your macOS desktop spaces, making it easier to identify and organize your workspaces.")
-        descriptionLabel.frame = NSRect(x: 20, y: 160, width: 360, height: 60)
         descriptionLabel.alignment = .center
+        descriptionLabel.translatesAutoresizingMaskIntoConstraints = false
         view.addSubview(descriptionLabel)
         
         // Copyright
@@ -33,9 +53,31 @@ class AboutViewController: NSViewController {
         let copyrightLabel = NSTextField(labelWithString: "© \(year) Michael Yicheng Qiu")
         copyrightLabel.font = .systemFont(ofSize: 12)
         copyrightLabel.textColor = .secondaryLabelColor
-        copyrightLabel.frame = NSRect(x: 20, y: 20, width: 360, height: 17)
         copyrightLabel.alignment = .center
+        copyrightLabel.translatesAutoresizingMaskIntoConstraints = false
         view.addSubview(copyrightLabel)
+        
+        // Auto Layout constraints
+        NSLayoutConstraint.activate([
+            iconImageView.topAnchor.constraint(equalTo: view.topAnchor, constant: 32),
+            iconImageView.centerXAnchor.constraint(equalTo: view.centerXAnchor),
+            iconImageView.widthAnchor.constraint(equalToConstant: 100),
+            iconImageView.heightAnchor.constraint(equalToConstant: 100),
+
+            nameLabel.topAnchor.constraint(equalTo: iconImageView.bottomAnchor, constant: 12),
+            nameLabel.centerXAnchor.constraint(equalTo: view.centerXAnchor),
+            nameLabel.widthAnchor.constraint(lessThanOrEqualTo: view.widthAnchor, constant: -40),
+
+            versionLabel?.topAnchor.constraint(equalTo: nameLabel.bottomAnchor, constant: 2) ?? nameLabel.bottomAnchor.constraint(equalTo: nameLabel.bottomAnchor),
+            versionLabel?.centerXAnchor.constraint(equalTo: view.centerXAnchor) ?? nameLabel.centerXAnchor.constraint(equalTo: view.centerXAnchor),
+
+            descriptionLabel.topAnchor.constraint(equalTo: (versionLabel ?? nameLabel).bottomAnchor, constant: 16),
+            descriptionLabel.centerXAnchor.constraint(equalTo: view.centerXAnchor),
+            descriptionLabel.widthAnchor.constraint(equalTo: view.widthAnchor, constant: -40),
+
+            copyrightLabel.bottomAnchor.constraint(equalTo: view.bottomAnchor, constant: -16),
+            copyrightLabel.centerXAnchor.constraint(equalTo: view.centerXAnchor)
+        ].compactMap { $0 })
         
         self.view = view
     }
