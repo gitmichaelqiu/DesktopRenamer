@@ -32,6 +32,10 @@ sudo xattr -r -d com.apple.quarantine /Applications/DesktopRenamer.app
 
 You may be required to enter the password. This is required by Apple. This app will **NOT** steal your password or personal information.
 
+## Tips
+
+Currently, you may need to start the app at the Main Desktop. Otherwise, the desktop names may be misplaced. I'm finding workarounds to resolve this issue.
+
 ## Any Issues
 
 Create issues in [GitHub Issues](https://github.com/gitmichaelqiu/DesktopRenamer/issues).
