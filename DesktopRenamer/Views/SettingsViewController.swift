@@ -41,6 +41,18 @@ class AboutViewController: NSViewController {
             view.addSubview(vLabel)
             versionLabel = vLabel
         }
+
+        // GitHub text link
+        let githubLink = NSTextField(labelWithString: "GitHub Repository")
+        githubLink.font = .systemFont(ofSize: 13)
+        githubLink.textColor = .systemBlue
+        githubLink.alignment = .center
+        githubLink.isEditable = false
+        githubLink.isSelectable = true
+        githubLink.isBezeled = false
+        githubLink.translatesAutoresizingMaskIntoConstraints = false
+        githubLink.addGestureRecognizer(NSClickGestureRecognizer(target: self, action: #selector(openGitHub)))
+        view.addSubview(githubLink)
         
         // Description
         let descriptionLabel = NSTextField(wrappingLabelWithString: "DesktopRenamer allows you to give custom names to your macOS desktop spaces, making it easier to identify and organize your workspaces.")
@@ -58,8 +70,9 @@ class AboutViewController: NSViewController {
         view.addSubview(copyrightLabel)
         
         // Auto Layout constraints
+        // Add githubLink below the iconImageView
         NSLayoutConstraint.activate([
-            iconImageView.topAnchor.constraint(equalTo: view.topAnchor, constant: 32),
+            iconImageView.topAnchor.constraint(equalTo: view.topAnchor, constant: 16),
             iconImageView.centerXAnchor.constraint(equalTo: view.centerXAnchor),
             iconImageView.widthAnchor.constraint(equalToConstant: 100),
             iconImageView.heightAnchor.constraint(equalToConstant: 100),
@@ -75,11 +88,21 @@ class AboutViewController: NSViewController {
             descriptionLabel.centerXAnchor.constraint(equalTo: view.centerXAnchor),
             descriptionLabel.widthAnchor.constraint(equalTo: view.widthAnchor, constant: -40),
 
-            copyrightLabel.bottomAnchor.constraint(equalTo: view.bottomAnchor, constant: -16),
+            githubLink.topAnchor.constraint(equalTo: descriptionLabel.bottomAnchor, constant: 12),
+            githubLink.centerXAnchor.constraint(equalTo: view.centerXAnchor),
+            githubLink.widthAnchor.constraint(lessThanOrEqualTo: view.widthAnchor, constant: -40),
+
+            copyrightLabel.bottomAnchor.constraint(equalTo: view.bottomAnchor, constant: -12),
             copyrightLabel.centerXAnchor.constraint(equalTo: view.centerXAnchor)
         ].compactMap { $0 })
         
         self.view = view
+    }
+
+    @objc private func openGitHub() {
+        if let url = URL(string: "https://github.com/gitmichaelqiu/DesktopRenamer") {
+            NSWorkspace.shared.open(url)
+        }
     }
 }
 
