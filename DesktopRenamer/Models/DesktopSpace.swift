@@ -1,10 +1,7 @@
 import Foundation
 
 struct DesktopSpace: Identifiable, Codable {
-    let id: Int
+    var id: String
     var customName: String
- 
-    var displayName: String {
-        return customName.isEmpty ? "Desktop \(id)" : customName
-    }
-} 
+    var num: Int
+}
