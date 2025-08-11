@@ -2,25 +2,12 @@ import Foundation
 import AppKit
 
 class SpaceHelper {
-    private static var lastKnownSpace: Int = 1
-    private static var onSpaceChange: ((Int) -> Void)?
-    private static var wallpaperCache: [String: Int] = [:]
-    private static var isFirstRun = true
-    private static var isProcessing = false
+    private static var onSpaceChange: ((String) -> Void)?
     
-    static func startMonitoring(onChange: @escaping (Int) -> Void) {
+    static func startMonitoring(onChange: @escaping (String) -> Void) {
         onSpaceChange = onChange
         
-        // Monitor space changes using distributed notifications
-        DistributedNotificationCenter.default().addObserver(
-            forName: NSNotification.Name("com.apple.spaces.switchedSpaces"),
-            object: nil,
-            queue: .main
-        ) { _ in
-            detectSpaceChange()
-        }
-        
-        // Also monitor window layout changes
+        // Monitor space changes
         NSWorkspace.shared.notificationCenter.addObserver(
             forName: NSWorkspace.activeSpaceDidChangeNotification,
             object: nil,
@@ -36,30 +23,14 @@ class SpaceHelper {
     static func stopMonitoring() {
         DistributedNotificationCenter.default().removeObserver(self)
         NSWorkspace.shared.notificationCenter.removeObserver(self)
-        onSpaceChange = nil
     }
     
-    private static func detectSpaceChange() {
-        guard !isProcessing else { return }
-        isProcessing = true
-        
-        if let spaceNumber = getCurrentSpaceNumber() {
-            if spaceNumber != lastKnownSpace || isFirstRun {
-                lastKnownSpace = spaceNumber
-                isFirstRun = false
-                onSpaceChange?(spaceNumber)
-            }
-        }
-        
-        isProcessing = false
-    }
-    
-    static func getCurrentSpaceNumber() -> Int? {
+    static func getSpaceUUID() -> String {
         // Get all windows
         let options = CGWindowListOption(arrayLiteral: .optionOnScreenOnly)
         let windowList = CGWindowListCopyWindowInfo(options, kCGNullWindowID) as? [[String: Any]] ?? []
         
-        // Look for the wallpaper window from Dock
+        // Look for the wallpaper window
         for window in windowList {
             if let owner = window[kCGWindowOwnerName as String] as? String,
                owner == "Dock",
@@ -69,79 +40,23 @@ class SpaceHelper {
                layer == -2147483624 { // This is the wallpaper layer
                 
                 // Extract UUID from wallpaper name
-                let uuid = String(name.dropFirst("Wallpaper-".count))
-                
-                // If we haven't seen this wallpaper before, assign it the next space number
-                if wallpaperCache[uuid] == nil {
-                    let nextSpace = wallpaperCache.count + 1
-                    wallpaperCache[uuid] = nextSpace
+                var uuid = String(name.dropFirst("Wallpaper-".count))
+
+                if uuid == "" {
+                    uuid = "MAIN"
                 }
                 
-                return wallpaperCache[uuid]
+                return uuid
             }
         }
         
-        return lastKnownSpace
+        print("Debug: Services/SH getUUID failed")
+        return ""
     }
     
-    static func showAlert(title: String, message: String, defaultText: String, completion: @escaping (String?) -> Void) {
-        DispatchQueue.main.async {
-            let alert = NSAlert()
-            alert.messageText = title
-            alert.informativeText = message
-            
-            // Create input field
-            let input = NSTextField(frame: NSRect(x: 0, y: 0, width: 200, height: 24))
-            input.stringValue = defaultText
-            alert.accessoryView = input
-            
-            alert.addButton(withTitle: "OK")
-            alert.addButton(withTitle: "Cancel")
-            
-            // Create a window to host the alert
-            let window = NSWindow(
-                contentRect: NSRect(x: 0, y: 0, width: 100, height: 100),
-                styleMask: [.titled],
-                backing: .buffered,
-                defer: false
-            )
-            
-            // Position the window in the center of the current screen
-            if let screen = NSScreen.main {
-                let centerX = screen.frame.midX - (window.frame.width / 2)
-                let centerY = screen.frame.midY - (window.frame.height / 2)
-                window.setFrameOrigin(NSPoint(x: centerX, y: centerY))
-            }
-            
-            // Make the window stay in the current space
-            window.collectionBehavior = [.moveToActiveSpace]
-            
-            // Run the alert as a sheet on our temporary window
-            window.makeKeyAndOrderFront(nil)
-            alert.beginSheetModal(for: window) { response in
-                let result = response == .alertFirstButtonReturn ? input.stringValue : nil
-                window.close()
-                completion(result)
-            }
-            
-            // Focus the input field
-            window.makeFirstResponder(input)
-        }
+    private static func detectSpaceChange() {
+        let spaceUUID: String = getSpaceUUID()
+        onSpaceChange?(spaceUUID)
     }
-    
-    static func debugPrintWindowInfo() {
-        // Get all windows
-        let options = CGWindowListOption(arrayLiteral: .optionOnScreenOnly)
-        let windowList = CGWindowListCopyWindowInfo(options, kCGNullWindowID) as? [[String: Any]] ?? []
-        
-        print("\n--- Window Information Debug ---")
-        for (index, window) in windowList.enumerated() {
-            print("\nWindow \(index):")
-            for (key, value) in window {
-                print("\(key): \(value)")
-            }
-        }
-        print("\n---------------------------")
-    }
-} 
- 
+}
+
