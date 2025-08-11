@@ -24,17 +24,17 @@ You do **NOT** have to disable *SIP* or things like that. Your macOS must be at 
 2. Drag the app to the *Applications* folder
 3. All set!
 
-Because I do not have an Apple developer account, you may receive alerts such as "App is broken". To resolve this, you need to go to *terminal* and run the following command:
+Because I do **NOT** have an Apple developer account, you may receive alerts such as "App is broken". To resolve this, you need to go to *terminal* and run the following command:
 
 ```bash
 sudo xattr -r -d com.apple.quarantine /Applications/DesktopRenamer.app
 ```
 
-You may be required to enter the password. This is required by Apple. This app will **NOT** steal your password or personal information.
+You may be required to enter the password. When you are entering the password, the password is not shown. This is required by Apple. The app will **NOT** steal your password or personal information.
 
 ## Tips
 
-Currently, you may need to start the app at the Main Desktop. Otherwise, the desktop names may be misplaced. I'm finding workarounds to resolve this issue.
+The app will not work as expected when you connect to **multiple** displays. I am currently working on solving this. If you have any ideas, you are welcomed to post them in [GitHub Issues](https://github.com/gitmichaelqiu/DesktopRenamer/issues).
 
 ## Any Issues
 
