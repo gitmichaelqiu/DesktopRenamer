@@ -3,11 +3,11 @@ import Combine
 
 class DesktopLabelWindow: NSWindow {
     private let label: NSTextField
-    public let spaceId: Int
+    public let spaceId: String
     private var cancellables = Set<AnyCancellable>()
-    private let spaceManager: DesktopSpaceManager
+    private let spaceManager: SpaceManager
     
-    init(spaceId: Int, name: String, spaceManager: DesktopSpaceManager) {
+    init(spaceId: String, name: String, spaceManager: SpaceManager) {
         self.spaceId = spaceId
         self.spaceManager = spaceManager
         
@@ -57,7 +57,7 @@ class DesktopLabelWindow: NSWindow {
         
         // Initialize window with panel behavior
         super.init(
-            contentRect: NSRect(x: 0, y: 0, width: 400, height: 300),
+            contentRect: NSRect(x: 0, y: 0, width: 400, height: 200),
             styleMask: [.borderless, .nonactivatingPanel],
             backing: .buffered,
             defer: true  // Changed to true to prevent automatic display
@@ -97,7 +97,7 @@ class DesktopLabelWindow: NSWindow {
         self.standardWindowButton(.zoomButton)?.isHidden = true
         
         // Observe space name changes
-        spaceManager.$desktopSpaces
+        spaceManager.$spaceNameDict
             .receive(on: DispatchQueue.main)
             .sink { [weak self] _ in
                 guard let self = self else { return }
@@ -118,8 +118,8 @@ class DesktopLabelWindow: NSWindow {
         DispatchQueue.main.async {
             // Calculate optimal font size for new name
             let padding: CGFloat = 20
-            let maxWidth = self.contentView?.frame.width ?? 400 - (padding * 2)
-            let maxHeight = self.contentView?.frame.height ?? 300 - (padding * 2)
+            let maxWidth = (self.contentView?.frame.width ?? 400) - (padding * 2)
+            let maxHeight = (self.contentView?.frame.height ?? 300) - (padding * 2)
             
             var fontSize: CGFloat = 50
             var attributedString = NSAttributedString(string: name, attributes: [.font: NSFont.systemFont(ofSize: fontSize, weight: .medium)])
@@ -150,4 +150,4 @@ class DesktopLabelWindow: NSWindow {
     var currentName: String {
         return label.stringValue
     }
-} 
+}

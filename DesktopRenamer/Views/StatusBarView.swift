@@ -3,11 +3,11 @@ import Combine
 import AppKit
 
 class RenameViewController: NSViewController {
-    private var spaceManager: DesktopSpaceManager
+    private var spaceManager: SpaceManager
     private var completion: () -> Void
     private var textField: NSTextField!
     
-    init(spaceManager: DesktopSpaceManager, completion: @escaping () -> Void) {
+    init(spaceManager: SpaceManager, completion: @escaping () -> Void) {
         self.spaceManager = spaceManager
         self.completion = completion
         super.init(nibName: nil, bundle: nil)
@@ -23,13 +23,13 @@ class RenameViewController: NSViewController {
         
         // Create and configure the text field
         textField = NSTextField(frame: NSRect(x: 20, y: 40, width: 200, height: 24))
-        textField.stringValue = spaceManager.getSpaceName(spaceManager.currentSpaceId)
+        textField.stringValue = spaceManager.getSpaceName(spaceManager.currentSpaceUUID)
         textField.placeholderString = "Enter space name"
         textField.delegate = self
         view.addSubview(textField)
         
         // Create the label
-        let label = NSTextField(labelWithString: "Rename Desktop \(spaceManager.currentSpaceId)")
+        let label = NSTextField(labelWithString: "Rename Desktop \(spaceManager.getSpaceNum(spaceManager.currentSpaceUUID))")
         label.frame = NSRect(x: 20, y: 15, width: 200, height: 17)
         label.textColor = .secondaryLabelColor
         view.addSubview(label)
@@ -60,7 +60,7 @@ extension RenameViewController: NSTextFieldDelegate {
     private func handleRename() {
         let newName = textField.stringValue.trimmingCharacters(in: .whitespacesAndNewlines)
         if !newName.isEmpty {
-            spaceManager.renameSpace(spaceManager.currentSpaceId, to: newName)
+            spaceManager.renameSpace(spaceManager.currentSpaceUUID, to: newName)
         }
         dismiss(nil)
         completion()
@@ -70,14 +70,14 @@ extension RenameViewController: NSTextFieldDelegate {
 class StatusBarController: NSObject {
     private var statusItem: NSStatusItem
     private var popover: NSPopover
-    @ObservedObject private var spaceManager: DesktopSpaceManager
-    private let labelManager: DesktopLabelManager
+    @ObservedObject private var spaceManager: SpaceManager
+    private let labelManager: SpaceLabelManager
     private var cancellables = Set<AnyCancellable>()
     private var settingsWindowController: NSWindowController?
     
-    init(spaceManager: DesktopSpaceManager) {
+    init(spaceManager: SpaceManager) {
         self.spaceManager = spaceManager
-        self.labelManager = DesktopLabelManager(spaceManager: spaceManager)
+        self.labelManager = SpaceLabelManager(spaceManager: spaceManager)
         
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
         popover = NSPopover()
@@ -97,7 +97,7 @@ class StatusBarController: NSObject {
     
     private func setupObservers() {
         // Observe current space ID changes
-        spaceManager.$currentSpaceId
+        spaceManager.$currentSpaceUUID
             .receive(on: DispatchQueue.main)
             .sink { [weak self] spaceId in
                 self?.updateStatusBarTitle()
@@ -109,7 +109,7 @@ class StatusBarController: NSObject {
             .store(in: &cancellables)
         
         // Observe desktop spaces array changes
-        spaceManager.$desktopSpaces
+        spaceManager.$spaceNameDict
             .receive(on: DispatchQueue.main)
             .sink { [weak self] spaces in
                 self?.updateStatusBarTitle()
@@ -125,7 +125,7 @@ class StatusBarController: NSObject {
     
     private func updateStatusBarTitle() {
         if let button = statusItem.button {
-            let name = spaceManager.getSpaceName(spaceManager.currentSpaceId)
+            let name = spaceManager.getSpaceName(spaceManager.currentSpaceUUID)
             button.title = name
         }
     }
@@ -229,5 +229,4 @@ extension StatusBarController: NSWindowDelegate {
             settingsWindowController = nil
         }
     }
-} 
- 
+}

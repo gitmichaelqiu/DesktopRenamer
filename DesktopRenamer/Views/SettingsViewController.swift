@@ -107,13 +107,13 @@ class AboutViewController: NSViewController {
 }
 
 class GeneralSettingsViewController: NSViewController {
-    private let spaceManager: DesktopSpaceManager
-    private let labelManager: DesktopLabelManager
+    private let spaceManager: SpaceManager
+    private let labelManager: SpaceLabelManager
     private var launchAtLoginButton: NSButton!
     private var showLabelsButton: NSButton!
     private var resetButton: NSButton!
     
-    init(spaceManager: DesktopSpaceManager, labelManager: DesktopLabelManager) {
+    init(spaceManager: SpaceManager, labelManager: SpaceLabelManager) {
         self.spaceManager = spaceManager
         self.labelManager = labelManager
         super.init(nibName: nil, bundle: nil)
@@ -139,7 +139,7 @@ class GeneralSettingsViewController: NSViewController {
         view.addSubview(showLabelsButton)
         
         // Reset names button
-        resetButton = NSButton(frame: NSRect(x: 20, y: 180, width: 200, height: 32))
+        resetButton = NSButton(frame: NSRect(x: 20, y: 180, width: 200, height: 32)) // Change back to 180 when adding back SLW
         resetButton.title = "Reset All Desktop Names"
         resetButton.bezelStyle = .rounded
         resetButton.target = self
@@ -216,10 +216,10 @@ class GeneralSettingsViewController: NSViewController {
 }
 
 class SettingsViewController: NSTabViewController {
-    private let spaceManager: DesktopSpaceManager
-    private let labelManager: DesktopLabelManager
+    private let spaceManager: SpaceManager
+    private let labelManager: SpaceLabelManager
     
-    init(spaceManager: DesktopSpaceManager, labelManager: DesktopLabelManager) {
+    init(spaceManager: SpaceManager, labelManager: SpaceLabelManager) {
         self.spaceManager = spaceManager
         self.labelManager = labelManager
         super.init(nibName: nil, bundle: nil)
@@ -257,4 +257,5 @@ class SettingsViewController: NSTabViewController {
         // Set the preferred content size
         self.preferredContentSize = NSSize(width: 400, height: 300)
     }
-} 
+}
+

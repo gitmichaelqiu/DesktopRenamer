@@ -10,7 +10,7 @@ import Combine
 
 @main
 struct DesktopRenamerApp: App {
-    @StateObject private var spaceManager = DesktopSpaceManager()
+    @StateObject private var spaceManager = SpaceManager()
     @State private var statusBarController: StatusBarController?
     
     var body: some Scene {
@@ -25,3 +25,4 @@ struct DesktopRenamerApp: App {
         .defaultSize(width: 0, height: 0)
     }
 }
+
