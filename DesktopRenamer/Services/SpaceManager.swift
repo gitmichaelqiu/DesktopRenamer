@@ -6,7 +6,7 @@ class SpaceManager: ObservableObject {
     @Published var spaceNameDict: [DesktopSpace] = []
     
     private let userDefaults = UserDefaults.standard
-    private let spacesKey = "com.desktoprenamer.spaces"
+    private let spacesKey = "com.gitmichaelqiu.desktoprenamer.spaces"
     
     private var currentTotalSpace = 0
     
