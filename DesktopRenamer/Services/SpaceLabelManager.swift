@@ -18,28 +18,6 @@ class SpaceLabelManager: ObservableObject {
     init(spaceManager: SpaceManager) {
         self.spaceManager = spaceManager
         self.isEnabled = UserDefaults.standard.bool(forKey: spacesKey)
-
-        // Monitor space changes
-        NSWorkspace.shared.notificationCenter.addObserver(
-            forName: NSWorkspace.activeSpaceDidChangeNotification,
-            object: nil,
-            queue: .main
-        ) { _ in
-            if self.isEnabled {
-                self.handleSpaceChange()
-            }
-        }
-        
-        // Initial setup
-        if isEnabled {
-            handleSpaceChange()
-        }
-        
-        // Refresh SLW
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-            self.toggleEnabled()
-            self.toggleEnabled()
-        }
     }
     
     deinit {
@@ -48,15 +26,18 @@ class SpaceLabelManager: ObservableObject {
     
     func toggleEnabled() {
         isEnabled.toggle()
+        
+        if isEnabled {
+            let spaceId = self.spaceManager?.currentSpaceUUID
+            let name = self.spaceManager?.getSpaceName(spaceId ?? "")
+            self.updateLabel(for: spaceId ?? "", name: name ?? "")
+        }
     }
     
     func updateLabel(for spaceId: String, name: String) {
         DispatchQueue.main.async {
             if self.isEnabled {
-                if let window = self.createdWindows[spaceId] {
-                    // Update existing window
-                    window.updateName(name)
-                } else {
+                if self.isEnabled, spaceId != "FULLSCREEN", self.createdWindows[spaceId] == nil {
                     // Create new window for this space
                     self.createWindow(for: spaceId, name: name)
                 }
@@ -79,17 +60,8 @@ class SpaceLabelManager: ObservableObject {
     }
     
     private func updateLabelsVisibility() {
-        if isEnabled {
-            handleSpaceChange()
-        } else {
+        if !isEnabled {
             removeAllWindows()
         }
-    }
-    
-    @objc private func handleSpaceChange() {
-        guard let spaceManager = spaceManager else { return }
-        let currentSpace = SpaceHelper.getSpaceUUID()
-        let name = spaceManager.getSpaceName(currentSpace)
-        updateLabel(for: currentSpace, name: name)
     }
 }

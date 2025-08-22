@@ -112,6 +112,8 @@ class GeneralSettingsViewController: NSViewController {
     private var launchAtLoginButton: NSButton!
     private var showLabelsButton: NSButton!
     private var resetButton: NSButton!
+    private var checkUpdateButton: NSButton!
+    private var autoCheckUpdateButton: NSButton!
     
     init(spaceManager: SpaceManager, labelManager: SpaceLabelManager) {
         self.spaceManager = spaceManager
@@ -125,28 +127,50 @@ class GeneralSettingsViewController: NSViewController {
     
     override func loadView() {
         let view = NSView(frame: NSRect(x: 0, y: 0, width: 400, height: 300))
-        
+
         // Launch at login checkbox
         launchAtLoginButton = NSButton(checkboxWithTitle: "Launch at login", target: self, action: #selector(toggleLaunchAtLogin))
         launchAtLoginButton.frame = NSRect(x: 20, y: 260, width: 200, height: 20)
         launchAtLoginButton.state = getLaunchAtLoginState()
         view.addSubview(launchAtLoginButton)
-        
+
         // Show labels checkbox
         showLabelsButton = NSButton(checkboxWithTitle: "Show desktop labels", target: self, action: #selector(toggleLabels))
         showLabelsButton.frame = NSRect(x: 20, y: 230, width: 200, height: 20)
         showLabelsButton.state = labelManager.isEnabled ? .on : .off
         view.addSubview(showLabelsButton)
         
+        // Auto Check for Update toggle
+        autoCheckUpdateButton = NSButton(checkboxWithTitle: "Automatically check for updates", target: self, action: #selector(toggleAutoCheckUpdate))
+        autoCheckUpdateButton.frame = NSRect(x: 20, y: 200, width: 250, height: 20)
+        autoCheckUpdateButton.state = UpdateManager.isAutoCheckEnabled ? .on : .off
+        view.addSubview(autoCheckUpdateButton)
+
         // Reset names button
-        resetButton = NSButton(frame: NSRect(x: 20, y: 180, width: 200, height: 32)) // Change back to 180 when adding back SLW
+        resetButton = NSButton(frame: NSRect(x: 20, y: 155, width: 200, height: 32))
         resetButton.title = "Reset All Desktop Names"
         resetButton.bezelStyle = .rounded
         resetButton.target = self
         resetButton.action = #selector(resetNames)
         view.addSubview(resetButton)
-        
+
+        // Check for Update button
+        checkUpdateButton = NSButton(frame: NSRect(x: 20, y: 120, width: 200, height: 32))
+        checkUpdateButton.title = "Check for Update"
+        checkUpdateButton.bezelStyle = .rounded
+        checkUpdateButton.target = self
+        checkUpdateButton.action = #selector(checkForUpdate)
+        view.addSubview(checkUpdateButton)
+
         self.view = view
+    }
+    @objc private func checkForUpdate() {
+        UpdateManager.shared.checkForUpdate(from: self.view.window, suppressUpToDateAlert: false)
+    }
+
+    @objc private func toggleAutoCheckUpdate() {
+        let enabled = autoCheckUpdateButton.state == .on
+        UpdateManager.isAutoCheckEnabled = enabled
     }
     
     private func getLaunchAtLoginState() -> NSControl.StateValue {

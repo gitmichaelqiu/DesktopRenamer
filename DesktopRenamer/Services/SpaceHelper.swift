@@ -29,6 +29,8 @@ class SpaceHelper {
         // Get all windows
         let options = CGWindowListOption(arrayLiteral: .optionOnScreenOnly)
         let windowList = CGWindowListCopyWindowInfo(options, kCGNullWindowID) as? [[String: Any]] ?? []
+        var uuid = ""
+        var inFullscreen = true
         
         // Look for the wallpaper window
         for window in windowList {
@@ -40,18 +42,22 @@ class SpaceHelper {
                layer == -2147483624 { // This is the wallpaper layer
                 
                 // Extract UUID from wallpaper name
-                var uuid = String(name.dropFirst("Wallpaper-".count))
+                uuid = String(name.dropFirst("Wallpaper-".count))
 
                 if uuid == "" {
                     uuid = "MAIN"
                 }
-                
-                return uuid
+            }
+            else if let owner = window[kCGWindowOwnerName as String] as? String,
+               owner == "Control Center" {
+                inFullscreen = false
             }
         }
         
-        print("Debug: Services/SH getUUID failed")
-        return ""
+        if inFullscreen {
+            uuid = "FULLSCREEN"
+        }
+        return uuid
     }
     
     private static func detectSpaceChange() {
