@@ -56,7 +56,7 @@ class SpaceLabelManager: ObservableObject {
                 if let window = self.createdWindows[spaceId] {
                     // Update existing window
                     window.updateName(name)
-                } else {
+                } else if spaceId != "FULLSCREEN" {
                     // Create new window for this space
                     self.createWindow(for: spaceId, name: name)
                 }
