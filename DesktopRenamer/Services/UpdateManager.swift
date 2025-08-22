@@ -8,14 +8,24 @@ class UpdateManager {
     private let repo = "gitmichaelqiu/DesktopRenamer"
     private let latestReleaseURL = "https://api.github.com/repos/gitmichaelqiu/DesktopRenamer/releases/latest"
 
-    func checkForUpdate(from window: NSWindow?) {
+    // UserDefaults key for auto update check
+    static let autoCheckKey = "AutoCheckForUpdate"
+    static var isAutoCheckEnabled: Bool {
+        get { UserDefaults.standard.bool(forKey: autoCheckKey) }
+        set { UserDefaults.standard.set(newValue, forKey: autoCheckKey) }
+    }
+
+    /// If `suppressUpToDateAlert` is true, do not show alert if already up to date (for auto-check)
+    func checkForUpdate(from window: NSWindow?, suppressUpToDateAlert: Bool = false) {
         guard let currentVersion = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String else { return }
         let url = URL(string: latestReleaseURL)!
         let task = URLSession.shared.dataTask(with: url) { data, _, error in
             guard let data = data, error == nil,
                   let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
                   let tag = json["tag_name"] as? String else {
-                self.showAlert("Update Check Failed", "Could not check for updates.", window: window)
+                if !suppressUpToDateAlert {
+                    self.showAlert("Update Check Failed", "Could not check for updates.", window: window)
+                }
                 return
             }
             let latestVersion = tag.trimmingCharacters(in: CharacterSet(charactersIn: "v"))
@@ -37,7 +47,7 @@ class UpdateManager {
                         }
                     }
                 }
-            } else {
+            } else if !suppressUpToDateAlert {
                 self.showAlert("Up To Date", "You are running the latest version (\(currentVersion)).", window: window)
             }
         }
