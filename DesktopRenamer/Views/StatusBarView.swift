@@ -109,18 +109,18 @@ class StatusBarController: NSObject {
             .store(in: &cancellables)
         
         // Observe desktop spaces array changes
-        spaceManager.$spaceNameDict
-            .receive(on: DispatchQueue.main)
-            .sink { [weak self] spaces in
-                self?.updateStatusBarTitle()
-                // Update all labels
-                for space in spaces {
-                    if let name = self?.spaceManager.getSpaceName(space.id) {
-                        self?.labelManager.updateLabel(for: space.id, name: name)
-                    }
-                }
-            }
-            .store(in: &cancellables)
+//        spaceManager.$spaceNameDict
+//            .receive(on: DispatchQueue.main)
+//            .sink { [weak self] spaces in
+//                self?.updateStatusBarTitle()
+//                // Update all labels
+//                for space in spaces {
+//                    if let name = self?.spaceManager.getSpaceName(space.id) {
+//                        self?.labelManager.updateLabel(for: space.id, name: name)
+//                    }
+//                }
+//            }
+//            .store(in: &cancellables)
     }
     
     private func updateStatusBarTitle() {
