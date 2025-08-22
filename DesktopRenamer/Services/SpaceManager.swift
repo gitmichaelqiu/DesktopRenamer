@@ -35,7 +35,7 @@ class SpaceManager: ObservableObject {
         currentSpaceUUID = newSpaceUUID
         
         // Check if the space was handled before
-        if !spaceNameDict.contains(where: { $0.id == currentSpaceUUID }) {
+        if !spaceNameDict.contains(where: { $0.id == currentSpaceUUID }) && currentSpaceUUID != "FULLSCREEN" {
             currentTotalSpace += 1
             spaceNameDict.append(DesktopSpace(id: currentSpaceUUID, customName: "", num: currentTotalSpace))
             saveSpaces()
