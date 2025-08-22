@@ -2,9 +2,11 @@ import Foundation
 import AppKit
 
 class SpaceLabelManager: ObservableObject {
+    private let spacesKey = "com.gitmichaelqiu.desktoprenamer.slw"
+    
     @Published private(set) var isEnabled: Bool {
         didSet {
-            UserDefaults.standard.set(isEnabled, forKey: "DesktopLabelEnabled")
+            UserDefaults.standard.set(isEnabled, forKey: spacesKey)
             updateLabelsVisibility()
         }
     }
@@ -15,7 +17,7 @@ class SpaceLabelManager: ObservableObject {
     
     init(spaceManager: SpaceManager) {
         self.spaceManager = spaceManager
-        self.isEnabled = UserDefaults.standard.bool(forKey: "DesktopLabelEnabled")
+        self.isEnabled = UserDefaults.standard.bool(forKey: spacesKey)
 
         // Monitor space changes
         NSWorkspace.shared.notificationCenter.addObserver(
