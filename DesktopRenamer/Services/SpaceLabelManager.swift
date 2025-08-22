@@ -26,6 +26,12 @@ class SpaceLabelManager: ObservableObject {
     
     func toggleEnabled() {
         isEnabled.toggle()
+        
+        if isEnabled {
+            let spaceId = self.spaceManager?.currentSpaceUUID
+            let name = self.spaceManager?.getSpaceName(spaceId ?? "")
+            self.updateLabel(for: spaceId ?? "", name: name ?? "")
+        }
     }
     
     func updateLabel(for spaceId: String, name: String) {
