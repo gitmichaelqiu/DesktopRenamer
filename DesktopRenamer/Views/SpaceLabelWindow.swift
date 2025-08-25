@@ -14,7 +14,7 @@ class DesktopLabelWindow: NSWindow {
         // Create the label
         label = NSTextField(labelWithString: name)
         label.font = .systemFont(ofSize: 50, weight: .medium) // Initial font size, will be adjusted
-        label.textColor = .white
+        label.textColor = .labelColor
         label.alignment = .center
         
         // Create a glass effect view for the background
