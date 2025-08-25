@@ -1,7 +1,7 @@
 import Cocoa
 import Combine
 
-class DesktopLabelWindow: NSWindow {
+class SpaceLabelWindow: NSWindow {
     private let label: NSTextField
     public let spaceId: String
     private var cancellables = Set<AnyCancellable>()
