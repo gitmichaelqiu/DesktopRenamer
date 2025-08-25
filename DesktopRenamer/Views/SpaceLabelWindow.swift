@@ -17,20 +17,19 @@ class DesktopLabelWindow: NSWindow {
         label.textColor = .white
         label.alignment = .center
         
-        // Create a visual effect view for the background
-        let visualEffect = NSVisualEffectView(frame: NSRect(x: 0, y: 0, width: 400, height: 300))
+        // Create a glass effect view for the background
+        let glassEffectView = NSGlassEffectView(frame: NSRect(x: 0, y: 0, width: 400, height: 300))
         
         // Calculate and set optimal font size and frame
         let padding: CGFloat = 20
-        let maxWidth = visualEffect.frame.width - (padding * 2)
-        let maxHeight = visualEffect.frame.height - (padding * 2)
+        let maxWidth = glassEffectView.frame.width - (padding * 2)
+        let maxHeight = glassEffectView.frame.height - (padding * 2)
         
         // Start with initial font size and adjust down if needed
         var fontSize: CGFloat = 50
         var attributedString = NSAttributedString(string: name, attributes: [.font: NSFont.systemFont(ofSize: fontSize, weight: .medium)])
         var stringSize = attributedString.size()
         
-        // Reduce font size until text fits within bounds with some padding
         while (stringSize.width > maxWidth || stringSize.height > maxHeight) && fontSize > 10 {
             fontSize -= 2
             attributedString = NSAttributedString(string: name, attributes: [.font: NSFont.systemFont(ofSize: fontSize, weight: .medium)])
@@ -39,21 +38,21 @@ class DesktopLabelWindow: NSWindow {
         
         label.font = .systemFont(ofSize: fontSize, weight: .medium)
         
-        // Center the label in the visual effect view
+        // Center the label in the glass effect view
         let labelFrame = NSRect(
-            x: (visualEffect.frame.width - stringSize.width) / 2,
-            y: (visualEffect.frame.height - stringSize.height) / 2,
+            x: (glassEffectView.frame.width - stringSize.width) / 2,
+            y: (glassEffectView.frame.height - stringSize.height) / 2,
             width: stringSize.width,
             height: stringSize.height
         )
         label.frame = labelFrame
-        visualEffect.material = .hudWindow
-        visualEffect.state = .active
-        visualEffect.wantsLayer = true
-        visualEffect.layer?.cornerRadius = 6
         
-        // Add label to visual effect view
-        visualEffect.addSubview(label)
+        // Configure glass effect view
+        glassEffectView.wantsLayer = true
+        glassEffectView.layer?.cornerRadius = 6
+        
+        // Add label to glass effect view
+        glassEffectView.addSubview(label)
         
         // Initialize window with panel behavior
         super.init(
@@ -64,7 +63,7 @@ class DesktopLabelWindow: NSWindow {
         )
         
         // Configure window properties
-        self.contentView = visualEffect
+        self.contentView = glassEffectView
         self.backgroundColor = .clear
         self.isOpaque = false
         self.hasShadow = false
@@ -135,10 +134,10 @@ class DesktopLabelWindow: NSWindow {
             self.label.stringValue = name
             
             // Recenter the label
-            if let visualEffect = self.contentView as? NSVisualEffectView {
+            if let glassEffectView = self.contentView as? NSGlassEffectView {
                 let labelFrame = NSRect(
-                    x: (visualEffect.frame.width - stringSize.width) / 2,
-                    y: (visualEffect.frame.height - stringSize.height) / 2,
+                    x: (glassEffectView.frame.width - stringSize.width) / 2,
+                    y: (glassEffectView.frame.height - stringSize.height) / 2,
                     width: stringSize.width,
                     height: stringSize.height
                 )
