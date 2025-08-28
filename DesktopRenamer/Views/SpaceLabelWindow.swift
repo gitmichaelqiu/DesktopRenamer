@@ -1,11 +1,14 @@
 import Cocoa
 import Combine
 
-class DesktopLabelWindow: NSWindow {
+class SpaceLabelWindow: NSWindow {
     private let label: NSTextField
     public let spaceId: String
     private var cancellables = Set<AnyCancellable>()
     private let spaceManager: SpaceManager
+    
+    private let frameWidth: CGFloat = 400
+    private let frameHeight: CGFloat = 200
     
     init(spaceId: String, name: String, spaceManager: SpaceManager) {
         self.spaceId = spaceId
@@ -14,23 +17,30 @@ class DesktopLabelWindow: NSWindow {
         // Create the label
         label = NSTextField(labelWithString: name)
         label.font = .systemFont(ofSize: 50, weight: .medium) // Initial font size, will be adjusted
-        label.textColor = .white
+        label.textColor = .labelColor
         label.alignment = .center
         
-        // Create a visual effect view for the background
-        let visualEffect = NSVisualEffectView(frame: NSRect(x: 0, y: 0, width: 400, height: 300))
+        // Create a glass effect view for the background
+        let contentView: NSView
+        if #available(macOS 26.0, *) {
+            let glassEffectView = NSGlassEffectView(frame: NSRect(x: 0, y: 0, width: frameWidth, height: frameHeight))
+            contentView = glassEffectView
+        } else {
+            // Fallback on earlier versions
+            let visualEffectView = NSVisualEffectView(frame: NSRect(x: 0, y: 0, width: frameWidth, height: frameHeight))
+            contentView = visualEffectView
+        }
         
         // Calculate and set optimal font size and frame
         let padding: CGFloat = 20
-        let maxWidth = visualEffect.frame.width - (padding * 2)
-        let maxHeight = visualEffect.frame.height - (padding * 2)
+        let maxWidth = frameWidth - (padding * 2)
+        let maxHeight = frameHeight - (padding * 2)
         
         // Start with initial font size and adjust down if needed
         var fontSize: CGFloat = 50
         var attributedString = NSAttributedString(string: name, attributes: [.font: NSFont.systemFont(ofSize: fontSize, weight: .medium)])
         var stringSize = attributedString.size()
         
-        // Reduce font size until text fits within bounds with some padding
         while (stringSize.width > maxWidth || stringSize.height > maxHeight) && fontSize > 10 {
             fontSize -= 2
             attributedString = NSAttributedString(string: name, attributes: [.font: NSFont.systemFont(ofSize: fontSize, weight: .medium)])
@@ -39,36 +49,35 @@ class DesktopLabelWindow: NSWindow {
         
         label.font = .systemFont(ofSize: fontSize, weight: .medium)
         
-        // Center the label in the visual effect view
+        // Center the label in the glass effect view
         let labelFrame = NSRect(
-            x: (visualEffect.frame.width - stringSize.width) / 2,
-            y: (visualEffect.frame.height - stringSize.height) / 2,
+            x: (frameWidth - stringSize.width) / 2,
+            y: (frameHeight - stringSize.height) / 2,
             width: stringSize.width,
             height: stringSize.height
         )
         label.frame = labelFrame
-        visualEffect.material = .hudWindow
-        visualEffect.state = .active
-        visualEffect.wantsLayer = true
-        visualEffect.layer?.cornerRadius = 6
         
-        // Add label to visual effect view
-        visualEffect.addSubview(label)
+        // Add label to glass effect view
+        contentView.addSubview(label)
         
         // Initialize window with panel behavior
         super.init(
-            contentRect: NSRect(x: 0, y: 0, width: 400, height: 200),
-            styleMask: [.borderless, .nonactivatingPanel],
+            contentRect: NSRect(x: 0, y: 0, width: frameWidth, height: frameHeight),
+            styleMask: [.borderless],
             backing: .buffered,
             defer: true  // Changed to true to prevent automatic display
         )
         
-        // Configure window properties
-        self.contentView = visualEffect
+        self.contentView = contentView
+        self.contentView?.wantsLayer = true
+        self.contentView?.layer?.cornerRadius = 6
+        self.contentView?.addSubview(label)
+        
         self.backgroundColor = .clear
         self.isOpaque = false
         self.hasShadow = false
-        self.level = .normal
+        self.level = .floating
         
         // Set window to be managed by Mission Control but stay in current space
         self.collectionBehavior = [
@@ -118,8 +127,8 @@ class DesktopLabelWindow: NSWindow {
         DispatchQueue.main.async {
             // Calculate optimal font size for new name
             let padding: CGFloat = 20
-            let maxWidth = (self.contentView?.frame.width ?? 400) - (padding * 2)
-            let maxHeight = (self.contentView?.frame.height ?? 300) - (padding * 2)
+            let maxWidth = (self.frameWidth) - (padding * 2)
+            let maxHeight = (self.frameHeight) - (padding * 2)
             
             var fontSize: CGFloat = 50
             var attributedString = NSAttributedString(string: name, attributes: [.font: NSFont.systemFont(ofSize: fontSize, weight: .medium)])
@@ -135,10 +144,10 @@ class DesktopLabelWindow: NSWindow {
             self.label.stringValue = name
             
             // Recenter the label
-            if let visualEffect = self.contentView as? NSVisualEffectView {
+            if self.contentView != nil {
                 let labelFrame = NSRect(
-                    x: (visualEffect.frame.width - stringSize.width) / 2,
-                    y: (visualEffect.frame.height - stringSize.height) / 2,
+                    x: (self.frameWidth - stringSize.width) / 2,
+                    y: (self.frameHeight - stringSize.height) / 2,
                     width: stringSize.width,
                     height: stringSize.height
                 )

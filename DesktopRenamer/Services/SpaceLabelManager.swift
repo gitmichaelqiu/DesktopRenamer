@@ -11,8 +11,8 @@ class SpaceLabelManager: ObservableObject {
         }
     }
     
-    private var currentWindow: DesktopLabelWindow?
-    private var createdWindows: [String: DesktopLabelWindow] = [:]
+    private var currentWindow: SpaceLabelWindow?
+    private var createdWindows: [String: SpaceLabelWindow] = [:]
     private weak var spaceManager: SpaceManager?
     
     init(spaceManager: SpaceManager) {
@@ -47,7 +47,7 @@ class SpaceLabelManager: ObservableObject {
     
     private func createWindow(for spaceId: String, name: String) {
         guard let spaceManager = spaceManager else { return }
-        let window = DesktopLabelWindow(spaceId: spaceId, name: name, spaceManager: spaceManager)
+        let window = SpaceLabelWindow(spaceId: spaceId, name: name, spaceManager: spaceManager)
         createdWindows[spaceId] = window
         window.orderFront(nil)
     }

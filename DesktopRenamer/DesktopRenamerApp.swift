@@ -32,12 +32,5 @@ struct DesktopRenamerApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
     
     var body: some Scene {
-        // No visible windows needed
-        WindowGroup {
-            EmptyView()
-                .hidden()
-        }
-        .windowStyle(.hiddenTitleBar)
-        .defaultSize(width: 0, height: 0)
     }
 }
