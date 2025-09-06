@@ -6,27 +6,8 @@
 	objectVersion = 77;
 	objects = {
 
-/* Begin PBXContainerItemProxy section */
-		466CC6512E2C883D002F4BB2 /* PBXContainerItemProxy */ = {
-			isa = PBXContainerItemProxy;
-			containerPortal = 466CC63A2E2C883B002F4BB2 /* Project object */;
-			proxyType = 1;
-			remoteGlobalIDString = 466CC6412E2C883B002F4BB2;
-			remoteInfo = DesktopRenamer;
-		};
-		466CC65B2E2C883D002F4BB2 /* PBXContainerItemProxy */ = {
-			isa = PBXContainerItemProxy;
-			containerPortal = 466CC63A2E2C883B002F4BB2 /* Project object */;
-			proxyType = 1;
-			remoteGlobalIDString = 466CC6412E2C883B002F4BB2;
-			remoteInfo = DesktopRenamer;
-		};
-/* End PBXContainerItemProxy section */
-
 /* Begin PBXFileReference section */
 		466CC6422E2C883C002F4BB2 /* DesktopRenamer.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = DesktopRenamer.app; sourceTree = BUILT_PRODUCTS_DIR; };
-		466CC6502E2C883D002F4BB2 /* DesktopRenamerTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = DesktopRenamerTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
-		466CC65A2E2C883D002F4BB2 /* DesktopRenamerUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = DesktopRenamerUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -39,20 +20,6 @@
 
 /* Begin PBXFrameworksBuildPhase section */
 		466CC63F2E2C883B002F4BB2 /* Frameworks */ = {
-			isa = PBXFrameworksBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
-		466CC64D2E2C883D002F4BB2 /* Frameworks */ = {
-			isa = PBXFrameworksBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
-		466CC6572E2C883D002F4BB2 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -74,8 +41,6 @@
 			isa = PBXGroup;
 			children = (
 				466CC6422E2C883C002F4BB2 /* DesktopRenamer.app */,
-				466CC6502E2C883D002F4BB2 /* DesktopRenamerTests.xctest */,
-				466CC65A2E2C883D002F4BB2 /* DesktopRenamerUITests.xctest */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -105,46 +70,6 @@
 			productReference = 466CC6422E2C883C002F4BB2 /* DesktopRenamer.app */;
 			productType = "com.apple.product-type.application";
 		};
-		466CC64F2E2C883D002F4BB2 /* DesktopRenamerTests */ = {
-			isa = PBXNativeTarget;
-			buildConfigurationList = 466CC6672E2C883D002F4BB2 /* Build configuration list for PBXNativeTarget "DesktopRenamerTests" */;
-			buildPhases = (
-				466CC64C2E2C883D002F4BB2 /* Sources */,
-				466CC64D2E2C883D002F4BB2 /* Frameworks */,
-				466CC64E2E2C883D002F4BB2 /* Resources */,
-			);
-			buildRules = (
-			);
-			dependencies = (
-				466CC6522E2C883D002F4BB2 /* PBXTargetDependency */,
-			);
-			name = DesktopRenamerTests;
-			packageProductDependencies = (
-			);
-			productName = DesktopRenamerTests;
-			productReference = 466CC6502E2C883D002F4BB2 /* DesktopRenamerTests.xctest */;
-			productType = "com.apple.product-type.bundle.unit-test";
-		};
-		466CC6592E2C883D002F4BB2 /* DesktopRenamerUITests */ = {
-			isa = PBXNativeTarget;
-			buildConfigurationList = 466CC66A2E2C883D002F4BB2 /* Build configuration list for PBXNativeTarget "DesktopRenamerUITests" */;
-			buildPhases = (
-				466CC6562E2C883D002F4BB2 /* Sources */,
-				466CC6572E2C883D002F4BB2 /* Frameworks */,
-				466CC6582E2C883D002F4BB2 /* Resources */,
-			);
-			buildRules = (
-			);
-			dependencies = (
-				466CC65C2E2C883D002F4BB2 /* PBXTargetDependency */,
-			);
-			name = DesktopRenamerUITests;
-			packageProductDependencies = (
-			);
-			productName = DesktopRenamerUITests;
-			productReference = 466CC65A2E2C883D002F4BB2 /* DesktopRenamerUITests.xctest */;
-			productType = "com.apple.product-type.bundle.ui-testing";
-		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -157,14 +82,6 @@
 				TargetAttributes = {
 					466CC6412E2C883B002F4BB2 = {
 						CreatedOnToolsVersion = 16.4;
-					};
-					466CC64F2E2C883D002F4BB2 = {
-						CreatedOnToolsVersion = 16.4;
-						TestTargetID = 466CC6412E2C883B002F4BB2;
-					};
-					466CC6592E2C883D002F4BB2 = {
-						CreatedOnToolsVersion = 16.4;
-						TestTargetID = 466CC6412E2C883B002F4BB2;
 					};
 				};
 			};
@@ -184,28 +101,12 @@
 			projectRoot = "";
 			targets = (
 				466CC6412E2C883B002F4BB2 /* DesktopRenamer */,
-				466CC64F2E2C883D002F4BB2 /* DesktopRenamerTests */,
-				466CC6592E2C883D002F4BB2 /* DesktopRenamerUITests */,
 			);
 		};
 /* End PBXProject section */
 
 /* Begin PBXResourcesBuildPhase section */
 		466CC6402E2C883B002F4BB2 /* Resources */ = {
-			isa = PBXResourcesBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
-		466CC64E2E2C883D002F4BB2 /* Resources */ = {
-			isa = PBXResourcesBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
-		466CC6582E2C883D002F4BB2 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -222,34 +123,7 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
-		466CC64C2E2C883D002F4BB2 /* Sources */ = {
-			isa = PBXSourcesBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
-		466CC6562E2C883D002F4BB2 /* Sources */ = {
-			isa = PBXSourcesBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
 /* End PBXSourcesBuildPhase section */
-
-/* Begin PBXTargetDependency section */
-		466CC6522E2C883D002F4BB2 /* PBXTargetDependency */ = {
-			isa = PBXTargetDependency;
-			target = 466CC6412E2C883B002F4BB2 /* DesktopRenamer */;
-			targetProxy = 466CC6512E2C883D002F4BB2 /* PBXContainerItemProxy */;
-		};
-		466CC65C2E2C883D002F4BB2 /* PBXTargetDependency */ = {
-			isa = PBXTargetDependency;
-			target = 466CC6412E2C883B002F4BB2 /* DesktopRenamer */;
-			targetProxy = 466CC65B2E2C883D002F4BB2 /* PBXContainerItemProxy */;
-		};
-/* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
 		466CC6622E2C883D002F4BB2 /* Debug */ = {
@@ -444,74 +318,6 @@
 			};
 			name = Release;
 		};
-		466CC6682E2C883D002F4BB2 /* Debug */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				BUNDLE_LOADER = "$(TEST_HOST)";
-				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
-				DEAD_CODE_STRIPPING = YES;
-				GENERATE_INFOPLIST_FILE = YES;
-				MACOSX_DEPLOYMENT_TARGET = 15.5;
-				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = michaelqiu.DesktopRenamerTests;
-				PRODUCT_NAME = "$(TARGET_NAME)";
-				SWIFT_EMIT_LOC_STRINGS = NO;
-				SWIFT_VERSION = 5.0;
-				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/DesktopRenamer.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/DesktopRenamer";
-			};
-			name = Debug;
-		};
-		466CC6692E2C883D002F4BB2 /* Release */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				BUNDLE_LOADER = "$(TEST_HOST)";
-				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
-				DEAD_CODE_STRIPPING = YES;
-				GENERATE_INFOPLIST_FILE = YES;
-				MACOSX_DEPLOYMENT_TARGET = 15.5;
-				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = michaelqiu.DesktopRenamerTests;
-				PRODUCT_NAME = "$(TARGET_NAME)";
-				SWIFT_EMIT_LOC_STRINGS = NO;
-				SWIFT_VERSION = 5.0;
-				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/DesktopRenamer.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/DesktopRenamer";
-			};
-			name = Release;
-		};
-		466CC66B2E2C883D002F4BB2 /* Debug */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
-				DEAD_CODE_STRIPPING = YES;
-				GENERATE_INFOPLIST_FILE = YES;
-				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = michaelqiu.DesktopRenamerUITests;
-				PRODUCT_NAME = "$(TARGET_NAME)";
-				SWIFT_EMIT_LOC_STRINGS = NO;
-				SWIFT_VERSION = 5.0;
-				TEST_TARGET_NAME = DesktopRenamer;
-			};
-			name = Debug;
-		};
-		466CC66C2E2C883D002F4BB2 /* Release */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
-				DEAD_CODE_STRIPPING = YES;
-				GENERATE_INFOPLIST_FILE = YES;
-				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = michaelqiu.DesktopRenamerUITests;
-				PRODUCT_NAME = "$(TARGET_NAME)";
-				SWIFT_EMIT_LOC_STRINGS = NO;
-				SWIFT_VERSION = 5.0;
-				TEST_TARGET_NAME = DesktopRenamer;
-			};
-			name = Release;
-		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -529,24 +335,6 @@
 			buildConfigurations = (
 				466CC6652E2C883D002F4BB2 /* Debug */,
 				466CC6662E2C883D002F4BB2 /* Release */,
-			);
-			defaultConfigurationIsVisible = 0;
-			defaultConfigurationName = Release;
-		};
-		466CC6672E2C883D002F4BB2 /* Build configuration list for PBXNativeTarget "DesktopRenamerTests" */ = {
-			isa = XCConfigurationList;
-			buildConfigurations = (
-				466CC6682E2C883D002F4BB2 /* Debug */,
-				466CC6692E2C883D002F4BB2 /* Release */,
-			);
-			defaultConfigurationIsVisible = 0;
-			defaultConfigurationName = Release;
-		};
-		466CC66A2E2C883D002F4BB2 /* Build configuration list for PBXNativeTarget "DesktopRenamerUITests" */ = {
-			isa = XCConfigurationList;
-			buildConfigurations = (
-				466CC66B2E2C883D002F4BB2 /* Debug */,
-				466CC66C2E2C883D002F4BB2 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
