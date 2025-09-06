@@ -42,5 +42,5 @@
 
 "about.app_name" = "DesktopRenamer";
 "about.github_link" = "GitHub 仓库";
-"about.description" = "DesktopRenamer 允许您为 macOS 桌面空间自定义名称，以便更轻松地识别和组织您的工作区。";
+"about.description" = "DesktopRenamer 允许您为 macOS 桌面自定义名称，以便更轻松地识别和组织您的工作空间。";
 "about.copyright" = "© %d Michael Yicheng Qiu";
