@@ -140,14 +140,14 @@ class GeneralSettingsViewController: NSViewController {
         view.addSubview(launchAtLoginButton)
 
         // Show labels checkbox
-        showLabelsButton = NSButton(
-            checkboxWithTitle: NSLocalizedString("settings.show_labels", comment: ""),
-            target: self,
-            action: #selector(toggleLabels)
-        )
-        showLabelsButton.frame = NSRect(x: 20, y: 230, width: 200, height: 20)
-        showLabelsButton.state = labelManager.isEnabled ? .on : .off
-        view.addSubview(showLabelsButton)
+//        showLabelsButton = NSButton(
+//            checkboxWithTitle: NSLocalizedString("settings.show_labels", comment: ""),
+//            target: self,
+//            action: #selector(toggleLabels)
+//        )
+//        showLabelsButton.frame = NSRect(x: 20, y: 230, width: 200, height: 20)
+//        showLabelsButton.state = labelManager.isEnabled ? .on : .off
+//        view.addSubview(showLabelsButton)
         
         // Auto Check for Update toggle
         autoCheckUpdateButton = NSButton(
