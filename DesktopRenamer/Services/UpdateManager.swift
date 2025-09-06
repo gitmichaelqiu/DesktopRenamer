@@ -15,7 +15,6 @@ class UpdateManager {
         set { UserDefaults.standard.set(newValue, forKey: autoCheckKey) }
     }
 
-    // Do not show alert if already up to date for auto-check)
     func checkForUpdate(from window: NSWindow?, suppressUpToDateAlert: Bool = false) {
         guard let currentVersion = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String else { return }
         let url = URL(string: latestReleaseURL)!
@@ -24,7 +23,11 @@ class UpdateManager {
                   let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
                   let tag = json["tag_name"] as? String else {
                 if !suppressUpToDateAlert {
-                    self.showAlert("Update Check Failed", "Could not check for updates.", window: window)
+                    self.showAlert(
+                        NSLocalizedString("update.check_failed_title", comment: ""),
+                        NSLocalizedString("update.check_failed_message", comment: ""),
+                        window: window
+                    )
                 }
                 return
             }
@@ -32,10 +35,10 @@ class UpdateManager {
             if self.isNewerVersion(latestVersion, than: currentVersion) {
                 DispatchQueue.main.async {
                     let alert = NSAlert()
-                    alert.messageText = "Update Available"
-                    alert.informativeText = "Version \(latestVersion) is available. Open the releases page to download and install?"
-                    alert.addButton(withTitle: "Update")
-                    alert.addButton(withTitle: "Cancel")
+                    alert.messageText = NSLocalizedString("update.available_title", comment: "")
+                    alert.informativeText = String(format: NSLocalizedString("update.available_message", comment: ""), latestVersion)
+                    alert.addButton(withTitle: NSLocalizedString("update.available_button_update", comment: ""))
+                    alert.addButton(withTitle: NSLocalizedString("update.available_button_cancel", comment: ""))
                     alert.alertStyle = .informational
                     if alert.runModal() == .alertFirstButtonReturn {
                         if let releasesURL = URL(string: "https://github.com/gitmichaelqiu/DesktopRenamer/releases/latest") {
@@ -44,7 +47,11 @@ class UpdateManager {
                     }
                 }
             } else if !suppressUpToDateAlert {
-                self.showAlert("Up To Date", "You are running the latest version (\(currentVersion)).", window: window)
+                self.showAlert(
+                    NSLocalizedString("update.up_to_date_title", comment: ""),
+                    String(format: NSLocalizedString("update.up_to_date_message", comment: ""), currentVersion),
+                    window: window
+                )
             }
         }
         task.resume()
