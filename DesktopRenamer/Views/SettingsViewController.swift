@@ -33,7 +33,7 @@ class AboutViewController: NSViewController {
         // Version
         var versionLabel: NSTextField?
         if let version = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String {
-            let vLabel = NSTextField(labelWithString: "Version \(version)")
+            let vLabel = NSTextField(labelWithString: "v\(version)")
             vLabel.font = .systemFont(ofSize: 13)
             vLabel.textColor = .secondaryLabelColor
             vLabel.alignment = .center
@@ -227,11 +227,11 @@ class GeneralSettingsViewController: NSViewController {
         resetButton.isEnabled = false
         
         let alert = NSAlert()
-        alert.messageText = "Reset Desktop Names"
-        alert.informativeText = "Are you sure you want to reset all desktop names to their defaults?"
+        alert.messageText = NSLocalizedString("settings.reset_alert_message_text", comment: "")
+        alert.informativeText = NSLocalizedString("settings.reset_alert_informative_text", comment: "")
         alert.alertStyle = .warning
-        alert.addButton(withTitle: "Reset")
-        alert.addButton(withTitle: "Cancel")
+        alert.addButton(withTitle: NSLocalizedString("settings.reset_alert_button_reset", comment: ""))
+        alert.addButton(withTitle: NSLocalizedString("settings.reset_alert_button_cancel", comment: ""))
         
         guard let window = view.window else {
             resetButton.isEnabled = true

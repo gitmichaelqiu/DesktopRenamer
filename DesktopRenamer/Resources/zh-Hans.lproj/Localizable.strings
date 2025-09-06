@@ -6,11 +6,11 @@
   
 */
 
-"menu.rename_current_space" = "重命名当前空间";
+"menu.rename_current_space" = "重命名当前桌面";
 "menu.settings" = "设置...";
 "menu.quit" = "退出";
 
-"rename.placeholder" = "输入空间名称";
+"rename.placeholder" = "输入新桌面名称";
 "rename.label" = "重命名桌面 %d";
 
 "settings.reset_button" = "重置所有桌面名称";
@@ -19,6 +19,11 @@
 "settings.launch_at_login" = "登录时启动";
 "settings.show_labels" = "显示桌面标签";
 "settings.auto_check_update" = "自动检查更新";
+
+"settings.reset_alert_message_text" = "重置所有桌面名称";
+"settings.reset_alert_informative_text" = "确定重置所有桌面名称？";
+"settings.reset_alert_button_reset" = "重置";
+"settings.reset_alert_button_cancel" = "取消";
 
 "update.available_title" = "有新版本可用";
 "update.available_message" = "版本 %@ 已发布。是否打开发布页面下载并安装？";
