@@ -1,0 +1,48 @@
+/* 
+  Localizable.strings
+  DesktopRenamer
+
+  Created by Michael Qiu on 2025/9/6.
+  
+*/
+
+"menu.rename_current_space" = "Rename Current Space";
+"menu.show_labels" = "Show Desktop Label Windows";
+"menu.settings" = "Settings...";
+"menu.quit" = "Quit";
+
+"rename.placeholder" = "Enter space name";
+"rename.label" = "Rename Desktop %d";
+
+"settings.reset_button" = "Reset All Desktop Names";
+"settings.check_update_button" = "Check for Update";
+
+"settings.launch_at_login" = "Launch at login";
+"settings.show_labels" = "Show desktop labels";
+"settings.auto_check_update" = "Automatically check for updates";
+
+"settings.reset_alert_message" = "Reset Desktop Names";
+"settings.reset_alert_informative" = "Are you sure you want to reset all desktop names to their defaults?";
+"settings.reset_alert_button_reset" = "Reset";
+"settings.reset_alert_button_cancel" = "Cancel";
+
+"settings.tab.general" = "General";
+"settings.tab.about" = "About";
+
+"update.available_title" = "Update Available";
+"update.available_message" = "Version %@ is available. Open the releases page to download and install?";
+"update.available_button_update" = "Update";
+"update.available_button_cancel" = "Cancel";
+"update.up_to_date_title" = "Up To Date";
+"update.up_to_date_message" = "You are running the latest version (%@).";
+"update.check_failed_title" = "Update Check Failed";
+"update.check_failed_message" = "Could not check for updates.";
+
+"space.default_name" = "Desktop %d";
+
+"window.settings_title" = "DesktopRenamer";
+
+"about.app_name" = "DesktopRenamer";
+"about.github_link" = "GitHub Repository";
+"about.description" = "DesktopRenamer allows you to give custom names to your macOS desktop spaces, making it easier to identify and organize your workspaces.";
+"about.copyright" = "© %d Michael Yicheng Qiu";

@@ -24,7 +24,7 @@ class AboutViewController: NSViewController {
         view.addSubview(iconImageView)
 
         // App name
-        let nameLabel = NSTextField(labelWithString: "DesktopRenamer")
+        let nameLabel = NSTextField(labelWithString: NSLocalizedString("about.app_name", comment: ""))
         nameLabel.font = .systemFont(ofSize: 20, weight: .bold)
         nameLabel.alignment = .center
         nameLabel.translatesAutoresizingMaskIntoConstraints = false
@@ -33,7 +33,7 @@ class AboutViewController: NSViewController {
         // Version
         var versionLabel: NSTextField?
         if let version = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String {
-            let vLabel = NSTextField(labelWithString: "Version \(version)")
+            let vLabel = NSTextField(labelWithString: "v\(version)")
             vLabel.font = .systemFont(ofSize: 13)
             vLabel.textColor = .secondaryLabelColor
             vLabel.alignment = .center
@@ -43,7 +43,7 @@ class AboutViewController: NSViewController {
         }
 
         // GitHub text link
-        let githubLink = NSTextField(labelWithString: "GitHub Repository")
+        let githubLink = NSTextField(labelWithString: NSLocalizedString("about.github_link", comment: ""))
         githubLink.font = .systemFont(ofSize: 13)
         githubLink.textColor = .systemBlue
         githubLink.alignment = .center
@@ -55,14 +55,15 @@ class AboutViewController: NSViewController {
         view.addSubview(githubLink)
         
         // Description
-        let descriptionLabel = NSTextField(wrappingLabelWithString: "DesktopRenamer allows you to give custom names to your macOS desktop spaces, making it easier to identify and organize your workspaces.")
+        let descriptionLabel = NSTextField(wrappingLabelWithString: NSLocalizedString("about.description", comment: ""))
         descriptionLabel.alignment = .center
         descriptionLabel.translatesAutoresizingMaskIntoConstraints = false
         view.addSubview(descriptionLabel)
         
         // Copyright
         let year = Calendar.current.component(.year, from: Date())
-        let copyrightLabel = NSTextField(labelWithString: "© \(year) Michael Yicheng Qiu")
+        let copyrightString = String(format: NSLocalizedString("about.copyright", comment: ""), year)
+        let copyrightLabel = NSTextField(labelWithString: copyrightString)
         copyrightLabel.font = .systemFont(ofSize: 12)
         copyrightLabel.textColor = .secondaryLabelColor
         copyrightLabel.alignment = .center
@@ -129,34 +130,46 @@ class GeneralSettingsViewController: NSViewController {
         let view = NSView(frame: NSRect(x: 0, y: 0, width: 400, height: 300))
 
         // Launch at login checkbox
-        launchAtLoginButton = NSButton(checkboxWithTitle: "Launch at login", target: self, action: #selector(toggleLaunchAtLogin))
+        launchAtLoginButton = NSButton(
+            checkboxWithTitle: NSLocalizedString("settings.launch_at_login", comment: ""),
+            target: self,
+            action: #selector(toggleLaunchAtLogin)
+        )
         launchAtLoginButton.frame = NSRect(x: 20, y: 260, width: 200, height: 20)
         launchAtLoginButton.state = getLaunchAtLoginState()
         view.addSubview(launchAtLoginButton)
 
         // Show labels checkbox
-        showLabelsButton = NSButton(checkboxWithTitle: "Show desktop labels", target: self, action: #selector(toggleLabels))
-        showLabelsButton.frame = NSRect(x: 20, y: 230, width: 200, height: 20)
-        showLabelsButton.state = labelManager.isEnabled ? .on : .off
-        view.addSubview(showLabelsButton)
+//        showLabelsButton = NSButton(
+//            checkboxWithTitle: NSLocalizedString("settings.show_labels", comment: ""),
+//            target: self,
+//            action: #selector(toggleLabels)
+//        )
+//        showLabelsButton.frame = NSRect(x: 20, y: 230, width: 200, height: 20)
+//        showLabelsButton.state = labelManager.isEnabled ? .on : .off
+//        view.addSubview(showLabelsButton)
         
         // Auto Check for Update toggle
-        autoCheckUpdateButton = NSButton(checkboxWithTitle: "Automatically check for updates", target: self, action: #selector(toggleAutoCheckUpdate))
-        autoCheckUpdateButton.frame = NSRect(x: 20, y: 200, width: 250, height: 20)
+        autoCheckUpdateButton = NSButton(
+            checkboxWithTitle: NSLocalizedString("settings.auto_check_update", comment: ""),
+            target: self,
+            action: #selector(toggleAutoCheckUpdate)
+        )
+        autoCheckUpdateButton.frame = NSRect(x: 20, y: 230, width: 250, height: 20)
         autoCheckUpdateButton.state = UpdateManager.isAutoCheckEnabled ? .on : .off
         view.addSubview(autoCheckUpdateButton)
 
         // Reset names button
-        resetButton = NSButton(frame: NSRect(x: 20, y: 155, width: 200, height: 32))
-        resetButton.title = "Reset All Desktop Names"
+        resetButton = NSButton(frame: NSRect(x: 20, y: 185, width: 200, height: 32))
+        resetButton.title = NSLocalizedString("settings.reset_button", comment: "")
         resetButton.bezelStyle = .rounded
         resetButton.target = self
         resetButton.action = #selector(resetNames)
         view.addSubview(resetButton)
 
         // Check for Update button
-        checkUpdateButton = NSButton(frame: NSRect(x: 20, y: 120, width: 200, height: 32))
-        checkUpdateButton.title = "Check for Update"
+        checkUpdateButton = NSButton(frame: NSRect(x: 20, y: 150, width: 200, height: 32))
+        checkUpdateButton.title = NSLocalizedString("settings.check_update_button", comment: "")
         checkUpdateButton.bezelStyle = .rounded
         checkUpdateButton.target = self
         checkUpdateButton.action = #selector(checkForUpdate)
@@ -214,11 +227,11 @@ class GeneralSettingsViewController: NSViewController {
         resetButton.isEnabled = false
         
         let alert = NSAlert()
-        alert.messageText = "Reset Desktop Names"
-        alert.informativeText = "Are you sure you want to reset all desktop names to their defaults?"
+        alert.messageText = NSLocalizedString("settings.reset_alert_message", comment: "")
+        alert.informativeText = NSLocalizedString("settings.reset_alert_informative", comment: "")
         alert.alertStyle = .warning
-        alert.addButton(withTitle: "Reset")
-        alert.addButton(withTitle: "Cancel")
+        alert.addButton(withTitle: NSLocalizedString("settings.reset_alert_button_reset", comment: ""))
+        alert.addButton(withTitle: NSLocalizedString("settings.reset_alert_button_cancel", comment: ""))
         
         guard let window = view.window else {
             resetButton.isEnabled = true
@@ -253,14 +266,14 @@ class SettingsViewController: NSTabViewController {
         
         // Create tab view items
         let generalTab = NSTabViewItem(viewController: GeneralSettingsViewController(spaceManager: spaceManager, labelManager: labelManager))
-        generalTab.label = "General"
+        generalTab.label = NSLocalizedString("settings.tab.general", comment: "")
         if let image = NSImage(systemSymbolName: "gearshape", accessibilityDescription: "General Settings") {
             image.isTemplate = true
             generalTab.image = image
         }
         
         let aboutTab = NSTabViewItem(viewController: AboutViewController())
-        aboutTab.label = "About"
+        aboutTab.label = NSLocalizedString("settings.tab.about", comment: "")
         if let image = NSImage(systemSymbolName: "info.circle", accessibilityDescription: "About") {
             image.isTemplate = true
             aboutTab.image = image

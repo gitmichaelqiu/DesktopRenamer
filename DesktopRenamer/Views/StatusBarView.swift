@@ -24,12 +24,13 @@ class RenameViewController: NSViewController {
         // Create and configure the text field
         textField = NSTextField(frame: NSRect(x: 20, y: 40, width: 200, height: 24))
         textField.stringValue = spaceManager.getSpaceName(spaceManager.currentSpaceUUID)
-        textField.placeholderString = "Enter space name"
+        textField.placeholderString = NSLocalizedString("rename.placeholder", comment: "")
         textField.delegate = self
         view.addSubview(textField)
         
         // Create the label
-        let label = NSTextField(labelWithString: "Rename Desktop \(spaceManager.getSpaceNum(spaceManager.currentSpaceUUID))")
+        let labelString = String(format: NSLocalizedString("rename.label", comment: ""), spaceManager.getSpaceNum(spaceManager.currentSpaceUUID))
+        let label = NSTextField(labelWithString: labelString)
         label.frame = NSRect(x: 20, y: 15, width: 200, height: 17)
         label.textColor = .secondaryLabelColor
         view.addSubview(label)
@@ -74,6 +75,8 @@ class StatusBarController: NSObject {
     private let labelManager: SpaceLabelManager
     private var cancellables = Set<AnyCancellable>()
     private var settingsWindowController: NSWindowController?
+    private var renameItem: NSMenuItem!
+    private var showLabelsMenuItem: NSMenuItem!
     
     init(spaceManager: SpaceManager) {
         self.spaceManager = spaceManager
@@ -88,6 +91,8 @@ class StatusBarController: NSObject {
         setupMenuBar()
         updateStatusBarTitle()
         setupObservers()
+        
+        updateRenameMenuItemState()
     }
     
     deinit {
@@ -105,6 +110,8 @@ class StatusBarController: NSObject {
                 if let name = self?.spaceManager.getSpaceName(spaceId) {
                     self?.labelManager.updateLabel(for: spaceId, name: name)
                 }
+                
+                self?.updateRenameMenuItemState()
             }
             .store(in: &cancellables)
     }
@@ -128,28 +135,70 @@ class StatusBarController: NSObject {
         let menu = NSMenu()
         
         // Add rename option for current space
-        let renameItem = NSMenuItem(title: "Rename Current Space", action: #selector(renameCurrentSpace), keyEquivalent: "r")
-        renameItem.target = self
-        menu.addItem(renameItem)
+        self.renameItem = NSMenuItem(
+            title: NSLocalizedString("menu.rename_current_space", comment: ""),
+            action: nil, // Temporarily
+            keyEquivalent: "r"
+        )
         
+        menu.addItem(self.renameItem)
+        
+        // Add show labels option
+        self.showLabelsMenuItem = NSMenuItem(
+            title: NSLocalizedString("menu.show_labels", comment: "Toggle desktop labels visibility"),
+            action: #selector(toggleLabelsFromMenu),
+            keyEquivalent: "l"
+        )
+        self.showLabelsMenuItem.target = self
+        self.showLabelsMenuItem.state = labelManager.isEnabled ? .on : .off
+        menu.addItem(self.showLabelsMenuItem)
+        
+        // Add a separator
         menu.addItem(NSMenuItem.separator())
         
         // Add settings option
-        let settingsItem = NSMenuItem(title: "Settings...", action: #selector(showSettings), keyEquivalent: ",")
+        let settingsItem = NSMenuItem(
+            title: NSLocalizedString("menu.settings", comment: ""),
+            action: #selector(showSettings),
+            keyEquivalent: ","
+        )
         settingsItem.target = self
         menu.addItem(settingsItem)
         
         menu.addItem(NSMenuItem.separator())
         
         // Add quit option
-        let quitItem = NSMenuItem(title: "Quit", action: #selector(quitApp), keyEquivalent: "q")
+        let quitItem = NSMenuItem(
+            title: NSLocalizedString("menu.quit", comment: ""),
+            action: #selector(quitApp),
+            keyEquivalent: "q"
+        )
         quitItem.target = self
         menu.addItem(quitItem)
         
         statusItem.menu = menu
     }
     
+    private func updateRenameMenuItemState() {
+        let currentSpaceNum = spaceManager.getSpaceNum(spaceManager.currentSpaceUUID)
+        
+        if currentSpaceNum == 0 {
+            // Fullscreen
+            self.renameItem?.isEnabled = false
+            self.renameItem?.target = nil
+            self.renameItem?.action = nil
+        } else {
+            self.renameItem?.isEnabled = true
+            self.renameItem?.target = self
+            self.renameItem?.action = #selector(renameCurrentSpace)
+        }
+    }
+    
     @objc private func renameCurrentSpace() {
+        if spaceManager.getSpaceNum(spaceManager.currentSpaceUUID) == 0 {
+            return // Fullscreen
+        }
+        
         guard let button = statusItem.button else { return }
         
         // Close the menu
@@ -164,6 +213,12 @@ class StatusBarController: NSObject {
         
         // Show the popover
         popover.show(relativeTo: button.bounds, of: button, preferredEdge: .minY)
+    }
+    
+    @objc private func toggleLabelsFromMenu() {
+        labelManager.toggleEnabled()
+        
+        self.showLabelsMenuItem.state = labelManager.isEnabled ? .on : .off
     }
     
     @objc private func showSettings() {
@@ -183,7 +238,7 @@ class StatusBarController: NSObject {
             backing: .buffered,
             defer: false
         )
-        window.title = "DesktopRenamer"
+        window.title = NSLocalizedString("window.settings_title", comment: "")
         window.center()
         
         // Create and set the settings view controller
