@@ -76,6 +76,7 @@ class StatusBarController: NSObject {
     private var cancellables = Set<AnyCancellable>()
     private var settingsWindowController: NSWindowController?
     private var renameItem: NSMenuItem!
+    private var showLabelsMenuItem: NSMenuItem!
     
     init(spaceManager: SpaceManager) {
         self.spaceManager = spaceManager
@@ -142,6 +143,17 @@ class StatusBarController: NSObject {
         
         menu.addItem(self.renameItem)
         
+        // Add show labels option
+        self.showLabelsMenuItem = NSMenuItem(
+            title: NSLocalizedString("menu.show_labels", comment: "Toggle desktop labels visibility"),
+            action: #selector(toggleLabelsFromMenu),
+            keyEquivalent: "l"
+        )
+        self.showLabelsMenuItem.target = self
+        self.showLabelsMenuItem.state = labelManager.isEnabled ? .on : .off
+        menu.addItem(self.showLabelsMenuItem)
+        
+        // Add a separator
         menu.addItem(NSMenuItem.separator())
         
         // Add settings option
@@ -201,6 +213,12 @@ class StatusBarController: NSObject {
         
         // Show the popover
         popover.show(relativeTo: button.bounds, of: button, preferredEdge: .minY)
+    }
+    
+    @objc private func toggleLabelsFromMenu() {
+        labelManager.toggleEnabled()
+        
+        self.showLabelsMenuItem.state = labelManager.isEnabled ? .on : .off
     }
     
     @objc private func showSettings() {

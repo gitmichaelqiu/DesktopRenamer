@@ -140,14 +140,14 @@ class GeneralSettingsViewController: NSViewController {
         view.addSubview(launchAtLoginButton)
 
         // Show labels checkbox
-        showLabelsButton = NSButton(
-            checkboxWithTitle: NSLocalizedString("settings.show_labels", comment: ""),
-            target: self,
-            action: #selector(toggleLabels)
-        )
-        showLabelsButton.frame = NSRect(x: 20, y: 230, width: 200, height: 20)
-        showLabelsButton.state = labelManager.isEnabled ? .on : .off
-        view.addSubview(showLabelsButton)
+//        showLabelsButton = NSButton(
+//            checkboxWithTitle: NSLocalizedString("settings.show_labels", comment: ""),
+//            target: self,
+//            action: #selector(toggleLabels)
+//        )
+//        showLabelsButton.frame = NSRect(x: 20, y: 230, width: 200, height: 20)
+//        showLabelsButton.state = labelManager.isEnabled ? .on : .off
+//        view.addSubview(showLabelsButton)
         
         // Auto Check for Update toggle
         autoCheckUpdateButton = NSButton(
@@ -155,12 +155,12 @@ class GeneralSettingsViewController: NSViewController {
             target: self,
             action: #selector(toggleAutoCheckUpdate)
         )
-        autoCheckUpdateButton.frame = NSRect(x: 20, y: 200, width: 250, height: 20)
+        autoCheckUpdateButton.frame = NSRect(x: 20, y: 230, width: 250, height: 20)
         autoCheckUpdateButton.state = UpdateManager.isAutoCheckEnabled ? .on : .off
         view.addSubview(autoCheckUpdateButton)
 
         // Reset names button
-        resetButton = NSButton(frame: NSRect(x: 20, y: 155, width: 200, height: 32))
+        resetButton = NSButton(frame: NSRect(x: 20, y: 185, width: 200, height: 32))
         resetButton.title = NSLocalizedString("settings.reset_button", comment: "")
         resetButton.bezelStyle = .rounded
         resetButton.target = self
@@ -168,7 +168,7 @@ class GeneralSettingsViewController: NSViewController {
         view.addSubview(resetButton)
 
         // Check for Update button
-        checkUpdateButton = NSButton(frame: NSRect(x: 20, y: 120, width: 200, height: 32))
+        checkUpdateButton = NSButton(frame: NSRect(x: 20, y: 150, width: 200, height: 32))
         checkUpdateButton.title = NSLocalizedString("settings.check_update_button", comment: "")
         checkUpdateButton.bezelStyle = .rounded
         checkUpdateButton.target = self
