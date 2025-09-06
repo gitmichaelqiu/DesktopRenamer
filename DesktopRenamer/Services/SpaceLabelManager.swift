@@ -35,11 +35,19 @@ class SpaceLabelManager: ObservableObject {
     }
     
     func updateLabel(for spaceId: String, name: String) {
-        DispatchQueue.main.async {
-            if self.isEnabled {
-                if self.isEnabled, spaceId != "FULLSCREEN", self.createdWindows[spaceId] == nil {
-                    // Create new window for this space
-                    self.createWindow(for: spaceId, name: name)
+        guard isEnabled, spaceId != "FULLSCREEN" else { return }
+        if createdWindows[spaceId] != nil { return }
+        
+        // Double check before creating
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.02) {
+            // Get UUID again
+            SpaceHelper.getSpaceUUID { confirmedSpaceId in
+                // Create window only if two are identical
+                if confirmedSpaceId == spaceId {
+                    // Make sure not creating a duplicated window
+                    if self.createdWindows[spaceId] == nil {
+                        self.createWindow(for: spaceId, name: name)
+                    }
                 }
             }
         }
