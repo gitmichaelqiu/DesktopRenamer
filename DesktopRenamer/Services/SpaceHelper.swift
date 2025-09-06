@@ -25,44 +25,49 @@ class SpaceHelper {
         NSWorkspace.shared.notificationCenter.removeObserver(self)
     }
     
-    static func getSpaceUUID() -> String {
-        // Get all windows
-        let options = CGWindowListOption(arrayLiteral: .optionOnScreenOnly)
-        let windowList = CGWindowListCopyWindowInfo(options, kCGNullWindowID) as? [[String: Any]] ?? []
-        var uuid = ""
-        var inFullscreen = true
-        
-        // Look for the wallpaper window
-        for window in windowList {
-            if let owner = window[kCGWindowOwnerName as String] as? String,
-               owner == "Dock",
-               let name = window[kCGWindowName as String] as? String,
-               name.starts(with: "Wallpaper-"),
-               let layer = window[kCGWindowLayer as String] as? Int32,
-               layer == -2147483624 { // This is the wallpaper layer
-                
-                // Extract UUID from wallpaper name
-                uuid = String(name.dropFirst("Wallpaper-".count))
+    static func getSpaceUUID(completion: @escaping (String) -> Void) {
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) { // Wait the system to update
+            // Get all windows
+            let options = CGWindowListOption(arrayLiteral: .optionOnScreenOnly)
+            let windowList = CGWindowListCopyWindowInfo(options, kCGNullWindowID) as? [[String: Any]] ?? []
+            var uuid = ""
+            var inFullscreen = true
+            
+            // Look for the wallpaper window
+            for window in windowList {
+                if let owner = window[kCGWindowOwnerName as String] as? String,
+                   owner == "Dock",
+                   let name = window[kCGWindowName as String] as? String,
+                   name.starts(with: "Wallpaper-"),
+                   let layer = window[kCGWindowLayer as String] as? Int32,
+                   layer == -2147483624 { // This is the wallpaper layer
+                    
+                    // Extract UUID from wallpaper name
+                    uuid = String(name.dropFirst("Wallpaper-".count))
 
-                if uuid == "" {
-                    uuid = "MAIN"
+                    if uuid == "" {
+                        uuid = "MAIN"
+                    }
+                }
+                else if let owner = window[kCGWindowOwnerName as String] as? String,
+                        owner == "Control Center" {
+                    inFullscreen = false
                 }
             }
-            else if let owner = window[kCGWindowOwnerName as String] as? String,
-               owner == "Control Center" {
-                inFullscreen = false
+            
+            if inFullscreen {
+                uuid = "FULLSCREEN"
             }
+            
+            // Return
+            completion(uuid)
         }
-        
-        if inFullscreen {
-            uuid = "FULLSCREEN"
-        }
-        return uuid
     }
     
     private static func detectSpaceChange() {
-        let spaceUUID: String = getSpaceUUID()
-        onSpaceChange?(spaceUUID)
+        getSpaceUUID {
+            spaceUUID in onSpaceChange?(spaceUUID)
+        }
     }
 }
 
