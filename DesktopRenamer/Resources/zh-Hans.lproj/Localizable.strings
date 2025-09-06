@@ -25,6 +25,9 @@
 "settings.reset_alert_button_reset" = "重置";
 "settings.reset_alert_button_cancel" = "取消";
 
+"settings.tab.general" = "通用";
+"settings.tab.about" = "关于";
+
 "update.available_title" = "有新版本可用";
 "update.available_message" = "版本 %@ 已发布。是否打开发布页面下载并安装？";
 "update.available_button_update" = "更新";
@@ -37,8 +40,6 @@
 "space.default_name" = "桌面 %d";
 
 "window.settings_title" = "DesktopRenamer";
-"settings.tab.general" = "通用";
-"settings.tab.about" = "关于";
 
 "about.app_name" = "DesktopRenamer";
 "about.github_link" = "GitHub 仓库";

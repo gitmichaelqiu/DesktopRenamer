@@ -25,6 +25,9 @@
 "settings.reset_alert_button_reset" = "Reset";
 "settings.reset_alert_button_cancel" = "Cancel";
 
+"settings.tab.general" = "General";
+"settings.tab.about" = "About";
+
 "update.available_title" = "Update Available";
 "update.available_message" = "Version %@ is available. Open the releases page to download and install?";
 "update.available_button_update" = "Update";
@@ -38,11 +41,7 @@
 
 "window.settings_title" = "DesktopRenamer";
 
-"settings.tab.general" = "General";
-"settings.tab.about" = "About";
-
 "about.app_name" = "DesktopRenamer";
 "about.github_link" = "GitHub Repository";
 "about.description" = "DesktopRenamer allows you to give custom names to your macOS desktop spaces, making it easier to identify and organize your workspaces.";
-
 "about.copyright" = "© %d Michael Yicheng Qiu";
