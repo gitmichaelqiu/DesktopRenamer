@@ -227,8 +227,8 @@ class GeneralSettingsViewController: NSViewController {
         resetButton.isEnabled = false
         
         let alert = NSAlert()
-        alert.messageText = NSLocalizedString("settings.reset_alert_message_text", comment: "")
-        alert.informativeText = NSLocalizedString("settings.reset_alert_informative_text", comment: "")
+        alert.messageText = NSLocalizedString("settings.reset_alert_message", comment: "")
+        alert.informativeText = NSLocalizedString("settings.reset_alert_informative", comment: "")
         alert.alertStyle = .warning
         alert.addButton(withTitle: NSLocalizedString("settings.reset_alert_button_reset", comment: ""))
         alert.addButton(withTitle: NSLocalizedString("settings.reset_alert_button_cancel", comment: ""))

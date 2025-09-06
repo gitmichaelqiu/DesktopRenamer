@@ -24,8 +24,8 @@ class UpdateManager {
                   let tag = json["tag_name"] as? String else {
                 if !suppressUpToDateAlert {
                     self.showAlert(
-                        NSLocalizedString("update.check_failed_title", comment: "Update Check Failed"),
-                        NSLocalizedString("update.check_failed_message", comment: "Could not check for updates."),
+                        NSLocalizedString("update.check_failed_title", comment: ""),
+                        NSLocalizedString("update.check_failed_message", comment: ""),
                         window: window
                     )
                 }
@@ -35,10 +35,10 @@ class UpdateManager {
             if self.isNewerVersion(latestVersion, than: currentVersion) {
                 DispatchQueue.main.async {
                     let alert = NSAlert()
-                    alert.messageText = NSLocalizedString("update.available_title", comment: "Update Available")
-                    alert.informativeText = String(format: NSLocalizedString("update.available_message", comment: "Version %@ is available. Open the releases page to download and install?"), latestVersion)
-                    alert.addButton(withTitle: "Update")
-                    alert.addButton(withTitle: "Cancel")
+                    alert.messageText = NSLocalizedString("update.available_title", comment: "")
+                    alert.informativeText = String(format: NSLocalizedString("update.available_message", comment: ""), latestVersion)
+                    alert.addButton(withTitle: NSLocalizedString("update.available_button_update", comment: ""))
+                    alert.addButton(withTitle: NSLocalizedString("update.available_button_cancel", comment: ""))
                     alert.alertStyle = .informational
                     if alert.runModal() == .alertFirstButtonReturn {
                         if let releasesURL = URL(string: "https://github.com/gitmichaelqiu/DesktopRenamer/releases/latest") {
@@ -48,8 +48,8 @@ class UpdateManager {
                 }
             } else if !suppressUpToDateAlert {
                 self.showAlert(
-                    NSLocalizedString("update.up_to_date_title", comment: "Up To Date"),
-                    String(format: NSLocalizedString("update.up_to_date_message", comment: "You are running the latest version (%@)."), currentVersion),
+                    NSLocalizedString("update.up_to_date_title", comment: ""),
+                    String(format: NSLocalizedString("update.up_to_date_message", comment: ""), currentVersion),
                     window: window
                 )
             }

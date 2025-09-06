@@ -20,13 +20,15 @@
 "settings.show_labels" = "显示桌面标签";
 "settings.auto_check_update" = "自动检查更新";
 
-"settings.reset_alert_message_text" = "重置所有桌面名称";
-"settings.reset_alert_informative_text" = "确定重置所有桌面名称？";
+"settings.reset_alert_message" = "重置所有桌面名称";
+"settings.reset_alert_informative" = "确定重置所有桌面名称？";
 "settings.reset_alert_button_reset" = "重置";
 "settings.reset_alert_button_cancel" = "取消";
 
 "update.available_title" = "有新版本可用";
 "update.available_message" = "版本 %@ 已发布。是否打开发布页面下载并安装？";
+"update.available_button_update" = "更新";
+"update.available_button_cancel" = "取消";
 "update.up_to_date_title" = "已是最新版";
 "update.up_to_date_message" = "您正在使用最新版本 (%@)。";
 "update.check_failed_title" = "更新检查失败";
