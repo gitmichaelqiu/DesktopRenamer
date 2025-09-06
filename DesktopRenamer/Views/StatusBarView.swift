@@ -24,12 +24,13 @@ class RenameViewController: NSViewController {
         // Create and configure the text field
         textField = NSTextField(frame: NSRect(x: 20, y: 40, width: 200, height: 24))
         textField.stringValue = spaceManager.getSpaceName(spaceManager.currentSpaceUUID)
-        textField.placeholderString = "Enter space name"
+        textField.placeholderString = NSLocalizedString("rename.placeholder", comment: "")
         textField.delegate = self
         view.addSubview(textField)
         
         // Create the label
-        let label = NSTextField(labelWithString: "Rename Desktop \(spaceManager.getSpaceNum(spaceManager.currentSpaceUUID))")
+        let labelString = String(format: NSLocalizedString("rename.label", comment: ""), spaceManager.getSpaceNum(spaceManager.currentSpaceUUID))
+        let label = NSTextField(labelWithString: labelString)
         label.frame = NSRect(x: 20, y: 15, width: 200, height: 17)
         label.textColor = .secondaryLabelColor
         view.addSubview(label)
@@ -128,21 +129,34 @@ class StatusBarController: NSObject {
         let menu = NSMenu()
         
         // Add rename option for current space
-        let renameItem = NSMenuItem(title: "Rename Current Space", action: #selector(renameCurrentSpace), keyEquivalent: "r")
+        let renameItem = NSMenuItem(
+            title: NSLocalizedString("menu.rename_current_space", comment: ""),
+            action: #selector(renameCurrentSpace),
+            keyEquivalent: "r"
+        )
+        
         renameItem.target = self
         menu.addItem(renameItem)
         
         menu.addItem(NSMenuItem.separator())
         
         // Add settings option
-        let settingsItem = NSMenuItem(title: "Settings...", action: #selector(showSettings), keyEquivalent: ",")
+        let settingsItem = NSMenuItem(
+            title: NSLocalizedString("menu.settings", comment: ""),
+            action: #selector(showSettings),
+            keyEquivalent: ","
+        )
         settingsItem.target = self
         menu.addItem(settingsItem)
         
         menu.addItem(NSMenuItem.separator())
         
         // Add quit option
-        let quitItem = NSMenuItem(title: "Quit", action: #selector(quitApp), keyEquivalent: "q")
+        let quitItem = NSMenuItem(
+            title: NSLocalizedString("menu.quit", comment: ""),
+            action: #selector(quitApp),
+            keyEquivalent: "q"
+        )
         quitItem.target = self
         menu.addItem(quitItem)
         
@@ -183,7 +197,7 @@ class StatusBarController: NSObject {
             backing: .buffered,
             defer: false
         )
-        window.title = "DesktopRenamer"
+        window.title = NSLocalizedString("window.settings_title", comment: "")
         window.center()
         
         // Create and set the settings view controller
