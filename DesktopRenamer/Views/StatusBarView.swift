@@ -75,6 +75,7 @@ class StatusBarController: NSObject {
     private let labelManager: SpaceLabelManager
     private var cancellables = Set<AnyCancellable>()
     private var settingsWindowController: NSWindowController?
+    private var renameItem: NSMenuItem!
     
     init(spaceManager: SpaceManager) {
         self.spaceManager = spaceManager
@@ -89,6 +90,8 @@ class StatusBarController: NSObject {
         setupMenuBar()
         updateStatusBarTitle()
         setupObservers()
+        
+        updateRenameMenuItemState()
     }
     
     deinit {
@@ -106,6 +109,8 @@ class StatusBarController: NSObject {
                 if let name = self?.spaceManager.getSpaceName(spaceId) {
                     self?.labelManager.updateLabel(for: spaceId, name: name)
                 }
+                
+                self?.updateRenameMenuItemState()
             }
             .store(in: &cancellables)
     }
@@ -129,14 +134,13 @@ class StatusBarController: NSObject {
         let menu = NSMenu()
         
         // Add rename option for current space
-        let renameItem = NSMenuItem(
+        self.renameItem = NSMenuItem(
             title: NSLocalizedString("menu.rename_current_space", comment: ""),
-            action: #selector(renameCurrentSpace),
+            action: nil, // Temporarily
             keyEquivalent: "r"
         )
         
-        renameItem.target = self
-        menu.addItem(renameItem)
+        menu.addItem(self.renameItem)
         
         menu.addItem(NSMenuItem.separator())
         
@@ -163,7 +167,26 @@ class StatusBarController: NSObject {
         statusItem.menu = menu
     }
     
+    private func updateRenameMenuItemState() {
+        let currentSpaceNum = spaceManager.getSpaceNum(spaceManager.currentSpaceUUID)
+        
+        if currentSpaceNum == 0 {
+            // Fullscreen
+            self.renameItem?.isEnabled = false
+            self.renameItem?.target = nil
+            self.renameItem?.action = nil
+        } else {
+            self.renameItem?.isEnabled = true
+            self.renameItem?.target = self
+            self.renameItem?.action = #selector(renameCurrentSpace)
+        }
+    }
+    
     @objc private func renameCurrentSpace() {
+        if spaceManager.getSpaceNum(spaceManager.currentSpaceUUID) == 0 {
+            return // Fullscreen
+        }
+        
         guard let button = statusItem.button else { return }
         
         // Close the menu

@@ -60,6 +60,10 @@ class SpaceManager: ObservableObject {
     }
     
     private func isValidUUID(_ spaceUUID: String) -> Bool {
+        if spaceUUID == "FULLSCREEN" {
+            return true
+        }
+        
         // Check if the space is removed
         if spaceNameDict.contains(where: { $0.id == spaceUUID }) { // Still exist
             return true
@@ -72,11 +76,19 @@ class SpaceManager: ObservableObject {
     
     func getSpaceNum(_ spaceUUID: String) -> Int {
         guard isValidUUID(spaceUUID) else { return -1 }
+        if spaceUUID == "FULLSCREEN" {
+            return 0
+        }
         return spaceNameDict.first(where: { $0.id == spaceUUID })?.num ?? -1
     }
     
     func getSpaceName(_ spaceUUID: String) -> String {
         guard isValidUUID(spaceUUID) else { return "" }
+        
+        if spaceUUID == "FULLSCREEN" {
+            return "Fullscreen"
+        }
+        
         var ret = spaceNameDict.first(where: {$0.id == spaceUUID})?.customName
         if ret == "" {
             ret = String(format: NSLocalizedString("space.default_name", comment: ""), getSpaceNum(spaceUUID))
