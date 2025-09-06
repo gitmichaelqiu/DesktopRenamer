@@ -109,8 +109,10 @@ class SpaceManager: ObservableObject {
             self.saveSpaces()
             
             // Force refresh current space
-            currentSpaceUUID = SpaceHelper.getSpaceUUID()
-            self.handleSpaceChange(currentSpaceUUID)
+            SpaceHelper.getSpaceUUID { spaceUUID in
+                self.currentSpaceUUID = spaceUUID
+                self.handleSpaceChange(spaceUUID)
+            }
             
             // Notify observers
             self.objectWillChange.send()
