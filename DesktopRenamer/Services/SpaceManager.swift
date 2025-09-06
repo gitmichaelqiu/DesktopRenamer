@@ -79,7 +79,7 @@ class SpaceManager: ObservableObject {
         guard isValidUUID(spaceUUID) else { return "" }
         var ret = spaceNameDict.first(where: {$0.id == spaceUUID})?.customName
         if ret == "" {
-            ret = "Desktop \(getSpaceNum(spaceUUID))"
+            ret = String(format: NSLocalizedString("space.default_name", comment: ""), getSpaceNum(spaceUUID))
         }
         
         return ret ?? ""
