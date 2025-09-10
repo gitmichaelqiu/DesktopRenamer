@@ -1,5 +1,6 @@
 import Cocoa
 import ServiceManagement
+import Combine
 
 class AboutViewController: NSViewController {
     override func loadView() {
@@ -258,6 +259,7 @@ class spaceEditViewController: NSViewController {
     
     private var tableView: NSTableView!
     private var desktopSpaces: [DesktopSpace] = []
+    private var cancellables = Set<AnyCancellable>()
     
     init(spaceManager: SpaceManager, labelManager: SpaceLabelManager) {
         self.spaceManager = spaceManager
@@ -325,6 +327,21 @@ class spaceEditViewController: NSViewController {
     public func refreshData() {
         desktopSpaces = spaceManager.spaceNameDict.sorted { $0.num < $1.num }
         tableView.reloadData()
+    }
+    
+    override func viewDidLoad() {
+        super.viewDidLoad()
+        
+        spaceManager.$spaceNameDict
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] _ in
+                self?.refreshData()
+            }
+            .store(in: &cancellables)
+    }
+    
+    deinit {
+        cancellables.removeAll()
     }
     
     @objc private func moveRowUp(_ sender: NSButton) {
