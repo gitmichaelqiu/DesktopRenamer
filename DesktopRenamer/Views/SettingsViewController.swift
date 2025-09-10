@@ -581,7 +581,7 @@ extension spaceEditViewController: NSTextFieldDelegate {
               let cellView = textField.superview as? NSTableCellView,
               let rowView = cellView.superview as? NSTableRowView,
               let tableView = rowView.superview as? NSTableView,
-              let column = tableView.tableColumns.firstIndex(where: { $0.identifier == NSUserInterfaceItemIdentifier("customName") }) else {
+              let _ = tableView.tableColumns.firstIndex(where: { $0.identifier == NSUserInterfaceItemIdentifier("customName") }) else {
             return
         }
         
