@@ -252,8 +252,19 @@ class GeneralSettingsViewController: NSViewController {
     }
 }
 
-class editSpaceViewController: NSViewController {
+class spaceEditViewController: NSViewController {
+    private let spaceManager: SpaceManager
+    private let labelManager: SpaceLabelManager
     
+    init(spaceManager: SpaceManager, labelManager: SpaceLabelManager) {
+        self.spaceManager = spaceManager
+        self.labelManager = labelManager
+        super.init(nibName: nil, bundle: nil)
+    }
+    
+    required init?(coder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
+    }
 }
 
 class SettingsViewController: NSTabViewController {
