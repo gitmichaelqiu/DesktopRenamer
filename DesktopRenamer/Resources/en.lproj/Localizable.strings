@@ -30,7 +30,7 @@
 "settings.tab.about" = "About";
 "settings.tab.space" = "Spaces";
 
-"settings.space.custom_name" = "Custom Name";
+"settings.space.custom_name" = "Name";
 "settings.space.actions" = "Actions";
 
 "update.available_title" = "Update Available";
