@@ -291,20 +291,24 @@ class spaceEditViewController: NSViewController {
         tableView.autoresizingMask = [.width, .height]
         tableView.dataSource = self
         tableView.delegate = self
+        tableView.allowsColumnReordering = false
         
         let numColumn = NSTableColumn(identifier: NSUserInterfaceItemIdentifier("num"))
-        numColumn.title = NSLocalizedString("settings.space.num", comment: "")
-        numColumn.width = 100
+        numColumn.title = "#"
+        numColumn.width = 20
+        numColumn.resizingMask = []
         tableView.addTableColumn(numColumn)
         
         let nameColumn = NSTableColumn(identifier: NSUserInterfaceItemIdentifier("customName"))
         nameColumn.title = NSLocalizedString("settings.space.custom_name", comment: "")
-        nameColumn.width = 200
+        nameColumn.width = 250
+        nameColumn.resizingMask = []
         tableView.addTableColumn(nameColumn)
         
         let actionColumn = NSTableColumn(identifier: NSUserInterfaceItemIdentifier("actions"))
         actionColumn.title = NSLocalizedString("settings.space.actions", comment: "")
-        actionColumn.width = 180
+        actionColumn.width = 85
+        actionColumn.resizingMask = []
         tableView.addTableColumn(actionColumn)
         
         // Add to scrollView
@@ -447,7 +451,7 @@ extension spaceEditViewController: NSTableViewDelegate {
                 upButton.bezelStyle = .texturedRounded
                 upButton.font = .systemFont(ofSize: 11)
                 upButton.sizeToFit()
-                upButton.tag = row // 用 tag 传递行号
+                upButton.tag = row
                 upButton.translatesAutoresizingMaskIntoConstraints = false
                 
                 let downButton = NSButton(title: "↓", target: self, action: #selector(moveRowDown(_:)))
