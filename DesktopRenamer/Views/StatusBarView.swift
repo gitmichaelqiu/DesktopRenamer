@@ -114,6 +114,19 @@ class StatusBarController: NSObject {
                 self?.updateRenameMenuItemState()
             }
             .store(in: &cancellables)
+        
+        spaceManager.$spaceNameDict
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] _ in
+                // 只有当当前空间的名称改变时才更新
+                if let currentSpaceUUID = self?.spaceManager.currentSpaceUUID,
+                   let newName = self?.spaceManager.getSpaceName(currentSpaceUUID),
+                   let button = self?.statusItem.button,
+                   button.title != newName {
+                    self?.updateStatusBarTitle()
+                }
+            }
+            .store(in: &cancellables)
     }
     
     private func updateStatusBarTitle() {
