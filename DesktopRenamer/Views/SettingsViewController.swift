@@ -252,6 +252,10 @@ class GeneralSettingsViewController: NSViewController {
     }
 }
 
+class editSpaceViewController: NSViewController {
+    
+}
+
 class SettingsViewController: NSTabViewController {
     private let spaceManager: SpaceManager
     private let labelManager: SpaceLabelManager
@@ -272,6 +276,13 @@ class SettingsViewController: NSTabViewController {
             generalTab.image = image
         }
         
+        let spaceTab = NSTabViewItem(viewController: editSpaceViewController())
+        spaceTab.label = NSLocalizedString("settings.tab.space", comment: "")
+        if let image = NSImage(systemSymbolName: "macwindow.stack", accessibilityDescription: "Edit Space") {
+            image.isTemplate = true
+            spaceTab.image = image
+        }
+        
         let aboutTab = NSTabViewItem(viewController: AboutViewController())
         aboutTab.label = NSLocalizedString("settings.tab.about", comment: "")
         if let image = NSImage(systemSymbolName: "info.circle", accessibilityDescription: "About") {
@@ -281,6 +292,7 @@ class SettingsViewController: NSTabViewController {
         
         // Add tabs
         self.addTabViewItem(generalTab)
+        self.addTabViewItem(spaceTab)
         self.addTabViewItem(aboutTab)
     }
     
