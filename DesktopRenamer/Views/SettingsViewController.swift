@@ -302,6 +302,11 @@ class spaceEditViewController: NSViewController {
         nameColumn.width = 200
         tableView.addTableColumn(nameColumn)
         
+        let actionColumn = NSTableColumn(identifier: NSUserInterfaceItemIdentifier("actions"))
+        actionColumn.title = NSLocalizedString("settings.space.actions", comment: "")
+        actionColumn.width = 180
+        tableView.addTableColumn(actionColumn)
+        
         // Add to scrollView
         scrollView.documentView = tableView
         view.addSubview(scrollView)
@@ -317,6 +322,50 @@ class spaceEditViewController: NSViewController {
         desktopSpaces = spaceManager.spaceNameDict.sorted { $0.num < $1.num }
         tableView.reloadData()
     }
+    
+    @objc private func moveRowUp(_ sender: NSButton) {
+        let row = sender.tag
+        guard row > 0 && row < desktopSpaces.count else { return }
+        
+        desktopSpaces.swapAt(row, row - 1)
+        updateNumbersAndSave()
+    }
+
+    @objc private func moveRowDown(_ sender: NSButton) {
+        let row = sender.tag
+        guard row >= 0 && row < desktopSpaces.count - 1 else { return }
+        
+        desktopSpaces.swapAt(row, row + 1)
+        updateNumbersAndSave()
+    }
+
+    @objc private func deleteRow(_ sender: NSButton) {
+        let row = sender.tag
+        guard row >= 0 && row < desktopSpaces.count else { return }
+        
+        let space = desktopSpaces[row]
+        
+        // Check again
+        if space.id == spaceManager.currentSpaceUUID {
+            return
+        }
+        
+        desktopSpaces.remove(at: row)
+        updateNumbersAndSave()
+    }
+
+    private func updateNumbersAndSave() {
+        // Reindex
+        for (index, _) in desktopSpaces.enumerated() {
+            desktopSpaces[index].num = index + 1
+        }
+        
+        // Sync back to spaceManager
+        spaceManager.spaceNameDict = desktopSpaces
+        spaceManager.saveSpaces()
+        
+        tableView.reloadData()
+    }
 }
 
 extension spaceEditViewController: NSTableViewDataSource {
@@ -329,44 +378,138 @@ extension spaceEditViewController: NSTableViewDelegate {
     func tableView(_ tableView: NSTableView, viewFor tableColumn: NSTableColumn?, row: Int) -> NSView? {
         let space = desktopSpaces[row]
         
-        let identifier: NSUserInterfaceItemIdentifier
-        let text: String
-
+        // 处理编号和名称列（不变）
         if tableColumn?.identifier == NSUserInterfaceItemIdentifier("customName") {
-            identifier = NSUserInterfaceItemIdentifier("customName")
-            text = space.customName
-        } else if tableColumn?.identifier == NSUserInterfaceItemIdentifier("num") {
-            identifier = NSUserInterfaceItemIdentifier("num")
-            text = String(space.num)
-        } else {
-            return nil
-        }
-        
-        // Create table
-        var cellView = tableView.makeView(withIdentifier: identifier, owner: self) as? NSTableCellView
-        if cellView == nil {
-            cellView = NSTableCellView()
-            cellView?.identifier = identifier
-            let textField = NSTextField()
-            textField.isBezeled = false
-            textField.drawsBackground = false
-            textField.isEditable = false
-            textField.isSelectable = false
-            cellView?.addSubview(textField)
-            cellView?.textField = textField
+            let identifier = NSUserInterfaceItemIdentifier("customName")
+            let text = space.customName
             
-            // Auto resizing
-            textField.translatesAutoresizingMaskIntoConstraints = false
-            NSLayoutConstraint.activate([
-                textField.leadingAnchor.constraint(equalTo: (cellView?.leadingAnchor)!),
-                textField.trailingAnchor.constraint(equalTo: (cellView?.trailingAnchor)!),
-                textField.topAnchor.constraint(equalTo: (cellView?.topAnchor)!),
-                textField.bottomAnchor.constraint(equalTo: (cellView?.bottomAnchor)!)
-            ])
+            var cellView = tableView.makeView(withIdentifier: identifier, owner: self) as? NSTableCellView
+            if cellView == nil {
+                cellView = NSTableCellView()
+                cellView?.identifier = identifier
+                let textField = NSTextField()
+                textField.isBezeled = false
+                textField.drawsBackground = false
+                textField.isEditable = false
+                textField.isSelectable = false
+                cellView?.addSubview(textField)
+                cellView?.textField = textField
+                
+                textField.translatesAutoresizingMaskIntoConstraints = false
+                NSLayoutConstraint.activate([
+                    textField.leadingAnchor.constraint(equalTo: cellView!.leadingAnchor),
+                    textField.trailingAnchor.constraint(equalTo: cellView!.trailingAnchor),
+                    textField.topAnchor.constraint(equalTo: cellView!.topAnchor),
+                    textField.bottomAnchor.constraint(equalTo: cellView!.bottomAnchor)
+                ])
+            }
+            
+            cellView?.textField?.stringValue = text
+            return cellView
+        } else if tableColumn?.identifier == NSUserInterfaceItemIdentifier("num") {
+            let identifier = NSUserInterfaceItemIdentifier("num")
+            let text = String(space.num)
+            
+            var cellView = tableView.makeView(withIdentifier: identifier, owner: self) as? NSTableCellView
+            if cellView == nil {
+                cellView = NSTableCellView()
+                cellView?.identifier = identifier
+                let textField = NSTextField()
+                textField.isBezeled = false
+                textField.drawsBackground = false
+                textField.isEditable = false
+                textField.isSelectable = false
+                cellView?.addSubview(textField)
+                cellView?.textField = textField
+                
+                textField.translatesAutoresizingMaskIntoConstraints = false
+                NSLayoutConstraint.activate([
+                    textField.leadingAnchor.constraint(equalTo: cellView!.leadingAnchor),
+                    textField.trailingAnchor.constraint(equalTo: cellView!.trailingAnchor),
+                    textField.topAnchor.constraint(equalTo: cellView!.topAnchor),
+                    textField.bottomAnchor.constraint(equalTo: cellView!.bottomAnchor)
+                ])
+            }
+            
+            cellView?.textField?.stringValue = text
+            return cellView
+        } else if tableColumn?.identifier == NSUserInterfaceItemIdentifier("actions") {
+            let identifier = NSUserInterfaceItemIdentifier("actions")
+            
+            // Reuse view
+            var actionView = tableView.makeView(withIdentifier: identifier, owner: self)
+            if actionView == nil {
+                actionView = NSView()
+                actionView?.identifier = identifier
+                
+                // Control buttons
+                let upButton = NSButton(title: "↑", target: self, action: #selector(moveRowUp(_:)))
+                upButton.bezelStyle = .texturedRounded
+                upButton.font = .systemFont(ofSize: 11)
+                upButton.sizeToFit()
+                upButton.tag = row // 用 tag 传递行号
+                upButton.translatesAutoresizingMaskIntoConstraints = false
+                
+                let downButton = NSButton(title: "↓", target: self, action: #selector(moveRowDown(_:)))
+                downButton.bezelStyle = .texturedRounded
+                downButton.font = .systemFont(ofSize: 11)
+                downButton.sizeToFit()
+                downButton.tag = row
+                downButton.translatesAutoresizingMaskIntoConstraints = false
+                
+                let deleteButton = NSButton(title: "⌫", target: self, action: #selector(deleteRow(_:)))
+                deleteButton.bezelStyle = .texturedRounded
+                deleteButton.font = .systemFont(ofSize: 11)
+                deleteButton.sizeToFit()
+                deleteButton.tag = row
+                deleteButton.translatesAutoresizingMaskIntoConstraints = false
+                
+                // Add subview
+                actionView?.addSubview(upButton)
+                actionView?.addSubview(downButton)
+                actionView?.addSubview(deleteButton)
+                
+                // Set view restrains
+                let buttons = [upButton, downButton, deleteButton]
+                for (index, button) in buttons.enumerated() {
+                    if index > 0 {
+                        button.leadingAnchor.constraint(equalTo: buttons[index-1].trailingAnchor, constant: 4).isActive = true
+                    } else {
+                        button.leadingAnchor.constraint(equalTo: actionView!.leadingAnchor, constant: 4).isActive = true
+                    }
+                    button.centerYAnchor.constraint(equalTo: actionView!.centerYAnchor).isActive = true
+                }
+                deleteButton.trailingAnchor.constraint(equalTo: actionView!.trailingAnchor, constant: -4).isActive = true
+            }
+            
+            // Get buttons
+            let buttons = actionView!.subviews.compactMap { $0 as? NSButton }
+            let upButton = buttons.first { $0.action == #selector(moveRowUp(_:)) }
+            let downButton = buttons.first { $0.action == #selector(moveRowDown(_:)) }
+            let deleteButton = buttons.first { $0.action == #selector(deleteRow(_:)) }
+            
+            // Set tags
+            upButton?.tag = row
+            downButton?.tag = row
+            deleteButton?.tag = row
+            
+            // Ban moves
+            upButton?.isEnabled = row > 0
+            downButton?.isEnabled = row < desktopSpaces.count - 1
+            
+            // Ban delete
+            let isCurrentSpace = space.id == spaceManager.currentSpaceUUID
+            deleteButton?.isEnabled = !isCurrentSpace
+            if isCurrentSpace {
+                deleteButton?.toolTip = NSLocalizedString("settings.space.cannot_delete_current", comment: "Cannot delete current space")
+            } else {
+                deleteButton?.toolTip = nil
+            }
+            
+            return actionView
         }
         
-        cellView?.textField?.stringValue = text
-        return cellView
+        return nil
     }
 }
 
