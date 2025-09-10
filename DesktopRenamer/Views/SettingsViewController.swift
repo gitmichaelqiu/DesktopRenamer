@@ -339,6 +339,13 @@ class spaceEditViewController: NSViewController {
                 self?.refreshData()
             }
             .store(in: &cancellables)
+        
+        spaceManager.$currentSpaceUUID
+             .receive(on: DispatchQueue.main)
+             .sink { [weak self] _ in
+                 self?.refreshData()
+             }
+             .store(in: &cancellables)
     }
     
     deinit {
