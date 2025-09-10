@@ -463,8 +463,7 @@ extension spaceEditViewController: NSTableViewDelegate {
                 NSLayoutConstraint.activate([
                     textField.leadingAnchor.constraint(equalTo: cellView!.leadingAnchor),
                     textField.trailingAnchor.constraint(equalTo: cellView!.trailingAnchor),
-                    textField.topAnchor.constraint(equalTo: cellView!.topAnchor),
-                    textField.bottomAnchor.constraint(equalTo: cellView!.bottomAnchor)
+                    textField.centerYAnchor.constraint(equalTo: cellView!.centerYAnchor)
                 ])
             }
             
