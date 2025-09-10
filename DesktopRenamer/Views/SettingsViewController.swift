@@ -467,7 +467,7 @@ extension spaceEditViewController: NSTableViewDelegate {
                 ])
             }
             
-            cellView?.textField?.stringValue = text
+            cellView?.textField?.stringValue = spaceManager.currentSpaceUUID == space.id ? "[\(text)]" : text
             return cellView
         } else if tableColumn?.identifier == NSUserInterfaceItemIdentifier("actions") {
             let identifier = NSUserInterfaceItemIdentifier("actions")
