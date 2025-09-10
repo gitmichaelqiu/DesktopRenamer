@@ -256,6 +256,9 @@ class spaceEditViewController: NSViewController {
     private let spaceManager: SpaceManager
     private let labelManager: SpaceLabelManager
     
+    private var tableView: NSTableView!
+    private var desktopSpaces: [DesktopSpace] = []
+    
     init(spaceManager: SpaceManager, labelManager: SpaceLabelManager) {
         self.spaceManager = spaceManager
         self.labelManager = labelManager
@@ -264,6 +267,106 @@ class spaceEditViewController: NSViewController {
     
     required init?(coder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
+    }
+    
+    override func loadView() {
+        // Create root view
+        let view = NSView(frame: NSRect(x: 0, y: 0, width: 600, height: 400))
+        self.view = view
+        
+        setupTableView()
+        loadData()
+    }
+    
+    private func setupTableView() {
+        // Scroll view
+        let scrollView = NSScrollView(frame: view.bounds)
+        scrollView.autoresizingMask = [.width, .height]
+        scrollView.hasVerticalScroller = true
+        scrollView.hasHorizontalScroller = false
+        scrollView.borderType = .bezelBorder
+        
+        // Create table
+        tableView = NSTableView(frame: scrollView.bounds)
+        tableView.autoresizingMask = [.width, .height]
+        tableView.dataSource = self
+        tableView.delegate = self
+        
+        let numColumn = NSTableColumn(identifier: NSUserInterfaceItemIdentifier("num"))
+        numColumn.title = NSLocalizedString("settings.space.num", comment: "")
+        numColumn.width = 100
+        tableView.addTableColumn(numColumn)
+        
+        let nameColumn = NSTableColumn(identifier: NSUserInterfaceItemIdentifier("customName"))
+        nameColumn.title = NSLocalizedString("settings.space.custom_name", comment: "")
+        nameColumn.width = 200
+        tableView.addTableColumn(nameColumn)
+        
+        // Add to scrollView
+        scrollView.documentView = tableView
+        view.addSubview(scrollView)
+    }
+    
+    private func loadData() {
+        desktopSpaces = spaceManager.spaceNameDict.sorted { $0.num < $1.num }
+        
+        tableView.reloadData()
+    }
+    
+    public func refreshData() {
+        desktopSpaces = spaceManager.spaceNameDict.sorted { $0.num < $1.num }
+        tableView.reloadData()
+    }
+}
+
+extension spaceEditViewController: NSTableViewDataSource {
+    func numberOfRows(in tableView: NSTableView) -> Int {
+        return desktopSpaces.count
+    }
+}
+
+extension spaceEditViewController: NSTableViewDelegate {
+    func tableView(_ tableView: NSTableView, viewFor tableColumn: NSTableColumn?, row: Int) -> NSView? {
+        let space = desktopSpaces[row]
+        
+        let identifier: NSUserInterfaceItemIdentifier
+        let text: String
+
+        if tableColumn?.identifier == NSUserInterfaceItemIdentifier("customName") {
+            identifier = NSUserInterfaceItemIdentifier("customName")
+            text = space.customName
+        } else if tableColumn?.identifier == NSUserInterfaceItemIdentifier("num") {
+            identifier = NSUserInterfaceItemIdentifier("num")
+            text = String(space.num)
+        } else {
+            return nil
+        }
+        
+        // Create table
+        var cellView = tableView.makeView(withIdentifier: identifier, owner: self) as? NSTableCellView
+        if cellView == nil {
+            cellView = NSTableCellView()
+            cellView?.identifier = identifier
+            let textField = NSTextField()
+            textField.isBezeled = false
+            textField.drawsBackground = false
+            textField.isEditable = false
+            textField.isSelectable = false
+            cellView?.addSubview(textField)
+            cellView?.textField = textField
+            
+            // Auto resizing
+            textField.translatesAutoresizingMaskIntoConstraints = false
+            NSLayoutConstraint.activate([
+                textField.leadingAnchor.constraint(equalTo: (cellView?.leadingAnchor)!),
+                textField.trailingAnchor.constraint(equalTo: (cellView?.trailingAnchor)!),
+                textField.topAnchor.constraint(equalTo: (cellView?.topAnchor)!),
+                textField.bottomAnchor.constraint(equalTo: (cellView?.bottomAnchor)!)
+            ])
+        }
+        
+        cellView?.textField?.stringValue = text
+        return cellView
     }
 }
 
@@ -287,7 +390,7 @@ class SettingsViewController: NSTabViewController {
             generalTab.image = image
         }
         
-        let spaceTab = NSTabViewItem(viewController: editSpaceViewController())
+        let spaceTab = NSTabViewItem(viewController: spaceEditViewController(spaceManager: spaceManager, labelManager: labelManager))
         spaceTab.label = NSLocalizedString("settings.tab.space", comment: "")
         if let image = NSImage(systemSymbolName: "macwindow.stack", accessibilityDescription: "Edit Space") {
             image.isTemplate = true

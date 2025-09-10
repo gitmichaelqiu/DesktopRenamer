@@ -30,6 +30,9 @@
 "settings.tab.about" = "About";
 "settings.tab.space" = "Spaces";
 
+"settings.space.custom_name" = "Custom Name";
+"settings.space.num" = "Number";
+
 "update.available_title" = "Update Available";
 "update.available_message" = "Version %@ is available. Open the releases page to download and install?";
 "update.available_button_update" = "Update";
