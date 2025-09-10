@@ -403,17 +403,20 @@ extension spaceEditViewController: NSTableViewDelegate {
         // Handle num and name
         if tableColumn?.identifier == NSUserInterfaceItemIdentifier("customName") {
             let identifier = NSUserInterfaceItemIdentifier("customName")
-            let text = space.customName.isEmpty ? String(format: NSLocalizedString("space.default_name", comment: ""), space.num) : space.customName
+            
+            let displayText = space.customName.isEmpty ? String(format: NSLocalizedString("space.default_name", comment: "Desktop %d"), space.num) : space.customName
+            let text = displayText
             
             var cellView = tableView.makeView(withIdentifier: identifier, owner: self) as? NSTableCellView
             if cellView == nil {
                 cellView = NSTableCellView()
                 cellView?.identifier = identifier
+                
                 let textField = NSTextField()
                 textField.isBezeled = false
                 textField.drawsBackground = false
-                textField.isEditable = false
-                textField.isSelectable = false
+                textField.isEditable = true
+                textField.isSelectable = true
                 cellView?.addSubview(textField)
                 cellView?.textField = textField
                 
@@ -426,7 +429,7 @@ extension spaceEditViewController: NSTableViewDelegate {
                 ])
             }
             
-            cellView?.textField?.stringValue = text
+            cellView?.textField?.stringValue = space.customName
             return cellView
         } else if tableColumn?.identifier == NSUserInterfaceItemIdentifier("num") {
             let identifier = NSUserInterfaceItemIdentifier("num")
@@ -532,6 +535,28 @@ extension spaceEditViewController: NSTableViewDelegate {
         }
         
         return nil
+    }
+    
+    func tableView(_ tableView: NSTableView, shouldEdit tableColumn: NSTableColumn?, row: Int) -> Bool {
+        return tableColumn?.identifier == NSUserInterfaceItemIdentifier("customName")
+    }
+
+    func tableView(_ tableView: NSTableView, setObjectValue object: Any?, for tableColumn: NSTableColumn?, row: Int) {
+        guard let tableColumn = tableColumn,
+              tableColumn.identifier == NSUserInterfaceItemIdentifier("customName"),
+              row >= 0 && row < desktopSpaces.count else { return }
+        
+        let newValue = (object as? String)?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        
+        var space = desktopSpaces[row]
+        space.customName = newValue
+        
+        desktopSpaces[row] = space
+        
+        spaceManager.spaceNameDict = desktopSpaces
+        spaceManager.saveSpaces()
+        
+        tableView.reloadData()
     }
 }
 
