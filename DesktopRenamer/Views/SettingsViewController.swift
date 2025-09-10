@@ -298,13 +298,13 @@ class spaceEditViewController: NSViewController {
         
         let numColumn = NSTableColumn(identifier: NSUserInterfaceItemIdentifier("num"))
         numColumn.title = "#"
-        numColumn.width = 20
+        numColumn.width = 30
         numColumn.resizingMask = []
         tableView.addTableColumn(numColumn)
         
         let nameColumn = NSTableColumn(identifier: NSUserInterfaceItemIdentifier("customName"))
         nameColumn.title = NSLocalizedString("settings.space.custom_name", comment: "")
-        nameColumn.width = 250
+        nameColumn.width = 240
         nameColumn.resizingMask = []
         tableView.addTableColumn(nameColumn)
         
@@ -475,6 +475,7 @@ extension spaceEditViewController: NSTableViewDelegate {
             }
             
             cellView?.textField?.stringValue = spaceManager.currentSpaceUUID == space.id ? "[\(text)]" : text
+            cellView?.textField?.alignment = .center
             return cellView
         } else if tableColumn?.identifier == NSUserInterfaceItemIdentifier("actions") {
             let identifier = NSUserInterfaceItemIdentifier("actions")
