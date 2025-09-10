@@ -14,6 +14,11 @@
 <p align="center">
   <img src="/DesktopRenamer/Resources/Demo_2_SLW.png" width="50%"><br>
   <I><b>SpaceLabelWindow</b> will be shown when entering Mission Control</i>
+</p>
+<p align="center">
+  <img src="/DesktopRenamer/Resources/Demo_3_SpacesSettings.png" width="50%" ><br>
+  <i>Edit spaces in settings</i>
+</p>
 
 
 ## Easy to Install
