@@ -366,6 +366,7 @@ class spaceEditViewController: NSViewController {
         
         // Sync back to spaceManager
         spaceManager.spaceNameDict = desktopSpaces
+        spaceManager.currentTotalSpace = desktopSpaces.count
         spaceManager.saveSpaces()
         
         tableView.reloadData()
@@ -382,7 +383,7 @@ extension spaceEditViewController: NSTableViewDelegate {
     func tableView(_ tableView: NSTableView, viewFor tableColumn: NSTableColumn?, row: Int) -> NSView? {
         let space = desktopSpaces[row]
         
-        // 处理编号和名称列（不变）
+        // Handle num and name
         if tableColumn?.identifier == NSUserInterfaceItemIdentifier("customName") {
             let identifier = NSUserInterfaceItemIdentifier("customName")
             let text = space.customName
