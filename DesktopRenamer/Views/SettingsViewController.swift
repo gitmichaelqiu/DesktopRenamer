@@ -403,7 +403,7 @@ extension spaceEditViewController: NSTableViewDelegate {
         // Handle num and name
         if tableColumn?.identifier == NSUserInterfaceItemIdentifier("customName") {
             let identifier = NSUserInterfaceItemIdentifier("customName")
-            let text = space.customName
+            let text = space.customName.isEmpty ? String(format: NSLocalizedString("space.default_name", comment: ""), space.num) : space.customName
             
             var cellView = tableView.makeView(withIdentifier: identifier, owner: self) as? NSTableCellView
             if cellView == nil {
