@@ -294,6 +294,7 @@ class spaceEditViewController: NSViewController {
         tableView.dataSource = self
         tableView.delegate = self
         tableView.allowsColumnReordering = false
+        tableView.doubleAction = #selector(tableViewDoubleClicked(_:))
         
         let numColumn = NSTableColumn(identifier: NSUserInterfaceItemIdentifier("num"))
         numColumn.title = "#"
@@ -374,6 +375,16 @@ class spaceEditViewController: NSViewController {
         desktopSpaces.remove(at: row)
         updateNumbersAndSave()
     }
+    
+    @objc private func tableViewDoubleClicked(_ sender: NSTableView) {
+        guard sender.clickedColumn >= 0,
+              sender.clickedRow >= 0,
+              sender.tableColumns[sender.clickedColumn].identifier == NSUserInterfaceItemIdentifier("customName") else {
+            return
+        }
+        
+        sender.editColumn(sender.clickedColumn, row: sender.clickedRow, with: nil, select: true)
+    }
 
     private func updateNumbersAndSave() {
         // Reindex
@@ -404,34 +415,35 @@ extension spaceEditViewController: NSTableViewDelegate {
         if tableColumn?.identifier == NSUserInterfaceItemIdentifier("customName") {
             let identifier = NSUserInterfaceItemIdentifier("customName")
             
-            let displayText = space.customName.isEmpty ? String(format: NSLocalizedString("space.default_name", comment: "Desktop %d"), space.num) : space.customName
-            let text = displayText
-            
             var cellView = tableView.makeView(withIdentifier: identifier, owner: self) as? NSTableCellView
             if cellView == nil {
                 cellView = NSTableCellView()
                 cellView?.identifier = identifier
                 
                 let textField = NSTextField()
-                textField.isBezeled = false
-                textField.drawsBackground = false
+                textField.isBezeled = true
+                textField.drawsBackground = true
                 textField.isEditable = true
                 textField.isSelectable = true
-                cellView?.addSubview(textField)
+                textField.backgroundColor = .textBackgroundColor
+                textField.delegate = self
+
                 cellView?.textField = textField
                 
                 textField.translatesAutoresizingMaskIntoConstraints = false
+                cellView?.addSubview(textField)
                 NSLayoutConstraint.activate([
-                    textField.leadingAnchor.constraint(equalTo: cellView!.leadingAnchor),
-                    textField.trailingAnchor.constraint(equalTo: cellView!.trailingAnchor),
-                    textField.topAnchor.constraint(equalTo: cellView!.topAnchor),
-                    textField.bottomAnchor.constraint(equalTo: cellView!.bottomAnchor)
+                    textField.leadingAnchor.constraint(equalTo: cellView!.leadingAnchor, constant: 4),
+                    textField.trailingAnchor.constraint(equalTo: cellView!.trailingAnchor, constant: -4),
+                    textField.topAnchor.constraint(equalTo: cellView!.topAnchor, constant: 2),
+                    textField.bottomAnchor.constraint(equalTo: cellView!.bottomAnchor, constant: -2)
                 ])
             }
             
-            cellView?.textField?.stringValue = space.customName
+            cellView?.textField?.stringValue = space.customName == "" ?  String(format: NSLocalizedString("space.default_name", comment: ""), space.num): space.customName
             return cellView
-        } else if tableColumn?.identifier == NSUserInterfaceItemIdentifier("num") {
+        }
+        else if tableColumn?.identifier == NSUserInterfaceItemIdentifier("num") {
             let identifier = NSUserInterfaceItemIdentifier("num")
             let text = String(space.num)
             
@@ -541,22 +553,49 @@ extension spaceEditViewController: NSTableViewDelegate {
         return tableColumn?.identifier == NSUserInterfaceItemIdentifier("customName")
     }
 
-    func tableView(_ tableView: NSTableView, setObjectValue object: Any?, for tableColumn: NSTableColumn?, row: Int) {
-        guard let tableColumn = tableColumn,
-              tableColumn.identifier == NSUserInterfaceItemIdentifier("customName"),
-              row >= 0 && row < desktopSpaces.count else { return }
+//    func tableView(_ tableView: NSTableView, setObjectValue object: Any?, for tableColumn: NSTableColumn?, row: Int) {
+//        guard let tableColumn = tableColumn,
+//              tableColumn.identifier == NSUserInterfaceItemIdentifier("customName"),
+//              row >= 0 && row < desktopSpaces.count else { return }
+//        
+//        let newValue = (object as? String)?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+//        
+//        var space = desktopSpaces[row]
+//        space.customName = newValue
+//        
+//        desktopSpaces[row] = space
+//        
+//        spaceManager.spaceNameDict = desktopSpaces
+//        spaceManager.saveSpaces()
+//        
+//        print(newValue)
+//        print("Update")
+//        
+//        tableView.reloadData()
+//    }
+}
+
+extension spaceEditViewController: NSTextFieldDelegate {
+    func controlTextDidEndEditing(_ obj: Notification) {
+        guard let textField = obj.object as? NSTextField,
+              let cellView = textField.superview as? NSTableCellView,
+              let rowView = cellView.superview as? NSTableRowView,
+              let tableView = rowView.superview as? NSTableView,
+              let column = tableView.tableColumns.firstIndex(where: { $0.identifier == NSUserInterfaceItemIdentifier("customName") }) else {
+            return
+        }
         
-        let newValue = (object as? String)?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        let row = tableView.row(for: rowView)
+        guard row >= 0 && row < desktopSpaces.count else { return }
+        
+        let newValue = textField.stringValue.trimmingCharacters(in: .whitespacesAndNewlines)
         
         var space = desktopSpaces[row]
         space.customName = newValue
-        
         desktopSpaces[row] = space
         
         spaceManager.spaceNameDict = desktopSpaces
         spaceManager.saveSpaces()
-        
-        tableView.reloadData()
     }
 }
 
