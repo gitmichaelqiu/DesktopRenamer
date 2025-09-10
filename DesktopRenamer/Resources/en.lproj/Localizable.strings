@@ -28,6 +28,10 @@
 
 "settings.tab.general" = "General";
 "settings.tab.about" = "About";
+"settings.tab.space" = "Spaces";
+
+"settings.space.custom_name" = "Name";
+"settings.space.actions" = "Actions";
 
 "update.available_title" = "Update Available";
 "update.available_message" = "Version %@ is available. Open the releases page to download and install?";
