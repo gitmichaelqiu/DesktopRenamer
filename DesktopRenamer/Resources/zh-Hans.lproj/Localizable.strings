@@ -28,6 +28,11 @@
 
 "settings.tab.general" = "通用";
 "settings.tab.about" = "关于";
+"settings.tab.space" = "桌面";
+
+"settings.space.custom_name" = "名称";
+"settings.space.num" = "数字";
+"settings.space.actions" = "操作";
 
 "update.available_title" = "有新版本可用";
 "update.available_message" = "版本 %@ 已发布。是否打开发布页面下载并安装？";

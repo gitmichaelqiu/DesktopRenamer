@@ -52,7 +52,7 @@ class SpaceManager: ObservableObject {
         }
     }
     
-    private func saveSpaces() {
+    public func saveSpaces() {
         if let data = try? JSONEncoder().encode(spaceNameDict) {
             userDefaults.set(data, forKey: spacesKey)
             userDefaults.synchronize()
