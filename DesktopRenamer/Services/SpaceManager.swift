@@ -8,7 +8,7 @@ class SpaceManager: ObservableObject {
     private let userDefaults = UserDefaults.standard
     private let spacesKey = "com.gitmichaelqiu.desktoprenamer.spaces"
     
-    private var currentTotalSpace = 0
+    public var currentTotalSpace = 0
     
     init() {
         loadSavedSpaces()
@@ -52,7 +52,7 @@ class SpaceManager: ObservableObject {
         }
     }
     
-    private func saveSpaces() {
+    public func saveSpaces() {
         if let data = try? JSONEncoder().encode(spaceNameDict) {
             userDefaults.set(data, forKey: spacesKey)
             userDefaults.synchronize()
