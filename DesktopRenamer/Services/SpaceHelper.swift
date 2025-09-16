@@ -36,6 +36,9 @@ class SpaceHelper {
             // Look for the wallpaper window
             for window in windowList {
                 if let owner = window[kCGWindowOwnerName as String] as? String,
+                        owner == "Notification Center" {
+                    inFullscreen = false
+                } else if let owner = window[kCGWindowOwnerName as String] as? String,
                    owner == "Dock",
                    let name = window[kCGWindowName as String] as? String,
                    name.starts(with: "Wallpaper-"),
@@ -49,10 +52,10 @@ class SpaceHelper {
                         uuid = "MAIN"
                     }
                 }
-                else if let owner = window[kCGWindowOwnerName as String] as? String,
-                        owner == "Control Center" {
-                    inFullscreen = false
-                }
+                
+//                if let owner = window[kCGWindowOwnerName as String] as? String {
+//                    print(owner)
+//                }
             }
             
             if inFullscreen {
