@@ -21,7 +21,7 @@
 </p>
 
 
-## Easy to Install
+## Installation
 
 You do **NOT** have to disable *SIP* or things like that. Your macOS must be at least **macOS 13.0 Ventura**. All you need to do is:
 
