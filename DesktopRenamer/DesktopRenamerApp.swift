@@ -14,8 +14,11 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     
     func applicationDidFinishLaunching(_ notification: Notification) {
         // Initialize SpaceManager and StatusBarController
-        spaceManager = SpaceManager()
-        statusBarController = StatusBarController(spaceManager: spaceManager)
+        
+        DispatchQueue.main.asyncAfter(deadline: .now() + 5.0) {
+            self.spaceManager = SpaceManager()
+            self.statusBarController = StatusBarController(spaceManager: self.spaceManager)
+        }
 
         // Automatically check for updates on launch if enabled
         if UpdateManager.isAutoCheckEnabled {
