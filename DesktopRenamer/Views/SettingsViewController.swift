@@ -559,27 +559,6 @@ extension spaceEditViewController: NSTableViewDelegate {
     func tableView(_ tableView: NSTableView, shouldEdit tableColumn: NSTableColumn?, row: Int) -> Bool {
         return tableColumn?.identifier == NSUserInterfaceItemIdentifier("customName")
     }
-
-//    func tableView(_ tableView: NSTableView, setObjectValue object: Any?, for tableColumn: NSTableColumn?, row: Int) {
-//        guard let tableColumn = tableColumn,
-//              tableColumn.identifier == NSUserInterfaceItemIdentifier("customName"),
-//              row >= 0 && row < desktopSpaces.count else { return }
-//        
-//        let newValue = (object as? String)?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
-//        
-//        var space = desktopSpaces[row]
-//        space.customName = newValue
-//        
-//        desktopSpaces[row] = space
-//        
-//        spaceManager.spaceNameDict = desktopSpaces
-//        spaceManager.saveSpaces()
-//        
-//        print(newValue)
-//        print("Update")
-//        
-//        tableView.reloadData()
-//    }
 }
 
 extension spaceEditViewController: NSTextFieldDelegate {
