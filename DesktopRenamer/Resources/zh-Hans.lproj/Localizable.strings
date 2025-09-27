@@ -6,47 +6,47 @@
   
 */
 
-"menu.rename_current_space" = "重命名当前桌面";
-"menu.show_labels" = "显示桌面名称窗口";
-"menu.settings" = "设置...";
-"menu.quit" = "退出";
+"Menu.RenameCurrentSpace" = "重命名当前桌面";
+"Menu.ShowLabels" = "显示桌面名称窗口";
+"Menu.Settings" = "设置...";
+"Menu.Quit" = "退出";
 
-"rename.placeholder" = "输入新桌面名称";
-"rename.label" = "重命名桌面 %d";
+"Rename.Placeholder" = "输入新桌面名称";
+"Rename.Label" = "重命名桌面 %d";
 
-"settings.reset_button" = "重置所有桌面名称";
-"settings.check_update_button" = "检查更新";
+"Settings.ResetButton" = "重置所有桌面名称";
+"Settings.CheckUpdateButton" = "检查更新";
 
-"settings.launch_at_login" = "登录时启动";
-"settings.show_labels" = "显示桌面标签";
-"settings.auto_check_update" = "自动检查更新";
+"Settings.LaunchAtLogin" = "登录时启动";
+"Settings.ShowLabels" = "显示桌面标签";
+"Settings.AutoCheckUpdate" = "自动检查更新";
 
-"settings.reset_alert_message" = "重置所有桌面名称";
-"settings.reset_alert_informative" = "确定重置所有桌面名称？";
-"settings.reset_alert_button_reset" = "重置";
-"settings.reset_alert_button_cancel" = "取消";
+"Settings.ResetAlertMsg" = "重置所有桌面名称";
+"Settings.ResetAlertInfo" = "确定重置所有桌面名称？";
+"Settings.ResetAlertButtonReset" = "重置";
+"Settings.ResetAlertButtonCancel" = "取消";
 
-"settings.tab.general" = "通用";
-"settings.tab.about" = "关于";
-"settings.tab.space" = "桌面";
+"Settings.Tab.General" = "通用";
+"Settings.Tab.About" = "关于";
+"Settings.Tab.Space" = "桌面";
 
-"settings.space.custom_name" = "名称";
-"settings.space.actions" = "操作";
+"Settings.Space.CustomName" = "名称";
+"Settings.Space.Actions" = "操作";
 
-"update.available_title" = "有新版本可用";
-"update.available_message" = "版本 %@ 已发布。是否打开发布页面下载并安装？";
-"update.available_button_update" = "更新";
-"update.available_button_cancel" = "取消";
-"update.up_to_date_title" = "已是最新版";
-"update.up_to_date_message" = "您正在使用最新版本 (%@)。";
-"update.check_failed_title" = "更新检查失败";
-"update.check_failed_message" = "无法检查更新。";
+"Update.AvailableTitle" = "有新版本可用";
+"Update.AvailableMsg" = "版本 %@ 已发布。是否打开发布页面下载并安装？";
+"Update.AvailableButtonUpdate" = "更新";
+"Update.AvailableButtonCancel" = "取消";
+"Update.UpToDateTitle" = "已是最新版";
+"Update.UpToDateMsg" = "您正在使用最新版本 (%@)。";
+"Update.CheckFailedTitle" = "更新检查失败";
+"Update.CheckFailedMsg" = "无法检查更新。";
 
-"space.default_name" = "桌面 %d";
+"Space.DefaultName" = "桌面 %d";
 
-"window.settings_title" = "DesktopRenamer";
+"Window.SettingsTitle" = "DesktopRenamer";
 
-"about.app_name" = "DesktopRenamer";
-"about.github_link" = "GitHub 仓库";
-"about.description" = "DesktopRenamer 允许您为 macOS 桌面自定义名称，以便更轻松地识别和组织您的工作空间。";
-"about.copyright" = "© %d Michael Yicheng Qiu";
+"About.AppName" = "DesktopRenamer";
+"About.GithubLink" = "GitHub 仓库";
+"About.Description" = "DesktopRenamer 允许您为 macOS 桌面自定义名称，以便更轻松地识别和组织您的工作空间。";
+"About.Copyright" = "© %d Michael Yicheng Qiu";

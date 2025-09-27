@@ -1,52 +1,44 @@
-/* 
-  Localizable.strings
-  DesktopRenamer
+"Menu.RenameCurrentSpace" = "Rename Current Space";
+"Menu.ShowLabels" = "Show Desktop Label Windows";
+"Menu.Settings" = "Settings...";
+"Menu.Quit" = "Quit";
 
-  Created by Michael Qiu on 2025/9/6.
-  
-*/
+"Rename.Placeholder" = "Enter space name";
+"Rename.Label" = "Rename Desktop %d";
 
-"menu.rename_current_space" = "Rename Current Space";
-"menu.show_labels" = "Show Desktop Label Windows";
-"menu.settings" = "Settings...";
-"menu.quit" = "Quit";
+"Settings.ResetButton" = "Reset All Desktop Names";
+"Settings.CheckUpdateButton" = "Check for Update";
 
-"rename.placeholder" = "Enter space name";
-"rename.label" = "Rename Desktop %d";
+"Settings.LaunchAtLogin" = "Launch at login";
+"Settings.ShowLabels" = "Show desktop labels";
+"Settings.AutoCheckUpdate" = "Automatically check for updates";
 
-"settings.reset_button" = "Reset All Desktop Names";
-"settings.check_update_button" = "Check for Update";
+"Settings.ResetAlertMsg" = "Reset Desktop Names";
+"Settings.ResetAlertInfo" = "Are you sure you want to reset all desktop names to their defaults?";
+"Settings.ResetAlertButtonReset" = "Reset";
+"Settings.ResetAlertButtonCancel" = "Cancel";
 
-"settings.launch_at_login" = "Launch at login";
-"settings.show_labels" = "Show desktop labels";
-"settings.auto_check_update" = "Automatically check for updates";
+"Settings.Tab.General" = "General";
+"Settings.Tab.About" = "About";
+"Settings.Tab.Space" = "Spaces";
 
-"settings.reset_alert_message" = "Reset Desktop Names";
-"settings.reset_alert_informative" = "Are you sure you want to reset all desktop names to their defaults?";
-"settings.reset_alert_button_reset" = "Reset";
-"settings.reset_alert_button_cancel" = "Cancel";
+"Settings.Space.CustomName" = "Name";
+"Settings.Space.Actions" = "Actions";
 
-"settings.tab.general" = "General";
-"settings.tab.about" = "About";
-"settings.tab.space" = "Spaces";
+"Update.AvailableTitle" = "Update Available";
+"Update.AvailableMsg" = "Version %@ is available. Open the releases page to download and install?";
+"Update.AvailableButtonUpdate" = "Update";
+"Update.AvailableButtonCancel" = "Cancel";
+"Update.UpToDateTitle" = "Up To Date";
+"Update.UpToDateMsg" = "You are running the latest version (%@).";
+"Update.CheckFailedTitle" = "Update Check Failed";
+"Update.CheckFailedMsg" = "Could not check for updates.";
 
-"settings.space.custom_name" = "Name";
-"settings.space.actions" = "Actions";
+"Space.DefaultName" = "Desktop %d";
 
-"update.available_title" = "Update Available";
-"update.available_message" = "Version %@ is available. Open the releases page to download and install?";
-"update.available_button_update" = "Update";
-"update.available_button_cancel" = "Cancel";
-"update.up_to_date_title" = "Up To Date";
-"update.up_to_date_message" = "You are running the latest version (%@).";
-"update.check_failed_title" = "Update Check Failed";
-"update.check_failed_message" = "Could not check for updates.";
+"Window.SettingsTitle" = "DesktopRenamer";
 
-"space.default_name" = "Desktop %d";
-
-"window.settings_title" = "DesktopRenamer";
-
-"about.app_name" = "DesktopRenamer";
-"about.github_link" = "GitHub Repository";
-"about.description" = "DesktopRenamer allows you to give custom names to your macOS desktop spaces, making it easier to identify and organize your workspaces.";
-"about.copyright" = "© %d Michael Yicheng Qiu";
+"About.AppName" = "DesktopRenamer";
+"About.GithubLink" = "GitHub Repository";
+"About.Description" = "DesktopRenamer allows you to give custom names to your macOS desktop spaces, making it easier to identify and organize your workspaces.";
+"About.Copyright" = "© %d Michael Yicheng Qiu";

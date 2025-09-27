@@ -25,7 +25,7 @@ class AboutViewController: NSViewController {
         view.addSubview(iconImageView)
 
         // App name
-        let nameLabel = NSTextField(labelWithString: NSLocalizedString("about.app_name", comment: ""))
+        let nameLabel = NSTextField(labelWithString: NSLocalizedString("About.AppName", comment: ""))
         nameLabel.font = .systemFont(ofSize: 20, weight: .bold)
         nameLabel.alignment = .center
         nameLabel.translatesAutoresizingMaskIntoConstraints = false
@@ -44,7 +44,7 @@ class AboutViewController: NSViewController {
         }
 
         // GitHub text link
-        let githubLink = NSTextField(labelWithString: NSLocalizedString("about.github_link", comment: ""))
+        let githubLink = NSTextField(labelWithString: NSLocalizedString("About.GithubLink", comment: ""))
         githubLink.font = .systemFont(ofSize: 13)
         githubLink.textColor = .systemBlue
         githubLink.alignment = .center
@@ -56,14 +56,14 @@ class AboutViewController: NSViewController {
         view.addSubview(githubLink)
         
         // Description
-        let descriptionLabel = NSTextField(wrappingLabelWithString: NSLocalizedString("about.description", comment: ""))
+        let descriptionLabel = NSTextField(wrappingLabelWithString: NSLocalizedString("About.Description", comment: ""))
         descriptionLabel.alignment = .center
         descriptionLabel.translatesAutoresizingMaskIntoConstraints = false
         view.addSubview(descriptionLabel)
         
         // Copyright
         let year = Calendar.current.component(.year, from: Date())
-        let copyrightString = String(format: NSLocalizedString("about.copyright", comment: ""), year)
+        let copyrightString = String(format: NSLocalizedString("About.Copyright", comment: ""), year)
         let copyrightLabel = NSTextField(labelWithString: copyrightString)
         copyrightLabel.font = .systemFont(ofSize: 12)
         copyrightLabel.textColor = .secondaryLabelColor
@@ -132,7 +132,7 @@ class GeneralSettingsViewController: NSViewController {
 
         // Launch at login checkbox
         launchAtLoginButton = NSButton(
-            checkboxWithTitle: NSLocalizedString("settings.launch_at_login", comment: ""),
+            checkboxWithTitle: NSLocalizedString("Settings.LaunchAtLogin", comment: ""),
             target: self,
             action: #selector(toggleLaunchAtLogin)
         )
@@ -142,7 +142,7 @@ class GeneralSettingsViewController: NSViewController {
 
         // Show labels checkbox
 //        showLabelsButton = NSButton(
-//            checkboxWithTitle: NSLocalizedString("settings.show_labels", comment: ""),
+//            checkboxWithTitle: NSLocalizedString("Settings.ShowLabels", comment: ""),
 //            target: self,
 //            action: #selector(toggleLabels)
 //        )
@@ -152,7 +152,7 @@ class GeneralSettingsViewController: NSViewController {
         
         // Auto Check for Update toggle
         autoCheckUpdateButton = NSButton(
-            checkboxWithTitle: NSLocalizedString("settings.auto_check_update", comment: ""),
+            checkboxWithTitle: NSLocalizedString("Settings.AutoCheckUpdate", comment: ""),
             target: self,
             action: #selector(toggleAutoCheckUpdate)
         )
@@ -162,7 +162,7 @@ class GeneralSettingsViewController: NSViewController {
 
         // Reset names button
         resetButton = NSButton(frame: NSRect(x: 20, y: 185, width: 200, height: 32))
-        resetButton.title = NSLocalizedString("settings.reset_button", comment: "")
+        resetButton.title = NSLocalizedString("Settings.ResetButton", comment: "")
         resetButton.bezelStyle = .rounded
         resetButton.target = self
         resetButton.action = #selector(resetNames)
@@ -170,7 +170,7 @@ class GeneralSettingsViewController: NSViewController {
 
         // Check for Update button
         checkUpdateButton = NSButton(frame: NSRect(x: 20, y: 150, width: 200, height: 32))
-        checkUpdateButton.title = NSLocalizedString("settings.check_update_button", comment: "")
+        checkUpdateButton.title = NSLocalizedString("Settings.CheckUpdateButton", comment: "")
         checkUpdateButton.bezelStyle = .rounded
         checkUpdateButton.target = self
         checkUpdateButton.action = #selector(checkForUpdate)
@@ -228,11 +228,11 @@ class GeneralSettingsViewController: NSViewController {
         resetButton.isEnabled = false
         
         let alert = NSAlert()
-        alert.messageText = NSLocalizedString("settings.reset_alert_message", comment: "")
-        alert.informativeText = NSLocalizedString("settings.reset_alert_informative", comment: "")
+        alert.messageText = NSLocalizedString("Settings.ResetAlertMsg", comment: "")
+        alert.informativeText = NSLocalizedString("Settings.ResetAlertInfo", comment: "")
         alert.alertStyle = .warning
-        alert.addButton(withTitle: NSLocalizedString("settings.reset_alert_button_reset", comment: ""))
-        alert.addButton(withTitle: NSLocalizedString("settings.reset_alert_button_cancel", comment: ""))
+        alert.addButton(withTitle: NSLocalizedString("Settings.ResetAlertButtonReset", comment: ""))
+        alert.addButton(withTitle: NSLocalizedString("Settings.ResetAlertButtonCancel", comment: ""))
         
         guard let window = view.window else {
             resetButton.isEnabled = true
@@ -303,13 +303,13 @@ class spaceEditViewController: NSViewController {
         tableView.addTableColumn(numColumn)
         
         let nameColumn = NSTableColumn(identifier: NSUserInterfaceItemIdentifier("customName"))
-        nameColumn.title = NSLocalizedString("settings.space.custom_name", comment: "")
+        nameColumn.title = NSLocalizedString("Settings.Space.CustomName", comment: "")
         nameColumn.width = 240
         nameColumn.resizingMask = []
         tableView.addTableColumn(nameColumn)
         
         let actionColumn = NSTableColumn(identifier: NSUserInterfaceItemIdentifier("actions"))
-        actionColumn.title = NSLocalizedString("settings.space.actions", comment: "")
+        actionColumn.title = NSLocalizedString("Settings.Space.Actions", comment: "")
         actionColumn.width = 85
         actionColumn.resizingMask = []
         tableView.addTableColumn(actionColumn)
@@ -447,7 +447,7 @@ extension spaceEditViewController: NSTableViewDelegate {
                 ])
             }
             
-            cellView?.textField?.stringValue = space.customName == "" ?  String(format: NSLocalizedString("space.default_name", comment: ""), space.num): space.customName
+            cellView?.textField?.stringValue = space.customName == "" ?  String(format: NSLocalizedString("Space.DefaultName", comment: ""), space.num): space.customName
             return cellView
         }
         else if tableColumn?.identifier == NSUserInterfaceItemIdentifier("num") {
@@ -599,21 +599,21 @@ class SettingsViewController: NSTabViewController {
         
         // Create tab view items
         let generalTab = NSTabViewItem(viewController: GeneralSettingsViewController(spaceManager: spaceManager, labelManager: labelManager))
-        generalTab.label = NSLocalizedString("settings.tab.general", comment: "")
+        generalTab.label = NSLocalizedString("Settings.Tab.General", comment: "")
         if let image = NSImage(systemSymbolName: "gearshape", accessibilityDescription: "General Settings") {
             image.isTemplate = true
             generalTab.image = image
         }
         
         let spaceTab = NSTabViewItem(viewController: spaceEditViewController(spaceManager: spaceManager, labelManager: labelManager))
-        spaceTab.label = NSLocalizedString("settings.tab.space", comment: "")
+        spaceTab.label = NSLocalizedString("Settings.Tab.Space", comment: "")
         if let image = NSImage(systemSymbolName: "macwindow.stack", accessibilityDescription: "Edit Space") {
             image.isTemplate = true
             spaceTab.image = image
         }
         
         let aboutTab = NSTabViewItem(viewController: AboutViewController())
-        aboutTab.label = NSLocalizedString("settings.tab.about", comment: "")
+        aboutTab.label = NSLocalizedString("Settings.Tab.About", comment: "")
         if let image = NSImage(systemSymbolName: "info.circle", accessibilityDescription: "About") {
             image.isTemplate = true
             aboutTab.image = image
