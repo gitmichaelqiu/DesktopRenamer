@@ -9,7 +9,7 @@ class AboutViewController: NSViewController {
         // Add app icon
         let iconImageView = NSImageView()
         iconImageView.translatesAutoresizingMaskIntoConstraints = false
-        if let icon = NSImage(named: "AppIcon") {
+        if let icon = NSApplication.shared.applicationIconImage {
             iconImageView.image = icon
             iconImageView.imageScaling = .scaleProportionallyUpOrDown
             iconImageView.wantsLayer = true
