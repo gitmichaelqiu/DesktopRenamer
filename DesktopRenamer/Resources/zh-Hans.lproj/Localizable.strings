@@ -1,11 +1,3 @@
-/* 
-  Localizable.strings
-  DesktopRenamer
-
-  Created by Michael Qiu on 2025/9/6.
-  
-*/
-
 "Menu.RenameCurrentSpace" = "重命名当前桌面";
 "Menu.ShowLabels" = "显示桌面名称窗口";
 "Menu.Settings" = "设置...";
