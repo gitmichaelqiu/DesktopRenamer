@@ -16,7 +16,7 @@
             {
               "appearance" : "dark",
               "value" : {
-                "solid" : "gray:0.22680,1.00000"
+                "solid" : "gray:0.19941,1.00000"
               }
             }
           ],
@@ -58,7 +58,7 @@
       }
     },
     {
-      "hidden" : false,
+      "hidden" : true,
       "layers" : [
         {
           "blend-mode" : "normal",
