@@ -64,7 +64,7 @@
           "blend-mode" : "normal",
           "fill" : "automatic",
           "glass" : true,
-          "hidden" : true,
+          "hidden" : false,
           "image-name" : "FINAL_MID.png",
           "name" : "FINAL_MID",
           "opacity" : 1,
@@ -84,7 +84,7 @@
             }
           ],
           "glass" : false,
-          "hidden" : true,
+          "hidden" : false,
           "image-name" : "FINAL_L.png",
           "name" : "FINAL_L",
           "position" : {
@@ -97,7 +97,7 @@
         },
         {
           "glass" : false,
-          "hidden" : true,
+          "hidden" : false,
           "image-name" : "FINAL_R.png",
           "name" : "FINAL_R",
           "position" : {
@@ -134,7 +134,7 @@
           }
         },
         {
-          "hidden" : true,
+          "hidden" : false,
           "image-name" : "DesktopRenamerIcon-macOS-Default-1024x1024@1x.png",
           "name" : "DesktopRenamerIcon-macOS-Default-1024x1024@1x",
           "position" : {
