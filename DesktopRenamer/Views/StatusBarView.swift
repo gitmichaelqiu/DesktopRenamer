@@ -24,12 +24,12 @@ class RenameViewController: NSViewController {
         // Create and configure the text field
         textField = NSTextField(frame: NSRect(x: 20, y: 40, width: 200, height: 24))
         textField.stringValue = spaceManager.getSpaceName(spaceManager.currentSpaceUUID)
-        textField.placeholderString = NSLocalizedString("rename.placeholder", comment: "")
+        textField.placeholderString = NSLocalizedString("Rename.Placeholder", comment: "")
         textField.delegate = self
         view.addSubview(textField)
         
         // Create the label
-        let labelString = String(format: NSLocalizedString("rename.label", comment: ""), spaceManager.getSpaceNum(spaceManager.currentSpaceUUID))
+        let labelString = String(format: NSLocalizedString("Rename.Label", comment: ""), spaceManager.getSpaceNum(spaceManager.currentSpaceUUID))
         let label = NSTextField(labelWithString: labelString)
         label.frame = NSRect(x: 20, y: 15, width: 200, height: 17)
         label.textColor = .secondaryLabelColor
@@ -149,7 +149,7 @@ class StatusBarController: NSObject {
         
         // Add rename option for current space
         self.renameItem = NSMenuItem(
-            title: NSLocalizedString("menu.rename_current_space", comment: ""),
+            title: NSLocalizedString("Menu.RenameCurrentSpace", comment: ""),
             action: nil, // Temporarily
             keyEquivalent: "r"
         )
@@ -158,7 +158,7 @@ class StatusBarController: NSObject {
         
         // Add show labels option
         self.showLabelsMenuItem = NSMenuItem(
-            title: NSLocalizedString("menu.show_labels", comment: "Toggle desktop labels visibility"),
+            title: NSLocalizedString("Menu.ShowLabels", comment: "Toggle desktop labels visibility"),
             action: #selector(toggleLabelsFromMenu),
             keyEquivalent: "l"
         )
@@ -171,7 +171,7 @@ class StatusBarController: NSObject {
         
         // Add settings option
         let settingsItem = NSMenuItem(
-            title: NSLocalizedString("menu.settings", comment: ""),
+            title: NSLocalizedString("Menu.Settings", comment: ""),
             action: #selector(showSettings),
             keyEquivalent: ","
         )
@@ -182,7 +182,7 @@ class StatusBarController: NSObject {
         
         // Add quit option
         let quitItem = NSMenuItem(
-            title: NSLocalizedString("menu.quit", comment: ""),
+            title: NSLocalizedString("Menu.Quit", comment: ""),
             action: #selector(quitApp),
             keyEquivalent: "q"
         )
@@ -251,7 +251,7 @@ class StatusBarController: NSObject {
             backing: .buffered,
             defer: false
         )
-        window.title = NSLocalizedString("window.settings_title", comment: "")
+        window.title = NSLocalizedString("Window.SettingsTitle", comment: "")
         window.center()
         
         // Create and set the settings view controller
