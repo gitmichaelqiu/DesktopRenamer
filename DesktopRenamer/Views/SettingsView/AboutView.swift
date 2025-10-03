@@ -1,65 +1,57 @@
 import SwiftUI
 
 struct AboutView: View {
+    var appName: String {
+        Bundle.main.infoDictionary?["CFBundleName"] as? String ?? "DesktopRenamer"
+    }
+
+    var appVersion: String {
+        Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0.0"
+    }
+
+    var currentYear: String {
+        let year = Calendar.current.component(.year, from: Date())
+        return String(year)
+    }
+
     var body: some View {
-        VStack(spacing: 16) {
-            // App icon
-            if let icon = NSApplication.shared.applicationIconImage {
-                Image(nsImage: icon)
+        VStack(spacing: 12) {
+            if let nsImage = NSApplication.shared.applicationIconImage {
+                Image(nsImage: nsImage)
                     .resizable()
-                    .aspectRatio(contentMode: .fit)
-                    .frame(width: 100, height: 100)
-                    .cornerRadius(10)
-            } else {
-                Image(systemName: "app.fill")
-                    .resizable()
-                    .aspectRatio(contentMode: .fit)
-                    .frame(width: 100, height: 100)
-                    .foregroundColor(.primary)
-                    .cornerRadius(10)
+                    .scaledToFit()
+                    .frame(width: 128, height: 128)
+                    .padding(.bottom, 8)
             }
-            
-            // App name
-            Text(NSLocalizedString("About.AppName", comment: ""))
-                .font(.system(size: 20, weight: .bold))
+
+            Text(appName)
+                .font(.largeTitle)
+                .bold()
+
+            Text("v\(appVersion)")
+                .font(.title3)
+                .foregroundColor(.secondary)
+
+            Divider()
+                .padding(.vertical, 8)
+
+            Text(NSLocalizedString("About.Description", comment: "Description"))
                 .multilineTextAlignment(.center)
-            
-            // Version
-            if let version = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String {
-                Text("v\(version)")
-                    .font(.system(size: 13))
-                    .foregroundColor(.secondary)
-            }
-            
-            // Description
-            Text(NSLocalizedString("About.Description", comment: ""))
-                .multilineTextAlignment(.center)
-                .fixedSize(horizontal: false, vertical: true)
-            
-            // GitHub link
-            Button(action: openGitHub) {
-                Text(NSLocalizedString("About.GithubLink", comment: ""))
-                    .font(.system(size: 13))
-                    .foregroundColor(.blue)
-            }
-            .buttonStyle(PlainButtonStyle())
+                .frame(maxWidth: 360, alignment: .center)
+//                .fixedSize(horizontal: false, vertical: true)
+                .font(.body)
             
             Spacer()
             
-            // Copyright
-            let year = Calendar.current.component(.year, from: Date())
-            let copyrightString = String(format: NSLocalizedString("About.Copyright", comment: ""), year)
-            Text(copyrightString)
-                .font(.system(size: 12))
+            Link(NSLocalizedString("About.Repo", comment: "GitHub Repo"), destination: URL(string: "https://github.com/gitmichaelqiu/DesktopRenamer")!)
+                .font(.body)
+                .foregroundColor(.blue)
+
+            Text("© \(currentYear) Michael Yicheng Qiu")
+                .font(.body)
                 .foregroundColor(.secondary)
         }
         .padding()
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-    }
-    
-    private func openGitHub() {
-        if let url = URL(string: "https://github.com/gitmichaelqiu/DesktopRenamer") {
-            NSWorkspace.shared.open(url)
-        }
+        .frame(maxWidth: .infinity, maxHeight: CGFloat(defaultSettingsWindowHeight), alignment: .topLeading)
     }
 }
