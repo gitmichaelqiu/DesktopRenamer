@@ -5,7 +5,6 @@ struct GeneralSettingsView: View {
     @ObservedObject var spaceManager: SpaceManager
     @ObservedObject var labelManager: SpaceLabelManager
     @State private var launchAtLogin: Bool = false
-    @State private var showLabels: Bool = false
     @State private var autoCheckUpdate: Bool = UpdateManager.isAutoCheckEnabled
     @State private var isResetting: Bool = false
     
@@ -13,23 +12,20 @@ struct GeneralSettingsView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 20) {
                 SettingsSection("Settings.General.General") {
+                    SettingsRow("Settings.ShowLabels") {
+                        Toggle("", isOn: $labelManager.isEnabled)
+                            .labelsHidden()
+                            .toggleStyle(.switch)
+                    }
+                    
+                    Divider()
+                    
                     SettingsRow("Settings.LaunchAtLogin") {
                         Toggle("", isOn: $launchAtLogin)
                             .labelsHidden()
                             .toggleStyle(.switch)
                             .onChange(of: launchAtLogin) { value in
                                 toggleLaunchAtLogin(value)
-                            }
-                    }
-                    
-                    Divider()
-                    
-                    SettingsRow("Settings.ShowLabels") {
-                        Toggle("", isOn: $showLabels)
-                            .labelsHidden()
-                            .toggleStyle(.switch)
-                            .onChange(of: showLabels) { value in
-                                labelManager.isEnabled = value
                             }
                     }
                 }
@@ -69,7 +65,6 @@ struct GeneralSettingsView: View {
         }
         .onAppear {
             launchAtLogin = getLaunchAtLoginState()
-            showLabels = labelManager.isEnabled
         }
     }
     

@@ -12,6 +12,7 @@
 "Settings.General.General" = "General";
 "Settings.General.Updates" = "Updates";
 "Settings.General.Reset" = "Reset";
+"Settings.General.Update.ManualCheck" = "Check for updates";
 
 "Settings.LaunchAtLogin" = "Launch at login";
 "Settings.ShowLabels" = "Show desktop labels";
