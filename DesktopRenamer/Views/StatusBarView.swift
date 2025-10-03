@@ -251,15 +251,20 @@ class StatusBarController: NSObject {
             return
         }
         
-        // Create settings window
+        // Create settings window with fixed size
         let window = NSWindow(
-            contentRect: NSRect(x: 0, y: 0, width: 400, height: 300),
+            contentRect: NSRect(x: 0, y: 0, width: defaultSettingsWindowWidth, height: defaultSettingsWindowHeight),
             styleMask: [.titled, .closable],
             backing: .buffered,
             defer: false
         )
         window.title = NSLocalizedString("Window.SettingsTitle", comment: "")
         window.center()
+        
+        window.styleMask.remove(.resizable)
+        window.minSize = NSSize(width: defaultSettingsWindowWidth, height: defaultSettingsWindowHeight)
+        window.maxSize = NSSize(width: defaultSettingsWindowWidth, height: defaultSettingsWindowHeight)
+        window.showsResizeIndicator = false
         
         // Create and set the settings view controller
         let settingsVC = SettingsHostingController(spaceManager: spaceManager, labelManager: labelManager)
