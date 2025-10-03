@@ -1,10 +1,3 @@
-//
-//  DesktopRenamerApp.swift
-//  DesktopRenamer
-//
-//  Created by Michael Qiu on 2025/7/20.
-//
-
 import SwiftUI
 import Combine
 
@@ -14,8 +7,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     
     func applicationDidFinishLaunching(_ notification: Notification) {
         // Initialize SpaceManager and StatusBarController
-        
-        DispatchQueue.main.asyncAfter(deadline: .now() + 5.0) {
+        DispatchQueue.main.asyncAfter(deadline: .now() + 3.0) {
             self.spaceManager = SpaceManager()
             self.statusBarController = StatusBarController(spaceManager: self.spaceManager)
         }
@@ -35,5 +27,19 @@ struct DesktopRenamerApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
     
     var body: some Scene {
+        Settings {
+            EmptyView()
+        }
+        .commands {
+            CommandGroup(replacing: .appInfo) {
+                Button(NSLocalizedString("Menu.About", comment: "")) {
+                    UserDefaults.standard.set(SettingsTab.about.rawValue, forKey: "selectedSettingsTab")
+                }
+            }
+            
+            CommandGroup(replacing: .appSettings) {
+                // Remove default settings
+            }
+        }
     }
 }

@@ -118,13 +118,20 @@ class StatusBarController: NSObject {
         spaceManager.$spaceNameDict
             .receive(on: DispatchQueue.main)
             .sink { [weak self] _ in
-                // 只有当当前空间的名称改变时才更新
                 if let currentSpaceUUID = self?.spaceManager.currentSpaceUUID,
                    let newName = self?.spaceManager.getSpaceName(currentSpaceUUID),
                    let button = self?.statusItem.button,
                    button.title != newName {
                     self?.updateStatusBarTitle()
                 }
+            }
+            .store(in: &cancellables)
+        
+        // Observe labelManager.isEnabled
+        labelManager.$isEnabled
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] _ in
+                self?.updateShowLabelsMenuItemState()
             }
             .store(in: &cancellables)
     }
@@ -241,21 +248,31 @@ class StatusBarController: NSObject {
         if let windowController = settingsWindowController {
             windowController.showWindow(nil)
             NSApp.activate(ignoringOtherApps: true)
+            
+            if let hostingController = windowController.window?.contentViewController as? SettingsHostingController {
+                hostingController.rootView = SettingsView(spaceManager: spaceManager, labelManager: labelManager)
+            }
             return
         }
         
-        // Create settings window
+        // Create settings window with proper style mask
         let window = NSWindow(
-            contentRect: NSRect(x: 0, y: 0, width: 400, height: 300),
-            styleMask: [.titled, .closable],
+            contentRect: NSRect(x: 0, y: 0, width: defaultSettingsWindowWidth, height: defaultSettingsWindowHeight),
+            styleMask: [.titled, .closable, .miniaturizable],
             backing: .buffered,
             defer: false
         )
         window.title = NSLocalizedString("Window.SettingsTitle", comment: "")
         window.center()
         
+        window.minSize = NSSize(width: defaultSettingsWindowWidth, height: defaultSettingsWindowHeight)
+        window.maxSize = NSSize(width: defaultSettingsWindowWidth, height: defaultSettingsWindowHeight)
+        
+        window.collectionBehavior = [.participatesInCycle]
+        window.level = .normal
+        
         // Create and set the settings view controller
-        let settingsVC = SettingsViewController(spaceManager: spaceManager, labelManager: labelManager)
+        let settingsVC = SettingsHostingController(spaceManager: spaceManager, labelManager: labelManager)
         window.contentViewController = settingsVC
         
         // Create window controller
@@ -263,13 +280,32 @@ class StatusBarController: NSObject {
         windowController.window?.delegate = self
         settingsWindowController = windowController
         
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(settingsWindowWillClose),
+            name: NSWindow.willCloseNotification,
+            object: window
+        )
+        
         // Show the window
         windowController.showWindow(nil)
         NSApp.activate(ignoringOtherApps: true)
     }
     
+    @objc private func settingsWindowWillClose(_ notification: Notification) {
+        // Hide dock icon
+        DispatchQueue.main.async {
+            NSApp.setActivationPolicy(.accessory)
+        }
+        settingsWindowController = nil
+    }
+    
     @objc private func quitApp() {
         NSApplication.shared.terminate(nil)
+    }
+    
+    private func updateShowLabelsMenuItemState() {
+        self.showLabelsMenuItem.state = labelManager.isEnabled ? .on : .off
     }
 }
 
