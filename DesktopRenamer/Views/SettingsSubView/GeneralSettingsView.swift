@@ -149,7 +149,7 @@ struct GeneralSettingsView: View {
                     successAlert.alertStyle = .informational
                     successAlert.addButton(withTitle: NSLocalizedString("Button.OK", comment: "OK"))
                     successAlert.beginSheetModal(for: window) { _ in
-                    } 
+                    }
                 }
             }
         }
