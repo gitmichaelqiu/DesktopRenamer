@@ -16,6 +16,8 @@
 "Settings.General.General" = "General";
 "Settings.General.General.ShowLabels" = "Show desktop labels";
 "Settings.General.General.LaunchAtLogin" = "Launch at login";
+"Settings.General.General.LaunchAtLogin.Error" = "Failed to toggle launch at login";
+"Settings.General.GeneralLaunchAtLogin.Error.info" = "Could not update login items";
 
 // Updates
 "Settings.General.Updates" = "Updates";
@@ -29,30 +31,35 @@
 "Settings.General.Reset.Alert.Msg" = "Reset Desktop Names";
 "Settings.General.Reset.Alert.Info" = "Are you sure you want to reset all desktop names to their defaults?";
 "Settings.General.Reset.Alert.Reset" = "Reset";
-"Settings.General.Reset.Alert.Cancel" = "Cancel";
+"Settings.General.Reset.Success.Msg" = "Reset successful";
+"Settings.General.Reset.Success.Info" = "All space names have been reset to their default values";
 
 // MARK: - Settings/Spaces
 "Settings.Spaces" = "Spaces";
 
 // Edit
 "Settings.Spaces.Edit" = "Edit Spaces";
-"Settings.Spaces.Edit" = "%d spaces";
+"Settings.Spaces.Count" = "%d spaces";
 "Settings.Spaces.Edit.Name" = "Name";
 "Settings.Spaces.Edit.Actions" = "Actions";
 "Settings.Spaces.Edit.Empty.Title" = "No Spaces Available";
 "Settings.Spaces.Edit.Empty.Hint" = "Your desktop spaces will appear here";
+"Settings.Spaces.Edit.Help.MoveUp" = "Move desktop up";
+"Settings.Spaces.Edit.Help.MoveUp.Cannot" = "Cannot move up current desktop";
+"Settings.Spaces.Edit.Help.MoveDown" = "Move desktop down";
+"Settings.Spaces.Edit.Help.MoveDown.Cannot" = "Cannot move down current desktop";
+"Settings.Spaces.Edit.Help.Delete" = "Delete desktop";
+"Settings.Spaces.Edit.Help.Delete.Cannot" = "Cannot delete current desktop";
 
 // MARK: - Settings/About
 "Settings.About" = "About";
 "Settings.About.Repo" = "GitHub Repository";
 "Settings.About.Description" = "DesktopRenamer allows you to give custom names to macOS workspaces.";
-"Settings.About.Copyright" = "© %d Michael Yicheng Qiu";
 
 // MARK: - Auto Update Alert
 "AutoUpdate.Available.Title" = "Update Available";
 "AutoUpdate.Available.Msg" = "Version %@ is available. Open the releases page to download and install?";
 "AutoUpdate.Available.Update" = "Update";
-"AutoUpdate.Available.Cancel" = "Cancel";
 "AutoUpdate.UpToDate.Title" = "Up To Date";
 "AutoUpdate.UpToDate.Msg" = "You are running the latest version (%@).";
 "AutoUpdate.CheckFailed.Title" = "Update Check Failed";
@@ -61,7 +68,5 @@
 // MARK: - Others
 "Space.DefaultName" = "Desktop %d";
 "Window.Settings.Title" = "DesktopRenamer Settings";
-"Tooltip.MoveUp" = "Move desktop up";
-"Tooltip.MoveDown" = "Move desktop down";
-"Tooltip.Delete" = "Delete desktop";
-"Tooltip.CannotDeleteCurrent" = "Cannot delete current desktop";
+"Button.Cancel" = "Cancel";
+"Button.OK" = "OK";
