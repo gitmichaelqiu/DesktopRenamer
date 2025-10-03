@@ -255,7 +255,7 @@ class StatusBarController: NSObject {
         window.center()
         
         // Create and set the settings view controller
-        let settingsVC = SettingsViewController(spaceManager: spaceManager, labelManager: labelManager)
+        let settingsVC = SettingsHostingController(spaceManager: spaceManager, labelManager: labelManager)
         window.contentViewController = settingsVC
         
         // Create window controller

@@ -1,202 +1,132 @@
-import Cocoa
+import SwiftUI
 import ServiceManagement
 import Combine
 
-class AboutViewController: NSViewController {
-    override func loadView() {
-        let view = NSView(frame: NSRect(x: 0, y: 0, width: 400, height: 300))
-
-        // Add app icon
-        let iconImageView = NSImageView()
-        iconImageView.translatesAutoresizingMaskIntoConstraints = false
-        if let icon = NSApplication.shared.applicationIconImage {
-            iconImageView.image = icon
-            iconImageView.imageScaling = .scaleProportionallyUpOrDown
-            iconImageView.wantsLayer = true
-            iconImageView.layer?.cornerRadius = 10
-            iconImageView.layer?.masksToBounds = true
-        } else {
-            iconImageView.image = NSImage(systemSymbolName: "app.fill", accessibilityDescription: "App Icon")
-            iconImageView.imageScaling = .scaleProportionallyUpOrDown
-            iconImageView.wantsLayer = true
-            iconImageView.layer?.cornerRadius = 10
-            iconImageView.layer?.masksToBounds = true
+// MARK: - About View
+struct AboutView: View {
+    var body: some View {
+        ScrollView {
+            VStack(spacing: 16) {
+                // App icon
+                if let icon = NSApplication.shared.applicationIconImage {
+                    Image(nsImage: icon)
+                        .resizable()
+                        .aspectRatio(contentMode: .fit)
+                        .frame(width: 100, height: 100)
+                        .cornerRadius(10)
+                } else {
+                    Image(systemName: "app.fill")
+                        .resizable()
+                        .aspectRatio(contentMode: .fit)
+                        .frame(width: 100, height: 100)
+                        .foregroundColor(.primary)
+                        .cornerRadius(10)
+                }
+                
+                // App name
+                Text(NSLocalizedString("About.AppName", comment: ""))
+                    .font(.system(size: 20, weight: .bold))
+                    .multilineTextAlignment(.center)
+                
+                // Version
+                if let version = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String {
+                    Text("v\(version)")
+                        .font(.system(size: 13))
+                        .foregroundColor(.secondary)
+                }
+                
+                // Description
+                Text(NSLocalizedString("About.Description", comment: ""))
+                    .multilineTextAlignment(.center)
+                    .fixedSize(horizontal: false, vertical: true)
+                
+                // GitHub link
+                Button(action: openGitHub) {
+                    Text(NSLocalizedString("About.GithubLink", comment: ""))
+                        .font(.system(size: 13))
+                        .foregroundColor(.blue)
+                }
+                .buttonStyle(PlainButtonStyle())
+                
+                Spacer()
+                
+                // Copyright
+                let year = Calendar.current.component(.year, from: Date())
+                let copyrightString = String(format: NSLocalizedString("About.Copyright", comment: ""), year)
+                Text(copyrightString)
+                    .font(.system(size: 12))
+                    .foregroundColor(.secondary)
+            }
+            .padding()
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
-        view.addSubview(iconImageView)
-
-        // App name
-        let nameLabel = NSTextField(labelWithString: NSLocalizedString("About.AppName", comment: ""))
-        nameLabel.font = .systemFont(ofSize: 20, weight: .bold)
-        nameLabel.alignment = .center
-        nameLabel.translatesAutoresizingMaskIntoConstraints = false
-        view.addSubview(nameLabel)
-        
-        // Version
-        var versionLabel: NSTextField?
-        if let version = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String {
-            let vLabel = NSTextField(labelWithString: "v\(version)")
-            vLabel.font = .systemFont(ofSize: 13)
-            vLabel.textColor = .secondaryLabelColor
-            vLabel.alignment = .center
-            vLabel.translatesAutoresizingMaskIntoConstraints = false
-            view.addSubview(vLabel)
-            versionLabel = vLabel
-        }
-
-        // GitHub text link
-        let githubLink = NSTextField(labelWithString: NSLocalizedString("About.GithubLink", comment: ""))
-        githubLink.font = .systemFont(ofSize: 13)
-        githubLink.textColor = .systemBlue
-        githubLink.alignment = .center
-        githubLink.isEditable = false
-        githubLink.isSelectable = true
-        githubLink.isBezeled = false
-        githubLink.translatesAutoresizingMaskIntoConstraints = false
-        githubLink.addGestureRecognizer(NSClickGestureRecognizer(target: self, action: #selector(openGitHub)))
-        view.addSubview(githubLink)
-        
-        // Description
-        let descriptionLabel = NSTextField(wrappingLabelWithString: NSLocalizedString("About.Description", comment: ""))
-        descriptionLabel.alignment = .center
-        descriptionLabel.translatesAutoresizingMaskIntoConstraints = false
-        view.addSubview(descriptionLabel)
-        
-        // Copyright
-        let year = Calendar.current.component(.year, from: Date())
-        let copyrightString = String(format: NSLocalizedString("About.Copyright", comment: ""), year)
-        let copyrightLabel = NSTextField(labelWithString: copyrightString)
-        copyrightLabel.font = .systemFont(ofSize: 12)
-        copyrightLabel.textColor = .secondaryLabelColor
-        copyrightLabel.alignment = .center
-        copyrightLabel.translatesAutoresizingMaskIntoConstraints = false
-        view.addSubview(copyrightLabel)
-        
-        // Auto Layout constraints
-        // Add githubLink below the iconImageView
-        NSLayoutConstraint.activate([
-            iconImageView.topAnchor.constraint(equalTo: view.topAnchor, constant: 16),
-            iconImageView.centerXAnchor.constraint(equalTo: view.centerXAnchor),
-            iconImageView.widthAnchor.constraint(equalToConstant: 100),
-            iconImageView.heightAnchor.constraint(equalToConstant: 100),
-
-            nameLabel.topAnchor.constraint(equalTo: iconImageView.bottomAnchor, constant: 12),
-            nameLabel.centerXAnchor.constraint(equalTo: view.centerXAnchor),
-            nameLabel.widthAnchor.constraint(lessThanOrEqualTo: view.widthAnchor, constant: -40),
-
-            versionLabel?.topAnchor.constraint(equalTo: nameLabel.bottomAnchor, constant: 2) ?? nameLabel.bottomAnchor.constraint(equalTo: nameLabel.bottomAnchor),
-            versionLabel?.centerXAnchor.constraint(equalTo: view.centerXAnchor) ?? nameLabel.centerXAnchor.constraint(equalTo: view.centerXAnchor),
-
-            descriptionLabel.topAnchor.constraint(equalTo: (versionLabel ?? nameLabel).bottomAnchor, constant: 16),
-            descriptionLabel.centerXAnchor.constraint(equalTo: view.centerXAnchor),
-            descriptionLabel.widthAnchor.constraint(equalTo: view.widthAnchor, constant: -40),
-
-            githubLink.topAnchor.constraint(equalTo: descriptionLabel.bottomAnchor, constant: 12),
-            githubLink.centerXAnchor.constraint(equalTo: view.centerXAnchor),
-            githubLink.widthAnchor.constraint(lessThanOrEqualTo: view.widthAnchor, constant: -40),
-
-            copyrightLabel.bottomAnchor.constraint(equalTo: view.bottomAnchor, constant: -12),
-            copyrightLabel.centerXAnchor.constraint(equalTo: view.centerXAnchor)
-        ].compactMap { $0 })
-        
-        self.view = view
     }
-
-    @objc private func openGitHub() {
+    
+    private func openGitHub() {
         if let url = URL(string: "https://github.com/gitmichaelqiu/DesktopRenamer") {
             NSWorkspace.shared.open(url)
         }
     }
 }
 
-class GeneralSettingsViewController: NSViewController {
-    private let spaceManager: SpaceManager
-    private let labelManager: SpaceLabelManager
-    private var launchAtLoginButton: NSButton!
-    private var showLabelsButton: NSButton!
-    private var resetButton: NSButton!
-    private var checkUpdateButton: NSButton!
-    private var autoCheckUpdateButton: NSButton!
+// MARK: - General Settings View
+struct GeneralSettingsView: View {
+    @ObservedObject var spaceManager: SpaceManager
+    @ObservedObject var labelManager: SpaceLabelManager
+    @State private var launchAtLogin: Bool = false
+    @State private var showLabels: Bool = false
+    @State private var autoCheckUpdate: Bool = UpdateManager.isAutoCheckEnabled
+    @State private var isResetting: Bool = false
     
-    init(spaceManager: SpaceManager, labelManager: SpaceLabelManager) {
-        self.spaceManager = spaceManager
-        self.labelManager = labelManager
-        super.init(nibName: nil, bundle: nil)
-    }
-    
-    required init?(coder: NSCoder) {
-        fatalError("init(coder:) has not been implemented")
-    }
-    
-    override func loadView() {
-        let view = NSView(frame: NSRect(x: 0, y: 0, width: 400, height: 300))
-
-        // Launch at login checkbox
-        launchAtLoginButton = NSButton(
-            checkboxWithTitle: NSLocalizedString("Settings.LaunchAtLogin", comment: ""),
-            target: self,
-            action: #selector(toggleLaunchAtLogin)
-        )
-        launchAtLoginButton.frame = NSRect(x: 20, y: 260, width: 200, height: 20)
-        launchAtLoginButton.state = getLaunchAtLoginState()
-        view.addSubview(launchAtLoginButton)
-
-        // Show labels checkbox
-//        showLabelsButton = NSButton(
-//            checkboxWithTitle: NSLocalizedString("Settings.ShowLabels", comment: ""),
-//            target: self,
-//            action: #selector(toggleLabels)
-//        )
-//        showLabelsButton.frame = NSRect(x: 20, y: 230, width: 200, height: 20)
-//        showLabelsButton.state = labelManager.isEnabled ? .on : .off
-//        view.addSubview(showLabelsButton)
-        
-        // Auto Check for Update toggle
-        autoCheckUpdateButton = NSButton(
-            checkboxWithTitle: NSLocalizedString("Settings.AutoCheckUpdate", comment: ""),
-            target: self,
-            action: #selector(toggleAutoCheckUpdate)
-        )
-        autoCheckUpdateButton.frame = NSRect(x: 20, y: 230, width: 250, height: 20)
-        autoCheckUpdateButton.state = UpdateManager.isAutoCheckEnabled ? .on : .off
-        view.addSubview(autoCheckUpdateButton)
-
-        // Reset names button
-        resetButton = NSButton(frame: NSRect(x: 20, y: 185, width: 200, height: 32))
-        resetButton.title = NSLocalizedString("Settings.ResetButton", comment: "")
-        resetButton.bezelStyle = .rounded
-        resetButton.target = self
-        resetButton.action = #selector(resetNames)
-        view.addSubview(resetButton)
-
-        // Check for Update button
-        checkUpdateButton = NSButton(frame: NSRect(x: 20, y: 150, width: 200, height: 32))
-        checkUpdateButton.title = NSLocalizedString("Settings.CheckUpdateButton", comment: "")
-        checkUpdateButton.bezelStyle = .rounded
-        checkUpdateButton.target = self
-        checkUpdateButton.action = #selector(checkForUpdate)
-        view.addSubview(checkUpdateButton)
-
-        self.view = view
-    }
-    @objc private func checkForUpdate() {
-        UpdateManager.shared.checkForUpdate(from: self.view.window, suppressUpToDateAlert: false)
-    }
-
-    @objc private func toggleAutoCheckUpdate() {
-        let enabled = autoCheckUpdateButton.state == .on
-        UpdateManager.isAutoCheckEnabled = enabled
-    }
-    
-    private func getLaunchAtLoginState() -> NSControl.StateValue {
-        if #available(macOS 13.0, *) {
-            return SMAppService.mainApp.status == .enabled ? .on : .off
-        } else {
-            let bundleId = Bundle.main.bundleIdentifier ?? ""
-            return SMLoginItemSetEnabled(bundleId as CFString, true) ? .on : .off
+    var body: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 20) {
+                // Launch at login toggle
+                Toggle(NSLocalizedString("Settings.LaunchAtLogin", comment: ""), isOn: $launchAtLogin)
+                    .onChange(of: launchAtLogin) { value in
+                        toggleLaunchAtLogin(value)
+                    }
+                
+                // Auto Check for Update toggle
+                Toggle(NSLocalizedString("Settings.AutoCheckUpdate", comment: ""), isOn: $autoCheckUpdate)
+                    .onChange(of: autoCheckUpdate) { value in
+                        UpdateManager.isAutoCheckEnabled = value
+                    }
+                
+                Spacer().frame(height: 20)
+                
+                // Reset names button
+                Button(NSLocalizedString("Settings.ResetButton", comment: "")) {
+                    resetNames()
+                }
+                .disabled(isResetting)
+                
+                // Check for Update button
+                Button(NSLocalizedString("Settings.CheckUpdateButton", comment: "")) {
+                    checkForUpdate()
+                }
+                
+                Spacer()
+            }
+            .padding()
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        }
+        .onAppear {
+            launchAtLogin = getLaunchAtLoginState()
+            showLabels = labelManager.isEnabled
         }
     }
     
-    @objc private func toggleLaunchAtLogin() {
+    private func getLaunchAtLoginState() -> Bool {
+        if #available(macOS 13.0, *) {
+            return SMAppService.mainApp.status == .enabled
+        } else {
+            let bundleId = Bundle.main.bundleIdentifier ?? ""
+            return SMLoginItemSetEnabled(bundleId as CFString, true)
+        }
+    }
+    
+    private func toggleLaunchAtLogin(_ enabled: Bool) {
         if #available(macOS 13.0, *) {
             do {
                 let service = SMAppService.mainApp
@@ -207,25 +137,24 @@ class GeneralSettingsViewController: NSViewController {
                 }
             } catch {
                 print("Failed to toggle launch at login: \(error)")
-                launchAtLoginButton.state = getLaunchAtLoginState()
+                launchAtLogin = getLaunchAtLoginState()
             }
         } else {
             if let bundleId = Bundle.main.bundleIdentifier {
-                let success = SMLoginItemSetEnabled(bundleId as CFString, launchAtLoginButton.state == .on)
+                let success = SMLoginItemSetEnabled(bundleId as CFString, enabled)
                 if !success {
-                    launchAtLoginButton.state = getLaunchAtLoginState()
+                    launchAtLogin = getLaunchAtLoginState()
                 }
             }
         }
     }
     
-    @objc private func toggleLabels() {
-        labelManager.toggleEnabled()
-        showLabelsButton.state = labelManager.isEnabled ? .on : .off
+    private func checkForUpdate() {
+        UpdateManager.shared.checkForUpdate(from: nil, suppressUpToDateAlert: false)
     }
     
-    @objc private func resetNames() {
-        resetButton.isEnabled = false
+    private func resetNames() {
+        isResetting = true
         
         let alert = NSAlert()
         alert.messageText = NSLocalizedString("Settings.ResetAlertMsg", comment: "")
@@ -234,165 +163,138 @@ class GeneralSettingsViewController: NSViewController {
         alert.addButton(withTitle: NSLocalizedString("Settings.ResetAlertButtonReset", comment: ""))
         alert.addButton(withTitle: NSLocalizedString("Settings.ResetAlertButtonCancel", comment: ""))
         
-        guard let window = view.window else {
-            resetButton.isEnabled = true
-            return
-        }
+        let response = alert.runModal()
         
-        let strongSelf = self
-        
-        alert.beginSheetModal(for: window) { response in
-            DispatchQueue.main.async {
-                strongSelf.resetButton.isEnabled = true
-                
-                if response == .alertFirstButtonReturn {
-                    strongSelf.spaceManager.resetAllNames()
-                }
+        DispatchQueue.main.async {
+            self.isResetting = false
+            
+            if response == .alertFirstButtonReturn {
+                self.spaceManager.resetAllNames()
             }
         }
     }
 }
 
-class spaceEditViewController: NSViewController {
-    private let spaceManager: SpaceManager
-    private let labelManager: SpaceLabelManager
+// MARK: - Space Edit View
+struct SpaceEditView: View {
+    @ObservedObject var spaceManager: SpaceManager
+    @ObservedObject var labelManager: SpaceLabelManager
+    @State private var desktopSpaces: [DesktopSpace] = []
     
-    private var tableView: NSTableView!
-    private var desktopSpaces: [DesktopSpace] = []
-    private var cancellables = Set<AnyCancellable>()
-    
-    init(spaceManager: SpaceManager, labelManager: SpaceLabelManager) {
-        self.spaceManager = spaceManager
-        self.labelManager = labelManager
-        super.init(nibName: nil, bundle: nil)
-    }
-    
-    required init?(coder: NSCoder) {
-        fatalError("init(coder:) has not been implemented")
-    }
-    
-    override func loadView() {
-        // Create root view
-        let view = NSView(frame: NSRect(x: 0, y: 0, width: 600, height: 400))
-        self.view = view
-        
-        setupTableView()
-        loadData()
-    }
-    
-    private func setupTableView() {
-        // Scroll view
-        let scrollView = NSScrollView(frame: view.bounds)
-        scrollView.autoresizingMask = [.width, .height]
-        scrollView.hasVerticalScroller = true
-        scrollView.hasHorizontalScroller = false
-        scrollView.borderType = .bezelBorder
-        
-        // Create table
-        tableView = NSTableView(frame: scrollView.bounds)
-        tableView.autoresizingMask = [.width, .height]
-        tableView.dataSource = self
-        tableView.delegate = self
-        tableView.allowsColumnReordering = false
-        tableView.doubleAction = #selector(tableViewDoubleClicked(_:))
-        
-        let numColumn = NSTableColumn(identifier: NSUserInterfaceItemIdentifier("num"))
-        numColumn.title = "#"
-        numColumn.width = 30
-        numColumn.resizingMask = []
-        tableView.addTableColumn(numColumn)
-        
-        let nameColumn = NSTableColumn(identifier: NSUserInterfaceItemIdentifier("customName"))
-        nameColumn.title = NSLocalizedString("Settings.Space.CustomName", comment: "")
-        nameColumn.width = 240
-        nameColumn.resizingMask = []
-        tableView.addTableColumn(nameColumn)
-        
-        let actionColumn = NSTableColumn(identifier: NSUserInterfaceItemIdentifier("actions"))
-        actionColumn.title = NSLocalizedString("Settings.Space.Actions", comment: "")
-        actionColumn.width = 85
-        actionColumn.resizingMask = []
-        tableView.addTableColumn(actionColumn)
-        
-        // Add to scrollView
-        scrollView.documentView = tableView
-        view.addSubview(scrollView)
-    }
-    
-    private func loadData() {
-        desktopSpaces = spaceManager.spaceNameDict.sorted { $0.num < $1.num }
-        
-        tableView.reloadData()
-    }
-    
-    public func refreshData() {
-        desktopSpaces = spaceManager.spaceNameDict.sorted { $0.num < $1.num }
-        tableView.reloadData()
-    }
-    
-    override func viewDidLoad() {
-        super.viewDidLoad()
-        
-        spaceManager.$spaceNameDict
-            .receive(on: DispatchQueue.main)
-            .sink { [weak self] _ in
-                self?.refreshData()
+    var body: some View {
+        VStack {
+            if desktopSpaces.isEmpty {
+                Text("No spaces available")
+                    .foregroundColor(.secondary)
+            } else {
+                Table(desktopSpaces) {
+                    TableColumn("#") { space in
+                        Text(spaceManager.currentSpaceUUID == space.id ? "[\(space.num)]" : "\(space.num)")
+                            .frame(maxWidth: .infinity, alignment: .center)
+                    }
+                    .width(30)
+                    
+                    TableColumn(NSLocalizedString("Settings.Space.CustomName", comment: "")) { space in
+                        TextField(
+                            String(format: NSLocalizedString("Space.DefaultName", comment: ""), space.num),
+                            text: Binding(
+                                get: { space.customName },
+                                set: { newValue in
+                                    updateSpaceName(space, newValue)
+                                }
+                            )
+                        )
+                        .textFieldStyle(RoundedBorderTextFieldStyle())
+                    }
+                    .width(240)
+                    
+                    TableColumn(NSLocalizedString("Settings.Space.Actions", comment: "")) { space in
+                        HStack(spacing: 4) {
+                            Button("↑") {
+                                moveRowUp(space)
+                            }
+                            .disabled(isFirstRow(space) || space.id == spaceManager.currentSpaceUUID)
+                            
+                            Button("↓") {
+                                moveRowDown(space)
+                            }
+                            .disabled(isLastRow(space) || space.id == spaceManager.currentSpaceUUID)
+                            
+                            Button("⌫") {
+                                deleteRow(space)
+                            }
+                            .disabled(space.id == spaceManager.currentSpaceUUID)
+                            .help(space.id == spaceManager.currentSpaceUUID ?
+                                  NSLocalizedString("settings.space.cannot_delete_current", comment: "Cannot delete current space") : "")
+                        }
+                        .buttonStyle(.bordered)
+                    }
+                    .width(85)
+                }
+                .tableStyle(.bordered)
             }
-            .store(in: &cancellables)
-        
-        spaceManager.$currentSpaceUUID
-             .receive(on: DispatchQueue.main)
-             .sink { [weak self] _ in
-                 self?.refreshData()
-             }
-             .store(in: &cancellables)
-    }
-    
-    deinit {
-        cancellables.removeAll()
-    }
-    
-    @objc private func moveRowUp(_ sender: NSButton) {
-        let row = sender.tag
-        guard row > 0 && row < desktopSpaces.count else { return }
-        
-        desktopSpaces.swapAt(row, row - 1)
-        updateNumbersAndSave()
-    }
-
-    @objc private func moveRowDown(_ sender: NSButton) {
-        let row = sender.tag
-        guard row >= 0 && row < desktopSpaces.count - 1 else { return }
-        
-        desktopSpaces.swapAt(row, row + 1)
-        updateNumbersAndSave()
-    }
-
-    @objc private func deleteRow(_ sender: NSButton) {
-        let row = sender.tag
-        guard row >= 0 && row < desktopSpaces.count else { return }
-        
-        let space = desktopSpaces[row]
-        
-        // Check again
-        if space.id == spaceManager.currentSpaceUUID {
-            return
         }
+        .padding()
+        .onAppear {
+            refreshData()
+        }
+        .onReceive(spaceManager.$spaceNameDict) { _ in
+            refreshData()
+        }
+        .onReceive(spaceManager.$currentSpaceUUID) { _ in
+            refreshData()
+        }
+    }
+    
+    private func refreshData() {
+        desktopSpaces = spaceManager.spaceNameDict.sorted { $0.num < $1.num }
+    }
+    
+    private func isFirstRow(_ space: DesktopSpace) -> Bool {
+        guard let index = desktopSpaces.firstIndex(where: { $0.id == space.id }) else { return true }
+        return index == 0
+    }
+    
+    private func isLastRow(_ space: DesktopSpace) -> Bool {
+        guard let index = desktopSpaces.firstIndex(where: { $0.id == space.id }) else { return true }
+        return index == desktopSpaces.count - 1
+    }
+    
+    private func moveRowUp(_ space: DesktopSpace) {
+        guard let index = desktopSpaces.firstIndex(where: { $0.id == space.id }),
+              index > 0 else { return }
         
-        desktopSpaces.remove(at: row)
+        desktopSpaces.swapAt(index, index - 1)
         updateNumbersAndSave()
     }
     
-    @objc private func tableViewDoubleClicked(_ sender: NSTableView) {
-        guard sender.clickedColumn >= 0,
-              sender.clickedRow >= 0,
-              sender.tableColumns[sender.clickedColumn].identifier == NSUserInterfaceItemIdentifier("customName") else {
-            return
-        }
+    private func moveRowDown(_ space: DesktopSpace) {
+        guard let index = desktopSpaces.firstIndex(where: { $0.id == space.id }),
+              index < desktopSpaces.count - 1 else { return }
         
-        sender.editColumn(sender.clickedColumn, row: sender.clickedRow, with: nil, select: true)
+        desktopSpaces.swapAt(index, index + 1)
+        updateNumbersAndSave()
     }
-
+    
+    private func deleteRow(_ space: DesktopSpace) {
+        guard let index = desktopSpaces.firstIndex(where: { $0.id == space.id }),
+              space.id != spaceManager.currentSpaceUUID else { return }
+        
+        desktopSpaces.remove(at: index)
+        updateNumbersAndSave()
+    }
+    
+    private func updateSpaceName(_ space: DesktopSpace, _ newName: String) {
+        guard let index = desktopSpaces.firstIndex(where: { $0.id == space.id }) else { return }
+        
+        var updatedSpace = desktopSpaces[index]
+        updatedSpace.customName = newName.trimmingCharacters(in: .whitespacesAndNewlines)
+        desktopSpaces[index] = updatedSpace
+        
+        spaceManager.spaceNameDict = desktopSpaces
+        spaceManager.saveSpaces()
+    }
+    
     private func updateNumbersAndSave() {
         // Reindex
         for (index, _) in desktopSpaces.enumerated() {
@@ -403,237 +305,60 @@ class spaceEditViewController: NSViewController {
         spaceManager.spaceNameDict = desktopSpaces
         spaceManager.currentTotalSpace = desktopSpaces.count
         spaceManager.saveSpaces()
-        
-        tableView.reloadData()
     }
 }
 
-extension spaceEditViewController: NSTableViewDataSource {
-    func numberOfRows(in tableView: NSTableView) -> Int {
-        return desktopSpaces.count
-    }
-}
-
-extension spaceEditViewController: NSTableViewDelegate {
-    func tableView(_ tableView: NSTableView, viewFor tableColumn: NSTableColumn?, row: Int) -> NSView? {
-        let space = desktopSpaces[row]
-        
-        // Handle num and name
-        if tableColumn?.identifier == NSUserInterfaceItemIdentifier("customName") {
-            let identifier = NSUserInterfaceItemIdentifier("customName")
-            
-            var cellView = tableView.makeView(withIdentifier: identifier, owner: self) as? NSTableCellView
-            if cellView == nil {
-                cellView = NSTableCellView()
-                cellView?.identifier = identifier
-                
-                let textField = NSTextField()
-                textField.isBezeled = true
-                textField.drawsBackground = true
-                textField.isEditable = true
-                textField.isSelectable = true
-                textField.backgroundColor = .textBackgroundColor
-                textField.delegate = self
-
-                cellView?.textField = textField
-                
-                textField.translatesAutoresizingMaskIntoConstraints = false
-                cellView?.addSubview(textField)
-                NSLayoutConstraint.activate([
-                    textField.leadingAnchor.constraint(equalTo: cellView!.leadingAnchor, constant: 4),
-                    textField.trailingAnchor.constraint(equalTo: cellView!.trailingAnchor, constant: -4),
-                    textField.topAnchor.constraint(equalTo: cellView!.topAnchor, constant: 2),
-                    textField.bottomAnchor.constraint(equalTo: cellView!.bottomAnchor, constant: -2)
-                ])
-            }
-            
-            cellView?.textField?.stringValue = space.customName == "" ?  String(format: NSLocalizedString("Space.DefaultName", comment: ""), space.num): space.customName
-            return cellView
-        }
-        else if tableColumn?.identifier == NSUserInterfaceItemIdentifier("num") {
-            let identifier = NSUserInterfaceItemIdentifier("num")
-            let text = String(space.num)
-            
-            var cellView = tableView.makeView(withIdentifier: identifier, owner: self) as? NSTableCellView
-            if cellView == nil {
-                cellView = NSTableCellView()
-                cellView?.identifier = identifier
-                let textField = NSTextField()
-                textField.isBezeled = false
-                textField.drawsBackground = false
-                textField.isEditable = false
-                textField.isSelectable = false
-                cellView?.addSubview(textField)
-                cellView?.textField = textField
-                
-                textField.translatesAutoresizingMaskIntoConstraints = false
-                NSLayoutConstraint.activate([
-                    textField.leadingAnchor.constraint(equalTo: cellView!.leadingAnchor),
-                    textField.trailingAnchor.constraint(equalTo: cellView!.trailingAnchor),
-                    textField.centerYAnchor.constraint(equalTo: cellView!.centerYAnchor)
-                ])
-            }
-            
-            cellView?.textField?.stringValue = spaceManager.currentSpaceUUID == space.id ? "[\(text)]" : text
-            cellView?.textField?.alignment = .center
-            return cellView
-        } else if tableColumn?.identifier == NSUserInterfaceItemIdentifier("actions") {
-            let identifier = NSUserInterfaceItemIdentifier("actions")
-            
-            // Reuse view
-            var actionView = tableView.makeView(withIdentifier: identifier, owner: self)
-            if actionView == nil {
-                actionView = NSView()
-                actionView?.identifier = identifier
-                
-                // Control buttons
-                let upButton = NSButton(title: "↑", target: self, action: #selector(moveRowUp(_:)))
-                upButton.bezelStyle = .texturedRounded
-                upButton.font = .systemFont(ofSize: 11)
-                upButton.sizeToFit()
-                upButton.tag = row
-                upButton.translatesAutoresizingMaskIntoConstraints = false
-                
-                let downButton = NSButton(title: "↓", target: self, action: #selector(moveRowDown(_:)))
-                downButton.bezelStyle = .texturedRounded
-                downButton.font = .systemFont(ofSize: 11)
-                downButton.sizeToFit()
-                downButton.tag = row
-                downButton.translatesAutoresizingMaskIntoConstraints = false
-                
-                let deleteButton = NSButton(title: "⌫", target: self, action: #selector(deleteRow(_:)))
-                deleteButton.bezelStyle = .texturedRounded
-                deleteButton.font = .systemFont(ofSize: 11)
-                deleteButton.sizeToFit()
-                deleteButton.tag = row
-                deleteButton.translatesAutoresizingMaskIntoConstraints = false
-                
-                // Add subview
-                actionView?.addSubview(upButton)
-                actionView?.addSubview(downButton)
-                actionView?.addSubview(deleteButton)
-                
-                // Set view restrains
-                let buttons = [upButton, downButton, deleteButton]
-                for (index, button) in buttons.enumerated() {
-                    if index > 0 {
-                        button.leadingAnchor.constraint(equalTo: buttons[index-1].trailingAnchor, constant: 4).isActive = true
-                    } else {
-                        button.leadingAnchor.constraint(equalTo: actionView!.leadingAnchor, constant: 4).isActive = true
-                    }
-                    button.centerYAnchor.constraint(equalTo: actionView!.centerYAnchor).isActive = true
-                }
-                deleteButton.trailingAnchor.constraint(equalTo: actionView!.trailingAnchor, constant: -4).isActive = true
-            }
-            
-            // Get buttons
-            let buttons = actionView!.subviews.compactMap { $0 as? NSButton }
-            let upButton = buttons.first { $0.action == #selector(moveRowUp(_:)) }
-            let downButton = buttons.first { $0.action == #selector(moveRowDown(_:)) }
-            let deleteButton = buttons.first { $0.action == #selector(deleteRow(_:)) }
-            
-            // Set tags
-            upButton?.tag = row
-            downButton?.tag = row
-            deleteButton?.tag = row
-            
-            // Ban moves
-            upButton?.isEnabled = row > 0
-            downButton?.isEnabled = row < desktopSpaces.count - 1
-            
-            // Ban delete
-            let isCurrentSpace = space.id == spaceManager.currentSpaceUUID
-            deleteButton?.isEnabled = !isCurrentSpace
-            if isCurrentSpace {
-                deleteButton?.toolTip = NSLocalizedString("settings.space.cannot_delete_current", comment: "Cannot delete current space")
-            } else {
-                deleteButton?.toolTip = nil
-            }
-            
-            return actionView
-        }
-        
-        return nil
-    }
+// MARK: - Main Settings View
+struct SettingsView: View {
+    @ObservedObject var spaceManager: SpaceManager
+    @ObservedObject var labelManager: SpaceLabelManager
+    @State private var selectedTab = 0
     
-    func tableView(_ tableView: NSTableView, shouldEdit tableColumn: NSTableColumn?, row: Int) -> Bool {
-        return tableColumn?.identifier == NSUserInterfaceItemIdentifier("customName")
-    }
-}
-
-extension spaceEditViewController: NSTextFieldDelegate {
-    func controlTextDidEndEditing(_ obj: Notification) {
-        guard let textField = obj.object as? NSTextField,
-              let cellView = textField.superview as? NSTableCellView,
-              let rowView = cellView.superview as? NSTableRowView,
-              let tableView = rowView.superview as? NSTableView,
-              let _ = tableView.tableColumns.firstIndex(where: { $0.identifier == NSUserInterfaceItemIdentifier("customName") }) else {
-            return
+    var body: some View {
+        TabView(selection: $selectedTab) {
+            GeneralSettingsView(spaceManager: spaceManager, labelManager: labelManager)
+                .tabItem {
+                    Image(systemName: "gearshape")
+                    Text(NSLocalizedString("Settings.Tab.General", comment: ""))
+                }
+                .tag(0)
+            
+            SpaceEditView(spaceManager: spaceManager, labelManager: labelManager)
+                .tabItem {
+                    Image(systemName: "macwindow.stack")
+                    Text(NSLocalizedString("Settings.Tab.Space", comment: ""))
+                }
+                .tag(1)
+            
+            AboutView()
+                .tabItem {
+                    Image(systemName: "info.circle")
+                    Text(NSLocalizedString("Settings.Tab.About", comment: ""))
+                }
+                .tag(2)
         }
-        
-        let row = tableView.row(for: rowView)
-        guard row >= 0 && row < desktopSpaces.count else { return }
-        
-        let newValue = textField.stringValue.trimmingCharacters(in: .whitespacesAndNewlines)
-        
-        var space = desktopSpaces[row]
-        space.customName = newValue
-        desktopSpaces[row] = space
-        
-        spaceManager.spaceNameDict = desktopSpaces
-        spaceManager.saveSpaces()
+        .frame(width: 600, height: 400)
+        .padding()
     }
 }
 
-class SettingsViewController: NSTabViewController {
+// MARK: - SwiftUI Hosting Controller
+class SettingsHostingController: NSHostingController<SettingsView> {
     private let spaceManager: SpaceManager
     private let labelManager: SpaceLabelManager
     
     init(spaceManager: SpaceManager, labelManager: SpaceLabelManager) {
         self.spaceManager = spaceManager
         self.labelManager = labelManager
-        super.init(nibName: nil, bundle: nil)
-        
-        // Set tab style
-        self.tabStyle = .toolbar
-        
-        // Create tab view items
-        let generalTab = NSTabViewItem(viewController: GeneralSettingsViewController(spaceManager: spaceManager, labelManager: labelManager))
-        generalTab.label = NSLocalizedString("Settings.Tab.General", comment: "")
-        if let image = NSImage(systemSymbolName: "gearshape", accessibilityDescription: "General Settings") {
-            image.isTemplate = true
-            generalTab.image = image
-        }
-        
-        let spaceTab = NSTabViewItem(viewController: spaceEditViewController(spaceManager: spaceManager, labelManager: labelManager))
-        spaceTab.label = NSLocalizedString("Settings.Tab.Space", comment: "")
-        if let image = NSImage(systemSymbolName: "macwindow.stack", accessibilityDescription: "Edit Space") {
-            image.isTemplate = true
-            spaceTab.image = image
-        }
-        
-        let aboutTab = NSTabViewItem(viewController: AboutViewController())
-        aboutTab.label = NSLocalizedString("Settings.Tab.About", comment: "")
-        if let image = NSImage(systemSymbolName: "info.circle", accessibilityDescription: "About") {
-            image.isTemplate = true
-            aboutTab.image = image
-        }
-        
-        // Add tabs
-        self.addTabViewItem(generalTab)
-        self.addTabViewItem(spaceTab)
-        self.addTabViewItem(aboutTab)
+        super.init(rootView: SettingsView(spaceManager: spaceManager, labelManager: labelManager))
     }
     
-    required init?(coder: NSCoder) {
+    @MainActor required dynamic init?(coder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
     }
     
     override func viewDidLoad() {
         super.viewDidLoad()
-        
-        // Set the preferred content size
-        self.preferredContentSize = NSSize(width: 400, height: 300)
+        self.preferredContentSize = NSSize(width: 600, height: 400)
     }
 }
-
