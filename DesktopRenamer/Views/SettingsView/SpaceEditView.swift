@@ -200,11 +200,11 @@ struct SpaceEditView: View {
         updatedSpace.customName = trimmedName
         desktopSpaces[index] = updatedSpace
         
-        // 直接更新数据，不等待下一个事件循环
+        // Update data
         spaceManager.spaceNameDict = desktopSpaces
         spaceManager.saveSpaces()
         
-        // 强制刷新表格数据
+        // Force refresh
         refreshData()
     }
     
@@ -219,7 +219,7 @@ struct SpaceEditView: View {
         spaceManager.currentTotalSpace = desktopSpaces.count
         spaceManager.saveSpaces()
         
-        // 强制刷新
+        // Force refresh
         refreshData()
     }
 }
