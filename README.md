@@ -1,5 +1,6 @@
 <h1 align="center">
-  <img src="/DesktopRenamer/Assets.xcassets/AppIcon.appiconset/DesktopRenamer-macOS-Default-512x512@1x.png" width="30%" alt=""/>  
+  <img src="/DesktopRenamer/Resources/DesktopRenamerIcon_Default.png" width="25%" alt=""/>  
+  <p></p>
   <p align="center">DesktopRenamer</p>
 </h1>
 
