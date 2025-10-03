@@ -9,6 +9,10 @@
 "Settings.ResetButton" = "重置所有桌面名称";
 "Settings.CheckUpdateButton" = "检查更新";
 
+"Settings.General.General" = "通用";
+"Settings.General.Updates" = "更新";
+"Settings.General.Reset" = "重置";
+
 "Settings.LaunchAtLogin" = "登录时启动";
 "Settings.ShowLabels" = "显示桌面标签";
 "Settings.AutoCheckUpdate" = "自动检查更新";
