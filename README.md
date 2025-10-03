@@ -10,8 +10,6 @@
       <img src="/DesktopRenamer/Resources/Demo/DesktopRenamer_v1-4-0_Rename.png" width="300"/><br>
       <i>Rename desktop label in menubar</i>
     </td>
-  </tr>
-  <tr>
     <td align="center">
       <img src="/DesktopRenamer/Resources/Demo/DesktopRenamer_v1-4-0_SLW.png" width="300"/><br>
       <i><b>SpaceLabelWindow</b> will be shown when entering Mission Control</i>
