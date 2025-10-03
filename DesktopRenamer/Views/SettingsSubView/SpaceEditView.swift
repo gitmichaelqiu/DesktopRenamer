@@ -130,7 +130,7 @@ struct SpaceEditView: View {
         Button(action: { deleteRow(space) }) {
             Image(systemName: "trash")
                 .font(.system(size: 12, weight: .medium))
-                .foregroundColor(isCurrentSpace(space) ? .gray : .red)
+                .foregroundColor(isCurrentSpace(space) ? Color(.disabledControlTextColor) : .red)
         }
         .disabled(isCurrentSpace(space))
         .help(isCurrentSpace(space)
