@@ -11,7 +11,7 @@
       <i>Rename desktop label in menubar</i>
     </td>
     <td align="center">
-      <img src="/DesktopRenamer/Resources/Demo/DesktopRenamer_v1-4-0_Settings_Shortcuts.png" width="300"/><br>
+      <img src="/DesktopRenamer/Resources/Demo/DesktopRenamer_v1-4-0_SLW.png" width="300"/><br>
       <i><b>SpaceLabelWindwo</b> will be shown when entering Mission Control</i>
     </td>
     <td align="center">
