@@ -3,20 +3,26 @@
   <p align="center">DesktopRenamer</p>
 </h1>
 
-<p align="center">
-  <b>DesktopRenamer</b> is a macOS menubar app that shows your <b>customized</b> name of the current desktop.
-</p>
+<table align="center" border="0" cellpadding="0" cellspacing="0">
+  <tr>
+    <td align="center">
+      <img src="/DesktopRenamer/Resources/Demo/DesktopRenamer_v1-4-0_Rename.png" width="300"/><br>
+      <i>Rename desktop label in menubar</i>
+    </td>
+    <td align="center">
+      <img src="/DesktopRenamer/Resources/Demo/DesktopRenamer_v1-0-0_Settings_Shortcuts.png" width="300"/><br>
+      <i><b>SpaceLabelWindwo</b> will be shown when entering Mission Control</i>
+    </td>
+    <td align="center">
+      <img src="/DesktopRenamer/Resources/Demo/DesktopRenamer_v1-4-0_SpaceEdit.png" width="300"/><br>
+      <i>Edit spaces in settings</i>
+    </td>
+  </tr>
+</table>
 
-<p align="center">
-  <img src="/DesktopRenamer/Resources/Demo_1_Menubar.png" width="50%" ><br>
-  <i>Rename the desktop label in menubar</i>
-</p>
-<p align="center">
-  <img src="/DesktopRenamer/Resources/Demo_2_SLW.png" width="50%"><br>
-  <I><b>SpaceLabelWindow</b> will be shown when entering Mission Control</i>
+**DesktopRenamer** is a macOS menubar app that shows your **customized** name of the current desktop.
 
-
-## Easy to Install
+## 📦 Installation
 
 You do **NOT** have to disable *SIP* or things like that. Your macOS must be at least **macOS 13.0 Ventura**. All you need to do is:
 
@@ -32,14 +38,14 @@ sudo xattr -r -d com.apple.quarantine /Applications/DesktopRenamer.app
 
 You may be required to enter the password. When you are entering the password, the password is not shown. This is required by Apple. The app will **NOT** steal your password or personal information.
 
-## Tips
+## 💡 Tips
 
 The app will not work as expected when you connect to **multiple** displays. I am currently working on solving this. If you have any ideas, you are welcomed to post them in [GitHub Issues](https://github.com/gitmichaelqiu/DesktopRenamer/issues).
 
-## Any Issues
+## ⚠️ Issues/Suggestions
 
-Create issues in [GitHub Issues](https://github.com/gitmichaelqiu/DesktopRenamer/issues).
+You are welcome to create issues/suggestions in [GitHub Issues](https://github.com/gitmichaelqiu/DesktopRenamer/issues).
 
-## How to Support
+## ⭐ Support This Project
 
 You can simply click on the **Star** to support this project for free. Thank you for your support!
