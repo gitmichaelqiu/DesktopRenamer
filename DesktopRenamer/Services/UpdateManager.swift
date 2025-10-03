@@ -24,8 +24,8 @@ class UpdateManager {
                   let tag = json["tag_name"] as? String else {
                 if !suppressUpToDateAlert {
                     self.showAlert(
-                        NSLocalizedString("Update.CheckFailedTitle", comment: ""),
-                        NSLocalizedString("Update.CheckFailedMsg", comment: ""),
+                        NSLocalizedString("AutoUpdate.CheckFailed.Title", comment: ""),
+                        NSLocalizedString("AutoUpdate.CheckFailed.Msg", comment: ""),
                         window: window
                     )
                 }
@@ -35,10 +35,10 @@ class UpdateManager {
             if self.isNewerVersion(latestVersion, than: currentVersion) {
                 DispatchQueue.main.async {
                     let alert = NSAlert()
-                    alert.messageText = NSLocalizedString("Update.AvailableTitle", comment: "")
-                    alert.informativeText = String(format: NSLocalizedString("Update.AvailableMsg", comment: ""), latestVersion)
-                    alert.addButton(withTitle: NSLocalizedString("Update.AvailableButtonUpdate", comment: ""))
-                    alert.addButton(withTitle: NSLocalizedString("Update.AvailableButtonCancel", comment: ""))
+                    alert.messageText = NSLocalizedString("AutoUpdate.Available.Title", comment: "")
+                    alert.informativeText = String(format: NSLocalizedString("AutoUpdate.Available.Msg", comment: ""), latestVersion)
+                    alert.addButton(withTitle: NSLocalizedString("AutoUpdate.Available.Update", comment: ""))
+                    alert.addButton(withTitle: NSLocalizedString("Button.Cancel", comment: ""))
                     alert.alertStyle = .informational
                     if alert.runModal() == .alertFirstButtonReturn {
                         if let releasesURL = URL(string: "https://github.com/gitmichaelqiu/DesktopRenamer/releases/latest") {
@@ -48,8 +48,8 @@ class UpdateManager {
                 }
             } else if !suppressUpToDateAlert {
                 self.showAlert(
-                    NSLocalizedString("Update.UpToDateTitle", comment: ""),
-                    String(format: NSLocalizedString("Update.UpToDateMsg", comment: ""), currentVersion),
+                    NSLocalizedString("AutoUpdate.UpToDate.Title", comment: ""),
+                    String(format: NSLocalizedString("AutoUpdate.UpToDate.Msg", comment: ""), currentVersion),
                     window: window
                 )
             }
