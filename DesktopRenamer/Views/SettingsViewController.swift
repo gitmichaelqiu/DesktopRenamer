@@ -2,6 +2,10 @@ import SwiftUI
 import ServiceManagement
 import Combine
 
+enum SettingsTab: String {
+    case general, space, about
+}
+
 let defaultSettingsWindowWidth = 450
 let defaultSettingsWindowHeight = 450
 
@@ -9,7 +13,7 @@ let defaultSettingsWindowHeight = 450
 struct SettingsView: View {
     @ObservedObject var spaceManager: SpaceManager
     @ObservedObject var labelManager: SpaceLabelManager
-    @AppStorage("selectedSettingsTab") private var selectedTab: Int = 0
+    @AppStorage("selectedSettingsTab") private var selectedTab: SettingsTab = .general
     
     var body: some View {
         TabView(selection: $selectedTab) {
@@ -18,29 +22,24 @@ struct SettingsView: View {
                     Image(systemName: "gearshape")
                     Text(NSLocalizedString("Settings.Tab.General", comment: ""))
                 }
-                .tag(0)
+                .tag(SettingsTab.general)
             
             SpaceEditView(spaceManager: spaceManager, labelManager: labelManager)
                 .tabItem {
                     Image(systemName: "macwindow.stack")
                     Text(NSLocalizedString("Settings.Tab.Space", comment: ""))
                 }
-                .tag(1)
+                .tag(SettingsTab.space)
             
             AboutView()
                 .tabItem {
                     Image(systemName: "info.circle")
                     Text(NSLocalizedString("Settings.Tab.About", comment: ""))
                 }
-                .tag(2)
+                .tag(SettingsTab.about)
         }
         .frame(width: 450, height: 450)
         .padding()
-        .onAppear {
-            if let savedTab = UserDefaults.standard.object(forKey: "selectedSettingsTab") as? Int {
-                selectedTab = savedTab
-            }
-        }
     }
 }
 
