@@ -43,7 +43,6 @@
 
 "Window.SettingsTitle" = "DesktopRenamer";
 
-"About.AppName" = "DesktopRenamer";
-"About.GithubLink" = "GitHub 仓库";
+"About.Repo" = "GitHub 仓库";
 "About.Description" = "DesktopRenamer 允许您自定义 macOS 桌面名称。";
 "About.Copyright" = "© %d Michael Yicheng Qiu";

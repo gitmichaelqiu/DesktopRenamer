@@ -43,7 +43,6 @@
 
 "Window.SettingsTitle" = "DesktopRenamer";
 
-"About.AppName" = "DesktopRenamer";
-"About.GithubLink" = "GitHub Repository";
+"About.Repo" = "GitHub Repository";
 "About.Description" = "DesktopRenamer allows you to give custom names to macOS workspaces.";
 "About.Copyright" = "© %d Michael Yicheng Qiu";
