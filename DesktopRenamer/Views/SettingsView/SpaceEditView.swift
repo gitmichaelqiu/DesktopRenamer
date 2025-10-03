@@ -28,9 +28,9 @@ struct SpaceEditView: View {
             Image(systemName: "macwindow")
                 .font(.system(size: 48))
                 .foregroundColor(.secondary)
-            Text("No Spaces Available")
+            Text(NSLocalizedString("Settings.Space.Empty.Title", comment: ""))
                 .font(.headline)
-            Text("Your desktop spaces will appear here")
+            Text(NSLocalizedString("Settings.Space.Empty.Hint", comment: ""))
                 .font(.body)
                 .foregroundColor(.secondary)
         }
@@ -40,10 +40,10 @@ struct SpaceEditView: View {
     
     private var tableHeader: some View {
         HStack {
-            Text("Desktop Spaces")
+            Text(NSLocalizedString("Settings.Space", comment: ""))
                 .font(.headline)
             Spacer()
-            Text("\(desktopSpaces.count) spaces")
+            Text(String(format: NSLocalizedString("Settings.Space.Count", comment: ""), desktopSpaces.count))
                 .font(.caption)
                 .foregroundColor(.secondary)
         }
@@ -57,11 +57,11 @@ struct SpaceEditView: View {
             }
             .width(40)
             
-            TableColumn("Name") { space in
+            TableColumn(NSLocalizedString("Settings.Space.CustomName", comment: "")) { space in
                 spaceNameEditor(for: space)
             }
             
-            TableColumn("Actions") { space in
+            TableColumn(NSLocalizedString("Settings.Space.Actions", comment: "")) { space in
                 actionButtons(for: space)
             }
             .width(100)
