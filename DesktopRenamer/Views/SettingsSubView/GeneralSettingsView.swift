@@ -12,7 +12,7 @@ struct GeneralSettingsView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 20) {
                 SettingsSection("Settings.General.General") {
-                    SettingsRow("Settings.ShowLabels") {
+                    SettingsRow("Settings.General.General.ShowLabels") {
                         Toggle("", isOn: $labelManager.isEnabled)
                             .labelsHidden()
                             .toggleStyle(.switch)
@@ -20,7 +20,7 @@ struct GeneralSettingsView: View {
                     
                     Divider()
                     
-                    SettingsRow("Settings.LaunchAtLogin") {
+                    SettingsRow("Settings.General.General.LaunchAtLogin") {
                         Toggle("", isOn: $launchAtLogin)
                             .labelsHidden()
                             .toggleStyle(.switch)
@@ -31,7 +31,7 @@ struct GeneralSettingsView: View {
                 }
                 
                 SettingsSection("Settings.General.Updates") {
-                    SettingsRow("Settings.AutoCheckUpdate") {
+                    SettingsRow("Settings.General.Updates.AutoCheckUpdate") {
                         Toggle("", isOn: $autoCheckUpdate)
                             .labelsHidden()
                             .toggleStyle(.switch)
@@ -42,16 +42,16 @@ struct GeneralSettingsView: View {
                     
                     Divider()
                     
-                    SettingsRow("Settings.General.Update.ManualCheck") {
-                        Button(NSLocalizedString("Settings.CheckUpdateButton", comment: "")) {
+                    SettingsRow("Settings.General.Updates.ManualCheck") {
+                        Button(NSLocalizedString("Settings.General.Updates.Button", comment: "")) {
                             checkForUpdate()
                         }
                     }
                 }
                 
                 SettingsSection("Settings.General.Reset") {
-                    SettingsRow("Settings.ResetButton") {
-                        Button(NSLocalizedString("Settings.ResetButton", comment: "")) {
+                    SettingsRow("Settings.General.Reset.Button") {
+                        Button(NSLocalizedString("Settings.General.Reset.Button", comment: "")) {
                             resetNames()
                         }
                         .disabled(isResetting)
@@ -95,7 +95,7 @@ struct GeneralSettingsView: View {
                 alert.messageText = NSLocalizedString("Settings.LaunchAtLogin.Error", comment: "Failed to toggle launch at login")
                 alert.informativeText = error.localizedDescription
                 alert.alertStyle = .warning
-                alert.addButton(withTitle: NSLocalizedString("Common.OK", comment: "OK"))
+                alert.addButton(withTitle: NSLocalizedString("Button.OK", comment: "OK"))
                 alert.runModal()
             }
         } else {
@@ -106,8 +106,8 @@ struct GeneralSettingsView: View {
                     
                     // Show error alert
                     let alert = NSAlert()
-                    alert.messageText = NSLocalizedString("Settings.LaunchAtLogin.Error", comment: "Failed to toggle launch at login")
-                    alert.informativeText = NSLocalizedString("Settings.LaunchAtLogin.ErrorLegacy", comment: "Could not update login items")
+                    alert.messageText = NSLocalizedString("Settings.General.General.LaunchAtLogin.Error", comment: "Failed to toggle launch at login")
+                    alert.informativeText = NSLocalizedString("Settings.General.General.LaunchAtLogin.Error.info", comment: "Could not update login items")
                     alert.alertStyle = .warning
                     alert.addButton(withTitle: NSLocalizedString("Common.OK", comment: "OK"))
                     alert.runModal()
@@ -124,11 +124,11 @@ struct GeneralSettingsView: View {
         isResetting = true
         
         let alert = NSAlert()
-        alert.messageText = NSLocalizedString("Settings.ResetAlertMsg", comment: "")
-        alert.informativeText = NSLocalizedString("Settings.ResetAlertInfo", comment: "")
+        alert.messageText = NSLocalizedString("Settings.General.Reset.Alert.Msg", comment: "")
+        alert.informativeText = NSLocalizedString("Settings.General.Reset.Alert.Info", comment: "")
         alert.alertStyle = .warning
-        alert.addButton(withTitle: NSLocalizedString("Settings.ResetAlertButtonReset", comment: ""))
-        alert.addButton(withTitle: NSLocalizedString("Settings.ResetAlertButtonCancel", comment: ""))
+        alert.addButton(withTitle: NSLocalizedString("Settings.General.Reset.Alert.Reset", comment: ""))
+        alert.addButton(withTitle: NSLocalizedString("Button.Cancel", comment: ""))
         
         guard let window = NSApp.keyWindow else {
             isResetting = false
@@ -144,10 +144,10 @@ struct GeneralSettingsView: View {
                     
                     // Show success feedback
                     let successAlert = NSAlert()
-                    successAlert.messageText = NSLocalizedString("Settings.ResetSuccess", comment: "Reset successful")
-                    successAlert.informativeText = NSLocalizedString("Settings.ResetSuccessInfo", comment: "All space names have been reset to their default values")
+                    successAlert.messageText = NSLocalizedString("Settings.General.Reset.Success.Msg", comment: "Reset successful")
+                    successAlert.informativeText = NSLocalizedString("Settings.General.Reset.Success.Info", comment: "All space names have been reset to their default values")
                     successAlert.alertStyle = .informational
-                    successAlert.addButton(withTitle: NSLocalizedString("Common.OK", comment: "OK"))
+                    successAlert.addButton(withTitle: NSLocalizedString("Button.OK", comment: "OK"))
                     successAlert.runModal()
                 }
             }

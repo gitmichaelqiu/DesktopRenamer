@@ -28,9 +28,9 @@ struct SpaceEditView: View {
             Image(systemName: "macwindow")
                 .font(.system(size: 48))
                 .foregroundColor(.secondary)
-            Text(NSLocalizedString("Settings.Space.Empty.Title", comment: ""))
+            Text(NSLocalizedString("Settings.Spaces.Edit.Empty.Title", comment: ""))
                 .font(.headline)
-            Text(NSLocalizedString("Settings.Space.Empty.Hint", comment: ""))
+            Text(NSLocalizedString("Settings.Spaces.Edit.Empty.Hint", comment: ""))
                 .font(.body)
                 .foregroundColor(.secondary)
         }
@@ -40,10 +40,10 @@ struct SpaceEditView: View {
     
     private var tableHeader: some View {
         HStack {
-            Text(NSLocalizedString("Settings.Space", comment: ""))
+            Text(NSLocalizedString("Settings.Spaces", comment: ""))
                 .font(.headline)
             Spacer()
-            Text(String(format: NSLocalizedString("Settings.Space.Count", comment: ""), desktopSpaces.count))
+            Text(String(format: NSLocalizedString("Settings.Spaces.Count", comment: ""), desktopSpaces.count))
                 .font(.caption)
                 .foregroundColor(.secondary)
         }
@@ -57,12 +57,12 @@ struct SpaceEditView: View {
             }
             .width(30)
             
-            TableColumn(NSLocalizedString("Settings.Space.CustomName", comment: "")) { space in
+            TableColumn(NSLocalizedString("Settings.Spaces.Edit.Name", comment: "")) { space in
                 spaceNameEditor(for: space)
             }
             .width(220)
             
-            TableColumn(NSLocalizedString("Settings.Space.Actions", comment: "")) { space in
+            TableColumn(NSLocalizedString("Settings.Spaces.Edit.Actions", comment: "")) { space in
                 actionButtons(for: space)
             }
             .width(67)
@@ -110,7 +110,9 @@ struct SpaceEditView: View {
                 .font(.system(size: 12, weight: .medium))
         }
         .disabled(isFirstRow(space) || isCurrentSpace(space))
-        .help("Move space up")
+        .help(isFirstRow(space) || isCurrentSpace(space)
+              ? NSLocalizedString("Settings.Spaces.Edit.Help.MoveUp.Cannot", comment: "")
+              : NSLocalizedString("Settings.Spaces.Edit.Help.MoveUp", comment: ""))
     }
     
     private func moveDownButton(for space: DesktopSpace) -> some View {
@@ -119,7 +121,9 @@ struct SpaceEditView: View {
                 .font(.system(size: 12, weight: .medium))
         }
         .disabled(isLastRow(space) || isCurrentSpace(space))
-        .help("Move space down")
+        .help(isLastRow(space) || isCurrentSpace(space)
+              ? NSLocalizedString("Settings.Spaces.Edit.Help.MoveDown.Cannot", comment: "")
+              : NSLocalizedString("Settings.Spaces.Edit.Help.MoveDown", comment: ""))
     }
     
     private func deleteButton(for space: DesktopSpace) -> some View {
@@ -129,8 +133,9 @@ struct SpaceEditView: View {
                 .foregroundColor(isCurrentSpace(space) ? .gray : .red)
         }
         .disabled(isCurrentSpace(space))
-        .help(isCurrentSpace(space) ?
-              "Cannot delete current space" : "Delete space")
+        .help(isCurrentSpace(space)
+              ? NSLocalizedString("Settings.Spaces.Edit.Help.Delete.Cannot", comment: "")
+              : NSLocalizedString("Settings.Spaces.Edit.Help.Delete", comment: ""))
     }
     
     // MARK: - Helper Methods

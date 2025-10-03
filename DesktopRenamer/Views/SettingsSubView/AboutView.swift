@@ -35,7 +35,7 @@ struct AboutView: View {
             Divider()
                 .padding(.vertical, 8)
 
-            Text(NSLocalizedString("About.Description", comment: "Description"))
+            Text(NSLocalizedString("Settings.About.Description", comment: "Description"))
                 .multilineTextAlignment(.center)
                 .frame(maxWidth: 360, alignment: .center)
 //                .fixedSize(horizontal: false, vertical: true)
@@ -43,7 +43,7 @@ struct AboutView: View {
             
             Spacer()
             
-            Link(NSLocalizedString("About.Repo", comment: "GitHub Repo"), destination: URL(string: "https://github.com/gitmichaelqiu/DesktopRenamer")!)
+            Link(NSLocalizedString("Settings.About.Repo", comment: "GitHub Repo"), destination: URL(string: "https://github.com/gitmichaelqiu/DesktopRenamer")!)
                 .font(.body)
                 .foregroundColor(.blue)
 
