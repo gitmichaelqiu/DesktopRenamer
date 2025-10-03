@@ -1,54 +1,67 @@
+// MARK: - Menu
 "Menu.RenameCurrentSpace" = "Rename Current Space";
 "Menu.ShowLabels" = "Show Desktop Label Windows";
 "Menu.Settings" = "Settings...";
 "Menu.Quit" = "Quit";
 "Menu.About" = "About DesktopRenamer";
 
+// MARK: - Rename Popover
 "Rename.Placeholder" = "Enter space name";
 "Rename.Label" = "Rename Desktop %d";
 
-"Settings.ResetButton" = "Reset All Desktop Names";
-"Settings.CheckUpdateButton" = "Check for Update";
+// MARK: - Settings/General
+"Settings.General" = "General";
 
+// General
 "Settings.General.General" = "General";
+"Settings.General.General.ShowLabels" = "Show desktop labels";
+"Settings.General.General.LaunchAtLogin" = "Launch at login";
+
+// Updates
 "Settings.General.Updates" = "Updates";
+"Settings.General.Updates.AutoCheckUpdate" = "Automatically check for updates";
+"Settings.General.Updates.ManualCheck" = "Check for updates";
+"Settings.General.Updates.Button" = "Check for Update";
+
+// Reset
 "Settings.General.Reset" = "Reset";
-"Settings.General.Update.ManualCheck" = "Check for updates";
+"Settings.General.Reset.Button" = "Reset All Desktop Names";
+"Settings.General.Reset.Alert.Msg" = "Reset Desktop Names";
+"Settings.General.Reset.Alert.Info" = "Are you sure you want to reset all desktop names to their defaults?";
+"Settings.General.Reset.Alert.Reset" = "Reset";
+"Settings.General.Reset.Alert.Cancel" = "Cancel";
 
-"Settings.LaunchAtLogin" = "Launch at login";
-"Settings.ShowLabels" = "Show desktop labels";
-"Settings.AutoCheckUpdate" = "Automatically check for updates";
+// MARK: - Settings/Spaces
+"Settings.Spaces" = "Spaces";
 
-"Settings.ResetAlertMsg" = "Reset Desktop Names";
-"Settings.ResetAlertInfo" = "Are you sure you want to reset all desktop names to their defaults?";
-"Settings.ResetAlertButtonReset" = "Reset";
-"Settings.ResetAlertButtonCancel" = "Cancel";
+// Edit
+"Settings.Spaces.Edit" = "Edit Spaces";
+"Settings.Spaces.Edit" = "%d spaces";
+"Settings.Spaces.Edit.Name" = "Name";
+"Settings.Spaces.Edit.Actions" = "Actions";
+"Settings.Spaces.Edit.Empty.Title" = "No Spaces Available";
+"Settings.Spaces.Edit.Empty.Hint" = "Your desktop spaces will appear here";
 
-"Settings.Tab.General" = "General";
-"Settings.Tab.About" = "About";
-"Settings.Tab.Space" = "Spaces";
+// MARK: - Settings/About
+"Settings.About" = "About";
+"Settings.About.Repo" = "GitHub Repository";
+"Settings.About.Description" = "DesktopRenamer allows you to give custom names to macOS workspaces.";
+"Settings.About.Copyright" = "© %d Michael Yicheng Qiu";
 
-"Settings.Space.CustomName" = "Name";
-"Settings.Space.Actions" = "Actions";
-"Settings.Space.Empty.Title" = "No Spaces Available";
-"Settings.Space.Empty.Hint" = "Your desktop spaces will appear here";
+// MARK: - Auto Update Alert
+"AutoUpdate.Available.Title" = "Update Available";
+"AutoUpdate.Available.Msg" = "Version %@ is available. Open the releases page to download and install?";
+"AutoUpdate.Available.Update" = "Update";
+"AutoUpdate.Available.Cancel" = "Cancel";
+"AutoUpdate.UpToDate.Title" = "Up To Date";
+"AutoUpdate.UpToDate.Msg" = "You are running the latest version (%@).";
+"AutoUpdate.CheckFailed.Title" = "Update Check Failed";
+"AutoUpdate.CheckFailed.Msg" = "Could not check for updates.";
 
-"Settings.Space" = "Edit Spaces";
-"Settings.Space.Count" = "%d spaces";
-
-"Update.AvailableTitle" = "Update Available";
-"Update.AvailableMsg" = "Version %@ is available. Open the releases page to download and install?";
-"Update.AvailableButtonUpdate" = "Update";
-"Update.AvailableButtonCancel" = "Cancel";
-"Update.UpToDateTitle" = "Up To Date";
-"Update.UpToDateMsg" = "You are running the latest version (%@).";
-"Update.CheckFailedTitle" = "Update Check Failed";
-"Update.CheckFailedMsg" = "Could not check for updates.";
-
+// MARK: - Others
 "Space.DefaultName" = "Desktop %d";
-
-"Window.SettingsTitle" = "DesktopRenamer";
-
-"About.Repo" = "GitHub Repository";
-"About.Description" = "DesktopRenamer allows you to give custom names to macOS workspaces.";
-"About.Copyright" = "© %d Michael Yicheng Qiu";
+"Window.Settings.Title" = "DesktopRenamer Settings";
+"Tooltip.MoveUp" = "Move desktop up";
+"Tooltip.MoveDown" = "Move desktop down";
+"Tooltip.Delete" = "Delete desktop";
+"Tooltip.CannotDeleteCurrent" = "Cannot delete current desktop";
