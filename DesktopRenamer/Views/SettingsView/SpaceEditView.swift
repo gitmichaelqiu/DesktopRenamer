@@ -82,7 +82,12 @@ struct SpaceEditView: View {
             defaultName(for: space),
             text: Binding(
                 get: { space.customName },
-                set: { updateSpaceName(space, $0) }
+                set: { newValue in
+                    // async to solve last char is deleted
+                    DispatchQueue.main.async {
+                        updateSpaceName(space, newValue)
+                    }
+                }
             )
         )
         .textFieldStyle(.roundedBorder)
@@ -191,11 +196,16 @@ struct SpaceEditView: View {
         guard let index = desktopSpaces.firstIndex(where: { $0.id == space.id }) else { return }
         
         var updatedSpace = desktopSpaces[index]
-        updatedSpace.customName = newName.trimmingCharacters(in: .whitespacesAndNewlines)
+        let trimmedName = newName.trimmingCharacters(in: .whitespacesAndNewlines)
+        updatedSpace.customName = trimmedName
         desktopSpaces[index] = updatedSpace
         
+        // 直接更新数据，不等待下一个事件循环
         spaceManager.spaceNameDict = desktopSpaces
         spaceManager.saveSpaces()
+        
+        // 强制刷新表格数据
+        refreshData()
     }
     
     private func updateNumbersAndSave() {
@@ -208,5 +218,8 @@ struct SpaceEditView: View {
         spaceManager.spaceNameDict = desktopSpaces
         spaceManager.currentTotalSpace = desktopSpaces.count
         spaceManager.saveSpaces()
+        
+        // 强制刷新
+        refreshData()
     }
 }
