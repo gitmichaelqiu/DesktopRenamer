@@ -91,7 +91,7 @@ class SpaceManager: ObservableObject {
         
         var ret = spaceNameDict.first(where: {$0.id == spaceUUID})?.customName
         if ret == "" {
-            ret = String(format: NSLocalizedString("space.default_name", comment: ""), getSpaceNum(spaceUUID))
+            ret = String(format: NSLocalizedString("Space.DefaultName", comment: ""), getSpaceNum(spaceUUID))
         }
         
         return ret ?? ""
