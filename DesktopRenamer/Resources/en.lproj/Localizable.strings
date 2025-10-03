@@ -9,6 +9,10 @@
 "Settings.ResetButton" = "Reset All Desktop Names";
 "Settings.CheckUpdateButton" = "Check for Update";
 
+"Settings.General.General" = "General";
+"Settings.General.Updates" = "Updates";
+"Settings.General.Reset" = "Reset";
+
 "Settings.LaunchAtLogin" = "Launch at login";
 "Settings.ShowLabels" = "Show desktop labels";
 "Settings.AutoCheckUpdate" = "Automatically check for updates";

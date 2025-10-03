@@ -12,7 +12,7 @@ struct GeneralSettingsView: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 20) {
-                SettingsSection("Settings.General.Application") {
+                SettingsSection("Settings.General.General") {
                     SettingsRow("Settings.LaunchAtLogin") {
                         Toggle("", isOn: $launchAtLogin)
                             .labelsHidden()
