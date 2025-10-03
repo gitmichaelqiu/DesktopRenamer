@@ -148,7 +148,8 @@ struct GeneralSettingsView: View {
                     successAlert.informativeText = NSLocalizedString("Settings.General.Reset.Success.Info", comment: "All space names have been reset to their default values")
                     successAlert.alertStyle = .informational
                     successAlert.addButton(withTitle: NSLocalizedString("Button.OK", comment: "OK"))
-                    successAlert.runModal()
+                    successAlert.beginSheetModal(for: window) { _ in
+                    } 
                 }
             }
         }
