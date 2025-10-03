@@ -7,72 +7,138 @@ struct SpaceEditView: View {
     @State private var desktopSpaces: [DesktopSpace] = []
     
     var body: some View {
-        VStack {
+        VStack(spacing: 0) {
             if desktopSpaces.isEmpty {
-                Text("No spaces available")
-                    .foregroundColor(.secondary)
+                emptyStateView
             } else {
-                Table(desktopSpaces) {
-                    TableColumn("#") { space in
-                        Text(spaceManager.currentSpaceUUID == space.id ? "[\(space.num)]" : "\(space.num)")
-                            .frame(maxWidth: .infinity, alignment: .center)
-                    }
-                    .width(30)
-                    
-                    TableColumn(NSLocalizedString("Settings.Space.CustomName", comment: "")) { space in
-                        TextField(
-                            String(format: NSLocalizedString("Space.DefaultName", comment: ""), space.num),
-                            text: Binding(
-                                get: { space.customName },
-                                set: { newValue in
-                                    updateSpaceName(space, newValue)
-                                }
-                            )
-                        )
-                        .textFieldStyle(RoundedBorderTextFieldStyle())
-                    }
-                    .width(240)
-                    
-                    TableColumn(NSLocalizedString("Settings.Space.Actions", comment: "")) { space in
-                        HStack(spacing: 4) {
-                            Button("↑") {
-                                moveRowUp(space)
-                            }
-                            .disabled(isFirstRow(space) || space.id == spaceManager.currentSpaceUUID)
-                            
-                            Button("↓") {
-                                moveRowDown(space)
-                            }
-                            .disabled(isLastRow(space) || space.id == spaceManager.currentSpaceUUID)
-                            
-                            Button("⌫") {
-                                deleteRow(space)
-                            }
-                            .disabled(space.id == spaceManager.currentSpaceUUID)
-                            .help(space.id == spaceManager.currentSpaceUUID ?
-                                  NSLocalizedString("settings.space.cannot_delete_current", comment: "Cannot delete current space") : "")
-                        }
-                        .buttonStyle(.bordered)
-                    }
-                    .width(85)
-                }
-                .tableStyle(.bordered)
+                tableHeader
+                spaceTable
             }
         }
         .padding()
-        .onAppear {
-            refreshData()
+        .onAppear(perform: refreshData)
+        .onReceive(spaceManager.$spaceNameDict) { _ in refreshData() }
+        .onReceive(spaceManager.$currentSpaceUUID) { _ in refreshData() }
+    }
+    
+    // MARK: - Subviews
+    
+    private var emptyStateView: some View {
+        VStack(spacing: 12) {
+            Image(systemName: "macwindow")
+                .font(.system(size: 48))
+                .foregroundColor(.secondary)
+            Text("No Spaces Available")
+                .font(.headline)
+            Text("Your desktop spaces will appear here")
+                .font(.body)
+                .foregroundColor(.secondary)
         }
-        .onReceive(spaceManager.$spaceNameDict) { _ in
-            refreshData()
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .padding()
+    }
+    
+    private var tableHeader: some View {
+        HStack {
+            Text("Desktop Spaces")
+                .font(.headline)
+            Spacer()
+            Text("\(desktopSpaces.count) spaces")
+                .font(.caption)
+                .foregroundColor(.secondary)
         }
-        .onReceive(spaceManager.$currentSpaceUUID) { _ in
-            refreshData()
+        .padding(.bottom, 12)
+    }
+    
+    private var spaceTable: some View {
+        Table(desktopSpaces) {
+            TableColumn("#") { space in
+                spaceNumberView(for: space)
+            }
+            .width(40)
+            
+            TableColumn("Name") { space in
+                spaceNameEditor(for: space)
+            }
+            
+            TableColumn("Actions") { space in
+                actionButtons(for: space)
+            }
+            .width(100)
         }
     }
     
-    private func refreshData() {
-        desktopSpaces = spaceManager.spaceNameDict.sorted { $0.num < $1.num }
+    // MARK: - Component Views
+    
+    private func spaceNumberView(for space: DesktopSpace) -> some View {
+        Text(spaceNumberText(for: space))
+            .font(.system(.body, design: .monospaced))
+            .frame(maxWidth: .infinity)
+            .foregroundColor(isCurrentSpace(space) ? .accentColor : .primary)
+    }
+    
+    private func spaceNameEditor(for space: DesktopSpace) -> some View {
+        TextField(
+            defaultName(for: space),
+            text: Binding(
+                get: { space.customName },
+                set: { updateSpaceName(space, $0) }
+            )
+        )
+        .textFieldStyle(.roundedBorder)
+        .disabled(isCurrentSpace(space))
+    }
+    
+    private func actionButtons(for space: DesktopSpace) -> some View {
+        HStack(spacing: 8) {
+            moveUpButton(for: space)
+            moveDownButton(for: space)
+            deleteButton(for: space)
+        }
+        .buttonStyle(.borderless)
+    }
+    
+    private func moveUpButton(for space: DesktopSpace) -> some View {
+        Button(action: { moveRowUp(space) }) {
+            Image(systemName: "chevron.up")
+                .font(.system(size: 12, weight: .medium))
+        }
+        .disabled(isFirstRow(space) || isCurrentSpace(space))
+        .help("Move space up")
+    }
+    
+    private func moveDownButton(for space: DesktopSpace) -> some View {
+        Button(action: { moveRowDown(space) }) {
+            Image(systemName: "chevron.down")
+                .font(.system(size: 12, weight: .medium))
+        }
+        .disabled(isLastRow(space) || isCurrentSpace(space))
+        .help("Move space down")
+    }
+    
+    private func deleteButton(for space: DesktopSpace) -> some View {
+        Button(action: { deleteRow(space) }) {
+            Image(systemName: "trash")
+                .font(.system(size: 12, weight: .medium))
+                .foregroundColor(isCurrentSpace(space) ? .gray : .red)
+        }
+        .disabled(isCurrentSpace(space))
+        .help(isCurrentSpace(space) ?
+              "Cannot delete current space" : "Delete space")
+    }
+    
+    // MARK: - Helper Methods
+    
+    private func spaceNumberText(for space: DesktopSpace) -> String {
+        isCurrentSpace(space) ? "[\(space.num)]" : "\(space.num)"
+    }
+    
+    private func defaultName(for space: DesktopSpace) -> String {
+        String(format: NSLocalizedString("Space.DefaultName", comment: ""), space.num)
+    }
+    
+    private func isCurrentSpace(_ space: DesktopSpace) -> Bool {
+        space.id == spaceManager.currentSpaceUUID
     }
     
     private func isFirstRow(_ space: DesktopSpace) -> Bool {
@@ -85,28 +151,40 @@ struct SpaceEditView: View {
         return index == desktopSpaces.count - 1
     }
     
+    // MARK: - Data Operations
+    
+    private func refreshData() {
+        desktopSpaces = spaceManager.spaceNameDict.sorted { $0.num < $1.num }
+    }
+    
     private func moveRowUp(_ space: DesktopSpace) {
         guard let index = desktopSpaces.firstIndex(where: { $0.id == space.id }),
               index > 0 else { return }
         
-        desktopSpaces.swapAt(index, index - 1)
-        updateNumbersAndSave()
+        withAnimation(.easeInOut(duration: 0.2)) {
+            desktopSpaces.swapAt(index, index - 1)
+            updateNumbersAndSave()
+        }
     }
     
     private func moveRowDown(_ space: DesktopSpace) {
         guard let index = desktopSpaces.firstIndex(where: { $0.id == space.id }),
               index < desktopSpaces.count - 1 else { return }
         
-        desktopSpaces.swapAt(index, index + 1)
-        updateNumbersAndSave()
+        withAnimation(.easeInOut(duration: 0.2)) {
+            desktopSpaces.swapAt(index, index + 1)
+            updateNumbersAndSave()
+        }
     }
     
     private func deleteRow(_ space: DesktopSpace) {
         guard let index = desktopSpaces.firstIndex(where: { $0.id == space.id }),
-              space.id != spaceManager.currentSpaceUUID else { return }
+              !isCurrentSpace(space) else { return }
         
-        desktopSpaces.remove(at: index)
-        updateNumbersAndSave()
+        withAnimation(.easeInOut(duration: 0.2)) {
+            desktopSpaces.remove(at: index)
+            updateNumbersAndSave()
+        }
     }
     
     private func updateSpaceName(_ space: DesktopSpace, _ newName: String) {
@@ -121,7 +199,7 @@ struct SpaceEditView: View {
     }
     
     private func updateNumbersAndSave() {
-        // Reindex
+        // Reindex with animation
         for (index, _) in desktopSpaces.enumerated() {
             desktopSpaces[index].num = index + 1
         }
