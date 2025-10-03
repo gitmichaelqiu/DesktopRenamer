@@ -4,7 +4,7 @@ import AppKit
 class SpaceLabelManager: ObservableObject {
     private let spacesKey = "com.gitmichaelqiu.desktoprenamer.slw"
     
-    @Published private(set) var isEnabled: Bool {
+    @Published var isEnabled: Bool {
         didSet {
             UserDefaults.standard.set(isEnabled, forKey: spacesKey)
             updateLabelsVisibility()
