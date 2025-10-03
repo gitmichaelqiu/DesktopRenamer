@@ -2,6 +2,9 @@ import SwiftUI
 import ServiceManagement
 import Combine
 
+let defaultSettingsWindowWidth = 450
+let defaultSettingsWindowHeight = 450
+
 // MARK: - Main Settings View
 struct SettingsView: View {
     @ObservedObject var spaceManager: SpaceManager
@@ -31,7 +34,7 @@ struct SettingsView: View {
                 }
                 .tag(2)
         }
-        .frame(width: 600, height: 400)
+        .frame(width: 450, height: 450)
         .padding()
     }
 }
@@ -53,6 +56,29 @@ class SettingsHostingController: NSHostingController<SettingsView> {
     
     override func viewDidLoad() {
         super.viewDidLoad()
-        self.preferredContentSize = NSSize(width: 600, height: 400)
+        self.preferredContentSize = NSSize(width: defaultSettingsWindowWidth, height: defaultSettingsWindowHeight)
+    }
+    
+    override func viewDidAppear() {
+        super.viewDidAppear()
+        if let window = self.view.window {
+            configureWindowSize(window)
+        }
+    }
+    
+    private func configureWindowSize(_ window: NSWindow) {
+        let styleMask: NSWindow.StyleMask = [.titled, .closable]
+        window.styleMask = styleMask
+        
+        window.minSize = NSSize(width: defaultSettingsWindowWidth, height: defaultSettingsWindowHeight)
+        window.maxSize = NSSize(width: defaultSettingsWindowWidth, height: defaultSettingsWindowHeight)
+        
+        window.setContentSize(NSSize(width: defaultSettingsWindowWidth, height: defaultSettingsWindowHeight))
+        
+        window.showsResizeIndicator = false
+        
+        if let zoomButton = window.standardWindowButton(.zoomButton) {
+            zoomButton.isEnabled = false
+        }
     }
 }
