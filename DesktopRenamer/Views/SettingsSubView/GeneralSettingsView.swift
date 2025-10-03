@@ -50,7 +50,7 @@ struct GeneralSettingsView: View {
                 }
                 
                 SettingsSection("Settings.General.Reset") {
-                    SettingsRow("Settings.General.Reset.Button") {
+                    SettingsRow("Settings.General.Reset.Body") {
                         Button(NSLocalizedString("Settings.General.Reset.Button", comment: "")) {
                             resetNames()
                         }

@@ -27,7 +27,8 @@
 
 // Reset
 "Settings.General.Reset" = "重置";
-"Settings.General.Reset.Button" = "重置所有桌面名称";
+"Settings.General.Reset.Body" = "重置所有桌面名称";
+"Settings.General.Reset.Button" = "重置";
 "Settings.General.Reset.Alert.Msg" = "重置桌面名称";
 "Settings.General.Reset.Alert.Info" = "确定要将所有桌面名称重置为默认值吗？";
 "Settings.General.Reset.Alert.Reset" = "重置";
