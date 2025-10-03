@@ -29,6 +29,11 @@
 
 "Settings.Space.CustomName" = "名称";
 "Settings.Space.Actions" = "操作";
+"Settings.Space.Empty.Title" = "没有可用桌面";
+"Settings.Space.Empty.Hint" = "你的桌面会显示在此处";
+
+"Settings.Space" = "编辑桌面";
+"Settings.Space.Count" = "%d个桌面";
 
 "Update.AvailableTitle" = "有新版本可用";
 "Update.AvailableMsg" = "版本 %@ 已发布。是否打开发布页面下载并安装？";

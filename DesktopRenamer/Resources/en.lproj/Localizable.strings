@@ -29,6 +29,11 @@
 
 "Settings.Space.CustomName" = "Name";
 "Settings.Space.Actions" = "Actions";
+"Settings.Space.Empty.Title" = "No Spaces Available";
+"Settings.Space.Empty.Hint" = "Your desktop spaces will appear here";
+
+"Settings.Space" = "Edit Spaces";
+"Settings.Space.Count" = "%d spaces";
 
 "Update.AvailableTitle" = "Update Available";
 "Update.AvailableMsg" = "Version %@ is available. Open the releases page to download and install?";
