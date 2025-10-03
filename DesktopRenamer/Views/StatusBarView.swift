@@ -118,13 +118,20 @@ class StatusBarController: NSObject {
         spaceManager.$spaceNameDict
             .receive(on: DispatchQueue.main)
             .sink { [weak self] _ in
-                // 只有当当前空间的名称改变时才更新
                 if let currentSpaceUUID = self?.spaceManager.currentSpaceUUID,
                    let newName = self?.spaceManager.getSpaceName(currentSpaceUUID),
                    let button = self?.statusItem.button,
                    button.title != newName {
                     self?.updateStatusBarTitle()
                 }
+            }
+            .store(in: &cancellables)
+        
+        // Observe labelManager.isEnabled
+        labelManager.$isEnabled
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] _ in
+                self?.updateShowLabelsMenuItemState()
             }
             .store(in: &cancellables)
     }
@@ -270,6 +277,10 @@ class StatusBarController: NSObject {
     
     @objc private func quitApp() {
         NSApplication.shared.terminate(nil)
+    }
+    
+    private func updateShowLabelsMenuItemState() {
+        self.showLabelsMenuItem.state = labelManager.isEnabled ? .on : .off
     }
 }
 

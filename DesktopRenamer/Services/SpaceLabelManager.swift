@@ -8,6 +8,7 @@ class SpaceLabelManager: ObservableObject {
         didSet {
             UserDefaults.standard.set(isEnabled, forKey: spacesKey)
             updateLabelsVisibility()
+            objectWillChange.send()
         }
     }
     
