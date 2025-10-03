@@ -248,23 +248,28 @@ class StatusBarController: NSObject {
         if let windowController = settingsWindowController {
             windowController.showWindow(nil)
             NSApp.activate(ignoringOtherApps: true)
+            
+            if let hostingController = windowController.window?.contentViewController as? SettingsHostingController {
+                hostingController.rootView = SettingsView(spaceManager: spaceManager, labelManager: labelManager)
+            }
             return
         }
         
-        // Create settings window with fixed size
+        // Create settings window with proper style mask
         let window = NSWindow(
-            contentRect: NSRect(x: 0, y: 0, width: defaultSettingsWindowWidth, height: defaultSettingsWindowHeight),
-            styleMask: [.titled, .closable],
+            contentRect: NSRect(x: 0, y: 0, width: 450, height: 450),
+            styleMask: [.titled, .closable, .miniaturizable],
             backing: .buffered,
             defer: false
         )
         window.title = NSLocalizedString("Window.SettingsTitle", comment: "")
         window.center()
         
-        window.styleMask.remove(.resizable)
-        window.minSize = NSSize(width: defaultSettingsWindowWidth, height: defaultSettingsWindowHeight)
-        window.maxSize = NSSize(width: defaultSettingsWindowWidth, height: defaultSettingsWindowHeight)
-        window.showsResizeIndicator = false
+        window.minSize = NSSize(width: 450, height: 450)
+        window.maxSize = NSSize(width: 450, height: 450)
+        
+        window.collectionBehavior = [.participatesInCycle]
+        window.level = .normal
         
         // Create and set the settings view controller
         let settingsVC = SettingsHostingController(spaceManager: spaceManager, labelManager: labelManager)
@@ -275,9 +280,24 @@ class StatusBarController: NSObject {
         windowController.window?.delegate = self
         settingsWindowController = windowController
         
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(settingsWindowWillClose),
+            name: NSWindow.willCloseNotification,
+            object: window
+        )
+        
         // Show the window
         windowController.showWindow(nil)
         NSApp.activate(ignoringOtherApps: true)
+    }
+    
+    @objc private func settingsWindowWillClose(_ notification: Notification) {
+        // Hide dock icon
+        DispatchQueue.main.async {
+            NSApp.setActivationPolicy(.accessory)
+        }
+        settingsWindowController = nil
     }
     
     @objc private func quitApp() {

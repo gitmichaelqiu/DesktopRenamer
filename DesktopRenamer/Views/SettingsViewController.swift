@@ -9,7 +9,7 @@ let defaultSettingsWindowHeight = 450
 struct SettingsView: View {
     @ObservedObject var spaceManager: SpaceManager
     @ObservedObject var labelManager: SpaceLabelManager
-    @State private var selectedTab = 0
+    @AppStorage("selectedSettingsTab") private var selectedTab: Int = 0
     
     var body: some View {
         TabView(selection: $selectedTab) {
@@ -36,6 +36,11 @@ struct SettingsView: View {
         }
         .frame(width: 450, height: 450)
         .padding()
+        .onAppear {
+            if let savedTab = UserDefaults.standard.object(forKey: "selectedSettingsTab") as? Int {
+                selectedTab = savedTab
+            }
+        }
     }
 }
 
@@ -56,29 +61,6 @@ class SettingsHostingController: NSHostingController<SettingsView> {
     
     override func viewDidLoad() {
         super.viewDidLoad()
-        self.preferredContentSize = NSSize(width: defaultSettingsWindowWidth, height: defaultSettingsWindowHeight)
-    }
-    
-    override func viewDidAppear() {
-        super.viewDidAppear()
-        if let window = self.view.window {
-            configureWindowSize(window)
-        }
-    }
-    
-    private func configureWindowSize(_ window: NSWindow) {
-        let styleMask: NSWindow.StyleMask = [.titled, .closable]
-        window.styleMask = styleMask
-        
-        window.minSize = NSSize(width: defaultSettingsWindowWidth, height: defaultSettingsWindowHeight)
-        window.maxSize = NSSize(width: defaultSettingsWindowWidth, height: defaultSettingsWindowHeight)
-        
-        window.setContentSize(NSSize(width: defaultSettingsWindowWidth, height: defaultSettingsWindowHeight))
-        
-        window.showsResizeIndicator = false
-        
-        if let zoomButton = window.standardWindowButton(.zoomButton) {
-            zoomButton.isEnabled = false
-        }
+        self.preferredContentSize = NSSize(width: 450, height: 450)
     }
 }

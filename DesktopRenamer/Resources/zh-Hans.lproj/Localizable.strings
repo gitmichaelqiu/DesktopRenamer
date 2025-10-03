@@ -2,6 +2,7 @@
 "Menu.ShowLabels" = "显示桌面名称窗口";
 "Menu.Settings" = "设置...";
 "Menu.Quit" = "退出";
+"Menu.About" = "关于 DesktopRenamer";
 
 "Rename.Placeholder" = "输入新桌面名称";
 "Rename.Label" = "重命名桌面 %d";

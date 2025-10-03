@@ -2,6 +2,7 @@
 "Menu.ShowLabels" = "Show Desktop Label Windows";
 "Menu.Settings" = "Settings...";
 "Menu.Quit" = "Quit";
+"Menu.About" = "About DesktopRenamer";
 
 "Rename.Placeholder" = "Enter space name";
 "Rename.Label" = "Rename Desktop %d";
