@@ -55,16 +55,17 @@ struct SpaceEditView: View {
             TableColumn("#") { space in
                 spaceNumberView(for: space)
             }
-            .width(40)
+            .width(30)
             
             TableColumn(NSLocalizedString("Settings.Space.CustomName", comment: "")) { space in
                 spaceNameEditor(for: space)
             }
+            .width(220)
             
             TableColumn(NSLocalizedString("Settings.Space.Actions", comment: "")) { space in
                 actionButtons(for: space)
             }
-            .width(100)
+            .width(67)
         }
     }
     
