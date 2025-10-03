@@ -27,7 +27,8 @@
 
 // Reset
 "Settings.General.Reset" = "Reset";
-"Settings.General.Reset.Button" = "Reset All Desktop Names";
+"Settings.General.Reset.Body" = "Reset All Desktop Names";
+"Settings.General.Reset.Button" = "Reset";
 "Settings.General.Reset.Alert.Msg" = "Reset Desktop Names";
 "Settings.General.Reset.Alert.Info" = "Are you sure you want to reset all desktop names to their defaults?";
 "Settings.General.Reset.Alert.Reset" = "Reset";
