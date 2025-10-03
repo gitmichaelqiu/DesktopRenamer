@@ -1,7 +1,6 @@
 import SwiftUI
 import ServiceManagement
 
-// MARK: - General Settings View
 struct GeneralSettingsView: View {
     @ObservedObject var spaceManager: SpaceManager
     @ObservedObject var labelManager: SpaceLabelManager
@@ -13,35 +12,60 @@ struct GeneralSettingsView: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 20) {
-                // Launch at login toggle
-                Toggle(NSLocalizedString("Settings.LaunchAtLogin", comment: ""), isOn: $launchAtLogin)
-                    .onChange(of: launchAtLogin) { value in
-                        toggleLaunchAtLogin(value)
+                SettingsSection("Settings.General.Application") {
+                    SettingsRow("Settings.LaunchAtLogin") {
+                        Toggle("", isOn: $launchAtLogin)
+                            .labelsHidden()
+                            .toggleStyle(.switch)
+                            .onChange(of: launchAtLogin) { value in
+                                toggleLaunchAtLogin(value)
+                            }
                     }
-                
-                // Auto Check for Update toggle
-                Toggle(NSLocalizedString("Settings.AutoCheckUpdate", comment: ""), isOn: $autoCheckUpdate)
-                    .onChange(of: autoCheckUpdate) { value in
-                        UpdateManager.isAutoCheckEnabled = value
+                    
+                    Divider()
+                    
+                    SettingsRow("Settings.ShowLabels") {
+                        Toggle("", isOn: $showLabels)
+                            .labelsHidden()
+                            .toggleStyle(.switch)
+                            .onChange(of: showLabels) { value in
+                                labelManager.isEnabled = value
+                            }
                     }
-                
-                Spacer().frame(height: 20)
-                
-                // Reset names button
-                Button(NSLocalizedString("Settings.ResetButton", comment: "")) {
-                    resetNames()
                 }
-                .disabled(isResetting)
                 
-                // Check for Update button
-                Button(NSLocalizedString("Settings.CheckUpdateButton", comment: "")) {
-                    checkForUpdate()
+                SettingsSection("Settings.General.Updates") {
+                    SettingsRow("Settings.AutoCheckUpdate") {
+                        Toggle("", isOn: $autoCheckUpdate)
+                            .labelsHidden()
+                            .toggleStyle(.switch)
+                            .onChange(of: autoCheckUpdate) { value in
+                                UpdateManager.isAutoCheckEnabled = value
+                            }
+                    }
+                    
+                    Divider()
+                    
+                    SettingsRow("Settings.General.Update.ManualCheck") {
+                        Button(NSLocalizedString("Settings.CheckUpdateButton", comment: "")) {
+                            checkForUpdate()
+                        }
+                    }
+                }
+                
+                SettingsSection("Settings.General.Reset") {
+                    SettingsRow("Settings.ResetButton") {
+                        Button(NSLocalizedString("Settings.ResetButton", comment: "")) {
+                            resetNames()
+                        }
+                        .disabled(isResetting)
+                    }
                 }
                 
                 Spacer()
             }
             .padding()
-            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+            .frame(maxWidth: .infinity, alignment: .topLeading)
         }
         .onAppear {
             launchAtLogin = getLaunchAtLoginState()
@@ -70,12 +94,28 @@ struct GeneralSettingsView: View {
             } catch {
                 print("Failed to toggle launch at login: \(error)")
                 launchAtLogin = getLaunchAtLoginState()
+                
+                // Show error alert
+                let alert = NSAlert()
+                alert.messageText = NSLocalizedString("Settings.LaunchAtLogin.Error", comment: "Failed to toggle launch at login")
+                alert.informativeText = error.localizedDescription
+                alert.alertStyle = .warning
+                alert.addButton(withTitle: NSLocalizedString("Common.OK", comment: "OK"))
+                alert.runModal()
             }
         } else {
             if let bundleId = Bundle.main.bundleIdentifier {
                 let success = SMLoginItemSetEnabled(bundleId as CFString, enabled)
                 if !success {
                     launchAtLogin = getLaunchAtLoginState()
+                    
+                    // Show error alert
+                    let alert = NSAlert()
+                    alert.messageText = NSLocalizedString("Settings.LaunchAtLogin.Error", comment: "Failed to toggle launch at login")
+                    alert.informativeText = NSLocalizedString("Settings.LaunchAtLogin.ErrorLegacy", comment: "Could not update login items")
+                    alert.alertStyle = .warning
+                    alert.addButton(withTitle: NSLocalizedString("Common.OK", comment: "OK"))
+                    alert.runModal()
                 }
             }
         }
@@ -95,13 +135,26 @@ struct GeneralSettingsView: View {
         alert.addButton(withTitle: NSLocalizedString("Settings.ResetAlertButtonReset", comment: ""))
         alert.addButton(withTitle: NSLocalizedString("Settings.ResetAlertButtonCancel", comment: ""))
         
-        let response = alert.runModal()
+        guard let window = NSApp.keyWindow else {
+            isResetting = false
+            return
+        }
         
-        DispatchQueue.main.async {
-            self.isResetting = false
-            
-            if response == .alertFirstButtonReturn {
-                self.spaceManager.resetAllNames()
+        alert.beginSheetModal(for: window) { response in
+            DispatchQueue.main.async {
+                self.isResetting = false
+                
+                if response == .alertFirstButtonReturn {
+                    self.spaceManager.resetAllNames()
+                    
+                    // Show success feedback
+                    let successAlert = NSAlert()
+                    successAlert.messageText = NSLocalizedString("Settings.ResetSuccess", comment: "Reset successful")
+                    successAlert.informativeText = NSLocalizedString("Settings.ResetSuccessInfo", comment: "All space names have been reset to their default values")
+                    successAlert.alertStyle = .informational
+                    successAlert.addButton(withTitle: NSLocalizedString("Common.OK", comment: "OK"))
+                    successAlert.runModal()
+                }
             }
         }
     }
