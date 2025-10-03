@@ -6,7 +6,7 @@ enum SettingsTab: String {
     case general, space, about
 }
 
-let defaultSettingsWindowWidth = 450
+let defaultSettingsWindowWidth = 417
 let defaultSettingsWindowHeight = 450
 
 // MARK: - Main Settings View
@@ -38,7 +38,7 @@ struct SettingsView: View {
                 }
                 .tag(SettingsTab.about)
         }
-        .frame(width: 450, height: 450)
+        .frame(width: CGFloat(defaultSettingsWindowWidth), height: CGFloat(defaultSettingsWindowHeight))
         .padding()
     }
 }
@@ -60,6 +60,6 @@ class SettingsHostingController: NSHostingController<SettingsView> {
     
     override func viewDidLoad() {
         super.viewDidLoad()
-        self.preferredContentSize = NSSize(width: 450, height: 450)
+        self.preferredContentSize = NSSize(width: defaultSettingsWindowWidth, height: defaultSettingsWindowHeight)
     }
 }

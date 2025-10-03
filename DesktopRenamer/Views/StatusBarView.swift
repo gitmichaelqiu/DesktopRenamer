@@ -257,7 +257,7 @@ class StatusBarController: NSObject {
         
         // Create settings window with proper style mask
         let window = NSWindow(
-            contentRect: NSRect(x: 0, y: 0, width: 450, height: 450),
+            contentRect: NSRect(x: 0, y: 0, width: defaultSettingsWindowWidth, height: defaultSettingsWindowHeight),
             styleMask: [.titled, .closable, .miniaturizable],
             backing: .buffered,
             defer: false
@@ -265,8 +265,8 @@ class StatusBarController: NSObject {
         window.title = NSLocalizedString("Window.SettingsTitle", comment: "")
         window.center()
         
-        window.minSize = NSSize(width: 450, height: 450)
-        window.maxSize = NSSize(width: 450, height: 450)
+        window.minSize = NSSize(width: defaultSettingsWindowWidth, height: defaultSettingsWindowHeight)
+        window.maxSize = NSSize(width: defaultSettingsWindowWidth, height: defaultSettingsWindowHeight)
         
         window.collectionBehavior = [.participatesInCycle]
         window.level = .normal
