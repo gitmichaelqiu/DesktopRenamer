@@ -1,6 +1,5 @@
-// Supporting components (in case they're not already defined elsewhere)
-
 import SwiftUI
+
 struct SettingsRow<Content: View>: View {
     let title: LocalizedStringKey
     let content: Content
