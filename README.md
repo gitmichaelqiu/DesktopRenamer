@@ -31,13 +31,9 @@ You do **NOT** have to disable *SIP* or things like that. Your macOS must be at 
 2. Drag the app to the *Applications* folder
 3. All set!
 
-Because I do **NOT** have an Apple developer account, you may receive alerts such as "App is broken". To resolve this, you need to go to *terminal* and run the following command:
+Because I do **NOT** have an Apple developer account for the app releases ~~(Apple charges an annual fee for this)~~, you may receive alerts such as "App is broken".
 
-```bash
-sudo xattr -r -d com.apple.quarantine /Applications/DesktopRenamer.app
-```
-
-You may be required to enter the password. When you are entering the password, the password is not shown. This is required by Apple. The app will **NOT** steal your password or personal information.
+To resolve this, go to System Settings → the bottom of Privacy & Security → Open DesktopRenamer.
 
 ## 💡 Tips
 
@@ -50,3 +46,5 @@ You are welcome to create issues/suggestions in [GitHub Issues](https://github.c
 ## ⭐ Support This Project
 
 You can simply click on the **Star** to support this project for free. Thank you for your support!
+
+[![Star History Chart](https://api.star-history.com/svg?repos=gitmichaelqiu/DesktopRenamer&type=date&legend=top-left)](https://www.star-history.com/#gitmichaelqiu/DesktopRenamer&type=date&legend=top-left)
