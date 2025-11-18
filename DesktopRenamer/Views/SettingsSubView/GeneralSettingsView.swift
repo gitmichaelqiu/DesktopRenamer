@@ -117,7 +117,9 @@ struct GeneralSettingsView: View {
     }
     
     private func checkForUpdate() {
-        UpdateManager.shared.checkForUpdate(from: nil, suppressUpToDateAlert: false)
+        Task {
+            await UpdateManager.shared.checkForUpdate(from: nil, suppressUpToDateAlert: false)
+        }
     }
     
     private func resetNames() {
