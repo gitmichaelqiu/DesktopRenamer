@@ -7,7 +7,7 @@ enum SettingsTab: String {
 }
 
 let defaultSettingsWindowWidth = 417
-let defaultSettingsWindowHeight = 450
+let defaultSettingsWindowHeight = 480
 
 // MARK: - Main Settings View
 struct SettingsView: View {
