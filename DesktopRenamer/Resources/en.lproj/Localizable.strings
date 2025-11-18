@@ -57,14 +57,28 @@
 "Settings.About.Repo" = "GitHub Repository";
 "Settings.About.Description" = "DesktopRenamer allows you to give custom names to macOS workspaces.";
 
-// MARK: - Auto Update Alert
-"AutoUpdate.Available.Title" = "Update Available";
-"AutoUpdate.Available.Msg" = "Version %@ is available. Open the releases page to download and install?";
-"AutoUpdate.Available.Update" = "Update";
-"AutoUpdate.UpToDate.Title" = "Up To Date";
-"AutoUpdate.UpToDate.Msg" = "You are running the latest version (%@).";
-"AutoUpdate.CheckFailed.Title" = "Update Check Failed";
-"AutoUpdate.CheckFailed.Msg" = "Could not check for updates.";
+// MARK: - Update
+"Settings.General.Update" = "Update";
+"Settings.General.Update.AutoCheck" = "Automatically check for updates";
+"Settings.General.Update.ManualCheck" = "Check for updates";
+
+"Settings.General.Update.Failed.Title" = "Update Check Failed";
+"Settings.General.Update.Failed.Msg" = "DesktopRenamer could not connect to the update server. Please check your network.";
+
+"Settings.General.Update.Failed.Notif.Title" = "DesktopRenamer Update Check Failed";
+"Settings.General.Update.Failed.Notif.Msg" = "Could not connect to the update server. Please check your network.";
+
+"Settings.General.Update.Available.Title" = "Update Available";
+"Settings.General.Update.Available.Msg" = " v%@ → v%@ is available.\nOpen the release page to download and install?";
+
+"Settings.General.Update.Available.Notif.Title" = "DesktopRenamer Update Available";
+"Settings.General.Update.Available.Notif.Msg" = "v%@ → v%@ is available. Click to open the release page.";
+
+"Settings.General.Update.Available.Button.Update" = "Update & Quit";
+"Settings.General.Update.Available.Button.Cancel" = "Cancel";
+
+"Settings.General.Update.UpToDate.Title" = "Up to Date";
+"Settings.General.Update.UpToDate.Msg" = "You are running the latest version (%@).";
 
 // MARK: - Others
 "Space.DefaultName" = "Desktop %d";
