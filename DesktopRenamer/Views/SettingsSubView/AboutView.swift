@@ -15,43 +15,64 @@ struct AboutView: View {
     }
 
     var body: some View {
-        VStack(spacing: 12) {
-            if let nsImage = NSApplication.shared.applicationIconImage {
-                Image(nsImage: nsImage)
-                    .resizable()
-                    .scaledToFit()
-                    .frame(width: 128, height: 128)
-                    .padding(.bottom, 8)
+        GeometryReader { geometry in
+            VStack(spacing: 16) {
+                if let nsImage = NSApplication.shared.applicationIconImage {
+                    Image(nsImage: nsImage)
+                        .resizable()
+                        .aspectRatio(contentMode: .fit)
+                        .frame(
+                            width: min(geometry.size.width * 0.6, 160),
+                            height: min(geometry.size.width * 0.6, 160)
+                        )
+                        .padding(.bottom, 8)
+                }
+
+                VStack(spacing: 4) {
+                    Text(appName)
+                        .font(.largeTitle)
+                        .fontWeight(.bold)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.7)
+
+                    Text("v\(appVersion)")
+                        .font(.title3)
+                        .foregroundColor(.secondary)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.8)
+                }
+
+                Divider()
+                    .padding(.vertical, 8)
+                
+                Text(NSLocalizedString("Settings.About.Description", comment: "Description"))
+                    .multilineTextAlignment(.center)
+                    .font(.body)
+                    .lineSpacing(4)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .frame(
+                        maxWidth: min(geometry.size.width * 0.8, 480),
+                        alignment: .center
+                    )
+
+                Spacer()
+
+                VStack(spacing: 8) {
+                    Link(NSLocalizedString("Settings.About.Repo", comment: "GitHub Repo"),
+                         destination: URL(string: "https://github.com/gitmichaelqiu/DesktopRenamer")!)
+                    .font(.body)
+                    .foregroundColor(.blue)
+
+                    Text("© \(currentYear) Michael Yicheng Qiu")
+                        .font(.footnote)
+                        .foregroundColor(.secondary)
+                }
+                .frame(maxWidth: .infinity)
+                .padding(.horizontal, max(16, geometry.size.width * 0.05))
             }
-
-            Text(appName)
-                .font(.largeTitle)
-                .bold()
-
-            Text("v\(appVersion)")
-                .font(.title3)
-                .foregroundColor(.secondary)
-
-            Divider()
-                .padding(.vertical, 8)
-
-            Text(NSLocalizedString("Settings.About.Description", comment: "Description"))
-                .multilineTextAlignment(.center)
-                .frame(maxWidth: 360, alignment: .center)
-//                .fixedSize(horizontal: false, vertical: true)
-                .font(.body)
-            
-            Spacer()
-            
-            Link(NSLocalizedString("Settings.About.Repo", comment: "GitHub Repo"), destination: URL(string: "https://github.com/gitmichaelqiu/DesktopRenamer")!)
-                .font(.body)
-                .foregroundColor(.blue)
-
-            Text("© \(currentYear) Michael Yicheng Qiu")
-                .font(.body)
-                .foregroundColor(.secondary)
+            .padding(.horizontal, max(24, geometry.size.width * 0.08))
+            .padding(.vertical, max(24, geometry.size.height * 0.05))
         }
-        .padding()
-        .frame(maxWidth: .infinity, maxHeight: CGFloat(defaultSettingsWindowHeight), alignment: .topLeading)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 }
