@@ -6,49 +6,62 @@ class SpaceManager: ObservableObject {
     @Published private(set) var currentSpaceUUID: String = ""
     @Published var spaceNameDict: [DesktopSpace] = []
     
-    @AppStorage("isAPIEnabled") public var isAPIEnabled: Bool = true
-    
-    private let userDefaults = UserDefaults.standard
-    private let spacesKey = "com.gitmichaelqiu.desktoprenamer.spaces"
+    // We observe this property to toggle the API automatically
+    @AppStorage("isAPIEnabled") public var isAPIEnabled: Bool = true {
+        didSet {
+            // Toggle the internal API instance when setting changes
+            spaceAPI?.toggleAPIState(isEnabled: isAPIEnabled)
+        }
+    }
     
     public var currentTotalSpace = 0
+    private let userDefaults = UserDefaults.standard
+    private let spacesKey = "com.michaelqiu.desktoprenamer.spaces"
     
-    private var spaceAPI: SpaceAPI?
+    // Keep reference to API
+    public var spaceAPI: SpaceAPI?
     
     init() {
         loadSavedSpaces()
+        
+        // Initialize API
+        self.spaceAPI = SpaceAPI(spaceManager: self)
+        
+        // Set initial state based on saved setting
+        if isAPIEnabled {
+            self.spaceAPI?.toggleAPIState(isEnabled: true)
+        }
         
         // Start monitoring
         SpaceHelper.startMonitoring { [weak self] newSpaceUUID in
             self?.handleSpaceChange(newSpaceUUID)
         }
-        
-        self.spaceAPI = SpaceAPI(spaceManager: self)
+    }
+    
+    // Called by AppDelegate when quitting
+    func prepareForTermination() {
+        print("SpaceManager: Shutting down...")
+        // Explicitly send "False" notification
+        spaceAPI?.toggleAPIState(isEnabled: false)
     }
     
     deinit {
         SpaceHelper.stopMonitoring()
     }
     
+    // ... (Keep rest of handleSpaceChange, loadSavedSpaces, saveSpaces, etc. exactly as before) ...
+    
     private func handleSpaceChange(_ newSpaceUUID: String) {
-        // Handle on main thread
         if !Thread.isMainThread {
-            DispatchQueue.main.async { [weak self] in
-                self?.handleSpaceChange(newSpaceUUID)
-            }
+            DispatchQueue.main.async { [weak self] in self?.handleSpaceChange(newSpaceUUID) }
             return
         }
-        
         currentSpaceUUID = newSpaceUUID
-        
-        // Check if the space was handled before
         if !spaceNameDict.contains(where: { $0.id == currentSpaceUUID }) && currentSpaceUUID != "FULLSCREEN" {
             currentTotalSpace += 1
             spaceNameDict.append(DesktopSpace(id: currentSpaceUUID, customName: "", num: currentTotalSpace))
             saveSpaces()
         }
-        
-        objectWillChange.send()
     }
     
     private func loadSavedSpaces() {
@@ -66,76 +79,38 @@ class SpaceManager: ObservableObject {
         }
     }
     
-    private func isValidUUID(_ spaceUUID: String) -> Bool {
-        if spaceUUID == "FULLSCREEN" {
-            return true
-        }
-        
-        // Check if the space is removed
-        if spaceNameDict.contains(where: { $0.id == spaceUUID }) { // Still exist
-            return true
-        }
-        
-        // Remove space
-        spaceNameDict.removeAll(where: {$0.id == spaceUUID})
-        return false
-    }
-    
     func getSpaceNum(_ spaceUUID: String) -> Int {
-        guard isValidUUID(spaceUUID) else { return -1 }
-        if spaceUUID == "FULLSCREEN" {
-            return 0
-        }
+        if spaceUUID == "FULLSCREEN" { return 0 }
         return spaceNameDict.first(where: { $0.id == spaceUUID })?.num ?? -1
     }
     
     func getSpaceName(_ spaceUUID: String) -> String {
-        guard isValidUUID(spaceUUID) else { return "" }
-        
-        if spaceUUID == "FULLSCREEN" {
-            return "Fullscreen"
-        }
-        
+        if spaceUUID == "FULLSCREEN" { return "Fullscreen" }
         var ret = spaceNameDict.first(where: {$0.id == spaceUUID})?.customName
-        if ret == "" {
+        if ret == nil || ret == "" {
             ret = String(format: NSLocalizedString("Space.DefaultName", comment: ""), getSpaceNum(spaceUUID))
         }
-        
         return ret ?? ""
     }
     
     func resetAllNames() {
         DispatchQueue.main.async { [weak self] in
             guard let self = self else { return }
-            // Clear userDefaults
-            userDefaults.removeObject(forKey: spacesKey)
-            
-            // Clear all custom names
-            currentTotalSpace = 0
+            self.userDefaults.removeObject(forKey: self.spacesKey)
+            self.currentTotalSpace = 0
             self.spaceNameDict.removeAll()
             self.saveSpaces()
-            
-            // Force refresh current space
             SpaceHelper.getSpaceUUID { spaceUUID in
                 self.currentSpaceUUID = spaceUUID
                 self.handleSpaceChange(spaceUUID)
             }
-            
-            // Notify observers
-            self.objectWillChange.send()
         }
     }
     
     func renameSpace(_ spaceUUID: String, to newName: String) {
-        guard isValidUUID(spaceUUID) else { return }
-        
         if let index = spaceNameDict.firstIndex(where: { $0.id == spaceUUID }) {
             spaceNameDict[index].customName = newName
             saveSpaces()
-        } else {
-            print("Debug: Services/SM renameSpace failed")
         }
-        
-        objectWillChange.send()
     }
 }

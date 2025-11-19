@@ -150,10 +150,10 @@ struct GeneralSettingsView: View {
                         Toggle("", isOn: $isAPIEnabled)
                             .labelsHidden()
                             .toggleStyle(.switch)
-                            .onChange(of: isAPIEnabled) { value in
-                                spaceManager.isAPIEnabled = value
-                                SpaceAPI(spaceManager: spaceManager).toggleAPIState(isEnabled: value)
-                            }
+//                            .onChange(of: isAPIEnabled) { value in
+//                                spaceManager.isAPIEnabled = value
+//                                SpaceAPI(spaceManager: spaceManager).toggleAPIState(isEnabled: value)
+//                            }
                     }
                     
 //                    Divider()
