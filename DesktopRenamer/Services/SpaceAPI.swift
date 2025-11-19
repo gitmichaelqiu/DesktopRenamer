@@ -9,7 +9,7 @@ class SpaceAPI {
     static let returnActiveSpace = Notification.Name("\(apiPrefix).ReturnActiveSpace")
     static let getSpaceList = Notification.Name("\(apiPrefix).GetSpaceList")
     static let returnSpaceList = Notification.Name("\(apiPrefix).ReturnSpaceList")
-    static let apiToggleNotification = Notification.Name("\(apiPrefix).APIToggleState")
+    static let apiToggleNotification = Notification.Name("\(apiPrefix).ReturnAPIState")
     
     // Use weak to avoid retain cycle (SpaceManager owns API, API shouldn't strongly own SpaceManager)
     private weak var spaceManager: SpaceManager?
