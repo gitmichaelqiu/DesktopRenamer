@@ -6,12 +6,12 @@ class SpaceAPI {
     static let apiName = "com.gitmichaelqiu.DesktopRenamer.SpaceAPI"
     
     // Notifications used by the API
-    static let requestCurrentSpaceNotification = Notification.Name(rawValue: "\(apiName).RequestCurrentSpace")
-    static let responseCurrentSpaceNotification = Notification.Name(rawValue: "\(apiName).ResponseCurrentSpace")
+    static let requestCurrentSpaceNotification = Notification.Name(rawValue: "\(apiName).GetActiveSpace")
+    static let responseCurrentSpaceNotification = Notification.Name(rawValue: "\(apiName).ReturnActiveSpace")
     
     // NEW: Notifications for getting all spaces
-    static let requestAllSpacesNotification = Notification.Name(rawValue: "\(apiName).RequestAllSpaces")
-    static let responseAllSpacesNotification = Notification.Name(rawValue: "\(apiName).ResponseAllSpaces")
+    static let requestAllSpacesNotification = Notification.Name(rawValue: "\(apiName).GetSpaceList")
+    static let responseAllSpacesNotification = Notification.Name(rawValue: "\(apiName).ReturnSpaceList")
     
     static let apiToggleNotification = Notification.Name(rawValue: "\(apiName).APIToggleState")
     
