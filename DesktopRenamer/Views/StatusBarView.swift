@@ -241,7 +241,7 @@ class StatusBarController: NSObject {
         self.showLabelsMenuItem.state = labelManager.isEnabled ? .on : .off
     }
     
-    @objc private func openSettingsWindow() {
+    @objc func openSettingsWindow() {
         // Show dock icon when opening settings
         NSApp.setActivationPolicy(.regular)
         
