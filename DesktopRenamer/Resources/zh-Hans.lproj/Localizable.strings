@@ -14,7 +14,7 @@
 
 // General
 "Settings.General.General" = "通用";
-"Settings.General.General.ShowLabels" = "显示桌面标签";
+"Settings.General.General.ShowLabels" = "启用桌面标签窗口";
 "Settings.General.General.LaunchAtLogin" = "登录时启动";
 "Settings.General.General.LaunchAtLogin.Error" = "无法设置登录时启动";
 "Settings.General.GeneralLaunchAtLogin.Error.info" = "无法更新启动项";

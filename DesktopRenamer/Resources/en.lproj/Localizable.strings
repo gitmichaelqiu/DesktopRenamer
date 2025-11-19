@@ -14,7 +14,7 @@
 
 // General
 "Settings.General.General" = "General";
-"Settings.General.General.ShowLabels" = "Show desktop labels";
+"Settings.General.General.ShowLabels" = "Show desktop label window";
 "Settings.General.General.LaunchAtLogin" = "Launch at login";
 "Settings.General.General.LaunchAtLogin.Error" = "Failed to toggle launch at login";
 "Settings.General.GeneralLaunchAtLogin.Error.info" = "Could not update login items";
