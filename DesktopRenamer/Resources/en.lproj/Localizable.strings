@@ -23,6 +23,11 @@
 "Settings.General.Advanced" = "Advanced";
 "Settings.General.Advanced.EnableAPI" = "Enable space API \n(allow other apps to get space ID)";
 
+"Settings.General.Advanced.APITest" = "API Test";
+"Settings.General.Advanced.APITest.Current" = "Current";
+"Settings.General.Advanced.APITest.All" = "All";
+"Settings.General.Advanced.APITest.Return" = "Return Value:";
+
 // Updates
 "Settings.General.Updates" = "Updates";
 "Settings.General.Updates.AutoCheckUpdate" = "Automatically check for updates";

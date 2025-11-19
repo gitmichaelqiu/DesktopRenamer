@@ -23,6 +23,11 @@
 "Settings.General.Advanced" = "高级";
 "Settings.General.Advanced.EnableAPI" = "启用桌面对外端口 \n(允许其他软件获取当前桌面 ID)";
 
+"Settings.General.Advanced.APITest" = "API 测试";
+"Settings.General.Advanced.APITest.Current" = "当前";
+"Settings.General.Advanced.APITest.All" = "所有";
+"Settings.General.Advanced.APITest.Return" = "返回值:";
+
 // Updates
 "Settings.General.Updates" = "更新";
 "Settings.General.Updates.AutoCheckUpdate" = "自动检查更新";

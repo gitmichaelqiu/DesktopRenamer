@@ -158,13 +158,13 @@ struct GeneralSettingsView: View {
                     
                     Divider()
                     
-                    SettingsRow("Test API Response") {
+                    SettingsRow("Settings.General.Advanced.APITest") {
                         HStack {
-                            Button("Current") {
+                            Button(NSLocalizedString("Settings.General.Advanced.APITest.Current", comment: "")) {
                                 apiTester.sendCurrentSpaceRequest()
                             }
                             
-                            Button("All") {
+                            Button(NSLocalizedString("Settings.General.Advanced.APITest.All", comment: "")) {
                                 apiTester.sendAllSpacesRequest()
                             }
                         }
@@ -173,7 +173,7 @@ struct GeneralSettingsView: View {
                     
                     if !apiTester.responseText.isEmpty {
                         VStack(alignment: .leading, spacing: 4) {
-                            Text("Return Value:")
+                            Text( NSLocalizedString("Settings.General.Advanced.APITest.Return", comment: ""))
                                 .font(.caption)
                                 .foregroundColor(.secondary)
                             
