@@ -160,11 +160,11 @@ struct GeneralSettingsView: View {
                     
                     SettingsRow("Test API Response") {
                         HStack {
-                            Button("Current Space") {
+                            Button("Current") {
                                 apiTester.sendCurrentSpaceRequest()
                             }
                             
-                            Button("All Spaces") {
+                            Button("All") {
                                 apiTester.sendAllSpacesRequest()
                             }
                         }
