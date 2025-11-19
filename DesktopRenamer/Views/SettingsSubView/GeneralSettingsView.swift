@@ -1,16 +1,22 @@
 import SwiftUI
 import ServiceManagement
 
-// Helper class to handle the Notification response
 class APITester: ObservableObject {
     @Published var responseText: String = ""
     
     init() {
-        // LISTEN to the Local Notification Center (Reliable for in-app testing)
+        // LISTEN to Local Notification Center
         NotificationCenter.default.addObserver(
             self,
-            selector: #selector(handleResponse(_:)),
+            selector: #selector(handleCurrentSpaceResponse(_:)),
             name: SpaceAPI.responseCurrentSpaceNotification,
+            object: nil
+        )
+        
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(handleAllSpacesResponse(_:)),
+            name: SpaceAPI.responseAllSpacesNotification,
             object: nil
         )
     }
@@ -19,12 +25,8 @@ class APITester: ObservableObject {
         NotificationCenter.default.removeObserver(self)
     }
     
-    func sendRequest() {
-        responseText = "Sending request..."
-        
-        // SEND via Distributed Center (To prove the app receives external requests)
-        // Since the log confirmed the app receives this, we keep sending it "the hard way"
-        // to validate the listener is actually working.
+    func sendCurrentSpaceRequest() {
+        responseText = "Requesting current space..."
         DistributedNotificationCenter.default().postNotificationName(
             SpaceAPI.requestCurrentSpaceNotification,
             object: nil,
@@ -33,7 +35,17 @@ class APITester: ObservableObject {
         )
     }
     
-    @objc private func handleResponse(_ notification: Notification) {
+    func sendAllSpacesRequest() {
+        responseText = "Requesting all spaces..."
+        DistributedNotificationCenter.default().postNotificationName(
+            SpaceAPI.requestAllSpacesNotification,
+            object: nil,
+            userInfo: nil,
+            deliverImmediately: true
+        )
+    }
+    
+    @objc private func handleCurrentSpaceResponse(_ notification: Notification) {
         DispatchQueue.main.async {
             guard let userInfo = notification.userInfo else {
                 self.responseText = "Received empty response"
@@ -41,11 +53,33 @@ class APITester: ObservableObject {
             }
             
             let name = userInfo["spaceName"] as? String ?? "N/A"
-            // Handle both Int and NSNumber just in case
             let num = (userInfo["spaceNumber"] as? NSNumber)?.intValue ?? (userInfo["spaceNumber"] as? Int) ?? -1
             let uuid = userInfo["spaceUUID"] as? String ?? "N/A"
             
-            self.responseText = "Name: \(name)\n#: \(num)\nUUID: \(uuid)"
+            self.responseText = "Current Space:\nName: \(name)\n#: \(num)\nUUID: \(uuid)"
+        }
+    }
+    
+    @objc private func handleAllSpacesResponse(_ notification: Notification) {
+        DispatchQueue.main.async {
+            guard let userInfo = notification.userInfo,
+                  let spaces = userInfo["spaces"] as? [[String: Any]] else {
+                self.responseText = "Received empty space list"
+                return
+            }
+            
+            var result = "All Spaces (\(spaces.count)):\n"
+            
+            for space in spaces {
+                let name = space["spaceName"] as? String ?? "N/A"
+                let num = (space["spaceNumber"] as? NSNumber)?.intValue ?? -1
+                // Truncate UUID for display
+                let uuid = (space["spaceUUID"] as? String)?.prefix(8) ?? "N/A"
+                
+                result += "#\(num): \(name) [\(uuid).. ]\n"
+            }
+            
+            self.responseText = result
         }
     }
 }
@@ -125,8 +159,14 @@ struct GeneralSettingsView: View {
                     Divider()
                     
                     SettingsRow("Test API Response") {
-                        Button("Check API") {
-                            apiTester.sendRequest()
+                        HStack {
+                            Button("Current Space") {
+                                apiTester.sendCurrentSpaceRequest()
+                            }
+                            
+                            Button("All Spaces") {
+                                apiTester.sendAllSpacesRequest()
+                            }
                         }
                         .disabled(!isAPIEnabled)
                     }
@@ -137,13 +177,15 @@ struct GeneralSettingsView: View {
                                 .font(.caption)
                                 .foregroundColor(.secondary)
                             
-                            Text(apiTester.responseText)
-                                .font(.system(.caption, design: .monospaced))
-                                .padding(8)
-                                .background(Color.black.opacity(0.1))
-                                .cornerRadius(6)
-                                .frame(maxWidth: .infinity, alignment: .leading)
-                                .textSelection(.enabled)
+                            ScrollView(.vertical) {
+                                Text(apiTester.responseText)
+                                    .font(.system(.caption, design: .monospaced))
+                                    .padding(8)
+                                    .frame(maxWidth: .infinity, alignment: .leading)
+                            }
+                            .frame(maxHeight: 150) // Limit height for long lists
+                            .background(Color.black.opacity(0.1))
+                            .cornerRadius(6)
                         }
                         .padding(.horizontal, 10)
                         .padding(.bottom, 10)
