@@ -3,7 +3,7 @@ import AppKit
 
 class SpaceAPI {
     // The name of the API. Other apps will use this to communicate.
-    static let apiName = "com.gitmichaelqiu.DesktopRenamer.SpaceAPI"
+    static let apiName = "com.gitmichaelqiu.DesktopRenamer"
     
     // Notifications used by the API
     static let requestCurrentSpaceNotification = Notification.Name(rawValue: "\(apiName).GetActiveSpace")
