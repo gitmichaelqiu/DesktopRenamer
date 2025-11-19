@@ -1,29 +1,30 @@
 import SwiftUI
 import ServiceManagement
 
-// Helper class to handle the Distributed Notification response
+// Helper class to handle the Notification response
 class APITester: ObservableObject {
     @Published var responseText: String = ""
-    @Published var lastReceivedDate: Date?
     
     init() {
-        // Register to listen for the RESPONSE
-        DistributedNotificationCenter.default().addObserver(
+        // LISTEN to the Local Notification Center (Reliable for in-app testing)
+        NotificationCenter.default.addObserver(
             self,
             selector: #selector(handleResponse(_:)),
             name: SpaceAPI.responseCurrentSpaceNotification,
-            object: nil,
-            suspensionBehavior: .deliverImmediately
+            object: nil
         )
     }
     
     deinit {
-        DistributedNotificationCenter.default().removeObserver(self)
+        NotificationCenter.default.removeObserver(self)
     }
     
     func sendRequest() {
         responseText = "Sending request..."
-        // Post the REQUEST
+        
+        // SEND via Distributed Center (To prove the app receives external requests)
+        // Since the log confirmed the app receives this, we keep sending it "the hard way"
+        // to validate the listener is actually working.
         DistributedNotificationCenter.default().postNotificationName(
             SpaceAPI.requestCurrentSpaceNotification,
             object: nil,
@@ -40,11 +41,11 @@ class APITester: ObservableObject {
             }
             
             let name = userInfo["spaceName"] as? String ?? "N/A"
-            let num = userInfo["spaceNumber"] as? Int ?? -1
+            // Handle both Int and NSNumber just in case
+            let num = (userInfo["spaceNumber"] as? NSNumber)?.intValue ?? (userInfo["spaceNumber"] as? Int) ?? -1
             let uuid = userInfo["spaceUUID"] as? String ?? "N/A"
             
             self.responseText = "Name: \(name)\n#: \(num)\nUUID: \(uuid)"
-            self.lastReceivedDate = Date()
         }
     }
 }
@@ -53,7 +54,6 @@ struct GeneralSettingsView: View {
     @ObservedObject var spaceManager: SpaceManager
     @ObservedObject var labelManager: SpaceLabelManager
     
-    // New API Tester Object
     @StateObject private var apiTester = APITester()
     
     @State private var launchAtLogin: Bool = false
@@ -124,7 +124,6 @@ struct GeneralSettingsView: View {
                     
                     Divider()
                     
-                    // --- API TEST BUTTON START ---
                     SettingsRow("Test API Response") {
                         Button("Check API") {
                             apiTester.sendRequest()
@@ -144,11 +143,11 @@ struct GeneralSettingsView: View {
                                 .background(Color.black.opacity(0.1))
                                 .cornerRadius(6)
                                 .frame(maxWidth: .infinity, alignment: .leading)
+                                .textSelection(.enabled)
                         }
                         .padding(.horizontal, 10)
                         .padding(.bottom, 10)
                     }
-                    // --- API TEST BUTTON END ---
                 }
                 
                 Spacer()
@@ -184,12 +183,11 @@ struct GeneralSettingsView: View {
                 print("Failed to toggle launch at login: \(error)")
                 launchAtLogin = getLaunchAtLoginState()
                 
-                // Show error alert
                 let alert = NSAlert()
-                alert.messageText = NSLocalizedString("Settings.LaunchAtLogin.Error", comment: "Failed to toggle launch at login")
+                alert.messageText = NSLocalizedString("Settings.LaunchAtLogin.Error", comment: "")
                 alert.informativeText = error.localizedDescription
                 alert.alertStyle = .warning
-                alert.addButton(withTitle: NSLocalizedString("Button.OK", comment: "OK"))
+                alert.addButton(withTitle: NSLocalizedString("Button.OK", comment: ""))
                 alert.runModal()
             }
         } else {
@@ -198,12 +196,11 @@ struct GeneralSettingsView: View {
                 if !success {
                     launchAtLogin = getLaunchAtLoginState()
                     
-                    // Show error alert
                     let alert = NSAlert()
-                    alert.messageText = NSLocalizedString("Settings.General.General.LaunchAtLogin.Error", comment: "Failed to toggle launch at login")
-                    alert.informativeText = NSLocalizedString("Settings.General.General.LaunchAtLogin.Error.info", comment: "Could not update login items")
+                    alert.messageText = NSLocalizedString("Settings.General.General.LaunchAtLogin.Error", comment: "")
+                    alert.informativeText = NSLocalizedString("Settings.General.General.LaunchAtLogin.Error.info", comment: "")
                     alert.alertStyle = .warning
-                    alert.addButton(withTitle: NSLocalizedString("Common.OK", comment: "OK"))
+                    alert.addButton(withTitle: NSLocalizedString("Common.OK", comment: ""))
                     alert.runModal()
                 }
             }
@@ -238,14 +235,12 @@ struct GeneralSettingsView: View {
                 if response == .alertFirstButtonReturn {
                     self.spaceManager.resetAllNames()
                     
-                    // Show success feedback
                     let successAlert = NSAlert()
-                    successAlert.messageText = NSLocalizedString("Settings.General.Reset.Success.Msg", comment: "Reset successful")
-                    successAlert.informativeText = NSLocalizedString("Settings.General.Reset.Success.Info", comment: "All space names have been reset to their default values")
+                    successAlert.messageText = NSLocalizedString("Settings.General.Reset.Success.Msg", comment: "")
+                    successAlert.informativeText = NSLocalizedString("Settings.General.Reset.Success.Info", comment: "")
                     successAlert.alertStyle = .informational
-                    successAlert.addButton(withTitle: NSLocalizedString("Button.OK", comment: "OK"))
-                    successAlert.beginSheetModal(for: window) { _ in
-                    }
+                    successAlert.addButton(withTitle: NSLocalizedString("Button.OK", comment: ""))
+                    successAlert.beginSheetModal(for: window) { _ in }
                 }
             }
         }

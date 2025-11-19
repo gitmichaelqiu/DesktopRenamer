@@ -28,16 +28,13 @@ class SpaceAPI {
     // MARK: - API Toggle and Listener Management
     
     func setupListener() {
-        // Check if already observing to prevent duplicates (though DistributedNotificationCenter handles this well)
         removeListener()
 
-        // FIXED: Added suspensionBehavior: .deliverImmediately
-        // This ensures the app responds even if it is in the background/menu bar mode.
         DistributedNotificationCenter.default().addObserver(
             self,
             selector: #selector(handleSpaceRequest(_:)),
             name: SpaceAPI.requestCurrentSpaceNotification,
-            object: nil, // Listen for any object sending this name
+            object: nil,
             suspensionBehavior: .deliverImmediately
         )
         print("SpaceAPI listener enabled.")
@@ -55,7 +52,6 @@ class SpaceAPI {
             removeListener()
         }
         
-        // Broadcast the API state change to all listeners
         DistributedNotificationCenter.default().postNotificationName(
             SpaceAPI.apiToggleNotification,
             object: nil,
@@ -67,7 +63,6 @@ class SpaceAPI {
     // MARK: - Request Handler
     
     @objc private func handleSpaceRequest(_ notification: Notification) {
-        // Only respond if the API is enabled
         guard spaceManager.isAPIEnabled else { return }
         
         // 1. Prepare the data
@@ -78,14 +73,21 @@ class SpaceAPI {
         // Ensure the UUID is not "FULLSCREEN" and is valid
         let uuidToSend = (spaceUUID == "FULLSCREEN") ? "FULLSCREEN" : spaceUUID
         
-        // Note: UserInfo in DistributedNotificationCenter must be Property List objects (String, Number, Date, etc)
+        // Use NSNumber for Ints to ensure DistributedNotificationCenter compatibility
         let userInfo: [String: Any] = [
             "spaceUUID": uuidToSend,
             "spaceName": spaceName,
-            "spaceNumber": spaceNum
+            "spaceNumber": NSNumber(value: spaceNum)
         ]
         
-        // 2. Respond via DistributedNotificationCenter
+        // 2. Respond LOCALLY (For the internal Test Button)
+        NotificationCenter.default.post(
+            name: SpaceAPI.responseCurrentSpaceNotification,
+            object: nil,
+            userInfo: userInfo
+        )
+        
+        // 3. Respond EXTERNALLY (For other apps)
         DistributedNotificationCenter.default().postNotificationName(
             SpaceAPI.responseCurrentSpaceNotification,
             object: nil,
