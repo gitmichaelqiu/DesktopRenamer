@@ -31,18 +31,6 @@ struct GeneralSettingsView: View {
                     }
                 }
                 
-                SettingsSection("Settings.General.Advanced") {
-                    SettingsRow("Settings.General.Advanced.EnableAPI") {
-                        Toggle("", isOn: $isAPIEnabled)
-                            .labelsHidden()
-                            .toggleStyle(.switch)
-                            .onChange(of: isAPIEnabled) { value in
-                                spaceManager.isAPIEnabled = value
-                                SpaceAPI(spaceManager: spaceManager).toggleAPIState(isEnabled: value)
-                            }
-                    }
-                }
-                
                 SettingsSection("Settings.General.Updates") {
                     SettingsRow("Settings.General.Updates.AutoCheckUpdate") {
                         Toggle("", isOn: $autoCheckUpdate)
@@ -68,6 +56,18 @@ struct GeneralSettingsView: View {
                             resetNames()
                         }
                         .disabled(isResetting)
+                    }
+                }
+                
+                SettingsSection("Settings.General.Advanced") {
+                    SettingsRow("Settings.General.Advanced.EnableAPI") {
+                        Toggle("", isOn: $isAPIEnabled)
+                            .labelsHidden()
+                            .toggleStyle(.switch)
+                            .onChange(of: isAPIEnabled) { value in
+                                spaceManager.isAPIEnabled = value
+                                SpaceAPI(spaceManager: spaceManager).toggleAPIState(isEnabled: value)
+                            }
                     }
                 }
                 
