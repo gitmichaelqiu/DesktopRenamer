@@ -1,5 +1,5 @@
 <h1 align="center">
-  <img src="/DesktopRenamer/Resources/DesktopRenamerIcon_Default.png" width="25%" alt=""/>  
+  <img src="./DesktopRenamer/Resources/DesktopRenamerIcon_Default.png" width="25%" alt=""/>  
   <p></p>
   <p align="center">DesktopRenamer</p>
 </h1>
@@ -7,15 +7,15 @@
 <table align="center" border="0" cellpadding="0" cellspacing="0">
   <tr>
     <td align="center">
-      <img src="/DesktopRenamer/Resources/Demo/DesktopRenamer_v1-4-0_Rename.png" width="300"/><br>
+      <img src="./DesktopRenamer/Resources/Demo/DesktopRenamer_v1-4-0_Rename.png" width="300"/><br>
       <i>Rename desktop label in menubar</i>
     </td>
     <td align="center">
-      <img src="/DesktopRenamer/Resources/Demo/DesktopRenamer_v1-4-0_SLW.png" width="300"/><br>
+      <img src="./DesktopRenamer/Resources/Demo/DesktopRenamer_v1-4-0_SLW.png" width="300"/><br>
       <i><b>SpaceLabelWindow</b> will be shown when entering Mission Control</i>
     </td>
     <td align="center">
-      <img src="/DesktopRenamer/Resources/Demo/DesktopRenamer_v1-4-0_SpaceEdit.png" width="300"/><br>
+      <img src="./DesktopRenamer/Resources/Demo/DesktopRenamer_v1-4-0_SpaceEdit.png" width="300"/><br>
       <i>Edit spaces in settings</i>
     </td>
   </tr>
