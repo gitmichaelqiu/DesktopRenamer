@@ -1,14 +1,19 @@
 import Foundation
 import AppKit
+import SwiftUI
 
 class SpaceManager: ObservableObject {
     @Published private(set) var currentSpaceUUID: String = ""
     @Published var spaceNameDict: [DesktopSpace] = []
     
+    @AppStorage("isAPIEnabled") public var isAPIEnabled: Bool = true
+    
     private let userDefaults = UserDefaults.standard
     private let spacesKey = "com.gitmichaelqiu.desktoprenamer.spaces"
     
     public var currentTotalSpace = 0
+    
+    private var spaceAPI: SpaceAPI?
     
     init() {
         loadSavedSpaces()
@@ -17,6 +22,8 @@ class SpaceManager: ObservableObject {
         SpaceHelper.startMonitoring { [weak self] newSpaceUUID in
             self?.handleSpaceChange(newSpaceUUID)
         }
+        
+        self.spaceAPI = SpaceAPI(spaceManager: self)
     }
     
     deinit {
