@@ -19,6 +19,10 @@
 "Settings.General.General.LaunchAtLogin.Error" = "Failed to toggle launch at login";
 "Settings.General.GeneralLaunchAtLogin.Error.info" = "Could not update login items";
 
+// Advanced
+"Settings.General.Advanced" = "Advanced";
+"Settings.General.Advanced.EnableAPI" = "Enable space API \n(allow other apps to get space ID)";
+
 // Updates
 "Settings.General.Updates" = "Updates";
 "Settings.General.Updates.AutoCheckUpdate" = "Automatically check for updates";
