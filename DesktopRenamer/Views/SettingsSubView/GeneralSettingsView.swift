@@ -1,9 +1,61 @@
 import SwiftUI
 import ServiceManagement
 
+// Helper class to handle the Distributed Notification response
+class APITester: ObservableObject {
+    @Published var responseText: String = ""
+    @Published var lastReceivedDate: Date?
+    
+    init() {
+        // Register to listen for the RESPONSE
+        DistributedNotificationCenter.default().addObserver(
+            self,
+            selector: #selector(handleResponse(_:)),
+            name: SpaceAPI.responseCurrentSpaceNotification,
+            object: nil,
+            suspensionBehavior: .deliverImmediately
+        )
+    }
+    
+    deinit {
+        DistributedNotificationCenter.default().removeObserver(self)
+    }
+    
+    func sendRequest() {
+        responseText = "Sending request..."
+        // Post the REQUEST
+        DistributedNotificationCenter.default().postNotificationName(
+            SpaceAPI.requestCurrentSpaceNotification,
+            object: nil,
+            userInfo: nil,
+            deliverImmediately: true
+        )
+    }
+    
+    @objc private func handleResponse(_ notification: Notification) {
+        DispatchQueue.main.async {
+            guard let userInfo = notification.userInfo else {
+                self.responseText = "Received empty response"
+                return
+            }
+            
+            let name = userInfo["spaceName"] as? String ?? "N/A"
+            let num = userInfo["spaceNumber"] as? Int ?? -1
+            let uuid = userInfo["spaceUUID"] as? String ?? "N/A"
+            
+            self.responseText = "Name: \(name)\n#: \(num)\nUUID: \(uuid)"
+            self.lastReceivedDate = Date()
+        }
+    }
+}
+
 struct GeneralSettingsView: View {
     @ObservedObject var spaceManager: SpaceManager
     @ObservedObject var labelManager: SpaceLabelManager
+    
+    // New API Tester Object
+    @StateObject private var apiTester = APITester()
+    
     @State private var launchAtLogin: Bool = false
     @State private var autoCheckUpdate: Bool = UpdateManager.isAutoCheckEnabled
     @State private var isResetting: Bool = false
@@ -69,6 +121,34 @@ struct GeneralSettingsView: View {
                                 SpaceAPI(spaceManager: spaceManager).toggleAPIState(isEnabled: value)
                             }
                     }
+                    
+                    Divider()
+                    
+                    // --- API TEST BUTTON START ---
+                    SettingsRow("Test API Response") {
+                        Button("Check API") {
+                            apiTester.sendRequest()
+                        }
+                        .disabled(!isAPIEnabled)
+                    }
+                    
+                    if !apiTester.responseText.isEmpty {
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text("Return Value:")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                            
+                            Text(apiTester.responseText)
+                                .font(.system(.caption, design: .monospaced))
+                                .padding(8)
+                                .background(Color.black.opacity(0.1))
+                                .cornerRadius(6)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                        }
+                        .padding(.horizontal, 10)
+                        .padding(.bottom, 10)
+                    }
+                    // --- API TEST BUTTON END ---
                 }
                 
                 Spacer()
