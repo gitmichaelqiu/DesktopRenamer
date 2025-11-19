@@ -18,21 +18,18 @@ struct SettingsView: View {
         TabView(selection: $selectedTab) {
             GeneralSettingsView(spaceManager: spaceManager, labelManager: labelManager)
                 .tabItem {
-                    Image(systemName: "gearshape")
                     Text(NSLocalizedString("Settings.General", comment: ""))
                 }
                 .tag(SettingsTab.general)
             
             SpaceEditView(spaceManager: spaceManager, labelManager: labelManager)
                 .tabItem {
-                    Image(systemName: "macwindow.stack")
                     Text(NSLocalizedString("Settings.Spaces", comment: ""))
                 }
                 .tag(SettingsTab.space)
             
             AboutView()
                 .tabItem {
-                    Image(systemName: "info.circle")
                     Text(NSLocalizedString("Settings.About", comment: ""))
                 }
                 .tag(SettingsTab.about)
