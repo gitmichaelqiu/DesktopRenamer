@@ -9,14 +9,14 @@ class APITester: ObservableObject {
         NotificationCenter.default.addObserver(
             self,
             selector: #selector(handleCurrentSpaceResponse(_:)),
-            name: SpaceAPI.responseCurrentSpaceNotification,
+            name: SpaceAPI.returnActiveSpace,
             object: nil
         )
         
         NotificationCenter.default.addObserver(
             self,
             selector: #selector(handleAllSpacesResponse(_:)),
-            name: SpaceAPI.responseAllSpacesNotification,
+            name: SpaceAPI.returnSpaceList,
             object: nil
         )
     }
@@ -28,7 +28,7 @@ class APITester: ObservableObject {
     func sendCurrentSpaceRequest() {
         responseText = "Requesting current space..."
         DistributedNotificationCenter.default().postNotificationName(
-            SpaceAPI.requestCurrentSpaceNotification,
+            SpaceAPI.getActiveSpace,
             object: nil,
             userInfo: nil,
             deliverImmediately: true
@@ -38,7 +38,7 @@ class APITester: ObservableObject {
     func sendAllSpacesRequest() {
         responseText = "Requesting all spaces..."
         DistributedNotificationCenter.default().postNotificationName(
-            SpaceAPI.requestAllSpacesNotification,
+            SpaceAPI.getSpaceList,
             object: nil,
             userInfo: nil,
             deliverImmediately: true
@@ -156,40 +156,40 @@ struct GeneralSettingsView: View {
                             }
                     }
                     
-                    Divider()
-                    
-                    SettingsRow("Settings.General.Advanced.APITest") {
-                        HStack {
-                            Button(NSLocalizedString("Settings.General.Advanced.APITest.Current", comment: "")) {
-                                apiTester.sendCurrentSpaceRequest()
-                            }
-                            
-                            Button(NSLocalizedString("Settings.General.Advanced.APITest.All", comment: "")) {
-                                apiTester.sendAllSpacesRequest()
-                            }
-                        }
-                        .disabled(!isAPIEnabled)
-                    }
-                    
-                    if !apiTester.responseText.isEmpty {
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text( NSLocalizedString("Settings.General.Advanced.APITest.Return", comment: ""))
-                                .font(.caption)
-                                .foregroundColor(.secondary)
-                            
-                            ScrollView(.vertical) {
-                                Text(apiTester.responseText)
-                                    .font(.system(.caption, design: .monospaced))
-                                    .padding(8)
-                                    .frame(maxWidth: .infinity, alignment: .leading)
-                            }
-                            .frame(maxHeight: 150) // Limit height for long lists
-                            .background(Color.black.opacity(0.1))
-                            .cornerRadius(6)
-                        }
-                        .padding(.horizontal, 10)
-                        .padding(.bottom, 10)
-                    }
+//                    Divider()
+//                    
+//                    SettingsRow("Settings.General.Advanced.APITest") {
+//                        HStack {
+//                            Button(NSLocalizedString("Settings.General.Advanced.APITest.Current", comment: "")) {
+//                                apiTester.sendCurrentSpaceRequest()
+//                            }
+//                            
+//                            Button(NSLocalizedString("Settings.General.Advanced.APITest.All", comment: "")) {
+//                                apiTester.sendAllSpacesRequest()
+//                            }
+//                        }
+//                        .disabled(!isAPIEnabled)
+//                    }
+//                    
+//                    if !apiTester.responseText.isEmpty {
+//                        VStack(alignment: .leading, spacing: 4) {
+//                            Text( NSLocalizedString("Settings.General.Advanced.APITest.Return", comment: ""))
+//                                .font(.caption)
+//                                .foregroundColor(.secondary)
+//                            
+//                            ScrollView(.vertical) {
+//                                Text(apiTester.responseText)
+//                                    .font(.system(.caption, design: .monospaced))
+//                                    .padding(8)
+//                                    .frame(maxWidth: .infinity, alignment: .leading)
+//                            }
+//                            .frame(maxHeight: 150) // Limit height for long lists
+//                            .background(Color.black.opacity(0.1))
+//                            .cornerRadius(6)
+//                        }
+//                        .padding(.horizontal, 10)
+//                        .padding(.bottom, 10)
+//                    }
                 }
                 
                 Spacer()
