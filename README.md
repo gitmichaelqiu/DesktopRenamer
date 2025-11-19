@@ -1,5 +1,5 @@
 <h1 align="center">
-  <img src="/DesktopRenamer/Resources/DesktopRenamerIcon_Default.png" width="25%" alt=""/>  
+  <img src="./DesktopRenamer/Resources/DesktopRenamerIcon_Default.png" width="25%" alt=""/>  
   <p></p>
   <p align="center">DesktopRenamer</p>
 </h1>
@@ -7,15 +7,15 @@
 <table align="center" border="0" cellpadding="0" cellspacing="0">
   <tr>
     <td align="center">
-      <img src="/DesktopRenamer/Resources/Demo/DesktopRenamer_v1-4-0_Rename.png" width="300"/><br>
+      <img src="./DesktopRenamer/Resources/Demo/DesktopRenamer_v1-4-0_Rename.png" width="300"/><br>
       <i>Rename desktop label in menubar</i>
     </td>
     <td align="center">
-      <img src="/DesktopRenamer/Resources/Demo/DesktopRenamer_v1-4-0_SLW.png" width="300"/><br>
+      <img src="./DesktopRenamer/Resources/Demo/DesktopRenamer_v1-4-0_SLW.png" width="300"/><br>
       <i><b>SpaceLabelWindow</b> will be shown when entering Mission Control</i>
     </td>
     <td align="center">
-      <img src="/DesktopRenamer/Resources/Demo/DesktopRenamer_v1-4-0_SpaceEdit.png" width="300"/><br>
+      <img src="./DesktopRenamer/Resources/Demo/DesktopRenamer_v1-4-0_SpaceEdit.png" width="300"/><br>
       <i>Edit spaces in settings</i>
     </td>
   </tr>
@@ -34,6 +34,14 @@ You do **NOT** have to disable *SIP* or things like that. Your macOS must be at 
 Because I do **NOT** have an Apple developer account for the app releases ~~(Apple charges an annual fee for this)~~, you may receive alerts such as "App is broken".
 
 To resolve this, go to System Settings → the bottom of Privacy & Security → Open DesktopRenamer.
+
+## 🛜 API
+
+This app provides an API to acquire space ID and names.
+
+Other applications can use `DistributedNotificationCenter` to send a notification with the name `com.gitmichaelqiu.DesktopRenamer.SpaceAPI.RequestCurrentSpace` and listen for a response on `com.gitmichaelqiu.DesktopRenamer.SpaceAPI.ResponseCurrentSpace`.
+
+You can switch on/off the API in Settings → Advanced.
 
 ## 💡 Tips
 
