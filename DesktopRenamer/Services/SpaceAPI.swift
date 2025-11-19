@@ -12,7 +12,7 @@ class SpaceAPI {
     static let getSpaceList = Notification.Name("\(apiPrefix).GetSpaceList")
     static let returnSpaceList = Notification.Name("\(apiPrefix).ReturnSpaceList")
     
-    static let apiToggleNotification = Notification.Name("\(apiPrefix).APIToggleState")
+    static let apiToggleNotification = Notification.Name("\(apiPrefix).getAPIState")
     
     private let spaceManager: SpaceManager
     private var cancellables = Set<AnyCancellable>() // Store the observer
