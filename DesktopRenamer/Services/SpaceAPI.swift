@@ -21,15 +21,24 @@ class SpaceAPI {
         }
     }
     
+    deinit {
+        removeListener()
+    }
+    
     // MARK: - API Toggle and Listener Management
     
     func setupListener() {
-        // Register to receive current space requests from other processes
+        // Check if already observing to prevent duplicates (though DistributedNotificationCenter handles this well)
+        removeListener()
+
+        // FIXED: Added suspensionBehavior: .deliverImmediately
+        // This ensures the app responds even if it is in the background/menu bar mode.
         DistributedNotificationCenter.default().addObserver(
             self,
             selector: #selector(handleSpaceRequest(_:)),
             name: SpaceAPI.requestCurrentSpaceNotification,
-            object: nil
+            object: nil, // Listen for any object sending this name
+            suspensionBehavior: .deliverImmediately
         )
         print("SpaceAPI listener enabled.")
     }
@@ -66,9 +75,10 @@ class SpaceAPI {
         let spaceName = spaceManager.getSpaceName(spaceUUID)
         let spaceNum = spaceManager.getSpaceNum(spaceUUID)
         
-        // Ensure the UUID is not "FULLSCREEN" and is valid, although we provide the name "Fullscreen"
-        let uuidToSend = (spaceUUID == "FULLSCREEN") ? "" : spaceUUID
+        // Ensure the UUID is not "FULLSCREEN" and is valid
+        let uuidToSend = (spaceUUID == "FULLSCREEN") ? "FULLSCREEN" : spaceUUID
         
+        // Note: UserInfo in DistributedNotificationCenter must be Property List objects (String, Number, Date, etc)
         let userInfo: [String: Any] = [
             "spaceUUID": uuidToSend,
             "spaceName": spaceName,
@@ -82,5 +92,7 @@ class SpaceAPI {
             userInfo: userInfo,
             deliverImmediately: true
         )
+        
+        print("API: Responded to request for space: \(spaceName)")
     }
 }
