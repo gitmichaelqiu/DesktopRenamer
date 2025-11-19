@@ -1,3 +1,5 @@
+<!-- v1.5.0 -->
+
 <h1 align="center">
   <img src="./DesktopRenamer/Resources/DesktopRenamerIcon_Default.png" width="25%" alt=""/>  
   <p></p>
