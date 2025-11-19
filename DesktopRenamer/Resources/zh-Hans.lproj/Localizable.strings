@@ -19,6 +19,10 @@
 "Settings.General.General.LaunchAtLogin.Error" = "无法设置登录时启动";
 "Settings.General.GeneralLaunchAtLogin.Error.info" = "无法更新启动项";
 
+// Advanced
+"Settings.General.Advanced" = "高级";
+"Settings.General.Advanced.EnableAPI" = "启用桌面对外端口 \n(允许其他软件获取当前桌面 ID)";
+
 // Updates
 "Settings.General.Updates" = "更新";
 "Settings.General.Updates.AutoCheckUpdate" = "自动检查更新";
