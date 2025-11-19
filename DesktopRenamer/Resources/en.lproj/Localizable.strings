@@ -23,7 +23,7 @@
 "Settings.General.Updates" = "Updates";
 "Settings.General.Updates.AutoCheckUpdate" = "Automatically check for updates";
 "Settings.General.Updates.ManualCheck" = "Check for updates";
-"Settings.General.Updates.Button" = "Check for Update";
+"Settings.General.Updates.Button" = "Check for Updates";
 
 // Reset
 "Settings.General.Reset" = "Reset";
