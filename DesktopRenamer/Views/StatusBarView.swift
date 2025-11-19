@@ -179,7 +179,7 @@ class StatusBarController: NSObject {
         // Add settings option
         let settingsItem = NSMenuItem(
             title: NSLocalizedString("Menu.Settings", comment: ""),
-            action: #selector(openSettingsView),
+            action: #selector(openSettingsWindow),
             keyEquivalent: ","
         )
         settingsItem.target = self
@@ -241,7 +241,7 @@ class StatusBarController: NSObject {
         self.showLabelsMenuItem.state = labelManager.isEnabled ? .on : .off
     }
     
-    @objc private func openSettingsView() {
+    @objc private func openSettingsWindow() {
         // Show dock icon when opening settings
         NSApp.setActivationPolicy(.regular)
         
