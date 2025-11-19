@@ -7,6 +7,7 @@ struct GeneralSettingsView: View {
     @State private var launchAtLogin: Bool = false
     @State private var autoCheckUpdate: Bool = UpdateManager.isAutoCheckEnabled
     @State private var isResetting: Bool = false
+    @State private var isAPIEnabled: Bool = true
     
     var body: some View {
         ScrollView {
@@ -26,6 +27,18 @@ struct GeneralSettingsView: View {
                             .toggleStyle(.switch)
                             .onChange(of: launchAtLogin) { value in
                                 toggleLaunchAtLogin(value)
+                            }
+                    }
+                }
+                
+                SettingsSection("Settings.General.Advanced") {
+                    SettingsRow("Settings.General.Advanced.EnableAPI") {
+                        Toggle("", isOn: $isAPIEnabled)
+                            .labelsHidden()
+                            .toggleStyle(.switch)
+                            .onChange(of: isAPIEnabled) { value in
+                                spaceManager.isAPIEnabled = value
+                                SpaceAPI(spaceManager: spaceManager).toggleAPIState(isEnabled: value)
                             }
                     }
                 }
@@ -65,6 +78,7 @@ struct GeneralSettingsView: View {
         }
         .onAppear {
             launchAtLogin = getLaunchAtLoginState()
+            isAPIEnabled = spaceManager.isAPIEnabled
         }
     }
     
