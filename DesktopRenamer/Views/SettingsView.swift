@@ -9,7 +9,6 @@ enum SettingsTab: String {
 let defaultSettingsWindowWidth = 417
 let defaultSettingsWindowHeight = 480
 
-// MARK: - Main Settings View
 struct SettingsView: View {
     @ObservedObject var spaceManager: SpaceManager
     @ObservedObject var labelManager: SpaceLabelManager
@@ -43,7 +42,6 @@ struct SettingsView: View {
     }
 }
 
-// MARK: - SwiftUI Hosting Controller
 class SettingsHostingController: NSHostingController<SettingsView> {
     private let spaceManager: SpaceManager
     private let labelManager: SpaceLabelManager
