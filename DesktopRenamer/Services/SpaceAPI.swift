@@ -1,84 +1,60 @@
 import Foundation
 import AppKit
-import Combine // REQUIRED: Import Combine to watch for changes
+import Combine
 
 class SpaceAPI {
-    // MARK: - Final API Constants
     static let apiPrefix = "com.michaelqiu.DesktopRenamer"
     
     static let getActiveSpace = Notification.Name("\(apiPrefix).GetActiveSpace")
     static let returnActiveSpace = Notification.Name("\(apiPrefix).ReturnActiveSpace")
-    
     static let getSpaceList = Notification.Name("\(apiPrefix).GetSpaceList")
     static let returnSpaceList = Notification.Name("\(apiPrefix).ReturnSpaceList")
+    static let apiToggleNotification = Notification.Name("\(apiPrefix).APIToggleState")
     
-    static let apiToggleNotification = Notification.Name("\(apiPrefix).getAPIState")
-    
-    private let spaceManager: SpaceManager
-    private var cancellables = Set<AnyCancellable>() // Store the observer
+    // Use weak to avoid retain cycle (SpaceManager owns API, API shouldn't strongly own SpaceManager)
+    private weak var spaceManager: SpaceManager?
+    private var cancellables = Set<AnyCancellable>()
     
     init(spaceManager: SpaceManager) {
         self.spaceManager = spaceManager
-        if spaceManager.isAPIEnabled {
-            setupListener()
-        }
     }
-    
-    deinit {
-        removeListener()
-    }
-    
-    // MARK: - Listener Management
     
     func setupListener() {
+        guard let spaceManager = spaceManager else { return }
         removeListener()
         
         let dnc = DistributedNotificationCenter.default()
         
-        // 1. Listen for External Requests (Pull)
-        dnc.addObserver(
-            self,
-            selector: #selector(handleActiveSpaceRequest(_:)),
-            name: SpaceAPI.getActiveSpace,
-            object: nil,
-            suspensionBehavior: .deliverImmediately
-        )
+        // 1. Listen for Requests
+        dnc.addObserver(self, selector: #selector(handleActiveSpaceRequest), name: SpaceAPI.getActiveSpace, object: nil, suspensionBehavior: .deliverImmediately)
+        dnc.addObserver(self, selector: #selector(handleSpaceListRequest), name: SpaceAPI.getSpaceList, object: nil, suspensionBehavior: .deliverImmediately)
         
-        dnc.addObserver(
-            self,
-            selector: #selector(handleSpaceListRequest(_:)),
-            name: SpaceAPI.getSpaceList,
-            object: nil,
-            suspensionBehavior: .deliverImmediately
-        )
-        
-        // 2. Listen for Internal Changes (Push)
-        // This is the missing piece: When SpaceManager changes the space, we broadcast it.
+        // 2. Observe Space Changes (Push Updates)
         spaceManager.$currentSpaceUUID
-            .dropFirst() // Ignore the initial value on setup
+            .dropFirst()
             .receive(on: DispatchQueue.main)
-            .sink { [weak self] _ in
-                self?.broadcastCurrentSpace()
-            }
+            .sink { [weak self] _ in self?.broadcastCurrentSpace() }
             .store(in: &cancellables)
             
-        // Also listen for name changes (renaming a space)
         spaceManager.$spaceNameDict
             .dropFirst()
             .receive(on: DispatchQueue.main)
             .sink { [weak self] _ in
                 self?.broadcastCurrentSpace()
-                self?.broadcastSpaceList() // Also update list if names change
+                self?.broadcastSpaceList()
             }
             .store(in: &cancellables)
-        
-        print("SpaceAPI: Listening enabled (Pull & Push)")
+            
+        print("SpaceAPI: Listener Started")
     }
     
     func removeListener() {
         DistributedNotificationCenter.default().removeObserver(self)
-        cancellables.removeAll() // Stop watching internal changes
+        cancellables.removeAll()
+        print("SpaceAPI: Listener Stopped")
     }
+    
+    // MARK: - State Management
     
     func toggleAPIState(isEnabled: Bool) {
         if isEnabled {
@@ -87,75 +63,49 @@ class SpaceAPI {
             removeListener()
         }
         
+        // NOTIFY other apps that the API is now ON or OFF
         DistributedNotificationCenter.default().postNotificationName(
             SpaceAPI.apiToggleNotification,
             object: nil,
             userInfo: ["isEnabled": isEnabled],
             deliverImmediately: true
         )
+        print("SpaceAPI: Sent Toggle Notification -> \(isEnabled)")
     }
     
-    // MARK: - Broadcasting Logic
+    // MARK: - Broadcasting
     
-    // Shared function used by both the Request Handler and the Auto-Broadcaster
     private func broadcastCurrentSpace() {
-        guard spaceManager.isAPIEnabled else { return }
+        guard let sm = spaceManager, sm.isAPIEnabled else { return }
         
-        let spaceUUID = spaceManager.currentSpaceUUID
-        let spaceName = spaceManager.getSpaceName(spaceUUID)
-        let spaceNum = spaceManager.getSpaceNum(spaceUUID)
-        
-        let uuidToSend = (spaceUUID == "FULLSCREEN") ? "FULLSCREEN" : spaceUUID
-        
+        let spaceUUID = sm.currentSpaceUUID
         let userInfo: [String: Any] = [
-            "spaceUUID": uuidToSend,
-            "spaceName": spaceName,
-            "spaceNumber": NSNumber(value: spaceNum)
+            "spaceUUID": (spaceUUID == "FULLSCREEN") ? "FULLSCREEN" : spaceUUID,
+            "spaceName": sm.getSpaceName(spaceUUID),
+            "spaceNumber": NSNumber(value: sm.getSpaceNum(spaceUUID))
         ]
         
-        // Post "ReturnActiveSpace" to the system
         DistributedNotificationCenter.default().postNotificationName(
-            SpaceAPI.returnActiveSpace,
-            object: nil,
-            userInfo: userInfo,
-            deliverImmediately: true
+            SpaceAPI.returnActiveSpace, object: nil, userInfo: userInfo, deliverImmediately: true
         )
-        
-        print("SpaceAPI: Broadcasted Active Space -> \(spaceName)")
     }
     
     private func broadcastSpaceList() {
-        guard spaceManager.isAPIEnabled else { return }
+        guard let sm = spaceManager, sm.isAPIEnabled else { return }
         
-        let spacesList = spaceManager.spaceNameDict.sorted(by: { $0.num < $1.num }).map { space -> [String: Any] in
-            return [
+        let list = sm.spaceNameDict.sorted(by: { $0.num < $1.num }).map { space -> [String: Any] in
+            [
                 "spaceUUID": space.id,
-                "spaceName": spaceManager.getSpaceName(space.id),
+                "spaceName": sm.getSpaceName(space.id),
                 "spaceNumber": NSNumber(value: space.num)
             ]
         }
         
-        let userInfo: [String: Any] = [
-            "spaces": spacesList
-        ]
-        
         DistributedNotificationCenter.default().postNotificationName(
-            SpaceAPI.returnSpaceList,
-            object: nil,
-            userInfo: userInfo,
-            deliverImmediately: true
+            SpaceAPI.returnSpaceList, object: nil, userInfo: ["spaces": list], deliverImmediately: true
         )
     }
     
-    // MARK: - Request Handlers
-    
-    @objc private func handleActiveSpaceRequest(_ notification: Notification) {
-        // Just trigger the broadcast function
-        broadcastCurrentSpace()
-    }
-    
-    @objc private func handleSpaceListRequest(_ notification: Notification) {
-        broadcastSpaceList()
-        print("SpaceAPI: Replied to Space List Request")
-    }
+    @objc private func handleActiveSpaceRequest() { broadcastCurrentSpace() }
+    @objc private func handleSpaceListRequest() { broadcastSpaceList() }
 }
