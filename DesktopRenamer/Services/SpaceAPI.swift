@@ -13,8 +13,6 @@ class SpaceAPI {
     static let requestAllSpacesNotification = Notification.Name(rawValue: "\(apiName).GetSpaceList")
     static let responseAllSpacesNotification = Notification.Name(rawValue: "\(apiName).ReturnSpaceList")
     
-    static let apiToggleNotification = Notification.Name(rawValue: "\(apiName).APIToggleState")
-    
     private let spaceManager: SpaceManager
     
     init(spaceManager: SpaceManager) {
@@ -68,13 +66,6 @@ class SpaceAPI {
         } else {
             removeListener()
         }
-        
-        DistributedNotificationCenter.default().postNotificationName(
-            SpaceAPI.apiToggleNotification,
-            object: nil,
-            userInfo: ["isEnabled": isEnabled],
-            deliverImmediately: true
-        )
     }
     
     // MARK: - Request Handlers
