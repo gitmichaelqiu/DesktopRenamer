@@ -1,6 +1,6 @@
 import SwiftUI
 
-// MARK: - Space Edit View
+// Space Edit View
 struct SpaceEditView: View {
     @ObservedObject var spaceManager: SpaceManager
     @ObservedObject var labelManager: SpaceLabelManager
@@ -21,7 +21,7 @@ struct SpaceEditView: View {
         .onReceive(spaceManager.$currentSpaceUUID) { _ in refreshData() }
     }
     
-    // MARK: - Subviews
+    // Subviews
     
     private var emptyStateView: some View {
         VStack(spacing: 12) {
@@ -69,7 +69,7 @@ struct SpaceEditView: View {
         }
     }
     
-    // MARK: - Component Views
+    // Component Views
     
     private func spaceNumberView(for space: DesktopSpace) -> some View {
         Text(spaceNumberText(for: space))
@@ -138,7 +138,7 @@ struct SpaceEditView: View {
               : NSLocalizedString("Settings.Spaces.Edit.Help.Delete", comment: ""))
     }
     
-    // MARK: - Helper Methods
+    // Helper Methods
     
     private func spaceNumberText(for space: DesktopSpace) -> String {
         isCurrentSpace(space) ? "[\(space.num)]" : "\(space.num)"
@@ -162,7 +162,7 @@ struct SpaceEditView: View {
         return index == desktopSpaces.count - 1
     }
     
-    // MARK: - Data Operations
+    // Data Operations
     
     private func refreshData() {
         desktopSpaces = spaceManager.spaceNameDict.sorted { $0.num < $1.num }
