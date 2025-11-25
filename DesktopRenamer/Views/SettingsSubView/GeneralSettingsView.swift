@@ -224,27 +224,6 @@ struct GeneralSettingsView: View {
             } catch {
                 print("Failed to toggle launch at login: \(error)")
                 launchAtLogin = getLaunchAtLoginState()
-                
-                let alert = NSAlert()
-                alert.messageText = NSLocalizedString("Settings.LaunchAtLogin.Error", comment: "")
-                alert.informativeText = error.localizedDescription
-                alert.alertStyle = .warning
-                alert.addButton(withTitle: NSLocalizedString("Button.OK", comment: ""))
-                alert.runModal()
-            }
-        } else {
-            if let bundleId = Bundle.main.bundleIdentifier {
-                let success = SMLoginItemSetEnabled(bundleId as CFString, enabled)
-                if !success {
-                    launchAtLogin = getLaunchAtLoginState()
-                    
-                    let alert = NSAlert()
-                    alert.messageText = NSLocalizedString("Settings.General.General.LaunchAtLogin.Error", comment: "")
-                    alert.informativeText = NSLocalizedString("Settings.General.General.LaunchAtLogin.Error.info", comment: "")
-                    alert.alertStyle = .warning
-                    alert.addButton(withTitle: NSLocalizedString("Common.OK", comment: ""))
-                    alert.runModal()
-                }
             }
         }
     }
