@@ -262,7 +262,7 @@ class StatusBarController: NSObject {
             backing: .buffered,
             defer: false
         )
-        window.title = NSLocalizedString("Window.SettingsTitle", comment: "")
+        window.title = NSLocalizedString("Window.Settings.Title", comment: "")
         window.center()
         
         window.minSize = NSSize(width: defaultSettingsWindowWidth, height: defaultSettingsWindowHeight)
