@@ -3,16 +3,44 @@ import SwiftUI
 struct SettingsRow<Content: View>: View {
     let title: LocalizedStringKey
     let content: Content
+    let helperText: LocalizedStringKey?
+    
+    @State private var showingHelperPopover = false
 
-    init(_ title: LocalizedStringKey, @ViewBuilder content: () -> Content) {
+    init(_ title: LocalizedStringKey, helperText: LocalizedStringKey? = nil, @ViewBuilder content: () -> Content) {
         self.title = title
+        self.helperText = helperText
         self.content = content()
     }
 
     var body: some View {
         HStack {
-            Text(title)
-                .frame(maxWidth: .infinity, alignment: .leading)
+            HStack(spacing: 4) {
+                Text(title)
+                    .frame(alignment: .leading)
+                
+                if let helperText = helperText {
+                    Button {
+                        showingHelperPopover.toggle()
+                    } label: {
+                        Image(systemName: "questionmark.circle.fill")
+                            .font(.caption)
+                            .foregroundColor(.gray)
+                    }
+                    .buttonStyle(.plain)
+                    .popover(isPresented: $showingHelperPopover, arrowEdge: .top) {
+                        VStack(alignment: .leading, spacing: 10) {
+                            Text(helperText)
+                                .font(.body)
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
+                        .padding(15)
+                        .frame(minWidth: 200, maxWidth: 300)
+                    }
+                }
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+
             content
                 .frame(alignment: .trailing)
         }

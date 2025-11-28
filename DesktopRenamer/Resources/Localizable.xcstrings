@@ -24,6 +24,9 @@
         }
       }
     },
+    "Allow other apps to get space names" : {
+
+    },
     "Button.Cancel" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -336,13 +339,13 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Enable space API \n(allow other apps to get space ID)"
+            "value" : "Enable space API"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "启用桌面对外端口 \n(允许其他软件获取当前桌面 ID)"
+            "value" : "启用桌面 API"
           }
         }
       }

@@ -146,7 +146,7 @@ struct GeneralSettingsView: View {
                 }
                 
                 SettingsSection("Settings.General.Advanced") {
-                    SettingsRow("Settings.General.Advanced.EnableAPI") {
+                    SettingsRow("Settings.General.Advanced.EnableAPI", helperText: "Allow other apps to get space names") {
                         Toggle("", isOn: $isAPIEnabled)
                             .labelsHidden()
                             .toggleStyle(.switch)
