@@ -2,7 +2,7 @@ import Foundation
 import AppKit
 
 class SpaceLabelManager: ObservableObject {
-    private let spacesKey = "com.gitmichaelqiu.desktoprenamer.slw"
+    private let spacesKey = "com.michaelqiu.desktoprenamer.slw"
     
     @Published var isEnabled: Bool {
         didSet {

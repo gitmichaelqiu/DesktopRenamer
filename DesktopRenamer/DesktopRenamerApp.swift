@@ -6,13 +6,13 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     var statusBarController: StatusBarController?
     
     func applicationDidFinishLaunching(_ notification: Notification) {
+        NSApp.setActivationPolicy(.accessory)
         // Initialize SpaceManager and StatusBarController
-        DispatchQueue.main.asyncAfter(deadline: .now() + 3.0) {
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) { // Reduced delay slightly
             self.spaceManager = SpaceManager()
             self.statusBarController = StatusBarController(spaceManager: self.spaceManager)
         }
 
-        // Automatically check for updates on launch if enabled
         if UpdateManager.isAutoCheckEnabled {
             DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
                 Task {
@@ -21,11 +21,16 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             }
         }
     }
+    
+    // NEW: Handle App Termination
+    func applicationWillTerminate(_ notification: Notification) {
+        // Notify external apps that API is going down
+        spaceManager?.prepareForTermination()
+    }
 }
 
 @main
 struct DesktopRenamerApp: App {
-    // Attach the AppDelegate
     @NSApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
     
     var body: some Scene {
@@ -38,10 +43,7 @@ struct DesktopRenamerApp: App {
                     UserDefaults.standard.set(SettingsTab.about.rawValue, forKey: "selectedSettingsTab")
                 }
             }
-            
-            CommandGroup(replacing: .appSettings) {
-                // Remove default settings
-            }
+            CommandGroup(replacing: .appSettings) { }
         }
     }
 }

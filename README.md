@@ -1,3 +1,5 @@
+<!-- v1.5.0 -->
+
 <h1 align="center">
   <img src="./DesktopRenamer/Resources/DesktopRenamerIcon_Default.png" width="25%" alt=""/>  
   <p></p>
@@ -14,9 +16,21 @@
       <img src="./DesktopRenamer/Resources/Demo/DesktopRenamer_v1-4-0_SLW.png" width="300"/><br>
       <i><b>SpaceLabelWindow</b> will be shown when entering Mission Control</i>
     </td>
+  </tr>
+  <tr>
     <td align="center">
       <img src="./DesktopRenamer/Resources/Demo/DesktopRenamer_v1-4-0_SpaceEdit.png" width="300"/><br>
       <i>Edit spaces in settings</i>
+    </td>
+    <td align="center">
+      <img src="./DesktopRenamer/Resources/Demo/DesktopRenamer_v1-5-0_API.png" width="500"/><br>
+      <i>
+        Open
+        <a href="https://github.com/gitmichaelqiu/DesktopRenamer/wiki/DesktopRenamer-API-Guide">
+        <b>SpaceAPI</b>
+        </a>
+        to other apps
+      </i>
     </td>
   </tr>
 </table>
@@ -34,6 +48,14 @@ You do **NOT** have to disable *SIP* or things like that. Your macOS must be at 
 Because I do **NOT** have an Apple developer account for the app releases ~~(Apple charges an annual fee for this)~~, you may receive alerts such as "App is broken".
 
 To resolve this, go to System Settings → the bottom of Privacy & Security → Open DesktopRenamer.
+
+## 🛜 API
+
+This app provides an API to acquire space ID and names.
+
+Check [Developer API Guide](https://github.com/gitmichaelqiu/DesktopRenamer/wiki/DesktopRenamer-API-Guide) for details.
+
+You can switch on/off the API in Settings → Advanced.
 
 ## 💡 Tips
 
