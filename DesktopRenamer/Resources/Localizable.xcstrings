@@ -24,8 +24,15 @@
         }
       }
     },
-    "Allow other apps to get space names" : {
-
+    "Allow other apps to get space names." : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "允许其他应用访问桌面名称。"
+          }
+        }
+      }
     },
     "Button.Cancel" : {
       "extractionState" : "manual",
@@ -57,6 +64,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "确认"
+          }
+        }
+      }
+    },
+    "Create windows that only appear in Mission Control to display space names.\n\nMay not work when multiple displays are connected." : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "创建只在调度中心中显示的窗口以显示桌面名称。\\n\\n在连接到多个显示器时可能不可用。"
           }
         }
       }
