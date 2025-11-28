@@ -16,9 +16,21 @@
       <img src="./DesktopRenamer/Resources/Demo/DesktopRenamer_v1-4-0_SLW.png" width="300"/><br>
       <i><b>SpaceLabelWindow</b> will be shown when entering Mission Control</i>
     </td>
+  </tr>
+  <tr>
     <td align="center">
       <img src="./DesktopRenamer/Resources/Demo/DesktopRenamer_v1-4-0_SpaceEdit.png" width="300"/><br>
       <i>Edit spaces in settings</i>
+    </td>
+    <td align="center">
+      <img src="./DesktopRenamer/Resources/Demo/DesktopRenamer_v1-5-0_API.png">
+      <i>
+        Open
+        <a href="https://github.com/gitmichaelqiu/DesktopRenamer/wiki/DesktopRenamer-API-Guide">
+        <b>SpaceAPI</b>
+        </a>
+        to other apps
+      </i>
     </td>
   </tr>
 </table>
@@ -41,7 +53,7 @@ To resolve this, go to System Settings → the bottom of Privacy & Security → 
 
 This app provides an API to acquire space ID and names.
 
-Other applications can use `DistributedNotificationCenter` to send a notification with the name `com.gitmichaelqiu.DesktopRenamer.SpaceAPI.RequestCurrentSpace` and listen for a response on `com.gitmichaelqiu.DesktopRenamer.SpaceAPI.ResponseCurrentSpace`.
+Check [Developer API Guide](https://github.com/gitmichaelqiu/DesktopRenamer/wiki/DesktopRenamer-API-Guide) for details.
 
 You can switch on/off the API in Settings → Advanced.
 
