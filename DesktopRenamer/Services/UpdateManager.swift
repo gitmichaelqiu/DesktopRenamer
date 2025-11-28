@@ -49,6 +49,7 @@ class UpdateManager {
                         in: window
                     )
                 }
+                sendCheckFailedNotification()
                 return
             }
             
