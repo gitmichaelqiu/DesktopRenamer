@@ -99,7 +99,7 @@ struct GeneralSettingsView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 20) {
                 SettingsSection("Settings.General.General") {
-                    SettingsRow("Settings.General.General.ShowLabels") {
+                    SettingsRow("Settings.General.General.ShowLabels", helperText: "Create windows that only appear in Mission Control to display space names.\n\nMay not work when multiple displays are connected.") {
                         Toggle("", isOn: $labelManager.isEnabled)
                             .labelsHidden()
                             .toggleStyle(.switch)
@@ -146,7 +146,7 @@ struct GeneralSettingsView: View {
                 }
                 
                 SettingsSection("Settings.General.Advanced") {
-                    SettingsRow("Settings.General.Advanced.EnableAPI", helperText: "Allow other apps to get space names") {
+                    SettingsRow("Settings.General.Advanced.EnableAPI", helperText: "Allow other apps to get space names.") {
                         Toggle("", isOn: $isAPIEnabled)
                             .labelsHidden()
                             .toggleStyle(.switch)
