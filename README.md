@@ -23,7 +23,7 @@
       <i>Edit spaces in settings</i>
     </td>
     <td align="center">
-      <img src="./DesktopRenamer/Resources/Demo/DesktopRenamer_v1-5-0_API.png">
+      <img src="./DesktopRenamer/Resources/Demo/DesktopRenamer_v1-5-0_API.png" width="500"/><br>
       <i>
         Open
         <a href="https://github.com/gitmichaelqiu/DesktopRenamer/wiki/DesktopRenamer-API-Guide">
