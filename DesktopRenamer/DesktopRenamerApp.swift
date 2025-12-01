@@ -22,10 +22,14 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         }
     }
     
-    // NEW: Handle App Termination
     func applicationWillTerminate(_ notification: Notification) {
         // Notify external apps that API is going down
         spaceManager?.prepareForTermination()
+    }
+    
+    func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
+        statusBarController?.openSettingsWindow()
+        return true
     }
 }
 
