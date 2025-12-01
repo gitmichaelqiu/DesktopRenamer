@@ -1,18 +1,105 @@
 import SwiftUI
 import ServiceManagement
 
+class APITester: ObservableObject {
+    @Published var responseText: String = ""
+    
+    init() {
+        // LISTEN to Local Notification Center
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(handleCurrentSpaceResponse(_:)),
+            name: SpaceAPI.returnActiveSpace,
+            object: nil
+        )
+        
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(handleAllSpacesResponse(_:)),
+            name: SpaceAPI.returnSpaceList,
+            object: nil
+        )
+    }
+    
+    deinit {
+        NotificationCenter.default.removeObserver(self)
+    }
+    
+    func sendCurrentSpaceRequest() {
+        responseText = "Requesting current space..."
+        DistributedNotificationCenter.default().postNotificationName(
+            SpaceAPI.getActiveSpace,
+            object: nil,
+            userInfo: nil,
+            deliverImmediately: true
+        )
+    }
+    
+    func sendAllSpacesRequest() {
+        responseText = "Requesting all spaces..."
+        DistributedNotificationCenter.default().postNotificationName(
+            SpaceAPI.getSpaceList,
+            object: nil,
+            userInfo: nil,
+            deliverImmediately: true
+        )
+    }
+    
+    @objc private func handleCurrentSpaceResponse(_ notification: Notification) {
+        DispatchQueue.main.async {
+            guard let userInfo = notification.userInfo else {
+                self.responseText = "Received empty response"
+                return
+            }
+            
+            let name = userInfo["spaceName"] as? String ?? "N/A"
+            let num = (userInfo["spaceNumber"] as? NSNumber)?.intValue ?? (userInfo["spaceNumber"] as? Int) ?? -1
+            let uuid = userInfo["spaceUUID"] as? String ?? "N/A"
+            
+            self.responseText = "Current Space:\nName: \(name)\n#: \(num)\nUUID: \(uuid)"
+        }
+    }
+    
+    @objc private func handleAllSpacesResponse(_ notification: Notification) {
+        DispatchQueue.main.async {
+            guard let userInfo = notification.userInfo,
+                  let spaces = userInfo["spaces"] as? [[String: Any]] else {
+                self.responseText = "Received empty space list"
+                return
+            }
+            
+            var result = "All Spaces (\(spaces.count)):\n"
+            
+            for space in spaces {
+                let name = space["spaceName"] as? String ?? "N/A"
+                let num = (space["spaceNumber"] as? NSNumber)?.intValue ?? -1
+                // Truncate UUID for display
+                let uuid = (space["spaceUUID"] as? String)?.prefix(8) ?? "N/A"
+                
+                result += "#\(num): \(name) [\(uuid).. ]\n"
+            }
+            
+            self.responseText = result
+        }
+    }
+}
+
 struct GeneralSettingsView: View {
     @ObservedObject var spaceManager: SpaceManager
     @ObservedObject var labelManager: SpaceLabelManager
+    
+    @StateObject private var apiTester = APITester()
+    
     @State private var launchAtLogin: Bool = false
     @State private var autoCheckUpdate: Bool = UpdateManager.isAutoCheckEnabled
     @State private var isResetting: Bool = false
+    @State private var isAPIEnabled: Bool = true
     
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 20) {
                 SettingsSection("Settings.General.General") {
-                    SettingsRow("Settings.General.General.ShowLabels") {
+                    SettingsRow("Settings.General.General.ShowLabels", helperText: "Create windows that only appear in Mission Control to display space names.\n\nMay not work when multiple displays are connected.") {
                         Toggle("", isOn: $labelManager.isEnabled)
                             .labelsHidden()
                             .toggleStyle(.switch)
@@ -58,6 +145,53 @@ struct GeneralSettingsView: View {
                     }
                 }
                 
+                SettingsSection("Settings.General.Advanced") {
+                    SettingsRow("Settings.General.Advanced.EnableAPI", helperText: "Allow other apps to get space names.") {
+                        Toggle("", isOn: $isAPIEnabled)
+                            .labelsHidden()
+                            .toggleStyle(.switch)
+                            .onChange(of: isAPIEnabled) { value in
+//                                spaceManager.isAPIEnabled = value
+                                SpaceAPI(spaceManager: spaceManager).toggleAPIState(isEnabled: value)
+                            }
+                    }
+                    
+//                    Divider()
+//                    
+//                    SettingsRow("Settings.General.Advanced.APITest") {
+//                        HStack {
+//                            Button(NSLocalizedString("Settings.General.Advanced.APITest.Current", comment: "")) {
+//                                apiTester.sendCurrentSpaceRequest()
+//                            }
+//                            
+//                            Button(NSLocalizedString("Settings.General.Advanced.APITest.All", comment: "")) {
+//                                apiTester.sendAllSpacesRequest()
+//                            }
+//                        }
+//                        .disabled(!isAPIEnabled)
+//                    }
+//                    
+//                    if !apiTester.responseText.isEmpty {
+//                        VStack(alignment: .leading, spacing: 4) {
+//                            Text( NSLocalizedString("Settings.General.Advanced.APITest.Return", comment: ""))
+//                                .font(.caption)
+//                                .foregroundColor(.secondary)
+//                            
+//                            ScrollView(.vertical) {
+//                                Text(apiTester.responseText)
+//                                    .font(.system(.caption, design: .monospaced))
+//                                    .padding(8)
+//                                    .frame(maxWidth: .infinity, alignment: .leading)
+//                            }
+//                            .frame(maxHeight: 150) // Limit height for long lists
+//                            .background(Color.black.opacity(0.1))
+//                            .cornerRadius(6)
+//                        }
+//                        .padding(.horizontal, 10)
+//                        .padding(.bottom, 10)
+//                    }
+                }
+                
                 Spacer()
             }
             .padding()
@@ -65,6 +199,7 @@ struct GeneralSettingsView: View {
         }
         .onAppear {
             launchAtLogin = getLaunchAtLoginState()
+            isAPIEnabled = spaceManager.isAPIEnabled
         }
     }
     
@@ -89,35 +224,14 @@ struct GeneralSettingsView: View {
             } catch {
                 print("Failed to toggle launch at login: \(error)")
                 launchAtLogin = getLaunchAtLoginState()
-                
-                // Show error alert
-                let alert = NSAlert()
-                alert.messageText = NSLocalizedString("Settings.LaunchAtLogin.Error", comment: "Failed to toggle launch at login")
-                alert.informativeText = error.localizedDescription
-                alert.alertStyle = .warning
-                alert.addButton(withTitle: NSLocalizedString("Button.OK", comment: "OK"))
-                alert.runModal()
-            }
-        } else {
-            if let bundleId = Bundle.main.bundleIdentifier {
-                let success = SMLoginItemSetEnabled(bundleId as CFString, enabled)
-                if !success {
-                    launchAtLogin = getLaunchAtLoginState()
-                    
-                    // Show error alert
-                    let alert = NSAlert()
-                    alert.messageText = NSLocalizedString("Settings.General.General.LaunchAtLogin.Error", comment: "Failed to toggle launch at login")
-                    alert.informativeText = NSLocalizedString("Settings.General.General.LaunchAtLogin.Error.info", comment: "Could not update login items")
-                    alert.alertStyle = .warning
-                    alert.addButton(withTitle: NSLocalizedString("Common.OK", comment: "OK"))
-                    alert.runModal()
-                }
             }
         }
     }
     
     private func checkForUpdate() {
-        UpdateManager.shared.checkForUpdate(from: nil, suppressUpToDateAlert: false)
+        Task {
+            await UpdateManager.shared.checkForUpdate(from: nil, suppressUpToDateAlert: false)
+        }
     }
     
     private func resetNames() {
@@ -142,14 +256,12 @@ struct GeneralSettingsView: View {
                 if response == .alertFirstButtonReturn {
                     self.spaceManager.resetAllNames()
                     
-                    // Show success feedback
                     let successAlert = NSAlert()
-                    successAlert.messageText = NSLocalizedString("Settings.General.Reset.Success.Msg", comment: "Reset successful")
-                    successAlert.informativeText = NSLocalizedString("Settings.General.Reset.Success.Info", comment: "All space names have been reset to their default values")
+                    successAlert.messageText = NSLocalizedString("Settings.General.Reset.Success.Msg", comment: "")
+                    successAlert.informativeText = NSLocalizedString("Settings.General.Reset.Success.Info", comment: "")
                     successAlert.alertStyle = .informational
-                    successAlert.addButton(withTitle: NSLocalizedString("Button.OK", comment: "OK"))
-                    successAlert.beginSheetModal(for: window) { _ in
-                    }
+                    successAlert.addButton(withTitle: NSLocalizedString("Button.OK", comment: ""))
+                    successAlert.beginSheetModal(for: window) { _ in }
                 }
             }
         }
