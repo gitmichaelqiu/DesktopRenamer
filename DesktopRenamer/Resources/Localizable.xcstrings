@@ -34,6 +34,12 @@
         }
       }
     },
+    "Bug report generator" : {
+
+    },
+    "Bug Report Log Collection" : {
+
+    },
     "Button.Cancel" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -67,6 +73,9 @@
           }
         }
       }
+    },
+    "Cancel" : {
+
     },
     "Create windows that only appear in Mission Control to display space names.\n\nMay not work when multiple displays are connected." : {
       "localizations" : {
@@ -163,6 +172,9 @@
         }
       }
     },
+    "Please go through all spaces that may be helpful in analyzing the bug. The log is updating in real-time." : {
+
+    },
     "Rename.Label" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -196,6 +208,9 @@
           }
         }
       }
+    },
+    "Save Log" : {
+
     },
     "Settings.About" : {
       "extractionState" : "manual",
@@ -1148,6 +1163,15 @@
           }
         }
       }
+    },
+    "Start" : {
+
+    },
+    "Stop" : {
+
+    },
+    "This generates a log that is helpful for the developers to debug. The log includes the following information:\n\n1. SpaceUUIDs (not your customized name)\n\n2. A number representing the notification center amount (does not contain sensitive information, just a number)" : {
+
     },
     "This method is more stable than the normal one. It detects space every %@s, slightly increasing the energy cost.\n\nNotice, the space name may update twice every time you switch the space, and you may also see the name of the main space appears shortly." : {
 
