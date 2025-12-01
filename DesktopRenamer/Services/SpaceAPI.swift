@@ -76,7 +76,7 @@ class SpaceAPI {
     // MARK: - Broadcasting
     
     private func broadcastCurrentSpace() {
-        guard let sm = spaceManager, sm.isAPIEnabled else { return }
+        guard let sm = spaceManager, SpaceManager.isAPIEnabled else { return }
         
         let spaceUUID = sm.currentSpaceUUID
         let userInfo: [String: Any] = [
@@ -91,7 +91,7 @@ class SpaceAPI {
     }
     
     private func broadcastSpaceList() {
-        guard let sm = spaceManager, sm.isAPIEnabled else { return }
+        guard let sm = spaceManager, SpaceManager.isAPIEnabled else { return }
         
         let list = sm.spaceNameDict.sorted(by: { $0.num < $1.num }).map { space -> [String: Any] in
             [
