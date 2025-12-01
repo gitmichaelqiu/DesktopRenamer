@@ -31,13 +31,36 @@ class SpaceHelper {
             let options = CGWindowListOption(arrayLiteral: .optionOnScreenOnly)
             let windowList = CGWindowListCopyWindowInfo(options, kCGNullWindowID) as? [[String: Any]] ?? []
             var uuid = ""
-            var inFullscreen = true
+            var ncCnt = 0
             
             // Look for the wallpaper window
+            
+            
+            var ccCnt = 0
+            var dkCnt = 0
+            var wsCnt = 0
             for window in windowList {
+//                print(window[kCGWindowOwnerName as String] as? String ?? "Empty")
+                
+                
+                if let owner = window[kCGWindowOwnerName as String] as? String,
+                   owner == "Control Center" {
+                    ccCnt += 1
+                }
+                if let owner = window[kCGWindowOwnerName as String] as? String,
+                   owner == "Dock" {
+                    dkCnt += 1
+                }
+                if let owner = window[kCGWindowOwnerName as String] as? String,
+                   owner == "Window Server" {
+                    wsCnt += 1
+                }
+                    
+                
                 if let owner = window[kCGWindowOwnerName as String] as? String,
                         owner == "Notification Center" {
-                    inFullscreen = false
+//                    inFullscreen = false
+                    ncCnt += 1
                 } else if let owner = window[kCGWindowOwnerName as String] as? String,
                    owner == "Dock",
                    let name = window[kCGWindowName as String] as? String,
@@ -58,9 +81,17 @@ class SpaceHelper {
 //                }
             }
             
-            if inFullscreen {
+            if ncCnt < 4 {
                 uuid = "FULLSCREEN"
             }
+            
+            print("####################")
+            print(uuid)
+            print(ncCnt)
+            print(ccCnt)
+            print(dkCnt)
+            print(wsCnt)
+            print("####################")
             
             // Return
             completion(uuid)
