@@ -26,7 +26,7 @@ class SpaceHelper {
     }
     
     static func getSpaceUUID(completion: @escaping (String) -> Void) {
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.01) { // Wait the system to update
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.02) { // Wait the system to update
             // Get all windows
             let options = CGWindowListOption(arrayLiteral: .optionOnScreenOnly)
             let windowList = CGWindowListCopyWindowInfo(options, kCGNullWindowID) as? [[String: Any]] ?? []
