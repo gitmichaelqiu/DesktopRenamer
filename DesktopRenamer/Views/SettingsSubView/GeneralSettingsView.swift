@@ -198,7 +198,13 @@ struct GeneralSettingsView: View {
         .onAppear {
             launchAtLogin = getLaunchAtLoginState()
         }
-        .sheet(isPresented: $showLogSheet) {
+        // FIX 2: Add an onDismiss handler to sheet to stop logging if the user closes the sheet
+        // using the Escape key or clicking outside (default sheet dismissal behavior).
+        .sheet(isPresented: $showLogSheet, onDismiss: {
+            if spaceManager.isBugReportActive {
+                spaceManager.stopBugReportLogging()
+            }
+        }) {
             bugReportSheet
         }
     }
@@ -224,24 +230,27 @@ struct GeneralSettingsView: View {
             ScrollView {
                 ScrollViewReader { proxy in
                     VStack(alignment: .leading, spacing: 4) {
-                        // FIX 1: Display log entries in normal chronological order (newest at bottom)
+                        // Display log entries in normal chronological order (newest at bottom)
                         ForEach(spaceManager.bugReportLog.indices, id: \.self) { index in
                             let entry = spaceManager.bugReportLog[index]
                             let isLatest = index == spaceManager.bugReportLog.count - 1
                             
                             Text(entry.description)
                                 .font(.system(.footnote, design: .monospaced))
-                                // FIX 2: Use accent color for the newest line, white for previous lines
+                                // Use accent color for the newest line, white for previous lines
                                 .foregroundColor(isLatest ? .accentColor : Color(NSColor.controlTextColor))
                                 .id(entry.id)
                         }
                     }
                     .frame(maxWidth: .infinity, alignment: .leading)
-                    // Scroll to bottom when log is updated
+                    // FIX 1: Scroll to bottom when log is updated
                     .onReceive(spaceManager.$bugReportLog) { log in
                         if let last = log.last {
-                            // Scroll to the newest item (which is now the last item)
-                            proxy.scrollTo(last.id, anchor: .bottom)
+                            // Scroll to the newest item (which is the last item)
+                            // This must be done on the next run loop cycle to ensure the view size has updated.
+                            DispatchQueue.main.async {
+                                proxy.scrollTo(last.id, anchor: .bottom)
+                            }
                         }
                     }
                 }
@@ -295,12 +304,13 @@ struct GeneralSettingsView: View {
                 do {
                     try data.write(to: url)
                     
-                    // FIX 3: Corrected the sequence of closing the log sheet and showing the thank you alert.
-                    // 1. Stop logging and close the initial sheet first, ensuring the parent window is active.
+                    // Corrected the sequence of closing the log sheet and showing the thank you alert.
+                    // 1. Stop logging and close the initial sheet immediately.
                     self.spaceManager.stopBugReportLogging()
                     self.showLogSheet = false
                     
-                    // 2. Schedule the thank you alert to be shown AFTER the sheet has closed.
+                    // 2. Schedule the thank you alert to be shown on the main thread AFTER a slight delay.
+                    // This ensures the first sheet (bug report log) has fully dismissed before the second sheet (alert) begins.
                     DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
                          self.showThankYouAlert()
                     }
@@ -329,6 +339,7 @@ struct GeneralSettingsView: View {
             return
         }
         
+        // Present the alert as a sheet on the (now visible) settings window
         alert.beginSheetModal(for: window) { _ in }
     }
     
@@ -346,7 +357,6 @@ struct GeneralSettingsView: View {
             }
         } catch {
             print("Failed to toggle launch at login: \(error)")
-            // Re-read the actual state if operation failed
             launchAtLogin = getLaunchAtLoginState()
         }
     }
