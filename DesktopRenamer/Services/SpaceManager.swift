@@ -5,22 +5,25 @@ import SwiftUI
 let POLL_INTERVAL = 0.8
 
 class SpaceManager: ObservableObject {
+    static private let spacesKey = "com.michaelqiu.desktoprenamer.spaces"
+    static private let isStableEnabledKey = "com.michaelqiu.desktoprenamer.isstableenabled"
+    static private let isAPIEnabledKey = "com.michaelqiu.desktoprenamer.isapienabled"
+    
     @Published private(set) var currentSpaceUUID: String = ""
     @Published var spaceNameDict: [DesktopSpace] = []
     
-    private var pollingTimer: Timer?
-    
-    // We observe this property to toggle the API automatically
-    @AppStorage("isAPIEnabled") public var isAPIEnabled: Bool = true {
-        didSet {
-            // Toggle the internal API instance when setting changes
-            spaceAPI?.toggleAPIState(isEnabled: isAPIEnabled)
-        }
+    static var isAPIEnabled: Bool {
+        get { UserDefaults.standard.bool(forKey: isAPIEnabledKey) }
+        set { UserDefaults.standard.set(newValue, forKey: isAPIEnabledKey) }
+    }
+    static var isStableEnabled: Bool {
+        get { UserDefaults.standard.bool(forKey: isStableEnabledKey) }
+        set { UserDefaults.standard.set(newValue, forKey: isStableEnabledKey) }
     }
     
+    private var pollingTimer: Timer?
+    
     public var currentTotalSpace = 0
-    private let spacesKey = "com.michaelqiu.desktoprenamer.spaces"
-    private let isStableKey = "com.michaelqiu.desktoprenamer.isstable"
     
     // Keep reference to API
     public var spaceAPI: SpaceAPI?
@@ -32,7 +35,7 @@ class SpaceManager: ObservableObject {
         self.spaceAPI = SpaceAPI(spaceManager: self)
         
         // Set initial state based on saved setting
-        if isAPIEnabled {
+        if SpaceManager.isAPIEnabled {
             self.spaceAPI?.toggleAPIState(isEnabled: true)
         }
         
@@ -40,15 +43,15 @@ class SpaceManager: ObservableObject {
             self?.handleSpaceChange(newSpaceUUID)
         }
         
-        if UserDefaults.standard.bool(forKey: isStableKey) {
+        if SpaceManager.isStableEnabled {
             startPolling()
         }
     }
     
-    func togglePolling(isEnabled: Bool) {
-        UserDefaults.standard.set(isEnabled, forKey: isStableKey)
+    func togglePolling() {
+        SpaceManager.isStableEnabled.toggle()
         
-        if isEnabled {
+        if SpaceManager.isStableEnabled {
             startPolling()
         } else {
             stopPolling()
@@ -108,7 +111,7 @@ class SpaceManager: ObservableObject {
     }
     
     private func loadSavedSpaces() {
-        if let data = UserDefaults.standard.data(forKey: spacesKey),
+        if let data = UserDefaults.standard.data(forKey: SpaceManager.spacesKey),
            let spaces = try? JSONDecoder().decode([DesktopSpace].self, from: data) {
             spaceNameDict = spaces
             currentTotalSpace = spaceNameDict.count
@@ -117,7 +120,7 @@ class SpaceManager: ObservableObject {
     
     public func saveSpaces() {
         if let data = try? JSONEncoder().encode(spaceNameDict) {
-            UserDefaults.standard.set(data, forKey: spacesKey)
+            UserDefaults.standard.set(data, forKey: SpaceManager.spacesKey)
             UserDefaults.standard.synchronize()
         }
     }
@@ -139,7 +142,7 @@ class SpaceManager: ObservableObject {
     func resetAllNames() {
         DispatchQueue.main.async { [weak self] in
             guard let self = self else { return }
-            UserDefaults.standard.removeObject(forKey: self.spacesKey)
+            UserDefaults.standard.removeObject(forKey: SpaceManager.spacesKey)
             self.currentTotalSpace = 0
             self.spaceNameDict.removeAll()
             self.saveSpaces()

@@ -93,8 +93,8 @@ struct GeneralSettingsView: View {
     @State private var launchAtLogin: Bool = false
     @State private var autoCheckUpdate: Bool = UpdateManager.isAutoCheckEnabled
     @State private var isResetting: Bool = false
-    @State private var isAPIEnabled: Bool = true
-    @State private var isStableDetect: Bool = false
+    @State private var isAPIEnabled: Bool = SpaceManager.isAPIEnabled
+    @State private var isStableEnabled: Bool = SpaceManager.isStableEnabled
     
     var body: some View {
         ScrollView {
@@ -159,12 +159,12 @@ struct GeneralSettingsView: View {
                     
                     Divider()
                     
-                    SettingsRow("Use stable space detection method", helperText: "This method is more stable than the normal one. It detects space every \(String(format: "%.2f", POLL_INTERVAL))s, slightly increasing energy cost.\n\nNotice, the space name may update twice. When space is changing, you may see 'Main' appears shortly.") {
-                        Toggle("", isOn: $isStableDetect)
+                    SettingsRow("Use stable space detection method", helperText: "This method is more stable than the normal one. It detects space every \(String(format: "%.2f", POLL_INTERVAL))s, slightly increasing the energy cost.\n\nNotice, the space name may update twice. When the space is changing, you may see 'Main' appears shortly.") {
+                        Toggle("", isOn: $isStableEnabled)
                             .labelsHidden()
                             .toggleStyle(.switch)
-                            .onChange(of: isStableDetect) { value in
-                                spaceManager.togglePolling(isEnabled: value)
+                            .onChange(of: isStableEnabled) { value in
+                                spaceManager.togglePolling()
                             }
                     }
                 }
@@ -176,7 +176,6 @@ struct GeneralSettingsView: View {
         }
         .onAppear {
             launchAtLogin = getLaunchAtLoginState()
-            isAPIEnabled = spaceManager.isAPIEnabled
         }
     }
     
