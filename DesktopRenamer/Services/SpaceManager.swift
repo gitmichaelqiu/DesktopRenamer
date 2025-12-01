@@ -2,9 +2,13 @@ import Foundation
 import AppKit
 import SwiftUI
 
+let POLL_INTERVAL = 1.0
+
 class SpaceManager: ObservableObject {
     @Published private(set) var currentSpaceUUID: String = ""
     @Published var spaceNameDict: [DesktopSpace] = []
+    
+    private var pollingTimer: Timer?
     
     // We observe this property to toggle the API automatically
     @AppStorage("isAPIEnabled") public var isAPIEnabled: Bool = true {
@@ -32,31 +36,59 @@ class SpaceManager: ObservableObject {
             self.spaceAPI?.toggleAPIState(isEnabled: true)
         }
         
-        // Start monitoring
         SpaceHelper.startMonitoring { [weak self] newSpaceUUID in
+            self?.handleSpaceChange(newSpaceUUID)
+        }
+        
+        startPolling()
+    }
+    
+    private func startPolling() {
+        // Schedule a repeating timer to run every 5 seconds
+        pollingTimer = Timer.scheduledTimer(withTimeInterval: TimeInterval(POLL_INTERVAL), repeats: true) { [weak self] _ in
+            self?.pollCurrentSpace()
+        }
+        // Add the timer to the common run loop mode to ensure it fires reliably
+        if let timer = pollingTimer {
+            RunLoop.current.add(timer, forMode: .common)
+        }
+    }
+    
+    private func stopPolling() {
+        pollingTimer?.invalidate()
+        pollingTimer = nil
+    }
+    
+    private func pollCurrentSpace() {
+        SpaceHelper.getSpaceUUID { [weak self] newSpaceUUID in
             self?.handleSpaceChange(newSpaceUUID)
         }
     }
     
-    // Called by AppDelegate when quitting
     func prepareForTermination() {
         print("SpaceManager: Shutting down...")
+        stopPolling() // Stop the timer
         // Explicitly send "False" notification
         spaceAPI?.toggleAPIState(isEnabled: false)
     }
     
     deinit {
         SpaceHelper.stopMonitoring()
+        stopPolling()
     }
-    
-    // ... (Keep rest of handleSpaceChange, loadSavedSpaces, saveSpaces, etc. exactly as before) ...
     
     private func handleSpaceChange(_ newSpaceUUID: String) {
         if !Thread.isMainThread {
             DispatchQueue.main.async { [weak self] in self?.handleSpaceChange(newSpaceUUID) }
             return
         }
-        currentSpaceUUID = newSpaceUUID
+        
+        guard currentSpaceUUID != newSpaceUUID else {
+            return
+        }
+
+        currentSpaceUUID = newSpaceUUID // Publishes change and triggers API update
+        
         if !spaceNameDict.contains(where: { $0.id == currentSpaceUUID }) && currentSpaceUUID != "FULLSCREEN" {
             currentTotalSpace += 1
             spaceNameDict.append(DesktopSpace(id: currentSpaceUUID, customName: "", num: currentTotalSpace))
@@ -100,8 +132,12 @@ class SpaceManager: ObservableObject {
             self.currentTotalSpace = 0
             self.spaceNameDict.removeAll()
             self.saveSpaces()
+            
+            // Re-identify the current space after reset
             SpaceHelper.getSpaceUUID { spaceUUID in
                 self.currentSpaceUUID = spaceUUID
+                // Call handleSpaceChange which will ensure the current space is re-added
+                // and the API is notified of the fresh state.
                 self.handleSpaceChange(spaceUUID)
             }
         }
