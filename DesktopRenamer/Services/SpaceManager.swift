@@ -36,7 +36,17 @@ class SpaceManager: ObservableObject {
         
         // Set initial state based on saved setting
         if SpaceManager.isAPIEnabled {
-            self.spaceAPI?.toggleAPIState(isEnabled: true)
+            self.spaceAPI?.setupListener()
+            
+            DistributedNotificationCenter.default().postNotificationName(
+                SpaceAPI.apiToggleNotification,
+                object: nil,
+                userInfo: ["isEnabled": true],
+                deliverImmediately: true
+            )
+            print("SpaceAPI: Sent Toggle Notification -> true")
+        } else {
+            self.spaceAPI?.removeListener()
         }
         
         SpaceHelper.startMonitoring { [weak self] newSpaceUUID in
@@ -83,7 +93,13 @@ class SpaceManager: ObservableObject {
         print("SpaceManager: Shutting down...")
         stopPolling() // Stop the timer
         // Explicitly send "False" notification
-        spaceAPI?.toggleAPIState(isEnabled: false)
+        DistributedNotificationCenter.default().postNotificationName(
+            SpaceAPI.apiToggleNotification,
+            object: nil,
+            userInfo: ["isEnabled": false],
+            deliverImmediately: true
+        )
+        print("SpaceAPI: Sent Toggle Notification -> false")
     }
     
     deinit {
