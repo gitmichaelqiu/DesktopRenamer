@@ -1,5 +1,6 @@
 import SwiftUI
 import ServiceManagement
+import AppKit // Import AppKit for NSColor and NSApp/NSSavePanel
 
 class APITester: ObservableObject {
     @Published var responseText: String = ""
@@ -96,6 +97,9 @@ struct GeneralSettingsView: View {
     @State private var isAPIEnabled: Bool = SpaceManager.isAPIEnabled
     @State private var isStableEnabled: Bool = SpaceManager.isStableEnabled
     
+    // New state for bug report feature
+    @State private var showLogSheet: Bool = false
+    
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 20) {
@@ -151,8 +155,9 @@ struct GeneralSettingsView: View {
                         Toggle("", isOn: $isAPIEnabled)
                             .labelsHidden()
                             .toggleStyle(.switch)
-                            .onChange(of: isAPIEnabled) { value in
-                                SpaceAPI(spaceManager: spaceManager).toggleAPIState()
+                            .onChange(of: isAPIEnabled) { _ in
+                                // Calling toggleAPIState handles SpaceManager.isAPIEnabled.toggle()
+                                spaceManager.spaceAPI?.toggleAPIState()
                             }
                     }
                     
@@ -162,9 +167,26 @@ struct GeneralSettingsView: View {
                         Toggle("", isOn: $isStableEnabled)
                             .labelsHidden()
                             .toggleStyle(.switch)
-                            .onChange(of: isStableEnabled) { value in
+                            .onChange(of: isStableEnabled) { _ in
+                                // togglePolling handles SpaceManager.isStableEnabled.toggle()
                                 spaceManager.togglePolling()
                             }
+                    }
+                    
+                    Divider()
+                    
+                    SettingsRow("Generate bug report", helperText: "This generates a log that is helpful for the developers to debug. The log includes the following information:\n\n1. SpaceUUIDs (not your customized name)\n2. A number representing the notification center amount (does not contain sensitive information, just a number)") {
+                        Button(action: {
+                            if spaceManager.isBugReportActive {
+                                spaceManager.stopBugReportLogging()
+                            } else {
+                                spaceManager.startBugReportLogging()
+                                showLogSheet = true
+                            }
+                        }) {
+                            Text(spaceManager.isBugReportActive ? "Stop" : "Start")
+                        }
+                        .keyboardShortcut("b")
                     }
                 }
                 
@@ -176,30 +198,162 @@ struct GeneralSettingsView: View {
         .onAppear {
             launchAtLogin = getLaunchAtLoginState()
         }
-    }
-    
-    private func getLaunchAtLoginState() -> Bool {
-        if #available(macOS 13.0, *) {
-            return SMAppService.mainApp.status == .enabled
-        } else {
-            let bundleId = Bundle.main.bundleIdentifier ?? ""
-            return SMLoginItemSetEnabled(bundleId as CFString, true)
+        // FIX 2: Add an onDismiss handler to sheet to stop logging if the user closes the sheet
+        // using the Escape key or clicking outside (default sheet dismissal behavior).
+        .sheet(isPresented: $showLogSheet, onDismiss: {
+            if spaceManager.isBugReportActive {
+                spaceManager.stopBugReportLogging()
+            }
+        }) {
+            bugReportSheet
         }
     }
     
-    private func toggleLaunchAtLogin(_ enabled: Bool) {
-        if #available(macOS 13.0, *) {
-            do {
-                let service = SMAppService.mainApp
-                if service.status == .enabled {
-                    try service.unregister()
-                } else {
-                    try service.register()
-                }
-            } catch {
-                print("Failed to toggle launch at login: \(error)")
-                launchAtLogin = getLaunchAtLoginState()
+    private var bugReportSheet: some View {
+        VStack(spacing: 15) {
+            HStack {
+                Text("Bug Report Log Collection")
+                    .font(.title2).fontWeight(.bold)
+                Spacer()
             }
+            .padding(.bottom, 5)
+            
+            Text("Please go through all spaces that may be helpful in analyzing the bug. The log is updating in real-time.")
+                .font(.body)
+                .foregroundColor(.secondary)
+                .multilineTextAlignment(.leading)
+            
+            ScrollView {
+                ScrollViewReader { proxy in
+                    VStack(alignment: .leading, spacing: 4) {
+                        // Display log entries in normal chronological order (newest at bottom)
+                        ForEach(spaceManager.bugReportLog.indices, id: \.self) { index in
+                            let entry = spaceManager.bugReportLog[index]
+                            let isLatest = index == spaceManager.bugReportLog.count - 1
+                            
+                            Text(entry.description)
+                                .font(.system(.footnote, design: .monospaced))
+                                // Use accent color for the newest line, white for previous lines
+                                .foregroundColor(isLatest ? .accentColor : Color(NSColor.controlTextColor))
+                                .id(entry.id)
+                        }
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    // FIX 1: Scroll to bottom when log is updated
+                    .onReceive(spaceManager.$bugReportLog) { log in
+                        if let last = log.last {
+                            // Scroll to the newest item (which is the last item)
+                            // This must be done on the next run loop cycle to ensure the view size has updated.
+                            DispatchQueue.main.async {
+                                proxy.scrollTo(last.id, anchor: .bottom)
+                            }
+                        }
+                    }
+                }
+            }
+            .frame(height: 250)
+            .background(Color(NSColor.textBackgroundColor))
+            .cornerRadius(8)
+            .border(Color.secondary.opacity(0.3), width: 1)
+            
+            HStack {
+                Button("Cancel") {
+                    spaceManager.stopBugReportLogging()
+                    showLogSheet = false
+                }
+                Spacer()
+                Button("Save Log") {
+                    saveLog()
+                }
+                .keyboardShortcut(.return)
+                .tint(.accentColor)
+            }
+        }
+        .padding()
+        .frame(minWidth: 500, minHeight: 400)
+    }
+    
+    private func saveLog() {
+        // Convert log entries to a single string
+        let logContent = spaceManager.bugReportLog.map { $0.description }.joined(separator: "\n")
+        guard let data = logContent.data(using: .utf8) else { return }
+        
+        let savePanel = NSSavePanel()
+        savePanel.canCreateDirectories = true
+        savePanel.showsTagField = false
+        
+        // Use ISO8601 for a machine-readable timestamp in the filename
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        let timestamp = formatter.string(from: Date()).replacingOccurrences(of: ":", with: "-")
+        
+        savePanel.nameFieldStringValue = "DesktopRenamer_BugReport_\(timestamp).log"
+        // Ensure .log type is available
+        savePanel.allowedContentTypes = [.log, .plainText]
+        
+        // Get the window for sheet presentation (using the extension in UpdateManager)
+        // This is the window the bugReportSheet is attached to.
+        guard let window = NSApp.suitableSheetWindow else { return }
+        
+        savePanel.beginSheetModal(for: window) { result in
+            if result == .OK, let url = savePanel.url {
+                do {
+                    try data.write(to: url)
+                    
+                    // Corrected the sequence of closing the log sheet and showing the thank you alert.
+                    // 1. Stop logging and close the initial sheet immediately.
+                    self.spaceManager.stopBugReportLogging()
+                    self.showLogSheet = false
+                    
+                    // 2. Schedule the thank you alert to be shown on the main thread AFTER a slight delay.
+                    // This ensures the first sheet (bug report log) has fully dismissed before the second sheet (alert) begins.
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                         self.showThankYouAlert()
+                    }
+
+                } catch {
+                    print("Error saving file: \(error)")
+                    // Optionally show an error alert
+                }
+            } else if result == .cancel {
+                // User cancelled save, keep the sheet open and logging active
+            }
+        }
+    }
+
+    private func showThankYouAlert() {
+        let alert = NSAlert()
+        alert.messageText = NSLocalizedString("Thank You!", comment: "")
+        alert.informativeText = NSLocalizedString("The bug report log has been successfully saved. This will greatly help in fixing issues!", comment: "")
+        alert.alertStyle = .informational
+        alert.addButton(withTitle: NSLocalizedString("Button.OK", comment: ""))
+        
+        // Use keyWindow or suitableSheetWindow for modal presentation
+        // Since the bug report sheet is now closed, keyWindow should be the Settings window again.
+        guard let window = NSApp.keyWindow else {
+            alert.runModal()
+            return
+        }
+        
+        // Present the alert as a sheet on the (now visible) settings window
+        alert.beginSheetModal(for: window) { _ in }
+    }
+    
+    private func getLaunchAtLoginState() -> Bool {
+        return SMAppService.mainApp.status == .enabled
+    }
+    
+    private func toggleLaunchAtLogin(_ enabled: Bool) {
+        do {
+            let service = SMAppService.mainApp
+            if enabled {
+                try service.register()
+            } else {
+                try service.unregister()
+            }
+        } catch {
+            print("Failed to toggle launch at login: \(error)")
+            launchAtLogin = getLaunchAtLoginState()
         }
     }
     

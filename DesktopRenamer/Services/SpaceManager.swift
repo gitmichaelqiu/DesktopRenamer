@@ -4,6 +4,23 @@ import SwiftUI
 
 let POLL_INTERVAL = 0.8
 
+// New struct for log entries
+struct LogEntry: Identifiable, CustomStringConvertible {
+    let id = UUID()
+    let timestamp: Date
+    let spaceUUID: String
+    let ncCount: Int
+    let action: String
+    
+    var description: String {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "HH:mm:ss.SSS"
+        let timeString = formatter.string(from: timestamp)
+        return "[\(timeString)] ACTION: \(action) | UUID: \(spaceUUID) | NCCount: \(ncCount)"
+    }
+}
+
+
 class SpaceManager: ObservableObject {
     static private let spacesKey = "com.michaelqiu.desktoprenamer.spaces"
     static private let isStableEnabledKey = "com.michaelqiu.desktoprenamer.isstableenabled"
@@ -11,6 +28,10 @@ class SpaceManager: ObservableObject {
     
     @Published private(set) var currentSpaceUUID: String = ""
     @Published var spaceNameDict: [DesktopSpace] = []
+    
+    // New Log properties
+    @Published var isBugReportActive: Bool = false
+    @Published private(set) var bugReportLog: [LogEntry] = []
     
     static var isAPIEnabled: Bool {
         get { UserDefaults.standard.bool(forKey: isAPIEnabledKey) }
@@ -49,8 +70,9 @@ class SpaceManager: ObservableObject {
             self.spaceAPI?.removeListener()
         }
         
-        SpaceHelper.startMonitoring { [weak self] newSpaceUUID in
-            self?.handleSpaceChange(newSpaceUUID)
+        // FIX: Update SpaceHelper monitoring to use the new signature (UUID and ncCount)
+        SpaceHelper.startMonitoring { [weak self] newSpaceUUID, ncCnt in
+            self?.handleSpaceChange(newSpaceUUID, ncCount: ncCnt, source: "Monitor")
         }
         
         if SpaceManager.isStableEnabled {
@@ -66,6 +88,20 @@ class SpaceManager: ObservableObject {
         } else {
             stopPolling()
         }
+    }
+    
+    // MARK: - Bug Report Logging
+    
+    func startBugReportLogging() {
+        // Initial log entry
+        bugReportLog = [LogEntry(timestamp: Date(), spaceUUID: currentSpaceUUID, ncCount: -1, action: "--- START LOGGING ---")]
+        isBugReportActive = true
+    }
+
+    func stopBugReportLogging() {
+        // Final log entry
+        bugReportLog.append(LogEntry(timestamp: Date(), spaceUUID: currentSpaceUUID, ncCount: -1, action: "--- STOP LOGGING ---"))
+        isBugReportActive = false
     }
     
     private func startPolling() {
@@ -84,8 +120,9 @@ class SpaceManager: ObservableObject {
     }
     
     private func pollCurrentSpace() {
-        SpaceHelper.getSpaceUUID { [weak self] newSpaceUUID in
-            self?.handleSpaceChange(newSpaceUUID)
+        // FIX: Update SpaceHelper call to use the new signature
+        SpaceHelper.getSpaceUUID { [weak self] newSpaceUUID, ncCnt in
+            self?.handleSpaceChange(newSpaceUUID, ncCount: ncCnt, source: "Polling")
         }
     }
     
@@ -107,10 +144,19 @@ class SpaceManager: ObservableObject {
         stopPolling()
     }
     
-    private func handleSpaceChange(_ newSpaceUUID: String) {
+    // FIX: Update handleSpaceChange signature to include ncCount and source
+    private func handleSpaceChange(_ newSpaceUUID: String, ncCount: Int, source: String) {
         if !Thread.isMainThread {
-            DispatchQueue.main.async { [weak self] in self?.handleSpaceChange(newSpaceUUID) }
+            // FIX: Update recursive call
+            DispatchQueue.main.async { [weak self] in self?.handleSpaceChange(newSpaceUUID, ncCount: ncCount, source: source) }
             return
+        }
+        
+        // Logging logic: Log the event immediately if logging is active
+        if isBugReportActive {
+            let action = (currentSpaceUUID != newSpaceUUID) ? "Space Switched (\(source))" : "State Check (\(source))"
+            let entry = LogEntry(timestamp: Date(), spaceUUID: newSpaceUUID, ncCount: ncCount, action: action)
+            bugReportLog.append(entry)
         }
         
         guard currentSpaceUUID != newSpaceUUID else {
@@ -164,11 +210,11 @@ class SpaceManager: ObservableObject {
             self.saveSpaces()
             
             // Re-identify the current space after reset
-            SpaceHelper.getSpaceUUID { spaceUUID in
+            SpaceHelper.getSpaceUUID { spaceUUID, _ in // Ignore ncCnt here
                 self.currentSpaceUUID = spaceUUID
                 // Call handleSpaceChange which will ensure the current space is re-added
                 // and the API is notified of the fresh state.
-                self.handleSpaceChange(spaceUUID)
+                self.handleSpaceChange(spaceUUID, ncCount: -1, source: "Reset")
             }
         }
     }
