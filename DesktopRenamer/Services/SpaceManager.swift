@@ -2,21 +2,49 @@ import Foundation
 import AppKit
 import SwiftUI
 
+let POLL_INTERVAL = 0.8
+
+// New struct for log entries
+struct LogEntry: Identifiable, CustomStringConvertible {
+    let id = UUID()
+    let timestamp: Date
+    let spaceUUID: String
+    let ncCount: Int
+    let action: String
+    
+    var description: String {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "HH:mm:ss.SSS"
+        let timeString = formatter.string(from: timestamp)
+        return "[\(timeString)] ACTION: \(action) | UUID: \(spaceUUID) | NCCount: \(ncCount)"
+    }
+}
+
+
 class SpaceManager: ObservableObject {
+    static private let spacesKey = "com.michaelqiu.desktoprenamer.spaces"
+    static private let isStableEnabledKey = "com.michaelqiu.desktoprenamer.isstableenabled"
+    static private let isAPIEnabledKey = "com.michaelqiu.desktoprenamer.isapienabled"
+    
     @Published private(set) var currentSpaceUUID: String = ""
     @Published var spaceNameDict: [DesktopSpace] = []
     
-    // We observe this property to toggle the API automatically
-    @AppStorage("isAPIEnabled") public var isAPIEnabled: Bool = true {
-        didSet {
-            // Toggle the internal API instance when setting changes
-            spaceAPI?.toggleAPIState(isEnabled: isAPIEnabled)
-        }
+    // New Log properties
+    @Published var isBugReportActive: Bool = false
+    @Published private(set) var bugReportLog: [LogEntry] = []
+    
+    static var isAPIEnabled: Bool {
+        get { UserDefaults.standard.bool(forKey: isAPIEnabledKey) }
+        set { UserDefaults.standard.set(newValue, forKey: isAPIEnabledKey) }
+    }
+    static var isStableEnabled: Bool {
+        get { UserDefaults.standard.bool(forKey: isStableEnabledKey) }
+        set { UserDefaults.standard.set(newValue, forKey: isStableEnabledKey) }
     }
     
+    private var pollingTimer: Timer?
+    
     public var currentTotalSpace = 0
-    private let userDefaults = UserDefaults.standard
-    private let spacesKey = "com.michaelqiu.desktoprenamer.spaces"
     
     // Keep reference to API
     public var spaceAPI: SpaceAPI?
@@ -28,35 +56,115 @@ class SpaceManager: ObservableObject {
         self.spaceAPI = SpaceAPI(spaceManager: self)
         
         // Set initial state based on saved setting
-        if isAPIEnabled {
-            self.spaceAPI?.toggleAPIState(isEnabled: true)
+        if SpaceManager.isAPIEnabled {
+            self.spaceAPI?.setupListener()
+            
+            DistributedNotificationCenter.default().postNotificationName(
+                SpaceAPI.apiToggleNotification,
+                object: nil,
+                userInfo: ["isEnabled": true],
+                deliverImmediately: true
+            )
+            print("SpaceAPI: Sent Toggle Notification -> true")
+        } else {
+            self.spaceAPI?.removeListener()
         }
         
-        // Start monitoring
-        SpaceHelper.startMonitoring { [weak self] newSpaceUUID in
-            self?.handleSpaceChange(newSpaceUUID)
+        // FIX: Update SpaceHelper monitoring to use the new signature (UUID and ncCount)
+        SpaceHelper.startMonitoring { [weak self] newSpaceUUID, ncCnt in
+            self?.handleSpaceChange(newSpaceUUID, ncCount: ncCnt, source: "Monitor")
+        }
+        
+        if SpaceManager.isStableEnabled {
+            startPolling()
         }
     }
     
-    // Called by AppDelegate when quitting
+    func togglePolling() {
+        SpaceManager.isStableEnabled.toggle()
+        
+        if SpaceManager.isStableEnabled {
+            startPolling()
+        } else {
+            stopPolling()
+        }
+    }
+    
+    // MARK: - Bug Report Logging
+    
+    func startBugReportLogging() {
+        // Initial log entry
+        bugReportLog = [LogEntry(timestamp: Date(), spaceUUID: currentSpaceUUID, ncCount: -1, action: "--- START LOGGING ---")]
+        isBugReportActive = true
+    }
+
+    func stopBugReportLogging() {
+        // Final log entry
+        bugReportLog.append(LogEntry(timestamp: Date(), spaceUUID: currentSpaceUUID, ncCount: -1, action: "--- STOP LOGGING ---"))
+        isBugReportActive = false
+    }
+    
+    private func startPolling() {
+        pollingTimer = Timer.scheduledTimer(withTimeInterval: TimeInterval(POLL_INTERVAL), repeats: true) { [weak self] _ in
+            self?.pollCurrentSpace()
+        }
+        // Add the timer to the common run loop mode to ensure it fires reliably
+        if let timer = pollingTimer {
+            RunLoop.current.add(timer, forMode: .common)
+        }
+    }
+    
+    private func stopPolling() {
+        pollingTimer?.invalidate()
+        pollingTimer = nil
+    }
+    
+    private func pollCurrentSpace() {
+        // FIX: Update SpaceHelper call to use the new signature
+        SpaceHelper.getSpaceUUID { [weak self] newSpaceUUID, ncCnt in
+            self?.handleSpaceChange(newSpaceUUID, ncCount: ncCnt, source: "Polling")
+        }
+    }
+    
     func prepareForTermination() {
         print("SpaceManager: Shutting down...")
+        stopPolling() // Stop the timer
         // Explicitly send "False" notification
-        spaceAPI?.toggleAPIState(isEnabled: false)
+        DistributedNotificationCenter.default().postNotificationName(
+            SpaceAPI.apiToggleNotification,
+            object: nil,
+            userInfo: ["isEnabled": false],
+            deliverImmediately: true
+        )
+        print("SpaceAPI: Sent Toggle Notification -> false")
     }
     
     deinit {
         SpaceHelper.stopMonitoring()
+        stopPolling()
     }
     
-    // ... (Keep rest of handleSpaceChange, loadSavedSpaces, saveSpaces, etc. exactly as before) ...
-    
-    private func handleSpaceChange(_ newSpaceUUID: String) {
+    // FIX: Update handleSpaceChange signature to include ncCount and source
+    private func handleSpaceChange(_ newSpaceUUID: String, ncCount: Int, source: String) {
         if !Thread.isMainThread {
-            DispatchQueue.main.async { [weak self] in self?.handleSpaceChange(newSpaceUUID) }
+            // FIX: Update recursive call
+            DispatchQueue.main.async { [weak self] in self?.handleSpaceChange(newSpaceUUID, ncCount: ncCount, source: source) }
             return
         }
-        currentSpaceUUID = newSpaceUUID
+        
+        // Logging logic: Log the event immediately if logging is active
+        if isBugReportActive {
+            let action = (currentSpaceUUID != newSpaceUUID) ? "Space Switched (\(source))" : "State Check (\(source))"
+            let entry = LogEntry(timestamp: Date(), spaceUUID: newSpaceUUID, ncCount: ncCount, action: action)
+            bugReportLog.append(entry)
+        }
+        
+        guard currentSpaceUUID != newSpaceUUID else {
+            return
+        }
+
+        currentSpaceUUID = newSpaceUUID // Publishes change and triggers API update
+        
         if !spaceNameDict.contains(where: { $0.id == currentSpaceUUID }) && currentSpaceUUID != "FULLSCREEN" {
             currentTotalSpace += 1
             spaceNameDict.append(DesktopSpace(id: currentSpaceUUID, customName: "", num: currentTotalSpace))
@@ -65,7 +173,7 @@ class SpaceManager: ObservableObject {
     }
     
     private func loadSavedSpaces() {
-        if let data = userDefaults.data(forKey: spacesKey),
+        if let data = UserDefaults.standard.data(forKey: SpaceManager.spacesKey),
            let spaces = try? JSONDecoder().decode([DesktopSpace].self, from: data) {
             spaceNameDict = spaces
             currentTotalSpace = spaceNameDict.count
@@ -74,8 +182,8 @@ class SpaceManager: ObservableObject {
     
     public func saveSpaces() {
         if let data = try? JSONEncoder().encode(spaceNameDict) {
-            userDefaults.set(data, forKey: spacesKey)
-            userDefaults.synchronize()
+            UserDefaults.standard.set(data, forKey: SpaceManager.spacesKey)
+            UserDefaults.standard.synchronize()
         }
     }
     
@@ -96,13 +204,17 @@ class SpaceManager: ObservableObject {
     func resetAllNames() {
         DispatchQueue.main.async { [weak self] in
             guard let self = self else { return }
-            self.userDefaults.removeObject(forKey: self.spacesKey)
+            UserDefaults.standard.removeObject(forKey: SpaceManager.spacesKey)
             self.currentTotalSpace = 0
             self.spaceNameDict.removeAll()
             self.saveSpaces()
-            SpaceHelper.getSpaceUUID { spaceUUID in
+            
+            // Re-identify the current space after reset
+            SpaceHelper.getSpaceUUID { spaceUUID, _ in // Ignore ncCnt here
                 self.currentSpaceUUID = spaceUUID
-                self.handleSpaceChange(spaceUUID)
+                // Call handleSpaceChange which will ensure the current space is re-added
+                // and the API is notified of the fresh state.
+                self.handleSpaceChange(spaceUUID, ncCount: -1, source: "Reset")
             }
         }
     }
