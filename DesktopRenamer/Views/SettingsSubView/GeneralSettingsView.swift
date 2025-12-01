@@ -94,6 +94,7 @@ struct GeneralSettingsView: View {
     @State private var autoCheckUpdate: Bool = UpdateManager.isAutoCheckEnabled
     @State private var isResetting: Bool = false
     @State private var isAPIEnabled: Bool = true
+    @State private var isStableDetect: Bool = false
     
     var body: some View {
         ScrollView {
@@ -156,40 +157,16 @@ struct GeneralSettingsView: View {
                             }
                     }
                     
-//                    Divider()
-//                    
-//                    SettingsRow("Settings.General.Advanced.APITest") {
-//                        HStack {
-//                            Button(NSLocalizedString("Settings.General.Advanced.APITest.Current", comment: "")) {
-//                                apiTester.sendCurrentSpaceRequest()
-//                            }
-//                            
-//                            Button(NSLocalizedString("Settings.General.Advanced.APITest.All", comment: "")) {
-//                                apiTester.sendAllSpacesRequest()
-//                            }
-//                        }
-//                        .disabled(!isAPIEnabled)
-//                    }
-//                    
-//                    if !apiTester.responseText.isEmpty {
-//                        VStack(alignment: .leading, spacing: 4) {
-//                            Text( NSLocalizedString("Settings.General.Advanced.APITest.Return", comment: ""))
-//                                .font(.caption)
-//                                .foregroundColor(.secondary)
-//                            
-//                            ScrollView(.vertical) {
-//                                Text(apiTester.responseText)
-//                                    .font(.system(.caption, design: .monospaced))
-//                                    .padding(8)
-//                                    .frame(maxWidth: .infinity, alignment: .leading)
-//                            }
-//                            .frame(maxHeight: 150) // Limit height for long lists
-//                            .background(Color.black.opacity(0.1))
-//                            .cornerRadius(6)
-//                        }
-//                        .padding(.horizontal, 10)
-//                        .padding(.bottom, 10)
-//                    }
+                    Divider()
+                    
+                    SettingsRow("Stable Space Detection") {
+                        Toggle("", isOn: $isStableDetect)
+                            .labelsHidden()
+                            .toggleStyle(.switch)
+                            .onChange(of: isStableDetect) { value in
+                                spaceManager.togglePolling(isEnabled: value)
+                            }
+                    }
                 }
                 
                 Spacer()
