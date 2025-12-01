@@ -1149,7 +1149,7 @@
         }
       }
     },
-    "This method is more stable than the normal one. It detects space every %@s, slightly increasing the energy cost.\n\nNotice, the space name may update twice. When the space is changing, you may see 'Main' appears shortly." : {
+    "This method is more stable than the normal one. It detects space every %@s, slightly increasing the energy cost.\n\nNotice, the space name may update twice every time you switch the space, and you may also see the name of the main space appears shortly." : {
 
     },
     "Use stable space detection method" : {
