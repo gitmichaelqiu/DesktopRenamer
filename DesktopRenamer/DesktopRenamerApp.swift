@@ -7,8 +7,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.setActivationPolicy(.accessory)
-        // Initialize SpaceManager and StatusBarController
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) { // Reduced delay slightly
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
             self.spaceManager = SpaceManager()
             self.statusBarController = StatusBarController(spaceManager: self.spaceManager)
         }
