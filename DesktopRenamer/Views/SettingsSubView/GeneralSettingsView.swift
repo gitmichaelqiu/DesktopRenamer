@@ -159,7 +159,7 @@ struct GeneralSettingsView: View {
                     
                     Divider()
                     
-                    SettingsRow("Stable Space Detection") {
+                    SettingsRow("Use stable space detection method", helperText: "This method is more stable than the normal one. It detects space every \(String(format: "%.2f", POLL_INTERVAL))s, slightly increasing energy cost.\n\nNotice, the space name may update twice. When space is changing, you may see 'Main' appears shortly.") {
                         Toggle("", isOn: $isStableDetect)
                             .labelsHidden()
                             .toggleStyle(.switch)
