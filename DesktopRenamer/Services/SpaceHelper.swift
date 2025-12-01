@@ -58,8 +58,7 @@ class SpaceHelper {
                     
                 
                 if let owner = window[kCGWindowOwnerName as String] as? String,
-                        owner == "Notification Center" {
-//                    inFullscreen = false
+                   owner == "Notification Center" {
                     ncCnt += 1
                 } else if let owner = window[kCGWindowOwnerName as String] as? String,
                    owner == "Dock",
@@ -85,13 +84,13 @@ class SpaceHelper {
                 uuid = "FULLSCREEN"
             }
             
-            print("####################")
-            print(uuid)
-            print(ncCnt)
-            print(ccCnt)
-            print(dkCnt)
-            print(wsCnt)
-            print("####################")
+//            print("####################")
+//            print(uuid)
+//            print(ncCnt)
+//            print(ccCnt)
+//            print(dkCnt)
+//            print(wsCnt)
+//            print("####################")
             
             // Return
             completion(uuid)
