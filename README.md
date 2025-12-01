@@ -65,6 +65,8 @@ The app will not work as expected when you connect to **multiple** displays. I a
 
 You are welcome to create issues/suggestions in [GitHub Issues](https://github.com/gitmichaelqiu/DesktopRenamer/issues).
 
+If you have encountered any bugs, please generate a bug report in DesktopRenamer Settings → General. This will help a lot for analzing the bugs!
+
 ## ⭐ Support This Project
 
 You can simply click on the **Star** to support this project for free. Thank you for your support!
