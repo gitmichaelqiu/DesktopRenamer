@@ -2,9 +2,11 @@ import Foundation
 import AppKit
 
 class SpaceHelper {
-    private static var onSpaceChange: ((String) -> Void)?
+    // Change the type of the callback to include ncCount
+    private static var onSpaceChange: ((String, Int) -> Void)?
     
-    static func startMonitoring(onChange: @escaping (String) -> Void) {
+    // Change startMonitoring to accept the new callback signature
+    static func startMonitoring(onChange: @escaping (String, Int) -> Void) {
         onSpaceChange = onChange
         
         // Monitor space changes
@@ -25,19 +27,42 @@ class SpaceHelper {
         NSWorkspace.shared.notificationCenter.removeObserver(self)
     }
     
-    static func getSpaceUUID(completion: @escaping (String) -> Void) {
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.01) { // Wait the system to update
+    // Change getSpaceUUID completion signature to include Int
+    static func getSpaceUUID(completion: @escaping (String, Int) -> Void) {
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.02) { // Wait the system to update
             // Get all windows
             let options = CGWindowListOption(arrayLiteral: .optionOnScreenOnly)
             let windowList = CGWindowListCopyWindowInfo(options, kCGNullWindowID) as? [[String: Any]] ?? []
             var uuid = ""
-            var inFullscreen = true
+            var ncCnt = 0 // ncCnt is here
             
             // Look for the wallpaper window
+            
+            
+            var ccCnt = 0
+            var dkCnt = 0
+            var wsCnt = 0
             for window in windowList {
+//                print(window[kCGWindowOwnerName as String] as? String ?? "Empty")
+                
+                
                 if let owner = window[kCGWindowOwnerName as String] as? String,
-                        owner == "Notification Center" {
-                    inFullscreen = false
+                   owner == "Control Center" {
+                    ccCnt += 1
+                }
+                if let owner = window[kCGWindowOwnerName as String] as? String,
+                   owner == "Dock" {
+                    dkCnt += 1
+                }
+                if let owner = window[kCGWindowOwnerName as String] as? String,
+                   owner == "Window Server" {
+                    wsCnt += 1
+                }
+                    
+                
+                if let owner = window[kCGWindowOwnerName as String] as? String,
+                   owner == "Notification Center" {
+                    ncCnt += 1
                 } else if let owner = window[kCGWindowOwnerName as String] as? String,
                    owner == "Dock",
                    let name = window[kCGWindowName as String] as? String,
@@ -58,19 +83,27 @@ class SpaceHelper {
 //                }
             }
             
-            if inFullscreen {
+            if ncCnt < 4 {
                 uuid = "FULLSCREEN"
             }
             
-            // Return
-            completion(uuid)
+//            print("####################")
+//            print(uuid)
+//            print(ncCnt)
+//            print(ccCnt)
+//            print(dkCnt)
+//            print(wsCnt)
+//            print("####################")
+            
+            // Return both UUID and ncCnt
+            completion(uuid, ncCnt)
         }
     }
     
     private static func detectSpaceChange() {
-        getSpaceUUID {
-            spaceUUID in onSpaceChange?(spaceUUID)
+        // Update to handle two arguments
+        getSpaceUUID { spaceUUID, ncCnt in
+            onSpaceChange?(spaceUUID, ncCnt)
         }
     }
 }
-

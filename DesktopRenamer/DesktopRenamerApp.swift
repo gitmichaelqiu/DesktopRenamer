@@ -7,8 +7,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.setActivationPolicy(.accessory)
-        // Initialize SpaceManager and StatusBarController
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) { // Reduced delay slightly
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
             self.spaceManager = SpaceManager()
             self.statusBarController = StatusBarController(spaceManager: self.spaceManager)
         }
@@ -22,10 +21,14 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         }
     }
     
-    // NEW: Handle App Termination
     func applicationWillTerminate(_ notification: Notification) {
         // Notify external apps that API is going down
         spaceManager?.prepareForTermination()
+    }
+    
+    func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
+        statusBarController?.openSettingsWindow()
+        return true
     }
 }
 
