@@ -2,7 +2,14 @@
   "sourceLanguage" : "en",
   "strings" : {
     "" : {
-
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : ""
+          }
+        }
+      }
     },
     "#" : {
       "localizations" : {
@@ -34,11 +41,21 @@
         }
       }
     },
-    "Bug report generator" : {
-
-    },
     "Bug Report Log Collection" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bug Report Collection"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "收集 Bug 报告"
+          }
+        }
+      }
     },
     "Button.Cancel" : {
       "extractionState" : "manual",
@@ -75,7 +92,14 @@
       }
     },
     "Cancel" : {
-
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "取消"
+          }
+        }
+      }
     },
     "Create windows that only appear in Mission Control to display space names.\n\nMay not work when multiple displays are connected." : {
       "localizations" : {
@@ -83,6 +107,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "创建只在调度中心中显示的窗口以显示桌面名称。\\n\\n在连接到多个显示器时可能不可用。"
+          }
+        }
+      }
+    },
+    "Generate bug report" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "生成 Bug 报告"
           }
         }
       }
@@ -173,7 +207,14 @@
       }
     },
     "Please go through all spaces that may be helpful in analyzing the bug. The log is updating in real-time." : {
-
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "请遍历所有可能对分析 Bug 有用的桌面。以下报告实时更新。"
+          }
+        }
+      }
     },
     "Rename.Label" : {
       "extractionState" : "manual",
@@ -210,7 +251,14 @@
       }
     },
     "Save Log" : {
-
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "保存报告"
+          }
+        }
+      }
     },
     "Settings.About" : {
       "extractionState" : "manual",
@@ -546,7 +594,7 @@
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "needs_review",
+            "state" : "translated",
             "value" : "重置所有桌面名称"
           }
         }
@@ -898,13 +946,13 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Check for updates"
+            "value" : "Check"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "检查更新"
+            "value" : "检查"
           }
         }
       }
@@ -1165,19 +1213,74 @@
       }
     },
     "Start" : {
-
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "开始"
+          }
+        }
+      }
     },
     "Stop" : {
-
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "停止"
+          }
+        }
+      }
     },
-    "This generates a log that is helpful for the developers to debug. The log includes the following information:\n\n1. SpaceUUIDs (not your customized name)\n\n2. A number representing the notification center amount (does not contain sensitive information, just a number)" : {
-
+    "Thank You!" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "感谢！"
+          }
+        }
+      }
+    },
+    "The bug report log has been successfully saved. This will greatly help in fixing issues!" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bug 报告已保存。这将对解决 Bug 提供重要帮助！"
+          }
+        }
+      }
+    },
+    "This generates a log that is helpful for the developers to debug. The log includes the following information:\n\n1. SpaceUUIDs (not your customized name)\n2. A number representing the notification center amount (does not contain sensitive information, just a number)" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "生成一个便于分析 Bug 的报告。报告包含以下信息：\\n\\n1. 桌面 UUID （不是自定义名称）\\n2. 一个表示消息中心数量的数字（不包含敏感信息，仅一个数字）"
+          }
+        }
+      }
     },
     "This method is more stable than the normal one. It detects space every %@s, slightly increasing the energy cost.\n\nNotice, the space name may update twice every time you switch the space, and you may also see the name of the main space appears shortly." : {
-
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "该方法更加稳定。它每隔 %@ 秒就检查一次桌面，但会轻微增加功耗。\\n\\n注意，每次切换桌面时可能会更新两次名称，且主桌面名称可能短暂出现。"
+          }
+        }
+      }
     },
     "Use stable space detection method" : {
-
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "使用稳定桌面检测方式"
+          }
+        }
+      }
     },
     "v%@" : {
       "localizations" : {

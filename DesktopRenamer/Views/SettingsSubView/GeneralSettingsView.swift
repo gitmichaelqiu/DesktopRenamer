@@ -175,7 +175,7 @@ struct GeneralSettingsView: View {
                     
                     Divider()
                     
-                    SettingsRow("Bug report generator", helperText: "This generates a log that is helpful for the developers to debug. The log includes the following information:\n\n1. SpaceUUIDs (not your customized name)\n\n2. A number representing the notification center amount (does not contain sensitive information, just a number)") {
+                    SettingsRow("Generate bug report", helperText: "This generates a log that is helpful for the developers to debug. The log includes the following information:\n\n1. SpaceUUIDs (not your customized name)\n2. A number representing the notification center amount (does not contain sensitive information, just a number)") {
                         Button(action: {
                             if spaceManager.isBugReportActive {
                                 spaceManager.stopBugReportLogging()
@@ -209,8 +209,6 @@ struct GeneralSettingsView: View {
         }
     }
     
-    // MARK: - Bug Report Sheet
-    
     private var bugReportSheet: some View {
         VStack(spacing: 15) {
             HStack {
@@ -224,8 +222,6 @@ struct GeneralSettingsView: View {
                 .font(.body)
                 .foregroundColor(.secondary)
                 .multilineTextAlignment(.leading)
-            
-            Divider()
             
             ScrollView {
                 ScrollViewReader { proxy in
@@ -327,8 +323,8 @@ struct GeneralSettingsView: View {
 
     private func showThankYouAlert() {
         let alert = NSAlert()
-        alert.messageText = "Thank You!"
-        alert.informativeText = "The bug report log has been successfully saved. This will greatly help in fixing issues."
+        alert.messageText = NSLocalizedString("Thank You!", comment: "")
+        alert.informativeText = NSLocalizedString("The bug report log has been successfully saved. This will greatly help in fixing issues!", comment: "")
         alert.alertStyle = .informational
         alert.addButton(withTitle: NSLocalizedString("Button.OK", comment: ""))
         
