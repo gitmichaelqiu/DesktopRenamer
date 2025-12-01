@@ -19,8 +19,8 @@ class SpaceManager: ObservableObject {
     }
     
     public var currentTotalSpace = 0
-    private let userDefaults = UserDefaults.standard
     private let spacesKey = "com.michaelqiu.desktoprenamer.spaces"
+    private let isStableKey = "com.michaelqiu.desktoprenamer.isstable"
     
     // Keep reference to API
     public var spaceAPI: SpaceAPI?
@@ -40,7 +40,19 @@ class SpaceManager: ObservableObject {
             self?.handleSpaceChange(newSpaceUUID)
         }
         
-        startPolling()
+        if UserDefaults.standard.bool(forKey: isStableKey) {
+            startPolling()
+        }
+    }
+    
+    func togglePolling(isEnabled: Bool) {
+        UserDefaults.standard.set(isEnabled, forKey: isStableKey)
+        
+        if isEnabled {
+            startPolling()
+        } else {
+            stopPolling()
+        }
     }
     
     private func startPolling() {
@@ -96,7 +108,7 @@ class SpaceManager: ObservableObject {
     }
     
     private func loadSavedSpaces() {
-        if let data = userDefaults.data(forKey: spacesKey),
+        if let data = UserDefaults.standard.data(forKey: spacesKey),
            let spaces = try? JSONDecoder().decode([DesktopSpace].self, from: data) {
             spaceNameDict = spaces
             currentTotalSpace = spaceNameDict.count
@@ -105,8 +117,8 @@ class SpaceManager: ObservableObject {
     
     public func saveSpaces() {
         if let data = try? JSONEncoder().encode(spaceNameDict) {
-            userDefaults.set(data, forKey: spacesKey)
-            userDefaults.synchronize()
+            UserDefaults.standard.set(data, forKey: spacesKey)
+            UserDefaults.standard.synchronize()
         }
     }
     
@@ -127,7 +139,7 @@ class SpaceManager: ObservableObject {
     func resetAllNames() {
         DispatchQueue.main.async { [weak self] in
             guard let self = self else { return }
-            self.userDefaults.removeObject(forKey: self.spacesKey)
+            UserDefaults.standard.removeObject(forKey: self.spacesKey)
             self.currentTotalSpace = 0
             self.spaceNameDict.removeAll()
             self.saveSpaces()
