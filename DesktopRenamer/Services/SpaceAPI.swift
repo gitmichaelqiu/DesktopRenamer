@@ -56,8 +56,10 @@ class SpaceAPI {
     
     // MARK: - State Management
     
-    func toggleAPIState(isEnabled: Bool) {
-        if isEnabled {
+    func toggleAPIState() {
+        SpaceManager.isAPIEnabled.toggle()
+        
+        if SpaceManager.isAPIEnabled {
             setupListener()
         } else {
             removeListener()
@@ -67,10 +69,10 @@ class SpaceAPI {
         DistributedNotificationCenter.default().postNotificationName(
             SpaceAPI.apiToggleNotification,
             object: nil,
-            userInfo: ["isEnabled": isEnabled],
+            userInfo: ["isEnabled": SpaceManager.isAPIEnabled],
             deliverImmediately: true
         )
-        print("SpaceAPI: Sent Toggle Notification -> \(isEnabled)")
+        print("SpaceAPI: Sent Toggle Notification -> \(SpaceManager.isAPIEnabled)")
     }
     
     // MARK: - Broadcasting

@@ -152,8 +152,7 @@ struct GeneralSettingsView: View {
                             .labelsHidden()
                             .toggleStyle(.switch)
                             .onChange(of: isAPIEnabled) { value in
-//                                spaceManager.isAPIEnabled = value
-                                SpaceAPI(spaceManager: spaceManager).toggleAPIState(isEnabled: value)
+                                SpaceAPI(spaceManager: spaceManager).toggleAPIState()
                             }
                     }
                     
