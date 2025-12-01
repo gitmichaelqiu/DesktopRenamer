@@ -2,7 +2,7 @@ import Foundation
 import AppKit
 import SwiftUI
 
-let POLL_INTERVAL = 1.0
+let POLL_INTERVAL = 0.8
 
 class SpaceManager: ObservableObject {
     @Published private(set) var currentSpaceUUID: String = ""
@@ -44,7 +44,6 @@ class SpaceManager: ObservableObject {
     }
     
     private func startPolling() {
-        // Schedule a repeating timer to run every 5 seconds
         pollingTimer = Timer.scheduledTimer(withTimeInterval: TimeInterval(POLL_INTERVAL), repeats: true) { [weak self] _ in
             self?.pollCurrentSpace()
         }
