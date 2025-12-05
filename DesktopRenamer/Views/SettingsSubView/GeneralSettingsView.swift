@@ -141,14 +141,14 @@ struct GeneralSettingsView: View {
                     }
                 }
                 
-                SettingsSection("Settings.General.Reset") {
-                    SettingsRow("Settings.General.Reset.Body") {
-                        Button(NSLocalizedString("Settings.General.Reset.Button", comment: "")) {
-                            resetNames()
-                        }
-                        .disabled(isResetting)
-                    }
-                }
+//                SettingsSection("Settings.General.Reset") {
+//                    SettingsRow("Settings.General.Reset.Body") {
+//                        Button(NSLocalizedString("Settings.General.Reset.Button", comment: "")) {
+//                            resetNames()
+//                        }
+//                        .disabled(isResetting)
+//                    }
+//                }
                 
                 SettingsSection("Settings.General.Advanced") {
                     SettingsRow("Settings.General.Advanced.EnableAPI", helperText: "Allow other apps to get space names.") {
