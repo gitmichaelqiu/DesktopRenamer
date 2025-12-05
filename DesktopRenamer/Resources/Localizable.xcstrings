@@ -91,6 +91,9 @@
         }
       }
     },
+    "By doing so, you can turn DesktopRenamer into a completely silent API app." : {
+
+    },
     "Cancel" : {
       "localizations" : {
         "zh-Hans" : {
@@ -120,6 +123,9 @@
           }
         }
       }
+    },
+    "Hide menubar icon" : {
+
     },
     "Menu.About" : {
       "extractionState" : "manual",

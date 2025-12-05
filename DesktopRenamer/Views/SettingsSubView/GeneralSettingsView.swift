@@ -96,6 +96,7 @@ struct GeneralSettingsView: View {
     @State private var isResetting: Bool = false
     @State private var isAPIEnabled: Bool = SpaceManager.isAPIEnabled
     @State private var isStableEnabled: Bool = SpaceManager.isStableEnabled
+    @State private var isStatusBarHidden: Bool = StatusBarController.isStatusBarHidden
     
     // New state for bug report feature
     @State private var showLogSheet: Bool = false
@@ -108,6 +109,17 @@ struct GeneralSettingsView: View {
                         Toggle("", isOn: $labelManager.isEnabled)
                             .labelsHidden()
                             .toggleStyle(.switch)
+                    }
+                    
+                    Divider()
+                    
+                    SettingsRow("Hide menubar icon", helperText: "By doing so, you can turn DesktopRenamer into a completely silent API app.") {
+                        Toggle("", isOn: $isStatusBarHidden)
+                            .labelsHidden()
+                            .toggleStyle(.switch)
+                            .onChange(of: isStatusBarHidden) { _ in
+                                StatusBarController.toggleStatusBar()
+                        }
                     }
                     
                     Divider()
@@ -141,14 +153,14 @@ struct GeneralSettingsView: View {
                     }
                 }
                 
-                SettingsSection("Settings.General.Reset") {
-                    SettingsRow("Settings.General.Reset.Body") {
-                        Button(NSLocalizedString("Settings.General.Reset.Button", comment: "")) {
-                            resetNames()
-                        }
-                        .disabled(isResetting)
-                    }
-                }
+//                SettingsSection("Settings.General.Reset") {
+//                    SettingsRow("Settings.General.Reset.Body") {
+//                        Button(NSLocalizedString("Settings.General.Reset.Button", comment: "")) {
+//                            resetNames()
+//                        }
+//                        .disabled(isResetting)
+//                    }
+//                }
                 
                 SettingsSection("Settings.General.Advanced") {
                     SettingsRow("Settings.General.Advanced.EnableAPI", helperText: "Allow other apps to get space names.") {
