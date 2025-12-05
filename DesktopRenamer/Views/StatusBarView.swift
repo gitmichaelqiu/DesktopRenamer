@@ -69,7 +69,7 @@ extension RenameViewController: NSTextFieldDelegate {
 }
 
 class StatusBarController: NSObject {
-    private var statusItem: NSStatusItem
+    static private var statusItem: NSStatusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
     private var popover: NSPopover
     @ObservedObject private var spaceManager: SpaceManager
     private let labelManager: SpaceLabelManager
@@ -88,14 +88,13 @@ class StatusBarController: NSObject {
         self.spaceManager = spaceManager
         self.labelManager = SpaceLabelManager(spaceManager: spaceManager)
         
-        statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
         popover = NSPopover()
         popover.behavior = .transient
         
         super.init()
         
         setupMenuBar()
-        self.statusItem.isVisible = !StatusBarController.isStatusBarHidden
+        StatusBarController.statusItem.isVisible = !StatusBarController.isStatusBarHidden
         
         updateStatusBarTitle()
         setupObservers()
@@ -128,7 +127,7 @@ class StatusBarController: NSObject {
             .sink { [weak self] _ in
                 if let currentSpaceUUID = self?.spaceManager.currentSpaceUUID,
                    let newName = self?.spaceManager.getSpaceName(currentSpaceUUID),
-                   let button = self?.statusItem.button,
+                   let button = StatusBarController.statusItem.button,
                    button.title != newName {
                     self?.updateStatusBarTitle()
                 }
@@ -145,15 +144,15 @@ class StatusBarController: NSObject {
     }
     
     private func updateStatusBarTitle() {
-        if let button = statusItem.button {
+        if let button = StatusBarController.statusItem.button {
             let name = spaceManager.getSpaceName(spaceManager.currentSpaceUUID)
             button.title = name
         }
     }
     
     private func setupMenuBar() {
-        if let button = statusItem.button {
-            button.title = "Loading..."  // Initial state
+        if let button = StatusBarController.statusItem.button {
+            button.title = "Loading..."
         }
         
         setupMenu()
@@ -204,7 +203,7 @@ class StatusBarController: NSObject {
         quitItem.target = self
         menu.addItem(quitItem)
         
-        statusItem.menu = menu
+        StatusBarController.statusItem.menu = menu
     }
     
     private func updateRenameMenuItemState() {
@@ -227,10 +226,10 @@ class StatusBarController: NSObject {
             return // Fullscreen
         }
         
-        guard let button = statusItem.button else { return }
+        guard let button = StatusBarController.statusItem.button else { return }
         
         // Close the menu
-        statusItem.menu?.cancelTracking()
+        StatusBarController.statusItem.menu?.cancelTracking()
         
         // Configure the popover
         let renameVC = RenameViewController(spaceManager: spaceManager) { [weak self] in
@@ -316,9 +315,9 @@ class StatusBarController: NSObject {
         self.showLabelsMenuItem.state = labelManager.isEnabled ? .on : .off
     }
     
-    func toggleStatusBar() {
+    static func toggleStatusBar() {
         StatusBarController.isStatusBarHidden.toggle()
-        self.statusItem.isVisible = !StatusBarController.isStatusBarHidden
+        StatusBarController.statusItem.isVisible = !StatusBarController.isStatusBarHidden
     }
 }
 

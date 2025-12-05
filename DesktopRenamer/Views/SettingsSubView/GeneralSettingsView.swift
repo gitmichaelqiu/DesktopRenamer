@@ -96,6 +96,7 @@ struct GeneralSettingsView: View {
     @State private var isResetting: Bool = false
     @State private var isAPIEnabled: Bool = SpaceManager.isAPIEnabled
     @State private var isStableEnabled: Bool = SpaceManager.isStableEnabled
+    @State private var isStatusBarHidden: Bool = StatusBarController.isStatusBarHidden
     
     // New state for bug report feature
     @State private var showLogSheet: Bool = false
@@ -113,6 +114,12 @@ struct GeneralSettingsView: View {
                     Divider()
                     
                     SettingsRow("Hide menubar icon", helperText: "By doing so, you can turn DesktopRenamer into a completely silent API app.") {
+                        Toggle("", isOn: $isStatusBarHidden)
+                            .labelsHidden()
+                            .toggleStyle(.switch)
+                            .onChange(of: isStatusBarHidden) { _ in
+                                StatusBarController.toggleStatusBar()
+                        }
                     }
                     
                     Divider()
