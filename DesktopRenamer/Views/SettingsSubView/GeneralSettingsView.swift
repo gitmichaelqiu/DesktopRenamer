@@ -112,6 +112,11 @@ struct GeneralSettingsView: View {
                     
                     Divider()
                     
+                    SettingsRow("Hide menubar icon", helperText: "By doing so, you can turn DesktopRenamer into a completely silent API app.") {
+                    }
+                    
+                    Divider()
+                    
                     SettingsRow("Settings.General.General.LaunchAtLogin") {
                         Toggle("", isOn: $launchAtLogin)
                             .labelsHidden()
