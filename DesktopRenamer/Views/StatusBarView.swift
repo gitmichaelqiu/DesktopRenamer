@@ -78,6 +78,12 @@ class StatusBarController: NSObject {
     private var renameItem: NSMenuItem!
     private var showLabelsMenuItem: NSMenuItem!
     
+    static let isStatusBarHiddenKey = "isStatusBarHidden"
+    static var isStatusBarHidden: Bool {
+        get { UserDefaults.standard.bool(forKey: isStatusBarHiddenKey) }
+        set { UserDefaults.standard.set(newValue, forKey: isStatusBarHiddenKey) }
+    }
+    
     init(spaceManager: SpaceManager) {
         self.spaceManager = spaceManager
         self.labelManager = SpaceLabelManager(spaceManager: spaceManager)
@@ -89,6 +95,8 @@ class StatusBarController: NSObject {
         super.init()
         
         setupMenuBar()
+        self.statusItem.isVisible = !StatusBarController.isStatusBarHidden
+        
         updateStatusBarTitle()
         setupObservers()
         
@@ -306,6 +314,11 @@ class StatusBarController: NSObject {
     
     private func updateShowLabelsMenuItemState() {
         self.showLabelsMenuItem.state = labelManager.isEnabled ? .on : .off
+    }
+    
+    func toggleStatusBar() {
+        StatusBarController.isStatusBarHidden.toggle()
+        self.statusItem.isVisible = !StatusBarController.isStatusBarHidden
     }
 }
 
