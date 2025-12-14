@@ -2,6 +2,12 @@ import Foundation
 import AppKit
 
 class SpaceHelper {
+    // Add the threshold constant backed by UserDefaults
+    static var fullscreenThreshold: Int {
+        get { UserDefaults.standard.integer(forKey: "com.michaelqiu.desktoprenamer.fullscreenthreshold") }
+        set { UserDefaults.standard.set(newValue, forKey: "com.michaelqiu.desktoprenamer.fullscreenthreshold") }
+    }
+
     // Change the type of the callback to include ncCount
     private static var onSpaceChange: ((String, Int) -> Void)?
     
@@ -83,7 +89,7 @@ class SpaceHelper {
 //                }
             }
             
-            if ncCnt <= 0 {
+            if ncCnt <= SpaceHelper.fullscreenThreshold {
                 uuid = "FULLSCREEN"
             }
             
