@@ -83,7 +83,7 @@ class SpaceHelper {
 //                }
             }
             
-            if ncCnt < 4 {
+            if ncCnt <= 0 {
                 uuid = "FULLSCREEN"
             }
             
