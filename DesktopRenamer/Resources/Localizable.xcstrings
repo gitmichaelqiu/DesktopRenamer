@@ -1589,6 +1589,7 @@
       }
     },
     "Troubleshoot space detection" : {
+      "extractionState" : "stale",
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
@@ -1597,6 +1598,9 @@
           }
         }
       }
+    },
+    "Troubleshoot Space Detection" : {
+
     },
     "v%@" : {
       "localizations" : {
