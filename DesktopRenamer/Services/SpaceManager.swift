@@ -2,6 +2,7 @@ import Foundation
 import AppKit
 import SwiftUI
 
+// POLL_INTERVAL is no longer needed but kept if referenced elsewhere, though effectively unused now.
 let POLL_INTERVAL = 0.8
 
 // New struct for log entries
@@ -23,11 +24,14 @@ struct LogEntry: Identifiable, CustomStringConvertible {
 
 class SpaceManager: ObservableObject {
     static private let spacesKey = "com.michaelqiu.desktoprenamer.spaces"
-    static private let isStableEnabledKey = "com.michaelqiu.desktoprenamer.isstableenabled"
     static private let isAPIEnabledKey = "com.michaelqiu.desktoprenamer.isapienabled"
+    static private let isManualSpacesEnabledKey = "com.michaelqiu.desktoprenamer.ismanualspacesenabled"
     
     @Published private(set) var currentSpaceUUID: String = ""
     @Published var spaceNameDict: [DesktopSpace] = []
+    
+    // Exposed for calibration UI
+    @Published var currentNcCount: Int = 0
     
     // New Log properties
     @Published var isBugReportActive: Bool = false
@@ -37,12 +41,12 @@ class SpaceManager: ObservableObject {
         get { UserDefaults.standard.bool(forKey: isAPIEnabledKey) }
         set { UserDefaults.standard.set(newValue, forKey: isAPIEnabledKey) }
     }
-    static var isStableEnabled: Bool {
-        get { UserDefaults.standard.bool(forKey: isStableEnabledKey) }
-        set { UserDefaults.standard.set(newValue, forKey: isStableEnabledKey) }
-    }
     
-    private var pollingTimer: Timer?
+    // Replaced Stable with Manual
+    static var isManualSpacesEnabled: Bool {
+        get { UserDefaults.standard.bool(forKey: isManualSpacesEnabledKey) }
+        set { UserDefaults.standard.set(newValue, forKey: isManualSpacesEnabledKey) }
+    }
     
     public var currentTotalSpace = 0
     
@@ -74,21 +78,9 @@ class SpaceManager: ObservableObject {
         SpaceHelper.startMonitoring { [weak self] newSpaceUUID, ncCnt in
             self?.handleSpaceChange(newSpaceUUID, ncCount: ncCnt, source: "Monitor")
         }
-        
-        if SpaceManager.isStableEnabled {
-            startPolling()
-        }
     }
     
-    func togglePolling() {
-        SpaceManager.isStableEnabled.toggle()
-        
-        if SpaceManager.isStableEnabled {
-            startPolling()
-        } else {
-            stopPolling()
-        }
-    }
+    // TogglePolling function removed as stable method is removed
     
     // MARK: - Bug Report Logging
     
@@ -104,31 +96,8 @@ class SpaceManager: ObservableObject {
         isBugReportActive = false
     }
     
-    private func startPolling() {
-        pollingTimer = Timer.scheduledTimer(withTimeInterval: TimeInterval(POLL_INTERVAL), repeats: true) { [weak self] _ in
-            self?.pollCurrentSpace()
-        }
-        // Add the timer to the common run loop mode to ensure it fires reliably
-        if let timer = pollingTimer {
-            RunLoop.current.add(timer, forMode: .common)
-        }
-    }
-    
-    private func stopPolling() {
-        pollingTimer?.invalidate()
-        pollingTimer = nil
-    }
-    
-    private func pollCurrentSpace() {
-        // FIX: Update SpaceHelper call to use the new signature
-        SpaceHelper.getSpaceUUID { [weak self] newSpaceUUID, ncCnt in
-            self?.handleSpaceChange(newSpaceUUID, ncCount: ncCnt, source: "Polling")
-        }
-    }
-    
     func prepareForTermination() {
         print("SpaceManager: Shutting down...")
-        stopPolling() // Stop the timer
         // Explicitly send "False" notification
         DistributedNotificationCenter.default().postNotificationName(
             SpaceAPI.apiToggleNotification,
@@ -141,7 +110,6 @@ class SpaceManager: ObservableObject {
     
     deinit {
         SpaceHelper.stopMonitoring()
-        stopPolling()
     }
     
     // FIX: Update handleSpaceChange signature to include ncCount and source
@@ -151,6 +119,9 @@ class SpaceManager: ObservableObject {
             DispatchQueue.main.async { [weak self] in self?.handleSpaceChange(newSpaceUUID, ncCount: ncCount, source: source) }
             return
         }
+        
+        // Update public ncCount for UI binding
+        self.currentNcCount = ncCount
         
         // Logging logic: Log the event immediately if logging is active
         if isBugReportActive {
@@ -166,9 +137,12 @@ class SpaceManager: ObservableObject {
         currentSpaceUUID = newSpaceUUID // Publishes change and triggers API update
         
         if !spaceNameDict.contains(where: { $0.id == currentSpaceUUID }) && currentSpaceUUID != "FULLSCREEN" {
-            currentTotalSpace += 1
-            spaceNameDict.append(DesktopSpace(id: currentSpaceUUID, customName: "", num: currentTotalSpace))
-            saveSpaces()
+            // Only auto-add if Manual mode is OFF
+            if !SpaceManager.isManualSpacesEnabled {
+                currentTotalSpace += 1
+                spaceNameDict.append(DesktopSpace(id: currentSpaceUUID, customName: "", num: currentTotalSpace))
+                saveSpaces()
+            }
         }
     }
     
@@ -210,11 +184,11 @@ class SpaceManager: ObservableObject {
             self.saveSpaces()
             
             // Re-identify the current space after reset
-            SpaceHelper.getSpaceUUID { spaceUUID, _ in // Ignore ncCnt here
+            SpaceHelper.getSpaceUUID { spaceUUID, ncCnt in
                 self.currentSpaceUUID = spaceUUID
                 // Call handleSpaceChange which will ensure the current space is re-added
                 // and the API is notified of the fresh state.
-                self.handleSpaceChange(spaceUUID, ncCount: -1, source: "Reset")
+                self.handleSpaceChange(spaceUUID, ncCount: ncCnt, source: "Reset")
             }
         }
     }

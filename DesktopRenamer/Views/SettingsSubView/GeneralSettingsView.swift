@@ -1,7 +1,8 @@
 import SwiftUI
 import ServiceManagement
-import AppKit // Import AppKit for NSColor and NSApp/NSSavePanel
+import AppKit
 
+// [APITester Class remains unchanged...]
 class APITester: ObservableObject {
     @Published var responseText: String = ""
     
@@ -85,6 +86,180 @@ class APITester: ObservableObject {
     }
 }
 
+struct ThresholdAdjustmentView: View {
+    @ObservedObject var spaceManager: SpaceManager
+    @Environment(\.presentationMode) var presentationMode
+    
+    @State private var thresholdValue: Int = SpaceHelper.fullscreenThreshold
+    
+    // Calibration State
+    @State private var recordedDesktops: [String: Int] = [:]
+    @State private var recordedFullscreens: [String: Int] = [:]
+    
+    @State private var isRecordingDesktops = false
+    @State private var isRecordingFullscreen = false
+    
+    @State private var suggestionText: String = ""
+    @State private var suggestionIsError: Bool = false
+    
+    var body: some View {
+        VStack(spacing: 20) {
+            Text("Adjust Fullscreen Threshold")
+                .font(.headline)
+            
+            HStack(alignment: .top, spacing: 30) {
+                // LEFT: Manual Edit
+                VStack(alignment: .leading, spacing: 10) {
+                    Text("Threshold Value")
+                        .font(.subheadline)
+                        .fontWeight(.medium)
+                    
+                    TextField("Value", value: $thresholdValue, formatter: NumberFormatter())
+                        .textFieldStyle(.roundedBorder)
+                        .frame(width: 80)
+                    
+                    Text("Current ncCnt: \(spaceManager.currentNcCount)")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                        .monospacedDigit()
+                }
+                .frame(width: 150)
+                
+                Divider()
+                
+                // RIGHT: Debug/Calibration
+                VStack(alignment: .leading, spacing: 15) {
+                    // Step 1: Desktops
+                    VStack(alignment: .leading, spacing: 5) {
+                        Text("1. Go through desktops")
+                            .font(.subheadline)
+                        
+                        HStack {
+                            Button(isRecordingDesktops ? "Stop" : "Start") {
+                                toggleDesktopRecording()
+                            }
+                            .disabled(isRecordingFullscreen)
+                            
+                            if !recordedDesktops.isEmpty {
+                                Text("Recorded: \(recordedDesktops.count)")
+                                    .font(.caption)
+                                    .foregroundColor(.secondary)
+                            }
+                        }
+                    }
+                    
+                    // Step 2: Fullscreens
+                    VStack(alignment: .leading, spacing: 5) {
+                        Text("2. Go through fullscreen")
+                            .font(.subheadline)
+                        
+                        HStack {
+                            Button(isRecordingFullscreen ? "Stop" : "Start") {
+                                toggleFullscreenRecording()
+                            }
+                            .disabled(recordedDesktops.isEmpty || isRecordingDesktops)
+                            
+                            if !recordedFullscreens.isEmpty {
+                                Text("Recorded: \(recordedFullscreens.count)")
+                                    .font(.caption)
+                                    .foregroundColor(.secondary)
+                            }
+                        }
+                    }
+                    
+                    // Suggestion Result
+                    if !suggestionText.isEmpty {
+                        Text(suggestionText)
+                            .font(.caption)
+                            .foregroundColor(suggestionIsError ? .red : .blue)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                }
+                .frame(width: 200)
+            }
+            .padding()
+            
+            HStack {
+                Button("Cancel") {
+                    presentationMode.wrappedValue.dismiss()
+                }
+                Spacer()
+                Button("Save") {
+                    SpaceHelper.fullscreenThreshold = thresholdValue
+                    presentationMode.wrappedValue.dismiss()
+                }
+                .keyboardShortcut(.return)
+            }
+        }
+        .padding()
+        .frame(width: 450)
+        // Monitor changes to capture data
+        .onReceive(spaceManager.$currentSpaceUUID) { uuid in
+            recordData(uuid: uuid, ncCnt: spaceManager.currentNcCount)
+        }
+    }
+    
+    private func toggleDesktopRecording() {
+        if isRecordingDesktops {
+            // Stop
+            isRecordingDesktops = false
+        } else {
+            // Start
+            recordedDesktops.removeAll()
+            recordedFullscreens.removeAll()
+            suggestionText = ""
+            isRecordingDesktops = true
+            // Record current immediately
+            recordData(uuid: spaceManager.currentSpaceUUID, ncCnt: spaceManager.currentNcCount)
+        }
+    }
+    
+    private func toggleFullscreenRecording() {
+        if isRecordingFullscreen {
+            // Stop & Calculate
+            isRecordingFullscreen = false
+            calculateSuggestion()
+        } else {
+            // Start
+            isRecordingFullscreen = true
+            // Record current immediately
+            recordData(uuid: spaceManager.currentSpaceUUID, ncCnt: spaceManager.currentNcCount)
+        }
+    }
+    
+    private func recordData(uuid: String, ncCnt: Int) {
+        if isRecordingDesktops {
+            recordedDesktops[uuid] = ncCnt
+        } else if isRecordingFullscreen {
+            // Remove ncCnt with UUID already existed in desktops part
+            // (Don't record if this UUID was seen as a desktop)
+            if recordedDesktops[uuid] == nil {
+                recordedFullscreens[uuid] = ncCnt
+            }
+        }
+    }
+    
+    private func calculateSuggestion() {
+        guard !recordedDesktops.isEmpty, !recordedFullscreens.isEmpty else {
+            suggestionText = "Not enough data collected."
+            suggestionIsError = true
+            return
+        }
+        
+        let minDesktop = recordedDesktops.values.min() ?? 0
+        let maxFullscreen = recordedFullscreens.values.max() ?? 0
+        
+        if minDesktop > maxFullscreen {
+            suggestionText = "Suggested Threshold: \(maxFullscreen)"
+            suggestionIsError = false
+            thresholdValue = maxFullscreen
+        } else {
+            suggestionText = "The automatic method does not work on your device, please switch to manual method."
+            suggestionIsError = true
+        }
+    }
+}
+
 struct GeneralSettingsView: View {
     @ObservedObject var spaceManager: SpaceManager
     @ObservedObject var labelManager: SpaceLabelManager
@@ -95,11 +270,14 @@ struct GeneralSettingsView: View {
     @State private var autoCheckUpdate: Bool = UpdateManager.isAutoCheckEnabled
     @State private var isResetting: Bool = false
     @State private var isAPIEnabled: Bool = SpaceManager.isAPIEnabled
-    @State private var isStableEnabled: Bool = SpaceManager.isStableEnabled
+    // Replaced isStableEnabled with isManualSpacesEnabled
+    @State private var isManualSpacesEnabled: Bool = SpaceManager.isManualSpacesEnabled
     @State private var isStatusBarHidden: Bool = StatusBarController.isStatusBarHidden
     
     // New state for bug report feature
     @State private var showLogSheet: Bool = false
+    // New state for threshold adjustment
+    @State private var showThresholdSheet: Bool = false
     
     var body: some View {
         ScrollView {
@@ -153,36 +331,36 @@ struct GeneralSettingsView: View {
                     }
                 }
                 
-//                SettingsSection("Settings.General.Reset") {
-//                    SettingsRow("Settings.General.Reset.Body") {
-//                        Button(NSLocalizedString("Settings.General.Reset.Button", comment: "")) {
-//                            resetNames()
-//                        }
-//                        .disabled(isResetting)
-//                    }
-//                }
-                
                 SettingsSection("Settings.General.Advanced") {
                     SettingsRow("Settings.General.Advanced.EnableAPI", helperText: "Allow other apps to get space names.") {
                         Toggle("", isOn: $isAPIEnabled)
                             .labelsHidden()
                             .toggleStyle(.switch)
                             .onChange(of: isAPIEnabled) { _ in
-                                // Calling toggleAPIState handles SpaceManager.isAPIEnabled.toggle()
                                 spaceManager.spaceAPI?.toggleAPIState()
                             }
                     }
                     
                     Divider()
                     
-                    SettingsRow("Use stable space detection method", helperText: "This method is more stable than the normal one. It detects space every \(String(format: "%.2f", POLL_INTERVAL))s, slightly increasing the energy cost.\n\nNotice, the space name may update twice every time you switch the space, and you may also see the name of the main space appears shortly.") {
-                        Toggle("", isOn: $isStableEnabled)
+                    // Replaced "Stable Method" with "Manual Method"
+                    SettingsRow("Manually add spaces", helperText: "If enabled, new spaces won't be added automatically. You must add them in the Spaces tab.") {
+                        Toggle("", isOn: $isManualSpacesEnabled)
                             .labelsHidden()
                             .toggleStyle(.switch)
-                            .onChange(of: isStableEnabled) { _ in
-                                // togglePolling handles SpaceManager.isStableEnabled.toggle()
-                                spaceManager.togglePolling()
+                            .onChange(of: isManualSpacesEnabled) { newValue in
+                                SpaceManager.isManualSpacesEnabled = newValue
                             }
+                    }
+                    
+                    // Show Adjust Threshold only if Manual is OFF
+                    if !isManualSpacesEnabled {
+                        Divider()
+                        SettingsRow("Adjust fullscreen threshold") {
+                            Button("Adjust") {
+                                showThresholdSheet = true
+                            }
+                        }
                     }
                     
                     Divider()
@@ -210,14 +388,15 @@ struct GeneralSettingsView: View {
         .onAppear {
             launchAtLogin = getLaunchAtLoginState()
         }
-        // FIX 2: Add an onDismiss handler to sheet to stop logging if the user closes the sheet
-        // using the Escape key or clicking outside (default sheet dismissal behavior).
         .sheet(isPresented: $showLogSheet, onDismiss: {
             if spaceManager.isBugReportActive {
                 spaceManager.stopBugReportLogging()
             }
         }) {
             bugReportSheet
+        }
+        .sheet(isPresented: $showThresholdSheet) {
+            ThresholdAdjustmentView(spaceManager: spaceManager)
         }
     }
     
@@ -376,6 +555,7 @@ struct GeneralSettingsView: View {
     }
     
     private func resetNames() {
+        // [Existing resetNames implementation remains unchanged]
         isResetting = true
         
         let alert = NSAlert()
