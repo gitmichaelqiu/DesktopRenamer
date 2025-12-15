@@ -256,14 +256,13 @@ struct AddSpacesView: View {
     @ObservedObject var spaceManager: SpaceManager
     @Environment(\.presentationMode) var presentationMode
     
-    // Struct to hold candidate details
+    // Make sure it conforms to Equatable for firstIndex(of:)
     struct SpaceCandidate: Identifiable, Equatable {
         let id = UUID()
         let spaceUUID: String
         let ncCnt: Int
     }
     
-    // List of candidates found during this session
     @State private var candidates: [SpaceCandidate] = []
     
     var body: some View {
@@ -277,55 +276,71 @@ struct AddSpacesView: View {
                 .multilineTextAlignment(.center)
                 .padding(.horizontal)
             
-            List {
-                if candidates.isEmpty {
-                    Text("No new spaces detected yet...")
-                        .foregroundColor(.secondary)
-                        .italic()
-                        .padding()
-                } else {
-                    // Logic: N = current existing spaces count
-                    let existingCount = spaceManager.spaceNameDict.count
-                    
-                    ForEach(Array(candidates.enumerated()), id: \.element.id) { index, candidate in
-                        HStack {
-                            VStack(alignment: .leading, spacing: 2) {
-                                // Number: New Space N + 1 + index
-                                Text("Space \(existingCount + index + 1)")
-                                    .fontWeight(.medium)
-                                
-                                Text("\(candidate.spaceUUID)")
-                                    .font(.caption)
-                                    .foregroundColor(.secondary)
-                                    .monospaced()
-                                
-                                // Show ncCnt
-                                Text("Metric: \(candidate.ncCnt)")
-                                    .font(.caption2)
-                                    .foregroundColor(.secondary)
-                            }
+            // REPLACED List with ScrollView + VStack for guaranteed animations
+            ScrollView {
+                VStack(spacing: 0) {
+                    if candidates.isEmpty {
+                        Text("No new spaces detected yet...")
+                            .foregroundColor(.secondary)
+                            .italic()
+                            .padding(.top, 40)
+                    } else {
+                        let existingCount = spaceManager.spaceNameDict.count
+                        
+                        // Use direct collection to maintain view identity
+                        ForEach(candidates) { candidate in
+                            // Calculate index dynamically
+                            let index = candidates.firstIndex(of: candidate) ?? 0
                             
-                            Spacer()
-                            
-                            // Remove Button (Red X)
-                            Button(action: {
-                                removeCandidate(candidate)
-                            }) {
-                                Image(systemName: "xmark.circle.fill")
-                                    .foregroundColor(.red)
-                                    .font(.title2)
+                            VStack(spacing: 0) {
+                                HStack {
+                                    VStack(alignment: .leading, spacing: 2) {
+                                        Text("New Space \(existingCount + index + 1)")
+                                            .fontWeight(.medium)
+                                        
+                                        Text("\(candidate.spaceUUID)")
+                                            .font(.caption)
+                                            .foregroundColor(.secondary)
+                                            .monospaced()
+                                        
+                                        Text("Metric: \(candidate.ncCnt)")
+                                            .font(.caption2)
+                                            .foregroundColor(.secondary)
+                                    }
+                                    
+                                    Spacer()
+                                    
+                                    Button(action: {
+                                        removeCandidate(candidate)
+                                    }) {
+                                        Image(systemName: "xmark.circle.fill")
+                                            .foregroundColor(.red)
+                                            .font(.title2)
+                                    }
+                                    .buttonStyle(.plain)
+                                }
+                                .padding(.vertical, 8)
+                                .padding(.horizontal, 12)
+                                
+                                Divider()
                             }
-                            .buttonStyle(.plain)
+                            .background(Color(NSColor.controlBackgroundColor))
+                            // ANIMATION TRANSITION
+                            .transition(.opacity.combined(with: .move(edge: .top)))
                         }
-                        .padding(.vertical, 4)
                     }
                 }
+                .frame(maxWidth: .infinity)
             }
             .frame(height: 250)
-            .border(Color.gray.opacity(0.2))
+            .background(Color(NSColor.controlBackgroundColor))
+            .cornerRadius(6)
+            .overlay(
+                RoundedRectangle(cornerRadius: 6)
+                    .stroke(Color.gray.opacity(0.2), lineWidth: 1)
+            )
             
             HStack(spacing: 20) {
-                // Cancel Button
                 Button("Cancel") {
                     presentationMode.wrappedValue.dismiss()
                 }
@@ -333,7 +348,6 @@ struct AddSpacesView: View {
                 
                 Spacer()
                 
-                // Add Button (Confirm)
                 Button("Add") {
                     confirmAdditions()
                 }
@@ -344,29 +358,31 @@ struct AddSpacesView: View {
         }
         .padding()
         .frame(width: 450)
-        // Listen to RAW UUID to capture unmasked data
         .onReceive(spaceManager.$currentRawSpaceUUID) { uuid in
             checkForNewSpace(uuid: uuid, ncCnt: spaceManager.currentNcCount)
         }
     }
     
     private func checkForNewSpace(uuid: String, ncCnt: Int) {
-        // Valid if:
-        // 1. Not "FULLSCREEN" string
-        // 2. Not already in the saved settings (spaceNameDict)
-        // 3. Not already in our current candidate list
         if uuid != "FULLSCREEN",
            !spaceManager.spaceNameDict.contains(where: { $0.id == uuid }),
            !candidates.contains(where: { $0.spaceUUID == uuid }) {
             
             let newCandidate = SpaceCandidate(spaceUUID: uuid, ncCnt: ncCnt)
-            candidates.append(newCandidate)
+            
+            // Explicit animation block
+            withAnimation(.spring(response: 0.4, dampingFraction: 0.7)) {
+                candidates.append(newCandidate)
+            }
         }
     }
     
     private func removeCandidate(_ candidate: SpaceCandidate) {
         if let index = candidates.firstIndex(of: candidate) {
-            candidates.remove(at: index)
+            // Explicit animation block
+            withAnimation(.easeInOut(duration: 0.25)) {
+                _ = candidates.remove(at: index)
+            }
         }
     }
     

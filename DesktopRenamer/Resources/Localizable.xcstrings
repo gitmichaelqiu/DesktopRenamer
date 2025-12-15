@@ -257,6 +257,9 @@
     "Min Metric: %lld" : {
 
     },
+    "New Space %lld" : {
+
+    },
     "No new spaces detected yet..." : {
 
     },
@@ -1254,9 +1257,6 @@
           }
         }
       }
-    },
-    "Space %lld" : {
-
     },
     "Space.DefaultName" : {
       "extractionState" : "manual",
