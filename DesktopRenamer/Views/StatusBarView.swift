@@ -192,6 +192,15 @@ class StatusBarController: NSObject {
         settingsItem.target = self
         menu.addItem(settingsItem)
         
+        // Replaces the long hintFixItem
+        let troubleshootItem = NSMenuItem(
+            title: NSLocalizedString("Troubleshoot space detection", comment: ""),
+            action: #selector(troubleshootSpaceDetection),
+            keyEquivalent: ""
+        )
+        troubleshootItem.target = self
+        menu.addItem(troubleshootItem)
+        
         menu.addItem(NSMenuItem.separator())
         
         // Add quit option
@@ -247,6 +256,44 @@ class StatusBarController: NSObject {
         
         self.showLabelsMenuItem.state = labelManager.isEnabled ? .on : .off
     }
+    
+    @objc private func troubleshootSpaceDetection() {
+            openSettingsWindow()
+        
+            var alertTitle = ""
+            var alertMessage = ""
+            
+            if SpaceManager.isManualSpacesEnabled {
+                if spaceManager.currentSpaceUUID == "FULLSCREEN" {
+                    alertTitle = "Not a fullscreen?"
+                    alertMessage = "Add it as a space in\nSettings → General → Manually add spaces"
+                } else {
+                    alertTitle = "Not a space?"
+                    alertMessage = "Remove it in\nSettings → Spaces\n(Switch to other space first)"
+                }
+            } else {
+                if spaceManager.currentSpaceUUID == "FULLSCREEN" {
+                    alertTitle = "Not a fullscreen?"
+                    // Updated text to match the UI we built in the previous step
+                    alertMessage = "Fix this issue in\nSettings → General → Adjust fullscreen threshold"
+                } else {
+                    alertTitle = "Not a space?"
+                    alertMessage = "Fix this issue in\nSettings → General → Adjust fullscreen threshold"
+                }
+            }
+            
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+                guard let window = self.settingsWindowController?.window else { return }
+                
+                let alert = NSAlert()
+                alert.messageText = alertTitle
+                alert.informativeText = alertMessage
+                alert.alertStyle = .informational
+                alert.addButton(withTitle: "OK")
+                
+                alert.beginSheetModal(for: window, completionHandler: nil)
+            }
+        }
     
     @objc func openSettingsWindow() {
         // Show dock icon when opening settings
