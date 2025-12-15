@@ -189,6 +189,7 @@ struct ThresholdAdjustmentView: View {
                     presentationMode.wrappedValue.dismiss()
                 }
                 .keyboardShortcut(.return)
+                .buttonStyle(.borderedProminent)
             }
         }
         .padding()
@@ -557,7 +558,7 @@ struct GeneralSettingsView: View {
                     saveLog()
                 }
                 .keyboardShortcut(.return)
-                .tint(.accentColor)
+                .buttonStyle(.borderedProminent)
             }
         }
         .padding()
