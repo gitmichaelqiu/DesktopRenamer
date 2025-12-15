@@ -435,7 +435,7 @@ struct GeneralSettingsView: View {
         .sheet(isPresented: $showLogSheet, onDismiss: { if spaceManager.isBugReportActive { spaceManager.stopBugReportLogging() } }) { bugReportSheet }
         .sheet(isPresented: $showThresholdSheet) { ThresholdAdjustmentView(spaceManager: spaceManager) }
         .sheet(isPresented: $showAddSpacesSheet) { AddSpacesView(spaceManager: spaceManager) }
-        .animation(.easeInOut(duration: 0.2), value: SpaceManager.isManualSpacesEnabled)
+        .animation(.easeInOut(duration: 0.16), value: isManualSpacesEnabled)
     }
     
     private var bugReportSheet: some View {
