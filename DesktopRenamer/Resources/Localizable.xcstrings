@@ -21,6 +21,9 @@
         }
       }
     },
+    "%@" : {
+
+    },
     "© %@ Michael Yicheng Qiu" : {
       "localizations" : {
         "zh-Hans" : {
@@ -133,9 +136,6 @@
       }
     },
     "Current Metric: %lld" : {
-
-    },
-    "Done" : {
 
     },
     "Fix" : {
@@ -251,10 +251,10 @@
         }
       }
     },
-    "Min Metric: %lld" : {
+    "Metric: %lld" : {
 
     },
-    "New Space" : {
+    "Min Metric: %lld" : {
 
     },
     "No new spaces detected yet..." : {
@@ -1254,6 +1254,9 @@
           }
         }
       }
+    },
+    "Space %lld" : {
+
     },
     "Space.DefaultName" : {
       "extractionState" : "manual",
