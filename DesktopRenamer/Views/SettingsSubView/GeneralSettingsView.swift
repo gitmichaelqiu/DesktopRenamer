@@ -102,10 +102,32 @@ struct ThresholdAdjustmentView: View {
     @State private var suggestionText: String = ""
     @State private var suggestionIsError: Bool = false
     
+    @State private var showingHelperPopover = false
+    
     var body: some View {
         VStack(spacing: 20) {
-            Text("Adjust Fullscreen Threshold")
-                .font(.headline)
+            HStack(spacing: 4) {
+                Text("Adjust Fullscreen Threshold")
+                    .font(.headline)
+                
+                Button {
+                    showingHelperPopover.toggle()
+                } label: {
+                    Image(systemName: "questionmark.circle.fill")
+                        .font(.caption)
+                        .foregroundColor(.gray)
+                }
+                .buttonStyle(.plain)
+                .popover(isPresented: $showingHelperPopover, arrowEdge: .top) {
+                    VStack(alignment: .leading, spacing: 10) {
+                        Text("You need to adjust the value of the threshold\n\nAt the right hand side, you can acquire a suggested value. The threshold should be between the two extreme values shown.\n\nIf all desktops are marked as Fullscreen, you may lower the threshold.")
+                            .font(.body)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                    .padding(15)
+                    .frame(minWidth: 200, maxWidth: 300)
+                }
+            }
             
             HStack(alignment: .top, spacing: 30) {
                 // LEFT: Manual Edit
@@ -352,8 +374,8 @@ struct GeneralSettingsView: View {
                     
                     if !isManualSpacesEnabled {
                         Divider()
-                        SettingsRow("Adjust fullscreen threshold") {
-                            Button("Adjust") {
+                        SettingsRow("Fix automatic space detection") {
+                            Button("Fix") {
                                 showThresholdSheet = true
                             }
                         }
