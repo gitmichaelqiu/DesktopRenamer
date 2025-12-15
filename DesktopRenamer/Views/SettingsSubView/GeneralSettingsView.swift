@@ -64,11 +64,34 @@ struct ThresholdAdjustmentView: View {
     
     @State private var suggestionText: String = ""
     @State private var suggestionIsError: Bool = false
+    @State private var showingHelperPopover = false
+    
+    
     
     var body: some View {
         VStack(spacing: 20) {
-            Text("Adjust Fullscreen Threshold")
-                .font(.headline)
+            HStack(spacing: 4) {
+                Text("Adjust Fullscreen Threshold")
+                    .font(.headline)
+                
+                Button {
+                    showingHelperPopover.toggle()
+                } label: {
+                    Image(systemName: "questionmark.circle.fill")
+                        .font(.caption)
+                        .foregroundColor(.gray)
+                }
+                .buttonStyle(.plain)
+                .popover(isPresented: $showingHelperPopover, arrowEdge: .top) {
+                    VStack(alignment: .leading, spacing: 10) {
+                        Text("This is the key parameter in the detection of fullscreen.\n\nAt the right hand side, you can acquire a suggested value. You need to go requested desktops or fullscreen (not necessarily all of them). During this process, do not stop at the spaces that do not match the request.\n\nThe threshold should be between the two extreme values shown.\n\nIf all desktops are marked as fullscreen, you may decrease the threshold.")
+                            .font(.body)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                    .padding(15)
+                    .frame(minWidth: 200, maxWidth: 300)
+                }
+            }
             
             HStack(alignment: .top, spacing: 30) {
                 // LEFT: Manual Edit
@@ -378,14 +401,14 @@ struct GeneralSettingsView: View {
                     if isManualSpacesEnabled {
                         Divider()
                         SettingsRow("Add spaces") {
-                            Button("Add spaces") {
+                            Button("Add") {
                                 showAddSpacesSheet = true
                             }
                         }
                     } else {
                         Divider()
-                        SettingsRow("Adjust fullscreen threshold") {
-                            Button("Adjust") {
+                        SettingsRow("Fix automatic detection") {
+                            Button("Fix") {
                                 showThresholdSheet = true
                             }
                         }

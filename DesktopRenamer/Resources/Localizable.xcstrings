@@ -46,12 +46,6 @@
     "Add spaces" : {
 
     },
-    "Adjust" : {
-
-    },
-    "Adjust fullscreen threshold" : {
-
-    },
     "Adjust Fullscreen Threshold" : {
 
     },
@@ -142,6 +136,12 @@
 
     },
     "Done" : {
+
+    },
+    "Fix" : {
+
+    },
+    "Fix automatic detection" : {
 
     },
     "Generate bug report" : {
@@ -1386,6 +1386,9 @@
           }
         }
       }
+    },
+    "You need to adjust the value of the threshold.\n\nAt the right hand side, you can acquire a suggested value. You need to go requested desktops or fullscreen (not necessarily all of them). During this process, do not stop at the spaces that do not match the request.\n\nThe threshold should be between the two extreme values shown.\n\nIf all desktops are marked as Fullscreen, you may decrease the threshold." : {
+
     }
   },
   "version" : "1.1"
