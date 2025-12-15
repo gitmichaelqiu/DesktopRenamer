@@ -392,6 +392,16 @@
         }
       }
     },
+    "Not enough data collected." : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "未收集到足够信息。"
+          }
+        }
+      }
+    },
     "Please go through all spaces that may be helpful in analyzing the bug. The log is updating in real-time." : {
       "localizations" : {
         "zh-Hans" : {
@@ -1448,6 +1458,16 @@
         }
       }
     },
+    "Suggested Threshold: %lld" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "建议参数：%lld"
+          }
+        }
+      }
+    },
     "Switch to the desktops you want to add.\nThey will appear in the list below." : {
       "localizations" : {
         "zh-Hans" : {
@@ -1464,6 +1484,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "感谢！"
+          }
+        }
+      }
+    },
+    "The automatic method does not work on your device, please switch to the manual method." : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "自动检测在此设备上无法工作，请切换至手动模式。"
           }
         }
       }
@@ -1493,7 +1523,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "这是检测全屏的核心参数。\n\n在右边，你可以获取一个推荐的值。你需要遍历要求的桌面/全屏（不一定要全部遍历）。在以上过程中，不要停在未要求的桌面中。\n\n参数应该在给出的两个指标之间。"
+            "value" : "这是检测全屏的核心参数。\n\n在右边，你可以获取一个推荐的值。你需要遍历要求的桌面/全屏（不一定要全部遍历）。在以上过程中，不要停在未要求的桌面中。\n\n参数取值在给出的两个指标之间。"
           }
         }
       }

@@ -233,7 +233,7 @@ struct ThresholdAdjustmentView: View {
     
     private func calculateSuggestion() {
         guard !recordedDesktops.isEmpty, !recordedFullscreens.isEmpty else {
-            suggestionText = "Not enough data collected."
+            suggestionText = NSLocalizedString("Not enough data collected.", comment: "")
             suggestionIsError = true
             return
         }
@@ -242,11 +242,11 @@ struct ThresholdAdjustmentView: View {
         let maxFullscreen = recordedFullscreens.values.max() ?? 0
         
         if minDesktop > maxFullscreen {
-            suggestionText = "Suggested Threshold: \(maxFullscreen)"
+            suggestionText = String(format: NSLocalizedString("Suggested Threshold: %lld", comment: ""), maxFullscreen)
             suggestionIsError = false
             thresholdValue = maxFullscreen
         } else {
-            suggestionText = "The automatic method does not work on your device, please switch to manual method."
+            suggestionText = NSLocalizedString("The automatic method does not work on your device, please switch to the manual method.", comment: "")
             suggestionIsError = true
         }
     }
