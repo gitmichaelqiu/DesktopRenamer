@@ -2,6 +2,7 @@ import SwiftUI
 import ServiceManagement
 import AppKit
 
+// [APITester Class remains unchanged...]
 class APITester: ObservableObject {
     @Published var responseText: String = ""
     
@@ -91,7 +92,7 @@ struct ThresholdAdjustmentView: View {
     
     @State private var thresholdValue: Int = SpaceHelper.fullscreenThreshold
     
-    // Calibration State - These are temporary and will clear when the view/sheet is dismissed
+    // Calibration State
     @State private var recordedDesktops: [String: Int] = [:]
     @State private var recordedFullscreens: [String: Int] = [:]
     
@@ -117,7 +118,6 @@ struct ThresholdAdjustmentView: View {
                         .textFieldStyle(.roundedBorder)
                         .frame(width: 80)
                     
-                    // Renamed "ncCnt" to "Detection Metric"
                     Text("Current Metric: \(spaceManager.currentNcCount)")
                         .font(.caption)
                         .foregroundColor(.secondary)
@@ -143,7 +143,6 @@ struct ThresholdAdjustmentView: View {
                             if !recordedDesktops.isEmpty {
                                 VStack(alignment: .leading, spacing: 2) {
                                     Text("Recorded: \(recordedDesktops.count)")
-                                    // Show Minimum value for Desktops
                                     if let min = recordedDesktops.values.min() {
                                         Text("Min Metric: \(min)")
                                             .foregroundColor(.blue)
@@ -169,7 +168,6 @@ struct ThresholdAdjustmentView: View {
                             if !recordedFullscreens.isEmpty {
                                 VStack(alignment: .leading, spacing: 2) {
                                     Text("Recorded: \(recordedFullscreens.count)")
-                                    // Show Maximum value for Fullscreens
                                     if let max = recordedFullscreens.values.max() {
                                         Text("Max Metric: \(max)")
                                             .foregroundColor(.orange)
@@ -218,12 +216,11 @@ struct ThresholdAdjustmentView: View {
             // Stop
             isRecordingDesktops = false
         } else {
-            // Start - Clear previous Desktop recordings to start fresh
-            // We do NOT clear fullscreens here, allowing user to do Step 1 then Step 2
+            // Start - Clear previous Desktop recordings
             recordedDesktops.removeAll()
+            // We do NOT clear fullscreens here, allowing user to do Step 1 then Step 2
             suggestionText = ""
             isRecordingDesktops = true
-            // Record current immediately
             recordData(uuid: spaceManager.currentSpaceUUID, ncCnt: spaceManager.currentNcCount)
         }
     }
@@ -237,17 +234,18 @@ struct ThresholdAdjustmentView: View {
             // Start - Clear previous Fullscreen recordings
             recordedFullscreens.removeAll()
             isRecordingFullscreen = true
-            // Record current immediately
             recordData(uuid: spaceManager.currentSpaceUUID, ncCnt: spaceManager.currentNcCount)
         }
     }
     
     private func recordData(uuid: String, ncCnt: Int) {
-        // Logic Update: Trust the user's current mode completely.
         if isRecordingDesktops {
             recordedDesktops[uuid] = ncCnt
         } else if isRecordingFullscreen {
-            recordedFullscreens[uuid] = ncCnt
+            // Exclude UUIDs already present in "Going through desktops"
+            if recordedDesktops[uuid] == nil {
+                recordedFullscreens[uuid] = ncCnt
+            }
         }
     }
     
@@ -405,7 +403,6 @@ struct GeneralSettingsView: View {
             bugReportSheet
         }
         .sheet(isPresented: $showThresholdSheet) {
-            // New view instance created each time sheet opens, ensuring temporary data is cleared
             ThresholdAdjustmentView(spaceManager: spaceManager)
         }
     }
