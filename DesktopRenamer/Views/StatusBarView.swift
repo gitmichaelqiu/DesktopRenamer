@@ -167,8 +167,16 @@ class StatusBarController: NSObject {
             action: nil, // Temporarily
             keyEquivalent: "r"
         )
-        
         menu.addItem(self.renameItem)
+        
+        // Add troubleshoot helper
+        let troubleshootItem = NSMenuItem(
+            title: NSLocalizedString("Troubleshoot space detection", comment: ""),
+            action: #selector(troubleshootSpaceDetection),
+            keyEquivalent: ""
+        )
+        troubleshootItem.target = self
+        menu.addItem(troubleshootItem)
         
         // Add show labels option
         self.showLabelsMenuItem = NSMenuItem(
@@ -191,15 +199,6 @@ class StatusBarController: NSObject {
         )
         settingsItem.target = self
         menu.addItem(settingsItem)
-        
-        // Replaces the long hintFixItem
-        let troubleshootItem = NSMenuItem(
-            title: NSLocalizedString("Troubleshoot space detection", comment: ""),
-            action: #selector(troubleshootSpaceDetection),
-            keyEquivalent: ""
-        )
-        troubleshootItem.target = self
-        menu.addItem(troubleshootItem)
         
         menu.addItem(NSMenuItem.separator())
         
