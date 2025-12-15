@@ -1318,6 +1318,9 @@
     "Threshold Value" : {
 
     },
+    "Troubleshoot space detection" : {
+
+    },
     "Use stable space detection method" : {
       "extractionState" : "stale",
       "localizations" : {
