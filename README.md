@@ -1,4 +1,4 @@
-<!-- v1.5.0 -->
+<!-- v1.5.2 -->
 
 <h1 align="center">
   <img src="./DesktopRenamer/Resources/DesktopRenamerIcon_Default.png" width="25%" alt=""/>  
@@ -57,15 +57,15 @@ Check [Developer API Guide](https://github.com/gitmichaelqiu/DesktopRenamer/wiki
 
 You can switch on/off the API in Settings → Advanced.
 
-## 💡 Tips
-
-The app will not work as expected when you connect to **multiple** displays. I am currently working on solving this. If you have any ideas, you are welcomed to post them in [GitHub Issues](https://github.com/gitmichaelqiu/DesktopRenamer/issues).
-
-## ⚠️ Issues/Suggestions
+## ⚠️ Issues
 
 You are welcome to create issues/suggestions in [GitHub Issues](https://github.com/gitmichaelqiu/DesktopRenamer/issues).
 
-If you have encountered any bugs, please generate a bug report in DesktopRenamer Settings → General. This will help a lot for analzing the bugs!
+For the issue that all of the spaces are marked as "Fullscreen", please check the [Troubleshoot](./Troubleshoot.md).
+
+The app will only work in the main display if you connect to **multiple** displays. I am currently working on solving this. If you have any ideas, welcome to post them in [GitHub Issues](https://github.com/gitmichaelqiu/DesktopRenamer/issues).
+
+If you have encountered any other bugs, please generate a bug report in DesktopRenamer Settings → General. This will help a lot for analyzing the bugs!
 
 ## ⭐ Support This Project
 
