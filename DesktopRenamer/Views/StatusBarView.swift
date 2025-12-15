@@ -273,11 +273,10 @@ class StatusBarController: NSObject {
             } else {
                 if spaceManager.currentSpaceUUID == "FULLSCREEN" {
                     alertTitle = "Not a fullscreen?"
-                    // Updated text to match the UI we built in the previous step
-                    alertMessage = "Fix this issue in\nSettings → General → Adjust fullscreen threshold"
+                    alertMessage = "Fix this issue in\nSettings → General → Fix automatic space detection"
                 } else {
                     alertTitle = "Not a space?"
-                    alertMessage = "Fix this issue in\nSettings → General → Adjust fullscreen threshold"
+                    alertMessage = "Fix this issue in\nSettings → General → Fix automatic space detection"
                 }
             }
             
