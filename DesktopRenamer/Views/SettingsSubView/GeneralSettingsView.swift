@@ -84,7 +84,7 @@ struct ThresholdAdjustmentView: View {
                 .buttonStyle(.plain)
                 .popover(isPresented: $showingHelperPopover, arrowEdge: .top) {
                     VStack(alignment: .leading, spacing: 10) {
-                        Text("This is the key parameter in the detection of fullscreen.\n\nAt the right hand side, you can acquire a suggested value. You need to go requested desktops or fullscreen (not necessarily all of them). During this process, do not stop at the spaces that do not match the request.\n\nThe threshold should be between the two extreme values shown.\n\nIf all desktops are marked as fullscreen, you may decrease the threshold.")
+                        Text("This is the key parameter in the detection of fullscreen.\n\nAt the right hand side, you can acquire a suggested value. You need to go requested desktops or fullscreen (not necessarily all of them). During this process, do not stop at the spaces that do not match the request.\n\nThe threshold should be between the two extreme values shown.")
                             .font(.body)
                             .fixedSize(horizontal: false, vertical: true)
                     }
@@ -295,7 +295,7 @@ struct AddSpacesView: View {
                             VStack(spacing: 0) {
                                 HStack {
                                     VStack(alignment: .leading, spacing: 2) {
-                                        Text("New Space \(existingCount + index + 1)")
+                                        Text("Space \(existingCount + index + 1)")
                                             .fontWeight(.medium)
                                         
                                         Text("\(candidate.spaceUUID)")
