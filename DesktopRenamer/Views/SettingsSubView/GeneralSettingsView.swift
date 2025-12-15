@@ -405,6 +405,7 @@ struct GeneralSettingsView: View {
         .sheet(isPresented: $showThresholdSheet) {
             ThresholdAdjustmentView(spaceManager: spaceManager)
         }
+        .animation(.easeInOut(duration: 0.2), value: SpaceManager.isManualSpacesEnabled)
     }
     
     private var bugReportSheet: some View {
