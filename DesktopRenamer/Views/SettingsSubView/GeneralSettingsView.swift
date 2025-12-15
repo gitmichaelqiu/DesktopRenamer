@@ -1,25 +1,14 @@
 import SwiftUI
 import ServiceManagement
-import AppKit // Import AppKit for NSColor and NSApp/NSSavePanel
+import AppKit
 
+// [APITester Class remains unchanged...]
 class APITester: ObservableObject {
     @Published var responseText: String = ""
     
     init() {
-        // LISTEN to Local Notification Center
-        NotificationCenter.default.addObserver(
-            self,
-            selector: #selector(handleCurrentSpaceResponse(_:)),
-            name: SpaceAPI.returnActiveSpace,
-            object: nil
-        )
-        
-        NotificationCenter.default.addObserver(
-            self,
-            selector: #selector(handleAllSpacesResponse(_:)),
-            name: SpaceAPI.returnSpaceList,
-            object: nil
-        )
+        NotificationCenter.default.addObserver(self, selector: #selector(handleCurrentSpaceResponse(_:)), name: SpaceAPI.returnActiveSpace, object: nil)
+        NotificationCenter.default.addObserver(self, selector: #selector(handleAllSpacesResponse(_:)), name: SpaceAPI.returnSpaceList, object: nil)
     }
     
     deinit {
@@ -28,60 +17,380 @@ class APITester: ObservableObject {
     
     func sendCurrentSpaceRequest() {
         responseText = "Requesting current space..."
-        DistributedNotificationCenter.default().postNotificationName(
-            SpaceAPI.getActiveSpace,
-            object: nil,
-            userInfo: nil,
-            deliverImmediately: true
-        )
+        DistributedNotificationCenter.default().postNotificationName(SpaceAPI.getActiveSpace, object: nil, userInfo: nil, deliverImmediately: true)
     }
     
     func sendAllSpacesRequest() {
         responseText = "Requesting all spaces..."
-        DistributedNotificationCenter.default().postNotificationName(
-            SpaceAPI.getSpaceList,
-            object: nil,
-            userInfo: nil,
-            deliverImmediately: true
-        )
+        DistributedNotificationCenter.default().postNotificationName(SpaceAPI.getSpaceList, object: nil, userInfo: nil, deliverImmediately: true)
     }
     
     @objc private func handleCurrentSpaceResponse(_ notification: Notification) {
         DispatchQueue.main.async {
-            guard let userInfo = notification.userInfo else {
-                self.responseText = "Received empty response"
-                return
-            }
-            
+            guard let userInfo = notification.userInfo else { self.responseText = "Received empty response"; return }
             let name = userInfo["spaceName"] as? String ?? "N/A"
             let num = (userInfo["spaceNumber"] as? NSNumber)?.intValue ?? (userInfo["spaceNumber"] as? Int) ?? -1
             let uuid = userInfo["spaceUUID"] as? String ?? "N/A"
-            
             self.responseText = "Current Space:\nName: \(name)\n#: \(num)\nUUID: \(uuid)"
         }
     }
     
     @objc private func handleAllSpacesResponse(_ notification: Notification) {
         DispatchQueue.main.async {
-            guard let userInfo = notification.userInfo,
-                  let spaces = userInfo["spaces"] as? [[String: Any]] else {
-                self.responseText = "Received empty space list"
-                return
-            }
-            
+            guard let userInfo = notification.userInfo, let spaces = userInfo["spaces"] as? [[String: Any]] else { self.responseText = "Received empty space list"; return }
             var result = "All Spaces (\(spaces.count)):\n"
-            
             for space in spaces {
                 let name = space["spaceName"] as? String ?? "N/A"
                 let num = (space["spaceNumber"] as? NSNumber)?.intValue ?? -1
-                // Truncate UUID for display
                 let uuid = (space["spaceUUID"] as? String)?.prefix(8) ?? "N/A"
-                
                 result += "#\(num): \(name) [\(uuid).. ]\n"
             }
-            
             self.responseText = result
         }
+    }
+}
+
+struct ThresholdAdjustmentView: View {
+    @ObservedObject var spaceManager: SpaceManager
+    @Environment(\.presentationMode) var presentationMode
+    
+    @State private var thresholdValue: Int = SpaceHelper.fullscreenThreshold
+    
+    @State private var recordedDesktops: [String: Int] = [:]
+    @State private var recordedFullscreens: [String: Int] = [:]
+    
+    @State private var isRecordingDesktops = false
+    @State private var isRecordingFullscreen = false
+    
+    @State private var suggestionText: String = ""
+    @State private var suggestionIsError: Bool = false
+    @State private var showingHelperPopover = false
+    
+    
+    
+    var body: some View {
+        VStack(spacing: 20) {
+            HStack(spacing: 4) {
+                Text("Adjust Fullscreen Threshold")
+                    .font(.headline)
+                
+                Button {
+                    showingHelperPopover.toggle()
+                } label: {
+                    Image(systemName: "questionmark.circle.fill")
+                        .font(.caption)
+                        .foregroundColor(.gray)
+                }
+                .buttonStyle(.plain)
+                .popover(isPresented: $showingHelperPopover, arrowEdge: .top) {
+                    VStack(alignment: .leading, spacing: 10) {
+                        Text("This is the key parameter in the detection of fullscreen.\n\nAt the right hand side, you can acquire a suggested value. You need to go requested desktops or fullscreen (not necessarily all of them). During this process, do not stop at the spaces that do not match the request.\n\nThe threshold should be between the two extreme values shown.")
+                            .font(.body)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                    .padding(15)
+                    .frame(minWidth: 200, maxWidth: 300)
+                }
+            }
+            
+            HStack(alignment: .top, spacing: 30) {
+                // LEFT: Manual Edit
+                VStack(alignment: .leading, spacing: 10) {
+                    Text("Threshold Value")
+                        .font(.subheadline)
+                        .fontWeight(.medium)
+                    
+                    TextField("Value", value: $thresholdValue, formatter: NumberFormatter())
+                        .textFieldStyle(.roundedBorder)
+                        .frame(width: 80)
+                    
+                    Text("Current Metric: \(spaceManager.currentNcCount)")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                        .monospacedDigit()
+                }
+                .frame(width: 150)
+                
+                Divider()
+                
+                // RIGHT: Debug/Calibration
+                VStack(alignment: .leading, spacing: 15) {
+                    // Step 1: Desktops
+                    VStack(alignment: .leading, spacing: 5) {
+                        Text("1. Go through desktops")
+                            .font(.subheadline)
+                        
+                        HStack {
+                            Button(isRecordingDesktops ? "Stop" : "Start") {
+                                toggleDesktopRecording()
+                            }
+                            .disabled(isRecordingFullscreen)
+                            
+                            if !recordedDesktops.isEmpty {
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text("Recorded: \(recordedDesktops.count)")
+                                    if let min = recordedDesktops.values.min() {
+                                        Text("Min Metric: \(min)")
+                                            .foregroundColor(.blue)
+                                    }
+                                }
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                            }
+                        }
+                    }
+                    
+                    // Step 2: Fullscreens
+                    VStack(alignment: .leading, spacing: 5) {
+                        Text("2. Go through fullscreen")
+                            .font(.subheadline)
+                        
+                        HStack {
+                            Button(isRecordingFullscreen ? "Stop" : "Start") {
+                                toggleFullscreenRecording()
+                            }
+                            .disabled(recordedDesktops.isEmpty || isRecordingDesktops)
+                            
+                            if !recordedFullscreens.isEmpty {
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text("Recorded: \(recordedFullscreens.count)")
+                                    if let max = recordedFullscreens.values.max() {
+                                        Text("Max Metric: \(max)")
+                                            .foregroundColor(.orange)
+                                    }
+                                }
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                            }
+                        }
+                    }
+                    
+                    // Suggestion Result
+                    if !suggestionText.isEmpty {
+                        Text(suggestionText)
+                            .font(.caption)
+                            .foregroundColor(suggestionIsError ? .red : .blue)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                }
+                .frame(width: 200)
+            }
+            .padding()
+            
+            HStack {
+                Button("Cancel") {
+                    presentationMode.wrappedValue.dismiss()
+                }
+                Spacer()
+                Button("Save") {
+                    SpaceHelper.fullscreenThreshold = thresholdValue
+                    // REFRESH: Immediately re-evaluate the current space with the new threshold
+                    spaceManager.refreshSpaceState()
+                    presentationMode.wrappedValue.dismiss()
+                }
+                .keyboardShortcut(.return)
+            }
+        }
+        .padding()
+        .frame(width: 450)
+        // CHANGE: Listen to currentRawSpaceUUID to ensure we capture actual data even if logic thinks it's fullscreen
+        .onReceive(spaceManager.$currentRawSpaceUUID) { uuid in
+            recordData(uuid: uuid, ncCnt: spaceManager.currentNcCount)
+        }
+    }
+    
+    private func toggleDesktopRecording() {
+        if isRecordingDesktops {
+            isRecordingDesktops = false
+        } else {
+            recordedDesktops.removeAll()
+            suggestionText = ""
+            isRecordingDesktops = true
+            recordData(uuid: spaceManager.currentRawSpaceUUID, ncCnt: spaceManager.currentNcCount)
+        }
+    }
+    
+    private func toggleFullscreenRecording() {
+        if isRecordingFullscreen {
+            isRecordingFullscreen = false
+            calculateSuggestion()
+        } else {
+            recordedFullscreens.removeAll()
+            isRecordingFullscreen = true
+            recordData(uuid: spaceManager.currentRawSpaceUUID, ncCnt: spaceManager.currentNcCount)
+        }
+    }
+    
+    private func recordData(uuid: String, ncCnt: Int) {
+        if isRecordingDesktops {
+            recordedDesktops[uuid] = ncCnt
+        } else if isRecordingFullscreen {
+            if recordedDesktops[uuid] == nil {
+                recordedFullscreens[uuid] = ncCnt
+            }
+        }
+    }
+    
+    private func calculateSuggestion() {
+        guard !recordedDesktops.isEmpty, !recordedFullscreens.isEmpty else {
+            suggestionText = NSLocalizedString("Not enough data collected.", comment: "")
+            suggestionIsError = true
+            return
+        }
+        
+        let minDesktop = recordedDesktops.values.min() ?? 0
+        let maxFullscreen = recordedFullscreens.values.max() ?? 0
+        
+        if minDesktop > maxFullscreen {
+            suggestionText = String(format: NSLocalizedString("Suggested Threshold: %lld", comment: ""), maxFullscreen)
+            suggestionIsError = false
+            thresholdValue = maxFullscreen
+        } else {
+            suggestionText = NSLocalizedString("The automatic method does not work on your device, please switch to the manual method.", comment: "")
+            suggestionIsError = true
+        }
+    }
+}
+
+struct AddSpacesView: View {
+    @ObservedObject var spaceManager: SpaceManager
+    @Environment(\.presentationMode) var presentationMode
+    
+    // Make sure it conforms to Equatable for firstIndex(of:)
+    struct SpaceCandidate: Identifiable, Equatable {
+        let id = UUID()
+        let spaceUUID: String
+        let ncCnt: Int
+    }
+    
+    @State private var candidates: [SpaceCandidate] = []
+    
+    var body: some View {
+        VStack(spacing: 20) {
+            Text("Add New Spaces")
+                .font(.headline)
+            
+            Text("Switch to the desktops you want to add.\nThey will appear in the list below.")
+                .font(.body)
+                .foregroundColor(.secondary)
+                .multilineTextAlignment(.center)
+                .padding(.horizontal)
+            
+            // REPLACED List with ScrollView + VStack for guaranteed animations
+            ScrollView {
+                VStack(spacing: 0) {
+                    if candidates.isEmpty {
+                        Text("No new spaces detected yet...")
+                            .foregroundColor(.secondary)
+                            .italic()
+                            .padding(.top, 40)
+                    } else {
+                        let existingCount = spaceManager.spaceNameDict.count
+                        
+                        // Use direct collection to maintain view identity
+                        ForEach(candidates) { candidate in
+                            // Calculate index dynamically
+                            let index = candidates.firstIndex(of: candidate) ?? 0
+                            
+                            VStack(spacing: 0) {
+                                HStack {
+                                    VStack(alignment: .leading, spacing: 2) {
+                                        Text("Space \(existingCount + index + 1)")
+                                            .fontWeight(.medium)
+                                        
+                                        Text("\(candidate.spaceUUID)")
+                                            .font(.caption)
+                                            .foregroundColor(.secondary)
+                                            .monospaced()
+                                        
+                                        Text("Metric: \(candidate.ncCnt)")
+                                            .font(.caption2)
+                                            .foregroundColor(.secondary)
+                                    }
+                                    
+                                    Spacer()
+                                    
+                                    Button(action: {
+                                        removeCandidate(candidate)
+                                    }) {
+                                        Image(systemName: "xmark.circle.fill")
+                                            .foregroundColor(.red)
+                                            .font(.title2)
+                                    }
+                                    .buttonStyle(.plain)
+                                }
+                                .padding(.vertical, 8)
+                                .padding(.horizontal, 12)
+                                
+                                Divider()
+                            }
+                            .background(Color(NSColor.controlBackgroundColor))
+                            // ANIMATION TRANSITION
+                            .transition(.opacity.combined(with: .move(edge: .top)))
+                        }
+                    }
+                }
+                .frame(maxWidth: .infinity)
+            }
+            .frame(height: 250)
+            .background(Color(NSColor.controlBackgroundColor))
+            .cornerRadius(6)
+            .overlay(
+                RoundedRectangle(cornerRadius: 6)
+                    .stroke(Color.gray.opacity(0.2), lineWidth: 1)
+            )
+            
+            HStack(spacing: 20) {
+                Button("Cancel") {
+                    presentationMode.wrappedValue.dismiss()
+                }
+                .keyboardShortcut(.escape)
+                
+                Spacer()
+                
+                Button("Add") {
+                    confirmAdditions()
+                }
+                .buttonStyle(.borderedProminent)
+                .disabled(candidates.isEmpty)
+                .keyboardShortcut(.return)
+            }
+        }
+        .padding()
+        .frame(width: 450)
+        .onReceive(spaceManager.$currentRawSpaceUUID) { uuid in
+            checkForNewSpace(uuid: uuid, ncCnt: spaceManager.currentNcCount)
+        }
+    }
+    
+    private func checkForNewSpace(uuid: String, ncCnt: Int) {
+        if uuid != "FULLSCREEN",
+           !spaceManager.spaceNameDict.contains(where: { $0.id == uuid }),
+           !candidates.contains(where: { $0.spaceUUID == uuid }) {
+            
+            let newCandidate = SpaceCandidate(spaceUUID: uuid, ncCnt: ncCnt)
+            
+            // Explicit animation block
+            withAnimation(.spring(response: 0.4, dampingFraction: 0.7)) {
+                candidates.append(newCandidate)
+            }
+        }
+    }
+    
+    private func removeCandidate(_ candidate: SpaceCandidate) {
+        if let index = candidates.firstIndex(of: candidate) {
+            // Explicit animation block
+            withAnimation(.easeInOut(duration: 0.25)) {
+                _ = candidates.remove(at: index)
+            }
+        }
+    }
+    
+    private func confirmAdditions() {
+        for candidate in candidates {
+            spaceManager.addManualSpace(candidate.spaceUUID)
+        }
+        presentationMode.wrappedValue.dismiss()
     }
 }
 
@@ -95,130 +404,105 @@ struct GeneralSettingsView: View {
     @State private var autoCheckUpdate: Bool = UpdateManager.isAutoCheckEnabled
     @State private var isResetting: Bool = false
     @State private var isAPIEnabled: Bool = SpaceManager.isAPIEnabled
-    @State private var isStableEnabled: Bool = SpaceManager.isStableEnabled
+    @State private var isManualSpacesEnabled: Bool = SpaceManager.isManualSpacesEnabled
     @State private var isStatusBarHidden: Bool = StatusBarController.isStatusBarHidden
     
-    // New state for bug report feature
     @State private var showLogSheet: Bool = false
+    @State private var showThresholdSheet: Bool = false
+    @State private var showAddSpacesSheet: Bool = false
     
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 20) {
+                // [General Section omitted for brevity]
                 SettingsSection("Settings.General.General") {
-                    SettingsRow("Settings.General.General.ShowLabels", helperText: "Create windows that only appear in Mission Control to display space names.\n\nMay not work when multiple displays are connected.") {
+                     SettingsRow("Settings.General.General.ShowLabels", helperText: "Create windows that only appear in Mission Control to display space names.\n\nMay not work when multiple displays are connected.") {
                         Toggle("", isOn: $labelManager.isEnabled)
                             .labelsHidden()
                             .toggleStyle(.switch)
                     }
-                    
                     Divider()
-                    
                     SettingsRow("Hide menubar icon", helperText: "By doing so, you can turn DesktopRenamer into a completely silent API app.") {
                         Toggle("", isOn: $isStatusBarHidden)
                             .labelsHidden()
                             .toggleStyle(.switch)
-                            .onChange(of: isStatusBarHidden) { _ in
-                                StatusBarController.toggleStatusBar()
-                        }
+                            .onChange(of: isStatusBarHidden) { _ in StatusBarController.toggleStatusBar() }
                     }
-                    
                     Divider()
-                    
                     SettingsRow("Settings.General.General.LaunchAtLogin") {
                         Toggle("", isOn: $launchAtLogin)
                             .labelsHidden()
                             .toggleStyle(.switch)
-                            .onChange(of: launchAtLogin) { value in
-                                toggleLaunchAtLogin(value)
-                            }
+                            .onChange(of: launchAtLogin) { value in toggleLaunchAtLogin(value) }
                     }
                 }
                 
                 SettingsSection("Settings.General.Updates") {
                     SettingsRow("Settings.General.Updates.AutoCheckUpdate") {
-                        Toggle("", isOn: $autoCheckUpdate)
-                            .labelsHidden()
-                            .toggleStyle(.switch)
-                            .onChange(of: autoCheckUpdate) { value in
-                                UpdateManager.isAutoCheckEnabled = value
-                            }
+                        Toggle("", isOn: $autoCheckUpdate).labelsHidden().toggleStyle(.switch)
+                            .onChange(of: autoCheckUpdate) { value in UpdateManager.isAutoCheckEnabled = value }
                     }
-                    
                     Divider()
-                    
                     SettingsRow("Settings.General.Updates.ManualCheck") {
-                        Button(NSLocalizedString("Settings.General.Updates.Button", comment: "")) {
-                            checkForUpdate()
-                        }
+                        Button(NSLocalizedString("Settings.General.Updates.Button", comment: "")) { checkForUpdate() }
                     }
                 }
                 
-//                SettingsSection("Settings.General.Reset") {
-//                    SettingsRow("Settings.General.Reset.Body") {
-//                        Button(NSLocalizedString("Settings.General.Reset.Button", comment: "")) {
-//                            resetNames()
-//                        }
-//                        .disabled(isResetting)
-//                    }
-//                }
-                
                 SettingsSection("Settings.General.Advanced") {
+                    SettingsRow("Manually add spaces", helperText: "If enabled, new spaces won't be added automatically. You must add them in the Spaces tab.") {
+                        Toggle("", isOn: $isManualSpacesEnabled).labelsHidden().toggleStyle(.switch)
+                            .onChange(of: isManualSpacesEnabled) { newValue in
+                                SpaceManager.isManualSpacesEnabled = newValue
+                                // REFRESH: Re-evaluate current space when mode changes
+                                spaceManager.refreshSpaceState()
+                            }
+                    }
+                    
+                    if isManualSpacesEnabled {
+                        Divider()
+                        SettingsRow("Add spaces") {
+                            Button("Add") {
+                                showAddSpacesSheet = true
+                            }
+                        }
+                    } else {
+                        Divider()
+                        SettingsRow("Fix automatic detection") {
+                            Button("Fix") {
+                                showThresholdSheet = true
+                            }
+                        }
+                    }
+                    
+                    Divider()
+                    
                     SettingsRow("Settings.General.Advanced.EnableAPI", helperText: "Allow other apps to get space names.") {
-                        Toggle("", isOn: $isAPIEnabled)
-                            .labelsHidden()
-                            .toggleStyle(.switch)
-                            .onChange(of: isAPIEnabled) { _ in
-                                // Calling toggleAPIState handles SpaceManager.isAPIEnabled.toggle()
-                                spaceManager.spaceAPI?.toggleAPIState()
-                            }
+                        Toggle("", isOn: $isAPIEnabled).labelsHidden().toggleStyle(.switch)
+                            .onChange(of: isAPIEnabled) { _ in spaceManager.spaceAPI?.toggleAPIState() }
                     }
                     
                     Divider()
                     
-                    SettingsRow("Use stable space detection method", helperText: "This method is more stable than the normal one. It detects space every \(String(format: "%.2f", POLL_INTERVAL))s, slightly increasing the energy cost.\n\nNotice, the space name may update twice every time you switch the space, and you may also see the name of the main space appears shortly.") {
-                        Toggle("", isOn: $isStableEnabled)
-                            .labelsHidden()
-                            .toggleStyle(.switch)
-                            .onChange(of: isStableEnabled) { _ in
-                                // togglePolling handles SpaceManager.isStableEnabled.toggle()
-                                spaceManager.togglePolling()
-                            }
-                    }
-                    
-                    Divider()
-                    
-                    SettingsRow("Generate bug report", helperText: "This generates a log that is helpful for the developers to debug. The log includes the following information:\n\n1. SpaceUUIDs (not your customized name)\n2. A number representing the notification center amount (does not contain sensitive information, just a number)") {
+                    SettingsRow("Generate bug report", helperText: "This generates a log that is helpful for the developers to debug.") {
                         Button(action: {
-                            if spaceManager.isBugReportActive {
-                                spaceManager.stopBugReportLogging()
-                            } else {
-                                spaceManager.startBugReportLogging()
-                                showLogSheet = true
-                            }
+                            if spaceManager.isBugReportActive { spaceManager.stopBugReportLogging() }
+                            else { spaceManager.startBugReportLogging(); showLogSheet = true }
                         }) {
                             Text(spaceManager.isBugReportActive ? "Stop" : "Start")
                         }
                         .keyboardShortcut("b")
                     }
                 }
-                
                 Spacer()
             }
             .padding()
             .frame(maxWidth: .infinity, alignment: .topLeading)
         }
-        .onAppear {
-            launchAtLogin = getLaunchAtLoginState()
-        }
-        // FIX 2: Add an onDismiss handler to sheet to stop logging if the user closes the sheet
-        // using the Escape key or clicking outside (default sheet dismissal behavior).
-        .sheet(isPresented: $showLogSheet, onDismiss: {
-            if spaceManager.isBugReportActive {
-                spaceManager.stopBugReportLogging()
-            }
-        }) {
-            bugReportSheet
-        }
+        .onAppear { launchAtLogin = getLaunchAtLoginState() }
+        .sheet(isPresented: $showLogSheet, onDismiss: { if spaceManager.isBugReportActive { spaceManager.stopBugReportLogging() } }) { bugReportSheet }
+        .sheet(isPresented: $showThresholdSheet) { ThresholdAdjustmentView(spaceManager: spaceManager) }
+        .sheet(isPresented: $showAddSpacesSheet) { AddSpacesView(spaceManager: spaceManager) }
+        .animation(.easeInOut(duration: 0.16), value: isManualSpacesEnabled)
     }
     
     private var bugReportSheet: some View {
@@ -238,24 +522,19 @@ struct GeneralSettingsView: View {
             ScrollView {
                 ScrollViewReader { proxy in
                     VStack(alignment: .leading, spacing: 4) {
-                        // Display log entries in normal chronological order (newest at bottom)
                         ForEach(spaceManager.bugReportLog.indices, id: \.self) { index in
                             let entry = spaceManager.bugReportLog[index]
                             let isLatest = index == spaceManager.bugReportLog.count - 1
                             
                             Text(entry.description)
                                 .font(.system(.footnote, design: .monospaced))
-                                // Use accent color for the newest line, white for previous lines
                                 .foregroundColor(isLatest ? .accentColor : Color(NSColor.controlTextColor))
                                 .id(entry.id)
                         }
                     }
                     .frame(maxWidth: .infinity, alignment: .leading)
-                    // FIX 1: Scroll to bottom when log is updated
                     .onReceive(spaceManager.$bugReportLog) { log in
                         if let last = log.last {
-                            // Scroll to the newest item (which is the last item)
-                            // This must be done on the next run loop cycle to ensure the view size has updated.
                             DispatchQueue.main.async {
                                 proxy.scrollTo(last.id, anchor: .bottom)
                             }
@@ -286,7 +565,6 @@ struct GeneralSettingsView: View {
     }
     
     private func saveLog() {
-        // Convert log entries to a single string
         let logContent = spaceManager.bugReportLog.map { $0.description }.joined(separator: "\n")
         guard let data = logContent.data(using: .utf8) else { return }
         
@@ -294,41 +572,27 @@ struct GeneralSettingsView: View {
         savePanel.canCreateDirectories = true
         savePanel.showsTagField = false
         
-        // Use ISO8601 for a machine-readable timestamp in the filename
         let formatter = ISO8601DateFormatter()
         formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
         let timestamp = formatter.string(from: Date()).replacingOccurrences(of: ":", with: "-")
         
         savePanel.nameFieldStringValue = "DesktopRenamer_BugReport_\(timestamp).log"
-        // Ensure .log type is available
         savePanel.allowedContentTypes = [.log, .plainText]
         
-        // Get the window for sheet presentation (using the extension in UpdateManager)
-        // This is the window the bugReportSheet is attached to.
         guard let window = NSApp.suitableSheetWindow else { return }
         
         savePanel.beginSheetModal(for: window) { result in
             if result == .OK, let url = savePanel.url {
                 do {
                     try data.write(to: url)
-                    
-                    // Corrected the sequence of closing the log sheet and showing the thank you alert.
-                    // 1. Stop logging and close the initial sheet immediately.
                     self.spaceManager.stopBugReportLogging()
                     self.showLogSheet = false
-                    
-                    // 2. Schedule the thank you alert to be shown on the main thread AFTER a slight delay.
-                    // This ensures the first sheet (bug report log) has fully dismissed before the second sheet (alert) begins.
                     DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
                          self.showThankYouAlert()
                     }
-
                 } catch {
                     print("Error saving file: \(error)")
-                    // Optionally show an error alert
                 }
-            } else if result == .cancel {
-                // User cancelled save, keep the sheet open and logging active
             }
         }
     }
@@ -340,14 +604,11 @@ struct GeneralSettingsView: View {
         alert.alertStyle = .informational
         alert.addButton(withTitle: NSLocalizedString("Button.OK", comment: ""))
         
-        // Use keyWindow or suitableSheetWindow for modal presentation
-        // Since the bug report sheet is now closed, keyWindow should be the Settings window again.
         guard let window = NSApp.keyWindow else {
             alert.runModal()
             return
         }
         
-        // Present the alert as a sheet on the (now visible) settings window
         alert.beginSheetModal(for: window) { _ in }
     }
     
