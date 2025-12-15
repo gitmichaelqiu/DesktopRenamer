@@ -33,7 +33,43 @@ class SpaceHelper {
         NSWorkspace.shared.notificationCenter.removeObserver(self)
     }
     
-    // Change getSpaceUUID completion signature to include Int
+    // RENAMED: getRawSpaceUUID
+    // This now returns the RAW UUID (or "MAIN") without applying the fullscreen threshold logic.
+    static func getRawSpaceUUID(completion: @escaping (String, Int) -> Void) {
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.02) { // Wait the system to update
+            // Get all windows
+            let options = CGWindowListOption(arrayLiteral: .optionOnScreenOnly)
+            let windowList = CGWindowListCopyWindowInfo(options, kCGNullWindowID) as? [[String: Any]] ?? []
+            var uuid = ""
+            var ncCnt = 0
+            
+            for window in windowList {
+                if let owner = window[kCGWindowOwnerName as String] as? String,
+                   owner == "Notification Center" {
+                    ncCnt += 1
+                } else if let owner = window[kCGWindowOwnerName as String] as? String,
+                   owner == "Dock",
+                   let name = window[kCGWindowName as String] as? String,
+                   name.starts(with: "Wallpaper-"),
+                   let layer = window[kCGWindowLayer as String] as? Int32,
+                   layer == -2147483624 { // This is the wallpaper layer
+                    
+                    // Extract UUID from wallpaper name
+                    uuid = String(name.dropFirst("Wallpaper-".count))
+
+                    if uuid == "" {
+                        uuid = "MAIN"
+                    }
+                }
+            }
+            
+            // REMOVED: The premature check "if ncCnt <= SpaceHelper.fullscreenThreshold".
+            // We now return the raw data and let SpaceManager decide.
+            
+            completion(uuid, ncCnt)
+        }
+    }
+    
     static func getSpaceUUID(completion: @escaping (String, Int) -> Void) {
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.02) { // Wait the system to update
             // Get all windows
@@ -106,9 +142,9 @@ class SpaceHelper {
         }
     }
     
-    private static func detectSpaceChange() {
-        // Update to handle two arguments
-        getSpaceUUID { spaceUUID, ncCnt in
+    // Helper to manually trigger detection (exposed for Refresh actions)
+    static func detectSpaceChange() {
+        getRawSpaceUUID { spaceUUID, ncCnt in
             onSpaceChange?(spaceUUID, ncCnt)
         }
     }

@@ -37,6 +37,21 @@
     "2. Go through fullscreen" : {
 
     },
+    "Add" : {
+
+    },
+    "Add New Spaces" : {
+
+    },
+    "Add spaces" : {
+
+    },
+    "Adjust" : {
+
+    },
+    "Adjust fullscreen threshold" : {
+
+    },
     "Adjust Fullscreen Threshold" : {
 
     },
@@ -126,10 +141,7 @@
     "Current Metric: %lld" : {
 
     },
-    "Fix" : {
-
-    },
-    "Fix automatic space detection" : {
+    "Done" : {
 
     },
     "Generate bug report" : {
@@ -240,6 +252,12 @@
       }
     },
     "Min Metric: %lld" : {
+
+    },
+    "New Space" : {
+
+    },
+    "No new spaces detected yet..." : {
 
     },
     "Please go through all spaces that may be helpful in analyzing the bug. The log is updating in real-time." : {
@@ -1274,6 +1292,9 @@
         }
       }
     },
+    "Switch to the desktops you want to add. They will appear in the list below." : {
+
+    },
     "Thank You!" : {
       "localizations" : {
         "zh-Hans" : {
@@ -1294,7 +1315,11 @@
         }
       }
     },
+    "This generates a log that is helpful for the developers to debug." : {
+
+    },
     "This generates a log that is helpful for the developers to debug. The log includes the following information:\n\n1. SpaceUUIDs (not your customized name)\n2. A number representing the notification center amount (does not contain sensitive information, just a number)" : {
+      "extractionState" : "stale",
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
@@ -1361,9 +1386,6 @@
           }
         }
       }
-    },
-    "You need to adjust the value of the threshold\n\nAt the right hand side, you can acquire a suggested value. The threshold should be between the two extreme values shown.\n\nIf all desktops are marked as Fullscreen, you may lower the threshold." : {
-
     }
   },
   "version" : "1.1"

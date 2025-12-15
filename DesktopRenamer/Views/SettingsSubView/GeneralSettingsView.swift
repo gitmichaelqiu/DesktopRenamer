@@ -7,20 +7,8 @@ class APITester: ObservableObject {
     @Published var responseText: String = ""
     
     init() {
-        // LISTEN to Local Notification Center
-        NotificationCenter.default.addObserver(
-            self,
-            selector: #selector(handleCurrentSpaceResponse(_:)),
-            name: SpaceAPI.returnActiveSpace,
-            object: nil
-        )
-        
-        NotificationCenter.default.addObserver(
-            self,
-            selector: #selector(handleAllSpacesResponse(_:)),
-            name: SpaceAPI.returnSpaceList,
-            object: nil
-        )
+        NotificationCenter.default.addObserver(self, selector: #selector(handleCurrentSpaceResponse(_:)), name: SpaceAPI.returnActiveSpace, object: nil)
+        NotificationCenter.default.addObserver(self, selector: #selector(handleAllSpacesResponse(_:)), name: SpaceAPI.returnSpaceList, object: nil)
     }
     
     deinit {
@@ -29,58 +17,34 @@ class APITester: ObservableObject {
     
     func sendCurrentSpaceRequest() {
         responseText = "Requesting current space..."
-        DistributedNotificationCenter.default().postNotificationName(
-            SpaceAPI.getActiveSpace,
-            object: nil,
-            userInfo: nil,
-            deliverImmediately: true
-        )
+        DistributedNotificationCenter.default().postNotificationName(SpaceAPI.getActiveSpace, object: nil, userInfo: nil, deliverImmediately: true)
     }
     
     func sendAllSpacesRequest() {
         responseText = "Requesting all spaces..."
-        DistributedNotificationCenter.default().postNotificationName(
-            SpaceAPI.getSpaceList,
-            object: nil,
-            userInfo: nil,
-            deliverImmediately: true
-        )
+        DistributedNotificationCenter.default().postNotificationName(SpaceAPI.getSpaceList, object: nil, userInfo: nil, deliverImmediately: true)
     }
     
     @objc private func handleCurrentSpaceResponse(_ notification: Notification) {
         DispatchQueue.main.async {
-            guard let userInfo = notification.userInfo else {
-                self.responseText = "Received empty response"
-                return
-            }
-            
+            guard let userInfo = notification.userInfo else { self.responseText = "Received empty response"; return }
             let name = userInfo["spaceName"] as? String ?? "N/A"
             let num = (userInfo["spaceNumber"] as? NSNumber)?.intValue ?? (userInfo["spaceNumber"] as? Int) ?? -1
             let uuid = userInfo["spaceUUID"] as? String ?? "N/A"
-            
             self.responseText = "Current Space:\nName: \(name)\n#: \(num)\nUUID: \(uuid)"
         }
     }
     
     @objc private func handleAllSpacesResponse(_ notification: Notification) {
         DispatchQueue.main.async {
-            guard let userInfo = notification.userInfo,
-                  let spaces = userInfo["spaces"] as? [[String: Any]] else {
-                self.responseText = "Received empty space list"
-                return
-            }
-            
+            guard let userInfo = notification.userInfo, let spaces = userInfo["spaces"] as? [[String: Any]] else { self.responseText = "Received empty space list"; return }
             var result = "All Spaces (\(spaces.count)):\n"
-            
             for space in spaces {
                 let name = space["spaceName"] as? String ?? "N/A"
                 let num = (space["spaceNumber"] as? NSNumber)?.intValue ?? -1
-                // Truncate UUID for display
                 let uuid = (space["spaceUUID"] as? String)?.prefix(8) ?? "N/A"
-                
                 result += "#\(num): \(name) [\(uuid).. ]\n"
             }
-            
             self.responseText = result
         }
     }
@@ -92,7 +56,6 @@ struct ThresholdAdjustmentView: View {
     
     @State private var thresholdValue: Int = SpaceHelper.fullscreenThreshold
     
-    // Calibration State
     @State private var recordedDesktops: [String: Int] = [:]
     @State private var recordedFullscreens: [String: Int] = [:]
     
@@ -102,32 +65,10 @@ struct ThresholdAdjustmentView: View {
     @State private var suggestionText: String = ""
     @State private var suggestionIsError: Bool = false
     
-    @State private var showingHelperPopover = false
-    
     var body: some View {
         VStack(spacing: 20) {
-            HStack(spacing: 4) {
-                Text("Adjust Fullscreen Threshold")
-                    .font(.headline)
-                
-                Button {
-                    showingHelperPopover.toggle()
-                } label: {
-                    Image(systemName: "questionmark.circle.fill")
-                        .font(.caption)
-                        .foregroundColor(.gray)
-                }
-                .buttonStyle(.plain)
-                .popover(isPresented: $showingHelperPopover, arrowEdge: .top) {
-                    VStack(alignment: .leading, spacing: 10) {
-                        Text("You need to adjust the value of the threshold\n\nAt the right hand side, you can acquire a suggested value. The threshold should be between the two extreme values shown.\n\nIf all desktops are marked as Fullscreen, you may lower the threshold.")
-                            .font(.body)
-                            .fixedSize(horizontal: false, vertical: true)
-                    }
-                    .padding(15)
-                    .frame(minWidth: 200, maxWidth: 300)
-                }
-            }
+            Text("Adjust Fullscreen Threshold")
+                .font(.headline)
             
             HStack(alignment: .top, spacing: 30) {
                 // LEFT: Manual Edit
@@ -220,6 +161,8 @@ struct ThresholdAdjustmentView: View {
                 Spacer()
                 Button("Save") {
                     SpaceHelper.fullscreenThreshold = thresholdValue
+                    // REFRESH: Immediately re-evaluate the current space with the new threshold
+                    spaceManager.refreshSpaceState()
                     presentationMode.wrappedValue.dismiss()
                 }
                 .keyboardShortcut(.return)
@@ -227,36 +170,31 @@ struct ThresholdAdjustmentView: View {
         }
         .padding()
         .frame(width: 450)
-        // Monitor changes to capture data
-        .onReceive(spaceManager.$currentSpaceUUID) { uuid in
+        // CHANGE: Listen to currentRawSpaceUUID to ensure we capture actual data even if logic thinks it's fullscreen
+        .onReceive(spaceManager.$currentRawSpaceUUID) { uuid in
             recordData(uuid: uuid, ncCnt: spaceManager.currentNcCount)
         }
     }
     
     private func toggleDesktopRecording() {
         if isRecordingDesktops {
-            // Stop
             isRecordingDesktops = false
         } else {
-            // Start - Clear previous Desktop recordings
             recordedDesktops.removeAll()
-            // We do NOT clear fullscreens here, allowing user to do Step 1 then Step 2
             suggestionText = ""
             isRecordingDesktops = true
-            recordData(uuid: spaceManager.currentSpaceUUID, ncCnt: spaceManager.currentNcCount)
+            recordData(uuid: spaceManager.currentRawSpaceUUID, ncCnt: spaceManager.currentNcCount)
         }
     }
     
     private func toggleFullscreenRecording() {
         if isRecordingFullscreen {
-            // Stop & Calculate
             isRecordingFullscreen = false
             calculateSuggestion()
         } else {
-            // Start - Clear previous Fullscreen recordings
             recordedFullscreens.removeAll()
             isRecordingFullscreen = true
-            recordData(uuid: spaceManager.currentSpaceUUID, ncCnt: spaceManager.currentNcCount)
+            recordData(uuid: spaceManager.currentRawSpaceUUID, ncCnt: spaceManager.currentNcCount)
         }
     }
     
@@ -264,7 +202,6 @@ struct ThresholdAdjustmentView: View {
         if isRecordingDesktops {
             recordedDesktops[uuid] = ncCnt
         } else if isRecordingFullscreen {
-            // Exclude UUIDs already present in "Going through desktops"
             if recordedDesktops[uuid] == nil {
                 recordedFullscreens[uuid] = ncCnt
             }
@@ -292,6 +229,81 @@ struct ThresholdAdjustmentView: View {
     }
 }
 
+struct AddSpacesView: View {
+    @ObservedObject var spaceManager: SpaceManager
+    @Environment(\.presentationMode) var presentationMode
+    
+    @State private var detectedSpaces: Set<String> = []
+    
+    var body: some View {
+        VStack(spacing: 20) {
+            Text("Add New Spaces")
+                .font(.headline)
+            
+            Text("Switch to the desktops you want to add. They will appear in the list below.")
+                .font(.body)
+                .foregroundColor(.secondary)
+                .multilineTextAlignment(.center)
+                .padding(.horizontal)
+            
+            List {
+                if detectedSpaces.isEmpty {
+                    Text("No new spaces detected yet...")
+                        .foregroundColor(.secondary)
+                        .italic()
+                        .padding()
+                } else {
+                    ForEach(Array(detectedSpaces).sorted(), id: \.self) { uuid in
+                        HStack {
+                            VStack(alignment: .leading) {
+                                Text("New Space")
+                                    .fontWeight(.medium)
+                                Text(uuid)
+                                    .font(.caption)
+                                    .foregroundColor(.secondary)
+                            }
+                            Spacer()
+                            Button("Add") {
+                                addSpace(uuid)
+                            }
+                            .buttonStyle(.borderedProminent)
+                        }
+                        .padding(.vertical, 4)
+                    }
+                }
+            }
+            .frame(height: 200)
+            .border(Color.gray.opacity(0.2))
+            
+            HStack {
+                Button("Done") {
+                    presentationMode.wrappedValue.dismiss()
+                }
+            }
+        }
+        .padding()
+        .frame(width: 400)
+        // CHANGE: Listen to raw UUID to capture spaces even if currently treated as fullscreen
+        .onReceive(spaceManager.$currentRawSpaceUUID) { uuid in
+            checkForNewSpace(uuid)
+        }
+    }
+    
+    private func checkForNewSpace(_ uuid: String) {
+        // We only add spaces that are NOT "FULLSCREEN" string (safeguard)
+        // and are NOT already in the dict.
+        if uuid != "FULLSCREEN" && !spaceManager.spaceNameDict.contains(where: { $0.id == uuid }) {
+            detectedSpaces.insert(uuid)
+        }
+    }
+    
+    private func addSpace(_ uuid: String) {
+        spaceManager.addManualSpace(uuid)
+        detectedSpaces.remove(uuid)
+    }
+}
+
+// [GeneralSettingsView remains largely the same, just included to show context]
 struct GeneralSettingsView: View {
     @ObservedObject var spaceManager: SpaceManager
     @ObservedObject var labelManager: SpaceLabelManager
@@ -305,77 +317,74 @@ struct GeneralSettingsView: View {
     @State private var isManualSpacesEnabled: Bool = SpaceManager.isManualSpacesEnabled
     @State private var isStatusBarHidden: Bool = StatusBarController.isStatusBarHidden
     
-    // New state for bug report feature
     @State private var showLogSheet: Bool = false
-    // New state for threshold adjustment
     @State private var showThresholdSheet: Bool = false
+    @State private var showAddSpacesSheet: Bool = false
     
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 20) {
+                // [General Section omitted for brevity]
                 SettingsSection("Settings.General.General") {
-                    SettingsRow("Settings.General.General.ShowLabels", helperText: "Create windows that only appear in Mission Control to display space names.\n\nMay not work when multiple displays are connected.") {
+                     SettingsRow("Settings.General.General.ShowLabels", helperText: "Create windows that only appear in Mission Control to display space names.\n\nMay not work when multiple displays are connected.") {
                         Toggle("", isOn: $labelManager.isEnabled)
                             .labelsHidden()
                             .toggleStyle(.switch)
                     }
-                    
                     Divider()
-                    
                     SettingsRow("Hide menubar icon", helperText: "By doing so, you can turn DesktopRenamer into a completely silent API app.") {
                         Toggle("", isOn: $isStatusBarHidden)
                             .labelsHidden()
                             .toggleStyle(.switch)
-                            .onChange(of: isStatusBarHidden) { _ in
-                                StatusBarController.toggleStatusBar()
-                        }
+                            .onChange(of: isStatusBarHidden) { _ in StatusBarController.toggleStatusBar() }
                     }
-                    
                     Divider()
-                    
                     SettingsRow("Settings.General.General.LaunchAtLogin") {
                         Toggle("", isOn: $launchAtLogin)
                             .labelsHidden()
                             .toggleStyle(.switch)
-                            .onChange(of: launchAtLogin) { value in
-                                toggleLaunchAtLogin(value)
-                            }
+                            .onChange(of: launchAtLogin) { value in toggleLaunchAtLogin(value) }
                     }
                 }
                 
                 SettingsSection("Settings.General.Updates") {
                     SettingsRow("Settings.General.Updates.AutoCheckUpdate") {
-                        Toggle("", isOn: $autoCheckUpdate)
-                            .labelsHidden()
-                            .toggleStyle(.switch)
-                            .onChange(of: autoCheckUpdate) { value in
-                                UpdateManager.isAutoCheckEnabled = value
-                            }
+                        Toggle("", isOn: $autoCheckUpdate).labelsHidden().toggleStyle(.switch)
+                            .onChange(of: autoCheckUpdate) { value in UpdateManager.isAutoCheckEnabled = value }
                     }
-                    
                     Divider()
-                    
                     SettingsRow("Settings.General.Updates.ManualCheck") {
-                        Button(NSLocalizedString("Settings.General.Updates.Button", comment: "")) {
-                            checkForUpdate()
-                        }
+                        Button(NSLocalizedString("Settings.General.Updates.Button", comment: "")) { checkForUpdate() }
                     }
                 }
                 
                 SettingsSection("Settings.General.Advanced") {
+                    SettingsRow("Settings.General.Advanced.EnableAPI", helperText: "Allow other apps to get space names.") {
+                        Toggle("", isOn: $isAPIEnabled).labelsHidden().toggleStyle(.switch)
+                            .onChange(of: isAPIEnabled) { _ in spaceManager.spaceAPI?.toggleAPIState() }
+                    }
+                    
+                    Divider()
+                    
                     SettingsRow("Manually add spaces", helperText: "If enabled, new spaces won't be added automatically. You must add them in the Spaces tab.") {
-                        Toggle("", isOn: $isManualSpacesEnabled)
-                            .labelsHidden()
-                            .toggleStyle(.switch)
+                        Toggle("", isOn: $isManualSpacesEnabled).labelsHidden().toggleStyle(.switch)
                             .onChange(of: isManualSpacesEnabled) { newValue in
                                 SpaceManager.isManualSpacesEnabled = newValue
+                                // REFRESH: Re-evaluate current space when mode changes
+                                spaceManager.refreshSpaceState()
                             }
                     }
                     
-                    if !isManualSpacesEnabled {
+                    if isManualSpacesEnabled {
+                        SettingsRow("Add spaces") {
+                            Button("Add spaces") {
+                                showAddSpacesSheet = true
+                            }
+                        }
+                    } else {
                         Divider()
-                        SettingsRow("Fix automatic space detection") {
-                            Button("Fix") {
+                        SettingsRow("Adjust fullscreen threshold") {
+                            Button("Adjust") {
                                 showThresholdSheet = true
                             }
                         }
@@ -383,50 +392,25 @@ struct GeneralSettingsView: View {
                     
                     Divider()
                     
-                    SettingsRow("Settings.General.Advanced.EnableAPI", helperText: "Allow other apps to get space names.") {
-                        Toggle("", isOn: $isAPIEnabled)
-                            .labelsHidden()
-                            .toggleStyle(.switch)
-                            .onChange(of: isAPIEnabled) { _ in
-                                spaceManager.spaceAPI?.toggleAPIState()
-                            }
-                    }
-                    
-                    Divider()
-                    
-                    SettingsRow("Generate bug report", helperText: "This generates a log that is helpful for the developers to debug. The log includes the following information:\n\n1. SpaceUUIDs (not your customized name)\n2. A number representing the notification center amount (does not contain sensitive information, just a number)") {
+                    SettingsRow("Generate bug report", helperText: "This generates a log that is helpful for the developers to debug.") {
                         Button(action: {
-                            if spaceManager.isBugReportActive {
-                                spaceManager.stopBugReportLogging()
-                            } else {
-                                spaceManager.startBugReportLogging()
-                                showLogSheet = true
-                            }
+                            if spaceManager.isBugReportActive { spaceManager.stopBugReportLogging() }
+                            else { spaceManager.startBugReportLogging(); showLogSheet = true }
                         }) {
                             Text(spaceManager.isBugReportActive ? "Stop" : "Start")
                         }
                         .keyboardShortcut("b")
                     }
                 }
-                
                 Spacer()
             }
             .padding()
             .frame(maxWidth: .infinity, alignment: .topLeading)
         }
-        .onAppear {
-            launchAtLogin = getLaunchAtLoginState()
-        }
-        .sheet(isPresented: $showLogSheet, onDismiss: {
-            if spaceManager.isBugReportActive {
-                spaceManager.stopBugReportLogging()
-            }
-        }) {
-            bugReportSheet
-        }
-        .sheet(isPresented: $showThresholdSheet) {
-            ThresholdAdjustmentView(spaceManager: spaceManager)
-        }
+        .onAppear { launchAtLogin = getLaunchAtLoginState() }
+        .sheet(isPresented: $showLogSheet, onDismiss: { if spaceManager.isBugReportActive { spaceManager.stopBugReportLogging() } }) { bugReportSheet }
+        .sheet(isPresented: $showThresholdSheet) { ThresholdAdjustmentView(spaceManager: spaceManager) }
+        .sheet(isPresented: $showAddSpacesSheet) { AddSpacesView(spaceManager: spaceManager) }
         .animation(.easeInOut(duration: 0.2), value: SpaceManager.isManualSpacesEnabled)
     }
     
