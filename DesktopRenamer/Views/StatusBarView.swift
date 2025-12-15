@@ -167,14 +167,16 @@ class StatusBarController: NSObject {
             action: nil, // Temporarily
             keyEquivalent: "r"
         )
+        renameItem.image = NSImage(systemSymbolName: "pencil.line", accessibilityDescription: nil)
         menu.addItem(self.renameItem)
         
         // Add troubleshoot helper
         let troubleshootItem = NSMenuItem(
-            title: NSLocalizedString("Troubleshoot space detection", comment: ""),
+            title: NSLocalizedString("Troubleshoot Space Detection", comment: ""),
             action: #selector(troubleshootSpaceDetection),
             keyEquivalent: ""
         )
+        troubleshootItem.image = NSImage(systemSymbolName: "wrench.and.screwdriver", accessibilityDescription: nil)
         troubleshootItem.target = self
         menu.addItem(troubleshootItem)
         
@@ -197,6 +199,7 @@ class StatusBarController: NSObject {
             action: #selector(openSettingsWindow),
             keyEquivalent: ","
         )
+        settingsItem.image = NSImage(systemSymbolName: "gear", accessibilityDescription: nil)
         settingsItem.target = self
         menu.addItem(settingsItem)
         
@@ -208,6 +211,7 @@ class StatusBarController: NSObject {
             action: #selector(quitApp),
             keyEquivalent: "q"
         )
+        quitItem.image = NSImage(systemSymbolName: "xmark.circle", accessibilityDescription: nil)
         quitItem.target = self
         menu.addItem(quitItem)
         
