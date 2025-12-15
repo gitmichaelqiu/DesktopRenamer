@@ -69,7 +69,7 @@ extension RenameViewController: NSTextFieldDelegate {
 }
 
 class StatusBarController: NSObject {
-    private var statusItem: NSStatusItem
+    static private var statusItem: NSStatusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
     private var popover: NSPopover
     @ObservedObject private var spaceManager: SpaceManager
     private let labelManager: SpaceLabelManager
@@ -78,17 +78,24 @@ class StatusBarController: NSObject {
     private var renameItem: NSMenuItem!
     private var showLabelsMenuItem: NSMenuItem!
     
+    static let isStatusBarHiddenKey = "isStatusBarHidden"
+    static var isStatusBarHidden: Bool {
+        get { UserDefaults.standard.bool(forKey: isStatusBarHiddenKey) }
+        set { UserDefaults.standard.set(newValue, forKey: isStatusBarHiddenKey) }
+    }
+    
     init(spaceManager: SpaceManager) {
         self.spaceManager = spaceManager
         self.labelManager = SpaceLabelManager(spaceManager: spaceManager)
         
-        statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
         popover = NSPopover()
         popover.behavior = .transient
         
         super.init()
         
         setupMenuBar()
+        StatusBarController.statusItem.isVisible = !StatusBarController.isStatusBarHidden
+        
         updateStatusBarTitle()
         setupObservers()
         
@@ -120,7 +127,7 @@ class StatusBarController: NSObject {
             .sink { [weak self] _ in
                 if let currentSpaceUUID = self?.spaceManager.currentSpaceUUID,
                    let newName = self?.spaceManager.getSpaceName(currentSpaceUUID),
-                   let button = self?.statusItem.button,
+                   let button = StatusBarController.statusItem.button,
                    button.title != newName {
                     self?.updateStatusBarTitle()
                 }
@@ -137,15 +144,15 @@ class StatusBarController: NSObject {
     }
     
     private func updateStatusBarTitle() {
-        if let button = statusItem.button {
+        if let button = StatusBarController.statusItem.button {
             let name = spaceManager.getSpaceName(spaceManager.currentSpaceUUID)
             button.title = name
         }
     }
     
     private func setupMenuBar() {
-        if let button = statusItem.button {
-            button.title = "Loading..."  // Initial state
+        if let button = StatusBarController.statusItem.button {
+            button.title = "Loading..."
         }
         
         setupMenu()
@@ -160,8 +167,18 @@ class StatusBarController: NSObject {
             action: nil, // Temporarily
             keyEquivalent: "r"
         )
-        
+        renameItem.image = NSImage(systemSymbolName: "pencil.line", accessibilityDescription: nil)
         menu.addItem(self.renameItem)
+        
+        // Add troubleshoot helper
+        let troubleshootItem = NSMenuItem(
+            title: NSLocalizedString("Troubleshoot Space Detection", comment: ""),
+            action: #selector(troubleshootSpaceDetection),
+            keyEquivalent: ""
+        )
+        troubleshootItem.image = NSImage(systemSymbolName: "wrench.and.screwdriver", accessibilityDescription: nil)
+        troubleshootItem.target = self
+        menu.addItem(troubleshootItem)
         
         // Add show labels option
         self.showLabelsMenuItem = NSMenuItem(
@@ -182,6 +199,7 @@ class StatusBarController: NSObject {
             action: #selector(openSettingsWindow),
             keyEquivalent: ","
         )
+        settingsItem.image = NSImage(systemSymbolName: "gear", accessibilityDescription: nil)
         settingsItem.target = self
         menu.addItem(settingsItem)
         
@@ -193,10 +211,11 @@ class StatusBarController: NSObject {
             action: #selector(quitApp),
             keyEquivalent: "q"
         )
+        quitItem.image = NSImage(systemSymbolName: "xmark.circle", accessibilityDescription: nil)
         quitItem.target = self
         menu.addItem(quitItem)
         
-        statusItem.menu = menu
+        StatusBarController.statusItem.menu = menu
     }
     
     private func updateRenameMenuItemState() {
@@ -219,10 +238,10 @@ class StatusBarController: NSObject {
             return // Fullscreen
         }
         
-        guard let button = statusItem.button else { return }
+        guard let button = StatusBarController.statusItem.button else { return }
         
         // Close the menu
-        statusItem.menu?.cancelTracking()
+        StatusBarController.statusItem.menu?.cancelTracking()
         
         // Configure the popover
         let renameVC = RenameViewController(spaceManager: spaceManager) { [weak self] in
@@ -240,6 +259,43 @@ class StatusBarController: NSObject {
         
         self.showLabelsMenuItem.state = labelManager.isEnabled ? .on : .off
     }
+    
+    @objc private func troubleshootSpaceDetection() {
+            openSettingsWindow()
+        
+            var alertTitle = ""
+            var alertMessage = ""
+            
+            if SpaceManager.isManualSpacesEnabled {
+                if spaceManager.currentSpaceUUID == "FULLSCREEN" {
+                    alertTitle = NSLocalizedString("Not a fullscreen?", comment: "")
+                    alertMessage = NSLocalizedString("Add it as a space in\nSettings → General → Manually add spaces", comment: "")
+                } else {
+                    alertTitle = NSLocalizedString("Not a space?", comment: "")
+                    alertMessage = NSLocalizedString("Remove it in\nSettings → Spaces\n(Switch to other space first)", comment: "")
+                }
+            } else {
+                if spaceManager.currentSpaceUUID == "FULLSCREEN" {
+                    alertTitle = NSLocalizedString("Not a fullscreen?", comment: "")
+                    alertMessage = NSLocalizedString("Fix this issue in\nSettings → General → Fix automatic space detection", comment: "")
+                } else {
+                    alertTitle = NSLocalizedString("Not a space?", comment: "")
+                    alertMessage = NSLocalizedString("Fix this issue in\nSettings → General → Fix automatic space detection", comment: "")
+                }
+            }
+            
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+                guard let window = self.settingsWindowController?.window else { return }
+                
+                let alert = NSAlert()
+                alert.messageText = alertTitle
+                alert.informativeText = alertMessage
+                alert.alertStyle = .informational
+                alert.addButton(withTitle: "OK")
+                
+                alert.beginSheetModal(for: window, completionHandler: nil)
+            }
+        }
     
     @objc func openSettingsWindow() {
         // Show dock icon when opening settings
@@ -306,6 +362,11 @@ class StatusBarController: NSObject {
     
     private func updateShowLabelsMenuItemState() {
         self.showLabelsMenuItem.state = labelManager.isEnabled ? .on : .off
+    }
+    
+    static func toggleStatusBar() {
+        StatusBarController.isStatusBarHidden.toggle()
+        StatusBarController.statusItem.isVisible = !StatusBarController.isStatusBarHidden
     }
 }
 
