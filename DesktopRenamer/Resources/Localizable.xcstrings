@@ -31,6 +31,21 @@
         }
       }
     },
+    "1. Go through desktops" : {
+
+    },
+    "2. Go through fullscreen" : {
+
+    },
+    "Adjust" : {
+
+    },
+    "Adjust fullscreen threshold" : {
+
+    },
+    "Adjust Fullscreen Threshold" : {
+
+    },
     "Allow other apps to get space names." : {
       "localizations" : {
         "zh-Hans" : {
@@ -114,6 +129,9 @@
         }
       }
     },
+    "Current ncCnt: %lld" : {
+
+    },
     "Generate bug report" : {
       "localizations" : {
         "zh-Hans" : {
@@ -125,6 +143,12 @@
       }
     },
     "Hide menubar icon" : {
+
+    },
+    "If enabled, new spaces won't be added automatically. You must add them in the Spaces tab." : {
+
+    },
+    "Manually add spaces" : {
 
     },
     "Menu.About" : {
@@ -222,6 +246,9 @@
         }
       }
     },
+    "Recorded: %lld" : {
+
+    },
     "Rename.Label" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -255,6 +282,9 @@
           }
         }
       }
+    },
+    "Save" : {
+
     },
     "Save Log" : {
       "localizations" : {
@@ -1269,6 +1299,7 @@
       }
     },
     "This method is more stable than the normal one. It detects space every %@s, slightly increasing the energy cost.\n\nNotice, the space name may update twice every time you switch the space, and you may also see the name of the main space appears shortly." : {
+      "extractionState" : "stale",
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
@@ -1278,7 +1309,11 @@
         }
       }
     },
+    "Threshold Value" : {
+
+    },
     "Use stable space detection method" : {
+      "extractionState" : "stale",
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
@@ -1297,6 +1332,9 @@
           }
         }
       }
+    },
+    "Value" : {
+
     },
     "Window.Settings.Title" : {
       "extractionState" : "manual",
