@@ -270,7 +270,7 @@ struct AddSpacesView: View {
             Text("Add New Spaces")
                 .font(.headline)
             
-            Text("Switch to the desktops you want to add. They will appear in the list below.")
+            Text("Switch to the desktops you want to add.\nThey will appear in the list below.")
                 .font(.body)
                 .foregroundColor(.secondary)
                 .multilineTextAlignment(.center)
