@@ -129,7 +129,7 @@
         }
       }
     },
-    "Current ncCnt: %lld" : {
+    "Current Metric: %lld" : {
 
     },
     "Generate bug report" : {
@@ -149,6 +149,9 @@
 
     },
     "Manually add spaces" : {
+
+    },
+    "Max Metric: %lld" : {
 
     },
     "Menu.About" : {
@@ -235,6 +238,9 @@
           }
         }
       }
+    },
+    "Min Metric: %lld" : {
+
     },
     "Please go through all spaces that may be helpful in analyzing the bug. The log is updating in real-time." : {
       "localizations" : {

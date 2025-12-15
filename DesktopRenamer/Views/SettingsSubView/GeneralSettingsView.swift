@@ -2,7 +2,6 @@ import SwiftUI
 import ServiceManagement
 import AppKit
 
-// [APITester Class remains unchanged...]
 class APITester: ObservableObject {
     @Published var responseText: String = ""
     
@@ -92,7 +91,7 @@ struct ThresholdAdjustmentView: View {
     
     @State private var thresholdValue: Int = SpaceHelper.fullscreenThreshold
     
-    // Calibration State
+    // Calibration State - These are temporary and will clear when the view/sheet is dismissed
     @State private var recordedDesktops: [String: Int] = [:]
     @State private var recordedFullscreens: [String: Int] = [:]
     
@@ -118,7 +117,8 @@ struct ThresholdAdjustmentView: View {
                         .textFieldStyle(.roundedBorder)
                         .frame(width: 80)
                     
-                    Text("Current ncCnt: \(spaceManager.currentNcCount)")
+                    // Renamed "ncCnt" to "Detection Metric"
+                    Text("Current Metric: \(spaceManager.currentNcCount)")
                         .font(.caption)
                         .foregroundColor(.secondary)
                         .monospacedDigit()
@@ -141,9 +141,16 @@ struct ThresholdAdjustmentView: View {
                             .disabled(isRecordingFullscreen)
                             
                             if !recordedDesktops.isEmpty {
-                                Text("Recorded: \(recordedDesktops.count)")
-                                    .font(.caption)
-                                    .foregroundColor(.secondary)
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text("Recorded: \(recordedDesktops.count)")
+                                    // Show Minimum value for Desktops
+                                    if let min = recordedDesktops.values.min() {
+                                        Text("Min Metric: \(min)")
+                                            .foregroundColor(.blue)
+                                    }
+                                }
+                                .font(.caption)
+                                .foregroundColor(.secondary)
                             }
                         }
                     }
@@ -160,9 +167,16 @@ struct ThresholdAdjustmentView: View {
                             .disabled(recordedDesktops.isEmpty || isRecordingDesktops)
                             
                             if !recordedFullscreens.isEmpty {
-                                Text("Recorded: \(recordedFullscreens.count)")
-                                    .font(.caption)
-                                    .foregroundColor(.secondary)
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text("Recorded: \(recordedFullscreens.count)")
+                                    // Show Maximum value for Fullscreens
+                                    if let max = recordedFullscreens.values.max() {
+                                        Text("Max Metric: \(max)")
+                                            .foregroundColor(.orange)
+                                    }
+                                }
+                                .font(.caption)
+                                .foregroundColor(.secondary)
                             }
                         }
                     }
@@ -204,9 +218,9 @@ struct ThresholdAdjustmentView: View {
             // Stop
             isRecordingDesktops = false
         } else {
-            // Start
+            // Start - Clear previous Desktop recordings to start fresh
+            // We do NOT clear fullscreens here, allowing user to do Step 1 then Step 2
             recordedDesktops.removeAll()
-            recordedFullscreens.removeAll()
             suggestionText = ""
             isRecordingDesktops = true
             // Record current immediately
@@ -220,7 +234,8 @@ struct ThresholdAdjustmentView: View {
             isRecordingFullscreen = false
             calculateSuggestion()
         } else {
-            // Start
+            // Start - Clear previous Fullscreen recordings
+            recordedFullscreens.removeAll()
             isRecordingFullscreen = true
             // Record current immediately
             recordData(uuid: spaceManager.currentSpaceUUID, ncCnt: spaceManager.currentNcCount)
@@ -228,14 +243,11 @@ struct ThresholdAdjustmentView: View {
     }
     
     private func recordData(uuid: String, ncCnt: Int) {
+        // Logic Update: Trust the user's current mode completely.
         if isRecordingDesktops {
             recordedDesktops[uuid] = ncCnt
         } else if isRecordingFullscreen {
-            // Remove ncCnt with UUID already existed in desktops part
-            // (Don't record if this UUID was seen as a desktop)
-            if recordedDesktops[uuid] == nil {
-                recordedFullscreens[uuid] = ncCnt
-            }
+            recordedFullscreens[uuid] = ncCnt
         }
     }
     
@@ -270,7 +282,6 @@ struct GeneralSettingsView: View {
     @State private var autoCheckUpdate: Bool = UpdateManager.isAutoCheckEnabled
     @State private var isResetting: Bool = false
     @State private var isAPIEnabled: Bool = SpaceManager.isAPIEnabled
-    // Replaced isStableEnabled with isManualSpacesEnabled
     @State private var isManualSpacesEnabled: Bool = SpaceManager.isManualSpacesEnabled
     @State private var isStatusBarHidden: Bool = StatusBarController.isStatusBarHidden
     
@@ -343,7 +354,6 @@ struct GeneralSettingsView: View {
                     
                     Divider()
                     
-                    // Replaced "Stable Method" with "Manual Method"
                     SettingsRow("Manually add spaces", helperText: "If enabled, new spaces won't be added automatically. You must add them in the Spaces tab.") {
                         Toggle("", isOn: $isManualSpacesEnabled)
                             .labelsHidden()
@@ -353,7 +363,6 @@ struct GeneralSettingsView: View {
                             }
                     }
                     
-                    // Show Adjust Threshold only if Manual is OFF
                     if !isManualSpacesEnabled {
                         Divider()
                         SettingsRow("Adjust fullscreen threshold") {
@@ -396,6 +405,7 @@ struct GeneralSettingsView: View {
             bugReportSheet
         }
         .sheet(isPresented: $showThresholdSheet) {
+            // New view instance created each time sheet opens, ensuring temporary data is cleared
             ThresholdAdjustmentView(spaceManager: spaceManager)
         }
     }
@@ -417,24 +427,19 @@ struct GeneralSettingsView: View {
             ScrollView {
                 ScrollViewReader { proxy in
                     VStack(alignment: .leading, spacing: 4) {
-                        // Display log entries in normal chronological order (newest at bottom)
                         ForEach(spaceManager.bugReportLog.indices, id: \.self) { index in
                             let entry = spaceManager.bugReportLog[index]
                             let isLatest = index == spaceManager.bugReportLog.count - 1
                             
                             Text(entry.description)
                                 .font(.system(.footnote, design: .monospaced))
-                                // Use accent color for the newest line, white for previous lines
                                 .foregroundColor(isLatest ? .accentColor : Color(NSColor.controlTextColor))
                                 .id(entry.id)
                         }
                     }
                     .frame(maxWidth: .infinity, alignment: .leading)
-                    // FIX 1: Scroll to bottom when log is updated
                     .onReceive(spaceManager.$bugReportLog) { log in
                         if let last = log.last {
-                            // Scroll to the newest item (which is the last item)
-                            // This must be done on the next run loop cycle to ensure the view size has updated.
                             DispatchQueue.main.async {
                                 proxy.scrollTo(last.id, anchor: .bottom)
                             }
@@ -465,7 +470,6 @@ struct GeneralSettingsView: View {
     }
     
     private func saveLog() {
-        // Convert log entries to a single string
         let logContent = spaceManager.bugReportLog.map { $0.description }.joined(separator: "\n")
         guard let data = logContent.data(using: .utf8) else { return }
         
@@ -473,41 +477,27 @@ struct GeneralSettingsView: View {
         savePanel.canCreateDirectories = true
         savePanel.showsTagField = false
         
-        // Use ISO8601 for a machine-readable timestamp in the filename
         let formatter = ISO8601DateFormatter()
         formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
         let timestamp = formatter.string(from: Date()).replacingOccurrences(of: ":", with: "-")
         
         savePanel.nameFieldStringValue = "DesktopRenamer_BugReport_\(timestamp).log"
-        // Ensure .log type is available
         savePanel.allowedContentTypes = [.log, .plainText]
         
-        // Get the window for sheet presentation (using the extension in UpdateManager)
-        // This is the window the bugReportSheet is attached to.
         guard let window = NSApp.suitableSheetWindow else { return }
         
         savePanel.beginSheetModal(for: window) { result in
             if result == .OK, let url = savePanel.url {
                 do {
                     try data.write(to: url)
-                    
-                    // Corrected the sequence of closing the log sheet and showing the thank you alert.
-                    // 1. Stop logging and close the initial sheet immediately.
                     self.spaceManager.stopBugReportLogging()
                     self.showLogSheet = false
-                    
-                    // 2. Schedule the thank you alert to be shown on the main thread AFTER a slight delay.
-                    // This ensures the first sheet (bug report log) has fully dismissed before the second sheet (alert) begins.
                     DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
                          self.showThankYouAlert()
                     }
-
                 } catch {
                     print("Error saving file: \(error)")
-                    // Optionally show an error alert
                 }
-            } else if result == .cancel {
-                // User cancelled save, keep the sheet open and logging active
             }
         }
     }
@@ -519,14 +509,11 @@ struct GeneralSettingsView: View {
         alert.alertStyle = .informational
         alert.addButton(withTitle: NSLocalizedString("Button.OK", comment: ""))
         
-        // Use keyWindow or suitableSheetWindow for modal presentation
-        // Since the bug report sheet is now closed, keyWindow should be the Settings window again.
         guard let window = NSApp.keyWindow else {
             alert.runModal()
             return
         }
         
-        // Present the alert as a sheet on the (now visible) settings window
         alert.beginSheetModal(for: window) { _ in }
     }
     
@@ -555,7 +542,6 @@ struct GeneralSettingsView: View {
     }
     
     private func resetNames() {
-        // [Existing resetNames implementation remains unchanged]
         isResetting = true
         
         let alert = NSAlert()
