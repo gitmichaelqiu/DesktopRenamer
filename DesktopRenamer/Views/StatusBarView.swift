@@ -264,19 +264,19 @@ class StatusBarController: NSObject {
             
             if SpaceManager.isManualSpacesEnabled {
                 if spaceManager.currentSpaceUUID == "FULLSCREEN" {
-                    alertTitle = "Not a fullscreen?"
-                    alertMessage = "Add it as a space in\nSettings → General → Manually add spaces"
+                    alertTitle = NSLocalizedString("Not a fullscreen?", comment: "")
+                    alertMessage = NSLocalizedString("Add it as a space in\nSettings → General → Manually add spaces", comment: "")
                 } else {
-                    alertTitle = "Not a space?"
-                    alertMessage = "Remove it in\nSettings → Spaces\n(Switch to other space first)"
+                    alertTitle = NSLocalizedString("Not a space?", comment: "")
+                    alertMessage = NSLocalizedString("Remove it in\nSettings → Spaces\n(Switch to other space first)", comment: "")
                 }
             } else {
                 if spaceManager.currentSpaceUUID == "FULLSCREEN" {
-                    alertTitle = "Not a fullscreen?"
-                    alertMessage = "Fix this issue in\nSettings → General → Fix automatic space detection"
+                    alertTitle = NSLocalizedString("Not a fullscreen?", comment: "")
+                    alertMessage = NSLocalizedString("Fix this issue in\nSettings → General → Fix automatic space detection", comment: "")
                 } else {
-                    alertTitle = "Not a space?"
-                    alertMessage = "Fix this issue in\nSettings → General → Fix automatic space detection"
+                    alertTitle = NSLocalizedString("Not a space?", comment: "")
+                    alertMessage = NSLocalizedString("Fix this issue in\nSettings → General → Fix automatic space detection", comment: "")
                 }
             }
             
