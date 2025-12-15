@@ -376,6 +376,7 @@ struct GeneralSettingsView: View {
                     }
                     
                     if isManualSpacesEnabled {
+                        Divider()
                         SettingsRow("Add spaces") {
                             Button("Add spaces") {
                                 showAddSpacesSheet = true
