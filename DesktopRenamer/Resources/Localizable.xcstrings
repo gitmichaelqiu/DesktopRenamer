@@ -71,6 +71,16 @@
         }
       }
     },
+    "Add it as a space in\nSettings → General → Manually add spaces" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "在设置 → 通用 → 手动添加桌面中添加"
+          }
+        }
+      }
+    },
     "Add New Spaces" : {
       "localizations" : {
         "zh-Hans" : {
@@ -217,6 +227,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "修复自动检测"
+          }
+        }
+      }
+    },
+    "Fix this issue in\nSettings → General → Fix automatic space detection" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "在设置 → 通用 → 修复自动检测中修复"
           }
         }
       }
@@ -392,6 +412,26 @@
         }
       }
     },
+    "Not a fullscreen?" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "不是全屏？"
+          }
+        }
+      }
+    },
+    "Not a space?" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "不是桌面？"
+          }
+        }
+      }
+    },
     "Not enough data collected." : {
       "localizations" : {
         "zh-Hans" : {
@@ -418,6 +458,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "已记录：%lld"
+          }
+        }
+      }
+    },
+    "Remove it in\nSettings → Spaces\n(Switch to other space first)" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "在设置 → 空间中删除\n（需要提前切换到其他桌面）"
           }
         }
       }
