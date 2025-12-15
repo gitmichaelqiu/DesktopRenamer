@@ -256,7 +256,15 @@ struct AddSpacesView: View {
     @ObservedObject var spaceManager: SpaceManager
     @Environment(\.presentationMode) var presentationMode
     
-    @State private var detectedSpaces: Set<String> = []
+    // Struct to hold candidate details
+    struct SpaceCandidate: Identifiable, Equatable {
+        let id = UUID()
+        let spaceUUID: String
+        let ncCnt: Int
+    }
+    
+    // List of candidates found during this session
+    @State private var candidates: [SpaceCandidate] = []
     
     var body: some View {
         VStack(spacing: 20) {
@@ -270,63 +278,106 @@ struct AddSpacesView: View {
                 .padding(.horizontal)
             
             List {
-                if detectedSpaces.isEmpty {
+                if candidates.isEmpty {
                     Text("No new spaces detected yet...")
                         .foregroundColor(.secondary)
                         .italic()
                         .padding()
                 } else {
-                    ForEach(Array(detectedSpaces).sorted(), id: \.self) { uuid in
+                    // Logic: N = current existing spaces count
+                    let existingCount = spaceManager.spaceNameDict.count
+                    
+                    ForEach(Array(candidates.enumerated()), id: \.element.id) { index, candidate in
                         HStack {
-                            VStack(alignment: .leading) {
-                                Text("New Space")
+                            VStack(alignment: .leading, spacing: 2) {
+                                // Number: New Space N + 1 + index
+                                Text("Space \(existingCount + index + 1)")
                                     .fontWeight(.medium)
-                                Text(uuid)
+                                
+                                Text("\(candidate.spaceUUID)")
                                     .font(.caption)
                                     .foregroundColor(.secondary)
+                                    .monospaced()
+                                
+                                // Show ncCnt
+                                Text("Metric: \(candidate.ncCnt)")
+                                    .font(.caption2)
+                                    .foregroundColor(.secondary)
                             }
+                            
                             Spacer()
-                            Button("Add") {
-                                addSpace(uuid)
+                            
+                            // Remove Button (Red X)
+                            Button(action: {
+                                removeCandidate(candidate)
+                            }) {
+                                Image(systemName: "xmark.circle.fill")
+                                    .foregroundColor(.red)
+                                    .font(.title2)
                             }
-                            .buttonStyle(.borderedProminent)
+                            .buttonStyle(.plain)
                         }
                         .padding(.vertical, 4)
                     }
                 }
             }
-            .frame(height: 200)
+            .frame(height: 250)
             .border(Color.gray.opacity(0.2))
             
-            HStack {
-                Button("Done") {
+            HStack(spacing: 20) {
+                // Cancel Button
+                Button("Cancel") {
                     presentationMode.wrappedValue.dismiss()
                 }
+                .keyboardShortcut(.escape)
+                
+                Spacer()
+                
+                // Add Button (Confirm)
+                Button("Add") {
+                    confirmAdditions()
+                }
+                .buttonStyle(.borderedProminent)
+                .disabled(candidates.isEmpty)
+                .keyboardShortcut(.return)
             }
         }
         .padding()
-        .frame(width: 400)
-        // CHANGE: Listen to raw UUID to capture spaces even if currently treated as fullscreen
+        .frame(width: 450)
+        // Listen to RAW UUID to capture unmasked data
         .onReceive(spaceManager.$currentRawSpaceUUID) { uuid in
-            checkForNewSpace(uuid)
+            checkForNewSpace(uuid: uuid, ncCnt: spaceManager.currentNcCount)
         }
     }
     
-    private func checkForNewSpace(_ uuid: String) {
-        // We only add spaces that are NOT "FULLSCREEN" string (safeguard)
-        // and are NOT already in the dict.
-        if uuid != "FULLSCREEN" && !spaceManager.spaceNameDict.contains(where: { $0.id == uuid }) {
-            detectedSpaces.insert(uuid)
+    private func checkForNewSpace(uuid: String, ncCnt: Int) {
+        // Valid if:
+        // 1. Not "FULLSCREEN" string
+        // 2. Not already in the saved settings (spaceNameDict)
+        // 3. Not already in our current candidate list
+        if uuid != "FULLSCREEN",
+           !spaceManager.spaceNameDict.contains(where: { $0.id == uuid }),
+           !candidates.contains(where: { $0.spaceUUID == uuid }) {
+            
+            let newCandidate = SpaceCandidate(spaceUUID: uuid, ncCnt: ncCnt)
+            candidates.append(newCandidate)
         }
     }
     
-    private func addSpace(_ uuid: String) {
-        spaceManager.addManualSpace(uuid)
-        detectedSpaces.remove(uuid)
+    private func removeCandidate(_ candidate: SpaceCandidate) {
+        if let index = candidates.firstIndex(of: candidate) {
+            candidates.remove(at: index)
+        }
+    }
+    
+    private func confirmAdditions() {
+        for candidate in candidates {
+            spaceManager.addManualSpace(candidate.spaceUUID)
+        }
+        presentationMode.wrappedValue.dismiss()
     }
 }
 
-// [GeneralSettingsView remains largely the same, just included to show context]
 struct GeneralSettingsView: View {
     @ObservedObject var spaceManager: SpaceManager
     @ObservedObject var labelManager: SpaceLabelManager
