@@ -382,13 +382,6 @@ struct GeneralSettingsView: View {
                 }
                 
                 SettingsSection("Settings.General.Advanced") {
-                    SettingsRow("Settings.General.Advanced.EnableAPI", helperText: "Allow other apps to get space names.") {
-                        Toggle("", isOn: $isAPIEnabled).labelsHidden().toggleStyle(.switch)
-                            .onChange(of: isAPIEnabled) { _ in spaceManager.spaceAPI?.toggleAPIState() }
-                    }
-                    
-                    Divider()
-                    
                     SettingsRow("Manually add spaces", helperText: "If enabled, new spaces won't be added automatically. You must add them in the Spaces tab.") {
                         Toggle("", isOn: $isManualSpacesEnabled).labelsHidden().toggleStyle(.switch)
                             .onChange(of: isManualSpacesEnabled) { newValue in
@@ -412,6 +405,13 @@ struct GeneralSettingsView: View {
                                 showThresholdSheet = true
                             }
                         }
+                    }
+                    
+                    Divider()
+                    
+                    SettingsRow("Settings.General.Advanced.EnableAPI", helperText: "Allow other apps to get space names.") {
+                        Toggle("", isOn: $isAPIEnabled).labelsHidden().toggleStyle(.switch)
+                            .onChange(of: isAPIEnabled) { _ in spaceManager.spaceAPI?.toggleAPIState() }
                     }
                     
                     Divider()
