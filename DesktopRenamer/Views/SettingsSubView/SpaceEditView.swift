@@ -82,7 +82,9 @@ struct SpaceEditView: View {
         TextField(
             defaultName(for: space),
             text: Binding(
-                get: { space.customName },
+                get: {
+                    spaceManager.spaceNameDict.first(where: { $0.id == space.id })?.customName ?? space.customName
+                },
                 set: { newValue in
                     // async to solve last char is deleted
                     DispatchQueue.main.async {
@@ -92,7 +94,6 @@ struct SpaceEditView: View {
             )
         )
         .textFieldStyle(.roundedBorder)
-        .disabled(isCurrentSpace(space))
     }
     
     private func actionButtons(for space: DesktopSpace) -> some View {
@@ -109,8 +110,8 @@ struct SpaceEditView: View {
             Image(systemName: "chevron.up")
                 .font(.system(size: 12, weight: .medium))
         }
-        .disabled(isFirstRow(space) || isCurrentSpace(space))
-        .help(isFirstRow(space) || isCurrentSpace(space)
+        .disabled(isFirstRow(space))
+        .help(isFirstRow(space)
               ? NSLocalizedString("Settings.Spaces.Edit.Help.MoveUp.Cannot", comment: "")
               : NSLocalizedString("Settings.Spaces.Edit.Help.MoveUp", comment: ""))
     }
@@ -120,8 +121,8 @@ struct SpaceEditView: View {
             Image(systemName: "chevron.down")
                 .font(.system(size: 12, weight: .medium))
         }
-        .disabled(isLastRow(space) || isCurrentSpace(space))
-        .help(isLastRow(space) || isCurrentSpace(space)
+        .disabled(isLastRow(space))
+        .help(isLastRow(space)
               ? NSLocalizedString("Settings.Spaces.Edit.Help.MoveDown.Cannot", comment: "")
               : NSLocalizedString("Settings.Spaces.Edit.Help.MoveDown", comment: ""))
     }
