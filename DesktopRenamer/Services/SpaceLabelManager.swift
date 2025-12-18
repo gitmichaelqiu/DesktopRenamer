@@ -25,16 +25,6 @@ class SpaceLabelManager: ObservableObject {
         removeAllWindows()
     }
     
-    func toggleEnabled() {
-        isEnabled.toggle()
-        
-        if isEnabled {
-            let spaceId = self.spaceManager?.currentSpaceUUID
-            let name = self.spaceManager?.getSpaceName(spaceId ?? "")
-            self.updateLabel(for: spaceId ?? "", name: name ?? "")
-        }
-    }
-    
     func updateLabel(for spaceId: String, name: String) {
         guard isEnabled, spaceId != "FULLSCREEN" else { return }
         if createdWindows[spaceId] != nil { return }
@@ -71,6 +61,40 @@ class SpaceLabelManager: ObservableObject {
     private func updateLabelsVisibility() {
         if !isEnabled {
             removeAllWindows()
+        }
+    }
+    
+    func toggleEnabled() {
+        isEnabled.toggle()
+        
+        if isEnabled {
+            let spaceId = self.spaceManager?.currentSpaceUUID
+            let name = self.spaceManager?.getSpaceName(spaceId ?? "")
+            // Fix: Added verifySpace: false to ensure immediate creation
+            self.updateLabel(for: spaceId ?? "", name: name ?? "", verifySpace: false)
+        }
+    }
+        
+    func updateLabel(for spaceId: String, name: String, verifySpace: Bool = true) {
+        guard isEnabled, spaceId != "FULLSCREEN" else { return }
+        if createdWindows[spaceId] != nil { return }
+        
+        if verifySpace {
+            // Double check before creating (Existing Logic)
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.02) {
+                // Get UUID again
+                SpaceHelper.getRawSpaceUUID { confirmedSpaceId, _ in
+                    // Create window only if two are identical
+                    if confirmedSpaceId == spaceId {
+                        // Make sure not creating a duplicated window
+                        if self.createdWindows[spaceId] == nil {
+                            self.createWindow(for: spaceId, name: name)
+                        }
+                    }
+                }
+            }
+        } else {
+            self.createWindow(for: spaceId, name: name)
         }
     }
 }
