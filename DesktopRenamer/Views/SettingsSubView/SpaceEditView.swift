@@ -92,7 +92,6 @@ struct SpaceEditView: View {
             )
         )
         .textFieldStyle(.roundedBorder)
-        .disabled(isCurrentSpace(space))
     }
     
     private func actionButtons(for space: DesktopSpace) -> some View {
