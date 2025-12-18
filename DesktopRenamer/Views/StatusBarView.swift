@@ -188,6 +188,7 @@ class StatusBarController: NSObject {
         )
         self.showLabelsMenuItem.target = self
         self.showLabelsMenuItem.state = labelManager.isEnabled ? .on : .off
+        self.showLabelsMenuItem.image = NSImage(systemSymbolName: "appwindow.swipe.rectangle", accessibilityDescription: nil)
         menu.addItem(self.showLabelsMenuItem)
         
         // Add a separator
