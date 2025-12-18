@@ -82,7 +82,9 @@ struct SpaceEditView: View {
         TextField(
             defaultName(for: space),
             text: Binding(
-                get: { space.customName },
+                get: {
+                    spaceManager.spaceNameDict.first(where: { $0.id == space.id })?.customName ?? space.customName
+                },
                 set: { newValue in
                     // async to solve last char is deleted
                     DispatchQueue.main.async {
