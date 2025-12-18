@@ -371,7 +371,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Show Desktop Label Windows"
+            "value" : "Show Space Label Windows"
           }
         },
         "zh-Hans" : {
@@ -753,7 +753,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Show desktop label window"
+            "value" : "Show space label window"
           }
         },
         "zh-Hans" : {
@@ -1588,8 +1588,7 @@
         }
       }
     },
-    "Troubleshoot space detection" : {
-      "extractionState" : "stale",
+    "Troubleshoot Space Detection" : {
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
@@ -1598,9 +1597,6 @@
           }
         }
       }
-    },
-    "Troubleshoot Space Detection" : {
-
     },
     "v%@" : {
       "localizations" : {
