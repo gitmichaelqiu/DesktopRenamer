@@ -113,6 +113,24 @@ class SpaceLabelWindow: NSWindow {
                 self.updateName(self.spaceManager.getSpaceName(self.spaceId))
             }
             .store(in: &cancellables)
+        
+        self.isRestorable = false
+        
+        // In init or a setup method
+        NSWorkspace.shared.notificationCenter.addObserver(
+            self,
+            selector: #selector(handleWake),
+            name: NSWorkspace.didWakeNotification,
+            object: nil
+        )
+    }
+    
+    @objc private func handleWake() {
+        if let screen = NSScreen.main {
+            let centerX = screen.frame.midX - (self.frame.width / 2)
+            let y = 1.5 * screen.frame.maxY
+            self.setFrameOrigin(NSPoint(x: centerX, y: y))
+        }
     }
     
     override var canBecomeKey: Bool {
