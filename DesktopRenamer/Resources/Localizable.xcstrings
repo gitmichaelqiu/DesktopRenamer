@@ -224,6 +224,9 @@
         }
       }
     },
+    "Factory Reset" : {
+
+    },
     "Fix" : {
       "localizations" : {
         "zh-Hans" : {
@@ -532,6 +535,9 @@
           }
         }
       }
+    },
+    "Reset App" : {
+
     },
     "Save" : {
       "localizations" : {
@@ -1594,7 +1600,7 @@
         }
       }
     },
-    "There are no parameters to fix for Automatic detection.\nIf the issue still happens, switch to other methods." : {
+    "There are no parameters to adjust for Automatic detection.\nIf the issue still happens, switch to other methods." : {
 
     },
     "This generates a log that is helpful for the developers to debug." : {
@@ -1673,6 +1679,9 @@
           }
         }
       }
+    },
+    "Wipe all data and restore default settings." : {
+
     }
   },
   "version" : "1.1"
