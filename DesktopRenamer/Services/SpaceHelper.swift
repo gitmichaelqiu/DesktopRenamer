@@ -7,15 +7,13 @@ class SpaceHelper {
         set { UserDefaults.standard.set(newValue, forKey: "com.michaelqiu.desktoprenamer.fullscreenthreshold") }
     }
 
-    // UPDATED: Returns (UUID, isDesktop(Finder), ncCount(Metric), DisplayID)
+    // Callback: (UUID, isDesktop, ncCount, DisplayID)
     private static var onSpaceChange: ((String, Bool, Int, String) -> Void)?
-    
-    private static var displayMonitorTimer: Timer?
-    private static var lastActiveScreenID: NSNumber?
     
     static func startMonitoring(onChange: @escaping (String, Bool, Int, String) -> Void) {
         onSpaceChange = onChange
         
+        // Monitor system space changes
         NSWorkspace.shared.notificationCenter.addObserver(
             forName: NSWorkspace.activeSpaceDidChangeNotification,
             object: nil,
@@ -24,53 +22,70 @@ class SpaceHelper {
             detectSpaceChange()
         }
         
-        startDisplayMonitoring()
+        // Also monitor app activation to catch focus changes between displays
+        NSWorkspace.shared.notificationCenter.addObserver(
+            forName: NSWorkspace.didActivateApplicationNotification,
+            object: nil,
+            queue: .main
+        ) { _ in
+            detectSpaceChange()
+        }
+        
         detectSpaceChange()
     }
     
     static func stopMonitoring() {
-        stopDisplayMonitoring()
         DistributedNotificationCenter.default().removeObserver(self)
         NSWorkspace.shared.notificationCenter.removeObserver(self)
     }
     
-    // MARK: - Display Monitoring
-    
-    private static func startDisplayMonitoring() {
-        stopDisplayMonitoring()
-        if let currentScreen = getActiveDisplay() {
-            lastActiveScreenID = currentScreen.deviceDescription[NSDeviceDescriptionKey("NSScreenNumber")] as? NSNumber
-        }
-        displayMonitorTimer = Timer.scheduledTimer(withTimeInterval: 0.2, repeats: true) { _ in
-            checkCursorDisplay()
-        }
-    }
-    
-    private static func stopDisplayMonitoring() {
-        displayMonitorTimer?.invalidate()
-        displayMonitorTimer = nil
-    }
-    
-    private static func checkCursorDisplay() {
-        guard let currentScreen = getActiveDisplay() else { return }
-        let currentID = currentScreen.deviceDescription[NSDeviceDescriptionKey("NSScreenNumber")] as? NSNumber
-        
-        if currentID != lastActiveScreenID {
-            lastActiveScreenID = currentID
-            detectSpaceChange()
-        }
-    }
-    
     // MARK: - Core Logic
     
+    /// Determines the active display based on the Frontmost App's Window.
+    /// Fallback to mouse position only if no windows are found (e.g. Empty Desktop).
     private static func getActiveDisplay() -> NSScreen? {
+        // 1. Try to find the screen containing the Frontmost App's main window
+        if let frontApp = NSWorkspace.shared.frontmostApplication {
+            let options = CGWindowListOption(arrayLiteral: .optionOnScreenOnly, .excludeDesktopElements)
+            let windowList = CGWindowListCopyWindowInfo(options, kCGNullWindowID) as? [[String: Any]] ?? []
+            
+            for window in windowList {
+                // Check if window belongs to frontmost app and is a standard window (Layer 0)
+                if let pid = window[kCGWindowOwnerPID as String] as? Int,
+                   pid == frontApp.processIdentifier,
+                   let layer = window[kCGWindowLayer as String] as? Int,
+                   layer == 0 {
+                    
+                    if let bounds = window[kCGWindowBounds as String] as? [String: Any],
+                       let x = bounds["X"] as? CGFloat,
+                       let y = bounds["Y"] as? CGFloat,
+                       let w = bounds["Width"] as? CGFloat,
+                       let h = bounds["Height"] as? CGFloat {
+                        
+                        let rect = CGRect(x: x, y: y, width: w, height: h)
+                        let center = CGPoint(x: rect.midX, y: rect.midY)
+                        
+                        // Find which screen contains this window's center
+                        // Note: isPoint handles coordinate flipping
+                        for screen in NSScreen.screens {
+                            if isPoint(center, inside: screen.frame) {
+                                return screen
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        
+        // 2. Fallback: Use Mouse Location (e.g., if clicking on empty desktop)
         let mouseLocation = NSEvent.mouseLocation
         return NSScreen.screens.first { NSMouseInRect(mouseLocation, $0.frame, false) }
     }
     
-    // UPDATED: Returns ALL metrics so Manager can choose
     static func getRawSpaceUUID(completion: @escaping (String, Bool, Int, String) -> Void) {
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) { // Slight delay to allow window server to update
+            
+            // 1. Determine Target Display
             guard let activeScreen = getActiveDisplay() else {
                 completion("", false, 0, "Unknown")
                 return
@@ -80,6 +95,7 @@ class SpaceHelper {
             let screenName = activeScreen.localizedName
             let displayIdentifier = "\(screenName) (\(screenID))"
             
+            // 2. Scan Windows
             let options = CGWindowListOption(arrayLiteral: .optionOnScreenOnly)
             let windowList = CGWindowListCopyWindowInfo(options, kCGNullWindowID) as? [[String: Any]] ?? []
             
@@ -97,10 +113,11 @@ class SpaceHelper {
                 let windowRect = CGRect(x: x, y: y, width: w, height: h)
                 let windowCenter = CGPoint(x: windowRect.midX, y: windowRect.midY)
                 
+                // CRITICAL: Filter windows by the DETECTED active screen
                 if isPoint(windowCenter, inside: activeScreen.frame) {
                     if let owner = window[kCGWindowOwnerName as String] as? String {
                         
-                        // 1. Wallpaper UUID
+                        // UUID (Wallpaper)
                         if owner == "Dock",
                            let name = window[kCGWindowName as String] as? String,
                            name.starts(with: "Wallpaper-") {
@@ -108,13 +125,12 @@ class SpaceHelper {
                             if uuid == "" { uuid = "MAIN" }
                         }
                         
-                        // 2. Metric-based (NC Count)
+                        // Metric (NC Count)
                         if owner == "Notification Center" {
                             ncCnt += 1
                         }
                         
-                        // 3. Automatic/Finder-based
-                        // Finder desktop window always has negative layer
+                        // Desktop Check (Finder Background)
                         if owner == "Finder",
                            let layer = window[kCGWindowLayer as String] as? Int,
                            layer < 0 {
@@ -135,6 +151,9 @@ class SpaceHelper {
     }
     
     static func isPoint(_ point: CGPoint, inside screenFrame: CGRect) -> Bool {
+        // Core Graphics (Window List) uses Top-Left origin (Y=0 is top)
+        // AppKit (NSScreen) uses Bottom-Left origin (Y=0 is bottom)
+        // We must flip the point relative to the primary screen height
         if let primaryScreen = NSScreen.screens.first {
             let flippedY = primaryScreen.frame.height - point.y
             let flippedPoint = CGPoint(x: point.x, y: flippedY)
