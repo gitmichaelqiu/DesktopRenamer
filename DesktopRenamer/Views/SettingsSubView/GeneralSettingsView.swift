@@ -687,15 +687,16 @@ struct GeneralSettingsView: View {
         alert.addButton(withTitle: "Reset & Quit")
         alert.addButton(withTitle: "Cancel")
         
-        if alert.runModal() == .alertFirstButtonReturn {
-            // 1. Wipe Defaults
-            if let bundleID = Bundle.main.bundleIdentifier {
-                UserDefaults.standard.removePersistentDomain(forName: bundleID)
-                UserDefaults.standard.synchronize()
+        guard let window = NSApp.suitableSheetWindow else { return }
+        alert.beginSheetModal(for: window) { result in
+            if result == .OK {
+                if let bundleID = Bundle.main.bundleIdentifier {
+                    UserDefaults.standard.removePersistentDomain(forName: bundleID)
+                    UserDefaults.standard.synchronize()
+                }
+                
+                NSApp.terminate(nil)
             }
-            
-            // 2. Quit to ensure fresh state on next launch
-            NSApp.terminate(nil)
         }
     }
 }
