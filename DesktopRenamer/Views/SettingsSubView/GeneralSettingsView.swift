@@ -690,7 +690,7 @@ struct GeneralSettingsView: View {
         
         guard let window = NSApp.suitableSheetWindow else { return }
         alert.beginSheetModal(for: window) { result in
-            if result == .OK {
+            if result == .alertFirstButtonReturn {
                 if let bundleID = Bundle.main.bundleIdentifier {
                     UserDefaults.standard.removePersistentDomain(forName: bundleID)
                     UserDefaults.standard.synchronize()
