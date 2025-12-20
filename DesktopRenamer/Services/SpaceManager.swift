@@ -66,7 +66,12 @@ class SpaceManager: ObservableObject {
     var isManualMode: Bool { detectionMethod == .manual }
     
     static var isAPIEnabled: Bool {
-        get { UserDefaults.standard.bool(forKey: isAPIEnabledKey) }
+        get {
+            if UserDefaults.standard.object(forKey: isAPIEnabledKey) == nil {
+                return true
+            }
+            return UserDefaults.standard.bool(forKey: isAPIEnabledKey)
+        }
         set { UserDefaults.standard.set(newValue, forKey: isAPIEnabledKey) }
     }
     

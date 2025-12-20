@@ -536,7 +536,7 @@
         }
       }
     },
-    "Reset App" : {
+    "Reset" : {
 
     },
     "Save" : {
@@ -1679,9 +1679,6 @@
           }
         }
       }
-    },
-    "Wipe all data and restore default settings." : {
-
     }
   },
   "version" : "1.1"
