@@ -10,8 +10,6 @@ struct SpaceEditView: View {
             if desktopSpaces.isEmpty {
                 emptyStateView
             } else {
-                // We use a List to allow for native-looking sections
-                // Alternatively, we could use ScrollView + VStack if we want distinct Tables
                 ScrollView {
                     VStack(alignment: .leading, spacing: 20) {
                         ForEach(groupedDisplayIDs, id: \.self) { displayID in
@@ -20,6 +18,7 @@ struct SpaceEditView: View {
                                 Text(displayID)
                                     .font(.headline)
                                     .padding(.leading, 4)
+                                    .padding(.top, 10) // Extra breathing room top of section
                                 
                                 // Table for this display
                                 displaySpecificTable(for: displayID)
@@ -28,6 +27,7 @@ struct SpaceEditView: View {
                         }
                     }
                     .padding()
+                    .padding(.bottom, 40)
                 }
             }
         }
@@ -36,9 +36,38 @@ struct SpaceEditView: View {
         .onReceive(spaceManager.$currentSpaceUUID) { _ in refreshData() }
     }
     
-    // Computed property to get unique display IDs
+    // Computed property to get unique display IDs with smart sorting
     private var groupedDisplayIDs: [String] {
-        Array(Set(desktopSpaces.map { $0.displayID })).sorted()
+        let ids = Array(Set(desktopSpaces.map { $0.displayID }))
+        
+        return ids.sorted { id1, id2 in
+            // Always put "Main" (legacy) at the top
+            if id1 == "Main" { return true }
+            if id2 == "Main" { return false }
+            
+            // Try to extract numbers from "Name (123)" format
+            let num1 = extractDisplayNumber(from: id1)
+            let num2 = extractDisplayNumber(from: id2)
+            
+            if num1 != num2 {
+                return num1 < num2
+            }
+            
+            // Fallback to alphabetical
+            return id1 < id2
+        }
+    }
+    
+    private func extractDisplayNumber(from id: String) -> Int {
+        // Look for pattern like "(1)" or "(2)"
+        guard let start = id.lastIndex(of: "("),
+              let end = id.lastIndex(of: ")"),
+              start < end else {
+            return Int.max // Put unknown formats at the end
+        }
+        
+        let numberString = id[id.index(after: start)..<end]
+        return Int(numberString) ?? Int.max
     }
     
     private func spaces(for displayID: String) -> [DesktopSpace] {
@@ -46,10 +75,10 @@ struct SpaceEditView: View {
     }
     
     private func calculateTableHeight(for displayID: String) -> CGFloat {
-        // Rough estimation: Header (30) + Row (30) * Count.
-        // Min height 60, Max height constrained by window, but ScrollView handles overflow.
+        // Header (30) + Row (30) * Count.
+        // Added +5 buffer to ensure borders render cleanly
         let count = spaces(for: displayID).count
-        return CGFloat(30 + (count * 30))
+        return CGFloat(30 + (count * 34))
     }
     
     // Subviews
@@ -174,10 +203,7 @@ struct SpaceEditView: View {
     }
     
     private func moveRowUp(_ space: DesktopSpace) {
-        // Find the full list
         var allSpaces = spaceManager.spaceNameDict
-        
-        // Find siblings in the SAME display
         let siblings = allSpaces.filter { $0.displayID == space.displayID }.sorted { $0.num < $1.num }
         
         guard let currentIndex = siblings.firstIndex(where: { $0.id == space.id }),
@@ -185,7 +211,6 @@ struct SpaceEditView: View {
         
         let prevSpace = siblings[currentIndex - 1]
         
-        // Swap their NUMBERS
         if let idx1 = allSpaces.firstIndex(where: { $0.id == space.id }),
            let idx2 = allSpaces.firstIndex(where: { $0.id == prevSpace.id }) {
             
@@ -219,11 +244,8 @@ struct SpaceEditView: View {
     
     private func deleteRow(_ space: DesktopSpace) {
         var allSpaces = spaceManager.spaceNameDict
-        
-        // Remove the item
         allSpaces.removeAll(where: { $0.id == space.id })
         
-        // Re-number siblings in that display
         let displayID = space.displayID
         var siblings = allSpaces.filter { $0.displayID == displayID }.sorted { $0.num < $1.num }
         
@@ -231,10 +253,7 @@ struct SpaceEditView: View {
             siblings[index].num = index + 1
         }
         
-        // Merge back into main list
-        // 1. Remove all old siblings from main list
         allSpaces.removeAll(where: { $0.displayID == displayID })
-        // 2. Add updated siblings back
         allSpaces.append(contentsOf: siblings)
         
         saveAndRefresh(allSpaces)
