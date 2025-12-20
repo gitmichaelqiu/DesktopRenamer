@@ -32,7 +32,7 @@ class SpaceLabelManager: ObservableObject {
         // Double check before creating
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.02) {
             // Get UUID again
-            SpaceHelper.getRawSpaceUUID { confirmedSpaceId, _ in
+            SpaceHelper.getRawSpaceUUID { confirmedSpaceId, _, _ in
                 // Create window only if two are identical
                 if confirmedSpaceId == spaceId {
                     // Make sure not creating a duplicated window
@@ -83,7 +83,7 @@ class SpaceLabelManager: ObservableObject {
             // Double check before creating (Existing Logic)
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.02) {
                 // Get UUID again
-                SpaceHelper.getRawSpaceUUID { confirmedSpaceId, _ in
+                SpaceHelper.getRawSpaceUUID { confirmedSpaceId, _, _ in
                     // Create window only if two are identical
                     if confirmedSpaceId == spaceId {
                         // Make sure not creating a duplicated window
