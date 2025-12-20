@@ -4,39 +4,38 @@ import Combine
 class SpaceLabelWindow: NSWindow {
     private let label: NSTextField
     public let spaceId: String
+    private let displayID: String
     private var cancellables = Set<AnyCancellable>()
     private let spaceManager: SpaceManager
     
     private let frameWidth: CGFloat = 400
     private let frameHeight: CGFloat = 200
     
-    init(spaceId: String, name: String, spaceManager: SpaceManager) {
+    init(spaceId: String, name: String, displayID: String, spaceManager: SpaceManager) {
         self.spaceId = spaceId
+        self.displayID = displayID
         self.spaceManager = spaceManager
         
-        // Create the label
+        // --- View Setup (Same as before) ---
         label = NSTextField(labelWithString: name)
-        label.font = .systemFont(ofSize: 50, weight: .medium) // Initial font size, will be adjusted
+        label.font = .systemFont(ofSize: 50, weight: .medium)
         label.textColor = .labelColor
         label.alignment = .center
         
-        // Create a glass effect view for the background
         let contentView: NSView
         if #available(macOS 26.0, *) {
             let glassEffectView = NSGlassEffectView(frame: NSRect(x: 0, y: 0, width: frameWidth, height: frameHeight))
             contentView = glassEffectView
         } else {
-            // Fallback on earlier versions
             let visualEffectView = NSVisualEffectView(frame: NSRect(x: 0, y: 0, width: frameWidth, height: frameHeight))
             contentView = visualEffectView
         }
         
-        // Calculate and set optimal font size and frame
+        // Font resizing logic
         let padding: CGFloat = 20
         let maxWidth = frameWidth - (padding * 2)
         let maxHeight = frameHeight - (padding * 2)
         
-        // Start with initial font size and adjust down if needed
         var fontSize: CGFloat = 50
         var attributedString = NSAttributedString(string: name, attributes: [.font: NSFont.systemFont(ofSize: fontSize, weight: .medium)])
         var stringSize = attributedString.size()
@@ -49,7 +48,6 @@ class SpaceLabelWindow: NSWindow {
         
         label.font = .systemFont(ofSize: fontSize, weight: .medium)
         
-        // Center the label in the glass effect view
         let labelFrame = NSRect(
             x: (frameWidth - stringSize.width) / 2,
             y: (frameHeight - stringSize.height) / 2,
@@ -57,16 +55,14 @@ class SpaceLabelWindow: NSWindow {
             height: stringSize.height
         )
         label.frame = labelFrame
-        
-        // Add label to glass effect view
         contentView.addSubview(label)
         
-        // Initialize window with panel behavior
+        // --- Window Init ---
         super.init(
             contentRect: NSRect(x: 0, y: 0, width: frameWidth, height: frameHeight),
             styleMask: [.borderless],
             backing: .buffered,
-            defer: true  // Changed to true to prevent automatic display
+            defer: true
         )
         
         self.contentView = contentView
@@ -79,33 +75,28 @@ class SpaceLabelWindow: NSWindow {
         self.hasShadow = false
         self.level = .floating
         
-        // Set window to be managed by Mission Control but stay in current space
         self.collectionBehavior = [
             .managed,
             .stationary,
-            .participatesInCycle,  // Changed to ensure proper space management
-            .fullScreenAuxiliary   // Ensures proper behavior in full screen
+            .participatesInCycle,
+            .fullScreenAuxiliary
         ]
         
-        // Make window completely invisible to mouse events
         self.ignoresMouseEvents = true
         self.acceptsMouseMovedEvents = false
         
-        // Position the window at the top center of the screen
-        if let screen = NSScreen.main {
-            let centerX = screen.frame.midX - (103 / 2)
-            let y = 1.5 * screen.frame.maxY
-            self.setFrameOrigin(NSPoint(x: centerX, y: y))
-        }
-        
-        // Additional properties to make window more invisible
+        // Hide standard controls
         self.titlebarAppearsTransparent = true
         self.titleVisibility = .hidden
         self.standardWindowButton(.closeButton)?.isHidden = true
         self.standardWindowButton(.miniaturizeButton)?.isHidden = true
         self.standardWindowButton(.zoomButton)?.isHidden = true
         
-        // Observe space name changes
+        self.isRestorable = false
+        
+        // --- Observers ---
+        
+        // 1. Name Changes
         spaceManager.$spaceNameDict
             .receive(on: DispatchQueue.main)
             .sink { [weak self] _ in
@@ -114,31 +105,104 @@ class SpaceLabelWindow: NSWindow {
             }
             .store(in: &cancellables)
         
-        self.isRestorable = false
+        // 2. Screen/Wake Changes (Re-calculate position)
+        let center = NotificationCenter.default
+        center.addObserver(self, selector: #selector(repositionWindow), name: NSApplication.didChangeScreenParametersNotification, object: nil)
+        center.addObserver(self, selector: #selector(repositionWindow), name: NSWorkspace.didWakeNotification, object: nil)
         
-        // In init or a setup method
-        NSWorkspace.shared.notificationCenter.addObserver(
-            self,
-            selector: #selector(handleWake),
-            name: NSWorkspace.didWakeNotification,
-            object: nil
-        )
+        // Initial Position
+        repositionWindow()
     }
     
-    @objc private func handleWake() {
-        if let screen = NSScreen.main {
-            let centerX = screen.frame.midX - (self.frame.width / 2)
-            let y = 1.5 * screen.frame.maxY
-            self.setFrameOrigin(NSPoint(x: centerX, y: y))
+    @objc private func repositionWindow() {
+        guard let targetScreen = findTargetScreen() else { return }
+        
+        let bestOrigin = findBestOffscreenPosition(targetScreen: targetScreen)
+        self.setFrameOrigin(bestOrigin)
+    }
+    
+    private func findTargetScreen() -> NSScreen? {
+        // Find the screen matching our displayID, or fallback to main
+        return NSScreen.screens.first { screen in
+            let screenID = screen.deviceDescription[NSDeviceDescriptionKey("NSScreenNumber")] as? NSNumber ?? 0
+            let screenName = screen.localizedName
+            let idString = "\(screenName) (\(screenID))"
+            return idString == self.displayID
+        } ?? NSScreen.main
+    }
+    
+    // NEW: Smart "Safe Zone" Scanner
+    private func findBestOffscreenPosition(targetScreen: NSScreen) -> NSPoint {
+        let allScreens = NSScreen.screens
+        let frame = targetScreen.frame
+        let size = self.frame.size
+        
+        // Distance to push off-screen (small enough to stay associated, large enough to hide)
+        let offset: CGFloat = 50
+        
+        // 1. Define Candidates (Cardinal Directions)
+        // Note: AppKit coords (0,0 is bottom-left).
+        let top    = NSPoint(x: frame.midX - size.width/2, y: frame.maxY + offset)
+        let bottom = NSPoint(x: frame.midX - size.width/2, y: frame.minY - size.height - offset)
+        let left   = NSPoint(x: frame.minX - size.width - offset, y: frame.midY - size.height/2)
+        let right  = NSPoint(x: frame.maxX + offset, y: frame.midY - size.height/2)
+        
+        let cardinalCandidates = [top, bottom, left, right]
+        
+        // 2. Check Intersections (Preferred)
+        for point in cardinalCandidates {
+            let candidateRect = NSRect(origin: point, size: size)
+            
+            let intersectsAny = allScreens.contains { screen in
+                // We use a slightly smaller rect to avoid false positives on touching edges
+                return screen.frame.intersects(candidateRect.insetBy(dx: 5, dy: 5))
+            }
+            
+            if !intersectsAny {
+                // Found a clean spot!
+                return point
+            }
         }
-    }
-    
-    override var canBecomeKey: Bool {
-        return false
-    }
-    
-    override var canBecomeMain: Bool {
-        return false
+        
+        // 3. Fallback: Corners (If cardinal directions blocked)
+        let tr = NSPoint(x: frame.maxX + offset, y: frame.maxY + offset)
+        let tl = NSPoint(x: frame.minX - size.width - offset, y: frame.maxY + offset)
+        let br = NSPoint(x: frame.maxX + offset, y: frame.minY - size.height - offset)
+        let bl = NSPoint(x: frame.minX - size.width - offset, y: frame.minY - size.height - offset)
+        
+        let cornerCandidates = [tr, tl, br, bl]
+        
+        for point in cornerCandidates {
+            let candidateRect = NSRect(origin: point, size: size)
+            let intersectsAny = allScreens.contains { screen in
+                return screen.frame.intersects(candidateRect.insetBy(dx: 5, dy: 5))
+            }
+            if !intersectsAny { return point }
+        }
+
+        // 4. Worst Case: Surrounded (e.g. Center of 3x3 grid)
+        // We pick the cardinal direction with the SMALLEST overlap area
+        var bestPoint = top
+        var minOverlapArea: CGFloat = .greatestFiniteMagnitude
+        
+        for point in cardinalCandidates {
+            let candidateRect = NSRect(origin: point, size: size)
+            var totalOverlap: CGFloat = 0
+            
+            for screen in allScreens {
+                let intersection = screen.frame.intersection(candidateRect)
+                if !intersection.isEmpty {
+                    totalOverlap += intersection.width * intersection.height
+                }
+            }
+            
+            if totalOverlap < minOverlapArea {
+                minOverlapArea = totalOverlap
+                bestPoint = point
+            }
+        }
+        
+        return bestPoint
     }
     
     func updateName(_ name: String) {
