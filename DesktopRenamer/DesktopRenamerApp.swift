@@ -1,4 +1,5 @@
 import SwiftUI
+import ServiceManagement
 import Combine
 
 class AppDelegate: NSObject, NSApplicationDelegate {
@@ -7,6 +8,16 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.setActivationPolicy(.accessory)
+        
+        NSApp.setActivationPolicy(.accessory)
+        
+        let hasInitialized = UserDefaults.standard.bool(forKey: "HasInitializedDefaults")
+        if !hasInitialized {
+            try? SMAppService.mainApp.register()
+            
+            UserDefaults.standard.set(true, forKey: "HasInitializedDefaults")
+        }
+        
         DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
             self.spaceManager = SpaceManager()
             self.statusBarController = StatusBarController(spaceManager: self.spaceManager)
