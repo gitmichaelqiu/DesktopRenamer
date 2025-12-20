@@ -271,10 +271,10 @@ class StatusBarController: NSObject {
         case .automatic:
             if spaceManager.currentSpaceUUID == "FULLSCREEN" {
                  alertTitle = NSLocalizedString("Not a fullscreen?", comment: "")
-                 alertMessage = "You are using Automatic detection (Finder-based).\nIf this is a desktop space, ensure Finder is running."
+                 alertMessage = NSLocalizedString("There are no parameters to fix for Automatic detection.\nIf the issue still happens, switch to other methods.", comment: "")
             } else {
                  alertTitle = NSLocalizedString("Not a space?", comment: "")
-                 alertMessage = "You are using Automatic detection.\nIf this is a fullscreen app, ensure no Finder windows are drawn on this display."
+                 alertMessage = NSLocalizedString("There are no parameters to fix for Automatic detection.\nIf the issue still happens, switch to other methods.", comment: "")
             }
             
         case .metric:
