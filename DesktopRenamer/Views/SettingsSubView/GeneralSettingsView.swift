@@ -494,6 +494,14 @@ struct GeneralSettingsView: View {
                         }
                         .keyboardShortcut("b")
                     }
+                    
+                    Divider()
+
+                    SettingsRow("Factory Reset", helperText: "Wipe all data and restore default settings.") {
+                        Button("Reset App") {
+                            performFactoryReset()
+                        }
+                    }
                 }
                 Spacer()
             }
@@ -668,6 +676,26 @@ struct GeneralSettingsView: View {
                     successAlert.beginSheetModal(for: window) { _ in }
                 }
             }
+        }
+    }
+    
+    private func performFactoryReset() {
+        let alert = NSAlert()
+        alert.messageText = "Factory Reset"
+        alert.informativeText = "Are you sure? This will delete all your space names and settings. The app will quit immediately."
+        alert.alertStyle = .critical
+        alert.addButton(withTitle: "Reset & Quit")
+        alert.addButton(withTitle: "Cancel")
+        
+        if alert.runModal() == .alertFirstButtonReturn {
+            // 1. Wipe Defaults
+            if let bundleID = Bundle.main.bundleIdentifier {
+                UserDefaults.standard.removePersistentDomain(forName: bundleID)
+                UserDefaults.standard.synchronize()
+            }
+            
+            // 2. Quit to ensure fresh state on next launch
+            NSApp.terminate(nil)
         }
     }
 }
