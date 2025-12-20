@@ -456,7 +456,6 @@ struct GeneralSettingsView: View {
                             Text("Manual").tag(DetectionMethod.manual)
                         }
                         .labelsHidden()
-                        .frame(width: 140)
                     }
                     
                     if spaceManager.detectionMethod == .metric {
