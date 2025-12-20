@@ -449,7 +449,7 @@ struct GeneralSettingsView: View {
                 }
                 
                 SettingsSection("Settings.General.Advanced") {
-                    SettingsRow("Fullscreen detection method", helperText: "Choose how the app determines if a space is a Desktop or a Fullscreen App.") {
+                    SettingsRow("Fullscreen detection method", helperText: "Choose how the app determines if a space is a Desktop or a Fullscreen App.\n\nAutomatic: No extra actions required.\n\nMetric-based: Based on the thresold of a metric. May not work for multiple displays.\n\nManual: All spaces that are not added will be treated as fullscreen.") {
                         Picker("", selection: $spaceManager.detectionMethod) {
                             Text("Automatic").tag(DetectionMethod.automatic)
                             Text("Metric-based").tag(DetectionMethod.metric)
