@@ -1,6 +1,5 @@
 import SwiftUI
 
-// Space Edit View
 struct SpaceEditView: View {
     @ObservedObject var spaceManager: SpaceManager
     @ObservedObject var labelManager: SpaceLabelManager
@@ -11,14 +10,46 @@ struct SpaceEditView: View {
             if desktopSpaces.isEmpty {
                 emptyStateView
             } else {
-                tableHeader
-                spaceTable
+                // We use a List to allow for native-looking sections
+                // Alternatively, we could use ScrollView + VStack if we want distinct Tables
+                ScrollView {
+                    VStack(alignment: .leading, spacing: 20) {
+                        ForEach(groupedDisplayIDs, id: \.self) { displayID in
+                            VStack(alignment: .leading, spacing: 8) {
+                                // Section Header
+                                Text(displayID)
+                                    .font(.headline)
+                                    .padding(.leading, 4)
+                                
+                                // Table for this display
+                                displaySpecificTable(for: displayID)
+                                    .frame(height: calculateTableHeight(for: displayID))
+                            }
+                        }
+                    }
+                    .padding()
+                }
             }
         }
-        .padding()
         .onAppear(perform: refreshData)
         .onReceive(spaceManager.$spaceNameDict) { _ in refreshData() }
         .onReceive(spaceManager.$currentSpaceUUID) { _ in refreshData() }
+    }
+    
+    // Computed property to get unique display IDs
+    private var groupedDisplayIDs: [String] {
+        Array(Set(desktopSpaces.map { $0.displayID })).sorted()
+    }
+    
+    private func spaces(for displayID: String) -> [DesktopSpace] {
+        desktopSpaces.filter { $0.displayID == displayID }.sorted { $0.num < $1.num }
+    }
+    
+    private func calculateTableHeight(for displayID: String) -> CGFloat {
+        // Rough estimation: Header (30) + Row (30) * Count.
+        // Min height 60, Max height constrained by window, but ScrollView handles overflow.
+        let count = spaces(for: displayID).count
+        return CGFloat(30 + (count * 30))
     }
     
     // Subviews
@@ -38,20 +69,10 @@ struct SpaceEditView: View {
         .padding()
     }
     
-    private var tableHeader: some View {
-        HStack {
-            Text(NSLocalizedString("Settings.Spaces", comment: ""))
-                .font(.headline)
-            Spacer()
-            Text(String(format: NSLocalizedString("Settings.Spaces.Count", comment: ""), desktopSpaces.count))
-                .font(.caption)
-                .foregroundColor(.secondary)
-        }
-        .padding(.bottom, 12)
-    }
-    
-    private var spaceTable: some View {
-        Table(desktopSpaces) {
+    private func displaySpecificTable(for displayID: String) -> some View {
+        let displaySpaces = spaces(for: displayID)
+        
+        return Table(displaySpaces) {
             TableColumn("#") { space in
                 spaceNumberView(for: space)
             }
@@ -63,10 +84,11 @@ struct SpaceEditView: View {
             .width(220)
             
             TableColumn(NSLocalizedString("Settings.Spaces.Edit.Actions", comment: "")) { space in
-                actionButtons(for: space)
+                actionButtons(for: space, in: displaySpaces)
             }
             .width(67)
         }
+        .scrollDisabled(true) // We let the parent ScrollView handle scrolling
     }
     
     // Component Views
@@ -86,7 +108,6 @@ struct SpaceEditView: View {
                     spaceManager.spaceNameDict.first(where: { $0.id == space.id })?.customName ?? space.customName
                 },
                 set: { newValue in
-                    // async to solve last char is deleted
                     DispatchQueue.main.async {
                         updateSpaceName(space, newValue)
                     }
@@ -96,35 +117,31 @@ struct SpaceEditView: View {
         .textFieldStyle(.roundedBorder)
     }
     
-    private func actionButtons(for space: DesktopSpace) -> some View {
+    private func actionButtons(for space: DesktopSpace, in displayList: [DesktopSpace]) -> some View {
         HStack(spacing: 8) {
-            moveUpButton(for: space)
-            moveDownButton(for: space)
+            moveUpButton(for: space, list: displayList)
+            moveDownButton(for: space, list: displayList)
             deleteButton(for: space)
         }
         .buttonStyle(.borderless)
     }
     
-    private func moveUpButton(for space: DesktopSpace) -> some View {
-        Button(action: { moveRowUp(space) }) {
+    private func moveUpButton(for space: DesktopSpace, list: [DesktopSpace]) -> some View {
+        let isFirst = list.first?.id == space.id
+        return Button(action: { moveRowUp(space) }) {
             Image(systemName: "chevron.up")
                 .font(.system(size: 12, weight: .medium))
         }
-        .disabled(isFirstRow(space))
-        .help(isFirstRow(space)
-              ? NSLocalizedString("Settings.Spaces.Edit.Help.MoveUp.Cannot", comment: "")
-              : NSLocalizedString("Settings.Spaces.Edit.Help.MoveUp", comment: ""))
+        .disabled(isFirst)
     }
     
-    private func moveDownButton(for space: DesktopSpace) -> some View {
-        Button(action: { moveRowDown(space) }) {
+    private func moveDownButton(for space: DesktopSpace, list: [DesktopSpace]) -> some View {
+        let isLast = list.last?.id == space.id
+        return Button(action: { moveRowDown(space) }) {
             Image(systemName: "chevron.down")
                 .font(.system(size: 12, weight: .medium))
         }
-        .disabled(isLastRow(space))
-        .help(isLastRow(space)
-              ? NSLocalizedString("Settings.Spaces.Edit.Help.MoveDown.Cannot", comment: "")
-              : NSLocalizedString("Settings.Spaces.Edit.Help.MoveDown", comment: ""))
+        .disabled(isLast)
     }
     
     private func deleteButton(for space: DesktopSpace) -> some View {
@@ -134,9 +151,6 @@ struct SpaceEditView: View {
                 .foregroundColor(isCurrentSpace(space) ? Color(.disabledControlTextColor) : .red)
         }
         .disabled(isCurrentSpace(space))
-        .help(isCurrentSpace(space)
-              ? NSLocalizedString("Settings.Spaces.Edit.Help.Delete.Cannot", comment: "")
-              : NSLocalizedString("Settings.Spaces.Edit.Help.Delete", comment: ""))
     }
     
     // Helper Methods
@@ -153,80 +167,89 @@ struct SpaceEditView: View {
         space.id == spaceManager.currentSpaceUUID
     }
     
-    private func isFirstRow(_ space: DesktopSpace) -> Bool {
-        guard let index = desktopSpaces.firstIndex(where: { $0.id == space.id }) else { return true }
-        return index == 0
-    }
-    
-    private func isLastRow(_ space: DesktopSpace) -> Bool {
-        guard let index = desktopSpaces.firstIndex(where: { $0.id == space.id }) else { return true }
-        return index == desktopSpaces.count - 1
-    }
-    
     // Data Operations
     
     private func refreshData() {
-        desktopSpaces = spaceManager.spaceNameDict.sorted { $0.num < $1.num }
+        desktopSpaces = spaceManager.spaceNameDict
     }
     
     private func moveRowUp(_ space: DesktopSpace) {
-        guard let index = desktopSpaces.firstIndex(where: { $0.id == space.id }),
-              index > 0 else { return }
+        // Find the full list
+        var allSpaces = spaceManager.spaceNameDict
         
-        withAnimation(.easeInOut(duration: 0.2)) {
-            desktopSpaces.swapAt(index, index - 1)
-            updateNumbersAndSave()
+        // Find siblings in the SAME display
+        let siblings = allSpaces.filter { $0.displayID == space.displayID }.sorted { $0.num < $1.num }
+        
+        guard let currentIndex = siblings.firstIndex(where: { $0.id == space.id }),
+              currentIndex > 0 else { return }
+        
+        let prevSpace = siblings[currentIndex - 1]
+        
+        // Swap their NUMBERS
+        if let idx1 = allSpaces.firstIndex(where: { $0.id == space.id }),
+           let idx2 = allSpaces.firstIndex(where: { $0.id == prevSpace.id }) {
+            
+            let tempNum = allSpaces[idx1].num
+            allSpaces[idx1].num = allSpaces[idx2].num
+            allSpaces[idx2].num = tempNum
+            
+            saveAndRefresh(allSpaces)
         }
     }
     
     private func moveRowDown(_ space: DesktopSpace) {
-        guard let index = desktopSpaces.firstIndex(where: { $0.id == space.id }),
-              index < desktopSpaces.count - 1 else { return }
+        var allSpaces = spaceManager.spaceNameDict
+        let siblings = allSpaces.filter { $0.displayID == space.displayID }.sorted { $0.num < $1.num }
         
-        withAnimation(.easeInOut(duration: 0.2)) {
-            desktopSpaces.swapAt(index, index + 1)
-            updateNumbersAndSave()
+        guard let currentIndex = siblings.firstIndex(where: { $0.id == space.id }),
+              currentIndex < siblings.count - 1 else { return }
+        
+        let nextSpace = siblings[currentIndex + 1]
+        
+        if let idx1 = allSpaces.firstIndex(where: { $0.id == space.id }),
+           let idx2 = allSpaces.firstIndex(where: { $0.id == nextSpace.id }) {
+            
+            let tempNum = allSpaces[idx1].num
+            allSpaces[idx1].num = allSpaces[idx2].num
+            allSpaces[idx2].num = tempNum
+            
+            saveAndRefresh(allSpaces)
         }
     }
     
     private func deleteRow(_ space: DesktopSpace) {
-        guard let index = desktopSpaces.firstIndex(where: { $0.id == space.id }),
-              !isCurrentSpace(space) else { return }
+        var allSpaces = spaceManager.spaceNameDict
         
-        withAnimation(.easeInOut(duration: 0.2)) {
-            desktopSpaces.remove(at: index)
-            updateNumbersAndSave()
+        // Remove the item
+        allSpaces.removeAll(where: { $0.id == space.id })
+        
+        // Re-number siblings in that display
+        let displayID = space.displayID
+        var siblings = allSpaces.filter { $0.displayID == displayID }.sorted { $0.num < $1.num }
+        
+        for (index, _) in siblings.enumerated() {
+            siblings[index].num = index + 1
         }
+        
+        // Merge back into main list
+        // 1. Remove all old siblings from main list
+        allSpaces.removeAll(where: { $0.displayID == displayID })
+        // 2. Add updated siblings back
+        allSpaces.append(contentsOf: siblings)
+        
+        saveAndRefresh(allSpaces)
     }
     
     private func updateSpaceName(_ space: DesktopSpace, _ newName: String) {
-        guard let index = desktopSpaces.firstIndex(where: { $0.id == space.id }) else { return }
-        
-        var updatedSpace = desktopSpaces[index]
-        let trimmedName = newName.trimmingCharacters(in: .whitespacesAndNewlines)
-        updatedSpace.customName = trimmedName
-        desktopSpaces[index] = updatedSpace
-        
-        // Update data
-        spaceManager.spaceNameDict = desktopSpaces
-        spaceManager.saveSpaces()
-        
-        // Force refresh
-        refreshData()
+        guard let index = spaceManager.spaceNameDict.firstIndex(where: { $0.id == space.id }) else { return }
+        var allSpaces = spaceManager.spaceNameDict
+        allSpaces[index].customName = newName.trimmingCharacters(in: .whitespacesAndNewlines)
+        saveAndRefresh(allSpaces)
     }
     
-    private func updateNumbersAndSave() {
-        // Reindex with animation
-        for (index, _) in desktopSpaces.enumerated() {
-            desktopSpaces[index].num = index + 1
-        }
-        
-        // Sync back to spaceManager
-        spaceManager.spaceNameDict = desktopSpaces
-        spaceManager.currentTotalSpace = desktopSpaces.count
+    private func saveAndRefresh(_ newSpaces: [DesktopSpace]) {
+        spaceManager.spaceNameDict = newSpaces
         spaceManager.saveSpaces()
-        
-        // Force refresh
         refreshData()
     }
 }
