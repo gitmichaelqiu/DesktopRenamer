@@ -271,10 +271,10 @@ class StatusBarController: NSObject {
         case .automatic:
             if spaceManager.currentSpaceUUID == "FULLSCREEN" {
                  alertTitle = NSLocalizedString("Not a fullscreen?", comment: "")
-                 alertMessage = NSLocalizedString("There are no parameters to fix for Automatic detection.\nIf the issue still happens, switch to other methods.", comment: "")
+                 alertMessage = NSLocalizedString("There are no parameters to adjust for Automatic detection.\nIf the issue still happens, switch to other methods.", comment: "")
             } else {
                  alertTitle = NSLocalizedString("Not a space?", comment: "")
-                 alertMessage = NSLocalizedString("There are no parameters to fix for Automatic detection.\nIf the issue still happens, switch to other methods.", comment: "")
+                 alertMessage = NSLocalizedString("There are no parameters to adjust for Automatic detection.\nIf the issue still happens, switch to other methods.", comment: "")
             }
             
         case .metric:
