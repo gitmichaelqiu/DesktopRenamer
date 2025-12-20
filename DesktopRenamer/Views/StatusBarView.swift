@@ -260,43 +260,54 @@ class StatusBarController: NSObject {
         
         self.showLabelsMenuItem.state = labelManager.isEnabled ? .on : .off
     }
-    
-    @objc private func troubleshootSpaceDetection() {
-            openSettingsWindow()
         
-            var alertTitle = ""
-            var alertMessage = ""
-            
-            if SpaceManager.isManualSpacesEnabled {
-                if spaceManager.currentSpaceUUID == "FULLSCREEN" {
-                    alertTitle = NSLocalizedString("Not a fullscreen?", comment: "")
-                    alertMessage = NSLocalizedString("Add it as a space in\nSettings → General → Manually add spaces", comment: "")
-                } else {
-                    alertTitle = NSLocalizedString("Not a space?", comment: "")
-                    alertMessage = NSLocalizedString("Remove it in\nSettings → Spaces\n(Switch to other space first)", comment: "")
-                }
+    @objc private func troubleshootSpaceDetection() {
+        openSettingsWindow()
+    
+        var alertTitle = ""
+        var alertMessage = ""
+        
+        switch spaceManager.detectionMethod {
+        case .automatic:
+            if spaceManager.currentSpaceUUID == "FULLSCREEN" {
+                 alertTitle = NSLocalizedString("Not a fullscreen?", comment: "")
+                 alertMessage = "You are using Automatic detection (Finder-based).\nIf this is a desktop space, ensure Finder is running."
             } else {
-                if spaceManager.currentSpaceUUID == "FULLSCREEN" {
-                    alertTitle = NSLocalizedString("Not a fullscreen?", comment: "")
-                    alertMessage = NSLocalizedString("Fix this issue in\nSettings → General → Fix automatic space detection", comment: "")
-                } else {
-                    alertTitle = NSLocalizedString("Not a space?", comment: "")
-                    alertMessage = NSLocalizedString("Fix this issue in\nSettings → General → Fix automatic space detection", comment: "")
-                }
+                 alertTitle = NSLocalizedString("Not a space?", comment: "")
+                 alertMessage = "You are using Automatic detection.\nIf this is a fullscreen app, ensure no Finder windows are drawn on this display."
             }
             
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
-                guard let window = self.settingsWindowController?.window else { return }
-                
-                let alert = NSAlert()
-                alert.messageText = alertTitle
-                alert.informativeText = alertMessage
-                alert.alertStyle = .informational
-                alert.addButton(withTitle: "OK")
-                
-                alert.beginSheetModal(for: window, completionHandler: nil)
+        case .metric:
+            if spaceManager.currentSpaceUUID == "FULLSCREEN" {
+                alertTitle = NSLocalizedString("Not a fullscreen?", comment: "")
+                alertMessage = NSLocalizedString("Fix this issue in\nSettings → General → Fix automatic space detection", comment: "")
+            } else {
+                alertTitle = NSLocalizedString("Not a space?", comment: "")
+                alertMessage = NSLocalizedString("Fix this issue in\nSettings → General → Fix automatic space detection", comment: "")
+            }
+            
+        case .manual:
+            if spaceManager.currentSpaceUUID == "FULLSCREEN" {
+                alertTitle = NSLocalizedString("Not a fullscreen?", comment: "")
+                alertMessage = NSLocalizedString("Add it as a space in\nSettings → General → Add spaces", comment: "")
+            } else {
+                alertTitle = NSLocalizedString("Not a space?", comment: "")
+                alertMessage = NSLocalizedString("Remove it in\nSettings → Spaces\n(Switch to other space first)", comment: "")
             }
         }
+        
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+            guard let window = self.settingsWindowController?.window else { return }
+            
+            let alert = NSAlert()
+            alert.messageText = alertTitle
+            alert.informativeText = alertMessage
+            alert.alertStyle = .informational
+            alert.addButton(withTitle: "OK")
+            
+            alert.beginSheetModal(for: window, completionHandler: nil)
+        }
+    }
     
     @objc func openSettingsWindow() {
         // Show dock icon when opening settings

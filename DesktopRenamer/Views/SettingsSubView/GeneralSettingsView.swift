@@ -405,7 +405,6 @@ struct GeneralSettingsView: View {
     @State private var autoCheckUpdate: Bool = UpdateManager.isAutoCheckEnabled
     @State private var isResetting: Bool = false
     @State private var isAPIEnabled: Bool = SpaceManager.isAPIEnabled
-    @State private var isManualSpacesEnabled: Bool = SpaceManager.isManualSpacesEnabled
     @State private var isStatusBarHidden: Bool = StatusBarController.isStatusBarHidden
     
     @State private var showLogSheet: Bool = false
@@ -450,29 +449,32 @@ struct GeneralSettingsView: View {
                 }
                 
                 SettingsSection("Settings.General.Advanced") {
-                    SettingsRow("Manually add spaces", helperText: "If enabled, new spaces won't be added automatically. You must add them in the Spaces tab.") {
-                        Toggle("", isOn: $isManualSpacesEnabled).labelsHidden().toggleStyle(.switch)
-                            .onChange(of: isManualSpacesEnabled) { newValue in
-                                SpaceManager.isManualSpacesEnabled = newValue
-                                // REFRESH: Re-evaluate current space when mode changes
-                                spaceManager.refreshSpaceState()
-                            }
+                    SettingsRow("Fullscreen detection method", helperText: "Choose how the app determines if a space is a Desktop or a Fullscreen App.") {
+                        Picker("", selection: $spaceManager.detectionMethod) {
+                            Text("Automatic").tag(DetectionMethod.automatic)
+                            Text("Metric-based").tag(DetectionMethod.metric)
+                            Text("Manual").tag(DetectionMethod.manual)
+                        }
+                        .labelsHidden()
+                        .frame(width: 140)
                     }
                     
-                    if isManualSpacesEnabled {
+                    if spaceManager.detectionMethod == .metric {
                         Divider()
-                        SettingsRow("Add spaces") {
+                        SettingsRow("Fix automatic detection", helperText: "Adjust the threshold for metric-based detection.") {
+                            Button("Fix") {
+                                showThresholdSheet = true
+                            }
+                        }
+                    } else if spaceManager.detectionMethod == .manual {
+                        Divider()
+                        SettingsRow("Add spaces", helperText: "Manually register new desktop spaces.") {
                             Button("Add") {
                                 showAddSpacesSheet = true
                             }
                         }
                     } else {
-                        Divider()
-                        SettingsRow("Fix automatic detection") {
-                            Button("Fix") {
-                                showThresholdSheet = true
-                            }
-                        }
+                        // Automatic mode doesn't need extra buttons
                     }
                     
                     Divider()
@@ -503,7 +505,7 @@ struct GeneralSettingsView: View {
         .sheet(isPresented: $showLogSheet, onDismiss: { if spaceManager.isBugReportActive { spaceManager.stopBugReportLogging() } }) { bugReportSheet }
         .sheet(isPresented: $showThresholdSheet) { ThresholdAdjustmentView(spaceManager: spaceManager) }
         .sheet(isPresented: $showAddSpacesSheet) { AddSpacesView(spaceManager: spaceManager) }
-        .animation(.easeInOut(duration: 0.16), value: isManualSpacesEnabled)
+        .animation(.easeInOut(duration: 0.16), value: spaceManager.detectionMethod)
     }
     
     private var bugReportSheet: some View {
