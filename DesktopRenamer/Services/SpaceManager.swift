@@ -6,14 +6,15 @@ struct LogEntry: Identifiable, CustomStringConvertible {
     let id = UUID()
     let timestamp: Date
     let spaceUUID: String
-    let ncCount: Int
+    let isDesktop: Bool
     let action: String
     
     var description: String {
         let formatter = DateFormatter()
         formatter.dateFormat = "HH:mm:ss.SSS"
         let timeString = formatter.string(from: timestamp)
-        return "[\(timeString)] ACTION: \(action) | UUID: \(spaceUUID) | NCCount: \(ncCount)"
+        // Updated description to show Desktop status instead of NC Count
+        return "[\(timeString)] ACTION: \(action) | UUID: \(spaceUUID) | Desktop: \(isDesktop)"
     }
 }
 
@@ -24,11 +25,12 @@ class SpaceManager: ObservableObject {
     
     @Published private(set) var currentSpaceUUID: String = ""
     @Published private(set) var currentRawSpaceUUID: String = ""
-    // UPDATED: Track current display
     @Published private(set) var currentDisplayID: String = "Main"
     
     @Published var spaceNameDict: [DesktopSpace] = []
     @Published var currentNcCount: Int = 0
+    // Renamed for clarity, though internal logic mainly uses the new Bool
+    @Published var currentIsDesktop: Bool = false
     
     @Published var isBugReportActive: Bool = false
     @Published private(set) var bugReportLog: [LogEntry] = []
@@ -60,26 +62,25 @@ class SpaceManager: ObservableObject {
             )
         }
         
-        // UPDATED: Callback signature
-        SpaceHelper.startMonitoring { [weak self] rawUUID, ncCnt, displayID in
-            self?.handleSpaceChange(rawUUID, ncCount: ncCnt, displayID: displayID, source: "Monitor")
+        SpaceHelper.startMonitoring { [weak self] rawUUID, isDesktop, displayID in
+            self?.handleSpaceChange(rawUUID, isDesktop: isDesktop, displayID: displayID, source: "Monitor")
         }
     }
     
     func refreshSpaceState() {
-        SpaceHelper.getRawSpaceUUID { [weak self] rawUUID, ncCnt, displayID in
-            self?.handleSpaceChange(rawUUID, ncCount: ncCnt, displayID: displayID, source: "Refresh")
+        SpaceHelper.getRawSpaceUUID { [weak self] rawUUID, isDesktop, displayID in
+            self?.handleSpaceChange(rawUUID, isDesktop: isDesktop, displayID: displayID, source: "Refresh")
         }
     }
     
-    // UPDATED: Logic to handle Display ID and separate numbering
-    private func handleSpaceChange(_ rawUUID: String, ncCount: Int, displayID: String, source: String) {
+    // UPDATED: Now takes isDesktop (Bool)
+    private func handleSpaceChange(_ rawUUID: String, isDesktop: Bool, displayID: String, source: String) {
         if !Thread.isMainThread {
-            DispatchQueue.main.async { [weak self] in self?.handleSpaceChange(rawUUID, ncCount: ncCount, displayID: displayID, source: source) }
+            DispatchQueue.main.async { [weak self] in self?.handleSpaceChange(rawUUID, isDesktop: isDesktop, displayID: displayID, source: source) }
             return
         }
         
-        self.currentNcCount = ncCount
+        self.currentIsDesktop = isDesktop
         self.currentRawSpaceUUID = rawUUID
         self.currentDisplayID = displayID
         
@@ -88,27 +89,25 @@ class SpaceManager: ObservableObject {
         if SpaceManager.isManualSpacesEnabled {
             logicalUUID = rawUUID
         } else {
-            if ncCount <= SpaceHelper.fullscreenThreshold {
+            // NEW LOGIC: Use the boolean directly.
+            // If the Finder Desktop window is missing, it's a Fullscreen App.
+            if !isDesktop {
                 logicalUUID = "FULLSCREEN"
             }
         }
         
         if isBugReportActive {
             let action = (currentSpaceUUID != logicalUUID) ? "Space Switched (\(source))" : "State Check (\(source))"
-            let entry = LogEntry(timestamp: Date(), spaceUUID: rawUUID, ncCount: ncCount, action: "\(action) [\(displayID)]")
+            let entry = LogEntry(timestamp: Date(), spaceUUID: rawUUID, isDesktop: isDesktop, action: "\(action) [\(displayID)]")
             bugReportLog.append(entry)
         }
         
-        // Check if we need to update state
         if currentSpaceUUID != logicalUUID {
             currentSpaceUUID = logicalUUID
         }
         
-        // Auto-Add Logic
         if !SpaceManager.isManualSpacesEnabled && logicalUUID != "FULLSCREEN" {
-            // Check if this space is already known
             if !spaceNameDict.contains(where: { $0.id == logicalUUID }) {
-                // Determine new number specific to this display
                 let existingSpacesOnDisplay = spaceNameDict.filter { $0.displayID == displayID }
                 let maxNum = existingSpacesOnDisplay.map { $0.num }.max() ?? 0
                 let newNum = maxNum + 1
@@ -126,13 +125,7 @@ class SpaceManager: ObservableObject {
         }
     }
     
-    // UPDATED: Manual add now needs to know which display the candidate came from.
-    // For simplicity, if we add manual space, we assume it comes from the current display if not specified,
-    // but the `AddSpacesView` should really track it.
-    // Here we will use currentDisplayID for now, or you can update AddSpacesView to pass it.
     func addManualSpace(_ uuid: String) {
-        // Warning: This assumes the manual space being added is on the currently active display
-        // which is usually true because the user has to visit it to see it in the "Add" list.
         guard uuid != "FULLSCREEN", !spaceNameDict.contains(where: { $0.id == uuid }) else { return }
         
         let existingSpacesOnDisplay = spaceNameDict.filter { $0.displayID == currentDisplayID }
@@ -144,18 +137,17 @@ class SpaceManager: ObservableObject {
         refreshSpaceState()
     }
     
-    // ... [Load/Save/Logging methods remain the same] ...
-    
     func startBugReportLogging() {
-        bugReportLog = [LogEntry(timestamp: Date(), spaceUUID: currentRawSpaceUUID, ncCount: -1, action: "--- START ---")]
+        bugReportLog = [LogEntry(timestamp: Date(), spaceUUID: currentRawSpaceUUID, isDesktop: currentIsDesktop, action: "--- START ---")]
         isBugReportActive = true
     }
 
     func stopBugReportLogging() {
-        bugReportLog.append(LogEntry(timestamp: Date(), spaceUUID: currentRawSpaceUUID, ncCount: -1, action: "--- STOP ---"))
+        bugReportLog.append(LogEntry(timestamp: Date(), spaceUUID: currentRawSpaceUUID, isDesktop: currentIsDesktop, action: "--- STOP ---"))
         isBugReportActive = false
     }
     
+    // ... [Rest of the class (loadSavedSpaces, saveSpaces, getSpaceNum, etc) remains exactly the same] ...
     func prepareForTermination() {
         DistributedNotificationCenter.default().postNotificationName(
             SpaceAPI.apiToggleNotification,

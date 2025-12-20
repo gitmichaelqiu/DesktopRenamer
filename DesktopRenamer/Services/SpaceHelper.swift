@@ -2,18 +2,21 @@ import Foundation
 import AppKit
 
 class SpaceHelper {
+    // We keep the threshold for backward compatibility or valid main-screen logic if needed,
+    // but the new boolean logic takes precedence.
     static var fullscreenThreshold: Int {
         get { UserDefaults.standard.integer(forKey: "com.michaelqiu.desktoprenamer.fullscreenthreshold") }
         set { UserDefaults.standard.set(newValue, forKey: "com.michaelqiu.desktoprenamer.fullscreenthreshold") }
     }
 
-    // UPDATED: Callback now includes Display ID (String)
-    private static var onSpaceChange: ((String, Int, String) -> Void)?
+    // UPDATED: Callback now returns (UUID, isDesktop, DisplayID)
+    // We replaced the 'Int' metric with a definitive 'Bool'
+    private static var onSpaceChange: ((String, Bool, String) -> Void)?
     
     private static var displayMonitorTimer: Timer?
     private static var lastActiveScreenID: NSNumber?
     
-    static func startMonitoring(onChange: @escaping (String, Int, String) -> Void) {
+    static func startMonitoring(onChange: @escaping (String, Bool, String) -> Void) {
         onSpaceChange = onChange
         
         NSWorkspace.shared.notificationCenter.addObserver(
@@ -68,16 +71,14 @@ class SpaceHelper {
         return NSScreen.screens.first { NSMouseInRect(mouseLocation, $0.frame, false) }
     }
     
-    // UPDATED: Now returns (UUID, Metric, DisplayID)
-    static func getRawSpaceUUID(completion: @escaping (String, Int, String) -> Void) {
+    // UPDATED: Returns isDesktop (Bool) instead of ncCount (Int)
+    static func getRawSpaceUUID(completion: @escaping (String, Bool, String) -> Void) {
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
             guard let activeScreen = getActiveDisplay() else {
-                completion("", 0, "Unknown")
+                completion("", false, "Unknown")
                 return
             }
             
-            // Generate a Display Identifier
-            // We use Name + ID to make it somewhat recognizable in the UI
             let screenID = activeScreen.deviceDescription[NSDeviceDescriptionKey("NSScreenNumber")] as? NSNumber ?? 0
             let screenName = activeScreen.localizedName
             let displayIdentifier = "\(screenName) (\(screenID))"
@@ -86,7 +87,7 @@ class SpaceHelper {
             let windowList = CGWindowListCopyWindowInfo(options, kCGNullWindowID) as? [[String: Any]] ?? []
             
             var uuid = ""
-            var ncCnt = 0
+            var hasFinderDesktop = false
             
             for window in windowList {
                 guard let bounds = window[kCGWindowBounds as String] as? [String: Any],
@@ -98,26 +99,37 @@ class SpaceHelper {
                 let windowRect = CGRect(x: x, y: y, width: w, height: h)
                 let windowCenter = CGPoint(x: windowRect.midX, y: windowRect.midY)
                 
+                // Only check windows on the active display
                 if isPoint(windowCenter, inside: activeScreen.frame) {
                     if let owner = window[kCGWindowOwnerName as String] as? String {
-                        if owner == "Notification Center" {
-                            ncCnt += 1
-                        } else if owner == "Dock",
-                                let name = window[kCGWindowName as String] as? String,
-                                name.starts(with: "Wallpaper-") {
+                        
+                        // 1. Wallpaper UUID Detection (same as before)
+                        if owner == "Dock",
+                           let name = window[kCGWindowName as String] as? String,
+                           name.starts(with: "Wallpaper-") {
                             uuid = String(name.dropFirst("Wallpaper-".count))
                             if uuid == "" { uuid = "MAIN" }
+                        }
+                        
+                        // 2. New Desktop Detection Logic
+                        // Finder windows with negative layer are the desktop icons/background.
+                        // Regular Finder windows (file browser) have Layer 0.
+                        if owner == "Finder",
+                           let layer = window[kCGWindowLayer as String] as? Int,
+                           layer < 0 {
+                            hasFinderDesktop = true
                         }
                     }
                 }
             }
-            completion(uuid, ncCnt, displayIdentifier)
+            
+            completion(uuid, hasFinderDesktop, displayIdentifier)
         }
     }
     
     static func detectSpaceChange() {
-        getRawSpaceUUID { spaceUUID, ncCnt, displayID in
-            onSpaceChange?(spaceUUID, ncCnt, displayID)
+        getRawSpaceUUID { spaceUUID, isDesktop, displayID in
+            onSpaceChange?(spaceUUID, isDesktop, displayID)
         }
     }
     
