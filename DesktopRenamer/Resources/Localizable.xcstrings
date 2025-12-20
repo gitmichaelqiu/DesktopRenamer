@@ -201,7 +201,7 @@
         }
       }
     },
-    "Choose how the app determines if a space is a Desktop or a Fullscreen App." : {
+    "Choose how the app determines if a space is a Desktop or a Fullscreen App.\n\nAutomatic: No extra actions required.\n\nMetric-based: Based on the thresold of a metric. May not work for multiple displays.\n\nManual: All spaces that are not added will be treated as fullscreen." : {
 
     },
     "Create windows that only appear in Mission Control to display space names.\n\nMay not work when multiple displays are connected." : {
