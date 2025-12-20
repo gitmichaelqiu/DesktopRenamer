@@ -71,7 +71,11 @@
         }
       }
     },
+    "Add it as a space in\nSettings → General → Add spaces" : {
+
+    },
     "Add it as a space in\nSettings → General → Manually add spaces" : {
+      "extractionState" : "stale",
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
@@ -111,6 +115,9 @@
         }
       }
     },
+    "Adjust the threshold for metric-based detection." : {
+
+    },
     "Allow other apps to get space names." : {
       "localizations" : {
         "zh-Hans" : {
@@ -120,6 +127,9 @@
           }
         }
       }
+    },
+    "Automatic" : {
+
     },
     "Bug Report Log Collection" : {
       "localizations" : {
@@ -191,6 +201,9 @@
         }
       }
     },
+    "Choose how the app determines if a space is a Desktop or a Fullscreen App." : {
+
+    },
     "Create windows that only appear in Mission Control to display space names.\n\nMay not work when multiple displays are connected." : {
       "localizations" : {
         "zh-Hans" : {
@@ -241,6 +254,9 @@
         }
       }
     },
+    "Fullscreen detection method" : {
+
+    },
     "Generate bug report" : {
       "localizations" : {
         "zh-Hans" : {
@@ -262,6 +278,7 @@
       }
     },
     "If enabled, new spaces won't be added automatically. You must add them in the Spaces tab." : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -277,7 +294,11 @@
         }
       }
     },
+    "Manual" : {
+
+    },
     "Manually add spaces" : {
+      "extractionState" : "stale",
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
@@ -286,6 +307,9 @@
           }
         }
       }
+    },
+    "Manually register new desktop spaces." : {
+
     },
     "Max Metric: %lld" : {
       "localizations" : {
@@ -381,6 +405,9 @@
           }
         }
       }
+    },
+    "Metric-based" : {
+
     },
     "Metric: %lld" : {
       "localizations" : {
@@ -780,6 +807,15 @@
           }
         }
       }
+    },
+    "Settings.General.Method.Auto" : {
+
+    },
+    "Settings.General.Method.Manual" : {
+
+    },
+    "Settings.General.Method.Metric" : {
+
     },
     "Settings.General.Reset" : {
       "extractionState" : "manual",
