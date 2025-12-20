@@ -8,14 +8,18 @@ class SpaceHelper {
         set { UserDefaults.standard.set(newValue, forKey: "com.michaelqiu.desktoprenamer.fullscreenthreshold") }
     }
 
-    // Change the type of the callback to include ncCount
+    // Callback for space changes
     private static var onSpaceChange: ((String, Int) -> Void)?
+    
+    // Timer for monitoring display switching
+    private static var displayMonitorTimer: Timer?
+    private static var lastActiveScreenID: NSNumber?
     
     // Change startMonitoring to accept the new callback signature
     static func startMonitoring(onChange: @escaping (String, Int) -> Void) {
         onSpaceChange = onChange
         
-        // Monitor space changes
+        // 1. Monitor system space changes (Mission Control switches)
         NSWorkspace.shared.notificationCenter.addObserver(
             forName: NSWorkspace.activeSpaceDidChangeNotification,
             object: nil,
@@ -24,13 +28,52 @@ class SpaceHelper {
             detectSpaceChange()
         }
         
+        // 2. Start monitoring display changes (Mouse moving to different screen)
+        startDisplayMonitoring()
+        
         // Initial detection
         detectSpaceChange()
     }
     
     static func stopMonitoring() {
+        stopDisplayMonitoring()
         DistributedNotificationCenter.default().removeObserver(self)
         NSWorkspace.shared.notificationCenter.removeObserver(self)
+    }
+    
+    // MARK: - Display Monitoring
+    
+    private static func startDisplayMonitoring() {
+        stopDisplayMonitoring() // Safety reset
+        
+        // Initialize last known screen
+        if let currentScreen = getActiveDisplay() {
+            lastActiveScreenID = currentScreen.deviceDescription[NSDeviceDescriptionKey("NSScreenNumber")] as? NSNumber
+        }
+        
+        // Poll cursor location every 0.2 seconds
+        // This is lightweight and avoids the complexity/permissions of a Global Event Monitor
+        displayMonitorTimer = Timer.scheduledTimer(withTimeInterval: 0.2, repeats: true) { _ in
+            checkCursorDisplay()
+        }
+    }
+    
+    private static func stopDisplayMonitoring() {
+        displayMonitorTimer?.invalidate()
+        displayMonitorTimer = nil
+    }
+    
+    private static func checkCursorDisplay() {
+        guard let currentScreen = getActiveDisplay() else { return }
+        
+        let currentID = currentScreen.deviceDescription[NSDeviceDescriptionKey("NSScreenNumber")] as? NSNumber
+        
+        if currentID != lastActiveScreenID {
+            lastActiveScreenID = currentID
+            // Display changed! Trigger a refresh.
+            // This will call getRawSpaceUUID -> getActiveDisplay -> update logic
+            detectSpaceChange()
+        }
     }
     
     // MARK: - Core Logic
@@ -43,13 +86,12 @@ class SpaceHelper {
     }
     
     // RENAMED: getRawSpaceUUID
-    // This now filters by the Active Display (where the cursor is).
+    // This filters by the Active Display (where the cursor is).
     static func getRawSpaceUUID(completion: @escaping (String, Int) -> Void) {
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) { // Wait for Window Server update
             
             // 1. Determine which display we are interested in (where the mouse is)
             guard let activeScreen = getActiveDisplay() else {
-                // Fallback if no screen is found (unlikely), return empty state
                 completion("", 0)
                 return
             }
@@ -99,9 +141,8 @@ class SpaceHelper {
         }
     }
     
-    // Helper to manually trigger detection (exposed for Refresh actions)
+    // Helper to manually trigger detection
     static func detectSpaceChange() {
-        testMultiDisplayDetection()
         getRawSpaceUUID { spaceUUID, ncCnt in
             onSpaceChange?(spaceUUID, ncCnt)
         }
@@ -109,10 +150,8 @@ class SpaceHelper {
     
     // MARK: - Coordinate Helpers
     
-    // Helper to handle the coordinate system comparison (CoreGraphics Top-Left vs AppKit Bottom-Left)
     static func isPoint(_ point: CGPoint, inside screenFrame: CGRect) -> Bool {
         // Core Graphics uses top-left origin. NSScreen uses bottom-left origin.
-        // We flip the point's Y relative to the primary screen (Screen 0) to match.
         if let primaryScreen = NSScreen.screens.first {
             let flippedY = primaryScreen.frame.height - point.y
             let flippedPoint = CGPoint(x: point.x, y: flippedY)
@@ -121,7 +160,6 @@ class SpaceHelper {
         return screenFrame.contains(point)
     }
 }
-
 
 // Extension kept for debugging purposes if needed
 extension SpaceHelper {
