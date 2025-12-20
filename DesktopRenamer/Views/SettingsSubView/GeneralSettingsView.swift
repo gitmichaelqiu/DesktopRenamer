@@ -497,10 +497,11 @@ struct GeneralSettingsView: View {
                     
                     Divider()
 
-                    SettingsRow("Factory Reset", helperText: "Wipe all data and restore default settings.") {
-                        Button("Reset App") {
+                    SettingsRow("Factory Reset") {
+                        Button("Reset") {
                             performFactoryReset()
                         }
+                        .foregroundStyle(.red)
                     }
                 }
                 Spacer()
