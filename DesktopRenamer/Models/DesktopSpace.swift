@@ -1,6 +1,6 @@
 import Foundation
 
-struct DesktopSpace: Identifiable, Codable {
+struct DesktopSpace: Identifiable, Codable, Equatable {
     var id: String
     var customName: String
     var num: Int
