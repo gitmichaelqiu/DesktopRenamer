@@ -27,29 +27,35 @@ class SpaceLabelManager: ObservableObject {
         removeAllWindows()
         cancellables.removeAll()
     }
-    
+
     private func setupObservers() {
         guard let spaceManager = spaceManager else { return }
         
-        // NEW: Listen to Space Switches
+        // Listen to Space Switches
         spaceManager.$currentSpaceUUID
-            .dropFirst() // Skip initial load
+            .dropFirst()
             .receive(on: DispatchQueue.main)
-            .sink { [weak self] currentSpaceId in
-                guard let self = self, self.isEnabled else { return }
-                self.updateAllWindowModes(currentSpaceId: currentSpaceId)
+            .sink { [weak self] _ in
+                // We don't just care about the 'current' ID anymore.
+                // We need to check GLOBAL visibility.
+                self?.updateAllWindowModes()
             }
             .store(in: &cancellables)
     }
     
-    private func updateAllWindowModes(currentSpaceId: String) {
-        for (spaceId, window) in createdWindows {
-            if spaceId == currentSpaceId {
-                // CURRENT SPACE: Shrink & Hide (So user can work)
-                window.setMode(isCurrentSpace: true)
-            } else {
-                // OTHER SPACES: Expand & Show (For Mission Control Preview)
-                window.setMode(isCurrentSpace: false)
+    private func updateAllWindowModes() {
+        // Ask Helper: "Which spaces are actually visible on ANY monitor right now?"
+        SpaceHelper.getVisibleSpaceUUIDs { [weak self] visibleUUIDs in
+            guard let self = self, self.isEnabled else { return }
+            
+            for (spaceId, window) in self.createdWindows {
+                // VISIBILITY CHECK:
+                // If the space is in the visible set, it is being shown on SOME monitor.
+                // Therefore, it should be in "Active Mode" (Small/Safe Zone).
+                // Only totally hidden spaces get "Preview Mode" (Big/Center).
+                let isVisibleOnAnyScreen = visibleUUIDs.contains(spaceId)
+                
+                window.setMode(isCurrentSpace: isVisibleOnAnyScreen)
             }
         }
     }
