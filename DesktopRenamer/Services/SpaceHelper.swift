@@ -39,37 +39,34 @@ class SpaceHelper {
         NSWorkspace.shared.notificationCenter.removeObserver(self)
     }
     
-    // MARK: - Core Logic
-    
-    /// Determines the active display based on the Frontmost App's Window.
-    /// Fallback to mouse position only if no windows are found (e.g. Empty Desktop).
     private static func getActiveDisplay() -> NSScreen? {
-        // 1. Try to find the screen containing the Frontmost App's main window
         if let frontApp = NSWorkspace.shared.frontmostApplication {
-            let options = CGWindowListOption(arrayLiteral: .optionOnScreenOnly, .excludeDesktopElements)
-            let windowList = CGWindowListCopyWindowInfo(options, kCGNullWindowID) as? [[String: Any]] ?? []
-            
-            for window in windowList {
-                // Check if window belongs to frontmost app and is a standard window (Layer 0)
-                if let pid = window[kCGWindowOwnerPID as String] as? Int,
-                   pid == frontApp.processIdentifier,
-                   let layer = window[kCGWindowLayer as String] as? Int,
-                   layer == 0 {
-                    
-                    if let bounds = window[kCGWindowBounds as String] as? [String: Any],
-                       let x = bounds["X"] as? CGFloat,
-                       let y = bounds["Y"] as? CGFloat,
-                       let w = bounds["Width"] as? CGFloat,
-                       let h = bounds["Height"] as? CGFloat {
+            // FIX: If Finder is active, ignore window checks because Finder owns
+            // desktop windows on ALL screens simultaneously. Use mouse fallback instead.
+            if frontApp.bundleIdentifier != "com.apple.finder" {
+                
+                let options = CGWindowListOption(arrayLiteral: .optionOnScreenOnly, .excludeDesktopElements)
+                let windowList = CGWindowListCopyWindowInfo(options, kCGNullWindowID) as? [[String: Any]] ?? []
+                
+                for window in windowList {
+                    if let pid = window[kCGWindowOwnerPID as String] as? Int,
+                       pid == frontApp.processIdentifier,
+                       let layer = window[kCGWindowLayer as String] as? Int,
+                       layer == 0 {
                         
-                        let rect = CGRect(x: x, y: y, width: w, height: h)
-                        let center = CGPoint(x: rect.midX, y: rect.midY)
-                        
-                        // Find which screen contains this window's center
-                        // Note: isPoint handles coordinate flipping
-                        for screen in NSScreen.screens {
-                            if isPoint(center, inside: screen.frame) {
-                                return screen
+                        if let bounds = window[kCGWindowBounds as String] as? [String: Any],
+                           let x = bounds["X"] as? CGFloat,
+                           let y = bounds["Y"] as? CGFloat,
+                           let w = bounds["Width"] as? CGFloat,
+                           let h = bounds["Height"] as? CGFloat {
+                            
+                            let rect = CGRect(x: x, y: y, width: w, height: h)
+                            let center = CGPoint(x: rect.midX, y: rect.midY)
+                            
+                            for screen in NSScreen.screens {
+                                if isPoint(center, inside: screen.frame) {
+                                    return screen
+                                }
                             }
                         }
                     }
@@ -77,7 +74,7 @@ class SpaceHelper {
             }
         }
         
-        // 2. Fallback: Use Mouse Location (e.g., if clicking on empty desktop)
+        // Fallback: Use Mouse Location
         let mouseLocation = NSEvent.mouseLocation
         return NSScreen.screens.first { NSMouseInRect(mouseLocation, $0.frame, false) }
     }
