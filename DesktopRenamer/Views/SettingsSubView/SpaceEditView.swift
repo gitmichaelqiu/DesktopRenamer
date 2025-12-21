@@ -3,11 +3,10 @@ import SwiftUI
 struct SpaceEditView: View {
     @ObservedObject var spaceManager: SpaceManager
     @ObservedObject var labelManager: SpaceLabelManager
-    @State private var desktopSpaces: [DesktopSpace] = []
     
     var body: some View {
         VStack(spacing: 0) {
-            if desktopSpaces.isEmpty {
+            if spaceManager.spaceNameDict.isEmpty {
                 emptyStateView
             } else {
                 ScrollView {
@@ -18,11 +17,16 @@ struct SpaceEditView: View {
                                 Text(displayID)
                                     .font(.headline)
                                     .padding(.leading, 4)
-                                    .padding(.top, 10) // Extra breathing room top of section
+                                    .padding(.top, 10)
                                 
-                                // Table for this display
-                                displaySpecificTable(for: displayID)
-                                    .frame(height: calculateTableHeight(for: displayID))
+                                // NEW: Dynamic Row Stack (No height calculation needed!)
+                                spacesStack(for: displayID)
+                                    .background(Color(NSColor.controlBackgroundColor))
+                                    .cornerRadius(8)
+                                    .overlay(
+                                        RoundedRectangle(cornerRadius: 8)
+                                            .stroke(Color(NSColor.separatorColor), lineWidth: 1)
+                                    )
                             }
                         }
                     }
@@ -31,57 +35,81 @@ struct SpaceEditView: View {
                 }
             }
         }
-        .onAppear(perform: refreshData)
-        .onReceive(spaceManager.$spaceNameDict) { _ in refreshData() }
-        .onReceive(spaceManager.$currentSpaceUUID) { _ in refreshData() }
     }
     
-    // Computed property to get unique display IDs with smart sorting
     private var groupedDisplayIDs: [String] {
-        let ids = Array(Set(desktopSpaces.map { $0.displayID }))
+        let ids = Array(Set(spaceManager.spaceNameDict.map { $0.displayID }))
         
         return ids.sorted { id1, id2 in
-            // Always put "Main" (legacy) at the top
             if id1 == "Main" { return true }
             if id2 == "Main" { return false }
             
-            // Try to extract numbers from "Name (123)" format
             let num1 = extractDisplayNumber(from: id1)
             let num2 = extractDisplayNumber(from: id2)
             
-            if num1 != num2 {
-                return num1 < num2
-            }
-            
-            // Fallback to alphabetical
+            if num1 != num2 { return num1 < num2 }
             return id1 < id2
         }
     }
     
     private func extractDisplayNumber(from id: String) -> Int {
-        // Look for pattern like "(1)" or "(2)"
         guard let start = id.lastIndex(of: "("),
               let end = id.lastIndex(of: ")"),
               start < end else {
-            return Int.max // Put unknown formats at the end
+            return Int.max
         }
-        
         let numberString = id[id.index(after: start)..<end]
         return Int(numberString) ?? Int.max
     }
     
     private func spaces(for displayID: String) -> [DesktopSpace] {
-        desktopSpaces.filter { $0.displayID == displayID }.sorted { $0.num < $1.num }
+        spaceManager.spaceNameDict.filter { $0.displayID == displayID }.sorted { $0.num < $1.num }
     }
     
-    private func calculateTableHeight(for displayID: String) -> CGFloat {
-        // Header (30) + Row (30) * Count.
-        // Added +5 buffer to ensure borders render cleanly
-        let count = spaces(for: displayID).count
-        return CGFloat(30 + (count * 34))
+    private func spacesStack(for displayID: String) -> some View {
+        VStack(spacing: 0) {
+            // Header Row
+            HStack(spacing: 10) {
+                Text("#").frame(width: 30, alignment: .leading)
+                Text(NSLocalizedString("Settings.Spaces.Edit.Name", comment: "")).frame(maxWidth: .infinity, alignment: .leading)
+                Text(NSLocalizedString("Settings.Spaces.Edit.Actions", comment: "")).frame(width: 60, alignment: .trailing)
+            }
+            .font(.caption)
+            .foregroundColor(.secondary)
+            .padding(.horizontal, 12)
+            .padding(.vertical, 8)
+            .background(Color(NSColor.controlBackgroundColor))
+            
+            Divider()
+            
+            // Data Rows
+            let displaySpaces = spaces(for: displayID)
+            ForEach(displaySpaces) { space in
+                VStack(spacing: 0) {
+                    HStack(spacing: 10) {
+                        // Column 1: Number
+                        spaceNumberView(for: space)
+                            .frame(width: 30, alignment: .leading)
+                        
+                        // Column 2: Editor
+                        spaceNameEditor(for: space)
+                            .frame(maxWidth: .infinity)
+                        
+                        // Column 3: Actions
+                        actionButtons(for: space, in: displaySpaces)
+                            .frame(width: 60, alignment: .trailing)
+                    }
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 6)
+                    
+                    // Separator (except for last item)
+                    if space.id != displaySpaces.last?.id {
+                        Divider().padding(.leading, 12)
+                    }
+                }
+            }
+        }
     }
-    
-    // Subviews
     
     private var emptyStateView: some View {
         VStack(spacing: 12) {
@@ -98,35 +126,11 @@ struct SpaceEditView: View {
         .padding()
     }
     
-    private func displaySpecificTable(for displayID: String) -> some View {
-        let displaySpaces = spaces(for: displayID)
-        
-        return Table(displaySpaces) {
-            TableColumn("#") { space in
-                spaceNumberView(for: space)
-            }
-            .width(30)
-            
-            TableColumn(NSLocalizedString("Settings.Spaces.Edit.Name", comment: "")) { space in
-                spaceNameEditor(for: space)
-            }
-            .width(220)
-            
-            TableColumn(NSLocalizedString("Settings.Spaces.Edit.Actions", comment: "")) { space in
-                actionButtons(for: space, in: displaySpaces)
-            }
-            .width(67)
-        }
-        .scrollDisabled(true) // We let the parent ScrollView handle scrolling
-    }
-    
-    // Component Views
-    
     private func spaceNumberView(for space: DesktopSpace) -> some View {
         Text(spaceNumberText(for: space))
             .font(.system(.body, design: .monospaced))
-            .frame(maxWidth: .infinity)
             .foregroundColor(isCurrentSpace(space) ? .accentColor : .primary)
+            .fontWeight(isCurrentSpace(space) ? .bold : .regular)
     }
     
     private func spaceNameEditor(for space: DesktopSpace) -> some View {
@@ -134,12 +138,11 @@ struct SpaceEditView: View {
             defaultName(for: space),
             text: Binding(
                 get: {
+                    // Safe lookup directly from source
                     spaceManager.spaceNameDict.first(where: { $0.id == space.id })?.customName ?? space.customName
                 },
                 set: { newValue in
-                    DispatchQueue.main.async {
-                        updateSpaceName(space, newValue)
-                    }
+                    updateSpaceName(space, newValue)
                 }
             )
         )
@@ -147,7 +150,7 @@ struct SpaceEditView: View {
     }
     
     private func actionButtons(for space: DesktopSpace, in displayList: [DesktopSpace]) -> some View {
-        HStack(spacing: 8) {
+        HStack(spacing: 4) {
             moveUpButton(for: space, list: displayList)
             moveDownButton(for: space, list: displayList)
             deleteButton(for: space)
@@ -159,30 +162,31 @@ struct SpaceEditView: View {
         let isFirst = list.first?.id == space.id
         return Button(action: { moveRowUp(space) }) {
             Image(systemName: "chevron.up")
-                .font(.system(size: 12, weight: .medium))
+                .frame(width: 16, height: 16)
         }
         .disabled(isFirst)
+        .opacity(isFirst ? 0.3 : 1.0)
     }
     
     private func moveDownButton(for space: DesktopSpace, list: [DesktopSpace]) -> some View {
         let isLast = list.last?.id == space.id
         return Button(action: { moveRowDown(space) }) {
             Image(systemName: "chevron.down")
-                .font(.system(size: 12, weight: .medium))
+                .frame(width: 16, height: 16)
         }
         .disabled(isLast)
+        .opacity(isLast ? 0.3 : 1.0)
     }
     
     private func deleteButton(for space: DesktopSpace) -> some View {
         Button(action: { deleteRow(space) }) {
             Image(systemName: "trash")
-                .font(.system(size: 12, weight: .medium))
-                .foregroundColor(isCurrentSpace(space) ? Color(.disabledControlTextColor) : .red)
+                .frame(width: 16, height: 16)
+                .foregroundColor(isCurrentSpace(space) ? Color.secondary : .red)
         }
         .disabled(isCurrentSpace(space))
+        .opacity(isCurrentSpace(space) ? 0.3 : 1.0)
     }
-    
-    // Helper Methods
     
     private func spaceNumberText(for space: DesktopSpace) -> String {
         isCurrentSpace(space) ? "[\(space.num)]" : "\(space.num)"
@@ -194,12 +198,6 @@ struct SpaceEditView: View {
     
     private func isCurrentSpace(_ space: DesktopSpace) -> Bool {
         space.id == spaceManager.currentSpaceUUID
-    }
-    
-    // Data Operations
-    
-    private func refreshData() {
-        desktopSpaces = spaceManager.spaceNameDict
     }
     
     private func moveRowUp(_ space: DesktopSpace) {
@@ -260,15 +258,14 @@ struct SpaceEditView: View {
     }
     
     private func updateSpaceName(_ space: DesktopSpace, _ newName: String) {
+        // Direct update to array, no separate refresh logic needed
         guard let index = spaceManager.spaceNameDict.firstIndex(where: { $0.id == space.id }) else { return }
-        var allSpaces = spaceManager.spaceNameDict
-        allSpaces[index].customName = newName.trimmingCharacters(in: .whitespacesAndNewlines)
-        saveAndRefresh(allSpaces)
+        spaceManager.spaceNameDict[index].customName = newName.trimmingCharacters(in: .whitespacesAndNewlines)
+        spaceManager.saveSpaces()
     }
     
     private func saveAndRefresh(_ newSpaces: [DesktopSpace]) {
         spaceManager.spaceNameDict = newSpaces
         spaceManager.saveSpaces()
-        refreshData()
     }
 }
