@@ -72,15 +72,11 @@
       }
     },
     "Add it as a space in\nSettings → General → Add spaces" : {
-
-    },
-    "Add it as a space in\nSettings → General → Manually add spaces" : {
-      "extractionState" : "stale",
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "在设置 → 通用 → 手动添加桌面中添加"
+            "value" : "在设置 → 通用 → 添加桌面中添加"
           }
         }
       }
@@ -116,7 +112,14 @@
       }
     },
     "Adjust the threshold for metric-based detection." : {
-
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "调整桌面/全屏检测参数"
+          }
+        }
+      }
     },
     "Allow other apps to get space names." : {
       "localizations" : {
@@ -129,7 +132,14 @@
       }
     },
     "Automatic" : {
-
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "自动"
+          }
+        }
+      }
     },
     "Bug Report Log Collection" : {
       "localizations" : {
@@ -202,7 +212,14 @@
       }
     },
     "Choose how the app determines if a space is a Desktop or a Fullscreen App.\n\nAutomatic: No extra actions required.\n\nMetric-based: Based on the thresold of a metric. May not work for multiple displays.\n\nManual: All spaces that are not added will be treated as fullscreen." : {
-
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "选择桌面/全屏检测方式。\n\n自动：无需额外操作。\n\n参数：通过桌面/全屏参数检测。当多个显示器连接时，可能无法工作。\n\n手动：所有未添加桌面都会作为全屏处理。"
+          }
+        }
+      }
     },
     "Create windows that only appear in Mission Control to display space names.\n\nMay not work when multiple displays are connected." : {
       "localizations" : {
@@ -225,7 +242,14 @@
       }
     },
     "Factory Reset" : {
-
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "出厂设置"
+          }
+        }
+      }
     },
     "Fix" : {
       "localizations" : {
@@ -258,7 +282,14 @@
       }
     },
     "Fullscreen detection method" : {
-
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "全屏检测方式"
+          }
+        }
+      }
     },
     "Generate bug report" : {
       "localizations" : {
@@ -280,39 +311,25 @@
         }
       }
     },
-    "If enabled, new spaces won't be added automatically. You must add them in the Spaces tab." : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "If enabled, new spaces won't be added automatically. You must add them in the Settings → Spaces tab."
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "如果启用，新检测桌面不会自动被添加。你必须手动在设置 → 桌面中添加。"
-          }
-        }
-      }
-    },
     "Manual" : {
-
-    },
-    "Manually add spaces" : {
-      "extractionState" : "stale",
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "手动添加桌面"
+            "value" : "手动"
           }
         }
       }
     },
     "Manually register new desktop spaces." : {
-
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "手动添加新桌面。"
+          }
+        }
+      }
     },
     "Max Metric: %lld" : {
       "localizations" : {
@@ -410,7 +427,14 @@
       }
     },
     "Metric-based" : {
-
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "参数"
+          }
+        }
+      }
     },
     "Metric: %lld" : {
       "localizations" : {
@@ -537,7 +561,14 @@
       }
     },
     "Reset" : {
-
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "重置"
+          }
+        }
+      }
     },
     "Save" : {
       "localizations" : {
@@ -786,7 +817,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Show space label window"
+            "value" : "Show space label windows"
           }
         },
         "zh-Hans" : {
@@ -815,13 +846,34 @@
       }
     },
     "Settings.General.Method.Auto" : {
-
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "自动"
+          }
+        }
+      }
     },
     "Settings.General.Method.Manual" : {
-
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "手动"
+          }
+        }
+      }
     },
     "Settings.General.Method.Metric" : {
-
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "参数"
+          }
+        }
+      }
     },
     "Settings.General.Reset" : {
       "extractionState" : "manual",
@@ -1601,7 +1653,14 @@
       }
     },
     "There are no parameters to adjust for Automatic detection.\nIf the issue still happens, switch to other methods." : {
-
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "自动检测无参数可调整。\n如果仍然无法正常操作，切换成其他方式。"
+          }
+        }
+      }
     },
     "This generates a log that is helpful for the developers to debug." : {
       "localizations" : {
