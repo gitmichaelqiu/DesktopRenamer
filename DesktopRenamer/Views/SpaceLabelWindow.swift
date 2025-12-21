@@ -8,11 +8,11 @@ class SpaceLabelWindow: NSWindow {
     private var cancellables = Set<AnyCancellable>()
     private let spaceManager: SpaceManager
     
-    // Config
-    private let smallSize = NSSize(width: 200, height: 100) // Keep anchor small/unobtrusive
-    private var previewSize = NSSize(width: 800, height: 500) // Dynamic (Unified)
+    // State Tracking
+    private var isActiveMode: Bool = true // Default to Active (Small/Hidden)
+    private var previewSize: NSSize = NSSize(width: 800, height: 500)
     
-    // Default Font Config for measurement
+    // Config
     static let referenceFontSize: CGFloat = 180
     static let referenceFont = NSFont.systemFont(ofSize: referenceFontSize, weight: .bold)
     
@@ -23,6 +23,7 @@ class SpaceLabelWindow: NSWindow {
         
         self.label = NSTextField(labelWithString: name)
         
+        // 1. Find Target Screen
         let foundScreen = NSScreen.screens.first { screen in
             let screenID = screen.deviceDescription[NSDeviceDescriptionKey("NSScreenNumber")] as? NSNumber ?? 0
             let idString = "\(screen.localizedName) (\(screenID))"
@@ -32,32 +33,28 @@ class SpaceLabelWindow: NSWindow {
         }
         let targetScreen = foundScreen ?? NSScreen.main!
         
+        // 2. Initial Setup (Use a temp small rect, layout will fix it immediately)
         let screenFrame = targetScreen.frame
-        let startRect = NSRect(
-            x: screenFrame.midX - (smallSize.width / 2),
-            y: screenFrame.midY - (smallSize.height / 2),
-            width: smallSize.width,
-            height: smallSize.height
-        )
+        let startRect = NSRect(x: screenFrame.midX - 100, y: screenFrame.midY - 50, width: 200, height: 100)
         
         super.init(contentRect: startRect, styleMask: [.borderless], backing: .buffered, defer: false)
         
-        // Setup View
+        // 3. View Setup
         let contentView: NSView
         if #available(macOS 10.14, *) {
-            contentView = NSVisualEffectView(frame: NSRect(origin: .zero, size: smallSize))
+            contentView = NSVisualEffectView(frame: .zero)
         } else {
-            contentView = NSView(frame: NSRect(origin: .zero, size: smallSize))
+            contentView = NSView(frame: .zero)
         }
         contentView.wantsLayer = true
-        contentView.layer?.cornerRadius = 24 // Slightly rounder for large windows
+        contentView.layer?.cornerRadius = 12
         
         self.label.alignment = .center
         self.label.textColor = .labelColor
         contentView.addSubview(self.label)
         self.contentView = contentView
         
-        // Attributes
+        // 4. Attributes
         self.backgroundColor = .clear
         self.isOpaque = false
         self.hasShadow = false
@@ -65,7 +62,7 @@ class SpaceLabelWindow: NSWindow {
         self.ignoresMouseEvents = true
         self.collectionBehavior = [.managed, .stationary, .participatesInCycle, .fullScreenAuxiliary]
         
-        // Observers
+        // 5. Observers
         self.spaceManager.$spaceNameDict
             .receive(on: DispatchQueue.main)
             .sink { [weak self] _ in
@@ -85,17 +82,22 @@ class SpaceLabelWindow: NSWindow {
     // MARK: - Public API
     
     func setPreviewSize(_ size: NSSize) {
-        // Only update if changed
         if self.previewSize != size {
             self.previewSize = size
-            // If currently in preview mode, animate to new size
-            if self.frame.width > smallSize.width + 10 {
+            
+            // FIX: Only refresh layout if we are currently in Preview Mode.
+            // If we are Active (Small), we ignore this change until we switch modes later.
+            if !isActiveMode {
                 setMode(isCurrentSpace: false)
             }
         }
     }
     
     func setMode(isCurrentSpace: Bool) {
+        // Update State
+        self.isActiveMode = isCurrentSpace
+        
+        // Asymmetric Timing
         let duration = isCurrentSpace ? 0.0 : 0.35
         
         NSAnimationContext.runAnimationGroup { context in
@@ -105,6 +107,21 @@ class SpaceLabelWindow: NSWindow {
         }
     }
     
+    func updateName(_ name: String) {
+        self.label.stringValue = name
+        
+        // FIX: Force a layout update immediately to handle size changes.
+        // We use the CURRENT mode so we don't accidentally switch sizes.
+        // (Active -> stays Small & Dynamic; Preview -> stays Large & Unified)
+        // We use 0.0 duration for name updates to make it snappy.
+        NSAnimationContext.runAnimationGroup { context in
+            context.duration = 0.0
+            self.updateLayout(isCurrentSpace: self.isActiveMode)
+        }
+    }
+    
+    // MARK: - Layout Logic
+    
     private func updateLayout(isCurrentSpace: Bool) {
         guard let targetScreen = findTargetScreen() else { self.close(); return }
         
@@ -113,16 +130,14 @@ class SpaceLabelWindow: NSWindow {
         var newOrigin: NSPoint
         
         if isCurrentSpace {
-            // MODE A: Active Space (Small/Hidden)
-            // FIX: Calculate exact size needed for the text at a readable small size (e.g., 45pt)
-            // This ensures text NEVER exceeds the window, because the window grows to fit the text.
+            // MODE A: Active (Small & Dynamic)
+            // Calculate size based on text length to ensure it fits
             newSize = calculateSizeForText(fontSize: 45, paddingH: 60, paddingV: 40)
             
-            // Anchor off-screen (Safe Zone)
+            // Anchor off-screen
             newOrigin = findBestOffscreenPosition(targetScreen: targetScreen, size: newSize)
         } else {
-            // MODE B: Inactive Space (Preview/Large)
-            // Use the unified preview size calculated by the Manager
+            // MODE B: Preview (Large & Unified)
             newSize = previewSize
             
             // Center on screen
@@ -132,16 +147,16 @@ class SpaceLabelWindow: NSWindow {
             )
         }
         
+        // Apply Updates
         self.contentView?.animator().alphaValue = 1.0
         self.animator().setFrame(NSRect(origin: newOrigin, size: newSize), display: true)
-        
         self.contentView?.frame = NSRect(origin: .zero, size: newSize)
         
-        // Update Font based on the new size
         updateLabelFont(for: newSize, isSmallMode: isCurrentSpace)
     }
     
-    // Helper to calculate ideal window dimensions
+    // MARK: - Helpers
+    
     private func calculateSizeForText(fontSize: CGFloat, paddingH: CGFloat, paddingV: CGFloat) -> NSSize {
         let name = self.label.stringValue
         let font = NSFont.systemFont(ofSize: fontSize, weight: .bold)
@@ -152,24 +167,19 @@ class SpaceLabelWindow: NSWindow {
     private func updateLabelFont(for size: NSSize, isSmallMode: Bool) {
         let name = self.label.stringValue
         
-        // Padding configuration
         let paddingH: CGFloat = size.width * 0.1
         let paddingV: CGFloat = size.height * 0.15
         let maxWidth = size.width - paddingH
         let maxHeight = size.height - paddingV
         
-        // Starting Font Size
-        // If Small Mode: We know 45 fits (because we just calculated the window size for it),
-        // but we run the check just to be safe.
-        // If Large Mode: Start at Reference (180).
+        // Start Size: 45 for Small, 180 (Reference) for Large
         var fontSize: CGFloat = isSmallMode ? 45 : SpaceLabelWindow.referenceFontSize
         
-        // Setup font
         var font = NSFont.systemFont(ofSize: fontSize, weight: .bold)
         var attributed = NSAttributedString(string: name, attributes: [.font: font])
         var sSize = attributed.size()
         
-        // Shrink Loop (Safety mechanism)
+        // Shrink Loop
         while (sSize.width > maxWidth || sSize.height > maxHeight) && fontSize > 10 {
             fontSize -= 2
             font = NSFont.systemFont(ofSize: fontSize, weight: .bold)
@@ -179,7 +189,6 @@ class SpaceLabelWindow: NSWindow {
         
         self.label.font = font
         
-        // Center text
         self.label.frame = NSRect(
             x: (size.width - sSize.width) / 2,
             y: (size.height - sSize.height) / 2,
@@ -188,48 +197,6 @@ class SpaceLabelWindow: NSWindow {
         )
     }
     
-    private func updateLabelFont(for size: NSSize) {
-        let name = self.label.stringValue
-        
-        // Define available area with padding
-        // Increase horizontal padding slightly to prevent edge touching
-        let paddingH: CGFloat = size.width * 0.15
-        let paddingV: CGFloat = size.height * 0.2
-        let maxWidth = size.width - paddingH
-        let maxHeight = size.height - paddingV
-        
-        // Determine starting font size
-        // If small mode (Active), use 40. If Preview mode, start at Reference (180).
-        let isSmall = size.width <= 210 // smallSize is 200, add buffer
-        var fontSize: CGFloat = isSmall ? 40 : SpaceLabelWindow.referenceFontSize
-        
-        // Setup initial font
-        var font = NSFont.systemFont(ofSize: fontSize, weight: .bold)
-        var attributed = NSAttributedString(string: name, attributes: [.font: font])
-        var sSize = attributed.size()
-        
-        // SHRINK LOOP: Reduce font size until it fits inside maxWidth/maxHeight
-        // We set a minimum limit (e.g. 10pt) to prevent infinite loops on empty strings
-        while (sSize.width > maxWidth || sSize.height > maxHeight) && fontSize > 10 {
-            fontSize -= 2 // Decrease in steps
-            font = NSFont.systemFont(ofSize: fontSize, weight: .bold)
-            attributed = NSAttributedString(string: name, attributes: [.font: font])
-            sSize = attributed.size()
-        }
-        
-        // Apply final font
-        self.label.font = font
-        
-        // Center text in the window
-        self.label.frame = NSRect(
-            x: (size.width - sSize.width) / 2,
-            y: (size.height - sSize.height) / 2,
-            width: sSize.width,
-            height: sSize.height
-        )
-    }
-
-    // MARK: - Helpers
     private func findTargetScreen() -> NSScreen? {
         return NSScreen.screens.first { screen in
             let screenID = screen.deviceDescription[NSDeviceDescriptionKey("NSScreenNumber")] as? NSNumber ?? 0
@@ -263,13 +230,5 @@ class SpaceLabelWindow: NSWindow {
         return candidates[0]
     }
     
-    @objc private func repositionWindow() { updateLayout(isCurrentSpace: true) }
-    
-    func updateName(_ name: String) {
-        self.label.stringValue = name
-        // Font update happens in layout loop or setMode usually, but we can force it here
-        if self.frame.width > smallSize.width + 10 {
-            updateLabelFont(for: self.frame.size)
-        }
-    }
+    @objc private func repositionWindow() { updateLayout(isCurrentSpace: isActiveMode) }
 }
