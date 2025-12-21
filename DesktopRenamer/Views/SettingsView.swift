@@ -24,9 +24,12 @@ enum SettingsTab: String, CaseIterable, Identifiable {
     }
 }
 
+// Layout Constants
 let sidebarWidth: CGFloat = 220
-let defaultSettingsWindowWidth = 800
+let defaultSettingsWindowWidth = 850
 let defaultSettingsWindowHeight = 550
+let sidebarRowHeight: CGFloat = 32
+let sidebarFontSize: CGFloat = 15
 
 struct SettingsView: View {
     @ObservedObject var spaceManager: SpaceManager
@@ -42,6 +45,7 @@ struct SettingsView: View {
         }
         .navigationTitle("")
         .toolbar(.hidden, for: .windowToolbar)
+        .edgesIgnoringSafeArea(.top)
         .frame(width: CGFloat(defaultSettingsWindowWidth), height: CGFloat(defaultSettingsWindowHeight))
     }
     
@@ -53,43 +57,71 @@ struct SettingsView: View {
                     sidebarItem(for: tab)
                 }
             } header: {
-                Color.clear.frame(height: 40)
-                // Ice Style Header: No spacers needed, Section Header handles layout
-                Text("DesktopRenamer")
-                    .font(.system(size: 18, weight: .semibold)) // Slightly smaller/bolder to match macOS standard
-                    .foregroundStyle(.primary)
-                    .padding(.vertical, 8) // Small vertical breathing room
+                VStack(alignment: .leading, spacing: 0) {
+                    Color.clear.frame(height: 30) // Spacer for Traffic Lights
+                    
+                    Text("DesktopRenamer")
+                        .font(.system(size: 24, weight: .medium))
+                        .foregroundStyle(.primary)
+                        .padding(.vertical, 10)
+                        .padding(.leading, 8)
+                }
             }
             .collapsible(false)
         }
         .scrollDisabled(true)
         .navigationSplitViewColumnWidth(sidebarWidth)
         .listStyle(.sidebar)
-        // Ensure sidebar extends to top edge behind traffic lights
         .edgesIgnoringSafeArea(.top)
     }
     
     @ViewBuilder
     private var detailView: some View {
+        // ZStack allows the Header to float ON TOP of the scrolling content
         ZStack(alignment: .top) {
-            if let tab = selectedTab {
-                switch tab {
-                case .general:
-                    GeneralSettingsView(spaceManager: spaceManager, labelManager: labelManager)
-                case .labels:
-                    LabelSettingsView(labelManager: labelManager)
-                case .space:
-                    SpaceEditView(spaceManager: spaceManager, labelManager: labelManager)
-                case .about:
-                    AboutView()
+            
+            // 1. CONTENT LAYER (Bottom)
+            ZStack(alignment: .top) {
+                if let tab = selectedTab {
+                    switch tab {
+                    case .general:
+                        GeneralSettingsView(spaceManager: spaceManager, labelManager: labelManager)
+                    case .labels:
+                        LabelSettingsView(labelManager: labelManager)
+                    case .space:
+                        SpaceEditView(spaceManager: spaceManager, labelManager: labelManager)
+                    case .about:
+                        AboutView()
+                    }
+                } else {
+                    Text("Select a category")
+                        .foregroundColor(.secondary)
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
                 }
-            } else {
-                Text("Select a category")
-                    .foregroundColor(.secondary)
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+            // Add padding so the top of the content starts BELOW the header,
+            // but when scrolled, it will slide UNDER the transparent header.
+            .padding(.top, 50)
+            
+            // 2. HEADER LAYER (Top)
+            if let tab = selectedTab {
+                VStack(spacing: 0) {
+                    HStack {
+                        Text(tab.localizedName)
+                            .font(.system(size: 20, weight: .semibold))
+                            .padding(.leading, 20)
+                        Spacer()
+                    }
+                    .frame(height: 50)
+                    .background(.bar)
+                    
+//                    Divider()
+                }
+                // Ensure the header stays pinned to the absolute top
+                .frame(maxHeight: .infinity, alignment: .top)
             }
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-        // FIX: This pulls the content up, ignoring the "Ghost" Title Bar space
         .edgesIgnoringSafeArea(.top)
     }
     
@@ -98,12 +130,13 @@ struct SettingsView: View {
         NavigationLink(value: tab) {
             Label {
                 Text(tab.localizedName)
+                    .font(.system(size: sidebarFontSize))
                     .padding(.leading, 2)
             } icon: {
                 Image(systemName: tab.iconName)
             }
         }
-        .frame(height: 30)
+        .frame(height: sidebarRowHeight)
     }
 }
 
