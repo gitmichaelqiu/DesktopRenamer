@@ -30,7 +30,8 @@ class SpaceLabelManager: ObservableObject {
     
     init(spaceManager: SpaceManager) {
         self.spaceManager = spaceManager
-        // Load isEnabled directly
+        
+        UserDefaults.standard.register(defaults: [spacesKey: true])
         self.isEnabled = UserDefaults.standard.bool(forKey: spacesKey)
         
         // 1. Load values into local variables first
