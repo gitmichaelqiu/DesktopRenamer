@@ -64,6 +64,9 @@
         }
       }
     },
+    "Active Space Labels" : {
+
+    },
     "Add" : {
       "localizations" : {
         "zh-Hans" : {
@@ -303,6 +306,9 @@
         }
       }
     },
+    "Font Size" : {
+
+    },
     "Fullscreen detection method" : {
       "localizations" : {
         "zh-Hans" : {
@@ -528,6 +534,9 @@
         }
       }
     },
+    "Preview Labels" : {
+
+    },
     "Recorded: %lld" : {
       "localizations" : {
         "zh-Hans" : {
@@ -601,6 +610,9 @@
           }
         }
       }
+    },
+    "Reset Defaults" : {
+      "comment" : "Reset Defaults"
     },
     "Save" : {
       "localizations" : {
@@ -1372,27 +1384,6 @@
     "Settings.Labels" : {
 
     },
-    "Settings.Labels.Active" : {
-
-    },
-    "Settings.Labels.Active.Desc" : {
-      "comment" : "The hidden label that slides into the corner."
-    },
-    "Settings.Labels.FontSize" : {
-
-    },
-    "Settings.Labels.Preview" : {
-
-    },
-    "Settings.Labels.Preview.Desc" : {
-      "comment" : "The large label visible in Mission Control."
-    },
-    "Settings.Labels.Reset" : {
-      "comment" : "Reset Defaults"
-    },
-    "Settings.Labels.WindowSize" : {
-
-    },
     "Settings.Spaces" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -1711,6 +1702,12 @@
         }
       }
     },
+    "The hidden label that slides into the corner." : {
+      "comment" : "The hidden label that slides into the corner."
+    },
+    "The large label visible in Mission Control." : {
+      "comment" : "The large label visible in Mission Control."
+    },
     "There are no parameters to adjust for Automatic detection.\nIf the issue still happens, switch to other methods." : {
       "localizations" : {
         "zh-Hans" : {
@@ -1780,6 +1777,9 @@
           }
         }
       }
+    },
+    "Window Size" : {
+
     },
     "Window.Settings.Title" : {
       "extractionState" : "manual",
