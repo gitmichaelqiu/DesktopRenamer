@@ -41,7 +41,7 @@ class SpaceHelper {
     
     private static func getActiveDisplay() -> NSScreen? {
         if let frontApp = NSWorkspace.shared.frontmostApplication {
-            // FIX: If Finder is active, ignore window checks because Finder owns
+            // If Finder is active, ignore window checks because Finder owns
             // desktop windows on ALL screens simultaneously. Use mouse fallback instead.
             if frontApp.bundleIdentifier != "com.apple.finder" {
                 

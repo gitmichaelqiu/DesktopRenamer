@@ -34,9 +34,9 @@ class SpaceLabelManager: ObservableObject {
             return
         }
         
-        // VERIFY: Check live state before creating
+        // Check live state before creating
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.02) {
-            // FIX: Capture the 'displayID' (4th parameter) from the helper
+            // Capture the 'displayID' (4th parameter) from the helper
             SpaceHelper.getRawSpaceUUID { confirmedSpaceId, _, _, liveDisplayID in
                 if confirmedSpaceId == spaceId {
                     self.ensureWindow(for: spaceId, name: name, displayID: liveDisplayID)
@@ -74,7 +74,7 @@ class SpaceLabelManager: ObservableObject {
     private func createWindow(for spaceId: String, name: String) {
             guard let spaceManager = spaceManager else { return }
             
-            // FIX: If we are creating the label for the space user is CURRENTLY on,
+            // If we are creating the label for the space user is CURRENTLY on,
             // use the live detected DisplayID. Otherwise, fallback to saved data.
             let displayID: String
             if spaceId == spaceManager.currentSpaceUUID {

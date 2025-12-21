@@ -54,7 +54,7 @@ class SpaceManager: ObservableObject {
     @Published var isBugReportActive: Bool = false
     @Published private(set) var bugReportLog: [LogEntry] = []
     
-    // NEW: Detection Method Setting
+    // Detection Method Setting
     @Published var detectionMethod: DetectionMethod {
         didSet {
             UserDefaults.standard.set(detectionMethod.rawValue, forKey: SpaceManager.detectionMethodKey)
