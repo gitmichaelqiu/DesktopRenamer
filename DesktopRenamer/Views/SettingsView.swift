@@ -61,7 +61,7 @@ struct SettingsView: View {
                 }
             } header: {
                 VStack(alignment: .leading, spacing: 0) {
-                    Color.clear.frame(height: 35)
+                    Color.clear.frame(height: 45)
                     
                     Text("Desktop")
                         .font(.system(size: 24, weight: .heavy))
@@ -69,7 +69,7 @@ struct SettingsView: View {
                     Text("Renamer")
                         .font(.system(size: 24, weight: .heavy))
                         .foregroundStyle(.primary)
-                        .padding(.bottom, 10)
+                        .padding(.bottom, 20)
                         // .padding(.leading, 8)
                 }
             }
@@ -141,7 +141,7 @@ struct SettingsView: View {
                 Image(systemName: tab.iconName)
                     .resizable()
                     .scaledToFit()
-                    .frame(height: sidebarRowHeight-14)
+                    .frame(height: sidebarRowHeight-15)
             }
         }
         .frame(height: sidebarRowHeight)
