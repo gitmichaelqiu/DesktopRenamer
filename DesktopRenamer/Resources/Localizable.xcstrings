@@ -236,13 +236,13 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Show space names in Mission Control."
+            "value" : "Show space names in Mission Control.\n\nThey will not be created before you access the spaces."
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "在调度中心显示桌面名称。"
+            "value" : "在调度中心显示桌面名称。\n\n只有在访问至少一次对应桌面时才会显示。"
           }
         }
       }
