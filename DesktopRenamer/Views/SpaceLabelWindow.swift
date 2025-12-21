@@ -123,7 +123,7 @@ class SpaceLabelWindow: NSWindow {
             center.addObserver(self, selector: #selector(repositionWindow), name: NSApplication.didChangeScreenParametersNotification, object: nil)
             center.addObserver(self, selector: #selector(repositionWindow), name: NSWorkspace.didWakeNotification, object: nil)
             
-            // 10. MOVE OFF-SCREEN (Fix: Do this LAST, and do not reset to center)
+            // 10. MOVE OFF-SCREEN
             // We use async to allow the window server to digest the initial "Center" placement first.
             DispatchQueue.main.async { [weak self] in
                 self?.repositionWindow()
@@ -151,7 +151,6 @@ class SpaceLabelWindow: NSWindow {
             let cleanTarget = self.displayID.components(separatedBy: " (").first ?? self.displayID
             return screen.localizedName == cleanTarget
         }
-        // FIX: Removed "?? NSScreen.main".
         // If the screen is disconnected, we want to return nil.
     }
 
