@@ -9,11 +9,11 @@ class SpaceLabelWindow: NSWindow {
     private let spaceManager: SpaceManager
     
     // State Tracking
-    private var isActiveMode: Bool = true // Default to Active (Small/Hidden)
+    private var isActiveMode: Bool = true
     private var previewSize: NSSize = NSSize(width: 800, height: 500)
     
     // Config
-    static let referenceFontSize: CGFloat = 200
+    static let referenceFontSize: CGFloat = 180
     static let referenceFont = NSFont.systemFont(ofSize: referenceFontSize, weight: .bold)
     
     init(spaceId: String, name: String, displayID: String, spaceManager: SpaceManager) {
@@ -23,7 +23,6 @@ class SpaceLabelWindow: NSWindow {
         
         self.label = NSTextField(labelWithString: name)
         
-        // 1. Find Target Screen
         let foundScreen = NSScreen.screens.first { screen in
             let screenID = screen.deviceDescription[NSDeviceDescriptionKey("NSScreenNumber")] as? NSNumber ?? 0
             let idString = "\(screen.localizedName) (\(screenID))"
@@ -33,13 +32,11 @@ class SpaceLabelWindow: NSWindow {
         }
         let targetScreen = foundScreen ?? NSScreen.main!
         
-        // 2. Initial Setup (Use a temp small rect, layout will fix it immediately)
         let screenFrame = targetScreen.frame
         let startRect = NSRect(x: screenFrame.midX - 100, y: screenFrame.midY - 50, width: 200, height: 100)
         
         super.init(contentRect: startRect, styleMask: [.borderless], backing: .buffered, defer: false)
         
-        // 3. View Setup
         let contentView: NSView
         if #available(macOS 26.0, *) {
             contentView = NSGlassEffectView(frame: .zero)
@@ -54,7 +51,6 @@ class SpaceLabelWindow: NSWindow {
         contentView.addSubview(self.label)
         self.contentView = contentView
         
-        // 4. Attributes
         self.backgroundColor = .clear
         self.isOpaque = false
         self.hasShadow = false
@@ -62,7 +58,6 @@ class SpaceLabelWindow: NSWindow {
         self.ignoresMouseEvents = true
         self.collectionBehavior = [.managed, .stationary, .participatesInCycle, .fullScreenAuxiliary]
         
-        // 5. Observers
         self.spaceManager.$spaceNameDict
             .receive(on: DispatchQueue.main)
             .sink { [weak self] _ in
@@ -73,20 +68,14 @@ class SpaceLabelWindow: NSWindow {
             
         NotificationCenter.default.addObserver(self, selector: #selector(repositionWindow), name: NSApplication.didChangeScreenParametersNotification, object: nil)
         
-        // Initial Layout
         DispatchQueue.main.async { [weak self] in
             self?.updateLayout(isCurrentSpace: true)
         }
     }
     
-    // MARK: - Public API
-    
     func setPreviewSize(_ size: NSSize) {
         if self.previewSize != size {
             self.previewSize = size
-            
-            // FIX: Only refresh layout if we are currently in Preview Mode.
-            // If we are Active (Small), we ignore this change until we switch modes later.
             if !isActiveMode {
                 setMode(isCurrentSpace: false)
             }
@@ -94,33 +83,46 @@ class SpaceLabelWindow: NSWindow {
     }
     
     func setMode(isCurrentSpace: Bool) {
-        // Update State
         self.isActiveMode = isCurrentSpace
         
-        // Asymmetric Timing
-        let duration = isCurrentSpace ? 0.0 : 0.35
-        
-        NSAnimationContext.runAnimationGroup { context in
-            context.duration = duration
-            context.timingFunction = CAMediaTimingFunction(name: .easeOut)
-            self.updateLayout(isCurrentSpace: isCurrentSpace)
+        if isCurrentSpace {
+            // Preview (Large) -> Active (Small)
+            // ACTION: Ease Out (Fade Out) then Secretly Put in Corner
+            
+            NSAnimationContext.runAnimationGroup { context in
+                context.duration = 0.08
+                context.timingFunction = CAMediaTimingFunction(name: .easeOut)
+                
+                // 1. Fade out the large window in place
+                self.animator().alphaValue = 0.0
+                
+            } completionHandler: {
+                // 2. Secretly snap to the corner (Instant)
+                self.updateLayout(isCurrentSpace: true)
+                
+                // 3. Restore opacity so it's visible to Mission Control
+                self.alphaValue = 1.0
+            }
+            
+        } else {
+            // Active (Small) -> Preview (Large)
+            // ACTION: No Animation (Instant Snap)
+            
+            NSAnimationContext.runAnimationGroup { context in
+                context.duration = 0.0
+                
+                // 1. Snap to Center Immediately
+                self.updateLayout(isCurrentSpace: false)
+                self.alphaValue = 1.0
+            }
         }
     }
     
     func updateName(_ name: String) {
         self.label.stringValue = name
-        
-        // FIX: Force a layout update immediately to handle size changes.
-        // We use the CURRENT mode so we don't accidentally switch sizes.
-        // (Active -> stays Small & Dynamic; Preview -> stays Large & Unified)
-        // We use 0.0 duration for name updates to make it snappy.
-        NSAnimationContext.runAnimationGroup { context in
-            context.duration = 0.0
-            self.updateLayout(isCurrentSpace: self.isActiveMode)
-        }
+        // Instant update for name changes
+        self.updateLayout(isCurrentSpace: self.isActiveMode)
     }
-    
-    // MARK: - Layout Logic
     
     private func updateLayout(isCurrentSpace: Bool) {
         guard let targetScreen = findTargetScreen() else { self.close(); return }
@@ -131,10 +133,10 @@ class SpaceLabelWindow: NSWindow {
         
         if isCurrentSpace {
             // MODE A: Active (Small & Dynamic)
-            // Calculate size based on text length to ensure it fits
+            // Calculate size based on text length to ensure it fits (Font 45)
             newSize = calculateSizeForText(fontSize: 45, paddingH: 60, paddingV: 40)
             
-            // Anchor off-screen
+            // Anchor off-screen (Safe Zone)
             newOrigin = findBestOffscreenPosition(targetScreen: targetScreen, size: newSize)
         } else {
             // MODE B: Preview (Large & Unified)
@@ -147,9 +149,10 @@ class SpaceLabelWindow: NSWindow {
             )
         }
         
-        // Apply Updates
-        self.contentView?.animator().alphaValue = 1.0
-        self.animator().setFrame(NSRect(origin: newOrigin, size: newSize), display: true)
+        // FRAME UPDATE:
+        // We do NOT use animator() here. setMode handles the animation strategy.
+        // This ensures the snap is instant when called.
+        self.setFrame(NSRect(origin: newOrigin, size: newSize), display: true)
         self.contentView?.frame = NSRect(origin: .zero, size: newSize)
         
         updateLabelFont(for: newSize, isSmallMode: isCurrentSpace)
@@ -172,14 +175,12 @@ class SpaceLabelWindow: NSWindow {
         let maxWidth = size.width - paddingH
         let maxHeight = size.height - paddingV
         
-        // Start Size: 45 for Small, 180 (Reference) for Large
         var fontSize: CGFloat = isSmallMode ? 45 : SpaceLabelWindow.referenceFontSize
         
         var font = NSFont.systemFont(ofSize: fontSize, weight: .bold)
         var attributed = NSAttributedString(string: name, attributes: [.font: font])
         var sSize = attributed.size()
         
-        // Shrink Loop
         while (sSize.width > maxWidth || sSize.height > maxHeight) && fontSize > 10 {
             fontSize -= 2
             font = NSFont.systemFont(ofSize: fontSize, weight: .bold)
