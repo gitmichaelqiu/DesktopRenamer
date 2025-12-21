@@ -556,7 +556,10 @@ struct GeneralSettingsView: View {
             .frame(height: 250)
             .background(Color(NSColor.textBackgroundColor))
             .cornerRadius(8)
-            .border(Color.secondary.opacity(0.3), width: 1)
+            .overlay(
+                RoundedRectangle(cornerRadius: 6)
+                    .stroke(Color.gray.opacity(0.2), lineWidth: 1)
+            )
             
             HStack {
                 Button("Cancel") {
