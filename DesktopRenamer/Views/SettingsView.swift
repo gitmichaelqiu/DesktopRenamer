@@ -1,15 +1,15 @@
 import SwiftUI
 
 enum SettingsTab: String, CaseIterable, Identifiable {
-    case general, labels, space, about
+    case general, space, labels, about
     
     var id: String { self.rawValue }
     
     var localizedName: LocalizedStringKey {
         switch self {
         case .general: return "Settings.General"
-        case .labels: return "Settings.Labels"
         case .space: return "Settings.Spaces"
+        case .labels: return "Settings.Labels"
         case .about: return "Settings.About"
         }
     }
@@ -17,8 +17,8 @@ enum SettingsTab: String, CaseIterable, Identifiable {
     var iconName: String {
         switch self {
         case .general: return "gearshape"
-        case .labels: return "tag"
         case .space: return "macwindow"
+        case .labels: return "tag"
         case .about: return "info.circle"
         }
     }
@@ -117,10 +117,10 @@ struct SettingsView: View {
                     switch tab {
                     case .general:
                         GeneralSettingsView(spaceManager: spaceManager, labelManager: labelManager)
-                    case .labels:
-                        LabelSettingsView(labelManager: labelManager)
                     case .space:
                         SpaceEditView(spaceManager: spaceManager, labelManager: labelManager)
+                    case .labels:
+                        LabelSettingsView(labelManager: labelManager)
                     case .about:
                         AboutView()
                     }
