@@ -140,6 +140,50 @@ class SpaceHelper {
             completion(uuid, hasFinderDesktop, ncCnt, displayIdentifier)
         }
     }
+        
+    static func getVisibleSpaceUUIDs(completion: @escaping (Set<String>) -> Void) {
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+            let options = CGWindowListOption(arrayLiteral: .optionOnScreenOnly)
+            // Get all windows
+            let windowList = CGWindowListCopyWindowInfo(options, kCGNullWindowID) as? [[String: Any]] ?? []
+            let screens = NSScreen.screens
+            var visibleUUIDs = Set<String>()
+
+            // Check each screen individually
+            for screen in screens {
+                for window in windowList {
+                    // Check if window is physically on this screen
+                    guard let bounds = window[kCGWindowBounds as String] as? [String: Any],
+                          let x = bounds["X"] as? CGFloat,
+                          let y = bounds["Y"] as? CGFloat,
+                          let w = bounds["Width"] as? CGFloat,
+                          let h = bounds["Height"] as? CGFloat else { continue }
+                    
+                    let windowRect = CGRect(x: x, y: y, width: w, height: h)
+                    let center = CGPoint(x: windowRect.midX, y: windowRect.midY)
+                    
+                    // Use our robust coordinate checker
+                    if isPoint(center, inside: screen.frame) {
+                        // Look for the Dock's "Wallpaper-" window
+                        if let owner = window[kCGWindowOwnerName as String] as? String,
+                           owner == "Dock",
+                           let name = window[kCGWindowName as String] as? String,
+                           name.starts(with: "Wallpaper-") {
+                            
+                            let uuid = String(name.dropFirst("Wallpaper-".count))
+                            let finalUUID = uuid.isEmpty ? "MAIN" : uuid
+                            visibleUUIDs.insert(finalUUID)
+                            
+                            // Once found for this screen, we can stop searching windows for this screen
+                            // (Optimization: assumes 1 wallpaper per screen)
+                            break
+                        }
+                    }
+                }
+            }
+            completion(visibleUUIDs)
+        }
+    }
     
     static func detectSpaceChange() {
         getRawSpaceUUID { spaceUUID, isDesktop, ncCnt, displayID in
