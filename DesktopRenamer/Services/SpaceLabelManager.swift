@@ -15,46 +15,82 @@ class SpaceLabelManager: ObservableObject {
     
     private var createdWindows: [String: SpaceLabelWindow] = [:]
     private weak var spaceManager: SpaceManager?
-    private var cancellables = Set<AnyCancellable>() // Added Cancellables storage
+    private var cancellables = Set<AnyCancellable>()
     
     init(spaceManager: SpaceManager) {
         self.spaceManager = spaceManager
         self.isEnabled = UserDefaults.standard.bool(forKey: spacesKey)
-        setupObservers() // Start listening immediately
+        setupObservers()
     }
     
     deinit {
         removeAllWindows()
         cancellables.removeAll()
     }
-
+    
     private func setupObservers() {
         guard let spaceManager = spaceManager else { return }
         
-        // Listen to Space Switches
+        // 1. Monitor Current Space (For Mode Switching)
         spaceManager.$currentSpaceUUID
             .dropFirst()
             .receive(on: DispatchQueue.main)
             .sink { [weak self] _ in
-                // We don't just care about the 'current' ID anymore.
-                // We need to check GLOBAL visibility.
                 self?.updateAllWindowModes()
+            }
+            .store(in: &cancellables)
+            
+        // 2. Monitor Space Names (For Size Calculation)
+        spaceManager.$spaceNameDict
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] _ in
+                self?.recalculateUnifiedSize()
             }
             .store(in: &cancellables)
     }
     
+    // NEW: Calculate the biggest text dimensions
+    private func recalculateUnifiedSize() {
+        guard let spaceManager = spaceManager else { return }
+        
+        let referenceFont = SpaceLabelWindow.referenceFont
+        var maxWidth: CGFloat = 600 // Minimum width baseline
+        var maxHeight: CGFloat = 300 // Minimum height baseline
+        
+        // 1. Find the largest text dimensions
+        for space in spaceManager.spaceNameDict {
+            let name = spaceManager.getSpaceName(space.id)
+            let size = name.size(withAttributes: [.font: referenceFont])
+            
+            if size.width > maxWidth { maxWidth = size.width }
+            if size.height > maxHeight { maxHeight = size.height }
+        }
+        
+        // 2. Add padding
+        let paddingH: CGFloat = 200
+        let paddingV: CGFloat = 150
+        var finalSize = NSSize(width: maxWidth + paddingH, height: maxHeight + paddingV)
+        
+        // 3. Cap at screen size (safety check)
+        if let screen = NSScreen.main {
+            let maxW = screen.frame.width * 0.9
+            let maxH = screen.frame.height * 0.8
+            finalSize.width = min(finalSize.width, maxW)
+            finalSize.height = min(finalSize.height, maxH)
+        }
+        
+        // 4. Update ALL windows with this size
+        for window in createdWindows.values {
+            window.setPreviewSize(finalSize)
+        }
+    }
+    
     private func updateAllWindowModes() {
-        // Ask Helper: "Which spaces are actually visible on ANY monitor right now?"
         SpaceHelper.getVisibleSpaceUUIDs { [weak self] visibleUUIDs in
             guard let self = self, self.isEnabled else { return }
             
             for (spaceId, window) in self.createdWindows {
-                // VISIBILITY CHECK:
-                // If the space is in the visible set, it is being shown on SOME monitor.
-                // Therefore, it should be in "Active Mode" (Small/Safe Zone).
-                // Only totally hidden spaces get "Preview Mode" (Big/Center).
                 let isVisibleOnAnyScreen = visibleUUIDs.contains(spaceId)
-                
                 window.setMode(isCurrentSpace: isVisibleOnAnyScreen)
             }
         }
@@ -82,9 +118,7 @@ class SpaceLabelManager: ObservableObject {
         if let existingWindow = createdWindows[spaceId] {
             if !existingWindow.isVisible {
                 createdWindows.removeValue(forKey: spaceId)
-            }
-            else if existingWindow.displayID != displayID {
-                print("Label Manager: Space \(spaceId) moved. Recreating window.")
+            } else if existingWindow.displayID != displayID {
                 existingWindow.orderOut(nil)
                 createdWindows.removeValue(forKey: spaceId)
             } else {
@@ -100,19 +134,16 @@ class SpaceLabelManager: ObservableObject {
         let window = SpaceLabelWindow(spaceId: spaceId, name: name, displayID: displayID, spaceManager: spaceManager)
         createdWindows[spaceId] = window
         
-        // Initialize Mode:
-        // If this is the active space, hide it. If it's a background space, show preview.
+        // Initialize with correct mode
         let isCurrent = (spaceId == spaceManager.currentSpaceUUID)
         window.setMode(isCurrentSpace: isCurrent)
         
+        // Important: Ensure the new window gets the current unified size immediately
+        // (recalculateUnifiedSize triggers updates, but we can also trigger one here if needed)
+        // Ideally, we run recalculate once after creation.
+        self.recalculateUnifiedSize()
+        
         window.orderFront(nil)
-    }
-    
-    // Legacy override support (unused now but kept for safety)
-    private func createWindow(for spaceId: String, name: String) {
-        guard let spaceManager = spaceManager else { return }
-        let displayID = (spaceId == spaceManager.currentSpaceUUID) ? spaceManager.currentDisplayID : "Main"
-        createWindow(for: spaceId, name: name, displayID: displayID)
     }
     
     private func removeAllWindows() {
@@ -126,7 +157,6 @@ class SpaceLabelManager: ObservableObject {
         if !isEnabled {
             removeAllWindows()
         } else {
-            // Restore labels for visible spaces
             if let spaceId = spaceManager?.currentSpaceUUID,
                let name = spaceManager?.getSpaceName(spaceId) {
                 updateLabel(for: spaceId, name: name, verifySpace: false)

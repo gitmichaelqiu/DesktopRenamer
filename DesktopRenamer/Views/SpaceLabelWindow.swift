@@ -9,8 +9,12 @@ class SpaceLabelWindow: NSWindow {
     private let spaceManager: SpaceManager
     
     // Config
-    private let smallSize = NSSize(width: 400, height: 200)
-    private let largeSize = NSSize(width: 1200, height: 800)
+    private let smallSize = NSSize(width: 200, height: 100) // Keep anchor small/unobtrusive
+    private var previewSize = NSSize(width: 800, height: 500) // Dynamic (Unified)
+    
+    // Default Font Config for measurement
+    static let referenceFontSize: CGFloat = 180
+    static let referenceFont = NSFont.systemFont(ofSize: referenceFontSize, weight: .bold)
     
     init(spaceId: String, name: String, displayID: String, spaceManager: SpaceManager) {
         self.spaceId = spaceId
@@ -19,7 +23,6 @@ class SpaceLabelWindow: NSWindow {
         
         self.label = NSTextField(labelWithString: name)
         
-        // 1. Find Target Screen
         let foundScreen = NSScreen.screens.first { screen in
             let screenID = screen.deviceDescription[NSDeviceDescriptionKey("NSScreenNumber")] as? NSNumber ?? 0
             let idString = "\(screen.localizedName) (\(screenID))"
@@ -29,7 +32,6 @@ class SpaceLabelWindow: NSWindow {
         }
         let targetScreen = foundScreen ?? NSScreen.main!
         
-        // 2. Start Center (Safe creation)
         let screenFrame = targetScreen.frame
         let startRect = NSRect(
             x: screenFrame.midX - (smallSize.width / 2),
@@ -40,7 +42,7 @@ class SpaceLabelWindow: NSWindow {
         
         super.init(contentRect: startRect, styleMask: [.borderless], backing: .buffered, defer: false)
         
-        // 3. View Setup
+        // Setup View
         let contentView: NSView
         if #available(macOS 10.14, *) {
             contentView = NSVisualEffectView(frame: NSRect(origin: .zero, size: smallSize))
@@ -48,14 +50,14 @@ class SpaceLabelWindow: NSWindow {
             contentView = NSView(frame: NSRect(origin: .zero, size: smallSize))
         }
         contentView.wantsLayer = true
-        contentView.layer?.cornerRadius = 12
+        contentView.layer?.cornerRadius = 24 // Slightly rounder for large windows
         
         self.label.alignment = .center
         self.label.textColor = .labelColor
         contentView.addSubview(self.label)
         self.contentView = contentView
         
-        // 4. Attributes
+        // Attributes
         self.backgroundColor = .clear
         self.isOpaque = false
         self.hasShadow = false
@@ -63,7 +65,7 @@ class SpaceLabelWindow: NSWindow {
         self.ignoresMouseEvents = true
         self.collectionBehavior = [.managed, .stationary, .participatesInCycle, .fullScreenAuxiliary]
         
-        // 5. Observers
+        // Observers
         self.spaceManager.$spaceNameDict
             .receive(on: DispatchQueue.main)
             .sink { [weak self] _ in
@@ -82,10 +84,18 @@ class SpaceLabelWindow: NSWindow {
     
     // MARK: - Public API
     
+    func setPreviewSize(_ size: NSSize) {
+        // Only update if changed
+        if self.previewSize != size {
+            self.previewSize = size
+            // If currently in preview mode, animate to new size
+            if self.frame.width > smallSize.width + 10 {
+                setMode(isCurrentSpace: false)
+            }
+        }
+    }
+    
     func setMode(isCurrentSpace: Bool) {
-        // OPTIMIZATION: Asymmetric Timing
-        // 1. Entering Space (Active): 0.0s (Instant). Snap out of the way immediately.
-        // 2. Leaving Space (Inactive): 0.35s (Smooth). Expand nicely for Mission Control preview.
         let duration = isCurrentSpace ? 0.0 : 0.35
         
         NSAnimationContext.runAnimationGroup { context in
@@ -98,57 +108,65 @@ class SpaceLabelWindow: NSWindow {
     // MARK: - Layout Logic
     
     private func updateLayout(isCurrentSpace: Bool) {
-        guard let targetScreen = findTargetScreen() else {
-            self.close()
-            return
-        }
+        guard let targetScreen = findTargetScreen() else { self.close(); return }
         
         let targetFrame = targetScreen.frame
-        let newSize = isCurrentSpace ? smallSize : largeSize
+        let newSize = isCurrentSpace ? smallSize : previewSize
         var newOrigin: NSPoint
         
         if isCurrentSpace {
-            // MODE A: Active Space -> Snap to Safe Anchor Zone
-            // It remains opaque (alpha 1.0) but is positioned 99% off-screen.
+            // Active: Anchor off-screen
             newOrigin = findBestOffscreenPosition(targetScreen: targetScreen, size: newSize)
         } else {
-            // MODE B: Inactive Space -> Center
+            // Inactive: Center on screen
             newOrigin = NSPoint(
                 x: targetFrame.midX - (newSize.width / 2),
                 y: targetFrame.midY - (newSize.height / 2)
             )
         }
         
-        // Ensure visibility
         self.contentView?.animator().alphaValue = 1.0
-        
-        // Apply Frame Change
         self.animator().setFrame(NSRect(origin: newOrigin, size: newSize), display: true)
         
-        // Update Content
         self.contentView?.frame = NSRect(origin: .zero, size: newSize)
+        
+        // Update Font based on CURRENT size state
         updateLabelFont(for: newSize)
     }
     
     private func updateLabelFont(for size: NSSize) {
         let name = self.label.stringValue
-        let padding: CGFloat = size.width * 0.1
-        let maxWidth = size.width - (padding * 2)
-        let maxHeight = size.height - (padding * 2)
         
-        var fontSize: CGFloat = size.width > 500 ? 180 : 50
+        // Define available area with padding
+        // Increase horizontal padding slightly to prevent edge touching
+        let paddingH: CGFloat = size.width * 0.15
+        let paddingV: CGFloat = size.height * 0.2
+        let maxWidth = size.width - paddingH
+        let maxHeight = size.height - paddingV
         
-        var attributed = NSAttributedString(string: name, attributes: [.font: NSFont.systemFont(ofSize: fontSize, weight: .bold)])
+        // Determine starting font size
+        // If small mode (Active), use 40. If Preview mode, start at Reference (180).
+        let isSmall = size.width <= 210 // smallSize is 200, add buffer
+        var fontSize: CGFloat = isSmall ? 40 : SpaceLabelWindow.referenceFontSize
+        
+        // Setup initial font
+        var font = NSFont.systemFont(ofSize: fontSize, weight: .bold)
+        var attributed = NSAttributedString(string: name, attributes: [.font: font])
         var sSize = attributed.size()
         
-        while (sSize.width > maxWidth || sSize.height > maxHeight) && fontSize > 20 {
-            fontSize -= 10
-            attributed = NSAttributedString(string: name, attributes: [.font: NSFont.systemFont(ofSize: fontSize, weight: .bold)])
+        // SHRINK LOOP: Reduce font size until it fits inside maxWidth/maxHeight
+        // We set a minimum limit (e.g. 10pt) to prevent infinite loops on empty strings
+        while (sSize.width > maxWidth || sSize.height > maxHeight) && fontSize > 10 {
+            fontSize -= 2 // Decrease in steps
+            font = NSFont.systemFont(ofSize: fontSize, weight: .bold)
+            attributed = NSAttributedString(string: name, attributes: [.font: font])
             sSize = attributed.size()
         }
         
-        self.label.font = .systemFont(ofSize: fontSize, weight: .bold)
+        // Apply final font
+        self.label.font = font
         
+        // Center text in the window
         self.label.frame = NSRect(
             x: (size.width - sSize.width) / 2,
             y: (size.height - sSize.height) / 2,
@@ -158,7 +176,6 @@ class SpaceLabelWindow: NSWindow {
     }
 
     // MARK: - Helpers
-    
     private func findTargetScreen() -> NSScreen? {
         return NSScreen.screens.first { screen in
             let screenID = screen.deviceDescription[NSDeviceDescriptionKey("NSScreenNumber")] as? NSNumber ?? 0
@@ -174,12 +191,12 @@ class SpaceLabelWindow: NSWindow {
         let f = targetScreen.frame
         let overlap: CGFloat = 1.0
         
-        let topLeft = NSPoint(x: f.minX - size.width + overlap, y: f.maxY - overlap)
-        let topRight = NSPoint(x: f.maxX - overlap, y: f.maxY - overlap)
-        let bottomLeft = NSPoint(x: f.minX - size.width + overlap, y: f.minY - size.height + overlap)
-        let bottomRight = NSPoint(x: f.maxX - overlap, y: f.minY - size.height + overlap)
-        
-        let candidates = [topLeft, topRight, bottomLeft, bottomRight]
+        let candidates = [
+            NSPoint(x: f.minX - size.width + overlap, y: f.maxY - overlap),
+            NSPoint(x: f.maxX - overlap, y: f.maxY - overlap),
+            NSPoint(x: f.minX - size.width + overlap, y: f.minY - size.height + overlap),
+            NSPoint(x: f.maxX - overlap, y: f.minY - size.height + overlap)
+        ]
         
         for point in candidates {
             let rect = NSRect(origin: point, size: size)
@@ -189,15 +206,16 @@ class SpaceLabelWindow: NSWindow {
             }
             if !touchesNeighbor { return point }
         }
-        return topLeft
+        return candidates[0]
     }
     
-    @objc private func repositionWindow() {
-        updateLayout(isCurrentSpace: true)
-    }
+    @objc private func repositionWindow() { updateLayout(isCurrentSpace: true) }
     
     func updateName(_ name: String) {
         self.label.stringValue = name
-        updateLabelFont(for: self.frame.size)
+        // Font update happens in layout loop or setMode usually, but we can force it here
+        if self.frame.width > smallSize.width + 10 {
+            updateLabelFont(for: self.frame.size)
+        }
     }
 }
