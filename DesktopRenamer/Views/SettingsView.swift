@@ -61,13 +61,16 @@ struct SettingsView: View {
                 }
             } header: {
                 VStack(alignment: .leading, spacing: 0) {
-                    Color.clear.frame(height: 30)
+                    Color.clear.frame(height: 35)
                     
-                    Text("DesktopRenamer")
+                    Text("Desktop")
                         .font(.system(size: 24, weight: .medium))
                         .foregroundStyle(.primary)
-                        .padding(.vertical, 10)
-                        .padding(.leading, 8)
+                    Text("Renamer")
+                        .font(.system(size: 24, weight: .medium))
+                        .foregroundStyle(.primary)
+                        .padding(.bottom, 10)
+                        // .padding(.leading, 8)
                 }
             }
             .collapsible(false)
