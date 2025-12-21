@@ -1,6 +1,5 @@
 import SwiftUI
 
-// Enum remains the same
 enum SettingsTab: String, CaseIterable, Identifiable {
     case general, labels, space, about
     
@@ -43,9 +42,6 @@ struct SettingsView: View {
         }
         .navigationTitle("")
         .toolbar(.hidden, for: .windowToolbar)
-        // CRITICAL FIX: This forces the SplitView to extend to the very top edge of the window
-        // overwriting the space reserved for the "ghost" toolbar.
-        .edgesIgnoringSafeArea(.top)
         .frame(width: CGFloat(defaultSettingsWindowWidth), height: CGFloat(defaultSettingsWindowHeight))
     }
     
@@ -57,27 +53,25 @@ struct SettingsView: View {
                     sidebarItem(for: tab)
                 }
             } header: {
-                // Header mimics Ice style: Large text, no collapsing
-                VStack(alignment: .leading, spacing: 0) {                    
-                    Text("DesktopRenamer")
-                        .font(.system(size: 20, weight: .medium))
-                        .foregroundStyle(.primary)
-                        .padding(.bottom, 5)
-                }
+                Color.clear.frame(height: 40)
+                // Ice Style Header: No spacers needed, Section Header handles layout
+                Text("DesktopRenamer")
+                    .font(.system(size: 18, weight: .semibold)) // Slightly smaller/bolder to match macOS standard
+                    .foregroundStyle(.primary)
+                    .padding(.vertical, 8) // Small vertical breathing room
             }
             .collapsible(false)
         }
         .scrollDisabled(true)
         .navigationSplitViewColumnWidth(sidebarWidth)
         .listStyle(.sidebar)
+        // Ensure sidebar extends to top edge behind traffic lights
+        .edgesIgnoringSafeArea(.top)
     }
     
     @ViewBuilder
     private var detailView: some View {
         ZStack(alignment: .top) {
-            // Background to verify full height (optional)
-            Color.clear
-            
             if let tab = selectedTab {
                 switch tab {
                 case .general:
@@ -94,10 +88,9 @@ struct SettingsView: View {
                     .foregroundColor(.secondary)
             }
         }
-        // Add top padding to the content so it aligns with the sidebar text
-        // and doesn't sit underneath the invisible title bar area.
-//        .padding(.top, 40)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+        // FIX: This pulls the content up, ignoring the "Ghost" Title Bar space
+        .edgesIgnoringSafeArea(.top)
     }
     
     @ViewBuilder
@@ -110,7 +103,7 @@ struct SettingsView: View {
                 Image(systemName: tab.iconName)
             }
         }
-        .frame(height: 30) // Fixed height for consistency
+        .frame(height: 30)
     }
 }
 
