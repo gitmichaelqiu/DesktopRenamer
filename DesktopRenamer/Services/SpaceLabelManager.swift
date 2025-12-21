@@ -1,5 +1,6 @@
 import Foundation
 import AppKit
+import Combine
 
 class SpaceLabelManager: ObservableObject {
     private let spacesKey = "com.michaelqiu.desktoprenamer.slw"
@@ -14,29 +15,55 @@ class SpaceLabelManager: ObservableObject {
     
     private var createdWindows: [String: SpaceLabelWindow] = [:]
     private weak var spaceManager: SpaceManager?
+    private var cancellables = Set<AnyCancellable>() // Added Cancellables storage
     
     init(spaceManager: SpaceManager) {
         self.spaceManager = spaceManager
         self.isEnabled = UserDefaults.standard.bool(forKey: spacesKey)
+        setupObservers() // Start listening immediately
     }
     
     deinit {
         removeAllWindows()
+        cancellables.removeAll()
+    }
+    
+    private func setupObservers() {
+        guard let spaceManager = spaceManager else { return }
+        
+        // NEW: Listen to Space Switches
+        spaceManager.$currentSpaceUUID
+            .dropFirst() // Skip initial load
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] currentSpaceId in
+                guard let self = self, self.isEnabled else { return }
+                self.updateAllWindowModes(currentSpaceId: currentSpaceId)
+            }
+            .store(in: &cancellables)
+    }
+    
+    private func updateAllWindowModes(currentSpaceId: String) {
+        for (spaceId, window) in createdWindows {
+            if spaceId == currentSpaceId {
+                // CURRENT SPACE: Shrink & Hide (So user can work)
+                window.setMode(isCurrentSpace: true)
+            } else {
+                // OTHER SPACES: Expand & Show (For Mission Control Preview)
+                window.setMode(isCurrentSpace: false)
+            }
+        }
     }
     
     func updateLabel(for spaceId: String, name: String, verifySpace: Bool = true) {
         guard isEnabled, spaceId != "FULLSCREEN" else { return }
         
-        // If we are not verifying (e.g. forced toggle), just use current manager state
         if !verifySpace {
             let currentDisplayID = spaceManager?.currentDisplayID ?? "Main"
             ensureWindow(for: spaceId, name: name, displayID: currentDisplayID)
             return
         }
         
-        // Check live state before creating
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.02) {
-            // Capture the 'displayID' (4th parameter) from the helper
             SpaceHelper.getRawSpaceUUID { confirmedSpaceId, _, _, liveDisplayID in
                 if confirmedSpaceId == spaceId {
                     self.ensureWindow(for: spaceId, name: name, displayID: liveDisplayID)
@@ -46,47 +73,41 @@ class SpaceLabelManager: ObservableObject {
     }
     
     private func ensureWindow(for spaceId: String, name: String, displayID: String) {
-        // 1. Check if window exists
         if let existingWindow = createdWindows[spaceId] {
-            // 2. Check if it's on the right screen. If not, destroy it.
-            if existingWindow.displayID != displayID {
-                print("Label Manager: Space \(spaceId) moved from \(existingWindow.displayID) to \(displayID). Recreating window.")
+            if !existingWindow.isVisible {
+                createdWindows.removeValue(forKey: spaceId)
+            }
+            else if existingWindow.displayID != displayID {
+                print("Label Manager: Space \(spaceId) moved. Recreating window.")
                 existingWindow.orderOut(nil)
                 createdWindows.removeValue(forKey: spaceId)
             } else {
-                return // Window exists and is correct
+                return
             }
         }
-        
-        // 3. Create new window with the EXPLICIT live displayID
         createWindow(for: spaceId, name: name, displayID: displayID)
     }
     
     private func createWindow(for spaceId: String, name: String, displayID: String) {
         guard let spaceManager = spaceManager else { return }
         
-        // We pass the explicit 'displayID' here, ignoring the database
         let window = SpaceLabelWindow(spaceId: spaceId, name: name, displayID: displayID, spaceManager: spaceManager)
         createdWindows[spaceId] = window
+        
+        // Initialize Mode:
+        // If this is the active space, hide it. If it's a background space, show preview.
+        let isCurrent = (spaceId == spaceManager.currentSpaceUUID)
+        window.setMode(isCurrentSpace: isCurrent)
+        
         window.orderFront(nil)
     }
     
+    // Legacy override support (unused now but kept for safety)
     private func createWindow(for spaceId: String, name: String) {
-            guard let spaceManager = spaceManager else { return }
-            
-            // If we are creating the label for the space user is CURRENTLY on,
-            // use the live detected DisplayID. Otherwise, fallback to saved data.
-            let displayID: String
-            if spaceId == spaceManager.currentSpaceUUID {
-                displayID = spaceManager.currentDisplayID
-            } else {
-                displayID = spaceManager.spaceNameDict.first(where: { $0.id == spaceId })?.displayID ?? "Main"
-            }
-            
-            let window = SpaceLabelWindow(spaceId: spaceId, name: name, displayID: displayID, spaceManager: spaceManager)
-            createdWindows[spaceId] = window
-            window.orderFront(nil)
-        }
+        guard let spaceManager = spaceManager else { return }
+        let displayID = (spaceId == spaceManager.currentSpaceUUID) ? spaceManager.currentDisplayID : "Main"
+        createWindow(for: spaceId, name: name, displayID: displayID)
+    }
     
     private func removeAllWindows() {
         for (_, window) in createdWindows {
@@ -99,6 +120,7 @@ class SpaceLabelManager: ObservableObject {
         if !isEnabled {
             removeAllWindows()
         } else {
+            // Restore labels for visible spaces
             if let spaceId = spaceManager?.currentSpaceUUID,
                let name = spaceManager?.getSpaceName(spaceId) {
                 updateLabel(for: spaceId, name: name, verifySpace: false)
@@ -109,9 +131,10 @@ class SpaceLabelManager: ObservableObject {
     func toggleEnabled() {
         isEnabled.toggle()
         if isEnabled {
-            let spaceId = self.spaceManager?.currentSpaceUUID
-            let name = self.spaceManager?.getSpaceName(spaceId ?? "")
-            self.updateLabel(for: spaceId ?? "", name: name ?? "", verifySpace: false)
+            if let spaceId = spaceManager?.currentSpaceUUID,
+               let name = spaceManager?.getSpaceName(spaceId) {
+                updateLabel(for: spaceId, name: name, verifySpace: false)
+            }
         }
     }
 }
