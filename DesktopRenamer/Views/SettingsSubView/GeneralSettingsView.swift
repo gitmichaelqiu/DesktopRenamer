@@ -685,11 +685,11 @@ struct GeneralSettingsView: View {
     
     private func performFactoryReset() {
         let alert = NSAlert()
-        alert.messageText = "Factory Reset"
-        alert.informativeText = "Are you sure? This will delete all your space names and settings. The app will quit immediately."
+        alert.messageText = NSLocalizedString("Factory Reset", comment: "")
+        alert.informativeText = NSLocalizedString("Are you sure? This will delete all your space names and settings. The app will quit immediately.", comment: "")
         alert.alertStyle = .critical
-        alert.addButton(withTitle: "Reset & Quit")
-        alert.addButton(withTitle: "Cancel")
+        alert.addButton(withTitle: NSLocalizedString("Reset & Quit", comment: ""))
+        alert.addButton(withTitle: NSLocalizedString("Cancel", comment: ""))
         
         guard let window = NSApp.suitableSheetWindow else { return }
         alert.beginSheetModal(for: window) { result in
