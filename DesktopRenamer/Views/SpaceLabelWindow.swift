@@ -2,9 +2,9 @@ import Cocoa
 import Combine
 
 class SpaceLabelWindow: NSWindow {
-    private let label: NSTextField
+    private var label: NSTextField
     public let spaceId: String
-    private let displayID: String
+    let displayID: String
     private var cancellables = Set<AnyCancellable>()
     private let spaceManager: SpaceManager
     
@@ -12,107 +12,141 @@ class SpaceLabelWindow: NSWindow {
     private let frameHeight: CGFloat = 200
     
     init(spaceId: String, name: String, displayID: String, spaceManager: SpaceManager) {
-        self.spaceId = spaceId
-        self.displayID = displayID
-        self.spaceManager = spaceManager
-        
-        // --- View Setup (Same as before) ---
-        label = NSTextField(labelWithString: name)
-        label.font = .systemFont(ofSize: 50, weight: .medium)
-        label.textColor = .labelColor
-        label.alignment = .center
-        
-        let contentView: NSView
-        if #available(macOS 26.0, *) {
-            let glassEffectView = NSGlassEffectView(frame: NSRect(x: 0, y: 0, width: frameWidth, height: frameHeight))
-            contentView = glassEffectView
-        } else {
-            let visualEffectView = NSVisualEffectView(frame: NSRect(x: 0, y: 0, width: frameWidth, height: frameHeight))
-            contentView = visualEffectView
-        }
-        
-        // Font resizing logic
-        let padding: CGFloat = 20
-        let maxWidth = frameWidth - (padding * 2)
-        let maxHeight = frameHeight - (padding * 2)
-        
-        var fontSize: CGFloat = 50
-        var attributedString = NSAttributedString(string: name, attributes: [.font: NSFont.systemFont(ofSize: fontSize, weight: .medium)])
-        var stringSize = attributedString.size()
-        
-        while (stringSize.width > maxWidth || stringSize.height > maxHeight) && fontSize > 10 {
-            fontSize -= 2
-            attributedString = NSAttributedString(string: name, attributes: [.font: NSFont.systemFont(ofSize: fontSize, weight: .medium)])
-            stringSize = attributedString.size()
-        }
-        
-        label.font = .systemFont(ofSize: fontSize, weight: .medium)
-        
-        let labelFrame = NSRect(
-            x: (frameWidth - stringSize.width) / 2,
-            y: (frameHeight - stringSize.height) / 2,
-            width: stringSize.width,
-            height: stringSize.height
-        )
-        label.frame = labelFrame
-        contentView.addSubview(label)
-        
-        // --- Window Init ---
-        super.init(
-            contentRect: NSRect(x: 0, y: 0, width: frameWidth, height: frameHeight),
-            styleMask: [.borderless],
-            backing: .buffered,
-            defer: true
-        )
-        
-        self.contentView = contentView
-        self.contentView?.wantsLayer = true
-        self.contentView?.layer?.cornerRadius = 6
-        self.contentView?.addSubview(label)
-        
-        self.backgroundColor = .clear
-        self.isOpaque = false
-        self.hasShadow = false
-        self.level = .floating
-        
-        self.collectionBehavior = [
-            .managed,
-            .stationary,
-            .participatesInCycle,
-            .fullScreenAuxiliary
-        ]
-        
-        self.ignoresMouseEvents = true
-        self.acceptsMouseMovedEvents = false
-        
-        // Hide standard controls
-        self.titlebarAppearsTransparent = true
-        self.titleVisibility = .hidden
-        self.standardWindowButton(.closeButton)?.isHidden = true
-        self.standardWindowButton(.miniaturizeButton)?.isHidden = true
-        self.standardWindowButton(.zoomButton)?.isHidden = true
-        
-        self.isRestorable = false
-        
-        // --- Observers ---
-        
-        // 1. Name Changes
-        spaceManager.$spaceNameDict
-            .receive(on: DispatchQueue.main)
-            .sink { [weak self] _ in
-                guard let self = self else { return }
-                self.updateName(self.spaceManager.getSpaceName(self.spaceId))
+            // 1. Initialize properties
+            self.spaceId = spaceId
+            self.displayID = displayID
+            self.spaceManager = spaceManager
+            
+            // Initialize Label
+            let newLabel = NSTextField(labelWithString: name)
+            self.label = newLabel
+            
+            // 2. Define Dimensions
+            let kWidth: CGFloat = 400
+            let kHeight: CGFloat = 200
+            
+            // 3. Find Target Screen
+            let foundScreen = NSScreen.screens.first { screen in
+                let screenID = screen.deviceDescription[NSDeviceDescriptionKey("NSScreenNumber")] as? NSNumber ?? 0
+                
+                // Exact Match
+                let idString = "\(screen.localizedName) (\(screenID))"
+                if idString == displayID { return true }
+                
+                // Fuzzy Match
+                let cleanName = displayID.components(separatedBy: " (").first ?? displayID
+                return screen.localizedName == cleanName
             }
-            .store(in: &cancellables)
-        
-        // 2. Screen/Wake Changes (Re-calculate position)
-        let center = NotificationCenter.default
-        center.addObserver(self, selector: #selector(repositionWindow), name: NSApplication.didChangeScreenParametersNotification, object: nil)
-        center.addObserver(self, selector: #selector(repositionWindow), name: NSWorkspace.didWakeNotification, object: nil)
-        
-        // Initial Position
-        repositionWindow()
-    }
+            
+            let targetScreen = foundScreen ?? NSScreen.main!
+            
+            // 4. Calculate Rect
+            let screenFrame = targetScreen.frame
+            let initialRect = NSRect(
+                x: screenFrame.midX - (kWidth / 2),
+                y: screenFrame.midY - (kHeight / 2),
+                width: kWidth,
+                height: kHeight
+            )
+            
+            // 5. Initialize Window (defer: false to create immediately)
+            super.init(
+                contentRect: initialRect,
+                styleMask: [.borderless],
+                backing: .buffered,
+                defer: false
+            )
+            
+            // 6. CRITICAL FIX: Force Position BEFORE setting CollectionBehavior
+            // We ensure the window is physically on the correct screen before telling
+            // Mission Control to treat it as "Stationary" on that screen.
+            self.setFrame(initialRect, display: true)
+            
+            // 7. View Configuration
+            let padding: CGFloat = 20
+            let maxWidth = kWidth - (padding * 2)
+            let maxHeight = kHeight - (padding * 2)
+            
+            var fontSize: CGFloat = 50
+            var attributedString = NSAttributedString(string: name, attributes: [.font: NSFont.systemFont(ofSize: fontSize, weight: .medium)])
+            var stringSize = attributedString.size()
+            
+            while (stringSize.width > maxWidth || stringSize.height > maxHeight) && fontSize > 10 {
+                fontSize -= 2
+                attributedString = NSAttributedString(string: name, attributes: [.font: NSFont.systemFont(ofSize: fontSize, weight: .medium)])
+                stringSize = attributedString.size()
+            }
+            
+            newLabel.font = .systemFont(ofSize: fontSize, weight: .medium)
+            newLabel.textColor = .labelColor
+            newLabel.alignment = .center
+            newLabel.frame = NSRect(
+                x: (kWidth - stringSize.width) / 2,
+                y: (kHeight - stringSize.height) / 2,
+                width: stringSize.width,
+                height: stringSize.height
+            )
+            
+            let mainContentView: NSView
+            if #available(macOS 10.14, *) {
+                mainContentView = NSVisualEffectView(frame: NSRect(x: 0, y: 0, width: kWidth, height: kHeight))
+            } else {
+                mainContentView = NSView(frame: NSRect(x: 0, y: 0, width: kWidth, height: kHeight))
+            }
+            
+            mainContentView.wantsLayer = true
+            mainContentView.layer?.cornerRadius = 6
+            mainContentView.addSubview(newLabel)
+            
+            self.contentView = mainContentView
+            
+            // 8. Window Attributes
+            self.backgroundColor = .clear
+            self.isOpaque = false
+            self.hasShadow = false
+            self.level = .floating
+            
+            // 9. APPLY BEHAVIORS LAST
+            // Now that the window is on the correct screen, we lock it down.
+            // We also add .canJoinAllSpaces to ensure it doesn't get hidden if the space technically "switches"
+            // underneath it (though stationary usually handles this).
+            self.collectionBehavior = [
+                .managed,
+                .stationary,
+                .participatesInCycle,
+                .fullScreenAuxiliary
+            ]
+            
+            self.ignoresMouseEvents = true
+            self.titlebarAppearsTransparent = true
+            self.titleVisibility = .hidden
+            self.standardWindowButton(.closeButton)?.isHidden = true
+            self.standardWindowButton(.miniaturizeButton)?.isHidden = true
+            self.standardWindowButton(.zoomButton)?.isHidden = true
+            self.isRestorable = false
+            
+            // 10. Async Reinforcement (Just in case)
+            // macOS can sometimes be stubborn; a second setFrame on the next run loop ensures it sticks.
+            DispatchQueue.main.async { [weak self] in
+                self?.setFrame(initialRect, display: true)
+            }
+            
+            // 11. Observers
+            self.spaceManager.$spaceNameDict
+                .receive(on: DispatchQueue.main)
+                .sink { [weak self] _ in
+                    guard let self = self else { return }
+                    self.updateName(self.spaceManager.getSpaceName(self.spaceId))
+                }
+                .store(in: &cancellables)
+                
+            let center = NotificationCenter.default
+            center.addObserver(self, selector: #selector(repositionWindow), name: NSApplication.didChangeScreenParametersNotification, object: nil)
+            center.addObserver(self, selector: #selector(repositionWindow), name: NSWorkspace.didWakeNotification, object: nil)
+            
+            // Final positioning check
+            repositionWindow()
+        }
     
     @objc private func repositionWindow() {
         guard let targetScreen = findTargetScreen() else { return }

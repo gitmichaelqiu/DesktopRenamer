@@ -26,34 +26,67 @@ class SpaceLabelManager: ObservableObject {
     
     func updateLabel(for spaceId: String, name: String, verifySpace: Bool = true) {
         guard isEnabled, spaceId != "FULLSCREEN" else { return }
-        if createdWindows[spaceId] != nil { return }
         
-        if verifySpace {
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.02) {
-                // Confirm existence before creating
-                SpaceHelper.getRawSpaceUUID { confirmedSpaceId, _, _, _ in
-                    if confirmedSpaceId == spaceId {
-                        if self.createdWindows[spaceId] == nil {
-                            self.createWindow(for: spaceId, name: name)
-                        }
-                    }
+        // If we are not verifying (e.g. forced toggle), just use current manager state
+        if !verifySpace {
+            let currentDisplayID = spaceManager?.currentDisplayID ?? "Main"
+            ensureWindow(for: spaceId, name: name, displayID: currentDisplayID)
+            return
+        }
+        
+        // VERIFY: Check live state before creating
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.02) {
+            // FIX: Capture the 'displayID' (4th parameter) from the helper
+            SpaceHelper.getRawSpaceUUID { confirmedSpaceId, _, _, liveDisplayID in
+                if confirmedSpaceId == spaceId {
+                    self.ensureWindow(for: spaceId, name: name, displayID: liveDisplayID)
                 }
             }
-        } else {
-            self.createWindow(for: spaceId, name: name)
         }
     }
     
-    private func createWindow(for spaceId: String, name: String) {
+    private func ensureWindow(for spaceId: String, name: String, displayID: String) {
+        // 1. Check if window exists
+        if let existingWindow = createdWindows[spaceId] {
+            // 2. Check if it's on the right screen. If not, destroy it.
+            if existingWindow.displayID != displayID {
+                print("Label Manager: Space \(spaceId) moved from \(existingWindow.displayID) to \(displayID). Recreating window.")
+                existingWindow.orderOut(nil)
+                createdWindows.removeValue(forKey: spaceId)
+            } else {
+                return // Window exists and is correct
+            }
+        }
+        
+        // 3. Create new window with the EXPLICIT live displayID
+        createWindow(for: spaceId, name: name, displayID: displayID)
+    }
+    
+    private func createWindow(for spaceId: String, name: String, displayID: String) {
         guard let spaceManager = spaceManager else { return }
         
-        // Find the Display ID for this space
-        let displayID = spaceManager.spaceNameDict.first(where: { $0.id == spaceId })?.displayID ?? "Main"
-        
+        // We pass the explicit 'displayID' here, ignoring the database
         let window = SpaceLabelWindow(spaceId: spaceId, name: name, displayID: displayID, spaceManager: spaceManager)
         createdWindows[spaceId] = window
         window.orderFront(nil)
     }
+    
+    private func createWindow(for spaceId: String, name: String) {
+            guard let spaceManager = spaceManager else { return }
+            
+            // FIX: If we are creating the label for the space user is CURRENTLY on,
+            // use the live detected DisplayID. Otherwise, fallback to saved data.
+            let displayID: String
+            if spaceId == spaceManager.currentSpaceUUID {
+                displayID = spaceManager.currentDisplayID
+            } else {
+                displayID = spaceManager.spaceNameDict.first(where: { $0.id == spaceId })?.displayID ?? "Main"
+            }
+            
+            let window = SpaceLabelWindow(spaceId: spaceId, name: name, displayID: displayID, spaceManager: spaceManager)
+            createdWindows[spaceId] = window
+            window.orderFront(nil)
+        }
     
     private func removeAllWindows() {
         for (_, window) in createdWindows {

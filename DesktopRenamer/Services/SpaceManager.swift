@@ -154,6 +154,14 @@ class SpaceManager: ObservableObject {
         if currentSpaceUUID != logicalUUID {
             currentSpaceUUID = logicalUUID
         }
+
+        if let index = spaceNameDict.firstIndex(where: { $0.id == logicalUUID }) {
+            if spaceNameDict[index].displayID != displayID {
+                print("Correcting Display ID for space \(logicalUUID): \(spaceNameDict[index].displayID) -> \(displayID)")
+                spaceNameDict[index].displayID = displayID
+                saveSpaces()
+            }
+        }
         
         // Auto-Add Logic (Only if NOT manual)
         if detectionMethod != .manual && logicalUUID != "FULLSCREEN" {
