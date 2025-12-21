@@ -98,6 +98,11 @@ class SpaceLabelManager: ObservableObject {
     private func updateLabelsVisibility() {
         if !isEnabled {
             removeAllWindows()
+        } else {
+            if let spaceId = spaceManager?.currentSpaceUUID,
+               let name = spaceManager?.getSpaceName(spaceId) {
+                updateLabel(for: spaceId, name: name, verifySpace: false)
+            }
         }
     }
     
