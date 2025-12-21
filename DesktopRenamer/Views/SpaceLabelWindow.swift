@@ -12,12 +12,11 @@ class SpaceLabelWindow: NSWindow {
     private let frameHeight: CGFloat = 200
     
     init(spaceId: String, name: String, displayID: String, spaceManager: SpaceManager) {
-            // 1. Initialize properties
+            // 1. Initialize Properties
             self.spaceId = spaceId
             self.displayID = displayID
             self.spaceManager = spaceManager
             
-            // Initialize Label
             let newLabel = NSTextField(labelWithString: name)
             self.label = newLabel
             
@@ -28,19 +27,15 @@ class SpaceLabelWindow: NSWindow {
             // 3. Find Target Screen
             let foundScreen = NSScreen.screens.first { screen in
                 let screenID = screen.deviceDescription[NSDeviceDescriptionKey("NSScreenNumber")] as? NSNumber ?? 0
-                
-                // Exact Match
                 let idString = "\(screen.localizedName) (\(screenID))"
                 if idString == displayID { return true }
-                
-                // Fuzzy Match
                 let cleanName = displayID.components(separatedBy: " (").first ?? displayID
                 return screen.localizedName == cleanName
             }
-            
             let targetScreen = foundScreen ?? NSScreen.main!
             
-            // 4. Calculate Rect
+            // 4. Calculate Center Rect (For initial creation only)
+            // We MUST create it here first to ensure macOS assigns it to the correct display.
             let screenFrame = targetScreen.frame
             let initialRect = NSRect(
                 x: screenFrame.midX - (kWidth / 2),
@@ -49,20 +44,19 @@ class SpaceLabelWindow: NSWindow {
                 height: kHeight
             )
             
-            // 5. Initialize Window (defer: false to create immediately)
+            // 5. Initialize Window
             super.init(
                 contentRect: initialRect,
                 styleMask: [.borderless],
                 backing: .buffered,
-                defer: false
+                defer: false // Create immediately
             )
             
-            // 6. CRITICAL FIX: Force Position BEFORE setting CollectionBehavior
-            // We ensure the window is physically on the correct screen before telling
-            // Mission Control to treat it as "Stationary" on that screen.
+            // 6. Force Screen Association
             self.setFrame(initialRect, display: true)
             
             // 7. View Configuration
+            // (Standard view setup code...)
             let padding: CGFloat = 20
             let maxWidth = kWidth - (padding * 2)
             let maxHeight = kHeight - (padding * 2)
@@ -97,7 +91,6 @@ class SpaceLabelWindow: NSWindow {
             mainContentView.wantsLayer = true
             mainContentView.layer?.cornerRadius = 6
             mainContentView.addSubview(newLabel)
-            
             self.contentView = mainContentView
             
             // 8. Window Attributes
@@ -106,16 +99,8 @@ class SpaceLabelWindow: NSWindow {
             self.hasShadow = false
             self.level = .floating
             
-            // 9. APPLY BEHAVIORS LAST
-            // Now that the window is on the correct screen, we lock it down.
-            // We also add .canJoinAllSpaces to ensure it doesn't get hidden if the space technically "switches"
-            // underneath it (though stationary usually handles this).
-            self.collectionBehavior = [
-                .managed,
-                .stationary,
-                .participatesInCycle,
-                .fullScreenAuxiliary
-            ]
+            // Collection Behaviors
+            self.collectionBehavior = [.managed, .stationary, .participatesInCycle, .fullScreenAuxiliary]
             
             self.ignoresMouseEvents = true
             self.titlebarAppearsTransparent = true
@@ -125,13 +110,7 @@ class SpaceLabelWindow: NSWindow {
             self.standardWindowButton(.zoomButton)?.isHidden = true
             self.isRestorable = false
             
-            // 10. Async Reinforcement (Just in case)
-            // macOS can sometimes be stubborn; a second setFrame on the next run loop ensures it sticks.
-            DispatchQueue.main.async { [weak self] in
-                self?.setFrame(initialRect, display: true)
-            }
-            
-            // 11. Observers
+            // 9. Observers
             self.spaceManager.$spaceNameDict
                 .receive(on: DispatchQueue.main)
                 .sink { [weak self] _ in
@@ -144,8 +123,11 @@ class SpaceLabelWindow: NSWindow {
             center.addObserver(self, selector: #selector(repositionWindow), name: NSApplication.didChangeScreenParametersNotification, object: nil)
             center.addObserver(self, selector: #selector(repositionWindow), name: NSWorkspace.didWakeNotification, object: nil)
             
-            // Final positioning check
-            repositionWindow()
+            // 10. MOVE OFF-SCREEN (Fix: Do this LAST, and do not reset to center)
+            // We use async to allow the window server to digest the initial "Center" placement first.
+            DispatchQueue.main.async { [weak self] in
+                self?.repositionWindow()
+            }
         }
     
     @objc private func repositionWindow() {
@@ -153,6 +135,8 @@ class SpaceLabelWindow: NSWindow {
         
         let bestOrigin = findBestOffscreenPosition(targetScreen: targetScreen)
         self.setFrameOrigin(bestOrigin)
+        
+        print("Window \(spaceId) repositioned to \(bestOrigin) for screen \(targetScreen.localizedName)")
     }
     
     private func findTargetScreen() -> NSScreen? {
@@ -175,81 +159,64 @@ class SpaceLabelWindow: NSWindow {
         // 3. Fallback
         return NSScreen.main
     }
-    
-    // NEW: Smart "Safe Zone" Scanner
-    private func findBestOffscreenPosition(targetScreen: NSScreen) -> NSPoint {
-        let allScreens = NSScreen.screens
-        let frame = targetScreen.frame
-        let size = self.frame.size
-        
-        // Distance to push off-screen (small enough to stay associated, large enough to hide)
-        let offset: CGFloat = 50
-        
-        // 1. Define Candidates (Cardinal Directions)
-        // Note: AppKit coords (0,0 is bottom-left).
-        let top    = NSPoint(x: frame.midX - size.width/2, y: frame.maxY + offset)
-        let bottom = NSPoint(x: frame.midX - size.width/2, y: frame.minY - size.height - offset)
-        let left   = NSPoint(x: frame.minX - size.width - offset, y: frame.midY - size.height/2)
-        let right  = NSPoint(x: frame.maxX + offset, y: frame.midY - size.height/2)
-        
-        let cardinalCandidates = [top, bottom, left, right]
-        
-        // 2. Check Intersections (Preferred)
-        for point in cardinalCandidates {
-            let candidateRect = NSRect(origin: point, size: size)
-            
-            let intersectsAny = allScreens.contains { screen in
-                // We use a slightly smaller rect to avoid false positives on touching edges
-                return screen.frame.intersects(candidateRect.insetBy(dx: 5, dy: 5))
-            }
-            
-            if !intersectsAny {
-                // Found a clean spot!
-                return point
-            }
-        }
-        
-        // 3. Fallback: Corners (If cardinal directions blocked)
-        let tr = NSPoint(x: frame.maxX + offset, y: frame.maxY + offset)
-        let tl = NSPoint(x: frame.minX - size.width - offset, y: frame.maxY + offset)
-        let br = NSPoint(x: frame.maxX + offset, y: frame.minY - size.height - offset)
-        let bl = NSPoint(x: frame.minX - size.width - offset, y: frame.minY - size.height - offset)
-        
-        let cornerCandidates = [tr, tl, br, bl]
-        
-        for point in cornerCandidates {
-            let candidateRect = NSRect(origin: point, size: size)
-            let intersectsAny = allScreens.contains { screen in
-                return screen.frame.intersects(candidateRect.insetBy(dx: 5, dy: 5))
-            }
-            if !intersectsAny { return point }
-        }
 
-        // 4. Worst Case: Surrounded (e.g. Center of 3x3 grid)
-        // We pick the cardinal direction with the SMALLEST overlap area
-        var bestPoint = top
-        var minOverlapArea: CGFloat = .greatestFiniteMagnitude
-        
-        for point in cardinalCandidates {
-            let candidateRect = NSRect(origin: point, size: size)
-            var totalOverlap: CGFloat = 0
+    private func findBestOffscreenPosition(targetScreen: NSScreen) -> NSPoint {
+            let allScreens = NSScreen.screens
+            let w = self.frame.width
+            let h = self.frame.height
+            let f = targetScreen.frame
             
-            for screen in allScreens {
-                let intersection = screen.frame.intersection(candidateRect)
-                if !intersection.isEmpty {
-                    totalOverlap += intersection.width * intersection.height
+            // ANCHOR STRATEGY:
+            // Instead of a gap (buffer = 50), we use a negative buffer (overlap = 1.0).
+            // This ensures 1 pixel of the window is technically "on screen", preventing
+            // macOS from resetting it to the Main Display.
+            let overlap: CGFloat = 1.0
+            
+            // 1. Top-Left Anchor (Hangs off left, 1px on top edge)
+            // x: ends at minX + 1 -> origin = minX - w + 1
+            // y: starts at maxY - 1
+            let topLeft = NSPoint(x: f.minX - w + overlap, y: f.maxY - overlap)
+            
+            // 2. Top-Right Anchor (Hangs off right, 1px on top edge)
+            // x: starts at maxX - 1
+            // y: starts at maxY - 1
+            let topRight = NSPoint(x: f.maxX - overlap, y: f.maxY - overlap)
+            
+            // 3. Bottom-Left Anchor (Hangs off left, 1px on bottom edge)
+            // x: ends at minX + 1 -> origin = minX - w + 1
+            // y: ends at minY + 1 -> origin = minY - h + overlap (wait, y is bottom-left)
+            // Let's stick to the corners:
+            let bottomLeft = NSPoint(x: f.minX - w + overlap, y: f.minY - h + overlap)
+            
+            // 4. Bottom-Right Anchor (Hangs off right, 1px on bottom edge)
+            let bottomRight = NSPoint(x: f.maxX - overlap, y: f.minY - h + overlap)
+            
+            let candidates = [topLeft, topRight, bottomLeft, bottomRight]
+            
+            // Check which candidate DOES NOT touch any *other* screen
+            for point in candidates {
+                let candidateRect = NSRect(origin: point, size: self.frame.size)
+                
+                // It WILL intersect the target screen (by design, 1px).
+                // We must check if it intersects ANY OTHER screen.
+                let touchesNeighbor = allScreens.contains { screen in
+                    // Skip the target screen itself
+                    if screen == targetScreen { return false }
+                    
+                    // Check intersection with others (using small inset to avoid false positives on shared edges)
+                    return screen.frame.intersects(candidateRect)
+                }
+                
+                if !touchesNeighbor {
+                    return point // This corner is free (no monitor attached here)
                 }
             }
             
-            if totalOverlap < minOverlapArea {
-                minOverlapArea = totalOverlap
-                bestPoint = point
-            }
+            // Fallback: If all 4 corners touch neighbors (e.g. 3x3 grid middle screen),
+            // we default to Top-Left. It's better to overlap a neighbor slightly than
+            // to snap to Main Screen (0,0).
+            return topLeft
         }
-        
-        return bestPoint
-    }
-    
     func updateName(_ name: String) {
         DispatchQueue.main.async {
             // Calculate optimal font size for new name
