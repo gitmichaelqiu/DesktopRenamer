@@ -122,13 +122,24 @@ class SpaceLabelWindow: NSWindow {
     }
     
     private func findTargetScreen() -> NSScreen? {
-        // Find the screen matching our displayID, or fallback to main
-        return NSScreen.screens.first { screen in
+        // 1. Try Exact Match (Name + ID)
+        if let exactMatch = NSScreen.screens.first(where: { screen in
             let screenID = screen.deviceDescription[NSDeviceDescriptionKey("NSScreenNumber")] as? NSNumber ?? 0
-            let screenName = screen.localizedName
-            let idString = "\(screenName) (\(screenID))"
+            let idString = "\(screen.localizedName) (\(screenID))"
             return idString == self.displayID
-        } ?? NSScreen.main
+        }) {
+            return exactMatch
+        }
+        
+        // 2. FIX: Fuzzy Match (Name only)
+        // If the ID changed (e.g. after reboot), try to find a screen with the same Name.
+        let cleanName = self.displayID.components(separatedBy: " (").first ?? self.displayID
+        if let nameMatch = NSScreen.screens.first(where: { $0.localizedName == cleanName }) {
+            return nameMatch
+        }
+        
+        // 3. Fallback
+        return NSScreen.main
     }
     
     // NEW: Smart "Safe Zone" Scanner
