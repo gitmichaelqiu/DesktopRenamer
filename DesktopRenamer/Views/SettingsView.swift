@@ -31,6 +31,9 @@ let defaultSettingsWindowHeight = 550
 let sidebarRowHeight: CGFloat = 32
 let sidebarFontSize: CGFloat = 15
 
+// Tighter Header Height
+let titleHeaderHeight: CGFloat = 48
+
 struct SettingsView: View {
     @ObservedObject var spaceManager: SpaceManager
     @ObservedObject var labelManager: SpaceLabelManager
@@ -58,7 +61,7 @@ struct SettingsView: View {
                 }
             } header: {
                 VStack(alignment: .leading, spacing: 0) {
-                    Color.clear.frame(height: 30) // Spacer for Traffic Lights
+                    Color.clear.frame(height: 30)
                     
                     Text("DesktopRenamer")
                         .font(.system(size: 24, weight: .medium))
@@ -77,10 +80,9 @@ struct SettingsView: View {
     
     @ViewBuilder
     private var detailView: some View {
-        // ZStack allows the Header to float ON TOP of the scrolling content
         ZStack(alignment: .top) {
             
-            // 1. CONTENT LAYER (Bottom)
+            // 1. CONTENT LAYER
             ZStack(alignment: .top) {
                 if let tab = selectedTab {
                     switch tab {
@@ -100,11 +102,12 @@ struct SettingsView: View {
                 }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-            // Add padding so the top of the content starts BELOW the header,
-            // but when scrolled, it will slide UNDER the transparent header.
-            .padding(.top, 50)
+            // Match the header height exactly
+            .padding(.top, titleHeaderHeight)
+            // OPTIONAL: Pull content up slightly if the gap is still too large due to internal Form padding
+            // .padding(.top, -10)
             
-            // 2. HEADER LAYER (Top)
+            // 2. HEADER LAYER (Blurry Title Bar)
             if let tab = selectedTab {
                 VStack(spacing: 0) {
                     HStack {
@@ -113,12 +116,11 @@ struct SettingsView: View {
                             .padding(.leading, 20)
                         Spacer()
                     }
-                    .frame(height: 50)
+                    .frame(height: titleHeaderHeight) // 48pt
                     .background(.bar)
                     
-//                    Divider()
+                    Divider()
                 }
-                // Ensure the header stays pinned to the absolute top
                 .frame(maxHeight: .infinity, alignment: .top)
             }
         }
