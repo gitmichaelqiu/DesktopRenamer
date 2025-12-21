@@ -146,17 +146,19 @@ class SpaceHelper {
             onSpaceChange?(spaceUUID, isDesktop, ncCnt, displayID)
         }
     }
-    
+
     static func isPoint(_ point: CGPoint, inside screenFrame: CGRect) -> Bool {
-        // Core Graphics (Window List) uses Top-Left origin (Y=0 is top)
-        // AppKit (NSScreen) uses Bottom-Left origin (Y=0 is bottom)
-        // We must flip the point relative to the primary screen height
-        if let primaryScreen = NSScreen.screens.first {
-            let flippedY = primaryScreen.frame.height - point.y
-            let flippedPoint = CGPoint(x: point.x, y: flippedY)
-            return screenFrame.contains(flippedPoint)
+        // Find the screen that acts as the origin (0,0)
+        guard let primaryScreen = NSScreen.screens.first(where: { $0.frame.origin.x == 0 && $0.frame.origin.y == 0 }) else {
+            return screenFrame.contains(point)
         }
-        return screenFrame.contains(point)
+        
+        // Flip Quartz coordinates (Y=0 at top) to Cocoa (Y=0 at bottom)
+        // The reference height must be the PRIMARY screen's height.
+        let flippedY = NSMaxY(primaryScreen.frame) - point.y
+        let flippedPoint = CGPoint(x: point.x, y: flippedY)
+        
+        return screenFrame.contains(flippedPoint)
     }
 }
 
