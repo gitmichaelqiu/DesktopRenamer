@@ -41,10 +41,10 @@ class SpaceLabelWindow: NSWindow {
         
         // 3. View Setup
         let contentView: NSView
-        if #available(macOS 10.14, *) {
-            contentView = NSVisualEffectView(frame: .zero)
+        if #available(macOS 26.0, *) {
+            contentView = NSGlassEffectView(frame: .zero)
         } else {
-            contentView = NSView(frame: .zero)
+            contentView = NSVisualEffectView(frame: .zero)
         }
         contentView.wantsLayer = true
         contentView.layer?.cornerRadius = 12
