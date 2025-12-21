@@ -8,9 +8,9 @@ class SpaceLabelWindow: NSWindow {
     private var cancellables = Set<AnyCancellable>()
     private let spaceManager: SpaceManager
     
-    // Configuration for the two states
+    // Configuration
     private let smallSize = NSSize(width: 400, height: 200)
-    private let largeSize = NSSize(width: 1200, height: 800) // Huge size for clear preview
+    private let largeSize = NSSize(width: 1200, height: 800)
     
     init(spaceId: String, name: String, displayID: String, spaceManager: SpaceManager) {
         self.spaceId = spaceId
@@ -29,7 +29,7 @@ class SpaceLabelWindow: NSWindow {
         }
         let targetScreen = foundScreen ?? NSScreen.main!
         
-        // 2. Start at Center (Safe creation point)
+        // 2. Start at Center
         let screenFrame = targetScreen.frame
         let startRect = NSRect(
             x: screenFrame.midX - (smallSize.width / 2),
@@ -62,7 +62,7 @@ class SpaceLabelWindow: NSWindow {
         self.level = .floating
         self.ignoresMouseEvents = true
         
-        // Stationary behavior is CRITICAL for Mission Control visibility
+        // Essential behavior for Mission Control visibility
         self.collectionBehavior = [.managed, .stationary, .participatesInCycle, .fullScreenAuxiliary]
         
         // 5. Observers
@@ -77,19 +77,15 @@ class SpaceLabelWindow: NSWindow {
         let center = NotificationCenter.default
         center.addObserver(self, selector: #selector(repositionWindow), name: NSApplication.didChangeScreenParametersNotification, object: nil)
         
-        // 6. Initial Layout: Default to "Active" (Hidden)
-        // We use async to ensure the window is registered on the screen before moving it off.
+        // 6. Initial Layout
         DispatchQueue.main.async { [weak self] in
-            // Default to true (Active/Hidden) just in case
             self?.updateLayout(isCurrentSpace: true)
         }
     }
     
     // MARK: - Public API
     
-    /// Called by SpaceLabelManager to switch modes
     func setMode(isCurrentSpace: Bool) {
-        // Animate the transition
         NSAnimationContext.runAnimationGroup { context in
             context.duration = 0.35
             context.timingFunction = CAMediaTimingFunction(name: .easeOut)
@@ -110,15 +106,16 @@ class SpaceLabelWindow: NSWindow {
         var newOrigin: NSPoint
         
         if isCurrentSpace {
-            // MODE A: Active Space -> Hide in "Safe Anchor Zone"
-            // This prevents it from blocking your work.
+            // MODE A: Active Space -> "Safe Anchor Zone"
+            // We move it to the edge so it doesn't block work.
             newOrigin = findBestOffscreenPosition(targetScreen: targetScreen, size: newSize)
             
-            // Fade out content so it's truly invisible even if it peeks 1px
-            self.contentView?.animator().alphaValue = 0.0
+            // FIX: Removed alphaValue = 0.0.
+            // We keep it fully opaque (1.0). Since it is only 1px on screen,
+            // it is effectively hidden from the user, but visible to Mission Control.
+            self.contentView?.animator().alphaValue = 1.0
         } else {
             // MODE B: Inactive Space -> Center & Giant
-            // This makes it visible in Mission Control thumbnails.
             newOrigin = NSPoint(
                 x: targetFrame.midX - (newSize.width / 2),
                 y: targetFrame.midY - (newSize.height / 2)
@@ -126,27 +123,26 @@ class SpaceLabelWindow: NSWindow {
             self.contentView?.animator().alphaValue = 1.0
         }
         
-        // 1. Resize Window
+        // Resize & Move
         self.animator().setFrame(NSRect(origin: newOrigin, size: newSize), display: true)
         
-        // 2. Resize Content View & Font
+        // Update Content
         self.contentView?.frame = NSRect(origin: .zero, size: newSize)
         updateLabelFont(for: newSize)
     }
     
     private func updateLabelFont(for size: NSSize) {
         let name = self.label.stringValue
-        let padding: CGFloat = size.width * 0.1 // 10% padding
+        let padding: CGFloat = size.width * 0.1
         let maxWidth = size.width - (padding * 2)
         let maxHeight = size.height - (padding * 2)
         
-        // Base font size: Huge for preview, small for active
+        // Dynamic font size based on mode
         var fontSize: CGFloat = size.width > 500 ? 180 : 50
         
         var attributed = NSAttributedString(string: name, attributes: [.font: NSFont.systemFont(ofSize: fontSize, weight: .bold)])
         var sSize = attributed.size()
         
-        // Shrink text to fit container
         while (sSize.width > maxWidth || sSize.height > maxHeight) && fontSize > 20 {
             fontSize -= 10
             attributed = NSAttributedString(string: name, attributes: [.font: NSFont.systemFont(ofSize: fontSize, weight: .bold)])
@@ -155,7 +151,6 @@ class SpaceLabelWindow: NSWindow {
         
         self.label.font = .systemFont(ofSize: fontSize, weight: .bold)
         
-        // Center the label
         self.label.frame = NSRect(
             x: (size.width - sSize.width) / 2,
             y: (size.height - sSize.height) / 2,
@@ -179,9 +174,8 @@ class SpaceLabelWindow: NSWindow {
     private func findBestOffscreenPosition(targetScreen: NSScreen, size: NSSize) -> NSPoint {
         let allScreens = NSScreen.screens
         let f = targetScreen.frame
-        let overlap: CGFloat = 1.0 // The magic 1-pixel anchor
+        let overlap: CGFloat = 1.0
         
-        // Check corners using the current SIZE
         let topLeft = NSPoint(x: f.minX - size.width + overlap, y: f.maxY - overlap)
         let topRight = NSPoint(x: f.maxX - overlap, y: f.maxY - overlap)
         let bottomLeft = NSPoint(x: f.minX - size.width + overlap, y: f.minY - size.height + overlap)
@@ -191,31 +185,21 @@ class SpaceLabelWindow: NSWindow {
         
         for point in candidates {
             let rect = NSRect(origin: point, size: size)
-            
-            // Does this candidate touch any *neighboring* screen?
             let touchesNeighbor = allScreens.contains { screen in
                 if screen == targetScreen { return false }
-                // Use small inset to avoid false positives on shared edges
                 return screen.frame.insetBy(dx: 1, dy: 1).intersects(rect)
             }
-            
-            if !touchesNeighbor {
-                return point // Found a safe anchor!
-            }
+            if !touchesNeighbor { return point }
         }
-        
-        return topLeft // Fallback
+        return topLeft
     }
     
     @objc private func repositionWindow() {
-        // If screen config changes, re-evaluate.
-        // We default to "Active" mode to be safe and hidden.
         updateLayout(isCurrentSpace: true)
     }
     
     func updateName(_ name: String) {
         self.label.stringValue = name
-        // Trigger font resize based on current frame width
         updateLabelFont(for: self.frame.size)
     }
 }
