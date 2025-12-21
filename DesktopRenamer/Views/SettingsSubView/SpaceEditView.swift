@@ -17,11 +17,11 @@ struct SpaceEditView: View {
                                 Text(displayID)
                                     .font(.headline)
                                     .padding(.leading, 4)
-                                    .padding(.top, 10)
                                 
                                 // Dynamic Row Stack (No height calculation needed!)
                                 spacesStack(for: displayID)
                                     .cornerRadius(8)
+                                    .padding(.bottom, 10)
                             }
                         }
                     }
