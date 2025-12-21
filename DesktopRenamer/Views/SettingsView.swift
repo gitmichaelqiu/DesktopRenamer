@@ -54,31 +54,61 @@ struct SettingsView: View {
     
     @ViewBuilder
     private var sidebar: some View {
-        List(selection: $selectedTab) {
-            Section {
-                ForEach(SettingsTab.allCases) { tab in
-                    sidebarItem(for: tab)
+        if #available(macOS 14.0, *) {
+            List(selection: $selectedTab) {
+                Section {
+                    ForEach(SettingsTab.allCases) { tab in
+                        sidebarItem(for: tab)
+                    }
+                } header: {
+                    VStack(alignment: .leading, spacing: 0) {
+                        Color.clear.frame(height: 45)
+                        
+                        Text("Desktop")
+                            .font(.system(size: 28, weight: .heavy))
+                            .foregroundStyle(.primary)
+                        Text("Renamer")
+                            .font(.system(size: 28, weight: .heavy))
+                            .foregroundStyle(.primary)
+                            .padding(.bottom, 20)
+                    }
                 }
-            } header: {
-                VStack(alignment: .leading, spacing: 0) {
-                    Color.clear.frame(height: 45)
-                    
-                    Text("Desktop")
-                        .font(.system(size: 28, weight: .heavy))
-                        .foregroundStyle(.primary)
-                    Text("Renamer")
-                        .font(.system(size: 28, weight: .heavy))
-                        .foregroundStyle(.primary)
-                        .padding(.bottom, 20)
-                        // .padding(.leading, 8)
-                }
+                .collapsible(false)
             }
-            .collapsible(false)
+            .scrollDisabled(true)
+            .navigationSplitViewColumnWidth(sidebarWidth)
+            .listStyle(.sidebar)
+            .edgesIgnoringSafeArea(.top)
+            .toolbar(removing: .sidebarToggle)
+            .toolbar {
+                Color.clear
+            }
+        } else {
+            List(selection: $selectedTab) {
+                Section {
+                    ForEach(SettingsTab.allCases) { tab in
+                        sidebarItem(for: tab)
+                    }
+                } header: {
+                    VStack(alignment: .leading, spacing: 0) {
+                        Color.clear.frame(height: 45)
+                        
+                        Text("Desktop")
+                            .font(.system(size: 28, weight: .heavy))
+                            .foregroundStyle(.primary)
+                        Text("Renamer")
+                            .font(.system(size: 28, weight: .heavy))
+                            .foregroundStyle(.primary)
+                            .padding(.bottom, 20)
+                    }
+                }
+                .collapsible(false)
+            }
+            .scrollDisabled(true)
+            .navigationSplitViewColumnWidth(sidebarWidth)
+            .listStyle(.sidebar)
+            .edgesIgnoringSafeArea(.top)
         }
-        .scrollDisabled(true)
-        .navigationSplitViewColumnWidth(sidebarWidth)
-        .listStyle(.sidebar)
-        .edgesIgnoringSafeArea(.top)
     }
     
     @ViewBuilder
