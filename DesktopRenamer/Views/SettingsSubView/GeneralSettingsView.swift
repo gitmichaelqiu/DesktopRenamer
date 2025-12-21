@@ -372,7 +372,7 @@ struct AddSpacesView: View {
             let newCandidate = SpaceCandidate(spaceUUID: uuid, ncCnt: ncCnt)
             
             // Explicit animation block
-            withAnimation(.spring(response: 0.4, dampingFraction: 0.7)) {
+            withAnimation(.easeInOut(duration: 0.2)) {
                 candidates.append(newCandidate)
             }
         }
