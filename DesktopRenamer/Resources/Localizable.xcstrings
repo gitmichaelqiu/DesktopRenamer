@@ -233,10 +233,16 @@
     },
     "Create windows that only appear in Mission Control to display space names.\n\nMay not work when multiple displays are connected." : {
       "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Show space names in Mission Control."
+          }
+        },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "创建只在调度中心中显示的窗口以显示桌面名称。\n\n在连接到多个显示器时可能不可用。"
+            "value" : "在调度中心显示桌面名称。"
           }
         }
       }
