@@ -64,10 +64,10 @@ struct SettingsView: View {
                     Color.clear.frame(height: 45)
                     
                     Text("Desktop")
-                        .font(.system(size: 24, weight: .heavy))
+                        .font(.system(size: 28, weight: .heavy))
                         .foregroundStyle(.primary)
                     Text("Renamer")
-                        .font(.system(size: 24, weight: .heavy))
+                        .font(.system(size: 28, weight: .heavy))
                         .foregroundStyle(.primary)
                         .padding(.bottom, 20)
                         // .padding(.leading, 8)
