@@ -28,8 +28,8 @@ enum SettingsTab: String, CaseIterable, Identifiable {
 let sidebarWidth: CGFloat = 180
 let defaultSettingsWindowWidth = 750
 let defaultSettingsWindowHeight = 550
-let sidebarRowHeight: CGFloat = 25
-let sidebarFontSize: CGFloat = 15
+let sidebarRowHeight: CGFloat = 32
+let sidebarFontSize: CGFloat = 16
 
 // Tighter Header Height
 let titleHeaderHeight: CGFloat = 48
@@ -139,6 +139,9 @@ struct SettingsView: View {
                     .padding(.leading, 2)
             } icon: {
                 Image(systemName: tab.iconName)
+                    .resizable()
+                    .scaledToFit()
+                    .frame(height: sidebarRowHeight-14)
             }
         }
         .frame(height: sidebarRowHeight)
