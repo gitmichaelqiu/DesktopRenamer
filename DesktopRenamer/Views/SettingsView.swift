@@ -28,7 +28,7 @@ enum SettingsTab: String, CaseIterable, Identifiable {
 let sidebarWidth: CGFloat = 180
 let defaultSettingsWindowWidth = 750
 let defaultSettingsWindowHeight = 550
-let sidebarRowHeight: CGFloat = 32
+let sidebarRowHeight: CGFloat = 25
 let sidebarFontSize: CGFloat = 15
 
 // Tighter Header Height
@@ -64,10 +64,10 @@ struct SettingsView: View {
                     Color.clear.frame(height: 35)
                     
                     Text("Desktop")
-                        .font(.system(size: 24, weight: .medium))
+                        .font(.system(size: 24, weight: .heavy))
                         .foregroundStyle(.primary)
                     Text("Renamer")
-                        .font(.system(size: 24, weight: .medium))
+                        .font(.system(size: 24, weight: .heavy))
                         .foregroundStyle(.primary)
                         .padding(.bottom, 10)
                         // .padding(.leading, 8)
