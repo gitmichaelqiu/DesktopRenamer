@@ -22,7 +22,7 @@
       }
     },
     "%.2fx" : {
-
+      "shouldTranslate" : false
     },
     "%@" : {
       "localizations" : {
@@ -65,7 +65,14 @@
       }
     },
     "Active Space Labels" : {
-
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "当前桌面标签"
+          }
+        }
+      }
     },
     "Add" : {
       "localizations" : {
@@ -264,7 +271,14 @@
       }
     },
     "Desktop" : {
-
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "桌面"
+          }
+        }
+      }
     },
     "Factory Reset" : {
       "localizations" : {
@@ -307,7 +321,14 @@
       }
     },
     "Font Size" : {
-
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "字体大小"
+          }
+        }
+      }
     },
     "Fullscreen detection method" : {
       "localizations" : {
@@ -535,7 +556,14 @@
       }
     },
     "Preview Labels" : {
-
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "预览标签"
+          }
+        }
+      }
     },
     "Recorded: %lld" : {
       "localizations" : {
@@ -592,7 +620,7 @@
       }
     },
     "Renamer" : {
-
+      "shouldTranslate" : false
     },
     "Reset" : {
       "localizations" : {
@@ -615,7 +643,15 @@
       }
     },
     "Reset Defaults" : {
-      "comment" : "Reset Defaults"
+      "comment" : "Reset Defaults",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "重置"
+          }
+        }
+      }
     },
     "Save" : {
       "localizations" : {
@@ -638,7 +674,14 @@
       }
     },
     "Select a category" : {
-
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "选择一个类别"
+          }
+        }
+      }
     },
     "Settings.About" : {
       "extractionState" : "manual",
@@ -1385,7 +1428,14 @@
       }
     },
     "Settings.Labels" : {
-
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "标签"
+          }
+        }
+      }
     },
     "Settings.Spaces" : {
       "extractionState" : "manual",
@@ -1706,10 +1756,26 @@
       }
     },
     "The hidden label that slides into the corner." : {
-      "comment" : "The hidden label that slides into the corner."
+      "comment" : "The hidden label that slides into the corner.",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "桌面隐藏角的标签。"
+          }
+        }
+      }
     },
     "The large label visible in Mission Control." : {
-      "comment" : "The large label visible in Mission Control."
+      "comment" : "The large label visible in Mission Control.",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "调度中心预览的大标签。"
+          }
+        }
+      }
     },
     "There are no parameters to adjust for Automatic detection.\nIf the issue still happens, switch to other methods." : {
       "localizations" : {
@@ -1782,7 +1848,14 @@
       }
     },
     "Window Size" : {
-
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "窗口大小"
+          }
+        }
+      }
     },
     "Window.Settings.Title" : {
       "extractionState" : "manual",
