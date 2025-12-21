@@ -21,12 +21,7 @@ struct SpaceEditView: View {
                                 
                                 // NEW: Dynamic Row Stack (No height calculation needed!)
                                 spacesStack(for: displayID)
-                                    .background(Color(NSColor.controlBackgroundColor))
                                     .cornerRadius(8)
-                                    .overlay(
-                                        RoundedRectangle(cornerRadius: 8)
-                                            .stroke(Color(NSColor.separatorColor), lineWidth: 1)
-                                    )
                             }
                         }
                     }
@@ -36,6 +31,17 @@ struct SpaceEditView: View {
             }
         }
         .animation(.easeInOut(duration: 0.2), value: spaceManager.spaceNameDict)
+    }
+    
+    private var sectionBackgroundColor: Color {
+        let nsColor = NSColor(name: nil) { appearance in
+            if appearance.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua {
+                return NSColor(calibratedWhite: 0.20, alpha: 1.0)
+            } else {
+                return NSColor(calibratedWhite: 1.00, alpha: 1.0)
+            }
+        }
+        return Color(nsColor: nsColor)
     }
     
     private var groupedDisplayIDs: [String] {
@@ -79,7 +85,6 @@ struct SpaceEditView: View {
             .foregroundColor(.secondary)
             .padding(.horizontal, 12)
             .padding(.vertical, 8)
-            .background(Color(NSColor.controlBackgroundColor))
             
             Divider()
             
@@ -111,6 +116,14 @@ struct SpaceEditView: View {
                 .transition(.opacity.combined(with: .move(edge: .top)))
             }
         }
+        .background(
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                .fill(sectionBackgroundColor.opacity(0.6))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 12, style: .continuous)
+                        .fill(.regularMaterial)
+                )
+        )
     }
     
     private var emptyStateView: some View {
