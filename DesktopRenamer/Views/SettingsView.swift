@@ -25,9 +25,8 @@ enum SettingsTab: String, CaseIterable, Identifiable {
     }
 }
 
-// Updated constants
 let sidebarWidth: CGFloat = 220
-let defaultSettingsWindowWidth = 750
+let defaultSettingsWindowWidth = 800
 let defaultSettingsWindowHeight = 550
 
 struct SettingsView: View {
@@ -38,71 +37,67 @@ struct SettingsView: View {
     
     var body: some View {
         NavigationSplitView {
-            List(selection: $selectedTab) {
-                // HEADER SECTION (Traffic Lights + Title)
-                Section {
-                    EmptyView()
-                } header: {
-                    VStack(alignment: .leading, spacing: 0) {
-                        // 1. Spacer to push content below traffic lights (approx 40pt)
-                        Color.clear
-                            .frame(height: 38)
-                        
-                        Text("Desktop")
-                            .font(.system(size: 25, weight: .medium))
-                            .foregroundStyle(.primary)
-                        Text("Renamer")
-                            .font(.system(size: 25, weight: .medium))
-                            .foregroundStyle(.primary)
-//                            .padding(.horizontal, 8)
-                            .padding(.vertical, 5)
-                    }
-                    // Remove default header padding to align with edge
-                    .listRowInsets(EdgeInsets(top: 0, leading: 0, bottom: 0, trailing: 0))
-                }
-                .collapsible(false)
-                
-                // TAB ITEMS
-                Section {
-                    ForEach(SettingsTab.allCases) { tab in
-                        sidebarItem(for: tab)
-                    }
-                }
-            }
-            .listStyle(.sidebar)
-            .scrollDisabled(true)
-            .navigationSplitViewColumnWidth(sidebarWidth)
-            
-            // 2. CRITICAL: Force Sidebar to top edge of window
-            .edgesIgnoringSafeArea(.top)
-            
+            sidebar
         } detail: {
-            ZStack {
-                if let tab = selectedTab {
-                    switch tab {
-                    case .general:
-                        GeneralSettingsView(spaceManager: spaceManager, labelManager: labelManager)
-                    case .labels:
-                        LabelSettingsView(labelManager: labelManager)
-                    case .space:
-                        SpaceEditView(spaceManager: spaceManager, labelManager: labelManager)
-                    case .about:
-                        AboutView()
-                    }
-                } else {
-                    Text("Select a category")
-                        .foregroundColor(.secondary)
-                }
-            }
-            // 3. CRITICAL: Push Detail view down so it doesn't sit under the toolbar area
-            //    (Since we removed the toolbar, the content might ride up too high otherwise)
-            .padding(.top, 20)
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            detailView
         }
         .navigationTitle("")
-        // 4. HIDE TOOLBARS explicitly to prevent SwiftUI from reserving space
         .toolbar(.hidden, for: .windowToolbar)
+        // CRITICAL FIX: This forces the SplitView to extend to the very top edge of the window
+        // overwriting the space reserved for the "ghost" toolbar.
+        .edgesIgnoringSafeArea(.top)
         .frame(width: CGFloat(defaultSettingsWindowWidth), height: CGFloat(defaultSettingsWindowHeight))
+    }
+    
+    @ViewBuilder
+    private var sidebar: some View {
+        List(selection: $selectedTab) {
+            Section {
+                ForEach(SettingsTab.allCases) { tab in
+                    sidebarItem(for: tab)
+                }
+            } header: {
+                // Header mimics Ice style: Large text, no collapsing
+                VStack(alignment: .leading, spacing: 0) {                    
+                    Text("DesktopRenamer")
+                        .font(.system(size: 20, weight: .medium))
+                        .foregroundStyle(.primary)
+                        .padding(.bottom, 5)
+                }
+            }
+            .collapsible(false)
+        }
+        .scrollDisabled(true)
+        .navigationSplitViewColumnWidth(sidebarWidth)
+        .listStyle(.sidebar)
+    }
+    
+    @ViewBuilder
+    private var detailView: some View {
+        ZStack(alignment: .top) {
+            // Background to verify full height (optional)
+            Color.clear
+            
+            if let tab = selectedTab {
+                switch tab {
+                case .general:
+                    GeneralSettingsView(spaceManager: spaceManager, labelManager: labelManager)
+                case .labels:
+                    LabelSettingsView(labelManager: labelManager)
+                case .space:
+                    SpaceEditView(spaceManager: spaceManager, labelManager: labelManager)
+                case .about:
+                    AboutView()
+                }
+            } else {
+                Text("Select a category")
+                    .foregroundColor(.secondary)
+            }
+        }
+        // Add top padding to the content so it aligns with the sidebar text
+        // and doesn't sit underneath the invisible title bar area.
+//        .padding(.top, 40)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
     }
     
     @ViewBuilder
@@ -115,7 +110,7 @@ struct SettingsView: View {
                 Image(systemName: tab.iconName)
             }
         }
-        // Use default height, no fixed frame needed
+        .frame(height: 30) // Fixed height for consistency
     }
 }
 

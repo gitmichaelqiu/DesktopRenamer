@@ -329,6 +329,7 @@ class StatusBarController: NSObject {
         // 2. CONFIG: Hide the native title bar elements
         window.titleVisibility = .hidden
         window.titlebarAppearsTransparent = true
+        window.titlebarSeparatorStyle = .none
         
         // 3. REMOVE TOOLBAR: Ensures no extra space is reserved at the top
         window.toolbar = nil
