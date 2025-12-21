@@ -40,8 +40,13 @@ class SpaceLabelWindow: NSWindow {
         
         super.init(contentRect: startRect, styleMask: [.borderless], backing: .buffered, defer: false)
         
-        // ... (View Setup - Same as before) ...
-        let contentView = NSVisualEffectView(frame: .zero)
+        let contentView: NSView
+        if #available(macOS 26.0, *) {
+            contentView = NSGlassEffectView(frame: .zero)
+        } else {
+            contentView = NSVisualEffectView(frame: .zero)
+        }
+        
         contentView.wantsLayer = true
         contentView.layer?.cornerRadius = 12
         self.label.alignment = .center
