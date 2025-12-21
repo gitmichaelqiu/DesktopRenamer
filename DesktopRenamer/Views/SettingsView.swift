@@ -3,7 +3,7 @@ import ServiceManagement
 import Combine
 
 enum SettingsTab: String {
-    case general, space, about
+    case general, space, labels, about
 }
 
 let defaultSettingsWindowWidth = 417
@@ -27,6 +27,10 @@ struct SettingsView: View {
                     Text(NSLocalizedString("Settings.Spaces", comment: ""))
                 }
                 .tag(SettingsTab.space)
+            
+            LabelSettingsView(labelManager: labelManager)
+                .tabItem { Text(NSLocalizedString("Settings.Labels", comment: "")) }
+                .tag(SettingsTab.labels)
             
             AboutView()
                 .tabItem {

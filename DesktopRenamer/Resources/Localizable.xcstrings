@@ -21,6 +21,9 @@
         }
       }
     },
+    "%.2fx" : {
+
+    },
     "%@" : {
       "localizations" : {
         "zh-Hans" : {
@@ -1359,6 +1362,30 @@
           }
         }
       }
+    },
+    "Settings.Labels" : {
+
+    },
+    "Settings.Labels.Active" : {
+
+    },
+    "Settings.Labels.Active.Desc" : {
+      "comment" : "The hidden label that slides into the corner."
+    },
+    "Settings.Labels.FontSize" : {
+
+    },
+    "Settings.Labels.Preview" : {
+
+    },
+    "Settings.Labels.Preview.Desc" : {
+      "comment" : "The large label visible in Mission Control."
+    },
+    "Settings.Labels.Reset" : {
+      "comment" : "Reset Defaults"
+    },
+    "Settings.Labels.WindowSize" : {
+
     },
     "Settings.Spaces" : {
       "extractionState" : "manual",
