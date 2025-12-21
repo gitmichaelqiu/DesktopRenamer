@@ -107,6 +107,7 @@ struct SpaceEditView: View {
                         Divider().padding(.leading, 12)
                     }
                 }
+                .transition(.opacity.combined(with: .move(edge: .top)))
             }
         }
     }
@@ -212,11 +213,13 @@ struct SpaceEditView: View {
         if let idx1 = allSpaces.firstIndex(where: { $0.id == space.id }),
            let idx2 = allSpaces.firstIndex(where: { $0.id == prevSpace.id }) {
             
-            let tempNum = allSpaces[idx1].num
-            allSpaces[idx1].num = allSpaces[idx2].num
-            allSpaces[idx2].num = tempNum
-            
-            saveAndRefresh(allSpaces)
+            withAnimation(.easeInOut(duration: 0.2)) {
+                let tempNum = allSpaces[idx1].num
+                allSpaces[idx1].num = allSpaces[idx2].num
+                allSpaces[idx2].num = tempNum
+                
+                saveAndRefresh(allSpaces)
+            }
         }
     }
     
@@ -232,29 +235,33 @@ struct SpaceEditView: View {
         if let idx1 = allSpaces.firstIndex(where: { $0.id == space.id }),
            let idx2 = allSpaces.firstIndex(where: { $0.id == nextSpace.id }) {
             
-            let tempNum = allSpaces[idx1].num
-            allSpaces[idx1].num = allSpaces[idx2].num
-            allSpaces[idx2].num = tempNum
-            
-            saveAndRefresh(allSpaces)
+            withAnimation(.easeInOut(duration: 0.2)) {
+                let tempNum = allSpaces[idx1].num
+                allSpaces[idx1].num = allSpaces[idx2].num
+                allSpaces[idx2].num = tempNum
+                
+                saveAndRefresh(allSpaces)
+            }
         }
     }
     
     private func deleteRow(_ space: DesktopSpace) {
-        var allSpaces = spaceManager.spaceNameDict
-        allSpaces.removeAll(where: { $0.id == space.id })
-        
-        let displayID = space.displayID
-        var siblings = allSpaces.filter { $0.displayID == displayID }.sorted { $0.num < $1.num }
-        
-        for (index, _) in siblings.enumerated() {
-            siblings[index].num = index + 1
+        withAnimation(.easeInOut(duration: 0.2)) {
+            var allSpaces = spaceManager.spaceNameDict
+            allSpaces.removeAll(where: { $0.id == space.id })
+            
+            let displayID = space.displayID
+            var siblings = allSpaces.filter { $0.displayID == displayID }.sorted { $0.num < $1.num }
+            
+            for (index, _) in siblings.enumerated() {
+                siblings[index].num = index + 1
+            }
+            
+            allSpaces.removeAll(where: { $0.displayID == displayID })
+            allSpaces.append(contentsOf: siblings)
+            
+            saveAndRefresh(allSpaces)
         }
-        
-        allSpaces.removeAll(where: { $0.displayID == displayID })
-        allSpaces.append(contentsOf: siblings)
-        
-        saveAndRefresh(allSpaces)
     }
     
     private func updateSpaceName(_ space: DesktopSpace, _ newName: String) {
