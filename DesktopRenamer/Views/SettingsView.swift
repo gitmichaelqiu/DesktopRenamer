@@ -48,11 +48,14 @@ struct SettingsView: View {
                         Color.clear
                             .frame(height: 38)
                         
-                        Text("DesktopRenamer")
-                            .font(.system(size: 20, weight: .medium))
+                        Text("Desktop")
+                            .font(.system(size: 25, weight: .medium))
                             .foregroundStyle(.primary)
-                            .padding(.horizontal, 8)
-                            .padding(.bottom, 10)
+                        Text("Renamer")
+                            .font(.system(size: 25, weight: .medium))
+                            .foregroundStyle(.primary)
+//                            .padding(.horizontal, 8)
+                            .padding(.vertical, 5)
                     }
                     // Remove default header padding to align with edge
                     .listRowInsets(EdgeInsets(top: 0, leading: 0, bottom: 0, trailing: 0))

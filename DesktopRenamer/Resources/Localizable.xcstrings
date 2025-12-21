@@ -260,7 +260,7 @@
         }
       }
     },
-    "DesktopRenamer" : {
+    "Desktop" : {
 
     },
     "Factory Reset" : {
@@ -581,6 +581,9 @@
           }
         }
       }
+    },
+    "Renamer" : {
+
     },
     "Reset" : {
       "localizations" : {
