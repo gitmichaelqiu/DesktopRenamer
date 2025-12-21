@@ -105,20 +105,27 @@ class SpaceLabelWindow: NSWindow {
         }
     }
     
-    // MARK: - Layout Logic
-    
     private func updateLayout(isCurrentSpace: Bool) {
         guard let targetScreen = findTargetScreen() else { self.close(); return }
         
         let targetFrame = targetScreen.frame
-        let newSize = isCurrentSpace ? smallSize : previewSize
+        var newSize: NSSize
         var newOrigin: NSPoint
         
         if isCurrentSpace {
-            // Active: Anchor off-screen
+            // MODE A: Active Space (Small/Hidden)
+            // FIX: Calculate exact size needed for the text at a readable small size (e.g., 45pt)
+            // This ensures text NEVER exceeds the window, because the window grows to fit the text.
+            newSize = calculateSizeForText(fontSize: 45, paddingH: 60, paddingV: 40)
+            
+            // Anchor off-screen (Safe Zone)
             newOrigin = findBestOffscreenPosition(targetScreen: targetScreen, size: newSize)
         } else {
-            // Inactive: Center on screen
+            // MODE B: Inactive Space (Preview/Large)
+            // Use the unified preview size calculated by the Manager
+            newSize = previewSize
+            
+            // Center on screen
             newOrigin = NSPoint(
                 x: targetFrame.midX - (newSize.width / 2),
                 y: targetFrame.midY - (newSize.height / 2)
@@ -130,8 +137,55 @@ class SpaceLabelWindow: NSWindow {
         
         self.contentView?.frame = NSRect(origin: .zero, size: newSize)
         
-        // Update Font based on CURRENT size state
-        updateLabelFont(for: newSize)
+        // Update Font based on the new size
+        updateLabelFont(for: newSize, isSmallMode: isCurrentSpace)
+    }
+    
+    // Helper to calculate ideal window dimensions
+    private func calculateSizeForText(fontSize: CGFloat, paddingH: CGFloat, paddingV: CGFloat) -> NSSize {
+        let name = self.label.stringValue
+        let font = NSFont.systemFont(ofSize: fontSize, weight: .bold)
+        let size = name.size(withAttributes: [.font: font])
+        return NSSize(width: size.width + paddingH, height: size.height + paddingV)
+    }
+    
+    private func updateLabelFont(for size: NSSize, isSmallMode: Bool) {
+        let name = self.label.stringValue
+        
+        // Padding configuration
+        let paddingH: CGFloat = size.width * 0.1
+        let paddingV: CGFloat = size.height * 0.15
+        let maxWidth = size.width - paddingH
+        let maxHeight = size.height - paddingV
+        
+        // Starting Font Size
+        // If Small Mode: We know 45 fits (because we just calculated the window size for it),
+        // but we run the check just to be safe.
+        // If Large Mode: Start at Reference (180).
+        var fontSize: CGFloat = isSmallMode ? 45 : SpaceLabelWindow.referenceFontSize
+        
+        // Setup font
+        var font = NSFont.systemFont(ofSize: fontSize, weight: .bold)
+        var attributed = NSAttributedString(string: name, attributes: [.font: font])
+        var sSize = attributed.size()
+        
+        // Shrink Loop (Safety mechanism)
+        while (sSize.width > maxWidth || sSize.height > maxHeight) && fontSize > 10 {
+            fontSize -= 2
+            font = NSFont.systemFont(ofSize: fontSize, weight: .bold)
+            attributed = NSAttributedString(string: name, attributes: [.font: font])
+            sSize = attributed.size()
+        }
+        
+        self.label.font = font
+        
+        // Center text
+        self.label.frame = NSRect(
+            x: (size.width - sSize.width) / 2,
+            y: (size.height - sSize.height) / 2,
+            width: sSize.width,
+            height: sSize.height
+        )
     }
     
     private func updateLabelFont(for size: NSSize) {
