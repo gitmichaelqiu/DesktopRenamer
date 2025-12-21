@@ -22,7 +22,7 @@ struct LabelSettingsView: View {
                                     .monospacedDigit()
                                     .foregroundColor(.secondary)
                             }
-                            Slider(value: $labelManager.activeFontScale, in: 0.5...2.0, step: 0.05)
+                            Slider(value: $labelManager.activeFontScale, in: 0.5...2.0, step: 0.10)
                         }
                         
                         // Padding Scale
@@ -34,7 +34,7 @@ struct LabelSettingsView: View {
                                     .monospacedDigit()
                                     .foregroundColor(.secondary)
                             }
-                            Slider(value: $labelManager.activePaddingScale, in: 0.5...3.0, step: 0.05)
+                            Slider(value: $labelManager.activePaddingScale, in: 0.5...3.0, step: 0.10)
                         }
                     }
                     .padding(.vertical, 8)
@@ -57,7 +57,7 @@ struct LabelSettingsView: View {
                                     .monospacedDigit()
                                     .foregroundColor(.secondary)
                             }
-                            Slider(value: $labelManager.previewFontScale, in: 0.5...2.0, step: 0.05)
+                            Slider(value: $labelManager.previewFontScale, in: 0.5...2.0, step: 0.10)
                         }
                         
                         // Padding Scale
@@ -69,7 +69,7 @@ struct LabelSettingsView: View {
                                     .monospacedDigit()
                                     .foregroundColor(.secondary)
                             }
-                            Slider(value: $labelManager.previewPaddingScale, in: 0.5...3.0, step: 0.05)
+                            Slider(value: $labelManager.previewPaddingScale, in: 0.5...3.0, step: 0.10)
                         }
                     }
                     .padding(.vertical, 8)
