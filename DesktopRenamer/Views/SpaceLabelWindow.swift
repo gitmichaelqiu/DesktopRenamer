@@ -140,24 +140,19 @@ class SpaceLabelWindow: NSWindow {
     }
     
     private func findTargetScreen() -> NSScreen? {
-        // 1. Try Exact Match (Name + ID)
-        if let exactMatch = NSScreen.screens.first(where: { screen in
+        return NSScreen.screens.first { screen in
             let screenID = screen.deviceDescription[NSDeviceDescriptionKey("NSScreenNumber")] as? NSNumber ?? 0
+            
+            // Exact Match
             let idString = "\(screen.localizedName) (\(screenID))"
-            return idString == self.displayID
-        }) {
-            return exactMatch
+            if idString == self.displayID { return true }
+            
+            // Fuzzy Match
+            let cleanTarget = self.displayID.components(separatedBy: " (").first ?? self.displayID
+            return screen.localizedName == cleanTarget
         }
-        
-        // 2. FIX: Fuzzy Match (Name only)
-        // If the ID changed (e.g. after reboot), try to find a screen with the same Name.
-        let cleanName = self.displayID.components(separatedBy: " (").first ?? self.displayID
-        if let nameMatch = NSScreen.screens.first(where: { $0.localizedName == cleanName }) {
-            return nameMatch
-        }
-        
-        // 3. Fallback
-        return NSScreen.main
+        // FIX: Removed "?? NSScreen.main".
+        // If the screen is disconnected, we want to return nil.
     }
 
     private func findBestOffscreenPosition(targetScreen: NSScreen) -> NSPoint {
