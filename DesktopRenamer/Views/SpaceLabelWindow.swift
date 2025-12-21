@@ -13,7 +13,7 @@ class SpaceLabelWindow: NSWindow {
     private var previewSize: NSSize = NSSize(width: 800, height: 500)
     
     // Config
-    static let referenceFontSize: CGFloat = 180
+    static let referenceFontSize: CGFloat = 200
     static let referenceFont = NSFont.systemFont(ofSize: referenceFontSize, weight: .bold)
     
     init(spaceId: String, name: String, displayID: String, spaceManager: SpaceManager) {
