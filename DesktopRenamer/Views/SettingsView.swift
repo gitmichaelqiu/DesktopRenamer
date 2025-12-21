@@ -25,8 +25,8 @@ enum SettingsTab: String, CaseIterable, Identifiable {
 }
 
 // Layout Constants
-let sidebarWidth: CGFloat = 220
-let defaultSettingsWindowWidth = 850
+let sidebarWidth: CGFloat = 180
+let defaultSettingsWindowWidth = 750
 let defaultSettingsWindowHeight = 550
 let sidebarRowHeight: CGFloat = 32
 let sidebarFontSize: CGFloat = 15
