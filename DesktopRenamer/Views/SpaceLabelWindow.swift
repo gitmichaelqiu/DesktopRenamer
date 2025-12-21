@@ -8,7 +8,7 @@ class SpaceLabelWindow: NSWindow {
     private var cancellables = Set<AnyCancellable>()
     private let spaceManager: SpaceManager
     
-    // Configuration
+    // Config
     private let smallSize = NSSize(width: 400, height: 200)
     private let largeSize = NSSize(width: 1200, height: 800)
     
@@ -29,7 +29,7 @@ class SpaceLabelWindow: NSWindow {
         }
         let targetScreen = foundScreen ?? NSScreen.main!
         
-        // 2. Start at Center
+        // 2. Start Center (Safe creation)
         let screenFrame = targetScreen.frame
         let startRect = NSRect(
             x: screenFrame.midX - (smallSize.width / 2),
@@ -55,14 +55,12 @@ class SpaceLabelWindow: NSWindow {
         contentView.addSubview(self.label)
         self.contentView = contentView
         
-        // 4. Window Attributes
+        // 4. Attributes
         self.backgroundColor = .clear
         self.isOpaque = false
         self.hasShadow = false
         self.level = .floating
         self.ignoresMouseEvents = true
-        
-        // Essential behavior for Mission Control visibility
         self.collectionBehavior = [.managed, .stationary, .participatesInCycle, .fullScreenAuxiliary]
         
         // 5. Observers
@@ -74,10 +72,9 @@ class SpaceLabelWindow: NSWindow {
             }
             .store(in: &cancellables)
             
-        let center = NotificationCenter.default
-        center.addObserver(self, selector: #selector(repositionWindow), name: NSApplication.didChangeScreenParametersNotification, object: nil)
+        NotificationCenter.default.addObserver(self, selector: #selector(repositionWindow), name: NSApplication.didChangeScreenParametersNotification, object: nil)
         
-        // 6. Initial Layout
+        // Initial Layout
         DispatchQueue.main.async { [weak self] in
             self?.updateLayout(isCurrentSpace: true)
         }
@@ -86,8 +83,13 @@ class SpaceLabelWindow: NSWindow {
     // MARK: - Public API
     
     func setMode(isCurrentSpace: Bool) {
+        // OPTIMIZATION: Asymmetric Timing
+        // 1. Entering Space (Active): 0.0s (Instant). Snap out of the way immediately.
+        // 2. Leaving Space (Inactive): 0.35s (Smooth). Expand nicely for Mission Control preview.
+        let duration = isCurrentSpace ? 0.0 : 0.35
+        
         NSAnimationContext.runAnimationGroup { context in
-            context.duration = 0.35
+            context.duration = duration
             context.timingFunction = CAMediaTimingFunction(name: .easeOut)
             self.updateLayout(isCurrentSpace: isCurrentSpace)
         }
@@ -106,24 +108,21 @@ class SpaceLabelWindow: NSWindow {
         var newOrigin: NSPoint
         
         if isCurrentSpace {
-            // MODE A: Active Space -> "Safe Anchor Zone"
-            // We move it to the edge so it doesn't block work.
+            // MODE A: Active Space -> Snap to Safe Anchor Zone
+            // It remains opaque (alpha 1.0) but is positioned 99% off-screen.
             newOrigin = findBestOffscreenPosition(targetScreen: targetScreen, size: newSize)
-            
-            // FIX: Removed alphaValue = 0.0.
-            // We keep it fully opaque (1.0). Since it is only 1px on screen,
-            // it is effectively hidden from the user, but visible to Mission Control.
-            self.contentView?.animator().alphaValue = 1.0
         } else {
-            // MODE B: Inactive Space -> Center & Giant
+            // MODE B: Inactive Space -> Center
             newOrigin = NSPoint(
                 x: targetFrame.midX - (newSize.width / 2),
                 y: targetFrame.midY - (newSize.height / 2)
             )
-            self.contentView?.animator().alphaValue = 1.0
         }
         
-        // Resize & Move
+        // Ensure visibility
+        self.contentView?.animator().alphaValue = 1.0
+        
+        // Apply Frame Change
         self.animator().setFrame(NSRect(origin: newOrigin, size: newSize), display: true)
         
         // Update Content
@@ -137,7 +136,6 @@ class SpaceLabelWindow: NSWindow {
         let maxWidth = size.width - (padding * 2)
         let maxHeight = size.height - (padding * 2)
         
-        // Dynamic font size based on mode
         var fontSize: CGFloat = size.width > 500 ? 180 : 50
         
         var attributed = NSAttributedString(string: name, attributes: [.font: NSFont.systemFont(ofSize: fontSize, weight: .bold)])
