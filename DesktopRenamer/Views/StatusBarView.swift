@@ -321,10 +321,12 @@ class StatusBarController: NSObject {
         // 1. STYLE: .fullSizeContentView is critical for "Ice" style
         let window = NSWindow(
             contentRect: NSRect(x: 0, y: 0, width: defaultSettingsWindowWidth, height: defaultSettingsWindowHeight),
-            styleMask: [.titled, .closable, .miniaturizable, .resizable, .fullSizeContentView],
+            styleMask: [.titled, .closable, .miniaturizable, .fullSizeContentView],
             backing: .buffered,
             defer: false
         )
+        
+        window.identifier = NSUserInterfaceItemIdentifier("SettingsWindow")
         
         // 2. CONFIG: Hide the native title bar elements
         window.titleVisibility = .hidden
