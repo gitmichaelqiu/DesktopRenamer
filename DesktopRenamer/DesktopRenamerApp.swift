@@ -1,6 +1,47 @@
 import SwiftUI
 import ServiceManagement
 import Combine
+import Cocoa
+
+extension NSSplitViewItem {
+    @nonobjc private static let swizzler: () = {
+        let originalSelector = #selector(getter: canCollapse)
+        let swizzledSelector = #selector(getter: swizzledCanCollapse)
+
+        guard
+            let originalMethod = class_getInstanceMethod(NSSplitViewItem.self, originalSelector),
+            let swizzledMethod = class_getInstanceMethod(NSSplitViewItem.self, swizzledSelector)
+        else { return }
+
+        method_exchangeImplementations(originalMethod, swizzledMethod)
+    }()
+
+    @objc private var swizzledCanCollapse: Bool {
+        // If this split view item belongs to our specific Settings Window, return false
+        if let window = viewController.view.window,
+           window.identifier?.rawValue == "SettingsWindow" {
+            return false
+        }
+        // Otherwise, return the original value (which is now stored in the 'swizzled' selector name due to the swap)
+        return self.swizzledCanCollapse
+    }
+
+    static func swizzle() {
+        _ = swizzler
+    }
+}
+
+@available(macOS 14.0, *)
+extension View {
+    /// Removes the sidebar toggle button from the toolbar.
+    func removeSidebarToggle() -> some View {
+        toolbar(removing: .sidebarToggle)
+            .toolbar {
+                Color.clear
+            }
+    }
+}
+
 
 class AppDelegate: NSObject, NSApplicationDelegate {
     var spaceManager: SpaceManager!
@@ -46,6 +87,10 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 @main
 struct DesktopRenamerApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
+    
+    init() {
+        NSSplitViewItem.swizzle()
+    }
     
     var body: some Scene {
         Settings {

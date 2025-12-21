@@ -76,13 +76,9 @@ struct SettingsView: View {
                 .collapsible(false)
             }
             .scrollDisabled(true)
-            .navigationSplitViewColumnWidth(sidebarWidth)
-            .listStyle(.sidebar)
+            .removeSidebarToggle()
+            .navigationSplitViewColumnWidth(min: sidebarWidth, ideal: sidebarWidth, max: sidebarWidth)
             .edgesIgnoringSafeArea(.top)
-            .toolbar(removing: .sidebarToggle)
-            .toolbar {
-                Color.clear
-            }
         } else {
             List(selection: $selectedTab) {
                 Section {
@@ -105,7 +101,7 @@ struct SettingsView: View {
                 .collapsible(false)
             }
             .scrollDisabled(true)
-            .navigationSplitViewColumnWidth(sidebarWidth)
+            .navigationSplitViewColumnWidth(min: sidebarWidth, ideal: sidebarWidth, max: sidebarWidth)
             .listStyle(.sidebar)
             .edgesIgnoringSafeArea(.top)
         }
