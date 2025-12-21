@@ -260,6 +260,9 @@
         }
       }
     },
+    "DesktopRenamer" : {
+
+    },
     "Factory Reset" : {
       "localizations" : {
         "zh-Hans" : {
@@ -618,6 +621,9 @@
           }
         }
       }
+    },
+    "Select a category" : {
+
     },
     "Settings.About" : {
       "extractionState" : "manual",

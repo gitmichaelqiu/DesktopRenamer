@@ -308,42 +308,39 @@ class StatusBarController: NSObject {
             alert.beginSheetModal(for: window, completionHandler: nil)
         }
     }
-    
+
     @objc func openSettingsWindow() {
-        // Show dock icon when opening settings
         NSApp.setActivationPolicy(.regular)
         
         if let windowController = settingsWindowController {
             windowController.showWindow(nil)
             NSApp.activate(ignoringOtherApps: true)
-            
-            if let hostingController = windowController.window?.contentViewController as? SettingsHostingController {
-                hostingController.rootView = SettingsView(spaceManager: spaceManager, labelManager: labelManager)
-            }
             return
         }
         
-        // Create settings window with proper style mask
+        // 1. STYLE: .fullSizeContentView is critical for "Ice" style
         let window = NSWindow(
             contentRect: NSRect(x: 0, y: 0, width: defaultSettingsWindowWidth, height: defaultSettingsWindowHeight),
-            styleMask: [.titled, .closable, .miniaturizable],
+            styleMask: [.titled, .closable, .miniaturizable, .resizable, .fullSizeContentView],
             backing: .buffered,
             defer: false
         )
-        window.title = NSLocalizedString("Window.Settings.Title", comment: "")
+        
+        // 2. CONFIG: Hide the native title bar elements
+        window.titleVisibility = .hidden
+        window.titlebarAppearsTransparent = true
+        
+        // 3. REMOVE TOOLBAR: Ensures no extra space is reserved at the top
+        window.toolbar = nil
+        
         window.center()
-        
         window.minSize = NSSize(width: defaultSettingsWindowWidth, height: defaultSettingsWindowHeight)
-        window.maxSize = NSSize(width: defaultSettingsWindowWidth, height: defaultSettingsWindowHeight)
-        
         window.collectionBehavior = [.participatesInCycle]
         window.level = .normal
         
-        // Create and set the settings view controller
         let settingsVC = SettingsHostingController(spaceManager: spaceManager, labelManager: labelManager)
         window.contentViewController = settingsVC
         
-        // Create window controller
         let windowController = NSWindowController(window: window)
         windowController.window?.delegate = self
         settingsWindowController = windowController
@@ -355,7 +352,6 @@ class StatusBarController: NSObject {
             object: window
         )
         
-        // Show the window
         windowController.showWindow(nil)
         NSApp.activate(ignoringOtherApps: true)
     }

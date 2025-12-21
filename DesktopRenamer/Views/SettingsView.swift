@@ -1,45 +1,118 @@
 import SwiftUI
-import ServiceManagement
-import Combine
 
-enum SettingsTab: String {
-    case general, space, labels, about
+// Enum remains the same
+enum SettingsTab: String, CaseIterable, Identifiable {
+    case general, labels, space, about
+    
+    var id: String { self.rawValue }
+    
+    var localizedName: LocalizedStringKey {
+        switch self {
+        case .general: return "Settings.General"
+        case .labels: return "Settings.Labels"
+        case .space: return "Settings.Spaces"
+        case .about: return "Settings.About"
+        }
+    }
+    
+    var iconName: String {
+        switch self {
+        case .general: return "gearshape"
+        case .labels: return "tag"
+        case .space: return "macwindow"
+        case .about: return "info.circle"
+        }
+    }
 }
 
-let defaultSettingsWindowWidth = 417
-let defaultSettingsWindowHeight = 480
+// Updated constants
+let sidebarWidth: CGFloat = 220
+let defaultSettingsWindowWidth = 750
+let defaultSettingsWindowHeight = 550
 
 struct SettingsView: View {
     @ObservedObject var spaceManager: SpaceManager
     @ObservedObject var labelManager: SpaceLabelManager
-    @AppStorage("selectedSettingsTab") private var selectedTab: SettingsTab = .general
+    
+    @State private var selectedTab: SettingsTab? = .general
     
     var body: some View {
-        TabView(selection: $selectedTab) {
-            GeneralSettingsView(spaceManager: spaceManager, labelManager: labelManager)
-                .tabItem {
-                    Text(NSLocalizedString("Settings.General", comment: ""))
+        NavigationSplitView {
+            List(selection: $selectedTab) {
+                // HEADER SECTION (Traffic Lights + Title)
+                Section {
+                    EmptyView()
+                } header: {
+                    VStack(alignment: .leading, spacing: 0) {
+                        // 1. Spacer to push content below traffic lights (approx 40pt)
+                        Color.clear
+                            .frame(height: 38)
+                        
+                        Text("DesktopRenamer")
+                            .font(.system(size: 20, weight: .medium))
+                            .foregroundStyle(.primary)
+                            .padding(.horizontal, 8)
+                            .padding(.bottom, 10)
+                    }
+                    // Remove default header padding to align with edge
+                    .listRowInsets(EdgeInsets(top: 0, leading: 0, bottom: 0, trailing: 0))
                 }
-                .tag(SettingsTab.general)
-            
-            SpaceEditView(spaceManager: spaceManager, labelManager: labelManager)
-                .tabItem {
-                    Text(NSLocalizedString("Settings.Spaces", comment: ""))
+                .collapsible(false)
+                
+                // TAB ITEMS
+                Section {
+                    ForEach(SettingsTab.allCases) { tab in
+                        sidebarItem(for: tab)
+                    }
                 }
-                .tag(SettingsTab.space)
+            }
+            .listStyle(.sidebar)
+            .scrollDisabled(true)
+            .navigationSplitViewColumnWidth(sidebarWidth)
             
-            LabelSettingsView(labelManager: labelManager)
-                .tabItem { Text(NSLocalizedString("Settings.Labels", comment: "")) }
-                .tag(SettingsTab.labels)
+            // 2. CRITICAL: Force Sidebar to top edge of window
+            .edgesIgnoringSafeArea(.top)
             
-            AboutView()
-                .tabItem {
-                    Text(NSLocalizedString("Settings.About", comment: ""))
+        } detail: {
+            ZStack {
+                if let tab = selectedTab {
+                    switch tab {
+                    case .general:
+                        GeneralSettingsView(spaceManager: spaceManager, labelManager: labelManager)
+                    case .labels:
+                        LabelSettingsView(labelManager: labelManager)
+                    case .space:
+                        SpaceEditView(spaceManager: spaceManager, labelManager: labelManager)
+                    case .about:
+                        AboutView()
+                    }
+                } else {
+                    Text("Select a category")
+                        .foregroundColor(.secondary)
                 }
-                .tag(SettingsTab.about)
+            }
+            // 3. CRITICAL: Push Detail view down so it doesn't sit under the toolbar area
+            //    (Since we removed the toolbar, the content might ride up too high otherwise)
+            .padding(.top, 20)
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
+        .navigationTitle("")
+        // 4. HIDE TOOLBARS explicitly to prevent SwiftUI from reserving space
+        .toolbar(.hidden, for: .windowToolbar)
         .frame(width: CGFloat(defaultSettingsWindowWidth), height: CGFloat(defaultSettingsWindowHeight))
-        .padding()
+    }
+    
+    @ViewBuilder
+    private func sidebarItem(for tab: SettingsTab) -> some View {
+        NavigationLink(value: tab) {
+            Label {
+                Text(tab.localizedName)
+                    .padding(.leading, 2)
+            } icon: {
+                Image(systemName: tab.iconName)
+            }
+        }
+        // Use default height, no fixed frame needed
     }
 }
 
