@@ -135,7 +135,7 @@ struct SettingsView: View {
         NavigationLink(value: tab) {
             Label {
                 Text(tab.localizedName)
-                    .font(.system(size: sidebarFontSize))
+                    .font(.system(size: sidebarFontSize, weight: .medium))
                     .padding(.leading, 2)
             } icon: {
                 Image(systemName: tab.iconName)
