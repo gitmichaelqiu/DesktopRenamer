@@ -15,64 +15,138 @@ struct AboutView: View {
     }
 
     var body: some View {
-        GeometryReader { geometry in
-            VStack(spacing: 16) {
-                if let nsImage = NSApplication.shared.applicationIconImage {
-                    Image(nsImage: nsImage)
-                        .resizable()
-                        .aspectRatio(contentMode: .fit)
-                        .frame(
-                            width: min(geometry.size.width * 0.6, 160),
-                            height: min(geometry.size.width * 0.6, 160)
-                        )
-                        .padding(.bottom, 8)
+        ScrollView {
+            VStack(spacing: 24) {
+                // MARK: - App Header
+                VStack(spacing: 12) {
+                    if let nsImage = NSApplication.shared.applicationIconImage {
+                        Image(nsImage: nsImage)
+                            .resizable()
+                            .aspectRatio(contentMode: .fit)
+                            .frame(width: 120, height: 120)
+                            .shadow(radius: 5)
+                    }
+
+                    VStack(spacing: 4) {
+                        Text(appName)
+                            .font(.system(size: 28, weight: .bold))
+
+                        Text("v\(appVersion)")
+                            .font(.title3)
+                            .foregroundColor(.secondary)
+                    }
                 }
+                .padding(.top, 20)
 
-                VStack(spacing: 4) {
-                    Text(appName)
-                        .font(.largeTitle)
-                        .fontWeight(.bold)
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.7)
-
-                    Text("v\(appVersion)")
-                        .font(.title3)
-                        .foregroundColor(.secondary)
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.8)
-                }
-
-                Divider()
-                    .padding(.vertical, 8)
-                
                 Text(NSLocalizedString("Settings.About.Description", comment: "Description"))
                     .multilineTextAlignment(.center)
                     .font(.body)
                     .lineSpacing(4)
-                    .fixedSize(horizontal: false, vertical: true)
-                    .frame(
-                        maxWidth: min(geometry.size.width * 0.8, 480),
-                        alignment: .center
-                    )
+                    .padding(.horizontal, 30)
+                    .frame(maxWidth: 500)
 
-                Spacer()
+                Divider()
+                    .padding(.horizontal, 40)
 
-                VStack(spacing: 8) {
+                // MARK: - More Apps Section
+                VStack(spacing: 16) {
+                    Text("More Apps by Me")
+                        .font(.headline)
+                        .foregroundColor(.primary)
+                    
+                    HStack(alignment: .top, spacing: 20) {
+                        // OptClicker
+                        OtherAppCard(
+                            imageName: "OptClickerIcon_Default",
+                            appName: "OptClicker",
+                            description: "Let you right-click with the Option key.",
+                            url: "https://github.com/gitmichaelqiu/OptClicker"
+                        )
+                        
+                        // SpaceSwitcher
+                        OtherAppCard(
+                            imageName: "SpaceSwitcherIcon_Default",
+                            appName: "SpaceSwitcher",
+                            description: "Control which app and dock to show in each workspace.",
+                            url: "https://github.com/gitmichaelqiu/SpaceSwitcher"
+                        )
+                    }
+                    .padding(.horizontal)
+                }
+
+                Divider()
+                    .padding(.horizontal, 40)
+
+                // MARK: - Footer
+                VStack(spacing: 10) {
                     Link(NSLocalizedString("Settings.About.Repo", comment: "GitHub Repo"),
                          destination: URL(string: "https://github.com/gitmichaelqiu/DesktopRenamer")!)
                     .font(.body)
-                    .foregroundColor(.blue)
+                    .foregroundColor(.accentColor)
 
                     Text("© \(currentYear) Michael Yicheng Qiu")
                         .font(.footnote)
+                        .foregroundColor(.primary)
+                }
+                .padding(.bottom, 40)
+            }
+            .frame(maxWidth: .infinity)
+        }
+    }
+}
+
+struct OtherAppCard: View {
+    let imageName: String
+    let appName: String
+    let description: String
+    let url: String
+    
+    var body: some View {
+        Link(destination: URL(string: url)!) {
+            VStack(spacing: 10) {
+                // Try to load image from bundle resources, fallback to generic icon
+                if let nsImage = NSImage(named: imageName) {
+                    Image(nsImage: nsImage)
+                        .resizable()
+                        .aspectRatio(contentMode: .fit)
+                        .frame(width: 55, height: 55)
+                        .shadow(radius: 2)
+                } else {
+                    Image(systemName: "app.dashed")
+                        .resizable()
+                        .aspectRatio(contentMode: .fit)
+                        .frame(width: 50, height: 50)
                         .foregroundColor(.secondary)
                 }
-                .frame(maxWidth: .infinity)
-                .padding(.horizontal, max(16, geometry.size.width * 0.05))
+                
+                VStack(spacing: 4) {
+                    Text(appName)
+                        .font(.headline)
+                        .foregroundColor(.primary)
+                    
+                    Text(description)
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                        .multilineTextAlignment(.center)
+                        .lineLimit(3)
+                        .frame(height: 40, alignment: .top)
+                }
             }
-            .padding(.horizontal, max(24, geometry.size.width * 0.08))
-            .padding(.vertical, max(24, geometry.size.height * 0.05))
+            .padding(12)
+            .frame(width: 160)
+            .background(
+                RoundedRectangle(cornerRadius: 12)
+                    .fill(Color(NSColor.controlBackgroundColor))
+                    .shadow(color: .black.opacity(0.1), radius: 2, x: 0, y: 1)
+            )
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .buttonStyle(.plain)
+        .onHover { isHovering in
+            if isHovering {
+                NSCursor.pointingHand.push()
+            } else {
+                NSCursor.pop()
+            }
+        }
     }
 }
