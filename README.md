@@ -61,8 +61,6 @@ You can switch on/off the API in Settings → Advanced.
 
 <img src="./DesktopRenamer/Resources/SpaceSwitcherIcon_Default.png" width="120"/>
 
-<br>
-
 [SpaceSwitcher](https://github.com/gitmichaelqiu/SpaceSwitcher/releases/) allows you to control which app and set of dock to display in each space.
 
 ## ⚠️ Issues
