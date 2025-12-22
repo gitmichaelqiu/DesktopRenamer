@@ -50,7 +50,7 @@ struct AboutView: View {
 
                 // MARK: - More Apps Section
                 VStack(spacing: 16) {
-                    Text("More Apps by Me")
+                    Text("More Apps")
                         .font(.headline)
                         .foregroundColor(.primary)
                     
@@ -86,7 +86,7 @@ struct AboutView: View {
 
                     Text("© \(currentYear) Michael Yicheng Qiu")
                         .font(.footnote)
-                        .foregroundColor(.primary)
+                        .foregroundColor(.gray)
                 }
                 .padding(.bottom, 40)
             }
