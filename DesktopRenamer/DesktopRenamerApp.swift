@@ -97,11 +97,7 @@ struct DesktopRenamerApp: App {
             EmptyView()
         }
         .commands {
-            CommandGroup(replacing: .appInfo) {
-                Button(NSLocalizedString("Menu.About", comment: "")) {
-                    UserDefaults.standard.set(SettingsTab.about.rawValue, forKey: "selectedSettingsTab")
-                }
-            }
+            CommandGroup(replacing: .appInfo) { }
             CommandGroup(replacing: .appSettings) { }
         }
     }
