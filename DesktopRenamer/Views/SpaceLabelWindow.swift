@@ -195,15 +195,15 @@ class SpaceLabelWindow: NSWindow {
         }
         
         self.label.font = font
+        let displayHeight = sSize.height + 4
         self.label.frame = NSRect(
-            x: (size.width - sSize.width) / 2,
-            y: (size.height - sSize.height) / 2,
-            width: sSize.width,
-            height: sSize.height
+            x: 0,
+            y: (size.height - displayHeight) / 2,
+            width: size.width,
+            height: displayHeight
         )
     }
     
-    // ... (findTargetScreen, findBestOffscreenPosition, repositionWindow - Same as before) ...
     private func findTargetScreen() -> NSScreen? {
         return NSScreen.screens.first { screen in
             let screenID = screen.deviceDescription[NSDeviceDescriptionKey("NSScreenNumber")] as? NSNumber ?? 0
@@ -213,6 +213,7 @@ class SpaceLabelWindow: NSWindow {
             return screen.localizedName == cleanTarget
         }
     }
+    
     private func findBestOffscreenPosition(targetScreen: NSScreen, size: NSSize) -> NSPoint {
         let allScreens = NSScreen.screens
         let f = targetScreen.frame
@@ -233,5 +234,6 @@ class SpaceLabelWindow: NSWindow {
         }
         return candidates[0]
     }
+    
     @objc private func repositionWindow() { updateLayout(isCurrentSpace: isActiveMode) }
 }
