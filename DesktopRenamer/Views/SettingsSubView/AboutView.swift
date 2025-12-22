@@ -67,7 +67,7 @@ struct AboutView: View {
                         OtherAppCard(
                             imageName: "SpaceSwitcherIcon_Default",
                             appName: "SpaceSwitcher",
-                            description: "Control which app and dock to show in each workspace.",
+                            description: "Control which app and dock to show in each space.",
                             url: "https://github.com/gitmichaelqiu/SpaceSwitcher"
                         )
                     }
