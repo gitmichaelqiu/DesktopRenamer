@@ -48,7 +48,7 @@ class SpaceLabelWindow: NSWindow {
         }
         
         contentView.wantsLayer = true
-        contentView.layer?.cornerRadius = 12
+        contentView.layer?.cornerRadius = 20
         self.label.alignment = .center
         self.label.textColor = .labelColor
         contentView.addSubview(self.label)
