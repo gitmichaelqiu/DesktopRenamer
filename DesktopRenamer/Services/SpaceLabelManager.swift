@@ -11,9 +11,10 @@ class SpaceLabelManager: ObservableObject {
     private let kPreviewFontScale = "kPreviewFontScale"
     private let kPreviewPaddingScale = "kPreviewPaddingScale"
     
-    // NEW: Visibility Keys
+    // Visibility Keys
     private let kShowPreviewLabels = "kShowPreviewLabels"
     private let kShowActiveLabels = "kShowActiveLabels"
+    private let kShowOnDesktop = "kShowOnDesktop" // NEW
     
     @Published var isEnabled: Bool {
         didSet {
@@ -22,11 +23,19 @@ class SpaceLabelManager: ObservableObject {
         }
     }
     
-    // NEW: Visibility Toggles (Default true)
+    // Visibility Toggles
     @Published var showPreviewLabels: Bool { didSet { saveSettings(); updateWindows() } }
     @Published var showActiveLabels: Bool { didSet { saveSettings(); updateWindows() } }
     
-    // Customizable Scales (Default 1.0)
+    // NEW: Active Label moves from "Hidden Corner" to "Visible Floating Widget"
+    @Published var showOnDesktop: Bool {
+        didSet {
+            saveSettings()
+            updateWindows()
+        }
+    }
+    
+    // Scales
     @Published var activeFontScale: Double { didSet { saveSettings(); updateWindows() } }
     @Published var activePaddingScale: Double { didSet { saveSettings(); updateWindows() } }
     @Published var previewFontScale: Double { didSet { saveSettings(); recalculateUnifiedSize() } }
@@ -53,18 +62,10 @@ class SpaceLabelManager: ObservableObject {
         self.previewFontScale = (loadedPreviewFont == 0) ? 1.0 : loadedPreviewFont
         self.previewPaddingScale = (loadedPreviewPadding == 0) ? 1.0 : loadedPreviewPadding
         
-        // NEW: Load Visibility (Default to true if nil/not set)
-        if UserDefaults.standard.object(forKey: kShowPreviewLabels) != nil {
-            self.showPreviewLabels = UserDefaults.standard.bool(forKey: kShowPreviewLabels)
-        } else {
-            self.showPreviewLabels = true
-        }
-        
-        if UserDefaults.standard.object(forKey: kShowActiveLabels) != nil {
-            self.showActiveLabels = UserDefaults.standard.bool(forKey: kShowActiveLabels)
-        } else {
-            self.showActiveLabels = true
-        }
+        // Load Visibility
+        self.showPreviewLabels = UserDefaults.standard.object(forKey: kShowPreviewLabels) == nil ? true : UserDefaults.standard.bool(forKey: kShowPreviewLabels)
+        self.showActiveLabels = UserDefaults.standard.object(forKey: kShowActiveLabels) == nil ? true : UserDefaults.standard.bool(forKey: kShowActiveLabels)
+        self.showOnDesktop = UserDefaults.standard.bool(forKey: kShowOnDesktop) // Default false
         
         setupObservers()
     }
@@ -80,13 +81,12 @@ class SpaceLabelManager: ObservableObject {
         UserDefaults.standard.set(previewFontScale, forKey: kPreviewFontScale)
         UserDefaults.standard.set(previewPaddingScale, forKey: kPreviewPaddingScale)
         
-        // NEW: Save Visibility
         UserDefaults.standard.set(showPreviewLabels, forKey: kShowPreviewLabels)
         UserDefaults.standard.set(showActiveLabels, forKey: kShowActiveLabels)
+        UserDefaults.standard.set(showOnDesktop, forKey: kShowOnDesktop)
     }
     
     private func updateWindows() {
-        // Trigger live updates for active windows
         for window in createdWindows.values {
             window.refreshAppearance()
         }
@@ -95,25 +95,22 @@ class SpaceLabelManager: ObservableObject {
     private func setupObservers() {
         guard let spaceManager = spaceManager else { return }
         
-        // 1. Monitor Current Space (Mode Switching)
         spaceManager.$currentSpaceUUID
             .dropFirst()
             .receive(on: DispatchQueue.main)
             .sink { [weak self] _ in self?.updateAllWindowModes() }
             .store(in: &cancellables)
             
-        // 2. Monitor Space Names (Size Calculation)
         spaceManager.$spaceNameDict
             .receive(on: DispatchQueue.main)
             .sink { [weak self] _ in self?.recalculateUnifiedSize() }
             .store(in: &cancellables)
     }
     
-    // UPDATED: Calculate unified size using sliders
     private func recalculateUnifiedSize() {
         guard let spaceManager = spaceManager else { return }
         
-        // Apply Preview Font Scale
+        // Uses Preview Settings for the "Max Size" reference
         let baseFontSize: CGFloat = 180
         let scaledFontSize = baseFontSize * CGFloat(previewFontScale)
         let referenceFont = NSFont.systemFont(ofSize: scaledFontSize, weight: .bold)
@@ -128,7 +125,6 @@ class SpaceLabelManager: ObservableObject {
             if size.height > maxHeight { maxHeight = size.height }
         }
         
-        // Apply Preview Padding Scale
         let basePadH: CGFloat = 200
         let basePadV: CGFloat = 150
         let paddingH = basePadH * CGFloat(previewPaddingScale)
@@ -136,12 +132,9 @@ class SpaceLabelManager: ObservableObject {
         
         var finalSize = NSSize(width: maxWidth + paddingH, height: maxHeight + paddingV)
         
-        // Cap at screen size
         if let screen = NSScreen.main {
-            let maxW = screen.frame.width * 0.95
-            let maxH = screen.frame.height * 0.9
-            finalSize.width = min(finalSize.width, maxW)
-            finalSize.height = min(finalSize.height, maxH)
+            finalSize.width = min(finalSize.width, screen.frame.width * 0.95)
+            finalSize.height = min(finalSize.height, screen.frame.height * 0.9)
         }
         
         for window in createdWindows.values {
@@ -191,12 +184,11 @@ class SpaceLabelManager: ObservableObject {
     
     private func createWindow(for spaceId: String, name: String, displayID: String) {
         guard let spaceManager = spaceManager else { return }
-        // Pass 'self' (LabelManager) to Window so it can read settings
         let window = SpaceLabelWindow(spaceId: spaceId, name: name, displayID: displayID, spaceManager: spaceManager, labelManager: self)
         createdWindows[spaceId] = window
         let isCurrent = (spaceId == spaceManager.currentSpaceUUID)
         window.setMode(isCurrentSpace: isCurrent)
-        self.recalculateUnifiedSize() // Ensure it gets current unified size
+        self.recalculateUnifiedSize()
         window.orderFront(nil)
     }
     

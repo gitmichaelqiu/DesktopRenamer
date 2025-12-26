@@ -22,7 +22,7 @@
       }
     },
     "%.2fx" : {
-      "shouldTranslate" : false
+
     },
     "%@" : {
       "localizations" : {
@@ -280,6 +280,9 @@
         }
       }
     },
+    "Drag to edge to shrink (PiP)" : {
+
+    },
     "Factory Reset" : {
       "localizations" : {
         "zh-Hans" : {
@@ -359,6 +362,9 @@
           }
         }
       }
+    },
+    "Keep Visible on Desktop" : {
+
     },
     "Manual" : {
       "localizations" : {
