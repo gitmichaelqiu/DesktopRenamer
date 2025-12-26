@@ -140,25 +140,15 @@ class SpaceLabelWindow: NSWindow {
     
     private func syncFromGlobalState() {
         guard let manager = labelManager else { return }
-        
         self.isDocked = manager.globalIsDocked
         self.dockEdge = manager.globalDockEdge
         
-        // Apply position (if available)
-        if let savedCenter = manager.globalCenterPoint {
-            // We have a saved center, frame origin will be calculated in updateLayout
-            // We can just store it temporarily or rely on updateLayout using specific logic.
-            // Since updateLayout calculates size then position, we need to ensure the position is set.
-            // We'll update the layout immediately after sync.
-        } else {
-            // First Run / Default: Middle of Right Edge
+        // Apply default if needed
+        if manager.globalCenterPoint == nil {
             if let screen = self.screen ?? NSScreen.main {
                 let frame = screen.visibleFrame
-                // Default Center Point: Right edge, vertically centered
                 let defaultCenter = NSPoint(x: frame.maxX, y: frame.midY)
-                // Save this default back to manager so other windows pick it up
                 manager.updateGlobalState(isDocked: true, edge: .maxX, center: defaultCenter)
-                
                 self.dockEdge = .maxX
                 self.isDocked = true
             }
@@ -192,9 +182,7 @@ class SpaceLabelWindow: NSWindow {
         self.isActiveMode = isCurrentSpace
         
         if isCurrentSpace {
-            // When becoming active, SYNC state from manager (in case user moved it on another space)
             syncFromGlobalState()
-            
             if let manager = labelManager, !manager.showOnDesktop {
                  self.isDocked = true
             }
@@ -234,7 +222,6 @@ class SpaceLabelWindow: NSWindow {
                 if !hasDragged {
                     toggleDockState()
                 } else {
-                    // Drag finished: Save new position
                     pushToGlobalState()
                 }
                 break
@@ -262,7 +249,6 @@ class SpaceLabelWindow: NSWindow {
                         let distBottom = abs(currentMouseLocation.y - screenFrame.minY)
                         let minMouseEdgeDist = min(distLeft, distRight, distTop, distBottom)
                         
-                        // --- TRANSITION ---
                         if !isDocked {
                             if minMouseEdgeDist < 15.0 {
                                 isDocked = true
@@ -283,7 +269,6 @@ class SpaceLabelWindow: NSWindow {
                             updateLayout(isCurrentSpace: true, updateFrame: false)
                             let newSize = self.frame.size
                             
-                            // Rooting Logic
                             let rootedOrigin = calculateCenteredOrigin(
                                 forSize: newSize,
                                 onEdge: self.dockEdge,
@@ -298,12 +283,10 @@ class SpaceLabelWindow: NSWindow {
                                                   y: currentMouseLocation.y - targetOrigin.y)
                             startMouseLocation = currentMouseLocation
                             
-                            // Push state immediately on change
                             pushToGlobalState()
                             continue
                         }
                         
-                        // --- NORMAL DRAG ---
                         if isDocked {
                             let rawRect = NSRect(origin: targetOrigin, size: self.frame.size)
                             let snappedOrigin = findNearestEdgePosition(targetScreen: screen, forRect: rawRect)
@@ -328,7 +311,6 @@ class SpaceLabelWindow: NSWindow {
             self.isDocked = true
             animateFrameChange()
         }
-        // Save state after toggle
         pushToGlobalState()
     }
     
@@ -354,19 +336,17 @@ class SpaceLabelWindow: NSWindow {
         var newSize: NSSize
         var newOrigin: NSPoint
         
-        // 1. Determine Target Center
-        // If we have a saved global center, prioritize that (to prevent drift on wake),
-        // UNLESS we are in the middle of a live interaction (handled by mouseDown).
-        // Since updateLayout is called by setMode/refresh, we use the Manager's center if available.
         var targetCenter = NSPoint(x: self.frame.midX, y: self.frame.midY)
         if let globalCenter = labelManager?.globalCenterPoint {
             targetCenter = globalCenter
         }
         
         let showHandle = isCurrentSpace && isDocked && (labelManager?.showOnDesktop == true)
+        // Detect if we are in "Hidden Corner" mode (Active Space, but PiP disabled)
+        let isHiddenCornerMode = isCurrentSpace && !showHandle && !(labelManager?.showOnDesktop == true)
         
         if showHandle {
-            // --- DOCKED ---
+            // --- DOCKED (Handle) ---
             self.label.isHidden = true
             self.handleView.isHidden = false
             self.handleView.edge = self.dockEdge
@@ -379,41 +359,35 @@ class SpaceLabelWindow: NSWindow {
             }
             
             self.handleView.frame = NSRect(origin: .zero, size: newSize)
-            
-            // Calculate origin centered on the global point, snapped to edge
             newOrigin = calculateCenteredOrigin(
-                forSize: newSize,
-                onEdge: self.dockEdge,
-                centerPoint: targetCenter,
-                screenFrame: targetScreen.visibleFrame,
-                clampToScreen: true
+                forSize: newSize, onEdge: self.dockEdge, centerPoint: targetCenter, screenFrame: targetScreen.visibleFrame, clampToScreen: true
             )
             
         } else {
-            // --- EXPANDED ---
+            // --- EXPANDED (Label) or HIDDEN ---
             self.label.isHidden = false
             self.handleView.isHidden = true
             self.contentView?.layer?.cornerRadius = 20
             
             if isCurrentSpace {
                 if labelManager?.showOnDesktop == true {
-                     newSize = calculatePreviewLikeSize()
+                     // Interactive PiP
+                     // STYLING FIX 1: Use Active Size (same as Hidden)
+                     newSize = calculateActiveSize()
                      
-                     // Expanded mode uses the center point freely
                      newOrigin = calculateCenteredOrigin(
-                        forSize: newSize,
-                        onEdge: self.dockEdge,
-                        centerPoint: targetCenter,
-                        screenFrame: targetScreen.visibleFrame,
-                        clampToScreen: false
+                        forSize: newSize, onEdge: self.dockEdge, centerPoint: targetCenter, screenFrame: targetScreen.visibleFrame, clampToScreen: false
                      )
-                     updateLabelFont(for: newSize, isSmallMode: false)
+                     // STYLING FIX 2: Use Active Font Settings
+                     updateLabelFont(for: newSize, isSmallMode: true)
                 } else {
+                    // Legacy Hidden Corner
                     newSize = calculateActiveSize()
                     newOrigin = findBestOffscreenPosition(targetScreen: targetScreen, size: newSize)
                     updateLabelFont(for: newSize, isSmallMode: true)
                 }
             } else {
+                // Preview (Mission Control)
                 newSize = previewSize
                 newOrigin = NSPoint(
                     x: targetScreen.frame.midX - (newSize.width / 2),
@@ -426,7 +400,24 @@ class SpaceLabelWindow: NSWindow {
         self.contentView?.frame = NSRect(origin: .zero, size: newSize)
         
         if updateFrame {
-            self.animator().setFrame(NSRect(origin: newOrigin, size: newSize), display: true)
+            if isHiddenCornerMode {
+                // ANIMATION FIX: Fade Out -> Jump -> Instant Appear
+                // This prevents the label from sliding across the screen when disabling PiP
+                NSAnimationContext.runAnimationGroup { context in
+                    context.duration = 0.08
+                    context.timingFunction = CAMediaTimingFunction(name: .easeOut)
+                    self.animator().alphaValue = 0.0
+                } completionHandler: {
+                    self.setFrame(NSRect(origin: newOrigin, size: newSize), display: true)
+                    self.alphaValue = 1.0 // Make it visible to system (offscreen)
+                }
+            } else {
+                // Standard Animation
+                self.animator().setFrame(NSRect(origin: newOrigin, size: newSize), display: true)
+                if self.alphaValue < 1.0 {
+                    self.animator().alphaValue = 1.0
+                }
+            }
         } else {
             self.setFrame(NSRect(origin: self.frame.origin, size: newSize), display: true)
         }
@@ -436,22 +427,12 @@ class SpaceLabelWindow: NSWindow {
     
     private func calculateCenteredOrigin(forSize size: NSSize, onEdge edge: NSRectEdge, centerPoint: NSPoint, screenFrame: NSRect, clampToScreen: Bool) -> NSPoint {
         var origin = NSPoint.zero
-        
         switch edge {
-        case .minX: // Left
-            origin.x = screenFrame.minX
-            origin.y = centerPoint.y - (size.height / 2)
-        case .maxX: // Right
-            origin.x = screenFrame.maxX - size.width
-            origin.y = centerPoint.y - (size.height / 2)
-        case .minY: // Bottom
-            origin.x = centerPoint.x - (size.width / 2)
-            origin.y = screenFrame.minY
-        case .maxY: // Top
-            origin.x = centerPoint.x - (size.width / 2)
-            origin.y = screenFrame.maxY - size.height
-        @unknown default:
-            origin = NSPoint(x: centerPoint.x - size.width/2, y: centerPoint.y - size.height/2)
+        case .minX: origin = NSPoint(x: screenFrame.minX, y: centerPoint.y - size.height/2)
+        case .maxX: origin = NSPoint(x: screenFrame.maxX - size.width, y: centerPoint.y - size.height/2)
+        case .minY: origin = NSPoint(x: centerPoint.x - size.width/2, y: screenFrame.minY)
+        case .maxY: origin = NSPoint(x: centerPoint.x - size.width/2, y: screenFrame.maxY - size.height)
+        @unknown default: origin = NSPoint(x: centerPoint.x - size.width/2, y: centerPoint.y - size.height/2)
         }
         
         if clampToScreen {
@@ -461,7 +442,6 @@ class SpaceLabelWindow: NSWindow {
                 origin.x = max(screenFrame.minX, min(origin.x, screenFrame.maxX - size.width))
             }
         }
-        
         return origin
     }
     
@@ -469,12 +449,6 @@ class SpaceLabelWindow: NSWindow {
         let scaleF = CGFloat(labelManager?.activeFontScale ?? 1.0)
         let scaleP = CGFloat(labelManager?.activePaddingScale ?? 1.0)
         return calculateSize(baseFont: SpaceLabelWindow.baseActiveFontSize * scaleF, paddingScale: scaleP, basePadH: 60, basePadV: 40)
-    }
-    
-    private func calculatePreviewLikeSize() -> NSSize {
-        let scaleF = CGFloat(labelManager?.previewFontScale ?? 1.0) * 0.5
-        let scaleP = CGFloat(labelManager?.previewPaddingScale ?? 1.0) * 0.5
-        return calculateSize(baseFont: SpaceLabelWindow.basePreviewFontSize * scaleF, paddingScale: scaleP, basePadH: 100, basePadV: 80)
     }
     
     private func calculateSize(baseFont: CGFloat, paddingScale: CGFloat, basePadH: CGFloat, basePadV: CGFloat) -> NSSize {
@@ -486,11 +460,12 @@ class SpaceLabelWindow: NSWindow {
     
     private func updateLabelFont(for size: NSSize, isSmallMode: Bool) {
         let name = self.label.stringValue
-        
         let paddingScale: CGFloat
         let fontScale: CGFloat
         let baseSize: CGFloat
         
+        // STYLING FIX: Interactive mode now treated as "SmallMode" for font calculation
+        // to ensure it matches the Hidden Label settings.
         if isSmallMode {
             paddingScale = CGFloat(labelManager?.activePaddingScale ?? 1.0)
             fontScale = CGFloat(labelManager?.activeFontScale ?? 1.0)
