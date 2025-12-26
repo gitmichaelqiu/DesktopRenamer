@@ -13,7 +13,7 @@ class CollapsibleHandleView: NSView {
     init() {
         // 1. Native Blur Background
         visualEffectView = NSVisualEffectView()
-        visualEffectView.material = .hudWindow // Native dark/glass look
+        visualEffectView.material = .hudWindow
         visualEffectView.blendingMode = .withinWindow
         visualEffectView.state = .active
         visualEffectView.wantsLayer = true
@@ -34,13 +34,11 @@ class CollapsibleHandleView: NSView {
         addSubview(imageView)
         
         NSLayoutConstraint.activate([
-            // Background fills view
             visualEffectView.leadingAnchor.constraint(equalTo: leadingAnchor),
             visualEffectView.trailingAnchor.constraint(equalTo: trailingAnchor),
             visualEffectView.topAnchor.constraint(equalTo: topAnchor),
             visualEffectView.bottomAnchor.constraint(equalTo: bottomAnchor),
             
-            // Icon centered
             imageView.centerXAnchor.constraint(equalTo: centerXAnchor),
             imageView.centerYAnchor.constraint(equalTo: centerYAnchor)
         ])
@@ -65,6 +63,9 @@ class CollapsibleHandleView: NSView {
 
 // MARK: - Main Window Class
 class SpaceLabelWindow: NSWindow {
+    // UI Elements
+    private let containerView: NSView
+    private let backgroundEffectView: NSVisualEffectView // The "Label" Background
     private let label: NSTextField
     private let handleView: CollapsibleHandleView
     
@@ -83,7 +84,7 @@ class SpaceLabelWindow: NSWindow {
     // Constants
     static let baseActiveFontSize: CGFloat = 45
     static let basePreviewFontSize: CGFloat = 180
-    static let handleSize = NSSize(width: 28, height: 64) // Polished native dimensions
+    static let handleSize = NSSize(width: 28, height: 64)
     
     init(spaceId: String, name: String, displayID: String, spaceManager: SpaceManager, labelManager: SpaceLabelManager) {
         self.spaceId = spaceId
@@ -91,16 +92,31 @@ class SpaceLabelWindow: NSWindow {
         self.spaceManager = spaceManager
         self.labelManager = labelManager
         
-        // 1. Label
+        // 1. Root Container (Transparent)
+        self.containerView = NSView()
+        self.containerView.wantsLayer = true
+        self.containerView.layer?.backgroundColor = NSColor.clear.cgColor
+        
+        // 2. Label Background (Visual Effect)
+        self.backgroundEffectView = NSVisualEffectView()
+        self.backgroundEffectView.material = .hudWindow
+        self.backgroundEffectView.state = .active
+        self.backgroundEffectView.blendingMode = .behindWindow
+        self.backgroundEffectView.wantsLayer = true
+        self.backgroundEffectView.layer?.cornerRadius = 16
+        self.backgroundEffectView.layer?.masksToBounds = true
+        
+        // 3. Label Text
         self.label = NSTextField(labelWithString: name)
         self.label.alignment = .center
         self.label.textColor = .labelColor
+        self.label.translatesAutoresizingMaskIntoConstraints = false
         
-        // 2. Handle
+        // 4. Handle View
         self.handleView = CollapsibleHandleView()
         self.handleView.isHidden = true
         
-        // Screen Finding
+        // ... (Screen Finding Logic) ...
         let foundScreen = NSScreen.screens.first { screen in
             let screenID = screen.deviceDescription[NSDeviceDescriptionKey("NSScreenNumber")] as? NSNumber ?? 0
             let idString = "\(screen.localizedName) (\(screenID))"
@@ -114,22 +130,24 @@ class SpaceLabelWindow: NSWindow {
         
         super.init(contentRect: startRect, styleMask: [.borderless], backing: .buffered, defer: false)
         
-        // Use Glass Effect for Main Background too
-        let contentView = NSVisualEffectView(frame: .zero)
-        contentView.material = .hudWindow
-        contentView.state = .active
-        contentView.blendingMode = .behindWindow
-        contentView.wantsLayer = true
-        contentView.layer?.cornerRadius = 16
-        contentView.layer?.masksToBounds = true
+        // Hierarchy Setup
+        // Background View holds the Label
+        self.backgroundEffectView.addSubview(self.label)
+        NSLayoutConstraint.activate([
+            self.label.centerXAnchor.constraint(equalTo: self.backgroundEffectView.centerXAnchor),
+            self.label.centerYAnchor.constraint(equalTo: self.backgroundEffectView.centerYAnchor),
+            self.label.leadingAnchor.constraint(equalTo: self.backgroundEffectView.leadingAnchor, constant: 10),
+            self.label.trailingAnchor.constraint(equalTo: self.backgroundEffectView.trailingAnchor, constant: -10)
+        ])
         
-        contentView.addSubview(self.label)
-        contentView.addSubview(self.handleView)
+        // Container holds Background AND Handle (Siblings)
+        self.containerView.addSubview(self.backgroundEffectView)
+        self.containerView.addSubview(self.handleView)
         
-        self.contentView = contentView
+        self.contentView = self.containerView
         self.backgroundColor = .clear
         self.isOpaque = false
-        self.hasShadow = false // Shadow handled by effect view or disable for cleaner look
+        self.hasShadow = false
         self.level = .floating
         self.collectionBehavior = [.managed, .stationary, .participatesInCycle, .fullScreenAuxiliary]
         
@@ -187,7 +205,7 @@ class SpaceLabelWindow: NSWindow {
         self.updateLayout(isCurrentSpace: self.isActiveMode)
     }
     
-    // MARK: - Interaction Logic (Click vs Drag)
+    // MARK: - Interactions
     
     override func mouseDown(with event: NSEvent) {
         guard let manager = labelManager, manager.showOnDesktop, isActiveMode else {
@@ -196,34 +214,26 @@ class SpaceLabelWindow: NSWindow {
         }
         
         let startOrigin = self.frame.origin
-        
-        // 1. Perform Drag (Blocks until release)
         self.performDrag(with: event)
-        
         let endOrigin = self.frame.origin
         
-        // 2. Calculate Movement
-        let movedX = abs(endOrigin.x - startOrigin.x)
-        let movedY = abs(endOrigin.y - startOrigin.y)
-        let distance = sqrt(movedX*movedX + movedY*movedY)
+        // Detect Click vs Drag
+        let distance = hypot(endOrigin.x - startOrigin.x, endOrigin.y - startOrigin.y)
         
-        // 3. Logic: Click (< 5px move) vs Drag
         if distance < 5 {
-            // It was a click!
+            // Click
             if self.isDocked {
-                // Clicked handle -> Expand
                 self.isDocked = false
                 animateFrameChange()
             }
         } else {
-            // It was a drag!
+            // Drag
             checkEdgeDocking()
         }
     }
     
     private func checkEdgeDocking() {
         guard let screen = self.screen else { return }
-        
         let windowFrame = self.frame
         let screenFrame = screen.visibleFrame
         let threshold: CGFloat = 50.0
@@ -234,19 +244,18 @@ class SpaceLabelWindow: NSWindow {
         let distBottom = abs(windowFrame.minY - screenFrame.minY)
         
         let minDist = min(distLeft, distRight, distTop, distBottom)
-        let isNearEdge = minDist < threshold
         
         if minDist == distLeft { self.dockEdge = .minX }
         else if minDist == distRight { self.dockEdge = .maxX }
         else if minDist == distTop { self.dockEdge = .maxY }
         else { self.dockEdge = .minY }
         
-        if isNearEdge {
+        if minDist < threshold {
             if !self.isDocked {
                 self.isDocked = true
                 animateFrameChange()
             } else {
-                animateFrameChange() // Snap to edge
+                animateFrameChange() // Snap
             }
         } else {
             if self.isDocked {
@@ -270,7 +279,7 @@ class SpaceLabelWindow: NSWindow {
         self.isMovableByWindowBackground = false
     }
     
-    // MARK: - Layout Logic
+    // MARK: - Layout Logic (FIXED HIERARCHY)
     
     private func updateLayout(isCurrentSpace: Bool) {
         guard let targetScreen = findTargetScreen() else { self.close(); return }
@@ -278,22 +287,14 @@ class SpaceLabelWindow: NSWindow {
         var newSize: NSSize
         var newOrigin: NSPoint
         
-        // Is this the "Interactive Handle" Mode?
         let showHandle = isCurrentSpace && isDocked && (labelManager?.showOnDesktop == true)
-        
-        // Access visual effect view
-        let visualView = self.contentView as? NSVisualEffectView
         
         if showHandle {
             // --- HANDLE MODE ---
-            self.label.isHidden = true
+            // Hide Background Label, Show Handle
+            self.backgroundEffectView.isHidden = true
             self.handleView.isHidden = false
             self.handleView.edge = self.dockEdge
-            
-            // Hide main background, let handle view draw its own background
-            visualView?.material = .titlebar // Transparent-ish
-            visualView?.state = .inactive
-            visualView?.alphaValue = 0.0 // Hide main container background
             
             if self.dockEdge == .minX || self.dockEdge == .maxX {
                 newSize = SpaceLabelWindow.handleSize
@@ -301,21 +302,16 @@ class SpaceLabelWindow: NSWindow {
                 newSize = NSSize(width: SpaceLabelWindow.handleSize.height, height: SpaceLabelWindow.handleSize.width)
             }
             
-            // Position handle inside window (fill)
+            // Handle fills the window frame
             self.handleView.frame = NSRect(origin: .zero, size: newSize)
             
             newOrigin = findNearestEdgePosition(targetScreen: targetScreen, size: newSize)
             
         } else {
-            // --- TEXT LABEL MODE ---
-            self.label.isHidden = false
+            // --- LABEL MODE ---
+            // Show Background Label, Hide Handle
+            self.backgroundEffectView.isHidden = false
             self.handleView.isHidden = true
-            
-            // Restore main background
-            visualView?.alphaValue = 1.0
-            visualView?.state = .active
-            visualView?.material = .hudWindow
-            visualView?.layer?.cornerRadius = 16
             
             if isCurrentSpace {
                 if labelManager?.showOnDesktop == true {
@@ -343,10 +339,15 @@ class SpaceLabelWindow: NSWindow {
                 )
                 updateLabelFont(for: newSize, isSmallMode: false)
             }
+            
+            // Background View fills window
+            self.backgroundEffectView.frame = NSRect(origin: .zero, size: newSize)
         }
         
         self.animator().setFrame(NSRect(origin: newOrigin, size: newSize), display: true)
-        self.contentView?.animator().frame = NSRect(origin: .zero, size: newSize)
+        // Note: contentView frame doesn't need animation if subviews are sized above,
+        // but ensuring it matches bounds is good practice.
+        self.contentView?.frame = NSRect(origin: .zero, size: newSize)
     }
     
     // MARK: - Calculation Helpers
@@ -403,8 +404,6 @@ class SpaceLabelWindow: NSWindow {
         }
         
         self.label.font = font
-        let displayHeight = sSize.height + 4
-        self.label.frame = NSRect(x: 0, y: (size.height - displayHeight) / 2, width: size.width, height: displayHeight)
     }
     
     private func findTargetScreen() -> NSScreen? {
@@ -434,8 +433,6 @@ class SpaceLabelWindow: NSWindow {
         let minDist = min(distLeft, distRight, distTop, distBottom)
         
         var finalOrigin = currentRect.origin
-        
-        // Add padding (4pts) for a nice floating look
         let padding: CGFloat = 4.0
         
         if minDist == distLeft {
