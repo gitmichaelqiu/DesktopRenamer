@@ -66,6 +66,11 @@ class SpaceLabelWindow: NSWindow {
     static let basePreviewFontSize: CGFloat = 180
     static let handleSize = NSSize(width: 32, height: 60)
     
+    // Computed property to detect "Hidden Corner" mode (Active Space, but PiP disabled)
+    private var isHiddenCornerMode: Bool {
+        return isActiveMode && !(labelManager?.showOnDesktop == true)
+    }
+    
     init(spaceId: String, name: String, displayID: String, spaceManager: SpaceManager, labelManager: SpaceLabelManager) {
         self.spaceId = spaceId
         self.displayID = displayID
@@ -143,7 +148,6 @@ class SpaceLabelWindow: NSWindow {
         self.isDocked = manager.globalIsDocked
         self.dockEdge = manager.globalDockEdge
         
-        // Default Position if none exists
         if manager.globalCenterPoint == nil {
             if let screen = self.screen ?? NSScreen.main {
                 let frame = screen.visibleFrame
@@ -249,7 +253,6 @@ class SpaceLabelWindow: NSWindow {
                         let distBottom = abs(currentMouseLocation.y - screenFrame.minY)
                         let minMouseEdgeDist = min(distLeft, distRight, distTop, distBottom)
                         
-                        // Interaction: Toggle via Drag
                         if !isDocked {
                             if minMouseEdgeDist < 15.0 {
                                 isDocked = true
@@ -270,13 +273,12 @@ class SpaceLabelWindow: NSWindow {
                             updateLayout(isCurrentSpace: true, updateFrame: false)
                             let newSize = self.frame.size
                             
-                            // Rooting Logic
                             let rootedOrigin = calculateCenteredOrigin(
                                 forSize: newSize,
                                 onEdge: self.dockEdge,
                                 centerPoint: NSPoint(x: currentMouseLocation.x, y: currentMouseLocation.y),
                                 screenFrame: screenFrame,
-                                clampToScreen: isDocked // Clamp if Docked, Allow flow if Expanded
+                                clampToScreen: isDocked
                             )
                             targetOrigin = rootedOrigin
                             
@@ -289,7 +291,6 @@ class SpaceLabelWindow: NSWindow {
                             continue
                         }
                         
-                        // Normal Drag
                         if isDocked {
                             let rawRect = NSRect(origin: targetOrigin, size: self.frame.size)
                             let snappedOrigin = findNearestEdgePosition(targetScreen: screen, forRect: rawRect)
@@ -305,10 +306,8 @@ class SpaceLabelWindow: NSWindow {
     
     private func toggleDockState() {
         if self.isDocked {
-            // Expand
             self.isDocked = false
             
-            // Pre-calculate Rooted position so animation starts from correct hypothetical center
             if let screen = self.screen {
                 let currentCenter = NSPoint(x: self.frame.midX, y: self.frame.midY)
                 let newSize = calculateActiveSize()
@@ -321,7 +320,6 @@ class SpaceLabelWindow: NSWindow {
                 )
                 let newCenter = NSPoint(x: rootedOrigin.x + newSize.width/2, y: rootedOrigin.y + newSize.height/2)
                 
-                // Update manager so updateLayout reads this center
                 if let manager = labelManager {
                     manager.updateGlobalState(isDocked: false, edge: self.dockEdge, center: newCenter)
                 }
@@ -329,7 +327,6 @@ class SpaceLabelWindow: NSWindow {
             animateFrameChange()
             
         } else {
-            // Collapse
             if let screen = self.screen {
                 _ = findNearestEdgePosition(targetScreen: screen, forRect: self.frame)
             }
@@ -367,8 +364,6 @@ class SpaceLabelWindow: NSWindow {
         }
         
         let showHandle = isCurrentSpace && isDocked && (labelManager?.showOnDesktop == true)
-        // Check if we are transitioning to "Hidden Corner" (Active space but labels disabled/hidden)
-        let isHiddenCornerMode = isCurrentSpace && !showHandle && !(labelManager?.showOnDesktop == true)
         
         if showHandle {
             // --- DOCKED ---
@@ -399,8 +394,6 @@ class SpaceLabelWindow: NSWindow {
                      // Interactive PiP
                      newSize = calculateActiveSize()
                      updateLabelFont(for: newSize, isSmallMode: true)
-                     
-                     // Expand: No Clamp (Free Float Rooting)
                      newOrigin = NSPoint(x: targetCenter.x - newSize.width/2, y: targetCenter.y - newSize.height/2)
                      
                 } else {
@@ -410,7 +403,7 @@ class SpaceLabelWindow: NSWindow {
                     updateLabelFont(for: newSize, isSmallMode: true)
                 }
             } else {
-                // Preview (Mission Control)
+                // Preview
                 newSize = previewSize
                 newOrigin = NSPoint(
                     x: targetScreen.frame.midX - (newSize.width / 2),
@@ -425,19 +418,19 @@ class SpaceLabelWindow: NSWindow {
         if updateFrame {
             if isHiddenCornerMode {
                 // ANIMATION: Fade Out (0.08s) -> Jump
-                // Covers: Visible -> Invisible (Corner)
+                // This block takes full responsibility for the fade-out, so updateVisibility should not interfere.
                 NSAnimationContext.runAnimationGroup { context in
                     context.duration = 0.08
                     context.timingFunction = CAMediaTimingFunction(name: .easeOut)
                     self.animator().alphaValue = 0.0
                 } completionHandler: {
                     self.setFrame(NSRect(origin: newOrigin, size: newSize), display: true)
-                    self.alphaValue = 1.0 // Restore alpha after moving offscreen
+                    self.alphaValue = 1.0 // Restore alpha after moving offscreen (ready for next time)
                 }
             } else {
                 // ANIMATION: Move (Standard)
-                // Covers: Invisible -> Visible, Preview -> Visible, Visible -> Preview
                 self.animator().setFrame(NSRect(origin: newOrigin, size: newSize), display: true)
+                // Ensure we fade back in if we were previously hidden
                 if self.alphaValue < 1.0 {
                     self.animator().alphaValue = 1.0
                 }
@@ -563,7 +556,12 @@ class SpaceLabelWindow: NSWindow {
         
         if shouldBeVisible {
             if !self.isVisible { self.alphaValue = 0.0; self.orderFront(nil) }
-            if animated { self.animator().alphaValue = 1.0 } else { self.alphaValue = 1.0 }
+            
+            // FIX: If we are in HiddenCornerMode, updateLayout is currently managing the alpha
+            // (fading it out), so we should NOT force it to 1.0 here.
+            if !isHiddenCornerMode {
+                if animated { self.animator().alphaValue = 1.0 } else { self.alphaValue = 1.0 }
+            }
         } else {
             if !self.isVisible { return }
             if animated {
