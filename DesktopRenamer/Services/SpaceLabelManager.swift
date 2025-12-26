@@ -11,6 +11,10 @@ class SpaceLabelManager: ObservableObject {
     private let kPreviewFontScale = "kPreviewFontScale"
     private let kPreviewPaddingScale = "kPreviewPaddingScale"
     
+    // NEW: Visibility Keys
+    private let kShowPreviewLabels = "kShowPreviewLabels"
+    private let kShowActiveLabels = "kShowActiveLabels"
+    
     @Published var isEnabled: Bool {
         didSet {
             UserDefaults.standard.set(isEnabled, forKey: spacesKey)
@@ -18,7 +22,11 @@ class SpaceLabelManager: ObservableObject {
         }
     }
     
-    // NEW: Customizable Scales (Default 1.0)
+    // NEW: Visibility Toggles (Default true)
+    @Published var showPreviewLabels: Bool { didSet { saveSettings(); updateWindows() } }
+    @Published var showActiveLabels: Bool { didSet { saveSettings(); updateWindows() } }
+    
+    // Customizable Scales (Default 1.0)
     @Published var activeFontScale: Double { didSet { saveSettings(); updateWindows() } }
     @Published var activePaddingScale: Double { didSet { saveSettings(); updateWindows() } }
     @Published var previewFontScale: Double { didSet { saveSettings(); recalculateUnifiedSize() } }
@@ -34,26 +42,30 @@ class SpaceLabelManager: ObservableObject {
         UserDefaults.standard.register(defaults: [spacesKey: true])
         self.isEnabled = UserDefaults.standard.bool(forKey: spacesKey)
         
-        // 1. Load values into local variables first
+        // Load Scales
         let loadedActiveFont = UserDefaults.standard.double(forKey: kActiveFontScale)
         let loadedActivePadding = UserDefaults.standard.double(forKey: kActivePaddingScale)
         let loadedPreviewFont = UserDefaults.standard.double(forKey: kPreviewFontScale)
         let loadedPreviewPadding = UserDefaults.standard.double(forKey: kPreviewPaddingScale)
         
-        // 2. Validate/Default them locally
-        // (If key doesn't exist, double returns 0.0, so we default to 1.0)
-        let finalActiveFont = (loadedActiveFont == 0) ? 1.0 : loadedActiveFont
-        let finalActivePadding = (loadedActivePadding == 0) ? 1.0 : loadedActivePadding
-        let finalPreviewFont = (loadedPreviewFont == 0) ? 1.0 : loadedPreviewFont
-        let finalPreviewPadding = (loadedPreviewPadding == 0) ? 1.0 : loadedPreviewPadding
+        self.activeFontScale = (loadedActiveFont == 0) ? 1.0 : loadedActiveFont
+        self.activePaddingScale = (loadedActivePadding == 0) ? 1.0 : loadedActivePadding
+        self.previewFontScale = (loadedPreviewFont == 0) ? 1.0 : loadedPreviewFont
+        self.previewPaddingScale = (loadedPreviewPadding == 0) ? 1.0 : loadedPreviewPadding
         
-        // 3. Assign to properties (Initializing them)
-        self.activeFontScale = finalActiveFont
-        self.activePaddingScale = finalActivePadding
-        self.previewFontScale = finalPreviewFont
-        self.previewPaddingScale = finalPreviewPadding
+        // NEW: Load Visibility (Default to true if nil/not set)
+        if UserDefaults.standard.object(forKey: kShowPreviewLabels) != nil {
+            self.showPreviewLabels = UserDefaults.standard.bool(forKey: kShowPreviewLabels)
+        } else {
+            self.showPreviewLabels = true
+        }
         
-        // 4. Now 'self' is fully initialized, we can call instance methods
+        if UserDefaults.standard.object(forKey: kShowActiveLabels) != nil {
+            self.showActiveLabels = UserDefaults.standard.bool(forKey: kShowActiveLabels)
+        } else {
+            self.showActiveLabels = true
+        }
+        
         setupObservers()
     }
     
@@ -67,6 +79,10 @@ class SpaceLabelManager: ObservableObject {
         UserDefaults.standard.set(activePaddingScale, forKey: kActivePaddingScale)
         UserDefaults.standard.set(previewFontScale, forKey: kPreviewFontScale)
         UserDefaults.standard.set(previewPaddingScale, forKey: kPreviewPaddingScale)
+        
+        // NEW: Save Visibility
+        UserDefaults.standard.set(showPreviewLabels, forKey: kShowPreviewLabels)
+        UserDefaults.standard.set(showActiveLabels, forKey: kShowActiveLabels)
     }
     
     private func updateWindows() {
@@ -133,11 +149,6 @@ class SpaceLabelManager: ObservableObject {
         }
     }
     
-    // ... (Keep updateAllWindowModes, updateLabel, ensureWindow, createWindow, removeAllWindows from previous version) ...
-    // Note: ensureWindow and createWindow need to access 'self' to get scales,
-    // which they do because SpaceLabelWindow now holds a reference to Manager or we pass values.
-    // Ideally, pass the manager reference to window is enough.
-    
     private func updateAllWindowModes() {
         SpaceHelper.getVisibleSpaceUUIDs { [weak self] visibleUUIDs in
             guard let self = self, self.isEnabled else { return }
@@ -148,7 +159,6 @@ class SpaceLabelManager: ObservableObject {
         }
     }
     
-    // Re-paste standard methods for completeness if needed, or assume they exist
     func updateLabel(for spaceId: String, name: String, verifySpace: Bool = true) {
         guard isEnabled, spaceId != "FULLSCREEN" else { return }
         if !verifySpace {
@@ -205,6 +215,5 @@ class SpaceLabelManager: ObservableObject {
     
     func toggleEnabled() {
         isEnabled.toggle()
-        // ... (standard toggle logic)
     }
 }
