@@ -66,8 +66,6 @@ class SpaceLabelWindow: NSWindow {
     // Constants
     static let baseActiveFontSize: CGFloat = 45
     static let basePreviewFontSize: CGFloat = 180
-    
-    // FIX: Increased handle width to 32 for better clickability
     static let handleSize = NSSize(width: 32, height: 60)
     
     init(spaceId: String, name: String, displayID: String, spaceManager: SpaceManager, labelManager: SpaceLabelManager) {
@@ -178,7 +176,7 @@ class SpaceLabelWindow: NSWindow {
         self.updateLayout(isCurrentSpace: self.isActiveMode)
     }
     
-    // MARK: - Interactions
+    // MARK: - Interactions (Corrected Manual Loop)
     
     override func mouseDown(with event: NSEvent) {
         guard let manager = labelManager, manager.showOnDesktop, isActiveMode else {
@@ -186,75 +184,134 @@ class SpaceLabelWindow: NSWindow {
             return
         }
         
-        // Record start position to detect Click vs Drag
-        let originalOrigin = self.frame.origin
+        // 1. Initial State for Delta Calculation
+        let startMouseLocation = NSEvent.mouseLocation // Screen coordinates
+        let startWindowOrigin = self.frame.origin
         
-        // Blocks until mouseUp
-        self.performDrag(with: event)
+        // Mouse offset within the window to keep the drag locked to cursor
+        let initialClickInWindow = event.locationInWindow
         
-        let newOrigin = self.frame.origin
-        let distance = hypot(newOrigin.x - originalOrigin.x, newOrigin.y - originalOrigin.y)
+        var hasDragged = false
         
-        // Threshold for "Click" (5 points)
-        if distance < 5.0 {
-            // --- HANDLE CLICK (Toggle) ---
-            if self.isDocked {
-                // Clicked Handle -> EXPAND
-                self.isDocked = false
-                animateFrameChange()
-            } else {
-                // Clicked Label -> COLLAPSE
-                // Update dockEdge relative to where the window currently is
-                if let screen = self.screen {
-                     // We run this just to update `self.dockEdge` before collapsing
-                    _ = findNearestEdgePosition(targetScreen: screen, size: SpaceLabelWindow.handleSize)
+        // 2. Manual Event Loop
+        while true {
+            guard let nextEvent = self.nextEvent(matching: [.leftMouseDragged, .leftMouseUp],
+                                                 until: .distantFuture,
+                                                 inMode: .eventTracking,
+                                                 dequeue: true) else { break }
+            
+            if nextEvent.type == .leftMouseUp {
+                if !hasDragged {
+                    // Clean Click -> Toggle
+                    toggleDockState()
                 }
-                self.isDocked = true
-                animateFrameChange()
+                break
             }
-        } else {
-            // --- HANDLE DRAG ---
-            // If dragging, we ONLY change state if dragging to/from edge
-            checkEdgeDocking()
+            else if nextEvent.type == .leftMouseDragged {
+                let currentMouseLocation = NSEvent.mouseLocation
+                let dx = currentMouseLocation.x - startMouseLocation.x
+                let dy = currentMouseLocation.y - startMouseLocation.y
+                let dist = hypot(dx, dy)
+                
+                // Hysteresis: Only start dragging if moved > 5 pixels
+                if !hasDragged && dist > 5.0 {
+                    hasDragged = true
+                }
+                
+                if hasDragged {
+                    // Update Window Position
+                    // Note: We don't simple add delta to origin, we recalculate based on screen alignment
+                    // But simpler is: NewOrigin = StartOrigin + Delta
+                    var newOrigin = NSPoint(x: startWindowOrigin.x + dx, y: startWindowOrigin.y + dy)
+                    
+                    // --- REAL TIME DOCKING LOGIC ---
+                    // While dragging, we check if we should snap to edge or undock
+                    if let screen = self.screen {
+                        let snapThreshold: CGFloat = 50.0
+                        let screenFrame = screen.visibleFrame
+                        
+                        // Check distance to edges based on CURRENT mouse pointer (approximated via window center)
+                        let windowCenter = NSPoint(x: newOrigin.x + (self.frame.width / 2),
+                                                   y: newOrigin.y + (self.frame.height / 2))
+                        
+                        let distLeft = abs(windowCenter.x - screenFrame.minX)
+                        let distRight = abs(windowCenter.x - screenFrame.maxX)
+                        let distTop = abs(windowCenter.y - screenFrame.maxY)
+                        let distBottom = abs(windowCenter.y - screenFrame.minY)
+                        
+                        let minDist = min(distLeft, distRight, distTop, distBottom)
+                        
+                        if minDist < snapThreshold {
+                            // SNAP TO EDGE
+                            if !isDocked {
+                                isDocked = true
+                                updateLayout(isCurrentSpace: true)
+                                // Adjust newOrigin to align with the edge we just snapped to
+                                // This prevents "jumping" visual artifacts
+                                // For simplicity in this logic, updateLayout snaps it to edge.
+                                // We just need to stop overriding it with the mouse for one frame?
+                                // Actually, updateLayout sets the frame.
+                                continue
+                            }
+                        } else {
+                            // DRAG AWAY
+                            if isDocked {
+                                isDocked = false
+                                updateLayout(isCurrentSpace: true)
+                                // Recalculate origin so the window centers on mouse (approximately)
+                                let newSize = self.frame.size
+                                newOrigin.x = currentMouseLocation.x - (newSize.width / 2)
+                                newOrigin.y = currentMouseLocation.y - (newSize.height / 2)
+                            }
+                        }
+                    }
+                    
+                    if !isDocked {
+                        self.setFrameOrigin(newOrigin)
+                    } else {
+                        // If docked, recalculate edge snap dynamically so it slides along edge?
+                        // For now, let's let updateLayout handle positioning or allow sliding:
+                        // A simpler "Edge Slide" requires knowing which edge.
+                        // We re-run edge logic:
+                        if let screen = self.screen {
+                           let fixedOrigin = findNearestEdgePosition(targetScreen: screen, size: self.frame.size)
+                           // But we want to allow sliding along the edge (e.g. up/down on left edge)
+                           // Overriding findNearestEdgePosition logic for dragging is complex.
+                           // Let's stick to simple snapping for now.
+                           self.setFrameOrigin(fixedOrigin)
+                        }
+                    }
+                }
+            }
         }
     }
     
-    private func checkEdgeDocking() {
-        guard let screen = self.screen else { return }
-        
-        let windowFrame = self.frame
-        let screenFrame = screen.visibleFrame
-        let threshold: CGFloat = 50.0 // Distance to snap
-        
-        let distLeft = abs(windowFrame.minX - screenFrame.minX)
-        let distRight = abs(windowFrame.maxX - screenFrame.maxX)
-        let distTop = abs(windowFrame.maxY - screenFrame.maxY)
-        let distBottom = abs(windowFrame.minY - screenFrame.minY)
-        
-        let minDist = min(distLeft, distRight, distTop, distBottom)
-        let isNearEdge = minDist < threshold
-        
-        // Determine which edge is closest
-        if minDist == distLeft { self.dockEdge = .minX }
-        else if minDist == distRight { self.dockEdge = .maxX }
-        else if minDist == distTop { self.dockEdge = .maxY }
-        else { self.dockEdge = .minY }
-        
-        if isNearEdge {
-            // If near edge, SNAP TO DOCK
-            if !self.isDocked {
-                self.isDocked = true
-                animateFrameChange()
-            } else {
-                // Already docked, just snap to perfect position
-                animateFrameChange()
-            }
+    private func toggleDockState() {
+        if self.isDocked {
+            // Expand
+            self.isDocked = false
+            animateFrameChange()
         } else {
-            // If dragged away from edge, EXPAND
-            if self.isDocked {
-                self.isDocked = false
-                animateFrameChange()
+            // Collapse
+            // Find nearest edge first to know where to go
+            if let screen = self.screen {
+                // Determine edge based on current center
+                let center = NSPoint(x: self.frame.midX, y: self.frame.midY)
+                let sFrame = screen.visibleFrame
+                
+                let dists = [
+                    (abs(center.x - sFrame.minX), NSRectEdge.minX),
+                    (abs(center.x - sFrame.maxX), NSRectEdge.maxX),
+                    (abs(center.y - sFrame.maxY), NSRectEdge.maxY),
+                    (abs(center.y - sFrame.minY), NSRectEdge.minY)
+                ]
+                
+                if let min = dists.min(by: { $0.0 < $1.0 }) {
+                    self.dockEdge = min.1
+                }
             }
+            self.isDocked = true
+            animateFrameChange()
         }
     }
     
@@ -314,11 +371,11 @@ class SpaceLabelWindow: NSWindow {
                      // 2a. Interactive Floating (Large Text)
                      newSize = calculatePreviewLikeSize()
                      
-                     // Expand from center of current position
+                     // Keep current center if possible, else default calculation
                      let currentCenter = NSPoint(x: self.frame.midX, y: self.frame.midY)
                      newOrigin = NSPoint(x: currentCenter.x - (newSize.width / 2), y: currentCenter.y - (newSize.height / 2))
                      
-                     // Keep on screen
+                     // Constrain
                      newOrigin.x = max(targetScreen.frame.minX, min(newOrigin.x, targetScreen.frame.maxX - newSize.width))
                      newOrigin.y = max(targetScreen.frame.minY, min(newOrigin.y, targetScreen.frame.maxY - newSize.height))
                      
@@ -340,6 +397,7 @@ class SpaceLabelWindow: NSWindow {
             }
         }
         
+        // Use animator only if valid target
         self.animator().setFrame(NSRect(origin: newOrigin, size: newSize), display: true)
         self.contentView?.animator().frame = NSRect(origin: .zero, size: newSize)
     }
