@@ -5,16 +5,21 @@ import Combine
 class SpaceLabelManager: ObservableObject {
     private let spacesKey = "com.michaelqiu.desktoprenamer.slw"
     
-    // Persistence Keys
+    // Persistence Keys (Settings)
     private let kActiveFontScale = "kActiveFontScale"
     private let kActivePaddingScale = "kActivePaddingScale"
     private let kPreviewFontScale = "kPreviewFontScale"
     private let kPreviewPaddingScale = "kPreviewPaddingScale"
     
-    // Visibility Keys
     private let kShowPreviewLabels = "kShowPreviewLabels"
     private let kShowActiveLabels = "kShowActiveLabels"
-    private let kShowOnDesktop = "kShowOnDesktop" // NEW
+    private let kShowOnDesktop = "kShowOnDesktop"
+    
+    // Persistence Keys (Window State Synchronization)
+    private let kGlobalIsDocked = "kGlobalIsDocked"
+    private let kGlobalDockEdge = "kGlobalDockEdge"
+    private let kGlobalCenterX = "kGlobalCenterX"
+    private let kGlobalCenterY = "kGlobalCenterY"
     
     @Published var isEnabled: Bool {
         didSet {
@@ -26,20 +31,19 @@ class SpaceLabelManager: ObservableObject {
     // Visibility Toggles
     @Published var showPreviewLabels: Bool { didSet { saveSettings(); updateWindows() } }
     @Published var showActiveLabels: Bool { didSet { saveSettings(); updateWindows() } }
-    
-    // NEW: Active Label moves from "Hidden Corner" to "Visible Floating Widget"
-    @Published var showOnDesktop: Bool {
-        didSet {
-            saveSettings()
-            updateWindows()
-        }
-    }
+    @Published var showOnDesktop: Bool { didSet { saveSettings(); updateWindows() } }
     
     // Scales
     @Published var activeFontScale: Double { didSet { saveSettings(); updateWindows() } }
     @Published var activePaddingScale: Double { didSet { saveSettings(); updateWindows() } }
     @Published var previewFontScale: Double { didSet { saveSettings(); recalculateUnifiedSize() } }
     @Published var previewPaddingScale: Double { didSet { saveSettings(); recalculateUnifiedSize() } }
+    
+    // MARK: - Global Window State (Synced)
+    // These hold the "Master" position/status for the window across all spaces.
+    @Published var globalIsDocked: Bool
+    @Published var globalDockEdge: NSRectEdge
+    @Published var globalCenterPoint: NSPoint? // Nil implies "use default calculation"
     
     private var createdWindows: [String: SpaceLabelWindow] = [:]
     private weak var spaceManager: SpaceManager?
@@ -65,7 +69,32 @@ class SpaceLabelManager: ObservableObject {
         // Load Visibility
         self.showPreviewLabels = UserDefaults.standard.object(forKey: kShowPreviewLabels) == nil ? true : UserDefaults.standard.bool(forKey: kShowPreviewLabels)
         self.showActiveLabels = UserDefaults.standard.object(forKey: kShowActiveLabels) == nil ? true : UserDefaults.standard.bool(forKey: kShowActiveLabels)
-        self.showOnDesktop = UserDefaults.standard.bool(forKey: kShowOnDesktop) // Default false
+        self.showOnDesktop = UserDefaults.standard.bool(forKey: kShowOnDesktop)
+        
+        // MARK: - Load Global Sync State (Defaults Logic)
+        // 1. Is Docked? Default: true
+        if UserDefaults.standard.object(forKey: kGlobalIsDocked) != nil {
+            self.globalIsDocked = UserDefaults.standard.bool(forKey: kGlobalIsDocked)
+        } else {
+            self.globalIsDocked = true // <-- DEFAULT: Start docked
+        }
+        
+        // 2. Dock Edge? Default: .maxX (Right side)
+        if UserDefaults.standard.object(forKey: kGlobalDockEdge) != nil {
+            let edgeRaw = UserDefaults.standard.integer(forKey: kGlobalDockEdge)
+            self.globalDockEdge = NSRectEdge(rawValue: UInt(edgeRaw)) ?? .maxX
+        } else {
+            self.globalDockEdge = .maxX // <-- DEFAULT: Right Edge
+        }
+        
+        // 3. Position? Default: nil (Window class will calculate screen middle-right)
+        if UserDefaults.standard.object(forKey: kGlobalCenterX) != nil {
+            let cx = UserDefaults.standard.double(forKey: kGlobalCenterX)
+            let cy = UserDefaults.standard.double(forKey: kGlobalCenterY)
+            self.globalCenterPoint = NSPoint(x: cx, y: cy)
+        } else {
+            self.globalCenterPoint = nil // <-- DEFAULT: Let window decide
+        }
         
         setupObservers()
     }
@@ -73,6 +102,20 @@ class SpaceLabelManager: ObservableObject {
     deinit {
         removeAllWindows()
         cancellables.removeAll()
+    }
+    
+    // MARK: - State Synchronization
+    
+    func updateGlobalState(isDocked: Bool, edge: NSRectEdge, center: NSPoint) {
+        self.globalIsDocked = isDocked
+        self.globalDockEdge = edge
+        self.globalCenterPoint = center
+        
+        // Save immediately
+        UserDefaults.standard.set(isDocked, forKey: kGlobalIsDocked)
+        UserDefaults.standard.set(Int(edge.rawValue), forKey: kGlobalDockEdge)
+        UserDefaults.standard.set(center.x, forKey: kGlobalCenterX)
+        UserDefaults.standard.set(center.y, forKey: kGlobalCenterY)
     }
     
     private func saveSettings() {

@@ -126,11 +126,49 @@ class SpaceLabelWindow: NSWindow {
             
         NotificationCenter.default.addObserver(self, selector: #selector(repositionWindow), name: NSApplication.didChangeScreenParametersNotification, object: nil)
         
+        // Initial Sync
+        syncFromGlobalState()
+        
         DispatchQueue.main.async { [weak self] in
             self?.updateLayout(isCurrentSpace: true)
             self?.updateVisibility(animated: false)
             self?.updateInteractivity()
         }
+    }
+    
+    // MARK: - State Synchronization
+    
+    private func syncFromGlobalState() {
+        guard let manager = labelManager else { return }
+        
+        self.isDocked = manager.globalIsDocked
+        self.dockEdge = manager.globalDockEdge
+        
+        // Apply position (if available)
+        if let savedCenter = manager.globalCenterPoint {
+            // We have a saved center, frame origin will be calculated in updateLayout
+            // We can just store it temporarily or rely on updateLayout using specific logic.
+            // Since updateLayout calculates size then position, we need to ensure the position is set.
+            // We'll update the layout immediately after sync.
+        } else {
+            // First Run / Default: Middle of Right Edge
+            if let screen = self.screen ?? NSScreen.main {
+                let frame = screen.visibleFrame
+                // Default Center Point: Right edge, vertically centered
+                let defaultCenter = NSPoint(x: frame.maxX, y: frame.midY)
+                // Save this default back to manager so other windows pick it up
+                manager.updateGlobalState(isDocked: true, edge: .maxX, center: defaultCenter)
+                
+                self.dockEdge = .maxX
+                self.isDocked = true
+            }
+        }
+    }
+    
+    private func pushToGlobalState() {
+        guard let manager = labelManager else { return }
+        let center = NSPoint(x: self.frame.midX, y: self.frame.midY)
+        manager.updateGlobalState(isDocked: self.isDocked, edge: self.dockEdge, center: center)
     }
     
     // MARK: - Public API
@@ -154,9 +192,12 @@ class SpaceLabelWindow: NSWindow {
         self.isActiveMode = isCurrentSpace
         
         if isCurrentSpace {
-             if let manager = labelManager, !manager.showOnDesktop {
+            // When becoming active, SYNC state from manager (in case user moved it on another space)
+            syncFromGlobalState()
+            
+            if let manager = labelManager, !manager.showOnDesktop {
                  self.isDocked = true
-             }
+            }
         }
         
         self.updateLayout(isCurrentSpace: isCurrentSpace)
@@ -169,7 +210,7 @@ class SpaceLabelWindow: NSWindow {
         self.updateLayout(isCurrentSpace: self.isActiveMode)
     }
     
-    // MARK: - Interactions (Rooting & Dragging)
+    // MARK: - Interactions
     
     override func mouseDown(with event: NSEvent) {
         guard let manager = labelManager, manager.showOnDesktop, isActiveMode else {
@@ -179,11 +220,8 @@ class SpaceLabelWindow: NSWindow {
         
         var startMouseLocation = NSEvent.mouseLocation
         let startWindowOrigin = self.frame.origin
-        
-        // Offset so window doesn't jump to center under mouse
         var mouseOffset = NSPoint(x: startMouseLocation.x - startWindowOrigin.x,
                                   y: startMouseLocation.y - startWindowOrigin.y)
-        
         var hasDragged = false
         
         while true {
@@ -195,19 +233,19 @@ class SpaceLabelWindow: NSWindow {
             if nextEvent.type == .leftMouseUp {
                 if !hasDragged {
                     toggleDockState()
+                } else {
+                    // Drag finished: Save new position
+                    pushToGlobalState()
                 }
                 break
             }
             else if nextEvent.type == .leftMouseDragged {
                 let currentMouseLocation = NSEvent.mouseLocation
                 
-                // Hysteresis
                 if !hasDragged {
                     let dx = currentMouseLocation.x - startMouseLocation.x
                     let dy = currentMouseLocation.y - startMouseLocation.y
-                    if hypot(dx, dy) > 5.0 {
-                        hasDragged = true
-                    }
+                    if hypot(dx, dy) > 5.0 { hasDragged = true }
                 }
                 
                 if hasDragged {
@@ -224,63 +262,53 @@ class SpaceLabelWindow: NSWindow {
                         let distBottom = abs(currentMouseLocation.y - screenFrame.minY)
                         let minMouseEdgeDist = min(distLeft, distRight, distTop, distBottom)
                         
-                        // --- TRANSITION TRIGGER ---
-                        
+                        // --- TRANSITION ---
                         if !isDocked {
-                            // COLLAPSE (Label -> Handle)
                             if minMouseEdgeDist < 15.0 {
                                 isDocked = true
                                 didStateChange = true
-                                
                                 if minMouseEdgeDist == distLeft { self.dockEdge = .minX }
                                 else if minMouseEdgeDist == distRight { self.dockEdge = .maxX }
                                 else if minMouseEdgeDist == distTop { self.dockEdge = .maxY }
                                 else { self.dockEdge = .minY }
                             }
                         } else {
-                            // EXPAND (Handle -> Label)
                             if minMouseEdgeDist > 50.0 {
                                 isDocked = false
                                 didStateChange = true
                             }
                         }
                         
-                        // --- APPLY TRANSITION ---
                         if didStateChange {
                             updateLayout(isCurrentSpace: true, updateFrame: false)
                             let newSize = self.frame.size
                             
-                            // 1. Calculate the hypothetical Rooted Origin
-                            // (Centered on the edge, unbounded)
+                            // Rooting Logic
                             let rootedOrigin = calculateCenteredOrigin(
                                 forSize: newSize,
                                 onEdge: self.dockEdge,
                                 centerPoint: NSPoint(x: currentMouseLocation.x, y: currentMouseLocation.y),
                                 screenFrame: screenFrame,
-                                clampToScreen: !isDocked // Only clamp if collapsing (Handle)
+                                clampToScreen: !isDocked
                             )
-                            
                             targetOrigin = rootedOrigin
                             
-                            // 2. Apply
                             self.setFrameOrigin(targetOrigin)
-                            
-                            // 3. Reset Offset to keep mouse interaction smooth
                             mouseOffset = NSPoint(x: currentMouseLocation.x - targetOrigin.x,
                                                   y: currentMouseLocation.y - targetOrigin.y)
-                            
                             startMouseLocation = currentMouseLocation
+                            
+                            // Push state immediately on change
+                            pushToGlobalState()
                             continue
                         }
                         
                         // --- NORMAL DRAG ---
                         if isDocked {
-                            // Handle Mode: Clamp to edges
                             let rawRect = NSRect(origin: targetOrigin, size: self.frame.size)
                             let snappedOrigin = findNearestEdgePosition(targetScreen: screen, forRect: rawRect)
                             self.setFrameOrigin(snappedOrigin)
                         } else {
-                            // Expanded Mode: Free drag
                             self.setFrameOrigin(targetOrigin)
                         }
                     }
@@ -294,13 +322,14 @@ class SpaceLabelWindow: NSWindow {
             self.isDocked = false
             animateFrameChange()
         } else {
-            // Determine best edge based on current position before collapsing
             if let screen = self.screen {
                 _ = findNearestEdgePosition(targetScreen: screen, forRect: self.frame)
             }
             self.isDocked = true
             animateFrameChange()
         }
+        // Save state after toggle
+        pushToGlobalState()
     }
     
     private func animateFrameChange() {
@@ -325,14 +354,19 @@ class SpaceLabelWindow: NSWindow {
         var newSize: NSSize
         var newOrigin: NSPoint
         
-        // Capture the center of the current frame BEFORE changing size.
-        // This is the key to preventing "Drift" during toggle.
-        let currentCenter = NSPoint(x: self.frame.midX, y: self.frame.midY)
+        // 1. Determine Target Center
+        // If we have a saved global center, prioritize that (to prevent drift on wake),
+        // UNLESS we are in the middle of a live interaction (handled by mouseDown).
+        // Since updateLayout is called by setMode/refresh, we use the Manager's center if available.
+        var targetCenter = NSPoint(x: self.frame.midX, y: self.frame.midY)
+        if let globalCenter = labelManager?.globalCenterPoint {
+            targetCenter = globalCenter
+        }
         
         let showHandle = isCurrentSpace && isDocked && (labelManager?.showOnDesktop == true)
         
         if showHandle {
-            // --- DOCKED (Handle) ---
+            // --- DOCKED ---
             self.label.isHidden = true
             self.handleView.isHidden = false
             self.handleView.edge = self.dockEdge
@@ -346,46 +380,40 @@ class SpaceLabelWindow: NSWindow {
             
             self.handleView.frame = NSRect(origin: .zero, size: newSize)
             
-            // Calculate new origin by centering the new small handle on the old big window's center position
-            // AND snapping it to the edge. CLAMPING enabled (handle must stay on screen).
+            // Calculate origin centered on the global point, snapped to edge
             newOrigin = calculateCenteredOrigin(
                 forSize: newSize,
                 onEdge: self.dockEdge,
-                centerPoint: currentCenter,
+                centerPoint: targetCenter,
                 screenFrame: targetScreen.visibleFrame,
                 clampToScreen: true
             )
             
         } else {
-            // --- EXPANDED (Label) ---
+            // --- EXPANDED ---
             self.label.isHidden = false
             self.handleView.isHidden = true
             self.contentView?.layer?.cornerRadius = 20
             
             if isCurrentSpace {
                 if labelManager?.showOnDesktop == true {
-                     // Interactive PiP
                      newSize = calculatePreviewLikeSize()
                      
-                     // Rooting: Anchor to edge, center on previous handle.
-                     // CLAMPING disabled (expanded label can overflow).
+                     // Expanded mode uses the center point freely
                      newOrigin = calculateCenteredOrigin(
                         forSize: newSize,
                         onEdge: self.dockEdge,
-                        centerPoint: currentCenter,
+                        centerPoint: targetCenter,
                         screenFrame: targetScreen.visibleFrame,
                         clampToScreen: false
                      )
-                     
                      updateLabelFont(for: newSize, isSmallMode: false)
                 } else {
-                    // Legacy Hidden Corner
                     newSize = calculateActiveSize()
                     newOrigin = findBestOffscreenPosition(targetScreen: targetScreen, size: newSize)
                     updateLabelFont(for: newSize, isSmallMode: true)
                 }
             } else {
-                // Preview (Mission Control)
                 newSize = previewSize
                 newOrigin = NSPoint(
                     x: targetScreen.frame.midX - (newSize.width / 2),
@@ -406,22 +434,20 @@ class SpaceLabelWindow: NSWindow {
     
     // MARK: - Calculation Helpers
     
-    /// Calculates the origin for a window such that it is anchored to a specific edge
-    /// but centered on a specific point (perpendicularly).
     private func calculateCenteredOrigin(forSize size: NSSize, onEdge edge: NSRectEdge, centerPoint: NSPoint, screenFrame: NSRect, clampToScreen: Bool) -> NSPoint {
         var origin = NSPoint.zero
         
         switch edge {
-        case .minX: // Left Edge
+        case .minX: // Left
             origin.x = screenFrame.minX
             origin.y = centerPoint.y - (size.height / 2)
-        case .maxX: // Right Edge
+        case .maxX: // Right
             origin.x = screenFrame.maxX - size.width
             origin.y = centerPoint.y - (size.height / 2)
-        case .minY: // Bottom Edge
+        case .minY: // Bottom
             origin.x = centerPoint.x - (size.width / 2)
             origin.y = screenFrame.minY
-        case .maxY: // Top Edge
+        case .maxY: // Top
             origin.x = centerPoint.x - (size.width / 2)
             origin.y = screenFrame.maxY - size.height
         @unknown default:
@@ -429,7 +455,6 @@ class SpaceLabelWindow: NSWindow {
         }
         
         if clampToScreen {
-            // Constrain the perpendicular axis so it doesn't float off screen
             if edge == .minX || edge == .maxX {
                 origin.y = max(screenFrame.minY, min(origin.y, screenFrame.maxY - size.height))
             } else {
@@ -511,43 +536,26 @@ class SpaceLabelWindow: NSWindow {
         return NSPoint(x: f.minX - size.width + 1, y: f.maxY - 1)
     }
     
-    /// Finds the nearest edge position (Top-Left Origin) for a given rect.
-    /// Used during dragging to snap to the nearest edge.
     private func findNearestEdgePosition(targetScreen: NSScreen, forRect rect: NSRect) -> NSPoint {
         let size = rect.size
         let sFrame = targetScreen.visibleFrame
-        
         let distLeft = abs(rect.minX - sFrame.minX)
         let distRight = abs(rect.maxX - sFrame.maxX)
         let distTop = abs(rect.maxY - sFrame.maxY)
         let distBottom = abs(rect.minY - sFrame.minY)
-        
         let minDist = min(distLeft, distRight, distTop, distBottom)
         
         var finalOrigin = rect.origin
+        if minDist == distLeft { finalOrigin.x = sFrame.minX; self.dockEdge = .minX }
+        else if minDist == distRight { finalOrigin.x = sFrame.maxX - size.width; self.dockEdge = .maxX }
+        else if minDist == distTop { finalOrigin.y = sFrame.maxY - size.height; self.dockEdge = .maxY }
+        else { finalOrigin.y = sFrame.minY; self.dockEdge = .minY }
         
-        // 1. Snap primary axis
-        if minDist == distLeft {
-            finalOrigin.x = sFrame.minX
-            self.dockEdge = .minX
-        } else if minDist == distRight {
-            finalOrigin.x = sFrame.maxX - size.width
-            self.dockEdge = .maxX
-        } else if minDist == distTop {
-            finalOrigin.y = sFrame.maxY - size.height
-            self.dockEdge = .maxY
-        } else {
-            finalOrigin.y = sFrame.minY
-            self.dockEdge = .minY
-        }
-        
-        // 2. Clamp secondary axis (Keep strictly on screen)
         if minDist == distLeft || minDist == distRight {
             finalOrigin.y = max(sFrame.minY, min(finalOrigin.y, sFrame.maxY - size.height))
         } else {
             finalOrigin.x = max(sFrame.minX, min(finalOrigin.x, sFrame.maxX - size.width))
         }
-        
         return finalOrigin
     }
     
@@ -557,28 +565,16 @@ class SpaceLabelWindow: NSWindow {
         let shouldBeVisible = isActiveMode ? showActive : showPreview
         
         if shouldBeVisible {
-            if !self.isVisible {
-                self.alphaValue = 0.0
-                self.orderFront(nil)
-            }
-            if animated {
-                self.animator().alphaValue = 1.0
-            } else {
-                self.alphaValue = 1.0
-            }
+            if !self.isVisible { self.alphaValue = 0.0; self.orderFront(nil) }
+            if animated { self.animator().alphaValue = 1.0 } else { self.alphaValue = 1.0 }
         } else {
             if !self.isVisible { return }
             if animated {
                 NSAnimationContext.runAnimationGroup { context in
                     context.duration = 0.15
                     self.animator().alphaValue = 0.0
-                } completionHandler: {
-                    if !shouldBeVisible { self.orderOut(nil) }
-                }
-            } else {
-                self.alphaValue = 0.0
-                self.orderOut(nil)
-            }
+                } completionHandler: { if !shouldBeVisible { self.orderOut(nil) } }
+            } else { self.alphaValue = 0.0; self.orderOut(nil) }
         }
     }
     
