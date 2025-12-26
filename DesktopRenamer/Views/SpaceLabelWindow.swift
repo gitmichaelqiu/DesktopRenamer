@@ -11,7 +11,7 @@ class SpaceLabelWindow: NSWindow {
     
     // State
     private var isActiveMode: Bool = true
-    private var isDocked: Bool = true // Default to docked (classic behavior)
+    private var isDocked: Bool = true // Default to docked
     private var previewSize: NSSize = NSSize(width: 800, height: 500)
     
     // Base Constants
@@ -58,7 +58,6 @@ class SpaceLabelWindow: NSWindow {
         self.hasShadow = false
         
         // Update level: If visible on desktop, act like a normal floating window.
-        // If not, keep it strictly as floating (above normal apps) but below menus.
         self.level = .floating
         
         self.collectionBehavior = [.managed, .stationary, .participatesInCycle, .fullScreenAuxiliary]
@@ -102,11 +101,10 @@ class SpaceLabelWindow: NSWindow {
         
         // Reset dock state when leaving preview mode to ensure correct active appearance
         if isCurrentSpace {
-             // If we enter Active Mode, and "Show on Desktop" is OFF, we force Docked (Standard)
+             // If we enter Active Mode, and "Show on Desktop" is OFF, force Docked
              if let manager = labelManager, !manager.showOnDesktop {
                  self.isDocked = true
              }
-             // If "Show on Desktop" is ON, we keep the previous state (Floating or Docked)
         }
         
         if isCurrentSpace {
@@ -124,21 +122,19 @@ class SpaceLabelWindow: NSWindow {
         self.updateLayout(isCurrentSpace: self.isActiveMode)
     }
     
-    // MARK: - Mouse / Dragging Logic
+    // MARK: - Mouse / Dragging Logic (FIXED)
     
     override func mouseDown(with event: NSEvent) {
         guard let manager = labelManager, manager.showOnDesktop, isActiveMode else {
             super.mouseDown(with: event)
             return
         }
-        // Allow dragging by background
+        
+        // 1. Perform the system drag.
+        // CRITICAL: This method blocks until the user releases the mouse button.
         self.performDrag(with: event)
-    }
-    
-    // Check for edge snapping after drag
-    override func mouseUp(with event: NSEvent) {
-        super.mouseUp(with: event)
-        guard let manager = labelManager, manager.showOnDesktop, isActiveMode else { return }
+        
+        // 2. Drag has finished. Now we check where the window landed.
         checkEdgeDocking()
     }
     
@@ -163,7 +159,7 @@ class SpaceLabelWindow: NSWindow {
                 self.isDocked = true
                 animateFrameChange()
             } else {
-                // Already docked, just snap to nearest edge
+                // Already docked, just snap tightly to the edge
                 animateFrameChange()
             }
         } else {
@@ -179,14 +175,18 @@ class SpaceLabelWindow: NSWindow {
         NSAnimationContext.runAnimationGroup { context in
             context.duration = 0.25
             context.timingFunction = CAMediaTimingFunction(name: .easeOut)
-            updateLayout(isCurrentSpace: true) // Recalculates based on new isDocked state
+            updateLayout(isCurrentSpace: true) // Recalculates frame based on isDocked
         }
     }
     
     private func updateInteractivity() {
         let isInteractive = (labelManager?.showOnDesktop == true) && isActiveMode
+        
         self.ignoresMouseEvents = !isInteractive
-        self.isMovableByWindowBackground = isInteractive
+        
+        // CRITICAL FIX: We must disable system background moving to intercept mouseDown.
+        // If this is true, macOS handles the drag and mouseDown is never called.
+        self.isMovableByWindowBackground = false
     }
     
     // MARK: - Visibility
@@ -234,37 +234,33 @@ class SpaceLabelWindow: NSWindow {
         var newOrigin: NSPoint
         
         if isCurrentSpace {
-            // Check if we are in "Docked" (Small) or "Floating" (Large/Visible) state
             if isDocked {
-                // MODE A1: Docked (Small, Corner/Edge)
-                // Uses 'activeFontScale'
+                // MODE A1: Docked (Small)
                 newSize = calculateActiveSize()
                 
-                // If the window is already on screen (interactive mode), snap to nearest edge
-                // If not interactive, find best offscreen/corner position (classic behavior)
+                // If interactive, snap to nearest edge based on current drop location
                 if labelManager?.showOnDesktop == true {
                     newOrigin = findNearestEdgePosition(targetScreen: targetScreen, size: newSize)
                 } else {
                     newOrigin = findBestOffscreenPosition(targetScreen: targetScreen, size: newSize)
                 }
             } else {
-                // MODE A2: Floating (Large, Interactive)
-                // Uses 'previewFontScale' (repurposed for readability)
-                // We keep the center point stable when expanding
+                // MODE A2: Floating (Large)
                 newSize = calculatePreviewLikeSize()
                 
+                // Expand from center
                 let currentCenter = NSPoint(x: self.frame.midX, y: self.frame.midY)
                 newOrigin = NSPoint(
                     x: currentCenter.x - (newSize.width / 2),
                     y: currentCenter.y - (newSize.height / 2)
                 )
                 
-                // Keep onscreen
+                // Clamp to screen
                 newOrigin.x = max(targetScreen.frame.minX, min(newOrigin.x, targetScreen.frame.maxX - newSize.width))
                 newOrigin.y = max(targetScreen.frame.minY, min(newOrigin.y, targetScreen.frame.maxY - newSize.height))
             }
         } else {
-            // MODE B: Preview (Mission Control)
+            // MODE B: Preview
             newSize = previewSize
             newOrigin = NSPoint(
                 x: targetScreen.frame.midX - (newSize.width / 2),
@@ -272,7 +268,6 @@ class SpaceLabelWindow: NSWindow {
             )
         }
         
-        // Use animator() if this call is inside an animation block
         self.animator().setFrame(NSRect(origin: newOrigin, size: newSize), display: true)
         self.contentView?.animator().frame = NSRect(origin: .zero, size: newSize)
         
@@ -288,8 +283,8 @@ class SpaceLabelWindow: NSWindow {
     }
     
     private func calculatePreviewLikeSize() -> NSSize {
-        // Reuse Preview scales for "Floating" mode readability
-        let scaleF = CGFloat(labelManager?.previewFontScale ?? 1.0) * 0.5 // Slightly smaller than massive MC preview
+        // Slightly smaller than Full Mission Control preview for better usability
+        let scaleF = CGFloat(labelManager?.previewFontScale ?? 1.0) * 0.5
         let scaleP = CGFloat(labelManager?.previewPaddingScale ?? 1.0) * 0.5
         return calculateSize(baseFont: SpaceLabelWindow.basePreviewFontSize * scaleF, paddingScale: scaleP, basePadH: 100, basePadV: 80)
     }
@@ -302,10 +297,8 @@ class SpaceLabelWindow: NSWindow {
     }
     
     private func updateLabelFont(for size: NSSize, isSmallMode: Bool) {
-        // ... (Font resizing logic remains similar, adjusting based on isSmallMode) ...
         let name = self.label.stringValue
         
-        // If docked, use active scales. If floating, use preview scales (scaled down slightly)
         let paddingScale: CGFloat
         let fontScale: CGFloat
         let baseSize: CGFloat
@@ -351,16 +344,14 @@ class SpaceLabelWindow: NSWindow {
         }
     }
     
-    // Classic Corner Logic
+    // Classic Corner Logic (Non-Interactive)
     private func findBestOffscreenPosition(targetScreen: NSScreen, size: NSSize) -> NSPoint {
         let f = targetScreen.frame
         let overlap: CGFloat = 1.0
-        // ... (Existing logic to check 4 corners) ...
-        // Default to Top Left for now or keep existing sophisticated check
         return NSPoint(x: f.minX - size.width + overlap, y: f.maxY - overlap)
     }
     
-    // NEW: Interactive Edge Snap Logic
+    // Interactive Edge Snap Logic
     private func findNearestEdgePosition(targetScreen: NSScreen, size: NSSize) -> NSPoint {
         let currentRect = self.frame
         let sFrame = targetScreen.visibleFrame
@@ -375,7 +366,9 @@ class SpaceLabelWindow: NSWindow {
         
         var finalOrigin = currentRect.origin
         
-        // Snap to closest edge
+        // 1. Identify which edge we are snapping to
+        // 2. Align that specific edge of the window to the screen edge
+        
         if minDist == distLeft {
             finalOrigin.x = sFrame.minX
         } else if minDist == distRight {
@@ -386,7 +379,7 @@ class SpaceLabelWindow: NSWindow {
             finalOrigin.y = sFrame.minY
         }
         
-        // Clamp to stay within screen bounds (orthogonal axis)
+        // 3. Clamp the other axis to ensure the window stays on screen
         if minDist == distLeft || minDist == distRight {
             finalOrigin.y = max(sFrame.minY, min(finalOrigin.y, sFrame.maxY - size.height))
         } else {
