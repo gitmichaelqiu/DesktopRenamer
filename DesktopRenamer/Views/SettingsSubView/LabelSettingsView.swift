@@ -58,6 +58,21 @@ struct LabelSettingsView: View {
                         // NEW: Toggle
                         Toggle("Show Active Space Labels", isOn: $labelManager.showActiveLabels)
                             .toggleStyle(.switch)
+                        
+                        HStack(alignment: .top) {
+                            Toggle("Keep Visible on Desktop", isOn: $labelManager.showOnDesktop)
+                                .toggleStyle(.switch)
+                                .disabled(!labelManager.showActiveLabels)
+                            
+                            Spacer()
+                            
+                            if labelManager.showOnDesktop {
+                                Text("Drag to edge to shrink (PiP)")
+                                    .font(.caption)
+                                    .foregroundColor(.secondary)
+                                    .padding(.top, 4)
+                            }
+                        }
 
                         Divider()
                             .padding(.vertical, 4)
