@@ -175,7 +175,7 @@ class SpaceLabelWindow: NSWindow {
         self.updateLayout(isCurrentSpace: self.isActiveMode)
     }
     
-    // MARK: - Interactions (Unified Manual Loop)
+    // MARK: - Interactions (Visibility-Aware Drag Logic)
     
     override func mouseDown(with event: NSEvent) {
         guard let manager = labelManager, manager.showOnDesktop, isActiveMode else {
@@ -218,57 +218,76 @@ class SpaceLabelWindow: NSWindow {
                     var candidateOrigin = NSPoint(x: startWindowOrigin.x + dx, y: startWindowOrigin.y + dy)
                     
                     if let screen = self.screen {
-                        let snapThreshold: CGFloat = 50.0
                         let screenFrame = screen.visibleFrame
-                        let currentSize = self.frame.size
-                        
-                        // Calculate center of the CANDIDATE position
-                        let candidateCenter = NSPoint(
-                            x: candidateOrigin.x + (currentSize.width / 2),
-                            y: candidateOrigin.y + (currentSize.height / 2)
-                        )
-                        
-                        // Distance to edges from candidate center
-                        let distLeft = abs(candidateCenter.x - screenFrame.minX)
-                        let distRight = abs(candidateCenter.x - screenFrame.maxX)
-                        let distTop = abs(candidateCenter.y - screenFrame.maxY)
-                        let distBottom = abs(candidateCenter.y - screenFrame.minY)
-                        
-                        let minDist = min(distLeft, distRight, distTop, distBottom)
                         
                         // --- DOCKING LOGIC ---
-                        if minDist < snapThreshold {
-                            // CLOSE TO EDGE
-                            if !isDocked {
-                                // Transition: Label -> Handle
+                        if !isDocked {
+                            // CASE: Expanded Window (Floating)
+                            // Logic: Collapse only if >50% of the window is off-screen
+                            
+                            let candidateRect = NSRect(origin: candidateOrigin, size: self.frame.size)
+                            
+                            // Calculate Intersection with Screen
+                            let intersection = screenFrame.intersection(candidateRect)
+                            
+                            // Treat null intersection (fully off-screen) as 0 area
+                            let visibleArea = intersection.isNull ? 0.0 : (intersection.width * intersection.height)
+                            let totalArea = candidateRect.width * candidateRect.height
+                            
+                            // Threshold: Is less than half visible?
+                            let isHalfHidden = visibleArea < (totalArea * 0.5)
+                            
+                            if isHalfHidden {
+                                // SNAP TO DOCK
                                 isDocked = true
                                 updateLayout(isCurrentSpace: true)
-                                // After layout update, frame size changes.
-                                // We continue to next loop iteration to re-calculate position with new size
+                                // Skip frame update this tick to allow layout to settle
                                 continue
                             }
                             
-                            // Calculate snapped origin based on the CANDIDATE Rect
-                            // This allows sliding along the edge
-                            let candidateRect = NSRect(origin: candidateOrigin, size: self.frame.size)
-                            candidateOrigin = findNearestEdgePosition(targetScreen: screen, forRect: candidateRect)
+                            // Normal Drag
+                            self.setFrameOrigin(candidateOrigin)
                             
                         } else {
-                            // FAR FROM EDGE
-                            if isDocked {
-                                // Transition: Handle -> Label
+                            // CASE: Docked Handle
+                            // Logic: Expand if pulled away from edge (Distance Threshold)
+                            
+                            // Calculate distance from center to edges
+                            // We use a simple distance threshold because "visibility area" of a small handle isn't useful for expansion logic.
+                            
+                            let currentSize = self.frame.size
+                            let center = NSPoint(x: candidateOrigin.x + (currentSize.width / 2),
+                                                 y: candidateOrigin.y + (currentSize.height / 2))
+                            
+                            let distLeft = abs(center.x - screenFrame.minX)
+                            let distRight = abs(center.x - screenFrame.maxX)
+                            let distTop = abs(center.y - screenFrame.maxY)
+                            let distBottom = abs(center.y - screenFrame.minY)
+                            
+                            let minDist = min(distLeft, distRight, distTop, distBottom)
+                            let undockThreshold: CGFloat = 50.0
+                            
+                            if minDist > undockThreshold {
+                                // DRAG AWAY -> EXPAND
                                 isDocked = false
                                 updateLayout(isCurrentSpace: true)
                                 
-                                // Re-center on mouse to avoid jump
+                                // Re-center on mouse to avoid visual jump
                                 let newSize = self.frame.size
                                 candidateOrigin.x = currentMouseLocation.x - (newSize.width / 2)
                                 candidateOrigin.y = currentMouseLocation.y - (newSize.height / 2)
+                                self.setFrameOrigin(candidateOrigin)
+                                
+                            } else {
+                                // SLIDE ALONG EDGE
+                                // We calculate the snapped position which clamps perpendicular movement
+                                // but allows parallel movement (sliding).
+                                let candidateRect = NSRect(origin: candidateOrigin, size: currentSize)
+                                let snappedOrigin = findNearestEdgePosition(targetScreen: screen, forRect: candidateRect)
+                                self.setFrameOrigin(snappedOrigin)
                             }
                         }
                     }
-                    
-                    self.setFrameOrigin(candidateOrigin)
                 }
             }
         }
@@ -451,8 +470,6 @@ class SpaceLabelWindow: NSWindow {
         return NSPoint(x: f.minX - size.width + 1, y: f.maxY - 1)
     }
     
-    // UPDATED: Now calculates position based on any given rect, not just current frame.
-    // This allows passing a "candidate" frame from the drag loop.
     private func findNearestEdgePosition(targetScreen: NSScreen, forRect rect: NSRect) -> NSPoint {
         let size = rect.size
         let sFrame = targetScreen.visibleFrame
@@ -480,12 +497,13 @@ class SpaceLabelWindow: NSWindow {
             self.dockEdge = .minY
         }
         
-        // Clamp to screen edges (Sliding Logic)
+        // Clamp perpendicular movement to stick to edge
+        // Allow parallel movement to slide along edge
         if minDist == distLeft || minDist == distRight {
-            // Snap X, Slide Y (Clamp Y to screen)
+            // Clamp X (Snap to Edge), Slide Y (Clamp Y to screen bounds)
             finalOrigin.y = max(sFrame.minY, min(finalOrigin.y, sFrame.maxY - size.height))
         } else {
-            // Snap Y, Slide X (Clamp X to screen)
+            // Clamp Y (Snap to Edge), Slide X (Clamp X to screen bounds)
             finalOrigin.x = max(sFrame.minX, min(finalOrigin.x, sFrame.maxX - size.width))
         }
         
