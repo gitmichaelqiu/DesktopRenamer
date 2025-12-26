@@ -7,7 +7,7 @@ class SpaceLabelWindow: NSWindow {
     public let displayID: String
     private var cancellables = Set<AnyCancellable>()
     private let spaceManager: SpaceManager
-    private weak var labelManager: SpaceLabelManager? // Weak ref to read settings
+    private weak var labelManager: SpaceLabelManager?
     
     // State
     private var isActiveMode: Bool = true
@@ -17,7 +17,6 @@ class SpaceLabelWindow: NSWindow {
     static let baseActiveFontSize: CGFloat = 45
     static let basePreviewFontSize: CGFloat = 180
     
-    // UPDATED Init
     init(spaceId: String, name: String, displayID: String, spaceManager: SpaceManager, labelManager: SpaceLabelManager) {
         self.spaceId = spaceId
         self.displayID = displayID
@@ -26,7 +25,7 @@ class SpaceLabelWindow: NSWindow {
         
         self.label = NSTextField(labelWithString: name)
         
-        // ... (Screen Finding Logic - Same as before) ...
+        // ... (Screen Finding Logic) ...
         let foundScreen = NSScreen.screens.first { screen in
             let screenID = screen.deviceDescription[NSDeviceDescriptionKey("NSScreenNumber")] as? NSNumber ?? 0
             let idString = "\(screen.localizedName) (\(screenID))"
@@ -60,7 +59,6 @@ class SpaceLabelWindow: NSWindow {
         self.ignoresMouseEvents = true
         self.collectionBehavior = [.managed, .stationary, .participatesInCycle, .fullScreenAuxiliary]
         
-        // ... (Observers - Same as before) ...
         self.spaceManager.$spaceNameDict
             .receive(on: DispatchQueue.main)
             .sink { [weak self] _ in
@@ -79,9 +77,18 @@ class SpaceLabelWindow: NSWindow {
     // MARK: - Public API
     
     func refreshAppearance() {
-        // Called when sliders move
-        // Force re-layout in current mode
+        // Called when settings (checkboxes/sliders) change
         updateLayout(isCurrentSpace: self.isActiveMode)
+        
+        // Immediately enforce visibility state based on current mode and new flags
+        let showActive = labelManager?.showActiveLabels ?? true
+        let showPreview = labelManager?.showPreviewLabels ?? true
+        
+        if self.isActiveMode {
+            self.alphaValue = showActive ? 1.0 : 0.0
+        } else {
+            self.alphaValue = showPreview ? 1.0 : 0.0
+        }
     }
     
     func setPreviewSize(_ size: NSSize) {
@@ -95,22 +102,39 @@ class SpaceLabelWindow: NSWindow {
     
     func setMode(isCurrentSpace: Bool) {
         self.isActiveMode = isCurrentSpace
+        
+        let showActive = labelManager?.showActiveLabels ?? true
+        let showPreview = labelManager?.showPreviewLabels ?? true
+        
         if isCurrentSpace {
-            // Preview -> Active (Fade Out -> Snap)
+            // Preview -> Active
+            // We animate the "Slide/Fade Out" of the Preview window
             NSAnimationContext.runAnimationGroup { context in
                 context.duration = 0.1
                 context.timingFunction = CAMediaTimingFunction(name: .easeOut)
                 self.animator().alphaValue = 0.0
             } completionHandler: {
                 self.updateLayout(isCurrentSpace: true)
-                self.alphaValue = 1.0
+                // Only fade back in if Active Labels are enabled
+                if showActive {
+                    self.alphaValue = 1.0
+                } else {
+                    self.alphaValue = 0.0
+                }
             }
         } else {
             // Active -> Preview (Instant)
+            // Mission Control triggers this instant change usually
             NSAnimationContext.runAnimationGroup { context in
                 context.duration = 0.0
                 self.updateLayout(isCurrentSpace: false)
-                self.alphaValue = 1.0
+                
+                // Only show if Preview Labels are enabled
+                if showPreview {
+                    self.alphaValue = 1.0
+                } else {
+                    self.alphaValue = 0.0
+                }
             }
         }
     }
@@ -130,7 +154,6 @@ class SpaceLabelWindow: NSWindow {
         
         if isCurrentSpace {
             // MODE A: Active (Small)
-            // UPDATED: Calculate using dynamic settings
             newSize = calculateActiveSize()
             newOrigin = findBestOffscreenPosition(targetScreen: targetScreen, size: newSize)
         } else {
@@ -168,12 +191,9 @@ class SpaceLabelWindow: NSWindow {
     private func updateLabelFont(for size: NSSize, isSmallMode: Bool) {
         let name = self.label.stringValue
         
-        // Dynamic Padding for Shrink Loop
-        // We use the same multipliers to determine the safe area
         let paddingScale = CGFloat(isSmallMode ? (labelManager?.activePaddingScale ?? 1.0) : (labelManager?.previewPaddingScale ?? 1.0))
         let fontScale = CGFloat(isSmallMode ? (labelManager?.activeFontScale ?? 1.0) : (labelManager?.previewFontScale ?? 1.0))
         
-        // Base padding roughly 10-15% of width, scaled by user pref
         let paddingH: CGFloat = (size.width * 0.1) * paddingScale
         let paddingV: CGFloat = (size.height * 0.15) * paddingScale
         
