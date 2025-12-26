@@ -70,7 +70,9 @@ class SpaceLabelWindow: NSWindow {
         NotificationCenter.default.addObserver(self, selector: #selector(repositionWindow), name: NSApplication.didChangeScreenParametersNotification, object: nil)
         
         DispatchQueue.main.async { [weak self] in
+            // Initial setup - do not animate
             self?.updateLayout(isCurrentSpace: true)
+            self?.updateVisibility(animated: false)
         }
     }
     
@@ -79,16 +81,7 @@ class SpaceLabelWindow: NSWindow {
     func refreshAppearance() {
         // Called when settings (checkboxes/sliders) change
         updateLayout(isCurrentSpace: self.isActiveMode)
-        
-        // Immediately enforce visibility state based on current mode and new flags
-        let showActive = labelManager?.showActiveLabels ?? true
-        let showPreview = labelManager?.showPreviewLabels ?? true
-        
-        if self.isActiveMode {
-            self.alphaValue = showActive ? 1.0 : 0.0
-        } else {
-            self.alphaValue = showPreview ? 1.0 : 0.0
-        }
+        updateVisibility(animated: true)
     }
     
     func setPreviewSize(_ size: NSSize) {
@@ -103,45 +96,69 @@ class SpaceLabelWindow: NSWindow {
     func setMode(isCurrentSpace: Bool) {
         self.isActiveMode = isCurrentSpace
         
-        let showActive = labelManager?.showActiveLabels ?? true
-        let showPreview = labelManager?.showPreviewLabels ?? true
-        
+        // 1. Update Layout Calculation (Position & Size)
+        // We do this immediately so the window is in the right place before we fade it in
         if isCurrentSpace {
-            // Preview -> Active
-            // We animate the "Slide/Fade Out" of the Preview window
-            NSAnimationContext.runAnimationGroup { context in
-                context.duration = 0.1
-                context.timingFunction = CAMediaTimingFunction(name: .easeOut)
-                self.animator().alphaValue = 0.0
-            } completionHandler: {
-                self.updateLayout(isCurrentSpace: true)
-                // Only fade back in if Active Labels are enabled
-                if showActive {
-                    self.alphaValue = 1.0
-                } else {
-                    self.alphaValue = 0.0
-                }
-            }
+            self.updateLayout(isCurrentSpace: true)
         } else {
-            // Active -> Preview (Instant)
-            // Mission Control triggers this instant change usually
-            NSAnimationContext.runAnimationGroup { context in
-                context.duration = 0.0
-                self.updateLayout(isCurrentSpace: false)
-                
-                // Only show if Preview Labels are enabled
-                if showPreview {
-                    self.alphaValue = 1.0
-                } else {
-                    self.alphaValue = 0.0
-                }
-            }
+            self.updateLayout(isCurrentSpace: false)
         }
+        
+        // 2. Handle Visibility & Animations
+        updateVisibility(animated: true)
     }
     
     func updateName(_ name: String) {
         self.label.stringValue = name
         self.updateLayout(isCurrentSpace: self.isActiveMode)
+    }
+    
+    // MARK: - Visibility Logic (The Core Fix)
+    
+    private func updateVisibility(animated: Bool) {
+        let showActive = labelManager?.showActiveLabels ?? true
+        let showPreview = labelManager?.showPreviewLabels ?? true
+        
+        // Determine if we *should* be visible right now
+        let shouldBeVisible = isActiveMode ? showActive : showPreview
+        
+        if shouldBeVisible {
+            // BECOMING VISIBLE
+            if !self.isVisible {
+                self.alphaValue = 0.0 // Ensure it starts invisible
+                self.orderFront(nil)  // Actually put it back in WindowServer
+            }
+            
+            if animated {
+                NSAnimationContext.runAnimationGroup { context in
+                    context.duration = 0.15
+                    context.timingFunction = CAMediaTimingFunction(name: .easeOut)
+                    self.animator().alphaValue = 1.0
+                }
+            } else {
+                self.alphaValue = 1.0
+            }
+            
+        } else {
+            // BECOMING HIDDEN
+            if !self.isVisible { return } // Already hidden
+            
+            if animated {
+                NSAnimationContext.runAnimationGroup { context in
+                    context.duration = 0.15
+                    context.timingFunction = CAMediaTimingFunction(name: .easeIn)
+                    self.animator().alphaValue = 0.0
+                } completionHandler: {
+                    // CRITICAL: Remove from WindowServer after fade out to fix Mission Control ghosts
+                    if !shouldBeVisible { // Check again in case state changed during animation
+                        self.orderOut(nil)
+                    }
+                }
+            } else {
+                self.alphaValue = 0.0
+                self.orderOut(nil)
+            }
+        }
     }
     
     // MARK: - Layout Logic
