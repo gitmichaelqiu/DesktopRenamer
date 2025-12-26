@@ -15,7 +15,6 @@ class CollapsibleHandleView: NSView {
         
         self.wantsLayer = true
         // FIX: Removed manual background color to let the parent VisualEffectView (Glass) shine through.
-        // This ensures the handle looks like a smaller version of the main window.
         self.layer?.cornerRadius = 12
         
         imageView.translatesAutoresizingMaskIntoConstraints = false
@@ -187,28 +186,37 @@ class SpaceLabelWindow: NSWindow {
             return
         }
         
-        // FIX: Capture state before drag to detect clicks
-        let originalFrame = self.frame
-        let wasDocked = self.isDocked
+        // Record start position to detect Click vs Drag
+        let originalOrigin = self.frame.origin
         
-        // Perform drag (blocks until mouse up)
+        // Blocks until mouseUp
         self.performDrag(with: event)
         
-        // Logic after drag finishes
-        if wasDocked {
-            let newFrame = self.frame
-            // Check if movement was negligible (treated as Click)
-            let dist = hypot(newFrame.origin.x - originalFrame.origin.x, newFrame.origin.y - originalFrame.origin.y)
-            
-            if dist < 5.0 {
-                // User clicked the handle -> Expand
+        let newOrigin = self.frame.origin
+        let distance = hypot(newOrigin.x - originalOrigin.x, newOrigin.y - originalOrigin.y)
+        
+        // Threshold for "Click" (5 points)
+        if distance < 5.0 {
+            // --- HANDLE CLICK (Toggle) ---
+            if self.isDocked {
+                // Clicked Handle -> EXPAND
                 self.isDocked = false
                 animateFrameChange()
-                return
+            } else {
+                // Clicked Label -> COLLAPSE
+                // Update dockEdge relative to where the window currently is
+                if let screen = self.screen {
+                     // We run this just to update `self.dockEdge` before collapsing
+                    _ = findNearestEdgePosition(targetScreen: screen, size: SpaceLabelWindow.handleSize)
+                }
+                self.isDocked = true
+                animateFrameChange()
             }
+        } else {
+            // --- HANDLE DRAG ---
+            // If dragging, we ONLY change state if dragging to/from edge
+            checkEdgeDocking()
         }
-        
-        checkEdgeDocking()
     }
     
     private func checkEdgeDocking() {
@@ -216,7 +224,7 @@ class SpaceLabelWindow: NSWindow {
         
         let windowFrame = self.frame
         let screenFrame = screen.visibleFrame
-        let threshold: CGFloat = 50.0
+        let threshold: CGFloat = 50.0 // Distance to snap
         
         let distLeft = abs(windowFrame.minX - screenFrame.minX)
         let distRight = abs(windowFrame.maxX - screenFrame.maxX)
@@ -226,19 +234,23 @@ class SpaceLabelWindow: NSWindow {
         let minDist = min(distLeft, distRight, distTop, distBottom)
         let isNearEdge = minDist < threshold
         
+        // Determine which edge is closest
         if minDist == distLeft { self.dockEdge = .minX }
         else if minDist == distRight { self.dockEdge = .maxX }
         else if minDist == distTop { self.dockEdge = .maxY }
         else { self.dockEdge = .minY }
         
         if isNearEdge {
+            // If near edge, SNAP TO DOCK
             if !self.isDocked {
                 self.isDocked = true
                 animateFrameChange()
             } else {
-                animateFrameChange() // Snap to perfect position
+                // Already docked, just snap to perfect position
+                animateFrameChange()
             }
         } else {
+            // If dragged away from edge, EXPAND
             if self.isDocked {
                 self.isDocked = false
                 animateFrameChange()
@@ -302,9 +314,11 @@ class SpaceLabelWindow: NSWindow {
                      // 2a. Interactive Floating (Large Text)
                      newSize = calculatePreviewLikeSize()
                      
-                     // Expand from center
+                     // Expand from center of current position
                      let currentCenter = NSPoint(x: self.frame.midX, y: self.frame.midY)
                      newOrigin = NSPoint(x: currentCenter.x - (newSize.width / 2), y: currentCenter.y - (newSize.height / 2))
+                     
+                     // Keep on screen
                      newOrigin.x = max(targetScreen.frame.minX, min(newOrigin.x, targetScreen.frame.maxX - newSize.width))
                      newOrigin.y = max(targetScreen.frame.minY, min(newOrigin.y, targetScreen.frame.maxY - newSize.height))
                      
