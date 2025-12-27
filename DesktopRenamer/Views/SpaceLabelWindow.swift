@@ -272,8 +272,8 @@ class SpaceLabelWindow: NSWindow {
         let showActive = labelManager?.showActiveLabels ?? true
         let showPreview = labelManager?.showPreviewLabels ?? true
         
-        // Corner Hidden Mode: Active Space Mode + "Show on Desktop" is OFF
-        // If this is true, we force off-screen placement regardless of showActiveLabels status
+        // Corner Hidden Mode: Active Space + "Show on Desktop" is OFF
+        // (Position is independent of current Show Active Toggle)
         let isCornerHidden = isActiveMode && !(labelManager?.showOnDesktop == true)
         
         // Base visibility
@@ -315,14 +315,14 @@ class SpaceLabelWindow: NSWindow {
              self.handleView.isHidden = true
              self.contentView?.layer?.cornerRadius = 20
              newSize = calculateActiveSize()
-             updateLabelFont(for: newSize, isSmallMode: true)
+             // Note: Label Font update happens in closure below
         } else {
             // PREVIEW
             self.label.isHidden = false
             self.handleView.isHidden = true
             self.contentView?.layer?.cornerRadius = 20
             newSize = previewSize
-            updateLabelFont(for: newSize, isSmallMode: false)
+            // Note: Label Font update happens in closure below
         }
         
         // B) Position Calculation
@@ -333,7 +333,7 @@ class SpaceLabelWindow: NSWindow {
             newOrigin = calculateCenteredOrigin(forSize: newSize, onEdge: self.dockEdge, centerPoint: naiveCenter, screenFrame: targetScreen.visibleFrame)
         } else if isActiveMode {
             if isCornerHidden {
-                // [FIX] Use exact logic from provided code
+                // [RESTORED] Force offscreen position if in Corner Hidden mode.
                 newOrigin = findBestOffscreenPosition(targetScreen: targetScreen, size: newSize)
             } else {
                 // Visible Expanded: Magnetic Snap
@@ -356,34 +356,49 @@ class SpaceLabelWindow: NSWindow {
             newOrigin = NSPoint(x: naiveCenter.x - newSize.width/2, y: naiveCenter.y - newSize.height/2)
         }
         
-        // --- 4. Execute Animation & Frame Updates ---
-        
-        self.contentView?.frame = NSRect(origin: .zero, size: newSize)
-        self.contentView?.needsDisplay = true
-        self.invalidateShadow()
+        // Helper to update visual content (Size/Font)
+        let applyLayoutUpdates = {
+            self.contentView?.frame = NSRect(origin: .zero, size: newSize)
+            self.contentView?.needsDisplay = true
+            
+            if showHandle {
+                // Handle handles its own layout via constraints/init
+            } else if self.isActiveMode {
+                self.updateLabelFont(for: newSize, isSmallMode: true)
+            } else {
+                self.updateLabelFont(for: newSize, isSmallMode: false)
+            }
+            self.invalidateShadow()
+        }
         
         let targetFrame = NSRect(origin: newOrigin, size: newSize)
         let animDuration = 0.08
+        
+        // --- 4. Execute Animation & Frame Updates ---
         
         if shouldBeVisible {
             // Handle "Corner Hidden" Special Case: Visible (Alpha 1) but in Corner
             if isCornerHidden {
                 if !self.isVisible { self.orderFront(nil) }
                 
-                // Legacy Logic: Fade out -> Move -> Restore Alpha 1.0
-                // Check distance to avoid redundant animation if already at corner
+                // Legacy Logic: Fade out IN PLACE -> Then move/shrink offscreen -> Restore Alpha 1.0
+                // We do NOT apply layout updates yet to prevent the window from shrinking/jumping before fading.
                 let dist = hypot(self.frame.origin.x - newOrigin.x, self.frame.origin.y - newOrigin.y)
+                
                 if dist > 1.0 {
                      NSAnimationContext.runAnimationGroup { context in
                         context.duration = animDuration
                         context.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
                         self.animator().alphaValue = 0.0
                     } completionHandler: {
+                        // AFTER fade, apply the new small size and position
+                        applyLayoutUpdates()
                         self.setFrame(targetFrame, display: true)
                         self.alphaValue = 1.0 // Legacy: It stays "visible" for system, but 1px offscreen
                     }
                 } else {
                     // Already in place
+                    applyLayoutUpdates()
                     self.setFrame(targetFrame, display: true)
                     self.alphaValue = 1.0
                 }
@@ -391,6 +406,8 @@ class SpaceLabelWindow: NSWindow {
             }
 
             // Normal Visibility Logic
+            applyLayoutUpdates() // Apply new size/font immediately
+            
             if !self.isVisible || self.alphaValue == 0 {
                 // [Hidden -> Visible]: Snap Frame -> Fade In
                 self.setFrame(targetFrame, display: true)
@@ -410,6 +427,8 @@ class SpaceLabelWindow: NSWindow {
             }
         } else {
             // [Visible -> Hidden]: Fade Out -> Then Snap Frame Offscreen
+            applyLayoutUpdates()
+            
             if self.isVisible && self.alphaValue > 0 {
                 NSAnimationContext.runAnimationGroup { context in
                     context.duration = animDuration
