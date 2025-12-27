@@ -85,6 +85,8 @@ class SpaceLabelWindow: NSWindow {
         // 2. Handle View
         self.handleView = CollapsibleHandleView()
         self.handleView.isHidden = true
+        // [FIX 2] Ensure handleView resizes to fill the contentView
+        self.handleView.autoresizingMask = [.width, .height]
         
         // Screen Logic
         let foundScreen = NSScreen.screens.first { screen in
@@ -216,23 +218,24 @@ class SpaceLabelWindow: NSWindow {
         var absY = sFrame.minY + (sFrame.height * relativePoint.y)
         
         // 2. OVERRIDE the coordinate perpendicular to the docked edge.
-        // If we are docked to Right Edge (.maxX), we force the X coordinate to exactly match
-        // the screen edge minus half the window width. This ensures flush contact.
-        
-        switch self.dockEdge {
-        case .minX: // Left Edge
-            absX = sFrame.minX + (size.width / 2)
-            
-        case .maxX: // Right Edge
-            absX = sFrame.maxX - (size.width / 2)
-            
-        case .minY: // Bottom Edge
-            absY = sFrame.minY + (size.height / 2)
-            
-        case .maxY: // Top Edge
-            absY = sFrame.maxY - (size.height / 2)
-            
-        default: break
+        // [FIX 1] Only enforce edge snapping if the window is actually docked.
+        // If !isDocked, we trust the relative position completely.
+        if self.isDocked {
+            switch self.dockEdge {
+            case .minX: // Left Edge
+                absX = sFrame.minX + (size.width / 2)
+                
+            case .maxX: // Right Edge
+                absX = sFrame.maxX - (size.width / 2)
+                
+            case .minY: // Bottom Edge
+                absY = sFrame.minY + (size.height / 2)
+                
+            case .maxY: // Top Edge
+                absY = sFrame.maxY - (size.height / 2)
+                
+            default: break
+            }
         }
         
         return NSPoint(x: absX, y: absY)
