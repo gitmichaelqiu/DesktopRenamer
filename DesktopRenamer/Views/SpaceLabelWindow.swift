@@ -98,22 +98,32 @@ class SpaceLabelWindow: NSWindow {
         let screenFrame = targetScreen.frame
         let startRect = NSRect(x: screenFrame.midX - 100, y: screenFrame.midY - 50, width: 200, height: 100)
         
-        super.init(contentRect: startRect, styleMask: [.borderless], backing: .buffered, defer: false)
+        // FIX: Add .fullSizeContentView to styleMask to ensure blur extends correctly
+        super.init(contentRect: startRect, styleMask: [.borderless, .fullSizeContentView], backing: .buffered, defer: false)
         
+        // 3. Configure Visual Effect View
         let contentView: NSView
         if #available(macOS 26.0, *) {
             contentView = NSGlassEffectView(frame: .zero)
         } else {
-            contentView = NSVisualEffectView(frame: .zero)
+            let effectView = NSVisualEffectView(frame: .zero)
+            effectView.material = .hudWindow
+            effectView.blendingMode = .behindWindow
+            // FIX: Ensure this is explicitly active
+            effectView.state = .active
+            contentView = effectView
         }
         
         contentView.wantsLayer = true
         contentView.layer?.cornerRadius = 20
+        contentView.layer?.masksToBounds = true
         
         contentView.addSubview(self.label)
         contentView.addSubview(self.handleView)
         
         self.contentView = contentView
+        
+        // FIX: Set these AFTER assigning contentView to ensure transparency sticks
         self.backgroundColor = .clear
         self.isOpaque = false
         self.hasShadow = false
@@ -364,6 +374,7 @@ class SpaceLabelWindow: NSWindow {
         }
         
         let showHandle = isCurrentSpace && isDocked && (labelManager?.showOnDesktop == true)
+        let isHiddenCornerMode = isCurrentSpace && !showHandle && !(labelManager?.showOnDesktop == true)
         
         if showHandle {
             // --- DOCKED ---
@@ -418,19 +429,18 @@ class SpaceLabelWindow: NSWindow {
         if updateFrame {
             if isHiddenCornerMode {
                 // ANIMATION: Fade Out (0.08s) -> Jump
-                // This block takes full responsibility for the fade-out, so updateVisibility should not interfere.
                 NSAnimationContext.runAnimationGroup { context in
                     context.duration = 0.08
                     context.timingFunction = CAMediaTimingFunction(name: .easeOut)
                     self.animator().alphaValue = 0.0
                 } completionHandler: {
                     self.setFrame(NSRect(origin: newOrigin, size: newSize), display: true)
-                    self.alphaValue = 1.0 // Restore alpha after moving offscreen (ready for next time)
+                    self.alphaValue = 1.0
                 }
             } else {
                 // ANIMATION: Move (Standard)
+                self.alphaValue = 1.0
                 self.animator().setFrame(NSRect(origin: newOrigin, size: newSize), display: true)
-                // Ensure we fade back in if we were previously hidden
                 if self.alphaValue < 1.0 {
                     self.animator().alphaValue = 1.0
                 }
@@ -556,16 +566,12 @@ class SpaceLabelWindow: NSWindow {
         
         if shouldBeVisible {
             if !self.isVisible { self.alphaValue = 0.0; self.orderFront(nil) }
-            
-            // FIX: If we are in HiddenCornerMode, updateLayout is currently managing the alpha
-            // (fading it out), so we should NOT force it to 1.0 here.
             if !isHiddenCornerMode {
                 if animated { self.animator().alphaValue = 1.0 } else { self.alphaValue = 1.0 }
             }
         } else {
             if !self.isVisible { return }
             if animated {
-                // ANIMATION: Fade Out (0.08s) for Preview -> Invisible or Visible -> Gone
                 NSAnimationContext.runAnimationGroup { context in
                     context.duration = 0.08
                     self.animator().alphaValue = 0.0
