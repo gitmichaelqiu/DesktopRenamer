@@ -62,6 +62,9 @@ class SpaceLabelWindow: NSWindow {
     private var dockEdge: NSRectEdge = .maxX
     private var previewSize: NSSize = NSSize(width: 800, height: 500)
     
+    // [NEW] State for restoring position
+    private var savedFloatingCenter: NSPoint? = nil
+    
     // Constants
     static let baseActiveFontSize: CGFloat = 45
     static let basePreviewFontSize: CGFloat = 180
@@ -85,7 +88,6 @@ class SpaceLabelWindow: NSWindow {
         // 2. Handle View
         self.handleView = CollapsibleHandleView()
         self.handleView.isHidden = true
-        // [FIX 2] Ensure handleView resizes to fill the contentView so chevron is visible
         self.handleView.autoresizingMask = [.width, .height]
         
         // Screen Logic
@@ -206,8 +208,6 @@ class SpaceLabelWindow: NSWindow {
     
     // MARK: - Helper: Position Calculation
     
-    /// Converts stored "Relative Center" (0.0-1.0) into an Absolute Center for the Target Screen.
-    /// This purely maps the percentage; it does NOT force edge snapping.
     private func getNaiveAbsoluteCenter(on screen: NSScreen) -> NSPoint {
         let relativePoint = labelManager?.globalCenterPoint ?? NSPoint(x: 1.0, y: 0.5)
         let sFrame = screen.visibleFrame
@@ -311,6 +311,9 @@ class SpaceLabelWindow: NSWindow {
                             if minMouseEdgeDist < 15.0 {
                                 isDocked = true
                                 didStateChange = true
+                                // [NEW] User manually dragged to dock, so we forget the saved "click" position
+                                self.savedFloatingCenter = nil
+                                
                                 if minMouseEdgeDist == distLeft { self.dockEdge = .minX }
                                 else if minMouseEdgeDist == distRight { self.dockEdge = .maxX }
                                 else if minMouseEdgeDist == distTop { self.dockEdge = .maxY }
@@ -320,16 +323,14 @@ class SpaceLabelWindow: NSWindow {
                             if minMouseEdgeDist > 50.0 {
                                 isDocked = false
                                 didStateChange = true
+                                self.savedFloatingCenter = nil
                             }
                         }
                         
                         if didStateChange {
                             updateLayout(isCurrentSpace: true, updateFrame: false)
-                            // After state change, we recalculate origin from the mouse position
-                            // to ensure smooth transition
                             let newSize = self.frame.size
                             
-                            // If we just docked, we snap. If we undocked, we might float.
                             if isDocked {
                                 let rootedOrigin = calculateCenteredOrigin(
                                     forSize: newSize,
@@ -345,7 +346,6 @@ class SpaceLabelWindow: NSWindow {
                             
                             self.setFrameOrigin(targetOrigin)
                             
-                            // Re-calculate offset based on new snapped position
                             mouseOffset = NSPoint(x: currentMouseLocation.x - targetOrigin.x,
                                                   y: currentMouseLocation.y - targetOrigin.y)
                             startMouseLocation = currentMouseLocation
@@ -356,12 +356,10 @@ class SpaceLabelWindow: NSWindow {
                         
                         // Dragging logic
                         if isDocked {
-                            // While dragging in Docked mode, constrain to the edge
                             let rawRect = NSRect(origin: targetOrigin, size: self.frame.size)
                             let snappedOrigin = findNearestEdgePosition(targetScreen: screen, forRect: rawRect)
                             self.setFrameOrigin(snappedOrigin)
                         } else {
-                            // While dragging in Expanded mode, move freely (Floating)
                             self.setFrameOrigin(targetOrigin)
                         }
                     }
@@ -372,20 +370,28 @@ class SpaceLabelWindow: NSWindow {
     
     private func toggleDockState() {
         if self.isDocked {
+            // ---> EXPANDING
             self.isDocked = false
             
             if let screen = self.screen {
-                // When undocking, we want to maintain the center visually
+                // Determine target center
                 let currentCenter = NSPoint(x: self.frame.midX, y: self.frame.midY)
                 let newSize = calculateActiveSize()
                 
-                // Calculate origin based on simple center - halfSize (No edge snapping)
-                let newOrigin = NSPoint(x: currentCenter.x - newSize.width/2, y: currentCenter.y - newSize.height/2)
+                var targetCenter: NSPoint
                 
-                // Update global state immediately so it persists
+                // [NEW] Check if we have a saved floating position
+                if let saved = self.savedFloatingCenter {
+                    targetCenter = saved
+                } else {
+                    // Fallback to expanding from the current pill location
+                    targetCenter = currentCenter
+                }
+                
+                // Update global state immediately with the new target center
                 let sFrame = screen.visibleFrame
-                let relX = (currentCenter.x - sFrame.minX) / sFrame.width
-                let relY = (currentCenter.y - sFrame.minY) / sFrame.height
+                let relX = (targetCenter.x - sFrame.minX) / sFrame.width
+                let relY = (targetCenter.y - sFrame.minY) / sFrame.height
                 
                 if let manager = labelManager {
                     manager.updateGlobalState(isDocked: false, edge: self.dockEdge, center: NSPoint(x: relX, y: relY))
@@ -394,8 +400,12 @@ class SpaceLabelWindow: NSWindow {
             animateFrameChange()
             
         } else {
-            // When docking, we find the nearest edge and snap
+            // ---> COLLAPSING
             if let screen = self.screen {
+                // [NEW] Save current floating position before we snap to edge
+                self.savedFloatingCenter = NSPoint(x: self.frame.midX, y: self.frame.midY)
+                
+                // Determine which edge is closest
                 _ = findNearestEdgePosition(targetScreen: screen, forRect: self.frame)
             }
             self.isDocked = true
@@ -468,27 +478,18 @@ class SpaceLabelWindow: NSWindow {
 
         // 3. Calculate Final Origin based on Mode
         if showHandle {
-            // [CASE A: DOCKED]
-            // We MUST use strict edge snapping logic.
-            // The `calculateCenteredOrigin` function forces the X or Y to the screen edge based on `dockEdge`.
+            // [CASE A: DOCKED] - Strict Snapping
             newOrigin = calculateCenteredOrigin(
                 forSize: newSize, onEdge: self.dockEdge, centerPoint: targetCenter, screenFrame: targetScreen.visibleFrame
             )
         } else if isCurrentSpace {
             if isHiddenCornerMode {
-                // Legacy: Just off-screen
                 newOrigin = findBestOffscreenPosition(targetScreen: targetScreen, size: newSize)
             } else {
-                // [CASE B: EXPANDED / FLOATING]
-                // [FIX 1] Do NOT use `calculateCenteredOrigin` here because it forces snapping to the edge.
-                // Instead, simply center the window on the calculated point.
-                
+                // [CASE B: EXPANDED] - Magnetic Snapping
                 var calculatedOrigin = NSPoint(x: targetCenter.x - newSize.width/2,
                                                y: targetCenter.y - newSize.height/2)
                 
-                // [FIX 1.1] "Magnetic" Snap for Expanded Mode
-                // If the naive position places the window very close to an edge, we snap it flush to that edge.
-                // This handles the "preserve relative location" (if in middle) vs "snap to edge" (if at edge) requirement.
                 let sFrame = targetScreen.visibleFrame
                 let snapThreshold: CGFloat = 20.0
                 
@@ -498,7 +499,6 @@ class SpaceLabelWindow: NSWindow {
                 if abs(calculatedOrigin.y - sFrame.minY) < snapThreshold { calculatedOrigin.y = sFrame.minY }
                 else if abs(calculatedOrigin.y + newSize.height - sFrame.maxY) < snapThreshold { calculatedOrigin.y = sFrame.maxY - newSize.height }
                 
-                // Basic clamp to ensure it doesn't fly offscreen entirely
                 calculatedOrigin.x = max(sFrame.minX, min(calculatedOrigin.x, sFrame.maxX - newSize.width))
                 calculatedOrigin.y = max(sFrame.minY, min(calculatedOrigin.y, sFrame.maxY - newSize.height))
                 
@@ -537,11 +537,8 @@ class SpaceLabelWindow: NSWindow {
     
     // MARK: - Calculation Helpers
     
-    /// Calculates origin specifically for DOCKED items, forcing them to the `dockEdge`.
     private func calculateCenteredOrigin(forSize size: NSSize, onEdge edge: NSRectEdge, centerPoint: NSPoint, screenFrame: NSRect) -> NSPoint {
         var origin = NSPoint.zero
-        
-        // Logic: Set the 'axis' coordinate to the screen edge, and center the 'cross-axis' coordinate.
         switch edge {
         case .minX: origin = NSPoint(x: screenFrame.minX, y: centerPoint.y - size.height/2)
         case .maxX: origin = NSPoint(x: screenFrame.maxX - size.width, y: centerPoint.y - size.height/2)
@@ -550,7 +547,6 @@ class SpaceLabelWindow: NSWindow {
         @unknown default: origin = NSPoint(x: centerPoint.x - size.width/2, y: centerPoint.y - size.height/2)
         }
         
-        // Clamp the cross-axis to stay on screen
         if edge == .minX || edge == .maxX {
             origin.y = max(screenFrame.minY, min(origin.y, screenFrame.maxY - size.height))
         } else {
