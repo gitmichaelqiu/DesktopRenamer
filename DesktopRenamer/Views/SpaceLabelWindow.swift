@@ -62,17 +62,17 @@ class SpaceLabelWindow: NSWindow {
     private var dockEdge: NSRectEdge = .maxX
     private var previewSize: NSSize = NSSize(width: 800, height: 500)
     
-    // [NEW] State for restoring position
+    // Position State
     private var savedFloatingCenter: NSPoint? = nil
+    
+    // Logic Flags
+    private var isFirstRun: Bool = true
+    private var previousActiveMode: Bool = false
     
     // Constants
     static let baseActiveFontSize: CGFloat = 45
     static let basePreviewFontSize: CGFloat = 180
     static let handleSize = NSSize(width: 32, height: 60)
-    
-    private var isHiddenCornerMode: Bool {
-        return isActiveMode && !(labelManager?.showOnDesktop == true)
-    }
     
     init(spaceId: String, name: String, displayID: String, spaceManager: SpaceManager, labelManager: SpaceLabelManager) {
         self.spaceId = spaceId
@@ -147,8 +147,10 @@ class SpaceLabelWindow: NSWindow {
         setupLiveBackgroundUpdate()
         
         DispatchQueue.main.async { [weak self] in
-            self?.updateLayout(isCurrentSpace: true)
-            self?.updateVisibility(animated: false)
+            // Initial layout
+            self?.updateState()
+            self?.isFirstRun = false
+            self?.previousActiveMode = self?.isActiveMode ?? true
             self?.updateInteractivity()
         }
     }
@@ -177,14 +179,12 @@ class SpaceLabelWindow: NSWindow {
         self.isDocked = manager.globalIsDocked
         self.dockEdge = manager.globalDockEdge
         
-        // Load center point or default
         if manager.globalCenterPoint == nil {
             let defaultRelative = NSPoint(x: 1.0, y: 0.5)
             manager.updateGlobalState(isDocked: true, edge: .maxX, center: defaultRelative)
             self.dockEdge = .maxX
             self.isDocked = true
         } else if let point = manager.globalCenterPoint {
-            // Migration check for old absolute data
             if point.x > 2.0 || point.y > 2.0 {
                 let defaultRelative = NSPoint(x: 1.0, y: 0.5)
                 manager.updateGlobalState(isDocked: true, edge: .maxX, center: defaultRelative)
@@ -198,7 +198,6 @@ class SpaceLabelWindow: NSWindow {
         guard let manager = labelManager, let screen = self.screen else { return }
         let currentAbsCenter = NSPoint(x: self.frame.midX, y: self.frame.midY)
         
-        // Convert Absolute -> Relative
         let sFrame = screen.visibleFrame
         let relX = (currentAbsCenter.x - sFrame.minX) / sFrame.width
         let relY = (currentAbsCenter.y - sFrame.minY) / sFrame.height
@@ -206,15 +205,25 @@ class SpaceLabelWindow: NSWindow {
         manager.updateGlobalState(isDocked: self.isDocked, edge: self.dockEdge, center: NSPoint(x: relX, y: relY))
     }
     
+    // MARK: - Reset Logic
+    
+    private func resetToCenter() {
+        guard let screen = findTargetScreen() else { return }
+        
+        self.isDocked = false
+        self.savedFloatingCenter = nil
+        
+        // Reset Global State
+        labelManager?.updateGlobalState(isDocked: false, edge: self.dockEdge, center: NSPoint(x: 0.5, y: 0.5))
+    }
+    
     // MARK: - Helper: Position Calculation
     
     private func getNaiveAbsoluteCenter(on screen: NSScreen) -> NSPoint {
         let relativePoint = labelManager?.globalCenterPoint ?? NSPoint(x: 1.0, y: 0.5)
         let sFrame = screen.visibleFrame
-        
         let absX = sFrame.minX + (sFrame.width * relativePoint.x)
         let absY = sFrame.minY + (sFrame.height * relativePoint.y)
-        
         return NSPoint(x: absX, y: absY)
     }
     
@@ -222,8 +231,7 @@ class SpaceLabelWindow: NSWindow {
     
     func refreshAppearance() {
         updateInteractivity()
-        updateLayout(isCurrentSpace: self.isActiveMode)
-        updateVisibility(animated: true)
+        updateState()
     }
     
     func setPreviewSize(_ size: NSSize) {
@@ -236,6 +244,7 @@ class SpaceLabelWindow: NSWindow {
     }
     
     func setMode(isCurrentSpace: Bool) {
+        self.previousActiveMode = self.isActiveMode
         self.isActiveMode = isCurrentSpace
         
         if isCurrentSpace {
@@ -245,14 +254,180 @@ class SpaceLabelWindow: NSWindow {
             }
         }
         
-        self.updateLayout(isCurrentSpace: isCurrentSpace)
-        updateVisibility(animated: true)
+        updateState()
         updateInteractivity()
     }
     
     func updateName(_ name: String) {
         self.label.stringValue = name
-        self.updateLayout(isCurrentSpace: self.isActiveMode)
+        updateState()
+    }
+    
+    // MARK: - Main Pipeline: Layout & Visibility & Animation
+    
+    private func updateState() {
+        guard let targetScreen = findTargetScreen() else { self.close(); return }
+        
+        // --- 1. Determine Visibility Intent ---
+        let showActive = labelManager?.showActiveLabels ?? true
+        let showPreview = labelManager?.showPreviewLabels ?? true
+        
+        // Corner Hidden Mode: Active Space Mode + "Show on Desktop" is OFF
+        // If this is true, we force off-screen placement regardless of showActiveLabels status
+        let isCornerHidden = isActiveMode && !(labelManager?.showOnDesktop == true)
+        
+        // Base visibility
+        let shouldBeVisible = isActiveMode ? showActive : showPreview
+
+        // --- 2. Check for Manual Toggle (Center Reset) ---
+        // Condition: Active Mode + Not First Run + Not Space Switch + Was Invisible -> Becoming Visible
+        if shouldBeVisible && isActiveMode && !isCornerHidden && !isFirstRun {
+            let isSpaceSwitch = (isActiveMode != previousActiveMode)
+            let wasInvisible = (self.alphaValue == 0 || !self.isVisible)
+            
+            if !isSpaceSwitch && wasInvisible {
+                resetToCenter()
+            }
+        }
+        
+        // --- 3. Determine Layout (Size & Position) ---
+        var newSize: NSSize
+        var newOrigin: NSPoint
+        
+        let showHandle = isActiveMode && isDocked && (labelManager?.showOnDesktop == true)
+        
+        // A) Size & Styling
+        if showHandle {
+            // DOCKED (Pill)
+            self.label.isHidden = true
+            self.handleView.isHidden = false
+            self.handleView.edge = self.dockEdge
+            self.contentView?.layer?.cornerRadius = 12
+            
+            if self.dockEdge == .minX || self.dockEdge == .maxX {
+                newSize = SpaceLabelWindow.handleSize
+            } else {
+                newSize = NSSize(width: SpaceLabelWindow.handleSize.height, height: SpaceLabelWindow.handleSize.width)
+            }
+        } else if isActiveMode {
+             // EXPANDED / HIDDEN
+             self.label.isHidden = false
+             self.handleView.isHidden = true
+             self.contentView?.layer?.cornerRadius = 20
+             newSize = calculateActiveSize()
+             updateLabelFont(for: newSize, isSmallMode: true)
+        } else {
+            // PREVIEW
+            self.label.isHidden = false
+            self.handleView.isHidden = true
+            self.contentView?.layer?.cornerRadius = 20
+            newSize = previewSize
+            updateLabelFont(for: newSize, isSmallMode: false)
+        }
+        
+        // B) Position Calculation
+        let naiveCenter = isActiveMode ? getNaiveAbsoluteCenter(on: targetScreen) : NSPoint(x: targetScreen.frame.midX, y: targetScreen.frame.midY)
+        
+        if showHandle {
+            // Docked: Strict Snap
+            newOrigin = calculateCenteredOrigin(forSize: newSize, onEdge: self.dockEdge, centerPoint: naiveCenter, screenFrame: targetScreen.visibleFrame)
+        } else if isActiveMode {
+            if isCornerHidden {
+                // [FIX] Use exact logic from provided code
+                newOrigin = findBestOffscreenPosition(targetScreen: targetScreen, size: newSize)
+            } else {
+                // Visible Expanded: Magnetic Snap
+                var calculatedOrigin = NSPoint(x: naiveCenter.x - newSize.width/2, y: naiveCenter.y - newSize.height/2)
+                let sFrame = targetScreen.visibleFrame
+                let snapThreshold: CGFloat = 20.0
+                
+                if abs(calculatedOrigin.x - sFrame.minX) < snapThreshold { calculatedOrigin.x = sFrame.minX }
+                else if abs(calculatedOrigin.x + newSize.width - sFrame.maxX) < snapThreshold { calculatedOrigin.x = sFrame.maxX - newSize.width }
+                
+                if abs(calculatedOrigin.y - sFrame.minY) < snapThreshold { calculatedOrigin.y = sFrame.minY }
+                else if abs(calculatedOrigin.y + newSize.height - sFrame.maxY) < snapThreshold { calculatedOrigin.y = sFrame.maxY - newSize.height }
+                
+                calculatedOrigin.x = max(sFrame.minX, min(calculatedOrigin.x, sFrame.maxX - newSize.width))
+                calculatedOrigin.y = max(sFrame.minY, min(calculatedOrigin.y, sFrame.maxY - newSize.height))
+                newOrigin = calculatedOrigin
+            }
+        } else {
+            // Preview: Center
+            newOrigin = NSPoint(x: naiveCenter.x - newSize.width/2, y: naiveCenter.y - newSize.height/2)
+        }
+        
+        // --- 4. Execute Animation & Frame Updates ---
+        
+        self.contentView?.frame = NSRect(origin: .zero, size: newSize)
+        self.contentView?.needsDisplay = true
+        self.invalidateShadow()
+        
+        let targetFrame = NSRect(origin: newOrigin, size: newSize)
+        let animDuration = 0.08
+        
+        if shouldBeVisible {
+            // Handle "Corner Hidden" Special Case: Visible (Alpha 1) but in Corner
+            if isCornerHidden {
+                if !self.isVisible { self.orderFront(nil) }
+                
+                // Legacy Logic: Fade out -> Move -> Restore Alpha 1.0
+                // Check distance to avoid redundant animation if already at corner
+                let dist = hypot(self.frame.origin.x - newOrigin.x, self.frame.origin.y - newOrigin.y)
+                if dist > 1.0 {
+                     NSAnimationContext.runAnimationGroup { context in
+                        context.duration = animDuration
+                        context.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
+                        self.animator().alphaValue = 0.0
+                    } completionHandler: {
+                        self.setFrame(targetFrame, display: true)
+                        self.alphaValue = 1.0 // Legacy: It stays "visible" for system, but 1px offscreen
+                    }
+                } else {
+                    // Already in place
+                    self.setFrame(targetFrame, display: true)
+                    self.alphaValue = 1.0
+                }
+                return
+            }
+
+            // Normal Visibility Logic
+            if !self.isVisible || self.alphaValue == 0 {
+                // [Hidden -> Visible]: Snap Frame -> Fade In
+                self.setFrame(targetFrame, display: true)
+                self.orderFront(nil)
+                self.alphaValue = 0.0
+                
+                NSAnimationContext.runAnimationGroup { context in
+                    context.duration = animDuration
+                    context.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
+                    self.animator().alphaValue = 1.0
+                }
+            } else {
+                // [Visible -> Visible]: Move Frame (Animation)
+                if self.alphaValue < 1.0 { self.animator().alphaValue = 1.0 }
+                
+                self.animator().setFrame(targetFrame, display: true)
+            }
+        } else {
+            // [Visible -> Hidden]: Fade Out -> Then Snap Frame Offscreen
+            if self.isVisible && self.alphaValue > 0 {
+                NSAnimationContext.runAnimationGroup { context in
+                    context.duration = animDuration
+                    context.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
+                    self.animator().alphaValue = 0.0
+                } completionHandler: {
+                    if self.alphaValue == 0 {
+                        self.setFrame(targetFrame, display: false)
+                        self.orderOut(nil)
+                    }
+                }
+            } else {
+                // [Hidden -> Hidden]: Just update internal state
+                self.setFrame(targetFrame, display: false)
+                self.alphaValue = 0.0
+                self.orderOut(nil)
+            }
+        }
     }
     
     // MARK: - Interactions
@@ -311,8 +486,7 @@ class SpaceLabelWindow: NSWindow {
                             if minMouseEdgeDist < 15.0 {
                                 isDocked = true
                                 didStateChange = true
-                                // [NEW] User manually dragged to dock, so we forget the saved "click" position
-                                self.savedFloatingCenter = nil
+                                self.savedFloatingCenter = nil // Reset on manual drag dock
                                 
                                 if minMouseEdgeDist == distLeft { self.dockEdge = .minX }
                                 else if minMouseEdgeDist == distRight { self.dockEdge = .maxX }
@@ -328,9 +502,10 @@ class SpaceLabelWindow: NSWindow {
                         }
                         
                         if didStateChange {
-                            updateLayout(isCurrentSpace: true, updateFrame: false)
+                            updateState() // Use main pipeline
                             let newSize = self.frame.size
                             
+                            // Re-calculate drag offset post-snap
                             if isDocked {
                                 let rootedOrigin = calculateCenteredOrigin(
                                     forSize: newSize,
@@ -345,11 +520,9 @@ class SpaceLabelWindow: NSWindow {
                             }
                             
                             self.setFrameOrigin(targetOrigin)
-                            
                             mouseOffset = NSPoint(x: currentMouseLocation.x - targetOrigin.x,
                                                   y: currentMouseLocation.y - targetOrigin.y)
                             startMouseLocation = currentMouseLocation
-                            
                             pushToGlobalState()
                             continue
                         }
@@ -370,55 +543,32 @@ class SpaceLabelWindow: NSWindow {
     
     private func toggleDockState() {
         if self.isDocked {
-            // ---> EXPANDING
+            // Undock
             self.isDocked = false
-            
             if let screen = self.screen {
-                // Determine target center
                 let currentCenter = NSPoint(x: self.frame.midX, y: self.frame.midY)
-                let newSize = calculateActiveSize()
+                let targetCenter = self.savedFloatingCenter ?? currentCenter
                 
-                var targetCenter: NSPoint
-                
-                // [NEW] Check if we have a saved floating position
-                if let saved = self.savedFloatingCenter {
-                    targetCenter = saved
-                } else {
-                    // Fallback to expanding from the current pill location
-                    targetCenter = currentCenter
-                }
-                
-                // Update global state immediately with the new target center
                 let sFrame = screen.visibleFrame
                 let relX = (targetCenter.x - sFrame.minX) / sFrame.width
                 let relY = (targetCenter.y - sFrame.minY) / sFrame.height
                 
-                if let manager = labelManager {
-                    manager.updateGlobalState(isDocked: false, edge: self.dockEdge, center: NSPoint(x: relX, y: relY))
-                }
+                labelManager?.updateGlobalState(isDocked: false, edge: self.dockEdge, center: NSPoint(x: relX, y: relY))
             }
-            animateFrameChange()
-            
         } else {
-            // ---> COLLAPSING
+            // Dock
             if let screen = self.screen {
-                // [NEW] Save current floating position before we snap to edge
                 self.savedFloatingCenter = NSPoint(x: self.frame.midX, y: self.frame.midY)
-                
-                // Determine which edge is closest
                 _ = findNearestEdgePosition(targetScreen: screen, forRect: self.frame)
             }
             self.isDocked = true
             pushToGlobalState()
-            animateFrameChange()
         }
-    }
-    
-    private func animateFrameChange() {
+        
         NSAnimationContext.runAnimationGroup { context in
             context.duration = 0.25
             context.timingFunction = CAMediaTimingFunction(name: .easeOut)
-            updateLayout(isCurrentSpace: true)
+            updateState()
         }
     }
     
@@ -426,113 +576,6 @@ class SpaceLabelWindow: NSWindow {
         let isInteractive = (labelManager?.showOnDesktop == true) && isActiveMode
         self.ignoresMouseEvents = !isInteractive
         self.isMovableByWindowBackground = false
-    }
-    
-    // MARK: - Layout Logic
-    
-    private func updateLayout(isCurrentSpace: Bool, updateFrame: Bool = true) {
-        guard let targetScreen = findTargetScreen() else { self.close(); return }
-        
-        var newSize: NSSize
-        var newOrigin: NSPoint
-        var targetCenter = NSPoint.zero
-        
-        let showHandle = isCurrentSpace && isDocked && (labelManager?.showOnDesktop == true)
-        let isHiddenCornerMode = isCurrentSpace && !showHandle && !(labelManager?.showOnDesktop == true)
-        
-        // 1. Determine Dimensions
-        if showHandle {
-            // DOCKED (Pill)
-            self.label.isHidden = true
-            self.handleView.isHidden = false
-            self.handleView.edge = self.dockEdge
-            self.contentView?.layer?.cornerRadius = 12
-            
-            if self.dockEdge == .minX || self.dockEdge == .maxX {
-                newSize = SpaceLabelWindow.handleSize
-            } else {
-                newSize = NSSize(width: SpaceLabelWindow.handleSize.height, height: SpaceLabelWindow.handleSize.width)
-            }
-        } else if isCurrentSpace {
-             // EXPANDED / HIDDEN
-             self.label.isHidden = false
-             self.handleView.isHidden = true
-             self.contentView?.layer?.cornerRadius = 20
-             
-             newSize = calculateActiveSize()
-             updateLabelFont(for: newSize, isSmallMode: true)
-        } else {
-            // PREVIEW
-            self.label.isHidden = false
-            self.handleView.isHidden = true
-            self.contentView?.layer?.cornerRadius = 20
-            
-            newSize = previewSize
-            updateLabelFont(for: newSize, isSmallMode: false)
-        }
-        
-        // 2. Determine Position
-        // Get the naive center based on stored percentage (0.0 - 1.0)
-        let naiveCenter = isCurrentSpace ? getNaiveAbsoluteCenter(on: targetScreen) : NSPoint(x: targetScreen.frame.midX, y: targetScreen.frame.midY)
-        targetCenter = naiveCenter
-
-        // 3. Calculate Final Origin based on Mode
-        if showHandle {
-            // [CASE A: DOCKED] - Strict Snapping
-            newOrigin = calculateCenteredOrigin(
-                forSize: newSize, onEdge: self.dockEdge, centerPoint: targetCenter, screenFrame: targetScreen.visibleFrame
-            )
-        } else if isCurrentSpace {
-            if isHiddenCornerMode {
-                newOrigin = findBestOffscreenPosition(targetScreen: targetScreen, size: newSize)
-            } else {
-                // [CASE B: EXPANDED] - Magnetic Snapping
-                var calculatedOrigin = NSPoint(x: targetCenter.x - newSize.width/2,
-                                               y: targetCenter.y - newSize.height/2)
-                
-                let sFrame = targetScreen.visibleFrame
-                let snapThreshold: CGFloat = 20.0
-                
-                if abs(calculatedOrigin.x - sFrame.minX) < snapThreshold { calculatedOrigin.x = sFrame.minX }
-                else if abs(calculatedOrigin.x + newSize.width - sFrame.maxX) < snapThreshold { calculatedOrigin.x = sFrame.maxX - newSize.width }
-                
-                if abs(calculatedOrigin.y - sFrame.minY) < snapThreshold { calculatedOrigin.y = sFrame.minY }
-                else if abs(calculatedOrigin.y + newSize.height - sFrame.maxY) < snapThreshold { calculatedOrigin.y = sFrame.maxY - newSize.height }
-                
-                calculatedOrigin.x = max(sFrame.minX, min(calculatedOrigin.x, sFrame.maxX - newSize.width))
-                calculatedOrigin.y = max(sFrame.minY, min(calculatedOrigin.y, sFrame.maxY - newSize.height))
-                
-                newOrigin = calculatedOrigin
-            }
-        } else {
-            // Preview
-            newOrigin = NSPoint(x: targetCenter.x - newSize.width/2, y: targetCenter.y - newSize.height/2)
-        }
-        
-        self.contentView?.frame = NSRect(origin: .zero, size: newSize)
-        
-        // Force visual update
-        self.contentView?.needsDisplay = true
-        self.invalidateShadow()
-        
-        if updateFrame {
-            if isHiddenCornerMode {
-                NSAnimationContext.runAnimationGroup { context in
-                    context.duration = 0.08
-                    context.timingFunction = CAMediaTimingFunction(name: .easeOut)
-                    self.animator().alphaValue = 0.0
-                } completionHandler: {
-                    self.setFrame(NSRect(origin: newOrigin, size: newSize), display: true)
-                    self.alphaValue = 1.0
-                }
-            } else {
-                self.alphaValue = 1.0
-                self.animator().setFrame(NSRect(origin: newOrigin, size: newSize), display: true)
-                if self.alphaValue < 1.0 { self.animator().alphaValue = 1.0 }
-            }
-        } else {
-            self.setFrame(NSRect(origin: self.frame.origin, size: newSize), display: true)
-        }
     }
     
     // MARK: - Calculation Helpers
@@ -614,9 +657,26 @@ class SpaceLabelWindow: NSWindow {
         }
     }
     
+    // [RESTORED] Exact logic from original provided code
     private func findBestOffscreenPosition(targetScreen: NSScreen, size: NSSize) -> NSPoint {
+        let allScreens = NSScreen.screens
         let f = targetScreen.frame
-        return NSPoint(x: f.minX - size.width + 1, y: f.maxY - 1)
+        let overlap: CGFloat = 1.0
+        let candidates = [
+            NSPoint(x: f.minX - size.width + overlap, y: f.maxY - overlap),
+            NSPoint(x: f.maxX - overlap, y: f.maxY - overlap),
+            NSPoint(x: f.minX - size.width + overlap, y: f.minY - size.height + overlap),
+            NSPoint(x: f.maxX - overlap, y: f.minY - size.height + overlap)
+        ]
+        for point in candidates {
+            let rect = NSRect(origin: point, size: size)
+            let touchesNeighbor = allScreens.contains { screen in
+                if screen == targetScreen { return false }
+                return screen.frame.insetBy(dx: 1, dy: 1).intersects(rect)
+            }
+            if !touchesNeighbor { return point }
+        }
+        return candidates[0]
     }
     
     private func findNearestEdgePosition(targetScreen: NSScreen, forRect rect: NSRect) -> NSPoint {
@@ -642,26 +702,5 @@ class SpaceLabelWindow: NSWindow {
         return finalOrigin
     }
     
-    private func updateVisibility(animated: Bool) {
-        let showActive = labelManager?.showActiveLabels ?? true
-        let showPreview = labelManager?.showPreviewLabels ?? true
-        let shouldBeVisible = isActiveMode ? showActive : showPreview
-        
-        if shouldBeVisible {
-            if !self.isVisible { self.alphaValue = 0.0; self.orderFront(nil) }
-            if !isHiddenCornerMode {
-                if animated { self.animator().alphaValue = 1.0 } else { self.alphaValue = 1.0 }
-            }
-        } else {
-            if !self.isVisible { return }
-            if animated {
-                NSAnimationContext.runAnimationGroup { context in
-                    context.duration = 0.08
-                    self.animator().alphaValue = 0.0
-                } completionHandler: { if !shouldBeVisible { self.orderOut(nil) } }
-            } else { self.alphaValue = 0.0; self.orderOut(nil) }
-        }
-    }
-    
-    @objc private func repositionWindow() { updateLayout(isCurrentSpace: isActiveMode) }
+    @objc private func repositionWindow() { updateState() }
 }
