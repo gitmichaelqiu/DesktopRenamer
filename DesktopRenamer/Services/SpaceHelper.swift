@@ -10,10 +10,14 @@ class SpaceHelper {
     // Callback: (UUID, isDesktop, ncCount, DisplayID)
     private static var onSpaceChange: ((String, Bool, Int, String) -> Void)?
     
+    // Store event monitors
+    private static var globalEventMonitor: Any?
+    private static var localEventMonitor: Any?
+    
     static func startMonitoring(onChange: @escaping (String, Bool, Int, String) -> Void) {
         onSpaceChange = onChange
         
-        // Monitor system space changes
+        // 1. Monitor system space changes (Swiping Left/Right)
         NSWorkspace.shared.notificationCenter.addObserver(
             forName: NSWorkspace.activeSpaceDidChangeNotification,
             object: nil,
@@ -22,7 +26,7 @@ class SpaceHelper {
             detectSpaceChange()
         }
         
-        // Also monitor app activation to catch focus changes between displays
+        // 2. Monitor app activation (Cmd+Tab or Dock Click)
         NSWorkspace.shared.notificationCenter.addObserver(
             forName: NSWorkspace.didActivateApplicationNotification,
             object: nil,
@@ -31,12 +35,35 @@ class SpaceHelper {
             detectSpaceChange()
         }
         
+        // 3. Monitor Mouse Clicks (Switching Displays)
+        // This fixes the issue where switching monitors within the same app (or to Finder)
+        // would not trigger an update.
+        globalEventMonitor = NSEvent.addGlobalMonitorForEvents(matching: [.leftMouseDown, .rightMouseDown]) { _ in
+             detectSpaceChange()
+        }
+        
+        // Also monitor local events (clicks on the app's own windows/menu)
+        localEventMonitor = NSEvent.addLocalMonitorForEvents(matching: [.leftMouseDown, .rightMouseDown]) { event in
+             detectSpaceChange()
+             return event
+        }
+        
         detectSpaceChange()
     }
     
     static func stopMonitoring() {
         DistributedNotificationCenter.default().removeObserver(self)
         NSWorkspace.shared.notificationCenter.removeObserver(self)
+        
+        if let monitor = globalEventMonitor {
+            NSEvent.removeMonitor(monitor)
+            globalEventMonitor = nil
+        }
+        
+        if let monitor = localEventMonitor {
+            NSEvent.removeMonitor(monitor)
+            localEventMonitor = nil
+        }
     }
     
     private static func getActiveDisplay() -> NSScreen? {
@@ -75,6 +102,7 @@ class SpaceHelper {
         }
         
         // Fallback: Use Mouse Location
+        // This catches cases like clicking on the Wallpaper/Finder or when window detection fails
         let mouseLocation = NSEvent.mouseLocation
         return NSScreen.screens.first { NSMouseInRect(mouseLocation, $0.frame, false) }
     }
@@ -203,57 +231,5 @@ class SpaceHelper {
         let flippedPoint = CGPoint(x: point.x, y: flippedY)
         
         return screenFrame.contains(flippedPoint)
-    }
-}
-
-// Extension kept for debugging purposes if needed
-extension SpaceHelper {
-    
-    static func testMultiDisplayDetection() {
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
-            let options = CGWindowListOption(arrayLiteral: .optionOnScreenOnly)
-            let windowList = CGWindowListCopyWindowInfo(options, kCGNullWindowID) as? [[String: Any]] ?? []
-            
-            let screens = NSScreen.screens
-            print("\n🚀 [TEST] MULTI-DISPLAY DETECTION START")
-            print("Detected \(screens.count) screens.")
-
-            for (index, screen) in screens.enumerated() {
-                var screenUUID = "UNKNOWN"
-                var screenNcCnt = 0
-                let screenFrame = screen.frame
-                
-                for window in windowList {
-                    guard let bounds = window[kCGWindowBounds as String] as? [String: Any],
-                          let x = bounds["X"] as? CGFloat,
-                          let y = bounds["Y"] as? CGFloat,
-                          let w = bounds["Width"] as? CGFloat,
-                          let h = bounds["Height"] as? CGFloat else { continue }
-                    
-                    let windowRect = CGRect(x: x, y: y, width: w, height: h)
-                    let windowCenter = CGPoint(x: windowRect.midX, y: windowRect.midY)
-                    
-                    if isPoint(windowCenter, inside: screenFrame) {
-                        if let owner = window[kCGWindowOwnerName as String] as? String {
-                            if owner == "Notification Center" {
-                                screenNcCnt += 1
-                            }
-                            else if owner == "Dock",
-                                    let name = window[kCGWindowName as String] as? String,
-                                    name.starts(with: "Wallpaper-") {
-                                screenUUID = String(name.dropFirst("Wallpaper-".count))
-                                if screenUUID.isEmpty { screenUUID = "MAIN" }
-                            }
-                        }
-                    }
-                }
-                
-                print("📺 Display #\(index) | Bounds: \(screenFrame)")
-                print("   ↳ UUID: \(screenUUID)")
-                print("   ↳ Metric (NC Count): \(screenNcCnt)")
-                print("   ↳ Status: \(screenNcCnt <= SpaceHelper.fullscreenThreshold ? "FULLSCREEN" : "DESKTOP")")
-            }
-            print("🚀 [TEST] MULTI-DISPLAY DETECTION END\n")
-        }
     }
 }
