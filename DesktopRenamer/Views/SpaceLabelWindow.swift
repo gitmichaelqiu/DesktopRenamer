@@ -1,5 +1,6 @@
 import Cocoa
 import Combine
+import QuartzCore
 
 // MARK: - Custom Handle View (The "Pill")
 class CollapsibleHandleView: NSView {
@@ -98,19 +99,22 @@ class SpaceLabelWindow: NSWindow {
         let screenFrame = targetScreen.frame
         let startRect = NSRect(x: screenFrame.midX - 100, y: screenFrame.midY - 50, width: 200, height: 100)
         
-        // FIX: Add .fullSizeContentView to styleMask to ensure blur extends correctly
+        // Note: .fullSizeContentView is critical for blur effects to extend under titlebar area
         super.init(contentRect: startRect, styleMask: [.borderless, .fullSizeContentView], backing: .buffered, defer: false)
         
-        // 3. Configure Visual Effect View
+        // 3. Configure Visual/Glass Effect View
         let contentView: NSView
         if #available(macOS 26.0, *) {
+            // macOS 26+: Use NSGlassEffectView
+            // NOTE: We do not cast to NSVisualEffectView or rely on .state = .active API
+            // Instead, we will force updates via animation in setupLiveBackgroundUpdate()
             contentView = NSGlassEffectView(frame: .zero)
         } else {
+            // Legacy: Use NSVisualEffectView
             let effectView = NSVisualEffectView(frame: .zero)
             effectView.material = .hudWindow
             effectView.blendingMode = .behindWindow
-            // FIX: Ensure this is explicitly active
-            effectView.state = .active
+            effectView.state = .active // Standard way to force live blur
             contentView = effectView
         }
         
@@ -123,7 +127,7 @@ class SpaceLabelWindow: NSWindow {
         
         self.contentView = contentView
         
-        // FIX: Set these AFTER assigning contentView to ensure transparency sticks
+        // Ensure transparent backing so blur works
         self.backgroundColor = .clear
         self.isOpaque = false
         self.hasShadow = false
@@ -141,13 +145,39 @@ class SpaceLabelWindow: NSWindow {
             
         NotificationCenter.default.addObserver(self, selector: #selector(repositionWindow), name: NSApplication.didChangeScreenParametersNotification, object: nil)
         
-        // Initial Sync
+        // Initialize State
         syncFromGlobalState()
+        
+        // Apply Hacks
+        setupLiveBackgroundUpdate()
         
         DispatchQueue.main.async { [weak self] in
             self?.updateLayout(isCurrentSpace: true)
             self?.updateVisibility(animated: false)
             self?.updateInteractivity()
+        }
+    }
+    
+    // MARK: - Live Background Hack
+    
+    private func setupLiveBackgroundUpdate() {
+        // HACK: NSGlassEffectView (and some floating windows) stop updating their background blur
+        // when the window is stationary and not Key.
+        // We force the Window Server to treat the window as "Transforming" (and thus dirty)
+        // by applying a continuous, imperceptible animation to the layer.
+        
+        guard let layer = self.contentView?.layer else { return }
+        
+        let key = "forceRedrawLoop"
+        if layer.animation(forKey: key) == nil {
+            let anim = CABasicAnimation(keyPath: "opacity")
+            anim.fromValue = 1.0
+            anim.toValue = 0.9999 // Invisible change, but effectively "active"
+            anim.duration = 1.0
+            anim.autoreverses = true
+            anim.repeatCount = .infinity
+            anim.isRemovedOnCompletion = false
+            layer.add(anim, forKey: key)
         }
     }
     
@@ -263,6 +293,7 @@ class SpaceLabelWindow: NSWindow {
                         let distBottom = abs(currentMouseLocation.y - screenFrame.minY)
                         let minMouseEdgeDist = min(distLeft, distRight, distTop, distBottom)
                         
+                        // Toggle Logic
                         if !isDocked {
                             if minMouseEdgeDist < 15.0 {
                                 isDocked = true
@@ -428,14 +459,14 @@ class SpaceLabelWindow: NSWindow {
         
         if updateFrame {
             if isHiddenCornerMode {
-                // ANIMATION: Fade Out (0.08s) -> Jump
+                // ANIMATION: Fade Out (0.08s) -> Jump (Invisible)
                 NSAnimationContext.runAnimationGroup { context in
                     context.duration = 0.08
                     context.timingFunction = CAMediaTimingFunction(name: .easeOut)
                     self.animator().alphaValue = 0.0
                 } completionHandler: {
                     self.setFrame(NSRect(origin: newOrigin, size: newSize), display: true)
-                    self.alphaValue = 1.0
+                    self.alphaValue = 1.0 // Restore alpha for next appearance
                 }
             } else {
                 // ANIMATION: Move (Standard)
@@ -566,12 +597,14 @@ class SpaceLabelWindow: NSWindow {
         
         if shouldBeVisible {
             if !self.isVisible { self.alphaValue = 0.0; self.orderFront(nil) }
+            // FIX: If hiddenCornerMode is handling alpha in updateLayout, don't reset to 1.0 here immediately
             if !isHiddenCornerMode {
                 if animated { self.animator().alphaValue = 1.0 } else { self.alphaValue = 1.0 }
             }
         } else {
             if !self.isVisible { return }
             if animated {
+                // ANIMATION: Fade Out (0.08s) for Preview -> Invisible
                 NSAnimationContext.runAnimationGroup { context in
                     context.duration = 0.08
                     self.animator().alphaValue = 0.0
