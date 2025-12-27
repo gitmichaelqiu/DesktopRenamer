@@ -67,7 +67,6 @@ class SpaceLabelWindow: NSWindow {
     static let basePreviewFontSize: CGFloat = 180
     static let handleSize = NSSize(width: 32, height: 60)
     
-    // Computed property to detect "Hidden Corner" mode (Active Space, but PiP disabled)
     private var isHiddenCornerMode: Bool {
         return isActiveMode && !(labelManager?.showOnDesktop == true)
     }
@@ -99,22 +98,17 @@ class SpaceLabelWindow: NSWindow {
         let screenFrame = targetScreen.frame
         let startRect = NSRect(x: screenFrame.midX - 100, y: screenFrame.midY - 50, width: 200, height: 100)
         
-        // Note: .fullSizeContentView is critical for blur effects to extend under titlebar area
         super.init(contentRect: startRect, styleMask: [.borderless, .fullSizeContentView], backing: .buffered, defer: false)
         
         // 3. Configure Visual/Glass Effect View
         let contentView: NSView
         if #available(macOS 26.0, *) {
-            // macOS 26+: Use NSGlassEffectView
-            // NOTE: We do not cast to NSVisualEffectView or rely on .state = .active API
-            // Instead, we will force updates via animation in setupLiveBackgroundUpdate()
             contentView = NSGlassEffectView(frame: .zero)
         } else {
-            // Legacy: Use NSVisualEffectView
             let effectView = NSVisualEffectView(frame: .zero)
             effectView.material = .hudWindow
             effectView.blendingMode = .behindWindow
-            effectView.state = .active // Standard way to force live blur
+            effectView.state = .active
             contentView = effectView
         }
         
@@ -127,7 +121,6 @@ class SpaceLabelWindow: NSWindow {
         
         self.contentView = contentView
         
-        // Ensure transparent backing so blur works
         self.backgroundColor = .clear
         self.isOpaque = false
         self.hasShadow = false
@@ -145,7 +138,7 @@ class SpaceLabelWindow: NSWindow {
             
         NotificationCenter.default.addObserver(self, selector: #selector(repositionWindow), name: NSApplication.didChangeScreenParametersNotification, object: nil)
         
-        // Initialize State
+        // Initialize with Safe Defaults (Relative)
         syncFromGlobalState()
         
         // Apply Hacks
@@ -161,18 +154,12 @@ class SpaceLabelWindow: NSWindow {
     // MARK: - Live Background Hack
     
     private func setupLiveBackgroundUpdate() {
-        // HACK: NSGlassEffectView (and some floating windows) stop updating their background blur
-        // when the window is stationary and not Key.
-        // We force the Window Server to treat the window as "Transforming" (and thus dirty)
-        // by applying a continuous, imperceptible animation to the layer.
-        
         guard let layer = self.contentView?.layer else { return }
-        
         let key = "forceRedrawLoop"
         if layer.animation(forKey: key) == nil {
             let anim = CABasicAnimation(keyPath: "opacity")
             anim.fromValue = 1.0
-            anim.toValue = 0.9999 // Invisible change, but effectively "active"
+            anim.toValue = 0.9999
             anim.duration = 1.0
             anim.autoreverses = true
             anim.repeatCount = .infinity
@@ -181,18 +168,26 @@ class SpaceLabelWindow: NSWindow {
         }
     }
     
-    // MARK: - State Synchronization
+    // MARK: - State Synchronization (Relative Positioning)
     
     private func syncFromGlobalState() {
         guard let manager = labelManager else { return }
         self.isDocked = manager.globalIsDocked
         self.dockEdge = manager.globalDockEdge
         
+        // If we have no data, default to Right-Edge Center (Relative: x=1.0, y=0.5)
         if manager.globalCenterPoint == nil {
-            if let screen = self.screen ?? NSScreen.main {
-                let frame = screen.visibleFrame
-                let defaultCenter = NSPoint(x: frame.maxX, y: frame.midY)
-                manager.updateGlobalState(isDocked: true, edge: .maxX, center: defaultCenter)
+            let defaultRelative = NSPoint(x: 1.0, y: 0.5)
+            manager.updateGlobalState(isDocked: true, edge: .maxX, center: defaultRelative)
+            self.dockEdge = .maxX
+            self.isDocked = true
+        } else if let point = manager.globalCenterPoint {
+            // MIGRATION CHECK:
+            // If the saved point is > 2.0 (e.g. x=1440), it is likely old "Absolute" data.
+            // We should reset it to safe relative defaults to prevent windows disappearing.
+            if point.x > 2.0 || point.y > 2.0 {
+                let defaultRelative = NSPoint(x: 1.0, y: 0.5)
+                manager.updateGlobalState(isDocked: true, edge: .maxX, center: defaultRelative)
                 self.dockEdge = .maxX
                 self.isDocked = true
             }
@@ -200,9 +195,27 @@ class SpaceLabelWindow: NSWindow {
     }
     
     private func pushToGlobalState() {
-        guard let manager = labelManager else { return }
-        let center = NSPoint(x: self.frame.midX, y: self.frame.midY)
-        manager.updateGlobalState(isDocked: self.isDocked, edge: self.dockEdge, center: center)
+        guard let manager = labelManager, let screen = self.screen else { return }
+        let currentAbsCenter = NSPoint(x: self.frame.midX, y: self.frame.midY)
+        
+        // Convert Absolute -> Relative
+        let sFrame = screen.visibleFrame
+        let relX = (currentAbsCenter.x - sFrame.minX) / sFrame.width
+        let relY = (currentAbsCenter.y - sFrame.minY) / sFrame.height
+        
+        let relativePoint = NSPoint(x: relX, y: relY)
+        manager.updateGlobalState(isDocked: self.isDocked, edge: self.dockEdge, center: relativePoint)
+    }
+    
+    // Helper to get Absolute Center from Global Relative State
+    private func getAbsoluteTargetCenter(on screen: NSScreen) -> NSPoint {
+        let relativePoint = labelManager?.globalCenterPoint ?? NSPoint(x: 1.0, y: 0.5)
+        let sFrame = screen.visibleFrame
+        
+        let absX = sFrame.minX + (sFrame.width * relativePoint.x)
+        let absY = sFrame.minY + (sFrame.height * relativePoint.y)
+        
+        return NSPoint(x: absX, y: absY)
     }
     
     // MARK: - Public API
@@ -266,7 +279,7 @@ class SpaceLabelWindow: NSWindow {
                 if !hasDragged {
                     toggleDockState()
                 } else {
-                    pushToGlobalState()
+                    pushToGlobalState() // Save new Relative position
                 }
                 break
             }
@@ -361,8 +374,13 @@ class SpaceLabelWindow: NSWindow {
                 )
                 let newCenter = NSPoint(x: rootedOrigin.x + newSize.width/2, y: rootedOrigin.y + newSize.height/2)
                 
+                // Save Relative Center immediately
+                let sFrame = screen.visibleFrame
+                let relX = (newCenter.x - sFrame.minX) / sFrame.width
+                let relY = (newCenter.y - sFrame.minY) / sFrame.height
+                
                 if let manager = labelManager {
-                    manager.updateGlobalState(isDocked: false, edge: self.dockEdge, center: newCenter)
+                    manager.updateGlobalState(isDocked: false, edge: self.dockEdge, center: NSPoint(x: relX, y: relY))
                 }
             }
             animateFrameChange()
@@ -399,10 +417,8 @@ class SpaceLabelWindow: NSWindow {
         var newSize: NSSize
         var newOrigin: NSPoint
         
-        var targetCenter = NSPoint(x: self.frame.midX, y: self.frame.midY)
-        if let globalCenter = labelManager?.globalCenterPoint {
-            targetCenter = globalCenter
-        }
+        // Use the relative position from manager, scaled to the current TARGET screen
+        let targetCenter = getAbsoluteTargetCenter(on: targetScreen)
         
         let showHandle = isCurrentSpace && isDocked && (labelManager?.showOnDesktop == true)
         let isHiddenCornerMode = isCurrentSpace && !showHandle && !(labelManager?.showOnDesktop == true)
@@ -457,19 +473,23 @@ class SpaceLabelWindow: NSWindow {
         
         self.contentView?.frame = NSRect(origin: .zero, size: newSize)
         
+        // Force visual update
+        self.contentView?.needsDisplay = true
+        self.invalidateShadow()
+        
         if updateFrame {
             if isHiddenCornerMode {
-                // ANIMATION: Fade Out (0.08s) -> Jump (Invisible)
+                // ANIMATION: Fade Out (0.08s) -> Jump
                 NSAnimationContext.runAnimationGroup { context in
                     context.duration = 0.08
                     context.timingFunction = CAMediaTimingFunction(name: .easeOut)
                     self.animator().alphaValue = 0.0
                 } completionHandler: {
                     self.setFrame(NSRect(origin: newOrigin, size: newSize), display: true)
-                    self.alphaValue = 1.0 // Restore alpha for next appearance
+                    self.alphaValue = 1.0
                 }
             } else {
-                // ANIMATION: Move (Standard)
+                // ANIMATION: Move
                 self.alphaValue = 1.0
                 self.animator().setFrame(NSRect(origin: newOrigin, size: newSize), display: true)
                 if self.alphaValue < 1.0 {
@@ -553,6 +573,7 @@ class SpaceLabelWindow: NSWindow {
     }
     
     private func findTargetScreen() -> NSScreen? {
+        // Robust matching
         return NSScreen.screens.first { screen in
             let screenID = screen.deviceDescription[NSDeviceDescriptionKey("NSScreenNumber")] as? NSNumber ?? 0
             let idString = "\(screen.localizedName) (\(screenID))"
@@ -597,7 +618,6 @@ class SpaceLabelWindow: NSWindow {
         
         if shouldBeVisible {
             if !self.isVisible { self.alphaValue = 0.0; self.orderFront(nil) }
-            // FIX: If hiddenCornerMode is handling alpha in updateLayout, don't reset to 1.0 here immediately
             if !isHiddenCornerMode {
                 if animated { self.animator().alphaValue = 1.0 } else { self.alphaValue = 1.0 }
             }
