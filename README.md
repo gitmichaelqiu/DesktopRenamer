@@ -5,6 +5,9 @@
   <p></p>
   <p align="center">DesktopRenamer</p>
 </h1>
+<h3>
+<p align="center"><i>Renamer Your Experiences</i></p>
+</h3>
 
 <table align="center" border="0" cellpadding="0" cellspacing="0">
   <tr>
