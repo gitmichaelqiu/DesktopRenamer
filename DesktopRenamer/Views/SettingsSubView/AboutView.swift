@@ -72,6 +72,7 @@ struct AboutView: View {
                         )
                     }
                     .padding(.horizontal)
+                    .padding(.bottom, 10) // Extra padding for shadow/glow space
                 }
 
                 Divider()
@@ -101,10 +102,12 @@ struct OtherAppCard: View {
     let description: String
     let url: String
     
+    @State private var isHovering = false
+    
     var body: some View {
         Link(destination: URL(string: url)!) {
             VStack(spacing: 10) {
-                // Try to load image from bundle resources, fallback to generic icon
+                // Icon
                 if let nsImage = NSImage(named: imageName) {
                     Image(nsImage: nsImage)
                         .resizable()
@@ -119,6 +122,7 @@ struct OtherAppCard: View {
                         .foregroundColor(.secondary)
                 }
                 
+                // Text Content
                 VStack(spacing: 4) {
                     Text(appName)
                         .font(.headline)
@@ -135,14 +139,28 @@ struct OtherAppCard: View {
             .padding(12)
             .frame(width: 160)
             .background(
-                RoundedRectangle(cornerRadius: 12)
-                    .fill(Color(NSColor.controlBackgroundColor))
-                    .shadow(color: .black.opacity(0.1), radius: 2, x: 0, y: 1)
+                ZStack {
+                    // Base Card Background
+                    RoundedRectangle(cornerRadius: 12)
+                        .fill(Color(NSColor.controlBackgroundColor))
+                    
+                    // Glow / Selection Ring
+                    RoundedRectangle(cornerRadius: 12)
+                        .stroke(Color.accentColor.opacity(isHovering ? 0.5 : 0.0), lineWidth: 1)
+                }
+                // Shadow Logic:
+                // 1. Base shadow (always present)
+                .shadow(color: .black.opacity(0.1), radius: 2, x: 0, y: 1)
+                // 2. Glow shadow (fades in on hover)
+                .shadow(color: .accentColor.opacity(isHovering ? 0.4 : 0.0), radius: isHovering ? 8 : 0, x: 0, y: 0)
             )
+            .scaleEffect(isHovering ? 1.03 : 1.0) // Slight "Lift" effect
+            .animation(.spring(response: 0.3, dampingFraction: 0.7), value: isHovering)
         }
         .buttonStyle(.plain)
-        .onHover { isHovering in
-            if isHovering {
+        .onHover { hovering in
+            isHovering = hovering
+            if hovering {
                 NSCursor.pointingHand.push()
             } else {
                 NSCursor.pop()
