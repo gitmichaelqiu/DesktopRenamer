@@ -260,79 +260,90 @@ class StatusBarController: NSObject {
         
         self.showLabelsMenuItem.state = labelManager.isEnabled ? .on : .off
     }
-    
-    @objc private func troubleshootSpaceDetection() {
-            openSettingsWindow()
         
-            var alertTitle = ""
-            var alertMessage = ""
-            
-            if SpaceManager.isManualSpacesEnabled {
-                if spaceManager.currentSpaceUUID == "FULLSCREEN" {
-                    alertTitle = NSLocalizedString("Not a fullscreen?", comment: "")
-                    alertMessage = NSLocalizedString("Add it as a space in\nSettings → General → Manually add spaces", comment: "")
-                } else {
-                    alertTitle = NSLocalizedString("Not a space?", comment: "")
-                    alertMessage = NSLocalizedString("Remove it in\nSettings → Spaces\n(Switch to other space first)", comment: "")
-                }
+    @objc private func troubleshootSpaceDetection() {
+        openSettingsWindow()
+    
+        var alertTitle = ""
+        var alertMessage = ""
+        
+        switch spaceManager.detectionMethod {
+        case .automatic:
+            if spaceManager.currentSpaceUUID == "FULLSCREEN" {
+                 alertTitle = NSLocalizedString("Not a fullscreen?", comment: "")
+                 alertMessage = NSLocalizedString("There are no parameters to adjust for Automatic detection.\nIf the issue still happens, switch to other methods.", comment: "")
             } else {
-                if spaceManager.currentSpaceUUID == "FULLSCREEN" {
-                    alertTitle = NSLocalizedString("Not a fullscreen?", comment: "")
-                    alertMessage = NSLocalizedString("Fix this issue in\nSettings → General → Fix automatic space detection", comment: "")
-                } else {
-                    alertTitle = NSLocalizedString("Not a space?", comment: "")
-                    alertMessage = NSLocalizedString("Fix this issue in\nSettings → General → Fix automatic space detection", comment: "")
-                }
+                 alertTitle = NSLocalizedString("Not a space?", comment: "")
+                 alertMessage = NSLocalizedString("There are no parameters to adjust for Automatic detection.\nIf the issue still happens, switch to other methods.", comment: "")
             }
             
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
-                guard let window = self.settingsWindowController?.window else { return }
-                
-                let alert = NSAlert()
-                alert.messageText = alertTitle
-                alert.informativeText = alertMessage
-                alert.alertStyle = .informational
-                alert.addButton(withTitle: "OK")
-                
-                alert.beginSheetModal(for: window, completionHandler: nil)
+        case .metric:
+            if spaceManager.currentSpaceUUID == "FULLSCREEN" {
+                alertTitle = NSLocalizedString("Not a fullscreen?", comment: "")
+                alertMessage = NSLocalizedString("Fix this issue in\nSettings → General → Fix automatic space detection", comment: "")
+            } else {
+                alertTitle = NSLocalizedString("Not a space?", comment: "")
+                alertMessage = NSLocalizedString("Fix this issue in\nSettings → General → Fix automatic space detection", comment: "")
+            }
+            
+        case .manual:
+            if spaceManager.currentSpaceUUID == "FULLSCREEN" {
+                alertTitle = NSLocalizedString("Not a fullscreen?", comment: "")
+                alertMessage = NSLocalizedString("Add it as a space in\nSettings → General → Add spaces", comment: "")
+            } else {
+                alertTitle = NSLocalizedString("Not a space?", comment: "")
+                alertMessage = NSLocalizedString("Remove it in\nSettings → Spaces\n(Switch to other space first)", comment: "")
             }
         }
-    
+        
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+            guard let window = self.settingsWindowController?.window else { return }
+            
+            let alert = NSAlert()
+            alert.messageText = alertTitle
+            alert.informativeText = alertMessage
+            alert.alertStyle = .informational
+            alert.addButton(withTitle: "OK")
+            
+            alert.beginSheetModal(for: window, completionHandler: nil)
+        }
+    }
+
     @objc func openSettingsWindow() {
-        // Show dock icon when opening settings
         NSApp.setActivationPolicy(.regular)
         
         if let windowController = settingsWindowController {
             windowController.showWindow(nil)
             NSApp.activate(ignoringOtherApps: true)
-            
-            if let hostingController = windowController.window?.contentViewController as? SettingsHostingController {
-                hostingController.rootView = SettingsView(spaceManager: spaceManager, labelManager: labelManager)
-            }
             return
         }
         
-        // Create settings window with proper style mask
+        // 1. STYLE: .fullSizeContentView is critical for "Ice" style
         let window = NSWindow(
             contentRect: NSRect(x: 0, y: 0, width: defaultSettingsWindowWidth, height: defaultSettingsWindowHeight),
-            styleMask: [.titled, .closable, .miniaturizable],
+            styleMask: [.titled, .closable, .miniaturizable, .fullSizeContentView],
             backing: .buffered,
             defer: false
         )
-        window.title = NSLocalizedString("Window.Settings.Title", comment: "")
+        
+        window.identifier = NSUserInterfaceItemIdentifier("SettingsWindow")
+        
+        // 2. CONFIG: Hide the native title bar elements
+        window.titleVisibility = .hidden
+        window.titlebarAppearsTransparent = true
+        window.titlebarSeparatorStyle = .none
+        
+        // 3. REMOVE TOOLBAR: Ensures no extra space is reserved at the top
+        window.toolbar = nil
+        
         window.center()
-        
         window.minSize = NSSize(width: defaultSettingsWindowWidth, height: defaultSettingsWindowHeight)
-        window.maxSize = NSSize(width: defaultSettingsWindowWidth, height: defaultSettingsWindowHeight)
-        
         window.collectionBehavior = [.participatesInCycle]
         window.level = .normal
         
-        // Create and set the settings view controller
         let settingsVC = SettingsHostingController(spaceManager: spaceManager, labelManager: labelManager)
         window.contentViewController = settingsVC
         
-        // Create window controller
         let windowController = NSWindowController(window: window)
         windowController.window?.delegate = self
         settingsWindowController = windowController
@@ -344,7 +355,6 @@ class StatusBarController: NSObject {
             object: window
         )
         
-        // Show the window
         windowController.showWindow(nil)
         NSApp.activate(ignoringOtherApps: true)
     }

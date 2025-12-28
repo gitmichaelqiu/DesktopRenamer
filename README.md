@@ -9,18 +9,18 @@
 <table align="center" border="0" cellpadding="0" cellspacing="0">
   <tr>
     <td align="center">
-      <img src="./DesktopRenamer/Resources/Demo/DesktopRenamer_v1-4-0_Rename.png" width="300"/><br>
+      <img src="./DesktopRenamer/Resources/Demo/DesktopRenamer_v1-6-0_Rename.png" width="300"/><br>
       <i>Rename desktop label in menubar</i>
     </td>
     <td align="center">
-      <img src="./DesktopRenamer/Resources/Demo/DesktopRenamer_v1-4-0_SLW.png" width="300"/><br>
-      <i><b>SpaceLabelWindow</b> will be shown when entering Mission Control</i>
+      <img src="./DesktopRenamer/Resources/Demo/DesktopRenamer_v1-6-0_MCPreview.png" width="300"/><br>
+      <i>Check the names in Mission Control</i>
     </td>
   </tr>
   <tr>
     <td align="center">
-      <img src="./DesktopRenamer/Resources/Demo/DesktopRenamer_v1-4-0_SpaceEdit.png" width="300"/><br>
-      <i>Edit spaces in settings</i>
+      <img src="./DesktopRenamer/Resources/Demo/DesktopRenamer_v1-6-0_SLW.png" width="300"/><br>
+      <i>Liquid Glass design</i>
     </td>
     <td align="center">
       <img src="./DesktopRenamer/Resources/Demo/DesktopRenamer_v1-5-0_API.png" width="500"/><br>
@@ -45,7 +45,7 @@ You do **NOT** have to disable *SIP* or things like that. Your macOS must be at 
 2. Drag the app to the *Applications* folder
 3. All set!
 
-Because I do **NOT** have an Apple developer account for the app releases ~~(Apple charges an annual fee for this)~~, you may receive alerts such as "App is broken".
+Because I do **NOT** have an Apple developer account for the app releases, you may receive alerts such as "Developer is not verified".
 
 To resolve this, go to System Settings → the bottom of Privacy & Security → Open DesktopRenamer.
 
@@ -57,13 +57,17 @@ Check [Developer API Guide](https://github.com/gitmichaelqiu/DesktopRenamer/wiki
 
 You can switch on/off the API in Settings → Advanced.
 
+## 🤝 Companion Apps
+
+<img src="./DesktopRenamer/Resources/SpaceSwitcherIcon_Default.png" width="120"/>
+
+[SpaceSwitcher](https://github.com/gitmichaelqiu/SpaceSwitcher) allows you to control which app and set of dock to display in each space.
+
 ## ⚠️ Issues
 
 You are welcome to create issues/suggestions in [GitHub Issues](https://github.com/gitmichaelqiu/DesktopRenamer/issues).
 
 For the issue that all of the spaces are marked as "Fullscreen", please check the [Troubleshoot](./Troubleshoot.md).
-
-The app will only work in the main display if you connect to **multiple** displays. I am currently working on solving this. If you have any ideas, welcome to post them in [GitHub Issues](https://github.com/gitmichaelqiu/DesktopRenamer/issues).
 
 If you have encountered any other bugs, please generate a bug report in DesktopRenamer Settings → General. This will help a lot for analyzing the bugs!
 

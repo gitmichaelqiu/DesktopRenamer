@@ -21,6 +21,9 @@
         }
       }
     },
+    "%.2fx" : {
+
+    },
     "%@" : {
       "localizations" : {
         "zh-Hans" : {
@@ -61,6 +64,19 @@
         }
       }
     },
+    "Actions" : {
+
+    },
+    "Active Space Labels" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "当前桌面标签"
+          }
+        }
+      }
+    },
     "Add" : {
       "localizations" : {
         "zh-Hans" : {
@@ -71,12 +87,12 @@
         }
       }
     },
-    "Add it as a space in\nSettings → General → Manually add spaces" : {
+    "Add it as a space in\nSettings → General → Add spaces" : {
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "在设置 → 通用 → 手动添加桌面中添加"
+            "value" : "在设置 → 通用 → 添加桌面中添加"
           }
         }
       }
@@ -111,12 +127,42 @@
         }
       }
     },
+    "Adjust the threshold for metric-based detection." : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "调整桌面/全屏检测参数"
+          }
+        }
+      }
+    },
     "Allow other apps to get space names." : {
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "允许其他应用访问桌面名称。"
+          }
+        }
+      }
+    },
+    "Are you sure? This will delete all your space names and settings. The app will quit immediately." : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "清空所有的桌面和设置。App会立即退出。"
+          }
+        }
+      }
+    },
+    "Automatic" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "自动"
           }
         }
       }
@@ -191,12 +237,28 @@
         }
       }
     },
-    "Create windows that only appear in Mission Control to display space names.\n\nMay not work when multiple displays are connected." : {
+    "Choose how the app determines if a space is a Desktop or a Fullscreen App.\n\nAutomatic: No extra actions required.\n\nMetric-based: Based on the thresold of a metric. May not work for multiple displays.\n\nManual: All spaces that are not added will be treated as fullscreen." : {
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "创建只在调度中心中显示的窗口以显示桌面名称。\n\n在连接到多个显示器时可能不可用。"
+            "value" : "选择桌面/全屏检测方式。\n\n自动：无需额外操作。\n\n参数：通过桌面/全屏参数检测。当多个显示器连接时，可能无法工作。\n\n手动：所有未添加桌面都会作为全屏处理。"
+          }
+        }
+      }
+    },
+    "Create windows that only appear in Mission Control to display space names.\n\nMay not work when multiple displays are connected." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Show space names in Mission Control.\n\nThey will not be created before you access the spaces."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "在调度中心显示桌面名称。\n\n只有在访问至少一次对应桌面时才会显示。"
           }
         }
       }
@@ -207,6 +269,26 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "当前指标：%lld"
+          }
+        }
+      }
+    },
+    "Desktop" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "桌面"
+          }
+        }
+      }
+    },
+    "Factory Reset" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "出厂设置"
           }
         }
       }
@@ -241,6 +323,26 @@
         }
       }
     },
+    "Font Size" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "字体大小"
+          }
+        }
+      }
+    },
+    "Fullscreen detection method" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "全屏检测方式"
+          }
+        }
+      }
+    },
     "Generate bug report" : {
       "localizations" : {
         "zh-Hans" : {
@@ -261,28 +363,28 @@
         }
       }
     },
-    "If enabled, new spaces won't be added automatically. You must add them in the Spaces tab." : {
+    "If enabled, the label stays on the desktop instead of hiding.\n\nTip: You can drag the window to the screen edge to shrink it into a 'Picture-in-Picture' mode." : {
+
+    },
+    "Keep Visible on Desktop" : {
+
+    },
+    "Manual" : {
       "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "If enabled, new spaces won't be added automatically. You must add them in the Settings → Spaces tab."
-          }
-        },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "如果启用，新检测桌面不会自动被添加。你必须手动在设置 → 桌面中添加。"
+            "value" : "手动"
           }
         }
       }
     },
-    "Manually add spaces" : {
+    "Manually register new desktop spaces." : {
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "手动添加桌面"
+            "value" : "手动添加新桌面。"
           }
         }
       }
@@ -371,13 +473,23 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Show Desktop Label Windows"
+            "value" : "Show Space Label Windows"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "显示桌面标签窗口"
+          }
+        }
+      }
+    },
+    "Metric-based" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "参数"
           }
         }
       }
@@ -401,6 +513,9 @@
           }
         }
       }
+    },
+    "More Apps" : {
+
     },
     "No new spaces detected yet..." : {
       "localizations" : {
@@ -448,6 +563,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "请遍历所有可能对分析 Bug 有用的桌面。以下报告实时更新。"
+          }
+        }
+      }
+    },
+    "Preview Labels" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "预览标签"
           }
         }
       }
@@ -506,6 +631,44 @@
         }
       }
     },
+    "Renamer" : {
+      "shouldTranslate" : false
+    },
+    "Reset" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "重置"
+          }
+        }
+      }
+    },
+    "Reset & Quit" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "重置并退出"
+          }
+        }
+      }
+    },
+    "Reset Defaults" : {
+      "comment" : "Reset Defaults",
+      "extractionState" : "stale",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "重置"
+          }
+        }
+      }
+    },
+    "Restore Defaults" : {
+
+    },
     "Save" : {
       "localizations" : {
         "zh-Hans" : {
@@ -522,6 +685,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "保存报告"
+          }
+        }
+      }
+    },
+    "Select a category" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "选择一个类别"
           }
         }
       }
@@ -753,7 +926,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Show desktop label window"
+            "value" : "Show space label windows"
           }
         },
         "zh-Hans" : {
@@ -777,6 +950,36 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "无法更新启动项"
+          }
+        }
+      }
+    },
+    "Settings.General.Method.Auto" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "自动"
+          }
+        }
+      }
+    },
+    "Settings.General.Method.Manual" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "手动"
+          }
+        }
+      }
+    },
+    "Settings.General.Method.Metric" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "参数"
           }
         }
       }
@@ -1240,6 +1443,22 @@
         }
       }
     },
+    "Settings.Labels" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Labels"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "标签"
+          }
+        }
+      }
+    },
     "Settings.Spaces" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -1461,6 +1680,12 @@
         }
       }
     },
+    "Show Active Space Labels" : {
+
+    },
+    "Show Preview Labels" : {
+
+    },
     "Space %lld" : {
       "localizations" : {
         "zh-Hans" : {
@@ -1558,6 +1783,42 @@
         }
       }
     },
+    "The hidden label that slides into the corner of the active desktop." : {
+
+    },
+    "The hidden label that slides into the corner." : {
+      "comment" : "The hidden label that slides into the corner.",
+      "extractionState" : "stale",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "桌面隐藏角的标签。"
+          }
+        }
+      }
+    },
+    "The large label visible in Mission Control." : {
+      "comment" : "The large label visible in Mission Control.",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "调度中心预览的大标签。"
+          }
+        }
+      }
+    },
+    "There are no parameters to adjust for Automatic detection.\nIf the issue still happens, switch to other methods." : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "自动检测无参数可调整。\n如果仍然无法正常操作，切换成其他方式。"
+          }
+        }
+      }
+    },
     "This generates a log that is helpful for the developers to debug." : {
       "localizations" : {
         "zh-Hans" : {
@@ -1588,8 +1849,7 @@
         }
       }
     },
-    "Troubleshoot space detection" : {
-      "extractionState" : "stale",
+    "Troubleshoot Space Detection" : {
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
@@ -1598,9 +1858,6 @@
           }
         }
       }
-    },
-    "Troubleshoot Space Detection" : {
-
     },
     "v%@" : {
       "localizations" : {
@@ -1618,6 +1875,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "值"
+          }
+        }
+      }
+    },
+    "Window Size" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "窗口大小"
           }
         }
       }
