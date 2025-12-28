@@ -22,14 +22,14 @@ struct LabelSettingsView: View {
                     if labelManager.showPreviewLabels {
                         Divider()
                         
-                        // Font Scale (Full Row)
                         SliderSectionRow(
                             title: "Font Size",
                             value: $labelManager.previewFontScale,
                             range: 0.5...2.0
                         )
                         
-                        // Window Size (Full Row)
+                        Divider()
+                        
                         SliderSectionRow(
                             title: "Window Size",
                             value: $labelManager.previewPaddingScale,
@@ -65,14 +65,14 @@ struct LabelSettingsView: View {
                         
                         Divider()
                         
-                        // Font Scale (Full Row)
                         SliderSectionRow(
                             title: "Font Size",
                             value: $labelManager.activeFontScale,
                             range: 0.5...2.0
                         )
                         
-                        // Window Size (Full Row)
+                        Divider()
+                        
                         SliderSectionRow(
                             title: "Window Size",
                             value: $labelManager.activePaddingScale,
@@ -102,7 +102,6 @@ struct LabelSettingsView: View {
     }
     
     // MARK: - Custom Helper for Full-Width Sliders
-    // This mimics the padding of SettingsRow but allows the slider to take the full width below the label.
     struct SliderSectionRow: View {
         let title: LocalizedStringKey
         @Binding var value: Double
@@ -122,8 +121,8 @@ struct LabelSettingsView: View {
                 // Bottom Row: Full Width Slider
                 Slider(value: $value, in: range, step: 0.10)
             }
-            .padding(.vertical, 8)      // Slightly taller to accommodate two lines
-            .padding(.horizontal, 10)   // Matches SettingsRow horizontal padding
+            .padding(.vertical, 8)
+            .padding(.horizontal, 10)
         }
     }
 }
