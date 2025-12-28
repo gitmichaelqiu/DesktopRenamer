@@ -20,8 +20,7 @@ class CollapsibleHandleView: NSView {
         imageView.translatesAutoresizingMaskIntoConstraints = false
         imageView.symbolConfiguration = .init(pointSize: 15, weight: .bold)
         
-        // [FIX] Ensure the chevron adapts to the background (Light/Dark)
-        // This makes it visible on the dark HUD and the adaptive Glass.
+        // [FIX] Ensure tint is set to .labelColor so it adapts to Light/Dark mode correctly
         imageView.contentTintColor = .labelColor
         
         addSubview(imageView)
@@ -85,7 +84,11 @@ class SpaceLabelWindow: NSWindow {
         // 1. Text Label
         self.label = NSTextField(labelWithString: name)
         self.label.alignment = .center
-        // [FIX] Removed explicit textColor to allow vibrancy adaptation
+        
+        // [FIX] Restore this line.
+        // .labelColor is a semantic color that automatically updates when the system appearance changes.
+        // Removing it caused the label to stop responding to live theme updates.
+        self.label.textColor = .labelColor
         
         // 2. Handle View
         self.handleView = CollapsibleHandleView()
@@ -100,9 +103,7 @@ class SpaceLabelWindow: NSWindow {
         self.contentContainer.addSubview(self.label)
         self.contentContainer.addSubview(self.handleView)
         
-        // [FIX] Pin HandleView to container edges using Constraints.
-        // This ensures the pill always fills the window without fighting the window's manual frame logic.
-        // We do NOT constrain the label, preserving the manual layout logic for text.
+        // [FIX] Pin HandleView to container edges.
         NSLayoutConstraint.activate([
             self.handleView.leadingAnchor.constraint(equalTo: self.contentContainer.leadingAnchor),
             self.handleView.trailingAnchor.constraint(equalTo: self.contentContainer.trailingAnchor),
@@ -131,8 +132,6 @@ class SpaceLabelWindow: NSWindow {
             // NEW DESIGN: NSGlassEffectView
             let glassView = NSGlassEffectView(frame: .zero)
             
-            // [FIX] Set contentView to enable legibility features
-            // The Glass View will automatically constrain this container to fill itself.
             glassView.contentView = self.contentContainer
             
             rootContentView = glassView
@@ -473,9 +472,7 @@ class SpaceLabelWindow: NSWindow {
             self.handleView.isHidden = false
             self.handleView.edge = self.dockEdge
             
-            // [FIX] REMOVED manual frame setting of handleView.
-            // The constraints set in init() now handle the sizing of handleView
-            // relative to the container/window, preventing conflicts.
+            // [FIX] Removed manual frame setting for handleView to rely on constraints
             
             self.contentView?.layer?.cornerRadius = 12
             
@@ -526,9 +523,7 @@ class SpaceLabelWindow: NSWindow {
             newOrigin = NSPoint(x: targetCenter.x - newSize.width/2, y: targetCenter.y - newSize.height/2)
         }
         
-        // [FIX] REMOVED manual setting of contentContainer.frame.
-        // We now rely on the Glass/Effect View's layout engine to resize the container
-        // when we set the Window frame below.
+        // [FIX] REMOVED manual setting of contentContainer.frame to allow glass view layout engine to work.
         
         self.contentView?.needsDisplay = true
         self.invalidateShadow()
