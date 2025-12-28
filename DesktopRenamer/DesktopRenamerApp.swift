@@ -44,11 +44,12 @@ extension View {
 
 
 class AppDelegate: NSObject, NSApplicationDelegate {
+    static var shared: AppDelegate!
     var spaceManager: SpaceManager!
     var statusBarController: StatusBarController?
     
     func applicationDidFinishLaunching(_ notification: Notification) {
-        NSApp.setActivationPolicy(.accessory)
+        AppDelegate.shared = self
         
         NSApp.setActivationPolicy(.accessory)
         
