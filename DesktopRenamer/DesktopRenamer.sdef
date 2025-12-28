@@ -23,8 +23,9 @@
             <cocoa class="DesktopRenamer.ToggleDesktopVisibilityCommand"/>
         </command>
 
-        <command name="rename current space" code="DskRRCur" description="Trigger the Rename UI for the current space">
+        <command name="rename current space" code="DskRRCur" description="Rename the current space to the given string">
             <cocoa class="DesktopRenamer.RenameCurrentSpaceCommand"/>
+            <direct-parameter description="The new name" type="text"/>
         </command>
         
     </suite>
