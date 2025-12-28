@@ -140,21 +140,25 @@ struct OtherAppCard: View {
             .frame(width: 160)
             .background(
                 ZStack {
-                    // Base Card Background
+                    // 1. Base Card Background
                     RoundedRectangle(cornerRadius: 12)
                         .fill(Color(NSColor.controlBackgroundColor))
                     
-                    // Glow / Selection Ring
+                    // 2. Idle Border: Subtle gray stroke to define shape when not hovering
                     RoundedRectangle(cornerRadius: 12)
-                        .stroke(Color.accentColor.opacity(isHovering ? 0.5 : 0.0), lineWidth: 1)
+                        .stroke(Color.primary.opacity(0.1), lineWidth: 1)
+                    
+                    // 3. Hover Ring: Accent color overlay that fades in
+                    RoundedRectangle(cornerRadius: 12)
+                        .stroke(Color.accentColor.opacity(isHovering ? 1.0 : 0.0), lineWidth: 2)
                 }
                 // Shadow Logic:
-                // 1. Base shadow (always present)
-                .shadow(color: .black.opacity(0.1), radius: 2, x: 0, y: 1)
-                // 2. Glow shadow (fades in on hover)
-                .shadow(color: .accentColor.opacity(isHovering ? 0.4 : 0.0), radius: isHovering ? 8 : 0, x: 0, y: 0)
+                // 1. Base shadow (Slightly stronger now for better separation)
+                .shadow(color: .black.opacity(0.15), radius: 4, x: 0, y: 2)
+                // 2. Glow shadow (Fades in on hover)
+                .shadow(color: .accentColor.opacity(isHovering ? 0.5 : 0.0), radius: 10, x: 0, y: 0)
             )
-            .scaleEffect(isHovering ? 1.03 : 1.0) // Slight "Lift" effect
+            .scaleEffect(isHovering ? 1.03 : 1.0)
             .animation(.spring(response: 0.3, dampingFraction: 0.7), value: isHovering)
         }
         .buttonStyle(.plain)
