@@ -9,7 +9,7 @@ struct LabelSettingsView: View {
                 
                 // MARK: - SECTION 1: PREVIEW LABEL
                 SettingsSection("Preview Labels") {
-                    // Toggle
+                    // Main Toggle
                     SettingsRow(
                         "Show Preview Labels",
                         helperText: "The large label visible in Mission Control."
@@ -22,21 +22,25 @@ struct LabelSettingsView: View {
                     if labelManager.showPreviewLabels {
                         Divider()
                         
-                        // Font Scale
-                        SettingsRow("Font Size") {
-                            sliderControl(value: $labelManager.previewFontScale, range: 0.5...2.0)
-                        }
+                        // Font Scale (Full Row)
+                        SliderSectionRow(
+                            title: "Font Size",
+                            value: $labelManager.previewFontScale,
+                            range: 0.5...2.0
+                        )
                         
-                        // Padding Scale
-                        SettingsRow("Window Size") {
-                            sliderControl(value: $labelManager.previewPaddingScale, range: 0.5...3.0)
-                        }
+                        // Window Size (Full Row)
+                        SliderSectionRow(
+                            title: "Window Size",
+                            value: $labelManager.previewPaddingScale,
+                            range: 0.5...3.0
+                        )
                     }
                 }
                 
                 // MARK: - SECTION 2: ACTIVE LABEL
                 SettingsSection("Active Space Labels") {
-                    // Toggle
+                    // Main Toggle
                     SettingsRow(
                         "Show Active Space Labels",
                         helperText: "The hidden label that slides into the corner of the active desktop."
@@ -61,15 +65,19 @@ struct LabelSettingsView: View {
                         
                         Divider()
                         
-                        // Font Scale
-                        SettingsRow("Font Size") {
-                            sliderControl(value: $labelManager.activeFontScale, range: 0.5...2.0)
-                        }
+                        // Font Scale (Full Row)
+                        SliderSectionRow(
+                            title: "Font Size",
+                            value: $labelManager.activeFontScale,
+                            range: 0.5...2.0
+                        )
                         
-                        // Padding Scale
-                        SettingsRow("Window Size") {
-                            sliderControl(value: $labelManager.activePaddingScale, range: 0.5...3.0)
-                        }
+                        // Window Size (Full Row)
+                        SliderSectionRow(
+                            title: "Window Size",
+                            value: $labelManager.activePaddingScale,
+                            range: 0.5...3.0
+                        )
                     }
                 }
                 
@@ -93,17 +101,29 @@ struct LabelSettingsView: View {
         }
     }
     
-    // Helper to keep slider styling consistent across rows
-    @ViewBuilder
-    private func sliderControl(value: Binding<Double>, range: ClosedRange<Double>) -> some View {
-        HStack(spacing: 12) {
-            Slider(value: value, in: range, step: 0.10)
-                .frame(width: 120) // Fixed width for alignment
-            
-            Text("\(value.wrappedValue, specifier: "%.2f")x")
-                .monospacedDigit()
-                .foregroundColor(.secondary)
-                .frame(width: 45, alignment: .trailing)
+    // MARK: - Custom Helper for Full-Width Sliders
+    // This mimics the padding of SettingsRow but allows the slider to take the full width below the label.
+    struct SliderSectionRow: View {
+        let title: LocalizedStringKey
+        @Binding var value: Double
+        let range: ClosedRange<Double>
+        
+        var body: some View {
+            VStack(spacing: 6) {
+                // Top Row: Title and Value
+                HStack {
+                    Text(title)
+                    Spacer()
+                    Text("\(value, specifier: "%.2f")x")
+                        .monospacedDigit()
+                        .foregroundColor(.secondary)
+                }
+                
+                // Bottom Row: Full Width Slider
+                Slider(value: $value, in: range, step: 0.10)
+            }
+            .padding(.vertical, 8)      // Slightly taller to accommodate two lines
+            .padding(.horizontal, 10)   // Matches SettingsRow horizontal padding
         }
     }
 }
