@@ -10,9 +10,22 @@
 		466CC6422E2C883C002F4BB2 /* DesktopRenamer.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = DesktopRenamer.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		467183122F012E9D00E7CD5D /* Exceptions for "DesktopRenamer" folder in "DesktopRenamer" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = 466CC6412E2C883B002F4BB2 /* DesktopRenamer */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
+
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		466CC6442E2C883C002F4BB2 /* DesktopRenamer */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				467183122F012E9D00E7CD5D /* Exceptions for "DesktopRenamer" folder in "DesktopRenamer" target */,
+			);
 			path = DesktopRenamer;
 			sourceTree = "<group>";
 		};
@@ -273,6 +286,7 @@
 				ENABLE_RESOURCE_ACCESS_LOCATION = NO;
 				ENABLE_RESOURCE_ACCESS_PHOTO_LIBRARY = NO;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = DesktopRenamer/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = DesktopRenamer;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.utilities";
 				INFOPLIST_KEY_LSUIElement = NO;
@@ -320,6 +334,7 @@
 				ENABLE_RESOURCE_ACCESS_LOCATION = NO;
 				ENABLE_RESOURCE_ACCESS_PHOTO_LIBRARY = NO;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = DesktopRenamer/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = DesktopRenamer;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.utilities";
 				INFOPLIST_KEY_LSUIElement = NO;
