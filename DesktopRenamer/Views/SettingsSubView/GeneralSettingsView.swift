@@ -372,7 +372,7 @@ struct AddSpacesView: View {
             let newCandidate = SpaceCandidate(spaceUUID: uuid, ncCnt: ncCnt)
             
             // Explicit animation block
-            withAnimation(.easeInOut(duration: 0.2)) {
+            withAnimation(.spring(response: 0.4, dampingFraction: 0.7)) {
                 candidates.append(newCandidate)
             }
         }
@@ -405,6 +405,7 @@ struct GeneralSettingsView: View {
     @State private var autoCheckUpdate: Bool = UpdateManager.isAutoCheckEnabled
     @State private var isResetting: Bool = false
     @State private var isAPIEnabled: Bool = SpaceManager.isAPIEnabled
+    @State private var isManualSpacesEnabled: Bool = SpaceManager.isManualSpacesEnabled
     @State private var isStatusBarHidden: Bool = StatusBarController.isStatusBarHidden
     
     @State private var showLogSheet: Bool = false
@@ -449,31 +450,29 @@ struct GeneralSettingsView: View {
                 }
                 
                 SettingsSection("Settings.General.Advanced") {
-                    SettingsRow("Fullscreen detection method", helperText: "Choose how the app determines if a space is a Desktop or a Fullscreen App.\n\nAutomatic: No extra actions required.\n\nMetric-based: Based on the thresold of a metric. May not work for multiple displays.\n\nManual: All spaces that are not added will be treated as fullscreen.") {
-                        Picker("", selection: $spaceManager.detectionMethod) {
-                            Text("Automatic").tag(DetectionMethod.automatic)
-                            Text("Metric-based").tag(DetectionMethod.metric)
-                            Text("Manual").tag(DetectionMethod.manual)
-                        }
-                        .labelsHidden()
+                    SettingsRow("Manually add spaces", helperText: "If enabled, new spaces won't be added automatically. You must add them in the Spaces tab.") {
+                        Toggle("", isOn: $isManualSpacesEnabled).labelsHidden().toggleStyle(.switch)
+                            .onChange(of: isManualSpacesEnabled) { newValue in
+                                SpaceManager.isManualSpacesEnabled = newValue
+                                // REFRESH: Re-evaluate current space when mode changes
+                                spaceManager.refreshSpaceState()
+                            }
                     }
                     
-                    if spaceManager.detectionMethod == .metric {
+                    if isManualSpacesEnabled {
                         Divider()
-                        SettingsRow("Fix automatic detection", helperText: "Adjust the threshold for metric-based detection.") {
-                            Button("Fix") {
-                                showThresholdSheet = true
-                            }
-                        }
-                    } else if spaceManager.detectionMethod == .manual {
-                        Divider()
-                        SettingsRow("Add spaces", helperText: "Manually register new desktop spaces.") {
+                        SettingsRow("Add spaces") {
                             Button("Add") {
                                 showAddSpacesSheet = true
                             }
                         }
                     } else {
-                        // Automatic mode doesn't need extra buttons
+                        Divider()
+                        SettingsRow("Fix automatic detection") {
+                            Button("Fix") {
+                                showThresholdSheet = true
+                            }
+                        }
                     }
                     
                     Divider()
@@ -494,15 +493,6 @@ struct GeneralSettingsView: View {
                         }
                         .keyboardShortcut("b")
                     }
-                    
-                    Divider()
-
-                    SettingsRow("Factory Reset") {
-                        Button("Reset") {
-                            performFactoryReset()
-                        }
-                        .foregroundStyle(.red)
-                    }
                 }
                 Spacer()
             }
@@ -513,7 +503,7 @@ struct GeneralSettingsView: View {
         .sheet(isPresented: $showLogSheet, onDismiss: { if spaceManager.isBugReportActive { spaceManager.stopBugReportLogging() } }) { bugReportSheet }
         .sheet(isPresented: $showThresholdSheet) { ThresholdAdjustmentView(spaceManager: spaceManager) }
         .sheet(isPresented: $showAddSpacesSheet) { AddSpacesView(spaceManager: spaceManager) }
-        .animation(.easeInOut(duration: 0.16), value: spaceManager.detectionMethod)
+        .animation(.easeInOut(duration: 0.16), value: isManualSpacesEnabled)
     }
     
     private var bugReportSheet: some View {
@@ -556,10 +546,7 @@ struct GeneralSettingsView: View {
             .frame(height: 250)
             .background(Color(NSColor.textBackgroundColor))
             .cornerRadius(8)
-            .overlay(
-                RoundedRectangle(cornerRadius: 6)
-                    .stroke(Color.gray.opacity(0.2), lineWidth: 1)
-            )
+            .border(Color.secondary.opacity(0.3), width: 1)
             
             HStack {
                 Button("Cancel") {
@@ -679,27 +666,6 @@ struct GeneralSettingsView: View {
                     successAlert.addButton(withTitle: NSLocalizedString("Button.OK", comment: ""))
                     successAlert.beginSheetModal(for: window) { _ in }
                 }
-            }
-        }
-    }
-    
-    private func performFactoryReset() {
-        let alert = NSAlert()
-        alert.messageText = NSLocalizedString("Factory Reset", comment: "")
-        alert.informativeText = NSLocalizedString("Are you sure? This will delete all your space names and settings. The app will quit immediately.", comment: "")
-        alert.alertStyle = .critical
-        alert.addButton(withTitle: NSLocalizedString("Reset & Quit", comment: ""))
-        alert.addButton(withTitle: NSLocalizedString("Cancel", comment: ""))
-        
-        guard let window = NSApp.suitableSheetWindow else { return }
-        alert.beginSheetModal(for: window) { result in
-            if result == .alertFirstButtonReturn {
-                if let bundleID = Bundle.main.bundleIdentifier {
-                    UserDefaults.standard.removePersistentDomain(forName: bundleID)
-                    UserDefaults.standard.synchronize()
-                }
-                
-                NSApp.terminate(nil)
             }
         }
     }
