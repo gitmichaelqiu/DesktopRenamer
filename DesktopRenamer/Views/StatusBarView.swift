@@ -69,10 +69,9 @@ extension RenameViewController: NSTextFieldDelegate {
 }
 
 class StatusBarController: NSObject {
+    @ObservedObject private var spaceManager: SpaceManager
     static private var statusItem: NSStatusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
     private var popover: NSPopover
-    @ObservedObject private var spaceManager: SpaceManager
-    private let labelManager: SpaceLabelManager
     private var cancellables = Set<AnyCancellable>()
     private var settingsWindowController: NSWindowController?
     private var renameItem: NSMenuItem!
@@ -83,6 +82,8 @@ class StatusBarController: NSObject {
         get { UserDefaults.standard.bool(forKey: isStatusBarHiddenKey) }
         set { UserDefaults.standard.set(newValue, forKey: isStatusBarHiddenKey) }
     }
+    
+    let labelManager: SpaceLabelManager
     
     init(spaceManager: SpaceManager) {
         self.spaceManager = spaceManager
@@ -234,7 +235,7 @@ class StatusBarController: NSObject {
         }
     }
     
-    @objc private func renameCurrentSpace() {
+    @objc func renameCurrentSpace() {
         if spaceManager.getSpaceNum(spaceManager.currentSpaceUUID) == 0 {
             return // Fullscreen
         }
