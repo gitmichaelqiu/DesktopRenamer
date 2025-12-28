@@ -9,7 +9,8 @@
             "value" : ""
           }
         }
-      }
+      },
+      "shouldTranslate" : false
     },
     "#" : {
       "localizations" : {
@@ -19,10 +20,11 @@
             "value" : "#"
           }
         }
-      }
+      },
+      "shouldTranslate" : false
     },
     "%.2fx" : {
-
+      "shouldTranslate" : false
     },
     "%@" : {
       "localizations" : {
@@ -32,7 +34,8 @@
             "value" : "%@"
           }
         }
-      }
+      },
+      "shouldTranslate" : false
     },
     "© %@ Michael Yicheng Qiu" : {
       "localizations" : {
@@ -42,7 +45,8 @@
             "value" : "© %@ Michael Yicheng Qiu"
           }
         }
-      }
+      },
+      "shouldTranslate" : false
     },
     "1. Go through desktops" : {
       "localizations" : {
@@ -65,7 +69,14 @@
       }
     },
     "Actions" : {
-
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "操作"
+          }
+        }
+      }
     },
     "Active Space Labels" : {
       "localizations" : {
@@ -274,14 +285,7 @@
       }
     },
     "Desktop" : {
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "桌面"
-          }
-        }
-      }
+      "shouldTranslate" : false
     },
     "Factory Reset" : {
       "localizations" : {
@@ -364,10 +368,30 @@
       }
     },
     "If enabled, the label stays on the desktop instead of hiding.\n\nTip: You can drag the window to the screen edge to shrink it into a 'Picture-in-Picture' mode." : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "If enabled, the label stays on the desktop instead of hiding.\n\nTip: You can drag the window to the screen edge to shrink it."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "如果启用，标签将会在桌面可见区域显示。\n\n提示：你可以将标签拖至桌面边缘以最小化。"
+          }
+        }
+      }
     },
     "Keep Visible on Desktop" : {
-
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "在桌面可见"
+          }
+        }
+      }
     },
     "Manual" : {
       "localizations" : {
@@ -515,7 +539,14 @@
       }
     },
     "More Apps" : {
-
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "更多 App"
+          }
+        }
+      }
     },
     "No new spaces detected yet..." : {
       "localizations" : {
@@ -654,20 +685,15 @@
         }
       }
     },
-    "Reset Defaults" : {
-      "comment" : "Reset Defaults",
-      "extractionState" : "stale",
+    "Restore Defaults" : {
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "重置"
+            "value" : "恢复默认"
           }
         }
       }
-    },
-    "Restore Defaults" : {
-
     },
     "Save" : {
       "localizations" : {
@@ -1453,7 +1479,7 @@
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "needs_review",
+            "state" : "translated",
             "value" : "标签"
           }
         }
@@ -1681,10 +1707,24 @@
       }
     },
     "Show Active Space Labels" : {
-
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "显示当前桌面标签"
+          }
+        }
+      }
     },
     "Show Preview Labels" : {
-
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "显示预览标签"
+          }
+        }
+      }
     },
     "Space %lld" : {
       "localizations" : {
@@ -1784,16 +1824,17 @@
       }
     },
     "The hidden label that slides into the corner of the active desktop." : {
-
-    },
-    "The hidden label that slides into the corner." : {
-      "comment" : "The hidden label that slides into the corner.",
-      "extractionState" : "stale",
       "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The hidden label that slides into the corner of the active desktop. Only appears in Mission Control."
+          }
+        },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "桌面隐藏角的标签。"
+            "value" : "在桌面角落的隐藏标签。仅在调度中心显示"
           }
         }
       }
