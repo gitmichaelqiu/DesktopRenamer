@@ -20,7 +20,8 @@ class CollapsibleHandleView: NSView {
         imageView.translatesAutoresizingMaskIntoConstraints = false
         imageView.symbolConfiguration = .init(pointSize: 15, weight: .bold)
         
-        // Use standard label color; the environment (Glass/HUD) will adjust it automatically.
+        // [FIX] Ensure the chevron adapts to the background (Light/Dark)
+        // This makes it visible on the dark HUD and the adaptive Glass.
         imageView.contentTintColor = .labelColor
         
         addSubview(imageView)
@@ -52,10 +53,6 @@ class CollapsibleHandleView: NSView {
 class SpaceLabelWindow: NSWindow {
     private let label: NSTextField
     private let handleView: CollapsibleHandleView
-    
-    // We keep a reference to the inner container to manage subview layout if needed,
-    // though Auto Layout inside the container is preferred in modern AppKit.
-    // For this existing manual-layout code, we will rely on autoresizing.
     private let contentContainer: NSView
     
     public let spaceId: String
@@ -88,20 +85,30 @@ class SpaceLabelWindow: NSWindow {
         // 1. Text Label
         self.label = NSTextField(labelWithString: name)
         self.label.alignment = .center
-        // FIX: Remove explicit textColor assignment.
-        // This allows the label to adapt automatically to the vibrancy of the glass/HUD.
-        // self.label.textColor = .labelColor <--- DELETED
+        // [FIX] Removed explicit textColor to allow vibrancy adaptation
         
         // 2. Handle View
         self.handleView = CollapsibleHandleView()
         self.handleView.isHidden = true
+        self.handleView.translatesAutoresizingMaskIntoConstraints = false
         
         // 3. Container View
-        // We place content in a container so we can assign it to NSGlassEffectView.contentView [cite: 128, 129]
+        // We use a container to satisfy NSGlassEffectView.contentView requirements
         self.contentContainer = NSView(frame: .zero)
         self.contentContainer.wantsLayer = true
+        
         self.contentContainer.addSubview(self.label)
         self.contentContainer.addSubview(self.handleView)
+        
+        // [FIX] Pin HandleView to container edges using Constraints.
+        // This ensures the pill always fills the window without fighting the window's manual frame logic.
+        // We do NOT constrain the label, preserving the manual layout logic for text.
+        NSLayoutConstraint.activate([
+            self.handleView.leadingAnchor.constraint(equalTo: self.contentContainer.leadingAnchor),
+            self.handleView.trailingAnchor.constraint(equalTo: self.contentContainer.trailingAnchor),
+            self.handleView.topAnchor.constraint(equalTo: self.contentContainer.topAnchor),
+            self.handleView.bottomAnchor.constraint(equalTo: self.contentContainer.bottomAnchor)
+        ])
         
         // Screen Logic
         let foundScreen = NSScreen.screens.first { screen in
@@ -124,11 +131,10 @@ class SpaceLabelWindow: NSWindow {
             // NEW DESIGN: NSGlassEffectView
             let glassView = NSGlassEffectView(frame: .zero)
             
-            // FIX: Set the contentView property instead of adding subviews directly.
-            // This enables automatic visual treatments for legibility. [cite: 129, 136]
+            // [FIX] Set contentView to enable legibility features
+            // The Glass View will automatically constrain this container to fill itself.
             glassView.contentView = self.contentContainer
             
-            // No explicit appearance set here; allows adaptive Light/Dark glass.
             rootContentView = glassView
         } else {
             // LEGACY: NSVisualEffectView
@@ -137,15 +143,19 @@ class SpaceLabelWindow: NSWindow {
             effectView.blendingMode = .behindWindow
             effectView.state = .active
             
-            // FIX: Force Dark Appearance for HUD.
-            // .hudWindow is always dark. If we don't force .darkAqua, a system in Light Mode
-            // will render black text on the dark HUD, making it invisible.
+            // [FIX] Force Dark Appearance for HUD so .labelColor resolves to white (legible)
             effectView.appearance = NSAppearance(named: .darkAqua)
             
             effectView.addSubview(self.contentContainer)
             
-            // Ensure container fills the effect view in legacy mode
-            self.contentContainer.autoresizingMask = [.width, .height]
+            // [FIX] Manually constrain container to fill the legacy effect view
+            self.contentContainer.translatesAutoresizingMaskIntoConstraints = false
+            NSLayoutConstraint.activate([
+                self.contentContainer.leadingAnchor.constraint(equalTo: effectView.leadingAnchor),
+                self.contentContainer.trailingAnchor.constraint(equalTo: effectView.trailingAnchor),
+                self.contentContainer.topAnchor.constraint(equalTo: effectView.topAnchor),
+                self.contentContainer.bottomAnchor.constraint(equalTo: effectView.bottomAnchor)
+            ])
             
             rootContentView = effectView
         }
@@ -201,21 +211,19 @@ class SpaceLabelWindow: NSWindow {
         }
     }
     
-    // MARK: - State Synchronization
+    // MARK: - State Synchronization (No Changes)
     
     private func syncFromGlobalState() {
         guard let manager = labelManager else { return }
         self.isDocked = manager.globalIsDocked
         self.dockEdge = manager.globalDockEdge
         
-        // Load center point or default
         if manager.globalCenterPoint == nil {
             let defaultRelative = NSPoint(x: 1.0, y: 0.5)
             manager.updateGlobalState(isDocked: true, edge: .maxX, center: defaultRelative)
             self.dockEdge = .maxX
             self.isDocked = true
         } else if let point = manager.globalCenterPoint {
-            // Migration check for old absolute data
             if point.x > 2.0 || point.y > 2.0 {
                 let defaultRelative = NSPoint(x: 1.0, y: 0.5)
                 manager.updateGlobalState(isDocked: true, edge: .maxX, center: defaultRelative)
@@ -229,7 +237,6 @@ class SpaceLabelWindow: NSWindow {
         guard let manager = labelManager, let screen = self.screen else { return }
         let currentAbsCenter = NSPoint(x: self.frame.midX, y: self.frame.midY)
         
-        // Convert Absolute -> Relative
         let sFrame = screen.visibleFrame
         let relX = (currentAbsCenter.x - sFrame.minX) / sFrame.width
         let relY = (currentAbsCenter.y - sFrame.minY) / sFrame.height
@@ -237,7 +244,7 @@ class SpaceLabelWindow: NSWindow {
         manager.updateGlobalState(isDocked: self.isDocked, edge: self.dockEdge, center: NSPoint(x: relX, y: relY))
     }
     
-    // MARK: - Helper: Edge-Aware Positioning
+    // MARK: - Helper: Edge-Aware Positioning (No Changes)
     
     private func getAbsoluteTargetCenter(on screen: NSScreen, forSize size: NSSize) -> NSPoint {
         let relativePoint = labelManager?.globalCenterPoint ?? NSPoint(x: 1.0, y: 0.5)
@@ -247,14 +254,10 @@ class SpaceLabelWindow: NSWindow {
         var absY = sFrame.minY + (sFrame.height * relativePoint.y)
         
         switch self.dockEdge {
-        case .minX: // Left Edge
-            absX = sFrame.minX + (size.width / 2)
-        case .maxX: // Right Edge
-            absX = sFrame.maxX - (size.width / 2)
-        case .minY: // Bottom Edge
-            absY = sFrame.minY + (size.height / 2)
-        case .maxY: // Top Edge
-            absY = sFrame.maxY - (size.height / 2)
+        case .minX: absX = sFrame.minX + (size.width / 2)
+        case .maxX: absX = sFrame.maxX - (size.width / 2)
+        case .minY: absY = sFrame.minY + (size.height / 2)
+        case .maxY: absY = sFrame.maxY - (size.height / 2)
         default: break
         }
         
@@ -298,7 +301,7 @@ class SpaceLabelWindow: NSWindow {
         self.updateLayout(isCurrentSpace: self.isActiveMode)
     }
     
-    // MARK: - Interactions
+    // MARK: - Interactions (No Changes)
     
     override func mouseDown(with event: NSEvent) {
         guard let manager = labelManager, manager.showOnDesktop, isActiveMode else {
@@ -417,7 +420,6 @@ class SpaceLabelWindow: NSWindow {
                 )
                 let newCenter = NSPoint(x: rootedOrigin.x + newSize.width/2, y: rootedOrigin.y + newSize.height/2)
                 
-                // Save Relative Center immediately
                 let sFrame = screen.visibleFrame
                 let relX = (newCenter.x - sFrame.minX) / sFrame.width
                 let relY = (newCenter.y - sFrame.minY) / sFrame.height
@@ -470,6 +472,11 @@ class SpaceLabelWindow: NSWindow {
             self.label.isHidden = true
             self.handleView.isHidden = false
             self.handleView.edge = self.dockEdge
+            
+            // [FIX] REMOVED manual frame setting of handleView.
+            // The constraints set in init() now handle the sizing of handleView
+            // relative to the container/window, preventing conflicts.
+            
             self.contentView?.layer?.cornerRadius = 12
             
             if self.dockEdge == .minX || self.dockEdge == .maxX {
@@ -497,39 +504,32 @@ class SpaceLabelWindow: NSWindow {
         
         // 2. Determine Position (Center)
         if isCurrentSpace {
-            // Use Edge-Aware Absolute Positioning logic
             targetCenter = getAbsoluteTargetCenter(on: targetScreen, forSize: newSize)
         } else {
-            // Preview: Center of screen
             targetCenter = NSPoint(x: targetScreen.frame.midX, y: targetScreen.frame.midY)
         }
 
         // 3. Calculate Final Origin
         if showHandle {
-            // Clamp strictly for dock
             newOrigin = calculateCenteredOrigin(
                 forSize: newSize, onEdge: self.dockEdge, centerPoint: targetCenter, screenFrame: targetScreen.visibleFrame, clampToScreen: true
             )
         } else if isCurrentSpace {
             if isHiddenCornerMode {
-                // Legacy: Just off-screen
                 newOrigin = findBestOffscreenPosition(targetScreen: targetScreen, size: newSize)
             } else {
-                // Expanded PiP: Use the target center, no clamp (rooting)
                 newOrigin = calculateCenteredOrigin(
                     forSize: newSize, onEdge: self.dockEdge, centerPoint: targetCenter, screenFrame: targetScreen.visibleFrame, clampToScreen: false
                 )
             }
         } else {
-            // Preview
             newOrigin = NSPoint(x: targetCenter.x - newSize.width/2, y: targetCenter.y - newSize.height/2)
         }
         
-        // We set the contentView (Glass/Effect View) frame implicitly by setting window frame,
-        // but for safety in the legacy container mode, we ensure the container fills the view.
-        self.contentContainer.frame = NSRect(origin: .zero, size: newSize)
+        // [FIX] REMOVED manual setting of contentContainer.frame.
+        // We now rely on the Glass/Effect View's layout engine to resize the container
+        // when we set the Window frame below.
         
-        // Force visual update
         self.contentView?.needsDisplay = true
         self.invalidateShadow()
         
@@ -553,7 +553,7 @@ class SpaceLabelWindow: NSWindow {
         }
     }
     
-    // MARK: - Calculation Helpers
+    // MARK: - Calculation Helpers (No Changes)
     
     private func calculateCenteredOrigin(forSize size: NSSize, onEdge edge: NSRectEdge, centerPoint: NSPoint, screenFrame: NSRect, clampToScreen: Bool) -> NSPoint {
         var origin = NSPoint.zero
@@ -621,7 +621,6 @@ class SpaceLabelWindow: NSWindow {
         
         self.label.font = font
         let displayHeight = sSize.height + 4
-        // Manually positioning label inside the container
         self.label.frame = NSRect(x: 0, y: (size.height - displayHeight) / 2, width: size.width, height: displayHeight)
     }
     
