@@ -22,7 +22,7 @@
       }
     },
     "%.2fx" : {
-
+      "shouldTranslate" : false
     },
     "%@" : {
       "localizations" : {
@@ -65,7 +65,14 @@
       }
     },
     "Actions" : {
-
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "操作"
+          }
+        }
+      }
     },
     "Active Space Labels" : {
       "localizations" : {
@@ -274,14 +281,7 @@
       }
     },
     "Desktop" : {
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "桌面"
-          }
-        }
-      }
+      "shouldTranslate" : false
     },
     "Factory Reset" : {
       "localizations" : {
@@ -364,10 +364,30 @@
       }
     },
     "If enabled, the label stays on the desktop instead of hiding.\n\nTip: You can drag the window to the screen edge to shrink it into a 'Picture-in-Picture' mode." : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "If enabled, the label stays on the desktop instead of hiding.\n\nTip: You can drag the window to the screen edge to shrink it."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "如果启用，标签会保留在桌面上，而非隐藏。\n\n提示：将窗口拖至桌面边缘以缩小。"
+          }
+        }
+      }
     },
     "Keep Visible on Desktop" : {
-
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "可见桌面标签"
+          }
+        }
+      }
     },
     "Manual" : {
       "localizations" : {
@@ -515,7 +535,14 @@
       }
     },
     "More Apps" : {
-
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "更多 App"
+          }
+        }
+      }
     },
     "No new spaces detected yet..." : {
       "localizations" : {
@@ -654,20 +681,15 @@
         }
       }
     },
-    "Reset Defaults" : {
-      "comment" : "Reset Defaults",
-      "extractionState" : "stale",
+    "Restore Defaults" : {
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "重置"
+            "value" : "恢复默认"
           }
         }
       }
-    },
-    "Restore Defaults" : {
-
     },
     "Save" : {
       "localizations" : {
@@ -1453,7 +1475,7 @@
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "needs_review",
+            "state" : "translated",
             "value" : "标签"
           }
         }
@@ -1681,10 +1703,24 @@
       }
     },
     "Show Active Space Labels" : {
-
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "显示当前桌面标签"
+          }
+        }
+      }
     },
     "Show Preview Labels" : {
-
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "显示预览标签"
+          }
+        }
+      }
     },
     "Space %lld" : {
       "localizations" : {
@@ -1784,16 +1820,11 @@
       }
     },
     "The hidden label that slides into the corner of the active desktop." : {
-
-    },
-    "The hidden label that slides into the corner." : {
-      "comment" : "The hidden label that slides into the corner.",
-      "extractionState" : "stale",
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "桌面隐藏角的标签。"
+            "value" : "隐藏在桌面角落的标签。"
           }
         }
       }
