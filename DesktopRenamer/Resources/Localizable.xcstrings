@@ -21,6 +21,9 @@
         }
       }
     },
+    "%.2fx" : {
+      "shouldTranslate" : false
+    },
     "%@" : {
       "localizations" : {
         "zh-Hans" : {
@@ -57,6 +60,26 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "2. 遍历全屏"
+          }
+        }
+      }
+    },
+    "Actions" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "操作"
+          }
+        }
+      }
+    },
+    "Active Space Labels" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "当前桌面标签"
           }
         }
       }
@@ -211,6 +234,19 @@
         }
       }
     },
+    "Desktop" : {
+      "shouldTranslate" : false
+    },
+    "Factory Reset" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "出厂设置"
+          }
+        }
+      }
+    },
     "Fix" : {
       "localizations" : {
         "zh-Hans" : {
@@ -261,7 +297,33 @@
         }
       }
     },
-    "If enabled, new spaces won't be added automatically. You must add them in the Spaces tab." : {
+    "If enabled, the label stays on the desktop instead of hiding.\n\nTip: You can drag the window to the screen edge to shrink it into a 'Picture-in-Picture' mode." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "If enabled, the label stays on the desktop instead of hiding.\n\nTip: You can drag the window to the screen edge to shrink it."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "如果启用，标签会保留在桌面上，而非隐藏。\n\n提示：将窗口拖至桌面边缘以缩小。"
+          }
+        }
+      }
+    },
+    "Keep Visible on Desktop" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "可见桌面标签"
+          }
+        }
+      }
+    },
+    "Manual" : {
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -402,6 +464,16 @@
         }
       }
     },
+    "More Apps" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "更多 App"
+          }
+        }
+      }
+    },
     "No new spaces detected yet..." : {
       "localizations" : {
         "zh-Hans" : {
@@ -502,6 +574,39 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "输入桌面名称"
+          }
+        }
+      }
+    },
+    "Renamer" : {
+      "shouldTranslate" : false
+    },
+    "Reset" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "重置"
+          }
+        }
+      }
+    },
+    "Reset & Quit" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "重置并退出"
+          }
+        }
+      }
+    },
+    "Restore Defaults" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "恢复默认"
           }
         }
       }
@@ -1240,6 +1345,22 @@
         }
       }
     },
+    "Settings.Labels" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Labels"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "标签"
+          }
+        }
+      }
+    },
     "Settings.Spaces" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -1461,6 +1582,26 @@
         }
       }
     },
+    "Show Active Space Labels" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "显示当前桌面标签"
+          }
+        }
+      }
+    },
+    "Show Preview Labels" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "显示预览标签"
+          }
+        }
+      }
+    },
     "Space %lld" : {
       "localizations" : {
         "zh-Hans" : {
@@ -1554,6 +1695,37 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Bug 报告已保存。这将对解决 Bug 提供重要帮助！"
+          }
+        }
+      }
+    },
+    "The hidden label that slides into the corner of the active desktop." : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "隐藏在桌面角落的标签。"
+          }
+        }
+      }
+    },
+    "The large label visible in Mission Control." : {
+      "comment" : "The large label visible in Mission Control.",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "调度中心预览的大标签。"
+          }
+        }
+      }
+    },
+    "There are no parameters to adjust for Automatic detection.\nIf the issue still happens, switch to other methods." : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "自动检测无参数可调整。\n如果仍然无法正常操作，切换成其他方式。"
           }
         }
       }
