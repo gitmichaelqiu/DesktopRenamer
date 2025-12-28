@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE dictionary SYSTEM "file://localhost/System/Library/DTDs/sdef.dtd">
+<dictionary title="DesktopRenamer Terminology">
+    <suite name="DesktopRenamer Suite" code="DskR" description="Commands for DesktopRenamer">
+        
+        <command name="toggle menubar" code="DskRTMen" description="Toggle the visibility of the menubar item">
+            <cocoa class="DesktopRenamer.ToggleMenubarCommand"/>
+        </command>
+        
+        <command name="toggle labels" code="DskRTLab" description="Toggle both Active &amp; Preview Label Windows">
+            <cocoa class="DesktopRenamer.ToggleLabelsCommand"/>
+        </command>
+
+        <command name="toggle active label" code="DskRTAct" description="Toggle the Active Label Window">
+            <cocoa class="DesktopRenamer.ToggleActiveLabelCommand"/>
+        </command>
+
+        <command name="toggle preview label" code="DskRTPrv" description="Toggle the Preview Label Window">
+            <cocoa class="DesktopRenamer.TogglePreviewLabelCommand"/>
+        </command>
+        
+        <command name="toggle desktop visibility" code="DskRTVis" description="Toggle visibility of Active Label Window on Desktop (Keep on Desktop)">
+            <cocoa class="DesktopRenamer.ToggleDesktopVisibilityCommand"/>
+        </command>
+
+        <command name="rename current space" code="DskRRCur" description="Trigger the Rename UI for the current space">
+            <cocoa class="DesktopRenamer.RenameCurrentSpaceCommand"/>
+        </command>
+        
+    </suite>
+</dictionary>
