@@ -51,9 +51,15 @@ class ToggleDesktopVisibilityCommand: NSScriptCommand {
 
 class RenameCurrentSpaceCommand: NSScriptCommand {
     override func performDefaultImplementation() -> Any? {
+        // 1. Get the text passed from Raycast
+        guard let newName = self.directParameter as? String else { return nil }
+        
         DispatchQueue.main.async {
-            // This triggers the existing popover UI
-            AppDelegate.shared.statusBarController?.renameCurrentSpace()
+            // 2. Access SpaceManager directly
+            if let manager = AppDelegate.shared.spaceManager {
+                // 3. Rename silently without triggering UI
+                manager.renameSpace(manager.currentSpaceUUID, to: newName)
+            }
         }
         return nil
     }
