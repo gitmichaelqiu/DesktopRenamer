@@ -20,7 +20,7 @@ class CollapsibleHandleView: NSView {
         imageView.translatesAutoresizingMaskIntoConstraints = false
         imageView.symbolConfiguration = .init(pointSize: 15, weight: .bold)
         
-        // [FIX] Ensure tint is set to .labelColor so it adapts to Light/Dark mode correctly
+        // Ensure tint is set to .labelColor so it adapts to Light/Dark mode correctly
         imageView.contentTintColor = .labelColor
         
         addSubview(imageView)
@@ -84,10 +84,6 @@ class SpaceLabelWindow: NSWindow {
         // 1. Text Label
         self.label = NSTextField(labelWithString: name)
         self.label.alignment = .center
-        
-        // [FIX] Restore this line.
-        // .labelColor is a semantic color that automatically updates when the system appearance changes.
-        // Removing it caused the label to stop responding to live theme updates.
         self.label.textColor = .labelColor
         
         // 2. Handle View
@@ -96,14 +92,13 @@ class SpaceLabelWindow: NSWindow {
         self.handleView.translatesAutoresizingMaskIntoConstraints = false
         
         // 3. Container View
-        // We use a container to satisfy NSGlassEffectView.contentView requirements
         self.contentContainer = NSView(frame: .zero)
         self.contentContainer.wantsLayer = true
         
         self.contentContainer.addSubview(self.label)
         self.contentContainer.addSubview(self.handleView)
         
-        // [FIX] Pin HandleView to container edges.
+        // Pin HandleView to container edges.
         NSLayoutConstraint.activate([
             self.handleView.leadingAnchor.constraint(equalTo: self.contentContainer.leadingAnchor),
             self.handleView.trailingAnchor.constraint(equalTo: self.contentContainer.trailingAnchor),
@@ -136,18 +131,13 @@ class SpaceLabelWindow: NSWindow {
             
             rootContentView = glassView
         } else {
-            // LEGACY: NSVisualEffectView
             let effectView = NSVisualEffectView(frame: .zero)
             effectView.material = .hudWindow
             effectView.blendingMode = .behindWindow
             effectView.state = .active
-            
-            // [FIX] Force Dark Appearance for HUD so .labelColor resolves to white (legible)
             effectView.appearance = NSAppearance(named: .darkAqua)
-            
             effectView.addSubview(self.contentContainer)
             
-            // [FIX] Manually constrain container to fill the legacy effect view
             self.contentContainer.translatesAutoresizingMaskIntoConstraints = false
             NSLayoutConstraint.activate([
                 self.contentContainer.leadingAnchor.constraint(equalTo: effectView.leadingAnchor),
@@ -194,7 +184,6 @@ class SpaceLabelWindow: NSWindow {
     }
     
     // MARK: - Live Background Hack
-    
     private func setupLiveBackgroundUpdate() {
         guard let layer = self.contentView?.layer else { return }
         let key = "forceRedrawLoop"
@@ -210,8 +199,7 @@ class SpaceLabelWindow: NSWindow {
         }
     }
     
-    // MARK: - State Synchronization (No Changes)
-    
+    // MARK: - State Synchronization
     private func syncFromGlobalState() {
         guard let manager = labelManager else { return }
         self.isDocked = manager.globalIsDocked
@@ -243,8 +231,7 @@ class SpaceLabelWindow: NSWindow {
         manager.updateGlobalState(isDocked: self.isDocked, edge: self.dockEdge, center: NSPoint(x: relX, y: relY))
     }
     
-    // MARK: - Helper: Edge-Aware Positioning (No Changes)
-    
+    // MARK: - Helper: Edge-Aware Positioning
     private func getAbsoluteTargetCenter(on screen: NSScreen, forSize size: NSSize) -> NSPoint {
         let relativePoint = labelManager?.globalCenterPoint ?? NSPoint(x: 1.0, y: 0.5)
         let sFrame = screen.visibleFrame
@@ -264,7 +251,6 @@ class SpaceLabelWindow: NSWindow {
     }
     
     // MARK: - Public API
-    
     func refreshAppearance() {
         updateInteractivity()
         updateLayout(isCurrentSpace: self.isActiveMode)
@@ -300,8 +286,7 @@ class SpaceLabelWindow: NSWindow {
         self.updateLayout(isCurrentSpace: self.isActiveMode)
     }
     
-    // MARK: - Interactions (No Changes)
-    
+    // MARK: - Interactions
     override func mouseDown(with event: NSEvent) {
         guard let manager = labelManager, manager.showOnDesktop, isActiveMode else {
             super.mouseDown(with: event)
@@ -472,7 +457,7 @@ class SpaceLabelWindow: NSWindow {
             self.handleView.isHidden = false
             self.handleView.edge = self.dockEdge
             
-            // [FIX] Removed manual frame setting for handleView to rely on constraints
+            // Removed manual frame setting for handleView to rely on constraints
             
             self.contentView?.layer?.cornerRadius = 12
             
@@ -523,7 +508,7 @@ class SpaceLabelWindow: NSWindow {
             newOrigin = NSPoint(x: targetCenter.x - newSize.width/2, y: targetCenter.y - newSize.height/2)
         }
         
-        // [FIX] REMOVED manual setting of contentContainer.frame to allow glass view layout engine to work.
+        // REMOVED manual setting of contentContainer.frame to allow glass view layout engine to work.
         
         self.contentView?.needsDisplay = true
         self.invalidateShadow()
@@ -548,7 +533,7 @@ class SpaceLabelWindow: NSWindow {
         }
     }
     
-    // MARK: - Calculation Helpers (No Changes)
+    // MARK: - Calculation Helpers
     
     private func calculateCenteredOrigin(forSize size: NSSize, onEdge edge: NSRectEdge, centerPoint: NSPoint, screenFrame: NSRect, clampToScreen: Bool) -> NSPoint {
         var origin = NSPoint.zero
