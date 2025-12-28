@@ -1,41 +1,176 @@
 import SwiftUI
-import ServiceManagement
-import Combine
 
-enum SettingsTab: String {
-    case general, space, about
+enum SettingsTab: String, CaseIterable, Identifiable {
+    case general, space, labels, about
+    
+    var id: String { self.rawValue }
+    
+    var localizedName: LocalizedStringKey {
+        switch self {
+        case .general: return "Settings.General"
+        case .space: return "Settings.Spaces"
+        case .labels: return "Settings.Labels"
+        case .about: return "Settings.About"
+        }
+    }
+    
+    var iconName: String {
+        switch self {
+        case .general: return "gearshape"
+        case .space: return "macwindow"
+        case .labels: return "tag"
+        case .about: return "info.circle"
+        }
+    }
 }
 
-let defaultSettingsWindowWidth = 417
-let defaultSettingsWindowHeight = 480
+// Layout Constants
+let sidebarWidth: CGFloat = 180
+let defaultSettingsWindowWidth = 750
+let defaultSettingsWindowHeight = 550
+let sidebarRowHeight: CGFloat = 32
+let sidebarFontSize: CGFloat = 16
+
+// Tighter Header Height
+let titleHeaderHeight: CGFloat = 48
 
 struct SettingsView: View {
     @ObservedObject var spaceManager: SpaceManager
     @ObservedObject var labelManager: SpaceLabelManager
-    @AppStorage("selectedSettingsTab") private var selectedTab: SettingsTab = .general
+    
+    @State private var selectedTab: SettingsTab? = .general
     
     var body: some View {
-        TabView(selection: $selectedTab) {
-            GeneralSettingsView(spaceManager: spaceManager, labelManager: labelManager)
-                .tabItem {
-                    Text(NSLocalizedString("Settings.General", comment: ""))
-                }
-                .tag(SettingsTab.general)
-            
-            SpaceEditView(spaceManager: spaceManager, labelManager: labelManager)
-                .tabItem {
-                    Text(NSLocalizedString("Settings.Spaces", comment: ""))
-                }
-                .tag(SettingsTab.space)
-            
-            AboutView()
-                .tabItem {
-                    Text(NSLocalizedString("Settings.About", comment: ""))
-                }
-                .tag(SettingsTab.about)
+        NavigationSplitView {
+            sidebar
+        } detail: {
+            detailView
         }
+        .navigationTitle("")
+        .toolbar(.hidden, for: .windowToolbar)
+        .edgesIgnoringSafeArea(.top)
         .frame(width: CGFloat(defaultSettingsWindowWidth), height: CGFloat(defaultSettingsWindowHeight))
-        .padding()
+    }
+    
+    @ViewBuilder
+    private var sidebar: some View {
+        if #available(macOS 14.0, *) {
+            List(selection: $selectedTab) {
+                Section {
+                    ForEach(SettingsTab.allCases) { tab in
+                        sidebarItem(for: tab)
+                    }
+                } header: {
+                    VStack(alignment: .leading, spacing: 0) {
+                        Color.clear.frame(height: 45)
+                        
+                        Text("Desktop")
+                            .font(.system(size: 28, weight: .heavy))
+                            .foregroundStyle(.primary)
+                        Text("Renamer")
+                            .font(.system(size: 28, weight: .heavy))
+                            .foregroundStyle(.primary)
+                            .padding(.bottom, 20)
+                    }
+                }
+                .collapsible(false)
+            }
+            .scrollDisabled(true)
+            .removeSidebarToggle()
+            .navigationSplitViewColumnWidth(min: sidebarWidth, ideal: sidebarWidth, max: sidebarWidth)
+            .edgesIgnoringSafeArea(.top)
+        } else {
+            List(selection: $selectedTab) {
+                Section {
+                    ForEach(SettingsTab.allCases) { tab in
+                        sidebarItem(for: tab)
+                    }
+                } header: {
+                    VStack(alignment: .leading, spacing: 0) {
+                        Color.clear.frame(height: 45)
+                        
+                        Text("Desktop")
+                            .font(.system(size: 28, weight: .heavy))
+                            .foregroundStyle(.primary)
+                        Text("Renamer")
+                            .font(.system(size: 28, weight: .heavy))
+                            .foregroundStyle(.primary)
+                            .padding(.bottom, 20)
+                    }
+                }
+                .collapsible(false)
+            }
+            .scrollDisabled(true)
+            .navigationSplitViewColumnWidth(min: sidebarWidth, ideal: sidebarWidth, max: sidebarWidth)
+            .listStyle(.sidebar)
+            .edgesIgnoringSafeArea(.top)
+        }
+    }
+    
+    @ViewBuilder
+    private var detailView: some View {
+        ZStack(alignment: .top) {
+            
+            // 1. CONTENT LAYER
+            ZStack(alignment: .top) {
+                if let tab = selectedTab {
+                    switch tab {
+                    case .general:
+                        GeneralSettingsView(spaceManager: spaceManager, labelManager: labelManager)
+                    case .space:
+                        SpaceEditView(spaceManager: spaceManager, labelManager: labelManager)
+                    case .labels:
+                        LabelSettingsView(labelManager: labelManager)
+                    case .about:
+                        AboutView()
+                    }
+                } else {
+                    Text("Select a category")
+                        .foregroundColor(.secondary)
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                }
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+            // Match the header height exactly
+            .padding(.top, titleHeaderHeight)
+            // OPTIONAL: Pull content up slightly if the gap is still too large due to internal Form padding
+            // .padding(.top, -10)
+            
+            // 2. HEADER LAYER (Blurry Title Bar)
+            if let tab = selectedTab {
+                VStack(spacing: 0) {
+                    HStack {
+                        Text(tab.localizedName)
+                            .font(.system(size: 20, weight: .semibold))
+                            .padding(.leading, 20)
+                        Spacer()
+                    }
+                    .frame(height: titleHeaderHeight) // 48pt
+                    .background(.bar)
+                    
+                    Divider()
+                }
+                .frame(maxHeight: .infinity, alignment: .top)
+            }
+        }
+        .edgesIgnoringSafeArea(.top)
+    }
+    
+    @ViewBuilder
+    private func sidebarItem(for tab: SettingsTab) -> some View {
+        NavigationLink(value: tab) {
+            Label {
+                Text(tab.localizedName)
+                    .font(.system(size: sidebarFontSize, weight: .medium))
+                    .padding(.leading, 2)
+            } icon: {
+                Image(systemName: tab.iconName)
+                    .resizable()
+                    .scaledToFit()
+                    .frame(height: sidebarRowHeight-15)
+            }
+        }
+        .frame(height: sidebarRowHeight)
     }
 }
 

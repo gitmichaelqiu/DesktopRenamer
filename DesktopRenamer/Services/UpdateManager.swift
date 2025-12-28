@@ -29,7 +29,12 @@ class UpdateManager {
     // UserDefaults key for auto update check
     static let autoCheckKey = "AutoCheckForUpdate"
     static var isAutoCheckEnabled: Bool {
-        get { UserDefaults.standard.bool(forKey: autoCheckKey) }
+        get {
+            if UserDefaults.standard.object(forKey: autoCheckKey) == nil {
+                return true
+            }
+            return UserDefaults.standard.bool(forKey: autoCheckKey)
+        }
         set { UserDefaults.standard.set(newValue, forKey: autoCheckKey) }
     }
     
@@ -62,7 +67,7 @@ class UpdateManager {
                 
                 let alert = NSAlert()
                 alert.messageText = NSLocalizedString("Settings.General.Update.Available.Title", comment: "")
-                alert.informativeText = String(format: NSLocalizedString("Settings.General.Update.Available.Msg", comment: ""), latestVersion, currentVersion)
+                alert.informativeText = String(format: NSLocalizedString("Settings.General.Update.Available.Msg", comment: ""), currentVersion, latestVersion)
                 alert.addButton(withTitle: NSLocalizedString("Settings.General.Update.Available.Button.Update", comment: ""))
                 alert.addButton(withTitle: NSLocalizedString("Settings.General.Update.Available.Button.Cancel", comment: ""))
                 alert.alertStyle = .informational
