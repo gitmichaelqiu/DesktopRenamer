@@ -18,7 +18,7 @@ struct SpaceEditView: View {
                                     .font(.headline)
                                     .padding(.leading, 4)
                                 
-                                // Dynamic Row Stack (No height calculation needed!)
+                                // Dynamic Row Stack
                                 spacesStack(for: displayID)
                                     .cornerRadius(8)
                                     .padding(.bottom, 10)
