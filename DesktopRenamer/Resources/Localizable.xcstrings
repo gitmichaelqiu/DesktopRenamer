@@ -64,6 +64,9 @@
         }
       }
     },
+    "Actions" : {
+
+    },
     "Active Space Labels" : {
       "localizations" : {
         "zh-Hans" : {
@@ -280,9 +283,6 @@
         }
       }
     },
-    "Drag to edge to shrink (PiP)" : {
-
-    },
     "Factory Reset" : {
       "localizations" : {
         "zh-Hans" : {
@@ -362,6 +362,9 @@
           }
         }
       }
+    },
+    "If enabled, the label stays on the desktop instead of hiding.\n\nTip: You can drag the window to the screen edge to shrink it into a 'Picture-in-Picture' mode." : {
+
     },
     "Keep Visible on Desktop" : {
 
@@ -653,6 +656,7 @@
     },
     "Reset Defaults" : {
       "comment" : "Reset Defaults",
+      "extractionState" : "stale",
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
@@ -661,6 +665,9 @@
           }
         }
       }
+    },
+    "Restore Defaults" : {
+
     },
     "Save" : {
       "localizations" : {
@@ -1776,8 +1783,12 @@
         }
       }
     },
+    "The hidden label that slides into the corner of the active desktop." : {
+
+    },
     "The hidden label that slides into the corner." : {
       "comment" : "The hidden label that slides into the corner.",
+      "extractionState" : "stale",
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
