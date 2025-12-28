@@ -450,48 +450,33 @@ class SpaceLabelWindow: NSWindow {
         let showHandle = isCurrentSpace && isDocked && (labelManager?.showOnDesktop == true)
         let isHiddenCornerMode = isCurrentSpace && !showHandle && !(labelManager?.showOnDesktop == true)
         
-        // 1. Determine Dimensions
+        // 1. Determine Dimensions (Calculation Only)
+        // We separate calculation from UI updates to support the deferred "Hide then Resize" animation.
+        var isSmallModeForFont = false
+        var shouldUseHandle = false
+        
         if showHandle {
-            // DOCKED
-            self.label.isHidden = true
-            self.handleView.isHidden = false
-            self.handleView.edge = self.dockEdge
-            
-            // Removed manual frame setting for handleView to rely on constraints
-            
-            self.contentView?.layer?.cornerRadius = 12
-            
+            shouldUseHandle = true
             if self.dockEdge == .minX || self.dockEdge == .maxX {
                 newSize = SpaceLabelWindow.handleSize
             } else {
                 newSize = NSSize(width: SpaceLabelWindow.handleSize.height, height: SpaceLabelWindow.handleSize.width)
             }
         } else if isCurrentSpace {
-             // EXPANDED / HIDDEN
-             self.label.isHidden = false
-             self.handleView.isHidden = true
-             self.contentView?.layer?.cornerRadius = 20
-             
+             isSmallModeForFont = true
              newSize = calculateActiveSize()
-             updateLabelFont(for: newSize, isSmallMode: true)
         } else {
-            // PREVIEW
-            self.label.isHidden = false
-            self.handleView.isHidden = true
-            self.contentView?.layer?.cornerRadius = 20
-            
+            isSmallModeForFont = false
             newSize = previewSize
-            updateLabelFont(for: newSize, isSmallMode: false)
         }
         
-        // 2. Determine Position (Center)
+        // 2. Determine Position
         if isCurrentSpace {
             targetCenter = getAbsoluteTargetCenter(on: targetScreen, forSize: newSize)
         } else {
             targetCenter = NSPoint(x: targetScreen.frame.midX, y: targetScreen.frame.midY)
         }
 
-        // 3. Calculate Final Origin
         if showHandle {
             newOrigin = calculateCenteredOrigin(
                 forSize: newSize, onEdge: self.dockEdge, centerPoint: targetCenter, screenFrame: targetScreen.visibleFrame, clampToScreen: true
@@ -508,27 +493,49 @@ class SpaceLabelWindow: NSWindow {
             newOrigin = NSPoint(x: targetCenter.x - newSize.width/2, y: targetCenter.y - newSize.height/2)
         }
         
-        // REMOVED manual setting of contentContainer.frame to allow glass view layout engine to work.
-        
-        self.contentView?.needsDisplay = true
-        self.invalidateShadow()
-        
+        // 3. Execution Phase
+        // Helper block to update visual elements (Label/Handle/CornerRadius/Font)
+        let updateVisuals = {
+            if shouldUseHandle {
+                self.label.isHidden = true
+                self.handleView.isHidden = false
+                self.handleView.edge = self.dockEdge
+                self.contentView?.layer?.cornerRadius = 12
+            } else {
+                self.label.isHidden = false
+                self.handleView.isHidden = true
+                self.contentView?.layer?.cornerRadius = 20
+                self.updateLabelFont(for: newSize, isSmallMode: isSmallModeForFont)
+            }
+            self.contentView?.needsDisplay = true
+            self.invalidateShadow()
+        }
+
         if updateFrame {
             if isHiddenCornerMode {
+                // SPECIAL CASE: Clean EaseOut
+                // 1. Hide first (using current appearance/frame)
                 NSAnimationContext.runAnimationGroup { context in
                     context.duration = 0.08
                     context.timingFunction = CAMediaTimingFunction(name: .easeOut)
                     self.animator().alphaValue = 0.0
                 } completionHandler: {
+                    // 2. After hidden, update visuals and instantly snap to new position
+                    updateVisuals()
                     self.setFrame(NSRect(origin: newOrigin, size: newSize), display: true)
                     self.alphaValue = 1.0
                 }
             } else {
+                // STANDARD CASE
+                updateVisuals() // Update visuals immediately
+                
                 self.alphaValue = 1.0
                 self.animator().setFrame(NSRect(origin: newOrigin, size: newSize), display: true)
                 if self.alphaValue < 1.0 { self.animator().alphaValue = 1.0 }
             }
         } else {
+            // NO ANIMATION (Instant Update)
+            updateVisuals()
             self.setFrame(NSRect(origin: self.frame.origin, size: newSize), display: true)
         }
     }
