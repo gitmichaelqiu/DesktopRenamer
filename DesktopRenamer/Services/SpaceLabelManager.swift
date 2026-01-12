@@ -175,7 +175,8 @@ class SpaceLabelManager: ObservableObject {
         
         var finalSize = NSSize(width: maxWidth + paddingH, height: maxHeight + paddingV)
         
-        if let screen = NSScreen.main {
+        // FIX: Replaced NSScreen.main with NSScreen.screens.first to avoid EXC_BAD_ACCESS during display disconnect
+        if let screen = NSScreen.screens.first {
             finalSize.width = min(finalSize.width, screen.frame.width * 0.95)
             finalSize.height = min(finalSize.height, screen.frame.height * 0.9)
         }
