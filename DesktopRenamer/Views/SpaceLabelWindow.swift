@@ -107,18 +107,35 @@ class SpaceLabelWindow: NSWindow {
         ])
         
         // Screen Logic
-        let foundScreen = NSScreen.screens.first { screen in
+        // Fixed: Use first(where:) and explicit NSDeviceDescriptionKey
+        let foundScreen = NSScreen.screens.first(where: { screen in
             let screenID = screen.deviceDescription[NSDeviceDescriptionKey("NSScreenNumber")] as? NSNumber ?? 0
             let idString = "\(screen.localizedName) (\(screenID))"
             if idString == displayID { return true }
             let cleanName = displayID.components(separatedBy: " (").first ?? displayID
             return screen.localizedName == cleanName
+        })
+        
+        // FIX: Removed force unwrap of NSScreen.main.
+        // During display disconnects, main screen can momentarily be undefined or flux.
+        let targetScreen = foundScreen ?? NSScreen.main ?? NSScreen.screens.first
+        
+        let startRect: NSRect
+        if let targetScreen = targetScreen {
+            let screenFrame = targetScreen.frame
+            startRect = NSRect(x: screenFrame.midX - 100, y: screenFrame.midY - 50, width: 200, height: 100)
+        } else {
+            // Safe fallback if no screens exist (e.g. headless/transition)
+            startRect = NSRect(x: 0, y: 0, width: 200, height: 100)
         }
-        let targetScreen = foundScreen ?? NSScreen.main!
-        let screenFrame = targetScreen.frame
-        let startRect = NSRect(x: screenFrame.midX - 100, y: screenFrame.midY - 50, width: 200, height: 100)
         
         super.init(contentRect: startRect, styleMask: [.borderless, .fullSizeContentView], backing: .buffered, defer: false)
+        
+        // If we initialized without a valid screen, close immediately to avoid ghost windows or crashes
+        if targetScreen == nil {
+            self.close()
+            return
+        }
         
         // 4. Configure Visual/Glass Effect View
         let rootContentView: NSView
@@ -126,9 +143,7 @@ class SpaceLabelWindow: NSWindow {
         if #available(macOS 26.0, *) {
             // NEW DESIGN: NSGlassEffectView
             let glassView = NSGlassEffectView(frame: .zero)
-            
             glassView.contentView = self.contentContainer
-            
             rootContentView = glassView
         } else {
             let effectView = NSVisualEffectView(frame: .zero)
@@ -612,13 +627,14 @@ class SpaceLabelWindow: NSWindow {
     }
     
     private func findTargetScreen() -> NSScreen? {
-        return NSScreen.screens.first { screen in
+        // Fixed: Use first(where:) and explicit NSDeviceDescriptionKey
+        return NSScreen.screens.first(where: { screen in
             let screenID = screen.deviceDescription[NSDeviceDescriptionKey("NSScreenNumber")] as? NSNumber ?? 0
             let idString = "\(screen.localizedName) (\(screenID))"
             if idString == self.displayID { return true }
             let cleanTarget = self.displayID.components(separatedBy: " (").first ?? self.displayID
             return screen.localizedName == cleanTarget
-        }
+        })
     }
     
     private func findBestOffscreenPosition(targetScreen: NSScreen, size: NSSize) -> NSPoint {
