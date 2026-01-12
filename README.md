@@ -1,10 +1,13 @@
-<!-- v1.5.2 -->
+<!-- v1.6.0 -->
 
 <h1 align="center">
   <img src="./DesktopRenamer/Resources/DesktopRenamerIcon_Default.png" width="25%" alt=""/>  
   <p></p>
   <p align="center">DesktopRenamer</p>
 </h1>
+<h3>
+<p align="center"><i>Renamer Your Experiences</i></p>
+</h3>
 
 <table align="center" border="0" cellpadding="0" cellspacing="0">
   <tr>
