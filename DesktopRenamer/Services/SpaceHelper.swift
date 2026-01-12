@@ -36,8 +36,6 @@ class SpaceHelper {
         }
         
         // 3. Monitor Mouse Clicks (Switching Displays)
-        // This fixes the issue where switching monitors within the same app (or to Finder)
-        // would not trigger an update.
         globalEventMonitor = NSEvent.addGlobalMonitorForEvents(matching: [.leftMouseDown, .rightMouseDown]) { _ in
              detectSpaceChange()
         }
@@ -68,8 +66,6 @@ class SpaceHelper {
     
     private static func getActiveDisplay() -> NSScreen? {
         if let frontApp = NSWorkspace.shared.frontmostApplication {
-            // If Finder is active, ignore window checks because Finder owns
-            // desktop windows on ALL screens simultaneously. Use mouse fallback instead.
             if frontApp.bundleIdentifier != "com.apple.finder" {
                 
                 let options = CGWindowListOption(arrayLiteral: .optionOnScreenOnly, .excludeDesktopElements)
@@ -102,13 +98,12 @@ class SpaceHelper {
         }
         
         // Fallback: Use Mouse Location
-        // This catches cases like clicking on the Wallpaper/Finder or when window detection fails
         let mouseLocation = NSEvent.mouseLocation
         return NSScreen.screens.first { NSMouseInRect(mouseLocation, $0.frame, false) }
     }
     
     static func getRawSpaceUUID(completion: @escaping (String, Bool, Int, String) -> Void) {
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) { // Slight delay to allow window server to update
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
             
             // 1. Determine Target Display
             guard let activeScreen = getActiveDisplay() else {
@@ -172,15 +167,20 @@ class SpaceHelper {
     static func getVisibleSpaceUUIDs(completion: @escaping (Set<String>) -> Void) {
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
             let options = CGWindowListOption(arrayLiteral: .optionOnScreenOnly)
-            // Get all windows
             let windowList = CGWindowListCopyWindowInfo(options, kCGNullWindowID) as? [[String: Any]] ?? []
+            
+            // Use local copy of screens to prevent mutation issues during loop
             let screens = NSScreen.screens
             var visibleUUIDs = Set<String>()
 
-            // Check each screen individually
+            // If screens are empty (e.g. headless or mid-transition), return empty safely
+            if screens.isEmpty {
+                completion([])
+                return
+            }
+
             for screen in screens {
                 for window in windowList {
-                    // Check if window is physically on this screen
                     guard let bounds = window[kCGWindowBounds as String] as? [String: Any],
                           let x = bounds["X"] as? CGFloat,
                           let y = bounds["Y"] as? CGFloat,
@@ -190,9 +190,7 @@ class SpaceHelper {
                     let windowRect = CGRect(x: x, y: y, width: w, height: h)
                     let center = CGPoint(x: windowRect.midX, y: windowRect.midY)
                     
-                    // Use our robust coordinate checker
                     if isPoint(center, inside: screen.frame) {
-                        // Look for the Dock's "Wallpaper-" window
                         if let owner = window[kCGWindowOwnerName as String] as? String,
                            owner == "Dock",
                            let name = window[kCGWindowName as String] as? String,
@@ -201,9 +199,6 @@ class SpaceHelper {
                             let uuid = String(name.dropFirst("Wallpaper-".count))
                             let finalUUID = uuid.isEmpty ? "MAIN" : uuid
                             visibleUUIDs.insert(finalUUID)
-                            
-                            // Once found for this screen, we can stop searching windows for this screen
-                            // (Optimization: assumes 1 wallpaper per screen)
                             break
                         }
                     }
@@ -225,8 +220,6 @@ class SpaceHelper {
             return screenFrame.contains(point)
         }
         
-        // Flip Quartz coordinates (Y=0 at top) to Cocoa (Y=0 at bottom)
-        // The reference height must be the PRIMARY screen's height.
         let flippedY = NSMaxY(primaryScreen.frame) - point.y
         let flippedPoint = CGPoint(x: point.x, y: flippedY)
         
