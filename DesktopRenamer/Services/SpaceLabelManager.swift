@@ -153,9 +153,19 @@ class SpaceLabelManager: ObservableObject {
     private func recalculateUnifiedSize() {
         guard let spaceManager = spaceManager else { return }
         
+        // Ensure this runs on main thread to avoid threading issues with UI checks
+        if !Thread.isMainThread {
+            DispatchQueue.main.async { [weak self] in self?.recalculateUnifiedSize() }
+            return
+        }
+        
         // Uses Preview Settings for the "Max Size" reference
+        // Sanitize input scales to prevent NaN/Inf
+        let pFontScale = previewFontScale.isNaN || previewFontScale <= 0 ? 1.0 : previewFontScale
+        let pPadScale = previewPaddingScale.isNaN || previewPaddingScale <= 0 ? 1.0 : previewPaddingScale
+        
         let baseFontSize: CGFloat = 180
-        let scaledFontSize = baseFontSize * CGFloat(previewFontScale)
+        let scaledFontSize = baseFontSize * CGFloat(pFontScale)
         let referenceFont = NSFont.systemFont(ofSize: scaledFontSize, weight: .bold)
         
         var maxWidth: CGFloat = 600
@@ -170,8 +180,8 @@ class SpaceLabelManager: ObservableObject {
         
         let basePadH: CGFloat = 200
         let basePadV: CGFloat = 150
-        let paddingH = basePadH * CGFloat(previewPaddingScale)
-        let paddingV = basePadV * CGFloat(previewPaddingScale)
+        let paddingH = basePadH * CGFloat(pPadScale)
+        let paddingV = basePadV * CGFloat(pPadScale)
         
         var finalSize = NSSize(width: maxWidth + paddingH, height: maxHeight + paddingV)
         
@@ -181,8 +191,20 @@ class SpaceLabelManager: ObservableObject {
             finalSize.height = min(finalSize.height, screen.frame.height * 0.9)
         }
         
-        for window in createdWindows.values {
-            window.setPreviewSize(finalSize)
+        // Safety check for invalid dimensions to prevent crash
+        if finalSize.width.isNaN || finalSize.height.isNaN || finalSize.width.isInfinite || finalSize.height.isInfinite || finalSize.width < 10 || finalSize.height < 10 {
+            return
+        }
+        
+        // Use a snapshot of values to safely iterate without mutation risks.
+        // Also dispatch asynchronously to allow any display reconfiguration (reconnect) to settle
+        // before forcing a window resize, which avoids conflict with AppKit's own layout passes.
+        DispatchQueue.main.async { [weak self] in
+            guard let self = self else { return }
+            let windows = Array(self.createdWindows.values)
+            for window in windows {
+                window.setPreviewSize(finalSize)
+            }
         }
     }
     
