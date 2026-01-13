@@ -8,7 +8,6 @@ enum DetectionMethod: String, CaseIterable, Identifiable {
     case manual = "Manual"
     
     var id: String { self.rawValue }
-    
     var localizedName: LocalizedStringKey {
         switch self {
         case .automatic: return "Settings.General.Method.Auto"
@@ -18,7 +17,6 @@ enum DetectionMethod: String, CaseIterable, Identifiable {
     }
 }
 
-// [LogEntry struct remains same]
 struct LogEntry: Identifiable, CustomStringConvertible {
     let id = UUID()
     let timestamp: Date
@@ -30,8 +28,7 @@ struct LogEntry: Identifiable, CustomStringConvertible {
     var description: String {
         let formatter = DateFormatter()
         formatter.dateFormat = "HH:mm:ss.SSS"
-        let timeString = formatter.string(from: timestamp)
-        return "[\(timeString)] ACTION: \(action) | UUID: \(spaceUUID) | Desktop: \(isDesktop) | NC: \(ncCount)"
+        return "[\(formatter.string(from: timestamp))] ACTION: \(action) | UUID: \(spaceUUID) | Desktop: \(isDesktop) | NC: \(ncCount)"
     }
 }
 
@@ -39,8 +36,6 @@ class SpaceManager: ObservableObject {
     static private let spacesKey = "com.michaelqiu.desktoprenamer.spaces"
     static private let isAPIEnabledKey = "com.michaelqiu.desktoprenamer.isapienabled"
     static private let detectionMethodKey = "com.michaelqiu.desktoprenamer.detectionMethod"
-    
-    // Legacy key for migration
     static private let isManualSpacesEnabledKey = "com.michaelqiu.desktoprenamer.ismanualspacesenabled"
     
     @Published private(set) var currentSpaceUUID: String = ""
@@ -54,7 +49,6 @@ class SpaceManager: ObservableObject {
     @Published var isBugReportActive: Bool = false
     @Published private(set) var bugReportLog: [LogEntry] = []
     
-    // Detection Method Setting
     @Published var detectionMethod: DetectionMethod {
         didSet {
             UserDefaults.standard.set(detectionMethod.rawValue, forKey: SpaceManager.detectionMethodKey)
@@ -62,23 +56,16 @@ class SpaceManager: ObservableObject {
         }
     }
     
-    // Computed helper for Views
     var isManualMode: Bool { detectionMethod == .manual }
     
     static var isAPIEnabled: Bool {
-        get {
-            if UserDefaults.standard.object(forKey: isAPIEnabledKey) == nil {
-                return true
-            }
-            return UserDefaults.standard.bool(forKey: isAPIEnabledKey)
-        }
+        get { UserDefaults.standard.object(forKey: isAPIEnabledKey) == nil ? true : UserDefaults.standard.bool(forKey: isAPIEnabledKey) }
         set { UserDefaults.standard.set(newValue, forKey: isAPIEnabledKey) }
     }
     
     public var spaceAPI: SpaceAPI?
     
     init() {
-        // Migration Logic: Check if legacy "Manual Mode" was on
         let legacyManual = UserDefaults.standard.bool(forKey: SpaceManager.isManualSpacesEnabledKey)
         let savedMethod = UserDefaults.standard.string(forKey: SpaceManager.detectionMethodKey)
         
@@ -87,21 +74,15 @@ class SpaceManager: ObservableObject {
         } else if legacyManual {
             self.detectionMethod = .manual
         } else {
-            self.detectionMethod = .automatic // Default
+            self.detectionMethod = .automatic
         }
         
         loadSavedSpaces()
-        
         self.spaceAPI = SpaceAPI(spaceManager: self)
         
         if SpaceManager.isAPIEnabled {
             self.spaceAPI?.setupListener()
-            DistributedNotificationCenter.default().postNotificationName(
-                SpaceAPI.apiToggleNotification,
-                object: nil,
-                userInfo: ["isEnabled": true],
-                deliverImmediately: true
-            )
+            DistributedNotificationCenter.default().postNotificationName(SpaceAPI.apiToggleNotification, object: nil, userInfo: ["isEnabled": true], deliverImmediately: true)
         }
         
         SpaceHelper.startMonitoring { [weak self] rawUUID, isDesktop, ncCnt, displayID in
@@ -121,20 +102,11 @@ class SpaceManager: ObservableObject {
             return
         }
         
-        // --- NEW DETECTION LOGIC ---
         if detectionMethod == .automatic {
-            // Use CGS based system state (WhichSpace Logic)
             guard let cgsState = SpaceHelper.getSystemState() else { return }
             
-            let systemSpaces = cgsState.spaces
-            let systemCurrentID = cgsState.currentUUID
-            let systemDisplayID = cgsState.displayID
-            
-            // Sync current spaces with system spaces
-            // Preserve names for existing IDs, adopt new structure
             var newSpaceList: [DesktopSpace] = []
-            
-            for sysSpace in systemSpaces {
+            for sysSpace in cgsState.spaces {
                 var finalSpace = sysSpace
                 if let existing = spaceNameDict.first(where: { $0.id == sysSpace.id }) {
                     finalSpace.customName = existing.customName
@@ -142,86 +114,55 @@ class SpaceManager: ObservableObject {
                 newSpaceList.append(finalSpace)
             }
             
-            // Only update if list changed to avoid loops/redraws
             if self.spaceNameDict != newSpaceList {
                 self.spaceNameDict = newSpaceList
                 saveSpaces()
             }
             
-            // Update State
-            self.currentSpaceUUID = systemCurrentID
-            self.currentDisplayID = systemDisplayID
-            // For raw data consistency in UI/Logs
-            self.currentRawSpaceUUID = systemCurrentID
-            self.currentIsDesktop = (systemCurrentID != "FULLSCREEN")
+            self.currentSpaceUUID = cgsState.currentUUID
+            self.currentDisplayID = cgsState.displayID
+            self.currentRawSpaceUUID = cgsState.currentUUID
+            self.currentIsDesktop = (cgsState.currentUUID != "FULLSCREEN")
             self.currentNcCount = 0
             
             if isBugReportActive {
-                let entry = LogEntry(timestamp: Date(), spaceUUID: systemCurrentID, isDesktop: currentIsDesktop, ncCount: 0, action: "CGS Update (\(source))")
-                bugReportLog.append(entry)
+                bugReportLog.append(LogEntry(timestamp: Date(), spaceUUID: cgsState.currentUUID, isDesktop: currentIsDesktop, ncCount: 0, action: "CGS Update (\(source))"))
             }
-            
             return
         }
         
-        // --- LEGACY DETECTION LOGIC (Metric/Manual) ---
-        
+        // Legacy Logic
         self.currentIsDesktop = isDesktop
         self.currentNcCount = ncCount
         self.currentRawSpaceUUID = rawUUID
         self.currentDisplayID = displayID
         
         var logicalUUID = rawUUID
-        
         switch detectionMethod {
-        case .automatic:
-            // This case is handled in the if-block above,
-            // but kept here as fallback if something goes wrong or for structure.
-            if !isDesktop { logicalUUID = "FULLSCREEN" }
-        case .metric:
-            // Old Notification Center Count method
-            if ncCount <= SpaceHelper.fullscreenThreshold {
-                logicalUUID = "FULLSCREEN"
-            }
-        case .manual:
-            // Raw UUIDs only
-            logicalUUID = rawUUID
+        case .automatic: if !isDesktop { logicalUUID = "FULLSCREEN" }
+        case .metric: if ncCount <= SpaceHelper.fullscreenThreshold { logicalUUID = "FULLSCREEN" }
+        case .manual: logicalUUID = rawUUID
         }
         
         if isBugReportActive {
             let action = (currentSpaceUUID != logicalUUID) ? "Space Switched (\(source))" : "State Check (\(source))"
-            let entry = LogEntry(timestamp: Date(), spaceUUID: rawUUID, isDesktop: isDesktop, ncCount: ncCount, action: "\(action) [\(detectionMethod.rawValue)]")
-            bugReportLog.append(entry)
+            bugReportLog.append(LogEntry(timestamp: Date(), spaceUUID: rawUUID, isDesktop: isDesktop, ncCount: ncCount, action: "\(action) [\(detectionMethod.rawValue)]"))
         }
         
-        if currentSpaceUUID != logicalUUID {
-            currentSpaceUUID = logicalUUID
-        }
+        if currentSpaceUUID != logicalUUID { currentSpaceUUID = logicalUUID }
 
         if let index = spaceNameDict.firstIndex(where: { $0.id == logicalUUID }) {
             if spaceNameDict[index].displayID != displayID {
-                print("Correcting Display ID for space \(logicalUUID): \(spaceNameDict[index].displayID) -> \(displayID)")
                 spaceNameDict[index].displayID = displayID
                 saveSpaces()
             }
         }
         
-        // Auto-Add Logic (Only if NOT manual, and old auto logic was here)
-        // Since new Automatic logic is handled above, this applies mostly to Metric now.
         if detectionMethod != .manual && detectionMethod != .automatic && logicalUUID != "FULLSCREEN" {
             if !spaceNameDict.contains(where: { $0.id == logicalUUID }) {
                 let existingSpacesOnDisplay = spaceNameDict.filter { $0.displayID == displayID }
-                let maxNum = existingSpacesOnDisplay.map { $0.num }.max() ?? 0
-                let newNum = maxNum + 1
-                
-                let newSpace = DesktopSpace(
-                    id: logicalUUID,
-                    customName: "",
-                    num: newNum,
-                    displayID: displayID
-                )
-                
-                spaceNameDict.append(newSpace)
+                let newNum = (existingSpacesOnDisplay.map { $0.num }.max() ?? 0) + 1
+                spaceNameDict.append(DesktopSpace(id: logicalUUID, customName: "", num: newNum, displayID: displayID))
                 saveSpaces()
             }
         }
@@ -229,11 +170,8 @@ class SpaceManager: ObservableObject {
     
     func addManualSpace(_ uuid: String) {
         guard uuid != "FULLSCREEN", !spaceNameDict.contains(where: { $0.id == uuid }) else { return }
-        
         let existingSpacesOnDisplay = spaceNameDict.filter { $0.displayID == currentDisplayID }
-        let maxNum = existingSpacesOnDisplay.map { $0.num }.max() ?? 0
-        let newNum = maxNum + 1
-        
+        let newNum = (existingSpacesOnDisplay.map { $0.num }.max() ?? 0) + 1
         spaceNameDict.append(DesktopSpace(id: uuid, customName: "", num: newNum, displayID: currentDisplayID))
         saveSpaces()
         refreshSpaceState()
@@ -249,15 +187,8 @@ class SpaceManager: ObservableObject {
         isBugReportActive = false
     }
     
-    // ... [PrepareForTermination, load/save, getSpaceNum, getSpaceName... same as previous] ...
-    
     func prepareForTermination() {
-        DistributedNotificationCenter.default().postNotificationName(
-            SpaceAPI.apiToggleNotification,
-            object: nil,
-            userInfo: ["isEnabled": false],
-            deliverImmediately: true
-        )
+        DistributedNotificationCenter.default().postNotificationName(SpaceAPI.apiToggleNotification, object: nil, userInfo: ["isEnabled": false], deliverImmediately: true)
     }
     
     private func loadSavedSpaces() {
@@ -276,17 +207,13 @@ class SpaceManager: ObservableObject {
 
     func getSpaceNum(_ spaceUUID: String) -> Int {
         if spaceUUID == "FULLSCREEN" { return 0 }
-        if let space = spaceNameDict.first(where: { $0.id == spaceUUID }) {
-            return space.num
-        }
+        if let space = spaceNameDict.first(where: { $0.id == spaceUUID }) { return space.num }
         return detectionMethod == .manual ? 0 : -1
     }
     
     func getSpaceName(_ spaceUUID: String) -> String {
         if detectionMethod == .manual {
-             if spaceUUID != "FULLSCREEN" && !spaceNameDict.contains(where: { $0.id == spaceUUID }) {
-                 return "Fullscreen"
-             }
+             if spaceUUID != "FULLSCREEN" && !spaceNameDict.contains(where: { $0.id == spaceUUID }) { return "Fullscreen" }
         }
         if spaceUUID == "FULLSCREEN" { return "Fullscreen" }
         
