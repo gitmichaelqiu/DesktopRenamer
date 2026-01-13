@@ -1,6 +1,11 @@
 import Foundation
 import AppKit
 
+// MARK: - CGS Private API Definitions
+@_silgen_name("_CGSDefaultConnection") private func _CGSDefaultConnection() -> Int32
+@_silgen_name("CGSCopyManagedDisplaySpaces") private func CGSCopyManagedDisplaySpaces(_ cid: Int32) -> CFArray?
+@_silgen_name("CGSCopyActiveMenuBarDisplayIdentifier") private func CGSCopyActiveMenuBarDisplayIdentifier(_ cid: Int32) -> CFString?
+
 class SpaceHelper {
     static var fullscreenThreshold: Int {
         get { UserDefaults.standard.integer(forKey: "com.michaelqiu.desktoprenamer.fullscreenthreshold") }
@@ -63,6 +68,8 @@ class SpaceHelper {
             localEventMonitor = nil
         }
     }
+    
+    // MARK: - Legacy Methods (for Metric/Manual modes)
     
     private static func getActiveDisplay() -> NSScreen? {
         if let frontApp = NSWorkspace.shared.frontmostApplication {
@@ -206,6 +213,74 @@ class SpaceHelper {
             }
             completion(visibleUUIDs)
         }
+    }
+    
+    // MARK: - New CGS Methods (Automatic Mode)
+    
+    /// Fetches the complete system state using CGS private APIs.
+    /// Returns a tuple containing the list of detected desktop spaces, the current space ID, and the active display ID.
+    static func getSystemState() -> (spaces: [DesktopSpace], currentUUID: String, displayID: String)? {
+        let conn = _CGSDefaultConnection()
+        guard let displays = CGSCopyManagedDisplaySpaces(conn) as? [NSDictionary] else { return nil }
+        guard let activeDisplay = CGSCopyActiveMenuBarDisplayIdentifier(conn) as? String else { return nil }
+        
+        var detectedSpaces: [DesktopSpace] = []
+        var currentSpaceID = "FULLSCREEN"
+        
+        // Use active display or fallback to Main
+        let targetDisplayID = displays.contains { ($0["Display Identifier"] as? String) == activeDisplay }
+            ? activeDisplay
+            : (displays.first { ($0["Display Identifier"] as? String) == "Main" }?["Display Identifier"] as? String ?? activeDisplay)
+        
+        // Iterate through all displays
+        for display in displays {
+            guard let displayID = display["Display Identifier"] as? String,
+                  let spaces = display["Spaces"] as? [[String: Any]] else { continue }
+            
+            var regularIndex = 0
+            for space in spaces {
+                guard let managedID = space["ManagedSpaceID"] as? Int else { continue }
+                let idString = String(managedID)
+                let isFullscreen = space["TileLayoutManager"] != nil
+                
+                // Only track non-fullscreen spaces as "DesktopSpace" objects
+                // (This matches the app's model where fullscreen is usually implicit/ephemeral or ignored)
+                if !isFullscreen {
+                    regularIndex += 1
+                    let s = DesktopSpace(id: idString, customName: "", num: regularIndex, displayID: displayID)
+                    detectedSpaces.append(s)
+                }
+                
+                // Check if this space is the current one on this display
+                if let currentDict = display["Current Space"] as? [String: Any],
+                   let currentID = currentDict["ManagedSpaceID"] as? Int,
+                   currentID == managedID {
+                    
+                    // If this is the active display (with menu bar), set global current ID
+                    if displayID == targetDisplayID {
+                        currentSpaceID = isFullscreen ? "FULLSCREEN" : idString
+                    }
+                }
+            }
+        }
+        
+        return (detectedSpaces, currentSpaceID, targetDisplayID)
+    }
+    
+    /// Returns a set of space IDs (Strings) that are currently visible on any connected display.
+    static func getVisibleSystemSpaceIDs() -> Set<String> {
+        let conn = _CGSDefaultConnection()
+        guard let displays = CGSCopyManagedDisplaySpaces(conn) as? [NSDictionary] else { return [] }
+        
+        var visibleIDs = Set<String>()
+        
+        for display in displays {
+            if let currentDict = display["Current Space"] as? [String: Any],
+               let currentID = currentDict["ManagedSpaceID"] as? Int {
+                visibleIDs.insert(String(currentID))
+            }
+        }
+        return visibleIDs
     }
     
     static func detectSpaceChange() {

@@ -121,6 +121,51 @@ class SpaceManager: ObservableObject {
             return
         }
         
+        // --- NEW DETECTION LOGIC ---
+        if detectionMethod == .automatic {
+            // Use CGS based system state (WhichSpace Logic)
+            guard let cgsState = SpaceHelper.getSystemState() else { return }
+            
+            let systemSpaces = cgsState.spaces
+            let systemCurrentID = cgsState.currentUUID
+            let systemDisplayID = cgsState.displayID
+            
+            // Sync current spaces with system spaces
+            // Preserve names for existing IDs, adopt new structure
+            var newSpaceList: [DesktopSpace] = []
+            
+            for sysSpace in systemSpaces {
+                var finalSpace = sysSpace
+                if let existing = spaceNameDict.first(where: { $0.id == sysSpace.id }) {
+                    finalSpace.customName = existing.customName
+                }
+                newSpaceList.append(finalSpace)
+            }
+            
+            // Only update if list changed to avoid loops/redraws
+            if self.spaceNameDict != newSpaceList {
+                self.spaceNameDict = newSpaceList
+                saveSpaces()
+            }
+            
+            // Update State
+            self.currentSpaceUUID = systemCurrentID
+            self.currentDisplayID = systemDisplayID
+            // For raw data consistency in UI/Logs
+            self.currentRawSpaceUUID = systemCurrentID
+            self.currentIsDesktop = (systemCurrentID != "FULLSCREEN")
+            self.currentNcCount = 0
+            
+            if isBugReportActive {
+                let entry = LogEntry(timestamp: Date(), spaceUUID: systemCurrentID, isDesktop: currentIsDesktop, ncCount: 0, action: "CGS Update (\(source))")
+                bugReportLog.append(entry)
+            }
+            
+            return
+        }
+        
+        // --- LEGACY DETECTION LOGIC (Metric/Manual) ---
+        
         self.currentIsDesktop = isDesktop
         self.currentNcCount = ncCount
         self.currentRawSpaceUUID = rawUUID
@@ -128,13 +173,11 @@ class SpaceManager: ObservableObject {
         
         var logicalUUID = rawUUID
         
-        // --- DETECTION LOGIC SWITCH ---
         switch detectionMethod {
         case .automatic:
-            // New Finder-based method
-            if !isDesktop {
-                logicalUUID = "FULLSCREEN"
-            }
+            // This case is handled in the if-block above,
+            // but kept here as fallback if something goes wrong or for structure.
+            if !isDesktop { logicalUUID = "FULLSCREEN" }
         case .metric:
             // Old Notification Center Count method
             if ncCount <= SpaceHelper.fullscreenThreshold {
@@ -163,8 +206,9 @@ class SpaceManager: ObservableObject {
             }
         }
         
-        // Auto-Add Logic (Only if NOT manual)
-        if detectionMethod != .manual && logicalUUID != "FULLSCREEN" {
+        // Auto-Add Logic (Only if NOT manual, and old auto logic was here)
+        // Since new Automatic logic is handled above, this applies mostly to Metric now.
+        if detectionMethod != .manual && detectionMethod != .automatic && logicalUUID != "FULLSCREEN" {
             if !spaceNameDict.contains(where: { $0.id == logicalUUID }) {
                 let existingSpacesOnDisplay = spaceNameDict.filter { $0.displayID == displayID }
                 let maxNum = existingSpacesOnDisplay.map { $0.num }.max() ?? 0

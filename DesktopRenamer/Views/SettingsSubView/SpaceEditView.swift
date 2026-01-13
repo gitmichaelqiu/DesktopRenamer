@@ -179,8 +179,8 @@ struct SpaceEditView: View {
             Image(systemName: "chevron.up")
                 .frame(width: 16, height: 16)
         }
-        .disabled(isFirst)
-        .opacity(isFirst ? 0.3 : 1.0)
+        .disabled(isFirst || spaceManager.detectionMethod == .automatic) // DISABLED IN AUTOMATIC
+        .opacity(isFirst || spaceManager.detectionMethod == .automatic ? 0.3 : 1.0)
     }
     
     private func moveDownButton(for space: DesktopSpace, list: [DesktopSpace]) -> some View {
@@ -189,8 +189,8 @@ struct SpaceEditView: View {
             Image(systemName: "chevron.down")
                 .frame(width: 16, height: 16)
         }
-        .disabled(isLast)
-        .opacity(isLast ? 0.3 : 1.0)
+        .disabled(isLast || spaceManager.detectionMethod == .automatic) // DISABLED IN AUTOMATIC
+        .opacity(isLast || spaceManager.detectionMethod == .automatic ? 0.3 : 1.0)
     }
     
     private func deleteButton(for space: DesktopSpace) -> some View {
@@ -199,8 +199,8 @@ struct SpaceEditView: View {
                 .frame(width: 16, height: 16)
                 .foregroundColor(isCurrentSpace(space) ? Color.secondary : .red)
         }
-        .disabled(isCurrentSpace(space))
-        .opacity(isCurrentSpace(space) ? 0.3 : 1.0)
+        .disabled(isCurrentSpace(space) || spaceManager.detectionMethod == .automatic) // DISABLED IN AUTOMATIC
+        .opacity(isCurrentSpace(space) || spaceManager.detectionMethod == .automatic ? 0.3 : 1.0)
     }
     
     private func spaceNumberText(for space: DesktopSpace) -> String {
@@ -216,6 +216,9 @@ struct SpaceEditView: View {
     }
     
     private func moveRowUp(_ space: DesktopSpace) {
+        // Disabled in Automatic mode, but guard included just in case
+        guard spaceManager.detectionMethod != .automatic else { return }
+        
         var allSpaces = spaceManager.spaceNameDict
         let siblings = allSpaces.filter { $0.displayID == space.displayID }.sorted { $0.num < $1.num }
         
@@ -238,6 +241,9 @@ struct SpaceEditView: View {
     }
     
     private func moveRowDown(_ space: DesktopSpace) {
+        // Disabled in Automatic mode, but guard included just in case
+        guard spaceManager.detectionMethod != .automatic else { return }
+        
         var allSpaces = spaceManager.spaceNameDict
         let siblings = allSpaces.filter { $0.displayID == space.displayID }.sorted { $0.num < $1.num }
         
@@ -260,6 +266,9 @@ struct SpaceEditView: View {
     }
     
     private func deleteRow(_ space: DesktopSpace) {
+        // Disabled in Automatic mode
+        guard spaceManager.detectionMethod != .automatic else { return }
+        
         withAnimation(.easeInOut(duration: 0.2)) {
             var allSpaces = spaceManager.spaceNameDict
             allSpaces.removeAll(where: { $0.id == space.id })
