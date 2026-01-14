@@ -1,4 +1,4 @@
-<!-- v1.6.0 -->
+<!-- v1.6.1 -->
 
 <h1 align="center">
   <img src="./DesktopRenamer/Resources/DesktopRenamerIcon_Default.png" width="25%" alt=""/>  
