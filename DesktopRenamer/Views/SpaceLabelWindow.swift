@@ -131,6 +131,11 @@ class SpaceLabelWindow: NSWindow {
         
         super.init(contentRect: startRect, styleMask: [.borderless, .fullSizeContentView], backing: .buffered, defer: false)
         
+        // CRITICAL FIX: Prevent the window from releasing itself when closed.
+        // Since SpaceLabelManager holds a strong reference, we must manually manage the lifecycle.
+        // If this is true (default), self.close() deallocates the window, causing BAD_ACCESS when the manager accesses it.
+        self.isReleasedWhenClosed = false
+        
         // If we initialized without a valid screen, close immediately to avoid ghost windows or crashes
         if targetScreen == nil {
             self.close()
@@ -196,6 +201,10 @@ class SpaceLabelWindow: NSWindow {
             self?.updateVisibility(animated: false)
             self?.updateInteractivity()
         }
+    }
+    
+    deinit {
+        NotificationCenter.default.removeObserver(self)
     }
     
     // MARK: - Live Background Hack
@@ -666,6 +675,13 @@ class SpaceLabelWindow: NSWindow {
     }
     
     private func updateVisibility(animated: Bool) {
+        // Safety check: If screen is gone, force hide and exit to prevent ghost windows
+        guard findTargetScreen() != nil else {
+            self.alphaValue = 0.0
+            self.orderOut(nil)
+            return
+        }
+        
         let showActive = labelManager?.showActiveLabels ?? true
         let showPreview = labelManager?.showPreviewLabels ?? true
         let shouldBeVisible = isActiveMode ? showActive : showPreview
