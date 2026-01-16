@@ -288,7 +288,14 @@
       "shouldTranslate" : false
     },
     "Enable Labels" : {
-
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "启用标签"
+          }
+        }
+      }
     },
     "Factory Reset" : {
       "localizations" : {
