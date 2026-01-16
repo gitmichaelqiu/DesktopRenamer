@@ -287,6 +287,9 @@
     "Desktop" : {
       "shouldTranslate" : false
     },
+    "Enable Labels" : {
+
+    },
     "Factory Reset" : {
       "localizations" : {
         "zh-Hans" : {
