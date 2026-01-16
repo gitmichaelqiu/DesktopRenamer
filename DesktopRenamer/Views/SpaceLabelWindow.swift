@@ -107,7 +107,6 @@ class SpaceLabelWindow: NSWindow {
         ])
         
         // Screen Logic
-        // Fixed: Use first(where:) and explicit NSDeviceDescriptionKey
         let foundScreen = NSScreen.screens.first(where: { screen in
             let screenID = screen.deviceDescription[NSDeviceDescriptionKey("NSScreenNumber")] as? NSNumber ?? 0
             let idString = "\(screen.localizedName) (\(screenID))"
@@ -116,8 +115,6 @@ class SpaceLabelWindow: NSWindow {
             return screen.localizedName == cleanName
         })
         
-        // FIX: Removed force unwrap of NSScreen.main.
-        // During display disconnects, main screen can momentarily be undefined or flux.
         let targetScreen = foundScreen ?? NSScreen.main ?? NSScreen.screens.first
         
         let startRect: NSRect
@@ -125,18 +122,14 @@ class SpaceLabelWindow: NSWindow {
             let screenFrame = targetScreen.frame
             startRect = NSRect(x: screenFrame.midX - 100, y: screenFrame.midY - 50, width: 200, height: 100)
         } else {
-            // Safe fallback if no screens exist (e.g. headless/transition)
             startRect = NSRect(x: 0, y: 0, width: 200, height: 100)
         }
         
         super.init(contentRect: startRect, styleMask: [.borderless, .fullSizeContentView], backing: .buffered, defer: false)
         
-        // CRITICAL FIX: Prevent the window from releasing itself when closed.
-        // Since SpaceLabelManager holds a strong reference, we must manually manage the lifecycle.
-        // If this is true (default), self.close() deallocates the window, causing BAD_ACCESS when the manager accesses it.
+        // Prevent auto-release to fix BAD_ACCESS
         self.isReleasedWhenClosed = false
         
-        // If we initialized without a valid screen, close immediately to avoid ghost windows or crashes
         if targetScreen == nil {
             self.close()
             return
@@ -146,7 +139,6 @@ class SpaceLabelWindow: NSWindow {
         let rootContentView: NSView
         
         if #available(macOS 26.0, *) {
-            // NEW DESIGN: NSGlassEffectView
             let glassView = NSGlassEffectView(frame: .zero)
             glassView.contentView = self.contentContainer
             rootContentView = glassView
@@ -179,7 +171,10 @@ class SpaceLabelWindow: NSWindow {
         self.isOpaque = false
         self.hasShadow = false
         self.level = .floating
-        self.collectionBehavior = [.managed, .stationary, .participatesInCycle, .fullScreenAuxiliary]
+        
+        // FIX: Removed .stationary. This allows the window to stick to a specific space
+        // instead of following the user to every space.
+        self.collectionBehavior = [.managed, .participatesInCycle, .fullScreenAuxiliary]
         
         // Observers
         self.spaceManager.$spaceNameDict
@@ -192,7 +187,6 @@ class SpaceLabelWindow: NSWindow {
             
         NotificationCenter.default.addObserver(self, selector: #selector(repositionWindow), name: NSApplication.didChangeScreenParametersNotification, object: nil)
         
-        // Initialize
         syncFromGlobalState()
         setupLiveBackgroundUpdate()
         
@@ -474,8 +468,7 @@ class SpaceLabelWindow: NSWindow {
         let showHandle = isCurrentSpace && isDocked && (labelManager?.showOnDesktop == true)
         let isHiddenCornerMode = isCurrentSpace && !showHandle && !(labelManager?.showOnDesktop == true)
         
-        // 1. Determine Dimensions (Calculation Only)
-        // We separate calculation from UI updates to support the deferred "Hide then Resize" animation.
+        // 1. Determine Dimensions
         var isSmallModeForFont = false
         var shouldUseHandle = false
         
@@ -518,7 +511,6 @@ class SpaceLabelWindow: NSWindow {
         }
         
         // 3. Execution Phase
-        // Helper block to update visual elements (Label/Handle/CornerRadius/Font)
         let updateVisuals = {
             if shouldUseHandle {
                 self.label.isHidden = true
@@ -537,28 +529,22 @@ class SpaceLabelWindow: NSWindow {
 
         if updateFrame {
             if isHiddenCornerMode {
-                // SPECIAL CASE: Clean EaseOut
-                // 1. Hide first (using current appearance/frame)
                 NSAnimationContext.runAnimationGroup { context in
                     context.duration = 0.08
                     context.timingFunction = CAMediaTimingFunction(name: .easeOut)
                     self.animator().alphaValue = 0.0
                 } completionHandler: {
-                    // 2. After hidden, update visuals and instantly snap to new position
                     updateVisuals()
                     self.setFrame(NSRect(origin: newOrigin, size: newSize), display: true)
                     self.alphaValue = 1.0
                 }
             } else {
-                // STANDARD CASE
-                updateVisuals() // Update visuals immediately
-                
+                updateVisuals()
                 self.alphaValue = 1.0
                 self.animator().setFrame(NSRect(origin: newOrigin, size: newSize), display: true)
                 if self.alphaValue < 1.0 { self.animator().alphaValue = 1.0 }
             }
         } else {
-            // NO ANIMATION (Instant Update)
             updateVisuals()
             self.setFrame(NSRect(origin: self.frame.origin, size: newSize), display: true)
         }
@@ -675,7 +661,6 @@ class SpaceLabelWindow: NSWindow {
     }
     
     private func updateVisibility(animated: Bool) {
-        // Safety check: If screen is gone, force hide and exit to prevent ghost windows
         guard findTargetScreen() != nil else {
             self.alphaValue = 0.0
             self.orderOut(nil)
@@ -684,7 +669,32 @@ class SpaceLabelWindow: NSWindow {
         
         let showActive = labelManager?.showActiveLabels ?? true
         let showPreview = labelManager?.showPreviewLabels ?? true
-        let shouldBeVisible = isActiveMode ? showActive : showPreview
+        
+        var shouldBeVisible = false
+        
+        if isActiveMode {
+            // ACTIVE MODE
+            shouldBeVisible = showActive
+            
+            // If it should be visible but isn't (or was reset by sleep), pull it to front
+            if shouldBeVisible && (!self.isVisible || !self.isOnActiveSpace) {
+                self.orderFront(nil)
+            }
+        } else {
+            // PREVIEW MODE
+            if showPreview {
+                // CLUTTER PROTECTION:
+                // If a "Preview" window is physically on the active space (due to sleep dump),
+                // we hide it to prevent stacking. It will reappear when the user visits its true space.
+                if self.isOnActiveSpace {
+                    shouldBeVisible = false
+                } else {
+                    shouldBeVisible = true
+                }
+            } else {
+                shouldBeVisible = false
+            }
+        }
         
         if shouldBeVisible {
             if !self.isVisible { self.alphaValue = 0.0; self.orderFront(nil) }
@@ -702,5 +712,9 @@ class SpaceLabelWindow: NSWindow {
         }
     }
     
-    @objc private func repositionWindow() { updateLayout(isCurrentSpace: isActiveMode) }
+    @objc private func repositionWindow() {
+        updateLayout(isCurrentSpace: isActiveMode)
+        // Ensure visibility logic is re-checked after layout/screen changes (e.g. Wake from sleep)
+        updateVisibility(animated: false)
+    }
 }
