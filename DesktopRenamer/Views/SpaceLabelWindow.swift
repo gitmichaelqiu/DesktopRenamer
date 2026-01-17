@@ -686,19 +686,49 @@ class SpaceLabelWindow: NSWindow {
             NSPoint(x: f.maxX - 1, y: f.minY - size.height + 1)             // Bottom-Right
         ]
         
+        var bestCandidate: NSPoint = candidates[0]
+        var maxMinDist: CGFloat = -2.0 // Use -2 to ensure -1 (intersection) can supersede if needed
+        
         for origin in candidates {
             let rect = NSRect(origin: origin, size: size)
-            // Check if this frame intersects with ANY OTHER screen
-            let intersectsOther = allScreens.contains { other in
-                other != targetScreen && other.frame.intersects(rect)
+            
+            var minDist: CGFloat = 100000.0 // Arbitrary large number
+            var intersects = false
+            
+            // Check against all other screens to find the "safest" corner (furthest from others)
+            for other in allScreens {
+                if other == targetScreen { continue }
+                
+                let otherFrame = other.frame
+                
+                if otherFrame.intersects(rect) {
+                    intersects = true
+                    break
+                }
+                
+                // Calculate distance to this screen
+                let dx = max(otherFrame.minX - rect.maxX, rect.minX - otherFrame.maxX, 0)
+                let dy = max(otherFrame.minY - rect.maxY, rect.minY - otherFrame.maxY, 0)
+                let dist = sqrt(dx*dx + dy*dy)
+                
+                if dist < minDist {
+                    minDist = dist
+                }
             }
-            if !intersectsOther {
-                return origin
+            
+            // If it intersects any screen, score is -1 (worst possible)
+            if intersects {
+                minDist = -1.0
+            }
+            
+            // We want the candidate that is furthest from its nearest neighbor (Maximize the Minimum Distance)
+            if minDist > maxMinDist {
+                maxMinDist = minDist
+                bestCandidate = origin
             }
         }
         
-        // Fallback: Default to Top-Left if all intersect or only one screen
-        return candidates[0]
+        return bestCandidate
     }
     
     private func findNearestEdgePosition(targetScreen: NSScreen, forRect rect: NSRect) -> NSPoint {
