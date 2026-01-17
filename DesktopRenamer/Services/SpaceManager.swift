@@ -88,6 +88,18 @@ class SpaceManager: ObservableObject {
         SpaceHelper.startMonitoring { [weak self] rawUUID, isDesktop, ncCnt, displayID in
             self?.handleSpaceChange(rawUUID, isDesktop: isDesktop, ncCount: ncCnt, displayID: displayID, source: "Monitor")
         }
+        
+        // Listen for changes in screen configuration (e.g., adding/removing displays)
+        NotificationCenter.default.addObserver(self, selector: #selector(screenParametersDidChange), name: NSApplication.didChangeScreenParametersNotification, object: nil)
+    }
+    
+    deinit {
+        NotificationCenter.default.removeObserver(self)
+    }
+    
+    @objc private func screenParametersDidChange() {
+        // Trigger a refresh when display configuration changes
+        refreshSpaceState()
     }
     
     func refreshSpaceState() {

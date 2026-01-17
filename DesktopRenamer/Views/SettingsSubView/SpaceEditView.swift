@@ -13,7 +13,7 @@ struct SpaceEditView: View {
                     VStack(alignment: .leading, spacing: 20) {
                         ForEach(groupedDisplayIDs, id: \.self) { displayID in
                             VStack(alignment: .leading, spacing: 8) {
-                                Text(displayID)
+                                Text(displayDisplayName(displayID))
                                     .font(.headline)
                                     .padding(.leading, 4)
                                 
@@ -52,6 +52,14 @@ struct SpaceEditView: View {
             if num1 != num2 { return num1 < num2 }
             return id1 < id2
         }
+    }
+    
+    // Helper to extract the friendly name from "Name (ID)"
+    private func displayDisplayName(_ id: String) -> String {
+        if let lastParenIndex = id.lastIndex(of: "(") {
+            return String(id[..<lastParenIndex]).trimmingCharacters(in: .whitespaces)
+        }
+        return id
     }
     
     private func extractDisplayNumber(from id: String) -> Int {
