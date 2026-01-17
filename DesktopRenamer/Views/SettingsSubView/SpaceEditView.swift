@@ -44,31 +44,22 @@ struct SpaceEditView: View {
     
     private var groupedDisplayIDs: [String] {
         let ids = Array(Set(spaceManager.spaceNameDict.map { $0.displayID }))
-        // Sort by resolved name or keep "Main" on top
         return ids.sorted { id1, id2 in
             if id1 == "Main" { return true }
             if id2 == "Main" { return false }
-            
-            // Try to sort by name for consistent ordering
             let name1 = resolveDisplayName(for: id1)
             let name2 = resolveDisplayName(for: id2)
             return name1 < name2
         }
     }
     
-    // Helper to resolve Display UUID to a Friendly Name
     private func resolveDisplayName(for displayID: String) -> String {
-        // 1. Handle "Main" legacy case
         if displayID == "Main" { return "Main Display" }
-        
-        // 2. Check if it's the legacy "Name (ID)" format (Fallback for older data)
         if displayID.contains("(") && displayID.contains(")") {
              if let lastParenIndex = displayID.lastIndex(of: "(") {
                 return String(displayID[..<lastParenIndex]).trimmingCharacters(in: .whitespaces)
             }
         }
-
-        // 3. Assume it's a UUID and try to match with connected screens
         for screen in NSScreen.screens {
             if let screenNumber = screen.deviceDescription[NSDeviceDescriptionKey("NSScreenNumber")] as? NSNumber {
                 let cgsID = screenNumber.uint32Value
@@ -81,8 +72,6 @@ struct SpaceEditView: View {
                 }
             }
         }
-        
-        // 4. Fallback: Return UUID if no match found (e.g. disconnected display)
         return displayID
     }
     
@@ -251,9 +240,9 @@ struct SpaceEditView: View {
     }
     
     private func updateSpaceName(_ space: DesktopSpace, _ newName: String) {
-        guard let index = spaceManager.spaceNameDict.firstIndex(where: { $0.id == space.id }) else { return }
-        spaceManager.spaceNameDict[index].customName = newName.trimmingCharacters(in: .whitespacesAndNewlines)
-        spaceManager.saveSpaces()
+        // Fix: Use renameSpace to ensure caches (UUID & Index) are updated.
+        // This prevents the system sync from reverting the name.
+        spaceManager.renameSpace(space.id, to: newName)
     }
     
     private func saveAndRefresh(_ newSpaces: [DesktopSpace]) {
