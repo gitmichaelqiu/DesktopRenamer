@@ -59,7 +59,7 @@ struct AboutView: View {
                         OtherAppCard(
                             imageName: "OptClickerIcon_Default",
                             appName: "OptClicker",
-                            description: "Let you right-click with the Option key.",
+                            description: NSLocalizedString("Let you right-click with the Option key.", comment: ""),
                             url: "https://github.com/gitmichaelqiu/OptClicker"
                         )
                         
@@ -67,7 +67,7 @@ struct AboutView: View {
                         OtherAppCard(
                             imageName: "SpaceSwitcherIcon_Default",
                             appName: "SpaceSwitcher",
-                            description: "Control which app and dock to show in each space.",
+                            description: NSLocalizedString("Control which app and dock to show in each space.", comment: ""),
                             url: "https://github.com/gitmichaelqiu/SpaceSwitcher"
                         )
                     }
