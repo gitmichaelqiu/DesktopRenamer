@@ -347,7 +347,11 @@
         }
       }
     },
+    "Font size" : {
+
+    },
     "Font Size" : {
+      "extractionState" : "stale",
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
@@ -403,7 +407,11 @@
         }
       }
     },
+    "Keep visible on desktop" : {
+
+    },
     "Keep Visible on Desktop" : {
+      "extractionState" : "stale",
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
@@ -715,7 +723,11 @@
         }
       }
     },
+    "Restore defaults" : {
+
+    },
     "Restore Defaults" : {
+      "extractionState" : "stale",
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
@@ -1736,7 +1748,11 @@
         }
       }
     },
+    "Show active space labels" : {
+
+    },
     "Show Active Space Labels" : {
+      "extractionState" : "stale",
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
@@ -1746,7 +1762,11 @@
         }
       }
     },
+    "Show preview labels" : {
+
+    },
     "Show Preview Labels" : {
+      "extractionState" : "stale",
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
@@ -1950,7 +1970,11 @@
         }
       }
     },
+    "Window size" : {
+
+    },
     "Window Size" : {
+      "extractionState" : "stale",
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
