@@ -108,11 +108,24 @@ class SpaceLabelWindow: NSWindow {
         
         // Screen Logic
         let foundScreen = NSScreen.screens.first(where: { screen in
-            let screenID = screen.deviceDescription[NSDeviceDescriptionKey("NSScreenNumber")] as? NSNumber ?? 0
-            let idString = "\(screen.localizedName) (\(screenID))"
+            let screenNumber = screen.deviceDescription[NSDeviceDescriptionKey("NSScreenNumber")] as? NSNumber ?? 0
+            let cgsID = screenNumber.uint32Value
+            
+            // 1. Check Custom Format: "Name (ID)"
+            let idString = "\(screen.localizedName) (\(screenNumber))"
             if idString == displayID { return true }
-            let cleanName = displayID.components(separatedBy: " (").first ?? displayID
-            return screen.localizedName == cleanName
+            
+            // 2. Check Name only
+            let cleanTarget = displayID.components(separatedBy: " (").first ?? displayID
+            if screen.localizedName == cleanTarget { return true }
+            
+            // 3. Check UUID (The fix for Automatic mode)
+            // CGDisplayCreateUUIDFromDisplayID returns Unmanaged<CFUUID>. We must take retained value.
+            let uuid = CGDisplayCreateUUIDFromDisplayID(cgsID).takeRetainedValue()
+            let uuidString = CFUUIDCreateString(nil, uuid) as String
+            if uuidString == displayID { return true }
+            
+            return false
         })
         
         let targetScreen = foundScreen ?? NSScreen.main ?? NSScreen.screens.first
@@ -624,11 +637,23 @@ class SpaceLabelWindow: NSWindow {
     private func findTargetScreen() -> NSScreen? {
         // Fixed: Use first(where:) and explicit NSDeviceDescriptionKey
         return NSScreen.screens.first(where: { screen in
-            let screenID = screen.deviceDescription[NSDeviceDescriptionKey("NSScreenNumber")] as? NSNumber ?? 0
-            let idString = "\(screen.localizedName) (\(screenID))"
+            let screenNumber = screen.deviceDescription[NSDeviceDescriptionKey("NSScreenNumber")] as? NSNumber ?? 0
+            let cgsID = screenNumber.uint32Value
+            
+            // 1. Check Custom Format: "Name (ID)"
+            let idString = "\(screen.localizedName) (\(screenNumber))"
             if idString == self.displayID { return true }
+            
+            // 2. Check Name only
             let cleanTarget = self.displayID.components(separatedBy: " (").first ?? self.displayID
-            return screen.localizedName == cleanTarget
+            if screen.localizedName == cleanTarget { return true }
+            
+            // 3. Check UUID (The fix for Automatic mode)
+            let uuid = CGDisplayCreateUUIDFromDisplayID(cgsID).takeRetainedValue()
+            let uuidString = CFUUIDCreateString(nil, uuid) as String
+            if uuidString == self.displayID { return true }
+            
+            return false
         })
     }
     
