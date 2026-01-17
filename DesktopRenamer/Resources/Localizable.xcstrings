@@ -258,6 +258,16 @@
         }
       }
     },
+    "Control which app and dock to show in each space." : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "控制每个桌面的 App 和 Dock。"
+          }
+        }
+      }
+    },
     "Create windows that only appear in Mission Control to display space names.\n\nMay not work when multiple displays are connected." : {
       "localizations" : {
         "en" : {
@@ -286,6 +296,16 @@
     },
     "Desktop" : {
       "shouldTranslate" : false
+    },
+    "Enable Labels" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "启用标签"
+          }
+        }
+      }
     },
     "Factory Reset" : {
       "localizations" : {
@@ -389,6 +409,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "在桌面可见"
+          }
+        }
+      }
+    },
+    "Let you right-click with the Option key." : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Option 键模拟右键。"
           }
         }
       }
