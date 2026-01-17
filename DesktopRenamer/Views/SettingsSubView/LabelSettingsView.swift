@@ -17,7 +17,7 @@ struct LabelSettingsView: View {
                 if labelManager.isEnabled {
                     SettingsSection("Preview Labels") {
                         SettingsRow(
-                            "Show Preview Labels",
+                            "Show preview labels",
                             helperText: "The large label visible in Mission Control."
                         ) {
                             Toggle("", isOn: $labelManager.showPreviewLabels)
@@ -29,7 +29,7 @@ struct LabelSettingsView: View {
                             Divider()
                             
                             SliderSectionRow(
-                                title: "Font Size",
+                                title: "Font size",
                                 value: $labelManager.previewFontScale,
                                 range: 0.5...2.0
                             )
@@ -37,7 +37,7 @@ struct LabelSettingsView: View {
                             Divider()
                             
                             SliderSectionRow(
-                                title: "Window Size",
+                                title: "Window size",
                                 value: $labelManager.previewPaddingScale,
                                 range: 0.5...3.0
                             )
@@ -47,7 +47,7 @@ struct LabelSettingsView: View {
                     SettingsSection("Active Space Labels") {
                         // Main Toggle
                         SettingsRow(
-                            "Show Active Space Labels",
+                            "Show active space labels",
                             helperText: "The hidden label that slides into the corner of the active desktop."
                         ) {
                             Toggle("", isOn: $labelManager.showActiveLabels)
@@ -59,7 +59,7 @@ struct LabelSettingsView: View {
                             Divider()
                             
                             SettingsRow(
-                                "Keep Visible on Desktop",
+                                "Keep visible on desktop",
                                 helperText: "If enabled, the label stays on the desktop instead of hiding.\n\nTip: You can drag the window to the screen edge to shrink it into a 'Picture-in-Picture' mode."
                             ) {
                                 Toggle("", isOn: $labelManager.showOnDesktop)
@@ -70,7 +70,7 @@ struct LabelSettingsView: View {
                             Divider()
                             
                             SliderSectionRow(
-                                title: "Font Size",
+                                title: "Font size",
                                 value: $labelManager.activeFontScale,
                                 range: 0.5...2.0
                             )
@@ -78,7 +78,7 @@ struct LabelSettingsView: View {
                             Divider()
                             
                             SliderSectionRow(
-                                title: "Window Size",
+                                title: "Window size",
                                 value: $labelManager.activePaddingScale,
                                 range: 0.5...3.0
                             )
@@ -87,7 +87,7 @@ struct LabelSettingsView: View {
                     
                     // MARK: - SECTION 3: ACTIONS
                     SettingsSection("Actions") {
-                        SettingsRow("Restore Defaults") {
+                        SettingsRow("Restore defaults") {
                             Button("Reset") {
                                 withAnimation {
                                     labelManager.showPreviewLabels = true
