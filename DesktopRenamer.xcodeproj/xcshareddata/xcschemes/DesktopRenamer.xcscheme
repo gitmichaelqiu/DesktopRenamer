@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <Scheme
    LastUpgradeVersion = "2600"
-   version = "1.7">
+   version = "2.2">
    <BuildAction
       parallelizeBuildables = "YES"
       buildImplicitDependencies = "YES"
@@ -18,6 +18,29 @@
                BlueprintIdentifier = "466CC6412E2C883B002F4BB2"
                BuildableName = "DesktopRenamer.app"
                BlueprintName = "DesktopRenamer"
+               ReferencedContainer = "container:DesktopRenamer.xcodeproj">
+            </BuildableReference>
+         </BuildActionEntry>
+         <BuildActionEntry
+            buildForTesting = "YES"
+            buildForRunning = "NO"
+            buildForProfiling = "NO"
+            buildForArchiving = "NO"
+            buildForAnalyzing = "NO">
+            <AutocreatedTestPlanReference>
+            </AutocreatedTestPlanReference>
+         </BuildActionEntry>
+         <BuildActionEntry
+            buildForTesting = "YES"
+            buildForRunning = "YES"
+            buildForProfiling = "YES"
+            buildForArchiving = "YES"
+            buildForAnalyzing = "YES">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "46C0D39E2F1BE635009258EB"
+               BuildableName = "DesktopNameWidgetExtension.appex"
+               BlueprintName = "DesktopNameWidgetExtension"
                ReferencedContainer = "container:DesktopRenamer.xcodeproj">
             </BuildableReference>
          </BuildActionEntry>
