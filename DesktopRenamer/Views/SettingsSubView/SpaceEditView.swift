@@ -13,7 +13,7 @@ struct SpaceEditView: View {
                     VStack(alignment: .leading, spacing: 20) {
                         ForEach(groupedDisplayIDs, id: \.self) { displayID in
                             VStack(alignment: .leading, spacing: 8) {
-                                Text(displayDisplayName(displayID))
+                                Text(resolveDisplayName(for: displayID))
                                     .font(.headline)
                                     .padding(.leading, 4)
                                 
@@ -44,30 +44,46 @@ struct SpaceEditView: View {
     
     private var groupedDisplayIDs: [String] {
         let ids = Array(Set(spaceManager.spaceNameDict.map { $0.displayID }))
+        // Sort by resolved name or keep "Main" on top
         return ids.sorted { id1, id2 in
             if id1 == "Main" { return true }
             if id2 == "Main" { return false }
-            let num1 = extractDisplayNumber(from: id1)
-            let num2 = extractDisplayNumber(from: id2)
-            if num1 != num2 { return num1 < num2 }
-            return id1 < id2
+            
+            // Try to sort by name for consistent ordering
+            let name1 = resolveDisplayName(for: id1)
+            let name2 = resolveDisplayName(for: id2)
+            return name1 < name2
         }
     }
     
-    // Helper to extract the friendly name from "Name (ID)"
-    private func displayDisplayName(_ id: String) -> String {
-        if let lastParenIndex = id.lastIndex(of: "(") {
-            return String(id[..<lastParenIndex]).trimmingCharacters(in: .whitespaces)
+    // Helper to resolve Display UUID to a Friendly Name
+    private func resolveDisplayName(for displayID: String) -> String {
+        // 1. Handle "Main" legacy case
+        if displayID == "Main" { return "Main Display" }
+        
+        // 2. Check if it's the legacy "Name (ID)" format (Fallback for older data)
+        if displayID.contains("(") && displayID.contains(")") {
+             if let lastParenIndex = displayID.lastIndex(of: "(") {
+                return String(displayID[..<lastParenIndex]).trimmingCharacters(in: .whitespaces)
+            }
         }
-        return id
-    }
-    
-    private func extractDisplayNumber(from id: String) -> Int {
-        guard let start = id.lastIndex(of: "("),
-              let end = id.lastIndex(of: ")"),
-              start < end else { return Int.max }
-        let numberString = id[id.index(after: start)..<end]
-        return Int(numberString) ?? Int.max
+
+        // 3. Assume it's a UUID and try to match with connected screens
+        for screen in NSScreen.screens {
+            if let screenNumber = screen.deviceDescription[NSDeviceDescriptionKey("NSScreenNumber")] as? NSNumber {
+                let cgsID = screenNumber.uint32Value
+                if let uuidRef = CGDisplayCreateUUIDFromDisplayID(cgsID) {
+                    let uuid = uuidRef.takeRetainedValue()
+                    let uuidString = CFUUIDCreateString(nil, uuid) as String?
+                    if let uuidStr = uuidString, uuidStr.caseInsensitiveCompare(displayID) == .orderedSame {
+                        return screen.localizedName
+                    }
+                }
+            }
+        }
+        
+        // 4. Fallback: Return UUID if no match found (e.g. disconnected display)
+        return displayID
     }
     
     private func spaces(for displayID: String) -> [DesktopSpace] {
