@@ -109,23 +109,10 @@ class SpaceLabelWindow: NSWindow {
         // Screen Logic
         let foundScreen = NSScreen.screens.first(where: { screen in
             let screenID = screen.deviceDescription[NSDeviceDescriptionKey("NSScreenNumber")] as? NSNumber ?? 0
-            
-            // 1. Name Check
             let idString = "\(screen.localizedName) (\(screenID))"
             if idString == displayID { return true }
-            
             let cleanName = displayID.components(separatedBy: " (").first ?? displayID
-            if screen.localizedName == cleanName { return true }
-            
-            // 2. UUID Check (Fix for Automatic Mode)
-            let cgsID = screenID.uint32Value
-            if let uuidRef = CGDisplayCreateUUIDFromDisplayID(cgsID) {
-                let uuid = uuidRef.takeRetainedValue()
-                let uuidString = CFUUIDCreateString(nil, uuid) as String
-                if uuidString.caseInsensitiveCompare(displayID) == .orderedSame { return true }
-            }
-            
-            return false
+            return screen.localizedName == cleanName
         })
         
         let targetScreen = foundScreen ?? NSScreen.main ?? NSScreen.screens.first
@@ -204,8 +191,7 @@ class SpaceLabelWindow: NSWindow {
         setupLiveBackgroundUpdate()
         
         DispatchQueue.main.async { [weak self] in
-            // IMPORTANT: Disable animation on initial layout to prevent wrong position glitches
-            self?.updateLayout(isCurrentSpace: true, animated: false)
+            self?.updateLayout(isCurrentSpace: true)
             self?.updateVisibility(animated: false)
             self?.updateInteractivity()
         }
@@ -472,7 +458,7 @@ class SpaceLabelWindow: NSWindow {
     
     // MARK: - Layout Logic
     
-    private func updateLayout(isCurrentSpace: Bool, updateFrame: Bool = true, animated: Bool = true) {
+    private func updateLayout(isCurrentSpace: Bool, updateFrame: Bool = true) {
         guard let targetScreen = findTargetScreen() else { self.close(); return }
         
         var newSize: NSSize
@@ -543,31 +529,20 @@ class SpaceLabelWindow: NSWindow {
 
         if updateFrame {
             if isHiddenCornerMode {
-                if animated {
-                    NSAnimationContext.runAnimationGroup { context in
-                        context.duration = 0.08
-                        context.timingFunction = CAMediaTimingFunction(name: .easeOut)
-                        self.animator().alphaValue = 0.0
-                    } completionHandler: {
-                        updateVisuals()
-                        self.setFrame(NSRect(origin: newOrigin, size: newSize), display: true)
-                        self.alphaValue = 1.0
-                    }
-                } else {
+                NSAnimationContext.runAnimationGroup { context in
+                    context.duration = 0.08
+                    context.timingFunction = CAMediaTimingFunction(name: .easeOut)
+                    self.animator().alphaValue = 0.0
+                } completionHandler: {
                     updateVisuals()
                     self.setFrame(NSRect(origin: newOrigin, size: newSize), display: true)
                     self.alphaValue = 1.0
                 }
             } else {
                 updateVisuals()
-                if animated {
-                    self.alphaValue = 1.0
-                    self.animator().setFrame(NSRect(origin: newOrigin, size: newSize), display: true)
-                    if self.alphaValue < 1.0 { self.animator().alphaValue = 1.0 }
-                } else {
-                    self.alphaValue = 1.0
-                    self.setFrame(NSRect(origin: newOrigin, size: newSize), display: true)
-                }
+                self.alphaValue = 1.0
+                self.animator().setFrame(NSRect(origin: newOrigin, size: newSize), display: true)
+                if self.alphaValue < 1.0 { self.animator().alphaValue = 1.0 }
             }
         } else {
             updateVisuals()
@@ -808,7 +783,7 @@ class SpaceLabelWindow: NSWindow {
     
     @objc private func repositionWindow() {
         // Disable animation for screen parameter changes to ensure instant snap
-        updateLayout(isCurrentSpace: isActiveMode, animated: false)
+        updateLayout(isCurrentSpace: isActiveMode)
         // Ensure visibility logic is re-checked after layout/screen changes (e.g. Wake from sleep)
         updateVisibility(animated: false)
     }

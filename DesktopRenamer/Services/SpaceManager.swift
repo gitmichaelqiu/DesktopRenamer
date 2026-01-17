@@ -35,7 +35,7 @@ struct LogEntry: Identifiable, CustomStringConvertible {
 class SpaceManager: ObservableObject {
     static private let spacesKey = "com.michaelqiu.desktoprenamer.spaces"
     static private let nameCacheKey = "com.michaelqiu.desktoprenamer.namecache"
-    static private let indexCacheKey = "com.michaelqiu.desktoprenamer.indexcache" // New Fallback Cache Key
+    static private let indexCacheKey = "com.michaelqiu.desktoprenamer.indexcache"
     static private let isAPIEnabledKey = "com.michaelqiu.desktoprenamer.isapienabled"
     static private let detectionMethodKey = "com.michaelqiu.desktoprenamer.detectionMethod"
     static private let isManualSpacesEnabledKey = "com.michaelqiu.desktoprenamer.ismanualspacesenabled"
@@ -46,10 +46,7 @@ class SpaceManager: ObservableObject {
     
     @Published var spaceNameDict: [DesktopSpace] = []
     
-    // Primary Cache: Space UUID -> Name (Precise)
     private var nameCache: [String: String] = [:]
-    
-    // Fallback Cache: "DisplayID|SpaceNum" -> Name (Resilient to Reconnects)
     private var indexCache: [String: String] = [:]
     
     @Published var currentNcCount: Int = 0
@@ -127,41 +124,44 @@ class SpaceManager: ObservableObject {
             var newSpaceList: [DesktopSpace] = []
             for sysSpace in cgsState.spaces {
                 var finalSpace = sysSpace
-                
-                // 1. Primary: Try to find name in Persistent UUID Cache
                 if let cachedName = nameCache[sysSpace.id], !cachedName.isEmpty {
                     finalSpace.customName = cachedName
-                }
-                // 2. Fallback: Try "DisplayID|SpaceNum" Cache (Handles Reconnects/New UUIDs)
-                else {
+                } else {
                     let indexKey = "\(finalSpace.displayID)|\(finalSpace.num)"
                     if let fallbackName = indexCache[indexKey], !fallbackName.isEmpty {
                         finalSpace.customName = fallbackName
-                        // Heal the primary cache with the new UUID
                         nameCache[sysSpace.id] = fallbackName
-                    }
-                    // 3. Last Resort: Check live dictionary
-                    else if let existing = spaceNameDict.first(where: { $0.id == sysSpace.id }), !existing.customName.isEmpty {
+                    } else if let existing = spaceNameDict.first(where: { $0.id == sysSpace.id }), !existing.customName.isEmpty {
                         finalSpace.customName = existing.customName
                         nameCache[sysSpace.id] = existing.customName
                         indexCache[indexKey] = existing.customName
                     }
                 }
-                
                 newSpaceList.append(finalSpace)
             }
             
-            // Only update if changed to avoid loop
             if self.spaceNameDict != newSpaceList {
                 self.spaceNameDict = newSpaceList
                 saveData()
             }
             
-            self.currentSpaceUUID = cgsState.currentUUID
-            self.currentDisplayID = cgsState.displayID
-            self.currentRawSpaceUUID = cgsState.currentUUID
-            self.currentIsDesktop = (cgsState.currentUUID != "FULLSCREEN")
-            self.currentNcCount = 0
+            // CRITICAL FIX: Only update Published properties if they actually changed.
+            // In 'automatic' mode, this is triggered by mouse clicks. Blindly assigning
+            // triggers SpaceLabelManager to reset the window position while dragging.
+            if self.currentSpaceUUID != cgsState.currentUUID {
+                self.currentSpaceUUID = cgsState.currentUUID
+            }
+            if self.currentDisplayID != cgsState.displayID {
+                self.currentDisplayID = cgsState.displayID
+            }
+            if self.currentRawSpaceUUID != cgsState.currentUUID {
+                self.currentRawSpaceUUID = cgsState.currentUUID
+            }
+            
+            let isCurrentDesktop = (cgsState.currentUUID != "FULLSCREEN")
+            if self.currentIsDesktop != isCurrentDesktop {
+                self.currentIsDesktop = isCurrentDesktop
+            }
             
             if isBugReportActive {
                 bugReportLog.append(LogEntry(timestamp: Date(), spaceUUID: cgsState.currentUUID, isDesktop: currentIsDesktop, ncCount: 0, action: "CGS Update (\(source))"))
@@ -169,7 +169,7 @@ class SpaceManager: ObservableObject {
             return
         }
         
-        // Legacy Logic
+        // Legacy Detection logic
         self.currentIsDesktop = isDesktop
         self.currentNcCount = ncCount
         self.currentRawSpaceUUID = rawUUID
@@ -230,25 +230,18 @@ class SpaceManager: ObservableObject {
     }
     
     private func loadSavedData() {
-        // 1. Load active list
         if let data = UserDefaults.standard.data(forKey: SpaceManager.spacesKey),
            let spaces = try? JSONDecoder().decode([DesktopSpace].self, from: data) {
             spaceNameDict = spaces
         }
-        
-        // 2. Load name cache
         if let data = UserDefaults.standard.data(forKey: SpaceManager.nameCacheKey),
            let cache = try? JSONDecoder().decode([String: String].self, from: data) {
             nameCache = cache
         }
-        
-        // 3. Load fallback cache
         if let data = UserDefaults.standard.data(forKey: SpaceManager.indexCacheKey),
            let cache = try? JSONDecoder().decode([String: String].self, from: data) {
             indexCache = cache
         }
-        
-        // 4. Migration: Populate Caches if empty but legacy data exists
         if (nameCache.isEmpty || indexCache.isEmpty) && !spaceNameDict.isEmpty {
             for space in spaceNameDict where !space.customName.isEmpty {
                 nameCache[space.id] = space.customName
@@ -311,15 +304,10 @@ class SpaceManager: ObservableObject {
     
     func renameSpace(_ spaceUUID: String, to newName: String) {
         let trimmedName = newName.trimmingCharacters(in: .whitespacesAndNewlines)
-        
-        // 1. Update Live List immediately (for UI responsiveness)
         if let index = spaceNameDict.firstIndex(where: { $0.id == spaceUUID }) {
             spaceNameDict[index].customName = trimmedName
-            
-            // 2. Update Caches immediately (Critical for sync stability)
             let space = spaceNameDict[index]
             let indexKey = "\(space.displayID)|\(space.num)"
-            
             if trimmedName.isEmpty {
                 nameCache.removeValue(forKey: spaceUUID)
                 indexCache.removeValue(forKey: indexKey)
@@ -327,8 +315,6 @@ class SpaceManager: ObservableObject {
                 nameCache[spaceUUID] = trimmedName
                 indexCache[indexKey] = trimmedName
             }
-            
-            // 3. Persist
             saveData()
         }
     }
