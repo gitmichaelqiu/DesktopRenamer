@@ -671,7 +671,34 @@ class SpaceLabelWindow: NSWindow {
     
     private func findBestOffscreenPosition(targetScreen: NSScreen, size: NSSize) -> NSPoint {
         let f = targetScreen.frame
-        return NSPoint(x: f.minX - size.width + 1, y: f.maxY - 1)
+        let allScreens = NSScreen.screens
+        
+        // Candidates for offscreen positions (1px overlap to keep on screen technically)
+        // 1. Top-Left
+        // 2. Top-Right
+        // 3. Bottom-Left
+        // 4. Bottom-Right
+        
+        let candidates: [NSPoint] = [
+            NSPoint(x: f.minX - size.width + 1, y: f.maxY - 1),             // Top-Left
+            NSPoint(x: f.maxX - 1, y: f.maxY - 1),                          // Top-Right
+            NSPoint(x: f.minX - size.width + 1, y: f.minY - size.height + 1), // Bottom-Left
+            NSPoint(x: f.maxX - 1, y: f.minY - size.height + 1)             // Bottom-Right
+        ]
+        
+        for origin in candidates {
+            let rect = NSRect(origin: origin, size: size)
+            // Check if this frame intersects with ANY OTHER screen
+            let intersectsOther = allScreens.contains { other in
+                other != targetScreen && other.frame.intersects(rect)
+            }
+            if !intersectsOther {
+                return origin
+            }
+        }
+        
+        // Fallback: Default to Top-Left if all intersect or only one screen
+        return candidates[0]
     }
     
     private func findNearestEdgePosition(targetScreen: NSScreen, forRect rect: NSRect) -> NSPoint {
