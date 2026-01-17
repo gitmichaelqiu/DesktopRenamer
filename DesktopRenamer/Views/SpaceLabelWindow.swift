@@ -108,22 +108,22 @@ class SpaceLabelWindow: NSWindow {
         
         // Screen Logic
         let foundScreen = NSScreen.screens.first(where: { screen in
-            let screenNumber = screen.deviceDescription[NSDeviceDescriptionKey("NSScreenNumber")] as? NSNumber ?? 0
-            let cgsID = screenNumber.uint32Value
+            let screenID = screen.deviceDescription[NSDeviceDescriptionKey("NSScreenNumber")] as? NSNumber ?? 0
             
-            // 1. Check Custom Format: "Name (ID)"
-            let idString = "\(screen.localizedName) (\(screenNumber))"
+            // 1. Name Check
+            let idString = "\(screen.localizedName) (\(screenID))"
             if idString == displayID { return true }
             
-            // 2. Check Name only
-            let cleanTarget = displayID.components(separatedBy: " (").first ?? displayID
-            if screen.localizedName == cleanTarget { return true }
+            let cleanName = displayID.components(separatedBy: " (").first ?? displayID
+            if screen.localizedName == cleanName { return true }
             
-            // 3. Check UUID (The fix for Automatic mode)
-            // CGDisplayCreateUUIDFromDisplayID returns Unmanaged<CFUUID>. We must take retained value.
-            let uuid = CGDisplayCreateUUIDFromDisplayID(cgsID).takeRetainedValue()
-            let uuidString = CFUUIDCreateString(nil, uuid) as String
-            if uuidString == displayID { return true }
+            // 2. UUID Check (Fix for Automatic Mode)
+            let cgsID = screenID.uint32Value
+            if let uuidRef = CGDisplayCreateUUIDFromDisplayID(cgsID) {
+                let uuid = uuidRef.takeRetainedValue()
+                let uuidString = CFUUIDCreateString(nil, uuid) as String
+                if uuidString.caseInsensitiveCompare(displayID) == .orderedSame { return true }
+            }
             
             return false
         })
@@ -204,7 +204,8 @@ class SpaceLabelWindow: NSWindow {
         setupLiveBackgroundUpdate()
         
         DispatchQueue.main.async { [weak self] in
-            self?.updateLayout(isCurrentSpace: true)
+            // IMPORTANT: Disable animation on initial layout to prevent wrong position glitches
+            self?.updateLayout(isCurrentSpace: true, animated: false)
             self?.updateVisibility(animated: false)
             self?.updateInteractivity()
         }
@@ -471,7 +472,7 @@ class SpaceLabelWindow: NSWindow {
     
     // MARK: - Layout Logic
     
-    private func updateLayout(isCurrentSpace: Bool, updateFrame: Bool = true) {
+    private func updateLayout(isCurrentSpace: Bool, updateFrame: Bool = true, animated: Bool = true) {
         guard let targetScreen = findTargetScreen() else { self.close(); return }
         
         var newSize: NSSize
@@ -542,20 +543,31 @@ class SpaceLabelWindow: NSWindow {
 
         if updateFrame {
             if isHiddenCornerMode {
-                NSAnimationContext.runAnimationGroup { context in
-                    context.duration = 0.08
-                    context.timingFunction = CAMediaTimingFunction(name: .easeOut)
-                    self.animator().alphaValue = 0.0
-                } completionHandler: {
+                if animated {
+                    NSAnimationContext.runAnimationGroup { context in
+                        context.duration = 0.08
+                        context.timingFunction = CAMediaTimingFunction(name: .easeOut)
+                        self.animator().alphaValue = 0.0
+                    } completionHandler: {
+                        updateVisuals()
+                        self.setFrame(NSRect(origin: newOrigin, size: newSize), display: true)
+                        self.alphaValue = 1.0
+                    }
+                } else {
                     updateVisuals()
                     self.setFrame(NSRect(origin: newOrigin, size: newSize), display: true)
                     self.alphaValue = 1.0
                 }
             } else {
                 updateVisuals()
-                self.alphaValue = 1.0
-                self.animator().setFrame(NSRect(origin: newOrigin, size: newSize), display: true)
-                if self.alphaValue < 1.0 { self.animator().alphaValue = 1.0 }
+                if animated {
+                    self.alphaValue = 1.0
+                    self.animator().setFrame(NSRect(origin: newOrigin, size: newSize), display: true)
+                    if self.alphaValue < 1.0 { self.animator().alphaValue = 1.0 }
+                } else {
+                    self.alphaValue = 1.0
+                    self.setFrame(NSRect(origin: newOrigin, size: newSize), display: true)
+                }
             }
         } else {
             updateVisuals()
@@ -637,22 +649,22 @@ class SpaceLabelWindow: NSWindow {
     private func findTargetScreen() -> NSScreen? {
         // Fixed: Use first(where:) and explicit NSDeviceDescriptionKey
         return NSScreen.screens.first(where: { screen in
-            let screenNumber = screen.deviceDescription[NSDeviceDescriptionKey("NSScreenNumber")] as? NSNumber ?? 0
-            let cgsID = screenNumber.uint32Value
+            let screenID = screen.deviceDescription[NSDeviceDescriptionKey("NSScreenNumber")] as? NSNumber ?? 0
             
-            // 1. Check Custom Format: "Name (ID)"
-            let idString = "\(screen.localizedName) (\(screenNumber))"
+            // 1. Name check (Default)
+            let idString = "\(screen.localizedName) (\(screenID))"
             if idString == self.displayID { return true }
             
-            // 2. Check Name only
             let cleanTarget = self.displayID.components(separatedBy: " (").first ?? self.displayID
             if screen.localizedName == cleanTarget { return true }
             
-            // 3. Check UUID (The fix for Automatic mode)
-            let uuid = CGDisplayCreateUUIDFromDisplayID(cgsID).takeRetainedValue()
-            let uuidString = CFUUIDCreateString(nil, uuid) as String
-            if uuidString == self.displayID { return true }
-            
+            // 2. UUID Check (Fix for Automatic Mode)
+            let cgsID = screenID.uint32Value
+            if let uuidRef = CGDisplayCreateUUIDFromDisplayID(cgsID) {
+                let uuid = uuidRef.takeRetainedValue()
+                let uuidString = CFUUIDCreateString(nil, uuid) as String
+                if uuidString.caseInsensitiveCompare(self.displayID) == .orderedSame { return true }
+            }
             return false
         })
     }
@@ -738,7 +750,8 @@ class SpaceLabelWindow: NSWindow {
     }
     
     @objc private func repositionWindow() {
-        updateLayout(isCurrentSpace: isActiveMode)
+        // Disable animation for screen parameter changes to ensure instant snap
+        updateLayout(isCurrentSpace: isActiveMode, animated: false)
         // Ensure visibility logic is re-checked after layout/screen changes (e.g. Wake from sleep)
         updateVisibility(animated: false)
     }
