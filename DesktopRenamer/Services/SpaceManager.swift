@@ -1,6 +1,7 @@
 import Foundation
 import AppKit
 import SwiftUI
+import WidgetKit
 
 enum DetectionMethod: String, CaseIterable, Identifiable {
     case automatic = "Automatic"
@@ -33,6 +34,9 @@ struct LogEntry: Identifiable, CustomStringConvertible {
 }
 
 class SpaceManager: ObservableObject {
+    // App Group ID for Widget Sharing
+    static let appGroupId = "group.com.michaelqiu.DesktopRenamer"
+    
     static private let spacesKey = "com.michaelqiu.desktoprenamer.spaces"
     static private let nameCacheKey = "com.michaelqiu.desktoprenamer.namecache"
     static private let indexCacheKey = "com.michaelqiu.desktoprenamer.indexcache"
@@ -54,6 +58,9 @@ class SpaceManager: ObservableObject {
     
     @Published var isBugReportActive: Bool = false
     @Published private(set) var bugReportLog: [LogEntry] = []
+    
+    // Widget Debouncer
+    private var widgetUpdateWorkItem: DispatchWorkItem?
     
     @Published var detectionMethod: DetectionMethod {
         didSet {
@@ -118,6 +125,8 @@ class SpaceManager: ObservableObject {
             return
         }
         
+        var shouldUpdateWidget = false
+        
         if detectionMethod == .automatic {
             guard let cgsState = SpaceHelper.getSystemState() else { return }
             
@@ -143,13 +152,12 @@ class SpaceManager: ObservableObject {
             if self.spaceNameDict != newSpaceList {
                 self.spaceNameDict = newSpaceList
                 saveData()
+                shouldUpdateWidget = true
             }
             
-            // CRITICAL FIX: Only update Published properties if they actually changed.
-            // In 'automatic' mode, this is triggered by mouse clicks. Blindly assigning
-            // triggers SpaceLabelManager to reset the window position while dragging.
             if self.currentSpaceUUID != cgsState.currentUUID {
                 self.currentSpaceUUID = cgsState.currentUUID
+                shouldUpdateWidget = true
             }
             if self.currentDisplayID != cgsState.displayID {
                 self.currentDisplayID = cgsState.displayID
@@ -161,16 +169,22 @@ class SpaceManager: ObservableObject {
             let isCurrentDesktop = (cgsState.currentUUID != "FULLSCREEN")
             if self.currentIsDesktop != isCurrentDesktop {
                 self.currentIsDesktop = isCurrentDesktop
+                shouldUpdateWidget = true
             }
             
             if isBugReportActive {
                 bugReportLog.append(LogEntry(timestamp: Date(), spaceUUID: cgsState.currentUUID, isDesktop: currentIsDesktop, ncCount: 0, action: "CGS Update (\(source))"))
             }
+            
+            if shouldUpdateWidget { scheduleWidgetUpdate() }
             return
         }
         
         // Legacy Detection logic
-        self.currentIsDesktop = isDesktop
+        if self.currentIsDesktop != isDesktop {
+            self.currentIsDesktop = isDesktop
+            shouldUpdateWidget = true
+        }
         self.currentNcCount = ncCount
         self.currentRawSpaceUUID = rawUUID
         self.currentDisplayID = displayID
@@ -187,7 +201,10 @@ class SpaceManager: ObservableObject {
             bugReportLog.append(LogEntry(timestamp: Date(), spaceUUID: rawUUID, isDesktop: isDesktop, ncCount: ncCount, action: "\(action) [\(detectionMethod.rawValue)]"))
         }
         
-        if currentSpaceUUID != logicalUUID { currentSpaceUUID = logicalUUID }
+        if currentSpaceUUID != logicalUUID {
+            currentSpaceUUID = logicalUUID
+            shouldUpdateWidget = true
+        }
 
         if let index = spaceNameDict.firstIndex(where: { $0.id == logicalUUID }) {
             if spaceNameDict[index].displayID != displayID {
@@ -202,8 +219,51 @@ class SpaceManager: ObservableObject {
                 let newNum = (existingSpacesOnDisplay.map { $0.num }.max() ?? 0) + 1
                 spaceNameDict.append(DesktopSpace(id: logicalUUID, customName: "", num: newNum, displayID: displayID))
                 saveData()
+                shouldUpdateWidget = true
             }
         }
+        
+        if shouldUpdateWidget { scheduleWidgetUpdate() }
+    }
+    
+    // MARK: - Widget Integration (Debounced)
+    private func scheduleWidgetUpdate() {
+        // 1. Cancel previous pending update
+        widgetUpdateWorkItem?.cancel()
+        
+        // 2. Create new work item
+        let workItem = DispatchWorkItem { [weak self] in
+            self?.performWidgetUpdate()
+        }
+        
+        widgetUpdateWorkItem = workItem
+        
+        // 3. Schedule with reduced delay (0.5s is usually enough)
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5, execute: workItem)
+    }
+    
+    private func performWidgetUpdate() {
+        guard let defaults = UserDefaults(suiteName: SpaceManager.appGroupId) else {
+            print("SpaceManager Widget Error: Failed to access App Group UserDefaults.")
+            return
+        }
+        
+        let name = getSpaceName(currentSpaceUUID)
+        let num = getSpaceNum(currentSpaceUUID)
+        let isDesktop = currentSpaceUUID != "FULLSCREEN"
+        
+        print("SpaceManager: Writing Widget Data - Name: \(name), Num: \(num)")
+        
+        defaults.set(name, forKey: "widget_spaceName")
+        defaults.set(num, forKey: "widget_spaceNum")
+        defaults.set(isDesktop, forKey: "widget_isDesktop")
+        
+        // Force write to disk (helper for IPC visibility)
+        defaults.synchronize()
+        
+        // 4. Trigger Widget Reload
+        print("SpaceManager: Requesting Widget Reload")
+        WidgetCenter.shared.reloadAllTimelines()
     }
     
     func addManualSpace(_ uuid: String) {
@@ -299,6 +359,7 @@ class SpaceManager: ObservableObject {
             self.indexCache.removeAll()
             self.saveData()
             self.refreshSpaceState()
+            self.scheduleWidgetUpdate()
         }
     }
     
@@ -316,6 +377,7 @@ class SpaceManager: ObservableObject {
                 indexCache[indexKey] = trimmedName
             }
             saveData()
+            scheduleWidgetUpdate()
         }
     }
 }
