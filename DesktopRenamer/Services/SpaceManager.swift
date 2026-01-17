@@ -34,6 +34,7 @@ struct LogEntry: Identifiable, CustomStringConvertible {
 
 class SpaceManager: ObservableObject {
     static private let spacesKey = "com.michaelqiu.desktoprenamer.spaces"
+    static private let nameCacheKey = "com.michaelqiu.desktoprenamer.namecache"
     static private let isAPIEnabledKey = "com.michaelqiu.desktoprenamer.isapienabled"
     static private let detectionMethodKey = "com.michaelqiu.desktoprenamer.detectionMethod"
     static private let isManualSpacesEnabledKey = "com.michaelqiu.desktoprenamer.ismanualspacesenabled"
@@ -43,6 +44,9 @@ class SpaceManager: ObservableObject {
     @Published private(set) var currentDisplayID: String = "Main"
     
     @Published var spaceNameDict: [DesktopSpace] = []
+    // Cache to persist names even if display disconnects
+    private var nameCache: [String: String] = [:]
+    
     @Published var currentNcCount: Int = 0
     @Published var currentIsDesktop: Bool = false
     
@@ -77,7 +81,7 @@ class SpaceManager: ObservableObject {
             self.detectionMethod = .automatic
         }
         
-        loadSavedSpaces()
+        loadSavedData()
         self.spaceAPI = SpaceAPI(spaceManager: self)
         
         if SpaceManager.isAPIEnabled {
@@ -89,7 +93,6 @@ class SpaceManager: ObservableObject {
             self?.handleSpaceChange(rawUUID, isDesktop: isDesktop, ncCount: ncCnt, displayID: displayID, source: "Monitor")
         }
         
-        // Listen for changes in screen configuration (e.g., adding/removing displays)
         NotificationCenter.default.addObserver(self, selector: #selector(screenParametersDidChange), name: NSApplication.didChangeScreenParametersNotification, object: nil)
     }
     
@@ -98,7 +101,6 @@ class SpaceManager: ObservableObject {
     }
     
     @objc private func screenParametersDidChange() {
-        // Trigger a refresh when display configuration changes
         refreshSpaceState()
     }
     
@@ -120,15 +122,25 @@ class SpaceManager: ObservableObject {
             var newSpaceList: [DesktopSpace] = []
             for sysSpace in cgsState.spaces {
                 var finalSpace = sysSpace
-                if let existing = spaceNameDict.first(where: { $0.id == sysSpace.id }) {
-                    finalSpace.customName = existing.customName
+                
+                // 1. Try to find name in Persistent Cache
+                if let cachedName = nameCache[sysSpace.id], !cachedName.isEmpty {
+                    finalSpace.customName = cachedName
                 }
+                // 2. Fallback to existing dict (in case cache missing but dict has it currently)
+                else if let existing = spaceNameDict.first(where: { $0.id == sysSpace.id }), !existing.customName.isEmpty {
+                    finalSpace.customName = existing.customName
+                    // Heal cache
+                    nameCache[sysSpace.id] = existing.customName
+                }
+                
                 newSpaceList.append(finalSpace)
             }
             
+            // Only update if changed to avoid loop
             if self.spaceNameDict != newSpaceList {
                 self.spaceNameDict = newSpaceList
-                saveSpaces()
+                saveData()
             }
             
             self.currentSpaceUUID = cgsState.currentUUID
@@ -166,7 +178,7 @@ class SpaceManager: ObservableObject {
         if let index = spaceNameDict.firstIndex(where: { $0.id == logicalUUID }) {
             if spaceNameDict[index].displayID != displayID {
                 spaceNameDict[index].displayID = displayID
-                saveSpaces()
+                saveData()
             }
         }
         
@@ -175,7 +187,7 @@ class SpaceManager: ObservableObject {
                 let existingSpacesOnDisplay = spaceNameDict.filter { $0.displayID == displayID }
                 let newNum = (existingSpacesOnDisplay.map { $0.num }.max() ?? 0) + 1
                 spaceNameDict.append(DesktopSpace(id: logicalUUID, customName: "", num: newNum, displayID: displayID))
-                saveSpaces()
+                saveData()
             }
         }
     }
@@ -185,7 +197,7 @@ class SpaceManager: ObservableObject {
         let existingSpacesOnDisplay = spaceNameDict.filter { $0.displayID == currentDisplayID }
         let newNum = (existingSpacesOnDisplay.map { $0.num }.max() ?? 0) + 1
         spaceNameDict.append(DesktopSpace(id: uuid, customName: "", num: newNum, displayID: currentDisplayID))
-        saveSpaces()
+        saveData()
         refreshSpaceState()
     }
     
@@ -203,18 +215,40 @@ class SpaceManager: ObservableObject {
         DistributedNotificationCenter.default().postNotificationName(SpaceAPI.apiToggleNotification, object: nil, userInfo: ["isEnabled": false], deliverImmediately: true)
     }
     
-    private func loadSavedSpaces() {
+    private func loadSavedData() {
+        // 1. Load active list
         if let data = UserDefaults.standard.data(forKey: SpaceManager.spacesKey),
            let spaces = try? JSONDecoder().decode([DesktopSpace].self, from: data) {
             spaceNameDict = spaces
         }
+        
+        // 2. Load name cache
+        if let data = UserDefaults.standard.data(forKey: SpaceManager.nameCacheKey),
+           let cache = try? JSONDecoder().decode([String: String].self, from: data) {
+            nameCache = cache
+        }
+        
+        // 3. Migration: If cache is empty but we have legacy names, populate cache
+        if nameCache.isEmpty && !spaceNameDict.isEmpty {
+            for space in spaceNameDict where !space.customName.isEmpty {
+                nameCache[space.id] = space.customName
+            }
+            saveData()
+        }
     }
     
     public func saveSpaces() {
+        saveData()
+    }
+    
+    private func saveData() {
         if let data = try? JSONEncoder().encode(spaceNameDict) {
             UserDefaults.standard.set(data, forKey: SpaceManager.spacesKey)
-            UserDefaults.standard.synchronize()
         }
+        if let data = try? JSONEncoder().encode(nameCache) {
+            UserDefaults.standard.set(data, forKey: SpaceManager.nameCacheKey)
+        }
+        UserDefaults.standard.synchronize()
     }
 
     func getSpaceNum(_ spaceUUID: String) -> Int {
@@ -240,16 +274,29 @@ class SpaceManager: ObservableObject {
         DispatchQueue.main.async { [weak self] in
             guard let self = self else { return }
             UserDefaults.standard.removeObject(forKey: SpaceManager.spacesKey)
+            UserDefaults.standard.removeObject(forKey: SpaceManager.nameCacheKey)
             self.spaceNameDict.removeAll()
-            self.saveSpaces()
+            self.nameCache.removeAll()
+            self.saveData()
             self.refreshSpaceState()
         }
     }
     
     func renameSpace(_ spaceUUID: String, to newName: String) {
+        let trimmedName = newName.trimmingCharacters(in: .whitespacesAndNewlines)
+        
+        // Update Live List
         if let index = spaceNameDict.firstIndex(where: { $0.id == spaceUUID }) {
-            spaceNameDict[index].customName = newName
-            saveSpaces()
+            spaceNameDict[index].customName = trimmedName
         }
+        
+        // Update Persistent Cache
+        if trimmedName.isEmpty {
+            nameCache.removeValue(forKey: spaceUUID)
+        } else {
+            nameCache[spaceUUID] = trimmedName
+        }
+        
+        saveData()
     }
 }
