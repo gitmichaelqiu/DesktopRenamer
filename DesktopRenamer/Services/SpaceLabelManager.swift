@@ -144,8 +144,29 @@ class SpaceLabelManager: ObservableObject {
             
         spaceManager.$spaceNameDict
             .receive(on: DispatchQueue.main)
-            .sink { [weak self] _ in self?.recalculateUnifiedSize() }
+            .sink { [weak self] _ in
+                self?.recalculateUnifiedSize()
+                self?.cleanupRedundantWindows()
+            }
             .store(in: &cancellables)
+    }
+    
+    private func cleanupRedundantWindows() {
+        guard let spaceManager = spaceManager else { return }
+        
+        // Get valid UUIDs from SpaceManager
+        let validUUIDs = Set(spaceManager.spaceNameDict.map { $0.id })
+        
+        // Find windows whose spaceID is not in validUUIDs
+        let redundantIDs = createdWindows.keys.filter { !validUUIDs.contains($0) }
+        
+        for id in redundantIDs {
+            if let window = createdWindows[id] {
+                window.close()
+            }
+            createdWindows.removeValue(forKey: id)
+            print("SpaceLabelManager: Removed redundant window for space \(id)")
+        }
     }
     
     private func recalculateUnifiedSize() {
