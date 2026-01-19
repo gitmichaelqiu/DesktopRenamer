@@ -3,7 +3,6 @@ import AppKit
 import CoreGraphics
 
 // MARK: - CGS Private API Definitions (Read-Only)
-// We retain these only for DETECTING spaces, not for switching.
 @_silgen_name("_CGSDefaultConnection") private func _CGSDefaultConnection() -> Int32
 @_silgen_name("CGSCopyManagedDisplaySpaces") private func CGSCopyManagedDisplaySpaces(_ cid: Int32) -> CFArray?
 @_silgen_name("CGSCopyActiveMenuBarDisplayIdentifier") private func CGSCopyActiveMenuBarDisplayIdentifier(_ cid: Int32) -> CFString?
@@ -18,48 +17,56 @@ class SpaceHelper {
     private static var globalEventMonitor: Any?
     private static var localEventMonitor: Any?
     
+    // Track switch state to prevent recursion glitches
+    private static var isSwitching = false
+    
     // MARK: - Space Switching Logic
     static func switchToSpace(_ spaceID: String) {
+        guard !isSwitching else { return }
+        isSwitching = true
+        
+        defer {
+            // Short delay to allow OS animations to settle before allowing another switch
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                isSwitching = false
+            }
+        }
+        
         // 1. Resolve Target Space Info
-        // We need to look up the current Space Number because shortcuts are based on index (Space 1, Space 2...)
         var targetNum: Int? = nil
         if let state = getSystemState(),
            let targetSpace = state.spaces.first(where: { $0.id == spaceID }) {
             targetNum = targetSpace.num
+            
+            // If we are already on the target space, stop.
+            if state.currentUUID == spaceID { return }
         }
         
         // 2. PRIORITY: Simulate Keyboard Shortcut (Control + Number)
-        // Since window activation can be visually disruptive (forcing window to front),
-        // we prefer the native shortcut IF it is available/effective for this space number.
+        // Native shortcuts are the cleanest way to switch.
         if let num = targetNum {
-            // CHECK: Verify if the system shortcut is actually enabled and matches our expectation (Ctrl+N)
-            // If the user disabled the shortcut or changed it to something else (e.g. Option+N),
-            // we skip the simulation to avoid doing nothing, and go straight to the fallback.
             if isShortcutEnabled(for: num) && simulateDesktopShortcut(for: num) {
-                print("Switched using Shortcut (Method B)")
                 return
             }
         }
         
-        // 3. Fallback: Activate our own Space Label Window (Precise & Reliable)
-        // Since we have a window on every desktop, activating the specific one
-        // on the target space forces the OS to switch to it immediately.
+        // 3. Fallback A: Activate our own Space Label Window
+        // This is highly reliable but can cause a "bounce" if the OS thinks
+        // the focus shift was accidental. We use a more surgical activation here.
         if switchByActivatingOwnWindow(for: spaceID) {
-            print("Switched using Own Window (Method A1)")
             return
+        }
+        
+        // 4. Fallback B: Mission Control UI Scripting
+        if let num = targetNum {
+            switchViaMissionControl(to: num)
         }
     }
     
     private static func switchByActivatingOwnWindow(for spaceID: String) -> Bool {
-        // Iterate through our own windows to find the SpaceLabelWindow on the target space.
         for window in NSApp.windows {
-            // Check if this window is a SpaceLabelWindow and matches the target space ID.
             if let labelWindow = window as? SpaceLabelWindow, labelWindow.spaceId == spaceID {
-                // Ensure the window is visible so the OS can switch to it
-                if !labelWindow.isVisible {
-                    labelWindow.orderFront(nil)
-                }
-                // Bringing it to front and key status triggers the space switch
+                // Do not use orderFront if not needed; just make it key to trigger space jump
                 labelWindow.makeKeyAndOrderFront(nil)
                 NSApp.activate(ignoringOtherApps: true)
                 return true
@@ -68,34 +75,48 @@ class SpaceHelper {
         return false
     }
     
-    /// Checks if the Mission Control shortcut for "Switch to Desktop N" is enabled and matches Control+N.
+    // MARK: - Mission Control Logic (Fallback C)
+    
+    private static func switchViaMissionControl(to targetNum: Int) {
+        let source = """
+        tell application "Mission Control" to launch
+        tell application "System Events"
+            delay 0.3
+            try
+                click button \(targetNum) of list 1 of group 2 of group 1 of group 1 of process "Dock"
+            on error
+                key code 53 -- Esc to exit if failed
+            end try
+        end tell
+        """
+        
+        DispatchQueue.global(qos: .userInitiated).async {
+            var error: NSDictionary?
+            if let scriptObject = NSAppleScript(source: source) {
+                scriptObject.executeAndReturnError(&error)
+            }
+        }
+    }
+    
+    // MARK: - Shortcut Helpers
+    
     private static func isShortcutEnabled(for number: Int) -> Bool {
-        // Standard Symbolic HotKey IDs for Spaces 1-16 (Apple reserved range)
-        // 118 -> Space 1
-        // ...
         let baseID = 118
         let targetID = baseID + (number - 1)
         
-        // Attempt to read the global domain for symbolic hotkeys
         guard let dict = UserDefaults.standard.persistentDomain(forName: "com.apple.symbolichotkeys"),
               let hotkeys = dict["AppleSymbolicHotKeys"] as? [String: Any] else {
-            // If we can't read the domain (e.g. sandbox restriction), default to true
-            // to attempt the shortcut rather than failing open to the more disruptive window-switch.
             return true
         }
         
-        // If the entry is missing, macOS defaults usually apply (Enabled, Ctrl+N).
         guard let targetKeyDict = hotkeys[String(targetID)] as? [String: Any] else {
             return true
         }
         
-        // 1. Check "enabled" boolean
         if let enabled = targetKeyDict["enabled"] as? Bool, !enabled {
             return false
         }
         
-        // 2. Check "parameters" to ensure it matches Control (262144) + Correct KeyCode
-        // If the user changed the mapping, our hardcoded simulation will fail anyway.
         if let value = targetKeyDict["value"] as? [String: Any],
            let parameters = value["parameters"] as? [Int],
            parameters.count >= 3 {
@@ -104,7 +125,7 @@ class SpaceHelper {
             let registeredModifiers = parameters[2]
             
             let expectedKeyCode = Int(getKeyCode(for: number))
-            let expectedModifiers = 262144 // Control Key Mask
+            let expectedModifiers = 262144 // Control
             
             if registeredKeyCode != expectedKeyCode || registeredModifiers != expectedModifiers {
                  return false
@@ -115,8 +136,6 @@ class SpaceHelper {
     }
     
     private static func getKeyCode(for number: Int) -> CGKeyCode {
-        // Map space number to standard ANSI Key Codes for row numbers
-        // 1=18, 2=19, 3=20, 4=21, 5=23, 6=22, 7=26, 8=28, 9=25, 0=29
         switch number {
         case 1: return 18
         case 2: return 19
@@ -127,34 +146,25 @@ class SpaceHelper {
         case 7: return 26
         case 8: return 28
         case 9: return 25
-        case 10: return 29 // Often mapped to Desktop 10 or 0
-        default: return 255 // Unknown/No shortcut
+        case 10: return 29
+        default: return 255
         }
     }
 
-    /// Simulates the keyboard shortcut for switching desktops.
-    /// Returns true if the shortcut was successfully posted (i.e., a valid keycode exists for this number).
     @discardableResult
     private static func simulateDesktopShortcut(for number: Int) -> Bool {
         let code = getKeyCode(for: number)
-        if code == 255 {
-            print("SpaceHelper: No standard hotkey available for Space \(number)")
-            return false
-        }
+        if code == 255 { return false }
         
         let source = CGEventSource(stateID: .hidSystemState)
-        
-        // Create Key Down/Up Events
         guard let keyDown = CGEvent(keyboardEventSource: source, virtualKey: code, keyDown: true),
               let keyUp = CGEvent(keyboardEventSource: source, virtualKey: code, keyDown: false) else {
             return false
         }
         
-        // Apply Control Flag (Control + Number)
         keyDown.flags = .maskControl
         keyUp.flags = .maskControl
         
-        // Post Events
         keyDown.post(tap: .cghidEventTap)
         keyUp.post(tap: .cghidEventTap)
         
@@ -183,7 +193,6 @@ class SpaceHelper {
         if let monitor = localEventMonitor { NSEvent.removeMonitor(monitor); localEventMonitor = nil }
     }
     
-    // MARK: - Legacy Detection
     private static func getActiveDisplay() -> NSScreen? {
         if let frontApp = NSWorkspace.shared.frontmostApplication, frontApp.bundleIdentifier != "com.apple.finder" {
             let options = CGWindowListOption(arrayLiteral: .optionOnScreenOnly, .excludeDesktopElements)
@@ -261,7 +270,6 @@ class SpaceHelper {
         }
     }
     
-    // MARK: - New CGS Methods
     static func getSystemState() -> (spaces: [DesktopSpace], currentUUID: String, displayID: String)? {
         let conn = _CGSDefaultConnection()
         guard let displays = CGSCopyManagedDisplaySpaces(conn) as? [NSDictionary] else { return nil }
