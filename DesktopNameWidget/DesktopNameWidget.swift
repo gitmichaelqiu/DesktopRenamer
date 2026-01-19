@@ -93,6 +93,26 @@ struct DesktopNameProvider: AppIntentTimelineProvider {
 
 // MARK: - 5. Visual Components
 
+struct AdaptiveText: View {
+    let text: String
+    let family: WidgetFamily
+    
+    var body: some View {
+        ViewThatFits(in: .horizontal) {
+            Text(text)
+                .font(.system(size: family == .systemSmall ? 34 : 48, weight: .bold, design: .rounded))
+            Text(text)
+                .font(.system(size: family == .systemSmall ? 26 : 36, weight: .bold, design: .rounded))
+            Text(text)
+                .font(.system(size: 18, weight: .bold, design: .rounded))
+                .minimumScaleFactor(0.6)
+        }
+        .lineLimit(1)
+        // FIX: Force alignment to leading to prevent "drift" when content changes
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+}
+
 /// A reusable list view that renders a specific slice of the spaces array
 struct DesktopListView: View {
     // Accepts a slice of enumerated elements to support split columns
@@ -200,12 +220,15 @@ struct SmallLayout: View {
             }
             
             Spacer()
-            Text(entry.spaceName)
-                .font(.system(size: 28, weight: .bold, design: .rounded))
-                .minimumScaleFactor(0.5)
-                .lineLimit(1)
+            
+            // Big Name at bottom
+            AdaptiveText(text: entry.spaceName, family: .systemSmall)
+                .foregroundStyle(.primary)
+                .shadow(color: Color.black.opacity(entry.backgroundStyle == .transparent ? 0.35 : 0), radius: 3, x: 0, y: 1.5)
         }
         .padding(12)
+        // FIX: Ensure entire Small widget content is pinned to the leading edge
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 }
 
@@ -239,6 +262,8 @@ struct MediumLayout: View {
                             .font(.system(size: 32, weight: .bold, design: .rounded))
                             .minimumScaleFactor(0.6)
                             .lineLimit(2)
+                            // FIX: Prevent drift for multi-line text
+                            .frame(maxWidth: .infinity, alignment: .leading)
                     }
                     .frame(maxWidth: .infinity, alignment: .leading)
                     
@@ -264,19 +289,20 @@ struct LargeLayout: View {
                 Text(entry.spaceName)
                     .font(.system(size: 36, weight: .bold, design: .rounded))
                     .lineLimit(1)
+                    // FIX: Prevent drift
+                    .frame(maxWidth: .infinity, alignment: .leading)
                 
                 Divider()
             }
             
-            // Fill with list. A large widget can typically fit ~10-12 items.
-            // We pass the whole list here, let it fill naturally.
-            // Using a simple list approach.
+            // Fill with list.
             let allSlice = Array(entry.allSpaceNames.enumerated())
             DesktopListView(spaces: allSlice, currentSpaceNumber: entry.spaceNumber)
             
             Spacer()
         }
         .padding(16)
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 }
 
