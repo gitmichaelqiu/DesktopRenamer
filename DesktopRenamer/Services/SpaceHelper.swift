@@ -1,8 +1,9 @@
 import Foundation
 import AppKit
-import Darwin // Required for dlsym/dlopen
+import CoreGraphics
 
-// MARK: - CGS Private API Definitions
+// MARK: - CGS Private API Definitions (Read-Only)
+// We retain these only for DETECTING spaces, not for switching.
 @_silgen_name("_CGSDefaultConnection") private func _CGSDefaultConnection() -> Int32
 @_silgen_name("CGSCopyManagedDisplaySpaces") private func CGSCopyManagedDisplaySpaces(_ cid: Int32) -> CFArray?
 @_silgen_name("CGSCopyActiveMenuBarDisplayIdentifier") private func CGSCopyActiveMenuBarDisplayIdentifier(_ cid: Int32) -> CFString?
@@ -20,58 +21,84 @@ class SpaceHelper {
     // MARK: - Space Switching Logic
     static func switchToSpace(_ spaceID: String) {
         guard let spaceInt = Int(spaceID) else { return }
-        let conn = _CGSDefaultConnection()
         
-        // Path to SkyLight framework (Private graphics framework on macOS)
-        let frameworkPath = "/System/Library/PrivateFrameworks/SkyLight.framework/Versions/A/SkyLight"
-        
-        guard let handle = dlopen(frameworkPath, RTLD_LAZY) else {
-            print("SpaceHelper: Could not load SkyLight framework.")
+        // METHOD A: Activate a window on the target space (Best UX)
+        // If we find a window on that space, activating it triggers a native, glitch-free switch.
+        if switchByActivatingWindow(on: spaceInt) {
+            print("METHOD 1")
             return
         }
-        defer { dlclose(handle) }
         
-        // Attempt 1: SLSManagedDisplaySetCurrentSpace (Modern / Sonoma+)
-        // This is the most reliable method on recent macOS but requires the Display UUID.
-        if let sym = dlsym(handle, "SLSManagedDisplaySetCurrentSpace") {
-            // We need to find the display UUID for the target space.
-            // Fetch fresh system state to map spaceID -> displayID.
-            if let state = getSystemState(),
-               let targetSpace = state.spaces.first(where: { $0.id == spaceID }) {
+        // METHOD B: Simulate Keyboard Shortcut (Control + Number)
+        // Fallback for empty desktops where no window exists to activate.
+        if let state = getSystemState(),
+           let targetSpace = state.spaces.first(where: { $0.id == spaceID }) {
+            print("METHOD 2")
+            simulateDesktopShortcut(for: targetSpace.num)
+        }
+    }
+    
+    private static func switchByActivatingWindow(on spaceInt: Int) -> Bool {
+        // CGWindowListOption.optionAll includes windows on other spaces
+        let options = CGWindowListOption(arrayLiteral: .optionAll, .excludeDesktopElements)
+        guard let windowList = CGWindowListCopyWindowInfo(options, kCGNullWindowID) as? [[String: Any]] else { return false }
+        
+        for window in windowList {
+            // Check if window is on the target space.
+            // Note: using string key because kCGWindowWorkspace constant is unavailable in some SDKs.
+            if let workspace = window["kCGWindowWorkspace"] as? Int,
+               workspace == spaceInt,
+               let pid = window[kCGWindowOwnerPID as String] as? Int32,
+               let app = NSRunningApplication(processIdentifier: pid),
+               app.activationPolicy == .regular { // Only switch to regular apps
                 
-                let displayUUID = targetSpace.displayID as CFString
-                typealias SLSManagedDisplaySetCurrentSpaceType = @convention(c) (Int32, CFString, Int) -> Void
-                let function = unsafeBitCast(sym, to: SLSManagedDisplaySetCurrentSpaceType.self)
-                function(conn, displayUUID, spaceInt)
-                return
+                // Activate the app to trigger the native space switch
+                if app.activate(options: .activateIgnoringOtherApps) {
+                    return true
+                }
             }
         }
+        return false
+    }
+    
+    private static func simulateDesktopShortcut(for number: Int) {
+        // Map space number to standard ANSI Key Codes for row numbers
+        // 1=18, 2=19, 3=20, 4=21, 5=23, 6=22, 7=26, 8=28, 9=25, 0=29
+        let keyCode: CGKeyCode?
+        switch number {
+        case 1: keyCode = 18
+        case 2: keyCode = 19
+        case 3: keyCode = 20
+        case 4: keyCode = 21
+        case 5: keyCode = 23
+        case 6: keyCode = 22
+        case 7: keyCode = 26
+        case 8: keyCode = 28
+        case 9: keyCode = 25
+        case 10: keyCode = 29 // Often mapped to Desktop 10 or 0
+        default: keyCode = nil
+        }
         
-        // Attempt 2: CGSSetWorkspace (Legacy)
-        if let sym = dlsym(handle, "CGSSetWorkspace") {
-            typealias CGSSetWorkspaceType = @convention(c) (Int32, Int) -> Void
-            let function = unsafeBitCast(sym, to: CGSSetWorkspaceType.self)
-            function(conn, spaceInt)
+        guard let code = keyCode else {
+            print("SpaceHelper: No standard hotkey available for Space \(number)")
             return
         }
         
-        // Attempt 3: SLSSetWorkspace (Modern Alternative)
-        if let sym = dlsym(handle, "SLSSetWorkspace") {
-            typealias SLSSetWorkspaceType = @convention(c) (Int32, Int) -> Void
-            let function = unsafeBitCast(sym, to: SLSSetWorkspaceType.self)
-            function(conn, spaceInt)
+        let source = CGEventSource(stateID: .hidSystemState)
+        
+        // Create Key Down/Up Events
+        guard let keyDown = CGEvent(keyboardEventSource: source, virtualKey: code, keyDown: true),
+              let keyUp = CGEvent(keyboardEventSource: source, virtualKey: code, keyDown: false) else {
             return
         }
         
-        // Attempt 4: CGSSetWorkspaceWithTransition (Fallback)
-        if let sym = dlsym(handle, "CGSSetWorkspaceWithTransition") {
-            typealias CGSSetWorkspaceWithTransitionType = @convention(c) (Int32, Int, Int, Int, Float) -> Void
-            let function = unsafeBitCast(sym, to: CGSSetWorkspaceWithTransitionType.self)
-            function(conn, spaceInt, 0, 0, 0.5)
-            return
-        }
+        // Apply Control Flag (Control + Number)
+        keyDown.flags = .maskControl
+        keyUp.flags = .maskControl
         
-        print("SpaceHelper: Could not resolve any space switching symbols.")
+        // Post Events
+        keyDown.post(tap: .cghidEventTap)
+        keyUp.post(tap: .cghidEventTap)
     }
     
     static func startMonitoring(onChange: @escaping (String, Bool, Int, String) -> Void) {
