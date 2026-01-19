@@ -254,6 +254,10 @@ class SpaceManager: ObservableObject {
         
         print("SpaceManager: Writing Widget Data - Name: \(name), Num: \(num)")
         
+        let sortedSpaces = spaceNameDict.sorted { $0.num < $1.num }
+        let allSpaceNames = sortedSpaces.map { $0.customName.isEmpty ? "Space \($0.num)" : $0.customName }
+        
+        defaults.set(allSpaceNames, forKey: "widget_allSpaces")
         defaults.set(name, forKey: "widget_spaceName")
         defaults.set(num, forKey: "widget_spaceNum")
         defaults.set(isDesktop, forKey: "widget_isDesktop")
