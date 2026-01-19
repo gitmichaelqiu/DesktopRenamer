@@ -151,6 +151,12 @@ class SpaceManager: ObservableObject {
             
             if self.spaceNameDict != newSpaceList {
                 self.spaceNameDict = newSpaceList
+                self.indexCache.removeAll()
+                for space in self.spaceNameDict where !space.customName.isEmpty {
+                    let key = "\(space.displayID)|\(space.num)"
+                    self.indexCache[key] = space.customName
+                }
+                
                 saveData()
                 shouldUpdateWidget = true
             }
@@ -252,15 +258,21 @@ class SpaceManager: ObservableObject {
         let num = getSpaceNum(currentSpaceUUID)
         let isDesktop = currentSpaceUUID != "FULLSCREEN"
         
+        // ADDED: Logic to save the full list of names for the squares widget
+        let sortedSpaces = spaceNameDict.sorted { $0.num < $1.num }
+        let allSpaceNames = sortedSpaces.map { space -> String in
+            if space.customName.isEmpty {
+                return String(format: NSLocalizedString("Space.DefaultName", comment: ""), space.num)
+            }
+            return space.customName
+        }
+        
         print("SpaceManager: Writing Widget Data - Name: \(name), Num: \(num)")
         
-        let sortedSpaces = spaceNameDict.sorted { $0.num < $1.num }
-        let allSpaceNames = sortedSpaces.map { $0.customName.isEmpty ? "Space \($0.num)" : $0.customName }
-        
-        defaults.set(allSpaceNames, forKey: "widget_allSpaces")
         defaults.set(name, forKey: "widget_spaceName")
         defaults.set(num, forKey: "widget_spaceNum")
         defaults.set(isDesktop, forKey: "widget_isDesktop")
+        defaults.set(allSpaceNames, forKey: "widget_allSpaces") // New Key
         
         // Force write to disk (helper for IPC visibility)
         defaults.synchronize()
