@@ -66,6 +66,11 @@ class SpaceLabelWindow: NSWindow {
     private var dockEdge: NSRectEdge = .maxX
     private var previewSize: NSSize = NSSize(width: 800, height: 500)
     
+    // New State: Invisible Anchor Mode
+    // When true, window becomes 1x1 pixel to hide from Mission Control visually,
+    // but remains managed to serve as a switch anchor.
+    private var isInvisibleAnchorMode: Bool = false
+    
     // Constants
     static let baseActiveFontSize: CGFloat = 45
     static let basePreviewFontSize: CGFloat = 180
@@ -200,6 +205,12 @@ class SpaceLabelWindow: NSWindow {
     deinit {
         NotificationCenter.default.removeObserver(self)
     }
+    
+    // MARK: - Window Overrides (CRITICAL FOR SWITCHING)
+    // Borderless windows return false by default. We must return true to allow
+    // makeKeyAndOrderFront to work, which is the trigger for space switching.
+    override var canBecomeKey: Bool { return true }
+    override var canBecomeMain: Bool { return true }
     
     // MARK: - Live Background Hack
     private func setupLiveBackgroundUpdate() {
@@ -472,7 +483,10 @@ class SpaceLabelWindow: NSWindow {
         var isSmallModeForFont = false
         var shouldUseHandle = false
         
-        if showHandle {
+        if self.isInvisibleAnchorMode {
+            // Anchor Mode: 1x1 Pixel
+            newSize = NSSize(width: 1, height: 1)
+        } else if showHandle {
             shouldUseHandle = true
             if self.dockEdge == .minX || self.dockEdge == .maxX {
                 newSize = SpaceLabelWindow.handleSize
@@ -488,18 +502,17 @@ class SpaceLabelWindow: NSWindow {
         }
         
         // 2. Determine Position
-        if isCurrentSpace {
-            targetCenter = getAbsoluteTargetCenter(on: targetScreen, forSize: newSize)
-        } else {
-            targetCenter = NSPoint(x: targetScreen.frame.midX, y: targetScreen.frame.midY)
-        }
-
-        if showHandle {
-            newOrigin = calculateCenteredOrigin(
-                forSize: newSize, onEdge: self.dockEdge, centerPoint: targetCenter, screenFrame: targetScreen.visibleFrame, clampToScreen: true
-            )
+        if self.isInvisibleAnchorMode {
+            // Anchor Mode: Center of Screen (safest for switching context)
+            newOrigin = NSPoint(x: targetScreen.frame.midX, y: targetScreen.frame.midY)
         } else if isCurrentSpace {
-            if isHiddenCornerMode {
+            targetCenter = getAbsoluteTargetCenter(on: targetScreen, forSize: newSize)
+            
+            if showHandle {
+                newOrigin = calculateCenteredOrigin(
+                    forSize: newSize, onEdge: self.dockEdge, centerPoint: targetCenter, screenFrame: targetScreen.visibleFrame, clampToScreen: true
+                )
+            } else if isHiddenCornerMode {
                 newOrigin = findBestOffscreenPosition(targetScreen: targetScreen, size: newSize)
             } else {
                 newOrigin = calculateCenteredOrigin(
@@ -507,42 +520,60 @@ class SpaceLabelWindow: NSWindow {
                 )
             }
         } else {
+            // Preview Mode
+            targetCenter = NSPoint(x: targetScreen.frame.midX, y: targetScreen.frame.midY)
             newOrigin = NSPoint(x: targetCenter.x - newSize.width/2, y: targetCenter.y - newSize.height/2)
         }
         
         // 3. Execution Phase
         let updateVisuals = {
-            if shouldUseHandle {
+            self.backgroundColor = .clear // RE-ASSERT TRANSPARENCY
+            
+            if self.isInvisibleAnchorMode {
+                self.level = .normal // CRITICAL: Floating windows don't switch spaces. Normal windows do.
+                self.label.isHidden = true
+                self.handleView.isHidden = true
+                self.contentView?.layer?.cornerRadius = 0
+                self.contentView?.isHidden = true // EXPLICITLY HIDE CONTENT
+            } else if shouldUseHandle {
+                self.level = .floating // Restore for visibility
                 self.label.isHidden = true
                 self.handleView.isHidden = false
                 self.handleView.edge = self.dockEdge
                 self.contentView?.layer?.cornerRadius = 12
+                self.contentView?.isHidden = false
             } else {
+                self.level = .floating // Restore for visibility
                 self.label.isHidden = false
                 self.handleView.isHidden = true
                 self.contentView?.layer?.cornerRadius = 20
                 self.updateLabelFont(for: newSize, isSmallMode: isSmallModeForFont)
+                self.contentView?.isHidden = false
             }
             self.contentView?.needsDisplay = true
             self.invalidateShadow()
         }
 
         if updateFrame {
-            if isHiddenCornerMode {
+            if isHiddenCornerMode && !self.isInvisibleAnchorMode {
+                // MODIFICATION: Do NOT fade window alpha. Fade Content Only.
+                // We keep window alpha 1.0 for space switching reliability.
                 NSAnimationContext.runAnimationGroup { context in
                     context.duration = 0.08
                     context.timingFunction = CAMediaTimingFunction(name: .easeOut)
-                    self.animator().alphaValue = 0.0
+                    self.contentView?.animator().alphaValue = 0.0
                 } completionHandler: {
                     updateVisuals()
                     self.setFrame(NSRect(origin: newOrigin, size: newSize), display: true)
-                    self.alphaValue = 1.0
+                    self.contentView?.alphaValue = 1.0
                 }
             } else {
                 updateVisuals()
+                // Ensure window alpha is valid
                 self.alphaValue = 1.0
                 self.animator().setFrame(NSRect(origin: newOrigin, size: newSize), display: true)
-                if self.alphaValue < 1.0 { self.animator().alphaValue = 1.0 }
+                // Ensure content alpha is restored if coming from hidden mode
+                if (self.contentView?.alphaValue ?? 0) < 1.0 { self.contentView?.animator().alphaValue = 1.0 }
             }
         } else {
             updateVisuals()
@@ -731,53 +762,66 @@ class SpaceLabelWindow: NSWindow {
     
     private func updateVisibility(animated: Bool) {
         guard findTargetScreen() != nil else {
+            // If screen not found, we effectively hide it but don't close it
             self.alphaValue = 0.0
             self.orderOut(nil)
             return
         }
         
+        // Master Enable/Disable logic
+        // MODIFICATION: Even if disabled, we treat it as an invisible anchor.
+        let masterEnabled = labelManager?.isEnabled ?? true
+        
         let showActive = labelManager?.showActiveLabels ?? true
         let showPreview = labelManager?.showPreviewLabels ?? true
         
-        var shouldBeVisible = false
+        var isVisuallyVisible = false
         
-        if isActiveMode {
-            // ACTIVE MODE
-            shouldBeVisible = showActive
-            
-            // If it should be visible but isn't (or was reset by sleep), pull it to front
-            if shouldBeVisible && (!self.isVisible || !self.isOnActiveSpace) {
-                self.orderFront(nil)
-            }
-        } else {
-            // PREVIEW MODE
-            if showPreview {
-                // CLUTTER PROTECTION:
-                // If a "Preview" window is physically on the active space (due to sleep dump),
-                // we hide it to prevent stacking. It will reappear when the user visits its true space.
-                if self.isOnActiveSpace {
-                    shouldBeVisible = false
-                } else {
-                    shouldBeVisible = true
-                }
+        if masterEnabled {
+            if isActiveMode {
+                // ACTIVE MODE
+                isVisuallyVisible = showActive
             } else {
-                shouldBeVisible = false
+                // PREVIEW MODE
+                if showPreview {
+                    // Hide preview on active space to avoid clutter
+                    isVisuallyVisible = !self.isOnActiveSpace
+                } else {
+                    isVisuallyVisible = false
+                }
             }
         }
         
-        if shouldBeVisible {
-            if !self.isVisible { self.alphaValue = 0.0; self.orderFront(nil) }
-            if !isHiddenCornerMode {
-                if animated { self.animator().alphaValue = 1.0 } else { self.alphaValue = 1.0 }
-            }
+        // Detect change in visibility requirement (aka Anchor Mode toggle)
+        let shouldBeAnchor = !isVisuallyVisible
+        if self.isInvisibleAnchorMode != shouldBeAnchor {
+            self.isInvisibleAnchorMode = shouldBeAnchor
+            // Update Layout immediately to resize to/from 1x1 pixel
+            updateLayout(isCurrentSpace: self.isActiveMode, updateFrame: animated)
+        }
+        
+        // ALWAYS ensure window is legally visible for switching logic
+        if !self.isVisible {
+            self.orderFront(nil)
+        }
+        
+        // MODIFICATION: Always keep Window alpha at 1.0 so makeKeyAndOrderFront works reliably for switching
+        self.alphaValue = 1.0
+        
+        // Control visual visibility via Content View Alpha
+        let targetContentAlpha: CGFloat = isVisuallyVisible ? 1.0 : 0.0
+        
+        if animated {
+            self.contentView?.animator().alphaValue = targetContentAlpha
         } else {
-            if !self.isVisible { return }
-            if animated {
-                NSAnimationContext.runAnimationGroup { context in
-                    context.duration = 0.08
-                    self.animator().alphaValue = 0.0
-                } completionHandler: { if !shouldBeVisible { self.orderOut(nil) } }
-            } else { self.alphaValue = 0.0; self.orderOut(nil) }
+            self.contentView?.alphaValue = targetContentAlpha
+        }
+        
+        // Interaction Logic
+        if isVisuallyVisible {
+            updateInteractivity()
+        } else {
+            self.ignoresMouseEvents = true
         }
     }
     
