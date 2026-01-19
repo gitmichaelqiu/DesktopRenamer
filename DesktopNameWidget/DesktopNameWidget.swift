@@ -91,7 +91,7 @@ struct DesktopNameProvider: AppIntentTimelineProvider {
     }
 }
 
-// MARK: - 5. Dynamic Text View
+// MARK: - 5. Sub-Views
 struct AdaptiveText: View {
     let text: String
     let family: WidgetFamily
@@ -110,31 +110,117 @@ struct AdaptiveText: View {
     }
 }
 
-// MARK: - 6. Entry View
+struct DesktopListView: View {
+    let entry: DesktopNameProvider.Entry
+    let limit: Int
+    
+    var body: some View {
+        VStack(spacing: 6) {
+            let spaces = Array(entry.allSpaceNames.enumerated().prefix(limit))
+            
+            ForEach(spaces, id: \.offset) { index, name in
+                let spaceNum = index + 1
+                let isCurrent = spaceNum == entry.spaceNumber
+                
+                HStack(spacing: 8) {
+                    // Number
+                    Text("\(spaceNum)")
+                        .font(.system(size: 14, weight: .bold, design: .rounded))
+                        .foregroundStyle(isCurrent ? .secondary : .secondary)
+                        .frame(width: 20, alignment: .trailing)
+                    
+                    // Name
+                    Text(name)
+                        .font(.system(size: 14, weight: .semibold, design: .rounded))
+                        .lineLimit(1)
+                    
+                    Spacer()
+                    
+                    // Active indicator dot (optional, but nice for visual confirmation)
+                    if isCurrent {
+                        Circle()
+                            .fill(Color.green)
+                            .frame(width: 6, height: 6)
+                    }
+                }
+                .padding(.horizontal, 10)
+                .padding(.vertical, 6)
+                .background {
+                    if isCurrent {
+                        RoundedRectangle(cornerRadius: 8, style: .continuous)
+                            .fill(Color.primary.opacity(0.1))
+                    } else {
+                        RoundedRectangle(cornerRadius: 8, style: .continuous)
+                            .strokeBorder(Color.primary.opacity(0.1), lineWidth: 1)
+                    }
+                }
+            }
+            
+            if entry.allSpaceNames.count > limit {
+                Text("... and \(entry.allSpaceNames.count - limit) more")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+        }
+    }
+}
+
+// MARK: - 6. Entry View (Dispatcher)
 struct DesktopNameWidgetEntryView: View {
     var entry: DesktopNameProvider.Entry
     @Environment(\.widgetFamily) var family
 
     var body: some View {
+        Group {
+            switch family {
+            case .systemSmall:
+                SmallWidgetView(entry: entry)
+            case .systemMedium:
+                MediumWidgetView(entry: entry)
+            case .systemLarge:
+                LargeWidgetView(entry: entry)
+            default:
+                SmallWidgetView(entry: entry)
+            }
+        }
+        .containerBackground(for: .widget) {
+            if entry.backgroundStyle == .transparent {
+                Color.clear
+            } else {
+                ZStack {
+                    Color(nsColor: .windowBackgroundColor)
+                    Rectangle()
+                        .fill(.regularMaterial)
+                        .opacity(0.5)
+                }
+            }
+        }
+    }
+}
+
+// MARK: - 6a. Small Widget Layout
+struct SmallWidgetView: View {
+    let entry: DesktopNameProvider.Entry
+    
+    var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            
-            // MARK: Desktop Indicators
+            // MARK: Top Indicators
             HStack(spacing: 6) {
                 if entry.isDesktop {
-                    // Limit to 8 spaces to prevent overflow in the small widget
+                    // Limit to 8 spaces to prevent overflow
                     ForEach(Array(entry.allSpaceNames.prefix(8).enumerated()), id: \.offset) { index, name in
                         let spaceIndex = index + 1
                         let isCurrent = spaceIndex == entry.spaceNumber
                         
-                        // Smart Label: If the name is default "Desktop X", show the Number "X"
-                        // instead of everyone showing "D". If it's custom "Work", show "W".
+                        // Small Widget Requirement:
+                        // Current desktop: show the number
+                        // Other desktops: show the first letter
                         let labelText: String = {
-                            if isCurrent { return "\(spaceIndex)" }
-                            let lower = name.lowercased()
-                            if lower.hasPrefix("desktop") || lower.hasPrefix("space") {
+                            if isCurrent {
                                 return "\(spaceIndex)"
+                            } else {
+                                return String(name.prefix(1)).uppercased()
                             }
-                            return String(name.prefix(1)).uppercased()
                         }()
                         
                         ZStack {
@@ -142,7 +228,7 @@ struct DesktopNameWidgetEntryView: View {
                             RoundedRectangle(cornerRadius: 6, style: .continuous)
                                 .fill(isCurrent ? Color.primary : Color.primary.opacity(0.1))
                             
-                            // Border for inactive spaces (adds definition)
+                            // Border for inactive
                             if !isCurrent {
                                 RoundedRectangle(cornerRadius: 6, style: .continuous)
                                     .strokeBorder(Color.primary.opacity(0.2), lineWidth: 1)
@@ -156,14 +242,12 @@ struct DesktopNameWidgetEntryView: View {
                         .frame(width: 22, height: 22)
                     }
                     
-                    // Indicator if there are more spaces than shown
                     if entry.allSpaceNames.count > 8 {
                         Circle()
                             .fill(Color.primary.opacity(0.3))
                             .frame(width: 4, height: 4)
                     }
                 } else {
-                    // Fullscreen Fallback
                     Label("FULLSCREEN", systemImage: "arrow.up.left.and.arrow.down.right")
                         .font(.system(size: 10, weight: .bold, design: .rounded))
                         .padding(.horizontal, 8)
@@ -178,23 +262,67 @@ struct DesktopNameWidgetEntryView: View {
             Spacer()
             
             // Dynamic Name
-            AdaptiveText(text: entry.spaceName, family: family)
+            AdaptiveText(text: entry.spaceName, family: .systemSmall)
                 .foregroundStyle(.primary)
                 .shadow(color: Color.black.opacity(entry.backgroundStyle == .transparent ? 0.35 : 0), radius: 3, x: 0, y: 1.5)
         }
         .padding(16)
-        .containerBackground(for: .widget) {
-            if entry.backgroundStyle == .transparent {
-                Color.clear
+    }
+}
+
+// MARK: - 6b. Medium Widget Layout
+struct MediumWidgetView: View {
+    let entry: DesktopNameProvider.Entry
+    
+    var body: some View {
+        // Medium requirement: Vertical list of squares (buttons).
+        // Before name, show number. Mark current.
+        VStack(alignment: .leading) {
+            if entry.isDesktop {
+                // We fit about 4 items comfortably in medium height
+                DesktopListView(entry: entry, limit: 4)
             } else {
-                ZStack {
-                    Color(nsColor: .windowBackgroundColor)
-                    Rectangle()
-                        .fill(.regularMaterial)
-                        .opacity(0.5)
+                Spacer()
+                HStack {
+                    Spacer()
+                    Label("Fullscreen App Active", systemImage: "arrow.up.left.and.arrow.down.right")
+                        .font(.headline)
+                        .foregroundStyle(.secondary)
+                    Spacer()
                 }
+                Spacer()
             }
         }
+        .padding(16)
+    }
+}
+
+// MARK: - 6c. Large Widget Layout
+struct LargeWidgetView: View {
+    let entry: DesktopNameProvider.Entry
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            // Large requirement: Top headline shows current desktop name
+            Text(entry.spaceName)
+                .font(.system(size: 34, weight: .bold, design: .rounded))
+                .lineLimit(1)
+                .foregroundStyle(.primary)
+                .shadow(color: Color.black.opacity(entry.backgroundStyle == .transparent ? 0.35 : 0), radius: 3, x: 0, y: 1.5)
+            
+            // Under it is a list
+            if entry.isDesktop {
+                // Large widget can fit more, maybe 8-10 depending on padding.
+                DesktopListView(entry: entry, limit: 8)
+            } else {
+                Text("Fullscreen Mode")
+                    .font(.title3)
+                    .foregroundStyle(.secondary)
+            }
+            
+            Spacer()
+        }
+        .padding(16)
     }
 }
 
@@ -213,7 +341,8 @@ struct DesktopNameWidget: Widget {
         }
         .configurationDisplayName("Current Desktop")
         .description("Displays your active Space name with dynamic sizing.")
-        .supportedFamilies([.systemSmall, .systemMedium])
+        // Added .systemLarge support
+        .supportedFamilies([.systemSmall, .systemMedium, .systemLarge])
         .contentMarginsDisabled()
     }
 }
