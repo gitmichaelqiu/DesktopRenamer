@@ -50,7 +50,6 @@ struct DesktopNameProvider: AppIntentTimelineProvider {
         let isDesktop = (defaults?.object(forKey: "widget_isDesktop") as? Bool) ?? true
         
         // 2. Get the ACTUAL customized names list saved by SpaceManager
-        // This key MUST match what is saved in SpaceManager.performWidgetUpdate
         let allNames = defaults?.stringArray(forKey: "widget_allSpaces") ?? []
         
         // Fallback logic if the array is empty
@@ -77,7 +76,7 @@ struct DesktopNameProvider: AppIntentTimelineProvider {
             spaceName: "Work",
             spaceNumber: 2,
             isDesktop: true,
-            allSpaceNames: ["Personal", "Work", "Dev", "Music"],
+            allSpaceNames: ["Personal", "Work", "Dev", "Music", "Social", "Gaming"],
             backgroundStyle: .standard
         )
     }
@@ -94,16 +93,17 @@ struct DesktopNameProvider: AppIntentTimelineProvider {
 
 // MARK: - 5. Visual Components
 
+/// A reusable list view that renders a specific slice of the spaces array
 struct DesktopListView: View {
-    let entry: DesktopNameEntry
-    let limit: Int
+    // Accepts a slice of enumerated elements to support split columns
+    let spaces: [(offset: Int, element: String)]
+    let currentSpaceNumber: Int
     
     var body: some View {
         VStack(spacing: 6) {
-            ForEach(0..<min(entry.allSpaceNames.count, limit), id: \.self) { index in
-                let spaceName = entry.allSpaceNames[index]
+            ForEach(spaces, id: \.offset) { index, name in
                 let spaceNum = index + 1
-                let isCurrent = spaceNum == entry.spaceNumber
+                let isCurrent = spaceNum == currentSpaceNumber
                 
                 HStack(spacing: 8) {
                     Text("\(spaceNum)")
@@ -111,7 +111,7 @@ struct DesktopListView: View {
                         .foregroundStyle(isCurrent ? .white : .secondary)
                         .frame(width: 18)
                     
-                    Text(spaceName)
+                    Text(name)
                         .font(.system(size: 13, weight: .semibold, design: .rounded))
                         .foregroundStyle(isCurrent ? .white : .primary)
                         .lineLimit(1)
@@ -164,23 +164,41 @@ struct DesktopNameWidgetEntryView: View {
 
 struct SmallLayout: View {
     let entry: DesktopNameEntry
+    
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            HStack(spacing: 5) {
-                ForEach(0..<min(entry.allSpaceNames.count, 5), id: \.self) { index in
-                    let isCurrent = (index + 1) == entry.spaceNumber
-                    let name = entry.allSpaceNames[index]
-                    
-                    ZStack {
-                        RoundedRectangle(cornerRadius: 5)
-                            .fill(isCurrent ? Color.blue : Color.primary.opacity(0.1))
-                        Text(isCurrent ? "\(index + 1)" : String(name.prefix(1)).uppercased())
-                            .font(.system(size: 10, weight: .bold, design: .rounded))
-                            .foregroundStyle(isCurrent ? .white : .primary.opacity(0.6))
+            // MARK: Top Indicators
+            // Limit to 8 squares max, no hints.
+            let maxSquares = 8
+            let spacesToShow = Array(entry.allSpaceNames.prefix(maxSquares))
+            
+            // Calculate rows needed (chunk into 4s)
+            let chunkSize = 4
+            let chunks = stride(from: 0, to: spacesToShow.count, by: chunkSize).map {
+                Array(spacesToShow.enumerated().dropFirst($0).prefix(chunkSize))
+            }
+            
+            VStack(alignment: .leading, spacing: 5) {
+                ForEach(chunks.indices, id: \.self) { chunkIndex in
+                    HStack(spacing: 5) {
+                        ForEach(chunks[chunkIndex], id: \.offset) { index, name in
+                            let isCurrent = (index + 1) == entry.spaceNumber
+                            
+                            ZStack {
+                                RoundedRectangle(cornerRadius: 5)
+                                    .fill(isCurrent ? Color.blue : Color.primary.opacity(0.1))
+                                
+                                // Current: Number. Other: First Letter.
+                                Text(isCurrent ? "\(index + 1)" : String(name.prefix(1)).uppercased())
+                                    .font(.system(size: 10, weight: .bold, design: .rounded))
+                                    .foregroundStyle(isCurrent ? .white : .primary.opacity(0.6))
+                            }
+                            .frame(width: 20, height: 20)
+                        }
                     }
-                    .frame(width: 20, height: 20)
                 }
             }
+            
             Spacer()
             Text(entry.spaceName)
                 .font(.system(size: 28, weight: .bold, design: .rounded))
@@ -193,19 +211,42 @@ struct SmallLayout: View {
 
 struct MediumLayout: View {
     let entry: DesktopNameEntry
+    
     var body: some View {
-        HStack(spacing: 12) {
-            VStack(alignment: .leading) {
-                Spacer()
-                Text(entry.spaceName)
-                    .font(.system(size: 32, weight: .bold, design: .rounded))
-                    .minimumScaleFactor(0.6)
-                    .lineLimit(2)
+        // Logic: If > 4 spaces, split into 2 columns (no big name).
+        // Max 8 spaces total.
+        let showSplitLayout = entry.allSpaceNames.count > 4
+        
+        Group {
+            if showSplitLayout {
+                HStack(alignment: .top, spacing: 12) {
+                    // Left Column: 1-4
+                    let leftSlice = Array(entry.allSpaceNames.enumerated().prefix(4))
+                    DesktopListView(spaces: leftSlice, currentSpaceNumber: entry.spaceNumber)
+                        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+                    
+                    // Right Column: 5-8
+                    let rightSlice = Array(entry.allSpaceNames.enumerated().dropFirst(4).prefix(4))
+                    DesktopListView(spaces: rightSlice, currentSpaceNumber: entry.spaceNumber)
+                        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+                }
+            } else {
+                // Standard Layout: Name Left, List Right
+                HStack(spacing: 12) {
+                    VStack(alignment: .leading) {
+                        Spacer()
+                        Text(entry.spaceName)
+                            .font(.system(size: 32, weight: .bold, design: .rounded))
+                            .minimumScaleFactor(0.6)
+                            .lineLimit(2)
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    
+                    let slice = Array(entry.allSpaceNames.enumerated().prefix(4))
+                    DesktopListView(spaces: slice, currentSpaceNumber: entry.spaceNumber)
+                        .frame(maxWidth: .infinity)
+                }
             }
-            .frame(maxWidth: .infinity, alignment: .leading)
-            
-            DesktopListView(entry: entry, limit: 4)
-                .frame(maxWidth: .infinity)
         }
         .padding(12)
     }
@@ -213,15 +254,27 @@ struct MediumLayout: View {
 
 struct LargeLayout: View {
     let entry: DesktopNameEntry
+    
     var body: some View {
+        // Logic: If > 6 spaces, hide headline name and fill list.
+        let hideHeadline = entry.allSpaceNames.count > 6
+        
         VStack(alignment: .leading, spacing: 12) {
-            Text(entry.spaceName)
-                .font(.system(size: 36, weight: .bold, design: .rounded))
-                .lineLimit(1)
+            if !hideHeadline {
+                Text(entry.spaceName)
+                    .font(.system(size: 36, weight: .bold, design: .rounded))
+                    .lineLimit(1)
+                
+                Divider()
+            }
             
-            Divider()
+            // Fill with list. A large widget can typically fit ~10-12 items.
+            // We pass the whole list here, let it fill naturally.
+            // Using a simple list approach.
+            let allSlice = Array(entry.allSpaceNames.enumerated())
+            DesktopListView(spaces: allSlice, currentSpaceNumber: entry.spaceNumber)
             
-            DesktopListView(entry: entry, limit: 8)
+            Spacer()
         }
         .padding(16)
     }
