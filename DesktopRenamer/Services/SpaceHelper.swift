@@ -1,5 +1,6 @@
 import Foundation
 import AppKit
+import Darwin // Required for dlsym/dlopen
 
 // MARK: - CGS Private API Definitions
 @_silgen_name("_CGSDefaultConnection") private func _CGSDefaultConnection() -> Int32
@@ -15,6 +16,63 @@ class SpaceHelper {
     private static var onSpaceChange: ((String, Bool, Int, String) -> Void)?
     private static var globalEventMonitor: Any?
     private static var localEventMonitor: Any?
+    
+    // MARK: - Space Switching Logic
+    static func switchToSpace(_ spaceID: String) {
+        guard let spaceInt = Int(spaceID) else { return }
+        let conn = _CGSDefaultConnection()
+        
+        // Path to SkyLight framework (Private graphics framework on macOS)
+        let frameworkPath = "/System/Library/PrivateFrameworks/SkyLight.framework/Versions/A/SkyLight"
+        
+        guard let handle = dlopen(frameworkPath, RTLD_LAZY) else {
+            print("SpaceHelper: Could not load SkyLight framework.")
+            return
+        }
+        defer { dlclose(handle) }
+        
+        // Attempt 1: SLSManagedDisplaySetCurrentSpace (Modern / Sonoma+)
+        // This is the most reliable method on recent macOS but requires the Display UUID.
+        if let sym = dlsym(handle, "SLSManagedDisplaySetCurrentSpace") {
+            // We need to find the display UUID for the target space.
+            // Fetch fresh system state to map spaceID -> displayID.
+            if let state = getSystemState(),
+               let targetSpace = state.spaces.first(where: { $0.id == spaceID }) {
+                
+                let displayUUID = targetSpace.displayID as CFString
+                typealias SLSManagedDisplaySetCurrentSpaceType = @convention(c) (Int32, CFString, Int) -> Void
+                let function = unsafeBitCast(sym, to: SLSManagedDisplaySetCurrentSpaceType.self)
+                function(conn, displayUUID, spaceInt)
+                return
+            }
+        }
+        
+        // Attempt 2: CGSSetWorkspace (Legacy)
+        if let sym = dlsym(handle, "CGSSetWorkspace") {
+            typealias CGSSetWorkspaceType = @convention(c) (Int32, Int) -> Void
+            let function = unsafeBitCast(sym, to: CGSSetWorkspaceType.self)
+            function(conn, spaceInt)
+            return
+        }
+        
+        // Attempt 3: SLSSetWorkspace (Modern Alternative)
+        if let sym = dlsym(handle, "SLSSetWorkspace") {
+            typealias SLSSetWorkspaceType = @convention(c) (Int32, Int) -> Void
+            let function = unsafeBitCast(sym, to: SLSSetWorkspaceType.self)
+            function(conn, spaceInt)
+            return
+        }
+        
+        // Attempt 4: CGSSetWorkspaceWithTransition (Fallback)
+        if let sym = dlsym(handle, "CGSSetWorkspaceWithTransition") {
+            typealias CGSSetWorkspaceWithTransitionType = @convention(c) (Int32, Int, Int, Int, Float) -> Void
+            let function = unsafeBitCast(sym, to: CGSSetWorkspaceWithTransitionType.self)
+            function(conn, spaceInt, 0, 0, 0.5)
+            return
+        }
+        
+        print("SpaceHelper: Could not resolve any space switching symbols.")
+    }
     
     static func startMonitoring(onChange: @escaping (String, Bool, Int, String) -> Void) {
         onSpaceChange = onChange

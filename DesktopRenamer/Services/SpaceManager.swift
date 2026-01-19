@@ -151,6 +151,11 @@ class SpaceManager: ObservableObject {
             
             if self.spaceNameDict != newSpaceList {
                 self.spaceNameDict = newSpaceList
+                
+                // FIX: REBUILD INDEX CACHE
+                // When spaces are reordered in Mission Control, the UUIDs move to new indices.
+                // We must update the indexCache to map these new indices to the correct names
+                // so that the next restart (which changes UUIDs) restores names correctly.
                 self.indexCache.removeAll()
                 for space in self.spaceNameDict where !space.customName.isEmpty {
                     let key = "\(space.displayID)|\(space.num)"
@@ -395,5 +400,11 @@ class SpaceManager: ObservableObject {
             saveData()
             scheduleWidgetUpdate()
         }
+    }
+    
+    // MARK: - Switching
+    func switchToSpace(_ space: DesktopSpace) {
+        // SpaceHelper handles the logic using CGSSetWorkspace
+        SpaceHelper.switchToSpace(space.id)
     }
 }
