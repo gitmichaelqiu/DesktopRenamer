@@ -33,5 +33,20 @@
             <direct-parameter description="The new name" type="text"/>
         </command>
         
+        <command name="get current space name" code="DskRGCur" description="Get the name of the current space">
+            <cocoa class="DesktopRenamer.GetCurrentSpaceNameCommand"/>
+            <result type="text" description="The name of the current space"/>
+        </command>
+        
+        <command name="get all spaces" code="DskRGAll" description="Get a list of all spaces in format 'ID|Name'">
+            <cocoa class="DesktopRenamer.GetAllSpacesCommand"/>
+            <result type="text" description="List of spaces separated by newlines, format: ID|Name"/>
+        </command>
+        
+        <command name="switch to space" code="DskRSwSp" description="Switch to a space by ID">
+            <cocoa class="DesktopRenamer.SwitchToSpaceCommand"/>
+            <direct-parameter description="The ID of the space to switch to" type="text"/>
+        </command>
+        
     </suite>
 </dictionary>

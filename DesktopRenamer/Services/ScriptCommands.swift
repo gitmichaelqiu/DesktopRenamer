@@ -86,3 +86,46 @@ class RenameCurrentSpaceCommand: NSScriptCommand {
         return nil
     }
 }
+
+class GetCurrentSpaceNameCommand: NSScriptCommand {
+    override func performDefaultImplementation() -> Any? {
+        return runOnMain {
+            if let manager = AppDelegate.shared.spaceManager {
+                return manager.getSpaceName(manager.currentSpaceUUID)
+            }
+            return "Unknown"
+        }
+    }
+}
+
+class GetAllSpacesCommand: NSScriptCommand {
+    override func performDefaultImplementation() -> Any? {
+        return runOnMain {
+            guard let manager = AppDelegate.shared.spaceManager else { return "" }
+            
+            // Format: "UUID|Name\nUUID|Name"
+            let sortedSpaces = manager.spaceNameDict.sorted { $0.num < $1.num }
+            let lines = sortedSpaces.map { space in
+                let name = manager.getSpaceName(space.id)
+                return "\(space.id)|\(name)"
+            }
+            return lines.joined(separator: "\n")
+        }
+    }
+}
+
+class SwitchToSpaceCommand: NSScriptCommand {
+    override func performDefaultImplementation() -> Any? {
+        guard let spaceID = self.directParameter as? String else { return nil }
+        
+        DispatchQueue.main.async {
+            if let manager = AppDelegate.shared.spaceManager {
+                // Find the space object
+                if let space = manager.spaceNameDict.first(where: { $0.id == spaceID }) {
+                    manager.switchToSpace(space)
+                }
+            }
+        }
+        return nil
+    }
+}
