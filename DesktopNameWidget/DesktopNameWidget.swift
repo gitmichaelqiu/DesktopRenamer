@@ -3,7 +3,6 @@ import SwiftUI
 import AppIntents
 
 // MARK: - 1. Configuration Enum
-/// Use AppEnum to provide the options in the "Edit Widget" menu.
 enum WidgetBackgroundStyle: String, AppEnum {
     case standard
     case transparent
@@ -17,7 +16,6 @@ enum WidgetBackgroundStyle: String, AppEnum {
 }
 
 // MARK: - 2. Widget Configuration Intent
-/// This structure must be clean for macOS to generate the "Edit Widget" UI.
 struct DesktopWidgetIntent: WidgetConfigurationIntent {
     static var title: LocalizedStringResource = "Widget Settings"
     static var description: LocalizedStringResource = "Customize the background style of your desktop widget."
@@ -32,12 +30,12 @@ struct DesktopNameEntry: TimelineEntry {
     let spaceName: String
     let spaceNumber: Int
     let isDesktop: Bool
+    let allSpaceNames: [String]
     let backgroundStyle: WidgetBackgroundStyle
 }
 
 // MARK: - 4. Provider
 struct DesktopNameProvider: AppIntentTimelineProvider {
-    // Explicitly define types to help the compiler
     typealias Entry = DesktopNameEntry
     typealias Intent = DesktopWidgetIntent
     
@@ -49,17 +47,39 @@ struct DesktopNameProvider: AppIntentTimelineProvider {
         let num = defaults?.integer(forKey: "widget_spaceNum") ?? 1
         let isDesktop = (defaults?.object(forKey: "widget_isDesktop") as? Bool) ?? true
         
+        // Fetch existing list or create a fallback to prevent "Single Square" issue
+        var allNames = defaults?.stringArray(forKey: "widget_allSpaces") ?? []
+        
+        // FIX: If the array is missing or empty, generate a fallback list
+        // so the user sees multiple squares instead of just one.
+        if allNames.isEmpty {
+            let count = max(num, 4) // Ensure we show at least 4, or up to current space
+            allNames = (1...count).map { "Desktop \($0)" }
+            // Ensure current name matches the specific saved name
+            if num > 0 && num <= allNames.count {
+                allNames[num - 1] = name
+            }
+        }
+        
         return DesktopNameEntry(
             date: Date(),
             spaceName: name,
             spaceNumber: num,
             isDesktop: isDesktop,
+            allSpaceNames: allNames,
             backgroundStyle: configuration.backgroundStyle
         )
     }
 
     func placeholder(in context: Context) -> DesktopNameEntry {
-        DesktopNameEntry(date: Date(), spaceName: "Work", spaceNumber: 1, isDesktop: true, backgroundStyle: .standard)
+        DesktopNameEntry(
+            date: Date(),
+            spaceName: "Work",
+            spaceNumber: 2,
+            isDesktop: true,
+            allSpaceNames: ["Personal", "Work", "Dev", "Music"],
+            backgroundStyle: .standard
+        )
     }
 
     func snapshot(for configuration: DesktopWidgetIntent, in context: Context) async -> DesktopNameEntry {
@@ -68,7 +88,6 @@ struct DesktopNameProvider: AppIntentTimelineProvider {
 
     func timeline(for configuration: DesktopWidgetIntent, in context: Context) async -> Timeline<DesktopNameEntry> {
         let entry = fetchSharedData(for: configuration)
-        // policy: .never implies the main app will call WidgetCenter.shared.reloadTimelines
         return Timeline(entries: [entry], policy: .never)
     }
 }
@@ -79,18 +98,11 @@ struct AdaptiveText: View {
     let family: WidgetFamily
     
     var body: some View {
-        // ViewThatFits is the most reliable way to handle "Dynamic Size" in SwiftUI
-        // It picks the largest view that doesn't overflow horizontally.
         ViewThatFits(in: .horizontal) {
-            // Priority 1: Large
             Text(text)
                 .font(.system(size: family == .systemSmall ? 34 : 48, weight: .bold, design: .rounded))
-            
-            // Priority 2: Medium
             Text(text)
                 .font(.system(size: family == .systemSmall ? 26 : 36, weight: .bold, design: .rounded))
-            
-            // Priority 3: Small + Scaling fallback
             Text(text)
                 .font(.system(size: 18, weight: .bold, design: .rounded))
                 .minimumScaleFactor(0.6)
@@ -106,64 +118,63 @@ struct DesktopNameWidgetEntryView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            // Top Badge (Space Number)
-            HStack {
-                Label {
-                    Text(badgeText)
+            
+            // MARK: Desktop Indicators
+            HStack(spacing: 6) {
+                if entry.isDesktop {
+                    // Iterate using indices to ensure stability
+                    ForEach(0..<entry.allSpaceNames.count, id: \.self) { index in
+                        let name = entry.allSpaceNames[index]
+                        let isCurrent = (index + 1) == entry.spaceNumber
+                        
+                        ZStack {
+                            // Background Square
+                            RoundedRectangle(cornerRadius: 5, style: .continuous)
+                                .fill(isCurrent ? Color.primary : Color.primary.opacity(0.15))
+                            
+                            // Content: Number if current, Letter if not
+                            Text(isCurrent ? "\(entry.spaceNumber)" : String(name.prefix(1)).uppercased())
+                                .font(.system(size: 12, weight: .bold, design: .rounded))
+                                .foregroundStyle(isCurrent ? Color(nsColor: .windowBackgroundColor) : Color.primary.opacity(0.7))
+                        }
+                        .frame(width: 24, height: 24)
+                    }
+                } else {
+                    Label("FULLSCREEN", systemImage: "arrow.up.left.and.arrow.down.right")
                         .font(.system(size: 10, weight: .bold, design: .rounded))
-                } icon: {
-                    Image(systemName: entry.isDesktop ? "macwindow" : "arrow.up.left.and.arrow.down.right")
-                        .font(.system(size: 8, weight: .bold))
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 4)
+                        .background(.ultraThinMaterial, in: Capsule())
                 }
-                .foregroundStyle(.secondary)
-                .padding(.horizontal, 8)
-                .padding(.vertical, 4)
-                .background(.ultraThinMaterial, in: Capsule())
                 
                 Spacer()
             }
+            .padding(.bottom, 8)
             
             Spacer()
             
             // Dynamic Name
             AdaptiveText(text: entry.spaceName, family: family)
                 .foregroundStyle(.primary)
-                // Shadow helps readability if the user chooses 'Transparent' over a busy wallpaper
                 .shadow(color: Color.black.opacity(entry.backgroundStyle == .transparent ? 0.35 : 0), radius: 3, x: 0, y: 1.5)
         }
         .padding(16)
-        // Use containerBackground for modern Widget API (Required for macOS Sonoma+)
+        // FIX: Replaced custom NSViewRepresentable with standard SwiftUI views
+        // This prevents the "Yellow Block" crash on some system versions.
         .containerBackground(for: .widget) {
             if entry.backgroundStyle == .transparent {
                 Color.clear
             } else {
                 ZStack {
                     Color(nsColor: .windowBackgroundColor)
-                    VisualEffectView().opacity(0.5)
+                    // Standard SwiftUI material instead of AppKit wrapper
+                    Rectangle()
+                        .fill(.regularMaterial)
+                        .opacity(0.5)
                 }
             }
         }
     }
-    
-    private var badgeText: String {
-        if entry.isDesktop {
-            return entry.spaceNumber > 0 ? "SPACE \(entry.spaceNumber)" : "DESKTOP"
-        } else {
-            return "FULLSCREEN"
-        }
-    }
-}
-
-// Helper for macOS Background Blur
-struct VisualEffectView: NSViewRepresentable {
-    func makeNSView(context: Context) -> NSVisualEffectView {
-        let view = NSVisualEffectView()
-        view.blendingMode = .withinWindow
-        view.state = .active
-        view.material = .headerView
-        return view
-    }
-    func updateNSView(_ nsView: NSVisualEffectView, context: Context) {}
 }
 
 // MARK: - 7. Widget Configuration
@@ -172,7 +183,6 @@ struct DesktopNameWidget: Widget {
     let kind: String = "DesktopNameWidget"
 
     var body: some WidgetConfiguration {
-        // AppIntentConfiguration allows the "Edit Widget" menu to appear on macOS
         AppIntentConfiguration(
             kind: kind,
             intent: DesktopWidgetIntent.self,
