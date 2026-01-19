@@ -47,15 +47,14 @@ struct DesktopNameProvider: AppIntentTimelineProvider {
         let num = defaults?.integer(forKey: "widget_spaceNum") ?? 1
         let isDesktop = (defaults?.object(forKey: "widget_isDesktop") as? Bool) ?? true
         
-        // Fetch existing list or create a fallback to prevent "Single Square" issue
+        // Fetch list of space names shared by SpaceManager
         var allNames = defaults?.stringArray(forKey: "widget_allSpaces") ?? []
         
-        // FIX: If the array is missing or empty, generate a fallback list
-        // so the user sees multiple squares instead of just one.
+        // Fallback: If list is empty (App hasn't written it yet), generate placeholders
         if allNames.isEmpty {
-            let count = max(num, 4) // Ensure we show at least 4, or up to current space
+            let count = max(num, 4)
             allNames = (1...count).map { "Desktop \($0)" }
-            // Ensure current name matches the specific saved name
+            // Ensure the current space name matches the display name
             if num > 0 && num <= allNames.count {
                 allNames[num - 1] = name
             }
@@ -77,7 +76,7 @@ struct DesktopNameProvider: AppIntentTimelineProvider {
             spaceName: "Work",
             spaceNumber: 2,
             isDesktop: true,
-            allSpaceNames: ["Personal", "Work", "Dev", "Music"],
+            allSpaceNames: ["Personal", "Work", "Code", "Music"],
             backgroundStyle: .standard
         )
     }
@@ -122,24 +121,49 @@ struct DesktopNameWidgetEntryView: View {
             // MARK: Desktop Indicators
             HStack(spacing: 6) {
                 if entry.isDesktop {
-                    // Iterate using indices to ensure stability
-                    ForEach(0..<entry.allSpaceNames.count, id: \.self) { index in
-                        let name = entry.allSpaceNames[index]
-                        let isCurrent = (index + 1) == entry.spaceNumber
+                    // Limit to 8 spaces to prevent overflow in the small widget
+                    ForEach(Array(entry.allSpaceNames.prefix(8).enumerated()), id: \.offset) { index, name in
+                        let spaceIndex = index + 1
+                        let isCurrent = spaceIndex == entry.spaceNumber
+                        
+                        // Smart Label: If the name is default "Desktop X", show the Number "X"
+                        // instead of everyone showing "D". If it's custom "Work", show "W".
+                        let labelText: String = {
+                            if isCurrent { return "\(spaceIndex)" }
+                            let lower = name.lowercased()
+                            if lower.hasPrefix("desktop") || lower.hasPrefix("space") {
+                                return "\(spaceIndex)"
+                            }
+                            return String(name.prefix(1)).uppercased()
+                        }()
                         
                         ZStack {
                             // Background Square
-                            RoundedRectangle(cornerRadius: 5, style: .continuous)
-                                .fill(isCurrent ? Color.primary : Color.primary.opacity(0.15))
+                            RoundedRectangle(cornerRadius: 6, style: .continuous)
+                                .fill(isCurrent ? Color.primary : Color.primary.opacity(0.1))
                             
-                            // Content: Number if current, Letter if not
-                            Text(isCurrent ? "\(entry.spaceNumber)" : String(name.prefix(1)).uppercased())
-                                .font(.system(size: 12, weight: .bold, design: .rounded))
-                                .foregroundStyle(isCurrent ? Color(nsColor: .windowBackgroundColor) : Color.primary.opacity(0.7))
+                            // Border for inactive spaces (adds definition)
+                            if !isCurrent {
+                                RoundedRectangle(cornerRadius: 6, style: .continuous)
+                                    .strokeBorder(Color.primary.opacity(0.2), lineWidth: 1)
+                            }
+                            
+                            // Content
+                            Text(labelText)
+                                .font(.system(size: 11, weight: .bold, design: .rounded))
+                                .foregroundStyle(isCurrent ? Color(nsColor: .windowBackgroundColor) : Color.primary.opacity(0.6))
                         }
-                        .frame(width: 24, height: 24)
+                        .frame(width: 22, height: 22)
+                    }
+                    
+                    // Indicator if there are more spaces than shown
+                    if entry.allSpaceNames.count > 8 {
+                        Circle()
+                            .fill(Color.primary.opacity(0.3))
+                            .frame(width: 4, height: 4)
                     }
                 } else {
+                    // Fullscreen Fallback
                     Label("FULLSCREEN", systemImage: "arrow.up.left.and.arrow.down.right")
                         .font(.system(size: 10, weight: .bold, design: .rounded))
                         .padding(.horizontal, 8)
@@ -159,15 +183,12 @@ struct DesktopNameWidgetEntryView: View {
                 .shadow(color: Color.black.opacity(entry.backgroundStyle == .transparent ? 0.35 : 0), radius: 3, x: 0, y: 1.5)
         }
         .padding(16)
-        // FIX: Replaced custom NSViewRepresentable with standard SwiftUI views
-        // This prevents the "Yellow Block" crash on some system versions.
         .containerBackground(for: .widget) {
             if entry.backgroundStyle == .transparent {
                 Color.clear
             } else {
                 ZStack {
                     Color(nsColor: .windowBackgroundColor)
-                    // Standard SwiftUI material instead of AppKit wrapper
                     Rectangle()
                         .fill(.regularMaterial)
                         .opacity(0.5)
