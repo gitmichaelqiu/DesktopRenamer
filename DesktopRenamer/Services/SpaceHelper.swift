@@ -51,8 +51,9 @@ class SpaceHelper {
         }
         
         // 3. Fallback A: Activate our own Space Label Window
-        // This is highly reliable but can cause a "bounce" if the OS thinks
-        // the focus shift was accidental. We use a more surgical activation here.
+        // This relies on SpaceLabelManager creating windows on every space.
+        // Even if the user "disables" labels, the windows should be kept alive (alpha=0)
+        // so this switching method remains available.
         if switchByActivatingOwnWindow(for: spaceID) {
             return
         }
@@ -65,10 +66,14 @@ class SpaceHelper {
     
     private static func switchByActivatingOwnWindow(for spaceID: String) -> Bool {
         for window in NSApp.windows {
+            // Check for SpaceLabelWindow
             if let labelWindow = window as? SpaceLabelWindow, labelWindow.spaceId == spaceID {
-                // Do not use orderFront if not needed; just make it key to trigger space jump
-                labelWindow.makeKeyAndOrderFront(nil)
+                // Force app activation first to ensure the window promotion works
                 NSApp.activate(ignoringOtherApps: true)
+                
+                // Even if the window is invisible (alpha 0), makeKeyAndOrderFront
+                // triggers the OS to switch to its space.
+                labelWindow.makeKeyAndOrderFront(nil)
                 return true
             }
         }
