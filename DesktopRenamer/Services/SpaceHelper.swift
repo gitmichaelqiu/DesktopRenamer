@@ -22,10 +22,18 @@ class SpaceHelper {
     static func switchToSpace(_ spaceID: String) {
         guard let spaceInt = Int(spaceID) else { return }
         
-        // METHOD A: Activate a window on the target space (Best UX)
+        // METHOD A1: Activate our own Space Label Window (Precise & Reliable)
+        // Since we have a window on every desktop, activating the specific one
+        // on the target space forces the OS to switch to it immediately.
+        if switchByActivatingOwnWindow(for: spaceID) {
+            print("A1")
+            return
+        }
+        
+        // METHOD A2: Activate another app's window on the target space (Good UX)
         // If we find a window on that space, activating it triggers a native, glitch-free switch.
         if switchByActivatingWindow(on: spaceInt) {
-            print("METHOD 1")
+            print("A2")
             return
         }
         
@@ -33,9 +41,27 @@ class SpaceHelper {
         // Fallback for empty desktops where no window exists to activate.
         if let state = getSystemState(),
            let targetSpace = state.spaces.first(where: { $0.id == spaceID }) {
-            print("METHOD 2")
+            print("B")
             simulateDesktopShortcut(for: targetSpace.num)
         }
+    }
+    
+    private static func switchByActivatingOwnWindow(for spaceID: String) -> Bool {
+        // Iterate through our own windows to find the SpaceLabelWindow on the target space.
+        for window in NSApp.windows {
+            // Check if this window is a SpaceLabelWindow and matches the target space ID.
+            if let labelWindow = window as? SpaceLabelWindow, labelWindow.spaceId == spaceID {
+                // Ensure the window is visible so the OS can switch to it
+                if !labelWindow.isVisible {
+                    labelWindow.orderFront(nil)
+                }
+                // Bringing it to front and key status triggers the space switch
+                labelWindow.makeKeyAndOrderFront(nil)
+                NSApp.activate(ignoringOtherApps: true)
+                return true
+            }
+        }
+        return false
     }
     
     private static func switchByActivatingWindow(on spaceInt: Int) -> Bool {
@@ -43,12 +69,15 @@ class SpaceHelper {
         let options = CGWindowListOption(arrayLiteral: .optionAll, .excludeDesktopElements)
         guard let windowList = CGWindowListCopyWindowInfo(options, kCGNullWindowID) as? [[String: Any]] else { return false }
         
+        let myPID = NSRunningApplication.current.processIdentifier
+        
         for window in windowList {
             // Check if window is on the target space.
             // Note: using string key because kCGWindowWorkspace constant is unavailable in some SDKs.
             if let workspace = window["kCGWindowWorkspace"] as? Int,
                workspace == spaceInt,
                let pid = window[kCGWindowOwnerPID as String] as? Int32,
+               pid != myPID, // Skip our own windows here (handled better in A1)
                let app = NSRunningApplication(processIdentifier: pid),
                app.activationPolicy == .regular { // Only switch to regular apps
                 
