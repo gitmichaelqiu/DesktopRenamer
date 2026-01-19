@@ -215,7 +215,9 @@ class SpaceLabelManager: ObservableObject {
     }
     
     private func applyVisibility(_ visibleUUIDs: Set<String>) {
-        guard self.isEnabled else { return }
+        // MODIFICATION: Removed guard self.isEnabled.
+        // We now allow windows to update mode even if disabled,
+        // so they can act as invisible anchors.
         
         // CRITICAL FIX: Snapshot dictionary to allow safe iteration without lookup crashes
         let windowsSnapshot = self.createdWindows
@@ -227,7 +229,10 @@ class SpaceLabelManager: ObservableObject {
     }
     
     func updateLabel(for spaceId: String, name: String, verifySpace: Bool = true) {
-        guard isEnabled, spaceId != "FULLSCREEN" else { return }
+        // MODIFICATION: Removed guard isEnabled.
+        // We allow creating windows even if disabled (they will be invisible).
+        guard spaceId != "FULLSCREEN" else { return }
+        
         if !verifySpace {
             let currentDisplayID = spaceManager?.currentDisplayID ?? "Main"
             ensureWindow(for: spaceId, name: name, displayID: currentDisplayID)
@@ -257,7 +262,8 @@ class SpaceLabelManager: ObservableObject {
     private func ensureWindow(for spaceId: String, name: String, displayID: String) {
         if let existingWindow = createdWindows[spaceId] {
             if !existingWindow.isVisible {
-                createdWindows.removeValue(forKey: spaceId)
+                // If it exists but is hidden (maybe from previous logic), bring it back as anchor
+                existingWindow.refreshAppearance()
             } else if existingWindow.displayID != displayID {
                 existingWindow.orderOut(nil)
                 createdWindows.removeValue(forKey: spaceId)
@@ -285,7 +291,14 @@ class SpaceLabelManager: ObservableObject {
     }
     
     private func updateLabelsVisibility() {
-        if !isEnabled { removeAllWindows() } else {
+        // MODIFICATION:
+        // Instead of removing windows when disabled, we just update them.
+        // The SpaceLabelWindow logic will handle hiding the content (invisible anchor mode).
+        updateWindows()
+        
+        // If enabled, we might need to trigger an update for the current space specifically
+        // to ensure it appears if it was missing.
+        if isEnabled {
             if let spaceId = spaceManager?.currentSpaceUUID, let name = spaceManager?.getSpaceName(spaceId) {
                 updateLabel(for: spaceId, name: name, verifySpace: false)
             }
