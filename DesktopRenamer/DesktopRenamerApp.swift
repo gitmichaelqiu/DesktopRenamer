@@ -83,6 +83,33 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         statusBarController?.openSettingsWindow()
         return true
     }
+    
+    // MARK: - URL Handling (Widget Support)
+    func application(_ application: NSApplication, open urls: [URL]) {
+        for url in urls {
+            handleURL(url)
+        }
+    }
+    
+    private func handleURL(_ url: URL) {
+        guard url.scheme == "desktoprenamer",
+              let components = URLComponents(url: url, resolvingAgainstBaseURL: true),
+              components.host == "switch",
+              let queryItems = components.queryItems,
+              let numString = queryItems.first(where: { $0.name == "num" })?.value,
+              let spaceNum = Int(numString)
+        else { return }
+
+        // Delay slightly to ensure SpaceManager is ready if app just launched
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+            guard let manager = self.spaceManager else { return }
+            
+            // Find space with matching number
+            if let space = manager.spaceNameDict.first(where: { $0.num == spaceNum }) {
+                manager.switchToSpace(space)
+            }
+        }
+    }
 }
 
 @main

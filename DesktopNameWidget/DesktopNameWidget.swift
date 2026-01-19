@@ -125,25 +125,27 @@ struct DesktopListView: View {
                 let spaceNum = index + 1
                 let isCurrent = spaceNum == currentSpaceNumber
                 
-                HStack(spacing: 8) {
-                    Text("\(spaceNum)")
-                        .font(.system(size: 13, weight: .bold, design: .rounded))
-                        .foregroundStyle(isCurrent ? .white : .secondary)
-                        .frame(width: 18)
-                    
-                    Text(name)
-                        .font(.system(size: 13, weight: .semibold, design: .rounded))
-                        .foregroundStyle(isCurrent ? .white : .primary)
-                        .lineLimit(1)
-                    
-                    Spacer()
-                }
-                .padding(.horizontal, 8)
-                .padding(.vertical, 6)
-                .background {
-                    RoundedRectangle(cornerRadius: 8, style: .continuous)
-                        // Blue Highlight for Current Desktop
-                        .fill(isCurrent ? Color.blue : Color.primary.opacity(0.05))
+                Link(destination: URL(string: "desktoprenamer://switch?num=\(spaceNum)")!) {
+                    HStack(spacing: 8) {
+                        Text("\(spaceNum)")
+                            .font(.system(size: 13, weight: .bold, design: .rounded))
+                            .foregroundStyle(isCurrent ? .white : .secondary)
+                            .frame(width: 18)
+                        
+                        Text(name)
+                            .font(.system(size: 13, weight: .semibold, design: .rounded))
+                            .foregroundStyle(isCurrent ? .white : .primary)
+                            .lineLimit(1)
+                        
+                        Spacer()
+                    }
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 6)
+                    .background {
+                        RoundedRectangle(cornerRadius: 8, style: .continuous)
+                            // Blue Highlight for Current Desktop
+                            .fill(isCurrent ? Color.blue : Color.primary.opacity(0.05))
+                    }
                 }
             }
         }
@@ -204,16 +206,18 @@ struct SmallLayout: View {
                         ForEach(chunks[chunkIndex], id: \.offset) { index, name in
                             let isCurrent = (index + 1) == entry.spaceNumber
                             
-                            ZStack {
-                                RoundedRectangle(cornerRadius: 5)
-                                    .fill(isCurrent ? Color.blue : Color.primary.opacity(0.1))
-                                
-                                // Current: Number. Other: First Letter.
-                                Text(isCurrent ? "\(index + 1)" : String(name.prefix(1)).uppercased())
-                                    .font(.system(size: 10, weight: .bold, design: .rounded))
-                                    .foregroundStyle(isCurrent ? .white : .primary.opacity(0.6))
+                            Link(destination: URL(string: "desktoprenamer://switch?num=\(index + 1)")!) {
+                                ZStack {
+                                    RoundedRectangle(cornerRadius: 5)
+                                        .fill(isCurrent ? Color.blue : Color.primary.opacity(0.1))
+                                    
+                                    // Current: Number. Other: First Letter.
+                                    Text(isCurrent ? "\(index + 1)" : String(name.prefix(1)).uppercased())
+                                        .font(.system(size: 10, weight: .bold, design: .rounded))
+                                        .foregroundStyle(isCurrent ? .white : .primary.opacity(0.6))
+                                }
+                                .frame(width: 20, height: 20)
                             }
-                            .frame(width: 20, height: 20)
                         }
                     }
                 }
