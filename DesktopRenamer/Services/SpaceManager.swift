@@ -130,16 +130,39 @@ class SpaceManager: ObservableObject {
         if detectionMethod == .automatic {
             guard let cgsState = SpaceHelper.getSystemState() else { return }
             
+            // PRE-CHECK: Identify which names are already securely claimed by existing UUIDs.
+            // This prevents "Name Stealing" where a new/moved space accidentally grabs a name
+            // from the indexCache that actually belongs to another active space.
+            var claimedNames: Set<String> = []
+            let activeUUIDs = Set(cgsState.spaces.map { $0.id })
+            
+            for (uuid, name) in nameCache {
+                // If the UUID exists in the current system state, its name is CLAIMED.
+                if activeUUIDs.contains(uuid) && !name.isEmpty {
+                    claimedNames.insert(name)
+                }
+            }
+            
             var newSpaceList: [DesktopSpace] = []
             for sysSpace in cgsState.spaces {
                 var finalSpace = sysSpace
+                
+                // 1. UUID Match (Highest Priority)
                 if let cachedName = nameCache[sysSpace.id], !cachedName.isEmpty {
                     finalSpace.customName = cachedName
                 } else {
+                    // 2. Index Match (Fallback for new UUIDs/Restart)
                     let indexKey = "\(finalSpace.displayID)|\(finalSpace.num)"
+                    
                     if let fallbackName = indexCache[indexKey], !fallbackName.isEmpty {
-                        finalSpace.customName = fallbackName
-                        nameCache[sysSpace.id] = fallbackName
+                        // BUG FIX: Only apply the fallback name if it is NOT claimed by another active space.
+                        // This handles cases where spaces are reordered or a new space slides into an old index.
+                        if !claimedNames.contains(fallbackName) {
+                            finalSpace.customName = fallbackName
+                            nameCache[sysSpace.id] = fallbackName
+                        }
+                        // If claimed, we leave customName empty (defaulting to "Desktop X")
+                        
                     } else if let existing = spaceNameDict.first(where: { $0.id == sysSpace.id }), !existing.customName.isEmpty {
                         finalSpace.customName = existing.customName
                         nameCache[sysSpace.id] = existing.customName
@@ -152,10 +175,8 @@ class SpaceManager: ObservableObject {
             if self.spaceNameDict != newSpaceList {
                 self.spaceNameDict = newSpaceList
                 
-                // FIX: REBUILD INDEX CACHE
-                // When spaces are reordered in Mission Control, the UUIDs move to new indices.
-                // We must update the indexCache to map these new indices to the correct names
-                // so that the next restart (which changes UUIDs) restores names correctly.
+                // REBUILD INDEX CACHE
+                // Ensure the restart-cache matches the current valid layout
                 self.indexCache.removeAll()
                 for space in self.spaceNameDict where !space.customName.isEmpty {
                     let key = "\(space.displayID)|\(space.num)"
