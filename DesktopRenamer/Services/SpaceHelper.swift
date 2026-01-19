@@ -20,29 +20,30 @@ class SpaceHelper {
     
     // MARK: - Space Switching Logic
     static func switchToSpace(_ spaceID: String) {
-        guard let spaceInt = Int(spaceID) else { return }
+        // 1. Resolve Target Space Info
+        // We need to look up the current Space Number because shortcuts are based on index (Space 1, Space 2...)
+        var targetNum: Int? = nil
+        if let state = getSystemState(),
+           let targetSpace = state.spaces.first(where: { $0.id == spaceID }) {
+            targetNum = targetSpace.num
+        }
         
-        // METHOD A1: Activate our own Space Label Window (Precise & Reliable)
+        // 2. PRIORITY: Simulate Keyboard Shortcut (Control + Number)
+        // Since window activation can be visually disruptive (forcing window to front),
+        // we prefer the native shortcut IF it is available/effective for this space number.
+        if let num = targetNum {
+            if simulateDesktopShortcut(for: num) {
+                print("Switched using Shortcut (Method B)")
+                return
+            }
+        }
+        
+        // 3. Fallback: Activate our own Space Label Window (Precise & Reliable)
         // Since we have a window on every desktop, activating the specific one
         // on the target space forces the OS to switch to it immediately.
         if switchByActivatingOwnWindow(for: spaceID) {
-            print("A1")
+            print("Switched using Own Window (Method A1)")
             return
-        }
-        
-        // METHOD A2: Activate another app's window on the target space (Good UX)
-        // If we find a window on that space, activating it triggers a native, glitch-free switch.
-        if switchByActivatingWindow(on: spaceInt) {
-            print("A2")
-            return
-        }
-        
-        // METHOD B: Simulate Keyboard Shortcut (Control + Number)
-        // Fallback for empty desktops where no window exists to activate.
-        if let state = getSystemState(),
-           let targetSpace = state.spaces.first(where: { $0.id == spaceID }) {
-            print("B")
-            simulateDesktopShortcut(for: targetSpace.num)
         }
     }
     
@@ -64,33 +65,10 @@ class SpaceHelper {
         return false
     }
     
-    private static func switchByActivatingWindow(on spaceInt: Int) -> Bool {
-        // CGWindowListOption.optionAll includes windows on other spaces
-        let options = CGWindowListOption(arrayLiteral: .optionAll, .excludeDesktopElements)
-        guard let windowList = CGWindowListCopyWindowInfo(options, kCGNullWindowID) as? [[String: Any]] else { return false }
-        
-        let myPID = NSRunningApplication.current.processIdentifier
-        
-        for window in windowList {
-            // Check if window is on the target space.
-            // Note: using string key because kCGWindowWorkspace constant is unavailable in some SDKs.
-            if let workspace = window["kCGWindowWorkspace"] as? Int,
-               workspace == spaceInt,
-               let pid = window[kCGWindowOwnerPID as String] as? Int32,
-               pid != myPID, // Skip our own windows here (handled better in A1)
-               let app = NSRunningApplication(processIdentifier: pid),
-               app.activationPolicy == .regular { // Only switch to regular apps
-                
-                // Activate the app to trigger the native space switch
-                if app.activate(options: .activateIgnoringOtherApps) {
-                    return true
-                }
-            }
-        }
-        return false
-    }
-    
-    private static func simulateDesktopShortcut(for number: Int) {
+    /// Simulates the keyboard shortcut for switching desktops.
+    /// Returns true if the shortcut was successfully posted (i.e., a valid keycode exists for this number).
+    @discardableResult
+    private static func simulateDesktopShortcut(for number: Int) -> Bool {
         // Map space number to standard ANSI Key Codes for row numbers
         // 1=18, 2=19, 3=20, 4=21, 5=23, 6=22, 7=26, 8=28, 9=25, 0=29
         let keyCode: CGKeyCode?
@@ -110,7 +88,7 @@ class SpaceHelper {
         
         guard let code = keyCode else {
             print("SpaceHelper: No standard hotkey available for Space \(number)")
-            return
+            return false
         }
         
         let source = CGEventSource(stateID: .hidSystemState)
@@ -118,7 +96,7 @@ class SpaceHelper {
         // Create Key Down/Up Events
         guard let keyDown = CGEvent(keyboardEventSource: source, virtualKey: code, keyDown: true),
               let keyUp = CGEvent(keyboardEventSource: source, virtualKey: code, keyDown: false) else {
-            return
+            return false
         }
         
         // Apply Control Flag (Control + Number)
@@ -128,6 +106,8 @@ class SpaceHelper {
         // Post Events
         keyDown.post(tap: .cghidEventTap)
         keyUp.post(tap: .cghidEventTap)
+        
+        return true
     }
     
     static func startMonitoring(onChange: @escaping (String, Bool, Int, String) -> Void) {

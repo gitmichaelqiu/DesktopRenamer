@@ -250,6 +250,10 @@ class StatusBarController: NSObject {
     
     @objc func selectSpace(_ sender: NSMenuItem) {
         guard let spaceID = sender.representedObject as? String else { return }
+        
+        // If we are already on that space, do nothing.
+        if spaceID == spaceManager.currentSpaceUUID { return }
+        
         // Use the new helper to switch
         if let space = spaceManager.spaceNameDict.first(where: { $0.id == spaceID }) {
             spaceManager.switchToSpace(space)
