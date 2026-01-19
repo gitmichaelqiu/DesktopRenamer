@@ -32,7 +32,10 @@ class SpaceHelper {
         // Since window activation can be visually disruptive (forcing window to front),
         // we prefer the native shortcut IF it is available/effective for this space number.
         if let num = targetNum {
-            if simulateDesktopShortcut(for: num) {
+            // CHECK: Verify if the system shortcut is actually enabled and matches our expectation (Ctrl+N)
+            // If the user disabled the shortcut or changed it to something else (e.g. Option+N),
+            // we skip the simulation to avoid doing nothing, and go straight to the fallback.
+            if isShortcutEnabled(for: num) && simulateDesktopShortcut(for: num) {
                 print("Switched using Shortcut (Method B)")
                 return
             }
@@ -65,28 +68,76 @@ class SpaceHelper {
         return false
     }
     
+    /// Checks if the Mission Control shortcut for "Switch to Desktop N" is enabled and matches Control+N.
+    private static func isShortcutEnabled(for number: Int) -> Bool {
+        // Standard Symbolic HotKey IDs for Spaces 1-16 (Apple reserved range)
+        // 118 -> Space 1
+        // ...
+        let baseID = 118
+        let targetID = baseID + (number - 1)
+        
+        // Attempt to read the global domain for symbolic hotkeys
+        guard let dict = UserDefaults.standard.persistentDomain(forName: "com.apple.symbolichotkeys"),
+              let hotkeys = dict["AppleSymbolicHotKeys"] as? [String: Any] else {
+            // If we can't read the domain (e.g. sandbox restriction), default to true
+            // to attempt the shortcut rather than failing open to the more disruptive window-switch.
+            return true
+        }
+        
+        // If the entry is missing, macOS defaults usually apply (Enabled, Ctrl+N).
+        guard let targetKeyDict = hotkeys[String(targetID)] as? [String: Any] else {
+            return true
+        }
+        
+        // 1. Check "enabled" boolean
+        if let enabled = targetKeyDict["enabled"] as? Bool, !enabled {
+            return false
+        }
+        
+        // 2. Check "parameters" to ensure it matches Control (262144) + Correct KeyCode
+        // If the user changed the mapping, our hardcoded simulation will fail anyway.
+        if let value = targetKeyDict["value"] as? [String: Any],
+           let parameters = value["parameters"] as? [Int],
+           parameters.count >= 3 {
+            
+            let registeredKeyCode = parameters[1]
+            let registeredModifiers = parameters[2]
+            
+            let expectedKeyCode = Int(getKeyCode(for: number))
+            let expectedModifiers = 262144 // Control Key Mask
+            
+            if registeredKeyCode != expectedKeyCode || registeredModifiers != expectedModifiers {
+                 return false
+            }
+        }
+        
+        return true
+    }
+    
+    private static func getKeyCode(for number: Int) -> CGKeyCode {
+        // Map space number to standard ANSI Key Codes for row numbers
+        // 1=18, 2=19, 3=20, 4=21, 5=23, 6=22, 7=26, 8=28, 9=25, 0=29
+        switch number {
+        case 1: return 18
+        case 2: return 19
+        case 3: return 20
+        case 4: return 21
+        case 5: return 23
+        case 6: return 22
+        case 7: return 26
+        case 8: return 28
+        case 9: return 25
+        case 10: return 29 // Often mapped to Desktop 10 or 0
+        default: return 255 // Unknown/No shortcut
+        }
+    }
+
     /// Simulates the keyboard shortcut for switching desktops.
     /// Returns true if the shortcut was successfully posted (i.e., a valid keycode exists for this number).
     @discardableResult
     private static func simulateDesktopShortcut(for number: Int) -> Bool {
-        // Map space number to standard ANSI Key Codes for row numbers
-        // 1=18, 2=19, 3=20, 4=21, 5=23, 6=22, 7=26, 8=28, 9=25, 0=29
-        let keyCode: CGKeyCode?
-        switch number {
-        case 1: keyCode = 18
-        case 2: keyCode = 19
-        case 3: keyCode = 20
-        case 4: keyCode = 21
-        case 5: keyCode = 23
-        case 6: keyCode = 22
-        case 7: keyCode = 26
-        case 8: keyCode = 28
-        case 9: keyCode = 25
-        case 10: keyCode = 29 // Often mapped to Desktop 10 or 0
-        default: keyCode = nil
-        }
-        
-        guard let code = keyCode else {
+        let code = getKeyCode(for: number)
+        if code == 255 {
             print("SpaceHelper: No standard hotkey available for Space \(number)")
             return false
         }
