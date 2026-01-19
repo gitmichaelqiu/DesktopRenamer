@@ -53,7 +53,8 @@ struct DesktopNameProvider: AppIntentTimelineProvider {
         // Fallback: If list is empty (App hasn't written it yet), generate placeholders
         if allNames.isEmpty {
             let count = max(num, 4)
-            allNames = (1...count).map { "Desktop \($0)" }
+            // Use "Space X" as a more generic fallback than "Desktop X"
+            allNames = (1...count).map { "Space \($0)" }
             // Ensure the current space name matches the display name
             if num > 0 && num <= allNames.count {
                 allNames[num - 1] = name
@@ -126,7 +127,7 @@ struct DesktopListView: View {
                     // Number
                     Text("\(spaceNum)")
                         .font(.system(size: 14, weight: .bold, design: .rounded))
-                        .foregroundStyle(isCurrent ? .secondary : .secondary)
+                        .foregroundStyle(isCurrent ? .primary : .secondary)
                         .frame(width: 20, alignment: .trailing)
                     
                     // Name
@@ -136,12 +137,7 @@ struct DesktopListView: View {
                     
                     Spacer()
                     
-                    // Active indicator dot (optional, but nice for visual confirmation)
-                    if isCurrent {
-                        Circle()
-                            .fill(Color.green)
-                            .frame(width: 6, height: 6)
-                    }
+                    // Removed redundant green dot
                 }
                 .padding(.horizontal, 10)
                 .padding(.vertical, 6)
@@ -214,7 +210,7 @@ struct SmallWidgetView: View {
                         
                         // Small Widget Requirement:
                         // Current desktop: show the number
-                        // Other desktops: show the first letter
+                        // Other desktops: show the first letter instead of the number
                         let labelText: String = {
                             if isCurrent {
                                 return "\(spaceIndex)"
@@ -275,23 +271,39 @@ struct MediumWidgetView: View {
     let entry: DesktopNameProvider.Entry
     
     var body: some View {
-        // Medium requirement: Vertical list of squares (buttons).
-        // Before name, show number. Mark current.
-        VStack(alignment: .leading) {
-            if entry.isDesktop {
-                // We fit about 4 items comfortably in medium height
-                DesktopListView(entry: entry, limit: 4)
-            } else {
+        // Medium requirement:
+        // 1. Big name at the bottom left corner.
+        // 2. List on the right half.
+        // 3. List style: Vertical buttons, Number before name, Mark current (handled by DesktopListView).
+        
+        HStack(alignment: .bottom, spacing: 16) {
+            // Left Side: Name
+            VStack(alignment: .leading) {
                 Spacer()
-                HStack {
+                AdaptiveText(text: entry.spaceName, family: .systemSmall)
+                    .foregroundStyle(.primary)
+                    .shadow(color: Color.black.opacity(entry.backgroundStyle == .transparent ? 0.35 : 0), radius: 3, x: 0, y: 1.5)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            
+            // Right Side: List
+            VStack(alignment: .leading) {
+                if entry.isDesktop {
+                    // We fit about 4 items comfortably in medium height
+                    DesktopListView(entry: entry, limit: 4)
+                } else {
                     Spacer()
-                    Label("Fullscreen App Active", systemImage: "arrow.up.left.and.arrow.down.right")
-                        .font(.headline)
-                        .foregroundStyle(.secondary)
+                    HStack {
+                        Spacer()
+                        Label("Fullscreen", systemImage: "arrow.up.left.and.arrow.down.right")
+                            .font(.headline)
+                            .foregroundStyle(.secondary)
+                        Spacer()
+                    }
                     Spacer()
                 }
-                Spacer()
             }
+            .frame(maxWidth: .infinity, alignment: .trailing)
         }
         .padding(16)
     }
