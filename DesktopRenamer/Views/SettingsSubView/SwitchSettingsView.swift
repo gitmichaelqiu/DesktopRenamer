@@ -25,7 +25,7 @@ struct SwitchSettingsView: View {
                             }
                         }
                         
-                        Divider().padding(.leading, 16)
+                        Divider()
                         
                         // Switch Right
                         SettingsRow("Switch to right space") {
@@ -45,27 +45,21 @@ struct SwitchSettingsView: View {
                 
                 // MARK: - Gesture Override
                 SettingsSection("Trackpad Gesture Override") {
-                    SettingsRow("Enable Gesture Override", helperText: "Replaces system gestures with instant space switching.\n\nRequired: You must disable 'Swipe between full screen apps' in System Settings > Trackpad > More Gestures to prevent conflicts.") {
+                    SettingsRow("Enable gesture override", helperText: "Replaces system gestures with instant space switching.\n\nRequired: You must disable 'Swipe between full screen apps' in System Settings > Trackpad > More Gestures to prevent conflicts.") {
                         Toggle("", isOn: $gestureManager.isEnabled)
                             .toggleStyle(.switch)
                             .labelsHidden()
                     }
                     
                     if gestureManager.isEnabled {
-                        Divider().padding(.leading, 16)
+                        Divider()
                         
-                        SettingsRow("Gesture Type") {
+                        SettingsRow("Gesture type") {
                             Picker("", selection: $gestureManager.fingerCount) {
                                 Text("3 Fingers").tag(3)
                                 Text("4 Fingers").tag(4)
                             }
-                            .pickerStyle(.segmented)
-                            .frame(width: 160)
                             .labelsHidden()
-                        }
-                        
-                        SettingsRow("", helperText: "Uses MultitouchSupport to detect physical swipes.") {
-                            EmptyView()
                         }
                     }
                 }
