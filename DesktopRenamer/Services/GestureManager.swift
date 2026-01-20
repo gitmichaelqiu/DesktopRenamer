@@ -71,6 +71,9 @@ class GestureManager: ObservableObject {
         
         // 1. Global Monitor (For when app is in background)
         // NOTE: This requires "Input Monitoring" permission or the user to disable system gestures.
+        // LIMITATION: Public APIs cannot distinguish finger count on global scroll events.
+        // This relies on the user disabling system gestures, which causes the system
+        // to often fallback to sending scroll events for multi-finger swipes.
         globalMonitor = NSEvent.addGlobalMonitorForEvents(matching: .scrollWheel) { [weak self] event in
             self?.handleScrollEvent(event, source: "Global")
         }
@@ -133,6 +136,8 @@ class GestureManager: ObservableObject {
         
         if abs(currentDeltaX) > swipeThreshold {
             // Determine direction
+            // dX > 0: Typically "Swipe Left" (Content moves Right) in Natural Scrolling
+            // dX < 0: Typically "Swipe Right" (Content moves Left) in Natural Scrolling
             let direction: SwipeDirection = currentDeltaX > 0 ? .left : .right
             
             logger.notice("TRIGGER: \(String(describing: direction)) | Acc: \(self.currentDeltaX)")
@@ -154,23 +159,19 @@ class GestureManager: ObservableObject {
         currentDeltaX = 0
         
         DispatchQueue.main.async {
-            // Logic Mapping:
-            // This behavior depends on "Natural Scrolling".
-            // Standard Natural Scrolling:
-            //   - Swipe Fingers LEFT -> Content moves RIGHT -> DeltaX is POSITIVE (+).
-            //   - Swipe Fingers LEFT -> Intention is to go to the NEXT space (on the right).
-            
-            //   - Swipe Fingers RIGHT -> Content moves LEFT -> DeltaX is NEGATIVE (-).
-            //   - Swipe Fingers RIGHT -> Intention is to go to the PREVIOUS space (on the left).
+            // Logic Mapping (Fixed):
+            // Direction based on standard macOS Mission Control behavior relative to Swipe.
             
             switch direction {
-            case .left: // DeltaX > 0 (Fingers moved Left)
-                // Go to Next Space
-                sm.switchToNextSpace()
-                
-            case .right: // DeltaX < 0 (Fingers moved Right)
-                // Go to Previous Space
+            case .left: // dX > 0 (Swipe Fingers Left)
+                // User intention: "Move to the space on the left" (Previous) OR "Pull content right"
+                // Fixed based on user feedback: Treat "Swipe Left" as going to PREVIOUS space.
                 sm.switchToPreviousSpace()
+                
+            case .right: // dX < 0 (Swipe Fingers Right)
+                // User intention: "Move to the space on the right" (Next)
+                // Fixed based on user feedback: Treat "Swipe Right" as going to NEXT space.
+                sm.switchToNextSpace()
             }
         }
     }
