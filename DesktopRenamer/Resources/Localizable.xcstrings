@@ -1836,6 +1836,12 @@
     },
     "Settings.Switch" : {
       "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Switch"
+          }
+        },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
