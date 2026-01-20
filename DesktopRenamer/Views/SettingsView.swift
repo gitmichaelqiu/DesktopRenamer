@@ -39,8 +39,9 @@ let titleHeaderHeight: CGFloat = 48
 struct SettingsView: View {
     @ObservedObject var spaceManager: SpaceManager
     @ObservedObject var labelManager: SpaceLabelManager
-    // Inject the HotkeyManager via Environment
     @EnvironmentObject var hotkeyManager: HotkeyManager
+    // Inject GestureManager
+    @EnvironmentObject var gestureManager: GestureManager
     
     @State private var selectedTab: SettingsTab? = .general
     
@@ -51,13 +52,11 @@ struct SettingsView: View {
             detailView
         }
         .navigationTitle("")
-        // Conditional toolbar hiding
         .modifier(ToolbarHider())
         .edgesIgnoringSafeArea(.top)
         .frame(width: CGFloat(defaultSettingsWindowWidth), height: CGFloat(defaultSettingsWindowHeight))
     }
     
-    // Helper to safely hide toolbar on supported versions
     struct ToolbarHider: ViewModifier {
         func body(content: Content) -> some View {
             if #available(macOS 14.0, *) {
@@ -79,14 +78,8 @@ struct SettingsView: View {
                 } header: {
                     VStack(alignment: .leading, spacing: 0) {
                         Color.clear.frame(height: 45)
-                        
-                        Text("Desktop")
-                            .font(.system(size: 28, weight: .heavy))
-                            .foregroundStyle(.primary)
-                        Text("Renamer")
-                            .font(.system(size: 28, weight: .heavy))
-                            .foregroundStyle(.primary)
-                            .padding(.bottom, 20)
+                        Text("Desktop").font(.system(size: 28, weight: .heavy)).foregroundStyle(.primary)
+                        Text("Renamer").font(.system(size: 28, weight: .heavy)).foregroundStyle(.primary).padding(.bottom, 20)
                     }
                 }
                 .collapsible(false)
@@ -104,14 +97,8 @@ struct SettingsView: View {
                 } header: {
                     VStack(alignment: .leading, spacing: 0) {
                         Color.clear.frame(height: 45)
-                        
-                        Text("Desktop")
-                            .font(.system(size: 28, weight: .heavy))
-                            .foregroundStyle(.primary)
-                        Text("Renamer")
-                            .font(.system(size: 28, weight: .heavy))
-                            .foregroundStyle(.primary)
-                            .padding(.bottom, 20)
+                        Text("Desktop").font(.system(size: 28, weight: .heavy)).foregroundStyle(.primary)
+                        Text("Renamer").font(.system(size: 28, weight: .heavy)).foregroundStyle(.primary).padding(.bottom, 20)
                     }
                 }
                 .collapsible(false)
@@ -126,8 +113,6 @@ struct SettingsView: View {
     @ViewBuilder
     private var detailView: some View {
         ZStack(alignment: .top) {
-            
-            // 1. CONTENT LAYER
             ZStack(alignment: .top) {
                 if let tab = selectedTab {
                     switch tab {
@@ -143,27 +128,20 @@ struct SettingsView: View {
                         AboutView()
                     }
                 } else {
-                    Text("Select a category")
-                        .foregroundColor(.secondary)
-                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    Text("Select a category").foregroundColor(.secondary).frame(maxWidth: .infinity, maxHeight: .infinity)
                 }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-            // Match the header height exactly
             .padding(.top, titleHeaderHeight)
             
-            // 2. HEADER LAYER (Blurry Title Bar)
             if let tab = selectedTab {
                 VStack(spacing: 0) {
                     HStack {
-                        Text(tab.localizedName)
-                            .font(.system(size: 20, weight: .semibold))
-                            .padding(.leading, 20)
+                        Text(tab.localizedName).font(.system(size: 20, weight: .semibold)).padding(.leading, 20)
                         Spacer()
                     }
-                    .frame(height: titleHeaderHeight) // 48pt
+                    .frame(height: titleHeaderHeight)
                     .background(.bar)
-                    
                     Divider()
                 }
                 .frame(maxHeight: .infinity, alignment: .top)
@@ -176,34 +154,31 @@ struct SettingsView: View {
     private func sidebarItem(for tab: SettingsTab) -> some View {
         NavigationLink(value: tab) {
             Label {
-                Text(tab.localizedName)
-                    .font(.system(size: sidebarFontSize, weight: .medium))
-                    .padding(.leading, 2)
+                Text(tab.localizedName).font(.system(size: sidebarFontSize, weight: .medium)).padding(.leading, 2)
             } icon: {
-                Image(systemName: tab.iconName)
-                    .resizable()
-                    .scaledToFit()
-                    .frame(height: sidebarRowHeight-15)
+                Image(systemName: tab.iconName).resizable().scaledToFit().frame(height: sidebarRowHeight-15)
             }
         }
         .frame(height: sidebarRowHeight)
     }
 }
 
-// FIX: Use NSHostingController<AnyView> to allow type erasure for EnvironmentObject injection
 class SettingsHostingController: NSHostingController<AnyView> {
     private let spaceManager: SpaceManager
     private let labelManager: SpaceLabelManager
     private let hotkeyManager: HotkeyManager
+    private let gestureManager: GestureManager
     
-    init(spaceManager: SpaceManager, labelManager: SpaceLabelManager, hotkeyManager: HotkeyManager) {
+    // Updated Init signature
+    init(spaceManager: SpaceManager, labelManager: SpaceLabelManager, hotkeyManager: HotkeyManager, gestureManager: GestureManager) {
         self.spaceManager = spaceManager
         self.labelManager = labelManager
         self.hotkeyManager = hotkeyManager
+        self.gestureManager = gestureManager
         
-        // Inject into the root view environment and wrap in AnyView to match the class generic type
         let rootView = SettingsView(spaceManager: spaceManager, labelManager: labelManager)
             .environmentObject(hotkeyManager)
+            .environmentObject(gestureManager) // Inject GestureManager
             
         super.init(rootView: AnyView(rootView))
     }

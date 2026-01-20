@@ -2,6 +2,7 @@ import SwiftUI
 
 struct SwitchSettingsView: View {
     @EnvironmentObject var hotkeyManager: HotkeyManager
+    @EnvironmentObject var gestureManager: GestureManager
 
     var body: some View {
         ScrollView {
@@ -40,9 +41,9 @@ struct SwitchSettingsView: View {
                             .foregroundColor(.primary)
                     }
                     .frame(minHeight: 36)
-
+                    
                     Divider()
-
+                    
                     SettingsRow("") {
                         HStack(spacing: 8) {
                             Button(NSLocalizedString("Settings.Shortcuts.Hotkey.Change", comment: "Change")) {
@@ -55,6 +56,33 @@ struct SwitchSettingsView: View {
                         .frame(maxWidth: .infinity, alignment: .trailing)
                     }
                     .frame(minHeight: 36)
+                }
+                
+                // MARK: - Gesture Override
+                SettingsSection("Trackpad Gesture Override") {
+                    SettingsRow("Enable Gesture Override", helperText: "Allows DesktopRenamer to handle space switching gestures.\n\nImportant: You must disable 'Swipe between full screen apps' in System Settings > Trackpad > More Gestures to prevent conflicts.") {
+                        Toggle("", isOn: $gestureManager.isEnabled)
+                            .toggleStyle(.switch)
+                            .labelsHidden()
+                    }
+                    
+                    if gestureManager.isEnabled {
+                        Divider().padding(.leading, 16)
+                        
+                        SettingsRow("Gesture Type") {
+                            Picker("", selection: $gestureManager.fingerCount) {
+                                Text("3 Fingers").tag(3)
+                                Text("4 Fingers").tag(4)
+                            }
+                            .pickerStyle(.segmented)
+                            .frame(width: 160)
+                            .labelsHidden()
+                        }
+                        
+                        SettingsRow("", helperText: "This feature uses scroll momentum to detect swipes. It provides a faster, instant switch compared to the native animation.") {
+                            EmptyView()
+                        }
+                    }
                 }
 
                 Spacer()
