@@ -248,7 +248,10 @@ class SpaceLabelManager: ObservableObject {
         }
         
         Task { @MainActor in
-            try? await Task.sleep(nanoseconds: 20_000_000)
+            // FIX: Increase delay to 0.5s (500ms) to ensure macOS space transition (swipe animation)
+            // is fully complete before creating the window. This prevents the window from being
+            // created on the 'source' desktop instead of the 'destination' fullscreen app.
+            try? await Task.sleep(nanoseconds: 500_000_000)
             
             if spaceManager?.detectionMethod == .automatic {
                 guard let state = SpaceHelper.getSystemState() else { return }
