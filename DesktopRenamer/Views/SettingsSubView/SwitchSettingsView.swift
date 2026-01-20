@@ -18,11 +18,12 @@ struct SwitchSettingsView: View {
                                     .foregroundColor(.secondary)
                                     .padding(.trailing, 8)
                                 
-                                Button("Record") {
+                                Button("◉") {
                                     hotkeyManager.startListening(for: .switchLeft)
                                 }
                                 .disabled(hotkeyManager.isListening)
-                                Button("Reset") {
+                                
+                                Button("↺") {
                                     hotkeyManager.resetToDefault(for: .switchLeft)
                                 }
                             }
@@ -37,11 +38,12 @@ struct SwitchSettingsView: View {
                                     .foregroundColor(.secondary)
                                     .padding(.trailing, 8)
                                 
-                                Button("Record") {
+                                Button("◉") {
                                     hotkeyManager.startListening(for: .switchRight)
                                 }
                                 .disabled(hotkeyManager.isListening)
-                                Button("Reset") {
+                                
+                                Button("↺") {
                                     hotkeyManager.resetToDefault(for: .switchRight)
                                 }
                             }
