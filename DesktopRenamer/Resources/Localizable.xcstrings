@@ -304,7 +304,7 @@
     "Desktop" : {
       "shouldTranslate" : false
     },
-    "Enable Gesture Override" : {
+    "Enable gesture override" : {
 
     },
     "Enable Labels" : {
@@ -392,7 +392,7 @@
         }
       }
     },
-    "Gesture Type" : {
+    "Gesture type" : {
 
     },
     "Hide menubar icon" : {
@@ -1994,9 +1994,6 @@
           }
         }
       }
-    },
-    "Uses MultitouchSupport to detect physical swipes." : {
-
     },
     "v%@" : {
       "localizations" : {
