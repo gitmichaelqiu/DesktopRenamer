@@ -35,14 +35,10 @@ class SpaceHelper {
         // 1. Resolve Target Space Info
         var targetNum: Int? = nil
         var shouldUseShortcut = true
-        var targetPID: Int32? = nil
-        var isTargetFullscreen = false
         
         if let state = getSystemState(),
            let targetSpace = state.spaces.first(where: { $0.id == spaceID }) {
             targetNum = targetSpace.num
-            targetPID = targetSpace.pid
-            isTargetFullscreen = targetSpace.isFullscreen
             
             // If we are already on the target space, stop.
             if state.currentUUID == spaceID { return }
@@ -59,30 +55,22 @@ class SpaceHelper {
         }
         
         // 2. PRIORITY: Simulate Keyboard Shortcut (Control + Number)
+        // Only valid for standard desktops.
         if shouldUseShortcut, let num = targetNum {
             if isShortcutEnabled(for: num) && simulateDesktopShortcut(for: num) {
                 return
             }
         }
         
-        // 3. FULLSCREEN STRATEGY: Activate the App Directly
-        // This avoids the issue where activating our own window (which might be stuck on Main Desktop)
-        // pulls the user back to the Main Desktop. Activating the owning app forces a switch to the Fullscreen Space.
-        if isTargetFullscreen, let pid = targetPID {
-            if let app = NSRunningApplication(processIdentifier: pid) {
-                if app.activate(options: [.activateIgnoringOtherApps]) {
-                    return
-                }
-            }
-        }
-        
-        // 4. Fallback A: Activate our own Space Label Window
-        // We use this primarily for non-fullscreen spaces where we have a confirmed window anchor.
+        // 3. Fallback A: Activate our own Space Label Window
+        // We use this for Fullscreen spaces as well.
+        // Since Space Label Windows are now correctly created for fullscreen apps,
+        // activating them should trigger the OS to switch to that space.
         if switchByActivatingOwnWindow(for: spaceID) {
             return
         }
         
-        // 5. Fallback B: Mission Control UI Scripting
+        // 4. Fallback B: Mission Control UI Scripting
         if let num = targetNum {
             switchViaMissionControl(to: num)
         }
@@ -315,12 +303,10 @@ class SpaceHelper {
                 let isFullscreen = space["TileLayoutManager"] != nil
                 
                 var appName: String? = nil
-                var pid: Int32? = nil
                 
                 if isFullscreen {
-                    // Try to extract PID from space dictionary to allow App Activation switching
+                    // Try to extract PID from space dictionary to get Name, but do NOT store PID in model
                     if let p = space["pid"] as? Int32 ?? space["owner pid"] as? Int32 {
-                        pid = p
                         appName = NSRunningApplication(processIdentifier: p)?.localizedName
                     }
                 }
@@ -332,8 +318,7 @@ class SpaceHelper {
                     num: regularIndex,
                     displayID: displayID,
                     isFullscreen: isFullscreen,
-                    appName: appName,
-                    pid: pid
+                    appName: appName
                 ))
                 
                 if let currentDict = display["Current Space"] as? [String: Any],

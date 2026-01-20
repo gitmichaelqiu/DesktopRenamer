@@ -7,7 +7,6 @@ struct DesktopSpace: Identifiable, Codable, Equatable {
     var displayID: String
     var isFullscreen: Bool
     var appName: String?
-    var pid: Int32?
     
     // Custom decoding to handle legacy data
     init(from decoder: Decoder) throws {
@@ -18,17 +17,15 @@ struct DesktopSpace: Identifiable, Codable, Equatable {
         displayID = try container.decodeIfPresent(String.self, forKey: .displayID) ?? "Main"
         isFullscreen = try container.decodeIfPresent(Bool.self, forKey: .isFullscreen) ?? false
         appName = try container.decodeIfPresent(String.self, forKey: .appName)
-        pid = try container.decodeIfPresent(Int32.self, forKey: .pid)
     }
     
     // Default init
-    init(id: String, customName: String, num: Int, displayID: String, isFullscreen: Bool = false, appName: String? = nil, pid: Int32? = nil) {
+    init(id: String, customName: String, num: Int, displayID: String, isFullscreen: Bool = false, appName: String? = nil) {
         self.id = id
         self.customName = customName
         self.num = num
         self.displayID = displayID
         self.isFullscreen = isFullscreen
         self.appName = appName
-        self.pid = pid
     }
 }
