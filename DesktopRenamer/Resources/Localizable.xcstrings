@@ -48,6 +48,12 @@
       },
       "shouldTranslate" : false
     },
+    "↺" : {
+
+    },
+    "◉" : {
+
+    },
     "1. Go through desktops" : {
       "localizations" : {
         "zh-Hans" : {
@@ -695,6 +701,7 @@
       }
     },
     "Record" : {
+      "extractionState" : "stale",
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
