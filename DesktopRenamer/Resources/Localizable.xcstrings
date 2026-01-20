@@ -119,7 +119,14 @@
       }
     },
     "Add it as a space in\nSettings → General → Add spaces" : {
-
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "在设置 → 通用 → 添加桌面中添加"
+          }
+        }
+      }
     },
     "Add New Spaces" : {
       "localizations" : {
@@ -361,7 +368,20 @@
       }
     },
     "Fix this issue in\nSettings → General → Fix automatic space detection" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Fix this issue in\nSettings → General → Fix metric detection"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "在设置 → 通用 → 修复参数检测"
+          }
+        }
+      }
     },
     "Font size" : {
       "localizations" : {
@@ -625,10 +645,24 @@
       }
     },
     "Not a fullscreen?" : {
-
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "不是全屏？"
+          }
+        }
+      }
     },
     "Not a space?" : {
-
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "不是桌面？"
+          }
+        }
+      }
     },
     "Not enough data collected." : {
       "localizations" : {
@@ -681,7 +715,14 @@
       }
     },
     "Remove it in\nSettings → Spaces\n(Switch to other space first)" : {
-
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "在设置 → 桌面中移除。需要先回到其他桌面。"
+          }
+        }
+      }
     },
     "Rename.Label" : {
       "extractionState" : "manual",
@@ -1968,7 +2009,14 @@
       }
     },
     "There are no parameters to adjust for Automatic detection.\nIf the issue still happens, switch to other methods." : {
-
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "自动检测没有可调节参数。如果问题持续发生，请使用其他检测方式。"
+          }
+        }
+      }
     },
     "This generates a log that is helpful for the developers to debug." : {
       "localizations" : {
