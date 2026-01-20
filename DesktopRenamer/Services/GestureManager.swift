@@ -197,7 +197,7 @@ class GestureManager: ObservableObject {
     private func setupIOKitListener() {
         guard notifyPort == nil else { return }
         
-        let port = IONotificationPortCreate(kIOMasterPortDefault)
+        let port = IONotificationPortCreate(kIOMainPortDefault)
         self.notifyPort = port
         
         guard let runLoopSource = IONotificationPortGetRunLoopSource(port)?.takeUnretainedValue() else { return }
