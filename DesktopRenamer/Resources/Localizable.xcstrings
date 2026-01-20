@@ -68,6 +68,12 @@
         }
       }
     },
+    "3 Fingers" : {
+
+    },
+    "4 Fingers" : {
+
+    },
     "Actions" : {
       "localizations" : {
         "zh-Hans" : {
@@ -99,6 +105,7 @@
       }
     },
     "Add it as a space in\nSettings → General → Add spaces" : {
+      "extractionState" : "stale",
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
@@ -157,6 +164,9 @@
           }
         }
       }
+    },
+    "Allows DesktopRenamer to handle space switching gestures.\n\nImportant: You must disable 'Swipe between full screen apps' in System Settings > Trackpad > More Gestures to prevent conflicts." : {
+
     },
     "Are you sure? This will delete all your space names and settings. The app will quit immediately." : {
       "localizations" : {
@@ -297,6 +307,9 @@
     "Desktop" : {
       "shouldTranslate" : false
     },
+    "Enable Gesture Override" : {
+
+    },
     "Enable Labels" : {
       "localizations" : {
         "zh-Hans" : {
@@ -338,6 +351,7 @@
       }
     },
     "Fix this issue in\nSettings → General → Fix automatic space detection" : {
+      "extractionState" : "stale",
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
@@ -380,6 +394,9 @@
           }
         }
       }
+    },
+    "Gesture Type" : {
+
     },
     "Hide menubar icon" : {
       "localizations" : {
@@ -597,6 +614,7 @@
       }
     },
     "Not a fullscreen?" : {
+      "extractionState" : "stale",
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
@@ -607,6 +625,7 @@
       }
     },
     "Not a space?" : {
+      "extractionState" : "stale",
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
@@ -657,6 +676,7 @@
       }
     },
     "Remove it in\nSettings → Spaces\n(Switch to other space first)" : {
+      "extractionState" : "stale",
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
@@ -1864,9 +1884,6 @@
     "Switch to the left space" : {
 
     },
-    "Switch to the right space" : {
-
-    },
     "Thank You!" : {
       "localizations" : {
         "zh-Hans" : {
@@ -1925,6 +1942,7 @@
       }
     },
     "There are no parameters to adjust for Automatic detection.\nIf the issue still happens, switch to other methods." : {
+      "extractionState" : "stale",
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
@@ -1933,6 +1951,9 @@
           }
         }
       }
+    },
+    "This feature uses scroll momentum to detect swipes. It provides a faster, instant switch compared to the native animation." : {
+
     },
     "This generates a log that is helpful for the developers to debug." : {
       "localizations" : {
@@ -1963,6 +1984,9 @@
           }
         }
       }
+    },
+    "Trackpad Gesture Override" : {
+
     },
     "Troubleshoot Space Detection" : {
       "localizations" : {
