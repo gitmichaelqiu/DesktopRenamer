@@ -33,9 +33,9 @@ private struct MTTouch {
     var angle: Float
     var majorAxis: Float
     var minorAxis: Float
-    var absoluteVector: MTVector // previously unknown4 (MTPoint) -> Fixed to MTVector (4 floats)
+    var absoluteVector: MTVector // previously unknown4
     var unknown2: Int32    // previously unknown5
-    var unknown3: Int32    // New field to match padding/layout
+    var unknown3: Int32    // New field
     var unknown4: Float    // previously unknown6
 }
 
@@ -77,14 +77,17 @@ class GestureManager: ObservableObject {
     
     // Tracking State
     fileprivate static var sharedManager: GestureManager?
-    private var lastSwitchTime: TimeInterval = 0
     private var initialX: Float? = nil
     private var previousX: Float? = nil
-    // Removed swipeDetectedInCurrentTouchSession to support consecutive swipes
+    
+    // Queue & Lock
+    private var actionQueue: [SwitchDirection] = []
+    private var isProcessingQueue = false
+    private var lockedDirection: SwitchDirection? = nil
     
     // Tuning
-    private let switchCooldown: TimeInterval = 0 // Slightly reduced for better responsiveness
-    private let minSwipeDistance: Float = 0.15
+    private let animationDuration: TimeInterval = 0.45 // Time to wait between executing queued swipes
+    private let minSwipeDistance: Float = 0.20
     
     init(spaceManager: SpaceManager) {
         self.spaceManager = spaceManager
@@ -177,7 +180,6 @@ class GestureManager: ObservableObject {
     }
     
     private func setupDevice(_ device: MTDeviceRef) {
-        // Prevent duplicate registration
         if !devices.contains(device) {
             devices.append(device)
             if let registerCallback = _MTRegisterContactFrameCallback,
@@ -197,7 +199,6 @@ class GestureManager: ObservableObject {
         self.notifyPort = port
         
         guard let runLoopSource = IONotificationPortGetRunLoopSource(port)?.takeUnretainedValue() else { return }
-        // Use CommonModes to ensure callbacks fire even during UI tracking
         CFRunLoopAddSource(CFRunLoopGetCurrent(), runLoopSource, .commonModes)
         
         let matchingDict = IOServiceMatching("AppleMultitouchDevice")
@@ -214,7 +215,6 @@ class GestureManager: ObservableObject {
         )
         
         if result == kIOReturnSuccess {
-            // Iterate once to arm the listener and add existing devices
             consumeIterator(addedIterator)
         } else {
             print("GestureManager: Failed to register IOKit notification.")
@@ -233,36 +233,23 @@ class GestureManager: ObservableObject {
     
     // MARK: - Handling Logic
     fileprivate func handleTouches(touches: [MTTouch], numFingers: Int) {
-        let now = Date().timeIntervalSince1970
-        
         // 1. Validate Finger Count
         guard numFingers == self.fingerCount else {
             // Reset state if fingers lift or count changes
             if numFingers == 0 {
                 initialX = nil
                 previousX = nil
+                lockedDirection = nil // Reset lock on lift
             }
             return
         }
         
         // 3. Calculate Average X Position (Centroid)
-        // Note: MTTouch x is normalized (0.0 to 1.0)
         let totalX = touches.reduce(0) { $0 + $1.normalizedVector.position.x }
         let currentAvgX = totalX / Float(numFingers)
         
         // 4. Initialize Start Position
         if initialX == nil {
-            initialX = currentAvgX
-            previousX = currentAvgX
-            return
-        }
-        
-        // 2. Cooldown check with Continuous Reset
-        // If we are currently in cooldown (animation playing), we treat the
-        // current position as the "new start". This ensures that when cooldown
-        // ends, the user must swipe distance X from *where they are now*,
-        // not from where they were 0.5s ago.
-        if now - lastSwitchTime < switchCooldown {
             initialX = currentAvgX
             previousX = currentAvgX
             return
@@ -275,19 +262,34 @@ class GestureManager: ObservableObject {
         
         // 6. Trigger Logic
         if abs(delta) > minSwipeDistance {
+            
+            var detectedDirection: SwitchDirection?
+            
             if delta < 0 {
-                // Fingers moved LEFT -> Go to NEXT space
-                print("GestureManager: Swipe Left Detected (Next Space)")
-                triggerSwitch(direction: .next)
+                // Fingers moved LEFT -> Next Space
+                detectedDirection = .next
             } else {
-                // Fingers moved RIGHT -> Go to PREVIOUS space
-                print("GestureManager: Swipe Right Detected (Previous Space)")
-                triggerSwitch(direction: .previous)
+                // Fingers moved RIGHT -> Previous Space
+                detectedDirection = .previous
             }
             
-            // Reset initialX to current position to allow consecutive swipe
-            // User must move minSwipeDistance again from this new point
-            initialX = currentAvgX
+            if let dir = detectedDirection {
+                // Lock Direction for this session
+                if lockedDirection == nil {
+                    lockedDirection = dir
+                }
+                
+                // Only act if matches locked direction (prevents recoil/reverse)
+                if lockedDirection == dir {
+                    print("GestureManager: Queued \(dir)")
+                    queueSwitch(direction: dir)
+                    
+                    // Reset anchor to allow continuous swiping in same direction
+                    initialX = currentAvgX
+                } else {
+                     print("GestureManager: Ignored reverse swipe (Lock: \(String(describing: lockedDirection)), Detected: \(dir))")
+                }
+            }
         }
         
         previousX = currentAvgX
@@ -298,17 +300,34 @@ class GestureManager: ObservableObject {
         case previous
     }
     
-    private func triggerSwitch(direction: SwitchDirection) {
-        lastSwitchTime = Date().timeIntervalSince1970
+    private func queueSwitch(direction: SwitchDirection) {
+        actionQueue.append(direction)
+        processQueue()
+    }
+    
+    private func processQueue() {
+        guard !isProcessingQueue, !actionQueue.isEmpty else { return }
+        guard let sm = spaceManager else {
+            actionQueue.removeAll()
+            return
+        }
+        
+        isProcessingQueue = true
+        let direction = actionQueue.removeFirst()
         
         DispatchQueue.main.async {
-            guard let sm = self.spaceManager else { return }
             switch direction {
             case .next:
                 sm.switchToNextSpace()
             case .previous:
                 sm.switchToPreviousSpace()
             }
+        }
+        
+        // Wait for animation before processing next
+        DispatchQueue.main.asyncAfter(deadline: .now() + animationDuration) { [weak self] in
+            self?.isProcessingQueue = false
+            self?.processQueue()
         }
     }
 }
@@ -329,9 +348,6 @@ private func mtCallback(device: MTDeviceRef, touchPointer: UnsafeMutableRawPoint
     let typedPointer = touchPointer.assumingMemoryBound(to: MTTouch.self)
     let buffer = UnsafeBufferPointer(start: typedPointer, count: Int(numFingers))
     let touches = Array(buffer)
-    
-    // Debug print to confirm callback is firing
-    // print("MTCallback: Fingers: \(numFingers)")
     
     let validTouches = touches.filter { $0.state > 0 && $0.state < 7 }
     
