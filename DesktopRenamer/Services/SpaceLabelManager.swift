@@ -126,7 +126,6 @@ class SpaceLabelManager: ObservableObject {
     }
     
     private func updateWindows() {
-        // Snapshot to avoid mutation during iteration
         let windows = Array(createdWindows.values)
         for window in windows {
             window.refreshAppearance()
@@ -153,11 +152,8 @@ class SpaceLabelManager: ObservableObject {
     
     private func cleanupRedundantWindows() {
         guard let spaceManager = spaceManager else { return }
-        
-        // Get valid UUIDs from SpaceManager
         let validUUIDs = Set(spaceManager.spaceNameDict.map { $0.id })
         
-        // Find windows whose spaceID is not in validUUIDs
         let redundantIDs = createdWindows.keys.filter { !validUUIDs.contains($0) }
         
         for id in redundantIDs {
@@ -172,7 +168,6 @@ class SpaceLabelManager: ObservableObject {
     private func recalculateUnifiedSize() {
         guard let spaceManager = spaceManager else { return }
         
-        // Enforce MainActor via Task
         if !Thread.isMainThread {
             Task { @MainActor [weak self] in self?.recalculateUnifiedSize() }
             return
@@ -211,7 +206,6 @@ class SpaceLabelManager: ObservableObject {
             return
         }
         
-        // Snapshot iteration
         let windows = Array(createdWindows.values)
         for window in windows {
             window.setPreviewSize(finalSize)
@@ -236,11 +230,6 @@ class SpaceLabelManager: ObservableObject {
     }
     
     private func applyVisibility(_ visibleUUIDs: Set<String>) {
-        // MODIFICATION: Removed guard self.isEnabled.
-        // We now allow windows to update mode even if disabled,
-        // so they can act as invisible anchors.
-        
-        // CRITICAL FIX: Snapshot dictionary to allow safe iteration without lookup crashes
         let windowsSnapshot = self.createdWindows
         
         for (key, window) in windowsSnapshot {
@@ -250,8 +239,6 @@ class SpaceLabelManager: ObservableObject {
     }
     
     func updateLabel(for spaceId: String, name: String, verifySpace: Bool = true) {
-        // MODIFICATION: Removed guard isEnabled.
-        // We allow creating windows even if disabled (they will be invisible).
         guard spaceId != "FULLSCREEN" else { return }
         
         if !verifySpace {
@@ -283,7 +270,6 @@ class SpaceLabelManager: ObservableObject {
     private func ensureWindow(for spaceId: String, name: String, displayID: String) {
         if let existingWindow = createdWindows[spaceId] {
             if !existingWindow.isVisible {
-                // If it exists but is hidden (maybe from previous logic), bring it back as anchor
                 existingWindow.refreshAppearance()
             } else if existingWindow.displayID != displayID {
                 existingWindow.orderOut(nil)
@@ -297,7 +283,11 @@ class SpaceLabelManager: ObservableObject {
     
     private func createWindow(for spaceId: String, name: String, displayID: String) {
         guard let spaceManager = spaceManager else { return }
-        let window = SpaceLabelWindow(spaceId: spaceId, name: name, displayID: displayID, spaceManager: spaceManager, labelManager: self)
+        
+        // Pass the isFullscreen flag from the space manager logic
+        let isFullscreen = spaceManager.spaceNameDict.first(where: { $0.id == spaceId })?.isFullscreen ?? false
+        
+        let window = SpaceLabelWindow(spaceId: spaceId, name: name, displayID: displayID, isFullscreen: isFullscreen, spaceManager: spaceManager, labelManager: self)
         createdWindows[spaceId] = window
         let isCurrent = (spaceId == spaceManager.currentSpaceUUID)
         window.setMode(isCurrentSpace: isCurrent)
@@ -312,13 +302,8 @@ class SpaceLabelManager: ObservableObject {
     }
     
     private func updateLabelsVisibility() {
-        // MODIFICATION:
-        // Instead of removing windows when disabled, we just update them.
-        // The SpaceLabelWindow logic will handle hiding the content (invisible anchor mode).
         updateWindows()
         
-        // If enabled, we might need to trigger an update for the current space specifically
-        // to ensure it appears if it was missing.
         if isEnabled {
             if let spaceId = spaceManager?.currentSpaceUUID, let name = spaceManager?.getSpaceName(spaceId) {
                 updateLabel(for: spaceId, name: name, verifySpace: false)
