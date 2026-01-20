@@ -22,6 +22,9 @@ struct SwitchSettingsView: View {
                                     hotkeyManager.startListening(for: .switchLeft)
                                 }
                                 .disabled(hotkeyManager.isListening)
+                                Button("Reset") {
+                                    hotkeyManager.resetToDefault(for: .switchLeft)
+                                }
                             }
                         }
                         
@@ -38,6 +41,9 @@ struct SwitchSettingsView: View {
                                     hotkeyManager.startListening(for: .switchRight)
                                 }
                                 .disabled(hotkeyManager.isListening)
+                                Button("Reset") {
+                                    hotkeyManager.resetToDefault(for: .switchRight)
+                                }
                             }
                         }
                     }

@@ -1594,9 +1594,15 @@
     "Settings.Shortcuts.Hotkey.PressNew" : {
       "comment" : "Press new shortcut…",
       "localizations" : {
-        "zh-Hans" : {
+        "en" : {
           "stringUnit" : {
             "state" : "translated",
+            "value" : "Press New"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
             "value" : "新快捷键"
           }
         }
@@ -1605,6 +1611,12 @@
     "Settings.Shortcuts.Unassgined" : {
       "comment" : "Unassigned",
       "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Unassigned"
+          }
+        },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
