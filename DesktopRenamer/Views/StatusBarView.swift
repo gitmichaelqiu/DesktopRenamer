@@ -2,6 +2,7 @@ import SwiftUI
 import Combine
 import AppKit
 
+// RenameViewController remains unchanged
 class RenameViewController: NSViewController {
     private var spaceManager: SpaceManager
     private var completion: () -> Void
@@ -18,17 +19,13 @@ class RenameViewController: NSViewController {
     }
     
     override func loadView() {
-        // Create the main view
         let view = NSView(frame: NSRect(x: 0, y: 0, width: 240, height: 80))
-        
-        // Create and configure the text field
         textField = NSTextField(frame: NSRect(x: 20, y: 40, width: 200, height: 24))
         textField.stringValue = spaceManager.getSpaceName(spaceManager.currentSpaceUUID)
         textField.placeholderString = NSLocalizedString("Rename.Placeholder", comment: "")
         textField.delegate = self
         view.addSubview(textField)
         
-        // Create the label
         let labelString = String(format: NSLocalizedString("Rename.Label", comment: ""), spaceManager.getSpaceNum(spaceManager.currentSpaceUUID))
         let label = NSTextField(labelWithString: labelString)
         label.frame = NSRect(x: 20, y: 15, width: 200, height: 17)
@@ -47,11 +44,9 @@ class RenameViewController: NSViewController {
 extension RenameViewController: NSTextFieldDelegate {
     func control(_ control: NSControl, textView: NSTextView, doCommandBy commandSelector: Selector) -> Bool {
         if commandSelector == #selector(NSResponder.insertNewline(_:)) {
-            // Handle Enter key
             handleRename()
             return true
         } else if commandSelector == #selector(NSResponder.cancelOperation(_:)) {
-            // Handle Escape key
             dismiss(nil)
             return true
         }
@@ -75,7 +70,6 @@ class StatusBarController: NSObject {
     private var cancellables = Set<AnyCancellable>()
     private var settingsWindowController: NSWindowController?
     
-    // Kept for direct access, though menu is now rebuilt
     private var renameItem: NSMenuItem?
     private var showLabelsMenuItem: NSMenuItem?
     
@@ -86,17 +80,20 @@ class StatusBarController: NSObject {
     }
     
     let labelManager: SpaceLabelManager
+    // Add HotkeyManager
+    let hotkeyManager: HotkeyManager
     
-    init(spaceManager: SpaceManager) {
+    // Updated Init
+    init(spaceManager: SpaceManager, hotkeyManager: HotkeyManager) {
         self.spaceManager = spaceManager
         self.labelManager = SpaceLabelManager(spaceManager: spaceManager)
+        self.hotkeyManager = hotkeyManager
         
         popover = NSPopover()
         popover.behavior = .transient
         
         super.init()
         
-        // Build initial menu
         rebuildMenu()
         StatusBarController.statusItem.isVisible = !StatusBarController.isStatusBarHidden
         
@@ -109,34 +106,28 @@ class StatusBarController: NSObject {
     }
     
     private func setupObservers() {
-        // Observe current space ID changes
         spaceManager.$currentSpaceUUID
             .receive(on: DispatchQueue.main)
             .sink { [weak self] spaceId in
                 self?.updateStatusBarTitle()
-                self?.rebuildMenu() // Rebuild menu to update ticks and logic
-                
-                // Update label for current space
+                self?.rebuildMenu()
                 if let name = self?.spaceManager.getSpaceName(spaceId) {
                     self?.labelManager.updateLabel(for: spaceId, name: name)
                 }
             }
             .store(in: &cancellables)
         
-        // Observe space name/count changes
         spaceManager.$spaceNameDict
             .receive(on: DispatchQueue.main)
             .sink { [weak self] _ in
                 self?.updateStatusBarTitle()
-                self?.rebuildMenu() // Rebuild to show new spaces/names
+                self?.rebuildMenu()
             }
             .store(in: &cancellables)
         
-        // Observe labelManager.isEnabled
         labelManager.$isEnabled
             .receive(on: DispatchQueue.main)
             .sink { [weak self] _ in
-                // Just toggle state in existing item if possible, or rebuild
                 self?.rebuildMenu()
             }
             .store(in: &cancellables)
@@ -152,21 +143,14 @@ class StatusBarController: NSObject {
     private func rebuildMenu() {
         let menu = NSMenu()
         
-        // 1. Desktop List Section
         let sortedSpaces = spaceManager.spaceNameDict.sorted { $0.num < $1.num }
         if !sortedSpaces.isEmpty {
-            // Optional Header
-            // let header = NSMenuItem(title: "Switch to Desktop", action: nil, keyEquivalent: "")
-            // header.isEnabled = false
-            // menu.addItem(header)
-            
             for space in sortedSpaces {
                 let name = spaceManager.getSpaceName(space.id)
                 let item = NSMenuItem(title: name, action: #selector(selectSpace(_:)), keyEquivalent: "")
                 item.target = self
-                item.representedObject = space.id // Store ID to switch
+                item.representedObject = space.id
                 
-                // Tick the current space
                 if space.id == spaceManager.currentSpaceUUID {
                     item.state = .on
                 } else {
@@ -178,17 +162,15 @@ class StatusBarController: NSObject {
             menu.addItem(NSMenuItem.separator())
         }
         
-        // 2. Rename Option
         let rename = NSMenuItem(
             title: NSLocalizedString("Menu.RenameCurrentSpace", comment: ""),
-            action: nil, // Set dynamically below
+            action: nil,
             keyEquivalent: "r"
         )
         rename.image = NSImage(systemSymbolName: "pencil.line", accessibilityDescription: nil)
         
-        // Configure Rename State
         let currentSpaceNum = spaceManager.getSpaceNum(spaceManager.currentSpaceUUID)
-        if currentSpaceNum == 0 { // Fullscreen
+        if currentSpaceNum == 0 {
             rename.isEnabled = false
         } else {
             rename.isEnabled = true
@@ -199,7 +181,6 @@ class StatusBarController: NSObject {
         self.renameItem = rename
         menu.addItem(rename)
         
-        // 3. Troubleshoot
         let troubleshootItem = NSMenuItem(
             title: NSLocalizedString("Troubleshoot Space Detection", comment: ""),
             action: #selector(troubleshootSpaceDetection),
@@ -209,7 +190,6 @@ class StatusBarController: NSObject {
         troubleshootItem.target = self
         menu.addItem(troubleshootItem)
         
-        // 4. Show Labels
         let showLabels = NSMenuItem(
             title: NSLocalizedString("Menu.ShowLabels", comment: "Toggle desktop labels visibility"),
             action: #selector(toggleLabelsFromMenu),
@@ -223,7 +203,6 @@ class StatusBarController: NSObject {
         
         menu.addItem(NSMenuItem.separator())
         
-        // 5. Settings
         let settingsItem = NSMenuItem(
             title: NSLocalizedString("Menu.Settings", comment: ""),
             action: #selector(openSettingsWindow),
@@ -235,7 +214,6 @@ class StatusBarController: NSObject {
         
         menu.addItem(NSMenuItem.separator())
         
-        // 6. Quit
         let quitItem = NSMenuItem(
             title: NSLocalizedString("Menu.Quit", comment: ""),
             action: #selector(quitApp),
@@ -250,40 +228,26 @@ class StatusBarController: NSObject {
     
     @objc func selectSpace(_ sender: NSMenuItem) {
         guard let spaceID = sender.representedObject as? String else { return }
-        
-        // If we are already on that space, do nothing.
         if spaceID == spaceManager.currentSpaceUUID { return }
-        
-        // Use the new helper to switch
         if let space = spaceManager.spaceNameDict.first(where: { $0.id == spaceID }) {
             spaceManager.switchToSpace(space)
         }
     }
     
     @objc func renameCurrentSpace() {
-        if spaceManager.getSpaceNum(spaceManager.currentSpaceUUID) == 0 {
-            return // Fullscreen
-        }
-        
+        if spaceManager.getSpaceNum(spaceManager.currentSpaceUUID) == 0 { return }
         guard let button = StatusBarController.statusItem.button else { return }
-        
-        // Close the menu
         StatusBarController.statusItem.menu?.cancelTracking()
-        
-        // Configure the popover
         let renameVC = RenameViewController(spaceManager: spaceManager) { [weak self] in
             self?.popover.performClose(nil)
             self?.updateStatusBarTitle()
         }
         popover.contentViewController = renameVC
-        
-        // Show the popover
         popover.show(relativeTo: button.bounds, of: button, preferredEdge: .minY)
     }
     
     @objc private func toggleLabelsFromMenu() {
         labelManager.toggleEnabled()
-        // Rebuild menu to update checkmark state immediately
         rebuildMenu()
     }
         
@@ -324,13 +288,11 @@ class StatusBarController: NSObject {
         
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
             guard let window = self.settingsWindowController?.window else { return }
-            
             let alert = NSAlert()
             alert.messageText = alertTitle
             alert.informativeText = alertMessage
             alert.alertStyle = .informational
             alert.addButton(withTitle: "OK")
-            
             alert.beginSheetModal(for: window, completionHandler: nil)
         }
     }
@@ -344,7 +306,6 @@ class StatusBarController: NSObject {
             return
         }
         
-        // 1. STYLE: .fullSizeContentView is critical for "Ice" style
         let window = NSWindow(
             contentRect: NSRect(x: 0, y: 0, width: defaultSettingsWindowWidth, height: defaultSettingsWindowHeight),
             styleMask: [.titled, .closable, .miniaturizable, .fullSizeContentView],
@@ -353,21 +314,17 @@ class StatusBarController: NSObject {
         )
         
         window.identifier = NSUserInterfaceItemIdentifier("SettingsWindow")
-        
-        // 2. CONFIG: Hide the native title bar elements
         window.titleVisibility = .hidden
         window.titlebarAppearsTransparent = true
         window.titlebarSeparatorStyle = .none
-        
-        // 3. REMOVE TOOLBAR: Ensures no extra space is reserved at the top
         window.toolbar = nil
-        
         window.center()
         window.minSize = NSSize(width: defaultSettingsWindowWidth, height: defaultSettingsWindowHeight)
         window.collectionBehavior = [.participatesInCycle]
         window.level = .normal
         
-        let settingsVC = SettingsHostingController(spaceManager: spaceManager, labelManager: labelManager)
+        // Pass hotkeyManager to SettingsHostingController
+        let settingsVC = SettingsHostingController(spaceManager: spaceManager, labelManager: labelManager, hotkeyManager: hotkeyManager)
         window.contentViewController = settingsVC
         
         let windowController = NSWindowController(window: window)
@@ -386,7 +343,6 @@ class StatusBarController: NSObject {
     }
     
     @objc private func settingsWindowWillClose(_ notification: Notification) {
-        // Hide dock icon
         DispatchQueue.main.async {
             NSApp.setActivationPolicy(.accessory)
         }
@@ -406,7 +362,6 @@ class StatusBarController: NSObject {
 extension StatusBarController: NSWindowDelegate {
     func windowWillClose(_ notification: Notification) {
         if notification.object as? NSWindow == settingsWindowController?.window {
-            // Hide dock icon when closing settings
             DispatchQueue.main.async {
                 NSApp.setActivationPolicy(.accessory)
             }

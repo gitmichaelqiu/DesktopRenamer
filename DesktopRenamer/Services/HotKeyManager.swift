@@ -3,87 +3,138 @@ import AppKit
 import Combine
 import HotKey
 
+enum HotkeyType {
+    case main
+    case switchLeft
+    case switchRight
+}
+
 class HotkeyManager: ObservableObject {
-    @Published var shortcut: Shortcut {
+    // MARK: - Publishers for Actions
+    // We use PassthroughSubject so the App/AppDelegate can listen and act
+    let mainShortcutTriggered = PassthroughSubject<Void, Never>()
+    let switchLeftTriggered = PassthroughSubject<Void, Never>()
+    let switchRightTriggered = PassthroughSubject<Void, Never>()
+
+    // MARK: - Properties
+    @Published var mainShortcut: Shortcut {
         didSet {
-            saveShortcut()
-            registerShortcut()
+            saveShortcut(mainShortcut, key: mainShortcutKey)
+            registerShortcuts()
         }
-    }
-
-    @Published var isListeningForShortcut: Bool = false
-
-    private var hotKey: HotKey?
-    private var monitor: Any?
-    private let defaultShortcut = Shortcut(key: Key.r, modifiers: [.control])
-    private let shortcutDefaultsKey = "HotkeyManager.Shortcut"
-
-    init() {
-        if let saved = Self.loadShortcutFromDefaults(key: shortcutDefaultsKey) {
-            self.shortcut = saved
-        } else {
-            self.shortcut = defaultShortcut
-        }
-        registerShortcut()
-    }
-
-    var shortcutDescription: String {
-        isListeningForShortcut ? NSLocalizedString("Settings.Shotcuts.Hotkey.PressNew", comment: "Press new shortcut…") : shortcut.description
     }
     
-    private static let functionKeys: Set<Key> = [
-        Key.f1, Key.f2, Key.f3, Key.f4, Key.f5, Key.f6,
-        Key.f7, Key.f8, Key.f9, Key.f10, Key.f11, Key.f12
-    ]
-
-    // MARK: - Shortcut Handling
-    private func registerShortcut() {
-        // Unregister existing hotkey
-        unregisterShortcut()
-        
-        // Don't register if key is empty (unassigned)
-        guard let key = shortcut.hotkeyKey,
-              let modifiers = shortcut.hotkeyModifiers else {
-            return
+    @Published var switchLeftShortcut: Shortcut {
+        didSet {
+            saveShortcut(switchLeftShortcut, key: switchLeftKey)
+            registerShortcuts()
         }
+    }
+    
+    @Published var switchRightShortcut: Shortcut {
+        didSet {
+            saveShortcut(switchRightShortcut, key: switchRightKey)
+            registerShortcuts()
+        }
+    }
+
+    @Published var isListening: Bool = false
+    @Published var listeningType: HotkeyType? = nil
+
+    // MARK: - Internals
+    private var mainHotKey: HotKey?
+    private var switchLeftHotKey: HotKey?
+    private var switchRightHotKey: HotKey?
+    
+    private var monitor: Any?
+    
+    // Default: Main (Ctrl+R), Others (None)
+    private let defaultMain = Shortcut(key: Key.r, modifiers: [.control])
+    private let defaultNone = Shortcut(key: nil, modifiers: [])
+    
+    private let mainShortcutKey = "HotkeyManager.Shortcut"
+    private let switchLeftKey = "HotkeyManager.SwitchLeft"
+    private let switchRightKey = "HotkeyManager.SwitchRight"
+
+    init() {
+        // Load or default
+        self.mainShortcut = Self.loadShortcut(key: mainShortcutKey) ?? Shortcut(key: Key.r, modifiers: [.control])
+        self.switchLeftShortcut = Self.loadShortcut(key: switchLeftKey) ?? Shortcut(key: nil, modifiers: [])
+        self.switchRightShortcut = Self.loadShortcut(key: switchRightKey) ?? Shortcut(key: nil, modifiers: [])
         
-        // Create and register the hotkey using HotKey library
-        hotKey = HotKey(key: key, modifiers: modifiers)
-        
-        // Set up the handler
-        hotKey?.keyDownHandler = {
-            DispatchQueue.main.async {
+        registerShortcuts()
+    }
+    
+    // MARK: - Public Helpers for UI
+    
+    func description(for type: HotkeyType) -> String {
+        if isListening && listeningType == type {
+            return NSLocalizedString("Settings.Shortcuts.Hotkey.PressNew", comment: "Press new shortcut…")
+        }
+        switch type {
+        case .main: return mainShortcut.description
+        case .switchLeft: return switchLeftShortcut.description
+        case .switchRight: return switchRightShortcut.description
+        }
+    }
+
+    // MARK: - Registration
+    
+    private func registerShortcuts() {
+        // 1. Main
+        mainHotKey = nil // Clear existing
+        if let key = mainShortcut.hotkeyKey, let mods = mainShortcut.hotkeyModifiers {
+            mainHotKey = HotKey(key: key, modifiers: mods)
+            mainHotKey?.keyDownHandler = { [weak self] in
+                self?.mainShortcutTriggered.send()
+                // Legacy notification support if needed
                 NotificationCenter.default.post(name: .hotkeyTriggered, object: nil)
             }
         }
+        
+        // 2. Switch Left
+        switchLeftHotKey = nil
+        if let key = switchLeftShortcut.hotkeyKey, let mods = switchLeftShortcut.hotkeyModifiers {
+            switchLeftHotKey = HotKey(key: key, modifiers: mods)
+            switchLeftHotKey?.keyDownHandler = { [weak self] in
+                self?.switchLeftTriggered.send()
+            }
+        }
+        
+        // 3. Switch Right
+        switchRightHotKey = nil
+        if let key = switchRightShortcut.hotkeyKey, let mods = switchRightShortcut.hotkeyModifiers {
+            switchRightHotKey = HotKey(key: key, modifiers: mods)
+            switchRightHotKey?.keyDownHandler = { [weak self] in
+                self?.switchRightTriggered.send()
+            }
+        }
     }
-    
-    private func unregisterShortcut() {
-        hotKey?.keyDownHandler = nil
-        hotKey = nil
-    }
 
-    func startListeningForNewShortcut() {
-        isListeningForShortcut = true
+    // MARK: - Listening Logic
 
-        // Temporarily unregister current hotkey
-        unregisterShortcut()
+    func startListening(for type: HotkeyType) {
+        isListening = true
+        listeningType = type
 
-        // Remove any existing monitor
+        // Temporarily disable hotkeys while recording
+        mainHotKey = nil
+        switchLeftHotKey = nil
+        switchRightHotKey = nil
+
         removeKeyListener()
 
         monitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
             guard let self = self else { return event }
             
+            // Check for Escape to cancel/clear
             if Shortcut.keyName(from: event) == "Escape" {
-                self.shortcut = Shortcut(key: nil, modifiers: [])
+                self.updateShortcut(Shortcut(key: nil, modifiers: []), for: type)
                 self.finishListening()
                 return nil
             }
             
-            guard let key = Shortcut.keyFromEvent(event) else {
-                return event
-            }
+            guard let key = Shortcut.keyFromEvent(event) else { return event }
             
             let rawModifiers = event.modifierFlags.intersection([.command, .option, .control, .shift])
             let cleanedModifiers = self.convertToHotkeyModifiers(rawModifiers)
@@ -91,20 +142,31 @@ class HotkeyManager: ObservableObject {
             let isFunctionKey = HotkeyManager.functionKeys.contains(key)
             let hasModifiers = !cleanedModifiers.isEmpty
             
+            // Accept if it has modifiers OR is a function key
             if hasModifiers || isFunctionKey {
-                self.shortcut = Shortcut(key: key, modifiers: cleanedModifiers)
+                self.updateShortcut(Shortcut(key: key, modifiers: cleanedModifiers), for: type)
                 self.finishListening()
                 return nil
-            } else {
-                return nil
             }
+            
+            // Allow typing if not a valid shortcut
+            return nil
+        }
+    }
+    
+    private func updateShortcut(_ shortcut: Shortcut, for type: HotkeyType) {
+        switch type {
+        case .main: mainShortcut = shortcut
+        case .switchLeft: switchLeftShortcut = shortcut
+        case .switchRight: switchRightShortcut = shortcut
         }
     }
     
     private func finishListening() {
-        isListeningForShortcut = false
+        isListening = false
+        listeningType = nil
         removeKeyListener()
-        registerShortcut()
+        registerShortcuts()
     }
     
     private func removeKeyListener() {
@@ -112,6 +174,30 @@ class HotkeyManager: ObservableObject {
             NSEvent.removeMonitor(monitor)
             self.monitor = nil
         }
+    }
+    
+    func resetToDefault(for type: HotkeyType) {
+        switch type {
+        case .main: mainShortcut = defaultMain
+        case .switchLeft: switchLeftShortcut = defaultNone
+        case .switchRight: switchRightShortcut = defaultNone
+        }
+    }
+    
+    // MARK: - Persistence & Helpers
+    
+    private func saveShortcut(_ shortcut: Shortcut, key: String) {
+        if let data = try? JSONEncoder().encode(shortcut) {
+            UserDefaults.standard.set(data, forKey: key)
+        }
+    }
+
+    private static func loadShortcut(key: String) -> Shortcut? {
+        guard let data = UserDefaults.standard.data(forKey: key),
+              let shortcut = try? JSONDecoder().decode(Shortcut.self, from: data) else {
+            return nil
+        }
+        return shortcut
     }
     
     private func convertToHotkeyModifiers(_ modifiers: NSEvent.ModifierFlags) -> NSEvent.ModifierFlags {
@@ -122,28 +208,16 @@ class HotkeyManager: ObservableObject {
         if modifiers.contains(.shift) { result.insert(.shift) }
         return result
     }
-
-    func resetToDefault() {
-        shortcut = defaultShortcut
-        saveShortcut()
-    }
     
-    private func saveShortcut() {
-        if let data = try? JSONEncoder().encode(shortcut) {
-            UserDefaults.standard.set(data, forKey: shortcutDefaultsKey)
-        }
-    }
-
-    private static func loadShortcutFromDefaults(key: String) -> Shortcut? {
-        guard let data = UserDefaults.standard.data(forKey: key),
-              let shortcut = try? JSONDecoder().decode(Shortcut.self, from: data) else {
-            return nil
-        }
-        return shortcut
-    }
+    private static let functionKeys: Set<Key> = [
+        Key.f1, Key.f2, Key.f3, Key.f4, Key.f5, Key.f6,
+        Key.f7, Key.f8, Key.f9, Key.f10, Key.f11, Key.f12
+    ]
     
     deinit {
-        unregisterShortcut()
+        mainHotKey = nil
+        switchLeftHotKey = nil
+        switchRightHotKey = nil
         removeKeyListener()
     }
 }

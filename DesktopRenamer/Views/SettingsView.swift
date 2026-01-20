@@ -1,7 +1,7 @@
 import SwiftUI
 
 enum SettingsTab: String, CaseIterable, Identifiable {
-    case general, space, labels, about
+    case general, space, labels, sswitch, about
     
     var id: String { self.rawValue }
     
@@ -10,6 +10,7 @@ enum SettingsTab: String, CaseIterable, Identifiable {
         case .general: return "Settings.General"
         case .space: return "Settings.Spaces"
         case .labels: return "Settings.Labels"
+        case .sswitch: return "Settings.Switch"
         case .about: return "Settings.About"
         }
     }
@@ -19,6 +20,7 @@ enum SettingsTab: String, CaseIterable, Identifiable {
         case .general: return "gearshape"
         case .space: return "macwindow"
         case .labels: return "tag"
+        case .sswitch: return "arrow.left.and.right.square"
         case .about: return "info.circle"
         }
     }
@@ -37,6 +39,8 @@ let titleHeaderHeight: CGFloat = 48
 struct SettingsView: View {
     @ObservedObject var spaceManager: SpaceManager
     @ObservedObject var labelManager: SpaceLabelManager
+    // Inject the HotkeyManager via Environment
+    @EnvironmentObject var hotkeyManager: HotkeyManager
     
     @State private var selectedTab: SettingsTab? = .general
     
@@ -47,9 +51,21 @@ struct SettingsView: View {
             detailView
         }
         .navigationTitle("")
-        .toolbar(.hidden, for: .windowToolbar)
+        // Conditional toolbar hiding
+        .modifier(ToolbarHider())
         .edgesIgnoringSafeArea(.top)
         .frame(width: CGFloat(defaultSettingsWindowWidth), height: CGFloat(defaultSettingsWindowHeight))
+    }
+    
+    // Helper to safely hide toolbar on supported versions
+    struct ToolbarHider: ViewModifier {
+        func body(content: Content) -> some View {
+            if #available(macOS 14.0, *) {
+                content.toolbar(.hidden, for: .windowToolbar)
+            } else {
+                content
+            }
+        }
     }
     
     @ViewBuilder
@@ -121,6 +137,8 @@ struct SettingsView: View {
                         SpaceEditView(spaceManager: spaceManager, labelManager: labelManager)
                     case .labels:
                         LabelSettingsView(labelManager: labelManager)
+                    case .sswitch:
+                        SwitchSettingsView()
                     case .about:
                         AboutView()
                     }
@@ -133,8 +151,6 @@ struct SettingsView: View {
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
             // Match the header height exactly
             .padding(.top, titleHeaderHeight)
-            // OPTIONAL: Pull content up slightly if the gap is still too large due to internal Form padding
-            // .padding(.top, -10)
             
             // 2. HEADER LAYER (Blurry Title Bar)
             if let tab = selectedTab {
@@ -174,14 +190,22 @@ struct SettingsView: View {
     }
 }
 
-class SettingsHostingController: NSHostingController<SettingsView> {
+// FIX: Use NSHostingController<AnyView> to allow type erasure for EnvironmentObject injection
+class SettingsHostingController: NSHostingController<AnyView> {
     private let spaceManager: SpaceManager
     private let labelManager: SpaceLabelManager
+    private let hotkeyManager: HotkeyManager
     
-    init(spaceManager: SpaceManager, labelManager: SpaceLabelManager) {
+    init(spaceManager: SpaceManager, labelManager: SpaceLabelManager, hotkeyManager: HotkeyManager) {
         self.spaceManager = spaceManager
         self.labelManager = labelManager
-        super.init(rootView: SettingsView(spaceManager: spaceManager, labelManager: labelManager))
+        self.hotkeyManager = hotkeyManager
+        
+        // Inject into the root view environment and wrap in AnyView to match the class generic type
+        let rootView = SettingsView(spaceManager: spaceManager, labelManager: labelManager)
+            .environmentObject(hotkeyManager)
+            
+        super.init(rootView: AnyView(rootView))
     }
     
     @MainActor required dynamic init?(coder: NSCoder) {

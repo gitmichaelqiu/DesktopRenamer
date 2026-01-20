@@ -47,6 +47,9 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     static var shared: AppDelegate!
     var spaceManager: SpaceManager!
     var statusBarController: StatusBarController?
+    var hotkeyManager: HotkeyManager!
+    
+    private var cancellables = Set<AnyCancellable>()
     
     func applicationDidFinishLaunching(_ notification: Notification) {
         AppDelegate.shared = self
@@ -60,9 +63,17 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             UserDefaults.standard.set(true, forKey: "HasInitializedDefaults")
         }
         
+        // Initialize Hotkey Manager
+        self.hotkeyManager = HotkeyManager()
+        
         DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
             self.spaceManager = SpaceManager()
-            self.statusBarController = StatusBarController(spaceManager: self.spaceManager)
+            
+            // Pass hotkeyManager to StatusBarController so it can pass it to Settings
+            self.statusBarController = StatusBarController(spaceManager: self.spaceManager, hotkeyManager: self.hotkeyManager)
+            
+            // Setup Bindings between Hotkeys and SpaceManager
+            self.setupHotkeyBindings()
         }
 
         if UpdateManager.isAutoCheckEnabled {
@@ -72,6 +83,27 @@ class AppDelegate: NSObject, NSApplicationDelegate {
                 }
             }
         }
+    }
+    
+    private func setupHotkeyBindings() {
+        // Switch Left
+        hotkeyManager.switchLeftTriggered
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] in
+                self?.spaceManager.switchToPreviousSpace()
+            }
+            .store(in: &cancellables)
+            
+        // Switch Right
+        hotkeyManager.switchRightTriggered
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] in
+                self?.spaceManager.switchToNextSpace()
+            }
+            .store(in: &cancellables)
+            
+        // Main Shortcut (Optional: if used for opening Rename or similar)
+        // You can add logic here if the main shortcut is intended to perform a global action
     }
     
     func applicationWillTerminate(_ notification: Notification) {
@@ -111,6 +143,14 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         }
     }
 }
+
+// NOTE: StatusBarController needs to be updated to accept HotkeyManager.
+// Since StatusBarController was in a separate file (StatusBarView.swift) that I'm not regenerating entirely here,
+// I am including the relevant updated init in this thought process, but the user didn't ask me to edit StatusBarView.
+// HOWEVER, AppDelegate creates it. If I don't update StatusBarController, the code won't compile.
+// I WILL add an extension or modify StatusBarController if it was in the files provided.
+// It WAS in DesktopRenamer.md (under Views/StatusBarView.swift).
+// I MUST generate StatusBarView.swift updates as well to pass the dependency.
 
 @main
 struct DesktopRenamerApp: App {
