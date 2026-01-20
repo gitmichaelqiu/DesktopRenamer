@@ -165,9 +165,6 @@
         }
       }
     },
-    "Allows DesktopRenamer to handle space switching gestures.\n\nImportant: You must disable 'Swipe between full screen apps' in System Settings > Trackpad > More Gestures to prevent conflicts." : {
-
-    },
     "Are you sure? This will delete all your space names and settings. The app will quit immediately." : {
       "localizations" : {
         "zh-Hans" : {
@@ -438,6 +435,9 @@
         }
       }
     },
+    "Keyboard Shortcuts" : {
+
+    },
     "Let you right-click with the Option key." : {
       "localizations" : {
         "zh-Hans" : {
@@ -665,6 +665,9 @@
         }
       }
     },
+    "Record" : {
+
+    },
     "Recorded: %lld" : {
       "localizations" : {
         "zh-Hans" : {
@@ -722,6 +725,9 @@
     },
     "Renamer" : {
       "shouldTranslate" : false
+    },
+    "Replaces system gestures with instant space switching.\n\nRequired: You must disable 'Swipe between full screen apps' in System Settings > Trackpad > More Gestures to prevent conflicts." : {
+
     },
     "Reset" : {
       "localizations" : {
@@ -1547,17 +1553,8 @@
         }
       }
     },
-    "Settings.Shortcuts.Hotkey" : {
-
-    },
-    "Settings.Shortcuts.Hotkey.Change" : {
-      "comment" : "Change"
-    },
     "Settings.Shortcuts.Hotkey.PressNew" : {
       "comment" : "Press new shortcut…"
-    },
-    "Settings.Shortcuts.Hotkey.Reset" : {
-      "comment" : "Reset"
     },
     "Settings.Shortcuts.Unassgined" : {
       "comment" : "Unassigned"
@@ -1871,6 +1868,12 @@
         }
       }
     },
+    "Switch to left space" : {
+
+    },
+    "Switch to right space" : {
+
+    },
     "Switch to the desktops you want to add.\nThey will appear in the list below." : {
       "localizations" : {
         "zh-Hans" : {
@@ -1880,12 +1883,6 @@
           }
         }
       }
-    },
-    "Switch to the left space" : {
-
-    },
-    "Switch to the right space" : {
-
     },
     "Thank You!" : {
       "localizations" : {
@@ -1955,9 +1952,6 @@
         }
       }
     },
-    "This feature uses scroll momentum to detect swipes. It provides a faster, instant switch compared to the native animation." : {
-
-    },
     "This generates a log that is helpful for the developers to debug." : {
       "localizations" : {
         "zh-Hans" : {
@@ -2000,6 +1994,9 @@
           }
         }
       }
+    },
+    "Uses MultitouchSupport to detect physical swipes." : {
+
     },
     "v%@" : {
       "localizations" : {
@@ -2051,9 +2048,6 @@
           }
         }
       }
-    },
-    "You can remove the system shortkey of control + arrow key by editing Settings/Keyboard/Keyboard Shortcuts/Mission Control." : {
-
     }
   },
   "version" : "1.1"
