@@ -640,6 +640,9 @@
         }
       }
     },
+    "No editable spaces (fullscreen only)" : {
+
+    },
     "No new spaces detected yet..." : {
       "localizations" : {
         "zh-Hans" : {

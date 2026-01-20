@@ -149,33 +149,65 @@ class SpaceManager: ObservableObject {
             }
             
             var newSpaceList: [DesktopSpace] = []
+            
+            // 1. Build List and Apply Cache (Skip cache for fullscreen)
             for sysSpace in cgsState.spaces {
                 var finalSpace = sysSpace
                 
-                if let cachedName = nameCache[sysSpace.id], !cachedName.isEmpty {
-                    finalSpace.customName = cachedName
+                if finalSpace.isFullscreen {
+                     // For fullscreen spaces, we do NOT load custom names.
+                     // The name will be auto-generated in the numbering pass below.
+                     finalSpace.customName = "" // Placeholder
                 } else {
-                    let indexKey = "\(finalSpace.displayID)|\(finalSpace.num)"
-                    
-                    if let fallbackName = indexCache[indexKey], !fallbackName.isEmpty {
-                        if !claimedNames.contains(fallbackName) {
-                            finalSpace.customName = fallbackName
-                            nameCache[sysSpace.id] = fallbackName
+                    if let cachedName = nameCache[sysSpace.id], !cachedName.isEmpty {
+                        finalSpace.customName = cachedName
+                    } else {
+                        let indexKey = "\(finalSpace.displayID)|\(finalSpace.num)"
+                        
+                        if let fallbackName = indexCache[indexKey], !fallbackName.isEmpty {
+                            if !claimedNames.contains(fallbackName) {
+                                finalSpace.customName = fallbackName
+                                nameCache[sysSpace.id] = fallbackName
+                            }
+                        } else if let existing = spaceNameDict.first(where: { $0.id == sysSpace.id }), !existing.customName.isEmpty {
+                            finalSpace.customName = existing.customName
+                            nameCache[sysSpace.id] = existing.customName
+                            indexCache[indexKey] = existing.customName
                         }
-                    } else if let existing = spaceNameDict.first(where: { $0.id == sysSpace.id }), !existing.customName.isEmpty {
-                        finalSpace.customName = existing.customName
-                        nameCache[sysSpace.id] = existing.customName
-                        indexCache[indexKey] = existing.customName
                     }
                 }
                 newSpaceList.append(finalSpace)
+            }
+            
+            // 2. Fullscreen Naming Pass (Group by App Name and Number)
+            // Group indices of fullscreen spaces by their appName
+            var appGroups: [String: [Int]] = [:]
+            
+            for (index, space) in newSpaceList.enumerated() {
+                if space.isFullscreen {
+                    let name = space.appName ?? "Fullscreen"
+                    appGroups[name, default: []].append(index)
+                }
+            }
+            
+            // Apply names: "Xcode", or "Xcode 1", "Xcode 2"
+            for (appName, indices) in appGroups {
+                let sortedIndices = indices.sorted { newSpaceList[$0].num < newSpaceList[$1].num }
+                
+                if sortedIndices.count == 1 {
+                    newSpaceList[sortedIndices[0]].customName = appName
+                } else {
+                    for (i, index) in sortedIndices.enumerated() {
+                        newSpaceList[index].customName = "\(appName) \(i + 1)"
+                    }
+                }
             }
             
             if self.spaceNameDict != newSpaceList {
                 self.spaceNameDict = newSpaceList
                 
                 self.indexCache.removeAll()
-                for space in self.spaceNameDict where !space.customName.isEmpty {
+                for space in self.spaceNameDict where !space.customName.isEmpty && !space.isFullscreen {
                     let key = "\(space.displayID)|\(space.num)"
                     self.indexCache[key] = space.customName
                 }
@@ -195,7 +227,8 @@ class SpaceManager: ObservableObject {
                 self.currentRawSpaceUUID = cgsState.currentUUID
             }
             
-            let isCurrentDesktop = (cgsState.currentUUID != "FULLSCREEN")
+            // Update desktop check based on fullscreen status of the matched space
+            let isCurrentDesktop = !(self.spaceNameDict.first(where: { $0.id == self.currentSpaceUUID })?.isFullscreen ?? false)
             if self.currentIsDesktop != isCurrentDesktop {
                 self.currentIsDesktop = isCurrentDesktop
                 shouldUpdateWidget = true
@@ -272,7 +305,8 @@ class SpaceManager: ObservableObject {
         
         let name = getSpaceName(currentSpaceUUID)
         let num = getSpaceNum(currentSpaceUUID)
-        let isDesktop = currentSpaceUUID != "FULLSCREEN"
+        // Check if current space is desktop
+        let isDesktop = !(spaceNameDict.first(where: { $0.id == currentSpaceUUID })?.isFullscreen ?? false)
         
         let sortedSpaces = spaceNameDict.sorted { $0.num < $1.num }
         let allSpaceNames = sortedSpaces.map { space -> String in
@@ -328,7 +362,7 @@ class SpaceManager: ObservableObject {
             indexCache = cache
         }
         if (nameCache.isEmpty || indexCache.isEmpty) && !spaceNameDict.isEmpty {
-            for space in spaceNameDict where !space.customName.isEmpty {
+            for space in spaceNameDict where !space.customName.isEmpty && !space.isFullscreen {
                 nameCache[space.id] = space.customName
                 let indexKey = "\(space.displayID)|\(space.num)"
                 indexCache[indexKey] = space.customName
@@ -342,6 +376,7 @@ class SpaceManager: ObservableObject {
     }
     
     private func saveData() {
+        // We only save the spaces. Naming logic for fullscreen is re-run on load/refresh.
         if let data = try? JSONEncoder().encode(spaceNameDict) {
             UserDefaults.standard.set(data, forKey: SpaceManager.spacesKey)
         }
@@ -391,15 +426,20 @@ class SpaceManager: ObservableObject {
     func renameSpace(_ spaceUUID: String, to newName: String) {
         let trimmedName = newName.trimmingCharacters(in: .whitespacesAndNewlines)
         if let index = spaceNameDict.firstIndex(where: { $0.id == spaceUUID }) {
+            // Prevent renaming fullscreen spaces manually if needed, or just let it be overwritten on next refresh.
+            // But UI filters them out, so this is mostly safe.
             spaceNameDict[index].customName = trimmedName
             let space = spaceNameDict[index]
             let indexKey = "\(space.displayID)|\(space.num)"
-            if trimmedName.isEmpty {
-                nameCache.removeValue(forKey: spaceUUID)
-                indexCache.removeValue(forKey: indexKey)
-            } else {
-                nameCache[spaceUUID] = trimmedName
-                indexCache[indexKey] = trimmedName
+            
+            if !space.isFullscreen {
+                if trimmedName.isEmpty {
+                    nameCache.removeValue(forKey: spaceUUID)
+                    indexCache.removeValue(forKey: indexKey)
+                } else {
+                    nameCache[spaceUUID] = trimmedName
+                    indexCache[indexKey] = trimmedName
+                }
             }
             saveData()
             scheduleWidgetUpdate()
