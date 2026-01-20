@@ -34,17 +34,34 @@ class SpaceHelper {
         
         // 1. Resolve Target Space Info
         var targetNum: Int? = nil
+        var shouldUseShortcut = true
+        
         if let state = getSystemState(),
            let targetSpace = state.spaces.first(where: { $0.id == spaceID }) {
             targetNum = targetSpace.num
             
             // If we are already on the target space, stop.
             if state.currentUUID == spaceID { return }
+            
+            // CHECK: Native shortcuts (Ctrl+1, Ctrl+2) only map to Desktops.
+            // If there are any fullscreen apps *before* this target, or if the target itself is fullscreen,
+            // the Visual Index (num) will not match the Native Desktop Index.
+            // In such cases, we MUST NOT use shortcut simulation.
+            
+            if targetSpace.isFullscreen {
+                shouldUseShortcut = false
+            } else {
+                // Check for any fullscreen spaces before this one on the same display
+                let spacesBefore = state.spaces.filter { $0.displayID == targetSpace.displayID && $0.num < targetSpace.num }
+                if spacesBefore.contains(where: { $0.isFullscreen }) {
+                    shouldUseShortcut = false
+                }
+            }
         }
         
         // 2. PRIORITY: Simulate Keyboard Shortcut (Control + Number)
-        // Native shortcuts are the cleanest way to switch.
-        if let num = targetNum {
+        // Native shortcuts are the cleanest way to switch, but only valid for pure desktop indexes.
+        if shouldUseShortcut, let num = targetNum {
             if isShortcutEnabled(for: num) && simulateDesktopShortcut(for: num) {
                 return
             }
@@ -59,6 +76,7 @@ class SpaceHelper {
         }
         
         // 4. Fallback B: Mission Control UI Scripting
+        // Note: targetNum corresponds to the visual slot in Mission Control, so this works for Fullscreen apps too.
         if let num = targetNum {
             switchViaMissionControl(to: num)
         }
@@ -297,15 +315,17 @@ class SpaceHelper {
                 let idString = String(managedID)
                 let isFullscreen = space["TileLayoutManager"] != nil
                 
-                if !isFullscreen {
-                    regularIndex += 1
-                    detectedSpaces.append(DesktopSpace(id: idString, customName: "", num: regularIndex, displayID: displayID))
-                }
+                // CHANGE: We now include Fullscreen spaces in the detected list so they can be switched to.
+                // We mark them with isFullscreen = true.
+                regularIndex += 1
+                detectedSpaces.append(DesktopSpace(id: idString, customName: "", num: regularIndex, displayID: displayID, isFullscreen: isFullscreen))
                 
                 if let currentDict = display["Current Space"] as? [String: Any],
                    let currentID = currentDict["ManagedSpaceID"] as? Int, currentID == managedID {
                     if displayID == targetDisplayID {
-                        currentSpaceID = isFullscreen ? "FULLSCREEN" : idString
+                        // CHANGE: We use the real UUID for detection even if it is fullscreen,
+                        // instead of collapsing it to "FULLSCREEN".
+                        currentSpaceID = idString
                     }
                 }
             }
