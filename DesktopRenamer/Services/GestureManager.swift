@@ -79,15 +79,17 @@ class GestureManager: ObservableObject {
     fileprivate static var sharedManager: GestureManager?
     private var initialX: Float? = nil
     private var previousX: Float? = nil
+    private var lastTouchTime: TimeInterval = 0 // Track time of last valid callback
+    private var lastSwitchTime: TimeInterval = 0
     
-    // Queue & Lock
-    private var actionQueue: [SwitchDirection] = []
-    private var isProcessingQueue = false
+    // Direction Lock
     private var lockedDirection: SwitchDirection? = nil
     
     // Tuning
-    private let animationDuration: TimeInterval = 0.45 // Time to wait between executing queued swipes
-    private let minSwipeDistance: Float = 0.20
+    // Reduced cooldown for snappier consecutive swipes (was 0.45s+ in queue)
+    private let switchCooldown: TimeInterval = 0.25
+    private let minSwipeDistance: Float = 0.12 // Slightly reduced for easier activation
+    private let touchTimeout: TimeInterval = 0.15 // Reset tracking if gap between frames > 150ms
     
     init(spaceManager: SpaceManager) {
         self.spaceManager = spaceManager
@@ -233,14 +235,17 @@ class GestureManager: ObservableObject {
     
     // MARK: - Handling Logic
     fileprivate func handleTouches(touches: [MTTouch], numFingers: Int) {
+        let now = Date().timeIntervalSince1970
+        
+        // 0. Timeout Check
+        if now - lastTouchTime > touchTimeout {
+            resetTrackingState()
+        }
+        lastTouchTime = now
+        
         // 1. Validate Finger Count
         guard numFingers == self.fingerCount else {
-            // Reset state if fingers lift or count changes
-            if numFingers == 0 {
-                initialX = nil
-                previousX = nil
-                lockedDirection = nil // Reset lock on lift
-            }
+            resetTrackingState()
             return
         }
         
@@ -256,6 +261,15 @@ class GestureManager: ObservableObject {
         }
         
         guard let startX = initialX else { return }
+        
+        // Cooldown Check
+        // If we recently switched, we don't trigger again immediately.
+        // But we DO NOT reset initialX here, because we want relative motion
+        // from the reset point (set at trigger time) to count once cooldown ends.
+        if now - lastSwitchTime < switchCooldown {
+            previousX = currentAvgX
+            return
+        }
         
         // 5. Detect Swipe Distance
         let delta = currentAvgX - startX
@@ -281,13 +295,13 @@ class GestureManager: ObservableObject {
                 
                 // Only act if matches locked direction (prevents recoil/reverse)
                 if lockedDirection == dir {
-                    print("GestureManager: Queued \(dir)")
-                    queueSwitch(direction: dir)
+                    print("GestureManager: Triggered \(dir)")
+                    triggerSwitch(direction: dir)
                     
-                    // Reset anchor to allow continuous swiping in same direction
+                    // CRITICAL: Reset anchor to current position.
+                    // This allows consecutive swipes: user moves another `minSwipeDistance`
+                    // from THIS point to trigger the next switch.
                     initialX = currentAvgX
-                } else {
-                     print("GestureManager: Ignored reverse swipe (Lock: \(String(describing: lockedDirection)), Detected: \(dir))")
                 }
             }
         }
@@ -295,25 +309,20 @@ class GestureManager: ObservableObject {
         previousX = currentAvgX
     }
     
+    private func resetTrackingState() {
+        initialX = nil
+        previousX = nil
+        lockedDirection = nil
+    }
+    
     enum SwitchDirection {
         case next
         case previous
     }
     
-    private func queueSwitch(direction: SwitchDirection) {
-        actionQueue.append(direction)
-        processQueue()
-    }
-    
-    private func processQueue() {
-        guard !isProcessingQueue, !actionQueue.isEmpty else { return }
-        guard let sm = spaceManager else {
-            actionQueue.removeAll()
-            return
-        }
-        
-        isProcessingQueue = true
-        let direction = actionQueue.removeFirst()
+    private func triggerSwitch(direction: SwitchDirection) {
+        lastSwitchTime = Date().timeIntervalSince1970
+        guard let sm = spaceManager else { return }
         
         DispatchQueue.main.async {
             switch direction {
@@ -322,12 +331,6 @@ class GestureManager: ObservableObject {
             case .previous:
                 sm.switchToPreviousSpace()
             }
-        }
-        
-        // Wait for animation before processing next
-        DispatchQueue.main.asyncAfter(deadline: .now() + animationDuration) { [weak self] in
-            self?.isProcessingQueue = false
-            self?.processQueue()
         }
     }
 }
