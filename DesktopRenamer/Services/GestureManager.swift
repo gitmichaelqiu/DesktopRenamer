@@ -80,10 +80,10 @@ class GestureManager: ObservableObject {
     private var lastSwitchTime: TimeInterval = 0
     private var initialX: Float? = nil
     private var previousX: Float? = nil
-    private var swipeDetectedInCurrentTouchSession = false
+    // Removed swipeDetectedInCurrentTouchSession to support consecutive swipes
     
     // Tuning
-    private let switchCooldown: TimeInterval = 0.6
+    private let switchCooldown: TimeInterval = 0 // Slightly reduced for better responsiveness
     private let minSwipeDistance: Float = 0.15
     
     init(spaceManager: SpaceManager) {
@@ -241,14 +241,9 @@ class GestureManager: ObservableObject {
             if numFingers == 0 {
                 initialX = nil
                 previousX = nil
-                swipeDetectedInCurrentTouchSession = false
             }
             return
         }
-        
-        // 2. Cooldown & Session Check
-        if now - lastSwitchTime < switchCooldown { return }
-        if swipeDetectedInCurrentTouchSession { return }
         
         // 3. Calculate Average X Position (Centroid)
         // Note: MTTouch x is normalized (0.0 to 1.0)
@@ -257,6 +252,17 @@ class GestureManager: ObservableObject {
         
         // 4. Initialize Start Position
         if initialX == nil {
+            initialX = currentAvgX
+            previousX = currentAvgX
+            return
+        }
+        
+        // 2. Cooldown check with Continuous Reset
+        // If we are currently in cooldown (animation playing), we treat the
+        // current position as the "new start". This ensures that when cooldown
+        // ends, the user must swipe distance X from *where they are now*,
+        // not from where they were 0.5s ago.
+        if now - lastSwitchTime < switchCooldown {
             initialX = currentAvgX
             previousX = currentAvgX
             return
@@ -279,7 +285,9 @@ class GestureManager: ObservableObject {
                 triggerSwitch(direction: .previous)
             }
             
-            swipeDetectedInCurrentTouchSession = true
+            // Reset initialX to current position to allow consecutive swipe
+            // User must move minSwipeDistance again from this new point
+            initialX = currentAvgX
         }
         
         previousX = currentAvgX
