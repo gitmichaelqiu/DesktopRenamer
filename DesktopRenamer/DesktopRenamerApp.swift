@@ -39,7 +39,6 @@ extension View {
     }
 }
 
-
 class AppDelegate: NSObject, NSApplicationDelegate {
     static var shared: AppDelegate!
     var spaceManager: SpaceManager!
@@ -60,14 +59,12 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             UserDefaults.standard.set(true, forKey: "HasInitializedDefaults")
         }
         
-        // Initialize Managers
         self.hotkeyManager = HotkeyManager()
         
         DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
             self.spaceManager = SpaceManager()
             self.gestureManager = GestureManager(spaceManager: self.spaceManager)
             
-            // Pass managers to StatusBarController
             self.statusBarController = StatusBarController(
                 spaceManager: self.spaceManager,
                 hotkeyManager: self.hotkeyManager,
