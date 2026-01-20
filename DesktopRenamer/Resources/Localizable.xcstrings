@@ -69,10 +69,24 @@
       }
     },
     "3 Fingers" : {
-
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "3指"
+          }
+        }
+      }
     },
     "4 Fingers" : {
-
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "4指"
+          }
+        }
+      }
     },
     "Actions" : {
       "localizations" : {
@@ -100,17 +114,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "添加"
-          }
-        }
-      }
-    },
-    "Add it as a space in\nSettings → General → Add spaces" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "在设置 → 通用 → 添加桌面中添加"
           }
         }
       }
@@ -304,9 +307,6 @@
     "Desktop" : {
       "shouldTranslate" : false
     },
-    "Enable gesture override" : {
-
-    },
     "Enable Labels" : {
       "localizations" : {
         "zh-Hans" : {
@@ -317,12 +317,22 @@
         }
       }
     },
+    "Enable switch gesture override" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "启用切换手势覆盖"
+          }
+        }
+      }
+    },
     "Factory Reset" : {
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "出厂设置"
+            "value" : "恢复出厂设置"
           }
         }
       }
@@ -347,22 +357,7 @@
         }
       }
     },
-    "Fix this issue in\nSettings → General → Fix automatic space detection" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "在设置 → 通用 → 修复自动检测中修复"
-          }
-        }
-      }
-    },
     "Font size" : {
-
-    },
-    "Font Size" : {
-      "extractionState" : "stale",
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
@@ -393,7 +388,14 @@
       }
     },
     "Gesture type" : {
-
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "手势类型"
+          }
+        }
+      }
     },
     "Hide menubar icon" : {
       "localizations" : {
@@ -422,21 +424,24 @@
       }
     },
     "Keep visible on desktop" : {
-
-    },
-    "Keep Visible on Desktop" : {
-      "extractionState" : "stale",
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "在桌面可见"
+            "value" : "显示在桌面"
           }
         }
       }
     },
     "Keyboard Shortcuts" : {
-
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "键盘快捷键"
+          }
+        }
+      }
     },
     "Let you right-click with the Option key." : {
       "localizations" : {
@@ -613,28 +618,6 @@
         }
       }
     },
-    "Not a fullscreen?" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "不是全屏？"
-          }
-        }
-      }
-    },
-    "Not a space?" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "不是桌面？"
-          }
-        }
-      }
-    },
     "Not enough data collected." : {
       "localizations" : {
         "zh-Hans" : {
@@ -666,7 +649,14 @@
       }
     },
     "Record" : {
-
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "修改"
+          }
+        }
+      }
     },
     "Recorded: %lld" : {
       "localizations" : {
@@ -674,17 +664,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "已记录：%lld"
-          }
-        }
-      }
-    },
-    "Remove it in\nSettings → Spaces\n(Switch to other space first)" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "在设置 → 空间中删除\n（需要提前切换到其他桌面）"
           }
         }
       }
@@ -726,8 +705,15 @@
     "Renamer" : {
       "shouldTranslate" : false
     },
-    "Replaces system gestures with instant space switching.\n\nRequired: You must disable 'Swipe between full screen apps' in System Settings > Trackpad > More Gestures to prevent conflicts." : {
-
+    "Replaces system switch gestures with instant space switching.\n\nRequired: You must disable 'Swipe between full screen apps' in System Settings > Trackpad > More Gestures to prevent conflicts." : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "替换缓慢的系统切换手势，使用 DesktopRenamer 的更快切换方法。\n\n要求：必须在系统设置 → 触控板 → 更多手势中取消默认的切换手势。"
+          }
+        }
+      }
     },
     "Reset" : {
       "localizations" : {
@@ -750,10 +736,6 @@
       }
     },
     "Restore defaults" : {
-
-    },
-    "Restore Defaults" : {
-      "extractionState" : "stale",
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
@@ -1554,10 +1536,26 @@
       }
     },
     "Settings.Shortcuts.Hotkey.PressNew" : {
-      "comment" : "Press new shortcut…"
+      "comment" : "Press new shortcut…",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "新快捷键"
+          }
+        }
+      }
     },
     "Settings.Shortcuts.Unassgined" : {
-      "comment" : "Unassigned"
+      "comment" : "Unassigned",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "未分配"
+          }
+        }
+      }
     },
     "Settings.Spaces" : {
       "extractionState" : "manual",
@@ -1781,13 +1779,16 @@
       }
     },
     "Settings.Switch" : {
-
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "切换"
+          }
+        }
+      }
     },
     "Show active space labels" : {
-
-    },
-    "Show Active Space Labels" : {
-      "extractionState" : "stale",
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
@@ -1798,10 +1799,6 @@
       }
     },
     "Show preview labels" : {
-
-    },
-    "Show Preview Labels" : {
-      "extractionState" : "stale",
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
@@ -1869,10 +1866,24 @@
       }
     },
     "Switch to left space" : {
-
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "切换至左桌面"
+          }
+        }
+      }
     },
     "Switch to right space" : {
-
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "切换至右桌面"
+          }
+        }
+      }
     },
     "Switch to the desktops you want to add.\nThey will appear in the list below." : {
       "localizations" : {
@@ -1941,17 +1952,6 @@
         }
       }
     },
-    "There are no parameters to adjust for Automatic detection.\nIf the issue still happens, switch to other methods." : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "自动检测无参数可调整。\n如果仍然无法正常操作，切换成其他方式。"
-          }
-        }
-      }
-    },
     "This generates a log that is helpful for the developers to debug." : {
       "localizations" : {
         "zh-Hans" : {
@@ -1982,8 +1982,15 @@
         }
       }
     },
-    "Trackpad Gesture Override" : {
-
+    "Trackpad Switch Gesture Override" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "触控板切换手势覆盖"
+          }
+        }
+      }
     },
     "Troubleshoot Space Detection" : {
       "localizations" : {
@@ -2016,10 +2023,6 @@
       }
     },
     "Window size" : {
-
-    },
-    "Window Size" : {
-      "extractionState" : "stale",
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
