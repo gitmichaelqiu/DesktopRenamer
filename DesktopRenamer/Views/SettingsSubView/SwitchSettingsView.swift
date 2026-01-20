@@ -44,8 +44,8 @@ struct SwitchSettingsView: View {
                 }
                 
                 // MARK: - Gesture Override
-                SettingsSection("Trackpad Gesture Override") {
-                    SettingsRow("Enable gesture override", helperText: "Replaces system gestures with instant space switching.\n\nRequired: You must disable 'Swipe between full screen apps' in System Settings > Trackpad > More Gestures to prevent conflicts.") {
+                SettingsSection("Trackpad Switch Gesture Override") {
+                    SettingsRow("Enable switch gesture override", helperText: "Replaces system switch gestures with instant space switching.\n\nRequired: You must disable 'Swipe between full screen apps' in System Settings > Trackpad > More Gestures to prevent conflicts.") {
                         Toggle("", isOn: $gestureManager.isEnabled)
                             .toggleStyle(.switch)
                             .labelsHidden()
