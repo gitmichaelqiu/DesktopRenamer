@@ -78,6 +78,7 @@ class GestureManager: ObservableObject {
     // Tracking State
     fileprivate static var sharedManager: GestureManager?
     private var initialX: Float? = nil
+    private var initialY: Float? = nil
     private var previousX: Float? = nil
     private var lastTouchTime: TimeInterval = 0 // Track time of last valid callback
     private var lastSwitchTime: TimeInterval = 0
@@ -88,7 +89,7 @@ class GestureManager: ObservableObject {
     // Tuning
     // Reduced cooldown for snappier consecutive swipes (was 0.45s+ in queue)
     private let switchCooldown: TimeInterval = 0.25
-    private let minSwipeDistance: Float = 0.12 // Slightly reduced for easier activation
+    private let minSwipeDistance: Float = 0.15 // Increased to 0.15 to prevent accidental taps triggering swipes
     private let touchTimeout: TimeInterval = 0.15 // Reset tracking if gap between frames > 150ms
     
     init(spaceManager: SpaceManager) {
@@ -249,59 +250,68 @@ class GestureManager: ObservableObject {
             return
         }
         
-        // 3. Calculate Average X Position (Centroid)
+        // 3. Calculate Average Position (Centroid)
         let totalX = touches.reduce(0) { $0 + $1.normalizedVector.position.x }
         let currentAvgX = totalX / Float(numFingers)
+        
+        let totalY = touches.reduce(0) { $0 + $1.normalizedVector.position.y }
+        let currentAvgY = totalY / Float(numFingers)
         
         // 4. Initialize Start Position
         if initialX == nil {
             initialX = currentAvgX
+            initialY = currentAvgY
             previousX = currentAvgX
             return
         }
         
-        guard let startX = initialX else { return }
+        guard let startX = initialX, let startY = initialY else { return }
         
         // Cooldown Check
         // If we recently switched, we don't trigger again immediately.
-        // But we DO NOT reset initialX here, because we want relative motion
-        // from the reset point (set at trigger time) to count once cooldown ends.
         if now - lastSwitchTime < switchCooldown {
             previousX = currentAvgX
             return
         }
         
         // 5. Detect Swipe Distance
-        let delta = currentAvgX - startX
+        let deltaX = currentAvgX - startX
+        let deltaY = currentAvgY - startY
         
         // 6. Trigger Logic
-        if abs(delta) > minSwipeDistance {
+        // Check for minimum distance
+        if abs(deltaX) > minSwipeDistance {
             
-            var detectedDirection: SwitchDirection?
-            
-            if delta < 0 {
-                // Fingers moved LEFT -> Next Space
-                detectedDirection = .next
-            } else {
-                // Fingers moved RIGHT -> Previous Space
-                detectedDirection = .previous
-            }
-            
-            if let dir = detectedDirection {
-                // Lock Direction for this session
-                if lockedDirection == nil {
-                    lockedDirection = dir
+            // Check for Horizontal Dominance
+            // We ensure horizontal movement is greater than vertical movement to filter out random tap jitter or vertical scrolls
+            if abs(deltaX) > abs(deltaY) {
+                
+                var detectedDirection: SwitchDirection?
+                
+                if deltaX < 0 {
+                    // Fingers moved LEFT -> Next Space
+                    detectedDirection = .next
+                } else {
+                    // Fingers moved RIGHT -> Previous Space
+                    detectedDirection = .previous
                 }
                 
-                // Only act if matches locked direction (prevents recoil/reverse)
-                if lockedDirection == dir {
-                    print("GestureManager: Triggered \(dir)")
-                    triggerSwitch(direction: dir)
+                if let dir = detectedDirection {
+                    // Lock Direction for this session
+                    if lockedDirection == nil {
+                        lockedDirection = dir
+                    }
                     
-                    // CRITICAL: Reset anchor to current position.
-                    // This allows consecutive swipes: user moves another `minSwipeDistance`
-                    // from THIS point to trigger the next switch.
-                    initialX = currentAvgX
+                    // Only act if matches locked direction (prevents recoil/reverse)
+                    if lockedDirection == dir {
+                        print("GestureManager: Triggered \(dir)")
+                        triggerSwitch(direction: dir)
+                        
+                        // CRITICAL: Reset anchor to current position.
+                        // This allows consecutive swipes.
+                        initialX = currentAvgX
+                        initialY = currentAvgY
+                    }
                 }
             }
         }
@@ -311,6 +321,7 @@ class GestureManager: ObservableObject {
     
     private func resetTrackingState() {
         initialX = nil
+        initialY = nil
         previousX = nil
         lockedDirection = nil
     }
