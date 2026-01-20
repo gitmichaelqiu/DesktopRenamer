@@ -118,6 +118,9 @@
         }
       }
     },
+    "Add it as a space in\nSettings → General → Add spaces" : {
+
+    },
     "Add New Spaces" : {
       "localizations" : {
         "zh-Hans" : {
@@ -356,6 +359,9 @@
           }
         }
       }
+    },
+    "Fix this issue in\nSettings → General → Fix automatic space detection" : {
+
     },
     "Font size" : {
       "localizations" : {
@@ -618,6 +624,12 @@
         }
       }
     },
+    "Not a fullscreen?" : {
+
+    },
+    "Not a space?" : {
+
+    },
     "Not enough data collected." : {
       "localizations" : {
         "zh-Hans" : {
@@ -667,6 +679,9 @@
           }
         }
       }
+    },
+    "Remove it in\nSettings → Spaces\n(Switch to other space first)" : {
+
     },
     "Rename.Label" : {
       "extractionState" : "manual",
@@ -1951,6 +1966,9 @@
           }
         }
       }
+    },
+    "There are no parameters to adjust for Automatic detection.\nIf the issue still happens, switch to other methods." : {
+
     },
     "This generates a log that is helpful for the developers to debug." : {
       "localizations" : {

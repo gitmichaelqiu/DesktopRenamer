@@ -50,6 +50,14 @@ class SpaceManager: ObservableObject {
     
     @Published var spaceNameDict: [DesktopSpace] = []
     
+    // MARK: - Computed Properties
+    
+    var currentDisplaySpaces: [DesktopSpace] {
+        spaceNameDict
+            .filter { $0.displayID == currentDisplayID }
+            .sorted { $0.num < $1.num }
+    }
+    
     private var nameCache: [String: String] = [:]
     private var indexCache: [String: String] = [:]
     
@@ -408,7 +416,7 @@ class SpaceManager: ObservableObject {
         // Find current space info
         guard let current = spaceNameDict.first(where: { $0.id == currentSpaceUUID }) else { return }
         
-        // Get all spaces on the SAME display as current, sorted by number
+        // Use spaces from the CURRENT display based on the current space's displayID
         let displaySpaces = spaceNameDict
             .filter { $0.displayID == current.displayID }
             .sorted { $0.num < $1.num }
@@ -424,7 +432,7 @@ class SpaceManager: ObservableObject {
         // Find current space info
         guard let current = spaceNameDict.first(where: { $0.id == currentSpaceUUID }) else { return }
         
-        // Get all spaces on the SAME display as current, sorted by number
+        // Use spaces from the CURRENT display based on the current space's displayID
         let displaySpaces = spaceNameDict
             .filter { $0.displayID == current.displayID }
             .sorted { $0.num < $1.num }
