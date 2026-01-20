@@ -56,6 +56,8 @@ class SpaceLabelWindow: NSWindow {
     
     public let spaceId: String
     public let displayID: String
+    public let isFullscreenSpace: Bool
+    
     private var cancellables = Set<AnyCancellable>()
     private let spaceManager: SpaceManager
     private weak var labelManager: SpaceLabelManager?
@@ -66,9 +68,6 @@ class SpaceLabelWindow: NSWindow {
     private var dockEdge: NSRectEdge = .maxX
     private var previewSize: NSSize = NSSize(width: 800, height: 500)
     
-    // New State: Invisible Anchor Mode
-    // When true, window becomes 1x1 pixel to hide from Mission Control visually,
-    // but remains managed to serve as a switch anchor.
     private var isInvisibleAnchorMode: Bool = false
     
     // Constants
@@ -80,9 +79,10 @@ class SpaceLabelWindow: NSWindow {
         return isActiveMode && !(labelManager?.showOnDesktop == true)
     }
     
-    init(spaceId: String, name: String, displayID: String, spaceManager: SpaceManager, labelManager: SpaceLabelManager) {
+    init(spaceId: String, name: String, displayID: String, isFullscreen: Bool, spaceManager: SpaceManager, labelManager: SpaceLabelManager) {
         self.spaceId = spaceId
         self.displayID = displayID
+        self.isFullscreenSpace = isFullscreen
         self.spaceManager = spaceManager
         self.labelManager = labelManager
         
@@ -132,7 +132,6 @@ class SpaceLabelWindow: NSWindow {
         
         super.init(contentRect: startRect, styleMask: [.borderless, .fullSizeContentView], backing: .buffered, defer: false)
         
-        // Prevent auto-release to fix BAD_ACCESS
         self.isReleasedWhenClosed = false
         
         if targetScreen == nil {
@@ -177,8 +176,9 @@ class SpaceLabelWindow: NSWindow {
         self.hasShadow = false
         self.level = .floating
         
-        // FIX: Removed .stationary. This allows the window to stick to a specific space
-        // instead of following the user to every space.
+        // Collection Behavior
+        // Reverted: .canJoinAllSpaces removed as it broke switching.
+        // We keep .fullScreenAuxiliary so it can theoretically appear over fullscreen apps.
         self.collectionBehavior = [.managed, .participatesInCycle, .fullScreenAuxiliary]
         
         // Observers
@@ -207,8 +207,6 @@ class SpaceLabelWindow: NSWindow {
     }
     
     // MARK: - Window Overrides (CRITICAL FOR SWITCHING)
-    // Borderless windows return false by default. We must return true to allow
-    // makeKeyAndOrderFront to work, which is the trigger for space switching.
     override var canBecomeKey: Bool { return true }
     override var canBecomeMain: Bool { return true }
     
@@ -503,7 +501,7 @@ class SpaceLabelWindow: NSWindow {
         
         // 2. Determine Position
         if self.isInvisibleAnchorMode {
-            // Anchor Mode: Center of Screen (safest for switching context)
+            // Anchor Mode: Center of Screen
             newOrigin = NSPoint(x: targetScreen.frame.midX, y: targetScreen.frame.midY)
         } else if isCurrentSpace {
             targetCenter = getAbsoluteTargetCenter(on: targetScreen, forSize: newSize)
@@ -556,8 +554,6 @@ class SpaceLabelWindow: NSWindow {
 
         if updateFrame {
             if isHiddenCornerMode && !self.isInvisibleAnchorMode {
-                // MODIFICATION: Do NOT fade window alpha. Fade Content Only.
-                // We keep window alpha 1.0 for space switching reliability.
                 NSAnimationContext.runAnimationGroup { context in
                     context.duration = 0.08
                     context.timingFunction = CAMediaTimingFunction(name: .easeOut)
@@ -569,10 +565,8 @@ class SpaceLabelWindow: NSWindow {
                 }
             } else {
                 updateVisuals()
-                // Ensure window alpha is valid
                 self.alphaValue = 1.0
                 self.animator().setFrame(NSRect(origin: newOrigin, size: newSize), display: true)
-                // Ensure content alpha is restored if coming from hidden mode
                 if (self.contentView?.alphaValue ?? 0) < 1.0 { self.contentView?.animator().alphaValue = 1.0 }
             }
         } else {
@@ -653,7 +647,6 @@ class SpaceLabelWindow: NSWindow {
     }
     
     private func findTargetScreen() -> NSScreen? {
-        // Fixed: Use first(where:) and explicit NSDeviceDescriptionKey
         return NSScreen.screens.first(where: { screen in
             let screenID = screen.deviceDescription[NSDeviceDescriptionKey("NSScreenNumber")] as? NSNumber ?? 0
             
@@ -664,7 +657,7 @@ class SpaceLabelWindow: NSWindow {
             let cleanTarget = self.displayID.components(separatedBy: " (").first ?? self.displayID
             if screen.localizedName == cleanTarget { return true }
             
-            // 2. UUID Check (Fix for Automatic Mode)
+            // 2. UUID Check
             let cgsID = screenID.uint32Value
             if let uuidRef = CGDisplayCreateUUIDFromDisplayID(cgsID) {
                 let uuid = uuidRef.takeRetainedValue()
@@ -679,12 +672,6 @@ class SpaceLabelWindow: NSWindow {
         let f = targetScreen.frame
         let allScreens = NSScreen.screens
         
-        // Candidates for offscreen positions (1px overlap to keep on screen technically)
-        // 1. Top-Left
-        // 2. Top-Right
-        // 3. Bottom-Left
-        // 4. Bottom-Right
-        
         let candidates: [NSPoint] = [
             NSPoint(x: f.minX - size.width + 1, y: f.maxY - 1),             // Top-Left
             NSPoint(x: f.maxX - 1, y: f.maxY - 1),                          // Top-Right
@@ -693,47 +680,32 @@ class SpaceLabelWindow: NSWindow {
         ]
         
         var bestCandidate: NSPoint = candidates[0]
-        var maxMinDist: CGFloat = -2.0 // Use -2 to ensure -1 (intersection) can supersede if needed
+        var maxMinDist: CGFloat = -2.0
         
         for origin in candidates {
             let rect = NSRect(origin: origin, size: size)
-            
-            var minDist: CGFloat = 100000.0 // Arbitrary large number
+            var minDist: CGFloat = 100000.0
             var intersects = false
             
-            // Check against all other screens to find the "safest" corner (furthest from others)
             for other in allScreens {
                 if other == targetScreen { continue }
-                
                 let otherFrame = other.frame
-                
                 if otherFrame.intersects(rect) {
                     intersects = true
                     break
                 }
-                
-                // Calculate distance to this screen
                 let dx = max(otherFrame.minX - rect.maxX, rect.minX - otherFrame.maxX, 0)
                 let dy = max(otherFrame.minY - rect.maxY, rect.minY - otherFrame.maxY, 0)
                 let dist = sqrt(dx*dx + dy*dy)
-                
-                if dist < minDist {
-                    minDist = dist
-                }
+                if dist < minDist { minDist = dist }
             }
             
-            // If it intersects any screen, score is -1 (worst possible)
-            if intersects {
-                minDist = -1.0
-            }
-            
-            // We want the candidate that is furthest from its nearest neighbor (Maximize the Minimum Distance)
+            if intersects { minDist = -1.0 }
             if minDist > maxMinDist {
                 maxMinDist = minDist
                 bestCandidate = origin
             }
         }
-        
         return bestCandidate
     }
     
@@ -762,16 +734,12 @@ class SpaceLabelWindow: NSWindow {
     
     private func updateVisibility(animated: Bool) {
         guard findTargetScreen() != nil else {
-            // If screen not found, we effectively hide it but don't close it
             self.alphaValue = 0.0
             self.orderOut(nil)
             return
         }
         
-        // Master Enable/Disable logic
-        // MODIFICATION: Even if disabled, we treat it as an invisible anchor.
         let masterEnabled = labelManager?.isEnabled ?? true
-        
         let showActive = labelManager?.showActiveLabels ?? true
         let showPreview = labelManager?.showPreviewLabels ?? true
         
@@ -779,12 +747,9 @@ class SpaceLabelWindow: NSWindow {
         
         if masterEnabled {
             if isActiveMode {
-                // ACTIVE MODE
                 isVisuallyVisible = showActive
             } else {
-                // PREVIEW MODE
                 if showPreview {
-                    // Hide preview on active space to avoid clutter
                     isVisuallyVisible = !self.isOnActiveSpace
                 } else {
                     isVisuallyVisible = false
@@ -792,23 +757,17 @@ class SpaceLabelWindow: NSWindow {
             }
         }
         
-        // Detect change in visibility requirement (aka Anchor Mode toggle)
         let shouldBeAnchor = !isVisuallyVisible
         if self.isInvisibleAnchorMode != shouldBeAnchor {
             self.isInvisibleAnchorMode = shouldBeAnchor
-            // Update Layout immediately to resize to/from 1x1 pixel
             updateLayout(isCurrentSpace: self.isActiveMode, updateFrame: animated)
         }
         
-        // ALWAYS ensure window is legally visible for switching logic
         if !self.isVisible {
             self.orderFront(nil)
         }
         
-        // MODIFICATION: Always keep Window alpha at 1.0 so makeKeyAndOrderFront works reliably for switching
         self.alphaValue = 1.0
-        
-        // Control visual visibility via Content View Alpha
         let targetContentAlpha: CGFloat = isVisuallyVisible ? 1.0 : 0.0
         
         if animated {
@@ -817,7 +776,6 @@ class SpaceLabelWindow: NSWindow {
             self.contentView?.alphaValue = targetContentAlpha
         }
         
-        // Interaction Logic
         if isVisuallyVisible {
             updateInteractivity()
         } else {
@@ -826,9 +784,7 @@ class SpaceLabelWindow: NSWindow {
     }
     
     @objc private func repositionWindow() {
-        // Disable animation for screen parameter changes to ensure instant snap
         updateLayout(isCurrentSpace: isActiveMode)
-        // Ensure visibility logic is re-checked after layout/screen changes (e.g. Wake from sleep)
         updateVisibility(animated: false)
     }
 }
