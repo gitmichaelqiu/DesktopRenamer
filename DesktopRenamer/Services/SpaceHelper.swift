@@ -46,12 +46,9 @@ class SpaceHelper {
             // CHECK: Native shortcuts (Ctrl+1, Ctrl+2) only map to Desktops.
             // If there are any fullscreen apps *before* this target, or if the target itself is fullscreen,
             // the Visual Index (num) will not match the Native Desktop Index.
-            // In such cases, we MUST NOT use shortcut simulation.
-            
             if targetSpace.isFullscreen {
                 shouldUseShortcut = false
             } else {
-                // Check for any fullscreen spaces before this one on the same display
                 let spacesBefore = state.spaces.filter { $0.displayID == targetSpace.displayID && $0.num < targetSpace.num }
                 if spacesBefore.contains(where: { $0.isFullscreen }) {
                     shouldUseShortcut = false
@@ -60,7 +57,6 @@ class SpaceHelper {
         }
         
         // 2. PRIORITY: Simulate Keyboard Shortcut (Control + Number)
-        // Native shortcuts are the cleanest way to switch, but only valid for pure desktop indexes.
         if shouldUseShortcut, let num = targetNum {
             if isShortcutEnabled(for: num) && simulateDesktopShortcut(for: num) {
                 return
@@ -68,15 +64,11 @@ class SpaceHelper {
         }
         
         // 3. Fallback A: Activate our own Space Label Window
-        // This relies on SpaceLabelManager creating windows on every space.
-        // Even if the user "disables" labels, the windows should be kept alive (alpha=0)
-        // so this switching method remains available.
         if switchByActivatingOwnWindow(for: spaceID) {
             return
         }
         
         // 4. Fallback B: Mission Control UI Scripting
-        // Note: targetNum corresponds to the visual slot in Mission Control, so this works for Fullscreen apps too.
         if let num = targetNum {
             switchViaMissionControl(to: num)
         }
@@ -84,21 +76,14 @@ class SpaceHelper {
     
     private static func switchByActivatingOwnWindow(for spaceID: String) -> Bool {
         for window in NSApp.windows {
-            // Check for SpaceLabelWindow
             if let labelWindow = window as? SpaceLabelWindow, labelWindow.spaceId == spaceID {
-                // Force app activation first to ensure the window promotion works
                 NSApp.activate(ignoringOtherApps: true)
-                
-                // Even if the window is invisible (alpha 0), makeKeyAndOrderFront
-                // triggers the OS to switch to its space.
                 labelWindow.makeKeyAndOrderFront(nil)
                 return true
             }
         }
         return false
     }
-    
-    // MARK: - Mission Control Logic (Fallback C)
     
     private static func switchViaMissionControl(to targetNum: Int) {
         let source = """
@@ -315,16 +300,28 @@ class SpaceHelper {
                 let idString = String(managedID)
                 let isFullscreen = space["TileLayoutManager"] != nil
                 
-                // CHANGE: We now include Fullscreen spaces in the detected list so they can be switched to.
-                // We mark them with isFullscreen = true.
+                // Identify App Name for Fullscreen Space if possible
+                var appName: String? = nil
+                if isFullscreen {
+                    // Try to extract PID from space dictionary
+                    if let pid = space["pid"] as? Int32 ?? space["owner pid"] as? Int32 {
+                        appName = NSRunningApplication(processIdentifier: pid)?.localizedName
+                    }
+                }
+
                 regularIndex += 1
-                detectedSpaces.append(DesktopSpace(id: idString, customName: "", num: regularIndex, displayID: displayID, isFullscreen: isFullscreen))
+                detectedSpaces.append(DesktopSpace(
+                    id: idString,
+                    customName: "",
+                    num: regularIndex,
+                    displayID: displayID,
+                    isFullscreen: isFullscreen,
+                    appName: appName
+                ))
                 
                 if let currentDict = display["Current Space"] as? [String: Any],
                    let currentID = currentDict["ManagedSpaceID"] as? Int, currentID == managedID {
                     if displayID == targetDisplayID {
-                        // CHANGE: We use the real UUID for detection even if it is fullscreen,
-                        // instead of collapsing it to "FULLSCREEN".
                         currentSpaceID = idString
                     }
                 }

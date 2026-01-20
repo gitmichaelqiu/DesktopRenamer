@@ -76,7 +76,10 @@ struct SpaceEditView: View {
     }
     
     private func spaces(for displayID: String) -> [DesktopSpace] {
-        spaceManager.spaceNameDict.filter { $0.displayID == displayID }.sorted { $0.num < $1.num }
+        // Filter out fullscreen spaces so they are not editable in settings
+        spaceManager.spaceNameDict
+            .filter { $0.displayID == displayID && !$0.isFullscreen }
+            .sorted { $0.num < $1.num }
     }
     
     private func spacesStack(for displayID: String) -> some View {
@@ -94,21 +97,29 @@ struct SpaceEditView: View {
             Divider()
             
             let displaySpaces = spaces(for: displayID)
-            ForEach(displaySpaces) { space in
-                VStack(spacing: 0) {
-                    HStack(spacing: 10) {
-                        spaceNumberView(for: space).frame(width: 30, alignment: .leading)
-                        spaceNameEditor(for: space).frame(maxWidth: .infinity)
-                        actionButtons(for: space, in: displaySpaces).frame(width: 60, alignment: .trailing)
+            
+            if displaySpaces.isEmpty {
+                Text("No editable spaces (fullscreen only)")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                    .padding(10)
+            } else {
+                ForEach(displaySpaces) { space in
+                    VStack(spacing: 0) {
+                        HStack(spacing: 10) {
+                            spaceNumberView(for: space).frame(width: 30, alignment: .leading)
+                            spaceNameEditor(for: space).frame(maxWidth: .infinity)
+                            actionButtons(for: space, in: displaySpaces).frame(width: 60, alignment: .trailing)
+                        }
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 6)
+                        
+                        if space.id != displaySpaces.last?.id {
+                            Divider().padding(.leading, 12)
+                        }
                     }
-                    .padding(.horizontal, 12)
-                    .padding(.vertical, 6)
-                    
-                    if space.id != displaySpaces.last?.id {
-                        Divider().padding(.leading, 12)
-                    }
+                    .transition(.opacity.combined(with: .move(edge: .top)))
                 }
-                .transition(.opacity.combined(with: .move(edge: .top)))
             }
         }
         .background(
@@ -240,8 +251,6 @@ struct SpaceEditView: View {
     }
     
     private func updateSpaceName(_ space: DesktopSpace, _ newName: String) {
-        // Fix: Use renameSpace to ensure caches (UUID & Index) are updated.
-        // This prevents the system sync from reverting the name.
         spaceManager.renameSpace(space.id, to: newName)
     }
     
