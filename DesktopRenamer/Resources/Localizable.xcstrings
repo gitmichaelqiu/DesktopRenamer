@@ -1527,6 +1527,21 @@
         }
       }
     },
+    "Settings.Shortcuts.Hotkey" : {
+
+    },
+    "Settings.Shortcuts.Hotkey.Change" : {
+      "comment" : "Change"
+    },
+    "Settings.Shortcuts.Hotkey.PressNew" : {
+      "comment" : "Press new shortcut…"
+    },
+    "Settings.Shortcuts.Hotkey.Reset" : {
+      "comment" : "Reset"
+    },
+    "Settings.Shortcuts.Unassgined" : {
+      "comment" : "Unassigned"
+    },
     "Settings.Spaces" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -1748,6 +1763,9 @@
         }
       }
     },
+    "Settings.Switch" : {
+
+    },
     "Show active space labels" : {
 
     },
@@ -1842,6 +1860,12 @@
           }
         }
       }
+    },
+    "Switch to the left space" : {
+
+    },
+    "Switch to the right space" : {
+
     },
     "Thank You!" : {
       "localizations" : {
@@ -2000,6 +2024,9 @@
           }
         }
       }
+    },
+    "You can remove the system shortkey of control + arrow key by editing Settings/Keyboard/Keyboard Shortcuts/Mission Control." : {
+
     }
   },
   "version" : "1.1"
