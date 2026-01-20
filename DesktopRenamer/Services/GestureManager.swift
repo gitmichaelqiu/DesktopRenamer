@@ -77,20 +77,21 @@ class GestureManager: ObservableObject {
     
     // Tracking State
     fileprivate static var sharedManager: GestureManager?
-    private var initialX: Float? = nil
-    private var initialY: Float? = nil
-    private var previousX: Float? = nil
-    private var lastTouchTime: TimeInterval = 0 // Track time of last valid callback
+    
+    // Replaced single centroid point with per-finger tracking for consistency checks
+    private var initialTouchPositions: [Int32: MTPoint] = [:]
+    
+    private var lastTouchTime: TimeInterval = 0
     private var lastSwitchTime: TimeInterval = 0
     
     // Direction Lock
     private var lockedDirection: SwitchDirection? = nil
     
     // Tuning
-    // Reduced cooldown for snappier consecutive swipes (was 0.45s+ in queue)
     private let switchCooldown: TimeInterval = 0.25
-    private let minSwipeDistance: Float = 0.15 // Increased to 0.15 to prevent accidental taps triggering swipes
-    private let touchTimeout: TimeInterval = 0.15 // Reset tracking if gap between frames > 150ms
+    private let minSwipeDistance: Float = 0.10 // 15% Total Average Movement
+    private let consistencyThreshold: Float = 0.01 // 5% Minimum movement per finger (Anti-Tap)
+    private let touchTimeout: TimeInterval = 0.15
     
     init(spaceManager: SpaceManager) {
         self.spaceManager = spaceManager
@@ -147,29 +148,23 @@ class GestureManager: ObservableObject {
     
     // MARK: - Device Management
     private func startMonitoring() {
-        // 1. Try standard list creation first
         if let createList = _MTDeviceCreateList {
             let deviceList = createList().takeRetainedValue() as? [MTDeviceRef] ?? []
             for device in deviceList {
                 setupDevice(device)
             }
         }
-        
-        // 2. Setup IOKit listener for hot-plugging / manual discovery
         setupIOKitListener()
-        
         print("GestureManager: Started monitoring. Current devices: \(devices.count)")
     }
     
     private func stopMonitoring() {
-        // Stop MT Devices
         guard let stopDevice = _MTDeviceStop else { return }
         for device in devices {
             stopDevice(device, 0)
         }
         devices.removeAll()
         
-        // Clean up IOKit
         if addedIterator != 0 {
             IOObjectRelease(addedIterator)
             addedIterator = 0
@@ -219,8 +214,6 @@ class GestureManager: ObservableObject {
         
         if result == kIOReturnSuccess {
             consumeIterator(addedIterator)
-        } else {
-            print("GestureManager: Failed to register IOKit notification.")
         }
     }
     
@@ -250,79 +243,102 @@ class GestureManager: ObservableObject {
             return
         }
         
-        // 3. Calculate Average Position (Centroid)
-        let totalX = touches.reduce(0) { $0 + $1.normalizedVector.position.x }
-        let currentAvgX = totalX / Float(numFingers)
+        // 2. Validate Touches (Sanity Check)
+        for touch in touches {
+            if touch.normalizedVector.position.x < 0 || touch.normalizedVector.position.x > 1.0 {
+                resetTrackingState()
+                return
+            }
+        }
         
-        let totalY = touches.reduce(0) { $0 + $1.normalizedVector.position.y }
-        let currentAvgY = totalY / Float(numFingers)
-        
-        // 4. Initialize Start Position
-        if initialX == nil {
-            initialX = currentAvgX
-            initialY = currentAvgY
-            previousX = currentAvgX
+        // 3. Initialize Start Position (Per Finger)
+        if initialTouchPositions.isEmpty {
+            for touch in touches {
+                initialTouchPositions[touch.identifier] = touch.normalizedVector.position
+            }
             return
         }
         
-        guard let startX = initialX, let startY = initialY else { return }
+        // 4. Validate Continuity
+        // Ensure the fingers on the pad match the IDs we started tracking
+        let currentIDs = Set(touches.map { $0.identifier })
+        let initialIDs = Set(initialTouchPositions.keys)
+        
+        if currentIDs != initialIDs {
+            resetTrackingState()
+            return
+        }
         
         // Cooldown Check
-        // If we recently switched, we don't trigger again immediately.
         if now - lastSwitchTime < switchCooldown {
-            previousX = currentAvgX
             return
         }
         
-        // 5. Detect Swipe Distance
-        let deltaX = currentAvgX - startX
-        let deltaY = currentAvgY - startY
+        // 5. Calculate Average Deltas
+        var totalDX: Float = 0
+        var totalDY: Float = 0
+        
+        for touch in touches {
+            guard let startPos = initialTouchPositions[touch.identifier] else { continue }
+            totalDX += (touch.normalizedVector.position.x - startPos.x)
+            totalDY += (touch.normalizedVector.position.y - startPos.y)
+        }
+        
+        let avgDX = totalDX / Float(numFingers)
+        let avgDY = totalDY / Float(numFingers)
         
         // 6. Trigger Logic
-        // Check for minimum distance
-        if abs(deltaX) > minSwipeDistance {
+        // Primary threshold check
+        if abs(avgDX) > minSwipeDistance {
             
-            // Check for Horizontal Dominance
-            // We ensure horizontal movement is greater than vertical movement to filter out random tap jitter or vertical scrolls
-            if abs(deltaX) > abs(deltaY) {
+            // Check for Horizontal Dominance (Must be more horizontal than vertical)
+            if abs(avgDX) > abs(avgDY) {
                 
-                var detectedDirection: SwitchDirection?
+                let direction: SwitchDirection = avgDX < 0 ? .next : .previous
                 
-                if deltaX < 0 {
-                    // Fingers moved LEFT -> Next Space
-                    detectedDirection = .next
-                } else {
-                    // Fingers moved RIGHT -> Previous Space
-                    detectedDirection = .previous
+                // 7. Consistency Check (Anti-Tap Protection)
+                // REQUIRE that EVERY finger has moved significantly in the target direction.
+                // A tap usually has one finger anchor or fingers moving in opposition.
+                var isConsistent = true
+                
+                for touch in touches {
+                    guard let startPos = initialTouchPositions[touch.identifier] else { continue }
+                    let dx = touch.normalizedVector.position.x - startPos.x
+                    
+                    if direction == .next {
+                        // Expect negative movement (Left Swipe)
+                        // If any finger moved less than threshold (e.g. -0.01 or +0.1), fail.
+                        if dx > -consistencyThreshold { isConsistent = false; break }
+                    } else {
+                        // Expect positive movement (Right Swipe)
+                        if dx < consistencyThreshold { isConsistent = false; break }
+                    }
                 }
                 
-                if let dir = detectedDirection {
+                if isConsistent {
                     // Lock Direction for this session
                     if lockedDirection == nil {
-                        lockedDirection = dir
+                        lockedDirection = direction
                     }
                     
-                    // Only act if matches locked direction (prevents recoil/reverse)
-                    if lockedDirection == dir {
-                        print("GestureManager: Triggered \(dir)")
-                        triggerSwitch(direction: dir)
+                    // Only act if matches locked direction
+                    if lockedDirection == direction {
+                        print("GestureManager: Triggered \(direction)")
+                        triggerSwitch(direction: direction)
                         
-                        // CRITICAL: Reset anchor to current position.
-                        // This allows consecutive swipes.
-                        initialX = currentAvgX
-                        initialY = currentAvgY
+                        // CRITICAL: Reset anchors to current position to allow consecutive swipes
+                        initialTouchPositions.removeAll()
+                        for touch in touches {
+                            initialTouchPositions[touch.identifier] = touch.normalizedVector.position
+                        }
                     }
                 }
             }
         }
-        
-        previousX = currentAvgX
     }
     
     private func resetTrackingState() {
-        initialX = nil
-        initialY = nil
-        previousX = nil
+        initialTouchPositions.removeAll()
         lockedDirection = nil
     }
     
@@ -348,14 +364,12 @@ class GestureManager: ObservableObject {
 
 // MARK: - Global C Callbacks
 
-// IOKit Callback
 private let ioKitCallback: @convention(c) (UnsafeMutableRawPointer?, io_iterator_t) -> Void = { (refCon, iterator) in
     guard let refCon = refCon else { return }
     let manager = Unmanaged<GestureManager>.fromOpaque(refCon).takeUnretainedValue()
     manager.consumeIterator(iterator)
 }
 
-// Multitouch Callback
 private func mtCallback(device: MTDeviceRef, touchPointer: UnsafeMutableRawPointer, numFingers: Int32, timestamp: Double, frame: Int32) {
     guard let manager = GestureManager.sharedManager, manager.isEnabled else { return }
     
@@ -363,11 +377,16 @@ private func mtCallback(device: MTDeviceRef, touchPointer: UnsafeMutableRawPoint
     let buffer = UnsafeBufferPointer(start: typedPointer, count: Int(numFingers))
     let touches = Array(buffer)
     
+    // Valid states: 1 (Hover/Range), 2 (Touching), 3 (Dragging), 4 (Lifting)
     let validTouches = touches.filter { $0.state > 0 && $0.state < 7 }
     
-    if !validTouches.isEmpty {
-        manager.handleTouches(touches: validTouches, numFingers: Int(numFingers))
+    // Calculate count from valid array, ignore raw numFingers if it mismatches active states
+    let activeCount = validTouches.count
+    
+    if activeCount > 0 {
+        manager.handleTouches(touches: validTouches, numFingers: activeCount)
     } else {
+        // Send 0 to force reset
         manager.handleTouches(touches: [], numFingers: 0)
     }
 }
