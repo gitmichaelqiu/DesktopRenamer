@@ -145,20 +145,32 @@ class StatusBarController: NSObject {
     private func rebuildMenu() {
         let menu = NSMenu()
         
-        let sortedSpaces = spaceManager.spaceNameDict.sorted { $0.num < $1.num }
-        if !sortedSpaces.isEmpty {
-            for space in sortedSpaces {
+        // Filter spaces to only show those on the current display
+        let currentDisplaySpaces = spaceManager.currentDisplaySpaces
+        
+        if !currentDisplaySpaces.isEmpty {
+            for space in currentDisplaySpaces {
                 let name = spaceManager.getSpaceName(space.id)
                 let item = NSMenuItem(title: name, action: #selector(selectSpace(_:)), keyEquivalent: "")
                 item.target = self
                 item.representedObject = space.id
-                item.state = (space.id == spaceManager.currentSpaceUUID) ? .on : .off
+                
+                if space.id == spaceManager.currentSpaceUUID {
+                    item.state = .on
+                } else {
+                    item.state = .off
+                }
+                
                 menu.addItem(item)
             }
             menu.addItem(NSMenuItem.separator())
         }
         
-        let rename = NSMenuItem(title: NSLocalizedString("Menu.RenameCurrentSpace", comment: ""), action: nil, keyEquivalent: "r")
+        let rename = NSMenuItem(
+            title: NSLocalizedString("Menu.RenameCurrentSpace", comment: ""),
+            action: nil,
+            keyEquivalent: "r"
+        )
         rename.image = NSImage(systemSymbolName: "pencil.line", accessibilityDescription: nil)
         
         if spaceManager.getSpaceNum(spaceManager.currentSpaceUUID) == 0 {
@@ -227,8 +239,48 @@ class StatusBarController: NSObject {
         
     @objc private func troubleshootSpaceDetection() {
         openSettingsWindow()
-        // (Truncated for brevity - logic remains same as previous version)
-        // ...
+        
+        var alertTitle = ""
+        var alertMessage = ""
+        
+        switch spaceManager.detectionMethod {
+        case .automatic:
+            if spaceManager.currentSpaceUUID == "FULLSCREEN" {
+                 alertTitle = NSLocalizedString("Not a fullscreen?", comment: "")
+                 alertMessage = NSLocalizedString("There are no parameters to adjust for Automatic detection.\nIf the issue still happens, switch to other methods.", comment: "")
+            } else {
+                 alertTitle = NSLocalizedString("Not a space?", comment: "")
+                 alertMessage = NSLocalizedString("There are no parameters to adjust for Automatic detection.\nIf the issue still happens, switch to other methods.", comment: "")
+            }
+            
+        case .metric:
+            if spaceManager.currentSpaceUUID == "FULLSCREEN" {
+                alertTitle = NSLocalizedString("Not a fullscreen?", comment: "")
+                alertMessage = NSLocalizedString("Fix this issue in\nSettings → General → Fix automatic space detection", comment: "")
+            } else {
+                alertTitle = NSLocalizedString("Not a space?", comment: "")
+                alertMessage = NSLocalizedString("Fix this issue in\nSettings → General → Fix automatic space detection", comment: "")
+            }
+            
+        case .manual:
+            if spaceManager.currentSpaceUUID == "FULLSCREEN" {
+                alertTitle = NSLocalizedString("Not a fullscreen?", comment: "")
+                alertMessage = NSLocalizedString("Add it as a space in\nSettings → General → Add spaces", comment: "")
+            } else {
+                alertTitle = NSLocalizedString("Not a space?", comment: "")
+                alertMessage = NSLocalizedString("Remove it in\nSettings → Spaces\n(Switch to other space first)", comment: "")
+            }
+        }
+        
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+            guard let window = self.settingsWindowController?.window else { return }
+            let alert = NSAlert()
+            alert.messageText = alertTitle
+            alert.informativeText = alertMessage
+            alert.alertStyle = .informational
+            alert.addButton(withTitle: "OK")
+            alert.beginSheetModal(for: window, completionHandler: nil)
+        }
     }
 
     @objc func openSettingsWindow() {
