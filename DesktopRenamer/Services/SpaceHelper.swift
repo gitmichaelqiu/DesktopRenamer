@@ -64,16 +64,32 @@ class SpaceHelper {
             }
         }
         
-        // 3. Fallback A: Activate our own Space Label Window
-        // We attempt this for ALL spaces now.
-        // For Desktops: We use "Hide Others" to prevent reversion.
-        // For Fullscreen: We skip "Hide Others" to prevent bouncing, but still attempt fast activation.
+        // 3. Unified Activation Logic
+        // We use our own SpaceLabelWindow for both Desktop and Fullscreen because it is the fastest method.
+        // However, each requires specific handling to avoid bugs (reversion/focus stealing).
         if switchByActivatingOwnWindow(for: spaceID, isFullscreen: targetIsFullscreen) {
+            
+            // FIX for Fullscreen Focus:
+            // When switching to a Fullscreen space via SpaceLabelWindow, DesktopRenamer initially gets focus.
+            // This can cause the OS to revert to the previous space if we don't hand off focus immediately.
+            // We must identify the "owner" app of the fullscreen space and activate it.
+            // Since we just triggered the visual switch, activating the app now should correctly
+            // prioritize the window on the target space (resolving the "multiple windows" ambiguity).
+            if targetIsFullscreen {
+                if let pid = getOwnerPID(for: spaceID),
+                   let app = NSRunningApplication(processIdentifier: pid) {
+                    
+                    // A very short delay ensures the Window Server registers the space switch intent
+                    // before we force the app activation.
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                        app.activate(options: .activateIgnoringOtherApps)
+                    }
+                }
+            }
             return
         }
         
-        // 4. Fallback B: Mission Control UI Scripting
-        // This is the reliable (but slower) method for Fullscreen apps.
+        // 4. Fallback: Mission Control UI Scripting
         if let num = targetNum {
             switchViaMissionControl(to: num)
         }
@@ -89,8 +105,6 @@ class SpaceHelper {
                 if labelWindow.spaceId == spaceID {
                     targetWindow = labelWindow
                 } else if labelWindow.isVisible {
-                    // Collect any other visible windows. These are the ones causing the
-                    // "Last Active Space" ambiguity in the Window Server during rapid switching.
                     windowsToHide.append(labelWindow)
                 }
             }
@@ -98,12 +112,11 @@ class SpaceHelper {
         
         guard let window = targetWindow else { return false }
         
-        // 2. CRITICAL FIX: "Hide Others" Logic
-        // For Desktop targets: Hiding other windows prevents the OS from reverting to a previous space (A)
-        // when switching B -> B (or similar) or B -> D. It resolves ambiguity.
-        // For Fullscreen targets: Do NOT hide others. Hiding the window on the current desktop (B)
-        // removes the app's anchor. If the target window (C) is auxiliary or not fully anchored,
-        // the OS sees NO valid windows and reverts to the Last Active Space (A), causing a bounce.
+        // 2. "Hide Others" Logic
+        // For Desktop targets: We hide other windows to remove ambiguity about "Last Active Space".
+        // This forces the OS to switch to the target window.
+        // For Fullscreen targets: We MUST NOT hide the desktop window. Doing so removes the app's
+        // anchor on the main desktop, causing the OS to panic and revert to the previous space.
         if !isFullscreen {
             for other in windowsToHide {
                 other.orderOut(nil)
@@ -116,6 +129,22 @@ class SpaceHelper {
         NSApp.activate(ignoringOtherApps: true)
         
         return true
+    }
+    
+    private static func getOwnerPID(for spaceID: String) -> Int32? {
+        let conn = _CGSDefaultConnection()
+        guard let displays = CGSCopyManagedDisplaySpaces(conn) as? [NSDictionary] else { return nil }
+        
+        for display in displays {
+            guard let spaces = display["Spaces"] as? [[String: Any]] else { continue }
+            for space in spaces {
+                guard let managedID = space["ManagedSpaceID"] as? Int,
+                      String(managedID) == spaceID else { continue }
+                
+                return space["pid"] as? Int32 ?? space["owner pid"] as? Int32
+            }
+        }
+        return nil
     }
     
     private static func switchViaMissionControl(to targetNum: Int) {
