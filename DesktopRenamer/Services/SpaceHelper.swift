@@ -65,14 +65,11 @@ class SpaceHelper {
         }
         
         // 3. Fallback A: Activate our own Space Label Window
-        // VIABILITY CHECK: This method is fast, but causes "bouncing" bugs (A->B->C->B reverts to A)
-        // if the OS thinks the app belongs on a different space.
-        // It is NOT viable for Fullscreen targets (causes jumps), but it IS viable for Desktop targets
-        // if we forcefully hide other windows to resolve the ambiguity.
-        if !targetIsFullscreen {
-            if switchByActivatingOwnWindow(for: spaceID) {
-                return
-            }
+        // We attempt this for ALL spaces now.
+        // For Desktops: We use "Hide Others" to prevent reversion.
+        // For Fullscreen: We skip "Hide Others" to prevent bouncing, but still attempt fast activation.
+        if switchByActivatingOwnWindow(for: spaceID, isFullscreen: targetIsFullscreen) {
+            return
         }
         
         // 4. Fallback B: Mission Control UI Scripting
@@ -82,7 +79,7 @@ class SpaceHelper {
         }
     }
     
-    private static func switchByActivatingOwnWindow(for spaceID: String) -> Bool {
+    private static func switchByActivatingOwnWindow(for spaceID: String, isFullscreen: Bool) -> Bool {
         var targetWindow: SpaceLabelWindow? = nil
         var windowsToHide: [SpaceLabelWindow] = []
         
@@ -101,12 +98,16 @@ class SpaceHelper {
         
         guard let window = targetWindow else { return false }
         
-        // 2. CRITICAL FIX: Temporarily hide all other windows.
-        // If we don't do this, and you quickly switch A -> B -> C -> B, the OS might see
-        // the window on A as "more recently active" than B, and switch to A instead.
-        // By hiding A, B becomes the *only* candidate for activation.
-        for other in windowsToHide {
-            other.orderOut(nil)
+        // 2. CRITICAL FIX: "Hide Others" Logic
+        // For Desktop targets: Hiding other windows prevents the OS from reverting to a previous space (A)
+        // when switching B -> B (or similar) or B -> D. It resolves ambiguity.
+        // For Fullscreen targets: Do NOT hide others. Hiding the window on the current desktop (B)
+        // removes the app's anchor. If the target window (C) is auxiliary or not fully anchored,
+        // the OS sees NO valid windows and reverts to the Last Active Space (A), causing a bounce.
+        if !isFullscreen {
+            for other in windowsToHide {
+                other.orderOut(nil)
+            }
         }
         
         // 3. Force Activation
