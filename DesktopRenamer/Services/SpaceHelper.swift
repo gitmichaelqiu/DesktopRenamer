@@ -79,8 +79,11 @@ class SpaceHelper {
     private static func switchByActivatingOwnWindow(for spaceID: String) -> Bool {
         for window in NSApp.windows {
             if let labelWindow = window as? SpaceLabelWindow, labelWindow.spaceId == spaceID {
-                NSApp.activate(ignoringOtherApps: true)
+                // FIX: Swap order to prevent double-switching bug (Previous -> Target).
+                // By ordering front first, we set the context for activation so macOS
+                // knows exactly which window (and space) we intend to focus.
                 labelWindow.makeKeyAndOrderFront(nil)
+                NSApp.activate(ignoringOtherApps: true)
                 return true
             }
         }
