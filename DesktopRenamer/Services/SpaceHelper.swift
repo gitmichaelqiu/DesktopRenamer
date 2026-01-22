@@ -35,10 +35,12 @@ class SpaceHelper {
         // 1. Resolve Target Space Info
         var targetNum: Int? = nil
         var shouldUseShortcut = true
+        var targetIsFullscreen = false
         
         if let state = getSystemState(),
            let targetSpace = state.spaces.first(where: { $0.id == spaceID }) {
             targetNum = targetSpace.num
+            targetIsFullscreen = targetSpace.isFullscreen
             
             // If we are already on the target space, stop.
             if state.currentUUID == spaceID { return }
@@ -63,31 +65,56 @@ class SpaceHelper {
         }
         
         // 3. Fallback A: Activate our own Space Label Window
-        // We use this for Fullscreen spaces as well.
-        // Since Space Label Windows are now correctly created for fullscreen apps,
-        // activating them should trigger the OS to switch to that space.
-        if switchByActivatingOwnWindow(for: spaceID) {
-            return
+        // VIABILITY CHECK: This method is fast, but causes "bouncing" bugs (A->B->C->B reverts to A)
+        // if the OS thinks the app belongs on a different space.
+        // It is NOT viable for Fullscreen targets (causes jumps), but it IS viable for Desktop targets
+        // if we forcefully hide other windows to resolve the ambiguity.
+        if !targetIsFullscreen {
+            if switchByActivatingOwnWindow(for: spaceID) {
+                return
+            }
         }
         
         // 4. Fallback B: Mission Control UI Scripting
+        // This is the reliable (but slower) method for Fullscreen apps.
         if let num = targetNum {
             switchViaMissionControl(to: num)
         }
     }
     
     private static func switchByActivatingOwnWindow(for spaceID: String) -> Bool {
+        var targetWindow: SpaceLabelWindow? = nil
+        var windowsToHide: [SpaceLabelWindow] = []
+        
+        // 1. Identify Target and Potential Conflict Windows
         for window in NSApp.windows {
-            if let labelWindow = window as? SpaceLabelWindow, labelWindow.spaceId == spaceID {
-                // FIX: Swap order to prevent double-switching bug (Previous -> Target).
-                // By ordering front first, we set the context for activation so macOS
-                // knows exactly which window (and space) we intend to focus.
-                labelWindow.makeKeyAndOrderFront(nil)
-                NSApp.activate(ignoringOtherApps: true)
-                return true
+            if let labelWindow = window as? SpaceLabelWindow {
+                if labelWindow.spaceId == spaceID {
+                    targetWindow = labelWindow
+                } else if labelWindow.isVisible {
+                    // Collect any other visible windows. These are the ones causing the
+                    // "Last Active Space" ambiguity in the Window Server during rapid switching.
+                    windowsToHide.append(labelWindow)
+                }
             }
         }
-        return false
+        
+        guard let window = targetWindow else { return false }
+        
+        // 2. CRITICAL FIX: Temporarily hide all other windows.
+        // If we don't do this, and you quickly switch A -> B -> C -> B, the OS might see
+        // the window on A as "more recently active" than B, and switch to A instead.
+        // By hiding A, B becomes the *only* candidate for activation.
+        for other in windowsToHide {
+            other.orderOut(nil)
+        }
+        
+        // 3. Force Activation
+        window.orderFrontRegardless()
+        window.makeKey()
+        NSApp.activate(ignoringOtherApps: true)
+        
+        return true
     }
     
     private static func switchViaMissionControl(to targetNum: Int) {
