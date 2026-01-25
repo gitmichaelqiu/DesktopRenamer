@@ -150,3 +150,18 @@ class SwitchToSpaceCommand: NSScriptCommand {
         return nil
     }
 }
+
+class RenameSpaceCommand: NSScriptCommand {
+    override func performDefaultImplementation() -> Any? {
+        guard let spaceID = self.directParameter as? String,
+              let arguments = self.evaluatedArguments,
+              let newName = arguments["newName"] as? String else { return nil }
+        
+        DispatchQueue.main.async {
+            if let manager = AppDelegate.shared.spaceManager {
+                manager.renameSpace(spaceID, to: newName)
+            }
+        }
+        return nil
+    }
+}
