@@ -364,7 +364,23 @@ class SpaceHelper {
         
         var globalDesktopCounter = 0
         
-        for display in displays {
+        // SORT: Ensure displays are processed in the order macOS assigns shortcuts (Main then others).
+        // NSScreen.screens[0] is Main. The order typically matches the shortcut assignment.
+        let screenOrder = NSScreen.screens.compactMap { screen -> String? in
+            guard let id = screen.deviceDescription[NSDeviceDescriptionKey("NSScreenNumber")] as? CGDirectDisplayID else { return nil }
+            guard let uuid = CGDisplayCreateUUIDFromDisplayID(id)?.takeRetainedValue() else { return nil }
+            return CFUUIDCreateString(nil, uuid) as String
+        }
+        
+        let sortedDisplays = displays.sorted { d1, d2 in
+            guard let id1 = d1["Display Identifier"] as? String,
+                  let id2 = d2["Display Identifier"] as? String else { return false }
+            let idx1 = screenOrder.firstIndex(of: id1) ?? Int.max
+            let idx2 = screenOrder.firstIndex(of: id2) ?? Int.max
+            return idx1 < idx2
+        }
+        
+        for display in sortedDisplays {
             guard let displayID = display["Display Identifier"] as? String,
                   let spaces = display["Spaces"] as? [[String: Any]] else { continue }
             

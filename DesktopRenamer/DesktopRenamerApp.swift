@@ -112,15 +112,30 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         guard url.scheme == "desktoprenamer",
               let components = URLComponents(url: url, resolvingAgainstBaseURL: true),
               components.host == "switch",
-              let queryItems = components.queryItems,
-              let numString = queryItems.first(where: { $0.name == "num" })?.value,
-              let spaceNum = Int(numString)
+              let queryItems = components.queryItems
         else { return }
 
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
-            guard let manager = self.spaceManager else { return }
-            if let space = manager.spaceNameDict.first(where: { $0.num == spaceNum }) {
-                manager.switchToSpace(space)
+        // Priority 1: UUID (Unique across all displays)
+        if let uuid = queryItems.first(where: { $0.name == "uuid" })?.value {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+                guard let manager = self.spaceManager else { return }
+                if let space = manager.spaceNameDict.first(where: { $0.id == uuid }) {
+                    manager.switchToSpace(space)
+                }
+            }
+            return
+        }
+        
+        // Priority 2: Num (Legacy / Ambiguous on multi-display)
+        if let numString = queryItems.first(where: { $0.name == "num" })?.value,
+           let spaceNum = Int(numString) {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+                guard let manager = self.spaceManager else { return }
+                // Fallback: This might pick the wrong display if numbers are duplicated (1, 1).
+                // But strictly speaking, it picks the *first* match.
+                if let space = manager.spaceNameDict.first(where: { $0.num == spaceNum }) {
+                    manager.switchToSpace(space)
+                }
             }
         }
     }
