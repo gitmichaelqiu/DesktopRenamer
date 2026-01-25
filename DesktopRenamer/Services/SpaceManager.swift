@@ -300,6 +300,13 @@ class SpaceManager: ObservableObject {
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.5, execute: workItem)
     }
     
+    struct WidgetSpace: Codable {
+        let id: String
+        let name: String
+        let num: Int
+        let displayID: String
+    }
+
     private func performWidgetUpdate() {
         guard let defaults = UserDefaults(suiteName: SpaceManager.appGroupId) else { return }
         
@@ -308,18 +315,35 @@ class SpaceManager: ObservableObject {
         // Check if current space is desktop
         let isDesktop = !(spaceNameDict.first(where: { $0.id == currentSpaceUUID })?.isFullscreen ?? false)
         
-        let sortedSpaces = spaceNameDict.sorted { $0.num < $1.num }
-        let allSpaceNames = sortedSpaces.map { space -> String in
-            if space.customName.isEmpty {
-                return String(format: NSLocalizedString("Space.DefaultName", comment: ""), space.num)
+        // Prepare structured data for Widget
+        let sortedSpaces = spaceNameDict.sorted {
+            if $0.displayID != $1.displayID {
+                return $0.displayID < $1.displayID
             }
-            return space.customName
+            return $0.num < $1.num
         }
+        
+        let widgetSpaces = sortedSpaces.map { space in
+            WidgetSpace(
+                id: space.id,
+                name: space.customName.isEmpty ? String(format: NSLocalizedString("Space.DefaultName", comment: ""), space.num) : space.customName,
+                num: space.num,
+                displayID: space.displayID
+            )
+        }
+        
+        if let data = try? JSONEncoder().encode(widgetSpaces) {
+            defaults.set(data, forKey: "widget_spacesData")
+        }
+        
+        // Legacy fields for backward compatibility or simple widgets
+        let allSpaceNames = sortedSpaces.map { $0.customName.isEmpty ? "\($0.num)" : $0.customName }
+        defaults.set(allSpaceNames, forKey: "widget_allSpaces")
         
         defaults.set(name, forKey: "widget_spaceName")
         defaults.set(num, forKey: "widget_spaceNum")
         defaults.set(isDesktop, forKey: "widget_isDesktop")
-        defaults.set(allSpaceNames, forKey: "widget_allSpaces")
+        defaults.set(currentSpaceUUID, forKey: "widget_currentSpaceUUID")
         
         defaults.synchronize()
         WidgetCenter.shared.reloadAllTimelines()

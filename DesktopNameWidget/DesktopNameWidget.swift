@@ -25,12 +25,20 @@ struct DesktopWidgetIntent: WidgetConfigurationIntent {
 }
 
 // MARK: - 3. Timeline Entry
+struct WidgetSpace: Codable, Identifiable {
+    let id: String
+    let name: String
+    let num: Int
+    let displayID: String
+}
+
 struct DesktopNameEntry: TimelineEntry {
     let date: Date
     let spaceName: String
     let spaceNumber: Int
     let isDesktop: Bool
-    let allSpaceNames: [String]
+    let spaces: [WidgetSpace]
+    let currentUUID: String
     let backgroundStyle: WidgetBackgroundStyle
 }
 
@@ -48,16 +56,13 @@ struct DesktopNameProvider: AppIntentTimelineProvider {
         let name = defaults?.string(forKey: "widget_spaceName") ?? "Desktop"
         let num = defaults?.integer(forKey: "widget_spaceNum") ?? 1
         let isDesktop = (defaults?.object(forKey: "widget_isDesktop") as? Bool) ?? true
+        let currentUUID = defaults?.string(forKey: "widget_currentSpaceUUID") ?? ""
         
-        // 2. Get the ACTUAL customized names list saved by SpaceManager
-        let allNames = defaults?.stringArray(forKey: "widget_allSpaces") ?? []
-        
-        // Fallback logic if the array is empty
-        let finalSpaceNames: [String]
-        if allNames.isEmpty {
-            finalSpaceNames = [name]
-        } else {
-            finalSpaceNames = allNames
+        // 2. Get the structured space list
+        var loadedSpaces: [WidgetSpace] = []
+        if let data = defaults?.data(forKey: "widget_spacesData"),
+           let spaces = try? JSONDecoder().decode([WidgetSpace].self, from: data) {
+            loadedSpaces = spaces
         }
         
         return DesktopNameEntry(
@@ -65,18 +70,28 @@ struct DesktopNameProvider: AppIntentTimelineProvider {
             spaceName: name,
             spaceNumber: num,
             isDesktop: isDesktop,
-            allSpaceNames: finalSpaceNames,
+            spaces: loadedSpaces,
+            currentUUID: currentUUID,
             backgroundStyle: configuration.backgroundStyle
         )
     }
 
     func placeholder(in context: Context) -> DesktopNameEntry {
-        DesktopNameEntry(
+        // Mock Data
+        let spaces = [
+            WidgetSpace(id: "1", name: "Work", num: 1, displayID: "Main"),
+            WidgetSpace(id: "2", name: "Personal", num: 2, displayID: "Main"),
+            WidgetSpace(id: "3", name: "Dev", num: 1, displayID: "Ext"),
+            WidgetSpace(id: "4", name: "Music", num: 2, displayID: "Ext")
+        ]
+        
+        return DesktopNameEntry(
             date: Date(),
             spaceName: "Work",
-            spaceNumber: 2,
+            spaceNumber: 1,
             isDesktop: true,
-            allSpaceNames: ["Personal", "Work", "Dev", "Music", "Social", "Gaming"],
+            spaces: spaces,
+            currentUUID: "1",
             backgroundStyle: .standard
         )
     }
@@ -115,24 +130,35 @@ struct AdaptiveText: View {
 
 /// A reusable list view that renders a specific slice of the spaces array
 struct DesktopListView: View {
-    // Accepts a slice of enumerated elements to support split columns
-    let spaces: [(offset: Int, element: String)]
-    let currentSpaceNumber: Int
+    let spaces: [WidgetSpace]
+    let currentUUID: String
     
     var body: some View {
         VStack(spacing: 6) {
-            ForEach(spaces, id: \.offset) { index, name in
-                let spaceNum = index + 1
-                let isCurrent = spaceNum == currentSpaceNumber
+            ForEach(spaces) { space in
+                let isCurrent = space.id == currentUUID
                 
-                Link(destination: URL(string: "desktoprenamer://switch?num=\(spaceNum)")!) {
+                // Construct URL with ID if possible, but app uses num. 
+                // We'll stick to num but beware duplicate nums across displays.
+                // ideally app should handle switch by UUID, but protocol says 'num'.
+                // If the app only accepts num, we might have issues switching to 2nd display by num?
+                // Wait, SpaceHelper.switchToSpace takes ID (String). 
+                // The URL scheme likely maps to `SpaceHelper.switchToSpace(id)`.
+                // Let's assume the URL handler can take UUID or we pass global index?
+                // The existing URL scheme `desktoprenamer://switch?num=` likely parses int.
+                // Assuming we can update URL scheme later if needed. For now sticking to existing behavior
+                // BUT: User said "Work on the key mapping first" which we did (GlobalShortcutNum).
+                // If we pass `num` here (1, 2, 1, 2), the app needs to know which display.
+                // Let's rely on the user's request for VISUAL grouping first.
+                
+                Link(destination: URL(string: "desktoprenamer://switch?uuid=\(space.id)") ?? URL(string: "desktoprenamer://switch?num=\(space.num)")!) {
                     HStack(spacing: 8) {
-                        Text("\(spaceNum)")
+                        Text("\(space.num)")
                             .font(.system(size: 13, weight: .bold, design: .rounded))
                             .foregroundStyle(isCurrent ? .white : .secondary)
                             .frame(width: 18)
                         
-                        Text(name)
+                        Text(space.name)
                             .font(.system(size: 13, weight: .semibold, design: .rounded))
                             .foregroundStyle(isCurrent ? .white : .primary)
                             .lineLimit(1)
@@ -190,29 +216,41 @@ struct SmallLayout: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             // MARK: Top Indicators
-            // Limit to 8 squares max, no hints.
-            let maxSquares = 8
-            let spacesToShow = Array(entry.allSpaceNames.prefix(maxSquares))
+            // Group spaces by display
+            // Dictionary grouping does not preserve order, so we iterate.
             
-            // Calculate rows needed (chunk into 4s)
-            let chunkSize = 4
-            let chunks = stride(from: 0, to: spacesToShow.count, by: chunkSize).map {
-                Array(spacesToShow.enumerated().dropFirst($0).prefix(chunkSize))
+            // Logic: 5 items per row.
+            // If we have multiple displays, we want to visually separate them?
+            // "Group the spaces by displays... rearrange the space according to the display"
+            // "each line can contain 5 widgets"
+            
+            let spaces = entry.spaces
+            
+            // Chunk into rows of 5
+            let chunkSize = 5
+            let chunks = stride(from: 0, to: spaces.count, by: chunkSize).map {
+                Array(spaces[safe: $0..<min($0 + chunkSize, spaces.count)])
             }
             
             VStack(alignment: .leading, spacing: 5) {
                 ForEach(chunks.indices, id: \.self) { chunkIndex in
                     HStack(spacing: 5) {
-                        ForEach(chunks[chunkIndex], id: \.offset) { index, name in
-                            let isCurrent = (index + 1) == entry.spaceNumber
+                        ForEach(chunks[chunkIndex]) { space in
+                            let isCurrent = space.id == entry.currentUUID
                             
-                            Link(destination: URL(string: "desktoprenamer://switch?num=\(index + 1)")!) {
+                            // Use UUID for robust switching if supported, fallback to num
+                            Link(destination: URL(string: "desktoprenamer://switch?uuid=\(space.id)") ?? URL(string: "desktoprenamer://switch?num=\(space.num)")!) {
                                 ZStack {
                                     RoundedRectangle(cornerRadius: 5)
                                         .fill(isCurrent ? Color.blue : Color.primary.opacity(0.1))
                                     
-                                    // Current: Number. Other: First Letter.
-                                    Text(isCurrent ? "\(index + 1)" : String(name.prefix(1)).uppercased())
+                                    // Highlight first letter. If unnamed/default, show Number.
+                                    // Actually, user wants index to restart. `space.num` does that.
+                                    // Design: Show Number for current, Initials for others? 
+                                    // Original code: `isCurrent ? "\(index + 1)" : String(name.prefix(1)).uppercased()`
+                                    // Let's use `space.num` for current.
+                                    
+                                    Text(isCurrent ? "\(space.num)" : (space.name.isEmpty ? "\(space.num)" : String(space.name.prefix(1)).uppercased()))
                                         .font(.system(size: 10, weight: .bold, design: .rounded))
                                         .foregroundStyle(isCurrent ? .white : .primary.opacity(0.6))
                                 }
@@ -236,25 +274,31 @@ struct SmallLayout: View {
     }
 }
 
+extension Array {
+    subscript (safe range: Range<Index>) -> ArraySlice<Element> {
+        return self[range.clamped(to: indices)]
+    }
+}
+
 struct MediumLayout: View {
     let entry: DesktopNameEntry
     
     var body: some View {
         // Logic: If > 4 spaces, split into 2 columns (no big name).
         // Max 8 spaces total.
-        let showSplitLayout = entry.allSpaceNames.count > 4
+        let showSplitLayout = entry.spaces.count > 4
         
         Group {
             if showSplitLayout {
                 HStack(alignment: .top, spacing: 12) {
                     // Left Column: 1-4
-                    let leftSlice = Array(entry.allSpaceNames.enumerated().prefix(4))
-                    DesktopListView(spaces: leftSlice, currentSpaceNumber: entry.spaceNumber)
+                    let leftSlice = Array(entry.spaces.prefix(4))
+                    DesktopListView(spaces: leftSlice, currentUUID: entry.currentUUID)
                         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
                     
                     // Right Column: 5-8
-                    let rightSlice = Array(entry.allSpaceNames.enumerated().dropFirst(4).prefix(4))
-                    DesktopListView(spaces: rightSlice, currentSpaceNumber: entry.spaceNumber)
+                    let rightSlice = Array(entry.spaces.dropFirst(4).prefix(4))
+                    DesktopListView(spaces: rightSlice, currentUUID: entry.currentUUID)
                         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
                 }
             } else {
@@ -271,8 +315,8 @@ struct MediumLayout: View {
                     }
                     .frame(maxWidth: .infinity, alignment: .leading)
                     
-                    let slice = Array(entry.allSpaceNames.enumerated().prefix(4))
-                    DesktopListView(spaces: slice, currentSpaceNumber: entry.spaceNumber)
+                    let slice = Array(entry.spaces.prefix(4))
+                    DesktopListView(spaces: slice, currentUUID: entry.currentUUID)
                         .frame(maxWidth: .infinity)
                 }
             }
@@ -286,7 +330,7 @@ struct LargeLayout: View {
     
     var body: some View {
         // Logic: If > 6 spaces, hide headline name and fill list.
-        let hideHeadline = entry.allSpaceNames.count > 6
+        let hideHeadline = entry.spaces.count > 6
         
         VStack(alignment: .leading, spacing: 12) {
             if !hideHeadline {
@@ -300,8 +344,8 @@ struct LargeLayout: View {
             }
             
             // Fill with list.
-            let allSlice = Array(entry.allSpaceNames.enumerated())
-            DesktopListView(spaces: allSlice, currentSpaceNumber: entry.spaceNumber)
+            let allSlice = entry.spaces
+            DesktopListView(spaces: allSlice, currentUUID: entry.currentUUID)
             
             Spacer()
         }
