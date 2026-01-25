@@ -7,6 +7,7 @@ struct DesktopSpace: Identifiable, Codable, Equatable {
     var displayID: String
     var isFullscreen: Bool
     var appName: String?
+    var globalShortcutNum: Int? // Unified index for keyboard shortcuts (1, 2, 3...) across displays
     
     // Custom decoding to handle legacy data
     init(from decoder: Decoder) throws {
@@ -17,15 +18,17 @@ struct DesktopSpace: Identifiable, Codable, Equatable {
         displayID = try container.decodeIfPresent(String.self, forKey: .displayID) ?? "Main"
         isFullscreen = try container.decodeIfPresent(Bool.self, forKey: .isFullscreen) ?? false
         appName = try container.decodeIfPresent(String.self, forKey: .appName)
+        globalShortcutNum = try container.decodeIfPresent(Int.self, forKey: .globalShortcutNum)
     }
     
     // Default init
-    init(id: String, customName: String, num: Int, displayID: String, isFullscreen: Bool = false, appName: String? = nil) {
+    init(id: String, customName: String, num: Int, displayID: String, isFullscreen: Bool = false, appName: String? = nil, globalShortcutNum: Int? = nil) {
         self.id = id
         self.customName = customName
         self.num = num
         self.displayID = displayID
         self.isFullscreen = isFullscreen
         self.appName = appName
+        self.globalShortcutNum = globalShortcutNum
     }
 }

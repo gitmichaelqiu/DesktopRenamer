@@ -34,12 +34,14 @@ class SpaceHelper {
         
         // 1. Resolve Target Space Info
         var targetNum: Int? = nil
+        var targetGlobalNum: Int? = nil
         var shouldUseShortcut = true
         var targetIsFullscreen = false
         
         if let state = getSystemState(),
            let targetSpace = state.spaces.first(where: { $0.id == spaceID }) {
             targetNum = targetSpace.num
+            targetGlobalNum = targetSpace.globalShortcutNum
             targetIsFullscreen = targetSpace.isFullscreen
             
             // If we are already on the target space, stop.
@@ -58,9 +60,17 @@ class SpaceHelper {
         
         // 2. PRIORITY: Simulate Keyboard Shortcut (Control + Number)
         // Only valid for standard desktops.
-        if shouldUseShortcut, let num = targetNum {
-            if isShortcutEnabled(for: num) && simulateDesktopShortcut(for: num) {
-                return
+        // multi-display support: use global shortcut index if available
+        if shouldUseShortcut {
+            if let globalNum = targetGlobalNum {
+                if isShortcutEnabled(for: globalNum) && simulateDesktopShortcut(for: globalNum) {
+                    return
+                }
+            } else if let localNum = targetNum {
+                // Fallback to local num if global is missing (should verify if this is ever needed/correct)
+                if isShortcutEnabled(for: localNum) && simulateDesktopShortcut(for: localNum) {
+                    return
+                }
             }
         }
         
@@ -352,6 +362,8 @@ class SpaceHelper {
             ? activeDisplay
             : (displays.first { ($0["Display Identifier"] as? String) == "Main" }?["Display Identifier"] as? String ?? activeDisplay)
         
+        var globalDesktopCounter = 0
+        
         for display in displays {
             guard let displayID = display["Display Identifier"] as? String,
                   let spaces = display["Spaces"] as? [[String: Any]] else { continue }
@@ -363,12 +375,17 @@ class SpaceHelper {
                 let isFullscreen = space["TileLayoutManager"] != nil
                 
                 var appName: String? = nil
+                var globalShortcutNum: Int? = nil
                 
                 if isFullscreen {
                     // Try to extract PID from space dictionary to get Name, but do NOT store PID in model
                     if let p = space["pid"] as? Int32 ?? space["owner pid"] as? Int32 {
                         appName = NSRunningApplication(processIdentifier: p)?.localizedName
                     }
+                } else {
+                    // Only standard desktops get a global shortcut number
+                    globalDesktopCounter += 1
+                    globalShortcutNum = globalDesktopCounter
                 }
 
                 regularIndex += 1
@@ -378,7 +395,8 @@ class SpaceHelper {
                     num: regularIndex,
                     displayID: displayID,
                     isFullscreen: isFullscreen,
-                    appName: appName
+                    appName: appName,
+                    globalShortcutNum: globalShortcutNum
                 ))
                 
                 if let currentDict = display["Current Space"] as? [String: Any],
