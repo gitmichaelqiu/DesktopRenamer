@@ -103,11 +103,17 @@ class GetAllSpacesCommand: NSScriptCommand {
         return runOnMain {
             guard let manager = AppDelegate.shared.spaceManager else { return "" }
             
-            // Format: "UUID|Name\nUUID|Name"
-            let sortedSpaces = manager.spaceNameDict.sorted { $0.num < $1.num }
+            // Format: "UUID|Name|DisplayID|Num"
+            // Sort by Display then Num for cleaner default output (though client should handle sorting too)
+            let sortedSpaces = manager.spaceNameDict.sorted {
+                if $0.displayID != $1.displayID { return $0.displayID < $1.displayID }
+                return $0.num < $1.num
+            }
+            
             let lines = sortedSpaces.map { space in
                 let name = manager.getSpaceName(space.id)
-                return "\(space.id)|\(name)"
+                // Use pipe delimiter
+                return "\(space.id)|\(name)|\(space.displayID)|\(space.num)"
             }
             return lines.joined(separator: "\n")
         }
