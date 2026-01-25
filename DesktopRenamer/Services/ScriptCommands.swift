@@ -104,7 +104,8 @@ class GetAllSpacesCommand: NSScriptCommand {
             guard let manager = AppDelegate.shared.spaceManager else { return "" }
             
             // Format: "UUID|Name|DisplayID|Num"
-            // Sort by Display then Num for cleaner default output (though client should handle sorting too)
+            // We want to group by Display. To make specific displays contiguous, we sort by UUID (or Name).
+            // Sorting by displayID (UUID) matches previous behavior.
             let sortedSpaces = manager.spaceNameDict.sorted {
                 if $0.displayID != $1.displayID { return $0.displayID < $1.displayID }
                 return $0.num < $1.num
@@ -112,12 +113,26 @@ class GetAllSpacesCommand: NSScriptCommand {
             
             let lines = sortedSpaces.map { space in
                 let name = manager.getSpaceName(space.id)
-                // Use pipe delimiter
-                return "\(space.id)|\(name)|\(space.displayID)|\(space.num)"
+                // Resolve Display Name from UUID
+                let displayName = getDisplayName(for: space.displayID)
+                return "\(space.id)|\(name)|\(displayName)|\(space.num)"
             }
             return lines.joined(separator: "\n")
         }
     }
+}
+
+private func getDisplayName(for uuidString: String) -> String {
+    for screen in NSScreen.screens {
+        guard let id = screen.deviceDescription[NSDeviceDescriptionKey("NSScreenNumber")] as? CGDirectDisplayID else { continue }
+        guard let uuid = CGDisplayCreateUUIDFromDisplayID(id)?.takeRetainedValue() else { continue }
+        let uuidStr = CFUUIDCreateString(nil, uuid) as String
+        if uuidStr == uuidString {
+            return screen.localizedName
+        }
+    }
+    // Fallback if not found (e.g. disconnected) or if main
+    return "Display"
 }
 
 class SwitchToSpaceCommand: NSScriptCommand {
