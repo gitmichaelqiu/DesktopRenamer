@@ -10,7 +10,7 @@ enum WidgetBackgroundStyle: String, AppEnum {
     static var typeDisplayRepresentation: TypeDisplayRepresentation = "Background Style"
 
     static var caseDisplayRepresentations: [WidgetBackgroundStyle: DisplayRepresentation] = [
-        .standard: "Standard (Adaptive)",
+        .standard: "Standard",
         .transparent: "Transparent"
     ]
 }
