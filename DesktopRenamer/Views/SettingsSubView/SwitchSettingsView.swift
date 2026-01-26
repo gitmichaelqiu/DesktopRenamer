@@ -12,7 +12,7 @@ struct SwitchSettingsView: View {
                 SettingsSection("Keyboard Shortcuts") {
                     // Switch Left
                     VStack(spacing: 0) {
-                        SettingsRow("Switch to left space") {
+                        SettingsRow("Switch to left space", helperText: "If you want to use Control + Arrow, disable the system's one in Settings → Keyboard → Keyboard Shortcuts... → Mission Control.") {
                             HStack {
                                 Text(hotkeyManager.description(for: .switchLeft))
                                     .foregroundColor(.secondary)
@@ -53,7 +53,7 @@ struct SwitchSettingsView: View {
                 
                 // MARK: - Gesture Override
                 SettingsSection("Trackpad Switch Gesture Override") {
-                    SettingsRow("Enable switch gesture override", helperText: "Replaces system switch gestures with instant space switching.\n\nRequired: You must disable 'Swipe between full screen apps' in System Settings > Trackpad > More Gestures or change to different number of fingers to prevent conflicts.\n\nNotice, you must click at the fullscreen app to make it active to avoid issues when leaving the app.") {
+                    SettingsRow("Enable switch gesture override", helperText: "Replaces system switch gestures with instant space switching.\n\nRequired: You must disable 'Swipe between full screen apps' in System Settings → Trackpad → More Gestures or change to different number of fingers to prevent conflicts.\n\nNotice, you must click at the fullscreen app to make it active to avoid issues when leaving the app.") {
                         Toggle("", isOn: $gestureManager.isEnabled)
                             .toggleStyle(.switch)
                             .labelsHidden()
