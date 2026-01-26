@@ -49,10 +49,10 @@
       "shouldTranslate" : false
     },
     "↺" : {
-
+      "shouldTranslate" : false
     },
     "◉" : {
-
+      "shouldTranslate" : false
     },
     "1. Go through desktops" : {
       "localizations" : {
@@ -641,7 +641,7 @@
       }
     },
     "No editable spaces (fullscreen only)" : {
-
+      "shouldTranslate" : false
     },
     "No new spaces detected yet..." : {
       "localizations" : {
@@ -703,17 +703,6 @@
         }
       }
     },
-    "Record" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "修改"
-          }
-        }
-      }
-    },
     "Recorded: %lld" : {
       "localizations" : {
         "zh-Hans" : {
@@ -771,12 +760,12 @@
     "Renamer" : {
       "shouldTranslate" : false
     },
-    "Replaces system switch gestures with instant space switching.\n\nRequired: You must disable 'Swipe between full screen apps' in System Settings > Trackpad > More Gestures to prevent conflicts." : {
+    "Replaces system switch gestures with instant space switching.\n\nRequired: You must disable 'Swipe between full screen apps' in System Settings > Trackpad > More Gestures or change to different number of fingers to prevent conflicts.\n\nNotice, you must click at the fullscreen app to make it active to avoid issues when leaving the app." : {
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "替换缓慢的系统切换手势，使用 DesktopRenamer 的更快切换方法。\n\n要求：必须在系统设置 → 触控板 → 更多手势中取消默认的切换手势。"
+            "value" : "替换缓慢的系统切换手势，使用 DesktopRenamer 的更快切换方法。\n\n要求：必须在系统设置 → 触控板 → 更多手势中取消默认的切换手势或选择不同数量的手指。\n\n在你切换到全屏App时，请点击App以保证切出App时不会出现问题。"
           }
         }
       }
@@ -1612,7 +1601,7 @@
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "needs_review",
+            "state" : "translated",
             "value" : "新快捷键"
           }
         }
