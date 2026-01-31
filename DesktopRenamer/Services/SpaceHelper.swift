@@ -447,11 +447,12 @@ class SpaceHelper {
 
     static func getCursorDisplayID() -> String? {
         let mouseLocation = NSEvent.mouseLocation
-        if let screen = NSScreen.screens.first(where: { NSMouseInRect(mouseLocation, $0.frame, false) }) {
-             let screenID = screen.deviceDescription[NSDeviceDescriptionKey("NSScreenNumber")] as? NSNumber ?? 0
-             return "\(screen.localizedName) (\(screenID))"
-        }
-        return nil
+        guard let screen = NSScreen.screens.first(where: { NSMouseInRect(mouseLocation, $0.frame, false) }) else { return nil }
+        
+        guard let id = screen.deviceDescription[NSDeviceDescriptionKey("NSScreenNumber")] as? CGDirectDisplayID else { return nil }
+        guard let uuidRef = CGDisplayCreateUUIDFromDisplayID(id) else { return nil }
+        let uuid = uuidRef.takeRetainedValue()
+        return CFUUIDCreateString(nil, uuid) as String
     }
 
     static func getCurrentSpaceID(for displayID: String) -> String? {
