@@ -78,8 +78,6 @@ struct SwitchSettingsView: View {
                                 Text("Active Window").tag(GestureManager.SwitchOverrideMode.activeWindow)
                             }
                             .labelsHidden()
-                            .pickerStyle(.segmented)
-                            .frame(width: 200)
                         }
                     }
                 }
