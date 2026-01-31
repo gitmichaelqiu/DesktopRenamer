@@ -54,6 +54,14 @@ class GestureManager: ObservableObject {
     // Settings
     private let kGestureEnabled = "GestureManager.Enabled"
     private let kFingerCount = "GestureManager.FingerCount"
+    private let kSwitchOverride = "GestureManager.SwitchOverride"
+    
+    public enum SwitchOverrideMode: String, CaseIterable, Identifiable {
+        case cursor = "Cursor"
+        case activeWindow = "Active Window"
+        
+        public var id: String { rawValue }
+    }
     
     @Published var isEnabled: Bool {
         didSet {
@@ -65,6 +73,12 @@ class GestureManager: ObservableObject {
     @Published var fingerCount: Int {
         didSet {
             UserDefaults.standard.set(fingerCount, forKey: kFingerCount)
+        }
+    }
+    
+    @Published var switchOverride: SwitchOverrideMode {
+        didSet {
+            UserDefaults.standard.set(switchOverride.rawValue, forKey: kSwitchOverride)
         }
     }
     
@@ -99,6 +113,13 @@ class GestureManager: ObservableObject {
         
         let savedCount = UserDefaults.standard.integer(forKey: kFingerCount)
         self.fingerCount = (savedCount == 3 || savedCount == 4) ? savedCount : 3
+        
+        let savedOverride = UserDefaults.standard.string(forKey: kSwitchOverride)
+        if let savedOverride = savedOverride, let mode = SwitchOverrideMode(rawValue: savedOverride) {
+            self.switchOverride = mode
+        } else {
+            self.switchOverride = .cursor
+        }
         
         GestureManager.sharedManager = self
         
@@ -351,12 +372,21 @@ class GestureManager: ObservableObject {
         lastSwitchTime = Date().timeIntervalSince1970
         guard let sm = spaceManager else { return }
         
-        DispatchQueue.main.async {
+        DispatchQueue.main.async { [weak self] in
+            guard let self = self else { return }
+            
+            var targetDisplayID: String? = nil
+            
+            if self.switchOverride == .cursor {
+                targetDisplayID = SpaceHelper.getCursorDisplayID()
+            }
+            // If .activeWindow, we pass nil, which causes SpaceManager to default to the currently active display
+            
             switch direction {
             case .next:
-                sm.switchToNextSpace()
+                sm.switchToNextSpace(onDisplayID: targetDisplayID)
             case .previous:
-                sm.switchToPreviousSpace()
+                sm.switchToPreviousSpace(onDisplayID: targetDisplayID)
             }
         }
     }

@@ -445,6 +445,29 @@ class SpaceHelper {
         }
     }
 
+    static func getCursorDisplayID() -> String? {
+        let mouseLocation = NSEvent.mouseLocation
+        if let screen = NSScreen.screens.first(where: { NSMouseInRect(mouseLocation, $0.frame, false) }) {
+             let screenID = screen.deviceDescription[NSDeviceDescriptionKey("NSScreenNumber")] as? NSNumber ?? 0
+             return "\(screen.localizedName) (\(screenID))"
+        }
+        return nil
+    }
+
+    static func getCurrentSpaceID(for displayID: String) -> String? {
+        let conn = _CGSDefaultConnection()
+        guard let displays = CGSCopyManagedDisplaySpaces(conn) as? [NSDictionary] else { return nil }
+        
+        for display in displays {
+            if let id = display["Display Identifier"] as? String, id == displayID,
+               let currentDict = display["Current Space"] as? [String: Any],
+               let currentID = currentDict["ManagedSpaceID"] as? Int {
+                return String(currentID)
+            }
+        }
+        return nil
+    }
+
     static func isPoint(_ point: CGPoint, inside screenFrame: CGRect) -> Bool {
         guard let primaryScreen = NSScreen.screens.first(where: { $0.frame.origin.x == 0 && $0.frame.origin.y == 0 }) else {
             return screenFrame.contains(point)
