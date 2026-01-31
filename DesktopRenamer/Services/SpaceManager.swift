@@ -478,13 +478,29 @@ class SpaceManager: ObservableObject {
         SpaceHelper.switchToSpace(space.id)
     }
     
-    func switchToPreviousSpace() {
-        // Find current space info
-        guard let current = spaceNameDict.first(where: { $0.id == currentSpaceUUID }) else { return }
+    func switchToPreviousSpace(onDisplayID displayID: String? = nil) {
+        var targetDisplayID = displayID
+        var currentSpaceID = currentSpaceUUID
         
-        // Use spaces from the CURRENT display based on the current space's displayID
+        // If a specific display is requested, find its current space
+        if let requestedDisplayID = displayID {
+            if let space = SpaceHelper.getCurrentSpaceID(for: requestedDisplayID) {
+                currentSpaceID = space
+                targetDisplayID = requestedDisplayID
+            } else {
+                return // Invalid display or state
+            }
+        }
+        
+        // Find current space info in our dictionary
+        guard let current = spaceNameDict.first(where: { $0.id == currentSpaceID }) else { return }
+        
+        // Double check display ID match if one was not constrained
+        if targetDisplayID == nil { targetDisplayID = current.displayID }
+        
+        // Use spaces from the TARGET display
         let displaySpaces = spaceNameDict
-            .filter { $0.displayID == current.displayID }
+            .filter { $0.displayID == targetDisplayID }
             .sorted { $0.num < $1.num }
         
         // Find index and move left
@@ -494,13 +510,29 @@ class SpaceManager: ObservableObject {
         switchToSpace(target)
     }
 
-    func switchToNextSpace() {
-        // Find current space info
-        guard let current = spaceNameDict.first(where: { $0.id == currentSpaceUUID }) else { return }
+    func switchToNextSpace(onDisplayID displayID: String? = nil) {
+        var targetDisplayID = displayID
+        var currentSpaceID = currentSpaceUUID
         
-        // Use spaces from the CURRENT display based on the current space's displayID
+        // If a specific display is requested, find its current space
+        if let requestedDisplayID = displayID {
+            if let space = SpaceHelper.getCurrentSpaceID(for: requestedDisplayID) {
+                currentSpaceID = space
+                targetDisplayID = requestedDisplayID
+            } else {
+                return // Invalid display or state
+            }
+        }
+        
+        // Find current space info in our dictionary
+        guard let current = spaceNameDict.first(where: { $0.id == currentSpaceID }) else { return }
+        
+        // Double check display ID match
+        if targetDisplayID == nil { targetDisplayID = current.displayID }
+        
+        // Use spaces from the TARGET display
         let displaySpaces = spaceNameDict
-            .filter { $0.displayID == current.displayID }
+            .filter { $0.displayID == targetDisplayID }
             .sorted { $0.num < $1.num }
         
         // Find index and move right

@@ -69,6 +69,18 @@ struct SwitchSettingsView: View {
                             }
                             .labelsHidden()
                         }
+                        
+                        Divider()
+                        
+                        SettingsRow("Switch display with") {
+                            Picker("", selection: $gestureManager.switchOverride) {
+                                Text("Cursor").tag(GestureManager.SwitchOverrideMode.cursor)
+                                Text("Active Window").tag(GestureManager.SwitchOverrideMode.activeWindow)
+                            }
+                            .labelsHidden()
+                            .pickerStyle(.segmented)
+                            .frame(width: 200)
+                        }
                     }
                 }
 

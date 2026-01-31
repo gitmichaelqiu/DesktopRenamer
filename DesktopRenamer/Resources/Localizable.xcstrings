@@ -114,6 +114,9 @@
         }
       }
     },
+    "Active Window" : {
+
+    },
     "Add" : {
       "localizations" : {
         "zh-Hans" : {
@@ -319,6 +322,9 @@
           }
         }
       }
+    },
+    "Cursor" : {
+
     },
     "Desktop" : {
       "shouldTranslate" : false
@@ -1947,6 +1953,9 @@
           }
         }
       }
+    },
+    "Switch display with" : {
+
     },
     "Switch to left space" : {
       "localizations" : {
