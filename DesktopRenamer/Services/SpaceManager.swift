@@ -206,7 +206,9 @@ class SpaceManager: ObservableObject {
             if self.spaceNameDict != newSpaceList {
                 self.spaceNameDict = newSpaceList
                 
-                self.indexCache.removeAll()
+                // Update index cache with currently detected spaces.
+                // We do NOT clear the cache here to preserve names for spaces/displays that might 
+                // be temporarily undetected (active display only, sleeping connection, etc).
                 for space in self.spaceNameDict where !space.customName.isEmpty && !space.isFullscreen {
                     let key = "\(space.displayID)|\(space.num)"
                     self.indexCache[key] = space.customName
