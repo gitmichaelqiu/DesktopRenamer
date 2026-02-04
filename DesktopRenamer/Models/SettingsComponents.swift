@@ -138,9 +138,10 @@ struct SliderSettingsRow<V>: View where V: BinaryFloatingPoint, V.Stride : Binar
                 Spacer()
                 
                 Button("↺") {
-                    value = defaultValue
+                    withAnimation {
+                        value = defaultValue
+                    }
                 }
-                .buttonStyle(.plain)
                 .help("Reset to default")
             }
             
