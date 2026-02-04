@@ -143,6 +143,7 @@ struct SliderSettingsRow<V>: View where V: BinaryFloatingPoint, V.Stride : Binar
                     }
                 }
                 .help("Reset to default")
+                .disabled(value == defaultValue)
             }
             
             // Row 2: Slider + Spacer + Value
