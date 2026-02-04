@@ -37,7 +37,7 @@ struct OverscrollIndicatorView: View {
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: edge == .leading ? .leading : .trailing)
             // Use explicit animation for the fade out transition
-            .animation(.easeOut(duration: 0.3), value: isFadingOut)
+            .animation(.easeOut(duration: 0.2), value: isFadingOut)
             // Use interactive spring for the drag gesture
             .animation(isFadingOut ? nil : .interactiveSpring(), value: progress)
         }
