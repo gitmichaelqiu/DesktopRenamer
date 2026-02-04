@@ -158,16 +158,23 @@ class SpaceHelper {
         // 3. Save Current Mouse Position
         let currentMouse = CGEvent(source: nil)?.location ?? grabPoint
         
-        // 4. Perform Drag Sequence
+        // 4. Perform Drag Sequence with NO Modifiers to avoid Control+Click (Right Click)
         let source = CGEventSource(stateID: .hidSystemState)
         
+        // Temporarily clear modifiers just for our events
+        // Note: We can't easily physical key-up, but we can set flags to 0 on the event.
+        
         // Move to grab point
-        let moveEvent = CGEvent(mouseEventSource: source, mouseType: .mouseMoved, mouseCursorPosition: grabPoint, mouseButton: .left)
-        moveEvent?.post(tap: .cghidEventTap)
+        if let moveEvent = CGEvent(mouseEventSource: source, mouseType: .mouseMoved, mouseCursorPosition: grabPoint, mouseButton: .left) {
+            moveEvent.flags = [] // Clear modifiers
+            moveEvent.post(tap: .cghidEventTap)
+        }
         
         // Click Down (Hold)
-        let downEvent = CGEvent(mouseEventSource: source, mouseType: .leftMouseDown, mouseCursorPosition: grabPoint, mouseButton: .left)
-        downEvent?.post(tap: .cghidEventTap)
+        if let downEvent = CGEvent(mouseEventSource: source, mouseType: .leftMouseDown, mouseCursorPosition: grabPoint, mouseButton: .left) {
+            downEvent.flags = [] // Clear modifiers (Essential to prevent Right Click if Ctrl is held)
+            downEvent.post(tap: .cghidEventTap)
+        }
         
         // Small delay to ensure grip
         usleep(50000) // 0.05s
@@ -175,22 +182,20 @@ class SpaceHelper {
         // 5. Trigger Space Switch
         switchToSpace(spaceID)
         
-        // 6. Wait for switch to complete, then Drop
-        // We use a decent delay to allow the animation to start/cross threshold. 
-        // macOS handles the "window dragged to edge" logic during the space swich.
-        // Actually, if we just hold the mouse down and switch space, the window SHOULD move with the focus?
-        // No, in Mission Control switching, the window stays unless we are dragging it.
-        // By simulating a hold ("Drag"), the OS considers the window attached to the cursor.
-        
+        // 6. Wait and Drop
         DispatchQueue.global().asyncAfter(deadline: .now() + 0.6) {
             // Drop (Mouse Up)
-            let upEvent = CGEvent(mouseEventSource: source, mouseType: .leftMouseUp, mouseCursorPosition: grabPoint, mouseButton: .left)
-            upEvent?.post(tap: .cghidEventTap)
+            if let upEvent = CGEvent(mouseEventSource: source, mouseType: .leftMouseUp, mouseCursorPosition: grabPoint, mouseButton: .left) {
+                upEvent.flags = [] // Clear modifiers
+                upEvent.post(tap: .cghidEventTap)
+            }
             
             // Restore Mouse
             usleep(50000)
-            let restoreEvent = CGEvent(mouseEventSource: source, mouseType: .mouseMoved, mouseCursorPosition: currentMouse, mouseButton: .left)
-            restoreEvent?.post(tap: .cghidEventTap)
+            if let restoreEvent = CGEvent(mouseEventSource: source, mouseType: .mouseMoved, mouseCursorPosition: currentMouse, mouseButton: .left) {
+                restoreEvent.flags = [] // Reset flags or leave to system? System usually recovers.
+                restoreEvent.post(tap: .cghidEventTap)
+            }
         }
     }
     
