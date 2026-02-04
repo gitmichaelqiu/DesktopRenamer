@@ -23,9 +23,6 @@
       },
       "shouldTranslate" : false
     },
-    "%.2fx" : {
-      "shouldTranslate" : false
-    },
     "%@" : {
       "localizations" : {
         "zh-Hans" : {
@@ -809,7 +806,7 @@
         }
       }
     },
-    "Reset to default (10%)" : {
+    "Reset to default" : {
 
     },
     "Restore defaults" : {
