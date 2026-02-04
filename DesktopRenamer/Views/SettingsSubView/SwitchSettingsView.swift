@@ -48,6 +48,65 @@ struct SwitchSettingsView: View {
                                 }
                             }
                         }
+                        Divider()
+                        
+                        // Move Next
+                        SettingsRow("Move window to next desktop") {
+                            HStack {
+                                Text(hotkeyManager.description(for: .moveWindowNext))
+                                    .foregroundColor(.secondary)
+                                    .padding(.trailing, 8)
+                                
+                                Button("◉") {
+                                    hotkeyManager.startListening(for: .moveWindowNext)
+                                }
+                                .disabled(hotkeyManager.isListening)
+                                
+                                Button("↺") {
+                                    hotkeyManager.resetToDefault(for: .moveWindowNext)
+                                }
+                            }
+                        }
+                        
+                        Divider()
+                        
+                        // Move Previous
+                        SettingsRow("Move window to previous desktop") {
+                            HStack {
+                                Text(hotkeyManager.description(for: .moveWindowPrevious))
+                                    .foregroundColor(.secondary)
+                                    .padding(.trailing, 8)
+                                
+                                Button("◉") {
+                                    hotkeyManager.startListening(for: .moveWindowPrevious)
+                                }
+                                .disabled(hotkeyManager.isListening)
+                                
+                                Button("↺") {
+                                    hotkeyManager.resetToDefault(for: .moveWindowPrevious)
+                                }
+                            }
+                        }
+                        
+                        Divider()
+                        
+                        // Move Number
+                        SettingsRow("Move window to desktop number", helperText: "Press modifiers (e.g., Ctrl+Option) to set base shortcut. Use with numbers 1-9.") {
+                            HStack {
+                                Text(hotkeyManager.description(for: .moveWindowNumber))
+                                    .foregroundColor(.secondary)
+                                    .padding(.trailing, 8)
+                                
+                                Button("◉") {
+                                    hotkeyManager.startListening(for: .moveWindowNumber)
+                                }
+                                .disabled(hotkeyManager.isListening)
+                                
+                                Button("↺") {
+                                    hotkeyManager.resetToDefault(for: .moveWindowNumber)
+                                }
+                            }
+                        }
                     }
                 }
                 

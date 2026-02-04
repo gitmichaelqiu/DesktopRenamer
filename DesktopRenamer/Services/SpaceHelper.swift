@@ -134,11 +134,84 @@ class SpaceHelper {
         }
         
         // 3. Force Activation
+        // 3. Force Activation
         window.orderFrontRegardless()
         window.makeKey()
         NSApp.activate(ignoringOtherApps: true)
         
         return true
+    }
+    
+    // MARK: - Window Moving Logic
+    
+    static func dragActiveWindow(to spaceID: String) {
+        // 1. Get Active Window Frame & Position
+        guard let frame = getActiveWindowFrame() else { return }
+        
+        // 2. Calculate Grab Point (Top Center - likely title bar)
+        // Ensure we don't click too high (menu bar) or off window
+        let headerHeight: CGFloat = 20
+        let grabX = frame.origin.x + (frame.width / 2)
+        let grabY = frame.origin.y + (headerHeight / 2) + 5 // 15px down from top
+        let grabPoint = CGPoint(x: grabX, y: grabY)
+        
+        // 3. Save Current Mouse Position
+        let currentMouse = CGEvent(source: nil)?.location ?? grabPoint
+        
+        // 4. Perform Drag Sequence
+        let source = CGEventSource(stateID: .hidSystemState)
+        
+        // Move to grab point
+        let moveEvent = CGEvent(mouseEventSource: source, mouseType: .mouseMoved, mouseCursorPosition: grabPoint, mouseButton: .left)
+        moveEvent?.post(tap: .cghidEventTap)
+        
+        // Click Down (Hold)
+        let downEvent = CGEvent(mouseEventSource: source, mouseType: .leftMouseDown, mouseCursorPosition: grabPoint, mouseButton: .left)
+        downEvent?.post(tap: .cghidEventTap)
+        
+        // Small delay to ensure grip
+        usleep(50000) // 0.05s
+        
+        // 5. Trigger Space Switch
+        switchToSpace(spaceID)
+        
+        // 6. Wait for switch to complete, then Drop
+        // We use a decent delay to allow the animation to start/cross threshold. 
+        // macOS handles the "window dragged to edge" logic during the space swich.
+        // Actually, if we just hold the mouse down and switch space, the window SHOULD move with the focus?
+        // No, in Mission Control switching, the window stays unless we are dragging it.
+        // By simulating a hold ("Drag"), the OS considers the window attached to the cursor.
+        
+        DispatchQueue.global().asyncAfter(deadline: .now() + 0.6) {
+            // Drop (Mouse Up)
+            let upEvent = CGEvent(mouseEventSource: source, mouseType: .leftMouseUp, mouseCursorPosition: grabPoint, mouseButton: .left)
+            upEvent?.post(tap: .cghidEventTap)
+            
+            // Restore Mouse
+            usleep(50000)
+            let restoreEvent = CGEvent(mouseEventSource: source, mouseType: .mouseMoved, mouseCursorPosition: currentMouse, mouseButton: .left)
+            restoreEvent?.post(tap: .cghidEventTap)
+        }
+    }
+    
+    private static func getActiveWindowFrame() -> CGRect? {
+        guard let frontApp = NSWorkspace.shared.frontmostApplication else { return nil }
+        let pid = frontApp.processIdentifier
+        
+        let options = CGWindowListOption(arrayLiteral: .optionOnScreenOnly, .excludeDesktopElements)
+        let windowList = CGWindowListCopyWindowInfo(options, kCGNullWindowID) as? [[String: Any]] ?? []
+        
+        for window in windowList {
+            if let windowPid = window[kCGWindowOwnerPID as String] as? Int,
+               windowPid == pid,
+               let layer = window[kCGWindowLayer as String] as? Int, layer == 0,
+               let bounds = window[kCGWindowBounds as String] as? [String: Any],
+               let x = bounds["X"] as? CGFloat, let y = bounds["Y"] as? CGFloat,
+               let w = bounds["Width"] as? CGFloat, let h = bounds["Height"] as? CGFloat {
+                   return CGRect(x: x, y: y, width: w, height: h)
+               }
+        }
+        return nil
     }
     
     private static func getOwnerPID(for spaceID: String) -> Int32? {
