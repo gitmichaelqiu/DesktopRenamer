@@ -541,4 +541,48 @@ class SpaceManager: ObservableObject {
         let target = displaySpaces[currentIndex + 1]
         switchToSpace(target)
     }
+    func isFirstSpace(onDisplayID displayID: String? = nil) -> Bool {
+        var targetDisplayID = displayID
+        var currentSpaceID = currentSpaceUUID
+        
+        if let requestedDisplayID = displayID {
+            if let space = SpaceHelper.getCurrentSpaceID(for: requestedDisplayID) {
+                currentSpaceID = space
+                targetDisplayID = requestedDisplayID
+            } else { return false }
+        }
+        
+        guard let current = spaceNameDict.first(where: { $0.id == currentSpaceID }) else { return false }
+        if targetDisplayID == nil { targetDisplayID = current.displayID }
+        
+        // Check manual filtering logic in displaySpaces
+        let displaySpaces = spaceNameDict
+            .filter { $0.displayID == targetDisplayID }
+            .sorted { $0.num < $1.num }
+            
+        guard let currentIndex = displaySpaces.firstIndex(of: current) else { return false }
+        return currentIndex == 0
+    }
+    
+    func isLastSpace(onDisplayID displayID: String? = nil) -> Bool {
+        var targetDisplayID = displayID
+        var currentSpaceID = currentSpaceUUID
+        
+        if let requestedDisplayID = displayID {
+             if let space = SpaceHelper.getCurrentSpaceID(for: requestedDisplayID) {
+                 currentSpaceID = space
+                 targetDisplayID = requestedDisplayID
+             } else { return false }
+         }
+         
+         guard let current = spaceNameDict.first(where: { $0.id == currentSpaceID }) else { return false }
+         if targetDisplayID == nil { targetDisplayID = current.displayID }
+         
+         let displaySpaces = spaceNameDict
+             .filter { $0.displayID == targetDisplayID }
+             .sorted { $0.num < $1.num }
+             
+         guard let currentIndex = displaySpaces.firstIndex(of: current) else { return false }
+         return currentIndex == displaySpaces.count - 1
+    }
 }
