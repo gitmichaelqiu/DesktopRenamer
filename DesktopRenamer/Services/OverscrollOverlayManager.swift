@@ -6,10 +6,15 @@ class OverscrollOverlayManager {
     
     private var overlayWindow: NSWindow?
     private var rootHost: NSHostingView<OverscrollIndicatorView>?
+    private var hideWorkItem: DispatchWorkItem?
     
     private init() {}
     
     func update(progress: Double, edge: OverscrollIndicatorView.Edge) {
+        // Cancel any pending hide animation
+        hideWorkItem?.cancel()
+        hideWorkItem = nil
+        
         // Find the screen containing the cursor (since gesture override usually targets cursor display)
         // Or we could pass the display explicitly. For now, cursor screen is safe default for gesture.
         let mouseLoc = NSEvent.mouseLocation
@@ -38,11 +43,38 @@ class OverscrollOverlayManager {
     }
     
     func hide() {
-        // Animate out? Or just hide?
-        // For responsiveness, just hide immediately or let the View handle fade out?
-        // View handles opacity based on progress. If progress is 0, it's invisible.
-        // But we should remove the window to save resources/interaction.
-        overlayWindow?.orderOut(nil)
+        guard let window = overlayWindow, window.isVisible else { return }
+        guard hideWorkItem == nil else { return } // Already hiding
+        
+        // Trigger fade out in View
+        if let host = rootHost {
+            // We need to keep the last state but set fadingOut.
+            // Since we can't easily extract state, we rely on the fact that hide() is called 
+            // after the last update(). Ideally pass a flag.
+            
+            // Actually, simply telling the view to update with isFadingOut might reset animations.
+            // A better way for this imperative-to-declarative bridge:
+            // Update with same parameters but `isFadingOut: true`
+            // But we don't have the last parameters easily here.
+            
+            // Simplified approach: Set progress to 1.0 (or last known?) and let it fade opacity.
+            // To make it "fly out" or "fade out", we need support in the View.
+            
+            // Let's modify parameters: use the View's internal animation by setting isFadingOut
+            // We'll update the view one last time with a special flag.
+            var currentRoot = host.rootView
+            currentRoot.isFadingOut = true
+            host.rootView = currentRoot
+        }
+        
+        let item = DispatchWorkItem { [weak self] in
+            self?.overlayWindow?.orderOut(nil)
+            self?.hideWorkItem = nil
+        }
+        
+        hideWorkItem = item
+        // Match the animation duration in the View
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3, execute: item)
     }
     
     private func ensureWindow(for screen: NSScreen) {
@@ -55,7 +87,7 @@ class OverscrollOverlayManager {
             )
             window.isOpaque = false
             window.backgroundColor = .clear
-//            window.level = .statusWindow // High level to sit above most things
+            window.level = .statusBar // High level to sit above most things
             window.ignoresMouseEvents = true
             window.collectionBehavior = [.canJoinAllSpaces, .transient, .ignoresCycle]
             

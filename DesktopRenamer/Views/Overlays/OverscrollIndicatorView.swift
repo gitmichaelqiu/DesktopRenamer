@@ -8,6 +8,7 @@ struct OverscrollIndicatorView: View {
     
     let edge: Edge
     let progress: Double // 0.0 ... 1.0
+    var isFadingOut: Bool = false
     
     private let size: CGFloat = 120
     
@@ -15,7 +16,6 @@ struct OverscrollIndicatorView: View {
         GeometryReader { geometry in
             ZStack(alignment: edge == .leading ? .leading : .trailing) {
                 // Background Semi-Circle
-                // We use a circle and offset it to look like it's emerging from the edge
                 Circle()
                     .fill(.regularMaterial)
                     .overlay(
@@ -24,19 +24,22 @@ struct OverscrollIndicatorView: View {
                     )
                     .shadow(color: .black.opacity(0.2), radius: 10, x: 0, y: 0)
                     .frame(width: size, height: size)
-                    // Initial state: Limit offscreen
-                    // Progress 1.0: Center on edge (showing half)
                     .offset(x: xOffset)
+                    .opacity(isFadingOut ? 0 : 1)
                 
                 // Arrow
                 Image(systemName: edge == .leading ? "arrow.right" : "arrow.left")
                     .font(.system(size: 32, weight: .bold))
                     .foregroundColor(.primary)
-                    .opacity(arrowOpacity)
+                    .opacity(isFadingOut ? 0 : arrowOpacity)
                     .scaleEffect(arrowScale)
                     .offset(x: arrowOffset)
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: edge == .leading ? .leading : .trailing)
+            // Use explicit animation for the fade out transition
+            .animation(.easeOut(duration: 0.3), value: isFadingOut)
+            // Use interactive spring for the drag gesture
+            .animation(isFadingOut ? nil : .interactiveSpring(), value: progress)
         }
     }
     
@@ -51,7 +54,9 @@ struct OverscrollIndicatorView: View {
         // Progress 0: Offset = -size (Fully hidden)
         // Progress 1: Offset = -size/2 (Half visible)
         
-        // Let's make it appear slightly faster than linear
+        // If fading out, we keep the position stable (or move out slightly?)
+        // Let's keep it stable based on cappedProgress which handles the state.
+        
         let move = (size / 2) * cappedProgress
         
         switch edge {
@@ -63,7 +68,6 @@ struct OverscrollIndicatorView: View {
     }
     
     private var arrowOpacity: Double {
-        // Fade in from 0.2 to 0.8
         return cappedProgress
     }
     
