@@ -55,6 +55,7 @@ class GestureManager: ObservableObject {
     private let kGestureEnabled = "GestureManager.Enabled"
     private let kFingerCount = "GestureManager.FingerCount"
     private let kSwitchOverride = "GestureManager.SwitchOverride"
+    private let kSwipeThreshold = "GestureManager.SwipeThreshold"
     
     public enum SwitchOverrideMode: String, CaseIterable, Identifiable {
         case cursor = "Cursor"
@@ -82,6 +83,12 @@ class GestureManager: ObservableObject {
         }
     }
     
+    @Published var swipeThreshold: Float {
+        didSet {
+            UserDefaults.standard.set(swipeThreshold, forKey: kSwipeThreshold)
+        }
+    }
+    
     private weak var spaceManager: SpaceManager?
     private var devices: [MTDeviceRef] = []
     
@@ -103,7 +110,7 @@ class GestureManager: ObservableObject {
     
     // Tuning
     private let switchCooldown: TimeInterval = 0.25
-    private let minSwipeDistance: Float = 0.10 // 15% Total Average Movement
+    // private let minSwipeDistance: Float = 0.10 // Moved to swipeThreshold
     private let consistencyThreshold: Float = 0.01 // 5% Minimum movement per finger (Anti-Tap)
     private let touchTimeout: TimeInterval = 0.15
     
@@ -120,6 +127,9 @@ class GestureManager: ObservableObject {
         } else {
             self.switchOverride = .cursor
         }
+        
+        // Default to 0.10 if not set
+        self.swipeThreshold = UserDefaults.standard.object(forKey: kSwipeThreshold) == nil ? 0.10 : UserDefaults.standard.float(forKey: kSwipeThreshold)
         
         GestureManager.sharedManager = self
         
@@ -310,7 +320,7 @@ class GestureManager: ObservableObject {
         
         // 6. Trigger Logic
         // Primary threshold check
-        if abs(avgDX) > minSwipeDistance {
+        if abs(avgDX) > swipeThreshold {
             
             // Check for Horizontal Dominance (Must be more horizontal than vertical)
             if abs(avgDX) > abs(avgDY) {

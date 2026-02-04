@@ -297,6 +297,9 @@
         }
       }
     },
+    "Controls how much distance the fingers have to move before switching the desktop." : {
+
+    },
     "Create windows that only appear in Mission Control to display space names.\n\nMay not work when multiple displays are connected." : {
       "localizations" : {
         "en" : {
@@ -805,6 +808,9 @@
           }
         }
       }
+    },
+    "Reset to default (10%)" : {
+
     },
     "Restore defaults" : {
       "localizations" : {
@@ -1955,6 +1961,9 @@
       }
     },
     "Switch display with" : {
+
+    },
+    "Switch override threshold" : {
 
     },
     "Switch to left space" : {
