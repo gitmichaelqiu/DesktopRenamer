@@ -96,22 +96,6 @@ struct LabelSettingsView: View {
                             )
                         }
                     }
-                    
-                    // MARK: - SECTION 3: ACTIONS
-                    SettingsSection("Actions") {
-                        SettingsRow("Restore defaults") {
-                            Button("Reset") {
-                                withAnimation {
-                                    labelManager.showPreviewLabels = true
-                                    labelManager.showActiveLabels = false
-                                    labelManager.activeFontScale = 1.0
-                                    labelManager.activePaddingScale = 1.0
-                                    labelManager.previewFontScale = 1.0
-                                    labelManager.previewPaddingScale = 1.0
-                                }
-                            }
-                        }
-                    }
                 }
             }
             .padding()
