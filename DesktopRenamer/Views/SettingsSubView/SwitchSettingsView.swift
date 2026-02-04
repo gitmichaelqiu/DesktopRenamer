@@ -82,22 +82,14 @@ struct SwitchSettingsView: View {
                         
                         Divider()
                         
-                        SettingsRow("Switch override threshold", helperText: "Controls how much distance the fingers have to move before switching the desktop.") {
-                            HStack {
-                                Text(String(format: "%.0f%%", gestureManager.swipeThreshold * 100))
-                                    .font(.body.monospacedDigit())
-                                    .foregroundColor(.secondary)
-                                    .frame(width: 40, alignment: .trailing)
-                                
-                                Slider(value: $gestureManager.swipeThreshold, in: 0.01...0.50)
-                                    .frame(width: 120)
-                                
-                                Button("↺") {
-                                    gestureManager.swipeThreshold = 0.10
-                                }
-                                .help("Reset to default (10%)")
-                            }
-                        }
+                        SliderSettingsRow(
+                            "Switch override threshold",
+                            value: $gestureManager.swipeThreshold,
+                            range: 0.01...0.50,
+                            defaultValue: 0.10,
+                            helperText: "Controls how much distance the fingers have to move before switching the desktop.",
+                            valueString: { String(format: "%.0f%%", $0 * 100) }
+                        )
                     }
                 }
 
