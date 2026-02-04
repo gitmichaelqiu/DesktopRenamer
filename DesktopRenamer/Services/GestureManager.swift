@@ -318,7 +318,52 @@ class GestureManager: ObservableObject {
         let avgDX = totalDX / Float(numFingers)
         let avgDY = totalDY / Float(numFingers)
         
-        // 6. Trigger Logic
+        // 6. Pre-Trigger Logic: Overscroll Indicator
+        var isOverscroll = false
+        
+        // Only check horizontal dominance for indicator first
+        if abs(avgDX) > abs(avgDY) {
+            let direction: SwitchDirection = avgDX < 0 ? .next : .previous
+            
+            // Determine target display to check boundaries
+            var targetDisplayID: String? = nil
+            if self.switchOverride == .cursor {
+                targetDisplayID = SpaceHelper.getCursorDisplayID()
+            }
+            // If .activeWindow, we leave nil, relying on SpaceManager's default context
+            
+            if direction == .previous {
+                if spaceManager?.isFirstSpace(onDisplayID: targetDisplayID) == true {
+                    isOverscroll = true
+                    // avgDX is positive here.
+                    let progress = Double(abs(avgDX) / swipeThreshold)
+                    // Previous means going "Left". Wall is on Left. Edge is .leading.
+                    DispatchQueue.main.async {
+                        OverscrollOverlayManager.shared.update(progress: progress, edge: .leading)
+                    }
+                }
+            } else { // .next
+                if spaceManager?.isLastSpace(onDisplayID: targetDisplayID) == true {
+                    isOverscroll = true
+                    // avgDX is negative here.
+                    let progress = Double(abs(avgDX) / swipeThreshold)
+                    // Next means going "Right". Wall is on Right. Edge is .trailing.
+                    DispatchQueue.main.async {
+                        OverscrollOverlayManager.shared.update(progress: progress, edge: .trailing)
+                    }
+                }
+            }
+        }
+        
+        if isOverscroll {
+            return
+        } else {
+             DispatchQueue.main.async {
+                 OverscrollOverlayManager.shared.hide()
+             }
+        }
+
+        // 7. Trigger Logic
         // Primary threshold check
         if abs(avgDX) > swipeThreshold {
             
@@ -371,6 +416,10 @@ class GestureManager: ObservableObject {
     private func resetTrackingState() {
         initialTouchPositions.removeAll()
         lockedDirection = nil
+        
+        DispatchQueue.main.async {
+            OverscrollOverlayManager.shared.hide()
+        }
     }
     
     enum SwitchDirection {
