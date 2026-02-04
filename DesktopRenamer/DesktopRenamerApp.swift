@@ -93,6 +93,21 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             .receive(on: DispatchQueue.main)
             .sink { [weak self] in self?.spaceManager.switchToNextSpace() }
             .store(in: &cancellables)
+            
+        hotkeyManager.moveWindowNextTriggered
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] in self?.spaceManager.moveActiveWindowToNextSpace() }
+            .store(in: &cancellables)
+            
+        hotkeyManager.moveWindowPreviousTriggered
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] in self?.spaceManager.moveActiveWindowToPreviousSpace() }
+            .store(in: &cancellables)
+            
+        hotkeyManager.moveWindowNumberTriggered
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] number in self?.spaceManager.moveActiveWindowToSpace(number: number) }
+            .store(in: &cancellables)
     }
     
     func applicationWillTerminate(_ notification: Notification) {

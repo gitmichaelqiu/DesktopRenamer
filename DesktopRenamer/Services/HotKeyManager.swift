@@ -7,6 +7,9 @@ enum HotkeyType {
     case main
     case switchLeft
     case switchRight
+    case moveWindowNext
+    case moveWindowPrevious
+    case moveWindowNumber
 }
 
 class HotkeyManager: ObservableObject {
@@ -15,7 +18,11 @@ class HotkeyManager: ObservableObject {
     let mainShortcutTriggered = PassthroughSubject<Void, Never>()
     let switchLeftTriggered = PassthroughSubject<Void, Never>()
     let switchRightTriggered = PassthroughSubject<Void, Never>()
+    let moveWindowNextTriggered = PassthroughSubject<Void, Never>()
+    let moveWindowPreviousTriggered = PassthroughSubject<Void, Never>()
+    let moveWindowNumberTriggered = PassthroughSubject<Int, Never>()
 
+    // MARK: - Properties
     // MARK: - Properties
     @Published var mainShortcut: Shortcut {
         didSet {
@@ -37,6 +44,27 @@ class HotkeyManager: ObservableObject {
             registerShortcuts()
         }
     }
+    
+    @Published var moveWindowNextShortcut: Shortcut {
+        didSet {
+            saveShortcut(moveWindowNextShortcut, key: moveWindowNextKey)
+            registerShortcuts()
+        }
+    }
+    
+    @Published var moveWindowPreviousShortcut: Shortcut {
+        didSet {
+            saveShortcut(moveWindowPreviousShortcut, key: moveWindowPreviousKey)
+            registerShortcuts()
+        }
+    }
+    
+    @Published var moveWindowNumberShortcut: Shortcut { // Stores modifiers only
+        didSet {
+            saveShortcut(moveWindowNumberShortcut, key: moveWindowNumberKey)
+            registerShortcuts()
+        }
+    }
 
     @Published var isListening: Bool = false
     @Published var listeningType: HotkeyType? = nil
@@ -45,6 +73,9 @@ class HotkeyManager: ObservableObject {
     private var mainHotKey: HotKey?
     private var switchLeftHotKey: HotKey?
     private var switchRightHotKey: HotKey?
+    private var moveWindowNextHotKey: HotKey?
+    private var moveWindowPreviousHotKey: HotKey?
+    private var moveWindowNumberHotKeys: [HotKey] = []
     
     private var monitor: Any?
     
@@ -55,12 +86,18 @@ class HotkeyManager: ObservableObject {
     private let mainShortcutKey = "HotkeyManager.Shortcut"
     private let switchLeftKey = "HotkeyManager.SwitchLeft"
     private let switchRightKey = "HotkeyManager.SwitchRight"
+    private let moveWindowNextKey = "HotkeyManager.MoveWindowNext"
+    private let moveWindowPreviousKey = "HotkeyManager.MoveWindowPrevious"
+    private let moveWindowNumberKey = "HotkeyManager.MoveWindowNumber"
 
     init() {
         // Load or default
         self.mainShortcut = Self.loadShortcut(key: mainShortcutKey) ?? Shortcut(key: Key.r, modifiers: [.control])
         self.switchLeftShortcut = Self.loadShortcut(key: switchLeftKey) ?? Shortcut(key: nil, modifiers: [])
         self.switchRightShortcut = Self.loadShortcut(key: switchRightKey) ?? Shortcut(key: nil, modifiers: [])
+        self.moveWindowNextShortcut = Self.loadShortcut(key: moveWindowNextKey) ?? Shortcut(key: nil, modifiers: [])
+        self.moveWindowPreviousShortcut = Self.loadShortcut(key: moveWindowPreviousKey) ?? Shortcut(key: nil, modifiers: [])
+        self.moveWindowNumberShortcut = Self.loadShortcut(key: moveWindowNumberKey) ?? Shortcut(key: nil, modifiers: [])
         
         registerShortcuts()
     }
@@ -75,38 +112,82 @@ class HotkeyManager: ObservableObject {
         case .main: return mainShortcut.description
         case .switchLeft: return switchLeftShortcut.description
         case .switchRight: return switchRightShortcut.description
+        case .moveWindowNext: return moveWindowNextShortcut.description
+        case .moveWindowPrevious: return moveWindowPreviousShortcut.description
+        case .moveWindowNumber:
+            if moveWindowNumberShortcut.modifiers.isEmpty {
+                 return NSLocalizedString("Settings.Shortcuts.Unassgined", comment: "Unassigned")
+            }
+            // Manually construct description: Modifiers + Number
+            var parts: [String] = []
+            if moveWindowNumberShortcut.modifiers.contains(.command) { parts.append("⌘") }
+            if moveWindowNumberShortcut.modifiers.contains(.option) { parts.append("⌥") }
+            if moveWindowNumberShortcut.modifiers.contains(.control) { parts.append("^") }
+            if moveWindowNumberShortcut.modifiers.contains(.shift) { parts.append("⇧") }
+            parts.append(" + Number")
+            return parts.joined()
         }
     }
 
     // MARK: - Registration
     
     private func registerShortcuts() {
+        // Clear all
+        mainHotKey = nil
+        switchLeftHotKey = nil
+        switchRightHotKey = nil
+        moveWindowNextHotKey = nil
+        moveWindowPreviousHotKey = nil
+        moveWindowNumberHotKeys.removeAll()
+        
         // 1. Main
-        mainHotKey = nil // Clear existing
         if let key = mainShortcut.hotkeyKey, let mods = mainShortcut.hotkeyModifiers {
             mainHotKey = HotKey(key: key, modifiers: mods)
             mainHotKey?.keyDownHandler = { [weak self] in
                 self?.mainShortcutTriggered.send()
-                // Legacy notification support if needed
                 NotificationCenter.default.post(name: .hotkeyTriggered, object: nil)
             }
         }
         
         // 2. Switch Left
-        switchLeftHotKey = nil
         if let key = switchLeftShortcut.hotkeyKey, let mods = switchLeftShortcut.hotkeyModifiers {
             switchLeftHotKey = HotKey(key: key, modifiers: mods)
-            switchLeftHotKey?.keyDownHandler = { [weak self] in
-                self?.switchLeftTriggered.send()
-            }
+            switchLeftHotKey?.keyDownHandler = { [weak self] in self?.switchLeftTriggered.send() }
         }
         
         // 3. Switch Right
-        switchRightHotKey = nil
         if let key = switchRightShortcut.hotkeyKey, let mods = switchRightShortcut.hotkeyModifiers {
             switchRightHotKey = HotKey(key: key, modifiers: mods)
-            switchRightHotKey?.keyDownHandler = { [weak self] in
-                self?.switchRightTriggered.send()
+            switchRightHotKey?.keyDownHandler = { [weak self] in self?.switchRightTriggered.send() }
+        }
+        
+        // 4. Move Window Next
+        if let key = moveWindowNextShortcut.hotkeyKey, let mods = moveWindowNextShortcut.hotkeyModifiers {
+            moveWindowNextHotKey = HotKey(key: key, modifiers: mods)
+            moveWindowNextHotKey?.keyDownHandler = { [weak self] in self?.moveWindowNextTriggered.send() }
+        }
+        
+        // 5. Move Window Previous
+        if let key = moveWindowPreviousShortcut.hotkeyKey, let mods = moveWindowPreviousShortcut.hotkeyModifiers {
+            moveWindowPreviousHotKey = HotKey(key: key, modifiers: mods)
+            moveWindowPreviousHotKey?.keyDownHandler = { [weak self] in self?.moveWindowPreviousTriggered.send() }
+        }
+        
+        // 6. Move Window Number (1-9)
+        // We register hotkeys for Modifiers + 1...9
+        let mods = moveWindowNumberShortcut.modifiers.intersection([.command, .option, .control, .shift])
+        if !mods.isEmpty {
+            let numberKeys: [(Key, Int)] = [
+                (.one, 1), (.two, 2), (.three, 3), (.four, 4), (.five, 5),
+                (.six, 6), (.seven, 7), (.eight, 8), (.nine, 9)
+            ]
+            
+            for (key, number) in numberKeys {
+                let hk = HotKey(key: key, modifiers: mods)
+                hk.keyDownHandler = { [weak self] in
+                    self?.moveWindowNumberTriggered.send(number)
+                }
+                moveWindowNumberHotKeys.append(hk)
             }
         }
     }
@@ -117,39 +198,76 @@ class HotkeyManager: ObservableObject {
         isListening = true
         listeningType = type
 
-        // Temporarily disable hotkeys while recording
+        // Temporarily disable hotkeys
         mainHotKey = nil
         switchLeftHotKey = nil
         switchRightHotKey = nil
+        moveWindowNextHotKey = nil
+        moveWindowPreviousHotKey = nil
+        moveWindowNumberHotKeys.removeAll()
 
         removeKeyListener()
 
-        monitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
+        monitor = NSEvent.addLocalMonitorForEvents(matching: [.keyDown, .flagsChanged]) { [weak self] event in
             guard let self = self else { return event }
             
             // Check for Escape to cancel/clear
-            if Shortcut.keyName(from: event) == "Escape" {
+            if event.type == .keyDown && Shortcut.keyName(from: event) == "Escape" {
                 self.updateShortcut(Shortcut(key: nil, modifiers: []), for: type)
                 self.finishListening()
                 return nil
             }
             
-            guard let key = Shortcut.keyFromEvent(event) else { return event }
-            
-            let rawModifiers = event.modifierFlags.intersection([.command, .option, .control, .shift])
-            let cleanedModifiers = self.convertToHotkeyModifiers(rawModifiers)
-            
-            let isFunctionKey = HotkeyManager.functionKeys.contains(key)
-            let hasModifiers = !cleanedModifiers.isEmpty
-            
-            // Accept if it has modifiers OR is a function key
-            if hasModifiers || isFunctionKey {
-                self.updateShortcut(Shortcut(key: key, modifiers: cleanedModifiers), for: type)
-                self.finishListening()
-                return nil
+            // Special Logic for Number Modifiers Only
+            if type == .moveWindowNumber {
+                // We track modifiers. If ONLY modifiers are pressed (flagsChanged), we update?
+                // No, usually we wait for the user to press modifiers and then... release? Or drag?
+                // Standard UI: User presses modifiers. If they press a key, we ignore the key?
+                // Let's implement: User holds modifiers. If they release modifiers, we take the last valid set?
+                // OR: If they press modifiers + Return?
+                
+                // Better approach: Listen for flagsChanged. If we have flags, update the UI (live).
+                // If they press Enter, confirm.
+                // If they press a key that is NOT a modifier or specific ignored keys, we might treat it as "Done".
+                
+                // DIFFERENT STRATEGY: Treat like normal shortcut (Mods + Key), but discard the key.
+                // User presses "Cmd + Ctrl + X". We take "Cmd + Ctrl".
+                
+                if event.type == .keyDown {
+                     guard let key = Shortcut.keyFromEvent(event) else { return event }
+                     // If key is Modifier-like or Enter, handle it.
+                     
+                     let rawModifiers = event.modifierFlags.intersection([.command, .option, .control, .shift])
+                     let cleanedModifiers = self.convertToHotkeyModifiers(rawModifiers)
+                     
+                     if !cleanedModifiers.isEmpty {
+                         // We have modifiers. Save them and finish.
+                         self.updateShortcut(Shortcut(key: nil, modifiers: cleanedModifiers), for: type)
+                         self.finishListening()
+                         return nil
+                     }
+                }
+                
+                return nil // Swallow events
             }
             
-            // Allow typing if not a valid shortcut
+            // Standard Logic (expect KeyDown)
+            if event.type == .keyDown {
+                guard let key = Shortcut.keyFromEvent(event) else { return event }
+                
+                let rawModifiers = event.modifierFlags.intersection([.command, .option, .control, .shift])
+                let cleanedModifiers = self.convertToHotkeyModifiers(rawModifiers)
+                
+                let isFunctionKey = HotkeyManager.functionKeys.contains(key)
+                let hasModifiers = !cleanedModifiers.isEmpty
+                
+                if hasModifiers || isFunctionKey {
+                    self.updateShortcut(Shortcut(key: key, modifiers: cleanedModifiers), for: type)
+                    self.finishListening()
+                    return nil
+                }
+            }
+            
             return nil
         }
     }
@@ -159,6 +277,9 @@ class HotkeyManager: ObservableObject {
         case .main: mainShortcut = shortcut
         case .switchLeft: switchLeftShortcut = shortcut
         case .switchRight: switchRightShortcut = shortcut
+        case .moveWindowNext: moveWindowNextShortcut = shortcut
+        case .moveWindowPrevious: moveWindowPreviousShortcut = shortcut
+        case .moveWindowNumber: moveWindowNumberShortcut = shortcut
         }
     }
     
@@ -181,6 +302,9 @@ class HotkeyManager: ObservableObject {
         case .main: mainShortcut = defaultMain
         case .switchLeft: switchLeftShortcut = defaultNone
         case .switchRight: switchRightShortcut = defaultNone
+        case .moveWindowNext: moveWindowNextShortcut = defaultNone
+        case .moveWindowPrevious: moveWindowPreviousShortcut = defaultNone
+        case .moveWindowNumber: moveWindowNumberShortcut = defaultNone
         }
     }
     

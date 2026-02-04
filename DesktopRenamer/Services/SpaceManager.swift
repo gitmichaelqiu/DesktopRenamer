@@ -541,6 +541,51 @@ class SpaceManager: ObservableObject {
         let target = displaySpaces[currentIndex + 1]
         switchToSpace(target)
     }
+
+    // MARK: - Move Window Functions
+    
+    func moveActiveWindowToNextSpace() {
+        // 1. Determine Display & Current Space
+        // We use cursor display as proxy for "Active Context"
+        guard let displayID = SpaceHelper.getCursorDisplayID() else { return }
+        guard let currentSpaceID = SpaceHelper.getCurrentSpaceID(for: displayID) else { return }
+        
+        // 2. Resolve Space Objects
+        guard let current = spaceNameDict.first(where: { $0.id == currentSpaceID }) else { return }
+        let displaySpaces = spaceNameDict
+            .filter { $0.displayID == displayID }
+            .sorted { $0.num < $1.num }
+        
+        // 3. Find Next
+        guard let currentIndex = displaySpaces.firstIndex(of: current),
+              currentIndex < displaySpaces.count - 1 else { return }
+        
+        let target = displaySpaces[currentIndex + 1]
+        SpaceHelper.dragActiveWindow(to: target.id)
+    }
+    
+    func moveActiveWindowToPreviousSpace() {
+        guard let displayID = SpaceHelper.getCursorDisplayID() else { return }
+        guard let currentSpaceID = SpaceHelper.getCurrentSpaceID(for: displayID) else { return }
+        
+        guard let current = spaceNameDict.first(where: { $0.id == currentSpaceID }) else { return }
+        let displaySpaces = spaceNameDict
+            .filter { $0.displayID == displayID }
+            .sorted { $0.num < $1.num }
+        
+        guard let currentIndex = displaySpaces.firstIndex(of: current),
+              currentIndex > 0 else { return }
+        
+        let target = displaySpaces[currentIndex - 1]
+        SpaceHelper.dragActiveWindow(to: target.id)
+    }
+    
+    func moveActiveWindowToSpace(number: Int) {
+        if let target = spaceNameDict.first(where: { $0.num == number }) {
+            SpaceHelper.dragActiveWindow(to: target.id)
+        }
+    }
+
     func isFirstSpace(onDisplayID displayID: String? = nil) -> Bool {
         var targetDisplayID = displayID
         var currentSpaceID = currentSpaceUUID
