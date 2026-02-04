@@ -46,35 +46,29 @@ class OverscrollOverlayManager {
         guard let window = overlayWindow, window.isVisible else { return }
         guard hideWorkItem == nil else { return } // Already hiding
         
-        // Trigger fade out in View
-        if let host = rootHost {
-            // We need to keep the last state but set fadingOut.
-            // Since we can't easily extract state, we rely on the fact that hide() is called 
-            // after the last update(). Ideally pass a flag.
+        // 1. Hold Phase (wait before fading)
+        let fadeTriggerItem = DispatchWorkItem { [weak self] in
+            // 2. Trigger Fade Out
+            if let host = self?.rootHost {
+                var currentRoot = host.rootView
+                currentRoot.isFadingOut = true
+                host.rootView = currentRoot
+            }
             
-            // Actually, simply telling the view to update with isFadingOut might reset animations.
-            // A better way for this imperative-to-declarative bridge:
-            // Update with same parameters but `isFadingOut: true`
-            // But we don't have the last parameters easily here.
+            // 3. Cleanup Phase (wait for animation)
+            let cleanupItem = DispatchWorkItem { [weak self] in
+                self?.overlayWindow?.orderOut(nil)
+                self?.hideWorkItem = nil
+            }
             
-            // Simplified approach: Set progress to 1.0 (or last known?) and let it fade opacity.
-            // To make it "fly out" or "fade out", we need support in the View.
-            
-            // Let's modify parameters: use the View's internal animation by setting isFadingOut
-            // We'll update the view one last time with a special flag.
-            var currentRoot = host.rootView
-            currentRoot.isFadingOut = true
-            host.rootView = currentRoot
+            // Update reference so it can be cancelled if update() happens during fade
+            self?.hideWorkItem = cleanupItem
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.2, execute: cleanupItem)
         }
         
-        let item = DispatchWorkItem { [weak self] in
-            self?.overlayWindow?.orderOut(nil)
-            self?.hideWorkItem = nil
-        }
-        
-        hideWorkItem = item
-        // Match the animation duration in the View
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3, execute: item)
+        hideWorkItem = fadeTriggerItem
+        // Hold for 0.5s before starting fade
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3, execute: fadeTriggerItem)
     }
     
     private func ensureWindow(for screen: NSScreen) {
