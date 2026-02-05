@@ -549,6 +549,18 @@
         }
       }
     },
+    "Menu.MoveWindowTo" : {
+      "comment" : "Header for move window menu",
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Move window to..."
+          }
+        }
+      }
+    },
     "Menu.Quit" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -719,7 +731,7 @@
         }
       }
     },
-    "Press modifiers (e.g., Ctrl+Option) to set base shortcut. Use with numbers 1-9." : {
+    "Press modifiers and a number to set the shortcut." : {
 
     },
     "Preview Labels" : {
