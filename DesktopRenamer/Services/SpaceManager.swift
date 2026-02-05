@@ -585,6 +585,10 @@ class SpaceManager: ObservableObject {
             SpaceHelper.dragActiveWindow(to: target.id)
         }
     }
+    
+    func moveActiveWindowToSpace(id: String) {
+        SpaceHelper.dragActiveWindow(to: id)
+    }
 
     func isFirstSpace(onDisplayID displayID: String? = nil) -> Bool {
         var targetDisplayID = displayID
