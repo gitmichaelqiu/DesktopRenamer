@@ -155,29 +155,41 @@ class StatusBarController: NSObject, NSMenuDelegate {
         
         if !currentDisplaySpaces.isEmpty {
             
-            // Header for Move Mode (Only visible if Option is held initially or swapped)
-            // Note: NSMenu alternates work best for 1-to-1 replacements.
-            // But we can also add dynamic headers if needed.
-            // For true "WiFi style", we want the ITEM itself to change.
+            // 0. Header Row (Swappable)
+            // Standard: "Switch to desktop..."
+            let headerTitle = NSLocalizedString("Menu.SwitchToDesktop", value: "Switch to desktop...", comment: "Header for switch menu")
+            let headerItem = NSMenuItem(title: headerTitle, action: nil, keyEquivalent: "")
+            headerItem.isEnabled = false
+            menu.addItem(headerItem)
             
+            // Alternate: "Move window to..."
+            let moveHeaderTitle = NSLocalizedString("Menu.MoveWindowTo", value: "Move window to...", comment: "Header for move window menu")
+            let headerAlt = NSMenuItem(title: moveHeaderTitle, action: nil, keyEquivalent: "")
+            headerAlt.isEnabled = false
+            headerAlt.isAlternate = true
+            headerAlt.keyEquivalentModifierMask = .option
+            menu.addItem(headerAlt)
+            
+            
+            // 1. Space Items
             for space in currentDisplaySpaces {
                 let name = spaceManager.getSpaceName(space.id)
                 let moveName = "→ " + name
                 
-                // 1. Standard Item (Switch)
+                // Standard Item (Switch)
                 let item = NSMenuItem(title: name, action: #selector(selectSpace(_:)), keyEquivalent: "")
                 item.target = self
                 item.representedObject = space.id
                 item.state = (space.id == spaceManager.currentSpaceUUID) ? .on : .off
                 menu.addItem(item)
                 
-                // 2. Alternate Item (Move Window)
+                // Alternate Item (Move Window)
                 let altItem = NSMenuItem(title: moveName, action: #selector(moveWindowToSpace(_:)), keyEquivalent: "")
                 altItem.target = self
                 altItem.representedObject = space.id
                 altItem.isAlternate = true
                 altItem.keyEquivalentModifierMask = .option
-                altItem.state = item.state // Keep same state look? Or none? Usually none.
+                altItem.state = item.state
                 menu.addItem(altItem)
             }
             menu.addItem(NSMenuItem.separator())
@@ -200,54 +212,7 @@ class StatusBarController: NSObject, NSMenuDelegate {
         }
         menu.addItem(rename)
         
-        // 3. Move Window Header (Alternate for Rename?)
-        // If we want a completely different menu structure like "WiFi -> Network Settings",
-        // we might not map 1:1. But for "Switch -> Move", 1:1 mapping above is best.
-        // For the "Move window to..." unclickable header user requested:
-        // We can add it as an alternate to the first item or similar, but alternates replace specific items.
-        // If the user wants a strict "Move window to..." header appearing at the top ONLY when Option is held,
-        // we might need to stick to the previous implementation OR use a hybrid.
-        // However, "WiFi settings becoming Network settings" implies 1:1 replacement.
-        // The user request "Add unclickable item at top... and -> before name" suggests:
-        //  - Item A (Switch Space 1)  --->  Item A' (Move to Space 1)
-        //  - Item B (Switch Space 2)  --->  Item B' (Move to Space 2)
-        //  - Header (None)            --->  Header (Move window to...)
-        
-        // To achieve "Header appears only on Option", we can use `menuNeedsUpdate` to Insert it.
-        // But `menuNeedsUpdate` is only called ONCE when opening.
-        // To support "Press Option while open", we MUST use `isAlternate`.
-        
-        // IMPLEMENTATION STRATEGY:
-        // We will stick to the 1-to-1 replacement for spaces as it's the most robust "WiFi-style" behavior.
-        // For the "Header", strictly speaking, NSMenu does not support "Adding a new row when Option is pressed" dynamically while open.
-        // The WiFi menu changes "Wi-Fi Settings..." (bottom) to "Network Settings..." (bottom).
-        // It updates text.
-        // If the user *really* wants the header, we can try to add it as a disabled item that is HIDDEN by default and visible as Alt?
-        // No, `isAlternate` checks if the modifier is present.
-        // Let's try adding a "Hidden Placeholer" -> "Visible Header".
-        
-        // Header Logic:
-        // Item 1: Hidden/Empty (Normal) -> "Move window to..." (Option)
-        let headerPlaceholder = NSMenuItem(title: "", action: nil, keyEquivalent: "")
-        headerPlaceholder.isHidden = true
-        menu.insertItem(headerPlaceholder, at: 0)
-        
-        let headerAlt = NSMenuItem(title: NSLocalizedString("Menu.MoveWindowTo", value: "Move window to...", comment: ""), action: nil, keyEquivalent: "")
-        headerAlt.isEnabled = false
-        headerAlt.isAlternate = true
-        headerAlt.keyEquivalentModifierMask = .option
-        menu.insertItem(headerAlt, at: 1) // Alt to the placeholder?
-        
-        // Correction: Alternates must be adjacent to the item they replace.
-        // And if the original is hidden... does it work? Unlikely.
-        
-        // Let's stick to the 1:1 mapping for spaces which gives the immediate feedback.
-        // For the header, since we reconstruct on `menuNeedsUpdate`, if the user opens with Option held, they get the header.
-        // If they toggle option *while* open, only the `isAlternate` items switch.
-        // This is a known macOS limitation (you can't add/remove rows while menu is open, only swap alternates).
-        // So we will focus on the Space Items swapping.
-        
-        // ... (Remaining items)
+
         
         let troubleshootItem = NSMenuItem(title: NSLocalizedString("Troubleshoot Space Detection", comment: ""), action: #selector(troubleshootSpaceDetection), keyEquivalent: "")
         troubleshootItem.image = NSImage(systemSymbolName: "wrench.and.screwdriver", accessibilityDescription: nil)

@@ -629,6 +629,18 @@
         }
       }
     },
+    "Menu.SwitchToDesktop" : {
+      "comment" : "Header for switch menu",
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Switch to desktop..."
+          }
+        }
+      }
+    },
     "Metric-based" : {
       "localizations" : {
         "zh-Hans" : {
