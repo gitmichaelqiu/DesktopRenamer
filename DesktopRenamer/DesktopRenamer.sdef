@@ -55,6 +55,19 @@
             <cocoa class="DesktopRenamer.SwitchToSpaceCommand"/>
             <direct-parameter description="The ID of the space to switch to" type="text"/>
         </command>
+
+        <command name="move window next" code="DskRMvNx" description="Move the active window to the next desktop">
+            <cocoa class="DesktopRenamer.MoveWindowNextCommand"/>
+        </command>
+
+        <command name="move window previous" code="DskRMvPr" description="Move the active window to the previous desktop">
+            <cocoa class="DesktopRenamer.MoveWindowPreviousCommand"/>
+        </command>
+
+        <command name="move window to space" code="DskRMvTo" description="Move the active window to a specific space by ID">
+            <cocoa class="DesktopRenamer.MoveWindowToSpaceCommand"/>
+            <direct-parameter description="The ID of the space to move the window to" type="text"/>
+        </command>
         
     </suite>
 </dictionary>
