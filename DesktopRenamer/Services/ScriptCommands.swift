@@ -165,3 +165,38 @@ class RenameSpaceCommand: NSScriptCommand {
         return nil
     }
 }
+
+class MoveWindowNextCommand: NSScriptCommand {
+    override func performDefaultImplementation() -> Any? {
+        DispatchQueue.main.async {
+            if let manager = AppDelegate.shared.spaceManager {
+                manager.moveActiveWindowToNextSpace()
+            }
+        }
+        return nil
+    }
+}
+
+class MoveWindowPreviousCommand: NSScriptCommand {
+    override func performDefaultImplementation() -> Any? {
+        DispatchQueue.main.async {
+            if let manager = AppDelegate.shared.spaceManager {
+                manager.moveActiveWindowToPreviousSpace()
+            }
+        }
+        return nil
+    }
+}
+
+class MoveWindowToSpaceCommand: NSScriptCommand {
+    override func performDefaultImplementation() -> Any? {
+        guard let spaceID = self.directParameter as? String else { return nil }
+        
+        DispatchQueue.main.async {
+            if let manager = AppDelegate.shared.spaceManager {
+                manager.moveActiveWindowToSpace(id: spaceID)
+            }
+        }
+        return nil
+    }
+}
