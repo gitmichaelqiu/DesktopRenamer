@@ -9,9 +9,7 @@ struct SwitchSettingsView: View {
             VStack(alignment: .leading, spacing: 20) {
                 
                 // MARK: - Keyboard Shortcuts
-                // MARK: - Keyboard Shortcuts
                 SettingsSection("Keyboard Shortcuts") {
-                    // Switch Left
                     VStack(spacing: 0) {
                         SettingsRow("Switch to left space", helperText: "If you want to use Control + Arrow, disable the system's one in Settings → Keyboard → Keyboard Shortcuts... → Mission Control.") {
                             HStack {
@@ -32,7 +30,6 @@ struct SwitchSettingsView: View {
                         
                         Divider()
                         
-                        // Switch Right
                         SettingsRow("Switch to right space") {
                             HStack {
                                 Text(hotkeyManager.description(for: .switchRight))
@@ -54,7 +51,6 @@ struct SwitchSettingsView: View {
                 
                 SettingsSection {
                     VStack(spacing: 0) {
-                        // Move Next
                         SettingsRow("Move window to next desktop") {
                             HStack {
                                 Text(hotkeyManager.description(for: .moveWindowNext))
@@ -73,8 +69,7 @@ struct SwitchSettingsView: View {
                         }
                         
                         Divider()
-                        
-                        // Move Previous
+
                         SettingsRow("Move window to previous desktop") {
                             HStack {
                                 Text(hotkeyManager.description(for: .moveWindowPrevious))
@@ -94,8 +89,7 @@ struct SwitchSettingsView: View {
                         
                         Divider()
                         
-                        // Move Number
-                        SettingsRow("Move window to desktop number", helperText: "Press modifiers (e.g., Ctrl+Option) to set base shortcut. Use with numbers 1-9.") {
+                        SettingsRow("Move window to desktop number", helperText: "Press modifiers and a number to set the shortcut.") {
                             HStack {
                                 Text(hotkeyManager.description(for: .moveWindowNumber))
                                     .foregroundColor(.secondary)
@@ -114,7 +108,6 @@ struct SwitchSettingsView: View {
                     }
                 }
                 
-                // MARK: - Gesture Override
                 SettingsSection("Trackpad Switch Gesture Override") {
                     SettingsRow("Enable switch gesture override", helperText: "Replaces system switch gestures with instant space switching.\n\nRequired: You must disable 'Swipe between full screen apps' in System Settings → Trackpad → More Gestures or change to different number of fingers to prevent conflicts.\n\nNotice, you must click at the fullscreen app to make it active to avoid issues when leaving the app.") {
                         Toggle("", isOn: $gestureManager.isEnabled)
