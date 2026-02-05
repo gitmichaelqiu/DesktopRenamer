@@ -9,6 +9,7 @@ struct SwitchSettingsView: View {
             VStack(alignment: .leading, spacing: 20) {
                 
                 // MARK: - Keyboard Shortcuts
+                // MARK: - Keyboard Shortcuts
                 SettingsSection("Keyboard Shortcuts") {
                     // Switch Left
                     VStack(spacing: 0) {
@@ -48,8 +49,11 @@ struct SwitchSettingsView: View {
                                 }
                             }
                         }
-                        Divider()
-                        
+                    }
+                }
+                
+                SettingsSection {
+                    VStack(spacing: 0) {
                         // Move Next
                         SettingsRow("Move window to next desktop") {
                             HStack {
