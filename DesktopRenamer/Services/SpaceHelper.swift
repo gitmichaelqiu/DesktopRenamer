@@ -148,11 +148,13 @@ class SpaceHelper {
         // 1. Get Active Window Frame & Position
         guard let frame = getActiveWindowFrame() else { return }
         
-        // 2. Calculate Grab Point (Top Center - likely title bar)
-        // Ensure we don't click too high (menu bar) or off window
-        let headerHeight: CGFloat = 20
-        let grabX = frame.origin.x + (frame.width / 2)
-        let grabY = frame.origin.y + (headerHeight / 2) + 5 // 15px down from top
+        // 2. Calculate Grab Point (Top Left Edge - Window Frame)
+        // We target the very top edge to avoid clicking inside non-draggable content (like sidebars).
+        // x+15 / y+5 puts us just past the rounded corner start, but high enough to potentially 
+        // miss traffic light hitboxes or hit the window chrome safe zone.
+        let offsetX: CGFloat = 15
+        let grabX = frame.origin.x + offsetX
+        let grabY = frame.origin.y + 5 // Very close to top edge
         let grabPoint = CGPoint(x: grabX, y: grabY)
         
         // 3. Save Current Mouse Position
