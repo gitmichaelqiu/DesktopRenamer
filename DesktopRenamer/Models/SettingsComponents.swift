@@ -34,19 +34,21 @@ struct SettingsRow<Content: View>: View {
 }
 
 struct SettingsSection<Content: View>: View {
-    let title: LocalizedStringKey
+    let title: LocalizedStringKey?
     let content: Content
 
-    init(_ title: LocalizedStringKey, @ViewBuilder content: () -> Content) {
+    init(_ title: LocalizedStringKey? = nil, @ViewBuilder content: () -> Content) {
         self.title = title
         self.content = content()
     }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text(title)
-                .font(.headline)
-                .padding(.leading, 4)
+            if let title = title {
+                Text(title)
+                    .font(.headline)
+                    .padding(.leading, 4)
+            }
 
             VStack(spacing: 0) {
                 content
