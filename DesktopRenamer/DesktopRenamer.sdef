@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE dictionary SYSTEM "file://localhost/System/Library/DTDs/sdef.dtd">
+<dictionary title="DesktopRenamer Terminology">
+    <suite name="DesktopRenamer Suite" code="DskR" description="Commands for DesktopRenamer">
+        
+        <command name="toggle menubar" code="DskRTMen" description="Toggle the visibility of the menubar item">
+            <cocoa class="DesktopRenamer.ToggleMenubarCommand"/>
+            <result type="boolean" description="The new visibility state (true = visible)"/>
+        </command>
+        
+        <command name="toggle labels" code="DskRTLab" description="Toggle both Active &amp; Preview Label Windows">
+            <cocoa class="DesktopRenamer.ToggleLabelsCommand"/>
+            <result type="boolean" description="The new enabled state (true = enabled)"/>
+        </command>
+
+        <command name="toggle active label" code="DskRTAct" description="Toggle the Active Label Window">
+            <cocoa class="DesktopRenamer.ToggleActiveLabelCommand"/>
+            <result type="boolean" description="The new visibility state (true = visible)"/>
+        </command>
+
+        <command name="toggle preview label" code="DskRTPrv" description="Toggle the Preview Label Window">
+            <cocoa class="DesktopRenamer.TogglePreviewLabelCommand"/>
+            <result type="boolean" description="The new visibility state (true = visible)"/>
+        </command>
+        
+        <command name="toggle desktop visibility" code="DskRTVis" description="Toggle visibility of Active Label Window on Desktop (Keep on Desktop)">
+            <cocoa class="DesktopRenamer.ToggleDesktopVisibilityCommand"/>
+            <result type="boolean" description="The new visibility state (true = visible on desktop)"/>
+        </command>
+
+        <command name="rename current space" code="DskRRCur" description="Rename the current space to the given string">
+            <cocoa class="DesktopRenamer.RenameCurrentSpaceCommand"/>
+            <direct-parameter description="The new name" type="text"/>
+        </command>
+        
+    </suite>
+</dictionary>

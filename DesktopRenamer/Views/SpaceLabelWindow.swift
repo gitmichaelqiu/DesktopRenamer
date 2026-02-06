@@ -625,16 +625,85 @@ class SpaceLabelWindow: NSWindow {
         // Fixed: Use first(where:) and explicit NSDeviceDescriptionKey
         return NSScreen.screens.first(where: { screen in
             let screenID = screen.deviceDescription[NSDeviceDescriptionKey("NSScreenNumber")] as? NSNumber ?? 0
+            
+            // 1. Name check (Default)
             let idString = "\(screen.localizedName) (\(screenID))"
             if idString == self.displayID { return true }
+            
             let cleanTarget = self.displayID.components(separatedBy: " (").first ?? self.displayID
-            return screen.localizedName == cleanTarget
+            if screen.localizedName == cleanTarget { return true }
+            
+            // 2. UUID Check (Fix for Automatic Mode)
+            let cgsID = screenID.uint32Value
+            if let uuidRef = CGDisplayCreateUUIDFromDisplayID(cgsID) {
+                let uuid = uuidRef.takeRetainedValue()
+                let uuidString = CFUUIDCreateString(nil, uuid) as String
+                if uuidString.caseInsensitiveCompare(self.displayID) == .orderedSame { return true }
+            }
+            return false
         })
     }
     
     private func findBestOffscreenPosition(targetScreen: NSScreen, size: NSSize) -> NSPoint {
         let f = targetScreen.frame
-        return NSPoint(x: f.minX - size.width + 1, y: f.maxY - 1)
+        let allScreens = NSScreen.screens
+        
+        // Candidates for offscreen positions (1px overlap to keep on screen technically)
+        // 1. Top-Left
+        // 2. Top-Right
+        // 3. Bottom-Left
+        // 4. Bottom-Right
+        
+        let candidates: [NSPoint] = [
+            NSPoint(x: f.minX - size.width + 1, y: f.maxY - 1),             // Top-Left
+            NSPoint(x: f.maxX - 1, y: f.maxY - 1),                          // Top-Right
+            NSPoint(x: f.minX - size.width + 1, y: f.minY - size.height + 1), // Bottom-Left
+            NSPoint(x: f.maxX - 1, y: f.minY - size.height + 1)             // Bottom-Right
+        ]
+        
+        var bestCandidate: NSPoint = candidates[0]
+        var maxMinDist: CGFloat = -2.0 // Use -2 to ensure -1 (intersection) can supersede if needed
+        
+        for origin in candidates {
+            let rect = NSRect(origin: origin, size: size)
+            
+            var minDist: CGFloat = 100000.0 // Arbitrary large number
+            var intersects = false
+            
+            // Check against all other screens to find the "safest" corner (furthest from others)
+            for other in allScreens {
+                if other == targetScreen { continue }
+                
+                let otherFrame = other.frame
+                
+                if otherFrame.intersects(rect) {
+                    intersects = true
+                    break
+                }
+                
+                // Calculate distance to this screen
+                let dx = max(otherFrame.minX - rect.maxX, rect.minX - otherFrame.maxX, 0)
+                let dy = max(otherFrame.minY - rect.maxY, rect.minY - otherFrame.maxY, 0)
+                let dist = sqrt(dx*dx + dy*dy)
+                
+                if dist < minDist {
+                    minDist = dist
+                }
+            }
+            
+            // If it intersects any screen, score is -1 (worst possible)
+            if intersects {
+                minDist = -1.0
+            }
+            
+            // We want the candidate that is furthest from its nearest neighbor (Maximize the Minimum Distance)
+            if minDist > maxMinDist {
+                maxMinDist = minDist
+                bestCandidate = origin
+            }
+        }
+        
+        return bestCandidate
     }
     
     private func findNearestEdgePosition(targetScreen: NSScreen, forRect rect: NSRect) -> NSPoint {
@@ -713,6 +782,7 @@ class SpaceLabelWindow: NSWindow {
     }
     
     @objc private func repositionWindow() {
+        // Disable animation for screen parameter changes to ensure instant snap
         updateLayout(isCurrentSpace: isActiveMode)
         // Ensure visibility logic is re-checked after layout/screen changes (e.g. Wake from sleep)
         updateVisibility(animated: false)

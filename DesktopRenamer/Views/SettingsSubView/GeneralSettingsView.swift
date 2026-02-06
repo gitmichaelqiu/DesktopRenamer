@@ -478,21 +478,23 @@ struct GeneralSettingsView: View {
                     
                     Divider()
                     
+                    if spaceManager.detectionMethod == .metric {
+                        SettingsRow("Generate bug report", helperText: "This generates a log that is helpful for the developers to debug.") {
+                            Button(action: {
+                                if spaceManager.isBugReportActive { spaceManager.stopBugReportLogging() }
+                                else { spaceManager.startBugReportLogging(); showLogSheet = true }
+                            }) {
+                                Text(spaceManager.isBugReportActive ? "Stop" : "Start")
+                            }
+                            .keyboardShortcut("b")
+                        }
+                        
+                        Divider()
+                    }
+                    
                     SettingsRow("Settings.General.Advanced.EnableAPI", helperText: "Allow other apps to get space names.") {
                         Toggle("", isOn: $isAPIEnabled).labelsHidden().toggleStyle(.switch)
                             .onChange(of: isAPIEnabled) { _ in spaceManager.spaceAPI?.toggleAPIState() }
-                    }
-                    
-                    Divider()
-                    
-                    SettingsRow("Generate bug report", helperText: "This generates a log that is helpful for the developers to debug.") {
-                        Button(action: {
-                            if spaceManager.isBugReportActive { spaceManager.stopBugReportLogging() }
-                            else { spaceManager.startBugReportLogging(); showLogSheet = true }
-                        }) {
-                            Text(spaceManager.isBugReportActive ? "Stop" : "Start")
-                        }
-                        .keyboardShortcut("b")
                     }
                     
                     Divider()
