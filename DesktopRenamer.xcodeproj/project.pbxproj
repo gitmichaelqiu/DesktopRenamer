@@ -6,14 +6,76 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		46C0D3A22F1BE635009258EB /* WidgetKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 46C0D3A12F1BE635009258EB /* WidgetKit.framework */; };
+		46C0D3A42F1BE635009258EB /* SwiftUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 46C0D3A32F1BE635009258EB /* SwiftUI.framework */; };
+		46C0D3B12F1BE636009258EB /* DesktopNameWidgetExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 46C0D39F2F1BE635009258EB /* DesktopNameWidgetExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+/* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		46C0D3AF2F1BE636009258EB /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 466CC63A2E2C883B002F4BB2 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 46C0D39E2F1BE635009258EB;
+			remoteInfo = DesktopNameWidgetExtension;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		46C0D3B22F1BE636009258EB /* Embed Foundation Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+				46C0D3B12F1BE636009258EB /* DesktopNameWidgetExtension.appex in Embed Foundation Extensions */,
+			);
+			name = "Embed Foundation Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
+
 /* Begin PBXFileReference section */
 		466CC6422E2C883C002F4BB2 /* DesktopRenamer.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = DesktopRenamer.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		46C0D39F2F1BE635009258EB /* DesktopNameWidgetExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = DesktopNameWidgetExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		46C0D3A12F1BE635009258EB /* WidgetKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = WidgetKit.framework; path = System/Library/Frameworks/WidgetKit.framework; sourceTree = SDKROOT; };
+		46C0D3A32F1BE635009258EB /* SwiftUI.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SwiftUI.framework; path = System/Library/Frameworks/SwiftUI.framework; sourceTree = SDKROOT; };
+		46C0D3B82F1BE653009258EB /* DesktopNameWidgetExtension.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = DesktopNameWidgetExtension.entitlements; sourceTree = "<group>"; };
 /* End PBXFileReference section */
+
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		467183122F012E9D00E7CD5D /* Exceptions for "DesktopRenamer" folder in "DesktopRenamer" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = 466CC6412E2C883B002F4BB2 /* DesktopRenamer */;
+		};
+		46C0D3B62F1BE636009258EB /* Exceptions for "DesktopNameWidget" folder in "DesktopNameWidgetExtension" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = 46C0D39E2F1BE635009258EB /* DesktopNameWidgetExtension */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		466CC6442E2C883C002F4BB2 /* DesktopRenamer */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				467183122F012E9D00E7CD5D /* Exceptions for "DesktopRenamer" folder in "DesktopRenamer" target */,
+			);
 			path = DesktopRenamer;
+			sourceTree = "<group>";
+		};
+		46C0D3A52F1BE635009258EB /* DesktopNameWidget */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				46C0D3B62F1BE636009258EB /* Exceptions for "DesktopNameWidget" folder in "DesktopNameWidgetExtension" target */,
+			);
+			path = DesktopNameWidget;
 			sourceTree = "<group>";
 		};
 /* End PBXFileSystemSynchronizedRootGroup section */
@@ -26,13 +88,25 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		46C0D39C2F1BE635009258EB /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				46C0D3A42F1BE635009258EB /* SwiftUI.framework in Frameworks */,
+				46C0D3A22F1BE635009258EB /* WidgetKit.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
 		466CC6392E2C883B002F4BB2 = {
 			isa = PBXGroup;
 			children = (
+				46C0D3B82F1BE653009258EB /* DesktopNameWidgetExtension.entitlements */,
 				466CC6442E2C883C002F4BB2 /* DesktopRenamer */,
+				46C0D3A52F1BE635009258EB /* DesktopNameWidget */,
+				46C0D3A02F1BE635009258EB /* Frameworks */,
 				466CC6432E2C883C002F4BB2 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -41,8 +115,18 @@
 			isa = PBXGroup;
 			children = (
 				466CC6422E2C883C002F4BB2 /* DesktopRenamer.app */,
+				46C0D39F2F1BE635009258EB /* DesktopNameWidgetExtension.appex */,
 			);
 			name = Products;
+			sourceTree = "<group>";
+		};
+		46C0D3A02F1BE635009258EB /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				46C0D3A12F1BE635009258EB /* WidgetKit.framework */,
+				46C0D3A32F1BE635009258EB /* SwiftUI.framework */,
+			);
+			name = Frameworks;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -55,10 +139,12 @@
 				466CC63E2E2C883B002F4BB2 /* Sources */,
 				466CC63F2E2C883B002F4BB2 /* Frameworks */,
 				466CC6402E2C883B002F4BB2 /* Resources */,
+				46C0D3B22F1BE636009258EB /* Embed Foundation Extensions */,
 			);
 			buildRules = (
 			);
 			dependencies = (
+				46C0D3B02F1BE636009258EB /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
 				466CC6442E2C883C002F4BB2 /* DesktopRenamer */,
@@ -70,6 +156,28 @@
 			productReference = 466CC6422E2C883C002F4BB2 /* DesktopRenamer.app */;
 			productType = "com.apple.product-type.application";
 		};
+		46C0D39E2F1BE635009258EB /* DesktopNameWidgetExtension */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 46C0D3B52F1BE636009258EB /* Build configuration list for PBXNativeTarget "DesktopNameWidgetExtension" */;
+			buildPhases = (
+				46C0D39B2F1BE635009258EB /* Sources */,
+				46C0D39C2F1BE635009258EB /* Frameworks */,
+				46C0D39D2F1BE635009258EB /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				46C0D3A52F1BE635009258EB /* DesktopNameWidget */,
+			);
+			name = DesktopNameWidgetExtension;
+			packageProductDependencies = (
+			);
+			productName = DesktopNameWidgetExtension;
+			productReference = 46C0D39F2F1BE635009258EB /* DesktopNameWidgetExtension.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -77,11 +185,14 @@
 			isa = PBXProject;
 			attributes = {
 				BuildIndependentTargetsInParallel = 1;
-				LastSwiftUpdateCheck = 1640;
+				LastSwiftUpdateCheck = 2600;
 				LastUpgradeCheck = 2600;
 				TargetAttributes = {
 					466CC6412E2C883B002F4BB2 = {
 						CreatedOnToolsVersion = 16.4;
+					};
+					46C0D39E2F1BE635009258EB = {
+						CreatedOnToolsVersion = 26.0;
 					};
 				};
 			};
@@ -101,12 +212,20 @@
 			projectRoot = "";
 			targets = (
 				466CC6412E2C883B002F4BB2 /* DesktopRenamer */,
+				46C0D39E2F1BE635009258EB /* DesktopNameWidgetExtension */,
 			);
 		};
 /* End PBXProject section */
 
 /* Begin PBXResourcesBuildPhase section */
 		466CC6402E2C883B002F4BB2 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		46C0D39D2F1BE635009258EB /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -123,7 +242,22 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		46C0D39B2F1BE635009258EB /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		46C0D3B02F1BE636009258EB /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 46C0D39E2F1BE635009258EB /* DesktopNameWidgetExtension */;
+			targetProxy = 46C0D3AF2F1BE636009258EB /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
 		466CC6622E2C883D002F4BB2 /* Debug */ = {
@@ -257,7 +391,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = NO;
 				AUTOMATION_APPLE_EVENTS = NO;
-				CODE_SIGN_ENTITLEMENTS = "";
+				CODE_SIGN_ENTITLEMENTS = DesktopRenamer/DesktopRenamer.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
 				CURRENT_PROJECT_VERSION = 1;
@@ -273,6 +407,7 @@
 				ENABLE_RESOURCE_ACCESS_LOCATION = NO;
 				ENABLE_RESOURCE_ACCESS_PHOTO_LIBRARY = NO;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = DesktopRenamer/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = DesktopRenamer;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.utilities";
 				INFOPLIST_KEY_LSUIElement = NO;
@@ -282,7 +417,7 @@
 					"@executable_path/../Frameworks",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 13.0;
-				MARKETING_VERSION = 1.6.2;
+				MARKETING_VERSION = 1.7.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.michaelqiu.DesktopRenamer;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				REGISTER_APP_GROUPS = YES;
@@ -304,7 +439,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = NO;
 				AUTOMATION_APPLE_EVENTS = NO;
-				CODE_SIGN_ENTITLEMENTS = "";
+				CODE_SIGN_ENTITLEMENTS = DesktopRenamer/DesktopRenamer.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
 				CURRENT_PROJECT_VERSION = 1;
@@ -320,6 +455,7 @@
 				ENABLE_RESOURCE_ACCESS_LOCATION = NO;
 				ENABLE_RESOURCE_ACCESS_PHOTO_LIBRARY = NO;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = DesktopRenamer/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = DesktopRenamer;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.utilities";
 				INFOPLIST_KEY_LSUIElement = NO;
@@ -329,7 +465,7 @@
 					"@executable_path/../Frameworks",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 13.0;
-				MARKETING_VERSION = 1.6.2;
+				MARKETING_VERSION = 1.7.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.michaelqiu.DesktopRenamer;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				REGISTER_APP_GROUPS = YES;
@@ -340,6 +476,74 @@
 				RUNTIME_EXCEPTION_DISABLE_EXECUTABLE_PAGE_PROTECTION = NO;
 				RUNTIME_EXCEPTION_DISABLE_LIBRARY_VALIDATION = NO;
 				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+			};
+			name = Release;
+		};
+		46C0D3B32F1BE636009258EB /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				ASSETCATALOG_COMPILER_WIDGET_BACKGROUND_COLOR_NAME = WidgetBackground;
+				CODE_SIGN_ENTITLEMENTS = DesktopNameWidgetExtension.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = W94S87F4LJ;
+				ENABLE_APP_SANDBOX = YES;
+				ENABLE_HARDENED_RUNTIME = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = DesktopNameWidget/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = DesktopNameWidget;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+					"@executable_path/../../../../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 26.0;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.michaelqiu.DesktopRenamer.DesktopNameWidget;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				REGISTER_APP_GROUPS = YES;
+				SKIP_INSTALL = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+			};
+			name = Debug;
+		};
+		46C0D3B42F1BE636009258EB /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				ASSETCATALOG_COMPILER_WIDGET_BACKGROUND_COLOR_NAME = WidgetBackground;
+				CODE_SIGN_ENTITLEMENTS = DesktopNameWidgetExtension.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = W94S87F4LJ;
+				ENABLE_APP_SANDBOX = YES;
+				ENABLE_HARDENED_RUNTIME = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = DesktopNameWidget/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = DesktopNameWidget;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+					"@executable_path/../../../../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 26.0;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.michaelqiu.DesktopRenamer.DesktopNameWidget;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				REGISTER_APP_GROUPS = YES;
+				SKIP_INSTALL = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
 				SWIFT_VERSION = 5.0;
 			};
 			name = Release;
@@ -361,6 +565,15 @@
 			buildConfigurations = (
 				466CC6652E2C883D002F4BB2 /* Debug */,
 				466CC6662E2C883D002F4BB2 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		46C0D3B52F1BE636009258EB /* Build configuration list for PBXNativeTarget "DesktopNameWidgetExtension" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				46C0D3B32F1BE636009258EB /* Debug */,
+				46C0D3B42F1BE636009258EB /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;

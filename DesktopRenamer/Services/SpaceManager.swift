@@ -1,6 +1,7 @@
 import Foundation
 import AppKit
 import SwiftUI
+import WidgetKit
 
 enum DetectionMethod: String, CaseIterable, Identifiable {
     case automatic = "Automatic"
@@ -8,7 +9,6 @@ enum DetectionMethod: String, CaseIterable, Identifiable {
     case manual = "Manual"
     
     var id: String { self.rawValue }
-    
     var localizedName: LocalizedStringKey {
         switch self {
         case .automatic: return "Settings.General.Method.Auto"
@@ -18,7 +18,6 @@ enum DetectionMethod: String, CaseIterable, Identifiable {
     }
 }
 
-// [LogEntry struct remains same]
 struct LogEntry: Identifiable, CustomStringConvertible {
     let id = UUID()
     let timestamp: Date
@@ -30,17 +29,19 @@ struct LogEntry: Identifiable, CustomStringConvertible {
     var description: String {
         let formatter = DateFormatter()
         formatter.dateFormat = "HH:mm:ss.SSS"
-        let timeString = formatter.string(from: timestamp)
-        return "[\(timeString)] ACTION: \(action) | UUID: \(spaceUUID) | Desktop: \(isDesktop) | NC: \(ncCount)"
+        return "[\(formatter.string(from: timestamp))] ACTION: \(action) | UUID: \(spaceUUID) | Desktop: \(isDesktop) | NC: \(ncCount)"
     }
 }
 
 class SpaceManager: ObservableObject {
+    // App Group ID for Widget Sharing
+    static let appGroupId = "group.com.michaelqiu.DesktopRenamer"
+    
     static private let spacesKey = "com.michaelqiu.desktoprenamer.spaces"
+    static private let nameCacheKey = "com.michaelqiu.desktoprenamer.namecache"
+    static private let indexCacheKey = "com.michaelqiu.desktoprenamer.indexcache"
     static private let isAPIEnabledKey = "com.michaelqiu.desktoprenamer.isapienabled"
     static private let detectionMethodKey = "com.michaelqiu.desktoprenamer.detectionMethod"
-    
-    // Legacy key for migration
     static private let isManualSpacesEnabledKey = "com.michaelqiu.desktoprenamer.ismanualspacesenabled"
     
     @Published private(set) var currentSpaceUUID: String = ""
@@ -48,13 +49,19 @@ class SpaceManager: ObservableObject {
     @Published private(set) var currentDisplayID: String = "Main"
     
     @Published var spaceNameDict: [DesktopSpace] = []
+    
+    private var nameCache: [String: String] = [:]
+    private var indexCache: [String: String] = [:]
+    
     @Published var currentNcCount: Int = 0
     @Published var currentIsDesktop: Bool = false
     
     @Published var isBugReportActive: Bool = false
     @Published private(set) var bugReportLog: [LogEntry] = []
     
-    // Detection Method Setting
+    // Widget Debouncer
+    private var widgetUpdateWorkItem: DispatchWorkItem?
+    
     @Published var detectionMethod: DetectionMethod {
         didSet {
             UserDefaults.standard.set(detectionMethod.rawValue, forKey: SpaceManager.detectionMethodKey)
@@ -62,23 +69,16 @@ class SpaceManager: ObservableObject {
         }
     }
     
-    // Computed helper for Views
     var isManualMode: Bool { detectionMethod == .manual }
     
     static var isAPIEnabled: Bool {
-        get {
-            if UserDefaults.standard.object(forKey: isAPIEnabledKey) == nil {
-                return true
-            }
-            return UserDefaults.standard.bool(forKey: isAPIEnabledKey)
-        }
+        get { UserDefaults.standard.object(forKey: isAPIEnabledKey) == nil ? true : UserDefaults.standard.bool(forKey: isAPIEnabledKey) }
         set { UserDefaults.standard.set(newValue, forKey: isAPIEnabledKey) }
     }
     
     public var spaceAPI: SpaceAPI?
     
     init() {
-        // Migration Logic: Check if legacy "Manual Mode" was on
         let legacyManual = UserDefaults.standard.bool(forKey: SpaceManager.isManualSpacesEnabledKey)
         let savedMethod = UserDefaults.standard.string(forKey: SpaceManager.detectionMethodKey)
         
@@ -87,26 +87,30 @@ class SpaceManager: ObservableObject {
         } else if legacyManual {
             self.detectionMethod = .manual
         } else {
-            self.detectionMethod = .automatic // Default
+            self.detectionMethod = .automatic
         }
         
-        loadSavedSpaces()
-        
+        loadSavedData()
         self.spaceAPI = SpaceAPI(spaceManager: self)
         
         if SpaceManager.isAPIEnabled {
             self.spaceAPI?.setupListener()
-            DistributedNotificationCenter.default().postNotificationName(
-                SpaceAPI.apiToggleNotification,
-                object: nil,
-                userInfo: ["isEnabled": true],
-                deliverImmediately: true
-            )
+            DistributedNotificationCenter.default().postNotificationName(SpaceAPI.apiToggleNotification, object: nil, userInfo: ["isEnabled": true], deliverImmediately: true)
         }
         
         SpaceHelper.startMonitoring { [weak self] rawUUID, isDesktop, ncCnt, displayID in
             self?.handleSpaceChange(rawUUID, isDesktop: isDesktop, ncCount: ncCnt, displayID: displayID, source: "Monitor")
         }
+        
+        NotificationCenter.default.addObserver(self, selector: #selector(screenParametersDidChange), name: NSApplication.didChangeScreenParametersNotification, object: nil)
+    }
+    
+    deinit {
+        NotificationCenter.default.removeObserver(self)
+    }
+    
+    @objc private func screenParametersDidChange() {
+        refreshSpaceState()
     }
     
     func refreshSpaceState() {
@@ -121,77 +125,169 @@ class SpaceManager: ObservableObject {
             return
         }
         
-        self.currentIsDesktop = isDesktop
+        var shouldUpdateWidget = false
+        
+        if detectionMethod == .automatic {
+            guard let cgsState = SpaceHelper.getSystemState() else { return }
+            
+            var newSpaceList: [DesktopSpace] = []
+            for sysSpace in cgsState.spaces {
+                var finalSpace = sysSpace
+                if let cachedName = nameCache[sysSpace.id], !cachedName.isEmpty {
+                    finalSpace.customName = cachedName
+                } else {
+                    let indexKey = "\(finalSpace.displayID)|\(finalSpace.num)"
+                    if let fallbackName = indexCache[indexKey], !fallbackName.isEmpty {
+                        finalSpace.customName = fallbackName
+                        nameCache[sysSpace.id] = fallbackName
+                    } else if let existing = spaceNameDict.first(where: { $0.id == sysSpace.id }), !existing.customName.isEmpty {
+                        finalSpace.customName = existing.customName
+                        nameCache[sysSpace.id] = existing.customName
+                        indexCache[indexKey] = existing.customName
+                    }
+                }
+                newSpaceList.append(finalSpace)
+            }
+            
+            if self.spaceNameDict != newSpaceList {
+                self.spaceNameDict = newSpaceList
+                self.indexCache.removeAll()
+                for space in self.spaceNameDict where !space.customName.isEmpty {
+                    let key = "\(space.displayID)|\(space.num)"
+                    self.indexCache[key] = space.customName
+                }
+                
+                saveData()
+                shouldUpdateWidget = true
+            }
+            
+            if self.currentSpaceUUID != cgsState.currentUUID {
+                self.currentSpaceUUID = cgsState.currentUUID
+                shouldUpdateWidget = true
+            }
+            if self.currentDisplayID != cgsState.displayID {
+                self.currentDisplayID = cgsState.displayID
+            }
+            if self.currentRawSpaceUUID != cgsState.currentUUID {
+                self.currentRawSpaceUUID = cgsState.currentUUID
+            }
+            
+            let isCurrentDesktop = (cgsState.currentUUID != "FULLSCREEN")
+            if self.currentIsDesktop != isCurrentDesktop {
+                self.currentIsDesktop = isCurrentDesktop
+                shouldUpdateWidget = true
+            }
+            
+            if isBugReportActive {
+                bugReportLog.append(LogEntry(timestamp: Date(), spaceUUID: cgsState.currentUUID, isDesktop: currentIsDesktop, ncCount: 0, action: "CGS Update (\(source))"))
+            }
+            
+            if shouldUpdateWidget { scheduleWidgetUpdate() }
+            return
+        }
+        
+        // Legacy Detection logic
+        if self.currentIsDesktop != isDesktop {
+            self.currentIsDesktop = isDesktop
+            shouldUpdateWidget = true
+        }
         self.currentNcCount = ncCount
         self.currentRawSpaceUUID = rawUUID
         self.currentDisplayID = displayID
         
         var logicalUUID = rawUUID
-        
-        // --- DETECTION LOGIC SWITCH ---
         switch detectionMethod {
-        case .automatic:
-            // New Finder-based method
-            if !isDesktop {
-                logicalUUID = "FULLSCREEN"
-            }
-        case .metric:
-            // Old Notification Center Count method
-            if ncCount <= SpaceHelper.fullscreenThreshold {
-                logicalUUID = "FULLSCREEN"
-            }
-        case .manual:
-            // Raw UUIDs only
-            logicalUUID = rawUUID
+        case .automatic: if !isDesktop { logicalUUID = "FULLSCREEN" }
+        case .metric: if ncCount <= SpaceHelper.fullscreenThreshold { logicalUUID = "FULLSCREEN" }
+        case .manual: logicalUUID = rawUUID
         }
         
         if isBugReportActive {
             let action = (currentSpaceUUID != logicalUUID) ? "Space Switched (\(source))" : "State Check (\(source))"
-            let entry = LogEntry(timestamp: Date(), spaceUUID: rawUUID, isDesktop: isDesktop, ncCount: ncCount, action: "\(action) [\(detectionMethod.rawValue)]")
-            bugReportLog.append(entry)
+            bugReportLog.append(LogEntry(timestamp: Date(), spaceUUID: rawUUID, isDesktop: isDesktop, ncCount: ncCount, action: "\(action) [\(detectionMethod.rawValue)]"))
         }
         
         if currentSpaceUUID != logicalUUID {
             currentSpaceUUID = logicalUUID
+            shouldUpdateWidget = true
         }
 
         if let index = spaceNameDict.firstIndex(where: { $0.id == logicalUUID }) {
             if spaceNameDict[index].displayID != displayID {
-                print("Correcting Display ID for space \(logicalUUID): \(spaceNameDict[index].displayID) -> \(displayID)")
                 spaceNameDict[index].displayID = displayID
-                saveSpaces()
+                saveData()
             }
         }
         
-        // Auto-Add Logic (Only if NOT manual)
-        if detectionMethod != .manual && logicalUUID != "FULLSCREEN" {
+        if detectionMethod != .manual && detectionMethod != .automatic && logicalUUID != "FULLSCREEN" {
             if !spaceNameDict.contains(where: { $0.id == logicalUUID }) {
                 let existingSpacesOnDisplay = spaceNameDict.filter { $0.displayID == displayID }
-                let maxNum = existingSpacesOnDisplay.map { $0.num }.max() ?? 0
-                let newNum = maxNum + 1
-                
-                let newSpace = DesktopSpace(
-                    id: logicalUUID,
-                    customName: "",
-                    num: newNum,
-                    displayID: displayID
-                )
-                
-                spaceNameDict.append(newSpace)
-                saveSpaces()
+                let newNum = (existingSpacesOnDisplay.map { $0.num }.max() ?? 0) + 1
+                spaceNameDict.append(DesktopSpace(id: logicalUUID, customName: "", num: newNum, displayID: displayID))
+                saveData()
+                shouldUpdateWidget = true
             }
         }
+        
+        if shouldUpdateWidget { scheduleWidgetUpdate() }
+    }
+    
+    // MARK: - Widget Integration (Debounced)
+    private func scheduleWidgetUpdate() {
+        // 1. Cancel previous pending update
+        widgetUpdateWorkItem?.cancel()
+        
+        // 2. Create new work item
+        let workItem = DispatchWorkItem { [weak self] in
+            self?.performWidgetUpdate()
+        }
+        
+        widgetUpdateWorkItem = workItem
+        
+        // 3. Schedule with reduced delay (0.5s is usually enough)
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5, execute: workItem)
+    }
+    
+    private func performWidgetUpdate() {
+        guard let defaults = UserDefaults(suiteName: SpaceManager.appGroupId) else {
+            print("SpaceManager Widget Error: Failed to access App Group UserDefaults.")
+            return
+        }
+        
+        let name = getSpaceName(currentSpaceUUID)
+        let num = getSpaceNum(currentSpaceUUID)
+        let isDesktop = currentSpaceUUID != "FULLSCREEN"
+        
+        // ADDED: Logic to save the full list of names for the squares widget
+        let sortedSpaces = spaceNameDict.sorted { $0.num < $1.num }
+        let allSpaceNames = sortedSpaces.map { space -> String in
+            if space.customName.isEmpty {
+                return String(format: NSLocalizedString("Space.DefaultName", comment: ""), space.num)
+            }
+            return space.customName
+        }
+        
+        print("SpaceManager: Writing Widget Data - Name: \(name), Num: \(num)")
+        
+        defaults.set(name, forKey: "widget_spaceName")
+        defaults.set(num, forKey: "widget_spaceNum")
+        defaults.set(isDesktop, forKey: "widget_isDesktop")
+        defaults.set(allSpaceNames, forKey: "widget_allSpaces") // New Key
+        
+        // Force write to disk (helper for IPC visibility)
+        defaults.synchronize()
+        
+        // 4. Trigger Widget Reload
+        print("SpaceManager: Requesting Widget Reload")
+        WidgetCenter.shared.reloadAllTimelines()
     }
     
     func addManualSpace(_ uuid: String) {
         guard uuid != "FULLSCREEN", !spaceNameDict.contains(where: { $0.id == uuid }) else { return }
-        
         let existingSpacesOnDisplay = spaceNameDict.filter { $0.displayID == currentDisplayID }
-        let maxNum = existingSpacesOnDisplay.map { $0.num }.max() ?? 0
-        let newNum = maxNum + 1
-        
+        let newNum = (existingSpacesOnDisplay.map { $0.num }.max() ?? 0) + 1
         spaceNameDict.append(DesktopSpace(id: uuid, customName: "", num: newNum, displayID: currentDisplayID))
-        saveSpaces()
+        saveData()
         refreshSpaceState()
     }
     
@@ -205,44 +301,59 @@ class SpaceManager: ObservableObject {
         isBugReportActive = false
     }
     
-    // ... [PrepareForTermination, load/save, getSpaceNum, getSpaceName... same as previous] ...
-    
     func prepareForTermination() {
-        DistributedNotificationCenter.default().postNotificationName(
-            SpaceAPI.apiToggleNotification,
-            object: nil,
-            userInfo: ["isEnabled": false],
-            deliverImmediately: true
-        )
+        DistributedNotificationCenter.default().postNotificationName(SpaceAPI.apiToggleNotification, object: nil, userInfo: ["isEnabled": false], deliverImmediately: true)
     }
     
-    private func loadSavedSpaces() {
+    private func loadSavedData() {
         if let data = UserDefaults.standard.data(forKey: SpaceManager.spacesKey),
            let spaces = try? JSONDecoder().decode([DesktopSpace].self, from: data) {
             spaceNameDict = spaces
         }
+        if let data = UserDefaults.standard.data(forKey: SpaceManager.nameCacheKey),
+           let cache = try? JSONDecoder().decode([String: String].self, from: data) {
+            nameCache = cache
+        }
+        if let data = UserDefaults.standard.data(forKey: SpaceManager.indexCacheKey),
+           let cache = try? JSONDecoder().decode([String: String].self, from: data) {
+            indexCache = cache
+        }
+        if (nameCache.isEmpty || indexCache.isEmpty) && !spaceNameDict.isEmpty {
+            for space in spaceNameDict where !space.customName.isEmpty {
+                nameCache[space.id] = space.customName
+                let indexKey = "\(space.displayID)|\(space.num)"
+                indexCache[indexKey] = space.customName
+            }
+            saveData()
+        }
     }
     
     public func saveSpaces() {
+        saveData()
+    }
+    
+    private func saveData() {
         if let data = try? JSONEncoder().encode(spaceNameDict) {
             UserDefaults.standard.set(data, forKey: SpaceManager.spacesKey)
-            UserDefaults.standard.synchronize()
         }
+        if let data = try? JSONEncoder().encode(nameCache) {
+            UserDefaults.standard.set(data, forKey: SpaceManager.nameCacheKey)
+        }
+        if let data = try? JSONEncoder().encode(indexCache) {
+            UserDefaults.standard.set(data, forKey: SpaceManager.indexCacheKey)
+        }
+        UserDefaults.standard.synchronize()
     }
 
     func getSpaceNum(_ spaceUUID: String) -> Int {
         if spaceUUID == "FULLSCREEN" { return 0 }
-        if let space = spaceNameDict.first(where: { $0.id == spaceUUID }) {
-            return space.num
-        }
+        if let space = spaceNameDict.first(where: { $0.id == spaceUUID }) { return space.num }
         return detectionMethod == .manual ? 0 : -1
     }
     
     func getSpaceName(_ spaceUUID: String) -> String {
         if detectionMethod == .manual {
-             if spaceUUID != "FULLSCREEN" && !spaceNameDict.contains(where: { $0.id == spaceUUID }) {
-                 return "Fullscreen"
-             }
+             if spaceUUID != "FULLSCREEN" && !spaceNameDict.contains(where: { $0.id == spaceUUID }) { return "Fullscreen" }
         }
         if spaceUUID == "FULLSCREEN" { return "Fullscreen" }
         
@@ -257,16 +368,32 @@ class SpaceManager: ObservableObject {
         DispatchQueue.main.async { [weak self] in
             guard let self = self else { return }
             UserDefaults.standard.removeObject(forKey: SpaceManager.spacesKey)
+            UserDefaults.standard.removeObject(forKey: SpaceManager.nameCacheKey)
+            UserDefaults.standard.removeObject(forKey: SpaceManager.indexCacheKey)
             self.spaceNameDict.removeAll()
-            self.saveSpaces()
+            self.nameCache.removeAll()
+            self.indexCache.removeAll()
+            self.saveData()
             self.refreshSpaceState()
+            self.scheduleWidgetUpdate()
         }
     }
     
     func renameSpace(_ spaceUUID: String, to newName: String) {
+        let trimmedName = newName.trimmingCharacters(in: .whitespacesAndNewlines)
         if let index = spaceNameDict.firstIndex(where: { $0.id == spaceUUID }) {
-            spaceNameDict[index].customName = newName
-            saveSpaces()
+            spaceNameDict[index].customName = trimmedName
+            let space = spaceNameDict[index]
+            let indexKey = "\(space.displayID)|\(space.num)"
+            if trimmedName.isEmpty {
+                nameCache.removeValue(forKey: spaceUUID)
+                indexCache.removeValue(forKey: indexKey)
+            } else {
+                nameCache[spaceUUID] = trimmedName
+                indexCache[indexKey] = trimmedName
+            }
+            saveData()
+            scheduleWidgetUpdate()
         }
     }
 }
