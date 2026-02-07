@@ -126,7 +126,6 @@ class SpaceLabelManager: ObservableObject {
     }
     
     private func updateWindows() {
-        // Snapshot to avoid mutation during iteration
         let windows = Array(createdWindows.values)
         for window in windows {
             window.refreshAppearance()
@@ -144,14 +143,31 @@ class SpaceLabelManager: ObservableObject {
             
         spaceManager.$spaceNameDict
             .receive(on: DispatchQueue.main)
-            .sink { [weak self] _ in self?.recalculateUnifiedSize() }
+            .sink { [weak self] _ in
+                self?.recalculateUnifiedSize()
+                self?.cleanupRedundantWindows()
+            }
             .store(in: &cancellables)
+    }
+    
+    private func cleanupRedundantWindows() {
+        guard let spaceManager = spaceManager else { return }
+        let validUUIDs = Set(spaceManager.spaceNameDict.map { $0.id })
+        
+        let redundantIDs = createdWindows.keys.filter { !validUUIDs.contains($0) }
+        
+        for id in redundantIDs {
+            if let window = createdWindows[id] {
+                window.close()
+            }
+            createdWindows.removeValue(forKey: id)
+            print("SpaceLabelManager: Removed redundant window for space \(id)")
+        }
     }
     
     private func recalculateUnifiedSize() {
         guard let spaceManager = spaceManager else { return }
         
-        // Enforce MainActor via Task
         if !Thread.isMainThread {
             Task { @MainActor [weak self] in self?.recalculateUnifiedSize() }
             return
@@ -190,7 +206,6 @@ class SpaceLabelManager: ObservableObject {
             return
         }
         
-        // Snapshot iteration
         let windows = Array(createdWindows.values)
         for window in windows {
             window.setPreviewSize(finalSize)
@@ -215,9 +230,6 @@ class SpaceLabelManager: ObservableObject {
     }
     
     private func applyVisibility(_ visibleUUIDs: Set<String>) {
-        guard self.isEnabled else { return }
-        
-        // CRITICAL FIX: Snapshot dictionary to allow safe iteration without lookup crashes
         let windowsSnapshot = self.createdWindows
         
         for (key, window) in windowsSnapshot {
@@ -227,7 +239,8 @@ class SpaceLabelManager: ObservableObject {
     }
     
     func updateLabel(for spaceId: String, name: String, verifySpace: Bool = true) {
-        guard isEnabled, spaceId != "FULLSCREEN" else { return }
+        guard spaceId != "FULLSCREEN" else { return }
+        
         if !verifySpace {
             let currentDisplayID = spaceManager?.currentDisplayID ?? "Main"
             ensureWindow(for: spaceId, name: name, displayID: currentDisplayID)
@@ -235,7 +248,10 @@ class SpaceLabelManager: ObservableObject {
         }
         
         Task { @MainActor in
-            try? await Task.sleep(nanoseconds: 20_000_000)
+            // FIX: Increase delay to 0.5s (500ms) to ensure macOS space transition (swipe animation)
+            // is fully complete before creating the window. This prevents the window from being
+            // created on the 'source' desktop instead of the 'destination' fullscreen app.
+            try? await Task.sleep(nanoseconds: 500_000_000)
             
             if spaceManager?.detectionMethod == .automatic {
                 guard let state = SpaceHelper.getSystemState() else { return }
@@ -257,7 +273,7 @@ class SpaceLabelManager: ObservableObject {
     private func ensureWindow(for spaceId: String, name: String, displayID: String) {
         if let existingWindow = createdWindows[spaceId] {
             if !existingWindow.isVisible {
-                createdWindows.removeValue(forKey: spaceId)
+                existingWindow.refreshAppearance()
             } else if existingWindow.displayID != displayID {
                 existingWindow.orderOut(nil)
                 createdWindows.removeValue(forKey: spaceId)
@@ -270,7 +286,11 @@ class SpaceLabelManager: ObservableObject {
     
     private func createWindow(for spaceId: String, name: String, displayID: String) {
         guard let spaceManager = spaceManager else { return }
-        let window = SpaceLabelWindow(spaceId: spaceId, name: name, displayID: displayID, spaceManager: spaceManager, labelManager: self)
+        
+        // Pass the isFullscreen flag from the space manager logic
+        let isFullscreen = spaceManager.spaceNameDict.first(where: { $0.id == spaceId })?.isFullscreen ?? false
+        
+        let window = SpaceLabelWindow(spaceId: spaceId, name: name, displayID: displayID, isFullscreen: isFullscreen, spaceManager: spaceManager, labelManager: self)
         createdWindows[spaceId] = window
         let isCurrent = (spaceId == spaceManager.currentSpaceUUID)
         window.setMode(isCurrentSpace: isCurrent)
@@ -285,7 +305,9 @@ class SpaceLabelManager: ObservableObject {
     }
     
     private func updateLabelsVisibility() {
-        if !isEnabled { removeAllWindows() } else {
+        updateWindows()
+        
+        if isEnabled {
             if let spaceId = spaceManager?.currentSpaceUUID, let name = spaceManager?.getSpaceName(spaceId) {
                 updateLabel(for: spaceId, name: name, verifySpace: false)
             }

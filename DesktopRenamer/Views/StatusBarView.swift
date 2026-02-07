@@ -2,6 +2,7 @@ import SwiftUI
 import Combine
 import AppKit
 
+// RenameViewController remains unchanged
 class RenameViewController: NSViewController {
     private var spaceManager: SpaceManager
     private var completion: () -> Void
@@ -18,17 +19,13 @@ class RenameViewController: NSViewController {
     }
     
     override func loadView() {
-        // Create the main view
         let view = NSView(frame: NSRect(x: 0, y: 0, width: 240, height: 80))
-        
-        // Create and configure the text field
         textField = NSTextField(frame: NSRect(x: 20, y: 40, width: 200, height: 24))
         textField.stringValue = spaceManager.getSpaceName(spaceManager.currentSpaceUUID)
         textField.placeholderString = NSLocalizedString("Rename.Placeholder", comment: "")
         textField.delegate = self
         view.addSubview(textField)
         
-        // Create the label
         let labelString = String(format: NSLocalizedString("Rename.Label", comment: ""), spaceManager.getSpaceNum(spaceManager.currentSpaceUUID))
         let label = NSTextField(labelWithString: labelString)
         label.frame = NSRect(x: 20, y: 15, width: 200, height: 17)
@@ -47,11 +44,9 @@ class RenameViewController: NSViewController {
 extension RenameViewController: NSTextFieldDelegate {
     func control(_ control: NSControl, textView: NSTextView, doCommandBy commandSelector: Selector) -> Bool {
         if commandSelector == #selector(NSResponder.insertNewline(_:)) {
-            // Handle Enter key
             handleRename()
             return true
         } else if commandSelector == #selector(NSResponder.cancelOperation(_:)) {
-            // Handle Escape key
             dismiss(nil)
             return true
         }
@@ -74,8 +69,9 @@ class StatusBarController: NSObject {
     private var popover: NSPopover
     private var cancellables = Set<AnyCancellable>()
     private var settingsWindowController: NSWindowController?
-    private var renameItem: NSMenuItem!
-    private var showLabelsMenuItem: NSMenuItem!
+    
+    private var renameItem: NSMenuItem?
+    private var showLabelsMenuItem: NSMenuItem?
     
     static let isStatusBarHiddenKey = "isStatusBarHidden"
     static var isStatusBarHidden: Bool {
@@ -84,62 +80,57 @@ class StatusBarController: NSObject {
     }
     
     let labelManager: SpaceLabelManager
+    let hotkeyManager: HotkeyManager
+    // Add GestureManager
+    let gestureManager: GestureManager
     
-    init(spaceManager: SpaceManager) {
+    // Updated Init
+    init(spaceManager: SpaceManager, hotkeyManager: HotkeyManager, gestureManager: GestureManager) {
         self.spaceManager = spaceManager
         self.labelManager = SpaceLabelManager(spaceManager: spaceManager)
+        self.hotkeyManager = hotkeyManager
+        self.gestureManager = gestureManager
         
         popover = NSPopover()
         popover.behavior = .transient
         
         super.init()
         
-        setupMenuBar()
+        rebuildMenu()
         StatusBarController.statusItem.isVisible = !StatusBarController.isStatusBarHidden
         
         updateStatusBarTitle()
         setupObservers()
-        
-        updateRenameMenuItemState()
     }
     
     deinit {
-        // Ensure dock icon is hidden when app quits
         NSApp.setActivationPolicy(.accessory)
     }
     
     private func setupObservers() {
-        // Observe current space ID changes
         spaceManager.$currentSpaceUUID
             .receive(on: DispatchQueue.main)
             .sink { [weak self] spaceId in
                 self?.updateStatusBarTitle()
-                // Update label for current space
+                self?.rebuildMenu()
                 if let name = self?.spaceManager.getSpaceName(spaceId) {
                     self?.labelManager.updateLabel(for: spaceId, name: name)
                 }
-                
-                self?.updateRenameMenuItemState()
             }
             .store(in: &cancellables)
         
         spaceManager.$spaceNameDict
             .receive(on: DispatchQueue.main)
             .sink { [weak self] _ in
-                if let currentSpaceUUID = self?.spaceManager.currentSpaceUUID,
-                   let newName = self?.spaceManager.getSpaceName(currentSpaceUUID),
-                   let button = StatusBarController.statusItem.button,
-                   button.title != newName {
-                    self?.updateStatusBarTitle()
-                }
+                self?.updateStatusBarTitle()
+                self?.rebuildMenu()
             }
             .store(in: &cancellables)
         
-        // Observe labelManager.isEnabled
         labelManager.$isEnabled
             .receive(on: DispatchQueue.main)
             .sink { [weak self] _ in
-                self?.updateShowLabelsMenuItemState()
+                self?.rebuildMenu()
             }
             .store(in: &cancellables)
     }
@@ -151,68 +142,69 @@ class StatusBarController: NSObject {
         }
     }
     
-    private func setupMenuBar() {
-        if let button = StatusBarController.statusItem.button {
-            button.title = "Loading..."
-        }
-        
-        setupMenu()
-    }
-    
-    private func setupMenu() {
+    private func rebuildMenu() {
         let menu = NSMenu()
         
-        // Add rename option for current space
-        self.renameItem = NSMenuItem(
+        // Filter spaces to only show those on the current display
+        let currentDisplaySpaces = spaceManager.currentDisplaySpaces
+        
+        if !currentDisplaySpaces.isEmpty {
+            for space in currentDisplaySpaces {
+                let name = spaceManager.getSpaceName(space.id)
+                let item = NSMenuItem(title: name, action: #selector(selectSpace(_:)), keyEquivalent: "")
+                item.target = self
+                item.representedObject = space.id
+                
+                if space.id == spaceManager.currentSpaceUUID {
+                    item.state = .on
+                } else {
+                    item.state = .off
+                }
+                
+                menu.addItem(item)
+            }
+            menu.addItem(NSMenuItem.separator())
+        }
+        
+        let rename = NSMenuItem(
             title: NSLocalizedString("Menu.RenameCurrentSpace", comment: ""),
-            action: nil, // Temporarily
+            action: nil,
             keyEquivalent: "r"
         )
-        renameItem.image = NSImage(systemSymbolName: "pencil.line", accessibilityDescription: nil)
-        menu.addItem(self.renameItem)
+        rename.image = NSImage(systemSymbolName: "pencil.line", accessibilityDescription: nil)
         
-        // Add troubleshoot helper
-        let troubleshootItem = NSMenuItem(
-            title: NSLocalizedString("Troubleshoot Space Detection", comment: ""),
-            action: #selector(troubleshootSpaceDetection),
-            keyEquivalent: ""
-        )
+        if spaceManager.getSpaceNum(spaceManager.currentSpaceUUID) == 0 {
+            rename.isEnabled = false
+        } else {
+            rename.isEnabled = true
+            rename.target = self
+            rename.action = #selector(renameCurrentSpace)
+        }
+        self.renameItem = rename
+        menu.addItem(rename)
+        
+        let troubleshootItem = NSMenuItem(title: NSLocalizedString("Troubleshoot Space Detection", comment: ""), action: #selector(troubleshootSpaceDetection), keyEquivalent: "")
         troubleshootItem.image = NSImage(systemSymbolName: "wrench.and.screwdriver", accessibilityDescription: nil)
         troubleshootItem.target = self
         menu.addItem(troubleshootItem)
         
-        // Add show labels option
-        self.showLabelsMenuItem = NSMenuItem(
-            title: NSLocalizedString("Menu.ShowLabels", comment: "Toggle desktop labels visibility"),
-            action: #selector(toggleLabelsFromMenu),
-            keyEquivalent: "l"
-        )
-        self.showLabelsMenuItem.target = self
-        self.showLabelsMenuItem.state = labelManager.isEnabled ? .on : .off
-        self.showLabelsMenuItem.image = NSImage(systemSymbolName: "appwindow.swipe.rectangle", accessibilityDescription: nil)
-        menu.addItem(self.showLabelsMenuItem)
+        let showLabels = NSMenuItem(title: NSLocalizedString("Menu.ShowLabels", comment: "Toggle labels"), action: #selector(toggleLabelsFromMenu), keyEquivalent: "l")
+        showLabels.target = self
+        showLabels.state = labelManager.isEnabled ? .on : .off
+        showLabels.image = NSImage(systemSymbolName: "appwindow.swipe.rectangle", accessibilityDescription: nil)
+        self.showLabelsMenuItem = showLabels
+        menu.addItem(showLabels)
         
-        // Add a separator
         menu.addItem(NSMenuItem.separator())
         
-        // Add settings option
-        let settingsItem = NSMenuItem(
-            title: NSLocalizedString("Menu.Settings", comment: ""),
-            action: #selector(openSettingsWindow),
-            keyEquivalent: ","
-        )
+        let settingsItem = NSMenuItem(title: NSLocalizedString("Menu.Settings", comment: ""), action: #selector(openSettingsWindow), keyEquivalent: ",")
         settingsItem.image = NSImage(systemSymbolName: "gear", accessibilityDescription: nil)
         settingsItem.target = self
         menu.addItem(settingsItem)
         
         menu.addItem(NSMenuItem.separator())
         
-        // Add quit option
-        let quitItem = NSMenuItem(
-            title: NSLocalizedString("Menu.Quit", comment: ""),
-            action: #selector(quitApp),
-            keyEquivalent: "q"
-        )
+        let quitItem = NSMenuItem(title: NSLocalizedString("Menu.Quit", comment: ""), action: #selector(quitApp), keyEquivalent: "q")
         quitItem.image = NSImage(systemSymbolName: "xmark.circle", accessibilityDescription: nil)
         quitItem.target = self
         menu.addItem(quitItem)
@@ -220,51 +212,34 @@ class StatusBarController: NSObject {
         StatusBarController.statusItem.menu = menu
     }
     
-    private func updateRenameMenuItemState() {
-        let currentSpaceNum = spaceManager.getSpaceNum(spaceManager.currentSpaceUUID)
-        
-        if currentSpaceNum == 0 {
-            // Fullscreen
-            self.renameItem?.isEnabled = false
-            self.renameItem?.target = nil
-            self.renameItem?.action = nil
-        } else {
-            self.renameItem?.isEnabled = true
-            self.renameItem?.target = self
-            self.renameItem?.action = #selector(renameCurrentSpace)
+    @objc func selectSpace(_ sender: NSMenuItem) {
+        guard let spaceID = sender.representedObject as? String else { return }
+        if spaceID == spaceManager.currentSpaceUUID { return }
+        if let space = spaceManager.spaceNameDict.first(where: { $0.id == spaceID }) {
+            spaceManager.switchToSpace(space)
         }
     }
     
     @objc func renameCurrentSpace() {
-        if spaceManager.getSpaceNum(spaceManager.currentSpaceUUID) == 0 {
-            return // Fullscreen
-        }
-        
+        if spaceManager.getSpaceNum(spaceManager.currentSpaceUUID) == 0 { return }
         guard let button = StatusBarController.statusItem.button else { return }
-        
-        // Close the menu
         StatusBarController.statusItem.menu?.cancelTracking()
-        
-        // Configure the popover
         let renameVC = RenameViewController(spaceManager: spaceManager) { [weak self] in
             self?.popover.performClose(nil)
             self?.updateStatusBarTitle()
         }
         popover.contentViewController = renameVC
-        
-        // Show the popover
         popover.show(relativeTo: button.bounds, of: button, preferredEdge: .minY)
     }
     
     @objc private func toggleLabelsFromMenu() {
         labelManager.toggleEnabled()
-        
-        self.showLabelsMenuItem.state = labelManager.isEnabled ? .on : .off
+        rebuildMenu()
     }
         
     @objc private func troubleshootSpaceDetection() {
         openSettingsWindow()
-    
+        
         var alertTitle = ""
         var alertMessage = ""
         
@@ -299,13 +274,11 @@ class StatusBarController: NSObject {
         
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
             guard let window = self.settingsWindowController?.window else { return }
-            
             let alert = NSAlert()
             alert.messageText = alertTitle
             alert.informativeText = alertMessage
             alert.alertStyle = .informational
             alert.addButton(withTitle: "OK")
-            
             alert.beginSheetModal(for: window, completionHandler: nil)
         }
     }
@@ -319,7 +292,6 @@ class StatusBarController: NSObject {
             return
         }
         
-        // 1. STYLE: .fullSizeContentView is critical for "Ice" style
         let window = NSWindow(
             contentRect: NSRect(x: 0, y: 0, width: defaultSettingsWindowWidth, height: defaultSettingsWindowHeight),
             styleMask: [.titled, .closable, .miniaturizable, .fullSizeContentView],
@@ -328,53 +300,40 @@ class StatusBarController: NSObject {
         )
         
         window.identifier = NSUserInterfaceItemIdentifier("SettingsWindow")
-        
-        // 2. CONFIG: Hide the native title bar elements
         window.titleVisibility = .hidden
         window.titlebarAppearsTransparent = true
         window.titlebarSeparatorStyle = .none
-        
-        // 3. REMOVE TOOLBAR: Ensures no extra space is reserved at the top
         window.toolbar = nil
-        
         window.center()
         window.minSize = NSSize(width: defaultSettingsWindowWidth, height: defaultSettingsWindowHeight)
         window.collectionBehavior = [.participatesInCycle]
         window.level = .normal
         
-        let settingsVC = SettingsHostingController(spaceManager: spaceManager, labelManager: labelManager)
+        // Pass gestureManager here
+        let settingsVC = SettingsHostingController(
+            spaceManager: spaceManager,
+            labelManager: labelManager,
+            hotkeyManager: hotkeyManager,
+            gestureManager: gestureManager
+        )
         window.contentViewController = settingsVC
         
         let windowController = NSWindowController(window: window)
         windowController.window?.delegate = self
         settingsWindowController = windowController
         
-        NotificationCenter.default.addObserver(
-            self,
-            selector: #selector(settingsWindowWillClose),
-            name: NSWindow.willCloseNotification,
-            object: window
-        )
+        NotificationCenter.default.addObserver(self, selector: #selector(settingsWindowWillClose), name: NSWindow.willCloseNotification, object: window)
         
         windowController.showWindow(nil)
         NSApp.activate(ignoringOtherApps: true)
     }
     
     @objc private func settingsWindowWillClose(_ notification: Notification) {
-        // Hide dock icon
-        DispatchQueue.main.async {
-            NSApp.setActivationPolicy(.accessory)
-        }
+        DispatchQueue.main.async { NSApp.setActivationPolicy(.accessory) }
         settingsWindowController = nil
     }
     
-    @objc private func quitApp() {
-        NSApplication.shared.terminate(nil)
-    }
-    
-    private func updateShowLabelsMenuItemState() {
-        self.showLabelsMenuItem.state = labelManager.isEnabled ? .on : .off
-    }
+    @objc private func quitApp() { NSApplication.shared.terminate(nil) }
     
     static func toggleStatusBar() {
         StatusBarController.isStatusBarHidden.toggle()
@@ -385,10 +344,7 @@ class StatusBarController: NSObject {
 extension StatusBarController: NSWindowDelegate {
     func windowWillClose(_ notification: Notification) {
         if notification.object as? NSWindow == settingsWindowController?.window {
-            // Hide dock icon when closing settings
-            DispatchQueue.main.async {
-                NSApp.setActivationPolicy(.accessory)
-            }
+            DispatchQueue.main.async { NSApp.setActivationPolicy(.accessory) }
             settingsWindowController = nil
         }
     }
