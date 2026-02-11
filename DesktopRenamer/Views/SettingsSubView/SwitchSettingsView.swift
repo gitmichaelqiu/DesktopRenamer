@@ -79,6 +79,18 @@ struct SwitchSettingsView: View {
                             }
                             .labelsHidden()
                         }
+                        
+                        Divider()
+                        
+                        SliderSettingsRow(
+                            "Switch override threshold",
+                            value: $gestureManager.swipeThreshold,
+                            range: 0.05...0.50,
+                            defaultValue: 0.10,
+                            step: 0.05,
+                            helperText: "Controls how much distance the fingers have to move before switching the desktop.",
+                            valueString: { String(format: "%.0f%%", $0 * 100) }
+                        )
                     }
                 }
 
