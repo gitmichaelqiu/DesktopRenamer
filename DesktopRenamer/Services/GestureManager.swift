@@ -55,6 +55,7 @@ class GestureManager: ObservableObject {
     private let kGestureEnabled = "GestureManager.Enabled"
     private let kFingerCount = "GestureManager.FingerCount"
     private let kSwitchOverride = "GestureManager.SwitchOverride"
+    private let kSwipeThreshold = "GestureManager.SwipeThreshold"
     
     public enum SwitchOverrideMode: String, CaseIterable, Identifiable {
         case cursor = "Cursor"
@@ -82,6 +83,12 @@ class GestureManager: ObservableObject {
         }
     }
     
+    @Published var swipeThreshold: Float {
+        didSet {
+            UserDefaults.standard.set(swipeThreshold, forKey: kSwipeThreshold)
+        }
+    }
+    
     private weak var spaceManager: SpaceManager?
     private var devices: [MTDeviceRef] = []
     
@@ -103,7 +110,7 @@ class GestureManager: ObservableObject {
     
     // Tuning
     private let switchCooldown: TimeInterval = 0.25
-    private let minSwipeDistance: Float = 0.10 // 15% Total Average Movement
+    // private let minSwipeDistance: Float = 0.10 // Moved to swipeThreshold
     private let consistencyThreshold: Float = 0.01 // 5% Minimum movement per finger (Anti-Tap)
     private let touchTimeout: TimeInterval = 0.15
     
@@ -120,6 +127,9 @@ class GestureManager: ObservableObject {
         } else {
             self.switchOverride = .cursor
         }
+        
+        // Default to 0.10 if not set
+        self.swipeThreshold = UserDefaults.standard.object(forKey: kSwipeThreshold) == nil ? 0.10 : UserDefaults.standard.float(forKey: kSwipeThreshold)
         
         GestureManager.sharedManager = self
         
@@ -308,9 +318,54 @@ class GestureManager: ObservableObject {
         let avgDX = totalDX / Float(numFingers)
         let avgDY = totalDY / Float(numFingers)
         
-        // 6. Trigger Logic
+        // 6. Pre-Trigger Logic: Overscroll Indicator
+        var isOverscroll = false
+        
+        // Only check horizontal dominance for indicator first
+        if abs(avgDX) > abs(avgDY) {
+            let direction: SwitchDirection = avgDX < 0 ? .next : .previous
+            
+            // Determine target display to check boundaries
+            var targetDisplayID: String? = nil
+            if self.switchOverride == .cursor {
+                targetDisplayID = SpaceHelper.getCursorDisplayID()
+            }
+            // If .activeWindow, we leave nil, relying on SpaceManager's default context
+            
+            if direction == .previous {
+                if spaceManager?.isFirstSpace(onDisplayID: targetDisplayID) == true {
+                    isOverscroll = true
+                    // avgDX is positive here.
+                    let progress = Double(abs(avgDX) / swipeThreshold)
+                    // Previous means going "Left". Wall is on Left. Edge is .leading.
+                    DispatchQueue.main.async {
+                        OverscrollOverlayManager.shared.update(progress: progress, edge: .leading)
+                    }
+                }
+            } else { // .next
+                if spaceManager?.isLastSpace(onDisplayID: targetDisplayID) == true {
+                    isOverscroll = true
+                    // avgDX is negative here.
+                    let progress = Double(abs(avgDX) / swipeThreshold)
+                    // Next means going "Right". Wall is on Right. Edge is .trailing.
+                    DispatchQueue.main.async {
+                        OverscrollOverlayManager.shared.update(progress: progress, edge: .trailing)
+                    }
+                }
+            }
+        }
+        
+        if isOverscroll {
+            return
+        } else {
+             DispatchQueue.main.async {
+                 OverscrollOverlayManager.shared.hide()
+             }
+        }
+
+        // 7. Trigger Logic
         // Primary threshold check
-        if abs(avgDX) > minSwipeDistance {
+        if abs(avgDX) > swipeThreshold {
             
             // Check for Horizontal Dominance (Must be more horizontal than vertical)
             if abs(avgDX) > abs(avgDY) {
@@ -361,6 +416,10 @@ class GestureManager: ObservableObject {
     private func resetTrackingState() {
         initialTouchPositions.removeAll()
         lockedDirection = nil
+        
+        DispatchQueue.main.async {
+            OverscrollOverlayManager.shared.hide()
+        }
     }
     
     enum SwitchDirection {

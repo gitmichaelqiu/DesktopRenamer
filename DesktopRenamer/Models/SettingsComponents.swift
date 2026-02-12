@@ -5,7 +5,7 @@ struct SettingsRow<Content: View>: View {
     let content: Content
     let helperText: LocalizedStringKey?
     
-    @State private var showingHelperPopover = false
+
 
     init(_ title: LocalizedStringKey, helperText: LocalizedStringKey? = nil, @ViewBuilder content: () -> Content) {
         self.title = title
@@ -20,23 +20,7 @@ struct SettingsRow<Content: View>: View {
                     .frame(alignment: .leading)
                 
                 if let helperText = helperText {
-                    Button {
-                        showingHelperPopover.toggle()
-                    } label: {
-                        Image(systemName: "questionmark.circle.fill")
-                            .font(.caption)
-                            .foregroundColor(.gray)
-                    }
-                    .buttonStyle(.plain)
-                    .popover(isPresented: $showingHelperPopover, arrowEdge: .top) {
-                        VStack(alignment: .leading, spacing: 10) {
-                            Text(helperText)
-                                .font(.body)
-                                .fixedSize(horizontal: false, vertical: true)
-                        }
-                        .padding(15)
-                        .frame(minWidth: 200, maxWidth: 300)
-                    }
+                    HelperInfoButton(text: helperText)
                 }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
@@ -87,5 +71,96 @@ struct SettingsSection<Content: View>: View {
             }
         }
         return Color(nsColor: nsColor)
+    }
+}
+
+fileprivate struct HelperInfoButton: View {
+    let text: LocalizedStringKey
+    @State private var showingPopover = false
+    
+    var body: some View {
+        Button {
+            showingPopover.toggle()
+        } label: {
+            Image(systemName: "questionmark.circle.fill")
+                .font(.caption)
+                .foregroundColor(.gray)
+        }
+        .buttonStyle(.plain)
+        .popover(isPresented: $showingPopover, arrowEdge: .top) {
+            VStack(alignment: .leading, spacing: 10) {
+                Text(text)
+                    .font(.body)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            .padding(15)
+            .frame(minWidth: 200, maxWidth: 300)
+        }
+    }
+}
+
+struct SliderSettingsRow<V>: View where V: BinaryFloatingPoint, V.Stride : BinaryFloatingPoint {
+    let title: LocalizedStringKey
+    @Binding var value: V
+    let range: ClosedRange<V>
+    let defaultValue: V
+    let step: V?
+    let helperText: LocalizedStringKey?
+    let valueString: (V) -> String
+    
+    init(_ title: LocalizedStringKey,
+         value: Binding<V>,
+         range: ClosedRange<V>,
+         defaultValue: V,
+         step: V? = nil,
+         helperText: LocalizedStringKey? = nil,
+         valueString: @escaping (V) -> String = { String(format: "%.2f", Double($0)) }) {
+        self.title = title
+        self._value = value
+        self.range = range
+        self.defaultValue = defaultValue
+        self.step = step
+        self.helperText = helperText
+        self.valueString = valueString
+    }
+    
+    var body: some View {
+        VStack(spacing: 6) {
+            // Row 1: Title + optional Helper + Spacer + Reset
+            HStack {
+                HStack(spacing: 4) {
+                    Text(title)
+                    if let helperText = helperText {
+                        HelperInfoButton(text: helperText)
+                    }
+                }
+                
+                Spacer()
+                
+                Button("↺") {
+                    withAnimation {
+                        value = defaultValue
+                    }
+                }
+                .help("Reset to default")
+                .disabled(value == defaultValue)
+            }
+            
+            // Row 2: Slider + Spacer + Value
+            HStack {
+                if let step = step {
+                    Slider(value: $value, in: range, step: V.Stride(step))
+                } else {
+                    Slider(value: $value, in: range)
+                }
+                
+                Text(valueString(value))
+                    .monospacedDigit()
+                    .foregroundColor(.secondary)
+                    .frame(minWidth: 50, alignment: .trailing)
+            }
+        }
+        .padding(.vertical, 8)
+        .padding(.horizontal, 10)
     }
 }

@@ -28,18 +28,24 @@ struct LabelSettingsView: View {
                         if labelManager.showPreviewLabels {
                             Divider()
                             
-                            SliderSectionRow(
-                                title: "Font size",
+                            SliderSettingsRow(
+                                "Font size",
                                 value: $labelManager.previewFontScale,
-                                range: 0.5...2.0
+                                range: 0.5...2.0,
+                                defaultValue: 1.0,
+                                step: 0.10,
+                                valueString: { String(format: "%.2fx", $0) }
                             )
                             
                             Divider()
                             
-                            SliderSectionRow(
-                                title: "Window size",
+                            SliderSettingsRow(
+                                "Window size",
                                 value: $labelManager.previewPaddingScale,
-                                range: 0.5...3.0
+                                range: 0.5...3.0,
+                                defaultValue: 1.0,
+                                step: 0.10,
+                                valueString: { String(format: "%.2fx", $0) }
                             )
                         }
                     }
@@ -69,35 +75,25 @@ struct LabelSettingsView: View {
                             
                             Divider()
                             
-                            SliderSectionRow(
-                                title: "Font size",
+                            SliderSettingsRow(
+                                "Font size",
                                 value: $labelManager.activeFontScale,
-                                range: 0.5...2.0
+                                range: 0.5...2.0,
+                                defaultValue: 1.0,
+                                step: 0.10,
+                                valueString: { String(format: "%.2fx", $0) }
                             )
                             
                             Divider()
                             
-                            SliderSectionRow(
-                                title: "Window size",
+                            SliderSettingsRow(
+                                "Window size",
                                 value: $labelManager.activePaddingScale,
-                                range: 0.5...3.0
+                                range: 0.5...3.0,
+                                defaultValue: 1.0,
+                                step: 0.10,
+                                valueString: { String(format: "%.2fx", $0) }
                             )
-                        }
-                    }
-                    
-                    // MARK: - SECTION 3: ACTIONS
-                    SettingsSection("Actions") {
-                        SettingsRow("Restore defaults") {
-                            Button("Reset") {
-                                withAnimation {
-                                    labelManager.showPreviewLabels = true
-                                    labelManager.showActiveLabels = false
-                                    labelManager.activeFontScale = 1.0
-                                    labelManager.activePaddingScale = 1.0
-                                    labelManager.previewFontScale = 1.0
-                                    labelManager.previewPaddingScale = 1.0
-                                }
-                            }
                         }
                     }
                 }
@@ -106,31 +102,6 @@ struct LabelSettingsView: View {
             .animation(.easeInOut(duration: 0.2), value: labelManager.showActiveLabels)
             .animation(.easeInOut(duration: 0.2), value: labelManager.showPreviewLabels)
             .animation(.easeInOut(duration: 0.2), value: labelManager.isEnabled)
-        }
-    }
-    
-    // MARK: - Custom Helper for Full-Width Sliders
-    struct SliderSectionRow: View {
-        let title: LocalizedStringKey
-        @Binding var value: Double
-        let range: ClosedRange<Double>
-        
-        var body: some View {
-            VStack(spacing: 6) {
-                // Top Row: Title and Value
-                HStack {
-                    Text(title)
-                    Spacer()
-                    Text("\(value, specifier: "%.2f")x")
-                        .monospacedDigit()
-                        .foregroundColor(.secondary)
-                }
-                
-                // Bottom Row: Full Width Slider
-                Slider(value: $value, in: range, step: 0.10)
-            }
-            .padding(.vertical, 8)
-            .padding(.horizontal, 10)
         }
     }
 }
