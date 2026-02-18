@@ -91,17 +91,6 @@
         }
       }
     },
-    "Actions" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "操作"
-          }
-        }
-      }
-    },
     "Active Space Labels" : {
       "localizations" : {
         "zh-Hans" : {
@@ -113,7 +102,14 @@
       }
     },
     "Active Window" : {
-
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "活跃窗口"
+          }
+        }
+      }
     },
     "Add" : {
       "localizations" : {
@@ -296,7 +292,14 @@
       }
     },
     "Controls how much distance the fingers have to move before switching the desktop." : {
-
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "控制触发切换的手指移动距离。"
+          }
+        }
+      }
     },
     "Create windows that only appear in Mission Control to display space names.\n\nMay not work when multiple displays are connected." : {
       "localizations" : {
@@ -325,7 +328,14 @@
       }
     },
     "Cursor" : {
-
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "指针"
+          }
+        }
+      }
     },
     "Desktop" : {
       "shouldTranslate" : false
@@ -808,15 +818,11 @@
       }
     },
     "Reset to default" : {
-
-    },
-    "Restore defaults" : {
-      "extractionState" : "stale",
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "恢复默认"
+            "value" : "重置默认"
           }
         }
       }
@@ -1960,10 +1966,30 @@
       }
     },
     "Switch display with" : {
-
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "切换有…的屏幕"
+          }
+        }
+      }
     },
     "Switch override threshold" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Switch distance"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "滑动距离"
+          }
+        }
+      }
     },
     "Switch to left space" : {
       "localizations" : {
