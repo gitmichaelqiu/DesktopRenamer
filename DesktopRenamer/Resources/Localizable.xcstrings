@@ -496,6 +496,12 @@
         }
       }
     },
+    "Hide the space label window of the space that is being switched to immediately instead of hiding it after the space is switched." : {
+
+    },
+    "Hide when switching desktops" : {
+
+    },
     "If enabled, the label stays on the desktop instead of hiding.\n\nTip: You can drag the window to the screen edge to shrink it into a 'Picture-in-Picture' mode." : {
       "localizations" : {
         "en" : {
