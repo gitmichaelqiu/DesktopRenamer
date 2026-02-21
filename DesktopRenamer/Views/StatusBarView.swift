@@ -97,9 +97,9 @@ class StatusBarController: NSObject {
         super.init()
         
         rebuildMenu()
+        updateStatusBarTitle()
         StatusBarController.statusItem.isVisible = !StatusBarController.isStatusBarHidden
         
-        updateStatusBarTitle()
         setupObservers()
     }
     
@@ -138,7 +138,7 @@ class StatusBarController: NSObject {
     private func updateStatusBarTitle() {
         if let button = StatusBarController.statusItem.button {
             let name = spaceManager.getSpaceName(spaceManager.currentSpaceUUID)
-            button.title = name
+            button.title = name.isEmpty ? " " : name
         }
     }
     
