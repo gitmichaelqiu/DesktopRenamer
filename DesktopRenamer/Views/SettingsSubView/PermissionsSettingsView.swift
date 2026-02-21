@@ -17,7 +17,7 @@ struct PermissionsSettingsView: View {
                                     .foregroundColor(.red)
                             }
                             
-                            Button(permissionManager.isAccessibilityGranted ? "Re-grant" : "Grant") {
+                            Button(permissionManager.isAccessibilityGranted ? "Open Settings" : "Grant") {
                                 permissionManager.requestAccessibilityPermission()
                             }
                         }
@@ -35,7 +35,7 @@ struct PermissionsSettingsView: View {
                                     .foregroundColor(.red)
                             }
                             
-                            Button(permissionManager.isAutomationGranted ? "Re-grant" : "Grant") {
+                            Button(permissionManager.isAutomationGranted ? "Open Settings" : "Grant") {
                                 permissionManager.requestAutomationPermission()
                             }
                         }
