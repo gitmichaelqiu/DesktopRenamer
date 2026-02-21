@@ -10,13 +10,11 @@ struct SwitchSettingsView: View {
             VStack(alignment: .leading, spacing: 20) {
 
                 // MARK: - Keyboard Shortcuts
-                SettingsSection("Keyboard Shortcuts") {
+                SettingsSection("Keyboard Shortcuts", helperText: "If you want to use Control + Arrow, disable the system's one in Settings → Keyboard → Keyboard Shortcuts... → Mission Control.") {
                     // Switch Left
                     VStack(spacing: 0) {
                         SettingsRow(
                             "Switch to left space",
-                            helperText:
-                                "If you want to use Control + Arrow, disable the system's one in Settings → Keyboard → Keyboard Shortcuts... → Mission Control.",
                             warningText: permissionManager.isAccessibilityGranted
                                 ? nil : "Requires Accessibility permission."
                         ) {
