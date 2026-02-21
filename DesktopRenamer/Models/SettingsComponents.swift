@@ -4,12 +4,16 @@ struct SettingsRow<Content: View>: View {
     let title: LocalizedStringKey
     let content: Content
     let helperText: LocalizedStringKey?
-    
+    let warningText: LocalizedStringKey?
 
-
-    init(_ title: LocalizedStringKey, helperText: LocalizedStringKey? = nil, @ViewBuilder content: () -> Content) {
+    init(
+        _ title: LocalizedStringKey, helperText: LocalizedStringKey? = nil,
+        warningText: LocalizedStringKey? = nil,
+        @ViewBuilder content: () -> Content
+    ) {
         self.title = title
         self.helperText = helperText
+        self.warningText = warningText
         self.content = content()
     }
 
@@ -18,9 +22,15 @@ struct SettingsRow<Content: View>: View {
             HStack(spacing: 4) {
                 Text(title)
                     .frame(alignment: .leading)
-                
+
                 if let helperText = helperText {
                     HelperInfoButton(text: helperText)
+                }
+
+                if let warningText = warningText {
+                    Image(systemName: "exclamationmark.triangle.fill")
+                        .foregroundColor(.yellow)
+                        .help(warningText)
                 }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
@@ -74,10 +84,10 @@ struct SettingsSection<Content: View>: View {
     }
 }
 
-fileprivate struct HelperInfoButton: View {
+private struct HelperInfoButton: View {
     let text: LocalizedStringKey
     @State private var showingPopover = false
-    
+
     var body: some View {
         Button {
             showingPopover.toggle()
@@ -99,7 +109,7 @@ fileprivate struct HelperInfoButton: View {
     }
 }
 
-struct SliderSettingsRow<V>: View where V: BinaryFloatingPoint, V.Stride : BinaryFloatingPoint {
+struct SliderSettingsRow<V>: View where V: BinaryFloatingPoint, V.Stride: BinaryFloatingPoint {
     let title: LocalizedStringKey
     @Binding var value: V
     let range: ClosedRange<V>
@@ -107,14 +117,16 @@ struct SliderSettingsRow<V>: View where V: BinaryFloatingPoint, V.Stride : Binar
     let step: V?
     let helperText: LocalizedStringKey?
     let valueString: (V) -> String
-    
-    init(_ title: LocalizedStringKey,
-         value: Binding<V>,
-         range: ClosedRange<V>,
-         defaultValue: V,
-         step: V? = nil,
-         helperText: LocalizedStringKey? = nil,
-         valueString: @escaping (V) -> String = { String(format: "%.2f", Double($0)) }) {
+
+    init(
+        _ title: LocalizedStringKey,
+        value: Binding<V>,
+        range: ClosedRange<V>,
+        defaultValue: V,
+        step: V? = nil,
+        helperText: LocalizedStringKey? = nil,
+        valueString: @escaping (V) -> String = { String(format: "%.2f", Double($0)) }
+    ) {
         self.title = title
         self._value = value
         self.range = range
@@ -123,7 +135,7 @@ struct SliderSettingsRow<V>: View where V: BinaryFloatingPoint, V.Stride : Binar
         self.helperText = helperText
         self.valueString = valueString
     }
-    
+
     var body: some View {
         VStack(spacing: 6) {
             // Row 1: Title + optional Helper + Spacer + Reset
@@ -134,9 +146,9 @@ struct SliderSettingsRow<V>: View where V: BinaryFloatingPoint, V.Stride : Binar
                         HelperInfoButton(text: helperText)
                     }
                 }
-                
+
                 Spacer()
-                
+
                 Button("↺") {
                     withAnimation {
                         value = defaultValue
@@ -145,7 +157,7 @@ struct SliderSettingsRow<V>: View where V: BinaryFloatingPoint, V.Stride : Binar
                 .help("Reset to default")
                 .disabled(value == defaultValue)
             }
-            
+
             // Row 2: Slider + Spacer + Value
             HStack {
                 if let step = step {
@@ -153,7 +165,7 @@ struct SliderSettingsRow<V>: View where V: BinaryFloatingPoint, V.Stride : Binar
                 } else {
                     Slider(value: $value, in: range)
                 }
-                
+
                 Text(valueString(value))
                     .monospacedDigit()
                     .foregroundColor(.secondary)
