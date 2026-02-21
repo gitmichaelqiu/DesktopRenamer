@@ -28,9 +28,7 @@ struct SettingsRow<Content: View>: View {
                 }
 
                 if let warningText = warningText {
-                    Image(systemName: "exclamationmark.triangle.fill")
-                        .foregroundColor(.yellow)
-                        .help(warningText)
+                    WarningInfoButton(text: warningText)
                 }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
@@ -95,6 +93,31 @@ private struct HelperInfoButton: View {
             Image(systemName: "questionmark.circle.fill")
                 .font(.caption)
                 .foregroundColor(.gray)
+        }
+        .buttonStyle(.plain)
+        .popover(isPresented: $showingPopover, arrowEdge: .top) {
+            VStack(alignment: .leading, spacing: 10) {
+                Text(text)
+                    .font(.body)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            .padding(15)
+            .frame(minWidth: 200, maxWidth: 300)
+        }
+    }
+}
+
+private struct WarningInfoButton: View {
+    let text: LocalizedStringKey
+    @State private var showingPopover = false
+
+    var body: some View {
+        Button {
+            showingPopover.toggle()
+        } label: {
+            Image(systemName: "exclamationmark.triangle.fill")
+                .font(.caption)
+                .foregroundColor(.yellow)
         }
         .buttonStyle(.plain)
         .popover(isPresented: $showingPopover, arrowEdge: .top) {
