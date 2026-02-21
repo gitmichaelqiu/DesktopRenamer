@@ -91,6 +91,9 @@
         }
       }
     },
+    "Accessibility" : {
+
+    },
     "Active Space Labels" : {
       "localizations" : {
         "zh-Hans" : {
@@ -200,6 +203,9 @@
           }
         }
       }
+    },
+    "Automation" : {
+
     },
     "Bug Report Log Collection" : {
       "localizations" : {
@@ -445,6 +451,12 @@
           }
         }
       }
+    },
+    "Grant" : {
+
+    },
+    "Granted" : {
+
     },
     "Hide menubar icon" : {
       "localizations" : {
@@ -710,6 +722,12 @@
         }
       }
     },
+    "Not Granted" : {
+
+    },
+    "Permissions" : {
+
+    },
     "Please go through all spaces that may be helpful in analyzing the bug. The log is updating in real-time." : {
       "localizations" : {
         "zh-Hans" : {
@@ -729,6 +747,9 @@
           }
         }
       }
+    },
+    "Re-grant" : {
+
     },
     "Recorded: %lld" : {
       "localizations" : {
@@ -796,6 +817,12 @@
           }
         }
       }
+    },
+    "Required for injecting shortcuts to switch spaces, and reading active window information." : {
+
+    },
+    "Required for using Mission Control via AppleScript (System Events) to switch spaces when the fast-switch method falls back." : {
+
     },
     "Reset" : {
       "localizations" : {
