@@ -195,8 +195,12 @@ class SpaceLabelManager: ObservableObject {
         NotificationCenter.default.publisher(for: NSNotification.Name("SpaceSwitchRequested"))
             .receive(on: DispatchQueue.main)
             .sink { [weak self] notification in
-                if self?.hideWhenSwitching == true, let spaceID = notification.object as? String {
-                    self?.hidePreviewLabel(for: spaceID)
+                if self?.hideWhenSwitching == true {
+                    if let spaceID = notification.object as? String {
+                        self?.hidePreviewLabel(for: spaceID)
+                    } else {
+                        self?.hideAllPreviewLabels()
+                    }
                 }
             }
             .store(in: &cancellables)
@@ -295,6 +299,12 @@ class SpaceLabelManager: ObservableObject {
 
     private func hidePreviewLabel(for spaceId: String) {
         if let window = createdWindows[spaceId] {
+            window.hideImmediately()
+        }
+    }
+
+    private func hideAllPreviewLabels() {
+        for window in createdWindows.values {
             window.hideImmediately()
         }
     }
