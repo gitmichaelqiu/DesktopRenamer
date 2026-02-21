@@ -194,13 +194,9 @@ class SpaceLabelManager: ObservableObject {
 
         NotificationCenter.default.publisher(for: NSNotification.Name("SpaceSwitchRequested"))
             .receive(on: DispatchQueue.main)
-            .sink { [weak self] notification in
+            .sink { [weak self] _ in
                 if self?.hideWhenSwitching == true {
-                    if let spaceID = notification.object as? String {
-                        self?.hidePreviewLabel(for: spaceID)
-                    } else {
-                        self?.hideAllPreviewLabels()
-                    }
+                    self?.hideAllPreviewLabels()
                 }
             }
             .store(in: &cancellables)

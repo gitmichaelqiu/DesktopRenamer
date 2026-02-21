@@ -41,7 +41,7 @@ class SpaceHelper {
         }
 
         NotificationCenter.default.post(
-            name: NSNotification.Name("SpaceSwitchRequested"), object: spaceID)
+            name: NSNotification.Name("SpaceSwitchRequested"), object: nil)
 
         // 1. Resolve Target Space Info
         var targetNum: Int? = nil

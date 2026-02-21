@@ -291,7 +291,11 @@ class GestureManager: ObservableObject {
         lastTouchTime = now
 
         // 1. Validate Finger Count
-        guard numFingers == self.fingerCount else {
+        // Standard macOS space switching uses 3 or 4 fingers.
+        // We will track BOTH of these counts for hiding purposes even if switchOverride fingerCount is different.
+        let isHidingEligible = (numFingers == 3 || numFingers == 4)
+
+        guard isHidingEligible else {
             resetTrackingState()
             return
         }
@@ -433,7 +437,10 @@ class GestureManager: ObservableObject {
                         NotificationCenter.default.post(
                             name: NSNotification.Name("SpaceSwitchRequested"), object: nil)
 
-                        triggerSwitch(direction: direction)
+                        // Only perform the switch action if SwitchOverride is enabled AND finger count matches user preference
+                        if numFingers == self.fingerCount && self.isEnabled {
+                            triggerSwitch(direction: direction)
+                        }
 
                         // CRITICAL: Reset anchors to current position to allow consecutive swipes
                         initialTouchPositions.removeAll()
