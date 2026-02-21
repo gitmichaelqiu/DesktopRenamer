@@ -43,18 +43,29 @@ struct SettingsRow<Content: View>: View {
 
 struct SettingsSection<Content: View>: View {
     let title: LocalizedStringKey
+    let helperText: LocalizedStringKey?
     let content: Content
 
-    init(_ title: LocalizedStringKey, @ViewBuilder content: () -> Content) {
+    init(
+        _ title: LocalizedStringKey, helperText: LocalizedStringKey? = nil,
+        @ViewBuilder content: () -> Content
+    ) {
         self.title = title
+        self.helperText = helperText
         self.content = content()
     }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text(title)
-                .font(.headline)
-                .padding(.leading, 4)
+            HStack(spacing: 4) {
+                Text(title)
+                    .font(.headline)
+
+                if let helperText = helperText {
+                    HelperInfoButton(text: helperText)
+                }
+            }
+            .padding(.leading, 4)
 
             VStack(spacing: 0) {
                 content
