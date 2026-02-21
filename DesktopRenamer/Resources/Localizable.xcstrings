@@ -512,6 +512,9 @@
         }
       }
     },
+    "If the Settings show that the permission is granted but the app still does not have the permission, remove the app row in Settings and re-grant." : {
+
+    },
     "If you want to use Control + Arrow, disable the system's one in Settings → Keyboard → Keyboard Shortcuts... → Mission Control." : {
       "localizations" : {
         "zh-Hans" : {
