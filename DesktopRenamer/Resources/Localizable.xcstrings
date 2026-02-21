@@ -92,7 +92,14 @@
       }
     },
     "Accessibility" : {
-
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "辅助功能"
+          }
+        }
+      }
     },
     "Active Space Labels" : {
       "localizations" : {
@@ -205,7 +212,14 @@
       }
     },
     "Automation" : {
-
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "自动"
+          }
+        }
+      }
     },
     "Bug Report Log Collection" : {
       "localizations" : {
@@ -453,10 +467,24 @@
       }
     },
     "Grant" : {
-
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "授权"
+          }
+        }
+      }
     },
     "Granted" : {
-
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已授权"
+          }
+        }
+      }
     },
     "Hide menubar icon" : {
       "localizations" : {
@@ -723,10 +751,34 @@
       }
     },
     "Not Granted" : {
-
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "未授权"
+          }
+        }
+      }
+    },
+    "Open Settings" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "打开设置"
+          }
+        }
+      }
     },
     "Permissions" : {
-
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "权限"
+          }
+        }
+      }
     },
     "Please go through all spaces that may be helpful in analyzing the bug. The log is updating in real-time." : {
       "localizations" : {
@@ -747,9 +799,6 @@
           }
         }
       }
-    },
-    "Re-grant" : {
-
     },
     "Recorded: %lld" : {
       "localizations" : {
@@ -819,10 +868,24 @@
       }
     },
     "Required for injecting shortcuts to switch spaces, and reading active window information." : {
-
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "在切换桌面，获取当前桌面时需要此权限。"
+          }
+        }
+      }
     },
     "Required for using Mission Control via AppleScript (System Events) to switch spaces when the fast-switch method falls back." : {
-
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "在切换桌面时，如果没有对应的系统快捷键，需要此权限。"
+          }
+        }
+      }
     },
     "Reset" : {
       "localizations" : {
