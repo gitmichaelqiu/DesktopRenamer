@@ -52,6 +52,15 @@ Because I do **NOT** have an Apple developer account for the app releases, you m
 
 To resolve this, go to System Settings → the bottom of Privacy & Security → Open DesktopRenamer.
 
+> [!NOTE]
+> If this still does not work for you and you encounter issue of "DesktopRenamer can't be opened", please open your terminal and execute this line:
+>
+> ```bash
+> codesign --force -s - /Applications/DesktopRenamer.app
+> ```
+>
+> Thanks [@timttate](https://github.com/timttate) for finding this [thread](https://github.com/luanti-org/luanti/issues/12033) with the solution by [@animaux](https://github.com/animaux).
+
 ## 🛜 API
 
 This app provides an API to acquire space ID and names.
