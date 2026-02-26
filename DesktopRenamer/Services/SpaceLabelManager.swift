@@ -309,8 +309,8 @@ class SpaceLabelManager: ObservableObject {
         guard spaceId != "FULLSCREEN" else { return }
 
         if !verifySpace {
-            let currentDisplayID = spaceManager?.currentDisplayID ?? "Main"
-            ensureWindow(for: spaceId, name: name, displayID: currentDisplayID)
+            let actualDisplayID = spaceManager?.spaceNameDict.first(where: { $0.id == spaceId })?.displayID ?? spaceManager?.currentDisplayID ?? "Main"
+            ensureWindow(for: spaceId, name: name, displayID: actualDisplayID)
             return
         }
 
@@ -366,6 +366,7 @@ class SpaceLabelManager: ObservableObject {
         window.setMode(isCurrentSpace: isCurrent)
         self.recalculateUnifiedSize()
         window.orderFront(nil)
+        window.bindToTargetSpace()
     }
 
     private func removeAllWindows() {
