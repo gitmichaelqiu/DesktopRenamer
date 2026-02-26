@@ -38,9 +38,9 @@
             <result type="text" description="The name of the current space"/>
         </command>
         
-        <command name="get all spaces" code="DskRGAll" description="Get a list of all spaces in format 'ID~|~Name~|~DisplayID~|~Num'">
-            <direct-parameter description="Returns list of all active spaces" type="text" optional="yes"/>
-            <result type="text" description="List of spaces separated by newlines, format: ID~|~Name~|~DisplayID~|~Num"/>
+        <command name="get all spaces" code="DskRGAll" description="Get a list of all spaces in format 'ID~Name~DisplayID~Num'">
+            <cocoa class="DesktopRenamer.GetAllSpacesCommand"/>
+            <result type="text" description="List of spaces separated by newlines, format: ID~Name~DisplayID~Num"/>
         </command>
         
         <command name="rename space" code="DskRRnSp" description="Rename a specific space by ID">

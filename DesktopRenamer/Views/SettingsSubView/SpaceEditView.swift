@@ -151,7 +151,7 @@ struct SpaceEditView: View {
             text: Binding(
                 get: { spaceManager.spaceNameDict.first(where: { $0.id == space.id })?.customName ?? space.customName },
                 set: { newValue in 
-                    let sanitized = newValue.replacingOccurrences(of: "~|~", with: "")
+                    let sanitized = newValue.replacingOccurrences(of: "~", with: "")
                     updateSpaceName(space, sanitized) 
                 }
             )

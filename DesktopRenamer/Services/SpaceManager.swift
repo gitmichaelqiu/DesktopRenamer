@@ -418,15 +418,19 @@ class SpaceManager: ObservableObject {
     private func loadSavedData() {
         if let data = UserDefaults.standard.data(forKey: SpaceManager.spacesKey),
            let spaces = try? JSONDecoder().decode([DesktopSpace].self, from: data) {
-            spaceNameDict = spaces
+            spaceNameDict = spaces.map {
+                var s = $0
+                s.customName = s.customName.replacingOccurrences(of: "~", with: "")
+                return s
+            }
         }
         if let data = UserDefaults.standard.data(forKey: SpaceManager.nameCacheKey),
            let cache = try? JSONDecoder().decode([String: String].self, from: data) {
-            nameCache = cache
+            nameCache = cache.mapValues { $0.replacingOccurrences(of: "~", with: "") }
         }
         if let data = UserDefaults.standard.data(forKey: SpaceManager.indexCacheKey),
            let cache = try? JSONDecoder().decode([String: String].self, from: data) {
-            indexCache = cache
+            indexCache = cache.mapValues { $0.replacingOccurrences(of: "~", with: "") }
         }
         if (nameCache.isEmpty || indexCache.isEmpty) && !spaceNameDict.isEmpty {
             var displayDesktopCounters: [String: Int] = [:]
