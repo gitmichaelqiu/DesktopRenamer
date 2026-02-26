@@ -16,6 +16,11 @@ class SpaceLabelManager: ObservableObject {
     private let kShowActiveLabels = "kShowActiveLabels"
     private let kShowOnDesktop = "kShowOnDesktop"
     private let kHideWhenSwitching = "kHideWhenSwitching"
+    
+    private let kGlobalIsDocked = "kGlobalIsDocked"
+    private let kGlobalDockEdge = "kGlobalDockEdge"
+    private let kGlobalCenterX = "kGlobalCenterX"
+    private let kGlobalCenterY = "kGlobalCenterY"
 
     // Where should the label sit on the screen?
 
@@ -335,6 +340,7 @@ class SpaceLabelManager: ObservableObject {
     }
 
     // Make sure we have a window for this space, or refresh it if we do
+    private func ensureWindow(for spaceId: String, name: String, displayID: String) {
         if let existingWindow = createdWindows[spaceId] {
             if !existingWindow.isVisible {
                 existingWindow.refreshAppearance()
