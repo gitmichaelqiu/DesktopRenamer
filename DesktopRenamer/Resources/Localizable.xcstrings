@@ -819,6 +819,9 @@
         }
       }
     },
+    "Reload Space Labels" : {
+      "comment" : "Reload Space Label Windows to fix glitches"
+    },
     "Remove it in\nSettings → Spaces\n(Switch to other space first)" : {
       "localizations" : {
         "zh-Hans" : {
