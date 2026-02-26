@@ -150,7 +150,10 @@ struct SpaceEditView: View {
             defaultName(for: space),
             text: Binding(
                 get: { spaceManager.spaceNameDict.first(where: { $0.id == space.id })?.customName ?? space.customName },
-                set: { newValue in updateSpaceName(space, newValue) }
+                set: { newValue in 
+                    let sanitized = newValue.replacingOccurrences(of: "~|~", with: "")
+                    updateSpaceName(space, sanitized) 
+                }
             )
         )
         .textFieldStyle(.roundedBorder)
