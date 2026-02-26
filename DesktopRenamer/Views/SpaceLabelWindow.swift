@@ -2,6 +2,12 @@ import Cocoa
 import Combine
 import QuartzCore
 
+// MARK: - CGS Private API
+@_silgen_name("_CGSDefaultConnection") private func _CGSDefaultConnection() -> Int32
+@_silgen_name("CGSCopyManagedDisplaySpaces") private func CGSCopyManagedDisplaySpaces(_ cid: Int32) -> CFArray?
+@_silgen_name("CGSAddWindowsToSpaces") private func CGSAddWindowsToSpaces(_ cid: Int32, _ windows: CFArray, _ spaces: CFArray)
+@_silgen_name("CGSRemoveWindowsFromSpaces") private func CGSRemoveWindowsFromSpaces(_ cid: Int32, _ windows: CFArray, _ spaces: CFArray)
+
 // MARK: - Custom Handle View (The "Pill")
 class CollapsibleHandleView: NSView {
     private let imageView: NSImageView
@@ -219,6 +225,44 @@ class SpaceLabelWindow: NSWindow {
     // MARK: - Window Overrides (CRITICAL FOR SWITCHING)
     override var canBecomeKey: Bool { return true }
     override var canBecomeMain: Bool { return true }
+
+    // MARK: - Space Binding
+    func bindToTargetSpace() {
+        let cid = _CGSDefaultConnection()
+        guard let displays = CGSCopyManagedDisplaySpaces(cid) as? [NSDictionary] else { return }
+
+        guard let targetSpaceInt = Int(self.spaceId) else { return }
+        
+        var currentSpaceInt: Int? = nil
+        // Find which space the window is currently on (it drops onto the active space by default)
+        for display in displays {
+            if let currentDict = display["Current Space"] as? [String: Any],
+               let currentID = currentDict["ManagedSpaceID"] as? Int {
+                // Determine if the target space is on this display.
+                // If the target space is NOT the current space, we need to move it.
+                // It's possible the window got assigned to the current space of the display it was created on.
+                if let spaces = display["Spaces"] as? [[String: Any]] {
+                    for space in spaces {
+                        if let managedID = space["ManagedSpaceID"] as? Int, managedID == targetSpaceInt {
+                            // Target space is on this display! We assume the window was created on this display's current space.
+                            currentSpaceInt = currentID
+                            break
+                        }
+                    }
+                }
+            }
+        }
+        
+        let winID = [NSNumber(value: self.windowNumber)] as CFArray
+        let targetSpaces = [NSNumber(value: targetSpaceInt)] as CFArray
+
+        CGSAddWindowsToSpaces(cid, winID, targetSpaces)
+        
+        if let current = currentSpaceInt, current != targetSpaceInt {
+            let currentSpaces = [NSNumber(value: current)] as CFArray
+            CGSRemoveWindowsFromSpaces(cid, winID, currentSpaces)
+        }
+    }
 
     // MARK: - Live Background Hack
     private func setupLiveBackgroundUpdate() {
