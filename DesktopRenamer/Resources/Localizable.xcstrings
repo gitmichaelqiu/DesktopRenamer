@@ -497,10 +497,24 @@
       }
     },
     "Hide the space label window of the space that is being switched to immediately instead of hiding it after the space is switched." : {
-
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "在切换桌面时，立即隐藏桌面标签窗口，而非切换结束后隐藏。"
+          }
+        }
+      }
     },
     "Hide when switching desktops" : {
-
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "切换时隐藏"
+          }
+        }
+      }
     },
     "If enabled, the label stays on the desktop instead of hiding.\n\nTip: You can drag the window to the screen edge to shrink it into a 'Picture-in-Picture' mode." : {
       "localizations" : {
@@ -519,7 +533,14 @@
       }
     },
     "If the Settings show that the permission is granted but the app still does not have the permission, remove the app row in Settings and re-grant." : {
-
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "如果设置显示权限已获取但是 App 显示未获取，在设置权限中移除 App 并重新获取权限。"
+          }
+        }
+      }
     },
     "If you want to use Control + Arrow, disable the system's one in Settings → Keyboard → Keyboard Shortcuts... → Mission Control." : {
       "localizations" : {
@@ -820,7 +841,15 @@
       }
     },
     "Reload Space Labels" : {
-      "comment" : "Reload Space Label Windows to fix glitches"
+      "comment" : "Reload Space Label Windows to fix glitches",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "重新加载桌面标签"
+          }
+        }
+      }
     },
     "Remove it in\nSettings → Spaces\n(Switch to other space first)" : {
       "localizations" : {
@@ -900,10 +929,24 @@
       }
     },
     "Requires Accessibility and Automation permissions." : {
-
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "需要辅助和自动化权限。"
+          }
+        }
+      }
     },
     "Requires Accessibility permission." : {
-
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "需要辅助权限。"
+          }
+        }
+      }
     },
     "Reset" : {
       "localizations" : {
