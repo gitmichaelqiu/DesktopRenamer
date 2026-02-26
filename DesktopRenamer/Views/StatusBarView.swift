@@ -194,6 +194,11 @@ class StatusBarController: NSObject {
         showLabels.image = NSImage(systemSymbolName: "appwindow.swipe.rectangle", accessibilityDescription: nil)
         self.showLabelsMenuItem = showLabels
         menu.addItem(showLabels)
+
+        let reloadLabels = NSMenuItem(title: NSLocalizedString("Reload Space Labels", comment: "Reload Space Label Windows to fix glitches"), action: #selector(reloadLabelsFromMenu), keyEquivalent: "")
+        reloadLabels.target = self
+        reloadLabels.image = NSImage(systemSymbolName: "arrow.clockwise", accessibilityDescription: nil)
+        menu.addItem(reloadLabels)
         
         menu.addItem(NSMenuItem.separator())
         
@@ -235,6 +240,10 @@ class StatusBarController: NSObject {
     @objc private func toggleLabelsFromMenu() {
         labelManager.toggleEnabled()
         rebuildMenu()
+    }
+
+    @objc private func reloadLabelsFromMenu() {
+        labelManager.reloadAllWindows()
     }
         
     @objc private func troubleshootSpaceDetection() {

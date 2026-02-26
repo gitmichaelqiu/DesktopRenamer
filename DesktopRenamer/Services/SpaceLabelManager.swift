@@ -369,6 +369,11 @@ class SpaceLabelManager: ObservableObject {
         window.bindToTargetSpace()
     }
 
+    func reloadAllWindows() {
+        removeAllWindows()
+        updateLabelsVisibility()
+    }
+
     private func removeAllWindows() {
         let windows = Array(createdWindows.values)
         for window in windows { window.orderOut(nil) }
