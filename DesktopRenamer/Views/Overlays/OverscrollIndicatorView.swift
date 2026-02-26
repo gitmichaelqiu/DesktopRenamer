@@ -43,7 +43,7 @@ struct OverscrollIndicatorView: View {
         }
     }
     
-    // MARK: - Computed Animations
+    // Logic for smooth animations during the overscroll swipe
     
     private var cappedProgress: Double {
         return min(max(progress, 0), 1.0)

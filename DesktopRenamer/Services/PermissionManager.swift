@@ -22,13 +22,13 @@ class PermissionManager: ObservableObject {
     }
 
     func checkPermissions() {
-        // Accessibility
+        // Check for accessibility (we need this to detect space changes)
         let axOptions: NSDictionary = [
             kAXTrustedCheckOptionPrompt.takeUnretainedValue() as String: false
         ]
         self.isAccessibilityGranted = AXIsProcessTrustedWithOptions(axOptions)
 
-        // Automation (System Events)
+        // Check for automation (to talk to System Events)
         let targetBundleID = "com.apple.systemevents"
         let targetDesc = NSAppleEventDescriptor(bundleIdentifier: targetBundleID)
         if let aeDesc = targetDesc.aeDesc {

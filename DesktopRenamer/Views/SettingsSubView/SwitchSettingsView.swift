@@ -9,7 +9,7 @@ struct SwitchSettingsView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 20) {
 
-                // MARK: - Keyboard Shortcuts
+                // Keyboard Shortcuts Setup
                 SettingsSection("Keyboard Shortcuts", helperText: "If you want to use Control + Arrow, disable the system's one in Settings → Keyboard → Keyboard Shortcuts... → Mission Control.") {
                     // Switch Left
                     VStack(spacing: 0) {
@@ -60,7 +60,7 @@ struct SwitchSettingsView: View {
                     }
                 }
 
-                // MARK: - Gesture Override
+                // Trackpad Gesture Settings
                 SettingsSection("Trackpad Switch Gesture Override") {
                     SettingsRow(
                         "Enable switch gesture override",

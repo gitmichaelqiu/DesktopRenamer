@@ -126,7 +126,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             return
         }
         
-        // Priority 2: Num (Legacy / Ambiguous on multi-display)
+        // If switch by UUID failed, try by number (Legacy / Ambiguous on multi-display)
         if let numString = queryItems.first(where: { $0.name == "num" })?.value,
            let spaceNum = Int(numString) {
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {

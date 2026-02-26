@@ -10,13 +10,13 @@ enum HotkeyType {
 }
 
 class HotkeyManager: ObservableObject {
-    // MARK: - Publishers for Actions
+    // These let the rest of the app know when a hotkey was pressed
     // We use PassthroughSubject so the App/AppDelegate can listen and act
     let mainShortcutTriggered = PassthroughSubject<Void, Never>()
     let switchLeftTriggered = PassthroughSubject<Void, Never>()
     let switchRightTriggered = PassthroughSubject<Void, Never>()
 
-    // MARK: - Properties
+    // Internal state
     @Published var mainShortcut: Shortcut {
         didSet {
             saveShortcut(mainShortcut, key: mainShortcutKey)
@@ -41,7 +41,7 @@ class HotkeyManager: ObservableObject {
     @Published var isListening: Bool = false
     @Published var listeningType: HotkeyType? = nil
 
-    // MARK: - Internals
+    // Internal hotkey objects from the library
     private var mainHotKey: HotKey?
     private var switchLeftHotKey: HotKey?
     private var switchRightHotKey: HotKey?
@@ -65,7 +65,7 @@ class HotkeyManager: ObservableObject {
         registerShortcuts()
     }
     
-    // MARK: - Public Helpers for UI
+    // Helpers for the settings UI
     
     func description(for type: HotkeyType) -> String {
         if isListening && listeningType == type {
@@ -78,7 +78,7 @@ class HotkeyManager: ObservableObject {
         }
     }
 
-    // MARK: - Registration
+    // Hooking up the actual shortcuts to the system
     
     private func registerShortcuts() {
         // 1. Main
@@ -111,7 +111,7 @@ class HotkeyManager: ObservableObject {
         }
     }
 
-    // MARK: - Listening Logic
+    // Logic for "Press a key" recording mode
 
     func startListening(for type: HotkeyType) {
         isListening = true
@@ -184,7 +184,7 @@ class HotkeyManager: ObservableObject {
         }
     }
     
-    // MARK: - Persistence & Helpers
+    // Saving and loading from UserDefaults
     
     private func saveShortcut(_ shortcut: Shortcut, key: String) {
         if let data = try? JSONEncoder().encode(shortcut) {
@@ -222,7 +222,7 @@ class HotkeyManager: ObservableObject {
     }
 }
 
-// MARK: - Shortcut Representation
+// Just a simple wrapper for a key + modifiers combo
 struct Shortcut: Equatable, Codable {
     let key: Key?
     let modifiers: NSEvent.ModifierFlags

@@ -103,6 +103,7 @@ class UpdateManager {
         }
     }
     
+    // Simple version comparison logic (1.2.3 vs 1.2.4)
     private func isNewerVersion(_ latest: String, than current: String) -> Bool {
         let latestParts = latest.split(separator: ".").compactMap { Int($0) }
         let currentParts = current.split(separator: ".").compactMap { Int($0) }
