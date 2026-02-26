@@ -111,11 +111,14 @@ class GetAllSpacesCommand: NSScriptCommand {
                 return $0.num < $1.num
             }
             
+            // Format: "UUID~Name~DisplayID~Num"
             let lines = sortedSpaces.map { space in
                 let name = manager.getSpaceName(space.id)
-                // Resolve Display Name from UUID
+                // Retrieve the display label for the space's displayID
                 let displayName = getDisplayName(for: space.displayID)
-                return "\(space.id)|\(name)|\(displayName)|\(space.num)"
+                
+                // Return string split by ~ to prevent escaping issues
+                return "\(space.id)~\(name)~\(displayName)~\(space.num)"
             }
             return lines.joined(separator: "\n")
         }

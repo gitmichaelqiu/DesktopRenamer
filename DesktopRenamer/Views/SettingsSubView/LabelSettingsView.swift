@@ -2,7 +2,7 @@ import SwiftUI
 
 struct LabelSettingsView: View {
     @ObservedObject var labelManager: SpaceLabelManager
-    
+
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 20) {
@@ -13,7 +13,7 @@ struct LabelSettingsView: View {
                             .toggleStyle(.switch)
                     }
                 }
-                
+
                 if labelManager.isEnabled {
                     SettingsSection("Preview Labels") {
                         SettingsRow(
@@ -25,9 +25,21 @@ struct LabelSettingsView: View {
                                 .labelsHidden()
                         }
                         
+                        Divider()
+
+                        SettingsRow(
+                            "Hide when switching desktops",
+                            helperText:
+                                "Hide the space label window of the space that is being switched to immediately instead of hiding it after the space is switched."
+                        ) {
+                            Toggle("", isOn: $labelManager.hideWhenSwitching)
+                                .toggleStyle(.switch)
+                                .labelsHidden()
+                        }
+
                         if labelManager.showPreviewLabels {
                             Divider()
-                            
+
                             SliderSettingsRow(
                                 "Font size",
                                 value: $labelManager.previewFontScale,
@@ -36,9 +48,9 @@ struct LabelSettingsView: View {
                                 step: 0.10,
                                 valueString: { String(format: "%.2fx", $0) }
                             )
-                            
+
                             Divider()
-                            
+
                             SliderSettingsRow(
                                 "Window size",
                                 value: $labelManager.previewPaddingScale,
@@ -49,32 +61,34 @@ struct LabelSettingsView: View {
                             )
                         }
                     }
-                    
+
                     SettingsSection("Active Space Labels") {
                         // Main Toggle
                         SettingsRow(
                             "Show active space labels",
-                            helperText: "The hidden label that slides into the corner of the active desktop."
+                            helperText:
+                                "The hidden label that slides into the corner of the active desktop."
                         ) {
                             Toggle("", isOn: $labelManager.showActiveLabels)
                                 .toggleStyle(.switch)
                                 .labelsHidden()
                         }
-                        
+
                         if labelManager.showActiveLabels {
                             Divider()
-                            
+
                             SettingsRow(
                                 "Keep visible on desktop",
-                                helperText: "If enabled, the label stays on the desktop instead of hiding.\n\nTip: You can drag the window to the screen edge to shrink it into a 'Picture-in-Picture' mode."
+                                helperText:
+                                    "If enabled, the label stays on the desktop instead of hiding.\n\nTip: You can drag the window to the screen edge to shrink it into a 'Picture-in-Picture' mode."
                             ) {
                                 Toggle("", isOn: $labelManager.showOnDesktop)
                                     .toggleStyle(.switch)
                                     .labelsHidden()
                             }
-                            
+
                             Divider()
-                            
+
                             SliderSettingsRow(
                                 "Font size",
                                 value: $labelManager.activeFontScale,
@@ -83,9 +97,9 @@ struct LabelSettingsView: View {
                                 step: 0.10,
                                 valueString: { String(format: "%.2fx", $0) }
                             )
-                            
+
                             Divider()
-                            
+
                             SliderSettingsRow(
                                 "Window size",
                                 value: $labelManager.activePaddingScale,

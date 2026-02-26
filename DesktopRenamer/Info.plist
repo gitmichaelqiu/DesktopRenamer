@@ -6,5 +6,7 @@
 	<true/>
 	<key>OSAScriptingDefinition</key>
 	<string>DesktopRenamer.sdef</string>
+	<key>LSUIElement</key>
+	<true/>
 </dict>
 </plist>

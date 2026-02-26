@@ -1,43 +1,59 @@
-import SwiftUI
-import ServiceManagement
 import AppKit
+import ServiceManagement
+import SwiftUI
 
-// [APITester Class remains unchanged...]
+// This class is used for testing the SpaceAPI from within the app
 class APITester: ObservableObject {
     @Published var responseText: String = ""
-    
+
     init() {
-        NotificationCenter.default.addObserver(self, selector: #selector(handleCurrentSpaceResponse(_:)), name: SpaceAPI.returnActiveSpace, object: nil)
-        NotificationCenter.default.addObserver(self, selector: #selector(handleAllSpacesResponse(_:)), name: SpaceAPI.returnSpaceList, object: nil)
+        NotificationCenter.default.addObserver(
+            self, selector: #selector(handleCurrentSpaceResponse(_:)),
+            name: SpaceAPI.returnActiveSpace, object: nil)
+        NotificationCenter.default.addObserver(
+            self, selector: #selector(handleAllSpacesResponse(_:)), name: SpaceAPI.returnSpaceList,
+            object: nil)
     }
-    
+
     deinit {
         NotificationCenter.default.removeObserver(self)
     }
-    
+
     func sendCurrentSpaceRequest() {
         responseText = "Requesting current space..."
-        DistributedNotificationCenter.default().postNotificationName(SpaceAPI.getActiveSpace, object: nil, userInfo: nil, deliverImmediately: true)
+        DistributedNotificationCenter.default().postNotificationName(
+            SpaceAPI.getActiveSpace, object: nil, userInfo: nil, deliverImmediately: true)
     }
-    
+
     func sendAllSpacesRequest() {
         responseText = "Requesting all spaces..."
-        DistributedNotificationCenter.default().postNotificationName(SpaceAPI.getSpaceList, object: nil, userInfo: nil, deliverImmediately: true)
+        DistributedNotificationCenter.default().postNotificationName(
+            SpaceAPI.getSpaceList, object: nil, userInfo: nil, deliverImmediately: true)
     }
-    
+
     @objc private func handleCurrentSpaceResponse(_ notification: Notification) {
         DispatchQueue.main.async {
-            guard let userInfo = notification.userInfo else { self.responseText = "Received empty response"; return }
+            guard let userInfo = notification.userInfo else {
+                self.responseText = "Received empty response"
+                return
+            }
             let name = userInfo["spaceName"] as? String ?? "N/A"
-            let num = (userInfo["spaceNumber"] as? NSNumber)?.intValue ?? (userInfo["spaceNumber"] as? Int) ?? -1
+            let num =
+                (userInfo["spaceNumber"] as? NSNumber)?.intValue
+                ?? (userInfo["spaceNumber"] as? Int) ?? -1
             let uuid = userInfo["spaceUUID"] as? String ?? "N/A"
             self.responseText = "Current Space:\nName: \(name)\n#: \(num)\nUUID: \(uuid)"
         }
     }
-    
+
     @objc private func handleAllSpacesResponse(_ notification: Notification) {
         DispatchQueue.main.async {
-            guard let userInfo = notification.userInfo, let spaces = userInfo["spaces"] as? [[String: Any]] else { self.responseText = "Received empty space list"; return }
+            guard let userInfo = notification.userInfo,
+                let spaces = userInfo["spaces"] as? [[String: Any]]
+            else {
+                self.responseText = "Received empty space list"
+                return
+            }
             var result = "All Spaces (\(spaces.count)):\n"
             for space in spaces {
                 let name = space["spaceName"] as? String ?? "N/A"
@@ -53,27 +69,25 @@ class APITester: ObservableObject {
 struct ThresholdAdjustmentView: View {
     @ObservedObject var spaceManager: SpaceManager
     @Environment(\.presentationMode) var presentationMode
-    
+
     @State private var thresholdValue: Int = SpaceHelper.fullscreenThreshold
-    
+
     @State private var recordedDesktops: [String: Int] = [:]
     @State private var recordedFullscreens: [String: Int] = [:]
-    
+
     @State private var isRecordingDesktops = false
     @State private var isRecordingFullscreen = false
-    
+
     @State private var suggestionText: String = ""
     @State private var suggestionIsError: Bool = false
     @State private var showingHelperPopover = false
-    
-    
-    
+
     var body: some View {
         VStack(spacing: 20) {
             HStack(spacing: 4) {
                 Text("Adjust Fullscreen Threshold")
                     .font(.headline)
-                
+
                 Button {
                     showingHelperPopover.toggle()
                 } label: {
@@ -84,48 +98,50 @@ struct ThresholdAdjustmentView: View {
                 .buttonStyle(.plain)
                 .popover(isPresented: $showingHelperPopover, arrowEdge: .top) {
                     VStack(alignment: .leading, spacing: 10) {
-                        Text("This is the key parameter in the detection of fullscreen.\n\nAt the right hand side, you can acquire a suggested value. You need to go requested desktops or fullscreen (not necessarily all of them). During this process, do not stop at the spaces that do not match the request.\n\nThe threshold should be between the two extreme values shown.")
-                            .font(.body)
-                            .fixedSize(horizontal: false, vertical: true)
+                        Text(
+                            "This is the key parameter in the detection of fullscreen.\n\nAt the right hand side, you can acquire a suggested value. You need to go requested desktops or fullscreen (not necessarily all of them). During this process, do not stop at the spaces that do not match the request.\n\nThe threshold should be between the two extreme values shown."
+                        )
+                        .font(.body)
+                        .fixedSize(horizontal: false, vertical: true)
                     }
                     .padding(15)
                     .frame(minWidth: 200, maxWidth: 300)
                 }
             }
-            
+
             HStack(alignment: .top, spacing: 30) {
                 // LEFT: Manual Edit
                 VStack(alignment: .leading, spacing: 10) {
                     Text("Threshold Value")
                         .font(.subheadline)
                         .fontWeight(.medium)
-                    
+
                     TextField("Value", value: $thresholdValue, formatter: NumberFormatter())
                         .textFieldStyle(.roundedBorder)
                         .frame(width: 80)
-                    
+
                     Text("Current Metric: \(spaceManager.currentNcCount)")
                         .font(.caption)
                         .foregroundColor(.secondary)
                         .monospacedDigit()
                 }
                 .frame(width: 150)
-                
+
                 Divider()
-                
+
                 // RIGHT: Debug/Calibration
                 VStack(alignment: .leading, spacing: 15) {
                     // Step 1: Desktops
                     VStack(alignment: .leading, spacing: 5) {
                         Text("1. Go through desktops")
                             .font(.subheadline)
-                        
+
                         HStack {
                             Button(isRecordingDesktops ? "Stop" : "Start") {
                                 toggleDesktopRecording()
                             }
                             .disabled(isRecordingFullscreen)
-                            
+
                             if !recordedDesktops.isEmpty {
                                 VStack(alignment: .leading, spacing: 2) {
                                     Text("Recorded: \(recordedDesktops.count)")
@@ -139,18 +155,18 @@ struct ThresholdAdjustmentView: View {
                             }
                         }
                     }
-                    
+
                     // Step 2: Fullscreens
                     VStack(alignment: .leading, spacing: 5) {
                         Text("2. Go through fullscreen")
                             .font(.subheadline)
-                        
+
                         HStack {
                             Button(isRecordingFullscreen ? "Stop" : "Start") {
                                 toggleFullscreenRecording()
                             }
                             .disabled(recordedDesktops.isEmpty || isRecordingDesktops)
-                            
+
                             if !recordedFullscreens.isEmpty {
                                 VStack(alignment: .leading, spacing: 2) {
                                     Text("Recorded: \(recordedFullscreens.count)")
@@ -164,7 +180,7 @@ struct ThresholdAdjustmentView: View {
                             }
                         }
                     }
-                    
+
                     // Suggestion Result
                     if !suggestionText.isEmpty {
                         Text(suggestionText)
@@ -176,7 +192,7 @@ struct ThresholdAdjustmentView: View {
                 .frame(width: 200)
             }
             .padding()
-            
+
             HStack {
                 Button("Cancel") {
                     presentationMode.wrappedValue.dismiss()
@@ -199,7 +215,7 @@ struct ThresholdAdjustmentView: View {
             recordData(uuid: uuid, ncCnt: spaceManager.currentNcCount)
         }
     }
-    
+
     private func toggleDesktopRecording() {
         if isRecordingDesktops {
             isRecordingDesktops = false
@@ -210,7 +226,7 @@ struct ThresholdAdjustmentView: View {
             recordData(uuid: spaceManager.currentRawSpaceUUID, ncCnt: spaceManager.currentNcCount)
         }
     }
-    
+
     private func toggleFullscreenRecording() {
         if isRecordingFullscreen {
             isRecordingFullscreen = false
@@ -221,7 +237,7 @@ struct ThresholdAdjustmentView: View {
             recordData(uuid: spaceManager.currentRawSpaceUUID, ncCnt: spaceManager.currentNcCount)
         }
     }
-    
+
     private func recordData(uuid: String, ncCnt: Int) {
         if isRecordingDesktops {
             recordedDesktops[uuid] = ncCnt
@@ -231,23 +247,26 @@ struct ThresholdAdjustmentView: View {
             }
         }
     }
-    
+
     private func calculateSuggestion() {
         guard !recordedDesktops.isEmpty, !recordedFullscreens.isEmpty else {
             suggestionText = NSLocalizedString("Not enough data collected.", comment: "")
             suggestionIsError = true
             return
         }
-        
+
         let minDesktop = recordedDesktops.values.min() ?? 0
         let maxFullscreen = recordedFullscreens.values.max() ?? 0
-        
+
         if minDesktop > maxFullscreen {
-            suggestionText = String(format: NSLocalizedString("Suggested Threshold: %lld", comment: ""), maxFullscreen)
+            suggestionText = String(
+                format: NSLocalizedString("Suggested Threshold: %lld", comment: ""), maxFullscreen)
             suggestionIsError = false
             thresholdValue = maxFullscreen
         } else {
-            suggestionText = NSLocalizedString("The automatic method does not work on your device, please switch to the manual method.", comment: "")
+            suggestionText = NSLocalizedString(
+                "The automatic method does not work on your device, please switch to the manual method.",
+                comment: "")
             suggestionIsError = true
         }
     }
@@ -256,28 +275,28 @@ struct ThresholdAdjustmentView: View {
 struct AddSpacesView: View {
     @ObservedObject var spaceManager: SpaceManager
     @Environment(\.presentationMode) var presentationMode
-    
+
     // Make sure it conforms to Equatable for firstIndex(of:)
     struct SpaceCandidate: Identifiable, Equatable {
         let id = UUID()
         let spaceUUID: String
         let ncCnt: Int
     }
-    
+
     @State private var candidates: [SpaceCandidate] = []
-    
+
     var body: some View {
         VStack(spacing: 20) {
             Text("Add New Spaces")
                 .font(.headline)
-            
+
             Text("Switch to the desktops you want to add.\nThey will appear in the list below.")
                 .font(.body)
                 .foregroundColor(.secondary)
                 .multilineTextAlignment(.center)
                 .padding(.horizontal)
-            
-            // REPLACED List with ScrollView + VStack for guaranteed animations
+
+            // Using ScrollView + VStack instead of List for better control over animations
             ScrollView {
                 VStack(spacing: 0) {
                     if candidates.isEmpty {
@@ -287,30 +306,30 @@ struct AddSpacesView: View {
                             .padding(.top, 40)
                     } else {
                         let existingCount = spaceManager.spaceNameDict.count
-                        
+
                         // Use direct collection to maintain view identity
                         ForEach(candidates) { candidate in
                             // Calculate index dynamically
                             let index = candidates.firstIndex(of: candidate) ?? 0
-                            
+
                             VStack(spacing: 0) {
                                 HStack {
                                     VStack(alignment: .leading, spacing: 2) {
                                         Text("Space \(existingCount + index + 1)")
                                             .fontWeight(.medium)
-                                        
+
                                         Text("\(candidate.spaceUUID)")
                                             .font(.caption)
                                             .foregroundColor(.secondary)
                                             .monospaced()
-                                        
+
                                         Text("Metric: \(candidate.ncCnt)")
                                             .font(.caption2)
                                             .foregroundColor(.secondary)
                                     }
-                                    
+
                                     Spacer()
-                                    
+
                                     Button(action: {
                                         removeCandidate(candidate)
                                     }) {
@@ -322,7 +341,7 @@ struct AddSpacesView: View {
                                 }
                                 .padding(.vertical, 8)
                                 .padding(.horizontal, 12)
-                                
+
                                 Divider()
                             }
                             .background(Color(NSColor.controlBackgroundColor))
@@ -340,15 +359,15 @@ struct AddSpacesView: View {
                 RoundedRectangle(cornerRadius: 6)
                     .stroke(Color.gray.opacity(0.2), lineWidth: 1)
             )
-            
+
             HStack(spacing: 20) {
                 Button("Cancel") {
                     presentationMode.wrappedValue.dismiss()
                 }
                 .keyboardShortcut(.escape)
-                
+
                 Spacer()
-                
+
                 Button("Add") {
                     confirmAdditions()
                 }
@@ -363,21 +382,22 @@ struct AddSpacesView: View {
             checkForNewSpace(uuid: uuid, ncCnt: spaceManager.currentNcCount)
         }
     }
-    
+
     private func checkForNewSpace(uuid: String, ncCnt: Int) {
         if uuid != "FULLSCREEN",
-           !spaceManager.spaceNameDict.contains(where: { $0.id == uuid }),
-           !candidates.contains(where: { $0.spaceUUID == uuid }) {
-            
+            !spaceManager.spaceNameDict.contains(where: { $0.id == uuid }),
+            !candidates.contains(where: { $0.spaceUUID == uuid })
+        {
+
             let newCandidate = SpaceCandidate(spaceUUID: uuid, ncCnt: ncCnt)
-            
+
             // Explicit animation block
             withAnimation(.easeInOut(duration: 0.2)) {
                 candidates.append(newCandidate)
             }
         }
     }
-    
+
     private func removeCandidate(_ candidate: SpaceCandidate) {
         if let index = candidates.firstIndex(of: candidate) {
             // Explicit animation block
@@ -386,7 +406,7 @@ struct AddSpacesView: View {
             }
         }
     }
-    
+
     private func confirmAdditions() {
         for candidate in candidates {
             spaceManager.addManualSpace(candidate.spaceUUID)
@@ -398,35 +418,45 @@ struct AddSpacesView: View {
 struct GeneralSettingsView: View {
     @ObservedObject var spaceManager: SpaceManager
     @ObservedObject var labelManager: SpaceLabelManager
-    
+
     @StateObject private var apiTester = APITester()
-    
+
     @State private var launchAtLogin: Bool = false
     @State private var autoCheckUpdate: Bool = UpdateManager.isAutoCheckEnabled
     @State private var isResetting: Bool = false
     @State private var isAPIEnabled: Bool = SpaceManager.isAPIEnabled
     @State private var isStatusBarHidden: Bool = StatusBarController.isStatusBarHidden
-    
+
     @State private var showLogSheet: Bool = false
     @State private var showThresholdSheet: Bool = false
     @State private var showAddSpacesSheet: Bool = false
-    
+
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 20) {
-                // [General Section omitted for brevity]
+                // General Section
                 SettingsSection("Settings.General.General") {
-                     SettingsRow("Settings.General.General.ShowLabels", helperText: "Create windows that only appear in Mission Control to display space names.\n\nMay not work when multiple displays are connected.") {
+                    SettingsRow(
+                        "Settings.General.General.ShowLabels",
+                        helperText:
+                            "Create windows that only appear in Mission Control to display space names.\n\nMay not work when multiple displays are connected."
+                    ) {
                         Toggle("", isOn: $labelManager.isEnabled)
                             .labelsHidden()
                             .toggleStyle(.switch)
                     }
                     Divider()
-                    SettingsRow("Hide menubar icon", helperText: "By doing so, you can turn DesktopRenamer into a completely silent API app.") {
+                    SettingsRow(
+                        "Hide menubar icon",
+                        helperText:
+                            "By doing so, you can turn DesktopRenamer into a completely silent API app."
+                    ) {
                         Toggle("", isOn: $isStatusBarHidden)
                             .labelsHidden()
                             .toggleStyle(.switch)
-                            .onChange(of: isStatusBarHidden) { _ in StatusBarController.toggleStatusBar() }
+                            .onChange(of: isStatusBarHidden) { _ in
+                                StatusBarController.toggleStatusBar()
+                            }
                     }
                     Divider()
                     SettingsRow("Settings.General.General.LaunchAtLogin") {
@@ -436,20 +466,28 @@ struct GeneralSettingsView: View {
                             .onChange(of: launchAtLogin) { value in toggleLaunchAtLogin(value) }
                     }
                 }
-                
+
                 SettingsSection("Settings.General.Updates") {
                     SettingsRow("Settings.General.Updates.AutoCheckUpdate") {
                         Toggle("", isOn: $autoCheckUpdate).labelsHidden().toggleStyle(.switch)
-                            .onChange(of: autoCheckUpdate) { value in UpdateManager.isAutoCheckEnabled = value }
+                            .onChange(of: autoCheckUpdate) { value in
+                                UpdateManager.isAutoCheckEnabled = value
+                            }
                     }
                     Divider()
                     SettingsRow("Settings.General.Updates.ManualCheck") {
-                        Button(NSLocalizedString("Settings.General.Updates.Button", comment: "")) { checkForUpdate() }
+                        Button(NSLocalizedString("Settings.General.Updates.Button", comment: "")) {
+                            checkForUpdate()
+                        }
                     }
                 }
-                
+
                 SettingsSection("Settings.General.Advanced") {
-                    SettingsRow("Fullscreen detection method", helperText: "Choose how the app determines if a space is a Desktop or a Fullscreen App.\n\nAutomatic: No extra actions required.\n\nMetric-based: Based on the thresold of a metric. May not work for multiple displays.\n\nManual: All spaces that are not added will be treated as fullscreen.") {
+                    SettingsRow(
+                        "Fullscreen detection method",
+                        helperText:
+                            "Choose how the app determines if a space is a Desktop or a Fullscreen App.\n\nAutomatic: No extra actions required.\n\nMetric-based: Based on the thresold of a metric. May not work for multiple displays.\n\nManual: All spaces that are not added will be treated as fullscreen."
+                    ) {
                         Picker("", selection: $spaceManager.detectionMethod) {
                             Text("Automatic").tag(DetectionMethod.automatic)
                             Text("Metric-based").tag(DetectionMethod.metric)
@@ -457,17 +495,22 @@ struct GeneralSettingsView: View {
                         }
                         .labelsHidden()
                     }
-                    
+
                     if spaceManager.detectionMethod == .metric {
                         Divider()
-                        SettingsRow("Fix automatic detection", helperText: "Adjust the threshold for metric-based detection.") {
+                        SettingsRow(
+                            "Fix automatic detection",
+                            helperText: "Adjust the threshold for metric-based detection."
+                        ) {
                             Button("Fix") {
                                 showThresholdSheet = true
                             }
                         }
                     } else if spaceManager.detectionMethod == .manual {
                         Divider()
-                        SettingsRow("Add spaces", helperText: "Manually register new desktop spaces.") {
+                        SettingsRow(
+                            "Add spaces", helperText: "Manually register new desktop spaces."
+                        ) {
                             Button("Add") {
                                 showAddSpacesSheet = true
                             }
@@ -475,28 +518,41 @@ struct GeneralSettingsView: View {
                     } else {
                         // Automatic mode doesn't need extra buttons
                     }
-                    
+
                     Divider()
-                    
+
                     if spaceManager.detectionMethod == .metric {
-                        SettingsRow("Generate bug report", helperText: "This generates a log that is helpful for the developers to debug.") {
+                        SettingsRow(
+                            "Generate bug report",
+                            helperText:
+                                "This generates a log that is helpful for the developers to debug."
+                        ) {
                             Button(action: {
-                                if spaceManager.isBugReportActive { spaceManager.stopBugReportLogging() }
-                                else { spaceManager.startBugReportLogging(); showLogSheet = true }
+                                if spaceManager.isBugReportActive {
+                                    spaceManager.stopBugReportLogging()
+                                } else {
+                                    spaceManager.startBugReportLogging()
+                                    showLogSheet = true
+                                }
                             }) {
                                 Text(spaceManager.isBugReportActive ? "Stop" : "Start")
                             }
                             .keyboardShortcut("b")
                         }
-                        
+
                         Divider()
                     }
-                    
-                    SettingsRow("Settings.General.Advanced.EnableAPI", helperText: "Allow other apps to get space names.") {
+
+                    SettingsRow(
+                        "Settings.General.Advanced.EnableAPI",
+                        helperText: "Allow other apps to get space names."
+                    ) {
                         Toggle("", isOn: $isAPIEnabled).labelsHidden().toggleStyle(.switch)
-                            .onChange(of: isAPIEnabled) { _ in spaceManager.spaceAPI?.toggleAPIState() }
+                            .onChange(of: isAPIEnabled) { _ in
+                                spaceManager.spaceAPI?.toggleAPIState()
+                            }
                     }
-                    
+
                     Divider()
 
                     SettingsRow("Factory Reset") {
@@ -512,12 +568,17 @@ struct GeneralSettingsView: View {
             .frame(maxWidth: .infinity, alignment: .topLeading)
         }
         .onAppear { launchAtLogin = getLaunchAtLoginState() }
-        .sheet(isPresented: $showLogSheet, onDismiss: { if spaceManager.isBugReportActive { spaceManager.stopBugReportLogging() } }) { bugReportSheet }
-        .sheet(isPresented: $showThresholdSheet) { ThresholdAdjustmentView(spaceManager: spaceManager) }
+        .sheet(
+            isPresented: $showLogSheet,
+            onDismiss: { if spaceManager.isBugReportActive { spaceManager.stopBugReportLogging() } }
+        ) { bugReportSheet }
+        .sheet(isPresented: $showThresholdSheet) {
+            ThresholdAdjustmentView(spaceManager: spaceManager)
+        }
         .sheet(isPresented: $showAddSpacesSheet) { AddSpacesView(spaceManager: spaceManager) }
         .animation(.easeInOut(duration: 0.16), value: spaceManager.detectionMethod)
     }
-    
+
     private var bugReportSheet: some View {
         VStack(spacing: 15) {
             HStack {
@@ -526,22 +587,26 @@ struct GeneralSettingsView: View {
                 Spacer()
             }
             .padding(.bottom, 5)
-            
-            Text("Please go through all spaces that may be helpful in analyzing the bug. The log is updating in real-time.")
-                .font(.body)
-                .foregroundColor(.secondary)
-                .multilineTextAlignment(.leading)
-            
+
+            Text(
+                "Please go through all spaces that may be helpful in analyzing the bug. The log is updating in real-time."
+            )
+            .font(.body)
+            .foregroundColor(.secondary)
+            .multilineTextAlignment(.leading)
+
             ScrollView {
                 ScrollViewReader { proxy in
                     VStack(alignment: .leading, spacing: 4) {
                         ForEach(spaceManager.bugReportLog.indices, id: \.self) { index in
                             let entry = spaceManager.bugReportLog[index]
                             let isLatest = index == spaceManager.bugReportLog.count - 1
-                            
+
                             Text(entry.description)
                                 .font(.system(.footnote, design: .monospaced))
-                                .foregroundColor(isLatest ? .accentColor : Color(NSColor.controlTextColor))
+                                .foregroundColor(
+                                    isLatest ? .accentColor : Color(NSColor.controlTextColor)
+                                )
                                 .id(entry.id)
                         }
                     }
@@ -562,7 +627,7 @@ struct GeneralSettingsView: View {
                 RoundedRectangle(cornerRadius: 6)
                     .stroke(Color.gray.opacity(0.2), lineWidth: 1)
             )
-            
+
             HStack {
                 Button("Cancel") {
                     spaceManager.stopBugReportLogging()
@@ -579,24 +644,24 @@ struct GeneralSettingsView: View {
         .padding()
         .frame(minWidth: 500, minHeight: 400)
     }
-    
+
     private func saveLog() {
         let logContent = spaceManager.bugReportLog.map { $0.description }.joined(separator: "\n")
         guard let data = logContent.data(using: .utf8) else { return }
-        
+
         let savePanel = NSSavePanel()
         savePanel.canCreateDirectories = true
         savePanel.showsTagField = false
-        
+
         let formatter = ISO8601DateFormatter()
         formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
         let timestamp = formatter.string(from: Date()).replacingOccurrences(of: ":", with: "-")
-        
+
         savePanel.nameFieldStringValue = "DesktopRenamer_BugReport_\(timestamp).log"
         savePanel.allowedContentTypes = [.log, .plainText]
-        
+
         guard let window = NSApp.suitableSheetWindow else { return }
-        
+
         savePanel.beginSheetModal(for: window) { result in
             if result == .OK, let url = savePanel.url {
                 do {
@@ -604,7 +669,7 @@ struct GeneralSettingsView: View {
                     self.spaceManager.stopBugReportLogging()
                     self.showLogSheet = false
                     DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-                         self.showThankYouAlert()
+                        self.showThankYouAlert()
                     }
                 } catch {
                     print("Error saving file: \(error)")
@@ -616,22 +681,24 @@ struct GeneralSettingsView: View {
     private func showThankYouAlert() {
         let alert = NSAlert()
         alert.messageText = NSLocalizedString("Thank You!", comment: "")
-        alert.informativeText = NSLocalizedString("The bug report log has been successfully saved. This will greatly help in fixing issues!", comment: "")
+        alert.informativeText = NSLocalizedString(
+            "The bug report log has been successfully saved. This will greatly help in fixing issues!",
+            comment: "")
         alert.alertStyle = .informational
         alert.addButton(withTitle: NSLocalizedString("Button.OK", comment: ""))
-        
+
         guard let window = NSApp.keyWindow else {
             alert.runModal()
             return
         }
-        
+
         alert.beginSheetModal(for: window) { _ in }
     }
-    
+
     private func getLaunchAtLoginState() -> Bool {
         return SMAppService.mainApp.status == .enabled
     }
-    
+
     private func toggleLaunchAtLogin(_ enabled: Bool) {
         do {
             let service = SMAppService.mainApp
@@ -645,38 +712,41 @@ struct GeneralSettingsView: View {
             launchAtLogin = getLaunchAtLoginState()
         }
     }
-    
+
     private func checkForUpdate() {
         Task {
             await UpdateManager.shared.checkForUpdate(from: nil, suppressUpToDateAlert: false)
         }
     }
-    
+
     private func resetNames() {
         isResetting = true
-        
+
         let alert = NSAlert()
         alert.messageText = NSLocalizedString("Settings.General.Reset.Alert.Msg", comment: "")
         alert.informativeText = NSLocalizedString("Settings.General.Reset.Alert.Info", comment: "")
         alert.alertStyle = .warning
-        alert.addButton(withTitle: NSLocalizedString("Settings.General.Reset.Alert.Reset", comment: ""))
+        alert.addButton(
+            withTitle: NSLocalizedString("Settings.General.Reset.Alert.Reset", comment: ""))
         alert.addButton(withTitle: NSLocalizedString("Button.Cancel", comment: ""))
-        
+
         guard let window = NSApp.keyWindow else {
             isResetting = false
             return
         }
-        
+
         alert.beginSheetModal(for: window) { response in
             DispatchQueue.main.async {
                 self.isResetting = false
-                
+
                 if response == .alertFirstButtonReturn {
                     self.spaceManager.resetAllNames()
-                    
+
                     let successAlert = NSAlert()
-                    successAlert.messageText = NSLocalizedString("Settings.General.Reset.Success.Msg", comment: "")
-                    successAlert.informativeText = NSLocalizedString("Settings.General.Reset.Success.Info", comment: "")
+                    successAlert.messageText = NSLocalizedString(
+                        "Settings.General.Reset.Success.Msg", comment: "")
+                    successAlert.informativeText = NSLocalizedString(
+                        "Settings.General.Reset.Success.Info", comment: "")
                     successAlert.alertStyle = .informational
                     successAlert.addButton(withTitle: NSLocalizedString("Button.OK", comment: ""))
                     successAlert.beginSheetModal(for: window) { _ in }
@@ -684,15 +754,17 @@ struct GeneralSettingsView: View {
             }
         }
     }
-    
+
     private func performFactoryReset() {
         let alert = NSAlert()
         alert.messageText = NSLocalizedString("Factory Reset", comment: "")
-        alert.informativeText = NSLocalizedString("Are you sure? This will delete all your space names and settings. The app will quit immediately.", comment: "")
+        alert.informativeText = NSLocalizedString(
+            "Are you sure? This will delete all your space names and settings. The app will quit immediately.",
+            comment: "")
         alert.alertStyle = .critical
         alert.addButton(withTitle: NSLocalizedString("Reset & Quit", comment: ""))
         alert.addButton(withTitle: NSLocalizedString("Cancel", comment: ""))
-        
+
         guard let window = NSApp.suitableSheetWindow else { return }
         alert.beginSheetModal(for: window) { result in
             if result == .alertFirstButtonReturn {
@@ -700,7 +772,7 @@ struct GeneralSettingsView: View {
                     UserDefaults.standard.removePersistentDomain(forName: bundleID)
                     UserDefaults.standard.synchronize()
                 }
-                
+
                 NSApp.terminate(nil)
             }
         }

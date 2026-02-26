@@ -17,7 +17,7 @@ struct AboutView: View {
     var body: some View {
         ScrollView {
             VStack(spacing: 24) {
-                // MARK: - App Header
+                // App Icon and Name
                 VStack(spacing: 12) {
                     if let nsImage = NSApplication.shared.applicationIconImage {
                         Image(nsImage: nsImage)
@@ -48,7 +48,7 @@ struct AboutView: View {
                 Divider()
                     .padding(.horizontal, 40)
 
-                // MARK: - More Apps Section
+                // Other projects by the same developer
                 VStack(spacing: 16) {
                     Text("More Apps")
                         .font(.headline)
@@ -78,7 +78,7 @@ struct AboutView: View {
                 Divider()
                     .padding(.horizontal, 40)
 
-                // MARK: - Footer
+                // Links and Copyright
                 VStack(spacing: 10) {
                     Link(NSLocalizedString("Settings.About.Repo", comment: "GitHub Repo"),
                          destination: URL(string: "https://github.com/gitmichaelqiu/DesktopRenamer")!)

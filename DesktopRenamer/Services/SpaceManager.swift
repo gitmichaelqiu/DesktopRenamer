@@ -34,7 +34,7 @@ struct LogEntry: Identifiable, CustomStringConvertible {
 }
 
 class SpaceManager: ObservableObject {
-    // App Group ID for Widget Sharing
+    // App group for sharing data with the widget
     static let appGroupId = "group.com.michaelqiu.DesktopRenamer"
     
     static private let spacesKey = "com.michaelqiu.desktoprenamer.spaces"
@@ -50,7 +50,7 @@ class SpaceManager: ObservableObject {
     
     @Published var spaceNameDict: [DesktopSpace] = []
     
-    // MARK: - Computed Properties
+    // Handy views for the current display
     
     var currentDisplaySpaces: [DesktopSpace] {
         spaceNameDict
@@ -72,6 +72,7 @@ class SpaceManager: ObservableObject {
     
     @Published var detectionMethod: DetectionMethod {
         didSet {
+            // Update storage and refresh whenever method changes
             UserDefaults.standard.set(detectionMethod.rawValue, forKey: SpaceManager.detectionMethodKey)
             refreshSpaceState()
         }
@@ -138,7 +139,7 @@ class SpaceManager: ObservableObject {
         if detectionMethod == .automatic {
             guard let cgsState = SpaceHelper.getSystemState() else { return }
             
-            // PRE-CHECK: Identify which names are already securely claimed by existing UUIDs.
+            // First, see which names are already taken by active UUIDs so we don't double-assign.
             var claimedNames: Set<String> = []
             let activeUUIDs = Set(cgsState.spaces.map { $0.id })
             
@@ -150,7 +151,20 @@ class SpaceManager: ObservableObject {
             
             var newSpaceList: [DesktopSpace] = []
             
-            // 1. Build List and Apply Cache (Skip cache for fullscreen)
+            // Calculate desktop indices per display
+            var displayDesktopCounters: [String: Int] = [:]
+            var spaceDesktopIndices: [String: Int] = [:]
+
+            for sysSpace in cgsState.spaces {
+                if !sysSpace.isFullscreen {
+                    let dID = sysSpace.displayID
+                    let count = displayDesktopCounters[dID, default: 0] + 1
+                    displayDesktopCounters[dID] = count
+                    spaceDesktopIndices[sysSpace.id] = count
+                }
+            }
+            
+            // 1. Build the list and try to pull from cache (we don't cache fullscreen names though)
             for sysSpace in cgsState.spaces {
                 var finalSpace = sysSpace
                 
@@ -159,12 +173,19 @@ class SpaceManager: ObservableObject {
                      // The name will be auto-generated in the numbering pass below.
                      finalSpace.customName = "" // Placeholder
                 } else {
+                    let dIndex = spaceDesktopIndices[sysSpace.id] ?? 1
+                    let indexKey = "\(finalSpace.displayID)|Desktop|\(dIndex)"
+                    let legacyIndexKey = "\(finalSpace.displayID)|\(finalSpace.num)"
+                    
                     if let cachedName = nameCache[sysSpace.id], !cachedName.isEmpty {
                         finalSpace.customName = cachedName
                     } else {
-                        let indexKey = "\(finalSpace.displayID)|\(finalSpace.num)"
-                        
                         if let fallbackName = indexCache[indexKey], !fallbackName.isEmpty {
+                            if !claimedNames.contains(fallbackName) {
+                                finalSpace.customName = fallbackName
+                                nameCache[sysSpace.id] = fallbackName
+                            }
+                        } else if let fallbackName = indexCache[legacyIndexKey], !fallbackName.isEmpty {
                             if !claimedNames.contains(fallbackName) {
                                 finalSpace.customName = fallbackName
                                 nameCache[sysSpace.id] = fallbackName
@@ -179,8 +200,8 @@ class SpaceManager: ObservableObject {
                 newSpaceList.append(finalSpace)
             }
             
-            // 2. Fullscreen Naming Pass (Group by App Name and Number)
-            // Group indices of fullscreen spaces by their appName
+            // 2. Name the fullscreen spaces based on the app they're running
+            // Group them by app name so we can number them if there's more than one (e.g. "Xcode 1", "Xcode 2")
             var appGroups: [String: [Int]] = [:]
             
             for (index, space) in newSpaceList.enumerated() {
@@ -206,12 +227,31 @@ class SpaceManager: ObservableObject {
             if self.spaceNameDict != newSpaceList {
                 self.spaceNameDict = newSpaceList
                 
+                // Clear index cache for active displays to prevent stale data accumulation
+                let activeDisplays = Set(cgsState.spaces.map { $0.displayID })
+                var keysToRemove: [String] = []
+                for key in self.indexCache.keys {
+                    let components = key.split(separator: "|")
+                    if let displayID = components.first, activeDisplays.contains(String(displayID)) {
+                        keysToRemove.append(key)
+                    }
+                }
+                for key in keysToRemove {
+                    self.indexCache.removeValue(forKey: key)
+                }
+                
                 // Update index cache with currently detected spaces.
                 // We do NOT clear the cache here to preserve names for spaces/displays that might 
                 // be temporarily undetected (active display only, sleeping connection, etc).
-                for space in self.spaceNameDict where !space.customName.isEmpty && !space.isFullscreen {
-                    let key = "\(space.displayID)|\(space.num)"
-                    self.indexCache[key] = space.customName
+                var displayDesktopCounters: [String: Int] = [:]
+                for space in self.spaceNameDict where !space.isFullscreen {
+                    let count = displayDesktopCounters[space.displayID, default: 0] + 1
+                    displayDesktopCounters[space.displayID] = count
+                    
+                    if !space.customName.isEmpty {
+                        let key = "\(space.displayID)|Desktop|\(count)"
+                        self.indexCache[key] = space.customName
+                    }
                 }
                 
                 saveData()
@@ -244,7 +284,7 @@ class SpaceManager: ObservableObject {
             return
         }
         
-        // Legacy Detection logic
+        // Old-school fallback detection logic
         if self.currentIsDesktop != isDesktop {
             self.currentIsDesktop = isDesktop
             shouldUpdateWidget = true
@@ -279,6 +319,7 @@ class SpaceManager: ObservableObject {
         
         if detectionMethod != .manual && detectionMethod != .automatic && logicalUUID != "FULLSCREEN" {
             if !spaceNameDict.contains(where: { $0.id == logicalUUID }) {
+                // If we found a new space, add it to the list
                 let existingSpacesOnDisplay = spaceNameDict.filter { $0.displayID == displayID }
                 let newNum = (existingSpacesOnDisplay.map { $0.num }.max() ?? 0) + 1
                 spaceNameDict.append(DesktopSpace(id: logicalUUID, customName: "", num: newNum, displayID: displayID))
@@ -290,7 +331,7 @@ class SpaceManager: ObservableObject {
         if shouldUpdateWidget { scheduleWidgetUpdate() }
     }
     
-    // MARK: - Widget Integration (Debounced)
+    // Debounce widget updates so we don't spam the system
     private func scheduleWidgetUpdate() {
         widgetUpdateWorkItem?.cancel()
         
@@ -338,7 +379,7 @@ class SpaceManager: ObservableObject {
             defaults.set(data, forKey: "widget_spacesData")
         }
         
-        // Legacy fields for backward compatibility or simple widgets
+        // Some simple fields for basic widgets to use
         let allSpaceNames = sortedSpaces.map { $0.customName.isEmpty ? "\($0.num)" : $0.customName }
         defaults.set(allSpaceNames, forKey: "widget_allSpaces")
         
@@ -377,21 +418,31 @@ class SpaceManager: ObservableObject {
     private func loadSavedData() {
         if let data = UserDefaults.standard.data(forKey: SpaceManager.spacesKey),
            let spaces = try? JSONDecoder().decode([DesktopSpace].self, from: data) {
-            spaceNameDict = spaces
+            spaceNameDict = spaces.map {
+                var s = $0
+                s.customName = s.customName.replacingOccurrences(of: "~", with: "")
+                return s
+            }
         }
         if let data = UserDefaults.standard.data(forKey: SpaceManager.nameCacheKey),
            let cache = try? JSONDecoder().decode([String: String].self, from: data) {
-            nameCache = cache
+            nameCache = cache.mapValues { $0.replacingOccurrences(of: "~", with: "") }
         }
         if let data = UserDefaults.standard.data(forKey: SpaceManager.indexCacheKey),
            let cache = try? JSONDecoder().decode([String: String].self, from: data) {
-            indexCache = cache
+            indexCache = cache.mapValues { $0.replacingOccurrences(of: "~", with: "") }
         }
         if (nameCache.isEmpty || indexCache.isEmpty) && !spaceNameDict.isEmpty {
-            for space in spaceNameDict where !space.customName.isEmpty && !space.isFullscreen {
-                nameCache[space.id] = space.customName
-                let indexKey = "\(space.displayID)|\(space.num)"
-                indexCache[indexKey] = space.customName
+            var displayDesktopCounters: [String: Int] = [:]
+            for space in spaceNameDict where !space.isFullscreen {
+                let count = displayDesktopCounters[space.displayID, default: 0] + 1
+                displayDesktopCounters[space.displayID] = count
+                
+                if !space.customName.isEmpty {
+                    nameCache[space.id] = space.customName
+                    let indexKey = "\(space.displayID)|Desktop|\(count)"
+                    indexCache[indexKey] = space.customName
+                }
             }
             saveData()
         }
@@ -456,15 +507,22 @@ class SpaceManager: ObservableObject {
             // But UI filters them out, so this is mostly safe.
             spaceNameDict[index].customName = trimmedName
             let space = spaceNameDict[index]
-            let indexKey = "\(space.displayID)|\(space.num)"
             
             if !space.isFullscreen {
-                if trimmedName.isEmpty {
-                    nameCache.removeValue(forKey: spaceUUID)
-                    indexCache.removeValue(forKey: indexKey)
-                } else {
-                    nameCache[spaceUUID] = trimmedName
-                    indexCache[indexKey] = trimmedName
+                let desktopsOnSameDisplay = spaceNameDict.filter { $0.displayID == space.displayID && !$0.isFullscreen }
+                if let dIndex = desktopsOnSameDisplay.firstIndex(where: { $0.id == space.id }) {
+                    let desktopNum = dIndex + 1
+                    let indexKey = "\(space.displayID)|Desktop|\(desktopNum)"
+                    let legacyIndexKey = "\(space.displayID)|\(space.num)"
+                    
+                    if trimmedName.isEmpty {
+                        nameCache.removeValue(forKey: spaceUUID)
+                        indexCache.removeValue(forKey: indexKey)
+                        indexCache.removeValue(forKey: legacyIndexKey)
+                    } else {
+                        nameCache[spaceUUID] = trimmedName
+                        indexCache[indexKey] = trimmedName
+                    }
                 }
             }
             saveData()
@@ -472,7 +530,7 @@ class SpaceManager: ObservableObject {
         }
     }
     
-    // MARK: - Switching
+    // Moving around spaces
     
     func switchToSpace(_ space: DesktopSpace) {
         SpaceHelper.switchToSpace(space.id)

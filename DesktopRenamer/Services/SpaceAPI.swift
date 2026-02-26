@@ -54,7 +54,7 @@ class SpaceAPI {
         print("SpaceAPI: Listener Stopped")
     }
     
-    // MARK: - State Management
+    // API on/off switch
     
     func toggleAPIState() {
         SpaceManager.isAPIEnabled.toggle()
@@ -75,7 +75,7 @@ class SpaceAPI {
         print("SpaceAPI: Sent Toggle Notification -> \(SpaceManager.isAPIEnabled)")
     }
     
-    // MARK: - Broadcasting
+    // Sending updates back to whatever asked for them
     
     private func broadcastCurrentSpace() {
         guard let sm = spaceManager, SpaceManager.isAPIEnabled else { return }
