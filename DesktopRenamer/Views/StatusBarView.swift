@@ -54,7 +54,7 @@ extension RenameViewController: NSTextFieldDelegate {
     }
     
     private func handleRename() {
-        let newName = textField.stringValue.trimmingCharacters(in: .whitespacesAndNewlines)
+        let newName = textField.stringValue.trimmingCharacters(in: .whitespacesAndNewlines).replacingOccurrences(of: "~|~", with: "")
         if !newName.isEmpty {
             spaceManager.renameSpace(spaceManager.currentSpaceUUID, to: newName)
         }
