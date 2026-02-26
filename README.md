@@ -38,6 +38,10 @@
   </tr>
 </table>
 
+https://github.com/user-attachments/assets/2f1ad8b6-c003-4086-ae88-b0ed87ee4dd1
+
+Switch desktops faster with ProMotion.
+
 **DesktopRenamer** is a macOS menubar app that shows your **customized** name of the current desktop.
 
 ## 📦 Installation
