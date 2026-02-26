@@ -2,13 +2,13 @@ import Cocoa
 import Combine
 import QuartzCore
 
-// MARK: - CGS Private API
+// Private APIs for space management (The black magic part)
 @_silgen_name("_CGSDefaultConnection") private func _CGSDefaultConnection() -> Int32
 @_silgen_name("CGSCopyManagedDisplaySpaces") private func CGSCopyManagedDisplaySpaces(_ cid: Int32) -> CFArray?
 @_silgen_name("CGSAddWindowsToSpaces") private func CGSAddWindowsToSpaces(_ cid: Int32, _ windows: CFArray, _ spaces: CFArray)
 @_silgen_name("CGSRemoveWindowsFromSpaces") private func CGSRemoveWindowsFromSpaces(_ cid: Int32, _ windows: CFArray, _ spaces: CFArray)
 
-// MARK: - Custom Handle View (The "Pill")
+// This is the little "pill" handle you see when the window is docked to the edge
 class CollapsibleHandleView: NSView {
     private let imageView: NSImageView
 
@@ -54,7 +54,7 @@ class CollapsibleHandleView: NSView {
     }
 }
 
-// MARK: - Main Window Class
+// The actual label window that floats on your desktop
 class SpaceLabelWindow: NSWindow {
     private let label: NSTextField
     private let handleView: CollapsibleHandleView
@@ -222,11 +222,11 @@ class SpaceLabelWindow: NSWindow {
         NotificationCenter.default.removeObserver(self)
     }
 
-    // MARK: - Window Overrides (CRITICAL FOR SWITCHING)
+    // Native OS window behavior overrides (Crucial for things like key focus)
     override var canBecomeKey: Bool { return true }
     override var canBecomeMain: Bool { return true }
 
-    // MARK: - Space Binding
+    // Forcing the window onto a specific space using the Private API
     func bindToTargetSpace() {
         let cid = _CGSDefaultConnection()
         guard let displays = CGSCopyManagedDisplaySpaces(cid) as? [NSDictionary] else { return }
@@ -264,7 +264,7 @@ class SpaceLabelWindow: NSWindow {
         }
     }
 
-    // MARK: - Live Background Hack
+    // A little trick to keep the window "alive" so it doesn't stutter during space switches
     private func setupLiveBackgroundUpdate() {
         guard let layer = self.contentView?.layer else { return }
         let key = "forceRedrawLoop"
@@ -280,7 +280,7 @@ class SpaceLabelWindow: NSWindow {
         }
     }
 
-    // MARK: - State Synchronization
+    // Keeping everything in sync with the manager
     private func syncFromGlobalState() {
         guard let manager = labelManager else { return }
         self.isDocked = manager.globalIsDocked
@@ -313,7 +313,7 @@ class SpaceLabelWindow: NSWindow {
             isDocked: self.isDocked, edge: self.dockEdge, center: NSPoint(x: relX, y: relY))
     }
 
-    // MARK: - Helper: Edge-Aware Positioning
+    // Figuring out where to put the window based on docking settings
     private func getAbsoluteTargetCenter(on screen: NSScreen, forSize size: NSSize) -> NSPoint {
         let relativePoint = labelManager?.globalCenterPoint ?? NSPoint(x: 1.0, y: 0.5)
         let sFrame = screen.visibleFrame
@@ -332,7 +332,7 @@ class SpaceLabelWindow: NSWindow {
         return NSPoint(x: absX, y: absY)
     }
 
-    // MARK: - Public API
+    // Methods for other classes to use
     func refreshAppearance() {
         updateInteractivity()
         updateLayout(isCurrentSpace: self.isActiveMode)
@@ -373,7 +373,7 @@ class SpaceLabelWindow: NSWindow {
         self.contentView?.alphaValue = 0.0
     }
 
-    // MARK: - Interactions
+    // Handling dragging and clicking on the label/handle
     override func mouseDown(with event: NSEvent) {
         guard let manager = labelManager, manager.showOnDesktop, isActiveMode else {
             super.mouseDown(with: event)
@@ -539,7 +539,7 @@ class SpaceLabelWindow: NSWindow {
         self.isMovableByWindowBackground = false
     }
 
-    // MARK: - Layout Logic
+    // Putting it all together: size, position, and visibility
 
     private func updateLayout(isCurrentSpace: Bool, updateFrame: Bool = true) {
         guard let targetScreen = findTargetScreen() else {
@@ -660,7 +660,7 @@ class SpaceLabelWindow: NSWindow {
         }
     }
 
-    // MARK: - Calculation Helpers
+    // Geometry math for centering and sizing
 
     private func calculateCenteredOrigin(
         forSize size: NSSize, onEdge edge: NSRectEdge, centerPoint: NSPoint, screenFrame: NSRect,

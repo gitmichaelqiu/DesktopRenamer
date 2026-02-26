@@ -76,9 +76,7 @@ struct SpaceEditView: View {
     }
     
     private func spaces(for displayID: String) -> [DesktopSpace] {
-        // Filter out fullscreen spaces so they are not editable in settings
-        spaceManager.spaceNameDict
-            .filter { $0.displayID == displayID && !$0.isFullscreen }
+        // We don't want to show or edit fullscreen apps here, just regular desktops
             .sorted { $0.num < $1.num }
     }
     

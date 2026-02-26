@@ -3,7 +3,7 @@ import Combine
 import Foundation
 import IOKit
 
-// MARK: - 1. Private MultitouchSupport Definitions
+// 1. Private MultitouchSupport Stuff (Magic spells for trackpad)
 
 private typealias MTDeviceRef = OpaquePointer
 
@@ -57,7 +57,7 @@ private var _MTRegisterContactFrameCallback:
 private var _MTDeviceStart: (@convention(c) (MTDeviceRef, Int32) -> Void)?
 private var _MTDeviceStop: (@convention(c) (MTDeviceRef, Int32) -> Void)?
 
-// MARK: - 2. Gesture Manager
+// 2. The Gesture Manager itself
 class GestureManager: ObservableObject {
     // Settings
     private let kGestureEnabled = "GestureManager.Enabled"
@@ -162,7 +162,7 @@ class GestureManager: ObservableObject {
         // We do not stop monitoring when `isEnabled` becomes false.
     }
 
-    // MARK: - Private API Loading
+    // Load the private MultitouchSupport framework from the system
     private func loadPrivateFramework() {
         guard let handle = dlopen(MTSFrameworkPath, RTLD_NOW) else {
             print("Failed to load MultitouchSupport.framework at \(MTSFrameworkPath)")
@@ -197,7 +197,7 @@ class GestureManager: ObservableObject {
         }
     }
 
-    // MARK: - Device Management
+    // Handling the hardware devices
     private func startMonitoring() {
         if let createList = _MTDeviceCreateList {
             let deviceList = createList().takeRetainedValue() as? [MTDeviceRef] ?? []
@@ -241,7 +241,7 @@ class GestureManager: ObservableObject {
         }
     }
 
-    // MARK: - IOKit Listener
+    // Watch for new devices being plugged in
     private func setupIOKitListener() {
         guard notifyPort == nil else { return }
 
@@ -280,7 +280,7 @@ class GestureManager: ObservableObject {
         }
     }
 
-    // MARK: - Handling Logic
+    // Here's where we actually figure out if a swipe happened
     fileprivate func handleTouches(touches: [MTTouch], numFingers: Int) {
         let now = Date().timeIntervalSince1970
 
@@ -492,7 +492,7 @@ class GestureManager: ObservableObject {
     }
 }
 
-// MARK: - Global C Callbacks
+// System-level callbacks from the trackpad driver
 
 private let ioKitCallback: @convention(c) (UnsafeMutableRawPointer?, io_iterator_t) -> Void = {
     (refCon, iterator) in

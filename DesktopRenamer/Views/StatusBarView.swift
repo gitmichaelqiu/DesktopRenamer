@@ -2,7 +2,7 @@ import SwiftUI
 import Combine
 import AppKit
 
-// RenameViewController remains unchanged
+// Popup window for typing in a new space name
 class RenameViewController: NSViewController {
     private var spaceManager: SpaceManager
     private var completion: () -> Void
@@ -84,7 +84,7 @@ class StatusBarController: NSObject {
     // Add GestureManager
     let gestureManager: GestureManager
     
-    // Updated Init
+    // Setting things up
     init(spaceManager: SpaceManager, hotkeyManager: HotkeyManager, gestureManager: GestureManager) {
         self.spaceManager = spaceManager
         self.labelManager = SpaceLabelManager(spaceManager: spaceManager)

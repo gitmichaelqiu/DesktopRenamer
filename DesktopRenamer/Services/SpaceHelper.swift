@@ -2,7 +2,7 @@ import AppKit
 import CoreGraphics
 import Foundation
 
-// MARK: - CGS Private API Definitions (Read-Only)
+// Private Apple APIs (Use with caution!)
 @_silgen_name("_CGSDefaultConnection") private func _CGSDefaultConnection() -> Int32
 @_silgen_name("CGSCopyManagedDisplaySpaces") private func CGSCopyManagedDisplaySpaces(_ cid: Int32)
     -> CFArray?
@@ -28,7 +28,7 @@ class SpaceHelper {
     // Track switch state to prevent recursion glitches
     private static var isSwitching = false
 
-    // MARK: - Space Switching Logic
+    // The meat of space switching logic
     static func switchToSpace(_ spaceID: String) {
         guard !isSwitching else { return }
         isSwitching = true
@@ -59,7 +59,7 @@ class SpaceHelper {
             // If we are already on the target space, stop.
             if state.currentUUID == spaceID { return }
 
-            // CHECK: Native shortcuts (Ctrl+1, Ctrl+2) only map to Desktops.
+            // Note: Native shortcuts (Ctrl+1, Ctrl+2) only map to Desktops.
             if targetSpace.isFullscreen {
                 shouldUseShortcut = false
             } else {
@@ -72,9 +72,8 @@ class SpaceHelper {
             }
         }
 
-        // 2. PRIORITY: Simulate Keyboard Shortcut (Control + Number)
-        // Only valid for standard desktops.
-        // multi-display support: use global shortcut index if available
+        // First priority: Try to use the built-in Ctrl+Number shortcuts (if enabled)
+        // This is usually the smoothest way if it works.
         if shouldUseShortcut {
             if let globalNum = targetGlobalNum {
                 if isShortcutEnabled(for: globalNum) && simulateDesktopShortcut(for: globalNum) {
@@ -88,12 +87,10 @@ class SpaceHelper {
             }
         }
 
-        // 3. Unified Activation Logic
-        // We use our own SpaceLabelWindow for both Desktop and Fullscreen because it is the fastest method.
-        // However, each requires specific handling to avoid bugs (reversion/focus stealing).
+        // If shortcuts didn't handle it, use our private window activation trick.
         if switchByActivatingOwnWindow(for: spaceID, isFullscreen: targetIsFullscreen) {
 
-            // FIX for Fullscreen Focus:
+            // High-priority fix for Fullscreen Focus:
             // When switching to a Fullscreen space via SpaceLabelWindow, DesktopRenamer initially gets focus.
             // This can cause the OS to revert to the previous space if we don't hand off focus immediately.
             // We must identify the "owner" app of the fullscreen space and activate it.
@@ -114,7 +111,7 @@ class SpaceHelper {
             return
         }
 
-        // 4. Fallback: Mission Control UI Scripting
+        // Last resort: Script Mission Control (it's slower and clunky)
         if let num = targetNum {
             switchViaMissionControl(to: num)
         }
@@ -197,7 +194,7 @@ class SpaceHelper {
         }
     }
 
-    // MARK: - Shortcut Helpers
+    // Help with shortcut logic
 
     private static func isShortcutEnabled(for number: Int) -> Bool {
         let baseID = 118
@@ -284,9 +281,7 @@ class SpaceHelper {
             forName: NSWorkspace.didActivateApplicationNotification, object: nil, queue: .main
         ) { _ in detectSpaceChange() }
 
-        globalEventMonitor = NSEvent.addGlobalMonitorForEvents(matching: [
-            .leftMouseDown, .rightMouseDown,
-        ]) { _ in detectSpaceChange() }
+        // Event monitors to catch when the user clicks around or does something that might change spaces
         localEventMonitor = NSEvent.addLocalMonitorForEvents(matching: [
             .leftMouseDown, .rightMouseDown,
         ]) { event in

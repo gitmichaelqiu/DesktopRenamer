@@ -34,7 +34,7 @@ struct LogEntry: Identifiable, CustomStringConvertible {
 }
 
 class SpaceManager: ObservableObject {
-    // App Group ID for Widget Sharing
+    // App group for sharing data with the widget
     static let appGroupId = "group.com.michaelqiu.DesktopRenamer"
     
     static private let spacesKey = "com.michaelqiu.desktoprenamer.spaces"
@@ -50,7 +50,7 @@ class SpaceManager: ObservableObject {
     
     @Published var spaceNameDict: [DesktopSpace] = []
     
-    // MARK: - Computed Properties
+    // Handy views for the current display
     
     var currentDisplaySpaces: [DesktopSpace] {
         spaceNameDict
@@ -72,6 +72,7 @@ class SpaceManager: ObservableObject {
     
     @Published var detectionMethod: DetectionMethod {
         didSet {
+            // Update storage and refresh whenever method changes
             UserDefaults.standard.set(detectionMethod.rawValue, forKey: SpaceManager.detectionMethodKey)
             refreshSpaceState()
         }
@@ -138,7 +139,7 @@ class SpaceManager: ObservableObject {
         if detectionMethod == .automatic {
             guard let cgsState = SpaceHelper.getSystemState() else { return }
             
-            // PRE-CHECK: Identify which names are already securely claimed by existing UUIDs.
+            // First, see which names are already taken by active UUIDs so we don't double-assign.
             var claimedNames: Set<String> = []
             let activeUUIDs = Set(cgsState.spaces.map { $0.id })
             
@@ -163,7 +164,7 @@ class SpaceManager: ObservableObject {
                 }
             }
             
-            // 1. Build List and Apply Cache (Skip cache for fullscreen)
+            // 1. Build the list and try to pull from cache (we don't cache fullscreen names though)
             for sysSpace in cgsState.spaces {
                 var finalSpace = sysSpace
                 
@@ -199,8 +200,8 @@ class SpaceManager: ObservableObject {
                 newSpaceList.append(finalSpace)
             }
             
-            // 2. Fullscreen Naming Pass (Group by App Name and Number)
-            // Group indices of fullscreen spaces by their appName
+            // 2. Name the fullscreen spaces based on the app they're running
+            // Group them by app name so we can number them if there's more than one (e.g. "Xcode 1", "Xcode 2")
             var appGroups: [String: [Int]] = [:]
             
             for (index, space) in newSpaceList.enumerated() {
@@ -283,7 +284,7 @@ class SpaceManager: ObservableObject {
             return
         }
         
-        // Legacy Detection logic
+        // Old-school fallback detection logic
         if self.currentIsDesktop != isDesktop {
             self.currentIsDesktop = isDesktop
             shouldUpdateWidget = true
@@ -318,6 +319,7 @@ class SpaceManager: ObservableObject {
         
         if detectionMethod != .manual && detectionMethod != .automatic && logicalUUID != "FULLSCREEN" {
             if !spaceNameDict.contains(where: { $0.id == logicalUUID }) {
+                // If we found a new space, add it to the list
                 let existingSpacesOnDisplay = spaceNameDict.filter { $0.displayID == displayID }
                 let newNum = (existingSpacesOnDisplay.map { $0.num }.max() ?? 0) + 1
                 spaceNameDict.append(DesktopSpace(id: logicalUUID, customName: "", num: newNum, displayID: displayID))
@@ -329,7 +331,7 @@ class SpaceManager: ObservableObject {
         if shouldUpdateWidget { scheduleWidgetUpdate() }
     }
     
-    // MARK: - Widget Integration (Debounced)
+    // Debounce widget updates so we don't spam the system
     private func scheduleWidgetUpdate() {
         widgetUpdateWorkItem?.cancel()
         
@@ -377,7 +379,7 @@ class SpaceManager: ObservableObject {
             defaults.set(data, forKey: "widget_spacesData")
         }
         
-        // Legacy fields for backward compatibility or simple widgets
+        // Some simple fields for basic widgets to use
         let allSpaceNames = sortedSpaces.map { $0.customName.isEmpty ? "\($0.num)" : $0.customName }
         defaults.set(allSpaceNames, forKey: "widget_allSpaces")
         
@@ -524,7 +526,7 @@ class SpaceManager: ObservableObject {
         }
     }
     
-    // MARK: - Switching
+    // Moving around spaces
     
     func switchToSpace(_ space: DesktopSpace) {
         SpaceHelper.switchToSpace(space.id)

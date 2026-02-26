@@ -2,7 +2,7 @@ import AppKit
 import ServiceManagement
 import SwiftUI
 
-// [APITester Class remains unchanged...]
+// This class is used for testing the SpaceAPI from within the app
 class APITester: ObservableObject {
     @Published var responseText: String = ""
 
@@ -296,7 +296,7 @@ struct AddSpacesView: View {
                 .multilineTextAlignment(.center)
                 .padding(.horizontal)
 
-            // REPLACED List with ScrollView + VStack for guaranteed animations
+            // Using ScrollView + VStack instead of List for better control over animations
             ScrollView {
                 VStack(spacing: 0) {
                     if candidates.isEmpty {
@@ -434,7 +434,7 @@ struct GeneralSettingsView: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 20) {
-                // [General Section omitted for brevity]
+                // General Section
                 SettingsSection("Settings.General.General") {
                     SettingsRow(
                         "Settings.General.General.ShowLabels",

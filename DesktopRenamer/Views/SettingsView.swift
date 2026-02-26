@@ -28,7 +28,7 @@ enum SettingsTab: String, CaseIterable, Identifiable {
     }
 }
 
-// Layout Constants
+// Just some numbers to keep the UI looking consistent
 let sidebarWidth: CGFloat = 180
 let defaultSettingsWindowWidth = 750
 let defaultSettingsWindowHeight = 550
@@ -189,7 +189,7 @@ class SettingsHostingController: NSHostingController<AnyView> {
     private let hotkeyManager: HotkeyManager
     private let gestureManager: GestureManager
 
-    // Updated Init signature
+    // This is the bridge between the SwiftUI settings and the rest of the app
     init(
         spaceManager: SpaceManager, labelManager: SpaceLabelManager, hotkeyManager: HotkeyManager,
         gestureManager: GestureManager

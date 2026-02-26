@@ -17,11 +17,7 @@ class SpaceLabelManager: ObservableObject {
     private let kShowOnDesktop = "kShowOnDesktop"
     private let kHideWhenSwitching = "kHideWhenSwitching"
 
-    // Window State Keys
-    private let kGlobalIsDocked = "kGlobalIsDocked"
-    private let kGlobalDockEdge = "kGlobalDockEdge"
-    private let kGlobalCenterX = "kGlobalCenterX"
-    private let kGlobalCenterY = "kGlobalCenterY"
+    // Where should the label sit on the screen?
 
     @Published var isEnabled: Bool {
         didSet {
@@ -76,7 +72,7 @@ class SpaceLabelManager: ObservableObject {
         }
     }
 
-    // Global State
+    // Current window position and docking status
     @Published var globalIsDocked: Bool
     @Published var globalDockEdge: NSRectEdge
     @Published var globalCenterPoint: NSPoint?
@@ -202,6 +198,7 @@ class SpaceLabelManager: ObservableObject {
             .store(in: &cancellables)
     }
 
+    // Get rid of windows for spaces that don't exist anymore
     private func cleanupRedundantWindows() {
         guard let spaceManager = spaceManager else { return }
         let validUUIDs = Set(spaceManager.spaceNameDict.map { $0.id })
@@ -337,7 +334,7 @@ class SpaceLabelManager: ObservableObject {
         }
     }
 
-    private func ensureWindow(for spaceId: String, name: String, displayID: String) {
+    // Make sure we have a window for this space, or refresh it if we do
         if let existingWindow = createdWindows[spaceId] {
             if !existingWindow.isVisible {
                 existingWindow.refreshAppearance()
