@@ -630,7 +630,16 @@
       }
     },
     "Menu.MoveWindowTo" : {
-      "comment" : "Header for move window menu"
+      "comment" : "Header for move window menu",
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "→"
+          }
+        }
+      }
     },
     "Menu.Quit" : {
       "extractionState" : "manual",

@@ -164,7 +164,7 @@ class StatusBarController: NSObject {
                 menu.addItem(item)
                 
                 // Alternate Item (Move Window)
-                let moveName = String(format: NSLocalizedString("Menu.MoveWindowTo", comment: ""), name)
+                let moveName = "→ " + name
                 let altItem = NSMenuItem(title: moveName, action: #selector(moveWindowToSpace(_:)), keyEquivalent: "")
                 altItem.target = self
                 altItem.representedObject = space.id
