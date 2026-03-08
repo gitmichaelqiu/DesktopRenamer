@@ -191,6 +191,9 @@
         }
       }
     },
+    "Are you a power user? Integrate directly with Raycast to manage and switch spaces elegantly via your favorite launcher." : {
+
+    },
     "Are you sure? This will delete all your space names and settings. The app will quit immediately." : {
       "localizations" : {
         "zh-Hans" : {
@@ -220,6 +223,9 @@
           }
         }
       }
+    },
+    "Back" : {
+
     },
     "Bug Report Log Collection" : {
       "localizations" : {
@@ -466,6 +472,12 @@
         }
       }
     },
+    "Get Started" : {
+
+    },
+    "Global Hotkeys" : {
+
+    },
     "Grant" : {
       "localizations" : {
         "zh-Hans" : {
@@ -551,6 +563,9 @@
           }
         }
       }
+    },
+    "Install Raycast Extension" : {
+
     },
     "Keep visible on desktop" : {
       "localizations" : {
@@ -746,6 +761,12 @@
     "Move window to previous desktop" : {
 
     },
+    "Name Your Spaces" : {
+
+    },
+    "Next" : {
+
+    },
     "No editable spaces (fullscreen only)" : {
       "shouldTranslate" : false
     },
@@ -841,6 +862,9 @@
           }
         }
       }
+    },
+    "Raycast Integration" : {
+
     },
     "Recorded: %lld" : {
       "localizations" : {
@@ -989,6 +1013,12 @@
           }
         }
       }
+    },
+    "Review" : {
+
+    },
+    "Review Splash" : {
+
     },
     "Save" : {
       "localizations" : {
@@ -2118,6 +2148,9 @@
         }
       }
     },
+    "Stop guessing what's on 'Desktop 4'.\nAssign persistent, custom names to all your spaces so you always know where you are." : {
+
+    },
     "Suggested Threshold: %lld" : {
       "localizations" : {
         "zh-Hans" : {
@@ -2127,6 +2160,9 @@
           }
         }
       }
+    },
+    "Switch between spaces instantly. Move windows around seamlessly.\nAll custom bindable and without touching your mouse." : {
+
     },
     "Switch display with" : {
       "localizations" : {
@@ -2183,6 +2219,9 @@
           }
         }
       }
+    },
+    "Take back control of your macOS spaces." : {
+
     },
     "Thank You!" : {
       "localizations" : {
@@ -2320,6 +2359,12 @@
           }
         }
       }
+    },
+    "View the welcome screen again." : {
+
+    },
+    "Welcome to\nDesktopRenamer" : {
+
     },
     "Window size" : {
       "localizations" : {

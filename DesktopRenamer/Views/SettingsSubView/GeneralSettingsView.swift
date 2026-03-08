@@ -555,6 +555,14 @@ struct GeneralSettingsView: View {
 
                     Divider()
 
+                    SettingsRow("Review Splash", helperText: "View the welcome screen again.") {
+                        Button("Review") {
+                            AppDelegate.shared.showSplashScreen()
+                        }
+                    }
+
+                    Divider()
+
                     SettingsRow("Factory Reset") {
                         Button("Reset") {
                             performFactoryReset()
