@@ -91,13 +91,12 @@
         }
       }
     },
-    "Actions" : {
-      "extractionState" : "stale",
+    "Accessibility" : {
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "操作"
+            "value" : "辅助功能"
           }
         }
       }
@@ -113,7 +112,14 @@
       }
     },
     "Active Window" : {
-
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "活跃窗口"
+          }
+        }
+      }
     },
     "Add" : {
       "localizations" : {
@@ -196,6 +202,16 @@
       }
     },
     "Automatic" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "自动"
+          }
+        }
+      }
+    },
+    "Automation" : {
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
@@ -296,7 +312,14 @@
       }
     },
     "Controls how much distance the fingers have to move before switching the desktop." : {
-
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "控制触发切换的手指移动距离。"
+          }
+        }
+      }
     },
     "Create windows that only appear in Mission Control to display space names.\n\nMay not work when multiple displays are connected." : {
       "localizations" : {
@@ -325,7 +348,14 @@
       }
     },
     "Cursor" : {
-
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "指针"
+          }
+        }
+      }
     },
     "Desktop" : {
       "shouldTranslate" : false
@@ -436,12 +466,52 @@
         }
       }
     },
+    "Grant" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "授权"
+          }
+        }
+      }
+    },
+    "Granted" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已授权"
+          }
+        }
+      }
+    },
     "Hide menubar icon" : {
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "隐藏菜单栏图标"
+          }
+        }
+      }
+    },
+    "Hide the space label window of the space that is being switched to immediately instead of hiding it after the space is switched." : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "在切换桌面时，立即隐藏桌面标签窗口，而非切换结束后隐藏。"
+          }
+        }
+      }
+    },
+    "Hide when switching desktops" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "切换时隐藏"
           }
         }
       }
@@ -458,6 +528,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "如果启用，标签将会在桌面可见区域显示。\n\n提示：你可以将标签拖至桌面边缘以最小化。"
+          }
+        }
+      }
+    },
+    "If the Settings show that the permission is granted but the app still does not have the permission, remove the app row in Settings and re-grant." : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "如果设置显示权限已获取但是 App 显示未获取，在设置权限中移除 App 并重新获取权限。"
           }
         }
       }
@@ -733,6 +813,36 @@
         }
       }
     },
+    "Not Granted" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "未授权"
+          }
+        }
+      }
+    },
+    "Open Settings" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "打开设置"
+          }
+        }
+      }
+    },
+    "Permissions" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "权限"
+          }
+        }
+      }
+    },
     "Please go through all spaces that may be helpful in analyzing the bug. The log is updating in real-time." : {
       "localizations" : {
         "zh-Hans" : {
@@ -762,6 +872,17 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "已记录：%lld"
+          }
+        }
+      }
+    },
+    "Reload Space Labels" : {
+      "comment" : "Reload Space Label Windows to fix glitches",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "重新加载桌面标签"
           }
         }
       }
@@ -823,6 +944,46 @@
         }
       }
     },
+    "Required for injecting shortcuts to switch spaces, and reading active window information." : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "在切换桌面，获取当前桌面时需要此权限。"
+          }
+        }
+      }
+    },
+    "Required for using Mission Control via AppleScript (System Events) to switch spaces when the fast-switch method falls back." : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "在切换桌面时，如果没有对应的系统快捷键，需要此权限。"
+          }
+        }
+      }
+    },
+    "Requires Accessibility and Automation permissions." : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "需要辅助和自动化权限。"
+          }
+        }
+      }
+    },
+    "Requires Accessibility permission." : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "需要辅助权限。"
+          }
+        }
+      }
+    },
     "Reset" : {
       "localizations" : {
         "zh-Hans" : {
@@ -844,15 +1005,11 @@
       }
     },
     "Reset to default" : {
-
-    },
-    "Restore defaults" : {
-      "extractionState" : "stale",
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "恢复默认"
+            "value" : "重置默认"
           }
         }
       }
@@ -1996,10 +2153,30 @@
       }
     },
     "Switch display with" : {
-
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "切换有…的屏幕"
+          }
+        }
+      }
     },
     "Switch override threshold" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Switch distance"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "滑动距离"
+          }
+        }
+      }
     },
     "Switch to left space" : {
       "localizations" : {

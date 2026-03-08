@@ -2,7 +2,7 @@ import SwiftUI
 import Combine
 import AppKit
 
-// RenameViewController remains unchanged
+// Popup window for typing in a new space name
 class RenameViewController: NSViewController {
     private var spaceManager: SpaceManager
     private var completion: () -> Void
@@ -54,7 +54,7 @@ extension RenameViewController: NSTextFieldDelegate {
     }
     
     private func handleRename() {
-        let newName = textField.stringValue.trimmingCharacters(in: .whitespacesAndNewlines)
+        let newName = textField.stringValue.trimmingCharacters(in: .whitespacesAndNewlines).replacingOccurrences(of: "~", with: "")
         if !newName.isEmpty {
             spaceManager.renameSpace(spaceManager.currentSpaceUUID, to: newName)
         }
@@ -63,7 +63,7 @@ extension RenameViewController: NSTextFieldDelegate {
     }
 }
 
-class StatusBarController: NSObject, NSMenuDelegate {
+class StatusBarController: NSObject {
     @ObservedObject private var spaceManager: SpaceManager
     static private var statusItem: NSStatusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
     private var popover: NSPopover
@@ -81,9 +81,10 @@ class StatusBarController: NSObject, NSMenuDelegate {
     
     let labelManager: SpaceLabelManager
     let hotkeyManager: HotkeyManager
+    // Add GestureManager
     let gestureManager: GestureManager
     
-    // Updated Init
+    // Setting things up
     init(spaceManager: SpaceManager, hotkeyManager: HotkeyManager, gestureManager: GestureManager) {
         self.spaceManager = spaceManager
         self.labelManager = SpaceLabelManager(spaceManager: spaceManager)
@@ -95,14 +96,10 @@ class StatusBarController: NSObject, NSMenuDelegate {
         
         super.init()
         
-        // Initialize Menu once, set delegate for dynamic updates
-        let menu = NSMenu()
-        menu.delegate = self
-        StatusBarController.statusItem.menu = menu
-        
+        rebuildMenu()
+        updateStatusBarTitle()
         StatusBarController.statusItem.isVisible = !StatusBarController.isStatusBarHidden
         
-        updateStatusBarTitle()
         setupObservers()
     }
     
@@ -115,7 +112,7 @@ class StatusBarController: NSObject, NSMenuDelegate {
             .receive(on: DispatchQueue.main)
             .sink { [weak self] spaceId in
                 self?.updateStatusBarTitle()
-                // No need to rebuildMenu, menuNeedsUpdate handles it on click
+                self?.rebuildMenu()
                 if let name = self?.spaceManager.getSpaceName(spaceId) {
                     self?.labelManager.updateLabel(for: spaceId, name: name)
                 }
@@ -126,13 +123,14 @@ class StatusBarController: NSObject, NSMenuDelegate {
             .receive(on: DispatchQueue.main)
             .sink { [weak self] _ in
                 self?.updateStatusBarTitle()
+                self?.rebuildMenu()
             }
             .store(in: &cancellables)
         
         labelManager.$isEnabled
             .receive(on: DispatchQueue.main)
-            .sink { _ in
-                // Menu updates dynamically on click
+            .sink { [weak self] _ in
+                self?.rebuildMenu()
             }
             .store(in: &cancellables)
     }
@@ -140,62 +138,34 @@ class StatusBarController: NSObject, NSMenuDelegate {
     private func updateStatusBarTitle() {
         if let button = StatusBarController.statusItem.button {
             let name = spaceManager.getSpaceName(spaceManager.currentSpaceUUID)
-            button.title = name
+            button.title = name.isEmpty ? " " : name
         }
     }
     
-    // MARK: - NSMenuDelegate
-    
-    func menuNeedsUpdate(_ menu: NSMenu) {
-        menu.removeAllItems()
-        let isOption = NSEvent.modifierFlags.contains(.option)
+    private func rebuildMenu() {
+        let menu = NSMenu()
         
-        // 1. Filter spaces to only show those on the current display
+        // Filter spaces to only show those on the current display
         let currentDisplaySpaces = spaceManager.currentDisplaySpaces
         
         if !currentDisplaySpaces.isEmpty {
-            
-            // 0. Header Row (Swappable)
-            // Standard: "Switch to desktop..."
-            let headerTitle = NSLocalizedString("Menu.SwitchToDesktop", value: "Switch to desktop...", comment: "Header for switch menu")
-            let headerItem = NSMenuItem(title: headerTitle, action: nil, keyEquivalent: "")
-            headerItem.isEnabled = false
-            menu.addItem(headerItem)
-            
-            // Alternate: "Move window to..."
-            let moveHeaderTitle = NSLocalizedString("Menu.MoveWindowTo", value: "Move window to...", comment: "Header for move window menu")
-            let headerAlt = NSMenuItem(title: moveHeaderTitle, action: nil, keyEquivalent: "")
-            headerAlt.isEnabled = false
-            headerAlt.isAlternate = true
-            headerAlt.keyEquivalentModifierMask = .option
-            menu.addItem(headerAlt)
-            
-            
-            // 1. Space Items
             for space in currentDisplaySpaces {
                 let name = spaceManager.getSpaceName(space.id)
-                let moveName = "→ " + name
-                
-                // Standard Item (Switch)
                 let item = NSMenuItem(title: name, action: #selector(selectSpace(_:)), keyEquivalent: "")
                 item.target = self
                 item.representedObject = space.id
-                item.state = (space.id == spaceManager.currentSpaceUUID) ? .on : .off
-                menu.addItem(item)
                 
-                // Alternate Item (Move Window)
-                let altItem = NSMenuItem(title: moveName, action: #selector(moveWindowToSpace(_:)), keyEquivalent: "")
-                altItem.target = self
-                altItem.representedObject = space.id
-                altItem.isAlternate = true
-                altItem.keyEquivalentModifierMask = .option
-                altItem.state = item.state
-                menu.addItem(altItem)
+                if space.id == spaceManager.currentSpaceUUID {
+                    item.state = .on
+                } else {
+                    item.state = .off
+                }
+                
+                menu.addItem(item)
             }
             menu.addItem(NSMenuItem.separator())
         }
         
-        // 2. Rename (Standard)
         let rename = NSMenuItem(
             title: NSLocalizedString("Menu.RenameCurrentSpace", comment: ""),
             action: nil,
@@ -210,9 +180,8 @@ class StatusBarController: NSObject, NSMenuDelegate {
             rename.target = self
             rename.action = #selector(renameCurrentSpace)
         }
+        self.renameItem = rename
         menu.addItem(rename)
-        
-
         
         let troubleshootItem = NSMenuItem(title: NSLocalizedString("Troubleshoot Space Detection", comment: ""), action: #selector(troubleshootSpaceDetection), keyEquivalent: "")
         troubleshootItem.image = NSImage(systemSymbolName: "wrench.and.screwdriver", accessibilityDescription: nil)
@@ -225,6 +194,11 @@ class StatusBarController: NSObject, NSMenuDelegate {
         showLabels.image = NSImage(systemSymbolName: "appwindow.swipe.rectangle", accessibilityDescription: nil)
         self.showLabelsMenuItem = showLabels
         menu.addItem(showLabels)
+
+        let reloadLabels = NSMenuItem(title: NSLocalizedString("Reload Space Labels", comment: "Reload Space Label Windows to fix glitches"), action: #selector(reloadLabelsFromMenu), keyEquivalent: "")
+        reloadLabels.target = self
+        reloadLabels.image = NSImage(systemSymbolName: "arrow.clockwise", accessibilityDescription: nil)
+        menu.addItem(reloadLabels)
         
         menu.addItem(NSMenuItem.separator())
         
@@ -239,6 +213,8 @@ class StatusBarController: NSObject, NSMenuDelegate {
         quitItem.image = NSImage(systemSymbolName: "xmark.circle", accessibilityDescription: nil)
         quitItem.target = self
         menu.addItem(quitItem)
+        
+        StatusBarController.statusItem.menu = menu
     }
     
     @objc func selectSpace(_ sender: NSMenuItem) {
@@ -249,11 +225,6 @@ class StatusBarController: NSObject, NSMenuDelegate {
         }
     }
     
-    @objc func moveWindowToSpace(_ sender: NSMenuItem) {
-        guard let spaceID = sender.representedObject as? String else { return }
-        spaceManager.moveActiveWindowToSpace(id: spaceID)
-    }
-        
     @objc func renameCurrentSpace() {
         if spaceManager.getSpaceNum(spaceManager.currentSpaceUUID) == 0 { return }
         guard let button = StatusBarController.statusItem.button else { return }
@@ -268,6 +239,11 @@ class StatusBarController: NSObject, NSMenuDelegate {
     
     @objc private func toggleLabelsFromMenu() {
         labelManager.toggleEnabled()
+        rebuildMenu()
+    }
+
+    @objc private func reloadLabelsFromMenu() {
+        labelManager.reloadAllWindows()
     }
         
     @objc private func troubleshootSpaceDetection() {
