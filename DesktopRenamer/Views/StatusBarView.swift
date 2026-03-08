@@ -162,6 +162,16 @@ class StatusBarController: NSObject {
                 }
                 
                 menu.addItem(item)
+                
+                // Alternate Item (Move Window)
+                let moveName = String(format: NSLocalizedString("Menu.MoveWindowTo", comment: ""), name)
+                let altItem = NSMenuItem(title: moveName, action: #selector(moveWindowToSpace(_:)), keyEquivalent: "")
+                altItem.target = self
+                altItem.representedObject = space.id
+                altItem.isAlternate = true
+                altItem.keyEquivalentModifierMask = .option
+                altItem.state = item.state
+                menu.addItem(altItem)
             }
             menu.addItem(NSMenuItem.separator())
         }
@@ -223,6 +233,11 @@ class StatusBarController: NSObject {
         if let space = spaceManager.spaceNameDict.first(where: { $0.id == spaceID }) {
             spaceManager.switchToSpace(space)
         }
+    }
+    
+    @objc func moveWindowToSpace(_ sender: NSMenuItem) {
+        guard let spaceID = sender.representedObject as? String else { return }
+        spaceManager.moveActiveWindowToSpace(id: spaceID)
     }
     
     @objc func renameCurrentSpace() {

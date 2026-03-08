@@ -630,16 +630,7 @@
       }
     },
     "Menu.MoveWindowTo" : {
-      "comment" : "Header for move window menu",
-      "extractionState" : "extracted_with_value",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Move window to..."
-          }
-        }
-      }
+      "comment" : "Header for move window menu"
     },
     "Menu.Quit" : {
       "extractionState" : "manual",
@@ -705,18 +696,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "显示桌面标签窗口"
-          }
-        }
-      }
-    },
-    "Menu.SwitchToDesktop" : {
-      "comment" : "Header for switch menu",
-      "extractionState" : "extracted_with_value",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Switch to desktop..."
           }
         }
       }
