@@ -47,6 +47,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     var gestureManager: GestureManager!
     
     private var cancellables = Set<AnyCancellable>()
+    var splashWindowController: NSWindowController?
     
     func applicationDidFinishLaunching(_ notification: Notification) {
         AppDelegate.shared = self
@@ -57,6 +58,12 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         if !hasInitialized {
             try? SMAppService.mainApp.register()
             UserDefaults.standard.set(true, forKey: "HasInitializedDefaults")
+        }
+        
+        // Show splash screen on first launch
+        let hasSeenSplash = UserDefaults.standard.bool(forKey: "hasSeenSplashScreen")
+        if !hasSeenSplash {
+            showSplashScreen()
         }
         
         self.hotkeyManager = HotkeyManager()
@@ -108,6 +115,38 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             .receive(on: DispatchQueue.main)
             .sink { [weak self] number in self?.spaceManager.moveActiveWindowToSpace(number: number) }
             .store(in: &cancellables)
+    }
+    
+    func showSplashScreen() {
+        if let existing = splashWindowController {
+            existing.showWindow(nil)
+            NSApp.activate(ignoringOtherApps: true)
+            return
+        }
+        
+        let splashView = SplashView { [weak self] in
+            UserDefaults.standard.set(true, forKey: "hasSeenSplashScreen")
+            self?.splashWindowController?.close()
+            self?.splashWindowController = nil
+        }
+        
+        let hostingController = NSHostingController(rootView: splashView)
+        let window = NSWindow(
+            contentRect: NSRect(x: 0, y: 0, width: 550, height: 450),
+            styleMask: [.titled, .closable, .fullSizeContentView],
+            backing: .buffered,
+            defer: false
+        )
+        window.center()
+        window.titlebarAppearsTransparent = true
+        window.titleVisibility = .hidden
+        window.isMovableByWindowBackground = true
+        window.contentViewController = hostingController
+        
+        let windowController = NSWindowController(window: window)
+        self.splashWindowController = windowController
+        windowController.showWindow(nil)
+        NSApp.activate(ignoringOtherApps: true)
     }
     
     func applicationWillTerminate(_ notification: Notification) {
