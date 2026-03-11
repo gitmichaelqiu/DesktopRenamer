@@ -204,6 +204,9 @@
         }
       }
     },
+    "Assign persistent, custom names to all your spaces. DesktopRenamer displays these beautifully as large labels in Mission Control and discreet active labels when you switch spaces." : {
+
+    },
     "Automatic" : {
       "localizations" : {
         "zh-Hans" : {
@@ -225,6 +228,9 @@
       }
     },
     "Back" : {
+
+    },
+    "Bind global hotkeys to switch spaces or move windows immediately.\n\nHate macOS animation lag? Enable **Trackpad Switch Override** for instant, zero-delay swipe switching using 3 or 4 fingers." : {
 
     },
     "Bug Report Log Collection" : {
@@ -366,6 +372,9 @@
     "Desktop" : {
       "shouldTranslate" : false
     },
+    "DesktopRenamer requires Accessibility and Automation permissions for hotkeys and trackpad overrides. Enable them in Settings → Permissions." : {
+
+    },
     "Enable Labels" : {
       "localizations" : {
         "zh-Hans" : {
@@ -475,9 +484,6 @@
     "Get Started" : {
 
     },
-    "Global Hotkeys" : {
-
-    },
     "Grant" : {
       "localizations" : {
         "zh-Hans" : {
@@ -527,6 +533,9 @@
           }
         }
       }
+    },
+    "Hotkeys & Trackpad" : {
+
     },
     "If enabled, the label stays on the desktop instead of hiding.\n\nTip: You can drag the window to the screen edge to shrink it into a 'Picture-in-Picture' mode." : {
       "localizations" : {
@@ -626,6 +635,9 @@
           }
         }
       }
+    },
+    "Menu Bar & Option-Click" : {
+
     },
     "Menu.About" : {
       "extractionState" : "manual",
@@ -761,7 +773,7 @@
     "Move window to previous desktop" : {
 
     },
-    "Name Your Spaces" : {
+    "Name & Labels" : {
 
     },
     "Next" : {
@@ -840,6 +852,9 @@
         }
       }
     },
+    "Permissions & More Apps" : {
+
+    },
     "Please go through all spaces that may be helpful in analyzing the bug. The log is updating in real-time." : {
       "localizations" : {
         "zh-Hans" : {
@@ -862,6 +877,9 @@
           }
         }
       }
+    },
+    "Quickly switch spaces directly from the menu bar.\n\nHere's a pro-tip: Hold the **Option (⌥)** key in the menu to instantly move your active window to the selected space!" : {
+
     },
     "Raycast Integration" : {
 
@@ -2148,9 +2166,6 @@
         }
       }
     },
-    "Stop guessing what's on 'Desktop 4'.\nAssign persistent, custom names to all your spaces so you always know where you are." : {
-
-    },
     "Suggested Threshold: %lld" : {
       "localizations" : {
         "zh-Hans" : {
@@ -2160,9 +2175,6 @@
           }
         }
       }
-    },
-    "Switch between spaces instantly. Move windows around seamlessly.\nAll custom bindable and without touching your mouse." : {
-
     },
     "Switch display with" : {
       "localizations" : {

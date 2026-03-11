@@ -5,7 +5,7 @@ struct SplashView: View {
     var onClose: () -> Void
     
     @State private var currentPage = 0
-    private let totalPages = 4
+    private let totalPages = 6
 
     var body: some View {
         VStack(spacing: 0) {
@@ -16,13 +16,19 @@ struct SplashView: View {
                     WelcomePage()
                         .transition(pageTransition)
                 case 1:
-                    NamingFeaturePage()
+                    NameAndLabelsPage()
                         .transition(pageTransition)
                 case 2:
-                    HotkeyFeaturePage()
+                    MenuBarPage()
                         .transition(pageTransition)
                 case 3:
+                    ShortcutsAndGesturesPage()
+                        .transition(pageTransition)
+                case 4:
                     RaycastFeaturePage(openURL: openURL)
+                        .transition(pageTransition)
+                case 5:
+                    PermissionsAndMorePage()
                         .transition(pageTransition)
                 default:
                     EmptyView()
@@ -100,10 +106,12 @@ struct SplashView: View {
     }
 }
 
+// MARK: - Pages
+
 struct WelcomePage: View {
     var body: some View {
         VStack(spacing: 24) {
-            Image(nsImage: NSImage(named: "AppIcon") ?? NSImage())
+            Image("AppIcon")
                 .resizable()
                 .frame(width: 128, height: 128)
                 .shadow(color: Color.black.opacity(0.2), radius: 10, x: 0, y: 5)
@@ -122,7 +130,7 @@ struct WelcomePage: View {
     }
 }
 
-struct NamingFeaturePage: View {
+struct NameAndLabelsPage: View {
     var body: some View {
         VStack(spacing: 32) {
             ZStack {
@@ -130,16 +138,16 @@ struct NamingFeaturePage: View {
                     .fill(LinearGradient(gradient: Gradient(colors: [.blue, .cyan]), startPoint: .topLeading, endPoint: .bottomTrailing))
                     .frame(width: 120, height: 120)
                     .shadow(color: .blue.opacity(0.3), radius: 15, x: 0, y: 8)
-                Image(systemName: "macwindow.on.rectangle")
+                Image(systemName: "tag.fill")
                     .font(.system(size: 50, weight: .light))
                     .foregroundColor(.white)
             }
             
             VStack(spacing: 12) {
-                Text("Name Your Spaces")
+                Text("Name & Labels")
                     .font(.system(size: 30, weight: .bold, design: .rounded))
                 
-                Text("Stop guessing what's on 'Desktop 4'.\nAssign persistent, custom names to all your spaces so you always know where you are.")
+                Text("Assign persistent, custom names to all your spaces. DesktopRenamer displays these beautifully as large labels in Mission Control and discreet active labels when you switch spaces.")
                     .font(.body)
                     .foregroundColor(.secondary)
                     .multilineTextAlignment(.center)
@@ -151,7 +159,36 @@ struct NamingFeaturePage: View {
     }
 }
 
-struct HotkeyFeaturePage: View {
+struct MenuBarPage: View {
+    var body: some View {
+        VStack(spacing: 32) {
+            ZStack {
+                Circle()
+                    .fill(LinearGradient(gradient: Gradient(colors: [.orange, .yellow]), startPoint: .topLeading, endPoint: .bottomTrailing))
+                    .frame(width: 120, height: 120)
+                    .shadow(color: .orange.opacity(0.3), radius: 15, x: 0, y: 8)
+                Image(systemName: "menubar.rectangle")
+                    .font(.system(size: 50, weight: .light))
+                    .foregroundColor(.white)
+            }
+            
+            VStack(spacing: 12) {
+                Text("Menu Bar & Option-Click")
+                    .font(.system(size: 30, weight: .bold, design: .rounded))
+                
+                Text("Quickly switch spaces directly from the menu bar.\n\nHere's a pro-tip: Hold the **Option (⌥)** key in the menu to instantly move your active window to the selected space!")
+                    .font(.body)
+                    .foregroundColor(.secondary)
+                    .multilineTextAlignment(.center)
+                    .lineSpacing(6)
+            }
+            .padding(.horizontal, 40)
+        }
+        .padding()
+    }
+}
+
+struct ShortcutsAndGesturesPage: View {
     var body: some View {
         VStack(spacing: 32) {
             ZStack {
@@ -159,16 +196,16 @@ struct HotkeyFeaturePage: View {
                     .fill(LinearGradient(gradient: Gradient(colors: [.green, .mint]), startPoint: .topLeading, endPoint: .bottomTrailing))
                     .frame(width: 120, height: 120)
                     .shadow(color: .green.opacity(0.3), radius: 15, x: 0, y: 8)
-                Image(systemName: "keyboard.fill")
+                Image(systemName: "hand.draw.fill")
                     .font(.system(size: 50, weight: .light))
                     .foregroundColor(.white)
             }
             
             VStack(spacing: 12) {
-                Text("Global Hotkeys")
+                Text("Hotkeys & Trackpad")
                     .font(.system(size: 30, weight: .bold, design: .rounded))
                 
-                Text("Switch between spaces instantly. Move windows around seamlessly.\nAll custom bindable and without touching your mouse.")
+                Text("Bind global hotkeys to switch spaces or move windows immediately.\n\nHate macOS animation lag? Enable **Trackpad Switch Override** for instant, zero-delay swipe switching using 3 or 4 fingers.")
                     .font(.body)
                     .foregroundColor(.secondary)
                     .multilineTextAlignment(.center)
@@ -230,6 +267,54 @@ struct RaycastFeaturePage: View {
             }
             .buttonStyle(PlainButtonStyle())
             .padding(.top, 8)
+        }
+        .padding()
+    }
+}
+
+struct PermissionsAndMorePage: View {
+    var body: some View {
+        VStack(spacing: 20) {
+            ZStack {
+                Circle()
+                    .fill(LinearGradient(gradient: Gradient(colors: [.red, .orange]), startPoint: .topLeading, endPoint: .bottomTrailing))
+                    .frame(width: 90, height: 90)
+                    .shadow(color: .red.opacity(0.3), radius: 10, x: 0, y: 5)
+                Image(systemName: "lock.shield.fill")
+                    .font(.system(size: 40, weight: .light))
+                    .foregroundColor(.white)
+            }
+            
+            VStack(spacing: 8) {
+                Text("Permissions & More Apps")
+                    .font(.system(size: 26, weight: .bold, design: .rounded))
+                
+                Text("DesktopRenamer requires Accessibility and Automation permissions for hotkeys and trackpad overrides. Enable them in Settings → Permissions.")
+                    .font(.body)
+                    .foregroundColor(.secondary)
+                    .multilineTextAlignment(.center)
+                    .lineSpacing(4)
+                    .padding(.horizontal, 20)
+            }
+            
+            HStack(alignment: .top, spacing: 20) {
+                // OptClicker
+                OtherAppCard(
+                    imageName: "OptClickerIcon_Default",
+                    appName: "OptClicker",
+                    description: NSLocalizedString("Let you right-click with the Option key.", comment: ""),
+                    url: "https://github.com/gitmichaelqiu/OptClicker"
+                )
+                
+                // SpaceSwitcher
+                OtherAppCard(
+                    imageName: "SpaceSwitcherIcon_Default",
+                    appName: "SpaceSwitcher",
+                    description: NSLocalizedString("Control which app and dock to show in each space.", comment: ""),
+                    url: "https://github.com/gitmichaelqiu/SpaceSwitcher"
+                )
+            }
+            .padding(.top, 4)
         }
         .padding()
     }
