@@ -8,12 +8,10 @@ struct SwitchSettingsView: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 20) {
-                
-                // Keyboard Shortcuts Setup
                 SettingsSection("Keyboard Shortcuts", helperText: "If you want to use Control + Arrow, disable the system's one in Settings → Keyboard → Keyboard Shortcuts... → Mission Control.") {
-                    // Switch Left
+                    
                     SettingsRow(
-                        "Switch to left space",
+                        "Switch to previous space",
                         warningText: permissionManager.isAccessibilityGranted
                         ? nil : "Requires Accessibility permission."
                     ) {
@@ -35,9 +33,8 @@ struct SwitchSettingsView: View {
                     
                     Divider()
                     
-                    // Switch Right
                     SettingsRow(
-                        "Switch to right space",
+                        "Switch to next space",
                         warningText: permissionManager.isAccessibilityGranted
                         ? nil : "Requires Accessibility permission."
                     ) {
@@ -59,25 +56,6 @@ struct SwitchSettingsView: View {
                 }
                 
                 SettingsSection(nil) {
-                    SettingsRow("Move window to next desktop") {
-                        HStack {
-                            Text(hotkeyManager.description(for: .moveWindowNext))
-                                .foregroundColor(.secondary)
-                                .padding(.trailing, 8)
-                            
-                            Button("◉") {
-                                hotkeyManager.startListening(for: .moveWindowNext)
-                            }
-                            .disabled(hotkeyManager.isListening)
-                            
-                            Button("↺") {
-                                hotkeyManager.resetToDefault(for: .moveWindowNext)
-                            }
-                        }
-                    }
-                    
-                    Divider()
-                    
                     SettingsRow("Move window to previous desktop") {
                         HStack {
                             Text(hotkeyManager.description(for: .moveWindowPrevious))
@@ -91,6 +69,25 @@ struct SwitchSettingsView: View {
                             
                             Button("↺") {
                                 hotkeyManager.resetToDefault(for: .moveWindowPrevious)
+                            }
+                        }
+                    }
+                    
+                    Divider()
+                    
+                    SettingsRow("Move window to next desktop") {
+                        HStack {
+                            Text(hotkeyManager.description(for: .moveWindowNext))
+                                .foregroundColor(.secondary)
+                                .padding(.trailing, 8)
+                            
+                            Button("◉") {
+                                hotkeyManager.startListening(for: .moveWindowNext)
+                            }
+                            .disabled(hotkeyManager.isListening)
+                            
+                            Button("↺") {
+                                hotkeyManager.resetToDefault(for: .moveWindowNext)
                             }
                         }
                     }
