@@ -117,17 +117,23 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             .store(in: &cancellables)
     }
     
-    func showSplashScreen() {
+    func showSplashScreen(on parentWindow: NSWindow? = nil) {
         if let existing = splashWindowController {
-            existing.showWindow(nil)
-            NSApp.activate(ignoringOtherApps: true)
-            return
+            if let window = existing.window, window.isVisible {
+                NSApp.activate(ignoringOtherApps: true)
+                window.makeKeyAndOrderFront(nil)
+                return
+            }
         }
         
         let splashView = SplashView { [weak self] in
             UserDefaults.standard.set(true, forKey: "hasSeenSplashScreen")
-            self?.splashWindowController?.close()
-            self?.splashWindowController = nil
+            if let parent = parentWindow, let sheet = self?.splashWindowController?.window {
+                parent.endSheet(sheet)
+            } else {
+                self?.splashWindowController?.close()
+                self?.splashWindowController = nil
+            }
         }
         
         let hostingController = NSHostingController(rootView: splashView)
@@ -137,7 +143,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             backing: .buffered,
             defer: false
         )
-        window.center()
+        
         window.titlebarAppearsTransparent = true
         window.titleVisibility = .hidden
         window.isMovableByWindowBackground = true
@@ -145,8 +151,16 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         
         let windowController = NSWindowController(window: window)
         self.splashWindowController = windowController
-        windowController.showWindow(nil)
-        NSApp.activate(ignoringOtherApps: true)
+        
+        if let parent = parentWindow {
+            parent.beginSheet(window) { _ in
+                self.splashWindowController = nil
+            }
+        } else {
+            window.center()
+            windowController.showWindow(nil)
+            NSApp.activate(ignoringOtherApps: true)
+        }
     }
     
     func applicationWillTerminate(_ notification: Notification) {
