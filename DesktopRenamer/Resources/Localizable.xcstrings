@@ -236,7 +236,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "自动"
+            "value" : "自动化"
           }
         }
       }
@@ -405,7 +405,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "DesktopRenamer 需要辅助和自动化权限以设置快捷键和检测触控板滑动。\n\n请在系统设置 → 隐私&安全中启用。"
+            "value" : "DesktopRenamer 需要辅助功能和自动化权限以设置快捷键和检测触控板滑动。\n\n请在系统设置 → 隐私&安全中启用。"
           }
         }
       }
