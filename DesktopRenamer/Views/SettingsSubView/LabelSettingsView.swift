@@ -80,7 +80,7 @@ struct LabelSettingsView: View {
                             SettingsRow(
                                 "Keep visible on desktop",
                                 helperText:
-                                    "If enabled, the label stays on the desktop instead of hiding.\n\nTip: You can drag the window to the screen edge to shrink it into a 'Picture-in-Picture' mode."
+                                    "If enabled, the label stays on the desktop instead of hiding.\n\nIf disabled, the label will only be visible in Mission Control.\n\nTip: You can drag the window to the screen edge to shrink it into a 'Picture-in-Picture' mode."
                             ) {
                                 Toggle("", isOn: $labelManager.showOnDesktop)
                                     .toggleStyle(.switch)
