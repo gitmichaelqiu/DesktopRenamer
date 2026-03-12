@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		4650D5AB2F631565004F0140 /* Sparkle in Frameworks */ = {isa = PBXBuildFile; productRef = 4650D5AA2F631565004F0140 /* Sparkle */; };
 		46D5266A2F1F2E1900CC3266 /* HotKey in Frameworks */ = {isa = PBXBuildFile; productRef = 46D526692F1F2E1900CC3266 /* HotKey */; };
 		46F34ECE2F4FF81500875507 /* WidgetKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 46C0D3A12F1BE635009258EB /* WidgetKit.framework */; };
 		46F34ECF2F4FF81500875507 /* SwiftUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 46C0D3A32F1BE635009258EB /* SwiftUI.framework */; };
@@ -86,6 +87,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				46D5266A2F1F2E1900CC3266 /* HotKey in Frameworks */,
+				4650D5AB2F631565004F0140 /* Sparkle in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -152,6 +154,7 @@
 			name = DesktopRenamer;
 			packageProductDependencies = (
 				46D526692F1F2E1900CC3266 /* HotKey */,
+				4650D5AA2F631565004F0140 /* Sparkle */,
 			);
 			productName = DesktopRenamer;
 			productReference = 466CC6422E2C883C002F4BB2 /* DesktopRenamer.app */;
@@ -209,6 +212,7 @@
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
 				46D526682F1F2E1900CC3266 /* XCRemoteSwiftPackageReference "HotKey" */,
+				4650D5A92F631565004F0140 /* XCRemoteSwiftPackageReference "Sparkle" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 466CC6432E2C883C002F4BB2 /* Products */;
@@ -398,7 +402,7 @@
 				CODE_SIGN_ENTITLEMENTS = DesktopRenamer/DesktopRenamer.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 23;
 				DEAD_CODE_STRIPPING = YES;
 				DEVELOPMENT_TEAM = W94S87F4LJ;
 				ENABLE_APP_SANDBOX = NO;
@@ -422,7 +426,7 @@
 					"@executable_path/../Frameworks",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 13.0;
-				MARKETING_VERSION = 1.9.0;
+				MARKETING_VERSION = 1.10.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.michaelqiu.DesktopRenamer;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				REGISTER_APP_GROUPS = YES;
@@ -447,7 +451,7 @@
 				CODE_SIGN_ENTITLEMENTS = DesktopRenamer/DesktopRenamer.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 23;
 				DEAD_CODE_STRIPPING = YES;
 				DEVELOPMENT_TEAM = W94S87F4LJ;
 				ENABLE_APP_SANDBOX = NO;
@@ -471,7 +475,7 @@
 					"@executable_path/../Frameworks",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 13.0;
-				MARKETING_VERSION = 1.9.0;
+				MARKETING_VERSION = 1.10.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.michaelqiu.DesktopRenamer;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				REGISTER_APP_GROUPS = YES;
@@ -494,7 +498,7 @@
 				AUTOMATION_APPLE_EVENTS = NO;
 				CODE_SIGN_ENTITLEMENTS = DesktopRenamerWidget/DesktopRenamerWidgetExtension.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 23;
 				DEVELOPMENT_TEAM = W94S87F4LJ;
 				ENABLE_APP_SANDBOX = YES;
 				ENABLE_HARDENED_RUNTIME = NO;
@@ -519,7 +523,7 @@
 					"@executable_path/../../../../Frameworks",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 14.0;
-				MARKETING_VERSION = 1.9.0;
+				MARKETING_VERSION = 1.10.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.michaelqiu.DesktopRenamer.DesktopRenamerWidget;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				RUNTIME_EXCEPTION_ALLOW_DYLD_ENVIRONMENT_VARIABLES = NO;
@@ -545,7 +549,7 @@
 				AUTOMATION_APPLE_EVENTS = NO;
 				CODE_SIGN_ENTITLEMENTS = DesktopRenamerWidget/DesktopRenamerWidgetExtension.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 23;
 				DEVELOPMENT_TEAM = W94S87F4LJ;
 				ENABLE_APP_SANDBOX = YES;
 				ENABLE_HARDENED_RUNTIME = NO;
@@ -570,7 +574,7 @@
 					"@executable_path/../../../../Frameworks",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 14.0;
-				MARKETING_VERSION = 1.9.0;
+				MARKETING_VERSION = 1.10.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.michaelqiu.DesktopRenamer.DesktopRenamerWidget;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				RUNTIME_EXCEPTION_ALLOW_DYLD_ENVIRONMENT_VARIABLES = NO;
@@ -621,6 +625,14 @@
 /* End XCConfigurationList section */
 
 /* Begin XCRemoteSwiftPackageReference section */
+		4650D5A92F631565004F0140 /* XCRemoteSwiftPackageReference "Sparkle" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/sparkle-project/Sparkle";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 2.9.0;
+			};
+		};
 		46D526682F1F2E1900CC3266 /* XCRemoteSwiftPackageReference "HotKey" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/soffes/HotKey";
@@ -632,6 +644,11 @@
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
+		4650D5AA2F631565004F0140 /* Sparkle */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 4650D5A92F631565004F0140 /* XCRemoteSwiftPackageReference "Sparkle" */;
+			productName = Sparkle;
+		};
 		46D526692F1F2E1900CC3266 /* HotKey */ = {
 			isa = XCSwiftPackageProductDependency;
 			package = 46D526682F1F2E1900CC3266 /* XCRemoteSwiftPackageReference "HotKey" */;

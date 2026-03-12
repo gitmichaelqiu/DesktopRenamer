@@ -12,21 +12,21 @@
 <table align="center" border="0" cellpadding="0" cellspacing="0">
   <tr>
     <td align="center">
-      <img src="./DesktopRenamer/Resources/Demo/DesktopRenamer_v1-6-0_Rename.png" width="300"/><br>
+      <img src="./DesktopRenamer/Resources/Demo/Images/DesktopRenamer_v1-6-0_Rename.png" width="300"/><br>
       <i>Rename desktop label in menubar</i>
     </td>
     <td align="center">
-      <img src="./DesktopRenamer/Resources/Demo/DesktopRenamer_v1-6-0_MCPreview.png" width="300"/><br>
+      <img src="./DesktopRenamer/Resources/Demo/Images/DesktopRenamer_v1-6-0_MCPreview.png" width="300"/><br>
       <i>Check the names in Mission Control</i>
     </td>
   </tr>
   <tr>
     <td align="center">
-      <img src="./DesktopRenamer/Resources/Demo/DesktopRenamer_v1-6-0_SLW.png" width="300"/><br>
+      <img src="./DesktopRenamer/Resources/Demo/Images/DesktopRenamer_v1-6-0_SLW.png" width="300"/><br>
       <i>Liquid Glass design</i>
     </td>
     <td align="center">
-      <img src="./DesktopRenamer/Resources/Demo/DesktopRenamer_v1-5-0_API.png" width="500"/><br>
+      <img src="./DesktopRenamer/Resources/Demo/Images/DesktopRenamer_v1-5-0_API.png" width="500"/><br>
       <i>
         Open
         <a href="https://github.com/gitmichaelqiu/DesktopRenamer/wiki/DesktopRenamer-API-Guide">

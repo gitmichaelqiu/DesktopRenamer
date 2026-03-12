@@ -42,12 +42,12 @@ struct SettingsRow<Content: View>: View {
 }
 
 struct SettingsSection<Content: View>: View {
-    let title: LocalizedStringKey
+    let title: LocalizedStringKey?
     let helperText: LocalizedStringKey?
     let content: Content
 
     init(
-        _ title: LocalizedStringKey, helperText: LocalizedStringKey? = nil,
+        _ title: LocalizedStringKey? = nil, helperText: LocalizedStringKey? = nil,
         @ViewBuilder content: () -> Content
     ) {
         self.title = title
@@ -57,15 +57,17 @@ struct SettingsSection<Content: View>: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            HStack(spacing: 4) {
-                Text(title)
-                    .font(.headline)
+            if let title = title {
+                HStack(spacing: 4) {
+                    Text(title)
+                        .font(.headline)
 
-                if let helperText = helperText {
-                    HelperInfoButton(text: helperText)
+                    if let helperText = helperText {
+                        HelperInfoButton(text: helperText)
+                    }
                 }
+                .padding(.leading, 4)
             }
-            .padding(.leading, 4)
 
             VStack(spacing: 0) {
                 content
@@ -79,6 +81,7 @@ struct SettingsSection<Content: View>: View {
                     )
             )
         }
+        .padding(.top, title == nil ? -10 : 0)
     }
 
     private var backgroundColor: Color {
