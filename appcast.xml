@@ -8,7 +8,7 @@
             <sparkle:version>23</sparkle:version>
             <sparkle:shortVersionString>1.10.0</sparkle:shortVersionString>
             <sparkle:minimumSystemVersion>13.0</sparkle:minimumSystemVersion>
-            <enclosure url="https://raw.githubusercontent.com/gitmichaelqiu/DesktopRenamer/main/DesktopRenamer%201.10.0.dmg" length="37381308" type="application/octet-stream" sparkle:edSignature="uK/elwgGeGf1s1QMQAUbtnP1Za2OESt0sTnjNQR5XQoZ5FSj81s75FONGoMvWh4bTlx0uNkolEtqXci+W14mAA=="/>
+            <enclosure url="https://github.com/gitmichaelqiu/DesktopRenamer/releases/download/v1.10.0/DesktopRenamer.1.10.0.dmg"/>
         </item>
     </channel>
 </rss>
