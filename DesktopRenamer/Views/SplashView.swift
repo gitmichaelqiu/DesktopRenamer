@@ -1,11 +1,12 @@
 import SwiftUI
+import AVKit
 
 struct SplashView: View {
     @Environment(\.openURL) var openURL
     var onClose: () -> Void
     
     @State private var currentPage = 0
-    private let totalPages = 6
+    private let totalPages = 8
 
     var body: some View {
         VStack(spacing: 0) {
@@ -16,19 +17,25 @@ struct SplashView: View {
                     WelcomePage()
                         .transition(pageTransition)
                 case 1:
-                    NameAndLabelsPage()
+                    RenamePage()
                         .transition(pageTransition)
                 case 2:
-                    MenuBarPage()
+                    MissionControlPage()
                         .transition(pageTransition)
                 case 3:
-                    ShortcutsAndGesturesPage()
+                    MenuBarSwitchPage()
                         .transition(pageTransition)
                 case 4:
-                    RaycastFeaturePage(openURL: openURL)
+                    FastSwitchingPage()
                         .transition(pageTransition)
                 case 5:
-                    PermissionsAndMorePage()
+                    RaycastFeaturePage(openURL: openURL)
+                        .transition(pageTransition)
+                case 6:
+                    PermissionsPage()
+                        .transition(pageTransition)
+                case 7:
+                    MoreAppsPage()
                         .transition(pageTransition)
                 default:
                     EmptyView()
@@ -89,12 +96,13 @@ struct SplashView: View {
                             }
                         )
                         .cornerRadius(8)
+                        .animation(.none, value: currentPage)
                 }
                 .buttonStyle(.plain)
             }
             .padding(24)
         }
-        .frame(width: 550, height: 450)
+        .frame(width: 700, height: 550)
         .background(Color(NSColor.windowBackgroundColor))
     }
     
@@ -103,6 +111,118 @@ struct SplashView: View {
             insertion: .move(edge: .trailing).combined(with: .opacity),
             removal: .move(edge: .leading).combined(with: .opacity)
         )
+    }
+}
+
+// MARK: - Auto Playing Video View
+struct AutoPlayingVideoView: NSViewRepresentable {
+    let videoName: String
+    
+    func makeNSView(context: Context) -> AVPlayerView {
+        let playerView = AVPlayerView()
+        playerView.controlsStyle = .none
+        
+        // Attempt to find the video file in the bundle
+        if let url = Bundle.main.url(forResource: videoName, withExtension: "mp4") {
+            let player = AVPlayer(url: url)
+            playerView.player = player
+            player.actionAtItemEnd = .none // Setup for looping
+            
+            NotificationCenter.default.addObserver(forName: .AVPlayerItemDidPlayToEndTime, object: player.currentItem, queue: .main) { _ in
+                player.seek(to: .zero)
+                player.play()
+            }
+            
+            player.play()
+        }
+        
+        return playerView
+    }
+    
+    func updateNSView(_ nsView: AVPlayerView, context: Context) {
+        // Handle updates if needed
+    }
+}
+
+// MARK: - Reusable Page Templates
+
+struct SingleVideoFeaturePage: View {
+    let title: String
+    let subtitle: String
+    let videoName: String
+    
+    var body: some View {
+        VStack(spacing: 20) {
+            VStack(spacing: 8) {
+                Text(title)
+                    .font(.system(size: 28, weight: .bold, design: .rounded))
+                Text(subtitle)
+                    .font(.body)
+                    .foregroundColor(.secondary)
+                    .multilineTextAlignment(.center)
+                    .lineSpacing(4)
+                    .padding(.horizontal, 20)
+            }
+            
+            AutoPlayingVideoView(videoName: videoName)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .cornerRadius(12)
+                .shadow(color: Color.black.opacity(0.15), radius: 8, x: 0, y: 4)
+                .padding(.horizontal, 20)
+                .padding(.bottom, 10)
+        }
+        .padding(.top, 30)
+    }
+}
+
+struct DoubleVideoFeaturePage: View {
+    let title: String
+    let subtitle: String
+    let videoName1: String
+    let videoName2: String
+    let label1: String
+    let label2: String
+    
+    var body: some View {
+        VStack(spacing: 20) {
+            VStack(spacing: 8) {
+                Text(title)
+                    .font(.system(size: 28, weight: .bold, design: .rounded))
+                Text(subtitle)
+                    .font(.body)
+                    .foregroundColor(.secondary)
+                    .multilineTextAlignment(.center)
+                    .lineSpacing(4)
+                    .padding(.horizontal, 20)
+            }
+            
+            HStack(spacing: 20) {
+                VStack(spacing: 8) {
+                    Text(label1)
+                        .font(.subheadline)
+                        .fontWeight(.medium)
+                        .foregroundColor(.secondary)
+                    AutoPlayingVideoView(videoName: videoName1)
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                        .cornerRadius(10)
+                        .shadow(color: Color.black.opacity(0.15), radius: 6, x: 0, y: 3)
+                }
+                
+                VStack(spacing: 8) {
+                    Text(label2)
+                        .font(.subheadline)
+                        .fontWeight(.medium)
+                        .foregroundColor(.secondary)
+                    AutoPlayingVideoView(videoName: videoName2)
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                        .cornerRadius(10)
+                        .shadow(color: Color.black.opacity(0.15), radius: 6, x: 0, y: 3)
+                }
+            }
+            .padding(.horizontal, 20)
+            .padding(.bottom, 10)
+        }
+        .padding(.top, 30)
     }
 }
 
@@ -121,7 +241,7 @@ struct WelcomePage: View {
             
             VStack(spacing: 8) {
                 Text("Welcome to\nDesktopRenamer")
-                    .font(.system(size: 36, weight: .heavy, design: .rounded))
+                    .font(.system(size: 38, weight: .heavy, design: .rounded))
                     .multilineTextAlignment(.center)
                 
                 Text("Take back control of your macOS spaces.")
@@ -133,90 +253,49 @@ struct WelcomePage: View {
     }
 }
 
-struct NameAndLabelsPage: View {
+struct RenamePage: View {
     var body: some View {
-        VStack(spacing: 32) {
-            ZStack {
-                Circle()
-                    .fill(LinearGradient(gradient: Gradient(colors: [.blue, .cyan]), startPoint: .topLeading, endPoint: .bottomTrailing))
-                    .frame(width: 120, height: 120)
-                    .shadow(color: .blue.opacity(0.3), radius: 15, x: 0, y: 8)
-                Image(systemName: "tag.fill")
-                    .font(.system(size: 50, weight: .light))
-                    .foregroundColor(.white)
-            }
-            
-            VStack(spacing: 12) {
-                Text("Name & Labels")
-                    .font(.system(size: 30, weight: .bold, design: .rounded))
-                
-                Text("Assign persistent, custom names to all your spaces. DesktopRenamer displays these beautifully as large labels in Mission Control and discreet active labels when you switch spaces.")
-                    .font(.body)
-                    .foregroundColor(.secondary)
-                    .multilineTextAlignment(.center)
-                    .lineSpacing(6)
-            }
-            .padding(.horizontal, 40)
-        }
-        .padding()
+        SingleVideoFeaturePage(
+            title: "Rename at Menu Bar",
+            subtitle: "Quickly give your desktop spaces a custom name directly from the menu bar.",
+            videoName: "Rename"
+        )
     }
 }
 
-struct MenuBarPage: View {
+struct MissionControlPage: View {
     var body: some View {
-        VStack(spacing: 32) {
-            ZStack {
-                Circle()
-                    .fill(LinearGradient(gradient: Gradient(colors: [.orange, .yellow]), startPoint: .topLeading, endPoint: .bottomTrailing))
-                    .frame(width: 120, height: 120)
-                    .shadow(color: .orange.opacity(0.3), radius: 15, x: 0, y: 8)
-                Image(systemName: "menubar.rectangle")
-                    .font(.system(size: 50, weight: .light))
-                    .foregroundColor(.white)
-            }
-            
-            VStack(spacing: 12) {
-                Text("Menu Bar & Option-Click")
-                    .font(.system(size: 30, weight: .bold, design: .rounded))
-                
-                Text("Quickly switch spaces directly from the menu bar.\n\nHere's a pro-tip: Hold the **Option (⌥)** key in the menu to instantly move your active window to the selected space!")
-                    .font(.body)
-                    .foregroundColor(.secondary)
-                    .multilineTextAlignment(.center)
-                    .lineSpacing(6)
-            }
-            .padding(.horizontal, 40)
-        }
-        .padding()
+        DoubleVideoFeaturePage(
+            title: "Crystal Clear Labels",
+            subtitle: "See large, aesthetic name labels when you enter Mission Control, and discreet active labels when you switch spaces.",
+            videoName1: "MissionControl",
+            videoName2: "ActiveLabel",
+            label1: "Mission Control",
+            label2: "Active Label"
+        )
     }
 }
 
-struct ShortcutsAndGesturesPage: View {
+struct MenuBarSwitchPage: View {
     var body: some View {
-        VStack(spacing: 32) {
-            ZStack {
-                Circle()
-                    .fill(LinearGradient(gradient: Gradient(colors: [.green, .mint]), startPoint: .topLeading, endPoint: .bottomTrailing))
-                    .frame(width: 120, height: 120)
-                    .shadow(color: .green.opacity(0.3), radius: 15, x: 0, y: 8)
-                Image(systemName: "hand.draw.fill")
-                    .font(.system(size: 50, weight: .light))
-                    .foregroundColor(.white)
-            }
-            
-            VStack(spacing: 12) {
-                Text("Hotkeys & Trackpad")
-                    .font(.system(size: 30, weight: .bold, design: .rounded))
-                
-                Text("Bind global hotkeys to switch spaces or move windows immediately.\n\nHate macOS animation lag? Enable **Trackpad Switch Override** for instant, zero-delay swipe switching using 3 or 4 fingers.")
-                    .font(.body)
-                    .foregroundColor(.secondary)
-                    .multilineTextAlignment(.center)
-                    .lineSpacing(6)
-            }
-            .padding(.horizontal, 40)
-        }
-        .padding()
+        DoubleVideoFeaturePage(
+            title: "Switch & Move",
+            subtitle: "Click a space in the menu bar to jump right to it.\nHold the Option (⌥) key to instantly teleport your active window.",
+            videoName1: "SwitchSpace",
+            videoName2: "MoveWindow",
+            label1: "Switch Space",
+            label2: "Option + Click to Move"
+        )
+    }
+}
+
+struct FastSwitchingPage: View {
+    var body: some View {
+        SingleVideoFeaturePage(
+            title: "Faster Switching Override",
+            subtitle: "Bypass native macOS animation lag. Enable trackpad overrides or hotkeys for instant, zero-delay switching.",
+            videoName: "SwitchOverride"
+        )
     }
 }
 
@@ -224,17 +303,7 @@ struct RaycastFeaturePage: View {
     var openURL: OpenURLAction
 
     var body: some View {
-        VStack(spacing: 32) {
-            ZStack {
-                Circle()
-                    .fill(LinearGradient(gradient: Gradient(colors: [.purple, .indigo]), startPoint: .topLeading, endPoint: .bottomTrailing))
-                    .frame(width: 120, height: 120)
-                    .shadow(color: .purple.opacity(0.3), radius: 15, x: 0, y: 8)
-                Image(systemName: "puzzlepiece.extension.fill")
-                    .font(.system(size: 50, weight: .light))
-                    .foregroundColor(.white)
-            }
-            
+        VStack(spacing: 30) {
             VStack(spacing: 12) {
                 Text("Raycast Integration")
                     .font(.system(size: 30, weight: .bold, design: .rounded))
@@ -244,8 +313,36 @@ struct RaycastFeaturePage: View {
                     .foregroundColor(.secondary)
                     .multilineTextAlignment(.center)
                     .lineSpacing(6)
+                    .padding(.horizontal, 40)
             }
-            .padding(.horizontal, 40)
+            
+            // Raycast Image Display
+            if let imageURL = Bundle.main.url(forResource: "RaycastExtension", withExtension: "png"),
+               let nsImage = NSImage(contentsOf: imageURL) {
+                Image(nsImage: nsImage)
+                    .resizable()
+                    .aspectRatio(contentMode: .fit)
+                    .cornerRadius(12)
+                    .shadow(color: Color.black.opacity(0.2), radius: 10, x: 0, y: 5)
+                    .padding(.horizontal, 40)
+            } else if let nsImageFallback = NSImage(named: "RaycastExtension") {
+                Image(nsImage: nsImageFallback)
+                    .resizable()
+                    .aspectRatio(contentMode: .fit)
+                    .cornerRadius(12)
+                    .shadow(color: Color.black.opacity(0.2), radius: 10, x: 0, y: 5)
+                    .padding(.horizontal, 40)
+            } else {
+                // Fallback icon if image cannot be found
+                ZStack {
+                    RoundedRectangle(cornerRadius: 12)
+                        .fill(Color.secondary.opacity(0.1))
+                    Image(systemName: "puzzlepiece.extension.fill")
+                        .font(.system(size: 50))
+                        .foregroundColor(.secondary)
+                }
+                .padding(.horizontal, 40)
+            }
 
             Button(action: {
                 if let url = URL(string: "https://www.raycast.com/michael_qiu/desktoprenamer") {
@@ -271,13 +368,13 @@ struct RaycastFeaturePage: View {
             .buttonStyle(PlainButtonStyle())
             .padding(.top, 8)
         }
-        .padding()
+        .padding(.top, 20)
     }
 }
 
-struct PermissionsAndMorePage: View {
+struct PermissionsPage: View {
     var body: some View {
-        VStack(spacing: 20) {
+        VStack(spacing: 30) {
             ZStack {
                 Circle()
                     .fill(LinearGradient(gradient: Gradient(colors: [.red, .orange]), startPoint: .topLeading, endPoint: .bottomTrailing))
@@ -288,17 +385,35 @@ struct PermissionsAndMorePage: View {
                     .foregroundColor(.white)
             }
             
-            VStack(spacing: 8) {
-                Text("Permissions & More Apps")
-                    .font(.system(size: 26, weight: .bold, design: .rounded))
+            VStack(spacing: 12) {
+                Text("Require Permissions")
+                    .font(.system(size: 30, weight: .bold, design: .rounded))
                 
-                Text("DesktopRenamer requires Accessibility and Automation permissions for hotkeys and trackpad overrides. Enable them in Settings → Permissions.")
+                Text("DesktopRenamer requires Accessibility and Automation permissions for hotkeys and trackpad overrides to function correctly.\n\nPlease enable them in System Settings → Privacy & Security.")
                     .font(.body)
                     .foregroundColor(.secondary)
                     .multilineTextAlignment(.center)
-                    .lineSpacing(4)
-                    .padding(.horizontal, 20)
+                    .lineSpacing(6)
+                    .padding(.horizontal, 40)
             }
+        }
+        .padding()
+    }
+}
+
+struct MoreAppsPage: View {
+    var body: some View {
+        VStack(spacing: 20) {
+            VStack(spacing: 8) {
+                Text("Discover More Apps")
+                    .font(.system(size: 30, weight: .bold, design: .rounded))
+                
+                Text("Check out these other productivity tools we've built.")
+                    .font(.body)
+                    .foregroundColor(.secondary)
+                    .multilineTextAlignment(.center)
+            }
+            .padding(.bottom, 10)
             
             HStack(alignment: .top, spacing: 20) {
                 // OptClicker
@@ -322,3 +437,5 @@ struct PermissionsAndMorePage: View {
         .padding()
     }
 }
+
+
