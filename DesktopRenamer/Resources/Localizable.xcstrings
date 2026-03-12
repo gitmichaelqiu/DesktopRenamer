@@ -2201,6 +2201,7 @@
       }
     },
     "Switch to left space" : {
+      "extractionState" : "stale",
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
@@ -2210,7 +2211,14 @@
         }
       }
     },
+    "Switch to next space" : {
+
+    },
+    "Switch to previous space" : {
+
+    },
     "Switch to right space" : {
+      "extractionState" : "stale",
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
