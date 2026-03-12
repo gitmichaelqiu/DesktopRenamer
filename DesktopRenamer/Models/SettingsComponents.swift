@@ -81,6 +81,8 @@ struct SettingsSection<Content: View>: View {
                     )
             )
         }
+        .padding(.top, title == nil ? -10 : 0)
+        .padding(.bottom, title == nil ? 10 : 0)
     }
 
     private var backgroundColor: Color {
