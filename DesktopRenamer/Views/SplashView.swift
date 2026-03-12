@@ -278,8 +278,8 @@ struct WelcomePage: View {
 struct RenamePage: View {
     var body: some View {
         SingleVideoFeaturePage(
-            title: "Rename at Menu Bar",
-            subtitle: "Quickly give your desktop spaces a custom name directly from the menu bar.",
+            title: NSLocalizedString("Rename at Menu Bar", comment: ""),
+            subtitle: NSLocalizedString("Quickly give your desktop spaces a custom name directly from the menu bar.", comment: ""),
             videoName: "Rename"
         )
     }
@@ -292,12 +292,12 @@ struct MissionControlPage: View {
     var body: some View {
         VStack(spacing: 10) {
             DoubleVideoFeaturePage(
-                title: "Crystal Clear Labels",
-                subtitle: "See large, aesthetic name labels when you enter Mission Control, and discreet active labels when you switch spaces.",
+                title: NSLocalizedString("Crystal Clear Labels", comment: ""),
+                subtitle: NSLocalizedString("See large, aesthetic name labels when you enter Mission Control, and discreet active labels when you switch spaces.", comment: ""),
                 videoName1: "MissionControl",
                 videoName2: "ActiveLabel",
-                label1: "Mission Control",
-                label2: "Active Label"
+                label1: NSLocalizedString("Preview Label", comment: ""),
+                label2: NSLocalizedString("Active Space Label", comment: "")
             )
             
             HStack(spacing: 40) {
@@ -314,12 +314,12 @@ struct MissionControlPage: View {
 struct MenuBarSwitchPage: View {
     var body: some View {
         DoubleVideoFeaturePage(
-            title: "Switch & Move",
-            subtitle: "Click a space in the menu bar to jump right to it.\nHold the Option (⌥) key to instantly teleport your active window.",
+            title: NSLocalizedString("Switch & Move", comment: ""),
+            subtitle: NSLocalizedString("Click a space in the menu bar to jump right to it.\nHold the Option (⌥) key to instantly teleport your active window.", comment: ""),
             videoName1: "SwitchSpace",
             videoName2: "MoveWindow",
-            label1: "Switch Space",
-            label2: "Option + Click to Move"
+            label1: NSLocalizedString("Switch Space", comment: ""),
+            label2: NSLocalizedString("Option + Click to Move", comment: "")
         )
     }
 }
@@ -330,8 +330,8 @@ struct FastSwitchingPage: View {
     var body: some View {
         VStack(spacing: 10) {
             SingleVideoFeaturePage(
-                title: "Faster Switching Override",
-                subtitle: "Bypass native macOS animation lag. Enable trackpad overrides or hotkeys for instant, zero-delay switching.",
+                title: NSLocalizedString("Faster Switching Override", comment: ""),
+                subtitle: NSLocalizedString("Bypass native macOS animation lag. Enable trackpad overrides or hotkeys for instant, zero-delay switching.", comment: ""),
                 videoName: "SwitchOverride"
             )
             
