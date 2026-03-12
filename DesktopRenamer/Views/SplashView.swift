@@ -111,10 +111,13 @@ struct SplashView: View {
 struct WelcomePage: View {
     var body: some View {
         VStack(spacing: 24) {
-            Image("AppIcon")
-                .resizable()
-                .frame(width: 128, height: 128)
-                .shadow(color: Color.black.opacity(0.2), radius: 10, x: 0, y: 5)
+            if let nsImage = NSApplication.shared.applicationIconImage {
+                Image(nsImage: nsImage)
+                    .resizable()
+                    .aspectRatio(contentMode: .fit)
+                    .frame(width: 120, height: 120)
+                    .shadow(radius: 5)
+            }
             
             VStack(spacing: 8) {
                 Text("Welcome to\nDesktopRenamer")
