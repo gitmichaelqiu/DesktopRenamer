@@ -204,9 +204,6 @@
         }
       }
     },
-    "Assign persistent, custom names to all your spaces. DesktopRenamer displays these beautifully as large labels in Mission Control and discreet active labels when you switch spaces." : {
-
-    },
     "Automatic" : {
       "localizations" : {
         "zh-Hans" : {
@@ -228,9 +225,6 @@
       }
     },
     "Back" : {
-
-    },
-    "Bind global hotkeys to switch spaces or move windows immediately.\n\nHate macOS animation lag? Enable **Trackpad Switch Override** for instant, zero-delay swipe switching using 3 or 4 fingers." : {
 
     },
     "Bug Report Log Collection" : {
@@ -303,6 +297,9 @@
         }
       }
     },
+    "Check out these other productivity tools we've built." : {
+
+    },
     "Choose how the app determines if a space is a Desktop or a Fullscreen App.\n\nAutomatic: No extra actions required.\n\nMetric-based: Based on the thresold of a metric. May not work for multiple displays.\n\nManual: All spaces that are not added will be treated as fullscreen." : {
       "localizations" : {
         "zh-Hans" : {
@@ -372,7 +369,10 @@
     "Desktop" : {
       "shouldTranslate" : false
     },
-    "DesktopRenamer requires Accessibility and Automation permissions for hotkeys and trackpad overrides. Enable them in Settings → Permissions." : {
+    "DesktopRenamer requires Accessibility and Automation permissions for hotkeys and trackpad overrides to function correctly.\n\nPlease enable them in System Settings → Privacy & Security." : {
+
+    },
+    "Discover More Apps" : {
 
     },
     "Enable Labels" : {
@@ -534,9 +534,6 @@
         }
       }
     },
-    "Hotkeys & Trackpad" : {
-
-    },
     "If enabled, the label stays on the desktop instead of hiding.\n\nTip: You can drag the window to the screen edge to shrink it into a 'Picture-in-Picture' mode." : {
       "localizations" : {
         "en" : {
@@ -635,9 +632,6 @@
           }
         }
       }
-    },
-    "Menu Bar & Option-Click" : {
-
     },
     "Menu.About" : {
       "extractionState" : "manual",
@@ -773,9 +767,6 @@
     "Move window to previous desktop" : {
 
     },
-    "Name & Labels" : {
-
-    },
     "Next" : {
 
     },
@@ -852,9 +843,6 @@
         }
       }
     },
-    "Permissions & More Apps" : {
-
-    },
     "Please go through all spaces that may be helpful in analyzing the bug. The log is updating in real-time." : {
       "localizations" : {
         "zh-Hans" : {
@@ -877,9 +865,6 @@
           }
         }
       }
-    },
-    "Quickly switch spaces directly from the menu bar.\n\nHere's a pro-tip: Hold the **Option (⌥)** key in the menu to instantly move your active window to the selected space!" : {
-
     },
     "Raycast Integration" : {
 
@@ -961,6 +946,9 @@
           }
         }
       }
+    },
+    "Require Permissions" : {
+
     },
     "Required for injecting shortcuts to switch spaces, and reading active window information." : {
       "localizations" : {
