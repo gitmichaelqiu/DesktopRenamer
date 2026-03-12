@@ -154,6 +154,85 @@ class SpaceHelper {
         return true
     }
 
+    // MARK: - Window Moving Logic
+    
+    static func dragActiveWindow(to spaceID: String) {
+        // 1. Get Active Window Frame & Position
+        guard let frame = getActiveWindowFrame() else { return }
+        
+        // 2. Calculate Grab Point (Top Left Edge - Window Frame)
+        // We target the very top edge to avoid clicking inside non-draggable content (like sidebars).
+        // x+15 / y+5 puts us just past the rounded corner start, but high enough to potentially 
+        // miss traffic light hitboxes or hit the window chrome safe zone.
+        let offsetX: CGFloat = 15
+        let grabX = frame.origin.x + offsetX
+        let grabY = frame.origin.y + 5 // Very close to top edge
+        let grabPoint = CGPoint(x: grabX, y: grabY)
+        
+        // 3. Save Current Mouse Position
+        let currentMouse = CGEvent(source: nil)?.location ?? grabPoint
+        
+        // 4. Perform Drag Sequence with NO Modifiers to avoid Control+Click (Right Click)
+        let source = CGEventSource(stateID: .hidSystemState)
+        
+        // Temporarily clear modifiers just for our events
+        // Note: We can't easily physical key-up, but we can set flags to 0 on the event.
+        
+        // Move to grab point
+        if let moveEvent = CGEvent(mouseEventSource: source, mouseType: .mouseMoved, mouseCursorPosition: grabPoint, mouseButton: .left) {
+            moveEvent.flags = [] // Clear modifiers
+            moveEvent.post(tap: .cghidEventTap)
+        }
+        
+        // Click Down (Hold)
+        if let downEvent = CGEvent(mouseEventSource: source, mouseType: .leftMouseDown, mouseCursorPosition: grabPoint, mouseButton: .left) {
+            downEvent.flags = [] // Clear modifiers (Essential to prevent Right Click if Ctrl is held)
+            downEvent.post(tap: .cghidEventTap)
+        }
+        
+        // Small delay to ensure grip
+        usleep(50000) // 0.05s
+        
+        // 5. Trigger Space Switch
+        switchToSpace(spaceID)
+        
+        // 6. Wait and Drop
+        DispatchQueue.global().asyncAfter(deadline: .now() + 0.6) {
+            // Drop (Mouse Up)
+            if let upEvent = CGEvent(mouseEventSource: source, mouseType: .leftMouseUp, mouseCursorPosition: grabPoint, mouseButton: .left) {
+                upEvent.flags = [] // Clear modifiers
+                upEvent.post(tap: .cghidEventTap)
+            }
+            
+            // Restore Mouse
+            usleep(50000)
+            if let restoreEvent = CGEvent(mouseEventSource: source, mouseType: .mouseMoved, mouseCursorPosition: currentMouse, mouseButton: .left) {
+                restoreEvent.flags = [] // Reset flags or leave to system? System usually recovers.
+                restoreEvent.post(tap: .cghidEventTap)
+            }
+        }
+    }
+    
+    private static func getActiveWindowFrame() -> CGRect? {
+        guard let frontApp = NSWorkspace.shared.frontmostApplication else { return nil }
+        let pid = frontApp.processIdentifier
+        
+        let options = CGWindowListOption(arrayLiteral: .optionOnScreenOnly, .excludeDesktopElements)
+        let windowList = CGWindowListCopyWindowInfo(options, kCGNullWindowID) as? [[String: Any]] ?? []
+        
+        for window in windowList {
+            if let windowPid = window[kCGWindowOwnerPID as String] as? Int,
+               windowPid == pid,
+               let layer = window[kCGWindowLayer as String] as? Int, layer == 0,
+               let bounds = window[kCGWindowBounds as String] as? [String: Any],
+               let x = bounds["X"] as? CGFloat, let y = bounds["Y"] as? CGFloat,
+               let w = bounds["Width"] as? CGFloat, let h = bounds["Height"] as? CGFloat {
+                   return CGRect(x: x, y: y, width: w, height: h)
+               }
+        }
+        return nil
+    }
+
     private static func getOwnerPID(for spaceID: String) -> Int32? {
         let conn = _CGSDefaultConnection()
         guard let displays = CGSCopyManagedDisplaySpaces(conn) as? [NSDictionary] else {

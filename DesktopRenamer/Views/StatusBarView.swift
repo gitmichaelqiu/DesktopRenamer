@@ -149,6 +149,15 @@ class StatusBarController: NSObject {
         let currentDisplaySpaces = spaceManager.currentDisplaySpaces
         
         if !currentDisplaySpaces.isEmpty {
+            let item = NSMenuItem(title: NSLocalizedString("Switch to... (press ⌥ for more)", comment: ""), action: nil, keyEquivalent: "")
+            menu.addItem(item)
+
+            // Alternative menu items
+            let altItem = NSMenuItem(title: NSLocalizedString("Move window to...", comment: ""), action: nil, keyEquivalent: "")
+            altItem.isAlternate = true
+            altItem.keyEquivalentModifierMask = .option
+            menu.addItem(altItem)
+
             for space in currentDisplaySpaces {
                 let name = spaceManager.getSpaceName(space.id)
                 let item = NSMenuItem(title: name, action: #selector(selectSpace(_:)), keyEquivalent: "")
@@ -162,6 +171,16 @@ class StatusBarController: NSObject {
                 }
                 
                 menu.addItem(item)
+                
+                // Alternate Item (Move Window)
+                let moveName = "→ " + name
+                let altItem = NSMenuItem(title: moveName, action: #selector(moveWindowToSpace(_:)), keyEquivalent: "")
+                altItem.target = self
+                altItem.representedObject = space.id
+                altItem.isAlternate = true
+                altItem.keyEquivalentModifierMask = .option
+                altItem.state = item.state
+                menu.addItem(altItem)
             }
             menu.addItem(NSMenuItem.separator())
         }
@@ -223,6 +242,11 @@ class StatusBarController: NSObject {
         if let space = spaceManager.spaceNameDict.first(where: { $0.id == spaceID }) {
             spaceManager.switchToSpace(space)
         }
+    }
+    
+    @objc func moveWindowToSpace(_ sender: NSMenuItem) {
+        guard let spaceID = sender.representedObject as? String else { return }
+        spaceManager.moveActiveWindowToSpace(id: spaceID)
     }
     
     @objc func renameCurrentSpace() {

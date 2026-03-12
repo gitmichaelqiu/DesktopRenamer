@@ -47,6 +47,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     var gestureManager: GestureManager!
     
     private var cancellables = Set<AnyCancellable>()
+    var splashWindowController: NSWindowController?
     
     func applicationDidFinishLaunching(_ notification: Notification) {
         AppDelegate.shared = self
@@ -57,6 +58,12 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         if !hasInitialized {
             try? SMAppService.mainApp.register()
             UserDefaults.standard.set(true, forKey: "HasInitializedDefaults")
+        }
+        
+        // Show splash screen on first launch
+        let hasSeenSplash = UserDefaults.standard.bool(forKey: "hasSeenSplashScreen")
+        if !hasSeenSplash {
+            showSplashScreen()
         }
         
         self.hotkeyManager = HotkeyManager()
@@ -74,12 +81,8 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             self.setupHotkeyBindings()
         }
 
-        if UpdateManager.isAutoCheckEnabled {
-            DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
-                Task {
-                    await UpdateManager.shared.checkForUpdate(from: nil, suppressUpToDateAlert: true)
-                }
-            }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
+            _ = UpdateManager.shared
         }
     }
     
@@ -93,6 +96,78 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             .receive(on: DispatchQueue.main)
             .sink { [weak self] in self?.spaceManager.switchToNextSpace() }
             .store(in: &cancellables)
+            
+        hotkeyManager.moveWindowNextTriggered
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] in self?.spaceManager.moveActiveWindowToNextSpace() }
+            .store(in: &cancellables)
+            
+        hotkeyManager.moveWindowPreviousTriggered
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] in self?.spaceManager.moveActiveWindowToPreviousSpace() }
+            .store(in: &cancellables)
+            
+        hotkeyManager.moveWindowNumberTriggered
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] number in self?.spaceManager.moveActiveWindowToSpace(number: number) }
+            .store(in: &cancellables)
+    }
+    
+    func showSplashScreen(on parentWindow: NSWindow? = nil) {
+        if let existing = splashWindowController {
+            if let window = existing.window, window.isVisible {
+                NSApp.activate(ignoringOtherApps: true)
+                window.makeKeyAndOrderFront(nil)
+                return
+            }
+        }
+        
+        let splashView = SplashView { [weak self] in
+            Task { @MainActor in
+                UserDefaults.standard.set(true, forKey: "hasSeenSplashScreen")
+                
+                if let gestureManager = self?.gestureManager {
+                    gestureManager.isEnabled = UserDefaults.standard.bool(forKey: "GestureManager.Enabled")
+                }
+                if let labelManager = self?.statusBarController?.labelManager {
+                    labelManager.showPreviewLabels = UserDefaults.standard.object(forKey: "kShowPreviewLabels") == nil ? true : UserDefaults.standard.bool(forKey: "kShowPreviewLabels")
+                    labelManager.showActiveLabels = UserDefaults.standard.object(forKey: "kShowActiveLabels") == nil ? true : UserDefaults.standard.bool(forKey: "kShowActiveLabels")
+                }
+                
+                if let parent = parentWindow, let sheet = self?.splashWindowController?.window {
+                    parent.endSheet(sheet)
+                } else {
+                    self?.splashWindowController?.close()
+                    self?.splashWindowController = nil
+                }
+            }
+        }
+        
+        let hostingController = NSHostingController(rootView: splashView)
+        let window = NSWindow(
+            contentRect: NSRect(x: 0, y: 0, width: 550, height: 450),
+            styleMask: [.titled, .closable, .fullSizeContentView],
+            backing: .buffered,
+            defer: false
+        )
+        
+        window.titlebarAppearsTransparent = true
+        window.titleVisibility = .hidden
+        window.isMovableByWindowBackground = true
+        window.contentViewController = hostingController
+        
+        let windowController = NSWindowController(window: window)
+        self.splashWindowController = windowController
+        
+        if let parent = parentWindow {
+            parent.beginSheet(window) { _ in
+                self.splashWindowController = nil
+            }
+        } else {
+            window.center()
+            windowController.showWindow(nil)
+            NSApp.activate(ignoringOtherApps: true)
+        }
     }
     
     func applicationWillTerminate(_ notification: Notification) {

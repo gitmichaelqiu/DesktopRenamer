@@ -10,14 +10,14 @@ struct PermissionsSettingsView: View {
                     SettingsRow("Accessibility", helperText: "Required for injecting shortcuts to switch spaces, and reading active window information.") {
                         HStack {
                             if permissionManager.isAccessibilityGranted {
-                                Text("Granted")
+                                Image(systemName: "checkmark.circle.fill")
                                     .foregroundColor(.green)
                             } else {
-                                Text("Not Granted")
+                                Image(systemName: "xmark.circle.fill")
                                     .foregroundColor(.red)
                             }
                             
-                            Button(permissionManager.isAccessibilityGranted ? "Open Settings" : "Grant") {
+                            Button(permissionManager.isAccessibilityGranted ? "Settings" : "Grant") {
                                 permissionManager.requestAccessibilityPermission()
                             }
                         }
@@ -28,14 +28,14 @@ struct PermissionsSettingsView: View {
                     SettingsRow("Automation", helperText: "Required for using Mission Control via AppleScript (System Events) to switch spaces when the fast-switch method falls back.") {
                         HStack {
                             if permissionManager.isAutomationGranted {
-                                Text("Granted")
+                                Image(systemName: "checkmark.circle.fill")
                                     .foregroundColor(.green)
                             } else {
-                                Text("Not Granted")
+                                Image(systemName: "xmark.circle.fill")
                                     .foregroundColor(.red)
                             }
                             
-                            Button(permissionManager.isAutomationGranted ? "Open Settings" : "Grant") {
+                            Button(permissionManager.isAutomationGranted ? "Settings" : "Grant") {
                                 permissionManager.requestAutomationPermission()
                             }
                         }
