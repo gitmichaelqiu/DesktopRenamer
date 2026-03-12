@@ -12,6 +12,16 @@
       },
       "shouldTranslate" : false
     },
+    " + Number" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : " + 数字"
+          }
+        }
+      }
+    },
     "#" : {
       "localizations" : {
         "zh-Hans" : {
@@ -236,7 +246,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "后退"
+            "value" : "返回"
           }
         }
       }
@@ -817,6 +827,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "将窗口移至上个桌面"
+          }
+        }
+      }
+    },
+    "Move window to..." : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "将窗口移至…"
           }
         }
       }
@@ -2306,12 +2326,28 @@
         }
       }
     },
+    "Switch to... (press ⌥ for more)" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Switch to… (press ⌥ to move window)"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "切换到… (按下⌥移动窗口)"
+          }
+        }
+      }
+    },
     "Take back control of your macOS spaces." : {
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "优雅的使用mac桌面。"
+            "value" : "优雅地使用mac桌面。"
           }
         }
       }
