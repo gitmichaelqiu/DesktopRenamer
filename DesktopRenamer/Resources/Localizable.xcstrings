@@ -2513,7 +2513,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "在桌面角落的隐藏标签。仅在调度中心显示"
+            "value" : "在桌面角落的隐藏标签，仅在调度中心显示。"
           }
         }
       }
@@ -2625,6 +2625,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "欢迎使用\nDesktopRenamer"
+          }
+        }
+      }
+    },
+    "When set to 3 fingers, you can still use 4 fingers to trigger native swipe." : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "设置为3指时，仍可以4指使用系统原生切换。"
           }
         }
       }
