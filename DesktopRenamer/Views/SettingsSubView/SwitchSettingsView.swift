@@ -130,7 +130,7 @@ struct SwitchSettingsView: View {
                     if gestureManager.isEnabled {
                         Divider()
                         
-                        SettingsRow("Gesture type") {
+                        SettingsRow("Gesture type", helperText: "When set to 3 fingers, you can still use 4 fingers to trigger native swipe.") {
                             Picker("", selection: $gestureManager.fingerCount) {
                                 Text("3 Fingers").tag(3)
                                 Text("4 Fingers").tag(4)
