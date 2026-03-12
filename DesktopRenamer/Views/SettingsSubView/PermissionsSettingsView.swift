@@ -10,10 +10,10 @@ struct PermissionsSettingsView: View {
                     SettingsRow("Accessibility", helperText: "Required for injecting shortcuts to switch spaces, and reading active window information.") {
                         HStack {
                             if permissionManager.isAccessibilityGranted {
-                                Text("Granted")
+                                Image(systemName: "checkmark.circle.fill")
                                     .foregroundColor(.green)
                             } else {
-                                Text("Not Granted")
+                                Image(systemName: "xmark.circle.fill")
                                     .foregroundColor(.red)
                             }
                             
@@ -28,10 +28,10 @@ struct PermissionsSettingsView: View {
                     SettingsRow("Automation", helperText: "Required for using Mission Control via AppleScript (System Events) to switch spaces when the fast-switch method falls back.") {
                         HStack {
                             if permissionManager.isAutomationGranted {
-                                Text("Granted")
+                                Image(systemName: "checkmark.circle.fill")
                                     .foregroundColor(.green)
                             } else {
-                                Text("Not Granted")
+                                Image(systemName: "xmark.circle.fill")
                                     .foregroundColor(.red)
                             }
                             
