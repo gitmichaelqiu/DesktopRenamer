@@ -448,7 +448,7 @@ struct PermissionsPage: View {
                     permissionManager.requestAccessibilityPermission()
                 }) {
                     HStack {
-                        Image(systemName: permissionManager.isAccessibilityGranted ? "checkmark.circle.fill" : "hand.raised.fill")
+                        Image(systemName: permissionManager.isAccessibilityGranted ? "checkmark.circle.fill" : "xmark.circle.fill")
                             .foregroundColor(permissionManager.isAccessibilityGranted ? .green : .white)
                         Text("Accessibility")
                             .fontWeight(.semibold)
@@ -456,7 +456,7 @@ struct PermissionsPage: View {
                     .foregroundColor(.white)
                     .padding(.vertical, 10)
                     .padding(.horizontal, 20)
-                    .background(permissionManager.isAccessibilityGranted ? Color.secondary.opacity(0.5) : Color.blue)
+                    .background(permissionManager.isAccessibilityGranted ? Color.secondary.opacity(0.5) : Color.red)
                     .cornerRadius(8)
                 }
                 .buttonStyle(PlainButtonStyle())
@@ -466,7 +466,7 @@ struct PermissionsPage: View {
                     permissionManager.requestAutomationPermission()
                 }) {
                     HStack {
-                        Image(systemName: permissionManager.isAutomationGranted ? "checkmark.circle.fill" : "applescript.fill")
+                        Image(systemName: permissionManager.isAutomationGranted ? "checkmark.circle.fill" : "xmark.circle.fill")
                             .foregroundColor(permissionManager.isAutomationGranted ? .green : .white)
                         Text("Automation")
                             .fontWeight(.semibold)
@@ -474,7 +474,7 @@ struct PermissionsPage: View {
                     .foregroundColor(.white)
                     .padding(.vertical, 10)
                     .padding(.horizontal, 20)
-                    .background(permissionManager.isAutomationGranted ? Color.secondary.opacity(0.5) : Color.blue)
+                    .background(permissionManager.isAutomationGranted ? Color.secondary.opacity(0.5) : Color.red)
                     .cornerRadius(8)
                 }
                 .buttonStyle(PlainButtonStyle())
