@@ -81,12 +81,8 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             self.setupHotkeyBindings()
         }
 
-        if UpdateManager.isAutoCheckEnabled {
-            DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
-                Task {
-                    await UpdateManager.shared.checkForUpdate(from: nil, suppressUpToDateAlert: true)
-                }
-            }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
+            _ = UpdateManager.shared
         }
     }
     
