@@ -557,7 +557,7 @@ struct GeneralSettingsView: View {
 
                     SettingsRow("Review Splash", helperText: "View the welcome screen again.") {
                         Button("Review") {
-                            AppDelegate.shared.showSplashScreen()
+                            AppDelegate.shared.showSplashScreen(on: NSApp.suitableSheetWindow)
                         }
                     }
 
