@@ -123,7 +123,7 @@ class HotkeyManager: ObservableObject {
             if moveWindowNumberShortcut.modifiers.contains(.option) { parts.append("⌥") }
             if moveWindowNumberShortcut.modifiers.contains(.control) { parts.append("^") }
             if moveWindowNumberShortcut.modifiers.contains(.shift) { parts.append("⇧") }
-            parts.append(" + Number")
+            parts.append(NSLocalizedString(" + Number", comment: ""))
             return parts.joined()
         }
     }
