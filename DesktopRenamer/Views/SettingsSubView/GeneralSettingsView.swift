@@ -422,7 +422,7 @@ struct GeneralSettingsView: View {
     @StateObject private var apiTester = APITester()
 
     @State private var launchAtLogin: Bool = false
-    @State private var autoCheckUpdate: Bool = UpdateManager.isAutoCheckEnabled
+    @State private var autoCheckUpdate: Bool = UpdateManager.shared.updaterController.updater.automaticallyChecksForUpdates
     @State private var isResetting: Bool = false
     @State private var isAPIEnabled: Bool = SpaceManager.isAPIEnabled
     @State private var isStatusBarHidden: Bool = StatusBarController.isStatusBarHidden
@@ -471,7 +471,7 @@ struct GeneralSettingsView: View {
                     SettingsRow("Settings.General.Updates.AutoCheckUpdate") {
                         Toggle("", isOn: $autoCheckUpdate).labelsHidden().toggleStyle(.switch)
                             .onChange(of: autoCheckUpdate) { value in
-                                UpdateManager.isAutoCheckEnabled = value
+                                UpdateManager.shared.updaterController.updater.automaticallyChecksForUpdates = value
                             }
                     }
                     Divider()
@@ -722,9 +722,7 @@ struct GeneralSettingsView: View {
     }
 
     private func checkForUpdate() {
-        Task {
-            await UpdateManager.shared.checkForUpdate(from: nil, suppressUpToDateAlert: false)
-        }
+        UpdateManager.shared.updaterController.checkForUpdates(nil)
     }
 
     private func resetNames() {

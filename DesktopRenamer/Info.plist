@@ -8,5 +8,9 @@
 	<string>DesktopRenamer.sdef</string>
 	<key>LSUIElement</key>
 	<true/>
+	<key>SUFeedURL</key>
+	<string>https://raw.githubusercontent.com/gitmichaelqiu/DesktopRenamer/main/appcast.xml</string>
+	<key>SUPublicEDKey</key>
+	<string>e9YKamydRddgnYK6Kq41W0vPbwI4F9XJAhks/9rzT0w=</string>
 </dict>
 </plist>
