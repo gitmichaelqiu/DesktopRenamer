@@ -1291,7 +1291,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "DesktopRenamer 允许您为 macOS 工作空间设置自定义名称。"
+            "value" : "DesktopRenamer 允许你为 macOS 工作空间设置自定义名称。"
           }
         }
       }
@@ -1916,7 +1916,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "您正在使用最新版本 (%@)。"
+            "value" : "你正在使用最新版本 (%@)。"
           }
         }
       }
@@ -2136,7 +2136,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "您的桌面空间将显示在此处"
+            "value" : "你的桌面空间将显示在此处"
           }
         }
       }
