@@ -114,7 +114,6 @@ struct SwitchSettingsView: View {
                         }
                     }
                 }
-                .padding(.top, 8)
                 
                 // Trackpad Gesture Settings
                 SettingsSection("Trackpad Switch Gesture Override") {
