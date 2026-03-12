@@ -149,7 +149,7 @@ class StatusBarController: NSObject {
         let currentDisplaySpaces = spaceManager.currentDisplaySpaces
         
         if !currentDisplaySpaces.isEmpty {
-            let item = NSMenuItem(title: "Switch to... (⌥ for more)", action: nil, keyEquivalent: "")
+            let item = NSMenuItem(title: "Switch to... (press ⌥ for more)", action: nil, keyEquivalent: "")
             menu.addItem(item)
 
             // Alternative menu items
