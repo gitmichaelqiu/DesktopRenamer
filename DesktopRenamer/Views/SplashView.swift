@@ -286,15 +286,28 @@ struct RenamePage: View {
 }
 
 struct MissionControlPage: View {
+    @AppStorage("kShowPreviewLabels") private var showPreviewLabels = true
+    @AppStorage("kShowActiveLabels") private var showActiveLabels = true
+
     var body: some View {
-        DoubleVideoFeaturePage(
-            title: "Crystal Clear Labels",
-            subtitle: "See large, aesthetic name labels when you enter Mission Control, and discreet active labels when you switch spaces.",
-            videoName1: "MissionControl",
-            videoName2: "ActiveLabel",
-            label1: "Mission Control",
-            label2: "Active Label"
-        )
+        VStack(spacing: 10) {
+            DoubleVideoFeaturePage(
+                title: "Crystal Clear Labels",
+                subtitle: "See large, aesthetic name labels when you enter Mission Control, and discreet active labels when you switch spaces.",
+                videoName1: "MissionControl",
+                videoName2: "ActiveLabel",
+                label1: "Mission Control",
+                label2: "Active Label"
+            )
+            
+            HStack(spacing: 40) {
+                Toggle("Show preview labels", isOn: $showPreviewLabels)
+                    .toggleStyle(.switch)
+                Toggle("Show active space labels", isOn: $showActiveLabels)
+                    .toggleStyle(.switch)
+            }
+            .padding(.bottom, 20)
+        }
     }
 }
 
@@ -312,12 +325,20 @@ struct MenuBarSwitchPage: View {
 }
 
 struct FastSwitchingPage: View {
+    @AppStorage("GestureManager.Enabled") private var gestureEnabled = false
+
     var body: some View {
-        SingleVideoFeaturePage(
-            title: "Faster Switching Override",
-            subtitle: "Bypass native macOS animation lag. Enable trackpad overrides or hotkeys for instant, zero-delay switching.",
-            videoName: "SwitchOverride"
-        )
+        VStack(spacing: 10) {
+            SingleVideoFeaturePage(
+                title: "Faster Switching Override",
+                subtitle: "Bypass native macOS animation lag. Enable trackpad overrides or hotkeys for instant, zero-delay switching.",
+                videoName: "SwitchOverride"
+            )
+            
+            Toggle("Enable switch gesture override", isOn: $gestureEnabled)
+                .toggleStyle(.switch)
+                .padding(.bottom, 20)
+        }
     }
 }
 

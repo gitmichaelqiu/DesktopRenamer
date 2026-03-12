@@ -127,12 +127,23 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         }
         
         let splashView = SplashView { [weak self] in
-            UserDefaults.standard.set(true, forKey: "hasSeenSplashScreen")
-            if let parent = parentWindow, let sheet = self?.splashWindowController?.window {
-                parent.endSheet(sheet)
-            } else {
-                self?.splashWindowController?.close()
-                self?.splashWindowController = nil
+            Task { @MainActor in
+                UserDefaults.standard.set(true, forKey: "hasSeenSplashScreen")
+                
+                if let gestureManager = self?.gestureManager {
+                    gestureManager.isEnabled = UserDefaults.standard.bool(forKey: "GestureManager.Enabled")
+                }
+                if let labelManager = self?.statusBarController?.labelManager {
+                    labelManager.showPreviewLabels = UserDefaults.standard.object(forKey: "kShowPreviewLabels") == nil ? true : UserDefaults.standard.bool(forKey: "kShowPreviewLabels")
+                    labelManager.showActiveLabels = UserDefaults.standard.object(forKey: "kShowActiveLabels") == nil ? true : UserDefaults.standard.bool(forKey: "kShowActiveLabels")
+                }
+                
+                if let parent = parentWindow, let sheet = self?.splashWindowController?.window {
+                    parent.endSheet(sheet)
+                } else {
+                    self?.splashWindowController?.close()
+                    self?.splashWindowController = nil
+                }
             }
         }
         
