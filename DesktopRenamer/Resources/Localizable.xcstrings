@@ -192,7 +192,14 @@
       }
     },
     "Are you a power user? Integrate directly with Raycast to manage and switch spaces elegantly via your favorite launcher." : {
-
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "是个高级用户？在 Raycast 内直接控制你的桌面。"
+          }
+        }
+      }
     },
     "Are you sure? This will delete all your space names and settings. The app will quit immediately." : {
       "localizations" : {
@@ -225,7 +232,14 @@
       }
     },
     "Back" : {
-
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "后退"
+          }
+        }
+      }
     },
     "Bug Report Log Collection" : {
       "localizations" : {
@@ -298,7 +312,14 @@
       }
     },
     "Check out these other productivity tools we've built." : {
-
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "看看我们所开发的其他效率工具。"
+          }
+        }
+      }
     },
     "Choose how the app determines if a space is a Desktop or a Fullscreen App.\n\nAutomatic: No extra actions required.\n\nMetric-based: Based on the thresold of a metric. May not work for multiple displays.\n\nManual: All spaces that are not added will be treated as fullscreen." : {
       "localizations" : {
@@ -370,10 +391,24 @@
       "shouldTranslate" : false
     },
     "DesktopRenamer requires Accessibility and Automation permissions for hotkeys and trackpad overrides to function correctly.\n\nPlease enable them in System Settings → Privacy & Security." : {
-
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "DesktopRenamer 需要辅助和自动化权限以设置快捷键和检测触控板滑动。\n\n请在系统设置 → 隐私&安全中启用。"
+          }
+        }
+      }
     },
     "Discover More Apps" : {
-
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "更多 App"
+          }
+        }
+      }
     },
     "Enable Labels" : {
       "localizations" : {
@@ -482,7 +517,14 @@
       }
     },
     "Get Started" : {
-
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "开始使用"
+          }
+        }
+      }
     },
     "Grant" : {
       "localizations" : {
@@ -490,17 +532,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "授权"
-          }
-        }
-      }
-    },
-    "Granted" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "已授权"
           }
         }
       }
@@ -536,21 +567,11 @@
       }
     },
     "If enabled, the label stays on the desktop instead of hiding.\n\nIf disabled, the label will only be visible in Mission Control.\n\nTip: You can drag the window to the screen edge to shrink it into a 'Picture-in-Picture' mode." : {
-
-    },
-    "If enabled, the label stays on the desktop instead of hiding.\n\nTip: You can drag the window to the screen edge to shrink it into a 'Picture-in-Picture' mode." : {
-      "extractionState" : "stale",
       "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "If enabled, the label stays on the desktop instead of hiding.\n\nTip: You can drag the window to the screen edge to shrink it."
-          }
-        },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "如果启用，标签将会在桌面可见区域显示。\n\n提示：你可以将标签拖至桌面边缘以最小化。"
+            "value" : "如果启用，标签将会在桌面可见区域显示。\n\n如果禁用，标签会在调度中心的角落显示。\n\n提示：你可以将标签拖至桌面边缘以最小化。"
           }
         }
       }
@@ -576,7 +597,14 @@
       }
     },
     "Install Raycast Extension" : {
-
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "安装 Raycast 拓展"
+          }
+        }
+      }
     },
     "Keep visible on desktop" : {
       "localizations" : {
@@ -764,16 +792,44 @@
       }
     },
     "Move window to desktop number" : {
-
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "将窗口移至桌面n"
+          }
+        }
+      }
     },
     "Move window to next desktop" : {
-
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "将窗口移至下个桌面"
+          }
+        }
+      }
     },
     "Move window to previous desktop" : {
-
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "将窗口移至上个桌面"
+          }
+        }
+      }
     },
     "Next" : {
-
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "继续"
+          }
+        }
+      }
     },
     "No editable spaces (fullscreen only)" : {
       "shouldTranslate" : false
@@ -818,28 +874,6 @@
         }
       }
     },
-    "Not Granted" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "未授权"
-          }
-        }
-      }
-    },
-    "Open Settings" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "打开设置"
-          }
-        }
-      }
-    },
     "Permissions" : {
       "localizations" : {
         "zh-Hans" : {
@@ -861,7 +895,14 @@
       }
     },
     "Press modifiers and a number to set the shortcut." : {
-
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "按下修饰键及一个数字键来设置该快捷键。"
+          }
+        }
+      }
     },
     "Preview Labels" : {
       "localizations" : {
@@ -874,7 +915,14 @@
       }
     },
     "Raycast Integration" : {
-
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Raycast 集成"
+          }
+        }
+      }
     },
     "Recorded: %lld" : {
       "localizations" : {
@@ -955,7 +1003,14 @@
       }
     },
     "Require Permissions" : {
-
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "需要权限"
+          }
+        }
+      }
     },
     "Required for injecting shortcuts to switch spaces, and reading active window information." : {
       "localizations" : {
@@ -1028,10 +1083,24 @@
       }
     },
     "Review" : {
-
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "浏览"
+          }
+        }
+      }
     },
     "Review Splash" : {
-
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "浏览介绍"
+          }
+        }
+      }
     },
     "Save" : {
       "localizations" : {
@@ -1064,7 +1133,14 @@
       }
     },
     "Settings" : {
-
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "设置"
+          }
+        }
+      }
     },
     "Settings.About" : {
       "extractionState" : "manual",
@@ -2200,30 +2276,22 @@
         }
       }
     },
-    "Switch to left space" : {
-      "extractionState" : "stale",
+    "Switch to next space" : {
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "切换至左桌面"
+            "value" : "切换至下个桌面"
           }
         }
       }
     },
-    "Switch to next space" : {
-
-    },
     "Switch to previous space" : {
-
-    },
-    "Switch to right space" : {
-      "extractionState" : "stale",
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "切换至右桌面"
+            "value" : "切换至上个桌面"
           }
         }
       }
@@ -2239,7 +2307,14 @@
       }
     },
     "Take back control of your macOS spaces." : {
-
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "优雅的使用mac桌面。"
+          }
+        }
+      }
     },
     "Thank You!" : {
       "localizations" : {
@@ -2379,10 +2454,24 @@
       }
     },
     "View the welcome screen again." : {
-
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "重新观看欢迎界面。"
+          }
+        }
+      }
     },
     "Welcome to\nDesktopRenamer" : {
-
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "欢迎使用\nDesktopRenamer"
+          }
+        }
+      }
     },
     "Window size" : {
       "localizations" : {
