@@ -224,10 +224,21 @@ struct DoubleVideoFeaturePage: View {
                         .font(.subheadline)
                         .fontWeight(.medium)
                         .foregroundColor(.secondary)
-                    AutoPlayingVideoView(videoName: videoName2)
-                        .frame(maxWidth: .infinity, maxHeight: .infinity)
-                        .cornerRadius(10)
-                        .shadow(color: Color.black.opacity(0.15), radius: 6, x: 0, y: 3)
+                    
+                    GeometryReader { geo in
+                        if videoName2 == "ActiveLabel" {
+                            let targetWidth = max(geo.size.width, geo.size.height * (1736.0 / 1080.0))
+                            AutoPlayingVideoView(videoName: videoName2)
+                                .frame(width: targetWidth, height: geo.size.height)
+                                .position(x: geo.size.width - targetWidth / 2, y: geo.size.height / 2)
+                        } else {
+                            AutoPlayingVideoView(videoName: videoName2)
+                                .frame(width: geo.size.width, height: geo.size.height)
+                        }
+                    }
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .clipShape(RoundedRectangle(cornerRadius: 10))
+                    .shadow(color: Color.black.opacity(0.15), radius: 6, x: 0, y: 3)
                 }
             }
             .padding(.horizontal, 20)
