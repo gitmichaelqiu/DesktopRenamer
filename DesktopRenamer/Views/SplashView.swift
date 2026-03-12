@@ -6,6 +6,7 @@ struct SplashView: View {
     var onClose: () -> Void
     
     @State private var currentPage = 0
+    @State private var movingForward = true
     private let totalPages = 8
 
     var body: some View {
@@ -60,6 +61,7 @@ struct SplashView: View {
                 // Back Button
                 if currentPage > 0 {
                     Button("Back") {
+                        movingForward = false
                         withAnimation(.easeInOut(duration: 0.3)) {
                             currentPage -= 1
                         }
@@ -74,6 +76,7 @@ struct SplashView: View {
                 // Next / Get Started Button
                 Button(action: {
                     if currentPage < totalPages - 1 {
+                        movingForward = true
                         withAnimation(.easeInOut(duration: 0.3)) {
                             currentPage += 1
                         }
@@ -107,10 +110,17 @@ struct SplashView: View {
     }
     
     private var pageTransition: AnyTransition {
-        .asymmetric(
-            insertion: .move(edge: .trailing).combined(with: .opacity),
-            removal: .move(edge: .leading).combined(with: .opacity)
-        )
+        if movingForward {
+            return .asymmetric(
+                insertion: .move(edge: .trailing).combined(with: .opacity),
+                removal: .move(edge: .leading).combined(with: .opacity)
+            )
+        } else {
+            return .asymmetric(
+                insertion: .move(edge: .leading).combined(with: .opacity),
+                removal: .move(edge: .trailing).combined(with: .opacity)
+            )
+        }
     }
 }
 
@@ -121,6 +131,7 @@ struct AutoPlayingVideoView: NSViewRepresentable {
     func makeNSView(context: Context) -> AVPlayerView {
         let playerView = AVPlayerView()
         playerView.controlsStyle = .none
+        playerView.videoGravity = .resizeAspectFill
         
         // Attempt to find the video file in the bundle
         if let url = Bundle.main.url(forResource: videoName, withExtension: "mp4") {
@@ -373,6 +384,8 @@ struct RaycastFeaturePage: View {
 }
 
 struct PermissionsPage: View {
+    @StateObject private var permissionManager = PermissionManager.shared
+    
     var body: some View {
         VStack(spacing: 30) {
             ZStack {
@@ -395,6 +408,44 @@ struct PermissionsPage: View {
                     .multilineTextAlignment(.center)
                     .lineSpacing(6)
                     .padding(.horizontal, 40)
+            }
+            
+            HStack(spacing: 20) {
+                // Accessibility Button
+                Button(action: {
+                    permissionManager.requestAccessibilityPermission()
+                }) {
+                    HStack {
+                        Image(systemName: permissionManager.isAccessibilityGranted ? "checkmark.circle.fill" : "hand.raised.fill")
+                            .foregroundColor(permissionManager.isAccessibilityGranted ? .green : .white)
+                        Text("Accessibility")
+                            .fontWeight(.semibold)
+                    }
+                    .foregroundColor(.white)
+                    .padding(.vertical, 10)
+                    .padding(.horizontal, 20)
+                    .background(permissionManager.isAccessibilityGranted ? Color.secondary.opacity(0.5) : Color.blue)
+                    .cornerRadius(8)
+                }
+                .buttonStyle(PlainButtonStyle())
+                
+                // Automation Button
+                Button(action: {
+                    permissionManager.requestAutomationPermission()
+                }) {
+                    HStack {
+                        Image(systemName: permissionManager.isAutomationGranted ? "checkmark.circle.fill" : "applescript.fill")
+                            .foregroundColor(permissionManager.isAutomationGranted ? .green : .white)
+                        Text("Automation")
+                            .fontWeight(.semibold)
+                    }
+                    .foregroundColor(.white)
+                    .padding(.vertical, 10)
+                    .padding(.horizontal, 20)
+                    .background(permissionManager.isAutomationGranted ? Color.secondary.opacity(0.5) : Color.blue)
+                    .cornerRadius(8)
+                }
+                .buttonStyle(PlainButtonStyle())
             }
         }
         .padding()
