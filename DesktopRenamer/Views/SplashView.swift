@@ -403,7 +403,7 @@ struct RaycastFeaturePage: View {
                 .padding(.vertical, 12)
                 .padding(.horizontal, 24)
                 .background(
-                    LinearGradient(gradient: Gradient(colors: [Color.purple, Color.blue]), startPoint: .leading, endPoint: .trailing)
+                    Color.red
                 )
                 .cornerRadius(10)
                 .shadow(color: Color.black.opacity(0.15), radius: 5, x: 0, y: 2)
