@@ -412,7 +412,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "清晰桌面标签"
+            "value" : "简洁的桌面标签"
           }
         }
       }
@@ -445,7 +445,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "DesktopRenamer 需要辅助功能和自动化权限以设置快捷键和检测触控板滑动。\n\n请在系统设置 → 隐私&安全中启用。"
+            "value" : "DesktopRenamer 需要辅助功能和自动化权限以设置快捷键和检测触控板滑动。\n\n请在系统设置 → 隐私 & 安全中启用。"
           }
         }
       }
@@ -1060,7 +1060,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "在菜单啦重命名"
+            "value" : "在菜单栏重命名"
           }
         }
       }
