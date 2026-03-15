@@ -1,4 +1,6 @@
 <!-- v1.6.1 -->
+<!-- Remember to put Move Window demo here -->
+<!-- And the promotion video -->
 
 <h1 align="center">
   <img src="./DesktopRenamer/Resources/DesktopRenamerIcon_Default.png" width="25%" alt=""/>  
@@ -86,6 +88,15 @@ You are welcome to create issues/suggestions in [GitHub Issues](https://github.c
 For the issue that all of the spaces are marked as "Fullscreen", please check the [Troubleshoot](./Troubleshoot.md).
 
 If you have encountered any other bugs, please generate a bug report in DesktopRenamer Settings → General. This will help a lot for analyzing the bugs!
+
+## 🙏 Acknowlegements
+
+This app uses the following packages:
+
+- [HotKey by @soffes](https://github.com/soffes/HotKey)
+- [Sparkle by @sparkle-project](https://github.com/sparkle-project/Sparkle)
+
+Many thanks to all of these wonderful developers!
 
 ## ⭐ Support This Project
 
