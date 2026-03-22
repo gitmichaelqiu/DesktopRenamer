@@ -374,6 +374,18 @@ class StatusBarController: NSObject {
     }
 }
 
+extension StatusBarController: NSMenuItemValidation {
+    func validateMenuItem(_ menuItem: NSMenuItem) -> Bool {
+        if menuItem.action == #selector(moveWindowToSpace(_:)) {
+            guard let spaceID = menuItem.representedObject as? String else { return true }
+            if let space = spaceManager.spaceNameDict.first(where: { $0.id == spaceID }) {
+                return !space.isFullscreen
+            }
+        }
+        return true
+    }
+}
+
 extension StatusBarController: NSWindowDelegate {
     func windowWillClose(_ notification: Notification) {
         if notification.object as? NSWindow == settingsWindowController?.window {
