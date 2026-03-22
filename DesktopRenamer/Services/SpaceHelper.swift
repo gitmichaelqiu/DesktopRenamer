@@ -28,7 +28,7 @@ class SpaceHelper {
     private static var isSwitching = false
 
     // The meat of space switching logic
-    static func switchToSpace(_ spaceID: String) {
+    static func switchToSpace(_ spaceID: String, forceMissionControl: Bool = false) {
         guard !isSwitching else { return }
         isSwitching = true
 
@@ -47,17 +47,34 @@ class SpaceHelper {
         var targetGlobalNum: Int? = nil
         var shouldUseShortcut = true
         var targetIsFullscreen = false
+        var currentIsFullscreen = false
+
+        if let state = getSystemState() {
+            if let targetSpace = state.spaces.first(where: { $0.id == spaceID }) {
+                targetNum = targetSpace.num
+                targetGlobalNum = targetSpace.globalShortcutNum
+                targetIsFullscreen = targetSpace.isFullscreen
+            }
+            
+            if let currentSpace = state.spaces.first(where: { $0.id == state.currentUUID }) {
+                currentIsFullscreen = currentSpace.isFullscreen
+            }
+
+            // If we are already on the target space, stop.
+            if state.currentUUID == spaceID { return }
+        }
+        
+        // Force Mission Control Automation for Fullscreen Transitions
+        if forceMissionControl && (targetIsFullscreen || currentIsFullscreen) {
+            if let num = targetNum {
+                switchViaMissionControl(to: num)
+                return
+            }
+        }
 
         if let state = getSystemState(),
             let targetSpace = state.spaces.first(where: { $0.id == spaceID })
         {
-            targetNum = targetSpace.num
-            targetGlobalNum = targetSpace.globalShortcutNum
-            targetIsFullscreen = targetSpace.isFullscreen
-
-            // If we are already on the target space, stop.
-            if state.currentUUID == spaceID { return }
-
             // Note: Native shortcuts (Ctrl+1, Ctrl+2) only map to Desktops.
             if targetSpace.isFullscreen {
                 shouldUseShortcut = false

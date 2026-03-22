@@ -201,7 +201,9 @@ class SettingsHostingController: NSHostingController<AnyView> {
 
         let rootView = SettingsView(spaceManager: spaceManager, labelManager: labelManager)
             .environmentObject(hotkeyManager)
-            .environmentObject(gestureManager)  // Inject GestureManager
+            .environmentObject(gestureManager)
+            .environmentObject(spaceManager)
+            .environmentObject(labelManager)
 
         super.init(rootView: AnyView(rootView))
     }
