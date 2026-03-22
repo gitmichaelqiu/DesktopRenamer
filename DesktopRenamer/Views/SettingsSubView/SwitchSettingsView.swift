@@ -3,6 +3,7 @@ import SwiftUI
 struct SwitchSettingsView: View {
     @EnvironmentObject var hotkeyManager: HotkeyManager
     @EnvironmentObject var gestureManager: GestureManager
+    @EnvironmentObject var spaceManager: SpaceManager
     @StateObject private var permissionManager = PermissionManager.shared
     
     var body: some View {
@@ -161,6 +162,22 @@ struct SwitchSettingsView: View {
                                 "Controls how much distance the fingers have to move before switching the desktop.",
                             valueString: { String(format: "%.0f%%", $0 * 100) }
                         )
+                    }
+                }
+                
+                // Advanced Settings
+                SettingsSection("Advanced") {
+                    SettingsRow(
+                        "Force Mission Control for fullscreen apps",
+                        helperText:
+                            "When enabled, the app will always use Mission Control Automation for transitions to or from fullscreen apps. This is slower but more reliable on some systems.",
+                        warningText: (permissionManager.isAccessibilityGranted
+                                      && permissionManager.isAutomationGranted)
+                        ? nil : "Requires Accessibility and Automation permissions."
+                    ) {
+                        Toggle("", isOn: $spaceManager.forceMissionControlForFullscreen)
+                            .toggleStyle(.switch)
+                            .labelsHidden()
                     }
                 }
                 

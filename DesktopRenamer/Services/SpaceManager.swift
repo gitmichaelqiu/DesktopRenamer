@@ -43,6 +43,7 @@ class SpaceManager: ObservableObject {
     static private let isAPIEnabledKey = "com.michaelqiu.desktoprenamer.isapienabled"
     static private let detectionMethodKey = "com.michaelqiu.desktoprenamer.detectionMethod"
     static private let isManualSpacesEnabledKey = "com.michaelqiu.desktoprenamer.ismanualspacesenabled"
+    static private let forceMissionControlForFullscreenKey = "com.michaelqiu.desktoprenamer.forceMissionControlForFullscreen"
     
     @Published private(set) var currentSpaceUUID: String = ""
     @Published private(set) var currentRawSpaceUUID: String = ""
@@ -80,6 +81,12 @@ class SpaceManager: ObservableObject {
     
     var isManualMode: Bool { detectionMethod == .manual }
     
+    @Published var forceMissionControlForFullscreen: Bool {
+        didSet {
+            UserDefaults.standard.set(forceMissionControlForFullscreen, forKey: SpaceManager.forceMissionControlForFullscreenKey)
+        }
+    }
+    
     static var isAPIEnabled: Bool {
         get { UserDefaults.standard.object(forKey: isAPIEnabledKey) == nil ? true : UserDefaults.standard.bool(forKey: isAPIEnabledKey) }
         set { UserDefaults.standard.set(newValue, forKey: isAPIEnabledKey) }
@@ -98,6 +105,8 @@ class SpaceManager: ObservableObject {
         } else {
             self.detectionMethod = .automatic
         }
+        
+        self.forceMissionControlForFullscreen = UserDefaults.standard.bool(forKey: SpaceManager.forceMissionControlForFullscreenKey)
         
         loadSavedData()
         self.spaceAPI = SpaceAPI(spaceManager: self)
@@ -533,7 +542,7 @@ class SpaceManager: ObservableObject {
     // Moving around spaces
     
     func switchToSpace(_ space: DesktopSpace) {
-        SpaceHelper.switchToSpace(space.id)
+        SpaceHelper.switchToSpace(space.id, forceMissionControl: forceMissionControlForFullscreen)
     }
     
     func switchToPreviousSpace(onDisplayID displayID: String? = nil) {
