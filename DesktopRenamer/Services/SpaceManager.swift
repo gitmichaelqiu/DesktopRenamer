@@ -645,6 +645,9 @@ class SpaceManager: ObservableObject {
     }
     
     func moveActiveWindowToSpace(id: String) {
+        if let space = spaceNameDict.first(where: { $0.id == id }), space.isFullscreen {
+            return
+        }
         SpaceHelper.dragActiveWindow(to: id)
     }
 
