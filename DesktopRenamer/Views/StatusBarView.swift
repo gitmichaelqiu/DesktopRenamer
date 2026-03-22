@@ -246,6 +246,11 @@ class StatusBarController: NSObject {
     
     @objc func moveWindowToSpace(_ sender: NSMenuItem) {
         guard let spaceID = sender.representedObject as? String else { return }
+        // Double check we are not in fullscreen
+        if let current = spaceManager.spaceNameDict.first(where: { $0.id == spaceManager.currentSpaceUUID }),
+           current.isFullscreen {
+            return
+        }
         spaceManager.moveActiveWindowToSpace(id: spaceID)
     }
     
@@ -377,6 +382,12 @@ class StatusBarController: NSObject {
 extension StatusBarController: NSMenuItemValidation {
     func validateMenuItem(_ menuItem: NSMenuItem) -> Bool {
         if menuItem.action == #selector(moveWindowToSpace(_:)) {
+            // Check if current space is fullscreen
+            if let current = spaceManager.spaceNameDict.first(where: { $0.id == spaceManager.currentSpaceUUID }),
+               current.isFullscreen {
+                return false
+            }
+            
             guard let spaceID = menuItem.representedObject as? String else { return true }
             if let space = spaceManager.spaceNameDict.first(where: { $0.id == spaceID }) {
                 return !space.isFullscreen
