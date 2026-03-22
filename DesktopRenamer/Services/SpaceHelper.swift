@@ -2,7 +2,6 @@ import AppKit
 import CoreGraphics
 import Foundation
 
-// Private Apple APIs (Use with caution!)
 @_silgen_name("_CGSDefaultConnection") private func _CGSDefaultConnection() -> Int32
 @_silgen_name("CGSCopyManagedDisplaySpaces") private func CGSCopyManagedDisplaySpaces(_ cid: Int32)
     -> CFArray?
@@ -160,13 +159,10 @@ class SpaceHelper {
         // 1. Get Active Window Frame & Position
         guard let frame = getActiveWindowFrame() else { return }
         
-        // 2. Calculate Grab Point (Top Left Edge - Window Frame)
-        // We target the very top edge to avoid clicking inside non-draggable content (like sidebars).
-        // x+15 / y+5 puts us just past the rounded corner start, but high enough to potentially 
-        // miss traffic light hitboxes or hit the window chrome safe zone.
-        let offsetX: CGFloat = 15
+        // 2. Calculate Grab Point (Between left edge and red close button)
+        let offsetX: CGFloat = 10
         let grabX = frame.origin.x + offsetX
-        let grabY = frame.origin.y + 5 // Very close to top edge
+        let grabY = frame.origin.y + 30
         let grabPoint = CGPoint(x: grabX, y: grabY)
         
         // 3. Save Current Mouse Position
