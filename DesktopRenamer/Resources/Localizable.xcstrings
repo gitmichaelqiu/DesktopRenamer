@@ -440,9 +440,6 @@
         }
       }
     },
-    "Debug - Grab Position" : {
-
-    },
     "Desktop" : {
       "shouldTranslate" : false
     },
