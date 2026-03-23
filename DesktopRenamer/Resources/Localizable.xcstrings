@@ -571,7 +571,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "For Mission Control for fullscreen switching"
+            "value" : "Force Mission Control for fullscreen switching"
           }
         },
         "zh-Hans" : {
