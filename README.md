@@ -67,6 +67,12 @@ To resolve this, go to System Settings → the bottom of Privacy & Security → 
 >
 > Thanks [@timttate](https://github.com/timttate) for finding this [thread](https://github.com/luanti-org/luanti/issues/12033) with the solution by [@animaux](https://github.com/animaux).
 
+You can also choose to download it from Homebrew:
+
+```bash
+brew install --cask --no-quarantine gitmichaelqiu/tap/desktoprenamer
+```
+
 ## 🛜 API
 
 This app provides an API to acquire space ID and names.
