@@ -154,12 +154,11 @@ struct SwitchSettingsView: View {
                         
                         SliderSettingsRow(
                             "Switch override threshold",
+                            helperText: "Controls how much distance the fingers have to move before switching the desktop.",
                             value: $gestureManager.swipeThreshold,
                             range: 0.05...0.50,
                             defaultValue: 0.10,
                             step: 0.05,
-                            helperText:
-                                "Controls how much distance the fingers have to move before switching the desktop.",
                             valueString: { String(format: "%.0f%%", $0 * 100) }
                         )
                     }
@@ -183,6 +182,7 @@ struct SwitchSettingsView: View {
                 SettingsSection(nil) {
                     SliderSettingsRow(
                         "Grab Offset X",
+                        helperText: "Adjust the horizontal position where the mouse grabs the window. Usually near the stoplight buttons.",
                         value: $spaceManager.grabOffsetX,
                         range: 0...100,
                         defaultValue: 6.0,
@@ -194,6 +194,7 @@ struct SwitchSettingsView: View {
                     
                     SliderSettingsRow(
                         "Grab Offset Y",
+                        helperText: "Adjust the vertical position where the mouse grabs the window. Usually at the center of the title bar.",
                         value: $spaceManager.grabOffsetY,
                         range: 0...100,
                         defaultValue: 27.0,
