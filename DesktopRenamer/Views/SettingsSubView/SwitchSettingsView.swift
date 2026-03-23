@@ -182,7 +182,7 @@ struct SwitchSettingsView: View {
                 SettingsSection(nil) {
                     SliderSettingsRow(
                         "Grab Offset X",
-                        helperText: "Adjust the horizontal position where the mouse grabs the window. Usually near the stoplight buttons.",
+                        helperText: "Adjust the position where the mouse grabs the window to move across spaces.",
                         value: $spaceManager.grabOffsetX,
                         range: 0...100,
                         defaultValue: 6.0,
@@ -194,7 +194,6 @@ struct SwitchSettingsView: View {
                     
                     SliderSettingsRow(
                         "Grab Offset Y",
-                        helperText: "Adjust the vertical position where the mouse grabs the window. Usually at the center of the title bar.",
                         value: $spaceManager.grabOffsetY,
                         range: 0...100,
                         defaultValue: 27.0,
