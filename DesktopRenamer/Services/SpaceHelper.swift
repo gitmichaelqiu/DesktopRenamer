@@ -177,9 +177,18 @@ class SpaceHelper {
         guard let frame = getActiveWindowFrame() else { return }
         
         // 2. Calculate Grab Point (Between left edge and red close button)
-        let offsetX: CGFloat = 10
-        let grabX = frame.origin.x + offsetX
-        let grabY = frame.origin.y + 30
+        let grabX: CGFloat
+        let grabY: CGFloat
+        
+        if let sm = AppDelegate.shared.spaceManager {
+            grabX = frame.origin.x + CGFloat(sm.grabOffsetX)
+            grabY = frame.origin.y + CGFloat(sm.grabOffsetY)
+        } else {
+            // Fallback to defaults
+            grabX = frame.origin.x + 13
+            grabY = frame.origin.y + 25
+        }
+        
         let grabPoint = CGPoint(x: grabX, y: grabY)
         
         // 3. Save Current Mouse Position

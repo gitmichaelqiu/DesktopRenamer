@@ -440,6 +440,9 @@
         }
       }
     },
+    "Debug - Grab Position" : {
+
+    },
     "Desktop" : {
       "shouldTranslate" : false
     },
@@ -591,6 +594,12 @@
           }
         }
       }
+    },
+    "Grab Offset X" : {
+
+    },
+    "Grab Offset Y" : {
+
     },
     "Grant" : {
       "localizations" : {

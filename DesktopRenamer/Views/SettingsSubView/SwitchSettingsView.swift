@@ -181,6 +181,29 @@ struct SwitchSettingsView: View {
                     }
                 }
                 
+                // Debug Settings
+                SettingsSection("Debug - Grab Position") {
+                    SliderSettingsRow(
+                        "Grab Offset X",
+                        value: $spaceManager.grabOffsetX,
+                        range: 0...100,
+                        defaultValue: 6.0,
+                        step: 1.0,
+                        valueString: { String(format: "%.0f px", $0) }
+                    )
+                    
+                    Divider()
+                    
+                    SliderSettingsRow(
+                        "Grab Offset Y",
+                        value: $spaceManager.grabOffsetY,
+                        range: 0...100,
+                        defaultValue: 27.0,
+                        step: 1.0,
+                        valueString: { String(format: "%.0f px", $0) }
+                    )
+                }
+                
                 Spacer()
             }
             .padding()
