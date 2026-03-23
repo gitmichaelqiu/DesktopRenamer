@@ -3,6 +3,7 @@ import SwiftUI
 struct SwitchSettingsView: View {
     @EnvironmentObject var hotkeyManager: HotkeyManager
     @EnvironmentObject var gestureManager: GestureManager
+    @EnvironmentObject var spaceManager: SpaceManager
     @StateObject private var permissionManager = PermissionManager.shared
     
     var body: some View {
@@ -153,15 +154,52 @@ struct SwitchSettingsView: View {
                         
                         SliderSettingsRow(
                             "Switch override threshold",
+                            helperText: "Controls how much distance the fingers have to move before switching the desktop.",
                             value: $gestureManager.swipeThreshold,
                             range: 0.05...0.50,
                             defaultValue: 0.10,
                             step: 0.05,
-                            helperText:
-                                "Controls how much distance the fingers have to move before switching the desktop.",
                             valueString: { String(format: "%.0f%%", $0 * 100) }
                         )
                     }
+                }
+                
+                // Advanced Settings
+                SettingsSection("Advanced") {
+                    SettingsRow(
+                        "Force Mission Control for fullscreen apps",
+                        helperText:
+                            "When enabled, the app will always use Mission Control Automation for transitions to or from fullscreen apps. This is slower but more reliable on some systems.",
+                        warningText: (permissionManager.isAccessibilityGranted
+                                      && permissionManager.isAutomationGranted)
+                        ? nil : "Requires Accessibility and Automation permissions."
+                    ) {
+                        Toggle("", isOn: $spaceManager.forceMissionControlForFullscreen)
+                            .toggleStyle(.switch)
+                            .labelsHidden()
+                    }
+                }
+                SettingsSection(nil) {
+                    SliderSettingsRow(
+                        "Grab Offset X",
+                        helperText: "Adjust the position where the mouse grabs the window to move across spaces.",
+                        value: $spaceManager.grabOffsetX,
+                        range: 0...100,
+                        defaultValue: 6.0,
+                        step: 1.0,
+                        valueString: { String(format: "%.0f px", $0) }
+                    )
+                    
+                    Divider()
+                    
+                    SliderSettingsRow(
+                        "Grab Offset Y",
+                        value: $spaceManager.grabOffsetY,
+                        range: 0...100,
+                        defaultValue: 27.0,
+                        step: 1.0,
+                        valueString: { String(format: "%.0f px", $0) }
+                    )
                 }
                 
                 Spacer()
