@@ -180,9 +180,7 @@ struct SwitchSettingsView: View {
                             .labelsHidden()
                     }
                 }
-                
-                // Debug Settings
-                SettingsSection("Debug - Grab Position") {
+                SettingsSection(nil) {
                     SliderSettingsRow(
                         "Grab Offset X",
                         value: $spaceManager.grabOffsetX,
