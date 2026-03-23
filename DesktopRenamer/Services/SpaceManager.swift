@@ -44,6 +44,8 @@ class SpaceManager: ObservableObject {
     static private let detectionMethodKey = "com.michaelqiu.desktoprenamer.detectionMethod"
     static private let isManualSpacesEnabledKey = "com.michaelqiu.desktoprenamer.ismanualspacesenabled"
     static private let forceMissionControlForFullscreenKey = "com.michaelqiu.desktoprenamer.forceMissionControlForFullscreen"
+    static private let grabOffsetXKey = "com.michaelqiu.desktoprenamer.grabOffsetX"
+    static private let grabOffsetYKey = "com.michaelqiu.desktoprenamer.grabOffsetY"
     
     @Published private(set) var currentSpaceUUID: String = ""
     @Published private(set) var currentRawSpaceUUID: String = ""
@@ -87,6 +89,18 @@ class SpaceManager: ObservableObject {
         }
     }
     
+    @Published var grabOffsetX: Double {
+        didSet {
+            UserDefaults.standard.set(grabOffsetX, forKey: SpaceManager.grabOffsetXKey)
+        }
+    }
+    
+    @Published var grabOffsetY: Double {
+        didSet {
+            UserDefaults.standard.set(grabOffsetY, forKey: SpaceManager.grabOffsetYKey)
+        }
+    }
+    
     static var isAPIEnabled: Bool {
         get { UserDefaults.standard.object(forKey: isAPIEnabledKey) == nil ? true : UserDefaults.standard.bool(forKey: isAPIEnabledKey) }
         set { UserDefaults.standard.set(newValue, forKey: isAPIEnabledKey) }
@@ -107,6 +121,9 @@ class SpaceManager: ObservableObject {
         }
         
         self.forceMissionControlForFullscreen = UserDefaults.standard.bool(forKey: SpaceManager.forceMissionControlForFullscreenKey)
+        
+        self.grabOffsetX = UserDefaults.standard.object(forKey: SpaceManager.grabOffsetXKey) == nil ? 13.0 : UserDefaults.standard.double(forKey: SpaceManager.grabOffsetXKey)
+        self.grabOffsetY = UserDefaults.standard.object(forKey: SpaceManager.grabOffsetYKey) == nil ? 25.0 : UserDefaults.standard.double(forKey: SpaceManager.grabOffsetYKey)
         
         loadSavedData()
         self.spaceAPI = SpaceAPI(spaceManager: self)
