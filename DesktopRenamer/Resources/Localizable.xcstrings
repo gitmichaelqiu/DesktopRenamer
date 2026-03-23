@@ -191,6 +191,9 @@
         }
       }
     },
+    "Adjust the position where the mouse grabs the window to move across spaces." : {
+
+    },
     "Adjust the threshold for metric-based detection." : {
       "localizations" : {
         "zh-Hans" : {
