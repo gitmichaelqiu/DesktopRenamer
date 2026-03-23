@@ -571,12 +571,12 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "For Mission Control for fullscreen switching"
+            "value" : "Force Mission Control for fullscreen switching"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "translated",
+            "state" : "needs_review",
             "value" : "强制使用调度中心以切换全屏 App"
           }
         }
