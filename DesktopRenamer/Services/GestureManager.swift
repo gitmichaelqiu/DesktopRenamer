@@ -3,11 +3,8 @@ import Combine
 import Foundation
 import IOKit
 
-// 1. Private MultitouchSupport Stuff (Magic spells for trackpad)
-
 private typealias MTDeviceRef = OpaquePointer
 
-// Helper structs to replace tuples for C-compatibility
 private struct MTPoint {
     var x: Float
     var y: Float

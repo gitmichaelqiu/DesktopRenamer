@@ -2,7 +2,6 @@ import AppKit
 import CoreGraphics
 import Foundation
 
-// Private Apple APIs (Use with caution!)
 @_silgen_name("_CGSDefaultConnection") private func _CGSDefaultConnection() -> Int32
 @_silgen_name("CGSCopyManagedDisplaySpaces") private func CGSCopyManagedDisplaySpaces(_ cid: Int32)
     -> CFArray?
@@ -29,7 +28,7 @@ class SpaceHelper {
     private static var isSwitching = false
 
     // The meat of space switching logic
-    static func switchToSpace(_ spaceID: String) {
+    static func switchToSpace(_ spaceID: String, forceMissionControl: Bool = false) {
         guard !isSwitching else { return }
         isSwitching = true
 
@@ -48,17 +47,34 @@ class SpaceHelper {
         var targetGlobalNum: Int? = nil
         var shouldUseShortcut = true
         var targetIsFullscreen = false
+        var currentIsFullscreen = false
+
+        if let state = getSystemState() {
+            if let targetSpace = state.spaces.first(where: { $0.id == spaceID }) {
+                targetNum = targetSpace.num
+                targetGlobalNum = targetSpace.globalShortcutNum
+                targetIsFullscreen = targetSpace.isFullscreen
+            }
+            
+            if let currentSpace = state.spaces.first(where: { $0.id == state.currentUUID }) {
+                currentIsFullscreen = currentSpace.isFullscreen
+            }
+
+            // If we are already on the target space, stop.
+            if state.currentUUID == spaceID { return }
+        }
+        
+        // Force Mission Control Automation for Fullscreen Transitions
+        if forceMissionControl && (targetIsFullscreen || currentIsFullscreen) {
+            if let num = targetNum {
+                switchViaMissionControl(to: num)
+                return
+            }
+        }
 
         if let state = getSystemState(),
             let targetSpace = state.spaces.first(where: { $0.id == spaceID })
         {
-            targetNum = targetSpace.num
-            targetGlobalNum = targetSpace.globalShortcutNum
-            targetIsFullscreen = targetSpace.isFullscreen
-
-            // If we are already on the target space, stop.
-            if state.currentUUID == spaceID { return }
-
             // Note: Native shortcuts (Ctrl+1, Ctrl+2) only map to Desktops.
             if targetSpace.isFullscreen {
                 shouldUseShortcut = false
@@ -160,13 +176,19 @@ class SpaceHelper {
         // 1. Get Active Window Frame & Position
         guard let frame = getActiveWindowFrame() else { return }
         
-        // 2. Calculate Grab Point (Top Left Edge - Window Frame)
-        // We target the very top edge to avoid clicking inside non-draggable content (like sidebars).
-        // x+15 / y+5 puts us just past the rounded corner start, but high enough to potentially 
-        // miss traffic light hitboxes or hit the window chrome safe zone.
-        let offsetX: CGFloat = 15
-        let grabX = frame.origin.x + offsetX
-        let grabY = frame.origin.y + 5 // Very close to top edge
+        // 2. Calculate Grab Point (Between left edge and red close button)
+        let grabX: CGFloat
+        let grabY: CGFloat
+        
+        if let sm = AppDelegate.shared.spaceManager {
+            grabX = frame.origin.x + CGFloat(sm.grabOffsetX)
+            grabY = frame.origin.y + CGFloat(sm.grabOffsetY)
+        } else {
+            // Fallback to defaults
+            grabX = frame.origin.x + 13
+            grabY = frame.origin.y + 25
+        }
+        
         let grabPoint = CGPoint(x: grabX, y: grabY)
         
         // 3. Save Current Mouse Position
