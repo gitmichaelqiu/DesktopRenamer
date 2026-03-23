@@ -192,7 +192,14 @@
       }
     },
     "Adjust the position where the mouse grabs the window to move across spaces." : {
-
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "调整鼠标抓窗口的位置，用于将窗口移动到不同桌面。"
+          }
+        }
+      }
     },
     "Adjust the threshold for metric-based detection." : {
       "localizations" : {
@@ -205,7 +212,14 @@
       }
     },
     "Advanced" : {
-
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "高级"
+          }
+        }
+      }
     },
     "Allow other apps to get space names." : {
       "localizations" : {
@@ -553,7 +567,20 @@
       }
     },
     "Force Mission Control for fullscreen apps" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "For Mission Control for fullscreen switching"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "强制使用调度中心以切换全屏 App"
+          }
+        }
+      }
     },
     "Fullscreen detection method" : {
       "localizations" : {
@@ -596,10 +623,24 @@
       }
     },
     "Grab Offset X" : {
-
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "抓取 X 坐标"
+          }
+        }
+      }
     },
     "Grab Offset Y" : {
-
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "抓取 Y 坐标"
+          }
+        }
+      }
     },
     "Grant" : {
       "localizations" : {
@@ -2645,7 +2686,14 @@
       }
     },
     "When enabled, the app will always use Mission Control Automation for transitions to or from fullscreen apps. This is slower but more reliable on some systems." : {
-
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "若启用，App 会自动使用调度中心来切换全屏 App。虽然速度上更慢，但是十分稳定。"
+          }
+        }
+      }
     },
     "When set to 3 fingers, you can still use 4 fingers to trigger native swipe." : {
       "localizations" : {
