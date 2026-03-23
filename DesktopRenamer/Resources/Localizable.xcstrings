@@ -576,7 +576,7 @@
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "needs_review",
+            "state" : "translated",
             "value" : "强制使用调度中心以切换全屏 App"
           }
         }
