@@ -514,6 +514,19 @@ class SpaceHelper {
         }
     }
 
+    private static func getAllDisplayUUIDs() -> [String] {
+        return NSScreen.screens.compactMap { screen -> String? in
+            guard let id = screen.deviceDescription[NSDeviceDescriptionKey("NSScreenNumber")] as? CGDirectDisplayID else { return nil }
+            guard let uuid = CGDisplayCreateUUIDFromDisplayID(id)?.takeRetainedValue() else { return nil }
+            return CFUUIDCreateString(nil, uuid) as String
+        }
+    }
+
+    private static func normalizeDisplayID(_ id: String, mainUUID: String?) -> String {
+        guard let main = mainUUID else { return id }
+        return id == "Main" ? main : id
+    }
+
     static func getSystemState() -> (
         spaces: [DesktopSpace], currentUUID: String, displayID: String
     )? {
@@ -521,47 +534,53 @@ class SpaceHelper {
         guard let displays = CGSCopyManagedDisplaySpaces(conn) as? [NSDictionary] else {
             return nil
         }
-        guard let activeDisplay = CGSCopyActiveMenuBarDisplayIdentifier(conn) as? String else {
+        guard let activeDisplayRaw = CGSCopyActiveMenuBarDisplayIdentifier(conn) as? String else {
             return nil
         }
 
+        let screenUUIDs = getAllDisplayUUIDs()
+        let mainScreenUUID = screenUUIDs.first
+        
+        let activeDisplay = normalizeDisplayID(activeDisplayRaw, mainUUID: mainScreenUUID)
+        
         var detectedSpaces: [DesktopSpace] = []
         var currentSpaceID = "FULLSCREEN"
 
-        let targetDisplayID =
-            displays.contains { ($0["Display Identifier"] as? String) == activeDisplay }
-            ? activeDisplay
-            : (displays.first { ($0["Display Identifier"] as? String) == "Main" }?[
-                "Display Identifier"] as? String ?? activeDisplay)
+        var targetDisplayID = activeDisplay // Default to active menu bar display
+        
+        // Find if target display is actually present in CGS displays (handling normalization)
+        let foundDisplay = displays.first { d in
+            let dID = d["Display Identifier"] as? String ?? ""
+            return normalizeDisplayID(dID, mainUUID: mainScreenUUID) == activeDisplay
+        }
+        
+        if foundDisplay == nil {
+            // If active display not found, fallback to Main
+            targetDisplayID = mainScreenUUID ?? activeDisplay
+        }
 
         var globalDesktopCounter = 0
 
         // SORT: Ensure displays are processed in the order macOS assigns shortcuts (Main then others).
-        // NSScreen.screens[0] is Main. The order typically matches the shortcut assignment.
-        let screenOrder = NSScreen.screens.compactMap { screen -> String? in
-            guard
-                let id = screen.deviceDescription[NSDeviceDescriptionKey("NSScreenNumber")]
-                    as? CGDirectDisplayID
-            else { return nil }
-            guard let uuid = CGDisplayCreateUUIDFromDisplayID(id)?.takeRetainedValue() else {
-                return nil
-            }
-            return CFUUIDCreateString(nil, uuid) as String
-        }
-
         let sortedDisplays = displays.sorted { d1, d2 in
-            guard let id1 = d1["Display Identifier"] as? String,
-                let id2 = d2["Display Identifier"] as? String
+            guard let id1raw = d1["Display Identifier"] as? String,
+                let id2raw = d2["Display Identifier"] as? String
             else { return false }
-            let idx1 = screenOrder.firstIndex(of: id1) ?? Int.max
-            let idx2 = screenOrder.firstIndex(of: id2) ?? Int.max
+            
+            let id1 = normalizeDisplayID(id1raw, mainUUID: mainScreenUUID)
+            let id2 = normalizeDisplayID(id2raw, mainUUID: mainScreenUUID)
+            
+            let idx1 = screenUUIDs.firstIndex(of: id1) ?? Int.max
+            let idx2 = screenUUIDs.firstIndex(of: id2) ?? Int.max
             return idx1 < idx2
         }
 
         for display in sortedDisplays {
-            guard let displayID = display["Display Identifier"] as? String,
+            guard let displayIDRaw = display["Display Identifier"] as? String,
                 let spaces = display["Spaces"] as? [[String: Any]]
             else { continue }
+            
+            let displayID = normalizeDisplayID(displayIDRaw, mainUUID: mainScreenUUID)
 
             var regularIndex = 0
             for space in spaces {
@@ -573,12 +592,10 @@ class SpaceHelper {
                 var globalShortcutNum: Int? = nil
 
                 if isFullscreen {
-                    // Try to extract PID from space dictionary to get Name, but do NOT store PID in model
                     if let p = space["pid"] as? Int32 ?? space["owner pid"] as? Int32 {
                         appName = NSRunningApplication(processIdentifier: p)?.localizedName
                     }
                 } else {
-                    // Only standard desktops get a global shortcut number
                     globalDesktopCounter += 1
                     globalShortcutNum = globalDesktopCounter
                 }
@@ -649,13 +666,19 @@ class SpaceHelper {
         guard let displays = CGSCopyManagedDisplaySpaces(conn) as? [NSDictionary] else {
             return nil
         }
+        
+        let screenUUIDs = getAllDisplayUUIDs()
+        let mainScreenUUID = screenUUIDs.first
 
         for display in displays {
-            if let id = display["Display Identifier"] as? String, id == displayID,
-                let currentDict = display["Current Space"] as? [String: Any],
-                let currentID = currentDict["ManagedSpaceID"] as? Int
-            {
-                return String(currentID)
+            if let rawID = display["Display Identifier"] as? String {
+                let currentID = normalizeDisplayID(rawID, mainUUID: mainScreenUUID)
+                if currentID == displayID,
+                   let currentDict = display["Current Space"] as? [String: Any],
+                   let managedID = currentDict["ManagedSpaceID"] as? Int
+                {
+                    return String(managedID)
+                }
             }
         }
         return nil
