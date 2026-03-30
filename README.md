@@ -48,6 +48,8 @@ Switch desktops faster with ProMotion.
 
 ## 📦 Installation
 
+### Direct Download
+
 You do **NOT** have to disable *SIP* or things like that. Your macOS must be at least **macOS 13.0 Ventura**. All you need to do is:
 
 1. Download the package from [Releases](https://github.com/gitmichaelqiu/DesktopRenamer/releases/)
@@ -58,6 +60,16 @@ Because I do **NOT** have an Apple developer account for the app releases, you m
 
 To resolve this, go to System Settings → the bottom of Privacy & Security → Open DesktopRenamer.
 
+### Homebrew
+
+You can also choose to download it from Homebrew:
+
+```bash
+brew install --cask --no-quarantine gitmichaelqiu/tap/desktoprenamer
+```
+
+### Troubleshooting
+
 > [!NOTE]
 > If this still does not work for you and you encounter issue of "DesktopRenamer can't be opened", please open your terminal and execute this line:
 >
@@ -66,12 +78,6 @@ To resolve this, go to System Settings → the bottom of Privacy & Security → 
 > ```
 >
 > Thanks [@timttate](https://github.com/timttate) for finding this [thread](https://github.com/luanti-org/luanti/issues/12033) with the solution by [@animaux](https://github.com/animaux).
-
-You can also choose to download it from Homebrew:
-
-```bash
-brew install --cask --no-quarantine gitmichaelqiu/tap/desktoprenamer
-```
 
 ## 🛜 API & Apple Script
 
