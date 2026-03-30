@@ -253,22 +253,9 @@ class SpaceManager: ObservableObject {
             if self.spaceNameDict != newSpaceList {
                 self.spaceNameDict = newSpaceList
                 
-                // Clear index cache for active displays to prevent stale data accumulation
-                let activeDisplays = Set(cgsState.spaces.map { $0.displayID })
-                var keysToRemove: [String] = []
-                for key in self.indexCache.keys {
-                    let components = key.split(separator: "|")
-                    if let displayID = components.first, activeDisplays.contains(String(displayID)) {
-                        keysToRemove.append(key)
-                    }
-                }
-                for key in keysToRemove {
-                    self.indexCache.removeValue(forKey: key)
-                }
-                
                 // Update index cache with currently detected spaces.
-                // We do NOT clear the cache here to preserve names for spaces/displays that might 
-                // be temporarily undetected (active display only, sleeping connection, etc).
+                // We do NOT aggressively clear the entire cache here to preserve names for displays 
+                // that might be temporarily undetected or in a transient state.
                 var displayDesktopCounters: [String: Int] = [:]
                 for space in self.spaceNameDict where !space.isFullscreen {
                     let count = displayDesktopCounters[space.displayID, default: 0] + 1
