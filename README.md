@@ -75,9 +75,10 @@ brew install --cask --no-quarantine gitmichaelqiu/tap/desktoprenamer
 
 ## 🛜 API & Apple Script
 
-This app provides an API to acquire space ID and names, and control the app via Apple Script.
+DesktopRenamer provides multiple ways to interact with it:
 
-Check [Developer API Guide](https://github.com/gitmichaelqiu/DesktopRenamer/wiki/DesktopRenamer-API-Guide) for details.
+- [SpaceAPI Guide](https://github.com/gitmichaelqiu/DesktopRenamer/wiki/DesktopRenamer-API-Guide) - Acquire space IDs and names via HTTP.
+- [AppleScript Guide](https://github.com/gitmichaelqiu/DesktopRenamer/wiki/DesktopRenamer-AppleScript-Guide) - Automate space management and window positioning via AppleScript.
 
 You can switch on/off the API in Settings → Advanced.
 
