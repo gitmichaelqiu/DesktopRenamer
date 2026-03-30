@@ -12,5 +12,7 @@
 	<string>https://raw.githubusercontent.com/gitmichaelqiu/DesktopRenamer/main/appcast.xml</string>
 	<key>SUPublicEDKey</key>
 	<string>e9YKamydRddgnYK6Kq41W0vPbwI4F9XJAhks/9rzT0w=</string>
+	<key>NSAppleEventsUsageDescription</key>
+	<string>DesktopRenamer needs to control System Events to switch between desktops via Mission Control when necessary.</string>
 </dict>
 </plist>
