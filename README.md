@@ -8,7 +8,7 @@
   <p align="center">DesktopRenamer</p>
 </h1>
 <h3>
-<p align="center"><i>Renamer Your Experiences</i></p>
+<p align="center"><i>Rename Your Experiences</i></p>
 </h3>
 
 <table align="center" border="0" cellpadding="0" cellspacing="0">
@@ -73,9 +73,9 @@ You can also choose to download it from Homebrew:
 brew install --cask --no-quarantine gitmichaelqiu/tap/desktoprenamer
 ```
 
-## 🛜 API
+## 🛜 API & Apple Script
 
-This app provides an API to acquire space ID and names.
+This app provides an API to acquire space ID and names, and control the app via Apple Script.
 
 Check [Developer API Guide](https://github.com/gitmichaelqiu/DesktopRenamer/wiki/DesktopRenamer-API-Guide) for details.
 
