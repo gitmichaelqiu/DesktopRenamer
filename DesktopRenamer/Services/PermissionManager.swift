@@ -50,12 +50,25 @@ class PermissionManager: ObservableObject {
     }
 
     func requestAutomationPermission() {
+        // Multi-layered approach for macOS Tahoe and recent versions:
+        // 1. Try to trigger the prompt via NSAppleScript (most reliable way today)
+        let scriptSource = "tell application \"System Events\" to get name"
+        if let script = NSAppleScript(source: scriptSource) {
+            var error: NSDictionary?
+            script.executeAndReturnError(&error)
+        }
+
+        // 2. Fallback/Standard API call (may still trigger prompt on some OS versions)
         let targetBundleID = "com.apple.systemevents"
         let targetDesc = NSAppleEventDescriptor(bundleIdentifier: targetBundleID)
         if let aeDesc = targetDesc.aeDesc {
             let status = AEDeterminePermissionToAutomateTarget(
                 aeDesc, typeWildCard, typeWildCard, true)
             self.isAutomationGranted = (status == noErr)
+        }
+
+        // 3. Open Settings if still not granted
+        if !isAutomationGranted {
             openSystemSettings(type: "Privacy_Automation")
         }
     }
