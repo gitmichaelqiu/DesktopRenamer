@@ -65,7 +65,7 @@ To resolve this, go to System Settings → the bottom of Privacy & Security → 
 You can also choose to download it from Homebrew:
 
 ```bash
-brew install --cask --no-quarantine gitmichaelqiu/tap/desktoprenamer
+brew install --cask gitmichaelqiu/tap/desktoprenamer
 ```
 
 ### Troubleshooting
