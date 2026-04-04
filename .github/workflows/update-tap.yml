@@ -1,0 +1,54 @@
+name: Update Homebrew Tap
+on:
+  release:
+    types: [published]
+
+jobs:
+  update-cask:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Get Release Info and Calculate Hash
+        id: info
+        run: |
+          # 1. Extract version info
+          TAG="${{ github.event.release.tag_name }}"
+          # Removes the 'v' prefix if it exists (e.g., v1.10.2 -> 1.10.2)
+          VERSION=$(echo $TAG | sed 's/^v//')
+          
+          # 2. Construct the URL based on your specific format
+          URL="https://github.com/gitmichaelqiu/DesktopRenamer/releases/download/$TAG/DesktopRenamer.$VERSION.dmg"
+          
+          # 3. Download and Hash
+          curl -L -o release.dmg "$URL"
+          SHA=$(shasum -a 256 release.dmg | awk '{print $1}')
+          
+          # 4. Export variables for next steps
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "sha=$SHA" >> $GITHUB_OUTPUT
+          echo "url=$URL" >> $GITHUB_OUTPUT
+
+      - name: Checkout Tap Repo
+        uses: actions/checkout@v4
+        with:
+          repository: gitmichaelqiu/homebrew-tap
+          token: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+
+      - name: Update Cask File
+        run: |
+          # Finds lines starting with version or sha256 and replaces the value
+          # Adjust the path 'Casks/desktoprenamer.rb' if your file is named differently
+          CASK_PATH="Casks/desktoprenamer.rb"
+          
+          sed -i "s/version \".*\"/version \"${{ steps.info.outputs.version }}\"/" $CASK_PATH
+          sed -i "s/sha256 \".*\"/sha256 \"${{ steps.info.outputs.sha }}\"/" $CASK_PATH
+          
+          # Optional: Update the URL line if it isn't using variables
+          # sed -i "s|url \".*\"|url \"${{ steps.info.outputs.url }}\"|" $CASK_PATH
+
+      - name: Commit and Push to Tap
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add .
+          git commit -m "Update DesktopRenamer to ${{ steps.info.outputs.version }}"
+          git push
