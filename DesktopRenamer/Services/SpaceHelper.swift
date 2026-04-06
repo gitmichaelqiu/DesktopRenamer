@@ -227,33 +227,9 @@ class SpaceHelper {
         pendingMoveCount += 1
         switchToSpace(spaceID)
         
-        // 3. Schedule Safety Restoration Task (Fallback if switch is not detected or fails)
-        // We only restore if the session has settled (no more pending moves)
-        let task = DispatchWorkItem { [originalPoint = originalMousePoint] in
-            guard let restorePoint = originalPoint else { return }
-            
-            // Drop (Mouse Up)
-            if let upEvent = CGEvent(mouseEventSource: source, mouseType: .leftMouseUp, mouseCursorPosition: CGEvent(source: nil)?.location ?? .zero, mouseButton: .left) {
-                upEvent.flags = []
-                upEvent.post(tap: .cghidEventTap)
-            }
-            
-            // Restore Mouse
-            usleep(50000)
-            if let restoreEvent = CGEvent(mouseEventSource: source, mouseType: .mouseMoved, mouseCursorPosition: restorePoint, mouseButton: .left) {
-                restoreEvent.flags = []
-                restoreEvent.post(tap: .cghidEventTap)
-            }
-            
-            // Reset Session
-            originalMousePoint = nil
-            restorationTask = nil
-            pendingMoveCount = 0
-        }
-        
-        restorationTask = task
-        // Safety timeout: 2.0s to allow for OS delays or failed switches at the edge of the screen.
-        DispatchQueue.main.asyncAfter(deadline: .now() + 2.0, execute: task)
+        // 3. Replace any existing restoration/drop tasks with a long safety fallback
+        // This ensures the Mouse stays down until either a space change or a timeout.
+        scheduleRestoration(delay: 2.0)
     }
     
     /// Fast-forwards the restoration process because we detected a successful space change.
@@ -263,17 +239,49 @@ class SpaceHelper {
         // Decrement pending moves
         pendingMoveCount = max(0, pendingMoveCount - 1)
         
-        // Only trigger restoration if all pending moves are accounted for
-        guard pendingMoveCount == 0, let task = restorationTask else { return }
-        
-        restorationTask = nil // Clear current reference
-        
-        // Execute after a tiny "settle" delay (0.15s) to allow WindowServer to finish animations
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
-            if !task.isCancelled {
-                task.perform()
-            }
+        // Only trigger the "Drop & Restore" if all pending moves are accounted for.
+        // We replace the 2.0s safety timer with a quick 0.15s settle-and-restore.
+        if pendingMoveCount == 0 {
+            scheduleRestoration(delay: 0.15)
         }
+    }
+    
+    /// Schedules an atomic cleanup task that drops the window and restores the cursor.
+    /// Calling this automatically cancels any previously scheduled restoration job.
+    private static func scheduleRestoration(delay: TimeInterval) {
+        // Atomic Cancellation: This is the critical fix for "multi restoration" bugs.
+        restorationTask?.cancel()
+        
+        let source = CGEventSource(stateID: .hidSystemState)
+        let task = DispatchWorkItem { [originalPoint = originalMousePoint] in
+            guard let restorePoint = originalPoint else { 
+                originalMousePoint = nil
+                restorationTask = nil
+                pendingMoveCount = 0
+                return 
+            }
+            
+            // 1. Drop (Mouse Up)
+            if let upEvent = CGEvent(mouseEventSource: source, mouseType: .leftMouseUp, mouseCursorPosition: CGEvent(source: nil)?.location ?? .zero, mouseButton: .left) {
+                upEvent.flags = []
+                upEvent.post(tap: .cghidEventTap)
+            }
+            
+            // 2. Restore Mouse
+            usleep(50000)
+            if let restoreEvent = CGEvent(mouseEventSource: source, mouseType: .mouseMoved, mouseCursorPosition: restorePoint, mouseButton: .left) {
+                restoreEvent.flags = []
+                restoreEvent.post(tap: .cghidEventTap)
+            }
+            
+            // 3. Reset Session
+            originalMousePoint = nil
+            restorationTask = nil
+            pendingMoveCount = 0
+        }
+        
+        restorationTask = task
+        DispatchQueue.main.asyncAfter(deadline: .now() + delay, execute: task)
     }
     
     static func getActiveWindowFrame() -> CGRect? {
