@@ -56,17 +56,19 @@ You do **NOT** have to disable *SIP* or things like that. Your macOS must be at 
 2. Drag the app to the *Applications* folder
 3. All set!
 
-Because I do **NOT** have an Apple developer account for the app releases, you may receive alerts such as "Developer is not verified".
-
-To resolve this, go to System Settings → the bottom of Privacy & Security → Open DesktopRenamer.
-
 ### Homebrew
 
 You can also choose to download it from Homebrew:
 
 ```bash
-brew install --cask --no-quarantine gitmichaelqiu/tap/desktoprenamer
+brew install --cask gitmichaelqiu/tap/desktoprenamer
 ```
+
+### Open App
+
+Because I do **NOT** have an Apple developer account for the app releases, you may receive alerts such as "Developer is not verified".
+
+To resolve this, go to System Settings → the bottom of Privacy & Security → Open DesktopRenamer.
 
 ### Troubleshooting
 
