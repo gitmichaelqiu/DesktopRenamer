@@ -54,24 +54,32 @@ struct SpaceEditView: View {
     }
     
     private func resolveDisplayName(for displayID: String) -> String {
+        // 1. Handle "Main" legacy identifier
         if displayID == "Main" { return "Main Display" }
-        if displayID.contains("(") && displayID.contains(")") {
-             if let lastParenIndex = displayID.lastIndex(of: "(") {
-                return String(displayID[..<lastParenIndex]).trimmingCharacters(in: .whitespaces)
-            }
-        }
+        
+        // 2. Try to find a matching screen by UUID
         for screen in NSScreen.screens {
             if let screenNumber = screen.deviceDescription[NSDeviceDescriptionKey("NSScreenNumber")] as? NSNumber {
                 let cgsID = screenNumber.uint32Value
                 if let uuidRef = CGDisplayCreateUUIDFromDisplayID(cgsID) {
                     let uuid = uuidRef.takeRetainedValue()
-                    let uuidString = CFUUIDCreateString(nil, uuid) as String?
-                    if let uuidStr = uuidString, uuidStr.caseInsensitiveCompare(displayID) == .orderedSame {
-                        return screen.localizedName
+                    if let uuidStr = CFUUIDCreateString(nil, uuid) as String? {
+                        // Check if the input is a UUID and it matches this screen
+                        if uuidStr.caseInsensitiveCompare(displayID) == .orderedSame {
+                            return screen.localizedName
+                        }
                     }
                 }
             }
         }
+        
+        // 3. Fallback for legacy "Name (ID)" format that hasn't been migrated yet
+        if displayID.contains("(") && displayID.contains(")") {
+             if let lastParenIndex = displayID.lastIndex(of: "(") {
+                return String(displayID[..<lastParenIndex]).trimmingCharacters(in: .whitespaces)
+            }
+        }
+        
         return displayID
     }
     

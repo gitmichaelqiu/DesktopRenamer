@@ -434,6 +434,22 @@ class SpaceManager: ObservableObject {
             spaceNameDict = spaces.map {
                 var s = $0
                 s.customName = s.customName.replacingOccurrences(of: "~", with: "")
+                
+                // Migrate displayID from "Name (ID)" to UUID if needed
+                if s.displayID.contains("(") && s.displayID.contains(")") {
+                    if let lastParenIndex = s.displayID.lastIndex(of: "("),
+                       let lastBracketIndex = s.displayID.lastIndex(of: ")") {
+                        let idStart = s.displayID.index(after: lastParenIndex)
+                        let idString = String(s.displayID[idStart..<lastBracketIndex])
+                        if let screenID = UInt32(idString),
+                           let uuidRef = CGDisplayCreateUUIDFromDisplayID(screenID) {
+                            let uuid = uuidRef.takeRetainedValue()
+                            if let uuidStr = CFUUIDCreateString(nil, uuid) as String? {
+                                s.displayID = uuidStr
+                            }
+                        }
+                    }
+                }
                 return s
             }
         }
@@ -616,12 +632,25 @@ class SpaceManager: ObservableObject {
     // MARK: - Move Window Functions
     
     func moveActiveWindowToNextSpace() {
-        // 1. Determine Display & Current Space
-        // We use cursor display as proxy for "Active Context"
-        guard let displayID = SpaceHelper.getCursorDisplayID() else { return }
-        guard let currentSpaceID = SpaceHelper.getCurrentSpaceID(for: displayID) else { return }
+        // 1. Determine Window & Its Display Context
+        // We prioritize the context of the focused window over the cursor position.
+        guard let frame = SpaceHelper.getActiveWindowFrame() else {
+            // Fallback to cursor display if no window frame found (unlikely for "Move Window" but safe)
+            moveActiveWindowToNextSpaceLegacy()
+            return
+        }
         
-        // 2. Resolve Space Objects
+        guard let displayID = SpaceHelper.getWindowDisplayID(for: frame) else {
+            moveActiveWindowToNextSpaceLegacy()
+            return
+        }
+        
+        guard let currentSpaceID = SpaceHelper.getCurrentSpaceID(for: displayID) else {
+            moveActiveWindowToNextSpaceLegacy()
+            return
+        }
+        
+        // 2. Resolve Space Objects for the specific display
         guard let current = spaceNameDict.first(where: { $0.id == currentSpaceID }) else { return }
         let displaySpaces = spaceNameDict
             .filter { $0.displayID == displayID }
@@ -634,10 +663,54 @@ class SpaceManager: ObservableObject {
         let target = displaySpaces[currentIndex + 1]
         SpaceHelper.dragActiveWindow(to: target.id)
     }
+
+    private func moveActiveWindowToNextSpaceLegacy() {
+        guard let displayID = SpaceHelper.getCursorDisplayID() ?? Optional(self.currentDisplayID) else { return }
+        guard let currentSpaceID = SpaceHelper.getCurrentSpaceID(for: displayID) ?? Optional(self.currentSpaceUUID) else { return }
+        
+        guard let current = spaceNameDict.first(where: { $0.id == currentSpaceID }) else { return }
+        let displaySpaces = spaceNameDict
+            .filter { $0.displayID == displayID }
+            .sorted { $0.num < $1.num }
+        
+        guard let currentIndex = displaySpaces.firstIndex(of: current),
+              currentIndex < displaySpaces.count - 1 else { return }
+        
+        let target = displaySpaces[currentIndex + 1]
+        SpaceHelper.dragActiveWindow(to: target.id)
+    }
     
     func moveActiveWindowToPreviousSpace() {
-        guard let displayID = SpaceHelper.getCursorDisplayID() else { return }
-        guard let currentSpaceID = SpaceHelper.getCurrentSpaceID(for: displayID) else { return }
+        guard let frame = SpaceHelper.getActiveWindowFrame() else {
+            moveActiveWindowToPreviousSpaceLegacy()
+            return
+        }
+        
+        guard let displayID = SpaceHelper.getWindowDisplayID(for: frame) else {
+            moveActiveWindowToPreviousSpaceLegacy()
+            return
+        }
+        
+        guard let currentSpaceID = SpaceHelper.getCurrentSpaceID(for: displayID) else {
+            moveActiveWindowToPreviousSpaceLegacy()
+            return
+        }
+        
+        guard let current = spaceNameDict.first(where: { $0.id == currentSpaceID }) else { return }
+        let displaySpaces = spaceNameDict
+            .filter { $0.displayID == displayID }
+            .sorted { $0.num < $1.num }
+        
+        guard let currentIndex = displaySpaces.firstIndex(of: current),
+              currentIndex > 0 else { return }
+        
+        let target = displaySpaces[currentIndex - 1]
+        SpaceHelper.dragActiveWindow(to: target.id)
+    }
+
+    private func moveActiveWindowToPreviousSpaceLegacy() {
+        guard let displayID = SpaceHelper.getCursorDisplayID() ?? Optional(self.currentDisplayID) else { return }
+        guard let currentSpaceID = SpaceHelper.getCurrentSpaceID(for: displayID) ?? Optional(self.currentSpaceUUID) else { return }
         
         guard let current = spaceNameDict.first(where: { $0.id == currentSpaceID }) else { return }
         let displaySpaces = spaceNameDict
