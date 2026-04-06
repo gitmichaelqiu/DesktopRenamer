@@ -25,6 +25,7 @@ class SpaceHelper {
     private static var localEventMonitor: Any?
 
     // Track switch state to prevent recursion glitches
+    private static var isDragging = false
     private static var isSwitching = false
 
     // The meat of space switching logic
@@ -173,8 +174,19 @@ class SpaceHelper {
     // MARK: - Window Moving Logic
     
     static func dragActiveWindow(to spaceID: String) {
+        guard !isDragging else { return }
+        isDragging = true
+        
+        defer {
+            // Safety: if the drag fails to reach the async block, reset the flag
+            // But usually we reset it in the asyncAfter block after mouse restoration.
+        }
+        
         // 1. Get Active Window Frame & Position
-        guard let frame = getActiveWindowFrame() else { return }
+        guard let frame = getActiveWindowFrame() else { 
+            isDragging = false
+            return 
+        }
         
         // 2. Calculate Grab Point (Between left edge and red close button)
         let grabX: CGFloat
@@ -231,6 +243,11 @@ class SpaceHelper {
             if let restoreEvent = CGEvent(mouseEventSource: source, mouseType: .mouseMoved, mouseCursorPosition: currentMouse, mouseButton: .left) {
                 restoreEvent.flags = [] // Reset flags or leave to system? System usually recovers.
                 restoreEvent.post(tap: .cghidEventTap)
+            }
+            
+            // Release the drag lock after full restoration & settle time
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                isDragging = false
             }
         }
     }
