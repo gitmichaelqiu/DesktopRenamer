@@ -465,7 +465,7 @@ class SpaceHelper {
             if let uuidRef = CGDisplayCreateUUIDFromDisplayID(screenID.uint32Value) {
                 let uuid = uuidRef.takeRetainedValue()
                 if let uuidStr = CFUUIDCreateString(nil, uuid) as String? {
-                    displayIdentifier = uuidStr
+                    displayIdentifier = uuidStr.uppercased()
                 }
             }
 
@@ -547,8 +547,9 @@ class SpaceHelper {
     }
 
     private static func normalizeDisplayID(_ id: String, mainUUID: String?) -> String {
-        guard let main = mainUUID else { return id }
-        return id == "Main" ? main : id
+        guard let main = mainUUID else { return id.uppercased() }
+        let result = id == "Main" ? main : id
+        return result.uppercased()
     }
 
     static func getSystemState() -> (
@@ -676,13 +677,12 @@ class SpaceHelper {
             })
         else { return nil }
 
-        guard
-            let id = screen.deviceDescription[NSDeviceDescriptionKey("NSScreenNumber")]
+        guard let id = screen.deviceDescription[NSDeviceDescriptionKey("NSScreenNumber")]
                 as? CGDirectDisplayID
         else { return nil }
         guard let uuidRef = CGDisplayCreateUUIDFromDisplayID(id) else { return nil }
         let uuid = uuidRef.takeRetainedValue()
-        return CFUUIDCreateString(nil, uuid) as String
+        return (CFUUIDCreateString(nil, uuid) as String).uppercased()
     }
 
     static func getWindowDisplayID(for frame: CGRect) -> String? {
@@ -690,15 +690,22 @@ class SpaceHelper {
         // Note: Window server uses top-left origin for frames from CGWindowListCopyWindowInfo
         let center = CGPoint(x: frame.origin.x + frame.width / 2, y: frame.origin.y + frame.height / 2)
         
-        // Find which screen contains the center point
-        // Important: we must flip the coordinate if comparing with screen.frame because screen coordinate system 
-        // usually has origin at bottom-left for primary screen.
-        guard let screen = NSScreen.screens.first(where: { isPoint(center, inside: $0.frame) }) else { return nil }
+        // Find screen using CGWindowList coordinates (top-left origin, Y increases downwards)
+        // We find the screen whose frame contains this point in CG coordinates
+        for screen in NSScreen.screens {
+            // Convert screen frame to CG coordinates (top-left)
+            // Primary screen is at 0,0. Others relative.
+            let screenID = screen.deviceDescription[NSDeviceDescriptionKey("NSScreenNumber")] as? CGDirectDisplayID ?? 0
+            let cgFrame = CGDisplayBounds(screenID)
+            
+            if cgFrame.contains(center) {
+                guard let uuidRef = CGDisplayCreateUUIDFromDisplayID(screenID) else { continue }
+                let uuid = uuidRef.takeRetainedValue()
+                return (CFUUIDCreateString(nil, uuid) as String).uppercased()
+            }
+        }
         
-        guard let id = screen.deviceDescription[NSDeviceDescriptionKey("NSScreenNumber")] as? CGDirectDisplayID else { return nil }
-        guard let uuidRef = CGDisplayCreateUUIDFromDisplayID(id) else { return nil }
-        let uuid = uuidRef.takeRetainedValue()
-        return CFUUIDCreateString(nil, uuid) as String
+        return nil
     }
 
     static func getCurrentSpaceID(for displayID: String) -> String? {

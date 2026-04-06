@@ -167,12 +167,14 @@ class HotkeyManager: ObservableObject {
         }
         
         // 4. Move Window Next
+        moveWindowNextHotKey = nil
         if let key = moveWindowNextShortcut.hotkeyKey, let mods = moveWindowNextShortcut.hotkeyModifiers {
             moveWindowNextHotKey = HotKey(key: key, modifiers: mods)
             moveWindowNextHotKey?.keyDownHandler = { [weak self] in self?.moveWindowNextTriggered.send() }
         }
         
         // 5. Move Window Previous
+        moveWindowPreviousHotKey = nil
         if let key = moveWindowPreviousShortcut.hotkeyKey, let mods = moveWindowPreviousShortcut.hotkeyModifiers {
             moveWindowPreviousHotKey = HotKey(key: key, modifiers: mods)
             moveWindowPreviousHotKey?.keyDownHandler = { [weak self] in self?.moveWindowPreviousTriggered.send() }
