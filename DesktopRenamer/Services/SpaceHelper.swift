@@ -25,8 +25,13 @@ class SpaceHelper {
     private static var localEventMonitor: Any?
 
     // Track switch state to prevent recursion glitches
-    private static var isDragging = false
     private static var isSwitching = false
+    
+    // Dragging session state
+    private static var originalMousePoint: CGPoint? = nil
+    private static var restorationTask: DispatchWorkItem? = nil
+    private static var pendingMoveCount = 0
+    static var isDragging: Bool { originalMousePoint != nil }
 
     // The meat of space switching logic
     static func switchToSpace(_ spaceID: String, forceMissionControl: Bool = false) {
@@ -174,80 +179,99 @@ class SpaceHelper {
     // MARK: - Window Moving Logic
     
     static func dragActiveWindow(to spaceID: String) {
-        guard !isDragging else { return }
-        isDragging = true
+        // Cancel any pending restoration from a previous "chained" move
+        restorationTask?.cancel()
+        restorationTask = nil
         
-        defer {
-            // Safety: if the drag fails to reach the async block, reset the flag
-            // But usually we reset it in the asyncAfter block after mouse restoration.
-        }
-        
-        // 1. Get Active Window Frame & Position
-        guard let frame = getActiveWindowFrame() else { 
-            isDragging = false
-            return 
-        }
-        
-        // 2. Calculate Grab Point (Between left edge and red close button)
-        let grabX: CGFloat
-        let grabY: CGFloat
-        
-        if let sm = AppDelegate.shared.spaceManager {
-            grabX = frame.origin.x + CGFloat(sm.grabOffsetX)
-            grabY = frame.origin.y + CGFloat(sm.grabOffsetY)
-        } else {
-            // Fallback to defaults
-            grabX = frame.origin.x + 13
-            grabY = frame.origin.y + 25
-        }
-        
-        let grabPoint = CGPoint(x: grabX, y: grabY)
-        
-        // 3. Save Current Mouse Position
-        let currentMouse = CGEvent(source: nil)?.location ?? grabPoint
-        
-        // 4. Perform Drag Sequence with NO Modifiers to avoid Control+Click (Right Click)
         let source = CGEventSource(stateID: .hidSystemState)
         
-        // Temporarily clear modifiers just for our events
-        // Note: We can't easily physical key-up, but we can set flags to 0 on the event.
-        
-        // Move to grab point
-        if let moveEvent = CGEvent(mouseEventSource: source, mouseType: .mouseMoved, mouseCursorPosition: grabPoint, mouseButton: .left) {
-            moveEvent.flags = [] // Clear modifiers
-            moveEvent.post(tap: .cghidEventTap)
+        // 1. Session Initialization: Only capture original mouse point and MouseDown for the FIRST move in a series
+        if originalMousePoint == nil {
+            // Save starting location
+            originalMousePoint = CGEvent(source: nil)?.location
+            
+            // Get Active Window Frame & Position to calculate grab point
+            guard let frame = getActiveWindowFrame() else {
+                originalMousePoint = nil
+                return 
+            }
+            
+            let grabX: CGFloat
+            let grabY: CGFloat
+            
+            if let sm = AppDelegate.shared.spaceManager {
+                grabX = frame.origin.x + CGFloat(sm.grabOffsetX)
+                grabY = frame.origin.y + CGFloat(sm.grabOffsetY)
+            } else {
+                grabX = frame.origin.x + 13
+                grabY = frame.origin.y + 25
+            }
+            
+            let grabPoint = CGPoint(x: grabX, y: grabY)
+            
+            // Move to grab point and Down
+            if let moveEvent = CGEvent(mouseEventSource: source, mouseType: .mouseMoved, mouseCursorPosition: grabPoint, mouseButton: .left) {
+                moveEvent.flags = []
+                moveEvent.post(tap: .cghidEventTap)
+            }
+            
+            if let downEvent = CGEvent(mouseEventSource: source, mouseType: .leftMouseDown, mouseCursorPosition: grabPoint, mouseButton: .left) {
+                downEvent.flags = []
+                downEvent.post(tap: .cghidEventTap)
+            }
+            
+            usleep(50000) // 0.05s grip
         }
         
-        // Click Down (Hold)
-        if let downEvent = CGEvent(mouseEventSource: source, mouseType: .leftMouseDown, mouseCursorPosition: grabPoint, mouseButton: .left) {
-            downEvent.flags = [] // Clear modifiers (Essential to prevent Right Click if Ctrl is held)
-            downEvent.post(tap: .cghidEventTap)
-        }
-        
-        // Small delay to ensure grip
-        usleep(50000) // 0.05s
-        
-        // 5. Trigger Space Switch
+        // 2. Trigger Space Switch and track the move
+        pendingMoveCount += 1
         switchToSpace(spaceID)
         
-        // 6. Wait and Drop
-        DispatchQueue.global().asyncAfter(deadline: .now() + 0.6) {
+        // 3. Schedule Safety Restoration Task (Fallback if switch is not detected or fails)
+        // We only restore if the session has settled (no more pending moves)
+        let task = DispatchWorkItem { [originalPoint = originalMousePoint] in
+            guard let restorePoint = originalPoint else { return }
+            
             // Drop (Mouse Up)
-            if let upEvent = CGEvent(mouseEventSource: source, mouseType: .leftMouseUp, mouseCursorPosition: grabPoint, mouseButton: .left) {
-                upEvent.flags = [] // Clear modifiers
+            if let upEvent = CGEvent(mouseEventSource: source, mouseType: .leftMouseUp, mouseCursorPosition: CGEvent(source: nil)?.location ?? .zero, mouseButton: .left) {
+                upEvent.flags = []
                 upEvent.post(tap: .cghidEventTap)
             }
             
             // Restore Mouse
             usleep(50000)
-            if let restoreEvent = CGEvent(mouseEventSource: source, mouseType: .mouseMoved, mouseCursorPosition: currentMouse, mouseButton: .left) {
-                restoreEvent.flags = [] // Reset flags or leave to system? System usually recovers.
+            if let restoreEvent = CGEvent(mouseEventSource: source, mouseType: .mouseMoved, mouseCursorPosition: restorePoint, mouseButton: .left) {
+                restoreEvent.flags = []
                 restoreEvent.post(tap: .cghidEventTap)
             }
             
-            // Release the drag lock after full restoration & settle time
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-                isDragging = false
+            // Reset Session
+            originalMousePoint = nil
+            restorationTask = nil
+            pendingMoveCount = 0
+        }
+        
+        restorationTask = task
+        // Safety timeout: 2.0s to allow for OS delays or failed switches at the edge of the screen.
+        DispatchQueue.main.asyncAfter(deadline: .now() + 2.0, execute: task)
+    }
+    
+    /// Fast-forwards the restoration process because we detected a successful space change.
+    static func signalSpaceSwitchComplete() {
+        guard originalMousePoint != nil else { return }
+        
+        // Decrement pending moves
+        pendingMoveCount = max(0, pendingMoveCount - 1)
+        
+        // Only trigger restoration if all pending moves are accounted for
+        guard pendingMoveCount == 0, let task = restorationTask else { return }
+        
+        restorationTask = nil // Clear current reference
+        
+        // Execute after a tiny "settle" delay (0.15s) to allow WindowServer to finish animations
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
+            if !task.isCancelled {
+                task.perform()
             }
         }
     }

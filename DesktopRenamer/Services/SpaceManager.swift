@@ -156,6 +156,10 @@ class SpaceManager: ObservableObject {
     }
     
     private func handleSpaceChange(_ rawUUID: String, isDesktop: Bool, ncCount: Int, displayID: String, source: String) {
+        if SpaceHelper.isDragging {
+            SpaceHelper.signalSpaceSwitchComplete()
+        }
+        
         if !Thread.isMainThread {
             DispatchQueue.main.async { [weak self] in self?.handleSpaceChange(rawUUID, isDesktop: isDesktop, ncCount: ncCount, displayID: displayID, source: source) }
             return
