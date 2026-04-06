@@ -78,8 +78,8 @@ class HotkeyManager: ObservableObject {
     
     private var monitor: Any?
     
-    // Default: Main (Ctrl+R), Others (None)
-    private let defaultMain = Shortcut(key: Key.r, modifiers: [.control])
+    // Default: Main (None), Others (None)
+    private let defaultMain = Shortcut(key: nil, modifiers: [])
     private let defaultNone = Shortcut(key: nil, modifiers: [])
     
     private let mainShortcutKey = "HotkeyManager.Shortcut"
@@ -91,7 +91,13 @@ class HotkeyManager: ObservableObject {
 
     init() {
         // Load or default
-        self.mainShortcut = Self.loadShortcut(key: mainShortcutKey) ?? Shortcut(key: Key.r, modifiers: [.control])
+        let loadedMain = Self.loadShortcut(key: mainShortcutKey)
+        if let loaded = loadedMain, loaded.key == .r && loaded.modifiers == [.control] {
+            // This was the problematic default introduced in some previous versions, clear it for now
+            self.mainShortcut = Shortcut(key: nil, modifiers: [])
+        } else {
+            self.mainShortcut = loadedMain ?? Shortcut(key: nil, modifiers: [])
+        }
         self.switchLeftShortcut = Self.loadShortcut(key: switchLeftKey) ?? Shortcut(key: nil, modifiers: [])
         self.switchRightShortcut = Self.loadShortcut(key: switchRightKey) ?? Shortcut(key: nil, modifiers: [])
         self.moveWindowNextShortcut = Self.loadShortcut(key: moveWindowNextKey) ?? Shortcut(key: nil, modifiers: [])
