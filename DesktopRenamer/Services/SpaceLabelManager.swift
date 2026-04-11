@@ -190,6 +190,7 @@ class SpaceLabelManager: ObservableObject {
             .sink { [weak self] _ in
                 self?.recalculateUnifiedSize()
                 self?.cleanupRedundantWindows()
+                self?.updateLabelsVisibility()
             }
             .store(in: &cancellables)
 
@@ -203,19 +204,32 @@ class SpaceLabelManager: ObservableObject {
             .store(in: &cancellables)
     }
 
-    // Get rid of windows for spaces that don't exist anymore
+    // Get rid of windows for spaces that don't exist anymore or moved monitors
     private func cleanupRedundantWindows() {
         guard let spaceManager = spaceManager else { return }
-        let validUUIDs = Set(spaceManager.spaceNameDict.map { $0.id })
+        let validSpaces = spaceManager.spaceNameDict
+        let validUUIDs = Set(validSpaces.map { $0.id })
 
-        let redundantIDs = createdWindows.keys.filter { !validUUIDs.contains($0) }
+        let redundantIDs = createdWindows.keys.filter { id in
+            if !validUUIDs.contains(id) { return true }
+            
+            // If the window's displayID doesn't match the current management state, it's redundant (needs move)
+            if let window = createdWindows[id],
+               let spaceInDict = validSpaces.first(where: { $0.id == id }),
+               window.displayID != spaceInDict.displayID {
+                print("SpaceLabelManager: Display mismatch for \(id), marking redundant for recreation")
+                return true
+            }
+            
+            return false
+        }
 
         for id in redundantIDs {
             if let window = createdWindows[id] {
                 window.close()
             }
             createdWindows.removeValue(forKey: id)
-            print("SpaceLabelManager: Removed redundant window for space \(id)")
+            print("SpaceLabelManager: Removed redundant/stale window for space \(id)")
         }
     }
 
@@ -387,10 +401,12 @@ class SpaceLabelManager: ObservableObject {
         updateWindows()
 
         if isEnabled {
-            if let spaceId = spaceManager?.currentSpaceUUID,
-                let name = spaceManager?.getSpaceName(spaceId)
-            {
-                updateLabel(for: spaceId, name: name, verifySpace: false)
+            // Support multi-monitor: show labels for ALL visible spaces
+            let visibleUUIDs = SpaceHelper.getVisibleSystemSpaceIDs()
+            for spaceId in visibleUUIDs {
+                if let name = spaceManager?.getSpaceName(spaceId) {
+                    updateLabel(for: spaceId, name: name, verifySpace: false)
+                }
             }
         }
     }
