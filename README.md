@@ -1,4 +1,6 @@
-<!-- v1.6.0 -->
+<!-- v1.6.1 -->
+<!-- Remember to put Move Window demo here -->
+<!-- And the promotion video -->
 
 <h1 align="center">
   <img src="./DesktopRenamer/Resources/DesktopRenamerIcon_Default.png" width="25%" alt=""/>  
@@ -6,27 +8,27 @@
   <p align="center">DesktopRenamer</p>
 </h1>
 <h3>
-<p align="center"><i>Renamer Your Experiences</i></p>
+<p align="center"><i>Rename Your Experiences</i></p>
 </h3>
 
 <table align="center" border="0" cellpadding="0" cellspacing="0">
   <tr>
     <td align="center">
-      <img src="./DesktopRenamer/Resources/Demo/DesktopRenamer_v1-6-0_Rename.png" width="300"/><br>
+      <img src="./DesktopRenamer/Resources/Demo/Images/DesktopRenamer_v1-6-0_Rename.png" width="300"/><br>
       <i>Rename desktop label in menubar</i>
     </td>
     <td align="center">
-      <img src="./DesktopRenamer/Resources/Demo/DesktopRenamer_v1-6-0_MCPreview.png" width="300"/><br>
+      <img src="./DesktopRenamer/Resources/Demo/Images/DesktopRenamer_v1-6-0_MCPreview.png" width="300"/><br>
       <i>Check the names in Mission Control</i>
     </td>
   </tr>
   <tr>
     <td align="center">
-      <img src="./DesktopRenamer/Resources/Demo/DesktopRenamer_v1-6-0_SLW.png" width="300"/><br>
+      <img src="./DesktopRenamer/Resources/Demo/Images/DesktopRenamer_v1-6-0_SLW.png" width="300"/><br>
       <i>Liquid Glass design</i>
     </td>
     <td align="center">
-      <img src="./DesktopRenamer/Resources/Demo/DesktopRenamer_v1-5-0_API.png" width="500"/><br>
+      <img src="./DesktopRenamer/Resources/Demo/Images/DesktopRenamer_v1-5-0_API.png" width="500"/><br>
       <i>
         Open
         <a href="https://github.com/gitmichaelqiu/DesktopRenamer/wiki/DesktopRenamer-API-Guide">
@@ -38,9 +40,15 @@
   </tr>
 </table>
 
+https://github.com/user-attachments/assets/2f1ad8b6-c003-4086-ae88-b0ed87ee4dd1
+
+Switch desktops faster with ProMotion.
+
 **DesktopRenamer** is a macOS menubar app that shows your **customized** name of the current desktop.
 
 ## 📦 Installation
+
+### Direct Download
 
 You do **NOT** have to disable *SIP* or things like that. Your macOS must be at least **macOS 13.0 Ventura**. All you need to do is:
 
@@ -48,15 +56,37 @@ You do **NOT** have to disable *SIP* or things like that. Your macOS must be at 
 2. Drag the app to the *Applications* folder
 3. All set!
 
+### Homebrew
+
+You can also choose to download it from Homebrew:
+
+```bash
+brew install --cask gitmichaelqiu/tap/desktoprenamer
+```
+
+### Open App
+
 Because I do **NOT** have an Apple developer account for the app releases, you may receive alerts such as "Developer is not verified".
 
 To resolve this, go to System Settings → the bottom of Privacy & Security → Open DesktopRenamer.
 
-## 🛜 API
+### Troubleshooting
 
-This app provides an API to acquire space ID and names.
+> [!NOTE]
+> If this still does not work for you and you encounter issue of "DesktopRenamer can't be opened", please open your terminal and execute this line:
+>
+> ```bash
+> codesign --force -s - /Applications/DesktopRenamer.app
+> ```
+>
+> Thanks [@timttate](https://github.com/timttate) for finding this [thread](https://github.com/luanti-org/luanti/issues/12033) with the solution by [@animaux](https://github.com/animaux).
 
-Check [Developer API Guide](https://github.com/gitmichaelqiu/DesktopRenamer/wiki/DesktopRenamer-API-Guide) for details.
+## 🛜 API & Apple Script
+
+DesktopRenamer provides multiple ways to interact with it:
+
+- [SpaceAPI Guide](https://github.com/gitmichaelqiu/DesktopRenamer/wiki/DesktopRenamer-API-Guide) - Acquire space IDs and names via HTTP.
+- [AppleScript Guide](https://github.com/gitmichaelqiu/DesktopRenamer/wiki/DesktopRenamer-AppleScript-Guide) - Automate space management and window positioning via AppleScript.
 
 You can switch on/off the API in Settings → Advanced.
 
@@ -73,6 +103,15 @@ You are welcome to create issues/suggestions in [GitHub Issues](https://github.c
 For the issue that all of the spaces are marked as "Fullscreen", please check the [Troubleshoot](./Troubleshoot.md).
 
 If you have encountered any other bugs, please generate a bug report in DesktopRenamer Settings → General. This will help a lot for analyzing the bugs!
+
+## 🙏 Acknowlegements
+
+This app uses the following packages:
+
+- [HotKey by @soffes](https://github.com/soffes/HotKey)
+- [Sparkle by @sparkle-project](https://github.com/sparkle-project/Sparkle)
+
+Many thanks to all of these wonderful developers!
 
 ## ⭐ Support This Project
 
