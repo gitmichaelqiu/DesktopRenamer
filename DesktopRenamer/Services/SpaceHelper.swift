@@ -92,6 +92,16 @@ class SpaceHelper {
 
         // --- NEW PRIORITY START ---
         
+        // Ensure the space is 'seeded' with an anchor window if it isn't already.
+        // This is critical for fresh launches or newly created spaces.
+        // SURGICAL FIX: Wrap in Task to bridge to MainActor-isolated SpaceLabelManager
+        Task { @MainActor in
+            if let manager = AppDelegate.shared.statusBarController?.labelManager {
+                let spaceName = AppDelegate.shared.spaceManager?.getSpaceName(spaceID) ?? "Space"
+                manager.ensureWindow(for: spaceID, name: spaceName, displayID: targetDisplayID)
+            }
+        }
+        
         // HIGHEST PRIORITY: Try window activation first. It's the most reliable 
         // across monitors and arrangements.
         print("SpaceHelper: Attempting primary method (Window Activation) for \(spaceID)")
@@ -457,7 +467,7 @@ class SpaceHelper {
     }
 
     static func startMonitoring(onChange: @escaping (String, Bool, Int, String) -> Void) {
-        onSpaceChange = onChange
+        self.onSpaceChange = onChange
 
         NSWorkspace.shared.notificationCenter.addObserver(
             forName: NSWorkspace.activeSpaceDidChangeNotification, object: nil, queue: .main

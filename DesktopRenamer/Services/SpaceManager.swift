@@ -344,8 +344,14 @@ class SpaceManager: ObservableObject {
                 bugReportLog.append(LogEntry(timestamp: Date(), spaceUUID: cgsState.currentUUID, isDesktop: currentIsDesktop, ncCount: 0, action: "CGS Update (\(source))"))
             }
             
-            if shouldUpdateWidget { scheduleWidgetUpdate() }
-    }
+            if shouldUpdateWidget { 
+                scheduleWidgetUpdate() 
+                // Aggressively trigger label seeding for new spaces
+                DispatchQueue.main.async {
+                    AppDelegate.shared.statusBarController?.labelManager.updateLabelsVisibility()
+                }
+            }
+        }
     
     // Debounce widget updates so we don't spam the system
     private func scheduleWidgetUpdate() {

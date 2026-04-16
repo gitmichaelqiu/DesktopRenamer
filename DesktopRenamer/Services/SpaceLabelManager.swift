@@ -356,7 +356,14 @@ class SpaceLabelManager: ObservableObject {
     }
 
     // Make sure we have a window for this space, or refresh it if we do
-    private func ensureWindow(for spaceId: String, name: String, displayID: String) {
+    func ensureWindow(for spaceId: String, name: String, displayID: String) {
+        if !Thread.isMainThread {
+            DispatchQueue.main.async { [weak self] in
+                self?.ensureWindow(for: spaceId, name: name, displayID: displayID)
+            }
+            return
+        }
+
         if let existingWindow = createdWindows[spaceId] {
             if !existingWindow.isVisible {
                 existingWindow.refreshAppearance()
@@ -404,7 +411,7 @@ class SpaceLabelManager: ObservableObject {
         createdWindows.removeAll()
     }
 
-    private func updateLabelsVisibility() {
+    func updateLabelsVisibility() {
         if isUpdating { return }
         isUpdating = true
         defer { isUpdating = false }
