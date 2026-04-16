@@ -40,8 +40,8 @@ class SpaceHelper {
         isSwitching = true
 
         defer {
-            // Short delay to allow OS animations to settle before allowing another switch
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+            // Unify cooldown to 0.35s to match macOS animation times and prevent rapid-fire failures
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
                 isSwitching = false
             }
         }
@@ -199,7 +199,12 @@ class SpaceHelper {
             }
         }
 
-        // 3. Force Activation
+        // 3. Force Re-binding & Activation
+        // CRITICAL FIX: Explicitly re-assert the space binding before activation.
+        // If macOS has jumbled the window onto the current space, activation will succeed 
+        // but no space switch will occur. Re-binding forces the window back to its target.
+        window.bindToTargetSpace()
+        
         window.orderFrontRegardless()
         window.makeKey()
         NSApp.activate(ignoringOtherApps: true)
