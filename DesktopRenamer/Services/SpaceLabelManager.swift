@@ -1,220 +1,349 @@
-import Foundation
 import AppKit
 import Combine
+import Foundation
 
+@MainActor
 class SpaceLabelManager: ObservableObject {
     private let spacesKey = "com.michaelqiu.desktoprenamer.slw"
-    
-    // Persistence Keys (Settings)
+
+    // Persistence Keys
     private let kActiveFontScale = "kActiveFontScale"
     private let kActivePaddingScale = "kActivePaddingScale"
     private let kPreviewFontScale = "kPreviewFontScale"
     private let kPreviewPaddingScale = "kPreviewPaddingScale"
-    
+
     private let kShowPreviewLabels = "kShowPreviewLabels"
     private let kShowActiveLabels = "kShowActiveLabels"
     private let kShowOnDesktop = "kShowOnDesktop"
+    private let kHideWhenSwitching = "kHideWhenSwitching"
     
-    // Persistence Keys (Window State Synchronization)
     private let kGlobalIsDocked = "kGlobalIsDocked"
     private let kGlobalDockEdge = "kGlobalDockEdge"
     private let kGlobalCenterX = "kGlobalCenterX"
     private let kGlobalCenterY = "kGlobalCenterY"
-    
+
+    // Where should the label sit on the screen?
+
     @Published var isEnabled: Bool {
         didSet {
             UserDefaults.standard.set(isEnabled, forKey: spacesKey)
             updateLabelsVisibility()
         }
     }
-    
-    // Visibility Toggles
-    @Published var showPreviewLabels: Bool { didSet { saveSettings(); updateWindows() } }
-    @Published var showActiveLabels: Bool { didSet { saveSettings(); updateWindows() } }
-    @Published var showOnDesktop: Bool { didSet { saveSettings(); updateWindows() } }
-    
-    // Scales
-    @Published var activeFontScale: Double { didSet { saveSettings(); updateWindows() } }
-    @Published var activePaddingScale: Double { didSet { saveSettings(); updateWindows() } }
-    @Published var previewFontScale: Double { didSet { saveSettings(); recalculateUnifiedSize() } }
-    @Published var previewPaddingScale: Double { didSet { saveSettings(); recalculateUnifiedSize() } }
-    
-    // MARK: - Global Window State (Synced)
-    // These hold the "Master" position/status for the window across all spaces.
+
+    // Settings
+    @Published var showPreviewLabels: Bool {
+        didSet {
+            saveSettings()
+            updateWindows()
+        }
+    }
+    @Published var hideWhenSwitching: Bool { didSet { saveSettings() } }
+    @Published var showActiveLabels: Bool {
+        didSet {
+            saveSettings()
+            updateWindows()
+        }
+    }
+    @Published var showOnDesktop: Bool {
+        didSet {
+            saveSettings()
+            updateWindows()
+        }
+    }
+
+    @Published var activeFontScale: Double {
+        didSet {
+            saveSettings()
+            updateWindows()
+        }
+    }
+    @Published var activePaddingScale: Double {
+        didSet {
+            saveSettings()
+            updateWindows()
+        }
+    }
+    @Published var previewFontScale: Double {
+        didSet {
+            saveSettings()
+            recalculateUnifiedSize()
+        }
+    }
+    @Published var previewPaddingScale: Double {
+        didSet {
+            saveSettings()
+            recalculateUnifiedSize()
+        }
+    }
+
+    // Current window position and docking status
     @Published var globalIsDocked: Bool
     @Published var globalDockEdge: NSRectEdge
-    @Published var globalCenterPoint: NSPoint? // Nil implies "use default calculation"
-    
+    @Published var globalCenterPoint: NSPoint?
+
     private var createdWindows: [String: SpaceLabelWindow] = [:]
     private weak var spaceManager: SpaceManager?
     private var cancellables = Set<AnyCancellable>()
-    
+
     init(spaceManager: SpaceManager) {
         self.spaceManager = spaceManager
-        
+
         UserDefaults.standard.register(defaults: [spacesKey: true])
         self.isEnabled = UserDefaults.standard.bool(forKey: spacesKey)
-        
-        // Load Scales
+
+        // Load Settings
         let loadedActiveFont = UserDefaults.standard.double(forKey: kActiveFontScale)
-        let loadedActivePadding = UserDefaults.standard.double(forKey: kActivePaddingScale)
-        let loadedPreviewFont = UserDefaults.standard.double(forKey: kPreviewFontScale)
-        let loadedPreviewPadding = UserDefaults.standard.double(forKey: kPreviewPaddingScale)
-        
         self.activeFontScale = (loadedActiveFont == 0) ? 1.0 : loadedActiveFont
+
+        let loadedActivePadding = UserDefaults.standard.double(forKey: kActivePaddingScale)
         self.activePaddingScale = (loadedActivePadding == 0) ? 1.0 : loadedActivePadding
+
+        let loadedPreviewFont = UserDefaults.standard.double(forKey: kPreviewFontScale)
         self.previewFontScale = (loadedPreviewFont == 0) ? 1.0 : loadedPreviewFont
+
+        let loadedPreviewPadding = UserDefaults.standard.double(forKey: kPreviewPaddingScale)
         self.previewPaddingScale = (loadedPreviewPadding == 0) ? 1.0 : loadedPreviewPadding
-        
-        // Load Visibility
-        self.showPreviewLabels = UserDefaults.standard.object(forKey: kShowPreviewLabels) == nil ? true : UserDefaults.standard.bool(forKey: kShowPreviewLabels)
-        self.showActiveLabels = UserDefaults.standard.object(forKey: kShowActiveLabels) == nil ? true : UserDefaults.standard.bool(forKey: kShowActiveLabels)
+
+        self.showPreviewLabels =
+            UserDefaults.standard.object(forKey: kShowPreviewLabels) == nil
+            ? true : UserDefaults.standard.bool(forKey: kShowPreviewLabels)
+        self.hideWhenSwitching = UserDefaults.standard.bool(forKey: kHideWhenSwitching)
+        self.showActiveLabels =
+            UserDefaults.standard.object(forKey: kShowActiveLabels) == nil
+            ? true : UserDefaults.standard.bool(forKey: kShowActiveLabels)
         self.showOnDesktop = UserDefaults.standard.bool(forKey: kShowOnDesktop)
-        
-        // MARK: - Load Global Sync State (Defaults Logic)
-        // 1. Is Docked? Default: true
+
+        // Load Global State
         if UserDefaults.standard.object(forKey: kGlobalIsDocked) != nil {
             self.globalIsDocked = UserDefaults.standard.bool(forKey: kGlobalIsDocked)
         } else {
-            self.globalIsDocked = true // <-- DEFAULT: Start docked
+            self.globalIsDocked = true
         }
-        
-        // 2. Dock Edge? Default: .maxX (Right side)
+
         if UserDefaults.standard.object(forKey: kGlobalDockEdge) != nil {
             let edgeRaw = UserDefaults.standard.integer(forKey: kGlobalDockEdge)
             self.globalDockEdge = NSRectEdge(rawValue: UInt(edgeRaw)) ?? .maxX
         } else {
-            self.globalDockEdge = .maxX // <-- DEFAULT: Right Edge
+            self.globalDockEdge = .maxX
         }
-        
-        // 3. Position? Default: nil (Window class will calculate screen middle-right)
+
         if UserDefaults.standard.object(forKey: kGlobalCenterX) != nil {
             let cx = UserDefaults.standard.double(forKey: kGlobalCenterX)
             let cy = UserDefaults.standard.double(forKey: kGlobalCenterY)
             self.globalCenterPoint = NSPoint(x: cx, y: cy)
         } else {
-            self.globalCenterPoint = nil // <-- DEFAULT: Let window decide
+            self.globalCenterPoint = nil
         }
-        
+
         setupObservers()
     }
-    
+
     deinit {
-        removeAllWindows()
-        cancellables.removeAll()
+        let windows = createdWindows.values
+        Task { @MainActor in
+            for window in windows { window.orderOut(nil) }
+        }
     }
-    
-    // MARK: - State Synchronization
-    
+
     func updateGlobalState(isDocked: Bool, edge: NSRectEdge, center: NSPoint) {
         self.globalIsDocked = isDocked
         self.globalDockEdge = edge
         self.globalCenterPoint = center
-        
-        // Save immediately
+
         UserDefaults.standard.set(isDocked, forKey: kGlobalIsDocked)
         UserDefaults.standard.set(Int(edge.rawValue), forKey: kGlobalDockEdge)
         UserDefaults.standard.set(center.x, forKey: kGlobalCenterX)
         UserDefaults.standard.set(center.y, forKey: kGlobalCenterY)
     }
-    
+
     private func saveSettings() {
         UserDefaults.standard.set(activeFontScale, forKey: kActiveFontScale)
         UserDefaults.standard.set(activePaddingScale, forKey: kActivePaddingScale)
         UserDefaults.standard.set(previewFontScale, forKey: kPreviewFontScale)
         UserDefaults.standard.set(previewPaddingScale, forKey: kPreviewPaddingScale)
-        
+
         UserDefaults.standard.set(showPreviewLabels, forKey: kShowPreviewLabels)
+        UserDefaults.standard.set(hideWhenSwitching, forKey: kHideWhenSwitching)
         UserDefaults.standard.set(showActiveLabels, forKey: kShowActiveLabels)
         UserDefaults.standard.set(showOnDesktop, forKey: kShowOnDesktop)
     }
-    
+
     private func updateWindows() {
-        for window in createdWindows.values {
+        let windows = Array(createdWindows.values)
+        for window in windows {
             window.refreshAppearance()
         }
     }
-    
+
     private func setupObservers() {
         guard let spaceManager = spaceManager else { return }
-        
+
         spaceManager.$currentSpaceUUID
             .dropFirst()
             .receive(on: DispatchQueue.main)
             .sink { [weak self] _ in self?.updateAllWindowModes() }
             .store(in: &cancellables)
-            
+
         spaceManager.$spaceNameDict
             .receive(on: DispatchQueue.main)
-            .sink { [weak self] _ in self?.recalculateUnifiedSize() }
+            .sink { [weak self] _ in
+                self?.recalculateUnifiedSize()
+                self?.cleanupRedundantWindows()
+            }
+            .store(in: &cancellables)
+
+        NotificationCenter.default.publisher(for: NSNotification.Name("SpaceSwitchRequested"))
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] _ in
+                if self?.hideWhenSwitching == true {
+                    self?.hideAllPreviewLabels()
+                }
+            }
             .store(in: &cancellables)
     }
-    
+
+    // Get rid of windows for spaces that don't exist anymore
+    private func cleanupRedundantWindows() {
+        guard let spaceManager = spaceManager else { return }
+        let validUUIDs = Set(spaceManager.spaceNameDict.map { $0.id })
+
+        let redundantIDs = createdWindows.keys.filter { !validUUIDs.contains($0) }
+
+        for id in redundantIDs {
+            if let window = createdWindows[id] {
+                window.close()
+            }
+            createdWindows.removeValue(forKey: id)
+            print("SpaceLabelManager: Removed redundant window for space \(id)")
+        }
+    }
+
     private func recalculateUnifiedSize() {
         guard let spaceManager = spaceManager else { return }
-        
-        // Uses Preview Settings for the "Max Size" reference
+
+        if !Thread.isMainThread {
+            Task { @MainActor [weak self] in self?.recalculateUnifiedSize() }
+            return
+        }
+
+        let pFontScale = previewFontScale.isNaN || previewFontScale <= 0 ? 1.0 : previewFontScale
+        let pPadScale =
+            previewPaddingScale.isNaN || previewPaddingScale <= 0 ? 1.0 : previewPaddingScale
+
         let baseFontSize: CGFloat = 180
-        let scaledFontSize = baseFontSize * CGFloat(previewFontScale)
+        let scaledFontSize = baseFontSize * CGFloat(pFontScale)
         let referenceFont = NSFont.systemFont(ofSize: scaledFontSize, weight: .bold)
-        
+
         var maxWidth: CGFloat = 600
         var maxHeight: CGFloat = 300
-        
+
         for space in spaceManager.spaceNameDict {
             let name = spaceManager.getSpaceName(space.id)
             let size = name.size(withAttributes: [.font: referenceFont])
             if size.width > maxWidth { maxWidth = size.width }
             if size.height > maxHeight { maxHeight = size.height }
         }
-        
+
         let basePadH: CGFloat = 200
         let basePadV: CGFloat = 150
-        let paddingH = basePadH * CGFloat(previewPaddingScale)
-        let paddingV = basePadV * CGFloat(previewPaddingScale)
-        
+        let paddingH = basePadH * CGFloat(pPadScale)
+        let paddingV = basePadV * CGFloat(pPadScale)
+
         var finalSize = NSSize(width: maxWidth + paddingH, height: maxHeight + paddingV)
-        
-        if let screen = NSScreen.main {
+
+        if let screen = NSScreen.screens.first {
             finalSize.width = min(finalSize.width, screen.frame.width * 0.95)
             finalSize.height = min(finalSize.height, screen.frame.height * 0.9)
         }
-        
-        for window in createdWindows.values {
+
+        if finalSize.width.isNaN || finalSize.height.isNaN || finalSize.width < 10
+            || finalSize.height < 10
+        {
+            return
+        }
+
+        let windows = Array(createdWindows.values)
+        for window in windows {
             window.setPreviewSize(finalSize)
         }
     }
-    
+
     private func updateAllWindowModes() {
-        SpaceHelper.getVisibleSpaceUUIDs { [weak self] visibleUUIDs in
-            guard let self = self, self.isEnabled else { return }
-            for (spaceId, window) in self.createdWindows {
-                let isVisibleOnAnyScreen = visibleUUIDs.contains(spaceId)
-                window.setMode(isCurrentSpace: isVisibleOnAnyScreen)
+        let detectionMethod = spaceManager?.detectionMethod ?? .automatic
+
+        if detectionMethod == .automatic {
+            Task { @MainActor in
+                let visibleUUIDs = SpaceHelper.getVisibleSystemSpaceIDs()
+                self.applyVisibility(visibleUUIDs)
             }
-        }
-    }
-    
-    func updateLabel(for spaceId: String, name: String, verifySpace: Bool = true) {
-        guard isEnabled, spaceId != "FULLSCREEN" else { return }
-        if !verifySpace {
-            let currentDisplayID = spaceManager?.currentDisplayID ?? "Main"
-            ensureWindow(for: spaceId, name: name, displayID: currentDisplayID)
-            return
-        }
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.02) {
-            SpaceHelper.getRawSpaceUUID { confirmedSpaceId, _, _, liveDisplayID in
-                if confirmedSpaceId == spaceId {
-                    self.ensureWindow(for: spaceId, name: name, displayID: liveDisplayID)
+        } else {
+            SpaceHelper.getVisibleSpaceUUIDs { [weak self] visibleUUIDs in
+                Task { @MainActor [weak self] in
+                    self?.applyVisibility(visibleUUIDs)
                 }
             }
         }
     }
-    
+
+    private func applyVisibility(_ visibleUUIDs: Set<String>) {
+        let windowsSnapshot = self.createdWindows
+
+        for (key, window) in windowsSnapshot {
+            let isVisibleOnAnyScreen = visibleUUIDs.contains(key)
+            window.setMode(isCurrentSpace: isVisibleOnAnyScreen)
+        }
+    }
+
+    private func hidePreviewLabel(for spaceId: String) {
+        if let window = createdWindows[spaceId] {
+            window.hideImmediately()
+        }
+    }
+
+    private func hideAllPreviewLabels() {
+        for window in createdWindows.values {
+            window.hideImmediately()
+        }
+    }
+
+    func updateLabel(for spaceId: String, name: String, verifySpace: Bool = true) {
+        guard spaceId != "FULLSCREEN" else { return }
+
+        if !verifySpace {
+            let actualDisplayID = spaceManager?.spaceNameDict.first(where: { $0.id == spaceId })?.displayID ?? spaceManager?.currentDisplayID ?? "Main"
+            ensureWindow(for: spaceId, name: name, displayID: actualDisplayID)
+            return
+        }
+
+        Task { @MainActor in
+            // FIX: Increase delay to 0.5s (500ms) to ensure macOS space transition (swipe animation)
+            // is fully complete before creating the window. This prevents the window from being
+            // created on the 'source' desktop instead of the 'destination' fullscreen app.
+            try? await Task.sleep(nanoseconds: 500_000_000)
+
+            if spaceManager?.detectionMethod == .automatic {
+                guard let state = SpaceHelper.getSystemState() else { return }
+                if state.currentUUID == spaceId {
+                    self.ensureWindow(for: spaceId, name: name, displayID: state.displayID)
+                }
+            } else {
+                SpaceHelper.getRawSpaceUUID { [weak self] confirmedSpaceId, _, _, liveDisplayID in
+                    Task { @MainActor [weak self] in
+                        if confirmedSpaceId == spaceId {
+                            self?.ensureWindow(for: spaceId, name: name, displayID: liveDisplayID)
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // Make sure we have a window for this space, or refresh it if we do
     private func ensureWindow(for spaceId: String, name: String, displayID: String) {
         if let existingWindow = createdWindows[spaceId] {
             if !existingWindow.isVisible {
-                createdWindows.removeValue(forKey: spaceId)
+                existingWindow.refreshAppearance()
             } else if existingWindow.displayID != displayID {
                 existingWindow.orderOut(nil)
                 createdWindows.removeValue(forKey: spaceId)
@@ -224,30 +353,48 @@ class SpaceLabelManager: ObservableObject {
         }
         createWindow(for: spaceId, name: name, displayID: displayID)
     }
-    
+
     private func createWindow(for spaceId: String, name: String, displayID: String) {
         guard let spaceManager = spaceManager else { return }
-        let window = SpaceLabelWindow(spaceId: spaceId, name: name, displayID: displayID, spaceManager: spaceManager, labelManager: self)
+
+        // Pass the isFullscreen flag from the space manager logic
+        let isFullscreen =
+            spaceManager.spaceNameDict.first(where: { $0.id == spaceId })?.isFullscreen ?? false
+
+        let window = SpaceLabelWindow(
+            spaceId: spaceId, name: name, displayID: displayID, isFullscreen: isFullscreen,
+            spaceManager: spaceManager, labelManager: self)
         createdWindows[spaceId] = window
         let isCurrent = (spaceId == spaceManager.currentSpaceUUID)
         window.setMode(isCurrentSpace: isCurrent)
         self.recalculateUnifiedSize()
         window.orderFront(nil)
+        window.bindToTargetSpace()
     }
-    
+
+    func reloadAllWindows() {
+        removeAllWindows()
+        updateLabelsVisibility()
+    }
+
     private func removeAllWindows() {
-        for (_, window) in createdWindows { window.orderOut(nil) }
+        let windows = Array(createdWindows.values)
+        for window in windows { window.orderOut(nil) }
         createdWindows.removeAll()
     }
-    
+
     private func updateLabelsVisibility() {
-        if !isEnabled { removeAllWindows() } else {
-            if let spaceId = spaceManager?.currentSpaceUUID, let name = spaceManager?.getSpaceName(spaceId) {
+        updateWindows()
+
+        if isEnabled {
+            if let spaceId = spaceManager?.currentSpaceUUID,
+                let name = spaceManager?.getSpaceName(spaceId)
+            {
                 updateLabel(for: spaceId, name: name, verifySpace: false)
             }
         }
     }
-    
+
     func toggleEnabled() {
         isEnabled.toggle()
     }

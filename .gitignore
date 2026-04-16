@@ -1,4 +1,6 @@
+tmp/
 .DS_Store
 *.xcuserstate
 *.xcworkspace
 *.xcuserdata
+Raycast_DesktopRenamer/

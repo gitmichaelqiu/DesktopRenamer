@@ -17,7 +17,7 @@ struct AboutView: View {
     var body: some View {
         ScrollView {
             VStack(spacing: 24) {
-                // MARK: - App Header
+                // App Icon and Name
                 VStack(spacing: 12) {
                     if let nsImage = NSApplication.shared.applicationIconImage {
                         Image(nsImage: nsImage)
@@ -48,7 +48,7 @@ struct AboutView: View {
                 Divider()
                     .padding(.horizontal, 40)
 
-                // MARK: - More Apps Section
+                // Other projects by the same developer
                 VStack(spacing: 16) {
                     Text("More Apps")
                         .font(.headline)
@@ -59,7 +59,7 @@ struct AboutView: View {
                         OtherAppCard(
                             imageName: "OptClickerIcon_Default",
                             appName: "OptClicker",
-                            description: "Let you right-click with the Option key.",
+                            description: NSLocalizedString("Let you right-click with the Option key.", comment: ""),
                             url: "https://github.com/gitmichaelqiu/OptClicker"
                         )
                         
@@ -67,7 +67,7 @@ struct AboutView: View {
                         OtherAppCard(
                             imageName: "SpaceSwitcherIcon_Default",
                             appName: "SpaceSwitcher",
-                            description: "Control which app and dock to show in each space.",
+                            description: NSLocalizedString("Control which app and dock to show in each space.", comment: ""),
                             url: "https://github.com/gitmichaelqiu/SpaceSwitcher"
                         )
                     }
@@ -78,7 +78,7 @@ struct AboutView: View {
                 Divider()
                     .padding(.horizontal, 40)
 
-                // MARK: - Footer
+                // Links and Copyright
                 VStack(spacing: 10) {
                     Link(NSLocalizedString("Settings.About.Repo", comment: "GitHub Repo"),
                          destination: URL(string: "https://github.com/gitmichaelqiu/DesktopRenamer")!)
