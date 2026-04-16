@@ -364,11 +364,17 @@ class SpaceLabelManager: ObservableObject {
         }
 
         if let existingWindow = createdWindows[spaceId] {
-            if !existingWindow.isVisible {
-                existingWindow.refreshAppearance()
-            } else if existingWindow.displayID != displayID {
-                existingWindow.orderOut(nil)
-                createdWindows.removeValue(forKey: spaceId)
+            // Even if it exists, if it's currently ordered out or on a mismatching displayID,
+            // we should re-assert its state or recreate it to ensure reliability for switches.
+            if !existingWindow.isVisible || existingWindow.displayID != displayID {
+                 existingWindow.refreshAppearance()
+                 // If display still doesn't match after refresh, recreate
+                 if existingWindow.displayID != displayID {
+                     existingWindow.orderOut(nil)
+                     createdWindows.removeValue(forKey: spaceId)
+                 } else {
+                     return
+                 }
             } else {
                 return
             }
