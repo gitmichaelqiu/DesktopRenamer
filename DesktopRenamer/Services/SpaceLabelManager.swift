@@ -86,6 +86,8 @@ class SpaceLabelManager: ObservableObject {
     private weak var spaceManager: SpaceManager?
     private var cancellables = Set<AnyCancellable>()
 
+    private var isUpdating: Bool = false
+
     init(spaceManager: SpaceManager) {
         self.spaceManager = spaceManager
 
@@ -382,7 +384,12 @@ class SpaceLabelManager: ObservableObject {
         let isCurrent = (spaceId == spaceManager.currentSpaceUUID)
         window.setMode(isCurrentSpace: isCurrent)
         self.recalculateUnifiedSize()
-        window.orderFront(nil)
+        
+        // Only order front immediately for active/current spaces
+        if isCurrent {
+            window.orderFront(nil)
+        }
+        
         window.bindToTargetSpace()
     }
 
@@ -398,16 +405,22 @@ class SpaceLabelManager: ObservableObject {
     }
 
     private func updateLabelsVisibility() {
+        if isUpdating { return }
+        isUpdating = true
+        defer { isUpdating = false }
+        
         updateWindows()
 
-        if isEnabled {
-            // Support multi-monitor: show labels for ALL visible spaces
-            let visibleUUIDs = SpaceHelper.getVisibleSystemSpaceIDs()
-            for spaceId in visibleUUIDs {
-                if let name = spaceManager?.getSpaceName(spaceId) {
-                    updateLabel(for: spaceId, name: name, verifySpace: false)
-                }
+        if isEnabled, let spaceManager = spaceManager {
+            // Support multi-monitor & reliable switching: 
+            // Ensure a window exists for EVERY space (active spaces get visible labels, others get invisible anchors)
+            let allSpaces = spaceManager.spaceNameDict
+            for space in allSpaces {
+                ensureWindow(for: space.id, name: space.customName, displayID: space.displayID)
             }
+            
+            let visibleUUIDs = SpaceHelper.getVisibleSystemSpaceIDs()
+            applyVisibility(visibleUUIDs)
         }
     }
 

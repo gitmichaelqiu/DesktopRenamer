@@ -168,7 +168,53 @@ class SpaceManager: ObservableObject {
         var shouldUpdateWidget = false
         
         if detectionMethod == .automatic {
-            guard let cgsState = SpaceHelper.getSystemState() else { return }
+            // State Settlement Delay: 
+            // During a swipe animation, CGS can report a space change before the OS has fully 
+            // 'settled' on the new space. We wait briefly (350ms) to ensure animations are finished.
+            if source == "CGS" {
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) { [weak self] in
+                    self?.performAutomaticRefresh(source: source)
+                }
+                return
+            }
+            performAutomaticRefresh(source: source)
+            return
+        }
+
+        // Old-school fallback detection logic (Metric/Manual modes)
+        if self.currentIsDesktop != isDesktop {
+            self.currentIsDesktop = isDesktop
+            shouldUpdateWidget = true
+        }
+        self.currentNcCount = ncCount
+        self.currentRawSpaceUUID = rawUUID
+        self.currentDisplayID = displayID
+        
+        var logicalUUID = rawUUID
+        switch detectionMethod {
+        case .automatic: if !isDesktop { logicalUUID = "FULLSCREEN" }
+        case .metric: if ncCount <= SpaceHelper.fullscreenThreshold { logicalUUID = "FULLSCREEN" }
+        case .manual: logicalUUID = rawUUID
+        }
+        
+        if isBugReportActive {
+            let action = (currentSpaceUUID != logicalUUID) ? "Space Switched (\(source))" : "State Check (\(source))"
+            bugReportLog.append(LogEntry(timestamp: Date(), spaceUUID: rawUUID, isDesktop: isDesktop, ncCount: ncCount, action: "\(action) [\(detectionMethod.rawValue)]"))
+        }
+
+        if currentSpaceUUID != logicalUUID {
+            print("SpaceManager: Space changed to \(logicalUUID) (via \(detectionMethod.rawValue) on \(displayID))")
+            self.currentSpaceUUID = logicalUUID
+            shouldUpdateWidget = true
+        }
+        
+        if shouldUpdateWidget { scheduleWidgetUpdate() }
+    }
+    
+    private func performAutomaticRefresh(source: String) {
+        guard let cgsState = SpaceHelper.getSystemState() else { return }
+        var shouldUpdateWidget = false
+        _ = cgsState.currentSpaces
             
             // First, see which names are already taken by active UUIDs so we don't double-assign.
             var claimedNames: Set<String> = []
@@ -299,54 +345,6 @@ class SpaceManager: ObservableObject {
             }
             
             if shouldUpdateWidget { scheduleWidgetUpdate() }
-            return
-        }
-        
-        // Old-school fallback detection logic
-        if self.currentIsDesktop != isDesktop {
-            self.currentIsDesktop = isDesktop
-            shouldUpdateWidget = true
-        }
-        self.currentNcCount = ncCount
-        self.currentRawSpaceUUID = rawUUID
-        self.currentDisplayID = displayID
-        
-        var logicalUUID = rawUUID
-        switch detectionMethod {
-        case .automatic: if !isDesktop { logicalUUID = "FULLSCREEN" }
-        case .metric: if ncCount <= SpaceHelper.fullscreenThreshold { logicalUUID = "FULLSCREEN" }
-        case .manual: logicalUUID = rawUUID
-        }
-        
-        if isBugReportActive {
-            let action = (currentSpaceUUID != logicalUUID) ? "Space Switched (\(source))" : "State Check (\(source))"
-            bugReportLog.append(LogEntry(timestamp: Date(), spaceUUID: rawUUID, isDesktop: isDesktop, ncCount: ncCount, action: "\(action) [\(detectionMethod.rawValue)]"))
-        }
-        
-        if currentSpaceUUID != logicalUUID {
-            currentSpaceUUID = logicalUUID
-            shouldUpdateWidget = true
-        }
-
-        if let index = spaceNameDict.firstIndex(where: { $0.id == logicalUUID }) {
-            if spaceNameDict[index].displayID != displayID {
-                spaceNameDict[index].displayID = displayID
-                saveData()
-            }
-        }
-        
-        if detectionMethod != .manual && detectionMethod != .automatic && logicalUUID != "FULLSCREEN" {
-            if !spaceNameDict.contains(where: { $0.id == logicalUUID }) {
-                // If we found a new space, add it to the list
-                let existingSpacesOnDisplay = spaceNameDict.filter { $0.displayID == displayID }
-                let newNum = (existingSpacesOnDisplay.map { $0.num }.max() ?? 0) + 1
-                spaceNameDict.append(DesktopSpace(id: logicalUUID, customName: "", num: newNum, displayID: displayID))
-                saveData()
-                shouldUpdateWidget = true
-            }
-        }
-        
-        if shouldUpdateWidget { scheduleWidgetUpdate() }
     }
     
     // Debounce widget updates so we don't spam the system
