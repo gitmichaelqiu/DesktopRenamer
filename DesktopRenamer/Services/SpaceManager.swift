@@ -72,6 +72,7 @@ class SpaceManager: ObservableObject {
     
     // Widget Debouncer
     private var widgetUpdateWorkItem: DispatchWorkItem?
+    private var settlementRefreshItem: DispatchWorkItem?
     
     @Published var detectionMethod: DetectionMethod {
         didSet {
@@ -171,10 +172,13 @@ class SpaceManager: ObservableObject {
             // State Settlement Delay: 
             // During a swipe animation, CGS can report a space change before the OS has fully 
             // 'settled' on the new space. We wait briefly (350ms) to ensure animations are finished.
-            if source == "CGS" {
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) { [weak self] in
+            if source == "Monitor" {
+                settlementRefreshItem?.cancel()
+                let workItem = DispatchWorkItem { [weak self] in
                     self?.performAutomaticRefresh(source: source)
                 }
+                settlementRefreshItem = workItem
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.35, execute: workItem)
                 return
             }
             performAutomaticRefresh(source: source)
@@ -214,7 +218,6 @@ class SpaceManager: ObservableObject {
     private func performAutomaticRefresh(source: String) {
         guard let cgsState = SpaceHelper.getSystemState() else { return }
         var shouldUpdateWidget = false
-        _ = cgsState.currentSpaces
             
             // First, see which names are already taken by active UUIDs so we don't double-assign.
             var claimedNames: Set<String> = []
