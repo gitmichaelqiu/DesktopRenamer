@@ -24,20 +24,20 @@ struct LabelSettingsView: View {
                                 .toggleStyle(.switch)
                                 .labelsHidden()
                         }
-                        
-                        Divider()
-
-                        SettingsRow(
-                            "Hide when switching desktops",
-                            helperText:
-                                "Hide the space label window of the space that is being switched to immediately instead of hiding it after the space is switched."
-                        ) {
-                            Toggle("", isOn: $labelManager.hideWhenSwitching)
-                                .toggleStyle(.switch)
-                                .labelsHidden()
-                        }
 
                         if labelManager.showPreviewLabels {
+                            Divider()
+
+                            SettingsRow(
+                                "Hide when switching desktops",
+                                helperText:
+                                    "Hide the space label window of the space that is being switched to immediately instead of hiding it after the space is switched."
+                            ) {
+                                Toggle("", isOn: $labelManager.hideWhenSwitching)
+                                    .toggleStyle(.switch)
+                                    .labelsHidden()
+                            }
+
                             Divider()
 
                             SliderSettingsRow(
