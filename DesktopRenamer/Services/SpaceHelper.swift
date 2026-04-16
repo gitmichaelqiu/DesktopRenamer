@@ -94,11 +94,21 @@ class SpaceHelper {
         
         // Ensure the space is 'seeded' with an anchor window if it isn't already.
         // This is critical for fresh launches or newly created spaces.
-        // SURGICAL FIX: Wrap in Task to bridge to MainActor-isolated SpaceLabelManager
-        Task { @MainActor in
-            if let manager = AppDelegate.shared.statusBarController?.labelManager {
-                let spaceName = AppDelegate.shared.spaceManager?.getSpaceName(spaceID) ?? "Space"
-                manager.ensureWindow(for: spaceID, name: spaceName, displayID: targetDisplayID)
+        // Use synchronous dispatch to ensure window exists before activation attempt.
+        let seedWindow = {
+            MainActor.assumeIsolated {
+                if let manager = AppDelegate.shared.statusBarController?.labelManager {
+                    let spaceName = AppDelegate.shared.spaceManager?.getSpaceName(spaceID) ?? "Space"
+                    manager.ensureWindow(for: spaceID, name: spaceName, displayID: targetDisplayID)
+                }
+            }
+        }
+        
+        if Thread.isMainThread {
+            seedWindow()
+        } else {
+            DispatchQueue.main.sync {
+                seedWindow()
             }
         }
         
@@ -667,30 +677,20 @@ class SpaceHelper {
 
         // SORT: Ensure displays are processed in the order macOS assigns shortcuts.
         // For multi-monitor, this usually follows primary monitor then spatial arrangement.
+        let screenFrames: [String: CGRect] = Dictionary(uniqueKeysWithValues: NSScreen.screens.compactMap { s in
+            let sID = s.deviceDescription[NSDeviceDescriptionKey("NSScreenNumber")] as? NSNumber ?? 0
+            guard let uuidRef = CGDisplayCreateUUIDFromDisplayID(sID.uint32Value)?.takeRetainedValue() else { return nil }
+            let uuid = (CFUUIDCreateString(nil, uuidRef) as String).uppercased()
+            return (uuid, s.frame)
+        })
+
         let sortedDisplays = displays.sorted { d1, d2 in
             let id1raw = d1["Display Identifier"] as? String ?? ""
             let id2raw = d2["Display Identifier"] as? String ?? ""
             let id1 = normalizeDisplayID(id1raw, mainUUID: mainScreenUUID)
             let id2 = normalizeDisplayID(id2raw, mainUUID: mainScreenUUID)
             
-            let screen1 = NSScreen.screens.first { s in
-                let sID = s.deviceDescription[NSDeviceDescriptionKey("NSScreenNumber")] as? NSNumber ?? 0
-                if let uuidRef = CGDisplayCreateUUIDFromDisplayID(sID.uint32Value)?.takeRetainedValue() {
-                    let uuid = (CFUUIDCreateString(nil, uuidRef) as String).uppercased()
-                    return uuid == id1
-                }
-                return false
-            }
-            let screen2 = NSScreen.screens.first { s in
-                let sID = s.deviceDescription[NSDeviceDescriptionKey("NSScreenNumber")] as? NSNumber ?? 0
-                if let uuidRef = CGDisplayCreateUUIDFromDisplayID(sID.uint32Value)?.takeRetainedValue() {
-                    let uuid = (CFUUIDCreateString(nil, uuidRef) as String).uppercased()
-                    return uuid == id2
-                }
-                return false
-            }
-            
-            guard let frame1 = screen1?.frame, let frame2 = screen2?.frame else {
+            guard let frame1 = screenFrames[id1], let frame2 = screenFrames[id2] else {
                 let idx1 = screenUUIDs.firstIndex(of: id1) ?? Int.max
                 let idx2 = screenUUIDs.firstIndex(of: id2) ?? Int.max
                 return idx1 < idx2

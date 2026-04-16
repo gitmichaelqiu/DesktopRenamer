@@ -210,14 +210,13 @@ class SpaceLabelManager: ObservableObject {
     private func cleanupRedundantWindows() {
         guard let spaceManager = spaceManager else { return }
         let validSpaces = spaceManager.spaceNameDict
-        let validUUIDs = Set(validSpaces.map { $0.id })
+        let spaceMap = Dictionary(uniqueKeysWithValues: validSpaces.map { ($0.id, $0) })
 
         let redundantIDs = createdWindows.keys.filter { id in
-            if !validUUIDs.contains(id) { return true }
+            guard let spaceInDict = spaceMap[id] else { return true }
             
             // If the window's displayID doesn't match the current management state, it's redundant (needs move)
             if let window = createdWindows[id],
-               let spaceInDict = validSpaces.first(where: { $0.id == id }),
                window.displayID != spaceInDict.displayID {
                 print("SpaceLabelManager: Display mismatch for \(id), marking redundant for recreation")
                 return true
