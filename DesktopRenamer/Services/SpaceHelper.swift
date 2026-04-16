@@ -21,6 +21,7 @@ class SpaceHelper {
     }
 
     private static var onSpaceChange: ((String, Bool, Int, String) -> Void)?
+    static var isActivating: Bool = false
     private static var globalEventMonitor: Any?
     private static var localEventMonitor: Any?
 
@@ -51,80 +52,57 @@ class SpaceHelper {
         // 1. Resolve Target Space Info
         var targetNum: Int? = nil
         var targetGlobalNum: Int? = nil
-        var shouldUseShortcut = true
         var targetIsFullscreen = false
         var currentIsFullscreen = false
+        var targetDisplayID: String = ""
 
-        if let state = getSystemState() {
-            if let targetSpace = state.spaces.first(where: { $0.id == spaceID }) {
-                targetNum = targetSpace.num
-                targetGlobalNum = targetSpace.globalShortcutNum
-                targetIsFullscreen = targetSpace.isFullscreen
+        if let state = getSystemState(),
+           let targetSpace = state.spaces.first(where: { $0.id == spaceID })
+        {
+            targetNum = targetSpace.num
+            targetGlobalNum = targetSpace.globalShortcutNum
+            targetIsFullscreen = targetSpace.isFullscreen
+            targetDisplayID = targetSpace.displayID
+            
+            print("SpaceHelper: Switching to space \(spaceID) (Num: \(targetNum ?? -1), Global: \(targetGlobalNum ?? -1), Display: \(targetDisplayID))")
+            
+            // Check if we are already on the target space on its own display
+            if let currentOnDisplay = state.currentSpaces[targetSpace.displayID], 
+               currentOnDisplay == spaceID {
+                print("SpaceHelper: Target space is already current on display \(targetDisplayID). Activating window.")
+                _ = switchByActivatingOwnWindow(for: spaceID, isFullscreen: targetIsFullscreen)
+                return
             }
             
             if let currentSpace = state.spaces.first(where: { $0.id == state.currentUUID }) {
                 currentIsFullscreen = currentSpace.isFullscreen
             }
-
-            // If we are already on the target space, stop.
-            if state.currentUUID == spaceID { return }
+        } else {
+            print("SpaceHelper: ERROR - Could not resolve target space state for \(spaceID)")
         }
         
-        // Force Mission Control Automation for Fullscreen Transitions
+        // Force Mission Control Automation for Fullscreen Transitions (if applicable)
         if forceMissionControl && (targetIsFullscreen || currentIsFullscreen) {
             if let num = targetNum {
+                print("SpaceHelper: Using Mission Control fallback for fullscreen transition to \(num)")
                 switchViaMissionControl(to: num)
                 return
             }
         }
 
-        if let state = getSystemState(),
-            let targetSpace = state.spaces.first(where: { $0.id == spaceID })
-        {
-            // Note: Native shortcuts (Ctrl+1, Ctrl+2) only map to Desktops.
-            if targetSpace.isFullscreen {
-                shouldUseShortcut = false
-            } else {
-                let spacesBefore = state.spaces.filter {
-                    $0.displayID == targetSpace.displayID && $0.num < targetSpace.num
-                }
-                if spacesBefore.contains(where: { $0.isFullscreen }) {
-                    shouldUseShortcut = false
-                }
-            }
-        }
-
-        // First priority: Try to use the built-in Ctrl+Number shortcuts (if enabled)
-        // This is usually the smoothest way if it works.
-        if shouldUseShortcut {
-            if let globalNum = targetGlobalNum {
-                if isShortcutEnabled(for: globalNum) && simulateDesktopShortcut(for: globalNum) {
-                    return
-                }
-            } else if let localNum = targetNum {
-                // Fallback to local num if global is missing (should verify if this is ever needed/correct)
-                if isShortcutEnabled(for: localNum) && simulateDesktopShortcut(for: localNum) {
-                    return
-                }
-            }
-        }
-
-        // If shortcuts didn't handle it, use our private window activation trick.
+        // --- NEW PRIORITY START ---
+        
+        // HIGHEST PRIORITY: Try window activation first. It's the most reliable 
+        // across monitors and arrangements.
+        print("SpaceHelper: Attempting primary method (Window Activation) for \(spaceID)")
         if switchByActivatingOwnWindow(for: spaceID, isFullscreen: targetIsFullscreen) {
-
+            print("SpaceHelper: Window activation switch successful.")
+            
             // High-priority fix for Fullscreen Focus:
-            // When switching to a Fullscreen space via SpaceLabelWindow, DesktopRenamer initially gets focus.
-            // This can cause the OS to revert to the previous space if we don't hand off focus immediately.
-            // We must identify the "owner" app of the fullscreen space and activate it.
-            // Since we just triggered the visual switch, activating the app now should correctly
-            // prioritize the window on the target space (resolving the "multiple windows" ambiguity).
             if targetIsFullscreen {
                 if let pid = getOwnerPID(for: spaceID),
                     let app = NSRunningApplication(processIdentifier: pid)
                 {
-
-                    // A very short delay ensures the Window Server registers the space switch intent
-                    // before we force the app activation.
                     DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
                         app.activate(options: .activateIgnoringOtherApps)
                     }
@@ -133,14 +111,47 @@ class SpaceHelper {
             return
         }
 
-        // Last resort: Script Mission Control (it's slower and clunky)
+        // SECOND PRIORITY: Try native shortcuts (if enabled and applicable)
+        var shouldUseShortcut = !targetIsFullscreen
+        if shouldUseShortcut {
+            if let state = getSystemState(),
+               let targetSpace = state.spaces.first(where: { $0.id == spaceID }) {
+                let spacesOnDisplay = state.spaces.filter { $0.displayID == targetSpace.displayID }
+                if spacesOnDisplay.prefix(while: { $0.id != spaceID }).contains(where: { $0.isFullscreen }) {
+                    shouldUseShortcut = false
+                }
+            }
+        }
+
+        if shouldUseShortcut {
+            if let globalNum = targetGlobalNum {
+                print("SpaceHelper: Trying shortcut simulation for Global Num \(globalNum)")
+                if isShortcutEnabled(for: globalNum) && simulateDesktopShortcut(for: globalNum) {
+                    return
+                }
+            } else if let localNum = targetNum {
+                print("SpaceHelper: Trying shortcut simulation for Local Num \(localNum)")
+                if isShortcutEnabled(for: localNum) && simulateDesktopShortcut(for: localNum) {
+                    return
+                }
+            }
+        }
+        
+        // LAST RESORT: Mission Control
         if let num = targetNum {
+            print("SpaceHelper: All methods failed. Falling back to Mission Control UI click for \(num)")
             switchViaMissionControl(to: num)
         }
+
+        print("SpaceHelper: Switch attempt cycle finished for \(spaceID)")
     }
 
     private static func switchByActivatingOwnWindow(for spaceID: String, isFullscreen: Bool) -> Bool
     {
+        if isActivating { return false }
+        isActivating = true
+        defer { isActivating = false }
+        
         var targetWindow: SpaceLabelWindow? = nil
         var windowsToHide: [SpaceLabelWindow] = []
 
@@ -327,12 +338,36 @@ class SpaceHelper {
         let source = """
             tell application "Mission Control" to launch
             tell application "System Events"
-                delay 0.3
-                try
-                    click button \(targetNum) of list 1 of group 2 of group 1 of group 1 of process "Dock"
-                on error
-                    key code 53 -- Esc to exit if failed
-                end try
+                delay 0.4
+                tell process "Dock"
+                    -- Try to find the button in any of the potential mission control button lists (for multiple monitors)
+                    set found to false
+                    try
+                        -- Common hierarchy for main display
+                        click button \(targetNum) of list 1 of group 2 of group 1 of group 1
+                        set found to true
+                    on error
+                        try
+                            -- Often for secondary displays
+                            click button \(targetNum) of list 1 of group 1 of group 1 of group 1
+                            set found to true
+                        on error
+                             -- Fallback: try iteration if the above fixed paths fail
+                             set allGroups to every group of group 1 of group 1
+                             repeat with g in allGroups
+                                 try
+                                     click button \(targetNum) of list 1 of g
+                                     set found to true
+                                     exit repeat
+                                 end try
+                             end repeat
+                        end try
+                    end try
+                    
+                    if not found then
+                        key code 53 -- Esc to exit if failed
+                    end if
+                end tell
             end tell
             """
 
@@ -585,7 +620,8 @@ class SpaceHelper {
     }
 
     static func getSystemState() -> (
-        spaces: [DesktopSpace], currentUUID: String, displayID: String
+        spaces: [DesktopSpace], currentUUID: String, displayID: String,
+        currentSpaces: [String: String] // Mapping: displayID -> currentSpaceUUID
     )? {
         let conn = _CGSDefaultConnection()
         guard let displays = CGSCopyManagedDisplaySpaces(conn) as? [NSDictionary] else {
@@ -602,6 +638,7 @@ class SpaceHelper {
         
         var detectedSpaces: [DesktopSpace] = []
         var currentSpaceID = "FULLSCREEN"
+        var currentSpaces: [String: String] = [:]
 
         var targetDisplayID = activeDisplay // Default to active menu bar display
         
@@ -618,18 +655,48 @@ class SpaceHelper {
 
         var globalDesktopCounter = 0
 
-        // SORT: Ensure displays are processed in the order macOS assigns shortcuts (Main then others).
+        // SORT: Ensure displays are processed in the order macOS assigns shortcuts.
+        // For multi-monitor, this usually follows primary monitor then spatial arrangement.
         let sortedDisplays = displays.sorted { d1, d2 in
-            guard let id1raw = d1["Display Identifier"] as? String,
-                let id2raw = d2["Display Identifier"] as? String
-            else { return false }
-            
+            let id1raw = d1["Display Identifier"] as? String ?? ""
+            let id2raw = d2["Display Identifier"] as? String ?? ""
             let id1 = normalizeDisplayID(id1raw, mainUUID: mainScreenUUID)
             let id2 = normalizeDisplayID(id2raw, mainUUID: mainScreenUUID)
             
-            let idx1 = screenUUIDs.firstIndex(of: id1) ?? Int.max
-            let idx2 = screenUUIDs.firstIndex(of: id2) ?? Int.max
-            return idx1 < idx2
+            let screen1 = NSScreen.screens.first { s in
+                let sID = s.deviceDescription[NSDeviceDescriptionKey("NSScreenNumber")] as? NSNumber ?? 0
+                if let uuidRef = CGDisplayCreateUUIDFromDisplayID(sID.uint32Value)?.takeRetainedValue() {
+                    let uuid = (CFUUIDCreateString(nil, uuidRef) as String).uppercased()
+                    return uuid == id1
+                }
+                return false
+            }
+            let screen2 = NSScreen.screens.first { s in
+                let sID = s.deviceDescription[NSDeviceDescriptionKey("NSScreenNumber")] as? NSNumber ?? 0
+                if let uuidRef = CGDisplayCreateUUIDFromDisplayID(sID.uint32Value)?.takeRetainedValue() {
+                    let uuid = (CFUUIDCreateString(nil, uuidRef) as String).uppercased()
+                    return uuid == id2
+                }
+                return false
+            }
+            
+            guard let frame1 = screen1?.frame, let frame2 = screen2?.frame else {
+                let idx1 = screenUUIDs.firstIndex(of: id1) ?? Int.max
+                let idx2 = screenUUIDs.firstIndex(of: id2) ?? Int.max
+                return idx1 < idx2
+            }
+            
+            // Spatial Sort: 
+            // 1. Primary monitor (origin 0,0) always comes first for shortcut indexing
+            if frame1.origin.x == 0 && frame1.origin.y == 0 { return true }
+            if frame2.origin.x == 0 && frame2.origin.y == 0 { return false }
+            
+            // 2. Top-to-Bottom (Higher Y origin means Top)
+            if abs(frame1.origin.y - frame2.origin.y) > 50 { 
+                return frame1.origin.y > frame2.origin.y
+            }
+            // 3. Left-to-Right
+            return frame1.origin.x < frame2.origin.x
         }
 
         for display in sortedDisplays {
@@ -672,13 +739,14 @@ class SpaceHelper {
                 if let currentDict = display["Current Space"] as? [String: Any],
                     let currentID = currentDict["ManagedSpaceID"] as? Int, currentID == managedID
                 {
+                    currentSpaces[displayID] = idString
                     if displayID == targetDisplayID {
                         currentSpaceID = idString
                     }
                 }
             }
         }
-        return (detectedSpaces, currentSpaceID, targetDisplayID)
+        return (detectedSpaces, currentSpaceID, targetDisplayID, currentSpaces)
     }
 
     static func getVisibleSystemSpaceIDs() -> Set<String> {
