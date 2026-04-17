@@ -570,7 +570,7 @@ class SpaceHelper {
         }
     }
 
-    private static func getAllDisplayUUIDs() -> [String] {
+    static func getAllDisplayUUIDs() -> [String] {
         return NSScreen.screens.compactMap { screen -> String? in
             guard let id = screen.deviceDescription[NSDeviceDescriptionKey("NSScreenNumber")] as? CGDirectDisplayID else { return nil }
             guard let uuid = CGDisplayCreateUUIDFromDisplayID(id)?.takeRetainedValue() else { return nil }

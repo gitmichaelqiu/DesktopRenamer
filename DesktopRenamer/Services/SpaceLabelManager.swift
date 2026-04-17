@@ -207,6 +207,18 @@ class SpaceLabelManager: ObservableObject {
                 }
             }
             .store(in: &cancellables)
+
+        NSWorkspace.shared.notificationCenter.publisher(for: NSWorkspace.didWakeNotification)
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] _ in
+                print("SpaceLabelManager: System wake detected. Refreshing labels...")
+                Task { @MainActor in
+                    // Wait for displays to re-initialize (2s)
+                    try? await Task.sleep(nanoseconds: 2_000_000_000)
+                    self?.seedAllLabels()
+                }
+            }
+            .store(in: &cancellables)
     }
 
     // Get rid of windows for spaces that don't exist anymore
