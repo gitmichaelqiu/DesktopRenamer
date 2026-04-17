@@ -191,8 +191,9 @@ class SpaceLabelWindow: NSWindow {
         self.level = .floating
 
         // Collection Behavior
-        // .ignoresCycle and .fullScreenAuxiliary ensure the window doesn't interfere with focus/space switching.
-        self.collectionBehavior = [.managed, .ignoresCycle, .fullScreenAuxiliary]
+        // Reverted: .canJoinAllSpaces removed as it broke switching.
+        // We keep .fullScreenAuxiliary so it can theoretically appear over fullscreen apps.
+        self.collectionBehavior = [.managed, .participatesInCycle, .fullScreenAuxiliary]
 
         // Observers
         self.spaceManager.$spaceNameDict
@@ -559,8 +560,8 @@ class SpaceLabelWindow: NSWindow {
         var shouldUseHandle = false
 
         if self.isInvisibleAnchorMode {
-            // Anchor Mode: 2x2 Pixels (Ensures OS recognizes window for activation/space switches)
-            newSize = NSSize(width: 2, height: 2)
+            // Anchor Mode: 1x1 Pixel
+            newSize = NSSize(width: 1, height: 1)
         } else if showHandle {
             shouldUseHandle = true
             if self.dockEdge == .minX || self.dockEdge == .maxX {
@@ -580,8 +581,8 @@ class SpaceLabelWindow: NSWindow {
 
         // 2. Determine Position
         if self.isInvisibleAnchorMode {
-            // Anchor Mode: Center of Screen (Relative to 2x2 size)
-            newOrigin = NSPoint(x: targetScreen.frame.midX - 1, y: targetScreen.frame.midY - 1)
+            // Anchor Mode: Center of Screen
+            newOrigin = NSPoint(x: targetScreen.frame.midX, y: targetScreen.frame.midY)
         } else if isCurrentSpace {
             targetCenter = getAbsoluteTargetCenter(on: targetScreen, forSize: newSize)
 
@@ -610,7 +611,7 @@ class SpaceLabelWindow: NSWindow {
             self.backgroundColor = .clear  // RE-ASSERT TRANSPARENCY
 
             if self.isInvisibleAnchorMode {
-                self.level = .floating  // Reverted from .normal to prevent OS-level auto-switching
+                self.level = .normal  // CRITICAL: Floating windows don't switch spaces. Normal windows do.
                 self.label.isHidden = true
                 self.handleView.isHidden = true
                 self.contentView?.layer?.cornerRadius = 0
@@ -870,9 +871,8 @@ class SpaceLabelWindow: NSWindow {
             updateLayout(isCurrentSpace: self.isActiveMode, updateFrame: animated)
         }
 
-        if !self.isInvisibleAnchorMode && !self.isVisible {
-            // RELAXED: Removed forced orderFront during setMode to stop switching loops.
-            // Presence on screen is now managed strictly by createWindow and updateLabelsVisibility.
+        if !self.isVisible {
+            self.orderFrontRegardless()
         }
 
         self.alphaValue = 1.0
