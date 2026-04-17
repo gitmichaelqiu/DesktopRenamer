@@ -86,8 +86,6 @@ class SpaceLabelManager: ObservableObject {
     private weak var spaceManager: SpaceManager?
     private var cancellables = Set<AnyCancellable>()
 
-    private var isUpdating: Bool = false
-
     init(spaceManager: SpaceManager) {
         self.spaceManager = spaceManager
 
@@ -139,6 +137,12 @@ class SpaceLabelManager: ObservableObject {
         }
 
         setupObservers()
+        
+        // Seed all labels once after launch to populate Mission Control
+        Task { @MainActor in
+            try? await Task.sleep(nanoseconds: 1_500_000_000)
+            self.seedAllLabels()
+        }
     }
 
     deinit {
@@ -192,7 +196,6 @@ class SpaceLabelManager: ObservableObject {
             .sink { [weak self] _ in
                 self?.recalculateUnifiedSize()
                 self?.cleanupRedundantWindows()
-                self?.updateLabelsVisibility()
             }
             .store(in: &cancellables)
 
@@ -206,31 +209,19 @@ class SpaceLabelManager: ObservableObject {
             .store(in: &cancellables)
     }
 
-    // Get rid of windows for spaces that don't exist anymore or moved monitors
+    // Get rid of windows for spaces that don't exist anymore
     private func cleanupRedundantWindows() {
         guard let spaceManager = spaceManager else { return }
-        let validSpaces = spaceManager.spaceNameDict
-        let spaceMap = Dictionary(uniqueKeysWithValues: validSpaces.map { ($0.id, $0) })
+        let validUUIDs = Set(spaceManager.spaceNameDict.map { $0.id })
 
-        let redundantIDs = createdWindows.keys.filter { id in
-            guard let spaceInDict = spaceMap[id] else { return true }
-            
-            // If the window's displayID doesn't match the current management state, it's redundant (needs move)
-            if let window = createdWindows[id],
-               window.displayID != spaceInDict.displayID {
-                print("SpaceLabelManager: Display mismatch for \(id), marking redundant for recreation")
-                return true
-            }
-            
-            return false
-        }
+        let redundantIDs = createdWindows.keys.filter { !validUUIDs.contains($0) }
 
         for id in redundantIDs {
             if let window = createdWindows[id] {
                 window.close()
             }
             createdWindows.removeValue(forKey: id)
-            print("SpaceLabelManager: Removed redundant/stale window for space \(id)")
+            print("SpaceLabelManager: Removed redundant window for space \(id)")
         }
     }
 
@@ -355,26 +346,13 @@ class SpaceLabelManager: ObservableObject {
     }
 
     // Make sure we have a window for this space, or refresh it if we do
-    func ensureWindow(for spaceId: String, name: String, displayID: String) {
-        if !Thread.isMainThread {
-            DispatchQueue.main.async { [weak self] in
-                self?.ensureWindow(for: spaceId, name: name, displayID: displayID)
-            }
-            return
-        }
-
+    private func ensureWindow(for spaceId: String, name: String, displayID: String) {
         if let existingWindow = createdWindows[spaceId] {
-            // Even if it exists, if it's currently ordered out or on a mismatching displayID,
-            // we should re-assert its state or recreate it to ensure reliability for switches.
-            if !existingWindow.isVisible || existingWindow.displayID != displayID {
-                 existingWindow.refreshAppearance()
-                 // If display still doesn't match after refresh, recreate
-                 if existingWindow.displayID != displayID {
-                     existingWindow.orderOut(nil)
-                     createdWindows.removeValue(forKey: spaceId)
-                 } else {
-                     return
-                 }
+            if !existingWindow.isVisible {
+                existingWindow.refreshAppearance()
+            } else if existingWindow.displayID != displayID {
+                existingWindow.orderOut(nil)
+                createdWindows.removeValue(forKey: spaceId)
             } else {
                 return
             }
@@ -396,12 +374,7 @@ class SpaceLabelManager: ObservableObject {
         let isCurrent = (spaceId == spaceManager.currentSpaceUUID)
         window.setMode(isCurrentSpace: isCurrent)
         self.recalculateUnifiedSize()
-        
-        // Only order front immediately for active/current spaces
-        if isCurrent {
-            window.orderFront(nil)
-        }
-        
+        window.refreshAppearance()
         window.bindToTargetSpace()
     }
 
@@ -416,24 +389,26 @@ class SpaceLabelManager: ObservableObject {
         createdWindows.removeAll()
     }
 
-    func updateLabelsVisibility() {
-        if isUpdating { return }
-        isUpdating = true
-        defer { isUpdating = false }
-        
+    private func updateLabelsVisibility() {
         updateWindows()
 
-        if isEnabled, let spaceManager = spaceManager {
-            // Support multi-monitor & reliable switching: 
-            // Ensure a window exists for EVERY space (active spaces get visible labels, others get invisible anchors)
-            let allSpaces = spaceManager.spaceNameDict
-            for space in allSpaces {
-                ensureWindow(for: space.id, name: space.customName, displayID: space.displayID)
+        if isEnabled {
+            if let spaceId = spaceManager?.currentSpaceUUID,
+                let name = spaceManager?.getSpaceName(spaceId)
+            {
+                updateLabel(for: spaceId, name: name, verifySpace: false)
             }
-            
-            let visibleUUIDs = SpaceHelper.getVisibleSystemSpaceIDs()
-            applyVisibility(visibleUUIDs)
         }
+    }
+
+    func seedAllLabels() {
+        guard isEnabled, let spaceManager = spaceManager else { return }
+        print("SpaceLabelManager: Background seeding all labels for Mission Control...")
+        let allSpaces = spaceManager.spaceNameDict
+        for space in allSpaces {
+            ensureWindow(for: space.id, name: space.customName, displayID: space.displayID)
+        }
+        updateAllWindowModes()
     }
 
     func toggleEnabled() {
