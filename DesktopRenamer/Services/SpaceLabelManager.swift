@@ -213,8 +213,8 @@ class SpaceLabelManager: ObservableObject {
             .sink { [weak self] _ in
                 print("SpaceLabelManager: System wake detected. Refreshing labels...")
                 Task { @MainActor in
-                    // Wait for displays to re-initialize (2s)
-                    try? await Task.sleep(nanoseconds: 2_000_000_000)
+                    // Wait for displays to re-initialize (5s)
+                    try? await Task.sleep(nanoseconds: 5_000_000_000)
                     self?.seedAllLabels()
                 }
             }

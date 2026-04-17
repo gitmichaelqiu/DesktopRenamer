@@ -73,6 +73,10 @@ class SpaceManager: ObservableObject {
     // Widget Debouncer
     private var widgetUpdateWorkItem: DispatchWorkItem?
     
+    // Wake Stabilization
+    private var lastWakeTime: Date = .distantPast
+    private let wakeCoolingDuration: TimeInterval = 15.0
+    
     @Published var detectionMethod: DetectionMethod {
         didSet {
             // Update storage and refresh whenever method changes
@@ -139,10 +143,23 @@ class SpaceManager: ObservableObject {
         }
         
         NotificationCenter.default.addObserver(self, selector: #selector(screenParametersDidChange), name: NSApplication.didChangeScreenParametersNotification, object: nil)
+        
+        NSWorkspace.shared.notificationCenter.addObserver(self, selector: #selector(systemDidWake), name: NSWorkspace.didWakeNotification, object: nil)
     }
     
     deinit {
         NotificationCenter.default.removeObserver(self)
+    }
+    
+    @objc private func systemDidWake() {
+        self.lastWakeTime = Date()
+        print("SpaceManager: System wake detected. Entering \(wakeCoolingDuration)s cooling period...")
+        
+        // Schedule a deep refresh once the cooling period ends to capture final stable arrangement
+        DispatchQueue.main.asyncAfter(deadline: .now() + wakeCoolingDuration + 1.0) { [weak self] in
+            print("SpaceManager: Cooling period ended. Performing final post-wake refresh.")
+            self?.refreshSpaceState()
+        }
     }
     
     @objc private func screenParametersDidChange() {
@@ -335,6 +352,16 @@ class SpaceManager: ObservableObject {
                 // Only overwrite the displayID if the OLD display is no longer connected.
                 // This prevents spaces from "forgetting" their external monitor assignment 
                 // when they temporarily collapse onto the built-in display during sleep/clamshell.
+                
+                // POST-WAKE STABILITY FIX:
+                // During the cooling period (first 15s after wake), we NEVER overwrite displayID.
+                // This prevents "learning" the transient state where macOS puts everything on the primary screen.
+                let timeSinceWake = Date().timeIntervalSince(lastWakeTime)
+                if timeSinceWake < wakeCoolingDuration {
+                    // print("SpaceManager: Ignoring display move during wake cooling period (\(Int(timeSinceWake))s/\(Int(wakeCoolingDuration))s)")
+                    return
+                }
+
                 let connectedUUIDs = SpaceHelper.getAllDisplayUUIDs().map { $0.uppercased() }
                 let isOldDisplayGone = !connectedUUIDs.contains(oldDisplayID.uppercased())
                 
