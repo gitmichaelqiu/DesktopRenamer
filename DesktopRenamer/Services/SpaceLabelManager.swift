@@ -195,7 +195,7 @@ class SpaceLabelManager: ObservableObject {
             .receive(on: DispatchQueue.main)
             .sink { [weak self] _ in
                 self?.recalculateUnifiedSize()
-                self?.cleanupRedundantWindows()
+                self?.syncWindowsWithDict()
             }
             .store(in: &cancellables)
 
@@ -219,6 +219,22 @@ class SpaceLabelManager: ObservableObject {
                 }
             }
             .store(in: &cancellables)
+    }
+
+    private func syncWindowsWithDict() {
+        guard let spaceManager = spaceManager else { return }
+        let allSpaces = spaceManager.spaceNameDict
+        
+        // 1. Add windows for new spaces
+        for space in allSpaces {
+            ensureWindow(for: space.id, name: space.customName, displayID: space.displayID)
+        }
+        
+        // 2. Remove windows for spaces that no longer exist in the dict
+        cleanupRedundantWindows()
+        
+        // 3. Update all window modes to ensure consistent visibility
+        updateAllWindowModes()
     }
 
     // Get rid of windows for spaces that don't exist anymore
