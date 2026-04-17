@@ -329,9 +329,19 @@ class SpaceManager: ObservableObject {
         }
 
         if let index = spaceNameDict.firstIndex(where: { $0.id == logicalUUID }) {
-            if spaceNameDict[index].displayID != displayID {
-                spaceNameDict[index].displayID = displayID
-                saveData()
+            let oldDisplayID = spaceNameDict[index].displayID
+            if oldDisplayID != displayID {
+                // STICKY DISPLAY LOGIC:
+                // Only overwrite the displayID if the OLD display is no longer connected.
+                // This prevents spaces from "forgetting" their external monitor assignment 
+                // when they temporarily collapse onto the built-in display during sleep/clamshell.
+                let connectedUUIDs = SpaceHelper.getAllDisplayUUIDs().map { $0.uppercased() }
+                let isOldDisplayGone = !connectedUUIDs.contains(oldDisplayID.uppercased())
+                
+                if isOldDisplayGone || oldDisplayID.isEmpty || oldDisplayID == "Main" || oldDisplayID == "Unknown" {
+                    spaceNameDict[index].displayID = displayID
+                    saveData()
+                }
             }
         }
         
