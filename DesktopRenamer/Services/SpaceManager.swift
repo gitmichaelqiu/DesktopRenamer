@@ -159,6 +159,11 @@ class SpaceManager: ObservableObject {
         DispatchQueue.main.asyncAfter(deadline: .now() + wakeCoolingDuration + 1.0) { [weak self] in
             print("SpaceManager: Cooling period ended. Performing final post-wake refresh.")
             self?.refreshSpaceState()
+            
+            // Final safety seeding to catch any labels that failed during the transient phase
+            DispatchQueue.main.async {
+                AppDelegate.shared.statusBarController?.labelManager.seedAllLabels()
+            }
         }
     }
     
@@ -546,9 +551,11 @@ class SpaceManager: ObservableObject {
     }
     
     private static func normalizeDisplayID(_ id: String, mainUUID: String?) -> String {
-        guard let main = mainUUID else { return id.uppercased() }
-        let result = id == "Main" ? main : id
-        return result.uppercased()
+        let cleanId = id.trimmingCharacters(in: .whitespacesAndNewlines)
+        if cleanId.isEmpty || cleanId.uppercased() == "MAIN" || cleanId.uppercased() == "UNKNOWN" {
+            return mainUUID?.uppercased() ?? "MAIN"
+        }
+        return cleanId.uppercased()
     }
     
     func getSpaceName(_ spaceUUID: String) -> String {
