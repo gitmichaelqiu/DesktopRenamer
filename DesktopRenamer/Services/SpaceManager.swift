@@ -168,7 +168,13 @@ class SpaceManager: ObservableObject {
     }
     
     @objc private func screenParametersDidChange() {
+        print("SpaceManager: Screen parameters changed. Refreshing spaces and labels...")
         refreshSpaceState()
+        
+        // When a monitor is connected/disconnected, re-seed all labels to ensure new displays are covered
+        DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
+            AppDelegate.shared.statusBarController?.labelManager.seedAllLabels()
+        }
     }
     
     func refreshSpaceState() {
