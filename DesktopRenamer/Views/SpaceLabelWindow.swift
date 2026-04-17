@@ -745,16 +745,21 @@ class SpaceLabelWindow: NSWindow {
     }
 
     private func findTargetScreen() -> NSScreen? {
+        let targetID = self.displayID.uppercased()
+        if targetID == "MAIN" || targetID == "UNKNOWN" || targetID.isEmpty {
+            return NSScreen.screens.first
+        }
+        
         return NSScreen.screens.first(where: { screen in
             let screenID =
                 screen.deviceDescription[NSDeviceDescriptionKey("NSScreenNumber")] as? NSNumber ?? 0
 
             // 1. Name check (Default)
             let idString = "\(screen.localizedName) (\(screenID))"
-            if idString == self.displayID { return true }
+            if idString.uppercased() == targetID { return true }
 
-            let cleanTarget = self.displayID.components(separatedBy: " (").first ?? self.displayID
-            if screen.localizedName == cleanTarget { return true }
+            let cleanTarget = targetID.components(separatedBy: " (").first ?? targetID
+            if screen.localizedName.uppercased() == cleanTarget { return true }
 
             // 2. UUID Check
             let cgsID = screenID.uint32Value
