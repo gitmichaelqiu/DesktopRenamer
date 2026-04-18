@@ -321,6 +321,7 @@ class SpaceLabelManager: ObservableObject {
     }
 
     private func applyVisibility(_ visibleUUIDs: Set<String>) {
+        print("SpaceLabelManager: applyVisibility(visibleUUIDs: \(visibleUUIDs))")
         let windowsSnapshot = self.createdWindows
 
         for (key, window) in windowsSnapshot {

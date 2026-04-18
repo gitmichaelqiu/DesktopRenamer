@@ -195,6 +195,9 @@ class SpaceManager: ObservableObject {
             DispatchQueue.main.async { [weak self] in self?.handleSpaceChange(rawUUID, isDesktop: isDesktop, ncCount: ncCount, displayID: displayID, source: source) }
             return
         }
+
+        print("SpaceManager: handleSpaceChange(rawUUID: \(rawUUID), displayID: \(displayID), source: \(source))")
+
         
         var shouldUpdateWidget = false
         
@@ -631,6 +634,7 @@ class SpaceManager: ObservableObject {
     // Moving around spaces
     
     func switchToSpace(_ space: DesktopSpace) {
+        print("SpaceManager: switchToSpace(\(space.id)) on display \(space.displayID)")
         SpaceHelper.switchToSpace(space.id, forceMissionControl: forceMissionControlForFullscreen)
     }
     
@@ -649,17 +653,17 @@ class SpaceManager: ObservableObject {
     }
 
     private func findBestCurrentSpace(for displayID: String) -> DesktopSpace? {
-        // 1. Check our per-display cache first
-        if let cachedID = currentSpaceByDisplay[displayID],
-           let space = spaceNameDict.first(where: { $0.id == cachedID && $0.displayID == displayID }) {
-            return space
-        }
-        
-        // 2. Query the OS for the live visible space on THIS monitor specifically
+        // 1. Query the OS for the live visible space on THIS monitor specifically (Priority #1)
         if let liveID = SpaceHelper.getCurrentSpaceID(for: displayID),
            let space = spaceNameDict.first(where: { $0.id == liveID && $0.displayID == displayID }) {
             // Update cache while we're at it
             currentSpaceByDisplay[displayID] = liveID
+            return space
+        }
+
+        // 2. Check our per-display cache (Priority #2)
+        if let cachedID = currentSpaceByDisplay[displayID],
+           let space = spaceNameDict.first(where: { $0.id == cachedID && $0.displayID == displayID }) {
             return space
         }
         
