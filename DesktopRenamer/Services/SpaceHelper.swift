@@ -60,6 +60,17 @@ class SpaceHelper {
                 targetNum = targetSpace.num
                 targetGlobalNum = targetSpace.globalShortcutNum
                 targetIsFullscreen = targetSpace.isFullscreen
+                
+                // CRITICAL FIX: To check if we are ALREADY on the target space, 
+                // we must check the current space of the TARGET display, 
+                // not the global active display.
+                if let liveCurrentID = getCurrentSpaceID(for: targetSpace.displayID) {
+                    print("SpaceHelper: switchToSpace check. Live ID: \(liveCurrentID), Target: \(spaceID)")
+                    if liveCurrentID == spaceID {
+                        print("SpaceHelper: Already on target space \(spaceID). Stopping.")
+                        return 
+                    }
+                }
             }
             
             if let currentSpace = state.spaces.first(where: { $0.id == state.currentUUID }) {
@@ -584,14 +595,13 @@ class SpaceHelper {
         return result.uppercased()
     }
 
-    static func getSystemState() -> (
+    static func getSystemState(onDisplayID specificDisplayID: String? = nil) -> (
         spaces: [DesktopSpace], currentUUID: String, displayID: String
     )? {
         let conn = _CGSDefaultConnection()
-        guard let displays = CGSCopyManagedDisplaySpaces(conn) as? [NSDictionary] else {
-            return nil
-        }
-        guard let activeDisplayRaw = CGSCopyActiveMenuBarDisplayIdentifier(conn) as? String else {
+        guard let displays = CGSCopyManagedDisplaySpaces(conn) as? [NSDictionary],
+            let activeDisplayRaw = CGSCopyActiveMenuBarDisplayIdentifier(conn) as? String
+        else {
             return nil
         }
 
@@ -599,11 +609,9 @@ class SpaceHelper {
         let mainScreenUUID = screenUUIDs.first
         
         let activeDisplay = normalizeDisplayID(activeDisplayRaw, mainUUID: mainScreenUUID)
-        
+        var targetDisplayID = specificDisplayID ?? activeDisplay
         var detectedSpaces: [DesktopSpace] = []
         var currentSpaceID = "FULLSCREEN"
-
-        var targetDisplayID = activeDisplay // Default to active menu bar display
         
         // Find if target display is actually present in CGS displays (handling normalization)
         let foundDisplay = displays.first { d in

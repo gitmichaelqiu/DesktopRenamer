@@ -81,6 +81,9 @@ class SpaceLabelWindow: NSWindow {
     static let basePreviewFontSize: CGFloat = 180
     static let handleSize = NSSize(width: 32, height: 60)
 
+    private var hasOrderedInOnce = false
+
+
     private var isHiddenCornerMode: Bool {
         return isActiveMode && !(labelManager?.showOnDesktop == true)
     }
@@ -193,7 +196,7 @@ class SpaceLabelWindow: NSWindow {
         // Collection Behavior
         // Reverted: .canJoinAllSpaces removed as it broke switching.
         // We keep .fullScreenAuxiliary so it can theoretically appear over fullscreen apps.
-        self.collectionBehavior = [.managed, .participatesInCycle, .fullScreenAuxiliary]
+        self.collectionBehavior = [.managed, .participatesInCycle, .fullScreenAuxiliary, .ignoresCycle]
 
         // Observers
         self.spaceManager.$spaceNameDict
@@ -349,6 +352,9 @@ class SpaceLabelWindow: NSWindow {
     }
 
     func setMode(isCurrentSpace: Bool) {
+        if self.isActiveMode != isCurrentSpace {
+            print("SpaceLabelWindow[\(self.spaceId)]: setMode(isCurrentSpace: \(isCurrentSpace))")
+        }
         self.isActiveMode = isCurrentSpace
 
         if isCurrentSpace {
@@ -863,7 +869,7 @@ class SpaceLabelWindow: NSWindow {
                 isVisuallyVisible = showActive
             } else {
                 if showPreview {
-                    isVisuallyVisible = !self.isOnActiveSpace
+                    isVisuallyVisible = true
                 } else {
                     isVisuallyVisible = false
                 }
@@ -876,8 +882,23 @@ class SpaceLabelWindow: NSWindow {
             updateLayout(isCurrentSpace: self.isActiveMode, updateFrame: animated)
         }
 
-        if !self.isVisible {
-            self.orderFrontRegardless()
+        if isVisuallyVisible {
+            // CRITICAL FIX: Only call orderFrontRegardless if the window is on the ACTIVE space
+            // OR if it's a preview window that hasn't been ordered in yet.
+            if self.isActiveMode {
+                if !self.isVisible {
+                    print("SpaceLabelWindow[\(self.spaceId)]: orderFrontRegardless() for ACTIVE space.")
+                    self.orderFrontRegardless()
+                    self.hasOrderedInOnce = true
+                }
+            } else if !hasOrderedInOnce {
+                // For preview windows (on background spaces), we ONLY order front once.
+                // After that, we let them stay there. Repeating orderFrontRegardless on background spaces
+                // is what causes focus hijacking and "snap-back" issues.
+                print("SpaceLabelWindow[\(self.spaceId)]: Initial orderFrontRegardless() for background preview.")
+                self.orderFrontRegardless()
+                self.hasOrderedInOnce = true
+            }
         }
 
         self.alphaValue = 1.0
