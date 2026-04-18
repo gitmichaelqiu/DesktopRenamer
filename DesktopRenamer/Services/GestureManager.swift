@@ -472,12 +472,9 @@ class GestureManager: ObservableObject {
         DispatchQueue.main.async { [weak self] in
             guard let self = self else { return }
 
-            var targetDisplayID: String? = nil
-
-            if self.switchOverride == .cursor {
-                targetDisplayID = SpaceHelper.getCursorDisplayID()
-            }
-            // If .activeWindow, we pass nil, which causes SpaceManager to default to the currently active display
+            // GESTURE FIX: For gestures, we ALWAYS prioritize the cursor's location
+            // because a swipe is physically tied to the display where the interaction happens.
+            let targetDisplayID = SpaceHelper.getCursorDisplayID()
 
             switch direction {
             case .next:

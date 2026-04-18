@@ -51,6 +51,9 @@ class SpaceManager: ObservableObject {
     @Published private(set) var currentRawSpaceUUID: String = ""
     @Published private(set) var currentDisplayID: String = "Main"
     
+    // Tracks active space per display to ensure local switching context
+    private(set) var currentSpaceByDisplay: [String: String] = [:]
+    
     @Published var spaceNameDict: [DesktopSpace] = []
     
     // Handy views for the current display
@@ -356,6 +359,9 @@ class SpaceManager: ObservableObject {
             shouldUpdateWidget = true
         }
 
+        // Always update the per-display mapping to ensure we have a local context for each monitor
+        currentSpaceByDisplay[displayID] = logicalUUID
+
         if let index = spaceNameDict.firstIndex(where: { $0.id == logicalUUID }) {
             let oldDisplayID = spaceNameDict[index].displayID
             if oldDisplayID != displayID {
@@ -629,66 +635,57 @@ class SpaceManager: ObservableObject {
     }
     
     func switchToPreviousSpace(onDisplayID displayID: String? = nil) {
-        var targetDisplayID = displayID
-        var currentSpaceID = currentSpaceUUID
+        // PER-DISPLAY FIX: If no display is provided, default to where the cursor is
+        let targetDisplayID = displayID ?? SpaceHelper.getCursorDisplayID() ?? currentDisplayID
         
-        // If a specific display is requested, find its current space
-        if let requestedDisplayID = displayID {
-            if let space = SpaceHelper.getCurrentSpaceID(for: requestedDisplayID) {
-                currentSpaceID = space
-                targetDisplayID = requestedDisplayID
-            } else {
-                return // Invalid display or state
-            }
-        }
+        // Use the tracked active space for THIS specific display if available
+        let currentSpaceID = currentSpaceByDisplay[targetDisplayID] ?? currentSpaceUUID
         
         // Find current space info in our dictionary
-        guard let current = spaceNameDict.first(where: { $0.id == currentSpaceID }) else { return }
+        guard let current = spaceNameDict.first(where: { $0.id == currentSpaceID }) else {
+            // Fallback: If dictionary lookup fails for this specific display ID, 
+            // try the global currentSpaceUUID as a last resort
+            if let backup = spaceNameDict.first(where: { $0.id == currentSpaceUUID }) {
+                proceedToSwitch(from: backup, on: backup.displayID, direction: -1)
+            }
+            return 
+        }
         
-        // Double check display ID match if one was not constrained
-        if targetDisplayID == nil { targetDisplayID = current.displayID }
-        
-        // Use spaces from the TARGET display
-        let displaySpaces = spaceNameDict
-            .filter { $0.displayID == targetDisplayID }
-            .sorted { $0.num < $1.num }
-        
-        // Find index and move left
-        guard let currentIndex = displaySpaces.firstIndex(of: current), currentIndex > 0 else { return }
-        
-        let target = displaySpaces[currentIndex - 1]
-        switchToSpace(target)
+        proceedToSwitch(from: current, on: targetDisplayID, direction: -1)
     }
 
     func switchToNextSpace(onDisplayID displayID: String? = nil) {
-        var targetDisplayID = displayID
-        var currentSpaceID = currentSpaceUUID
+        // PER-DISPLAY FIX: If no display is provided, default to where the cursor is
+        let targetDisplayID = displayID ?? SpaceHelper.getCursorDisplayID() ?? currentDisplayID
         
-        // If a specific display is requested, find its current space
-        if let requestedDisplayID = displayID {
-            if let space = SpaceHelper.getCurrentSpaceID(for: requestedDisplayID) {
-                currentSpaceID = space
-                targetDisplayID = requestedDisplayID
-            } else {
-                return // Invalid display or state
-            }
-        }
+        // Use the tracked active space for THIS specific display if available
+        let currentSpaceID = currentSpaceByDisplay[targetDisplayID] ?? currentSpaceUUID
         
         // Find current space info in our dictionary
-        guard let current = spaceNameDict.first(where: { $0.id == currentSpaceID }) else { return }
+        guard let current = spaceNameDict.first(where: { $0.id == currentSpaceID }) else {
+            // Fallback: If dictionary lookup fails for this specific display ID, 
+            // try the global currentSpaceUUID as a last resort
+            if let backup = spaceNameDict.first(where: { $0.id == currentSpaceUUID }) {
+                proceedToSwitch(from: backup, on: backup.displayID, direction: 1)
+            }
+            return 
+        }
         
-        // Double check display ID match
-        if targetDisplayID == nil { targetDisplayID = current.displayID }
-        
+        proceedToSwitch(from: current, on: targetDisplayID, direction: 1)
+    }
+
+    private func proceedToSwitch(from current: DesktopSpace, on targetDisplayID: String, direction: Int) {
         // Use spaces from the TARGET display
         let displaySpaces = spaceNameDict
             .filter { $0.displayID == targetDisplayID }
             .sorted { $0.num < $1.num }
         
-        // Find index and move right
-        guard let currentIndex = displaySpaces.firstIndex(of: current), currentIndex < displaySpaces.count - 1 else { return }
+        guard let currentIndex = displaySpaces.firstIndex(of: current) else { return }
         
-        let target = displaySpaces[currentIndex + 1]
+        let targetIndex = currentIndex + direction
+        guard targetIndex >= 0 && targetIndex < displaySpaces.count else { return }
+        
+        let target = displaySpaces[targetIndex]
         switchToSpace(target)
     }
 
