@@ -80,6 +80,9 @@ class SpaceManager: ObservableObject {
     private var lastWakeTime: Date = .distantPast
     private let wakeCoolingDuration: TimeInterval = 15.0
     
+    // Display Cache
+    private var connectedDisplayUUIDs: Set<String> = []
+    
     @Published var detectionMethod: DetectionMethod {
         didSet {
             // Update storage and refresh whenever method changes
@@ -148,6 +151,8 @@ class SpaceManager: ObservableObject {
         NotificationCenter.default.addObserver(self, selector: #selector(screenParametersDidChange), name: NSApplication.didChangeScreenParametersNotification, object: nil)
         
         NSWorkspace.shared.notificationCenter.addObserver(self, selector: #selector(systemDidWake), name: NSWorkspace.didWakeNotification, object: nil)
+        
+        refreshConnectedDisplays()
     }
     
     deinit {
@@ -172,12 +177,18 @@ class SpaceManager: ObservableObject {
     
     @objc private func screenParametersDidChange() {
         print("SpaceManager: Screen parameters changed. Refreshing spaces and labels...")
+        refreshConnectedDisplays()
         refreshSpaceState()
         
         // When a monitor is connected/disconnected, re-seed all labels to ensure new displays are covered
         DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
             AppDelegate.shared.statusBarController?.labelManager.seedAllLabels()
         }
+    }
+    
+    private func refreshConnectedDisplays() {
+        self.connectedDisplayUUIDs = Set(SpaceHelper.getAllDisplayUUIDs().map { $0.uppercased() })
+        // print("SpaceManager: Refreshed connected displays: \(connectedDisplayUUIDs)")
     }
     
     func refreshSpaceState() {
@@ -382,8 +393,7 @@ class SpaceManager: ObservableObject {
                     return
                 }
 
-                let connectedUUIDs = SpaceHelper.getAllDisplayUUIDs().map { $0.uppercased() }
-                let isOldDisplayGone = !connectedUUIDs.contains(oldDisplayID.uppercased())
+                let isOldDisplayGone = !connectedDisplayUUIDs.contains(oldDisplayID.uppercased())
                 
                 if isOldDisplayGone || oldDisplayID.isEmpty || oldDisplayID == "Main" || oldDisplayID == "Unknown" {
                     spaceNameDict[index].displayID = displayID
