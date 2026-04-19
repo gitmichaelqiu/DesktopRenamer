@@ -470,7 +470,7 @@ class GestureManager: ObservableObject {
         guard let sm = spaceManager, self.isEnabled else { return }
 
         DispatchQueue.main.async { [weak self] in
-            guard let self = self else { return }
+            guard self != nil else { return }
 
             // GESTURE FIX: For gestures, we ALWAYS prioritize the cursor's location
             // because a swipe is physically tied to the display where the interaction happens.
