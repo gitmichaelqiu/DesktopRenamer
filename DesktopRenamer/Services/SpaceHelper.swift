@@ -26,6 +26,7 @@ class SpaceHelper {
 
     // Track switch state to prevent recursion glitches
     private static var isSwitching = false
+    static var lastProgrammaticSwitchTime: TimeInterval = 0
     
     // Dragging session state
     private static var originalMousePoint: CGPoint? = nil
@@ -35,6 +36,7 @@ class SpaceHelper {
 
     // The meat of space switching logic
     static func switchToSpace(_ spaceID: String, forceMissionControl: Bool = false) {
+        lastProgrammaticSwitchTime = Date().timeIntervalSince1970
         guard !isSwitching else { return }
         isSwitching = true
 
@@ -161,9 +163,23 @@ class SpaceHelper {
                 if labelWindow.spaceId == spaceID {
                     targetWindow = labelWindow
                 } else if labelWindow.isVisible {
-                    windowsToHide.append(labelWindow)
+                    // CRITICAL MULTI-MONITOR FIX: Only hide windows on the SAME display.
+                    // Hiding windows on other displays causes them to lose focus state 
+                    // and triggers "snap-back" issues when they are automatically restored.
+                    if let target = targetWindow, labelWindow.displayID == target.displayID {
+                        windowsToHide.append(labelWindow)
+                    } else if targetWindow == nil {
+                        // If we haven't found the target yet, we'll collect all visible ones
+                        // and filter them after the loop.
+                        windowsToHide.append(labelWindow)
+                    }
                 }
             }
+        }
+        
+        // Final filter if we collected them before finding target
+        if let target = targetWindow {
+            windowsToHide = windowsToHide.filter { $0.displayID == target.displayID }
         }
 
         guard let window = targetWindow else { return false }

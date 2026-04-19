@@ -883,21 +883,33 @@ class SpaceLabelWindow: NSWindow {
         }
 
         if isVisuallyVisible {
-            // CRITICAL FIX: Only call orderFrontRegardless if the window is on the ACTIVE space
-            // OR if it's a preview window that hasn't been ordered in yet.
+            // MULTI-MONITOR STABILITY FIX: Check for programmatic switch cooling period.
+            // If a switch was triggered recently, we DO NOT order front based on isVisible.
+            // This is because isVisible might be false briefly during animations, 
+            // and calling orderFrontRegardless on the WRONG monitor causes a "snap-back".
+            let now = Date().timeIntervalSince1970
+            let timeSinceSwitch = now - SpaceHelper.lastProgrammaticSwitchTime
+            let inCoolingPeriod = timeSinceSwitch < 1.0
+            
             if self.isActiveMode {
                 if !self.isVisible {
-                    print("SpaceLabelWindow[\(self.spaceId)]: orderFrontRegardless() for ACTIVE space.")
-                    self.orderFrontRegardless()
-                    self.hasOrderedInOnce = true
+                    if !inCoolingPeriod {
+                        print("SpaceLabelWindow[\(self.spaceId)]: orderFrontRegardless() for ACTIVE space.")
+                        self.orderFrontRegardless()
+                        self.hasOrderedInOnce = true
+                    } else {
+                        print("SpaceLabelWindow[\(self.spaceId)]: Suppressing orderFrontRegardless (Active) during switch cooling period (\(String(format: "%.2f", timeSinceSwitch))s).")
+                    }
                 }
             } else if !hasOrderedInOnce {
                 // For preview windows (on background spaces), we ONLY order front once.
-                // After that, we let them stay there. Repeating orderFrontRegardless on background spaces
-                // is what causes focus hijacking and "snap-back" issues.
-                print("SpaceLabelWindow[\(self.spaceId)]: Initial orderFrontRegardless() for background preview.")
-                self.orderFrontRegardless()
-                self.hasOrderedInOnce = true
+                if !inCoolingPeriod {
+                    print("SpaceLabelWindow[\(self.spaceId)]: Initial orderFrontRegardless() for background preview.")
+                    self.orderFrontRegardless()
+                    self.hasOrderedInOnce = true
+                } else {
+                    print("SpaceLabelWindow[\(self.spaceId)]: Suppressing orderFrontRegardless (Preview) during switch cooling period (\(String(format: "%.2f", timeSinceSwitch))s).")
+                }
             }
         }
 

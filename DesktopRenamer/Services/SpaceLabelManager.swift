@@ -188,7 +188,11 @@ class SpaceLabelManager: ObservableObject {
         spaceManager.$currentSpaceUUID
             .dropFirst()
             .receive(on: DispatchQueue.main)
-            .sink { [weak self] _ in self?.updateAllWindowModes() }
+            .sink { [weak self] _ in 
+                // We use currentDisplayID here to scope the refresh to the monitor that actually changed.
+                // This prevents focus hijacking where Monitor A switches and Monitor B accidentally steals focus back.
+                self?.updateAllWindowModes(forDisplay: self?.spaceManager?.currentDisplayID) 
+            }
             .store(in: &cancellables)
 
         spaceManager.$spaceNameDict
@@ -303,28 +307,36 @@ class SpaceLabelManager: ObservableObject {
         }
     }
 
-    private func updateAllWindowModes() {
-        let detectionMethod = spaceManager?.detectionMethod ?? .automatic
-
+    private func updateAllWindowModes(forDisplay displayID: String? = nil) {
+        let detectionMethod = spaceManager?.detectionMethod
         if detectionMethod == .automatic {
             Task { @MainActor in
                 let visibleUUIDs = SpaceHelper.getVisibleSystemSpaceIDs()
-                self.applyVisibility(visibleUUIDs)
+                self.applyVisibility(visibleUUIDs, forDisplay: displayID)
             }
         } else {
             SpaceHelper.getVisibleSpaceUUIDs { [weak self] visibleUUIDs in
                 Task { @MainActor [weak self] in
-                    self?.applyVisibility(visibleUUIDs)
+                    self?.applyVisibility(visibleUUIDs, forDisplay: displayID)
                 }
             }
         }
     }
 
-    private func applyVisibility(_ visibleUUIDs: Set<String>) {
-        print("SpaceLabelManager: applyVisibility(visibleUUIDs: \(visibleUUIDs))")
+    private func applyVisibility(_ visibleUUIDs: Set<String>, forDisplay displayID: String? = nil) {
+        if let id = displayID {
+             print("SpaceLabelManager: applyVisibility(visibleUUIDs: \(visibleUUIDs)) SCOPED to display: \(id)")
+        } else {
+             print("SpaceLabelManager: applyVisibility(visibleUUIDs: \(visibleUUIDs)) GLOBAL refresh")
+        }
+        
         let windowsSnapshot = self.createdWindows
 
         for (key, window) in windowsSnapshot {
+            if let targetDisplay = displayID, window.displayID != targetDisplay {
+                continue // Skip windows that are on a different display than the one we are updating
+            }
+            
             let isVisibleOnAnyScreen = visibleUUIDs.contains(key)
             window.setMode(isCurrentSpace: isVisibleOnAnyScreen)
         }
