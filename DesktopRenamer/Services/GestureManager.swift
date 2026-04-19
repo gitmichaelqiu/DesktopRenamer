@@ -472,11 +472,7 @@ class GestureManager: ObservableObject {
         lastSwitchTime = Date().timeIntervalSince1970
         guard let sm = spaceManager, self.isEnabled else { return }
 
-        DispatchQueue.main.async { [weak self] in
-            guard self != nil else { return }
-
-            // GESTURE FIX: For gestures, we ALWAYS prioritize the cursor's location
-            // because a swipe is physically tied to the display where the interaction happens.
+        DispatchQueue.main.async {
             let targetDisplayID = SpaceHelper.getCursorDisplayID()
 
             switch direction {
