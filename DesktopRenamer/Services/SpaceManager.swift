@@ -388,16 +388,13 @@ class SpaceManager: ObservableObject {
                 // During the cooling period (first 15s after wake), we NEVER overwrite displayID.
                 // This prevents "learning" the transient state where macOS puts everything on the primary screen.
                 let timeSinceWake = Date().timeIntervalSince(lastWakeTime)
-                if timeSinceWake < wakeCoolingDuration {
-                    // print("SpaceManager: Ignoring display move during wake cooling period (\(Int(timeSinceWake))s/\(Int(wakeCoolingDuration))s)")
-                    return
-                }
-
-                let isOldDisplayGone = !connectedDisplayUUIDs.contains(oldDisplayID.uppercased())
-                
-                if isOldDisplayGone || oldDisplayID.isEmpty || oldDisplayID == "Main" || oldDisplayID == "Unknown" {
-                    spaceNameDict[index].displayID = displayID
-                    saveData()
+                if timeSinceWake >= wakeCoolingDuration {
+                    let isOldDisplayGone = !connectedDisplayUUIDs.contains(oldDisplayID.uppercased())
+                    
+                    if isOldDisplayGone || oldDisplayID.isEmpty || oldDisplayID == "MAIN" || oldDisplayID == "UNKNOWN" {
+                        spaceNameDict[index].displayID = displayID
+                        saveData()
+                    }
                 }
             }
         }
