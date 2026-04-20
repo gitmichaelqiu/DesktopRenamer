@@ -480,17 +480,6 @@
         }
       }
     },
-    "Enable Labels" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "启用标签"
-          }
-        }
-      }
-    },
     "Enable switch gesture override" : {
       "localizations" : {
         "zh-Hans" : {
@@ -852,7 +841,15 @@
       }
     },
     "Menu.ShowActiveLabels" : {
-      "comment" : "Toggle active labels"
+      "comment" : "Toggle active labels",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "显示当前桌面标签"
+          }
+        }
+      }
     },
     "Menu.ShowLabels" : {
       "extractionState" : "manual",
@@ -872,7 +869,15 @@
       }
     },
     "Menu.ShowPreviewLabels" : {
-      "comment" : "Toggle preview labels"
+      "comment" : "Toggle preview labels",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "显示预览标签"
+          }
+        }
+      }
     },
     "Metric-based" : {
       "localizations" : {
