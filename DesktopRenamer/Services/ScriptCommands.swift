@@ -22,17 +22,6 @@ class ToggleMenubarCommand: NSScriptCommand {
     }
 }
 
-class ToggleLabelsCommand: NSScriptCommand {
-    override func performDefaultImplementation() -> Any? {
-        return runOnMain {
-            if let manager = AppDelegate.shared.statusBarController?.labelManager {
-                manager.toggleEnabled()
-                return manager.isEnabled
-            }
-            return false
-        }
-    }
-}
 
 class ToggleActiveLabelCommand: NSScriptCommand {
     override func performDefaultImplementation() -> Any? {

@@ -4,8 +4,6 @@ import Foundation
 
 @MainActor
 class SpaceLabelManager: ObservableObject {
-    private let spacesKey = "com.michaelqiu.desktoprenamer.slw"
-
     // Persistence Keys
     private let kActiveFontScale = "kActiveFontScale"
     private let kActivePaddingScale = "kActivePaddingScale"
@@ -21,15 +19,6 @@ class SpaceLabelManager: ObservableObject {
     private let kGlobalDockEdge = "kGlobalDockEdge"
     private let kGlobalCenterX = "kGlobalCenterX"
     private let kGlobalCenterY = "kGlobalCenterY"
-
-    // Where should the label sit on the screen?
-
-    @Published var isEnabled: Bool {
-        didSet {
-            UserDefaults.standard.set(isEnabled, forKey: spacesKey)
-            updateLabelsVisibility()
-        }
-    }
 
     // Settings
     @Published var showPreviewLabels: Bool {
@@ -88,9 +77,6 @@ class SpaceLabelManager: ObservableObject {
 
     init(spaceManager: SpaceManager) {
         self.spaceManager = spaceManager
-
-        UserDefaults.standard.register(defaults: [spacesKey: true])
-        self.isEnabled = UserDefaults.standard.bool(forKey: spacesKey)
 
         // Load Settings
         let loadedActiveFont = UserDefaults.standard.double(forKey: kActiveFontScale)
@@ -422,7 +408,7 @@ class SpaceLabelManager: ObservableObject {
     private func updateLabelsVisibility() {
         updateWindows()
 
-        if isEnabled {
+        if showActiveLabels {
             if let spaceId = spaceManager?.currentSpaceUUID,
                 let name = spaceManager?.getSpaceName(spaceId)
             {
@@ -432,7 +418,7 @@ class SpaceLabelManager: ObservableObject {
     }
 
     func seedAllLabels() {
-        guard isEnabled, let spaceManager = spaceManager else { return }
+        guard showPreviewLabels, let spaceManager = spaceManager else { return }
         print("SpaceLabelManager: Background seeding all labels for Mission Control...")
         let allSpaces = spaceManager.spaceNameDict
         for space in allSpaces {
@@ -441,7 +427,11 @@ class SpaceLabelManager: ObservableObject {
         updateAllWindowModes()
     }
 
-    func toggleEnabled() {
-        isEnabled.toggle()
+    func toggleActiveLabels() {
+        showActiveLabels.toggle()
+    }
+
+    func togglePreviewLabels() {
+        showPreviewLabels.toggle()
     }
 }
