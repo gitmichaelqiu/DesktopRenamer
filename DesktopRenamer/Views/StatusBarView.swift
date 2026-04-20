@@ -214,13 +214,6 @@ class StatusBarController: NSObject {
         troubleshootItem.image = NSImage(systemSymbolName: "wrench.and.screwdriver", accessibilityDescription: nil)
         troubleshootItem.target = self
         menu.addItem(troubleshootItem)
-        
-        let showActiveLabels = NSMenuItem(title: NSLocalizedString("Menu.ShowActiveLabels", comment: "Toggle active labels"), action: #selector(toggleActiveLabelsFromMenu), keyEquivalent: "a")
-        showActiveLabels.target = self
-        showActiveLabels.state = labelManager.showActiveLabels ? .on : .off
-        showActiveLabels.image = NSImage(systemSymbolName: "appwindow.swipe.rectangle", accessibilityDescription: nil)
-        self.showActiveLabelsMenuItem = showActiveLabels
-        menu.addItem(showActiveLabels)
 
         let showPreviewLabels = NSMenuItem(title: NSLocalizedString("Menu.ShowPreviewLabels", comment: "Toggle preview labels"), action: #selector(togglePreviewLabelsFromMenu), keyEquivalent: "p")
         showPreviewLabels.target = self
@@ -228,6 +221,13 @@ class StatusBarController: NSObject {
         showPreviewLabels.image = NSImage(systemSymbolName: "rectangle.inset.filled.and.cursorarrow", accessibilityDescription: nil)
         self.showPreviewLabelsMenuItem = showPreviewLabels
         menu.addItem(showPreviewLabels)
+        
+        let showActiveLabels = NSMenuItem(title: NSLocalizedString("Menu.ShowActiveLabels", comment: "Toggle active labels"), action: #selector(toggleActiveLabelsFromMenu), keyEquivalent: "a")
+        showActiveLabels.target = self
+        showActiveLabels.state = labelManager.showActiveLabels ? .on : .off
+        showActiveLabels.image = NSImage(systemSymbolName: "appwindow.swipe.rectangle", accessibilityDescription: nil)
+        self.showActiveLabelsMenuItem = showActiveLabels
+        menu.addItem(showActiveLabels)
 
         let reloadLabels = NSMenuItem(title: NSLocalizedString("Reload Space Labels", comment: "Reload Space Label Windows to fix glitches"), action: #selector(reloadLabelsFromMenu), keyEquivalent: "")
         reloadLabels.target = self
