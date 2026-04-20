@@ -481,6 +481,7 @@
       }
     },
     "Enable Labels" : {
+      "extractionState" : "stale",
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
@@ -850,6 +851,9 @@
         }
       }
     },
+    "Menu.ShowActiveLabels" : {
+      "comment" : "Toggle active labels"
+    },
     "Menu.ShowLabels" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -866,6 +870,9 @@
           }
         }
       }
+    },
+    "Menu.ShowPreviewLabels" : {
+      "comment" : "Toggle preview labels"
     },
     "Metric-based" : {
       "localizations" : {

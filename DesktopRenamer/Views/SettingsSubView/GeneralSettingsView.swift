@@ -437,15 +437,28 @@ struct GeneralSettingsView: View {
                 // General Section
                 SettingsSection("Settings.General.General") {
                     SettingsRow(
-                        "Settings.General.General.ShowLabels",
+                        "Show preview labels",
+                        helperText: "The large label visible in Mission Control."
+                    ) {
+                        Toggle("", isOn: $labelManager.showPreviewLabels)
+                            .toggleStyle(.switch)
+                            .labelsHidden()
+                    }
+
+                    Divider()
+                
+                    SettingsRow(
+                        "Show active space labels",
                         helperText:
                             "Create windows that only appear in Mission Control to display space names.\n\nMay not work when multiple displays are connected."
                     ) {
-                        Toggle("", isOn: $labelManager.isEnabled)
+                        Toggle("", isOn: $labelManager.showActiveLabels)
                             .labelsHidden()
                             .toggleStyle(.switch)
                     }
+
                     Divider()
+
                     SettingsRow(
                         "Hide menubar icon",
                         helperText:
@@ -458,7 +471,9 @@ struct GeneralSettingsView: View {
                                 StatusBarController.toggleStatusBar()
                             }
                     }
+
                     Divider()
+
                     SettingsRow("Settings.General.General.LaunchAtLogin") {
                         Toggle("", isOn: $launchAtLogin)
                             .labelsHidden()

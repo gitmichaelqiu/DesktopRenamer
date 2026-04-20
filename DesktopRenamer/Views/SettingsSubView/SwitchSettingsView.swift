@@ -4,6 +4,7 @@ struct SwitchSettingsView: View {
     @EnvironmentObject var hotkeyManager: HotkeyManager
     @EnvironmentObject var gestureManager: GestureManager
     @EnvironmentObject var spaceManager: SpaceManager
+    @EnvironmentObject var labelManager: SpaceLabelManager
     @StateObject private var permissionManager = PermissionManager.shared
     
     var body: some View {
