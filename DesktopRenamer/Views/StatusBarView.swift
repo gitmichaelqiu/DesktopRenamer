@@ -209,12 +209,7 @@ class StatusBarController: NSObject {
         }
         self.renameItem = rename
         menu.addItem(rename)
-        
-        let troubleshootItem = NSMenuItem(title: NSLocalizedString("Troubleshoot Space Detection", comment: ""), action: #selector(troubleshootSpaceDetection), keyEquivalent: "")
-        troubleshootItem.image = NSImage(systemSymbolName: "wrench.and.screwdriver", accessibilityDescription: nil)
-        troubleshootItem.target = self
-        menu.addItem(troubleshootItem)
-
+    
         let showPreviewLabels = NSMenuItem(title: NSLocalizedString("Menu.ShowPreviewLabels", comment: "Toggle preview labels"), action: #selector(togglePreviewLabelsFromMenu), keyEquivalent: "p")
         showPreviewLabels.target = self
         showPreviewLabels.state = labelManager.showPreviewLabels ? .on : .off
@@ -228,6 +223,11 @@ class StatusBarController: NSObject {
         showActiveLabels.image = NSImage(systemSymbolName: "rectangle.inset.filled.and.cursorarrow", accessibilityDescription: nil)
         self.showActiveLabelsMenuItem = showActiveLabels
         menu.addItem(showActiveLabels)
+
+        let troubleshootItem = NSMenuItem(title: NSLocalizedString("Troubleshoot Space Detection", comment: ""), action: #selector(troubleshootSpaceDetection), keyEquivalent: "")
+        troubleshootItem.image = NSImage(systemSymbolName: "wrench.and.screwdriver", accessibilityDescription: nil)
+        troubleshootItem.target = self
+        menu.addItem(troubleshootItem)
 
         let reloadLabels = NSMenuItem(title: NSLocalizedString("Reload Space Labels", comment: "Reload Space Label Windows to fix glitches"), action: #selector(reloadLabelsFromMenu), keyEquivalent: "")
         reloadLabels.target = self
