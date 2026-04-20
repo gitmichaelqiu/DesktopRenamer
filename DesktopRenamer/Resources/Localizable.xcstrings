@@ -843,9 +843,15 @@
     "Menu.ShowActiveLabels" : {
       "comment" : "Toggle active labels",
       "localizations" : {
-        "zh-Hans" : {
+        "en" : {
           "stringUnit" : {
             "state" : "translated",
+            "value" : "Show Active Space Labels"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
             "value" : "显示当前桌面标签"
           }
         }
@@ -871,9 +877,15 @@
     "Menu.ShowPreviewLabels" : {
       "comment" : "Toggle preview labels",
       "localizations" : {
-        "zh-Hans" : {
+        "en" : {
           "stringUnit" : {
             "state" : "translated",
+            "value" : "Show Preview Labels"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
             "value" : "显示预览标签"
           }
         }
