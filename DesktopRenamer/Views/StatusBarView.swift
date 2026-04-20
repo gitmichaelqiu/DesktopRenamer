@@ -224,10 +224,12 @@ class StatusBarController: NSObject {
         self.showActiveLabelsMenuItem = showActiveLabels
         menu.addItem(showActiveLabels)
 
-        let troubleshootItem = NSMenuItem(title: NSLocalizedString("Troubleshoot Space Detection", comment: ""), action: #selector(troubleshootSpaceDetection), keyEquivalent: "")
-        troubleshootItem.image = NSImage(systemSymbolName: "wrench.and.screwdriver", accessibilityDescription: nil)
-        troubleshootItem.target = self
-        menu.addItem(troubleshootItem)
+        if spaceManager.detectionMethod != .automatic {
+            let troubleshootItem = NSMenuItem(title: NSLocalizedString("Troubleshoot Space Detection", comment: ""), action: #selector(troubleshootSpaceDetection), keyEquivalent: "")
+            troubleshootItem.image = NSImage(systemSymbolName: "wrench.and.screwdriver", accessibilityDescription: nil)
+            troubleshootItem.target = self
+            menu.addItem(troubleshootItem)
+        }
 
         let reloadLabels = NSMenuItem(title: NSLocalizedString("Reload Space Labels", comment: "Reload Space Label Windows to fix glitches"), action: #selector(reloadLabelsFromMenu), keyEquivalent: "")
         reloadLabels.target = self
