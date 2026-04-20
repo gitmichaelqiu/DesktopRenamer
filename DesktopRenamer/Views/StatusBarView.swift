@@ -218,14 +218,14 @@ class StatusBarController: NSObject {
         let showPreviewLabels = NSMenuItem(title: NSLocalizedString("Menu.ShowPreviewLabels", comment: "Toggle preview labels"), action: #selector(togglePreviewLabelsFromMenu), keyEquivalent: "p")
         showPreviewLabels.target = self
         showPreviewLabels.state = labelManager.showPreviewLabels ? .on : .off
-        showPreviewLabels.image = NSImage(systemSymbolName: "rectangle.inset.filled.and.cursorarrow", accessibilityDescription: nil)
+        showPreviewLabels.image = NSImage(systemSymbolName: "appwindow.swipe.rectangle", accessibilityDescription: nil)
         self.showPreviewLabelsMenuItem = showPreviewLabels
         menu.addItem(showPreviewLabels)
         
         let showActiveLabels = NSMenuItem(title: NSLocalizedString("Menu.ShowActiveLabels", comment: "Toggle active labels"), action: #selector(toggleActiveLabelsFromMenu), keyEquivalent: "a")
         showActiveLabels.target = self
         showActiveLabels.state = labelManager.showActiveLabels ? .on : .off
-        showActiveLabels.image = NSImage(systemSymbolName: "appwindow.swipe.rectangle", accessibilityDescription: nil)
+        showActiveLabels.image = NSImage(systemSymbolName: "rectangle.inset.filled.and.cursorarrow", accessibilityDescription: nil)
         self.showActiveLabelsMenuItem = showActiveLabels
         menu.addItem(showActiveLabels)
 
