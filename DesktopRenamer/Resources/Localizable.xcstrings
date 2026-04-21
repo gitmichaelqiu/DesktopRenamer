@@ -261,6 +261,16 @@
         }
       }
     },
+    "Automatically download updates" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "自动下载更新"
+          }
+        }
+      }
+    },
     "Automation" : {
       "localizations" : {
         "zh-Hans" : {
