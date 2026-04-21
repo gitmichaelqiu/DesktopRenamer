@@ -323,9 +323,9 @@ class SpaceLabelWindow: NSWindow {
             default: break
             }
         } else {
-            // For floating labels, use exact 0.0/1.0 if perfectly aligned (clamped) to edges
+            // For floating labels, use exact 0.0/1.0 if near edges (clamped or close)
             // to ensure consistent edge alignment across labels of different widths.
-            let snapThreshold: CGFloat = 1.0
+            let snapThreshold: CGFloat = 20.0
             if abs(self.frame.minX - sFrame.minX) < snapThreshold { relX = 0.0 }
             else if abs(self.frame.maxX - sFrame.maxX) < snapThreshold { relX = 1.0 }
 
