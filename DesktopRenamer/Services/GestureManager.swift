@@ -114,7 +114,7 @@ class GestureManager: ObservableObject {
     private var lockedDirection: SwitchDirection? = nil
 
     // Tuning
-    private let switchCooldown: TimeInterval = 0.35
+    private let switchCooldown: TimeInterval = 0.25
     // private let minSwipeDistance: Float = 0.10 // Moved to swipeThreshold
     private let consistencyThreshold: Float = 0.01  // 5% Minimum movement per finger (Anti-Tap)
     private let touchTimeout: TimeInterval = 0.15
@@ -344,38 +344,35 @@ class GestureManager: ObservableObject {
         // 6. Pre-Trigger Logic: Overscroll Indicator
         var isOverscroll = false
 
-        // Only show overscroll indicator if we are the ones overriding the switch AND finger count matches
-        if self.isEnabled && numFingers == self.fingerCount {
-            // Only check horizontal dominance for indicator first
-            if abs(avgDX) > abs(avgDY) {
-                let direction: SwitchDirection = avgDX < 0 ? .next : .previous
+        // Only check horizontal dominance for indicator first
+        if abs(avgDX) > abs(avgDY) {
+            let direction: SwitchDirection = avgDX < 0 ? .next : .previous
 
-                // Determine target display to check boundaries
-                var targetDisplayID: String? = nil
-                if self.switchOverride == .cursor {
-                    targetDisplayID = SpaceHelper.getCursorDisplayID()
-                }
-                // If .activeWindow, we leave nil, relying on SpaceManager's default context
+            // Determine target display to check boundaries
+            var targetDisplayID: String? = nil
+            if self.switchOverride == .cursor {
+                targetDisplayID = SpaceHelper.getCursorDisplayID()
+            }
+            // If .activeWindow, we leave nil, relying on SpaceManager's default context
 
-                if direction == .previous {
-                    if spaceManager?.isFirstSpace(onDisplayID: targetDisplayID) == true {
-                        isOverscroll = true
-                        // avgDX is positive here.
-                        let progress = Double(abs(avgDX) / swipeThreshold)
-                        // Previous means going "Left". Wall is on Left. Edge is .leading.
-                        DispatchQueue.main.async {
-                            OverscrollOverlayManager.shared.update(progress: progress, edge: .leading)
-                        }
+            if direction == .previous {
+                if spaceManager?.isFirstSpace(onDisplayID: targetDisplayID) == true {
+                    isOverscroll = true
+                    // avgDX is positive here.
+                    let progress = Double(abs(avgDX) / swipeThreshold)
+                    // Previous means going "Left". Wall is on Left. Edge is .leading.
+                    DispatchQueue.main.async {
+                        OverscrollOverlayManager.shared.update(progress: progress, edge: .leading)
                     }
-                } else {  // .next
-                    if spaceManager?.isLastSpace(onDisplayID: targetDisplayID) == true {
-                        isOverscroll = true
-                        // avgDX is negative here.
-                        let progress = Double(abs(avgDX) / swipeThreshold)
-                        // Next means going "Right". Wall is on Right. Edge is .trailing.
-                        DispatchQueue.main.async {
-                            OverscrollOverlayManager.shared.update(progress: progress, edge: .trailing)
-                        }
+                }
+            } else {  // .next
+                if spaceManager?.isLastSpace(onDisplayID: targetDisplayID) == true {
+                    isOverscroll = true
+                    // avgDX is negative here.
+                    let progress = Double(abs(avgDX) / swipeThreshold)
+                    // Next means going "Right". Wall is on Right. Edge is .trailing.
+                    DispatchQueue.main.async {
+                        OverscrollOverlayManager.shared.update(progress: progress, edge: .trailing)
                     }
                 }
             }
@@ -472,8 +469,15 @@ class GestureManager: ObservableObject {
         lastSwitchTime = Date().timeIntervalSince1970
         guard let sm = spaceManager, self.isEnabled else { return }
 
-        DispatchQueue.main.async {
-            let targetDisplayID = SpaceHelper.getCursorDisplayID()
+        DispatchQueue.main.async { [weak self] in
+            guard let self = self else { return }
+
+            var targetDisplayID: String? = nil
+
+            if self.switchOverride == .cursor {
+                targetDisplayID = SpaceHelper.getCursorDisplayID()
+            }
+            // If .activeWindow, we pass nil, which causes SpaceManager to default to the currently active display
 
             switch direction {
             case .next:

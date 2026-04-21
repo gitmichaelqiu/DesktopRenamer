@@ -51,9 +51,6 @@ class SpaceManager: ObservableObject {
     @Published private(set) var currentRawSpaceUUID: String = ""
     @Published private(set) var currentDisplayID: String = "Main"
     
-    // Tracks active space per display to ensure local switching context
-    private(set) var currentSpaceByDisplay: [String: String] = [:]
-    
     @Published var spaceNameDict: [DesktopSpace] = []
     
     // Handy views for the current display
@@ -75,13 +72,6 @@ class SpaceManager: ObservableObject {
     
     // Widget Debouncer
     private var widgetUpdateWorkItem: DispatchWorkItem?
-    
-    // Wake Stabilization
-    private var lastWakeTime: Date = .distantPast
-    private let wakeCoolingDuration: TimeInterval = 15.0
-    
-    // Display Cache
-    private var connectedDisplayUUIDs: Set<String> = []
     
     @Published var detectionMethod: DetectionMethod {
         didSet {
@@ -149,46 +139,14 @@ class SpaceManager: ObservableObject {
         }
         
         NotificationCenter.default.addObserver(self, selector: #selector(screenParametersDidChange), name: NSApplication.didChangeScreenParametersNotification, object: nil)
-        
-        NSWorkspace.shared.notificationCenter.addObserver(self, selector: #selector(systemDidWake), name: NSWorkspace.didWakeNotification, object: nil)
-        
-        refreshConnectedDisplays()
     }
     
     deinit {
         NotificationCenter.default.removeObserver(self)
     }
     
-    @objc private func systemDidWake() {
-        self.lastWakeTime = Date()
-        print("SpaceManager: System wake detected. Entering \(wakeCoolingDuration)s cooling period...")
-        
-        // Schedule a deep refresh once the cooling period ends to capture final stable arrangement
-        DispatchQueue.main.asyncAfter(deadline: .now() + wakeCoolingDuration + 1.0) { [weak self] in
-            print("SpaceManager: Cooling period ended. Performing final post-wake refresh.")
-            self?.refreshSpaceState()
-            
-            // Final safety seeding to catch any labels that failed during the transient phase
-            DispatchQueue.main.async {
-                AppDelegate.shared.statusBarController?.labelManager.seedAllLabels()
-            }
-        }
-    }
-    
     @objc private func screenParametersDidChange() {
-        print("SpaceManager: Screen parameters changed. Refreshing spaces and labels...")
-        refreshConnectedDisplays()
         refreshSpaceState()
-        
-        // When a monitor is connected/disconnected, re-seed all labels to ensure new displays are covered
-        DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
-            AppDelegate.shared.statusBarController?.labelManager.seedAllLabels()
-        }
-    }
-    
-    private func refreshConnectedDisplays() {
-        self.connectedDisplayUUIDs = Set(SpaceHelper.getAllDisplayUUIDs().map { $0.uppercased() })
-        // print("SpaceManager: Refreshed connected displays: \(connectedDisplayUUIDs)")
     }
     
     func refreshSpaceState() {
@@ -206,9 +164,6 @@ class SpaceManager: ObservableObject {
             DispatchQueue.main.async { [weak self] in self?.handleSpaceChange(rawUUID, isDesktop: isDesktop, ncCount: ncCount, displayID: displayID, source: source) }
             return
         }
-
-        print("SpaceManager: handleSpaceChange(rawUUID: \(rawUUID), displayID: \(displayID), source: \(source))")
-
         
         var shouldUpdateWidget = false
         
@@ -373,29 +328,10 @@ class SpaceManager: ObservableObject {
             shouldUpdateWidget = true
         }
 
-        // Always update the per-display mapping to ensure we have a local context for each monitor
-        currentSpaceByDisplay[displayID] = logicalUUID
-
         if let index = spaceNameDict.firstIndex(where: { $0.id == logicalUUID }) {
-            let oldDisplayID = spaceNameDict[index].displayID
-            if oldDisplayID != displayID {
-                // STICKY DISPLAY LOGIC:
-                // Only overwrite the displayID if the OLD display is no longer connected.
-                // This prevents spaces from "forgetting" their external monitor assignment 
-                // when they temporarily collapse onto the built-in display during sleep/clamshell.
-                
-                // POST-WAKE STABILITY FIX:
-                // During the cooling period (first 15s after wake), we NEVER overwrite displayID.
-                // This prevents "learning" the transient state where macOS puts everything on the primary screen.
-                let timeSinceWake = Date().timeIntervalSince(lastWakeTime)
-                if timeSinceWake >= wakeCoolingDuration {
-                    let isOldDisplayGone = !connectedDisplayUUIDs.contains(oldDisplayID.uppercased())
-                    
-                    if isOldDisplayGone || oldDisplayID.isEmpty || oldDisplayID == "MAIN" || oldDisplayID == "UNKNOWN" {
-                        spaceNameDict[index].displayID = displayID
-                        saveData()
-                    }
-                }
+            if spaceNameDict[index].displayID != displayID {
+                spaceNameDict[index].displayID = displayID
+                saveData()
             }
         }
         
@@ -573,11 +509,9 @@ class SpaceManager: ObservableObject {
     }
     
     private static func normalizeDisplayID(_ id: String, mainUUID: String?) -> String {
-        let cleanId = id.trimmingCharacters(in: .whitespacesAndNewlines)
-        if cleanId.isEmpty || cleanId.uppercased() == "MAIN" || cleanId.uppercased() == "UNKNOWN" {
-            return mainUUID?.uppercased() ?? "MAIN"
-        }
-        return cleanId.uppercased()
+        guard let main = mainUUID else { return id.uppercased() }
+        let result = id == "Main" ? main : id
+        return result.uppercased()
     }
     
     func getSpaceName(_ spaceUUID: String) -> String {
@@ -641,60 +575,70 @@ class SpaceManager: ObservableObject {
     // Moving around spaces
     
     func switchToSpace(_ space: DesktopSpace) {
-        print("SpaceManager: switchToSpace(\(space.id)) on display \(space.displayID)")
         SpaceHelper.switchToSpace(space.id, forceMissionControl: forceMissionControlForFullscreen)
     }
     
     func switchToPreviousSpace(onDisplayID displayID: String? = nil) {
-        let targetDisplayID = displayID ?? SpaceHelper.getCursorDisplayID() ?? currentDisplayID
-        if let current = findBestCurrentSpace(for: targetDisplayID) {
-            proceedToSwitch(from: current, on: targetDisplayID, direction: -1)
-        }
-    }
-
-    func switchToNextSpace(onDisplayID displayID: String? = nil) {
-        let targetDisplayID = displayID ?? SpaceHelper.getCursorDisplayID() ?? currentDisplayID
-        if let current = findBestCurrentSpace(for: targetDisplayID) {
-            proceedToSwitch(from: current, on: targetDisplayID, direction: 1)
-        }
-    }
-
-    private func findBestCurrentSpace(for displayID: String) -> DesktopSpace? {
-        // 1. Query the OS for the live visible space on THIS monitor specifically (Priority #1)
-        if let liveID = SpaceHelper.getCurrentSpaceID(for: displayID),
-           let space = spaceNameDict.first(where: { $0.id == liveID && $0.displayID == displayID }) {
-            // Update cache while we're at it
-            currentSpaceByDisplay[displayID] = liveID
-            return space
-        }
-
-        // 2. Check our per-display cache (Priority #2)
-        if let cachedID = currentSpaceByDisplay[displayID],
-           let space = spaceNameDict.first(where: { $0.id == cachedID && $0.displayID == displayID }) {
-            return space
+        var targetDisplayID = displayID
+        var currentSpaceID = currentSpaceUUID
+        
+        // If a specific display is requested, find its current space
+        if let requestedDisplayID = displayID {
+            if let space = SpaceHelper.getCurrentSpaceID(for: requestedDisplayID) {
+                currentSpaceID = space
+                targetDisplayID = requestedDisplayID
+            } else {
+                return // Invalid display or state
+            }
         }
         
-        // 3. Last resort: If the global focused space happens to be on this display, use it
-        if let global = spaceNameDict.first(where: { $0.id == currentSpaceUUID && $0.displayID == displayID }) {
-            return global
-        }
+        // Find current space info in our dictionary
+        guard let current = spaceNameDict.first(where: { $0.id == currentSpaceID }) else { return }
         
-        // 4. Extreme fallback: Just pick the first space on this monitor so the switch action has a context
-        return spaceNameDict.first(where: { $0.displayID == displayID })
-    }
-
-    private func proceedToSwitch(from current: DesktopSpace, on targetDisplayID: String, direction: Int) {
+        // Double check display ID match if one was not constrained
+        if targetDisplayID == nil { targetDisplayID = current.displayID }
+        
         // Use spaces from the TARGET display
         let displaySpaces = spaceNameDict
             .filter { $0.displayID == targetDisplayID }
             .sorted { $0.num < $1.num }
         
-        guard let currentIndex = displaySpaces.firstIndex(of: current) else { return }
+        // Find index and move left
+        guard let currentIndex = displaySpaces.firstIndex(of: current), currentIndex > 0 else { return }
         
-        let targetIndex = currentIndex + direction
-        guard targetIndex >= 0 && targetIndex < displaySpaces.count else { return }
+        let target = displaySpaces[currentIndex - 1]
+        switchToSpace(target)
+    }
+
+    func switchToNextSpace(onDisplayID displayID: String? = nil) {
+        var targetDisplayID = displayID
+        var currentSpaceID = currentSpaceUUID
         
-        let target = displaySpaces[targetIndex]
+        // If a specific display is requested, find its current space
+        if let requestedDisplayID = displayID {
+            if let space = SpaceHelper.getCurrentSpaceID(for: requestedDisplayID) {
+                currentSpaceID = space
+                targetDisplayID = requestedDisplayID
+            } else {
+                return // Invalid display or state
+            }
+        }
+        
+        // Find current space info in our dictionary
+        guard let current = spaceNameDict.first(where: { $0.id == currentSpaceID }) else { return }
+        
+        // Double check display ID match
+        if targetDisplayID == nil { targetDisplayID = current.displayID }
+        
+        // Use spaces from the TARGET display
+        let displaySpaces = spaceNameDict
+            .filter { $0.displayID == targetDisplayID }
+            .sorted { $0.num < $1.num }
+        
+        // Find index and move right
+        guard let currentIndex = displaySpaces.firstIndex(of: current), currentIndex < displaySpaces.count - 1 else { return }
+        
+        let target = displaySpaces[currentIndex + 1]
         switchToSpace(target)
     }
 

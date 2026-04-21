@@ -4,6 +4,8 @@ import Foundation
 
 @MainActor
 class SpaceLabelManager: ObservableObject {
+    private let spacesKey = "com.michaelqiu.desktoprenamer.slw"
+
     // Persistence Keys
     private let kActiveFontScale = "kActiveFontScale"
     private let kActivePaddingScale = "kActivePaddingScale"
@@ -19,6 +21,15 @@ class SpaceLabelManager: ObservableObject {
     private let kGlobalDockEdge = "kGlobalDockEdge"
     private let kGlobalCenterX = "kGlobalCenterX"
     private let kGlobalCenterY = "kGlobalCenterY"
+
+    // Where should the label sit on the screen?
+
+    @Published var isEnabled: Bool {
+        didSet {
+            UserDefaults.standard.set(isEnabled, forKey: spacesKey)
+            updateLabelsVisibility()
+        }
+    }
 
     // Settings
     @Published var showPreviewLabels: Bool {
@@ -78,6 +89,9 @@ class SpaceLabelManager: ObservableObject {
     init(spaceManager: SpaceManager) {
         self.spaceManager = spaceManager
 
+        UserDefaults.standard.register(defaults: [spacesKey: true])
+        self.isEnabled = UserDefaults.standard.bool(forKey: spacesKey)
+
         // Load Settings
         let loadedActiveFont = UserDefaults.standard.double(forKey: kActiveFontScale)
         self.activeFontScale = (loadedActiveFont == 0) ? 1.0 : loadedActiveFont
@@ -123,12 +137,6 @@ class SpaceLabelManager: ObservableObject {
         }
 
         setupObservers()
-        
-        // Seed all labels once after launch to populate Mission Control
-        Task { @MainActor in
-            try? await Task.sleep(nanoseconds: 1_500_000_000)
-            self.seedAllLabels()
-        }
     }
 
     deinit {
@@ -174,18 +182,14 @@ class SpaceLabelManager: ObservableObject {
         spaceManager.$currentSpaceUUID
             .dropFirst()
             .receive(on: DispatchQueue.main)
-            .sink { [weak self] _ in 
-                // We use currentDisplayID here to scope the refresh to the monitor that actually changed.
-                // This prevents focus hijacking where Monitor A switches and Monitor B accidentally steals focus back.
-                self?.updateAllWindowModes(forDisplay: self?.spaceManager?.currentDisplayID) 
-            }
+            .sink { [weak self] _ in self?.updateAllWindowModes() }
             .store(in: &cancellables)
 
         spaceManager.$spaceNameDict
             .receive(on: DispatchQueue.main)
             .sink { [weak self] _ in
                 self?.recalculateUnifiedSize()
-                self?.syncWindowsWithDict()
+                self?.cleanupRedundantWindows()
             }
             .store(in: &cancellables)
 
@@ -197,23 +201,6 @@ class SpaceLabelManager: ObservableObject {
                 }
             }
             .store(in: &cancellables)
-
-    }
-
-    private func syncWindowsWithDict() {
-        guard let spaceManager = spaceManager else { return }
-        let allSpaces = spaceManager.spaceNameDict
-        
-        // 1. Add windows for new spaces
-        for space in allSpaces {
-            ensureWindow(for: space.id, name: space.customName, displayID: space.displayID)
-        }
-        
-        // 2. Remove windows for spaces that no longer exist in the dict
-        cleanupRedundantWindows()
-        
-        // 3. Update all window modes to ensure consistent visibility
-        updateAllWindowModes()
     }
 
     // Get rid of windows for spaces that don't exist anymore
@@ -282,36 +269,27 @@ class SpaceLabelManager: ObservableObject {
         }
     }
 
-    private func updateAllWindowModes(forDisplay displayID: String? = nil) {
-        let detectionMethod = spaceManager?.detectionMethod
+    private func updateAllWindowModes() {
+        let detectionMethod = spaceManager?.detectionMethod ?? .automatic
+
         if detectionMethod == .automatic {
             Task { @MainActor in
                 let visibleUUIDs = SpaceHelper.getVisibleSystemSpaceIDs()
-                self.applyVisibility(visibleUUIDs, forDisplay: displayID)
+                self.applyVisibility(visibleUUIDs)
             }
         } else {
             SpaceHelper.getVisibleSpaceUUIDs { [weak self] visibleUUIDs in
                 Task { @MainActor [weak self] in
-                    self?.applyVisibility(visibleUUIDs, forDisplay: displayID)
+                    self?.applyVisibility(visibleUUIDs)
                 }
             }
         }
     }
 
-    private func applyVisibility(_ visibleUUIDs: Set<String>, forDisplay displayID: String? = nil) {
-        if let id = displayID {
-             print("SpaceLabelManager: applyVisibility(visibleUUIDs: \(visibleUUIDs)) SCOPED to display: \(id)")
-        } else {
-             print("SpaceLabelManager: applyVisibility(visibleUUIDs: \(visibleUUIDs)) GLOBAL refresh")
-        }
-        
+    private func applyVisibility(_ visibleUUIDs: Set<String>) {
         let windowsSnapshot = self.createdWindows
 
         for (key, window) in windowsSnapshot {
-            if let targetDisplay = displayID, window.displayID != targetDisplay {
-                continue // Skip windows that are on a different display than the one we are updating
-            }
-            
             let isVisibleOnAnyScreen = visibleUUIDs.contains(key)
             window.setMode(isCurrentSpace: isVisibleOnAnyScreen)
         }
@@ -390,7 +368,7 @@ class SpaceLabelManager: ObservableObject {
         let isCurrent = (spaceId == spaceManager.currentSpaceUUID)
         window.setMode(isCurrentSpace: isCurrent)
         self.recalculateUnifiedSize()
-        window.refreshAppearance()
+        window.orderFront(nil)
         window.bindToTargetSpace()
     }
 
@@ -408,7 +386,7 @@ class SpaceLabelManager: ObservableObject {
     private func updateLabelsVisibility() {
         updateWindows()
 
-        if showActiveLabels {
+        if isEnabled {
             if let spaceId = spaceManager?.currentSpaceUUID,
                 let name = spaceManager?.getSpaceName(spaceId)
             {
@@ -417,21 +395,7 @@ class SpaceLabelManager: ObservableObject {
         }
     }
 
-    func seedAllLabels() {
-        guard showPreviewLabels, let spaceManager = spaceManager else { return }
-        print("SpaceLabelManager: Background seeding all labels for Mission Control...")
-        let allSpaces = spaceManager.spaceNameDict
-        for space in allSpaces {
-            ensureWindow(for: space.id, name: space.customName, displayID: space.displayID)
-        }
-        updateAllWindowModes()
-    }
-
-    func toggleActiveLabels() {
-        showActiveLabels.toggle()
-    }
-
-    func togglePreviewLabels() {
-        showPreviewLabels.toggle()
+    func toggleEnabled() {
+        isEnabled.toggle()
     }
 }

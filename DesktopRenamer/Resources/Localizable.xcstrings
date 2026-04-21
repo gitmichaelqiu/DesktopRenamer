@@ -261,16 +261,6 @@
         }
       }
     },
-    "Automatically download updates" : {
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "自动下载更新"
-          }
-        }
-      }
-    },
     "Automation" : {
       "localizations" : {
         "zh-Hans" : {
@@ -490,6 +480,16 @@
         }
       }
     },
+    "Enable Labels" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "启用标签"
+          }
+        }
+      }
+    },
     "Enable switch gesture override" : {
       "localizations" : {
         "zh-Hans" : {
@@ -502,12 +502,6 @@
     },
     "Factory Reset" : {
       "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Factory reset"
-          }
-        },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
@@ -856,23 +850,6 @@
         }
       }
     },
-    "Menu.ShowActiveLabels" : {
-      "comment" : "Toggle active labels",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Show Active Space Labels"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "显示当前桌面标签"
-          }
-        }
-      }
-    },
     "Menu.ShowLabels" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -886,23 +863,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "显示桌面标签窗口"
-          }
-        }
-      }
-    },
-    "Menu.ShowPreviewLabels" : {
-      "comment" : "Toggle preview labels",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Show Preview Labels"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "显示预览标签"
           }
         }
       }
@@ -1300,12 +1260,6 @@
     },
     "Review Splash" : {
       "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Review splash"
-          }
-        },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
