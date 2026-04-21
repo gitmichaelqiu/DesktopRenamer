@@ -306,11 +306,32 @@ class SpaceLabelWindow: NSWindow {
 
     private func pushToGlobalState() {
         guard let manager = labelManager, let screen = self.screen else { return }
+        let sFrame = screen.visibleFrame
         let currentAbsCenter = NSPoint(x: self.frame.midX, y: self.frame.midY)
 
-        let sFrame = screen.visibleFrame
-        let relX = (currentAbsCenter.x - sFrame.minX) / sFrame.width
-        let relY = (currentAbsCenter.y - sFrame.minY) / sFrame.height
+        var relX: CGFloat = (currentAbsCenter.x - sFrame.minX) / sFrame.width
+        var relY: CGFloat = (currentAbsCenter.y - sFrame.minY) / sFrame.height
+
+        if self.isDocked {
+            // For docked handles, force relative center to respect the edge
+            // so that if we undock on another space, it appears at the edge.
+            switch self.dockEdge {
+            case .minX: relX = 0.0
+            case .maxX: relX = 1.0
+            case .minY: relY = 0.0
+            case .maxY: relY = 1.0
+            default: break
+            }
+        } else {
+            // For floating labels, use exact 0.0/1.0 if perfectly aligned (clamped) to edges
+            // to ensure consistent edge alignment across labels of different widths.
+            let snapThreshold: CGFloat = 1.0
+            if abs(self.frame.minX - sFrame.minX) < snapThreshold { relX = 0.0 }
+            else if abs(self.frame.maxX - sFrame.maxX) < snapThreshold { relX = 1.0 }
+
+            if abs(self.frame.minY - sFrame.minY) < snapThreshold { relY = 0.0 }
+            else if abs(self.frame.maxY - sFrame.maxY) < snapThreshold { relY = 1.0 }
+        }
 
         manager.updateGlobalState(
             isDocked: self.isDocked, edge: self.dockEdge, center: NSPoint(x: relX, y: relY))
@@ -321,8 +342,25 @@ class SpaceLabelWindow: NSWindow {
         let relativePoint = labelManager?.globalCenterPoint ?? NSPoint(x: 1.0, y: 0.5)
         let sFrame = screen.visibleFrame
 
-        var absX = sFrame.minX + (sFrame.width * relativePoint.x)
-        var absY = sFrame.minY + (sFrame.height * relativePoint.y)
+        var absX: CGFloat
+        var absY: CGFloat
+
+        // Interpret relative 0.0 and 1.0 as absolute "Flush to Edge" alignment
+        if relativePoint.x == 0.0 {
+            absX = sFrame.minX + (size.width / 2)
+        } else if relativePoint.x == 1.0 {
+            absX = sFrame.maxX - (size.width / 2)
+        } else {
+            absX = sFrame.minX + (sFrame.width * relativePoint.x)
+        }
+
+        if relativePoint.y == 0.0 {
+            absY = sFrame.minY + (size.height / 2)
+        } else if relativePoint.y == 1.0 {
+            absY = sFrame.maxY - (size.height / 2)
+        } else {
+            absY = sFrame.minY + (sFrame.height * relativePoint.y)
+        }
 
         if isDocked {
             switch self.dockEdge {
