@@ -71,7 +71,8 @@ class StatusBarController: NSObject {
     private var settingsWindowController: NSWindowController?
     
     private var renameItem: NSMenuItem?
-    private var showLabelsMenuItem: NSMenuItem?
+    private var showActiveLabelsMenuItem: NSMenuItem?
+    private var showPreviewLabelsMenuItem: NSMenuItem?
     
     static let isStatusBarHiddenKey = "isStatusBarHidden"
     static var isStatusBarHidden: Bool {
@@ -127,7 +128,14 @@ class StatusBarController: NSObject {
             }
             .store(in: &cancellables)
         
-        labelManager.$isEnabled
+        labelManager.$showActiveLabels
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] _ in
+                self?.rebuildMenu()
+            }
+            .store(in: &cancellables)
+
+        labelManager.$showPreviewLabels
             .receive(on: DispatchQueue.main)
             .sink { [weak self] _ in
                 self?.rebuildMenu()
@@ -201,18 +209,27 @@ class StatusBarController: NSObject {
         }
         self.renameItem = rename
         menu.addItem(rename)
+    
+        let showPreviewLabels = NSMenuItem(title: NSLocalizedString("Menu.ShowPreviewLabels", comment: "Toggle preview labels"), action: #selector(togglePreviewLabelsFromMenu), keyEquivalent: "p")
+        showPreviewLabels.target = self
+        showPreviewLabels.state = labelManager.showPreviewLabels ? .on : .off
+        showPreviewLabels.image = NSImage(systemSymbolName: "appwindow.swipe.rectangle", accessibilityDescription: nil)
+        self.showPreviewLabelsMenuItem = showPreviewLabels
+        menu.addItem(showPreviewLabels)
         
-        let troubleshootItem = NSMenuItem(title: NSLocalizedString("Troubleshoot Space Detection", comment: ""), action: #selector(troubleshootSpaceDetection), keyEquivalent: "")
-        troubleshootItem.image = NSImage(systemSymbolName: "wrench.and.screwdriver", accessibilityDescription: nil)
-        troubleshootItem.target = self
-        menu.addItem(troubleshootItem)
-        
-        let showLabels = NSMenuItem(title: NSLocalizedString("Menu.ShowLabels", comment: "Toggle labels"), action: #selector(toggleLabelsFromMenu), keyEquivalent: "l")
-        showLabels.target = self
-        showLabels.state = labelManager.isEnabled ? .on : .off
-        showLabels.image = NSImage(systemSymbolName: "appwindow.swipe.rectangle", accessibilityDescription: nil)
-        self.showLabelsMenuItem = showLabels
-        menu.addItem(showLabels)
+        let showActiveLabels = NSMenuItem(title: NSLocalizedString("Menu.ShowActiveLabels", comment: "Toggle active labels"), action: #selector(toggleActiveLabelsFromMenu), keyEquivalent: "a")
+        showActiveLabels.target = self
+        showActiveLabels.state = labelManager.showActiveLabels ? .on : .off
+        showActiveLabels.image = NSImage(systemSymbolName: "rectangle.inset.filled.and.cursorarrow", accessibilityDescription: nil)
+        self.showActiveLabelsMenuItem = showActiveLabels
+        menu.addItem(showActiveLabels)
+
+        if spaceManager.detectionMethod != .automatic {
+            let troubleshootItem = NSMenuItem(title: NSLocalizedString("Troubleshoot Space Detection", comment: ""), action: #selector(troubleshootSpaceDetection), keyEquivalent: "")
+            troubleshootItem.image = NSImage(systemSymbolName: "wrench.and.screwdriver", accessibilityDescription: nil)
+            troubleshootItem.target = self
+            menu.addItem(troubleshootItem)
+        }
 
         let reloadLabels = NSMenuItem(title: NSLocalizedString("Reload Space Labels", comment: "Reload Space Label Windows to fix glitches"), action: #selector(reloadLabelsFromMenu), keyEquivalent: "")
         reloadLabels.target = self
@@ -266,8 +283,13 @@ class StatusBarController: NSObject {
         popover.show(relativeTo: button.bounds, of: button, preferredEdge: .minY)
     }
     
-    @objc private func toggleLabelsFromMenu() {
-        labelManager.toggleEnabled()
+    @objc private func toggleActiveLabelsFromMenu() {
+        labelManager.toggleActiveLabels()
+        rebuildMenu()
+    }
+
+    @objc private func togglePreviewLabelsFromMenu() {
+        labelManager.togglePreviewLabels()
         rebuildMenu()
     }
 

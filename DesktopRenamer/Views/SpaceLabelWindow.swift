@@ -858,22 +858,11 @@ class SpaceLabelWindow: NSWindow {
             return
         }
 
-        let masterEnabled = labelManager?.isEnabled ?? true
-        let showActive = labelManager?.showActiveLabels ?? true
-        let showPreview = labelManager?.showPreviewLabels ?? true
-
         var isVisuallyVisible = false
-
-        if masterEnabled {
-            if isActiveMode {
-                isVisuallyVisible = showActive
-            } else {
-                if showPreview {
-                    isVisuallyVisible = true
-                } else {
-                    isVisuallyVisible = false
-                }
-            }
+        if isActiveMode {
+            isVisuallyVisible = labelManager?.showActiveLabels ?? true
+        } else {
+            isVisuallyVisible = labelManager?.showPreviewLabels ?? true
         }
 
         let shouldBeAnchor = !isVisuallyVisible

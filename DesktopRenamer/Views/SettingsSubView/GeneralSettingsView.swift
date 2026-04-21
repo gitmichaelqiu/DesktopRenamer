@@ -423,6 +423,7 @@ struct GeneralSettingsView: View {
 
     @State private var launchAtLogin: Bool = false
     @State private var autoCheckUpdate: Bool = UpdateManager.shared.updaterController.updater.automaticallyChecksForUpdates
+    @State private var autoDownloadUpdate: Bool = UpdateManager.shared.updaterController.updater.automaticallyDownloadsUpdates
     @State private var isResetting: Bool = false
     @State private var isAPIEnabled: Bool = SpaceManager.isAPIEnabled
     @State private var isStatusBarHidden: Bool = StatusBarController.isStatusBarHidden
@@ -437,15 +438,28 @@ struct GeneralSettingsView: View {
                 // General Section
                 SettingsSection("Settings.General.General") {
                     SettingsRow(
-                        "Settings.General.General.ShowLabels",
+                        "Show preview labels",
+                        helperText: "The large label visible in Mission Control."
+                    ) {
+                        Toggle("", isOn: $labelManager.showPreviewLabels)
+                            .toggleStyle(.switch)
+                            .labelsHidden()
+                    }
+
+                    Divider()
+                
+                    SettingsRow(
+                        "Show active space labels",
                         helperText:
                             "Create windows that only appear in Mission Control to display space names.\n\nMay not work when multiple displays are connected."
                     ) {
-                        Toggle("", isOn: $labelManager.isEnabled)
+                        Toggle("", isOn: $labelManager.showActiveLabels)
                             .labelsHidden()
                             .toggleStyle(.switch)
                     }
-                    Divider()
+                }
+                
+                SettingsSection(nil) {
                     SettingsRow(
                         "Hide menubar icon",
                         helperText:
@@ -458,7 +472,9 @@ struct GeneralSettingsView: View {
                                 StatusBarController.toggleStatusBar()
                             }
                     }
+
                     Divider()
+
                     SettingsRow("Settings.General.General.LaunchAtLogin") {
                         Toggle("", isOn: $launchAtLogin)
                             .labelsHidden()
@@ -475,6 +491,17 @@ struct GeneralSettingsView: View {
                             }
                     }
                     Divider()
+
+                    if autoCheckUpdate {
+                        SettingsRow("Automatically download updates") {
+                            Toggle("", isOn: $autoDownloadUpdate).labelsHidden().toggleStyle(.switch)
+                                .onChange(of: autoDownloadUpdate) { value in
+                                    UpdateManager.shared.updaterController.updater.automaticallyDownloadsUpdates = value
+                                }
+                        }
+                        Divider()
+                    }
+
                     SettingsRow("Settings.General.Updates.ManualCheck") {
                         Button(NSLocalizedString("Settings.General.Updates.Button", comment: "")) {
                             checkForUpdate()
@@ -584,7 +611,8 @@ struct GeneralSettingsView: View {
             ThresholdAdjustmentView(spaceManager: spaceManager)
         }
         .sheet(isPresented: $showAddSpacesSheet) { AddSpacesView(spaceManager: spaceManager) }
-        .animation(.easeInOut(duration: 0.16), value: spaceManager.detectionMethod)
+        .animation(.easeInOut(duration: 0.2), value: spaceManager.detectionMethod)
+        .animation(.easeInOut(duration: 0.2), value: autoCheckUpdate)
     }
 
     private var bugReportSheet: some View {

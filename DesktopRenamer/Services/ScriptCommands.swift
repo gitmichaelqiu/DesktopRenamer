@@ -15,6 +15,7 @@ func runOnMain<T>(_ block: @MainActor () -> T) -> T {
 
 class ToggleMenubarCommand: NSScriptCommand {
     override func performDefaultImplementation() -> Any? {
+        guard SpaceManager.isAPIEnabled else { return nil }
         return runOnMain {
             StatusBarController.toggleStatusBar()
             return !StatusBarController.isStatusBarHidden
@@ -22,20 +23,10 @@ class ToggleMenubarCommand: NSScriptCommand {
     }
 }
 
-class ToggleLabelsCommand: NSScriptCommand {
-    override func performDefaultImplementation() -> Any? {
-        return runOnMain {
-            if let manager = AppDelegate.shared.statusBarController?.labelManager {
-                manager.toggleEnabled()
-                return manager.isEnabled
-            }
-            return false
-        }
-    }
-}
 
 class ToggleActiveLabelCommand: NSScriptCommand {
     override func performDefaultImplementation() -> Any? {
+        guard SpaceManager.isAPIEnabled else { return false }
         return runOnMain {
             if let manager = AppDelegate.shared.statusBarController?.labelManager {
                 manager.showActiveLabels.toggle()
@@ -48,6 +39,7 @@ class ToggleActiveLabelCommand: NSScriptCommand {
 
 class TogglePreviewLabelCommand: NSScriptCommand {
     override func performDefaultImplementation() -> Any? {
+        guard SpaceManager.isAPIEnabled else { return false }
         return runOnMain {
             if let manager = AppDelegate.shared.statusBarController?.labelManager {
                 manager.showPreviewLabels.toggle()
@@ -60,6 +52,7 @@ class TogglePreviewLabelCommand: NSScriptCommand {
 
 class ToggleDesktopVisibilityCommand: NSScriptCommand {
     override func performDefaultImplementation() -> Any? {
+        guard SpaceManager.isAPIEnabled else { return false }
         return runOnMain {
             if let manager = AppDelegate.shared.statusBarController?.labelManager {
                 // Toggles "Keep visible on desktop" (showOnDesktop)
@@ -75,6 +68,7 @@ class ToggleDesktopVisibilityCommand: NSScriptCommand {
 
 class RenameCurrentSpaceCommand: NSScriptCommand {
     override func performDefaultImplementation() -> Any? {
+        guard SpaceManager.isAPIEnabled else { return nil }
         guard let newName = self.directParameter as? String else { return nil }
         
         // No return value needed, so standard async is fine.
@@ -89,6 +83,7 @@ class RenameCurrentSpaceCommand: NSScriptCommand {
 
 class GetCurrentSpaceNameCommand: NSScriptCommand {
     override func performDefaultImplementation() -> Any? {
+        guard SpaceManager.isAPIEnabled else { return "API Disabled" }
         return runOnMain {
             if let manager = AppDelegate.shared.spaceManager {
                 return manager.getSpaceName(manager.currentSpaceUUID)
@@ -100,6 +95,7 @@ class GetCurrentSpaceNameCommand: NSScriptCommand {
 
 class GetAllSpacesCommand: NSScriptCommand {
     override func performDefaultImplementation() -> Any? {
+        guard SpaceManager.isAPIEnabled else { return "API Disabled" }
         return runOnMain {
             guard let manager = AppDelegate.shared.spaceManager else { return "" }
             
@@ -140,6 +136,7 @@ private func getDisplayName(for uuidString: String) -> String {
 
 class SwitchToSpaceCommand: NSScriptCommand {
     override func performDefaultImplementation() -> Any? {
+        guard SpaceManager.isAPIEnabled else { return nil }
         guard let spaceID = self.directParameter as? String else { return nil }
         
         DispatchQueue.main.async {
@@ -156,6 +153,7 @@ class SwitchToSpaceCommand: NSScriptCommand {
 
 class RenameSpaceCommand: NSScriptCommand {
     override func performDefaultImplementation() -> Any? {
+        guard SpaceManager.isAPIEnabled else { return nil }
         guard let spaceID = self.directParameter as? String,
               let arguments = self.evaluatedArguments,
               let newName = arguments["newName"] as? String else { return nil }
@@ -171,6 +169,7 @@ class RenameSpaceCommand: NSScriptCommand {
 
 class MoveWindowNextCommand: NSScriptCommand {
     override func performDefaultImplementation() -> Any? {
+        guard SpaceManager.isAPIEnabled else { return nil }
         DispatchQueue.main.async {
             if let manager = AppDelegate.shared.spaceManager {
                 manager.moveActiveWindowToNextSpace()
@@ -182,6 +181,7 @@ class MoveWindowNextCommand: NSScriptCommand {
 
 class MoveWindowPreviousCommand: NSScriptCommand {
     override func performDefaultImplementation() -> Any? {
+        guard SpaceManager.isAPIEnabled else { return nil }
         DispatchQueue.main.async {
             if let manager = AppDelegate.shared.spaceManager {
                 manager.moveActiveWindowToPreviousSpace()
@@ -193,6 +193,7 @@ class MoveWindowPreviousCommand: NSScriptCommand {
 
 class MoveWindowToSpaceCommand: NSScriptCommand {
     override func performDefaultImplementation() -> Any? {
+        guard SpaceManager.isAPIEnabled else { return nil }
         guard let spaceID = self.directParameter as? String else { return nil }
         
         DispatchQueue.main.async {
