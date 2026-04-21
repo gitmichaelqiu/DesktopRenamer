@@ -70,6 +70,9 @@ class SpaceLabelWindow: NSWindow {
 
     // State
     private var isActiveMode: Bool = true
+    private var isDragging = false
+    private var lastDragPoint: NSPoint = .zero
+    private var pendingVisibilityTask: DispatchWorkItem?
     private var isDocked: Bool = true
     private var dockEdge: NSRectEdge = .maxX
     private var previewSize: NSSize = NSSize(width: 800, height: 500)
@@ -916,6 +919,9 @@ class SpaceLabelWindow: NSWindow {
     }
 
     private func updateVisibility(animated: Bool) {
+        pendingVisibilityTask?.cancel()
+        pendingVisibilityTask = nil
+
         guard findTargetScreen() != nil else {
             self.alphaValue = 0.0
             self.orderOut(nil)
@@ -951,7 +957,8 @@ class SpaceLabelWindow: NSWindow {
                         self.orderFrontRegardless()
                         self.hasOrderedInOnce = true
                     } else {
-                        print("SpaceLabelWindow[\(self.spaceId)]: Suppressing orderFrontRegardless (Active) during switch cooling period (\(String(format: "%.2f", timeSinceSwitch))s).")
+                        print("SpaceLabelWindow[\(self.spaceId)]: Suppressing orderFrontRegardless (Active) during switch cooling period (\(String(format: "%.2f", timeSinceSwitch))s). Scheduling retry.")
+                        scheduleVisibilityRetry(delay: 1.0 - timeSinceSwitch + 0.1)
                     }
                 }
             } else if !hasOrderedInOnce {
@@ -961,7 +968,8 @@ class SpaceLabelWindow: NSWindow {
                     self.orderFrontRegardless()
                     self.hasOrderedInOnce = true
                 } else {
-                    print("SpaceLabelWindow[\(self.spaceId)]: Suppressing orderFrontRegardless (Preview) during switch cooling period (\(String(format: "%.2f", timeSinceSwitch))s).")
+                    print("SpaceLabelWindow[\(self.spaceId)]: Suppressing orderFrontRegardless (Preview) during switch cooling period (\(String(format: "%.2f", timeSinceSwitch))s). Scheduling retry.")
+                    scheduleVisibilityRetry(delay: 1.0 - timeSinceSwitch + 0.1)
                 }
             }
         }
@@ -985,5 +993,13 @@ class SpaceLabelWindow: NSWindow {
     @objc private func repositionWindow() {
         updateLayout(isCurrentSpace: isActiveMode)
         updateVisibility(animated: false)
+    }
+
+    private func scheduleVisibilityRetry(delay: TimeInterval) {
+        let task = DispatchWorkItem { [weak self] in
+            self?.updateVisibility(animated: true)
+        }
+        self.pendingVisibilityTask = task
+        DispatchQueue.main.asyncAfter(deadline: .now() + max(0.01, delay), execute: task)
     }
 }
