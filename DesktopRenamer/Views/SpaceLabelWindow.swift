@@ -285,7 +285,7 @@ class SpaceLabelWindow: NSWindow {
 
     // Keeping everything in sync with the manager
     private func syncFromGlobalState() {
-        guard let manager = labelManager, let screen = self.screen else { return }
+        guard let manager = labelManager, let _ = self.screen else { return }
         self.isDocked = manager.globalIsDocked
         self.dockEdge = manager.globalDockEdge
 
