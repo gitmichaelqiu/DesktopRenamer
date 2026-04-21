@@ -355,7 +355,15 @@ class SpaceLabelWindow: NSWindow {
         if self.isActiveMode != isCurrentSpace {
             print("SpaceLabelWindow[\(self.spaceId)]: setMode(isCurrentSpace: \(isCurrentSpace))")
         }
+        
+        let wasAnchor = self.isInvisibleAnchorMode
+        let wasHidden = self.contentView?.alphaValue == 0
+        
+        // Pre-calculate visibility to avoid "flashing" or "stuttering" during mode change
+        let willBeVisible = isCurrentSpace ? (labelManager?.showActiveLabels ?? true) : (labelManager?.showPreviewLabels ?? true)
+        
         self.isActiveMode = isCurrentSpace
+        self.isInvisibleAnchorMode = !willBeVisible
 
         if isCurrentSpace {
             syncFromGlobalState()
@@ -364,8 +372,13 @@ class SpaceLabelWindow: NSWindow {
             }
         }
 
-        self.updateLayout(isCurrentSpace: isCurrentSpace)
-        updateVisibility(animated: true)
+        // We only animate the transition if the window was ALREADY visible as a preview window
+        // and is now becoming an active window (shrinking/docking).
+        // If it was an invisible anchor or explicitly hidden via hideImmediately, we snap it.
+        let shouldAnimate = isCurrentSpace ? (!wasAnchor && !wasHidden) : true
+        
+        self.updateLayout(isCurrentSpace: isCurrentSpace, updateFrame: shouldAnimate)
+        updateVisibility(animated: shouldAnimate)
         updateInteractivity()
     }
 
@@ -662,7 +675,7 @@ class SpaceLabelWindow: NSWindow {
             }
         } else {
             updateVisuals()
-            self.setFrame(NSRect(origin: self.frame.origin, size: newSize), display: true)
+            self.setFrame(NSRect(origin: newOrigin, size: newSize), display: true)
         }
     }
 
