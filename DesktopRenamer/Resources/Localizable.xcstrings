@@ -628,7 +628,7 @@
         }
       }
     },
-    "Grab Offset X" : {
+    "Grab offset X" : {
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
@@ -638,7 +638,7 @@
         }
       }
     },
-    "Grab Offset Y" : {
+    "Grab offset Y" : {
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
@@ -2699,7 +2699,8 @@
             "value" : "v%@"
           }
         }
-      }
+      },
+      "shouldTranslate" : false
     },
     "Value" : {
       "localizations" : {
