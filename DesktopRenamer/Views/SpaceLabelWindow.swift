@@ -324,12 +324,14 @@ class SpaceLabelWindow: NSWindow {
         var absX = sFrame.minX + (sFrame.width * relativePoint.x)
         var absY = sFrame.minY + (sFrame.height * relativePoint.y)
 
-        switch self.dockEdge {
-        case .minX: absX = sFrame.minX + (size.width / 2)
-        case .maxX: absX = sFrame.maxX - (size.width / 2)
-        case .minY: absY = sFrame.minY + (size.height / 2)
-        case .maxY: absY = sFrame.maxY - (size.height / 2)
-        default: break
+        if isDocked {
+            switch self.dockEdge {
+            case .minX: absX = sFrame.minX + (size.width / 2)
+            case .maxX: absX = sFrame.maxX - (size.width / 2)
+            case .minY: absY = sFrame.minY + (size.height / 2)
+            case .maxY: absY = sFrame.maxY - (size.height / 2)
+            default: break
+            }
         }
 
         return NSPoint(x: absX, y: absY)
@@ -478,7 +480,8 @@ class SpaceLabelWindow: NSWindow {
                                 centerPoint: NSPoint(
                                     x: currentMouseLocation.x, y: currentMouseLocation.y),
                                 screenFrame: screenFrame,
-                                clampToScreen: isDocked
+                                clampToScreen: isDocked,
+                                isDocked: isDocked
                             )
                             targetOrigin = rootedOrigin
 
@@ -518,7 +521,8 @@ class SpaceLabelWindow: NSWindow {
                     onEdge: self.dockEdge,
                     centerPoint: currentCenter,
                     screenFrame: screen.visibleFrame,
-                    clampToScreen: false
+                    clampToScreen: false,
+                    isDocked: false
                 )
                 let newCenter = NSPoint(
                     x: rootedOrigin.x + newSize.width / 2, y: rootedOrigin.y + newSize.height / 2)
@@ -615,7 +619,8 @@ class SpaceLabelWindow: NSWindow {
             } else {
                 newOrigin = calculateCenteredOrigin(
                     forSize: newSize, onEdge: self.dockEdge, centerPoint: targetCenter,
-                    screenFrame: targetScreen.visibleFrame, clampToScreen: false
+                    screenFrame: targetScreen.visibleFrame, clampToScreen: false,
+                    isDocked: self.isDocked
                 )
             }
         } else {
@@ -683,8 +688,12 @@ class SpaceLabelWindow: NSWindow {
 
     private func calculateCenteredOrigin(
         forSize size: NSSize, onEdge edge: NSRectEdge, centerPoint: NSPoint, screenFrame: NSRect,
-        clampToScreen: Bool
+        clampToScreen: Bool, isDocked: Bool = true
     ) -> NSPoint {
+        if !isDocked {
+            return NSPoint(x: centerPoint.x - size.width / 2, y: centerPoint.y - size.height / 2)
+        }
+
         var origin = NSPoint.zero
         switch edge {
         case .minX: origin = NSPoint(x: screenFrame.minX, y: centerPoint.y - size.height / 2)
