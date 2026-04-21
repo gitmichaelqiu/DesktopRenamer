@@ -2,7 +2,7 @@ import AppKit
 import ServiceManagement
 import SwiftUI
 
-// This class is used for testing the SpaceAPI from within the app
+// Helper class for testing SpaceAPI functionality.
 class APITester: ObservableObject {
     @Published var responseText: String = ""
 
@@ -110,7 +110,7 @@ struct ThresholdAdjustmentView: View {
             }
 
             HStack(alignment: .top, spacing: 30) {
-                // LEFT: Manual Edit
+                // Manual threshold entry.
                 VStack(alignment: .leading, spacing: 10) {
                     Text("Threshold Value")
                         .font(.subheadline)
@@ -129,9 +129,9 @@ struct ThresholdAdjustmentView: View {
 
                 Divider()
 
-                // RIGHT: Debug/Calibration
+                // Threshold calibration.
                 VStack(alignment: .leading, spacing: 15) {
-                    // Step 1: Desktops
+                    // Step: Desktop recording.
                     VStack(alignment: .leading, spacing: 5) {
                         Text("1. Go through desktops")
                             .font(.subheadline)
@@ -156,7 +156,7 @@ struct ThresholdAdjustmentView: View {
                         }
                     }
 
-                    // Step 2: Fullscreens
+                    // Step: Fullscreen recording.
                     VStack(alignment: .leading, spacing: 5) {
                         Text("2. Go through fullscreen")
                             .font(.subheadline)
@@ -181,7 +181,7 @@ struct ThresholdAdjustmentView: View {
                         }
                     }
 
-                    // Suggestion Result
+                    // Calculation suggestion results.
                     if !suggestionText.isEmpty {
                         Text(suggestionText)
                             .font(.caption)
@@ -210,7 +210,7 @@ struct ThresholdAdjustmentView: View {
         }
         .padding()
         .frame(width: 450)
-        // CHANGE: Listen to currentRawSpaceUUID to ensure we capture actual data even if logic thinks it's fullscreen
+        // Monitor currentRawSpaceUUID to ensure data capture across all space types.
         .onReceive(spaceManager.$currentRawSpaceUUID) { uuid in
             recordData(uuid: uuid, ncCnt: spaceManager.currentNcCount)
         }
@@ -276,7 +276,7 @@ struct AddSpacesView: View {
     @ObservedObject var spaceManager: SpaceManager
     @Environment(\.presentationMode) var presentationMode
 
-    // Make sure it conforms to Equatable for firstIndex(of:)
+    // Candidate space model for manual additions.
     struct SpaceCandidate: Identifiable, Equatable {
         let id = UUID()
         let spaceUUID: String
@@ -296,7 +296,7 @@ struct AddSpacesView: View {
                 .multilineTextAlignment(.center)
                 .padding(.horizontal)
 
-            // Using ScrollView + VStack instead of List for better control over animations
+            // ScrollView implementation for optimized list animations.
             ScrollView {
                 VStack(spacing: 0) {
                     if candidates.isEmpty {
@@ -307,9 +307,9 @@ struct AddSpacesView: View {
                     } else {
                         let existingCount = spaceManager.spaceNameDict.count
 
-                        // Use direct collection to maintain view identity
+                        // Maintain view identity during collection updates.
                         ForEach(candidates) { candidate in
-                            // Calculate index dynamically
+                            // Dynamic index calculation for space labels.
                             let index = candidates.firstIndex(of: candidate) ?? 0
 
                             VStack(spacing: 0) {
@@ -345,7 +345,6 @@ struct AddSpacesView: View {
                                 Divider()
                             }
                             .background(Color(NSColor.controlBackgroundColor))
-                            // ANIMATION TRANSITION
                             .transition(.opacity.combined(with: .move(edge: .top)))
                         }
                     }
@@ -435,7 +434,7 @@ struct GeneralSettingsView: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 20) {
-                // General Section
+                // General configuration options.
                 SettingsSection("Settings.General.General") {
                     SettingsRow(
                         "Show preview labels",

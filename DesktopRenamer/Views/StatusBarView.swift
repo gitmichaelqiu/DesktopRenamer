@@ -2,7 +2,7 @@ import SwiftUI
 import Combine
 import AppKit
 
-// Popup window for typing in a new space name
+// View controller for the space renaming popover.
 class RenameViewController: NSViewController {
     private var spaceManager: SpaceManager
     private var completion: () -> Void
@@ -82,10 +82,9 @@ class StatusBarController: NSObject {
     
     let labelManager: SpaceLabelManager
     let hotkeyManager: HotkeyManager
-    // Add GestureManager
     let gestureManager: GestureManager
     
-    // Setting things up
+    // Initialization and configuration.
     init(spaceManager: SpaceManager, hotkeyManager: HotkeyManager, gestureManager: GestureManager) {
         self.spaceManager = spaceManager
         self.labelManager = SpaceLabelManager(spaceManager: spaceManager)
@@ -153,14 +152,14 @@ class StatusBarController: NSObject {
     private func rebuildMenu() {
         let menu = NSMenu()
         
-        // Filter spaces to only show those on the current display
+        // Display-scoped space list for the menu.
         let currentDisplaySpaces = spaceManager.currentDisplaySpaces
         
         if !currentDisplaySpaces.isEmpty {
             let item = NSMenuItem(title: NSLocalizedString("Switch to... (press ⌥ for more)", comment: ""), action: nil, keyEquivalent: "")
             menu.addItem(item)
 
-            // Alternative menu items
+            // Alternate menu items for window movement.
             let altItem = NSMenuItem(title: NSLocalizedString("Move window to...", comment: ""), action: nil, keyEquivalent: "")
             altItem.isAlternate = true
             altItem.keyEquivalentModifierMask = .option
@@ -180,7 +179,7 @@ class StatusBarController: NSObject {
                 
                 menu.addItem(item)
                 
-                // Alternate Item (Move Window)
+                // Alternate item for window movement.
                 let moveName = "→ " + name
                 let altItem = NSMenuItem(title: moveName, action: #selector(moveWindowToSpace(_:)), keyEquivalent: "")
                 altItem.target = self
@@ -369,7 +368,7 @@ class StatusBarController: NSObject {
         window.collectionBehavior = [.participatesInCycle]
         window.level = .normal
         
-        // Pass gestureManager here
+        // Initialize host controller with required managers.
         let settingsVC = SettingsHostingController(
             spaceManager: spaceManager,
             labelManager: labelManager,

@@ -60,7 +60,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             UserDefaults.standard.set(true, forKey: "HasInitializedDefaults")
         }
         
-        // Show splash screen on first launch
+        // Check for first launch to present onboarding splash screen.
         let hasSeenSplash = UserDefaults.standard.bool(forKey: "hasSeenSplashScreen")
         if !hasSeenSplash {
             showSplashScreen()
@@ -201,13 +201,13 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             return
         }
         
-        // If switch by UUID failed, try by number (Legacy / Ambiguous on multi-display)
+        // Fallback to number-based switching if UUID is missing or unavailable (Legacy support).
         if let numString = queryItems.first(where: { $0.name == "num" })?.value,
            let spaceNum = Int(numString) {
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
                 guard let manager = self.spaceManager else { return }
-                // Fallback: This might pick the wrong display if numbers are duplicated (1, 1).
-                // But strictly speaking, it picks the *first* match.
+                // Note: This matches the first found space by number, which may be ambiguous 
+                // on multi-monitor setups where numbers overlap.
                 if let space = manager.spaceNameDict.first(where: { $0.num == spaceNum }) {
                     manager.switchToSpace(space)
                 }

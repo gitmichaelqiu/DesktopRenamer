@@ -2,8 +2,8 @@ import SwiftUI
 
 struct OverscrollIndicatorView: View {
     enum Edge {
-        case leading  // Left Edge
-        case trailing // Right Edge
+        case leading  // Leading screen edge
+        case trailing // Trailing screen edge
     }
     
     let edge: Edge
@@ -15,7 +15,7 @@ struct OverscrollIndicatorView: View {
     var body: some View {
         GeometryReader { geometry in
             ZStack(alignment: edge == .leading ? .leading : .trailing) {
-                // Background Semi-Circle
+                // Semi-circular background element
                 Circle()
                     .fill(.regularMaterial)
                     .overlay(
@@ -43,19 +43,15 @@ struct OverscrollIndicatorView: View {
         }
     }
     
-    // Logic for smooth animations during the overscroll swipe
+    // Animation logic for overscroll transitions.
     
     private var cappedProgress: Double {
         return min(max(progress, 0), 1.0)
     }
     
     private var xOffset: CGFloat {
-        // Goal:
-        // Progress 0: Offset = -size (Fully hidden)
-        // Progress 1: Offset = -size/2 (Half visible)
-        
-        // If fading out, we keep the position stable (or move out slightly?)
-        // Let's keep it stable based on cappedProgress which handles the state.
+        // Offset ranges from -size (fully hidden at progress 0) to -size/2 (half visible at progress 1).
+        // Maintain position stability during fade-out.
         
         let move = (size / 2) * cappedProgress
         
@@ -76,8 +72,7 @@ struct OverscrollIndicatorView: View {
     }
     
     private var arrowOffset: CGFloat {
-        // Arrow follows the circle but with lag/lead
-        // Leading: Moves from left to right.
+        // Arrow follows the circle with a staggered delay.
         let baseOffset: CGFloat = edge == .leading ? -10 : 10
         let move: CGFloat = 20 * cappedProgress
         

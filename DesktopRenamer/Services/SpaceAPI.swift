@@ -25,11 +25,11 @@ class SpaceAPI {
         
         let dnc = DistributedNotificationCenter.default()
         
-        // 1. Listen for Requests
+        // Register observers for external requests.
         dnc.addObserver(self, selector: #selector(handleActiveSpaceRequest), name: SpaceAPI.getActiveSpace, object: nil, suspensionBehavior: .deliverImmediately)
         dnc.addObserver(self, selector: #selector(handleSpaceListRequest), name: SpaceAPI.getSpaceList, object: nil, suspensionBehavior: .deliverImmediately)
         
-        // 2. Observe Space Changes (Push Updates)
+        // Broadcast space state changes to observers.
         spaceManager.$currentSpaceUUID
             .dropFirst()
             .receive(on: DispatchQueue.main)
@@ -54,7 +54,7 @@ class SpaceAPI {
         print("SpaceAPI: Listener Stopped")
     }
     
-    // API on/off switch
+    // API status management.
     
     func toggleAPIState() {
         SpaceManager.isAPIEnabled.toggle()
@@ -65,7 +65,7 @@ class SpaceAPI {
             removeListener()
         }
         
-        // NOTIFY other apps that the API is now ON or OFF
+        // Broadcast API availability updates.
         DistributedNotificationCenter.default().postNotificationName(
             SpaceAPI.apiToggleNotification,
             object: nil,
@@ -75,7 +75,7 @@ class SpaceAPI {
         print("SpaceAPI: Sent Toggle Notification -> \(SpaceManager.isAPIEnabled)")
     }
     
-    // Sending updates back to whatever asked for them
+    // Broadcast updates to observers.
     
     private func broadcastCurrentSpace() {
         guard let sm = spaceManager, SpaceManager.isAPIEnabled else { return }

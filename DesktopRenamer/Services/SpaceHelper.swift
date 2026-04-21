@@ -24,17 +24,17 @@ class SpaceHelper {
     private static var globalEventMonitor: Any?
     private static var localEventMonitor: Any?
 
-    // Track switch state to prevent recursion glitches
+    // Tracks switching state to prevent recursion during transitions.
     private static var isSwitching = false
     static var lastProgrammaticSwitchTime: TimeInterval = 0
     
-    // Dragging session state
+    // Session state for active dragging operations.
     private static var originalMousePoint: CGPoint? = nil
     private static var restorationTask: DispatchWorkItem? = nil
     private static var pendingMoveCount = 0
     static var isDragging: Bool { originalMousePoint != nil }
 
-    // The meat of space switching logic
+    // Core space switching implementation.
     static func switchToSpace(_ spaceID: String, forceMissionControl: Bool = false) {
         lastProgrammaticSwitchTime = Date().timeIntervalSince1970
         guard !isSwitching else { return }
@@ -50,7 +50,7 @@ class SpaceHelper {
         NotificationCenter.default.post(
             name: NSNotification.Name("SpaceSwitchRequested"), object: nil)
 
-        // 1. Resolve Target Space Info
+        // Resolve target space information.
         var targetNum: Int? = nil
         var targetGlobalNum: Int? = nil
         var shouldUseShortcut = true
@@ -83,7 +83,7 @@ class SpaceHelper {
             if state.currentUUID == spaceID { return }
         }
         
-        // Force Mission Control Automation for Fullscreen Transitions
+        // Automate Mission Control for fullscreen transitions if forced.
         if forceMissionControl && (targetIsFullscreen || currentIsFullscreen) {
             if let num = targetNum {
                 switchViaMissionControl(to: num)
@@ -107,8 +107,8 @@ class SpaceHelper {
             }
         }
 
-        // First priority: Try to use the built-in Ctrl+Number shortcuts (if enabled)
-        // This is usually the smoothest way if it works.
+        // Attempt to use system Desktop shortcuts (Control + Number).
+        // This provides the smoothest transition when available.
         if shouldUseShortcut {
             if let globalNum = targetGlobalNum {
                 if isShortcutEnabled(for: globalNum) && simulateDesktopShortcut(for: globalNum) {
@@ -157,7 +157,7 @@ class SpaceHelper {
         var targetWindow: SpaceLabelWindow? = nil
         var windowsToHide: [SpaceLabelWindow] = []
 
-        // 1. Identify Target and Potential Conflict Windows
+        // Identify target and potential conflicting windows.
         for window in NSApp.windows {
             if let labelWindow = window as? SpaceLabelWindow {
                 if labelWindow.spaceId == spaceID {
@@ -184,7 +184,7 @@ class SpaceHelper {
 
         guard let window = targetWindow else { return false }
 
-        // 2. "Hide Others" Logic
+        // Manage conflicting windows to remove focus ambiguity.
         // For Desktop targets: We hide other windows to remove ambiguity about "Last Active Space".
         // This forces the OS to switch to the target window.
         // For Fullscreen targets: We MUST NOT hide the desktop window. Doing so removes the app's
@@ -195,7 +195,7 @@ class SpaceHelper {
             }
         }
 
-        // 3. Force Activation
+        // Force window activation.
         window.orderFrontRegardless()
         window.makeKey()
         NSApp.activate(ignoringOtherApps: true)
@@ -212,7 +212,7 @@ class SpaceHelper {
         
         let source = CGEventSource(stateID: .hidSystemState)
         
-        // 1. Session Initialization: Only capture original mouse point and MouseDown for the FIRST move in a series
+        // Session Initialization: Capture original mouse state for the initial move.
         if originalMousePoint == nil {
             // Save starting location
             originalMousePoint = CGEvent(source: nil)?.location
@@ -250,12 +250,12 @@ class SpaceHelper {
             usleep(50000) // 0.05s grip
         }
         
-        // 2. Trigger Space Switch and track the move
+        // Trigger the space switch and track the movement.
         pendingMoveCount += 1
         switchToSpace(spaceID)
         
-        // 3. Replace any existing restoration/drop tasks with a long safety fallback
-        // This ensures the Mouse stays down until either a space change or a timeout.
+        // Schedule a safety fallback for cursor restoration.
+        // Ensures the mouse is released after a timeout if the space change detection fails.
         scheduleRestoration(delay: 2.0)
     }
     
@@ -288,20 +288,20 @@ class SpaceHelper {
                 return 
             }
             
-            // 1. Drop (Mouse Up)
+            // Release the window (Mouse Up).
             if let upEvent = CGEvent(mouseEventSource: source, mouseType: .leftMouseUp, mouseCursorPosition: CGEvent(source: nil)?.location ?? .zero, mouseButton: .left) {
                 upEvent.flags = []
                 upEvent.post(tap: .cghidEventTap)
             }
             
-            // 2. Restore Mouse
+            // Restore the cursor position.
             usleep(50000)
             if let restoreEvent = CGEvent(mouseEventSource: source, mouseType: .mouseMoved, mouseCursorPosition: restorePoint, mouseButton: .left) {
                 restoreEvent.flags = []
                 restoreEvent.post(tap: .cghidEventTap)
             }
             
-            // 3. Reset Session
+            // Reset session state.
             originalMousePoint = nil
             restorationTask = nil
             pendingMoveCount = 0
@@ -371,7 +371,7 @@ class SpaceHelper {
         }
     }
 
-    // Help with shortcut logic
+    // Shortcut configuration helpers.
 
     private static func isShortcutEnabled(for number: Int) -> Bool {
         let baseID = 118
@@ -458,7 +458,7 @@ class SpaceHelper {
             forName: NSWorkspace.didActivateApplicationNotification, object: nil, queue: .main
         ) { _ in detectSpaceChange() }
 
-        // Event monitors to catch when the user clicks around or does something that might change spaces
+        // Monitor events to detect user-initiated space switches.
         localEventMonitor = NSEvent.addLocalMonitorForEvents(matching: [
             .leftMouseDown, .rightMouseDown,
         ]) { event in

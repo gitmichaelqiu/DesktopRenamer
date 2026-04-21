@@ -9,7 +9,7 @@ class PermissionManager: ObservableObject {
 
     private init() {
         checkPermissions()
-        // Listen for app becoming active to re-check permissions
+        // Re-verify permissions when the application returns to the foreground.
         NotificationCenter.default.addObserver(
             forName: NSApplication.didBecomeActiveNotification, object: nil, queue: .main
         ) { [weak self] _ in
@@ -22,13 +22,13 @@ class PermissionManager: ObservableObject {
     }
 
     func checkPermissions() {
-        // Check for accessibility (we need this to detect space changes)
+        // Accessibility check.
         let axOptions: NSDictionary = [
             kAXTrustedCheckOptionPrompt.takeUnretainedValue() as String: false
         ]
         self.isAccessibilityGranted = AXIsProcessTrustedWithOptions(axOptions)
 
-        // Check for automation (to talk to System Events)
+        // Automation check.
         let targetBundleID = "com.apple.systemevents"
         let targetDesc = NSAppleEventDescriptor(bundleIdentifier: targetBundleID)
         if let aeDesc = targetDesc.aeDesc {
@@ -50,15 +50,15 @@ class PermissionManager: ObservableObject {
     }
 
     func requestAutomationPermission() {
-        // Multi-layered approach for macOS Tahoe and recent versions:
-        // 1. Try to trigger the prompt via NSAppleScript (most reliable way today)
+        // Permission requests for recent macOS versions:
+        // Attempt to trigger the prompt via a simple AppleScript execution.
         let scriptSource = "tell application \"System Events\" to get name"
         if let script = NSAppleScript(source: scriptSource) {
             var error: NSDictionary?
             script.executeAndReturnError(&error)
         }
 
-        // 2. Fallback/Standard API call (may still trigger prompt on some OS versions)
+        // Fallback to standard API call.
         let targetBundleID = "com.apple.systemevents"
         let targetDesc = NSAppleEventDescriptor(bundleIdentifier: targetBundleID)
         if let aeDesc = targetDesc.aeDesc {
@@ -67,7 +67,7 @@ class PermissionManager: ObservableObject {
             self.isAutomationGranted = (status == noErr)
         }
 
-        // 3. Open Settings if still not granted
+        // Open System Settings if permission remains pending.
         if !isAutomationGranted {
             openSystemSettings(type: "Privacy_Automation")
         }

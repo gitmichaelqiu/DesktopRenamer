@@ -17,7 +17,7 @@ struct AboutView: View {
     var body: some View {
         ScrollView {
             VStack(spacing: 24) {
-                // App Icon and Name
+                // Primary branding elements.
                 VStack(spacing: 12) {
                     if let nsImage = NSApplication.shared.applicationIconImage {
                         Image(nsImage: nsImage)
@@ -48,7 +48,7 @@ struct AboutView: View {
                 Divider()
                     .padding(.horizontal, 40)
 
-                // Other projects by the same developer
+                // Cross-promotion cards for developer projects.
                 VStack(spacing: 16) {
                     Text("More Apps")
                         .font(.headline)
@@ -140,22 +140,20 @@ struct OtherAppCard: View {
             .frame(width: 160)
             .background(
                 ZStack {
-                    // 1. Base Card Background
+                    // Base card background.
                     RoundedRectangle(cornerRadius: 12)
                         .fill(Color(NSColor.controlBackgroundColor))
                     
-                    // 2. Idle Border: Subtle gray stroke to define shape when not hovering
+                    // Idle border stroke.
                     RoundedRectangle(cornerRadius: 12)
                         .stroke(Color.primary.opacity(0.1), lineWidth: 1)
                     
-                    // 3. Hover Ring: Accent color overlay that fades in
+                    // Hover state accent ring.
                     RoundedRectangle(cornerRadius: 12)
                         .stroke(Color.accentColor.opacity(isHovering ? 1.0 : 0.0), lineWidth: 2)
                 }
-                // Shadow Logic:
-                // 1. Base shadow (Slightly stronger now for better separation)
+                // Visual effects for depth and hover states.
                 .shadow(color: .black.opacity(0.15), radius: 4, x: 0, y: 2)
-                // 2. Glow shadow (Fades in on hover)
                 .shadow(color: .accentColor.opacity(isHovering ? 0.5 : 0.0), radius: 10, x: 0, y: 0)
             )
             .scaleEffect(isHovering ? 1.03 : 1.0)

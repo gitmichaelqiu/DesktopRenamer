@@ -114,7 +114,7 @@ struct SwitchSettingsView: View {
                     }
                 }
                 
-                // Trackpad Gesture Settings
+                // Gesture-based switching configuration.
                 SettingsSection("Trackpad Switch Gesture Override") {
                     SettingsRow(
                         "Enable switch gesture override",
@@ -165,7 +165,7 @@ struct SwitchSettingsView: View {
                     }
                 }
                 
-                // Advanced Settings
+                // Advanced switching preferences.
                 SettingsSection("Advanced") {
                     SettingsRow(
                         "Force Mission Control for fullscreen apps",

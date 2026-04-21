@@ -34,7 +34,7 @@ struct LogEntry: Identifiable, CustomStringConvertible {
 }
 
 class SpaceManager: ObservableObject {
-    // App group for sharing data with the widget
+    // App group ID for sharing data with the widget extension
     static let appGroupId = "group.com.michaelqiu.DesktopRenamer"
     
     static private let spacesKey = "com.michaelqiu.desktoprenamer.spaces"
@@ -56,8 +56,7 @@ class SpaceManager: ObservableObject {
     
     @Published var spaceNameDict: [DesktopSpace] = []
     
-    // Handy views for the current display
-    
+    // Convenience views for the current display
     var currentDisplaySpaces: [DesktopSpace] {
         spaceNameDict
             .filter { $0.displayID == currentDisplayID }
@@ -76,7 +75,7 @@ class SpaceManager: ObservableObject {
     // Widget Debouncer
     private var widgetUpdateWorkItem: DispatchWorkItem?
     
-    // Wake Stabilization
+    // Stabilization state for system wake events
     private var lastWakeTime: Date = .distantPast
     private let wakeCoolingDuration: TimeInterval = 15.0
     
@@ -240,7 +239,7 @@ class SpaceManager: ObservableObject {
                 }
             }
             
-            // 1. Build the list and try to pull from cache (we don't cache fullscreen names though)
+            // Build updated space list and attempt to load names from cache; fullscreen names are not cached.
             for sysSpace in cgsState.spaces {
                 var finalSpace = sysSpace
                 
@@ -276,8 +275,8 @@ class SpaceManager: ObservableObject {
                 newSpaceList.append(finalSpace)
             }
             
-            // 2. Name the fullscreen spaces based on the app they're running
-            // Group them by app name so we can number them if there's more than one (e.g. "Xcode 1", "Xcode 2")
+            // Assign names to fullscreen spaces based on their parent application.
+            // Spaces are grouped by application name and numbered if multiple instances exist.
             var appGroups: [String: [Int]] = [:]
             
             for (index, space) in newSpaceList.enumerated() {
@@ -379,14 +378,9 @@ class SpaceManager: ObservableObject {
         if let index = spaceNameDict.firstIndex(where: { $0.id == logicalUUID }) {
             let oldDisplayID = spaceNameDict[index].displayID
             if oldDisplayID != displayID {
-                // STICKY DISPLAY LOGIC:
-                // Only overwrite the displayID if the OLD display is no longer connected.
-                // This prevents spaces from "forgetting" their external monitor assignment 
-                // when they temporarily collapse onto the built-in display during sleep/clamshell.
+                // Ensure display assignment persists even if the space temporarily collapses onto the built-in display during sleep.
                 
-                // POST-WAKE STABILITY FIX:
-                // During the cooling period (first 15s after wake), we NEVER overwrite displayID.
-                // This prevents "learning" the transient state where macOS puts everything on the primary screen.
+                // Ignore transient MacOS display arrangements during the post-wake cooling period.
                 let timeSinceWake = Date().timeIntervalSince(lastWakeTime)
                 if timeSinceWake >= wakeCoolingDuration {
                     let isOldDisplayGone = !connectedDisplayUUIDs.contains(oldDisplayID.uppercased())
@@ -413,7 +407,7 @@ class SpaceManager: ObservableObject {
         if shouldUpdateWidget { scheduleWidgetUpdate() }
     }
     
-    // Debounce widget updates so we don't spam the system
+    // Debounces widget updates to throttle system load.
     private func scheduleWidgetUpdate() {
         widgetUpdateWorkItem?.cancel()
         
@@ -638,7 +632,7 @@ class SpaceManager: ObservableObject {
         }
     }
     
-    // Moving around spaces
+    // Space navigation and switching logic.
     
     func switchToSpace(_ space: DesktopSpace) {
         print("SpaceManager: switchToSpace(\(space.id)) on display \(space.displayID)")
@@ -660,7 +654,7 @@ class SpaceManager: ObservableObject {
     }
 
     private func findBestCurrentSpace(for displayID: String) -> DesktopSpace? {
-        // 1. Query the OS for the live visible space on THIS monitor specifically (Priority #1)
+        // Identify the visible space for the specified monitor.
         if let liveID = SpaceHelper.getCurrentSpaceID(for: displayID),
            let space = spaceNameDict.first(where: { $0.id == liveID && $0.displayID == displayID }) {
             // Update cache while we're at it
@@ -668,18 +662,18 @@ class SpaceManager: ObservableObject {
             return space
         }
 
-        // 2. Check our per-display cache (Priority #2)
+        // Fallback: check the per-display cache.
         if let cachedID = currentSpaceByDisplay[displayID],
            let space = spaceNameDict.first(where: { $0.id == cachedID && $0.displayID == displayID }) {
             return space
         }
         
-        // 3. Last resort: If the global focused space happens to be on this display, use it
+        // Fallback: check if the globally focused space is on this display.
         if let global = spaceNameDict.first(where: { $0.id == currentSpaceUUID && $0.displayID == displayID }) {
             return global
         }
         
-        // 4. Extreme fallback: Just pick the first space on this monitor so the switch action has a context
+        // Fallback: default to the first available space on this monitor.
         return spaceNameDict.first(where: { $0.displayID == displayID })
     }
 
@@ -701,7 +695,7 @@ class SpaceManager: ObservableObject {
     // MARK: - Move Window Functions
     
     func moveActiveWindowToNextSpace() {
-        // 1. Determine Window & Its Display Context
+        // Determine window and display context.
         guard let frame = SpaceHelper.getActiveWindowFrame() else {
             moveActiveWindowToNextSpaceLegacy()
             return
@@ -710,7 +704,7 @@ class SpaceManager: ObservableObject {
         let displayID = SpaceHelper.getWindowDisplayID(for: frame) ?? self.currentDisplayID
         let currentSpaceID = SpaceHelper.getCurrentSpaceID(for: displayID) ?? self.currentSpaceUUID
         
-        // 2. Resolve Space Objects for the specific display
+        // Resolve space objects for the specific display.
         // Robustness: If the exact ID doesn't match, we fallback to finding any space on this display that's marked current.
         let spaceList = spaceNameDict
             .filter { $0.displayID == displayID }
@@ -729,7 +723,7 @@ class SpaceManager: ObservableObject {
             return
         }
         
-        // 3. Find Next
+        // Target the next available space.
         guard let currentIndex = spaceList.firstIndex(of: current),
               currentIndex < spaceList.count - 1 else { return }
         

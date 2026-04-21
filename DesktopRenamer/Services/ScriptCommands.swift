@@ -1,8 +1,8 @@
 import Foundation
 import AppKit
 
-// Helper to safely execute MainActor logic from NSScriptCommand
-// This satisfies the compiler by explicitly entering the actor context
+// Resolves MainActor isolation for NSScriptCommand implementation.
+// Note: Explicitly enters actor context to satisfy concurrency requirements.
 func runOnMain<T>(_ block: @MainActor () -> T) -> T {
     if Thread.isMainThread {
         return MainActor.assumeIsolated(block)
@@ -55,9 +55,9 @@ class ToggleDesktopVisibilityCommand: NSScriptCommand {
         guard SpaceManager.isAPIEnabled else { return false }
         return runOnMain {
             if let manager = AppDelegate.shared.statusBarController?.labelManager {
-                // Toggles "Keep visible on desktop" (showOnDesktop)
-                // This does NOT toggle the internal window pinning/docking logic directly,
-                // just the user preference for visibility.
+                // Toggles "Keep visible on desktop" (showOnDesktop).
+                // Note: This modifies the user preference for visibility; it does not directly 
+                // toggle the internal window pinning logic.
                 manager.showOnDesktop.toggle()
                 return manager.showOnDesktop
             }
@@ -100,8 +100,7 @@ class GetAllSpacesCommand: NSScriptCommand {
             guard let manager = AppDelegate.shared.spaceManager else { return "" }
             
             // Format: "UUID|Name|DisplayID|Num"
-            // We want to group by Display. To make specific displays contiguous, we sort by UUID (or Name).
-            // Sorting by displayID (UUID) matches previous behavior.
+            // Entries are grouped by display and sorted by displayID (UUID) and number.
             let sortedSpaces = manager.spaceNameDict.sorted {
                 if $0.displayID != $1.displayID { return $0.displayID < $1.displayID }
                 return $0.num < $1.num
@@ -113,7 +112,7 @@ class GetAllSpacesCommand: NSScriptCommand {
                 // Retrieve the display label for the space's displayID
                 let displayName = getDisplayName(for: space.displayID)
                 
-                // Return string split by ~ to prevent escaping issues
+                // Return string split by ~ to prevent escaping issues.
                 return "\(space.id)~\(name)~\(displayName)~\(space.num)"
             }
             return lines.joined(separator: "\n")
@@ -141,7 +140,7 @@ class SwitchToSpaceCommand: NSScriptCommand {
         
         DispatchQueue.main.async {
             if let manager = AppDelegate.shared.spaceManager {
-                // Find the space object
+                // Resolve space object by identifier.
                 if let space = manager.spaceNameDict.first(where: { $0.id == spaceID }) {
                     manager.switchToSpace(space)
                 }
