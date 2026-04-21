@@ -450,7 +450,7 @@ struct GeneralSettingsView: View {
                     SettingsRow(
                         "Show active space labels",
                         helperText:
-                            "Create windows that only appear in Mission Control to display space names.\n\nMay not work when multiple displays are connected."
+                            "The hidden label that slides into the corner of the active desktop."
                     ) {
                         Toggle("", isOn: $labelManager.showActiveLabels)
                             .labelsHidden()
