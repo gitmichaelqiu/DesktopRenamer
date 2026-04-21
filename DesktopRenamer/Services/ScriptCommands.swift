@@ -26,7 +26,7 @@ class ToggleMenubarCommand: NSScriptCommand {
 
 class ToggleActiveLabelCommand: NSScriptCommand {
     override func performDefaultImplementation() -> Any? {
-        guard SpaceManager.isAPIEnabled else { return false }
+        guard SpaceManager.isAPIEnabled else { return nil }
         return runOnMain {
             if let manager = AppDelegate.shared.statusBarController?.labelManager {
                 manager.showActiveLabels.toggle()
@@ -39,7 +39,7 @@ class ToggleActiveLabelCommand: NSScriptCommand {
 
 class TogglePreviewLabelCommand: NSScriptCommand {
     override func performDefaultImplementation() -> Any? {
-        guard SpaceManager.isAPIEnabled else { return false }
+        guard SpaceManager.isAPIEnabled else { return nil }
         return runOnMain {
             if let manager = AppDelegate.shared.statusBarController?.labelManager {
                 manager.showPreviewLabels.toggle()
@@ -52,7 +52,7 @@ class TogglePreviewLabelCommand: NSScriptCommand {
 
 class ToggleDesktopVisibilityCommand: NSScriptCommand {
     override func performDefaultImplementation() -> Any? {
-        guard SpaceManager.isAPIEnabled else { return false }
+        guard SpaceManager.isAPIEnabled else { return nil }
         return runOnMain {
             if let manager = AppDelegate.shared.statusBarController?.labelManager {
                 // Toggles "Keep visible on desktop" (showOnDesktop).
