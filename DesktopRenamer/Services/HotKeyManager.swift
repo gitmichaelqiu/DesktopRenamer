@@ -13,8 +13,8 @@ enum HotkeyType {
 }
 
 class HotkeyManager: ObservableObject {
-    // These let the rest of the app know when a hotkey was pressed
-    // We use PassthroughSubject so the App/AppDelegate can listen and act
+    // Subjects to broadcast hotkey trigger events.
+    // Note: PassthroughSubject is used for decoupled event handling in the AppDelegate.
     let mainShortcutTriggered = PassthroughSubject<Void, Never>()
     let switchLeftTriggered = PassthroughSubject<Void, Never>()
     let switchRightTriggered = PassthroughSubject<Void, Never>()
@@ -58,7 +58,7 @@ class HotkeyManager: ObservableObject {
         }
     }
     
-    @Published var moveWindowNumberShortcut: Shortcut { // Stores modifiers only
+    @Published var moveWindowNumberShortcut: Shortcut { // Stores modifiers only for number-based space switching.
         didSet {
             saveShortcut(moveWindowNumberShortcut, key: moveWindowNumberKey)
             registerShortcuts()
@@ -78,7 +78,7 @@ class HotkeyManager: ObservableObject {
     
     private var monitor: Any?
     
-    // Default: Main (None), Others (None)
+    // Default shortcut configurations.
     private let defaultMain = Shortcut(key: nil, modifiers: [])
     private let defaultNone = Shortcut(key: nil, modifiers: [])
     
@@ -134,10 +134,10 @@ class HotkeyManager: ObservableObject {
         }
     }
 
-    // Hooking up the actual shortcuts to the system
+    // Internal registration of shortcuts with the system.
     
     private func registerShortcuts() {
-        // 1. Main
+        // Main Hotkey.
         mainHotKey = nil // Clear existing
         if let key = mainShortcut.hotkeyKey, let mods = mainShortcut.hotkeyModifiers {
             mainHotKey = HotKey(key: key, modifiers: mods)
@@ -148,7 +148,7 @@ class HotkeyManager: ObservableObject {
             }
         }
         
-        // 2. Switch Left
+        // Switch Left.
         switchLeftHotKey = nil
         if let key = switchLeftShortcut.hotkeyKey, let mods = switchLeftShortcut.hotkeyModifiers {
             switchLeftHotKey = HotKey(key: key, modifiers: mods)
@@ -157,7 +157,7 @@ class HotkeyManager: ObservableObject {
             }
         }
         
-        // 3. Switch Right
+        // Switch Right.
         switchRightHotKey = nil
         if let key = switchRightShortcut.hotkeyKey, let mods = switchRightShortcut.hotkeyModifiers {
             switchRightHotKey = HotKey(key: key, modifiers: mods)
@@ -166,21 +166,21 @@ class HotkeyManager: ObservableObject {
             }
         }
         
-        // 4. Move Window Next
+        // Move Window Next.
         moveWindowNextHotKey = nil
         if let key = moveWindowNextShortcut.hotkeyKey, let mods = moveWindowNextShortcut.hotkeyModifiers {
             moveWindowNextHotKey = HotKey(key: key, modifiers: mods)
             moveWindowNextHotKey?.keyDownHandler = { [weak self] in self?.moveWindowNextTriggered.send() }
         }
         
-        // 5. Move Window Previous
+        // Move Window Previous.
         moveWindowPreviousHotKey = nil
         if let key = moveWindowPreviousShortcut.hotkeyKey, let mods = moveWindowPreviousShortcut.hotkeyModifiers {
             moveWindowPreviousHotKey = HotKey(key: key, modifiers: mods)
             moveWindowPreviousHotKey?.keyDownHandler = { [weak self] in self?.moveWindowPreviousTriggered.send() }
         }
         
-        // 6. Move Window Number (1-9)
+        // Move Window Number (1-9).
         // We register hotkeys for Modifiers + 1...9
         let modSet = moveWindowNumberShortcut.modifiers.intersection([.command, .option, .control, .shift])
         if !modSet.isEmpty {
@@ -199,13 +199,13 @@ class HotkeyManager: ObservableObject {
         }
     }
 
-    // Logic for "Press a key" recording mode
+    // Hotkey recording/listening logic.
 
     func startListening(for type: HotkeyType) {
         isListening = true
         listeningType = type
 
-        // Temporarily disable hotkeys while recording
+        // Unregister existing hotkeys during recording sessions.
         mainHotKey = nil
         switchLeftHotKey = nil
         switchRightHotKey = nil
@@ -332,12 +332,12 @@ class HotkeyManager: ObservableObject {
     }
 }
 
-// Just a simple wrapper for a key + modifiers combo
+// Data model for a keyboard shortcut.
 struct Shortcut: Equatable, Codable {
     let key: Key?
     let modifiers: NSEvent.ModifierFlags
     
-    // For backward compatibility with the UI
+    // UI-compatible string representation.
     var keyString: String {
         key?.description ?? ""
     }
@@ -349,7 +349,7 @@ struct Shortcut: Equatable, Codable {
     
     public func encode(to encoder: Encoder) throws {
         var container = encoder.container(keyedBy: CodingKeys.self)
-        // Store key as its description string
+        // Serialize key as a string for storage compatibility.
         try container.encode(key?.description, forKey: .key)
         try container.encode(modifiers.rawValue, forKey: .modifiers)
     }

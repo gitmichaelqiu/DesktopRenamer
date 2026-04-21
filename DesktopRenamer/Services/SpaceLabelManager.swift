@@ -66,7 +66,7 @@ class SpaceLabelManager: ObservableObject {
         }
     }
 
-    // Current window position and docking status
+    // Current window state and docking configuration
     @Published var globalIsDocked: Bool
     @Published var globalDockEdge: NSRectEdge
     @Published var globalCenterPoint: NSPoint?
@@ -124,7 +124,7 @@ class SpaceLabelManager: ObservableObject {
 
         setupObservers()
         
-        // Seed all labels once after launch to populate Mission Control
+        // Populate Mission Control with labels after launch.
         Task { @MainActor in
             try? await Task.sleep(nanoseconds: 1_500_000_000)
             self.seedAllLabels()
@@ -205,19 +205,19 @@ class SpaceLabelManager: ObservableObject {
         guard let spaceManager = spaceManager else { return }
         let allSpaces = spaceManager.spaceNameDict
         
-        // 1. Add windows for new spaces
+        // Add windows for new spaces.
         for space in allSpaces {
             ensureWindow(for: space.id, name: space.customName, displayID: space.displayID)
         }
         
-        // 2. Remove windows for spaces that no longer exist in the dict
+        // Remove windows for spaces that no longer exist.
         cleanupRedundantWindows()
         
-        // 3. Update all window modes to ensure consistent visibility
+        // Update window modes to ensure consistent visibility.
         updateAllWindowModes()
     }
 
-    // Get rid of windows for spaces that don't exist anymore
+    // Removes windows for obsolete spaces.
     private func cleanupRedundantWindows() {
         guard let spaceManager = spaceManager else { return }
         let validUUIDs = Set(spaceManager.spaceNameDict.map { $0.id })
@@ -362,7 +362,7 @@ class SpaceLabelManager: ObservableObject {
         }
     }
 
-    // Make sure we have a window for this space, or refresh it if we do
+    // Asserts that a window exists for the specified space, refreshing if already present.
     private func ensureWindow(for spaceId: String, name: String, displayID: String) {
         if let existingWindow = createdWindows[spaceId] {
             if !existingWindow.isVisible {
@@ -380,7 +380,7 @@ class SpaceLabelManager: ObservableObject {
     private func createWindow(for spaceId: String, name: String, displayID: String) {
         guard let spaceManager = spaceManager else { return }
 
-        // Pass the isFullscreen flag from the space manager logic
+        // Inherit fullscreen status from the space manager.
         let isFullscreen =
             spaceManager.spaceNameDict.first(where: { $0.id == spaceId })?.isFullscreen ?? false
 

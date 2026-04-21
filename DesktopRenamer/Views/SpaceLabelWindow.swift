@@ -2,13 +2,13 @@ import Cocoa
 import Combine
 import QuartzCore
 
-// Private APIs for space management (The black magic part)
+// Private APIs for space management.
 @_silgen_name("_CGSDefaultConnection") private func _CGSDefaultConnection() -> Int32
 @_silgen_name("CGSCopyManagedDisplaySpaces") private func CGSCopyManagedDisplaySpaces(_ cid: Int32) -> CFArray?
 @_silgen_name("CGSAddWindowsToSpaces") private func CGSAddWindowsToSpaces(_ cid: Int32, _ windows: CFArray, _ spaces: CFArray)
 @_silgen_name("CGSRemoveWindowsFromSpaces") private func CGSRemoveWindowsFromSpaces(_ cid: Int32, _ windows: CFArray, _ spaces: CFArray)
 
-// This is the little "pill" handle you see when the window is docked to the edge
+// Handle view displayed when the window is docked to a screen edge.
 class CollapsibleHandleView: NSView {
     private let imageView: NSImageView
 
@@ -54,7 +54,7 @@ class CollapsibleHandleView: NSView {
     }
 }
 
-// The actual label window that floats on your desktop
+// The floating label window used to display space names.
 class SpaceLabelWindow: NSWindow {
     private let label: NSTextField
     private let handleView: CollapsibleHandleView
@@ -98,17 +98,17 @@ class SpaceLabelWindow: NSWindow {
         self.spaceManager = spaceManager
         self.labelManager = labelManager
 
-        // 1. Text Label
+        // Text Label
         self.label = NSTextField(labelWithString: name)
         self.label.alignment = .center
         self.label.textColor = .labelColor
 
-        // 2. Handle View
+        // Handle View
         self.handleView = CollapsibleHandleView()
         self.handleView.isHidden = true
         self.handleView.translatesAutoresizingMaskIntoConstraints = false
 
-        // 3. Container View
+        // Container View
         self.contentContainer = NSView(frame: .zero)
         self.contentContainer.wantsLayer = true
 
@@ -124,7 +124,7 @@ class SpaceLabelWindow: NSWindow {
             self.handleView.bottomAnchor.constraint(equalTo: self.contentContainer.bottomAnchor),
         ])
 
-        // Screen Logic
+        // Screen identification logic.
         let foundScreen = NSScreen.screens.first(where: { screen in
             let screenID =
                 screen.deviceDescription[NSDeviceDescriptionKey("NSScreenNumber")] as? NSNumber ?? 0
@@ -156,7 +156,7 @@ class SpaceLabelWindow: NSWindow {
             return
         }
 
-        // 4. Configure Visual/Glass Effect View
+        // Configure visual/glass effect views.
         let rootContentView: NSView
 
         if #available(macOS 26.0, *) {
@@ -194,8 +194,8 @@ class SpaceLabelWindow: NSWindow {
         self.level = .floating
 
         // Collection Behavior
-        // Reverted: .canJoinAllSpaces removed as it broke switching.
-        // We keep .fullScreenAuxiliary so it can theoretically appear over fullscreen apps.
+        // Note: .canJoinAllSpaces is excluded as it interferes with space switching.
+        // .fullScreenAuxiliary is retained to allow visibility over fullscreen apps.
         self.collectionBehavior = [.managed, .participatesInCycle, .fullScreenAuxiliary, .ignoresCycle]
 
         // Observers
@@ -225,11 +225,11 @@ class SpaceLabelWindow: NSWindow {
         NotificationCenter.default.removeObserver(self)
     }
 
-    // Native OS window behavior overrides (Crucial for things like key focus)
+    // Standard OS window behavior overrides.
     override var canBecomeKey: Bool { return true }
     override var canBecomeMain: Bool { return true }
 
-    // Forcing the window onto a specific space using the Private API
+    // Binds the window to a specific space via private APIs.
     func bindToTargetSpace() {
         let cid = _CGSDefaultConnection()
         guard let displays = CGSCopyManagedDisplaySpaces(cid) as? [NSDictionary] else { return }
@@ -267,7 +267,7 @@ class SpaceLabelWindow: NSWindow {
         }
     }
 
-    // A little trick to keep the window "alive" so it doesn't stutter during space switches
+    // Workaround to maintain window rendering during space transitions.
     private func setupLiveBackgroundUpdate() {
         guard let layer = self.contentView?.layer else { return }
         let key = "forceRedrawLoop"
@@ -337,7 +337,7 @@ class SpaceLabelWindow: NSWindow {
             isDocked: self.isDocked, edge: self.dockEdge, center: NSPoint(x: relX, y: relY))
     }
 
-    // Figuring out where to put the window based on docking settings
+    // Calculates the target center point based on docking and layout settings.
     private func getAbsoluteTargetCenter(on screen: NSScreen, forSize size: NSSize) -> NSPoint {
         let relativePoint = labelManager?.globalCenterPoint ?? NSPoint(x: 1.0, y: 0.5)
         let sFrame = screen.visibleFrame
@@ -375,7 +375,7 @@ class SpaceLabelWindow: NSWindow {
         return NSPoint(x: absX, y: absY)
     }
 
-    // Methods for other classes to use
+    // Public interface for window management.
     func refreshAppearance() {
         updateInteractivity()
         updateLayout(isCurrentSpace: self.isActiveMode)
@@ -432,7 +432,7 @@ class SpaceLabelWindow: NSWindow {
         self.contentView?.alphaValue = 0.0
     }
 
-    // Handling dragging and clicking on the label/handle
+    // Interaction handling for mouse events.
     override func mouseDown(with event: NSEvent) {
         guard let manager = labelManager, manager.showOnDesktop, isActiveMode else {
             super.mouseDown(with: event)
@@ -600,7 +600,7 @@ class SpaceLabelWindow: NSWindow {
         self.isMovableByWindowBackground = false
     }
 
-    // Putting it all together: size, position, and visibility
+    // Full layout and visibility update.
 
     private func updateLayout(isCurrentSpace: Bool, updateFrame: Bool = true) {
         guard let targetScreen = findTargetScreen() else {
@@ -616,7 +616,7 @@ class SpaceLabelWindow: NSWindow {
         let isHiddenCornerMode =
             isCurrentSpace && !showHandle && !(labelManager?.showOnDesktop == true)
 
-        // 1. Determine Dimensions
+        // Determine Dimensions.
         var isSmallModeForFont = false
         var shouldUseHandle = false
 
@@ -640,7 +640,7 @@ class SpaceLabelWindow: NSWindow {
             newSize = previewSize
         }
 
-        // 2. Determine Position
+        // Determine Position.
         if self.isInvisibleAnchorMode {
             // Anchor Mode: Center of Screen
             newOrigin = NSPoint(x: targetScreen.frame.midX, y: targetScreen.frame.midY)
@@ -668,7 +668,7 @@ class SpaceLabelWindow: NSWindow {
                 x: targetCenter.x - newSize.width / 2, y: targetCenter.y - newSize.height / 2)
         }
 
-        // 3. Execution Phase
+        // Execution Phase.
         let updateVisuals = {
             self.backgroundColor = .clear  // RE-ASSERT TRANSPARENCY
 
@@ -722,7 +722,7 @@ class SpaceLabelWindow: NSWindow {
         }
     }
 
-    // Geometry math for centering and sizing
+    // Geometry utilities for layout calculations.
 
     private func calculateCenteredOrigin(
         forSize size: NSSize, onEdge edge: NSRectEdge, centerPoint: NSPoint, screenFrame: NSRect,

@@ -54,10 +54,10 @@ struct SpaceEditView: View {
     }
     
     private func resolveDisplayName(for displayID: String) -> String {
-        // 1. Handle "Main" legacy identifier
+        // Handle "Main" legacy identifier.
         if displayID == "Main" { return "Main Display" }
         
-        // 2. Try to find a matching screen by UUID
+        // Attempt to match screen by UUID.
         for screen in NSScreen.screens {
             if let screenNumber = screen.deviceDescription[NSDeviceDescriptionKey("NSScreenNumber")] as? NSNumber {
                 let cgsID = screenNumber.uint32Value
@@ -73,7 +73,7 @@ struct SpaceEditView: View {
             }
         }
         
-        // 3. Fallback for legacy "Name (ID)" format that hasn't been migrated yet
+        // Fallback for legacy "Name (ID)" format.
         if displayID.contains("(") && displayID.contains(")") {
              if let lastParenIndex = displayID.lastIndex(of: "(") {
                 return String(displayID[..<lastParenIndex]).trimmingCharacters(in: .whitespaces)
@@ -84,7 +84,7 @@ struct SpaceEditView: View {
     }
     
     private func spaces(for displayID: String) -> [DesktopSpace] {
-        // We don't want to show or edit fullscreen apps here, just regular desktops
+        // Filter to regular desktops only; fullscreen apps are excluded from manual editing.
         return spaceManager.spaceNameDict
             .filter { $0.displayID == displayID && !$0.isFullscreen }
             .sorted { $0.num < $1.num }

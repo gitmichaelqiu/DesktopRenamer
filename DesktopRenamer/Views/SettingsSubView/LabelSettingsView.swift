@@ -54,7 +54,7 @@ struct LabelSettingsView: View {
                 }
 
                 SettingsSection("Active Space Labels") {
-                    // Main Toggle
+                    // Visibility toggle for active space labels.
                     SettingsRow(
                         "Show active space labels",
                         helperText:
