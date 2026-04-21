@@ -502,6 +502,12 @@
     },
     "Factory Reset" : {
       "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Factory reset"
+          }
+        },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
@@ -1294,6 +1300,12 @@
     },
     "Review Splash" : {
       "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Review splash"
+          }
+        },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
