@@ -982,7 +982,14 @@
       }
     },
     "No editable spaces (fullscreen only)" : {
-      "shouldTranslate" : false
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "无可编辑桌面（只有全屏）"
+          }
+        }
+      }
     },
     "No new spaces detected yet..." : {
       "localizations" : {
