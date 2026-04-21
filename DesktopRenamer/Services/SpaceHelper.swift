@@ -26,6 +26,7 @@ class SpaceHelper {
 
     // Track switch state to prevent recursion glitches
     private static var isSwitching = false
+    static var lastProgrammaticSwitchTime: TimeInterval = 0
     
     // Dragging session state
     private static var originalMousePoint: CGPoint? = nil
@@ -35,6 +36,7 @@ class SpaceHelper {
 
     // The meat of space switching logic
     static func switchToSpace(_ spaceID: String, forceMissionControl: Bool = false) {
+        lastProgrammaticSwitchTime = Date().timeIntervalSince1970
         guard !isSwitching else { return }
         isSwitching = true
 
@@ -60,6 +62,17 @@ class SpaceHelper {
                 targetNum = targetSpace.num
                 targetGlobalNum = targetSpace.globalShortcutNum
                 targetIsFullscreen = targetSpace.isFullscreen
+                
+                // CRITICAL FIX: To check if we are ALREADY on the target space, 
+                // we must check the current space of the TARGET display, 
+                // not the global active display.
+                if let liveCurrentID = getCurrentSpaceID(for: targetSpace.displayID) {
+                    print("SpaceHelper: switchToSpace check. Live ID: \(liveCurrentID), Target: \(spaceID)")
+                    if liveCurrentID == spaceID {
+                        print("SpaceHelper: Already on target space \(spaceID). Stopping.")
+                        return 
+                    }
+                }
             }
             
             if let currentSpace = state.spaces.first(where: { $0.id == state.currentUUID }) {
@@ -150,9 +163,23 @@ class SpaceHelper {
                 if labelWindow.spaceId == spaceID {
                     targetWindow = labelWindow
                 } else if labelWindow.isVisible {
-                    windowsToHide.append(labelWindow)
+                    // CRITICAL MULTI-MONITOR FIX: Only hide windows on the SAME display.
+                    // Hiding windows on other displays causes them to lose focus state 
+                    // and triggers "snap-back" issues when they are automatically restored.
+                    if let target = targetWindow, labelWindow.displayID == target.displayID {
+                        windowsToHide.append(labelWindow)
+                    } else if targetWindow == nil {
+                        // If we haven't found the target yet, we'll collect all visible ones
+                        // and filter them after the loop.
+                        windowsToHide.append(labelWindow)
+                    }
                 }
             }
+        }
+        
+        // Final filter if we collected them before finding target
+        if let target = targetWindow {
+            windowsToHide = windowsToHide.filter { $0.displayID == target.displayID }
         }
 
         guard let window = targetWindow else { return false }
@@ -570,7 +597,7 @@ class SpaceHelper {
         }
     }
 
-    private static func getAllDisplayUUIDs() -> [String] {
+    static func getAllDisplayUUIDs() -> [String] {
         return NSScreen.screens.compactMap { screen -> String? in
             guard let id = screen.deviceDescription[NSDeviceDescriptionKey("NSScreenNumber")] as? CGDirectDisplayID else { return nil }
             guard let uuid = CGDisplayCreateUUIDFromDisplayID(id)?.takeRetainedValue() else { return nil }
@@ -584,14 +611,13 @@ class SpaceHelper {
         return result.uppercased()
     }
 
-    static func getSystemState() -> (
+    static func getSystemState(onDisplayID specificDisplayID: String? = nil) -> (
         spaces: [DesktopSpace], currentUUID: String, displayID: String
     )? {
         let conn = _CGSDefaultConnection()
-        guard let displays = CGSCopyManagedDisplaySpaces(conn) as? [NSDictionary] else {
-            return nil
-        }
-        guard let activeDisplayRaw = CGSCopyActiveMenuBarDisplayIdentifier(conn) as? String else {
+        guard let displays = CGSCopyManagedDisplaySpaces(conn) as? [NSDictionary],
+            let activeDisplayRaw = CGSCopyActiveMenuBarDisplayIdentifier(conn) as? String
+        else {
             return nil
         }
 
@@ -599,11 +625,9 @@ class SpaceHelper {
         let mainScreenUUID = screenUUIDs.first
         
         let activeDisplay = normalizeDisplayID(activeDisplayRaw, mainUUID: mainScreenUUID)
-        
+        var targetDisplayID = specificDisplayID ?? activeDisplay
         var detectedSpaces: [DesktopSpace] = []
         var currentSpaceID = "FULLSCREEN"
-
-        var targetDisplayID = activeDisplay // Default to active menu bar display
         
         // Find if target display is actually present in CGS displays (handling normalization)
         let foundDisplay = displays.first { d in

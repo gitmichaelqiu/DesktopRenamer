@@ -81,6 +81,9 @@ class SpaceLabelWindow: NSWindow {
     static let basePreviewFontSize: CGFloat = 180
     static let handleSize = NSSize(width: 32, height: 60)
 
+    private var hasOrderedInOnce = false
+
+
     private var isHiddenCornerMode: Bool {
         return isActiveMode && !(labelManager?.showOnDesktop == true)
     }
@@ -193,7 +196,7 @@ class SpaceLabelWindow: NSWindow {
         // Collection Behavior
         // Reverted: .canJoinAllSpaces removed as it broke switching.
         // We keep .fullScreenAuxiliary so it can theoretically appear over fullscreen apps.
-        self.collectionBehavior = [.managed, .participatesInCycle, .fullScreenAuxiliary]
+        self.collectionBehavior = [.managed, .participatesInCycle, .fullScreenAuxiliary, .ignoresCycle]
 
         // Observers
         self.spaceManager.$spaceNameDict
@@ -349,6 +352,9 @@ class SpaceLabelWindow: NSWindow {
     }
 
     func setMode(isCurrentSpace: Bool) {
+        if self.isActiveMode != isCurrentSpace {
+            print("SpaceLabelWindow[\(self.spaceId)]: setMode(isCurrentSpace: \(isCurrentSpace))")
+        }
         self.isActiveMode = isCurrentSpace
 
         if isCurrentSpace {
@@ -745,16 +751,21 @@ class SpaceLabelWindow: NSWindow {
     }
 
     private func findTargetScreen() -> NSScreen? {
+        let targetID = self.displayID.uppercased()
+        if targetID == "MAIN" || targetID == "UNKNOWN" || targetID.isEmpty {
+            return NSScreen.screens.first
+        }
+        
         return NSScreen.screens.first(where: { screen in
             let screenID =
                 screen.deviceDescription[NSDeviceDescriptionKey("NSScreenNumber")] as? NSNumber ?? 0
 
             // 1. Name check (Default)
             let idString = "\(screen.localizedName) (\(screenID))"
-            if idString == self.displayID { return true }
+            if idString.uppercased() == targetID { return true }
 
-            let cleanTarget = self.displayID.components(separatedBy: " (").first ?? self.displayID
-            if screen.localizedName == cleanTarget { return true }
+            let cleanTarget = targetID.components(separatedBy: " (").first ?? targetID
+            if screen.localizedName.uppercased() == cleanTarget { return true }
 
             // 2. UUID Check
             let cgsID = screenID.uint32Value
@@ -847,22 +858,11 @@ class SpaceLabelWindow: NSWindow {
             return
         }
 
-        let masterEnabled = labelManager?.isEnabled ?? true
-        let showActive = labelManager?.showActiveLabels ?? true
-        let showPreview = labelManager?.showPreviewLabels ?? true
-
         var isVisuallyVisible = false
-
-        if masterEnabled {
-            if isActiveMode {
-                isVisuallyVisible = showActive
-            } else {
-                if showPreview {
-                    isVisuallyVisible = !self.isOnActiveSpace
-                } else {
-                    isVisuallyVisible = false
-                }
-            }
+        if isActiveMode {
+            isVisuallyVisible = labelManager?.showActiveLabels ?? true
+        } else {
+            isVisuallyVisible = labelManager?.showPreviewLabels ?? true
         }
 
         let shouldBeAnchor = !isVisuallyVisible
@@ -871,8 +871,35 @@ class SpaceLabelWindow: NSWindow {
             updateLayout(isCurrentSpace: self.isActiveMode, updateFrame: animated)
         }
 
-        if !self.isVisible {
-            self.orderFront(nil)
+        if isVisuallyVisible {
+            // MULTI-MONITOR STABILITY FIX: Check for programmatic switch cooling period.
+            // If a switch was triggered recently, we DO NOT order front based on isVisible.
+            // This is because isVisible might be false briefly during animations, 
+            // and calling orderFrontRegardless on the WRONG monitor causes a "snap-back".
+            let now = Date().timeIntervalSince1970
+            let timeSinceSwitch = now - SpaceHelper.lastProgrammaticSwitchTime
+            let inCoolingPeriod = timeSinceSwitch < 1.0
+            
+            if self.isActiveMode {
+                if !self.isVisible {
+                    if !inCoolingPeriod {
+                        print("SpaceLabelWindow[\(self.spaceId)]: orderFrontRegardless() for ACTIVE space.")
+                        self.orderFrontRegardless()
+                        self.hasOrderedInOnce = true
+                    } else {
+                        print("SpaceLabelWindow[\(self.spaceId)]: Suppressing orderFrontRegardless (Active) during switch cooling period (\(String(format: "%.2f", timeSinceSwitch))s).")
+                    }
+                }
+            } else if !hasOrderedInOnce {
+                // For preview windows (on background spaces), we ONLY order front once.
+                if !inCoolingPeriod {
+                    print("SpaceLabelWindow[\(self.spaceId)]: Initial orderFrontRegardless() for background preview.")
+                    self.orderFrontRegardless()
+                    self.hasOrderedInOnce = true
+                } else {
+                    print("SpaceLabelWindow[\(self.spaceId)]: Suppressing orderFrontRegardless (Preview) during switch cooling period (\(String(format: "%.2f", timeSinceSwitch))s).")
+                }
+            }
         }
 
         self.alphaValue = 1.0
