@@ -456,9 +456,9 @@ struct GeneralSettingsView: View {
                             .labelsHidden()
                             .toggleStyle(.switch)
                     }
-
-                    Divider()
-
+                }
+                
+                SettingsSection(nil) {
                     SettingsRow(
                         "Hide menubar icon",
                         helperText:
