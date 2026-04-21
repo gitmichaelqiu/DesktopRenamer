@@ -168,6 +168,7 @@ class SpaceLabelManager: ObservableObject {
         }
     }
 
+
     private func setupObservers() {
         guard let spaceManager = spaceManager else { return }
 
@@ -396,7 +397,7 @@ class SpaceLabelManager: ObservableObject {
 
     func reloadAllWindows() {
         removeAllWindows()
-        updateLabelsVisibility()
+        syncWindowsWithDict()
     }
 
     private func removeAllWindows() {
@@ -405,17 +406,6 @@ class SpaceLabelManager: ObservableObject {
         createdWindows.removeAll()
     }
 
-    private func updateLabelsVisibility() {
-        updateWindows()
-
-        if showActiveLabels {
-            if let spaceId = spaceManager?.currentSpaceUUID,
-                let name = spaceManager?.getSpaceName(spaceId)
-            {
-                updateLabel(for: spaceId, name: name, verifySpace: false)
-            }
-        }
-    }
 
     func seedAllLabels() {
         guard showPreviewLabels, let spaceManager = spaceManager else { return }
