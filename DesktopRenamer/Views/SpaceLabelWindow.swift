@@ -285,22 +285,22 @@ class SpaceLabelWindow: NSWindow {
 
     // Keeping everything in sync with the manager
     private func syncFromGlobalState() {
-        guard let manager = labelManager else { return }
+        guard let manager = labelManager, let screen = self.screen else { return }
         self.isDocked = manager.globalIsDocked
         self.dockEdge = manager.globalDockEdge
 
-        if manager.globalCenterPoint == nil {
-            let defaultRelative = NSPoint(x: 1.0, y: 0.5)
-            manager.updateGlobalState(isDocked: true, edge: .maxX, center: defaultRelative)
-            self.dockEdge = .maxX
-            self.isDocked = true
-        } else if let point = manager.globalCenterPoint {
+        if let point = manager.globalCenterPoint {
             if point.x > 2.0 || point.y > 2.0 {
                 let defaultRelative = NSPoint(x: 1.0, y: 0.5)
                 manager.updateGlobalState(isDocked: true, edge: .maxX, center: defaultRelative)
                 self.dockEdge = .maxX
                 self.isDocked = true
             }
+        } else {
+            let defaultRelative = NSPoint(x: 1.0, y: 0.5)
+            manager.updateGlobalState(isDocked: true, edge: .maxX, center: defaultRelative)
+            self.dockEdge = .maxX
+            self.isDocked = true
         }
     }
 
@@ -691,7 +691,11 @@ class SpaceLabelWindow: NSWindow {
         clampToScreen: Bool, isDocked: Bool = true
     ) -> NSPoint {
         if !isDocked {
-            return NSPoint(x: centerPoint.x - size.width / 2, y: centerPoint.y - size.height / 2)
+            var origin = NSPoint(x: centerPoint.x - size.width / 2, y: centerPoint.y - size.height / 2)
+            // Mandatory Clamping to prevent clipping
+            origin.x = max(screenFrame.minX, min(origin.x, screenFrame.maxX - size.width))
+            origin.y = max(screenFrame.minY, min(origin.y, screenFrame.maxY - size.height))
+            return origin
         }
 
         var origin = NSPoint.zero
