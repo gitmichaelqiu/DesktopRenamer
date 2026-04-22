@@ -24,17 +24,19 @@ class SpaceHelper {
     private static var globalEventMonitor: Any?
     private static var localEventMonitor: Any?
 
-    // Track switch state to prevent recursion glitches
+    // Tracks switching state to prevent recursion during transitions.
     private static var isSwitching = false
+    static var lastProgrammaticSwitchTime: TimeInterval = 0
     
-    // Dragging session state
+    // Session state for active dragging operations.
     private static var originalMousePoint: CGPoint? = nil
     private static var restorationTask: DispatchWorkItem? = nil
     private static var pendingMoveCount = 0
     static var isDragging: Bool { originalMousePoint != nil }
 
-    // The meat of space switching logic
+    // Core space switching implementation.
     static func switchToSpace(_ spaceID: String, forceMissionControl: Bool = false) {
+        lastProgrammaticSwitchTime = Date().timeIntervalSince1970
         guard !isSwitching else { return }
         isSwitching = true
 
@@ -48,7 +50,7 @@ class SpaceHelper {
         NotificationCenter.default.post(
             name: NSNotification.Name("SpaceSwitchRequested"), object: nil)
 
-        // 1. Resolve Target Space Info
+        // Resolve target space information.
         var targetNum: Int? = nil
         var targetGlobalNum: Int? = nil
         var shouldUseShortcut = true
@@ -60,6 +62,17 @@ class SpaceHelper {
                 targetNum = targetSpace.num
                 targetGlobalNum = targetSpace.globalShortcutNum
                 targetIsFullscreen = targetSpace.isFullscreen
+                
+                // CRITICAL FIX: To check if we are ALREADY on the target space, 
+                // we must check the current space of the TARGET display, 
+                // not the global active display.
+                if let liveCurrentID = getCurrentSpaceID(for: targetSpace.displayID) {
+                    print("SpaceHelper: switchToSpace check. Live ID: \(liveCurrentID), Target: \(spaceID)")
+                    if liveCurrentID == spaceID {
+                        print("SpaceHelper: Already on target space \(spaceID). Stopping.")
+                        return 
+                    }
+                }
             }
             
             if let currentSpace = state.spaces.first(where: { $0.id == state.currentUUID }) {
@@ -70,7 +83,7 @@ class SpaceHelper {
             if state.currentUUID == spaceID { return }
         }
         
-        // Force Mission Control Automation for Fullscreen Transitions
+        // Automate Mission Control for fullscreen transitions if forced.
         if forceMissionControl && (targetIsFullscreen || currentIsFullscreen) {
             if let num = targetNum {
                 switchViaMissionControl(to: num)
@@ -94,8 +107,8 @@ class SpaceHelper {
             }
         }
 
-        // First priority: Try to use the built-in Ctrl+Number shortcuts (if enabled)
-        // This is usually the smoothest way if it works.
+        // Attempt to use system Desktop shortcuts (Control + Number).
+        // This provides the smoothest transition when available.
         if shouldUseShortcut {
             if let globalNum = targetGlobalNum {
                 if isShortcutEnabled(for: globalNum) && simulateDesktopShortcut(for: globalNum) {
@@ -144,20 +157,34 @@ class SpaceHelper {
         var targetWindow: SpaceLabelWindow? = nil
         var windowsToHide: [SpaceLabelWindow] = []
 
-        // 1. Identify Target and Potential Conflict Windows
+        // Identify target and potential conflicting windows.
         for window in NSApp.windows {
             if let labelWindow = window as? SpaceLabelWindow {
                 if labelWindow.spaceId == spaceID {
                     targetWindow = labelWindow
                 } else if labelWindow.isVisible {
-                    windowsToHide.append(labelWindow)
+                    // CRITICAL MULTI-MONITOR FIX: Only hide windows on the SAME display.
+                    // Hiding windows on other displays causes them to lose focus state 
+                    // and triggers "snap-back" issues when they are automatically restored.
+                    if let target = targetWindow, labelWindow.displayID == target.displayID {
+                        windowsToHide.append(labelWindow)
+                    } else if targetWindow == nil {
+                        // If we haven't found the target yet, we'll collect all visible ones
+                        // and filter them after the loop.
+                        windowsToHide.append(labelWindow)
+                    }
                 }
             }
+        }
+        
+        // Final filter if we collected them before finding target
+        if let target = targetWindow {
+            windowsToHide = windowsToHide.filter { $0.displayID == target.displayID }
         }
 
         guard let window = targetWindow else { return false }
 
-        // 2. "Hide Others" Logic
+        // Manage conflicting windows to remove focus ambiguity.
         // For Desktop targets: We hide other windows to remove ambiguity about "Last Active Space".
         // This forces the OS to switch to the target window.
         // For Fullscreen targets: We MUST NOT hide the desktop window. Doing so removes the app's
@@ -168,7 +195,7 @@ class SpaceHelper {
             }
         }
 
-        // 3. Force Activation
+        // Force window activation.
         window.orderFrontRegardless()
         window.makeKey()
         NSApp.activate(ignoringOtherApps: true)
@@ -185,7 +212,7 @@ class SpaceHelper {
         
         let source = CGEventSource(stateID: .hidSystemState)
         
-        // 1. Session Initialization: Only capture original mouse point and MouseDown for the FIRST move in a series
+        // Session Initialization: Capture original mouse state for the initial move.
         if originalMousePoint == nil {
             // Save starting location
             originalMousePoint = CGEvent(source: nil)?.location
@@ -223,12 +250,12 @@ class SpaceHelper {
             usleep(50000) // 0.05s grip
         }
         
-        // 2. Trigger Space Switch and track the move
+        // Trigger the space switch and track the movement.
         pendingMoveCount += 1
         switchToSpace(spaceID)
         
-        // 3. Replace any existing restoration/drop tasks with a long safety fallback
-        // This ensures the Mouse stays down until either a space change or a timeout.
+        // Schedule a safety fallback for cursor restoration.
+        // Ensures the mouse is released after a timeout if the space change detection fails.
         scheduleRestoration(delay: 2.0)
     }
     
@@ -261,20 +288,20 @@ class SpaceHelper {
                 return 
             }
             
-            // 1. Drop (Mouse Up)
+            // Release the window (Mouse Up).
             if let upEvent = CGEvent(mouseEventSource: source, mouseType: .leftMouseUp, mouseCursorPosition: CGEvent(source: nil)?.location ?? .zero, mouseButton: .left) {
                 upEvent.flags = []
                 upEvent.post(tap: .cghidEventTap)
             }
             
-            // 2. Restore Mouse
+            // Restore the cursor position.
             usleep(50000)
             if let restoreEvent = CGEvent(mouseEventSource: source, mouseType: .mouseMoved, mouseCursorPosition: restorePoint, mouseButton: .left) {
                 restoreEvent.flags = []
                 restoreEvent.post(tap: .cghidEventTap)
             }
             
-            // 3. Reset Session
+            // Reset session state.
             originalMousePoint = nil
             restorationTask = nil
             pendingMoveCount = 0
@@ -344,7 +371,7 @@ class SpaceHelper {
         }
     }
 
-    // Help with shortcut logic
+    // Shortcut configuration helpers.
 
     private static func isShortcutEnabled(for number: Int) -> Bool {
         let baseID = 118
@@ -431,7 +458,7 @@ class SpaceHelper {
             forName: NSWorkspace.didActivateApplicationNotification, object: nil, queue: .main
         ) { _ in detectSpaceChange() }
 
-        // Event monitors to catch when the user clicks around or does something that might change spaces
+        // Monitor events to detect user-initiated space switches.
         localEventMonitor = NSEvent.addLocalMonitorForEvents(matching: [
             .leftMouseDown, .rightMouseDown,
         ]) { event in
@@ -570,7 +597,7 @@ class SpaceHelper {
         }
     }
 
-    private static func getAllDisplayUUIDs() -> [String] {
+    static func getAllDisplayUUIDs() -> [String] {
         return NSScreen.screens.compactMap { screen -> String? in
             guard let id = screen.deviceDescription[NSDeviceDescriptionKey("NSScreenNumber")] as? CGDirectDisplayID else { return nil }
             guard let uuid = CGDisplayCreateUUIDFromDisplayID(id)?.takeRetainedValue() else { return nil }
@@ -584,14 +611,13 @@ class SpaceHelper {
         return result.uppercased()
     }
 
-    static func getSystemState() -> (
+    static func getSystemState(onDisplayID specificDisplayID: String? = nil) -> (
         spaces: [DesktopSpace], currentUUID: String, displayID: String
     )? {
         let conn = _CGSDefaultConnection()
-        guard let displays = CGSCopyManagedDisplaySpaces(conn) as? [NSDictionary] else {
-            return nil
-        }
-        guard let activeDisplayRaw = CGSCopyActiveMenuBarDisplayIdentifier(conn) as? String else {
+        guard let displays = CGSCopyManagedDisplaySpaces(conn) as? [NSDictionary],
+            let activeDisplayRaw = CGSCopyActiveMenuBarDisplayIdentifier(conn) as? String
+        else {
             return nil
         }
 
@@ -599,11 +625,9 @@ class SpaceHelper {
         let mainScreenUUID = screenUUIDs.first
         
         let activeDisplay = normalizeDisplayID(activeDisplayRaw, mainUUID: mainScreenUUID)
-        
+        var targetDisplayID = specificDisplayID ?? activeDisplay
         var detectedSpaces: [DesktopSpace] = []
         var currentSpaceID = "FULLSCREEN"
-
-        var targetDisplayID = activeDisplay // Default to active menu bar display
         
         // Find if target display is actually present in CGS displays (handling normalization)
         let foundDisplay = displays.first { d in

@@ -4,6 +4,7 @@ struct SwitchSettingsView: View {
     @EnvironmentObject var hotkeyManager: HotkeyManager
     @EnvironmentObject var gestureManager: GestureManager
     @EnvironmentObject var spaceManager: SpaceManager
+    @EnvironmentObject var labelManager: SpaceLabelManager
     @StateObject private var permissionManager = PermissionManager.shared
     
     var body: some View {
@@ -113,7 +114,7 @@ struct SwitchSettingsView: View {
                     }
                 }
                 
-                // Trackpad Gesture Settings
+                // Gesture-based switching configuration.
                 SettingsSection("Trackpad Switch Gesture Override") {
                     SettingsRow(
                         "Enable switch gesture override",
@@ -164,7 +165,7 @@ struct SwitchSettingsView: View {
                     }
                 }
                 
-                // Advanced Settings
+                // Advanced switching preferences.
                 SettingsSection("Advanced") {
                     SettingsRow(
                         "Force Mission Control for fullscreen apps",
@@ -181,7 +182,7 @@ struct SwitchSettingsView: View {
                 }
                 SettingsSection(nil) {
                     SliderSettingsRow(
-                        "Grab Offset X",
+                        "Grab offset X",
                         helperText: "Adjust the position where the mouse grabs the window to move across spaces.",
                         value: $spaceManager.grabOffsetX,
                         range: 0...100,
@@ -193,7 +194,7 @@ struct SwitchSettingsView: View {
                     Divider()
                     
                     SliderSettingsRow(
-                        "Grab Offset Y",
+                        "Grab offset Y",
                         value: $spaceManager.grabOffsetY,
                         range: 0...100,
                         defaultValue: 27.0,

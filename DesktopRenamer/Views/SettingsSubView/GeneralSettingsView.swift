@@ -2,7 +2,7 @@ import AppKit
 import ServiceManagement
 import SwiftUI
 
-// This class is used for testing the SpaceAPI from within the app
+// Helper class for testing SpaceAPI functionality.
 class APITester: ObservableObject {
     @Published var responseText: String = ""
 
@@ -110,7 +110,7 @@ struct ThresholdAdjustmentView: View {
             }
 
             HStack(alignment: .top, spacing: 30) {
-                // LEFT: Manual Edit
+                // Manual threshold entry.
                 VStack(alignment: .leading, spacing: 10) {
                     Text("Threshold Value")
                         .font(.subheadline)
@@ -129,9 +129,9 @@ struct ThresholdAdjustmentView: View {
 
                 Divider()
 
-                // RIGHT: Debug/Calibration
+                // Threshold calibration.
                 VStack(alignment: .leading, spacing: 15) {
-                    // Step 1: Desktops
+                    // Step: Desktop recording.
                     VStack(alignment: .leading, spacing: 5) {
                         Text("1. Go through desktops")
                             .font(.subheadline)
@@ -156,7 +156,7 @@ struct ThresholdAdjustmentView: View {
                         }
                     }
 
-                    // Step 2: Fullscreens
+                    // Step: Fullscreen recording.
                     VStack(alignment: .leading, spacing: 5) {
                         Text("2. Go through fullscreen")
                             .font(.subheadline)
@@ -181,7 +181,7 @@ struct ThresholdAdjustmentView: View {
                         }
                     }
 
-                    // Suggestion Result
+                    // Calculation suggestion results.
                     if !suggestionText.isEmpty {
                         Text(suggestionText)
                             .font(.caption)
@@ -210,7 +210,7 @@ struct ThresholdAdjustmentView: View {
         }
         .padding()
         .frame(width: 450)
-        // CHANGE: Listen to currentRawSpaceUUID to ensure we capture actual data even if logic thinks it's fullscreen
+        // Monitor currentRawSpaceUUID to ensure data capture across all space types.
         .onReceive(spaceManager.$currentRawSpaceUUID) { uuid in
             recordData(uuid: uuid, ncCnt: spaceManager.currentNcCount)
         }
@@ -276,7 +276,7 @@ struct AddSpacesView: View {
     @ObservedObject var spaceManager: SpaceManager
     @Environment(\.presentationMode) var presentationMode
 
-    // Make sure it conforms to Equatable for firstIndex(of:)
+    // Candidate space model for manual additions.
     struct SpaceCandidate: Identifiable, Equatable {
         let id = UUID()
         let spaceUUID: String
@@ -296,7 +296,7 @@ struct AddSpacesView: View {
                 .multilineTextAlignment(.center)
                 .padding(.horizontal)
 
-            // Using ScrollView + VStack instead of List for better control over animations
+            // ScrollView implementation for optimized list animations.
             ScrollView {
                 VStack(spacing: 0) {
                     if candidates.isEmpty {
@@ -307,9 +307,9 @@ struct AddSpacesView: View {
                     } else {
                         let existingCount = spaceManager.spaceNameDict.count
 
-                        // Use direct collection to maintain view identity
+                        // Maintain view identity during collection updates.
                         ForEach(candidates) { candidate in
-                            // Calculate index dynamically
+                            // Dynamic index calculation for space labels.
                             let index = candidates.firstIndex(of: candidate) ?? 0
 
                             VStack(spacing: 0) {
@@ -345,7 +345,6 @@ struct AddSpacesView: View {
                                 Divider()
                             }
                             .background(Color(NSColor.controlBackgroundColor))
-                            // ANIMATION TRANSITION
                             .transition(.opacity.combined(with: .move(edge: .top)))
                         }
                     }
@@ -423,6 +422,7 @@ struct GeneralSettingsView: View {
 
     @State private var launchAtLogin: Bool = false
     @State private var autoCheckUpdate: Bool = UpdateManager.shared.updaterController.updater.automaticallyChecksForUpdates
+    @State private var autoDownloadUpdate: Bool = UpdateManager.shared.updaterController.updater.automaticallyDownloadsUpdates
     @State private var isResetting: Bool = false
     @State private var isAPIEnabled: Bool = SpaceManager.isAPIEnabled
     @State private var isStatusBarHidden: Bool = StatusBarController.isStatusBarHidden
@@ -434,18 +434,31 @@ struct GeneralSettingsView: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 20) {
-                // General Section
+                // General configuration options.
                 SettingsSection("Settings.General.General") {
                     SettingsRow(
-                        "Settings.General.General.ShowLabels",
-                        helperText:
-                            "Create windows that only appear in Mission Control to display space names.\n\nMay not work when multiple displays are connected."
+                        "Show preview labels",
+                        helperText: "The large label visible in Mission Control."
                     ) {
-                        Toggle("", isOn: $labelManager.isEnabled)
+                        Toggle("", isOn: $labelManager.showPreviewLabels)
+                            .toggleStyle(.switch)
+                            .labelsHidden()
+                    }
+
+                    Divider()
+                
+                    SettingsRow(
+                        "Show active space labels",
+                        helperText:
+                            "The hidden label that slides into the corner of the active desktop."
+                    ) {
+                        Toggle("", isOn: $labelManager.showActiveLabels)
                             .labelsHidden()
                             .toggleStyle(.switch)
                     }
-                    Divider()
+                }
+                
+                SettingsSection(nil) {
                     SettingsRow(
                         "Hide menubar icon",
                         helperText:
@@ -458,7 +471,9 @@ struct GeneralSettingsView: View {
                                 StatusBarController.toggleStatusBar()
                             }
                     }
+
                     Divider()
+
                     SettingsRow("Settings.General.General.LaunchAtLogin") {
                         Toggle("", isOn: $launchAtLogin)
                             .labelsHidden()
@@ -475,6 +490,17 @@ struct GeneralSettingsView: View {
                             }
                     }
                     Divider()
+
+                    if autoCheckUpdate {
+                        SettingsRow("Automatically download updates") {
+                            Toggle("", isOn: $autoDownloadUpdate).labelsHidden().toggleStyle(.switch)
+                                .onChange(of: autoDownloadUpdate) { value in
+                                    UpdateManager.shared.updaterController.updater.automaticallyDownloadsUpdates = value
+                                }
+                        }
+                        Divider()
+                    }
+
                     SettingsRow("Settings.General.Updates.ManualCheck") {
                         Button(NSLocalizedString("Settings.General.Updates.Button", comment: "")) {
                             checkForUpdate()
@@ -584,7 +610,8 @@ struct GeneralSettingsView: View {
             ThresholdAdjustmentView(spaceManager: spaceManager)
         }
         .sheet(isPresented: $showAddSpacesSheet) { AddSpacesView(spaceManager: spaceManager) }
-        .animation(.easeInOut(duration: 0.16), value: spaceManager.detectionMethod)
+        .animation(.easeInOut(duration: 0.2), value: spaceManager.detectionMethod)
+        .animation(.easeInOut(duration: 0.2), value: autoCheckUpdate)
     }
 
     private var bugReportSheet: some View {

@@ -261,6 +261,16 @@
         }
       }
     },
+    "Automatically download updates" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "自动下载更新"
+          }
+        }
+      }
+    },
     "Automation" : {
       "localizations" : {
         "zh-Hans" : {
@@ -411,22 +421,6 @@
         }
       }
     },
-    "Create windows that only appear in Mission Control to display space names.\n\nMay not work when multiple displays are connected." : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Show space names in Mission Control.\n\nThey will not be created before you access the spaces."
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "在调度中心显示桌面名称。\n\n只有在访问至少一次对应桌面时才会显示。"
-          }
-        }
-      }
-    },
     "Crystal Clear Labels" : {
       "localizations" : {
         "zh-Hans" : {
@@ -480,16 +474,6 @@
         }
       }
     },
-    "Enable Labels" : {
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "启用标签"
-          }
-        }
-      }
-    },
     "Enable switch gesture override" : {
       "localizations" : {
         "zh-Hans" : {
@@ -502,6 +486,12 @@
     },
     "Factory Reset" : {
       "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Factory reset"
+          }
+        },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
@@ -622,7 +612,7 @@
         }
       }
     },
-    "Grab Offset X" : {
+    "Grab offset X" : {
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
@@ -632,7 +622,7 @@
         }
       }
     },
-    "Grab Offset Y" : {
+    "Grab offset Y" : {
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
@@ -850,6 +840,23 @@
         }
       }
     },
+    "Menu.ShowActiveLabels" : {
+      "comment" : "Toggle active labels",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Show Active Space Labels"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "显示当前桌面标签"
+          }
+        }
+      }
+    },
     "Menu.ShowLabels" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -863,6 +870,23 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "显示桌面标签窗口"
+          }
+        }
+      }
+    },
+    "Menu.ShowPreviewLabels" : {
+      "comment" : "Toggle preview labels",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Show Preview Labels"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "显示预览标签"
           }
         }
       }
@@ -958,7 +982,14 @@
       }
     },
     "No editable spaces (fullscreen only)" : {
-      "shouldTranslate" : false
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "无可编辑桌面（只有全屏）"
+          }
+        }
+      }
     },
     "No new spaces detected yet..." : {
       "localizations" : {
@@ -1260,6 +1291,12 @@
     },
     "Review Splash" : {
       "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Review splash"
+          }
+        },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
@@ -2653,7 +2690,8 @@
             "value" : "v%@"
           }
         }
-      }
+      },
+      "shouldTranslate" : false
     },
     "Value" : {
       "localizations" : {

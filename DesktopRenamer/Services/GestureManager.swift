@@ -15,8 +15,8 @@ private struct MTVector {
     var velocity: MTPoint
 }
 
-// Structure representing a single finger touch
-// Updated to match standard 64-bit layout (~92-96 bytes) to correct stride issues
+// Structure representing a single finger touch event from the multitouch sensor.
+// Note: Updated to 64-bit layout (~92-96 bytes) to resolve memory alignment and stride issues.
 private struct MTTouch {
     var frame: Int32
     var timestamp: Double
@@ -54,7 +54,7 @@ private var _MTRegisterContactFrameCallback:
 private var _MTDeviceStart: (@convention(c) (MTDeviceRef, Int32) -> Void)?
 private var _MTDeviceStop: (@convention(c) (MTDeviceRef, Int32) -> Void)?
 
-// 2. The Gesture Manager itself
+// Core service responsible for intercepting and interpreting trackpad gestures.
 class GestureManager: ObservableObject {
     // Settings
     private let kGestureEnabled = "GestureManager.Enabled"
@@ -97,24 +97,24 @@ class GestureManager: ObservableObject {
     private weak var spaceManager: SpaceManager?
     private var devices: [MTDeviceRef] = []
 
-    // IOKit State
+    // IOKit notification state for hardware lifecycle management.
     private var notifyPort: IONotificationPortRef?
     private var addedIterator: io_iterator_t = 0
 
-    // Tracking State
+    // Internal state for active gesture tracking.
     fileprivate static var sharedManager: GestureManager?
 
-    // Replaced single centroid point with per-finger tracking for consistency checks
+    // Per-finger tracking is used instead of a single centroid to allow for consistency verification.
     private var initialTouchPositions: [Int32: MTPoint] = [:]
 
     private var lastTouchTime: TimeInterval = 0
     private var lastSwitchTime: TimeInterval = 0
 
-    // Direction Lock
+    // Gesture direction locking to prevent oscillation during a single swipe.
     private var lockedDirection: SwitchDirection? = nil
 
-    // Tuning
-    private let switchCooldown: TimeInterval = 0.25
+    // Sensitivity and timing configuration.
+    private let switchCooldown: TimeInterval = 0.35
     // private let minSwipeDistance: Float = 0.10 // Moved to swipeThreshold
     private let consistencyThreshold: Float = 0.01  // 5% Minimum movement per finger (Anti-Tap)
     private let touchTimeout: TimeInterval = 0.15
@@ -159,14 +159,14 @@ class GestureManager: ObservableObject {
         // We do not stop monitoring when `isEnabled` becomes false.
     }
 
-    // Load the private MultitouchSupport framework from the system
+    // Dynamically loads the private MultitouchSupport framework.
     private func loadPrivateFramework() {
         guard let handle = dlopen(MTSFrameworkPath, RTLD_NOW) else {
             print("Failed to load MultitouchSupport.framework at \(MTSFrameworkPath)")
             return
         }
 
-        // Bind C functions
+        // Resolve private C function symbols.
         if let sym = dlsym(handle, "MTDeviceCreateList") {
             _MTDeviceCreateList = unsafeBitCast(
                 sym, to: (@convention(c) () -> Unmanaged<CFArray>).self)
@@ -194,7 +194,7 @@ class GestureManager: ObservableObject {
         }
     }
 
-    // Handling the hardware devices
+    // Lifecycle management for multitouch devices.
     private func startMonitoring() {
         if let createList = _MTDeviceCreateList {
             let deviceList = createList().takeRetainedValue() as? [MTDeviceRef] ?? []
@@ -238,7 +238,7 @@ class GestureManager: ObservableObject {
         }
     }
 
-    // Watch for new devices being plugged in
+    // Registers for IOKit notifications to detect hardware arrival events.
     private func setupIOKitListener() {
         guard notifyPort == nil else { return }
 
@@ -277,17 +277,17 @@ class GestureManager: ObservableObject {
         }
     }
 
-    // Here's where we actually figure out if a swipe happened
+    // Analyzes touch frames to determine gesture intent.
     fileprivate func handleTouches(touches: [MTTouch], numFingers: Int) {
         let now = Date().timeIntervalSince1970
 
-        // 0. Timeout Check
+        // Timeout Check.
         if now - lastTouchTime > touchTimeout {
             resetTrackingState()
         }
         lastTouchTime = now
 
-        // 1. Validate Finger Count
+        // Validate Finger Count.
         // Standard macOS space switching uses 3 or 4 fingers.
         // We will track BOTH of these counts for hiding purposes even if switchOverride fingerCount is different.
         let isHidingEligible = (numFingers == 3 || numFingers == 4)
@@ -297,7 +297,7 @@ class GestureManager: ObservableObject {
             return
         }
 
-        // 2. Validate Touches (Sanity Check)
+        // Validate Touches (Sanity Check).
         for touch in touches {
             if touch.normalizedVector.position.x < 0 || touch.normalizedVector.position.x > 1.0 {
                 resetTrackingState()
@@ -305,7 +305,7 @@ class GestureManager: ObservableObject {
             }
         }
 
-        // 3. Initialize Start Position (Per Finger)
+        // Initialize Start Position (Per Finger).
         if initialTouchPositions.isEmpty {
             for touch in touches {
                 initialTouchPositions[touch.identifier] = touch.normalizedVector.position
@@ -313,7 +313,7 @@ class GestureManager: ObservableObject {
             return
         }
 
-        // 4. Validate Continuity
+        // Validate Continuity.
         // Ensure the fingers on the pad match the IDs we started tracking
         let currentIDs = Set(touches.map { $0.identifier })
         let initialIDs = Set(initialTouchPositions.keys)
@@ -328,7 +328,7 @@ class GestureManager: ObservableObject {
             return
         }
 
-        // 5. Calculate Average Deltas
+        // Calculate Average Deltas.
         var totalDX: Float = 0
         var totalDY: Float = 0
 
@@ -341,38 +341,41 @@ class GestureManager: ObservableObject {
         let avgDX = totalDX / Float(numFingers)
         let avgDY = totalDY / Float(numFingers)
 
-        // 6. Pre-Trigger Logic: Overscroll Indicator
+        // Pre-Trigger Logic: Overscroll Indicator.
         var isOverscroll = false
 
-        // Only check horizontal dominance for indicator first
-        if abs(avgDX) > abs(avgDY) {
-            let direction: SwitchDirection = avgDX < 0 ? .next : .previous
+        // Only show overscroll indicator if we are the ones overriding the switch AND finger count matches
+        if self.isEnabled && numFingers == self.fingerCount {
+            // Only check horizontal dominance for indicator first
+            if abs(avgDX) > abs(avgDY) {
+                let direction: SwitchDirection = avgDX < 0 ? .next : .previous
 
-            // Determine target display to check boundaries
-            var targetDisplayID: String? = nil
-            if self.switchOverride == .cursor {
-                targetDisplayID = SpaceHelper.getCursorDisplayID()
-            }
-            // If .activeWindow, we leave nil, relying on SpaceManager's default context
-
-            if direction == .previous {
-                if spaceManager?.isFirstSpace(onDisplayID: targetDisplayID) == true {
-                    isOverscroll = true
-                    // avgDX is positive here.
-                    let progress = Double(abs(avgDX) / swipeThreshold)
-                    // Previous means going "Left". Wall is on Left. Edge is .leading.
-                    DispatchQueue.main.async {
-                        OverscrollOverlayManager.shared.update(progress: progress, edge: .leading)
-                    }
+                // Determine target display to check boundaries
+                var targetDisplayID: String? = nil
+                if self.switchOverride == .cursor {
+                    targetDisplayID = SpaceHelper.getCursorDisplayID()
                 }
-            } else {  // .next
-                if spaceManager?.isLastSpace(onDisplayID: targetDisplayID) == true {
-                    isOverscroll = true
-                    // avgDX is negative here.
-                    let progress = Double(abs(avgDX) / swipeThreshold)
-                    // Next means going "Right". Wall is on Right. Edge is .trailing.
-                    DispatchQueue.main.async {
-                        OverscrollOverlayManager.shared.update(progress: progress, edge: .trailing)
+                // If .activeWindow, we leave nil, relying on SpaceManager's default context
+
+                if direction == .previous {
+                    if spaceManager?.isFirstSpace(onDisplayID: targetDisplayID) == true {
+                        isOverscroll = true
+                        // avgDX is positive here.
+                        let progress = Double(abs(avgDX) / swipeThreshold)
+                        // Previous means going "Left". Wall is on Left. Edge is .leading.
+                        DispatchQueue.main.async {
+                            OverscrollOverlayManager.shared.update(progress: progress, edge: .leading)
+                        }
+                    }
+                } else {  // .next
+                    if spaceManager?.isLastSpace(onDisplayID: targetDisplayID) == true {
+                        isOverscroll = true
+                        // avgDX is negative here.
+                        let progress = Double(abs(avgDX) / swipeThreshold)
+                        // Next means going "Right". Wall is on Right. Edge is .trailing.
+                        DispatchQueue.main.async {
+                            OverscrollOverlayManager.shared.update(progress: progress, edge: .trailing)
+                        }
                     }
                 }
             }
@@ -386,7 +389,7 @@ class GestureManager: ObservableObject {
             }
         }
 
-        // 7. Trigger Logic
+        // Trigger Logic.
         // Primary threshold check
         if abs(avgDX) > swipeThreshold {
 
@@ -395,7 +398,7 @@ class GestureManager: ObservableObject {
 
                 let direction: SwitchDirection = avgDX < 0 ? .next : .previous
 
-                // 7. Consistency Check (Anti-Tap Protection)
+                // Consistency Check (Anti-Tap Protection).
                 // REQUIRE that EVERY finger has moved significantly in the target direction.
                 // A tap usually has one finger anchor or fingers moving in opposition.
                 var isConsistent = true
@@ -471,13 +474,7 @@ class GestureManager: ObservableObject {
 
         DispatchQueue.main.async { [weak self] in
             guard let self = self else { return }
-
-            var targetDisplayID: String? = nil
-
-            if self.switchOverride == .cursor {
-                targetDisplayID = SpaceHelper.getCursorDisplayID()
-            }
-            // If .activeWindow, we pass nil, which causes SpaceManager to default to the currently active display
+            let targetDisplayID = (self.switchOverride == .cursor) ? SpaceHelper.getCursorDisplayID() : nil
 
             switch direction {
             case .next:
@@ -489,7 +486,7 @@ class GestureManager: ObservableObject {
     }
 }
 
-// System-level callbacks from the trackpad driver
+// C callbacks originating from the low-level Multitouch driver.
 
 private let ioKitCallback: @convention(c) (UnsafeMutableRawPointer?, io_iterator_t) -> Void = {
     (refCon, iterator) in

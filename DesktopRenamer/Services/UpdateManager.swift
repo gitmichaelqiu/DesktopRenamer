@@ -3,7 +3,7 @@ import AppKit
 import Sparkle
 
 extension NSApplication {
-    // Return main window for sheet
+    // Resolves the most appropriate window for presenting sheet-modal interfaces.
     var suitableSheetWindow: NSWindow? {
         suitableSheetWindow(nil)
     }

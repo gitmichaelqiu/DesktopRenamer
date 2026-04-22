@@ -11,7 +11,7 @@ struct SplashView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            // Main content area
+            // Current page content
             ZStack {
                 switch currentPage {
                 case 0:
@@ -44,9 +44,9 @@ struct SplashView: View {
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             
-            // Bottom navigation bar
+            // Navigation controls
             HStack {
-                // Page indicator dots
+                // Page indicators
                 HStack(spacing: 8) {
                     ForEach(0..<totalPages, id: \.self) { index in
                         Capsule()
@@ -58,7 +58,7 @@ struct SplashView: View {
                 
                 Spacer()
                 
-                // Back Button
+                // Navigation: Back
                 if currentPage > 0 {
                     Button("Back") {
                         movingForward = false
@@ -73,7 +73,7 @@ struct SplashView: View {
                     .transition(.opacity)
                 }
                 
-                // Next / Get Started Button
+                // Navigation: Next / Completion
                 Button(action: {
                     if currentPage < totalPages - 1 {
                         movingForward = true
@@ -124,7 +124,7 @@ struct SplashView: View {
     }
 }
 
-// MARK: - Auto Playing Video View
+// Auto Playing Video View
 struct AutoPlayingVideoView: NSViewRepresentable {
     let videoName: String
     
@@ -155,7 +155,7 @@ struct AutoPlayingVideoView: NSViewRepresentable {
     }
 }
 
-// MARK: - Reusable Page Templates
+// Reusable Page Templates
 
 struct SingleVideoFeaturePage: View {
     let title: String
@@ -248,7 +248,7 @@ struct DoubleVideoFeaturePage: View {
     }
 }
 
-// MARK: - Pages
+// Pages
 
 struct WelcomePage: View {
     var body: some View {
@@ -359,7 +359,7 @@ struct RaycastFeaturePage: View {
                     .padding(.horizontal, 40)
             }
             
-            // Raycast Image Display
+            // Raycast extension preview.
             if let imageURL = Bundle.main.url(forResource: "RaycastExtension", withExtension: "png"),
                let nsImage = NSImage(contentsOf: imageURL) {
                 Image(nsImage: nsImage)
@@ -376,7 +376,7 @@ struct RaycastFeaturePage: View {
                     .shadow(color: Color.black.opacity(0.2), radius: 10, x: 0, y: 5)
                     .padding(.horizontal, 40)
             } else {
-                // Fallback icon if image cannot be found
+                // Fallback icon for missing extension image.
                 ZStack {
                     RoundedRectangle(cornerRadius: 12)
                         .fill(Color.secondary.opacity(0.1))

@@ -2,13 +2,13 @@ import Cocoa
 import Combine
 import QuartzCore
 
-// Private APIs for space management (The black magic part)
+// Private APIs for space management.
 @_silgen_name("_CGSDefaultConnection") private func _CGSDefaultConnection() -> Int32
 @_silgen_name("CGSCopyManagedDisplaySpaces") private func CGSCopyManagedDisplaySpaces(_ cid: Int32) -> CFArray?
 @_silgen_name("CGSAddWindowsToSpaces") private func CGSAddWindowsToSpaces(_ cid: Int32, _ windows: CFArray, _ spaces: CFArray)
 @_silgen_name("CGSRemoveWindowsFromSpaces") private func CGSRemoveWindowsFromSpaces(_ cid: Int32, _ windows: CFArray, _ spaces: CFArray)
 
-// This is the little "pill" handle you see when the window is docked to the edge
+// Handle view displayed when the window is docked to a screen edge.
 class CollapsibleHandleView: NSView {
     private let imageView: NSImageView
 
@@ -54,7 +54,7 @@ class CollapsibleHandleView: NSView {
     }
 }
 
-// The actual label window that floats on your desktop
+// The floating label window used to display space names.
 class SpaceLabelWindow: NSWindow {
     private let label: NSTextField
     private let handleView: CollapsibleHandleView
@@ -70,6 +70,9 @@ class SpaceLabelWindow: NSWindow {
 
     // State
     private var isActiveMode: Bool = true
+    private var isDragging = false
+    private var lastDragPoint: NSPoint = .zero
+    private var pendingVisibilityTask: DispatchWorkItem?
     private var isDocked: Bool = true
     private var dockEdge: NSRectEdge = .maxX
     private var previewSize: NSSize = NSSize(width: 800, height: 500)
@@ -80,6 +83,9 @@ class SpaceLabelWindow: NSWindow {
     static let baseActiveFontSize: CGFloat = 45
     static let basePreviewFontSize: CGFloat = 180
     static let handleSize = NSSize(width: 32, height: 60)
+
+    private var hasOrderedInOnce = false
+
 
     private var isHiddenCornerMode: Bool {
         return isActiveMode && !(labelManager?.showOnDesktop == true)
@@ -95,17 +101,17 @@ class SpaceLabelWindow: NSWindow {
         self.spaceManager = spaceManager
         self.labelManager = labelManager
 
-        // 1. Text Label
+        // Text Label
         self.label = NSTextField(labelWithString: name)
         self.label.alignment = .center
         self.label.textColor = .labelColor
 
-        // 2. Handle View
+        // Handle View
         self.handleView = CollapsibleHandleView()
         self.handleView.isHidden = true
         self.handleView.translatesAutoresizingMaskIntoConstraints = false
 
-        // 3. Container View
+        // Container View
         self.contentContainer = NSView(frame: .zero)
         self.contentContainer.wantsLayer = true
 
@@ -121,7 +127,7 @@ class SpaceLabelWindow: NSWindow {
             self.handleView.bottomAnchor.constraint(equalTo: self.contentContainer.bottomAnchor),
         ])
 
-        // Screen Logic
+        // Screen identification logic.
         let foundScreen = NSScreen.screens.first(where: { screen in
             let screenID =
                 screen.deviceDescription[NSDeviceDescriptionKey("NSScreenNumber")] as? NSNumber ?? 0
@@ -153,7 +159,7 @@ class SpaceLabelWindow: NSWindow {
             return
         }
 
-        // 4. Configure Visual/Glass Effect View
+        // Configure visual/glass effect views.
         let rootContentView: NSView
 
         if #available(macOS 26.0, *) {
@@ -191,9 +197,9 @@ class SpaceLabelWindow: NSWindow {
         self.level = .floating
 
         // Collection Behavior
-        // Reverted: .canJoinAllSpaces removed as it broke switching.
-        // We keep .fullScreenAuxiliary so it can theoretically appear over fullscreen apps.
-        self.collectionBehavior = [.managed, .participatesInCycle, .fullScreenAuxiliary]
+        // Note: .canJoinAllSpaces is excluded as it interferes with space switching.
+        // .fullScreenAuxiliary is retained to allow visibility over fullscreen apps.
+        self.collectionBehavior = [.managed, .participatesInCycle, .fullScreenAuxiliary, .ignoresCycle]
 
         // Observers
         self.spaceManager.$spaceNameDict
@@ -222,11 +228,11 @@ class SpaceLabelWindow: NSWindow {
         NotificationCenter.default.removeObserver(self)
     }
 
-    // Native OS window behavior overrides (Crucial for things like key focus)
+    // Standard OS window behavior overrides.
     override var canBecomeKey: Bool { return true }
     override var canBecomeMain: Bool { return true }
 
-    // Forcing the window onto a specific space using the Private API
+    // Binds the window to a specific space via private APIs.
     func bindToTargetSpace() {
         let cid = _CGSDefaultConnection()
         guard let displays = CGSCopyManagedDisplaySpaces(cid) as? [NSDictionary] else { return }
@@ -264,7 +270,7 @@ class SpaceLabelWindow: NSWindow {
         }
     }
 
-    // A little trick to keep the window "alive" so it doesn't stutter during space switches
+    // Workaround to maintain window rendering during space transitions.
     private func setupLiveBackgroundUpdate() {
         guard let layer = self.contentView?.layer else { return }
         let key = "forceRedrawLoop"
@@ -282,57 +288,97 @@ class SpaceLabelWindow: NSWindow {
 
     // Keeping everything in sync with the manager
     private func syncFromGlobalState() {
-        guard let manager = labelManager else { return }
+        guard let manager = labelManager, let _ = self.screen else { return }
         self.isDocked = manager.globalIsDocked
         self.dockEdge = manager.globalDockEdge
 
-        if manager.globalCenterPoint == nil {
-            let defaultRelative = NSPoint(x: 1.0, y: 0.5)
-            manager.updateGlobalState(isDocked: true, edge: .maxX, center: defaultRelative)
-            self.dockEdge = .maxX
-            self.isDocked = true
-        } else if let point = manager.globalCenterPoint {
+        if let point = manager.globalCenterPoint {
             if point.x > 2.0 || point.y > 2.0 {
                 let defaultRelative = NSPoint(x: 1.0, y: 0.5)
                 manager.updateGlobalState(isDocked: true, edge: .maxX, center: defaultRelative)
                 self.dockEdge = .maxX
                 self.isDocked = true
             }
+        } else {
+            let defaultRelative = NSPoint(x: 1.0, y: 0.5)
+            manager.updateGlobalState(isDocked: true, edge: .maxX, center: defaultRelative)
+            self.dockEdge = .maxX
+            self.isDocked = true
         }
     }
 
     private func pushToGlobalState() {
         guard let manager = labelManager, let screen = self.screen else { return }
+        let sFrame = screen.visibleFrame
         let currentAbsCenter = NSPoint(x: self.frame.midX, y: self.frame.midY)
 
-        let sFrame = screen.visibleFrame
-        let relX = (currentAbsCenter.x - sFrame.minX) / sFrame.width
-        let relY = (currentAbsCenter.y - sFrame.minY) / sFrame.height
+        var relX: CGFloat = (currentAbsCenter.x - sFrame.minX) / sFrame.width
+        var relY: CGFloat = (currentAbsCenter.y - sFrame.minY) / sFrame.height
+
+        if self.isDocked {
+            // For docked handles, force relative center to respect the edge
+            // so that if we undock on another space, it appears at the edge.
+            switch self.dockEdge {
+            case .minX: relX = 0.0
+            case .maxX: relX = 1.0
+            case .minY: relY = 0.0
+            case .maxY: relY = 1.0
+            default: break
+            }
+        } else {
+            // For floating labels, use exact 0.0/1.0 if near edges (clamped or close)
+            // to ensure consistent edge alignment across labels of different widths.
+            let snapThreshold: CGFloat = 20.0
+            if abs(self.frame.minX - sFrame.minX) < snapThreshold { relX = 0.0 }
+            else if abs(self.frame.maxX - sFrame.maxX) < snapThreshold { relX = 1.0 }
+
+            if abs(self.frame.minY - sFrame.minY) < snapThreshold { relY = 0.0 }
+            else if abs(self.frame.maxY - sFrame.maxY) < snapThreshold { relY = 1.0 }
+        }
 
         manager.updateGlobalState(
             isDocked: self.isDocked, edge: self.dockEdge, center: NSPoint(x: relX, y: relY))
     }
 
-    // Figuring out where to put the window based on docking settings
+    // Calculates the target center point based on docking and layout settings.
     private func getAbsoluteTargetCenter(on screen: NSScreen, forSize size: NSSize) -> NSPoint {
         let relativePoint = labelManager?.globalCenterPoint ?? NSPoint(x: 1.0, y: 0.5)
         let sFrame = screen.visibleFrame
 
-        var absX = sFrame.minX + (sFrame.width * relativePoint.x)
-        var absY = sFrame.minY + (sFrame.height * relativePoint.y)
+        var absX: CGFloat
+        var absY: CGFloat
 
-        switch self.dockEdge {
-        case .minX: absX = sFrame.minX + (size.width / 2)
-        case .maxX: absX = sFrame.maxX - (size.width / 2)
-        case .minY: absY = sFrame.minY + (size.height / 2)
-        case .maxY: absY = sFrame.maxY - (size.height / 2)
-        default: break
+        // Interpret relative 0.0 and 1.0 as absolute "Flush to Edge" alignment
+        if relativePoint.x == 0.0 {
+            absX = sFrame.minX + (size.width / 2)
+        } else if relativePoint.x == 1.0 {
+            absX = sFrame.maxX - (size.width / 2)
+        } else {
+            absX = sFrame.minX + (sFrame.width * relativePoint.x)
+        }
+
+        if relativePoint.y == 0.0 {
+            absY = sFrame.minY + (size.height / 2)
+        } else if relativePoint.y == 1.0 {
+            absY = sFrame.maxY - (size.height / 2)
+        } else {
+            absY = sFrame.minY + (sFrame.height * relativePoint.y)
+        }
+
+        if isDocked {
+            switch self.dockEdge {
+            case .minX: absX = sFrame.minX + (size.width / 2)
+            case .maxX: absX = sFrame.maxX - (size.width / 2)
+            case .minY: absY = sFrame.minY + (size.height / 2)
+            case .maxY: absY = sFrame.maxY - (size.height / 2)
+            default: break
+            }
         }
 
         return NSPoint(x: absX, y: absY)
     }
 
-    // Methods for other classes to use
+    // Public interface for window management.
     func refreshAppearance() {
         updateInteractivity()
         updateLayout(isCurrentSpace: self.isActiveMode)
@@ -349,7 +395,18 @@ class SpaceLabelWindow: NSWindow {
     }
 
     func setMode(isCurrentSpace: Bool) {
+        if self.isActiveMode != isCurrentSpace {
+            print("SpaceLabelWindow[\(self.spaceId)]: setMode(isCurrentSpace: \(isCurrentSpace))")
+        }
+        
+        let wasAnchor = self.isInvisibleAnchorMode
+        let wasHidden = self.contentView?.alphaValue == 0
+        
+        // Pre-calculate visibility to avoid "flashing" or "stuttering" during mode change
+        let willBeVisible = isCurrentSpace ? (labelManager?.showActiveLabels ?? true) : (labelManager?.showPreviewLabels ?? true)
+        
         self.isActiveMode = isCurrentSpace
+        self.isInvisibleAnchorMode = !willBeVisible
 
         if isCurrentSpace {
             syncFromGlobalState()
@@ -358,8 +415,13 @@ class SpaceLabelWindow: NSWindow {
             }
         }
 
-        self.updateLayout(isCurrentSpace: isCurrentSpace)
-        updateVisibility(animated: true)
+        // We only animate the transition if the window was ALREADY visible as a preview window
+        // and is now becoming an active window (shrinking/docking).
+        // If it was an invisible anchor or explicitly hidden via hideImmediately, we snap it.
+        let shouldAnimate = isCurrentSpace ? (!wasAnchor && !wasHidden) : true
+        
+        self.updateLayout(isCurrentSpace: isCurrentSpace, updateFrame: shouldAnimate)
+        updateVisibility(animated: shouldAnimate)
         updateInteractivity()
     }
 
@@ -373,7 +435,7 @@ class SpaceLabelWindow: NSWindow {
         self.contentView?.alphaValue = 0.0
     }
 
-    // Handling dragging and clicking on the label/handle
+    // Interaction handling for mouse events.
     override func mouseDown(with event: NSEvent) {
         guard let manager = labelManager, manager.showOnDesktop, isActiveMode else {
             super.mouseDown(with: event)
@@ -459,7 +521,8 @@ class SpaceLabelWindow: NSWindow {
                                 centerPoint: NSPoint(
                                     x: currentMouseLocation.x, y: currentMouseLocation.y),
                                 screenFrame: screenFrame,
-                                clampToScreen: isDocked
+                                clampToScreen: isDocked,
+                                isDocked: isDocked
                             )
                             targetOrigin = rootedOrigin
 
@@ -499,7 +562,8 @@ class SpaceLabelWindow: NSWindow {
                     onEdge: self.dockEdge,
                     centerPoint: currentCenter,
                     screenFrame: screen.visibleFrame,
-                    clampToScreen: false
+                    clampToScreen: false,
+                    isDocked: false
                 )
                 let newCenter = NSPoint(
                     x: rootedOrigin.x + newSize.width / 2, y: rootedOrigin.y + newSize.height / 2)
@@ -539,7 +603,7 @@ class SpaceLabelWindow: NSWindow {
         self.isMovableByWindowBackground = false
     }
 
-    // Putting it all together: size, position, and visibility
+    // Full layout and visibility update.
 
     private func updateLayout(isCurrentSpace: Bool, updateFrame: Bool = true) {
         guard let targetScreen = findTargetScreen() else {
@@ -555,7 +619,7 @@ class SpaceLabelWindow: NSWindow {
         let isHiddenCornerMode =
             isCurrentSpace && !showHandle && !(labelManager?.showOnDesktop == true)
 
-        // 1. Determine Dimensions
+        // Determine Dimensions.
         var isSmallModeForFont = false
         var shouldUseHandle = false
 
@@ -579,7 +643,7 @@ class SpaceLabelWindow: NSWindow {
             newSize = previewSize
         }
 
-        // 2. Determine Position
+        // Determine Position.
         if self.isInvisibleAnchorMode {
             // Anchor Mode: Center of Screen
             newOrigin = NSPoint(x: targetScreen.frame.midX, y: targetScreen.frame.midY)
@@ -596,7 +660,8 @@ class SpaceLabelWindow: NSWindow {
             } else {
                 newOrigin = calculateCenteredOrigin(
                     forSize: newSize, onEdge: self.dockEdge, centerPoint: targetCenter,
-                    screenFrame: targetScreen.visibleFrame, clampToScreen: false
+                    screenFrame: targetScreen.visibleFrame, clampToScreen: false,
+                    isDocked: self.isDocked
                 )
             }
         } else {
@@ -606,7 +671,7 @@ class SpaceLabelWindow: NSWindow {
                 x: targetCenter.x - newSize.width / 2, y: targetCenter.y - newSize.height / 2)
         }
 
-        // 3. Execution Phase
+        // Execution Phase.
         let updateVisuals = {
             self.backgroundColor = .clear  // RE-ASSERT TRANSPARENCY
 
@@ -656,16 +721,24 @@ class SpaceLabelWindow: NSWindow {
             }
         } else {
             updateVisuals()
-            self.setFrame(NSRect(origin: self.frame.origin, size: newSize), display: true)
+            self.setFrame(NSRect(origin: newOrigin, size: newSize), display: true)
         }
     }
 
-    // Geometry math for centering and sizing
+    // Geometry utilities for layout calculations.
 
     private func calculateCenteredOrigin(
         forSize size: NSSize, onEdge edge: NSRectEdge, centerPoint: NSPoint, screenFrame: NSRect,
-        clampToScreen: Bool
+        clampToScreen: Bool, isDocked: Bool = true
     ) -> NSPoint {
+        if !isDocked {
+            var origin = NSPoint(x: centerPoint.x - size.width / 2, y: centerPoint.y - size.height / 2)
+            // Mandatory Clamping to prevent clipping
+            origin.x = max(screenFrame.minX, min(origin.x, screenFrame.maxX - size.width))
+            origin.y = max(screenFrame.minY, min(origin.y, screenFrame.maxY - size.height))
+            return origin
+        }
+
         var origin = NSPoint.zero
         switch edge {
         case .minX: origin = NSPoint(x: screenFrame.minX, y: centerPoint.y - size.height / 2)
@@ -745,16 +818,21 @@ class SpaceLabelWindow: NSWindow {
     }
 
     private func findTargetScreen() -> NSScreen? {
+        let targetID = self.displayID.uppercased()
+        if targetID == "MAIN" || targetID == "UNKNOWN" || targetID.isEmpty {
+            return NSScreen.screens.first
+        }
+        
         return NSScreen.screens.first(where: { screen in
             let screenID =
                 screen.deviceDescription[NSDeviceDescriptionKey("NSScreenNumber")] as? NSNumber ?? 0
 
             // 1. Name check (Default)
             let idString = "\(screen.localizedName) (\(screenID))"
-            if idString == self.displayID { return true }
+            if idString.uppercased() == targetID { return true }
 
-            let cleanTarget = self.displayID.components(separatedBy: " (").first ?? self.displayID
-            if screen.localizedName == cleanTarget { return true }
+            let cleanTarget = targetID.components(separatedBy: " (").first ?? targetID
+            if screen.localizedName.uppercased() == cleanTarget { return true }
 
             // 2. UUID Check
             let cgsID = screenID.uint32Value
@@ -841,28 +919,20 @@ class SpaceLabelWindow: NSWindow {
     }
 
     private func updateVisibility(animated: Bool) {
+        pendingVisibilityTask?.cancel()
+        pendingVisibilityTask = nil
+
         guard findTargetScreen() != nil else {
             self.alphaValue = 0.0
             self.orderOut(nil)
             return
         }
 
-        let masterEnabled = labelManager?.isEnabled ?? true
-        let showActive = labelManager?.showActiveLabels ?? true
-        let showPreview = labelManager?.showPreviewLabels ?? true
-
         var isVisuallyVisible = false
-
-        if masterEnabled {
-            if isActiveMode {
-                isVisuallyVisible = showActive
-            } else {
-                if showPreview {
-                    isVisuallyVisible = !self.isOnActiveSpace
-                } else {
-                    isVisuallyVisible = false
-                }
-            }
+        if isActiveMode {
+            isVisuallyVisible = labelManager?.showActiveLabels ?? true
+        } else {
+            isVisuallyVisible = labelManager?.showPreviewLabels ?? true
         }
 
         let shouldBeAnchor = !isVisuallyVisible
@@ -871,8 +941,37 @@ class SpaceLabelWindow: NSWindow {
             updateLayout(isCurrentSpace: self.isActiveMode, updateFrame: animated)
         }
 
-        if !self.isVisible {
-            self.orderFront(nil)
+        if isVisuallyVisible {
+            // MULTI-MONITOR STABILITY FIX: Check for programmatic switch cooling period.
+            // If a switch was triggered recently, we DO NOT order front based on isVisible.
+            // This is because isVisible might be false briefly during animations, 
+            // and calling orderFrontRegardless on the WRONG monitor causes a "snap-back".
+            let now = Date().timeIntervalSince1970
+            let timeSinceSwitch = now - SpaceHelper.lastProgrammaticSwitchTime
+            let inCoolingPeriod = timeSinceSwitch < 1.0
+            
+            if self.isActiveMode {
+                if !self.isVisible {
+                    if !inCoolingPeriod {
+                        print("SpaceLabelWindow[\(self.spaceId)]: orderFrontRegardless() for ACTIVE space.")
+                        self.orderFrontRegardless()
+                        self.hasOrderedInOnce = true
+                    } else {
+                        print("SpaceLabelWindow[\(self.spaceId)]: Suppressing orderFrontRegardless (Active) during switch cooling period (\(String(format: "%.2f", timeSinceSwitch))s). Scheduling retry.")
+                        scheduleVisibilityRetry(delay: 1.0 - timeSinceSwitch + 0.1)
+                    }
+                }
+            } else if !hasOrderedInOnce {
+                // For preview windows (on background spaces), we ONLY order front once.
+                if !inCoolingPeriod {
+                    print("SpaceLabelWindow[\(self.spaceId)]: Initial orderFrontRegardless() for background preview.")
+                    self.orderFrontRegardless()
+                    self.hasOrderedInOnce = true
+                } else {
+                    print("SpaceLabelWindow[\(self.spaceId)]: Suppressing orderFrontRegardless (Preview) during switch cooling period (\(String(format: "%.2f", timeSinceSwitch))s). Scheduling retry.")
+                    scheduleVisibilityRetry(delay: 1.0 - timeSinceSwitch + 0.1)
+                }
+            }
         }
 
         self.alphaValue = 1.0
@@ -894,5 +993,13 @@ class SpaceLabelWindow: NSWindow {
     @objc private func repositionWindow() {
         updateLayout(isCurrentSpace: isActiveMode)
         updateVisibility(animated: false)
+    }
+
+    private func scheduleVisibilityRetry(delay: TimeInterval) {
+        let task = DispatchWorkItem { [weak self] in
+            self?.updateVisibility(animated: true)
+        }
+        self.pendingVisibilityTask = task
+        DispatchQueue.main.asyncAfter(deadline: .now() + max(0.01, delay), execute: task)
     }
 }
