@@ -472,8 +472,9 @@ class GestureManager: ObservableObject {
         lastSwitchTime = Date().timeIntervalSince1970
         guard let sm = spaceManager, self.isEnabled else { return }
 
-        DispatchQueue.main.async {
-            let targetDisplayID = SpaceHelper.getCursorDisplayID()
+        DispatchQueue.main.async { [weak self] in
+            guard let self = self else { return }
+            let targetDisplayID = (self.switchOverride == .cursor) ? SpaceHelper.getCursorDisplayID() : nil
 
             switch direction {
             case .next:
