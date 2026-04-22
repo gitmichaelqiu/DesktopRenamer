@@ -647,7 +647,7 @@ class SpaceManager: ObservableObject {
     }
 
     func switchToNextSpace(onDisplayID displayID: String? = nil) {
-        let targetDisplayID = displayID ?? SpaceHelper.getCursorDisplayID() ?? currentDisplayID
+        let targetDisplayID = displayID ?? spaceNameDict.first(where: { $0.id == currentSpaceUUID })?.displayID ?? currentDisplayID
         if let current = findBestCurrentSpace(for: targetDisplayID) {
             proceedToSwitch(from: current, on: targetDisplayID, direction: 1)
         }
