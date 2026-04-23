@@ -70,6 +70,10 @@ Because I do **NOT** have an Apple developer account for the app releases, you m
 
 To resolve this, go to System Settings → the bottom of Privacy & Security → Open DesktopRenamer.
 
+### Raycast Extension
+
+<a href="https://www.raycast.com/michael_qiu/desktoprenamer" title="Install desktoprenamer Raycast Extension"><img src="https://www.raycast.com/michael_qiu/desktoprenamer/install_button@2x.png?v=1.1" height="64" style="height: 64px;" alt="" /></a>
+
 ### Troubleshooting
 
 > [!NOTE]
