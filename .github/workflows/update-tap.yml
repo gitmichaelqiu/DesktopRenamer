@@ -12,11 +12,10 @@ jobs:
         run: |
           # 1. Extract version info
           TAG="${{ github.event.release.tag_name }}"
-          # Removes the 'v' prefix if it exists (e.g., v1.10.2 -> 1.10.2)
           VERSION=$(echo $TAG | sed 's/^v//')
           
-          # 2. Construct the URL based on your specific format
-          URL="https://github.com/gitmichaelqiu/DesktopRenamer/releases/download/$TAG/DesktopRenamer.$VERSION.dmg"
+          # 2. Construct the URL
+          URL="https://github.com/gitmichaelqiu/desktoprenamer/releases/download/$TAG/desktoprenamer.$VERSION.dmg"
           
           # 3. Download and Hash
           curl -L -o release.dmg "$URL"
@@ -36,7 +35,6 @@ jobs:
       - name: Update Cask File
         run: |
           # Finds lines starting with version or sha256 and replaces the value
-          # Adjust the path 'Casks/desktoprenamer.rb' if your file is named differently
           CASK_PATH="Casks/desktoprenamer.rb"
           
           sed -i "s/version \".*\"/version \"${{ steps.info.outputs.version }}\"/" $CASK_PATH
@@ -49,6 +47,6 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add .
-          git commit -m "Update DesktopRenamer to ${{ steps.info.outputs.version }}"
+          git add Casks/desktoprenamer.rb
+          git commit -m "chore: update desktoprenamer to ${{ steps.info.outputs.version }}"
           git push
