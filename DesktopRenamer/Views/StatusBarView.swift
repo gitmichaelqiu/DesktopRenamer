@@ -343,7 +343,7 @@ class StatusBarController: NSObject {
     }
 
     @objc func openSettingsWindow() {
-        openSettingsWindow(tab: nil)
+        openSettingsWindow(tab: .general)
     }
 
     func openSettingsWindow(tab: SettingsTab? = nil) {
