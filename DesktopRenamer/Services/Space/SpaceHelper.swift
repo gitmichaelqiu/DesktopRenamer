@@ -453,18 +453,10 @@ class SpaceHelper {
 
         NSWorkspace.shared.notificationCenter.addObserver(
             forName: NSWorkspace.activeSpaceDidChangeNotification, object: nil, queue: .main
-        ) { _ in
-            NotificationCenter.default.post(
-                name: NSNotification.Name("SpaceSwitchRequested"), object: nil)
-            detectSpaceChange()
-        }
+        ) { _ in detectSpaceChange() }
         NSWorkspace.shared.notificationCenter.addObserver(
             forName: NSWorkspace.didActivateApplicationNotification, object: nil, queue: .main
-        ) { _ in
-            NotificationCenter.default.post(
-                name: NSNotification.Name("SpaceSwitchRequested"), object: nil)
-            detectSpaceChange()
-        }
+        ) { _ in detectSpaceChange() }
 
         // Monitor events to detect user-initiated space switches.
         localEventMonitor = NSEvent.addLocalMonitorForEvents(matching: [
