@@ -78,6 +78,12 @@ class SpaceManager: ObservableObject {
     // Stabilization state for system wake events
     private var lastWakeTime: Date = .distantPast
     private let wakeCoolingDuration: TimeInterval = 15.0
+
+    // Retry state for space change detection (Cmd+Tab switches can fire notifications
+    // before CGS state stabilizes, causing stale labels)
+    private var spaceChangeRetryCount: Int = 0
+    private let maxSpaceChangeRetries: Int = 5
+    private var spaceChangeRetryWorkItem: DispatchWorkItem?
     
     // Display Cache
     private var connectedDisplayUUIDs: Set<String> = []
@@ -212,7 +218,10 @@ class SpaceManager: ObservableObject {
         var shouldUpdateWidget = false
         
         if detectionMethod == .automatic {
-            guard let cgsState = SpaceHelper.getSystemState() else { return }
+            guard let cgsState = SpaceHelper.getSystemState() else {
+                if source == "Monitor" { scheduleSpaceChangeRetry() }
+                return
+            }
             
             // First, see which names are already taken by active UUIDs so we don't double-assign.
             var claimedNames: Set<String> = []
@@ -320,6 +329,8 @@ class SpaceManager: ObservableObject {
                 shouldUpdateWidget = true
             }
             
+            let previousUUID = self.currentSpaceUUID
+
             if self.currentSpaceUUID != cgsState.currentUUID {
                 self.currentSpaceUUID = cgsState.currentUUID
                 shouldUpdateWidget = true
@@ -341,7 +352,16 @@ class SpaceManager: ObservableObject {
             if isBugReportActive {
                 bugReportLog.append(LogEntry(timestamp: Date(), spaceUUID: cgsState.currentUUID, isDesktop: currentIsDesktop, ncCount: 0, action: "CGS Update (\(source))"))
             }
-            
+
+            // If no space change was detected from a monitor event, schedule
+            // verification retries. Cmd+Tab can fire notifications before CGS
+            // state stabilizes, causing stale labels when hideWhenSwitching is off.
+            if previousUUID == self.currentSpaceUUID && source == "Monitor" {
+                scheduleSpaceChangeRetry()
+            } else {
+                cancelSpaceChangeRetry()
+            }
+
             if shouldUpdateWidget { scheduleWidgetUpdate() }
             return
         }
@@ -406,7 +426,43 @@ class SpaceManager: ObservableObject {
         
         if shouldUpdateWidget { scheduleWidgetUpdate() }
     }
-    
+
+    private func scheduleSpaceChangeRetry() {
+        guard spaceChangeRetryCount < maxSpaceChangeRetries else { return }
+        spaceChangeRetryWorkItem?.cancel()
+
+        let delay = TimeInterval(0.3 + Double(spaceChangeRetryCount) * 0.2)
+        spaceChangeRetryCount += 1
+
+        let workItem = DispatchWorkItem { [weak self] in
+            self?.performRetryDetection()
+        }
+        spaceChangeRetryWorkItem = workItem
+        DispatchQueue.main.asyncAfter(deadline: .now() + delay, execute: workItem)
+    }
+
+    private func cancelSpaceChangeRetry() {
+        spaceChangeRetryWorkItem?.cancel()
+        spaceChangeRetryWorkItem = nil
+        spaceChangeRetryCount = 0
+    }
+
+    private func performRetryDetection() {
+        guard detectionMethod == .automatic else { return }
+        guard let cgsState = SpaceHelper.getSystemState() else {
+            scheduleSpaceChangeRetry()
+            return
+        }
+
+        if currentSpaceUUID != cgsState.currentUUID {
+            handleSpaceChange(cgsState.currentUUID, isDesktop: true, ncCount: 0,
+                             displayID: cgsState.displayID, source: "Retry")
+            cancelSpaceChangeRetry()
+        } else {
+            scheduleSpaceChangeRetry()
+        }
+    }
+
     // Debounces widget updates to throttle system load.
     private func scheduleWidgetUpdate() {
         widgetUpdateWorkItem?.cancel()
