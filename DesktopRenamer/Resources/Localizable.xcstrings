@@ -2723,16 +2723,6 @@
         }
       }
     },
-    "View Acknowledgements (PDF)" : {
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "查看致谢（PDF）"
-          }
-        }
-      }
-    },
     "View the welcome screen again." : {
       "localizations" : {
         "zh-Hans" : {

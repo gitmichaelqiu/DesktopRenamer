@@ -85,24 +85,7 @@ struct AboutView: View {
                         .font(.headline)
                         .foregroundColor(.primary)
                     
-                    Button(action: openAcknowledgements) {
-                        HStack {
-                            Image(systemName: "doc.plaintext.fill")
-                            Text("View Acknowledgements (PDF)")
-                        }
-                        .padding(.vertical, 8)
-                        .padding(.horizontal, 16)
-                        .background(Color.accentColor.opacity(0.1))
-                        .cornerRadius(8)
-                    }
-                    .buttonStyle(.plain)
-                    .onHover { hovering in
-                        if hovering {
-                            NSCursor.pointingHand.push()
-                        } else {
-                            NSCursor.pop()
-                        }
-                    }
+                    AboutButtonRow(title: "Acknowledgements.pdf", action: openAcknowledgements)
                 }
             }
             .padding(30)
@@ -141,11 +124,47 @@ struct AboutLinkRow: View {
                     .font(.caption2)
                     .foregroundColor(.secondary.opacity(0.5))
             }
+            .padding(.vertical, 2)
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
         .onHover { hovering in
-            isHovering = hovering
+            withAnimation(.easeInOut(duration: 0.1)) {
+                isHovering = hovering
+            }
+            if hovering {
+                NSCursor.pointingHand.push()
+            } else {
+                NSCursor.pop()
+            }
+        }
+    }
+}
+
+struct AboutButtonRow: View {
+    let title: String
+    let action: () -> Void
+    
+    @State private var isHovering = false
+    
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: 4) {
+                Text(title)
+                    .foregroundColor(isHovering ? .accentColor : .secondary)
+                Spacer()
+                Image(systemName: "doc.fill")
+                    .font(.caption2)
+                    .foregroundColor(.secondary.opacity(0.5))
+            }
+            .padding(.vertical, 2)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .onHover { hovering in
+            withAnimation(.easeInOut(duration: 0.1)) {
+                isHovering = hovering
+            }
             if hovering {
                 NSCursor.pointingHand.push()
             } else {
@@ -205,6 +224,7 @@ struct OtherAppRow: View {
                 }
             }
             .padding(12)
+            .contentShape(Rectangle())
             .background(
                 RoundedRectangle(cornerRadius: 12)
                     .fill(isHovering ? Color.accentColor.opacity(0.05) : Color.clear)
