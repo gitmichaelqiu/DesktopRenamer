@@ -79,7 +79,7 @@ struct SettingsView: View {
                         sidebarItem(for: tab)
                     }
                 } header: {
-                    VStack(alignment: .leading, spacing: 0) {
+                    VStack(alignment: .leading, spacing: 2) {
                         Color.clear.frame(height: 45)
                         Text("Desktop").font(.custom("Syncopate-Bold", size: 21)).foregroundStyle(
                             .primary)
