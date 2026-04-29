@@ -111,6 +111,9 @@
         }
       }
     },
+    "Acknowledgements" : {
+
+    },
     "Active Space Label" : {
       "localizations" : {
         "zh-Hans" : {
@@ -741,6 +744,9 @@
           }
         }
       }
+    },
+    "Links" : {
+
     },
     "Manual" : {
       "localizations" : {
@@ -2702,6 +2708,9 @@
           }
         }
       }
+    },
+    "View Acknowledgements (PDF)" : {
+
     },
     "View the welcome screen again." : {
       "localizations" : {
