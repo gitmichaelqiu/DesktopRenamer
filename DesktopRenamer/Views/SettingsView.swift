@@ -44,7 +44,13 @@ struct SettingsView: View {
     @EnvironmentObject var hotkeyManager: HotkeyManager
     @EnvironmentObject var gestureManager: GestureManager
 
-    @State private var selectedTab: SettingsTab? = .general
+    @State private var selectedTab: SettingsTab?
+    
+    init(spaceManager: SpaceManager, labelManager: SpaceLabelManager, initialTab: SettingsTab? = .general) {
+        self.spaceManager = spaceManager
+        self.labelManager = labelManager
+        _selectedTab = State(initialValue: initialTab)
+    }
 
     var body: some View {
         NavigationSplitView {
@@ -191,19 +197,19 @@ class SettingsHostingController: NSHostingController<AnyView> {
     // Integrates SwiftUI settings with the application logic.
     init(
         spaceManager: SpaceManager, labelManager: SpaceLabelManager, hotkeyManager: HotkeyManager,
-        gestureManager: GestureManager
+        gestureManager: GestureManager, initialTab: SettingsTab? = .general
     ) {
         self.spaceManager = spaceManager
         self.labelManager = labelManager
         self.hotkeyManager = hotkeyManager
         self.gestureManager = gestureManager
-
-        let rootView = SettingsView(spaceManager: spaceManager, labelManager: labelManager)
+ 
+        let rootView = SettingsView(spaceManager: spaceManager, labelManager: labelManager, initialTab: initialTab)
             .environmentObject(hotkeyManager)
             .environmentObject(gestureManager)
             .environmentObject(spaceManager)
             .environmentObject(labelManager)
-
+ 
         super.init(rootView: AnyView(rootView))
     }
 

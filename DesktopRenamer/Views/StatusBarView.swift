@@ -343,6 +343,10 @@ class StatusBarController: NSObject {
     }
 
     @objc func openSettingsWindow() {
+        openSettingsWindow(tab: nil)
+    }
+
+    func openSettingsWindow(tab: SettingsTab? = nil) {
         NSApp.setActivationPolicy(.regular)
         
         if let windowController = settingsWindowController {
@@ -368,12 +372,13 @@ class StatusBarController: NSObject {
         window.collectionBehavior = [.participatesInCycle]
         window.level = .normal
         
-        // Initialize host controller with required managers.
+        // Initialize host controller with required managers and optional tab.
         let settingsVC = SettingsHostingController(
             spaceManager: spaceManager,
             labelManager: labelManager,
             hotkeyManager: hotkeyManager,
-            gestureManager: gestureManager
+            gestureManager: gestureManager,
+            initialTab: tab
         )
         window.contentViewController = settingsVC
         

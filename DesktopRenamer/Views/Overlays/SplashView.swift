@@ -461,7 +461,7 @@ struct PermissionsPage: View {
                     .foregroundColor(.white)
                     .padding(.vertical, 10)
                     .padding(.horizontal, 20)
-                    .background(permissionManager.isAccessibilityGranted ? Color.secondary.opacity(0.5) : Color.red)
+                    .background(permissionManager.isAccessibilityGranted ? Color.blue : Color.red)
                     .cornerRadius(8)
                 }
                 .buttonStyle(PlainButtonStyle())
@@ -479,7 +479,7 @@ struct PermissionsPage: View {
                     .foregroundColor(.white)
                     .padding(.vertical, 10)
                     .padding(.horizontal, 20)
-                    .background(permissionManager.isAutomationGranted ? Color.secondary.opacity(0.5) : Color.red)
+                    .background(permissionManager.isAutomationGranted ? Color.blue : Color.red)
                     .cornerRadius(8)
                 }
                 .buttonStyle(PlainButtonStyle())
@@ -491,7 +491,7 @@ struct PermissionsPage: View {
 
 struct MoreAppsPage: View {
     var body: some View {
-        VStack(spacing: 20) {
+        VStack(spacing: 24) {
             VStack(spacing: 8) {
                 Text("Discover More Apps")
                     .font(.system(size: 30, weight: .bold, design: .rounded))
@@ -503,9 +503,9 @@ struct MoreAppsPage: View {
             }
             .padding(.bottom, 10)
             
-            HStack(alignment: .top, spacing: 20) {
+            VStack(spacing: 12) {
                 // OptClicker
-                OtherAppCard(
+                OtherAppRow(
                     imageName: "OptClickerIcon_Default",
                     appName: "OptClicker",
                     description: NSLocalizedString("Let you right-click with the Option key.", comment: ""),
@@ -513,14 +513,14 @@ struct MoreAppsPage: View {
                 )
                 
                 // SpaceSwitcher
-                OtherAppCard(
+                OtherAppRow(
                     imageName: "SpaceSwitcherIcon_Default",
                     appName: "SpaceSwitcher",
                     description: NSLocalizedString("Control which app and dock to show in each space.", comment: ""),
                     url: "https://github.com/gitmichaelqiu/SpaceSwitcher"
                 )
             }
-            .padding(.top, 4)
+            .padding(.horizontal, 40)
         }
         .padding()
     }
