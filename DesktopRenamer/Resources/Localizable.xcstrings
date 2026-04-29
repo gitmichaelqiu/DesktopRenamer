@@ -465,7 +465,7 @@
       "shouldTranslate" : false
     },
     "DesktopRenamer" : {
-
+      "shouldTranslate" : false
     },
     "DesktopRenamer requires Accessibility and Automation permissions for hotkeys and trackpad overrides to function correctly.\n\nPlease enable them in System Settings → Privacy & Security." : {
       "localizations" : {
@@ -2737,15 +2737,11 @@
       }
     },
     "Welcome to" : {
-
-    },
-    "Welcome to\nDesktopRenamer" : {
-      "extractionState" : "stale",
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "欢迎使用\nDesktopRenamer"
+            "value" : "欢迎使用"
           }
         }
       }
