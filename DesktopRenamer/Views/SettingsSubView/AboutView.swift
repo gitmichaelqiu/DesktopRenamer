@@ -40,7 +40,7 @@ struct AboutView: View {
                             .foregroundColor(.secondary.opacity(0.8))
                     }
                 }
-                .padding(.top, 10)
+
 
                 // Links Section
                 VStack(alignment: .leading, spacing: 12) {
