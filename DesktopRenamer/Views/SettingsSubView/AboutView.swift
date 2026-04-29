@@ -205,7 +205,7 @@ struct OtherAppRow: View {
                 
                 VStack(alignment: .leading, spacing: 2) {
                     Text(appName)
-                        .font(.headline)
+                        .font(.custom("Syncopate-Bold", size: 17))
                         .foregroundColor(.primary)
                     
                     Text(description)
@@ -277,7 +277,7 @@ struct OtherAppCard: View {
                 // Text Content
                 VStack(spacing: 4) {
                     Text(appName)
-                        .font(.headline)
+                        .font(.custom("Syncopate-Bold", size: 10))
                         .foregroundColor(.primary)
                     
                     Text(description)
