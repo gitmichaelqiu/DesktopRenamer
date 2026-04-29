@@ -112,7 +112,14 @@
       }
     },
     "Acknowledgements" : {
-
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "致谢"
+          }
+        }
+      }
     },
     "Active Space Label" : {
       "localizations" : {
@@ -746,7 +753,14 @@
       }
     },
     "Links" : {
-
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "链接"
+          }
+        }
+      }
     },
     "Manual" : {
       "localizations" : {
@@ -2710,7 +2724,14 @@
       }
     },
     "View Acknowledgements (PDF)" : {
-
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "查看致谢（PDF）"
+          }
+        }
+      }
     },
     "View the welcome screen again." : {
       "localizations" : {
