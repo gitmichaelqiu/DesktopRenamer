@@ -23,7 +23,7 @@ struct AboutView: View {
                         Image(nsImage: nsImage)
                             .resizable()
                             .aspectRatio(contentMode: .fit)
-                            .frame(width: 80, height: 80)
+                            .frame(width: 100, height: 100)
                             .shadow(color: .black.opacity(0.1), radius: 4, x: 0, y: 2)
                     }
 
