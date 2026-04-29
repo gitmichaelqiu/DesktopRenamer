@@ -261,19 +261,24 @@ struct WelcomePage: View {
                     .shadow(radius: 5)
             }
             
-            VStack(spacing: 8) {
-                Text("Welcome to\nDesktopRenamer")
-                    .font(.system(size: 38, weight: .heavy, design: .rounded))
-                    .multilineTextAlignment(.center)
+                VStack(spacing: 12) {
+                    Text("Welcome to")
+                        .font(.system(size: 30, weight: .medium, design: .rounded))
+
+
+                    Text("DesktopRenamer")
+                        .font(.custom("Syncopate-Bold", size: 28))
+                }
+                .multilineTextAlignment(.center)
                 
                 Text("Take back control of your macOS spaces.")
                     .font(.title3)
                     .foregroundColor(.secondary)
             }
-        }
-        .padding()
+            .padding()
     }
 }
+
 
 struct RenamePage: View {
     var body: some View {

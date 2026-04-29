@@ -29,7 +29,7 @@ struct AboutView: View {
 
                     VStack(alignment: .leading, spacing: 4) {
                         Text(appName)
-                            .font(.system(size: 32, weight: .bold))
+                            .font(.custom("Syncopate-Bold", size: 24))
                         
                         Text("v\(appVersion)")
                             .font(.title3)

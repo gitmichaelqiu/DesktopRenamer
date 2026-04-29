@@ -81,9 +81,9 @@ struct SettingsView: View {
                 } header: {
                     VStack(alignment: .leading, spacing: 0) {
                         Color.clear.frame(height: 45)
-                        Text("Desktop").font(.system(size: 28, weight: .heavy)).foregroundStyle(
+                        Text("Desktop").font(.custom("Syncopate-Bold", size: 21)).foregroundStyle(
                             .primary)
-                        Text("Renamer").font(.system(size: 28, weight: .heavy)).foregroundStyle(
+                        Text("Renamer").font(.custom("Syncopate-Bold", size: 21)).foregroundStyle(
                             .primary
                         ).padding(.bottom, 20)
                     }
@@ -105,9 +105,9 @@ struct SettingsView: View {
                 } header: {
                     VStack(alignment: .leading, spacing: 0) {
                         Color.clear.frame(height: 45)
-                        Text("Desktop").font(.system(size: 28, weight: .heavy)).foregroundStyle(
+                        Text("Desktop").font(.custom("Syncopate-Bold", size: 18)).foregroundStyle(
                             .primary)
-                        Text("Renamer").font(.system(size: 28, weight: .heavy)).foregroundStyle(
+                        Text("Renamer").font(.custom("Syncopate-Bold", size: 18)).foregroundStyle(
                             .primary
                         ).padding(.bottom, 20)
                     }
