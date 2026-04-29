@@ -175,10 +175,13 @@ class SpaceLabelManager: ObservableObject {
         spaceManager.$currentSpaceUUID
             .dropFirst()
             .receive(on: DispatchQueue.main)
-            .sink { [weak self] _ in 
+            .sink { [weak self] _ in
+                if self?.hideWhenSwitching == true {
+                    self?.hideAllPreviewLabels()
+                }
                 // We use currentDisplayID here to scope the refresh to the monitor that actually changed.
                 // This prevents focus hijacking where Monitor A switches and Monitor B accidentally steals focus back.
-                self?.updateAllWindowModes(forDisplay: self?.spaceManager?.currentDisplayID) 
+                self?.updateAllWindowModes(forDisplay: self?.spaceManager?.currentDisplayID)
             }
             .store(in: &cancellables)
 
