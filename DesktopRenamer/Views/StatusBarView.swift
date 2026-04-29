@@ -245,7 +245,7 @@ class StatusBarController: NSObject {
         menu.addItem(NSMenuItem.separator())
         
         let quitItem = NSMenuItem(title: NSLocalizedString("Menu.Quit", comment: ""), action: #selector(quitApp), keyEquivalent: "q")
-        quitItem.image = NSImage(systemSymbolName: "xmark.circle", accessibilityDescription: nil)
+        quitItem.image = NSImage(systemSymbolName: "xmark.rectangle", accessibilityDescription: nil)
         quitItem.target = self
         menu.addItem(quitItem)
         
