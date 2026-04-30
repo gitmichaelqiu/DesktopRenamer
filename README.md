@@ -117,6 +117,8 @@ This app uses the following packages:
 
 Many thanks to all of these wonderful developers!
 
+See [Acknowledgements.pdf](https://github.com/gitmichaelqiu/DesktopRenamer/blob/main/DesktopRenamer/Resources/Acknowledgements/Acknowledgements.pdf) for licenses.
+
 ## ⭐ Support This Project
 
 You can simply click on the **Star** to support this project for free. Thank you for your support!
