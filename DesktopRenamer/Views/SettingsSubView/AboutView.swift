@@ -95,7 +95,7 @@ struct AboutView: View {
     }
 
     private func openAcknowledgements() {
-        if let path = Bundle.main.path(forResource: "Acknowledgements", ofType: "pdf", inDirectory: "Acknowledgements") {
+        if let path = Bundle.main.path(forResource: "Acknowledgements", ofType: "pdf") {
             let url = URL(fileURLWithPath: path)
             NSWorkspace.shared.open(url)
         }
