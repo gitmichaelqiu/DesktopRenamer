@@ -95,16 +95,9 @@ struct AboutView: View {
     }
 
     private func openAcknowledgements() {
-        if let pdfPath = Bundle.main.path(forResource: "Acknowledgements", ofType: "pdf", inDirectory: "Acknowledgements") {
-            let url = URL(fileURLWithPath: pdfPath)
+        if let path = Bundle.main.path(forResource: "Acknowledgements", ofType: "pdf", inDirectory: "Acknowledgements") {
+            let url = URL(fileURLWithPath: path)
             NSWorkspace.shared.open(url)
-        } else {
-            // Fallback: search by direct path if bundle fails (useful during dev)
-            let directPath = "/Users/michaelqiu/Projects/03_App_macOS/DesktopRenamer/DesktopRenamer/Resources/Acknowledgements/Acknowledgements.pdf"
-            let url = URL(fileURLWithPath: directPath)
-            if FileManager.default.fileExists(atPath: directPath) {
-                NSWorkspace.shared.open(url)
-            }
         }
     }
 }
