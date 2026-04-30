@@ -477,6 +477,26 @@
         }
       }
     },
+    "DesktopRenamer's GitHub" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "DesktopRenamer的GitHub"
+          }
+        }
+      }
+    },
+    "DesktopRenamer's website" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "DesktopRenamer的网站"
+          }
+        }
+      }
+    },
     "Discover More Apps" : {
       "localizations" : {
         "zh-Hans" : {
@@ -750,7 +770,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Option 键模拟右键。"
+            "value" : "用 Option 键模拟右键。"
           }
         }
       }
@@ -994,6 +1014,38 @@
         }
       }
     },
+    "My GitHub" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Author’s GitHub"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "作者的GitHub"
+          }
+        }
+      }
+    },
+    "My website" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Author’s website"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "作者的网站"
+          }
+        }
+      }
+    },
     "Next" : {
       "localizations" : {
         "zh-Hans" : {
@@ -1222,12 +1274,22 @@
         }
       }
     },
+    "Report an issue" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "反馈"
+          }
+        }
+      }
+    },
     "Require Permissions" : {
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "需要权限"
+            "value" : "权限"
           }
         }
       }
@@ -2501,7 +2563,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "切换有…的屏幕"
+            "value" : "切换屏幕条件"
           }
         }
       }

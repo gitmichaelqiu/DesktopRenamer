@@ -49,11 +49,11 @@ struct AboutView: View {
                         .foregroundColor(.primary)
                     
                     VStack(alignment: .leading, spacing: 8) {
-                        AboutLinkRow(title: "Report an issue", url: "https://gitmichaelqiu.github.io/DesktopRenamer/issues")
-                        AboutLinkRow(title: "DesktopRenamer's website", url: "https://gitmichaelqiu.github.io/DesktopRenamer")
-                        AboutLinkRow(title: "DesktopRenamer's GitHub", url: "https://github.com/gitmichaelqiu/DesktopRenamer")
-                        AboutLinkRow(title: "My website", url: "https://gitmichaelqiu.github.io")
-                        AboutLinkRow(title: "My GitHub", url: "https://github.com/gitmichaelqiu")
+                        AboutLinkRow(title: NSLocalizedString("Report an issue", comment: ""), url: "https://gitmichaelqiu.github.io/DesktopRenamer/issues")
+                        AboutLinkRow(title: NSLocalizedString("DesktopRenamer's website", comment: ""), url: "https://gitmichaelqiu.github.io/DesktopRenamer")
+                        AboutLinkRow(title: NSLocalizedString("DesktopRenamer's GitHub", comment: ""), url: "https://github.com/gitmichaelqiu/DesktopRenamer")
+                        AboutLinkRow(title: NSLocalizedString("My website", comment: ""), url: "https://gitmichaelqiu.github.io")
+                        AboutLinkRow(title: NSLocalizedString("My GitHub", comment: ""), url: "https://github.com/gitmichaelqiu")
                     }
                 }
 
@@ -67,14 +67,14 @@ struct AboutView: View {
                         OtherAppRow(
                             imageName: "OptClickerIcon_Default",
                             appName: "OptClicker",
-                            description: "Let you right-click with the Option key.",
+                            description: NSLocalizedString("Let you right-click with the Option key.", comment: ""),
                             url: "https://github.com/gitmichaelqiu/OptClicker"
                         )
                         
                         OtherAppRow(
                             imageName: "SpaceSwitcherIcon_Default",
                             appName: "SpaceSwitcher",
-                            description: "Control which app and dock to show in each space.",
+                            description: NSLocalizedString("Control which app and dock to show in each space.", comment: ""),
                             url: "https://github.com/gitmichaelqiu/SpaceSwitcher"
                         )
                     }
