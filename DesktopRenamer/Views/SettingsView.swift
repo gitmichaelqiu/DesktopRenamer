@@ -44,7 +44,13 @@ struct SettingsView: View {
     @EnvironmentObject var hotkeyManager: HotkeyManager
     @EnvironmentObject var gestureManager: GestureManager
 
-    @State private var selectedTab: SettingsTab? = .general
+    @State private var selectedTab: SettingsTab?
+    
+    init(spaceManager: SpaceManager, labelManager: SpaceLabelManager, initialTab: SettingsTab? = .general) {
+        self.spaceManager = spaceManager
+        self.labelManager = labelManager
+        _selectedTab = State(initialValue: initialTab)
+    }
 
     var body: some View {
         NavigationSplitView {
@@ -79,11 +85,11 @@ struct SettingsView: View {
                         sidebarItem(for: tab)
                     }
                 } header: {
-                    VStack(alignment: .leading, spacing: 0) {
+                    VStack(alignment: .leading, spacing: 2) {
                         Color.clear.frame(height: 45)
-                        Text("Desktop").font(.system(size: 28, weight: .heavy)).foregroundStyle(
+                        Text("Desktop").font(.custom("Syncopate-Bold", size: 21)).foregroundStyle(
                             .primary)
-                        Text("Renamer").font(.system(size: 28, weight: .heavy)).foregroundStyle(
+                        Text("Renamer").font(.custom("Syncopate-Bold", size: 21)).foregroundStyle(
                             .primary
                         ).padding(.bottom, 20)
                     }
@@ -105,9 +111,9 @@ struct SettingsView: View {
                 } header: {
                     VStack(alignment: .leading, spacing: 0) {
                         Color.clear.frame(height: 45)
-                        Text("Desktop").font(.system(size: 28, weight: .heavy)).foregroundStyle(
+                        Text("Desktop").font(.custom("Syncopate-Bold", size: 18)).foregroundStyle(
                             .primary)
-                        Text("Renamer").font(.system(size: 28, weight: .heavy)).foregroundStyle(
+                        Text("Renamer").font(.custom("Syncopate-Bold", size: 18)).foregroundStyle(
                             .primary
                         ).padding(.bottom, 20)
                     }
@@ -191,19 +197,19 @@ class SettingsHostingController: NSHostingController<AnyView> {
     // Integrates SwiftUI settings with the application logic.
     init(
         spaceManager: SpaceManager, labelManager: SpaceLabelManager, hotkeyManager: HotkeyManager,
-        gestureManager: GestureManager
+        gestureManager: GestureManager, initialTab: SettingsTab? = .general
     ) {
         self.spaceManager = spaceManager
         self.labelManager = labelManager
         self.hotkeyManager = hotkeyManager
         self.gestureManager = gestureManager
-
-        let rootView = SettingsView(spaceManager: spaceManager, labelManager: labelManager)
+ 
+        let rootView = SettingsView(spaceManager: spaceManager, labelManager: labelManager, initialTab: initialTab)
             .environmentObject(hotkeyManager)
             .environmentObject(gestureManager)
             .environmentObject(spaceManager)
             .environmentObject(labelManager)
-
+ 
         super.init(rootView: AnyView(rootView))
     }
 

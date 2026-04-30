@@ -111,6 +111,16 @@
         }
       }
     },
+    "Acknowledgements" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "致谢"
+          }
+        }
+      }
+    },
     "Active Space Label" : {
       "localizations" : {
         "zh-Hans" : {
@@ -454,12 +464,35 @@
     "Desktop" : {
       "shouldTranslate" : false
     },
+    "DesktopRenamer" : {
+      "shouldTranslate" : false
+    },
     "DesktopRenamer requires Accessibility and Automation permissions for hotkeys and trackpad overrides to function correctly.\n\nPlease enable them in System Settings → Privacy & Security." : {
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "DesktopRenamer 需要辅助功能和自动化权限以设置快捷键和检测触控板滑动。\n\n请在系统设置 → 隐私 & 安全中启用。"
+          }
+        }
+      }
+    },
+    "DesktopRenamer's GitHub" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "DesktopRenamer的GitHub"
+          }
+        }
+      }
+    },
+    "DesktopRenamer's website" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "DesktopRenamer的网站"
           }
         }
       }
@@ -737,7 +770,17 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Option 键模拟右键。"
+            "value" : "用 Option 键模拟右键。"
+          }
+        }
+      }
+    },
+    "Links" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "链接"
           }
         }
       }
@@ -971,6 +1014,38 @@
         }
       }
     },
+    "My GitHub" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Author’s GitHub"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "作者的GitHub"
+          }
+        }
+      }
+    },
+    "My website" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Author’s website"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "作者的网站"
+          }
+        }
+      }
+    },
     "Next" : {
       "localizations" : {
         "zh-Hans" : {
@@ -1199,12 +1274,22 @@
         }
       }
     },
+    "Report an issue" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "反馈"
+          }
+        }
+      }
+    },
     "Require Permissions" : {
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "需要权限"
+            "value" : "权限"
           }
         }
       }
@@ -1514,7 +1599,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Enable space API"
+            "value" : "Enable Space API"
           }
         },
         "zh-Hans" : {
@@ -2478,7 +2563,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "切换有…的屏幕"
+            "value" : "切换屏幕条件"
           }
         }
       }
@@ -2713,12 +2798,12 @@
         }
       }
     },
-    "Welcome to\nDesktopRenamer" : {
+    "Welcome to" : {
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "欢迎使用\nDesktopRenamer"
+            "value" : "欢迎使用"
           }
         }
       }

@@ -245,7 +245,7 @@ class StatusBarController: NSObject {
         menu.addItem(NSMenuItem.separator())
         
         let quitItem = NSMenuItem(title: NSLocalizedString("Menu.Quit", comment: ""), action: #selector(quitApp), keyEquivalent: "q")
-        quitItem.image = NSImage(systemSymbolName: "xmark.circle", accessibilityDescription: nil)
+        quitItem.image = NSImage(systemSymbolName: "xmark.rectangle", accessibilityDescription: nil)
         quitItem.target = self
         menu.addItem(quitItem)
         
@@ -343,6 +343,10 @@ class StatusBarController: NSObject {
     }
 
     @objc func openSettingsWindow() {
+        openSettingsWindow(tab: .general)
+    }
+
+    func openSettingsWindow(tab: SettingsTab? = nil) {
         NSApp.setActivationPolicy(.regular)
         
         if let windowController = settingsWindowController {
@@ -368,12 +372,13 @@ class StatusBarController: NSObject {
         window.collectionBehavior = [.participatesInCycle]
         window.level = .normal
         
-        // Initialize host controller with required managers.
+        // Initialize host controller with required managers and optional tab.
         let settingsVC = SettingsHostingController(
             spaceManager: spaceManager,
             labelManager: labelManager,
             hotkeyManager: hotkeyManager,
-            gestureManager: gestureManager
+            gestureManager: gestureManager,
+            initialTab: tab
         )
         window.contentViewController = settingsVC
         

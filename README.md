@@ -102,7 +102,7 @@ You can switch on/off the API in Settings → Advanced.
 
 ## ⚠️ Issues
 
-You are welcomed to create issues/suggestions in [GitHub Issues](https://github.com/gitmichaelqiu/DesktopRenamer/issues).
+You are welcome to create issues/suggestions in [GitHub Issues](https://github.com/gitmichaelqiu/DesktopRenamer/issues).
 
 For the issue that all of the spaces are marked as "Fullscreen", please check the [Troubleshoot](./Troubleshoot.md).
 

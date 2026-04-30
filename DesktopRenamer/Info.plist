@@ -14,5 +14,7 @@
 	<string>e9YKamydRddgnYK6Kq41W0vPbwI4F9XJAhks/9rzT0w=</string>
 	<key>NSAppleEventsUsageDescription</key>
 	<string>DesktopRenamer needs to control System Events to switch between desktops via Mission Control when necessary.</string>
+	<key>ATSApplicationFontsPath</key>
+	<string>Fonts</string>
 </dict>
 </plist>

@@ -140,6 +140,9 @@ class AppDelegate: NSObject, NSApplicationDelegate {
                     self?.splashWindowController?.close()
                     self?.splashWindowController = nil
                 }
+                
+                // Automatically switch to About page of settings.
+                self?.statusBarController?.openSettingsWindow(tab: .about)
             }
         }
         
