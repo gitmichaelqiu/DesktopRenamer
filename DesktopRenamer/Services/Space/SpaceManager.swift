@@ -851,11 +851,16 @@ class SpaceManager: ObservableObject {
     
     func moveActiveWindowToSpace(number: Int) {
         if let target = spaceNameDict.first(where: { $0.num == number }) {
+            // BUG FIX: Prevent redundant move attempts if the target is already current.
+            if target.id == currentSpaceUUID { return }
             SpaceHelper.dragActiveWindow(to: target.id)
         }
     }
     
     func moveActiveWindowToSpace(id: String) {
+        // BUG FIX: Prevent redundant move attempts if the target is already current.
+        if id == currentSpaceUUID { return }
+        
         if let space = spaceNameDict.first(where: { $0.id == id }), space.isFullscreen {
             return
         }
