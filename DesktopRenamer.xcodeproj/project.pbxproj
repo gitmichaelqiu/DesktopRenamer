@@ -427,7 +427,7 @@
 					"@executable_path/../Frameworks",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 13.0;
-				MARKETING_VERSION = 1.10.6;
+				MARKETING_VERSION = "1.10.6-beta.1";
 				PRODUCT_BUNDLE_IDENTIFIER = com.michaelqiu.DesktopRenamer;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				REGISTER_APP_GROUPS = YES;
@@ -477,7 +477,7 @@
 					"@executable_path/../Frameworks",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 13.0;
-				MARKETING_VERSION = 1.10.6;
+				MARKETING_VERSION = "1.10.6-beta.1";
 				PRODUCT_BUNDLE_IDENTIFIER = com.michaelqiu.DesktopRenamer;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				REGISTER_APP_GROUPS = YES;
@@ -525,7 +525,7 @@
 					"@executable_path/../../../../Frameworks",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 14.0;
-				MARKETING_VERSION = 1.10.6;
+				MARKETING_VERSION = "1.10.6-beta.1";
 				PRODUCT_BUNDLE_IDENTIFIER = com.michaelqiu.DesktopRenamer.DesktopRenamerWidget;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				RUNTIME_EXCEPTION_ALLOW_DYLD_ENVIRONMENT_VARIABLES = NO;
@@ -576,7 +576,7 @@
 					"@executable_path/../../../../Frameworks",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 14.0;
-				MARKETING_VERSION = 1.10.6;
+				MARKETING_VERSION = "1.10.6-beta.1";
 				PRODUCT_BUNDLE_IDENTIFIER = com.michaelqiu.DesktopRenamer.DesktopRenamerWidget;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				RUNTIME_EXCEPTION_ALLOW_DYLD_ENVIRONMENT_VARIABLES = NO;
