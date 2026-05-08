@@ -55,10 +55,10 @@ struct AboutView: View {
                         .foregroundColor(.primary)
                     
                     VStack(alignment: .leading, spacing: 8) {
-                        AboutLinkRow(title: NSLocalizedString("Report an issue", comment: ""), url: "https://gitmichaelqiu.github.io/DesktopRenamer/issues")
-                        AboutLinkRow(title: NSLocalizedString("DesktopRenamer's website", comment: ""), url: "https://gitmichaelqiu.github.io/DesktopRenamer")
+                        AboutLinkRow(title: NSLocalizedString("Report an issue", comment: ""), url: "https://github.com/gitmichaelqiu/DesktopRenamer/issues")
+                        AboutLinkRow(title: NSLocalizedString("DesktopRenamer's website", comment: ""), url: "https://desktoprenamer.mqiu.dev")
                         AboutLinkRow(title: NSLocalizedString("DesktopRenamer's GitHub", comment: ""), url: "https://github.com/gitmichaelqiu/DesktopRenamer")
-                        AboutLinkRow(title: NSLocalizedString("My website", comment: ""), url: "https://gitmichaelqiu.github.io")
+                        AboutLinkRow(title: NSLocalizedString("My website", comment: ""), url: "https://mqiu.dev")
                         AboutLinkRow(title: NSLocalizedString("My GitHub", comment: ""), url: "https://github.com/gitmichaelqiu")
                     }
                 }
@@ -74,14 +74,14 @@ struct AboutView: View {
                             imageName: "OptClickerIcon\(iconSuffix)",
                             appName: "OptClicker",
                             description: NSLocalizedString("Let you right-click with the Option key.", comment: ""),
-                            url: "https://github.com/gitmichaelqiu/OptClicker"
+                            url: "https://optclicker.mqiu.dev"
                         )
                         
                         OtherAppRow(
                             imageName: "SpaceSwitcherIcon\(iconSuffix)",
                             appName: "SpaceSwitcher",
                             description: NSLocalizedString("Control which app and dock to show in each space.", comment: ""),
-                            url: "https://github.com/gitmichaelqiu/SpaceSwitcher"
+                            url: "https://spaceswitcher.mqiu.dev"
                         )
                     }
                 }
