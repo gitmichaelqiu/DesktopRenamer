@@ -490,6 +490,11 @@ struct PermissionsPage: View {
 }
 
 struct MoreAppsPage: View {
+    @Environment(\.colorScheme) var colorScheme
+    var iconSuffix: String {
+        colorScheme == .dark ? "_Dark" : "_Default"
+    }
+
     var body: some View {
         VStack(spacing: 24) {
             VStack(spacing: 8) {
@@ -506,7 +511,7 @@ struct MoreAppsPage: View {
             VStack(spacing: 12) {
                 // OptClicker
                 OtherAppRow(
-                    imageName: "OptClickerIcon_Default",
+                    imageName: "OptClickerIcon\(iconSuffix)",
                     appName: "OptClicker",
                     description: NSLocalizedString("Let you right-click with the Option key.", comment: ""),
                     url: "https://github.com/gitmichaelqiu/OptClicker"
@@ -514,7 +519,7 @@ struct MoreAppsPage: View {
                 
                 // SpaceSwitcher
                 OtherAppRow(
-                    imageName: "SpaceSwitcherIcon_Default",
+                    imageName: "SpaceSwitcherIcon\(iconSuffix)",
                     appName: "SpaceSwitcher",
                     description: NSLocalizedString("Control which app and dock to show in each space.", comment: ""),
                     url: "https://github.com/gitmichaelqiu/SpaceSwitcher"
