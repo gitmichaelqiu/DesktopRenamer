@@ -71,6 +71,7 @@
 
         <command name="reload space labels" code="DskRRelL" description="Reload all space label windows to fix glitches">
             <cocoa class="DesktopRenamer.ReloadSpaceLabelsCommand"/>
+            <result type="boolean" description="True if successful, false if API is disabled"/>
         </command>
         
     </suite>
