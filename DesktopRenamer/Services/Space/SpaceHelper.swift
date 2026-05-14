@@ -759,15 +759,26 @@ class SpaceHelper {
                 // Get all valid window IDs directly from the app's Accessibility hierarchy.
                 // This definitively eliminates closed/ghost windows that CGWindowList retains.
                 let appElement = AXUIElementCreateApplication(app.processIdentifier)
+                
+                let extractWID = { (element: AXUIElement) in
+                    var cgWID: CGWindowID = 0
+                    if _AXUIElementGetWindow(element, &cgWID) == 0 {
+                        axWindowIDs.insert(Int(cgWID))
+                    }
+                }
+                
+                // 1. Check standard AXWindows attribute
                 var windowsRef: CFTypeRef?
                 if AXUIElementCopyAttributeValue(appElement, kAXWindowsAttribute as CFString, &windowsRef) == .success,
                    let axWindows = windowsRef as? [AXUIElement] {
-                    for axWindow in axWindows {
-                        var cgWID: CGWindowID = 0
-                        if _AXUIElementGetWindow(axWindow, &cgWID) == 0 {
-                            axWindowIDs.insert(Int(cgWID))
-                        }
-                    }
+                    axWindows.forEach(extractWID)
+                }
+                
+                // 2. Check AXChildren (apps like Preview put their document windows here instead)
+                var childrenRef: CFTypeRef?
+                if AXUIElementCopyAttributeValue(appElement, kAXChildrenAttribute as CFString, &childrenRef) == .success,
+                   let axChildren = childrenRef as? [AXUIElement] {
+                    axChildren.forEach(extractWID)
                 }
             }
         }
