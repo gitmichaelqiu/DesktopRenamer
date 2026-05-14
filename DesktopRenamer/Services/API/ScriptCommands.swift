@@ -206,12 +206,17 @@ class MoveWindowToSpaceCommand: NSScriptCommand {
 
 class ReloadSpaceLabelsCommand: NSScriptCommand {
     override func performDefaultImplementation() -> Any? {
-        guard SpaceManager.isAPIEnabled else { return nil }
+        guard SpaceManager.isAPIEnabled else {
+            self.scriptErrorNumber = -1
+            self.scriptErrorString = "SpaceAPI is disabled"
+            return false
+        }
         return runOnMain {
             if let manager = AppDelegate.shared.statusBarController?.labelManager {
                 manager.reloadAllWindows()
+                return true
             }
-            return nil
+            return false
         }
     }
 }
