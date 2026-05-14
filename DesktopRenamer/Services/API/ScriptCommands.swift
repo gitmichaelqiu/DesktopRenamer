@@ -253,3 +253,30 @@ class FocusWindowCommand: NSScriptCommand {
         return nil
     }
 }
+
+class MoveSpecificWindowToSpaceCommand: NSScriptCommand {
+    override func performDefaultImplementation() -> Any? {
+        guard isAPIEnabled() else { return nil }
+        guard let windowIDStr = self.directParameter as? String,
+              let windowID = Int(windowIDStr),
+              let arguments = self.evaluatedArguments,
+              let targetSpaceStr = arguments["targetSpace"] as? String,
+              let targetSpaceID = Int(targetSpaceStr)
+        else { return nil }
+
+        DispatchQueue.main.async {
+            SpaceHelper.moveWindowToSpace(windowID: windowID, targetSpaceID: targetSpaceID)
+        }
+        return nil
+    }
+}
+
+class GetCurrentSpaceIDCommand: NSScriptCommand {
+    override func performDefaultImplementation() -> Any? {
+        guard isAPIEnabled() else { return "API Disabled" }
+        return runOnMain {
+            let ids = SpaceHelper.getCurrentSpaceIDs()
+            return ids.joined(separator: ",")
+        }
+    }
+}

@@ -87,5 +87,18 @@
             </parameter>
         </command>
 
+        <command name="move specific window" code="DskRMvSW" description="Move a specific window to a target space">
+            <cocoa class="DesktopRenamer.MoveSpecificWindowToSpaceCommand"/>
+            <direct-parameter description="The window ID (CGWindowID)" type="text"/>
+            <parameter name="to space" code="MvSp" description="The target space ID (ManagedSpaceID)" type="text" optional="no">
+                <cocoa key="targetSpace"/>
+            </parameter>
+        </command>
+
+        <command name="get current space id" code="DskRGCID" description="Get the ManagedSpaceID(s) of the currently visible space(s)">
+            <cocoa class="DesktopRenamer.GetCurrentSpaceIDCommand"/>
+            <result type="text" description="Comma-separated ManagedSpaceIDs of currently visible spaces"/>
+        </command>
+
     </suite>
 </dictionary>

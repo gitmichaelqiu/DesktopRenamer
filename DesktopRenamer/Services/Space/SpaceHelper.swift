@@ -7,6 +7,8 @@ import Foundation
     -> CFArray?
 @_silgen_name("CGSCopyActiveMenuBarDisplayIdentifier")
 private func CGSCopyActiveMenuBarDisplayIdentifier(_ cid: Int32) -> CFString?
+@_silgen_name("_AXUIElementGetWindow")
+private func _AXUIElementGetWindow(_ element: AXUIElement, _ windowID: inout CGWindowID) -> Int32
 
 class SpaceHelper {
     static var fullscreenThreshold: Int {
@@ -735,6 +737,8 @@ class SpaceHelper {
         else { return false }
         // Reject invisible windows when the key is present.
         if let alpha = window[kCGWindowAlpha as String] as? Double, alpha <= 0 { return false }
+        // Reject windows with sharing state "none" (hidden helper windows like WeChat background).
+        if let sharing = window[kCGWindowSharingState as String] as? Int, sharing == 0 { return false }
         return true
     }
 
@@ -887,20 +891,63 @@ class SpaceHelper {
     }
 
     static func focusWindow(id windowID: Int, pid: Int32) {
-        // Order the window to front FIRST while the app is still in the background.
-        // macOS preserves z-order during activation, so this ensures the target
-        // window stays on top when the app is subsequently activated.
-        let conn = _CGSDefaultConnection()
-        if let ptr = dlsym(UnsafeMutableRawPointer(bitPattern: -2), "CGSOrderWindow") {
-            typealias CGSOrderWindowFn = @convention(c) (Int32, UInt32, Int32, UInt32) -> OSStatus
-            let fn = unsafeBitCast(ptr, to: CGSOrderWindowFn.self)
-            _ = fn(conn, UInt32(windowID), 0, 0)  // mode 0 = above, relative 0 = front
+        // Use AXUIElement to find and raise the exact window by CGWindowID.
+        // This is more reliable than CGSOrderWindow for targeting a specific
+        // window when an app has multiple windows.
+        let appElement = AXUIElementCreateApplication(pid)
+        var windowsRef: CFTypeRef?
+        var raised = false
+
+        if AXUIElementCopyAttributeValue(appElement, kAXWindowsAttribute as CFString, &windowsRef) == .success,
+           let axWindows = windowsRef as? [AXUIElement] {
+            for axWindow in axWindows {
+                var cgWID: CGWindowID = 0
+                if _AXUIElementGetWindow(axWindow, &cgWID) == 0, cgWID == CGWindowID(windowID) {
+                    AXUIElementPerformAction(axWindow, kAXRaiseAction as CFString)
+                    raised = true
+                    break
+                }
+            }
         }
-        // Activate the app after ordering so it comes to foreground
-        // without disturbing the window z-order we just set.
+
+        // Fallback: use CGSOrderWindow if AX matching failed.
+        if !raised {
+            let conn = _CGSDefaultConnection()
+            if let ptr = dlsym(UnsafeMutableRawPointer(bitPattern: -2), "CGSOrderWindow") {
+                typealias CGSOrderWindowFn = @convention(c) (Int32, UInt32, Int32, UInt32) -> OSStatus
+                let fn = unsafeBitCast(ptr, to: CGSOrderWindowFn.self)
+                _ = fn(conn, UInt32(windowID), 0, 0)
+            }
+        }
+
+        // Activate the app so it comes to foreground.
         if let app = NSRunningApplication(processIdentifier: pid) {
             app.activate(options: .activateIgnoringOtherApps)
         }
+    }
+
+    /// Moves a specific window (by CGWindowID) to a target space (by ManagedSpaceID).
+    static func moveWindowToSpace(windowID: Int, targetSpaceID: Int) {
+        let conn = _CGSDefaultConnection()
+        typealias CGSMoveWindowsToManagedSpaceFn = @convention(c) (Int32, CFArray, Int) -> Void
+        guard let ptr = dlsym(UnsafeMutableRawPointer(bitPattern: -2), "CGSMoveWindowsToManagedSpace")
+        else { return }
+        let fn = unsafeBitCast(ptr, to: CGSMoveWindowsToManagedSpaceFn.self)
+        fn(conn, [windowID as NSNumber] as CFArray, targetSpaceID)
+    }
+
+    /// Returns the ManagedSpaceIDs of the currently visible spaces (one per display).
+    static func getCurrentSpaceIDs() -> [String] {
+        let conn = _CGSDefaultConnection()
+        guard let displays = CGSCopyManagedDisplaySpaces(conn) as? [NSDictionary] else { return [] }
+        var ids: [String] = []
+        for display in displays {
+            if let currentDict = display["Current Space"] as? [String: Any],
+               let managedID = currentDict["ManagedSpaceID"] as? Int {
+                ids.append(String(managedID))
+            }
+        }
+        return ids
     }
 
     private static func getDisplayName(for uuidString: String) -> String {
