@@ -721,97 +721,165 @@ class SpaceHelper {
 
     // MARK: - Window Enumeration
 
+    /// Filters a CGWindowList dictionary to real, visible app windows.
+    /// Excludes: non-layer-0, empty titles, tiny windows, invisible windows, and our own process.
+    private static func isValidWindow(
+        _ window: [String: Any], ourPID: Int32, minSize: CGFloat = 50
+    ) -> Bool {
+        guard let layer = window[kCGWindowLayer as String] as? Int, layer == 0,
+              let title = window[kCGWindowName as String] as? String, !title.isEmpty,
+              let pid = window[kCGWindowOwnerPID as String] as? Int, pid != Int(ourPID),
+              let bounds = window[kCGWindowBounds as String] as? [String: Any],
+              let w = bounds["Width"] as? CGFloat, let h = bounds["Height"] as? CGFloat,
+              w >= minSize, h >= minSize
+        else { return false }
+        // Reject invisible windows when the key is present.
+        if let alpha = window[kCGWindowAlpha as String] as? Double, alpha <= 0 { return false }
+        return true
+    }
+
     static func getWindowsForAllSpaces() -> String {
         guard let manager = AppDelegate.shared.spaceManager else { return "" }
+        let conn = _CGSDefaultConnection()
+        let ourPID = ProcessInfo.processInfo.processIdentifier
 
-        // Build lookup: ManagedSpaceID (Int) → DesktopSpace
-        var spaceByID: [Int: DesktopSpace] = [:]
-        for space in manager.spaceNameDict {
-            if let idInt = Int(space.id) {
-                spaceByID[idInt] = space
+        // Build PID → app bundle path cache from running applications.
+        var pidToAppPath: [Int32: String] = [:]
+        for app in NSWorkspace.shared.runningApplications {
+            if let path = app.bundleURL?.path {
+                pidToAppPath[app.processIdentifier] = path
             }
         }
 
-        // Enumerate all on-screen windows.
-        let options = CGWindowListOption(arrayLiteral: .optionOnScreenOnly, .excludeDesktopElements)
-        guard let windowList = CGWindowListCopyWindowInfo(options, kCGNullWindowID) as? [[String: Any]]
+        // Get ALL windows, not just on-screen, to include off-screen spaces.
+        let options = CGWindowListOption(arrayLiteral: .excludeDesktopElements)
+        guard let allWindows = CGWindowListCopyWindowInfo(options, kCGNullWindowID)
+                as? [[String: Any]]
         else { return "" }
 
-        // Group windows by workspace (ManagedSpaceID).
-        // kCGWindowWorkspace key returns Int64 matching CGS ManagedSpaceID.
-        var windowsBySpace: [Int: [[String: Any]]] = [:]
-
-        for window in windowList {
-            guard let layer = window[kCGWindowLayer as String] as? Int, layer == 0,
-                  let title = window[kCGWindowName as String] as? String, !title.isEmpty,
-                  let ownerPID = window[kCGWindowOwnerPID as String] as? Int
+        // Collect valid windows with their IDs.
+        var validWindows: [(wid: Int, dict: [String: Any])] = []
+        for window in allWindows {
+            guard isValidWindow(window, ourPID: ourPID),
+                  let wid = window[kCGWindowNumber as String] as? Int,
+                  let pid = window[kCGWindowOwnerPID as String] as? Int,
+                  pidToAppPath[Int32(pid)] != nil  // skip windows without bundle path
             else { continue }
+            validWindows.append((wid: wid, dict: window))
+        }
 
-            // Determine the space this window belongs to.
-            var spaceID: Int? = nil
+        // Known space IDs from SpaceManager.
+        let knownSpaceIDs = Set(manager.spaceNameDict.compactMap { Int($0.id) })
 
-            // Try kCGWindowWorkspace first (matches CGS ManagedSpaceID).
-            if let ws = window["kCGWindowWorkspace"] as? Int64 {
-                spaceID = Int(ws)
+        // Map windows to spaces via CGSCopySpacesForWindows (window → space mapping).
+        // Signature: (connection, spaceMask, windowIDArray) → CFArray of space IDs.
+        // spaceMask = 7 covers all space types (current | other | fullscreen).
+        typealias CGSCopySpacesForWindowsFn = @convention(c) (Int32, Int32, CFArray) -> CFArray?
+        let cgsSpacesForWindows: CGSCopySpacesForWindowsFn? = {
+            guard let ptr = dlsym(UnsafeMutableRawPointer(bitPattern: -2), "CGSCopySpacesForWindows") else { return nil }
+            return unsafeBitCast(ptr, to: CGSCopySpacesForWindowsFn.self)
+        }()
+
+        var windowsBySpaceID: [String: [[String: Any]]] = [:]
+
+        if let spacesForWindows = cgsSpacesForWindows {
+            // Query each window individually for its space assignment.
+            for (wid, dict) in validWindows {
+                let widArray = [wid as NSNumber] as CFArray
+                guard let result = spacesForWindows(conn, 7, widArray),
+                      let spaceIDs = result as? [NSNumber],
+                      let firstSpace = spaceIDs.first
+                else { continue }
+
+                let spaceID = firstSpace.intValue
+                guard knownSpaceIDs.contains(spaceID) else { continue }
+                windowsBySpaceID[String(spaceID), default: []].append(dict)
             }
+        }
 
-            // Fallback: match by display + window bounds to find owning space.
-            if spaceID == nil, let bounds = window[kCGWindowBounds as String] as? [String: Any],
-               let x = bounds["X"] as? CGFloat, let y = bounds["Y"] as? CGFloat,
-               let w = bounds["Width"] as? CGFloat, let h = bounds["Height"] as? CGFloat
-            {
-                let center = CGPoint(x: x + w / 2, y: y + h / 2)
-                if let displayID = getWindowDisplayID(for: CGRect(x: x, y: y, width: w, height: h)) {
-                    // Find first desktop space on this display.
-                    for s in manager.spaceNameDict where s.displayID == displayID && !s.isFullscreen {
-                        if let sid = Int(s.id) { spaceID = sid; break }
+        // Fallback: assign windows to current space per display if CGS API unavailable or empty.
+        if windowsBySpaceID.isEmpty {
+            // Build current-space-per-display map and fullscreen PID→space map.
+            guard let displays = CGSCopyManagedDisplaySpaces(conn) as? [NSDictionary] else { return "" }
+            let screenUUIDs = getAllDisplayUUIDs()
+            let mainUUID = screenUUIDs.first
+            var currentSpaceForDisplay: [String: String] = [:]
+            var fullscreenPIDToSpace: [Int32: String] = [:]
+
+            for display in displays {
+                guard let displayIDRaw = display["Display Identifier"] as? String,
+                      let spaces = display["Spaces"] as? [[String: Any]]
+                else { continue }
+                let displayID = normalizeDisplayID(displayIDRaw, mainUUID: mainUUID)
+
+                if let currentDict = display["Current Space"] as? [String: Any],
+                   let currentID = currentDict["ManagedSpaceID"] as? Int {
+                    currentSpaceForDisplay[displayID] = String(currentID)
+                }
+
+                for space in spaces {
+                    guard let managedID = space["ManagedSpaceID"] as? Int else { continue }
+                    if space["TileLayoutManager"] != nil {
+                        let sid = String(managedID)
+                        if let pid = getOwnerPID(for: sid) {
+                            fullscreenPIDToSpace[pid] = sid
+                        }
                     }
                 }
             }
 
-            guard let sid = spaceID else { continue }
-            windowsBySpace[sid, default: []].append(window)
+            // Only on-screen windows for fallback.
+            let onScreenOptions = CGWindowListOption(arrayLiteral: .optionOnScreenOnly, .excludeDesktopElements)
+            let onScreenWindows = CGWindowListCopyWindowInfo(onScreenOptions, kCGNullWindowID)
+                as? [[String: Any]] ?? []
+
+            for window in onScreenWindows {
+                guard isValidWindow(window, ourPID: ourPID),
+                      let pid = window[kCGWindowOwnerPID as String] as? Int,
+                      pidToAppPath[Int32(pid)] != nil,
+                      let bounds = window[kCGWindowBounds as String] as? [String: Any],
+                      let x = bounds["X"] as? CGFloat, let y = bounds["Y"] as? CGFloat,
+                      let w = bounds["Width"] as? CGFloat, let h = bounds["Height"] as? CGFloat
+                else { continue }
+
+                let frame = CGRect(x: x, y: y, width: w, height: h)
+                guard let displayID = getWindowDisplayID(for: frame) else { continue }
+
+                let spaceID: String
+                if let fsSpace = fullscreenPIDToSpace[Int32(pid)] {
+                    spaceID = fsSpace
+                } else if let cs = currentSpaceForDisplay[displayID] {
+                    spaceID = cs
+                } else {
+                    continue
+                }
+
+                guard knownSpaceIDs.contains(Int(spaceID) ?? -1) else { continue }
+                windowsBySpaceID[spaceID, default: []].append(window)
+            }
         }
 
-        // Sort spaces by display, then number (same order as get all spaces).
+        // Build output sorted by display then number.
         let sortedSpaces = manager.spaceNameDict.sorted {
             if $0.displayID != $1.displayID { return $0.displayID < $1.displayID }
             return $0.num < $1.num
         }
 
-        // Determine DesktopRenamer's own PIDs to filter out label windows.
-        let ourPID = ProcessInfo.processInfo.processIdentifier
-        let ourBundleID = Bundle.main.bundleIdentifier
-
-        // Build output.
         var output = ""
         for space in sortedSpaces {
             let name = manager.getSpaceName(space.id)
             let displayName = getDisplayName(for: space.displayID)
             output += ">\(space.id)~\(name)~\(displayName)~\(space.num)\n"
 
-            guard let sid = Int(space.id),
-                  let windows = windowsBySpace[sid]
-            else { continue }
-
+            guard let windows = windowsBySpaceID[space.id] else { continue }
             for window in windows {
                 guard let wid = window[kCGWindowNumber as String] as? Int,
                       let pid = window[kCGWindowOwnerPID as String] as? Int,
-                      pid != ourPID
+                      let appPath = pidToAppPath[Int32(pid)]
                 else { continue }
 
                 let ownerName = window[kCGWindowOwnerName as String] as? String ?? ""
                 let title = window[kCGWindowName as String] as? String ?? ""
-
-                // Get .app path for icon display in Raycast.
-                var appPath = ""
-                if let runningApp = NSRunningApplication(processIdentifier: pid_t(pid)),
-                   let bundleID = runningApp.bundleIdentifier,
-                   let url = NSWorkspace.shared.urlForApplication(withBundleIdentifier: bundleID)
-                {
-                    appPath = url.path
-                }
-
                 output += "  \(wid)|\(pid)|\(ownerName)|\(appPath)|\(title)\n"
             }
         }
@@ -819,19 +887,20 @@ class SpaceHelper {
     }
 
     static func focusWindow(id windowID: Int, pid: Int32) {
-        // Activate the owning application.
+        // Order the window to front FIRST while the app is still in the background.
+        // macOS preserves z-order during activation, so this ensures the target
+        // window stays on top when the app is subsequently activated.
+        let conn = _CGSDefaultConnection()
+        if let ptr = dlsym(UnsafeMutableRawPointer(bitPattern: -2), "CGSOrderWindow") {
+            typealias CGSOrderWindowFn = @convention(c) (Int32, UInt32, Int32, UInt32) -> OSStatus
+            let fn = unsafeBitCast(ptr, to: CGSOrderWindowFn.self)
+            _ = fn(conn, UInt32(windowID), 0, 0)  // mode 0 = above, relative 0 = front
+        }
+        // Activate the app after ordering so it comes to foreground
+        // without disturbing the window z-order we just set.
         if let app = NSRunningApplication(processIdentifier: pid) {
             app.activate(options: .activateIgnoringOtherApps)
         }
-
-        // Raise the specific window via CGS private API.
-        let conn = _CGSDefaultConnection()
-        typealias CGSOrderWindowFn = @convention(c) (Int32, UInt32, Int32, UInt32) -> OSStatus
-        let CGSOrderWindow = unsafeBitCast(
-            dlsym(UnsafeMutableRawPointer(bitPattern: -2), "CGSOrderWindow"),
-            to: CGSOrderWindowFn.self
-        )
-        _ = CGSOrderWindow(conn, UInt32(windowID), 0, 0)
     }
 
     private static func getDisplayName(for uuidString: String) -> String {
