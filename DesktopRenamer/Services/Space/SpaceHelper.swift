@@ -751,9 +751,24 @@ class SpaceHelper {
         // Only include apps with .regular activation policy (shown in Dock).
         // This excludes background agents like Ollama, menu bar-only apps, etc.
         var pidToAppPath: [Int32: String] = [:]
+        var axWindowIDs = Set<Int>()
         for app in NSWorkspace.shared.runningApplications {
             if app.activationPolicy == .regular, let path = app.bundleURL?.path {
                 pidToAppPath[app.processIdentifier] = path
+                
+                // Get all valid window IDs directly from the app's Accessibility hierarchy.
+                // This definitively eliminates closed/ghost windows that CGWindowList retains.
+                let appElement = AXUIElementCreateApplication(app.processIdentifier)
+                var windowsRef: CFTypeRef?
+                if AXUIElementCopyAttributeValue(appElement, kAXWindowsAttribute as CFString, &windowsRef) == .success,
+                   let axWindows = windowsRef as? [AXUIElement] {
+                    for axWindow in axWindows {
+                        var cgWID: CGWindowID = 0
+                        if _AXUIElementGetWindow(axWindow, &cgWID) == 0 {
+                            axWindowIDs.insert(Int(cgWID))
+                        }
+                    }
+                }
             }
         }
 
@@ -768,6 +783,7 @@ class SpaceHelper {
         for window in allWindows {
             guard isValidWindow(window, ourPID: ourPID),
                   let wid = window[kCGWindowNumber as String] as? Int,
+                  axWindowIDs.contains(wid),
                   let pid = window[kCGWindowOwnerPID as String] as? Int,
                   pidToAppPath[Int32(pid)] != nil  // skip windows without bundle path
             else { continue }
