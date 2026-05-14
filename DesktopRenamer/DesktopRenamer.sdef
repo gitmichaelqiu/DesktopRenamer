@@ -68,6 +68,10 @@
             <cocoa class="DesktopRenamer.MoveWindowToSpaceCommand"/>
             <direct-parameter description="The ID of the space to move the window to" type="text"/>
         </command>
+
+        <command name="reload space labels" code="DskRRelL" description="Reload all space label windows to fix glitches">
+            <cocoa class="DesktopRenamer.ReloadSpaceLabelsCommand"/>
+        </command>
         
     </suite>
 </dictionary>
