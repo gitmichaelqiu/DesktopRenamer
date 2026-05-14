@@ -748,9 +748,11 @@ class SpaceHelper {
         let ourPID = ProcessInfo.processInfo.processIdentifier
 
         // Build PID → app bundle path cache from running applications.
+        // Only include apps with .regular activation policy (shown in Dock).
+        // This excludes background agents like Ollama, menu bar-only apps, etc.
         var pidToAppPath: [Int32: String] = [:]
         for app in NSWorkspace.shared.runningApplications {
-            if let path = app.bundleURL?.path {
+            if app.activationPolicy == .regular, let path = app.bundleURL?.path {
                 pidToAppPath[app.processIdentifier] = path
             }
         }
@@ -926,14 +928,25 @@ class SpaceHelper {
         }
     }
 
-    /// Moves a specific window (by CGWindowID) to a target space (by ManagedSpaceID).
-    static func moveWindowToSpace(windowID: Int, targetSpaceID: Int) {
+    /// Moves a specific window (by CGWindowID) between spaces.
+    /// Uses CGSAddWindowsToSpaces + CGSRemoveWindowsFromSpaces (proven in SpaceLabelWindow).
+    static func moveWindowToSpace(windowID: Int, fromSpaceID: Int, targetSpaceID: Int) {
         let conn = _CGSDefaultConnection()
-        typealias CGSMoveWindowsToManagedSpaceFn = @convention(c) (Int32, CFArray, Int) -> Void
-        guard let ptr = dlsym(UnsafeMutableRawPointer(bitPattern: -2), "CGSMoveWindowsToManagedSpace")
-        else { return }
-        let fn = unsafeBitCast(ptr, to: CGSMoveWindowsToManagedSpaceFn.self)
-        fn(conn, [windowID as NSNumber] as CFArray, targetSpaceID)
+        let windowArray = [windowID as NSNumber] as CFArray
+
+        typealias CGSSpacesFn = @convention(c) (Int32, CFArray, CFArray) -> Void
+
+        // Add to target space first for visual stability.
+        if let addPtr = dlsym(UnsafeMutableRawPointer(bitPattern: -2), "CGSAddWindowsToSpaces") {
+            let addFn = unsafeBitCast(addPtr, to: CGSSpacesFn.self)
+            addFn(conn, windowArray, [targetSpaceID as NSNumber] as CFArray)
+        }
+
+        // Then remove from source space.
+        if let removePtr = dlsym(UnsafeMutableRawPointer(bitPattern: -2), "CGSRemoveWindowsFromSpaces") {
+            let removeFn = unsafeBitCast(removePtr, to: CGSSpacesFn.self)
+            removeFn(conn, windowArray, [fromSpaceID as NSNumber] as CFArray)
+        }
     }
 
     /// Returns the ManagedSpaceIDs of the currently visible spaces (one per display).

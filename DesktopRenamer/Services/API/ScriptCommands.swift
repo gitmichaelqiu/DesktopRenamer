@@ -260,12 +260,14 @@ class MoveSpecificWindowToSpaceCommand: NSScriptCommand {
         guard let windowIDStr = self.directParameter as? String,
               let windowID = Int(windowIDStr),
               let arguments = self.evaluatedArguments,
+              let fromSpaceStr = arguments["fromSpace"] as? String,
+              let fromSpaceID = Int(fromSpaceStr),
               let targetSpaceStr = arguments["targetSpace"] as? String,
               let targetSpaceID = Int(targetSpaceStr)
         else { return nil }
 
         DispatchQueue.main.async {
-            SpaceHelper.moveWindowToSpace(windowID: windowID, targetSpaceID: targetSpaceID)
+            SpaceHelper.moveWindowToSpace(windowID: windowID, fromSpaceID: fromSpaceID, targetSpaceID: targetSpaceID)
         }
         return nil
     }
