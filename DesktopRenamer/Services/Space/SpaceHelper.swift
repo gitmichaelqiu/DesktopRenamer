@@ -719,6 +719,133 @@ class SpaceHelper {
         return visibleIDs
     }
 
+    // MARK: - Window Enumeration
+
+    static func getWindowsForAllSpaces() -> String {
+        guard let manager = AppDelegate.shared.spaceManager else { return "" }
+
+        // Build lookup: ManagedSpaceID (Int) → DesktopSpace
+        var spaceByID: [Int: DesktopSpace] = [:]
+        for space in manager.spaceNameDict {
+            if let idInt = Int(space.id) {
+                spaceByID[idInt] = space
+            }
+        }
+
+        // Enumerate all on-screen windows.
+        let options = CGWindowListOption(arrayLiteral: .optionOnScreenOnly, .excludeDesktopElements)
+        guard let windowList = CGWindowListCopyWindowInfo(options, kCGNullWindowID) as? [[String: Any]]
+        else { return "" }
+
+        // Group windows by workspace (ManagedSpaceID).
+        // kCGWindowWorkspace key returns Int64 matching CGS ManagedSpaceID.
+        var windowsBySpace: [Int: [[String: Any]]] = [:]
+
+        for window in windowList {
+            guard let layer = window[kCGWindowLayer as String] as? Int, layer == 0,
+                  let title = window[kCGWindowName as String] as? String, !title.isEmpty,
+                  let ownerPID = window[kCGWindowOwnerPID as String] as? Int
+            else { continue }
+
+            // Determine the space this window belongs to.
+            var spaceID: Int? = nil
+
+            // Try kCGWindowWorkspace first (matches CGS ManagedSpaceID).
+            if let ws = window["kCGWindowWorkspace"] as? Int64 {
+                spaceID = Int(ws)
+            }
+
+            // Fallback: match by display + window bounds to find owning space.
+            if spaceID == nil, let bounds = window[kCGWindowBounds as String] as? [String: Any],
+               let x = bounds["X"] as? CGFloat, let y = bounds["Y"] as? CGFloat,
+               let w = bounds["Width"] as? CGFloat, let h = bounds["Height"] as? CGFloat
+            {
+                let center = CGPoint(x: x + w / 2, y: y + h / 2)
+                if let displayID = getWindowDisplayID(for: CGRect(x: x, y: y, width: w, height: h)) {
+                    // Find first desktop space on this display.
+                    for s in manager.spaceNameDict where s.displayID == displayID && !s.isFullscreen {
+                        if let sid = Int(s.id) { spaceID = sid; break }
+                    }
+                }
+            }
+
+            guard let sid = spaceID else { continue }
+            windowsBySpace[sid, default: []].append(window)
+        }
+
+        // Sort spaces by display, then number (same order as get all spaces).
+        let sortedSpaces = manager.spaceNameDict.sorted {
+            if $0.displayID != $1.displayID { return $0.displayID < $1.displayID }
+            return $0.num < $1.num
+        }
+
+        // Determine DesktopRenamer's own PIDs to filter out label windows.
+        let ourPID = ProcessInfo.processInfo.processIdentifier
+        let ourBundleID = Bundle.main.bundleIdentifier
+
+        // Build output.
+        var output = ""
+        for space in sortedSpaces {
+            let name = manager.getSpaceName(space.id)
+            let displayName = getDisplayName(for: space.displayID)
+            output += ">\(space.id)~\(name)~\(displayName)~\(space.num)\n"
+
+            guard let sid = Int(space.id),
+                  let windows = windowsBySpace[sid]
+            else { continue }
+
+            for window in windows {
+                guard let wid = window[kCGWindowNumber as String] as? Int,
+                      let pid = window[kCGWindowOwnerPID as String] as? Int,
+                      pid != ourPID
+                else { continue }
+
+                let ownerName = window[kCGWindowOwnerName as String] as? String ?? ""
+                let title = window[kCGWindowName as String] as? String ?? ""
+
+                // Get .app path for icon display in Raycast.
+                var appPath = ""
+                if let runningApp = NSRunningApplication(processIdentifier: pid_t(pid)),
+                   let bundleID = runningApp.bundleIdentifier,
+                   let url = NSWorkspace.shared.urlForApplication(withBundleIdentifier: bundleID)
+                {
+                    appPath = url.path
+                }
+
+                output += "  \(wid)|\(pid)|\(ownerName)|\(appPath)|\(title)\n"
+            }
+        }
+        return output
+    }
+
+    static func focusWindow(id windowID: Int, pid: Int32) {
+        // Activate the owning application.
+        if let app = NSRunningApplication(processIdentifier: pid) {
+            app.activate(options: .activateIgnoringOtherApps)
+        }
+
+        // Raise the specific window via CGS private API.
+        let conn = _CGSDefaultConnection()
+        typealias CGSOrderWindowFn = @convention(c) (Int32, UInt32, Int32, UInt32) -> OSStatus
+        let CGSOrderWindow = unsafeBitCast(
+            dlsym(UnsafeMutableRawPointer(bitPattern: -2), "CGSOrderWindow"),
+            to: CGSOrderWindowFn.self
+        )
+        _ = CGSOrderWindow(conn, UInt32(windowID), 0, 0)
+    }
+
+    private static func getDisplayName(for uuidString: String) -> String {
+        for screen in NSScreen.screens {
+            guard let id = screen.deviceDescription[NSDeviceDescriptionKey("NSScreenNumber")] as? CGDirectDisplayID else { continue }
+            guard let uuid = CGDisplayCreateUUIDFromDisplayID(id)?.takeRetainedValue() else { continue }
+            let uuidStr = CFUUIDCreateString(nil, uuid) as String
+            if uuidStr == uuidString {
+                return screen.localizedName
+            }
+        }
+        return "Display"
+    }
+
     static func detectSpaceChange() {
         getRawSpaceUUID { spaceUUID, isDesktop, ncCnt, displayID in
             onSpaceChange?(spaceUUID, isDesktop, ncCnt, displayID)

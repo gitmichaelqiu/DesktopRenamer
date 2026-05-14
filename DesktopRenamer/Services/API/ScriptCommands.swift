@@ -227,3 +227,29 @@ class ReloadSpaceLabelsCommand: NSScriptCommand {
         }
     }
 }
+
+class GetWindowsCommand: NSScriptCommand {
+    override func performDefaultImplementation() -> Any? {
+        guard isAPIEnabled() else { return "API Disabled" }
+        return runOnMain {
+            return SpaceHelper.getWindowsForAllSpaces()
+        }
+    }
+}
+
+class FocusWindowCommand: NSScriptCommand {
+    override func performDefaultImplementation() -> Any? {
+        guard isAPIEnabled() else { return nil }
+        guard let windowIDStr = self.directParameter as? String,
+              let windowID = Int(windowIDStr),
+              let arguments = self.evaluatedArguments,
+              let pidStr = arguments["ownerPID"] as? String,
+              let pid = Int32(pidStr)
+        else { return nil }
+
+        DispatchQueue.main.async {
+            SpaceHelper.focusWindow(id: windowID, pid: pid)
+        }
+        return nil
+    }
+}
