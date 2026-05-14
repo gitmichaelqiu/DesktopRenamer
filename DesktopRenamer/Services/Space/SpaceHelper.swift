@@ -794,7 +794,6 @@ class SpaceHelper {
         for window in allWindows {
             guard isValidWindow(window, ourPID: ourPID),
                   let wid = window[kCGWindowNumber as String] as? Int,
-                  axWindowIDs.contains(wid),
                   let pid = window[kCGWindowOwnerPID as String] as? Int,
                   pidToAppPath[Int32(pid)] != nil  // skip windows without bundle path
             else { continue }
@@ -803,6 +802,17 @@ class SpaceHelper {
 
         // Known space IDs from SpaceManager.
         let knownSpaceIDs = Set(manager.spaceNameDict.compactMap { Int($0.id) })
+        
+        // Get active space IDs
+        var activeSpaceIDs = Set<Int>()
+        if let displays = CGSCopyManagedDisplaySpaces(conn) as? [NSDictionary] {
+            for display in displays {
+                if let currentDict = display["Current Space"] as? [String: Any],
+                   let currentID = currentDict["ManagedSpaceID"] as? Int {
+                    activeSpaceIDs.insert(currentID)
+                }
+            }
+        }
 
         // Map windows to spaces via CGSCopySpacesForWindows (window → space mapping).
         // Signature: (connection, spaceMask, windowIDArray) → CFArray of space IDs.
@@ -826,6 +836,13 @@ class SpaceHelper {
 
                 let spaceID = firstSpace.intValue
                 guard knownSpaceIDs.contains(spaceID) else { continue }
+                
+                // AX Validation: If the window is on an ACTIVE space, it MUST be in axWindowIDs.
+                // If it's on an inactive space, AX can't see it anyway, so we allow it.
+                if activeSpaceIDs.contains(spaceID) {
+                    guard axWindowIDs.contains(wid) else { continue }
+                }
+                
                 windowsBySpaceID[String(spaceID), default: []].append(dict)
             }
         }
@@ -868,6 +885,8 @@ class SpaceHelper {
 
             for window in onScreenWindows {
                 guard isValidWindow(window, ourPID: ourPID),
+                      let wid = window[kCGWindowNumber as String] as? Int,
+                      axWindowIDs.contains(wid),
                       let pid = window[kCGWindowOwnerPID as String] as? Int,
                       pidToAppPath[Int32(pid)] != nil,
                       let bounds = window[kCGWindowBounds as String] as? [String: Any],
