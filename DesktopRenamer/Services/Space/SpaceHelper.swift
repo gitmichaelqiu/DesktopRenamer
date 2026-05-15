@@ -84,10 +84,11 @@ class SpaceHelper {
             // If we are already on the target space, stop.
             if state.currentUUID == spaceID { return }
             
-            // Instant Space Switch handling
-            // We disable instant switch during active window dragging operations to prevent dropping the window.
-            if !isDragging, AppDelegate.shared.spaceManager?.instantSpaceSwitch == true, let targetSpace = state.spaces.first(where: { $0.id == spaceID }) {
+            // Gesture-based Space Switch handling
+            // We use the gesture method for all normal switches (no window moving).
+            if !isDragging, let targetSpace = state.spaces.first(where: { $0.id == spaceID }) {
                 let displayID = targetSpace.displayID
+                let isInstant = AppDelegate.shared.spaceManager?.instantSpaceSwitch == true
                 
                 if let liveCurrentID = getCurrentSpaceID(for: displayID) {
                     let displaySpaces = state.spaces
@@ -98,7 +99,7 @@ class SpaceHelper {
                        let targetIndex = displaySpaces.firstIndex(where: { $0.id == spaceID }) {
                         let steps = targetIndex - currentIndex
                         if steps != 0 {
-                            performInstantSwitchGesture(steps: steps, targetDisplayID: displayID)
+                            performSpaceSwitchGesture(steps: steps, targetDisplayID: displayID, isInstant: isInstant)
                             return
                         }
                     }
@@ -248,13 +249,15 @@ class SpaceHelper {
         return true
     }
     
-    static func performInstantSwitchGesture(steps: Int, targetDisplayID: String) {
+    static func performSpaceSwitchGesture(steps: Int, targetDisplayID: String, isInstant: Bool) {
         if steps == 0 { return }
         
-        // Restore original correct logic: steps > 0 means target is to the right.
         let directionRight = steps > 0 
         let absSteps = abs(steps)
-        let velocity = 2000.0 * Double(absSteps)
+        
+        // Use high velocity for instant switch (2000.0), lower for "normal" gesture-based switch (e.g. 500.0).
+        let baseVelocity = isInstant ? 2000.0 : 500.0
+        let velocity = baseVelocity * Double(absSteps)
         
         // Warp mouse if the active display isn't the target display
         let originalLocation = CGEvent(source: nil)?.location ?? .zero
