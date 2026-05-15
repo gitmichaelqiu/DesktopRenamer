@@ -55,6 +55,25 @@ struct SwitchSettingsView: View {
                             }
                         }
                     }
+                    
+                    Divider()
+                    
+                    SettingsRow("Reload space labels") {
+                        HStack {
+                            Text(hotkeyManager.description(for: .reloadLabels))
+                                .foregroundColor(.secondary)
+                                .padding(.trailing, 8)
+                            
+                            Button("◉") {
+                                hotkeyManager.startListening(for: .reloadLabels)
+                            }
+                            .disabled(hotkeyManager.isListening)
+                            
+                            Button("↺") {
+                                hotkeyManager.resetToDefault(for: .reloadLabels)
+                            }
+                        }
+                    }
                 }
                 
                 SettingsSection(nil) {
@@ -109,6 +128,44 @@ struct SwitchSettingsView: View {
                             
                             Button("↺") {
                                 hotkeyManager.resetToDefault(for: .moveWindowNumber)
+                            }
+                        }
+                    }
+                    
+                    Divider()
+                    
+                    SettingsRow("Move window to previous display") {
+                        HStack {
+                            Text(hotkeyManager.description(for: .moveWindowPreviousDisplay))
+                                .foregroundColor(.secondary)
+                                .padding(.trailing, 8)
+                            
+                            Button("◉") {
+                                hotkeyManager.startListening(for: .moveWindowPreviousDisplay)
+                            }
+                            .disabled(hotkeyManager.isListening)
+                            
+                            Button("↺") {
+                                hotkeyManager.resetToDefault(for: .moveWindowPreviousDisplay)
+                            }
+                        }
+                    }
+                    
+                    Divider()
+                    
+                    SettingsRow("Move window to next display") {
+                        HStack {
+                            Text(hotkeyManager.description(for: .moveWindowNextDisplay))
+                                .foregroundColor(.secondary)
+                                .padding(.trailing, 8)
+                            
+                            Button("◉") {
+                                hotkeyManager.startListening(for: .moveWindowNextDisplay)
+                            }
+                            .disabled(hotkeyManager.isListening)
+                            
+                            Button("↺") {
+                                hotkeyManager.resetToDefault(for: .moveWindowNextDisplay)
                             }
                         }
                     }

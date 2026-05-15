@@ -910,6 +910,41 @@ class SpaceManager: ObservableObject {
         return currentIndex == 0
     }
     
+    func moveActiveWindowToNextDisplay() {
+        moveActiveWindowToDisplay(offset: 1)
+    }
+
+    func moveActiveWindowToPreviousDisplay() {
+        moveActiveWindowToDisplay(offset: -1)
+    }
+
+    private func moveActiveWindowToDisplay(offset: Int) {
+        guard let windowInfo = SpaceHelper.getActiveWindowInfo() else { return }
+        let sourceDisplayID = SpaceHelper.getWindowDisplayID(for: windowInfo.frame) ?? self.currentDisplayID
+        
+        let displayIDs = SpaceHelper.getAllDisplayUUIDs()
+        guard displayIDs.count > 1 else { return }
+        
+        guard let currentIndex = displayIDs.firstIndex(of: sourceDisplayID) else { return }
+        
+        let targetIndex = (currentIndex + offset + displayIDs.count) % displayIDs.count
+        let targetDisplayID = displayIDs[targetIndex]
+        
+        // Find the current space on the target display
+        guard let targetSpaceIDStr = SpaceHelper.getCurrentSpaceID(for: targetDisplayID),
+              let targetSpace = spaceNameDict.first(where: { $0.id == targetSpaceIDStr }) else { return }
+        
+        // Perform move using the robust cross-monitor logic
+        let fromSpaceID = Int(SpaceHelper.getCurrentSpaceID(for: sourceDisplayID) ?? "0") ?? 0
+        let targetSpaceID = Int(targetSpaceIDStr) ?? 0
+        
+        print("SpaceManager: Moving active window to display \(targetDisplayID)")
+        SpaceHelper.moveWindowToSpace(windowID: windowInfo.id, fromSpaceID: fromSpaceID, targetSpaceID: targetSpaceID)
+        
+        // Switch to the target space to follow the window
+        self.switchToSpace(targetSpace, forceInstant: true)
+    }
+    
     func isLastSpace(onDisplayID displayID: String? = nil) -> Bool {
         var targetDisplayID = displayID
         var currentSpaceID = currentSpaceUUID
