@@ -1162,7 +1162,6 @@ class SpaceHelper {
         }
         return nil
     }
-    }
 
     /// Returns the ManagedSpaceIDs of the currently visible spaces (one per display).
     static func getCurrentSpaceIDs() -> [String] {
