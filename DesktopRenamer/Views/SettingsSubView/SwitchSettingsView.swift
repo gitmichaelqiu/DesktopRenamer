@@ -141,6 +141,21 @@ struct SwitchSettingsView: View {
                         }
                         
                         Divider()
+
+                        SettingsRow(
+                            "Instant switch without animations",
+                            helperText:
+                                "Bypasses the macOS sliding animation using synthetic high-velocity gestures.\n\nRequires 'Swipe between full-screen applications' enabled in System Settings → Trackpad.\nRecommended: Disable 'Automatically rearrange spaces based on most recent use' in Desktop & Dock settings to prevent miscalculations.",
+                            warningText: (permissionManager.isAccessibilityGranted
+                                        && permissionManager.isAutomationGranted)
+                            ? nil : "Requires Accessibility and Automation permissions."
+                        ) {
+                            Toggle("", isOn: $spaceManager.instantSpaceSwitch)
+                                .toggleStyle(.switch)
+                                .labelsHidden()
+                        }
+
+                        Divider()
                         
                         SettingsRow("Switch display with") {
                             Picker("", selection: $gestureManager.switchOverride) {
@@ -166,20 +181,7 @@ struct SwitchSettingsView: View {
                 }
                 
                 // Advanced switching preferences.
-                SettingsSection("Advanced") {
-                    SettingsRow(
-                        "Skip space transition animations (Instant Switch)",
-                        helperText:
-                            "Bypasses the macOS sliding animation using synthetic high-velocity gestures.\n\nRequires 'Swipe between full-screen applications' enabled in System Settings → Trackpad.\nRecommended: Disable 'Automatically rearrange spaces based on most recent use' in Desktop & Dock settings to prevent miscalculations.",
-                        warningText: (permissionManager.isAccessibilityGranted
-                                      && permissionManager.isAutomationGranted)
-                        ? nil : "Requires Accessibility and Automation permissions."
-                    ) {
-                        Toggle("", isOn: $spaceManager.instantSpaceSwitch)
-                            .toggleStyle(.switch)
-                            .labelsHidden()
-                    }
-                    
+                SettingsSection("Advanced") {                    
                     Divider()
                     
                     SettingsRow(
