@@ -988,12 +988,32 @@
         }
       }
     },
+    "Move window to next display" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "将窗口移至下个显示器"
+          }
+        }
+      }
+    },
     "Move window to previous desktop" : {
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "将窗口移至上个桌面"
+          }
+        }
+      }
+    },
+    "Move window to previous display" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "将窗口移至上个显示器"
           }
         }
       }
@@ -1186,6 +1206,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "已记录：%lld"
+          }
+        }
+      }
+    },
+    "Reload space labels" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "重新加载桌面标签"
           }
         }
       }
