@@ -391,7 +391,7 @@ class SpaceHelper {
         DispatchQueue.main.asyncAfter(deadline: .now() + delay, execute: task)
     }
     
-    static func getActiveWindowInfo() -> (id: Int, frame: CGRect)? {
+    static func getActiveWindowInfo() -> (id: Int, pid: Int32, frame: CGRect)? {
         guard let frontApp = NSWorkspace.shared.frontmostApplication else { return nil }
         let pid = frontApp.processIdentifier
         
@@ -406,8 +406,22 @@ class SpaceHelper {
                let bounds = window[kCGWindowBounds as String] as? [String: Any],
                let x = bounds["X"] as? CGFloat, let y = bounds["Y"] as? CGFloat,
                let w = bounds["Width"] as? CGFloat, let h = bounds["Height"] as? CGFloat {
-                   return (id: wid, frame: CGRect(x: x, y: y, width: w, height: h))
+                   return (id: wid, pid: Int32(pid), frame: CGRect(x: x, y: y, width: w, height: h))
                }
+        }
+        return nil
+    }
+
+    static func getWindowInfo(id: Int) -> (pid: Int32, frame: CGRect)? {
+        let options = CGWindowListOption(arrayLiteral: .optionIncludingWindow)
+        let windowList = CGWindowListCopyWindowInfo(options, CGWindowID(id)) as? [[String: Any]] ?? []
+        
+        if let window = windowList.first,
+           let pid = window[kCGWindowOwnerPID as String] as? Int32,
+           let bounds = window[kCGWindowBounds as String] as? [String: Any],
+           let x = bounds["X"] as? CGFloat, let y = bounds["Y"] as? CGFloat,
+           let w = bounds["Width"] as? CGFloat, let h = bounds["Height"] as? CGFloat {
+               return (pid: pid, frame: CGRect(x: x, y: y, width: w, height: h))
         }
         return nil
     }
@@ -1040,9 +1054,31 @@ class SpaceHelper {
 
     /// Moves a specific window (by CGWindowID) between spaces.
     /// Uses CGSAddWindowsToSpaces + CGSRemoveWindowsFromSpaces (proven in SpaceLabelWindow).
+    /// Now handles cross-monitor moves by repositioning the window via Accessibility API.
     static func moveWindowToSpace(windowID: Int, fromSpaceID: Int, targetSpaceID: Int) {
         let conn = _CGSDefaultConnection()
         let windowArray = [windowID as NSNumber] as CFArray
+
+        // Cross-monitor move logic
+        let targetDisplayID = getDisplayID(for: String(targetSpaceID))
+        var sourceDisplayID: String? = nil
+        var windowPID: Int32? = nil
+        var windowFrame: CGRect? = nil
+        
+        if let info = getWindowInfo(id: windowID) {
+            windowPID = info.pid
+            windowFrame = info.frame
+            sourceDisplayID = getWindowDisplayID(for: info.frame)
+        }
+        
+        if let targetDisplay = targetDisplayID, 
+           let sourceDisplay = sourceDisplayID, 
+           targetDisplay != sourceDisplay,
+           let pid = windowPID, 
+           let frame = windowFrame {
+            print("SpaceHelper: Cross-monitor move detected (\(sourceDisplay) -> \(targetDisplay)). Repositioning window \(windowID).")
+            repositionWindowToDisplay(windowID: windowID, pid: pid, frame: frame, sourceDisplayID: sourceDisplay, targetDisplayID: targetDisplay)
+        }
 
         typealias CGSSpacesFn = @convention(c) (Int32, CFArray, CFArray) -> Void
 
@@ -1057,6 +1093,75 @@ class SpaceHelper {
             let removeFn = unsafeBitCast(removePtr, to: CGSSpacesFn.self)
             removeFn(conn, windowArray, [fromSpaceID as NSNumber] as CFArray)
         }
+    }
+
+    private static func repositionWindowToDisplay(windowID: Int, pid: Int32, frame: CGRect, sourceDisplayID: String, targetDisplayID: String) {
+        guard let sourceRect = getDisplayRect(for: sourceDisplayID),
+              let targetRect = getDisplayRect(for: targetDisplayID) else { return }
+        
+        // Calculate relative position (offset from source display top-left)
+        let relativeX = frame.origin.x - sourceRect.origin.x
+        let relativeY = frame.origin.y - sourceRect.origin.y
+        
+        // Apply same offset to target display
+        let newX = targetRect.origin.x + relativeX
+        let newY = targetRect.origin.y + relativeY
+        
+        let appElement = AXUIElementCreateApplication(pid)
+        var windowsRef: CFTypeRef?
+        if AXUIElementCopyAttributeValue(appElement, kAXWindowsAttribute as CFString, &windowsRef) == .success,
+           let axWindows = windowsRef as? [AXUIElement] {
+            for axWindow in axWindows {
+                var cgWID: CGWindowID = 0
+                if _AXUIElementGetWindow(axWindow, &cgWID) == 0, cgWID == CGWindowID(windowID) {
+                    var point = CGPoint(x: newX, y: newY)
+                    if let positionRef = AXValueCreate(.cgPoint, &point) {
+                        AXUIElementSetAttributeValue(axWindow, kAXPositionAttribute as CFString, positionRef)
+                        print("SpaceHelper: Repositioned window \(windowID) to \(newX), \(newY) on target display.")
+                    }
+                    break
+                }
+            }
+        }
+    }
+
+    /// Returns the display UUID that a specific space belongs to.
+    static func getDisplayID(for spaceID: String) -> String? {
+        let conn = _CGSDefaultConnection()
+        guard let displays = CGSCopyManagedDisplaySpaces(conn) as? [NSDictionary] else {
+            return nil
+        }
+        
+        let screenUUIDs = getAllDisplayUUIDs()
+        let mainScreenUUID = screenUUIDs.first
+
+        for display in displays {
+            if let rawID = display["Display Identifier"] as? String,
+               let spaces = display["Spaces"] as? [[String: Any]] {
+                let displayID = normalizeDisplayID(rawID, mainUUID: mainScreenUUID)
+                for space in spaces {
+                    if let managedID = space["ManagedSpaceID"] as? Int, String(managedID) == spaceID {
+                        return displayID
+                    }
+                }
+            }
+        }
+        return nil
+    }
+
+    /// Returns the bounds of a display given its UUID.
+    static func getDisplayRect(for uuid: String) -> CGRect? {
+        for screen in NSScreen.screens {
+            let id = screen.deviceDescription[NSDeviceDescriptionKey("NSScreenNumber")] as? CGDirectDisplayID ?? 0
+            guard let uuidRef = CGDisplayCreateUUIDFromDisplayID(id) else { continue }
+            let screenUUID = (CFUUIDCreateString(nil, uuidRef.takeRetainedValue()) as String).uppercased()
+            if screenUUID == uuid.uppercased() {
+                // Return bounds in CG coordinates (top-left origin)
+                return CGDisplayBounds(id)
+            }
+        }
+        return nil
+    }
     }
 
     /// Returns the ManagedSpaceIDs of the currently visible spaces (one per display).
