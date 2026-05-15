@@ -43,7 +43,6 @@ class SpaceManager: ObservableObject {
     static private let isAPIEnabledKey = "com.michaelqiu.desktoprenamer.isapienabled"
     static private let detectionMethodKey = "com.michaelqiu.desktoprenamer.detectionMethod"
     static private let isManualSpacesEnabledKey = "com.michaelqiu.desktoprenamer.ismanualspacesenabled"
-    static private let forceMissionControlForFullscreenKey = "com.michaelqiu.desktoprenamer.forceMissionControlForFullscreen"
     static private let instantSpaceSwitchKey = "com.michaelqiu.desktoprenamer.instantSpaceSwitch"
     static private let grabOffsetXKey = "com.michaelqiu.desktoprenamer.grabOffsetX"
     static private let grabOffsetYKey = "com.michaelqiu.desktoprenamer.grabOffsetY"
@@ -99,12 +98,6 @@ class SpaceManager: ObservableObject {
     
     var isManualMode: Bool { detectionMethod == .manual }
     
-    @Published var forceMissionControlForFullscreen: Bool {
-        didSet {
-            UserDefaults.standard.set(forceMissionControlForFullscreen, forKey: SpaceManager.forceMissionControlForFullscreenKey)
-        }
-    }
-    
     @Published var instantSpaceSwitch: Bool {
         didSet {
             UserDefaults.standard.set(instantSpaceSwitch, forKey: SpaceManager.instantSpaceSwitchKey)
@@ -142,7 +135,6 @@ class SpaceManager: ObservableObject {
             self.detectionMethod = .automatic
         }
         
-        self.forceMissionControlForFullscreen = UserDefaults.standard.bool(forKey: SpaceManager.forceMissionControlForFullscreenKey)
         self.instantSpaceSwitch = UserDefaults.standard.bool(forKey: SpaceManager.instantSpaceSwitchKey)
         
         self.grabOffsetX = UserDefaults.standard.object(forKey: SpaceManager.grabOffsetXKey) == nil ? 13.0 : UserDefaults.standard.double(forKey: SpaceManager.grabOffsetXKey)
@@ -700,7 +692,7 @@ class SpaceManager: ObservableObject {
     
     func switchToSpace(_ space: DesktopSpace) {
         print("SpaceManager: switchToSpace(\(space.id)) on display \(space.displayID)")
-        SpaceHelper.switchToSpace(space.id, forceMissionControl: forceMissionControlForFullscreen)
+        SpaceHelper.switchToSpace(space.id)
     }
     
     func switchToPreviousSpace(onDisplayID displayID: String? = nil) {
