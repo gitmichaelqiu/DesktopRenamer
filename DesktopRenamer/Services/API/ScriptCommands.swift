@@ -233,7 +233,7 @@ class GetWindowsCommand: NSScriptCommand {
         guard isAPIEnabled() else { return "API Disabled" }
         
         // Fetch necessary space data on the main thread.
-        let data = runOnMain {
+        let data: ([DesktopSpace], [String: String])? = runOnMain {
             guard let manager = AppDelegate.shared.spaceManager else { return nil }
             let spaces = manager.spaceNameDict
             var names: [String: String] = [:]
