@@ -371,6 +371,9 @@
         }
       }
     },
+    "Bypasses the macOS sliding animation using synthetic high-velocity gestures.\n\nRequires 'Swipe between full-screen applications' enabled in System Settings → Trackpad.\nRecommended: Disable 'Automatically rearrange spaces based on most recent use' in Desktop & Dock settings to prevent miscalculations." : {
+
+    },
     "Cancel" : {
       "localizations" : {
         "zh-Hans" : {
@@ -2490,6 +2493,9 @@
           }
         }
       }
+    },
+    "Skip space transition animations (Instant Switch)" : {
+
     },
     "Space %lld" : {
       "localizations" : {

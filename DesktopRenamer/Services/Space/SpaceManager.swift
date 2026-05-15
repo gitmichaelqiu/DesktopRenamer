@@ -44,6 +44,7 @@ class SpaceManager: ObservableObject {
     static private let detectionMethodKey = "com.michaelqiu.desktoprenamer.detectionMethod"
     static private let isManualSpacesEnabledKey = "com.michaelqiu.desktoprenamer.ismanualspacesenabled"
     static private let forceMissionControlForFullscreenKey = "com.michaelqiu.desktoprenamer.forceMissionControlForFullscreen"
+    static private let instantSpaceSwitchKey = "com.michaelqiu.desktoprenamer.instantSpaceSwitch"
     static private let grabOffsetXKey = "com.michaelqiu.desktoprenamer.grabOffsetX"
     static private let grabOffsetYKey = "com.michaelqiu.desktoprenamer.grabOffsetY"
     
@@ -104,6 +105,12 @@ class SpaceManager: ObservableObject {
         }
     }
     
+    @Published var instantSpaceSwitch: Bool {
+        didSet {
+            UserDefaults.standard.set(instantSpaceSwitch, forKey: SpaceManager.instantSpaceSwitchKey)
+        }
+    }
+    
     @Published var grabOffsetX: Double {
         didSet {
             UserDefaults.standard.set(grabOffsetX, forKey: SpaceManager.grabOffsetXKey)
@@ -136,6 +143,7 @@ class SpaceManager: ObservableObject {
         }
         
         self.forceMissionControlForFullscreen = UserDefaults.standard.bool(forKey: SpaceManager.forceMissionControlForFullscreenKey)
+        self.instantSpaceSwitch = UserDefaults.standard.bool(forKey: SpaceManager.instantSpaceSwitchKey)
         
         self.grabOffsetX = UserDefaults.standard.object(forKey: SpaceManager.grabOffsetXKey) == nil ? 13.0 : UserDefaults.standard.double(forKey: SpaceManager.grabOffsetXKey)
         self.grabOffsetY = UserDefaults.standard.object(forKey: SpaceManager.grabOffsetYKey) == nil ? 25.0 : UserDefaults.standard.double(forKey: SpaceManager.grabOffsetYKey)

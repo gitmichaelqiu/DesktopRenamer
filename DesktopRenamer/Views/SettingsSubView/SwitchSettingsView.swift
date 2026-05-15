@@ -168,6 +168,21 @@ struct SwitchSettingsView: View {
                 // Advanced switching preferences.
                 SettingsSection("Advanced") {
                     SettingsRow(
+                        "Skip space transition animations (Instant Switch)",
+                        helperText:
+                            "Bypasses the macOS sliding animation using synthetic high-velocity gestures.\n\nRequires 'Swipe between full-screen applications' enabled in System Settings → Trackpad.\nRecommended: Disable 'Automatically rearrange spaces based on most recent use' in Desktop & Dock settings to prevent miscalculations.",
+                        warningText: (permissionManager.isAccessibilityGranted
+                                      && permissionManager.isAutomationGranted)
+                        ? nil : "Requires Accessibility and Automation permissions."
+                    ) {
+                        Toggle("", isOn: $spaceManager.instantSpaceSwitch)
+                            .toggleStyle(.switch)
+                            .labelsHidden()
+                    }
+                    
+                    Divider()
+                    
+                    SettingsRow(
                         "Force Mission Control for fullscreen apps",
                         helperText:
                             "When enabled, the app will always use Mission Control Automation for transitions to or from fullscreen apps. This is slower but more reliable on some systems.",
