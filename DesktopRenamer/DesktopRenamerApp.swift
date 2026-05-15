@@ -111,6 +111,25 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             .receive(on: DispatchQueue.main)
             .sink { [weak self] number in self?.spaceManager.moveActiveWindowToSpace(number: number) }
             .store(in: &cancellables)
+
+        hotkeyManager.reloadLabelsTriggered
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] in
+                Task { @MainActor in
+                    self?.statusBarController?.labelManager.reloadAllWindows()
+                }
+            }
+            .store(in: &cancellables)
+
+        hotkeyManager.moveWindowNextDisplayTriggered
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] in self?.spaceManager.moveActiveWindowToNextDisplay() }
+            .store(in: &cancellables)
+
+        hotkeyManager.moveWindowPreviousDisplayTriggered
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] in self?.spaceManager.moveActiveWindowToPreviousDisplay() }
+            .store(in: &cancellables)
     }
     
     func showSplashScreen(on parentWindow: NSWindow? = nil) {

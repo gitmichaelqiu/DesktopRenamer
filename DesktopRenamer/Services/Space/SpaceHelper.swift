@@ -7,8 +7,36 @@ import Foundation
     -> CFArray?
 @_silgen_name("CGSCopyActiveMenuBarDisplayIdentifier")
 private func CGSCopyActiveMenuBarDisplayIdentifier(_ cid: Int32) -> CFString?
+@_silgen_name("_AXUIElementGetWindow")
+private func _AXUIElementGetWindow(_ element: AXUIElement, _ windowID: inout CGWindowID) -> Int32
 
 class SpaceHelper {
+    // MARK: - Private CGS Functions Caching
+    
+    private typealias CGSCopySpacesForWindowsFn = @convention(c) (Int32, Int32, CFArray) -> CFArray?
+    private typealias CGSSpacesFn = @convention(c) (Int32, CFArray, CFArray) -> Void
+    private typealias CGSOrderWindowFn = @convention(c) (Int32, UInt32, Int32, UInt32) -> OSStatus
+    
+    private static let cgsCopySpacesForWindows: CGSCopySpacesForWindowsFn? = {
+        guard let ptr = dlsym(UnsafeMutableRawPointer(bitPattern: -2), "CGSCopySpacesForWindows") else { return nil }
+        return unsafeBitCast(ptr, to: CGSCopySpacesForWindowsFn.self)
+    }()
+    
+    private static let cgsAddWindowsToSpaces: CGSSpacesFn? = {
+        guard let ptr = dlsym(UnsafeMutableRawPointer(bitPattern: -2), "CGSAddWindowsToSpaces") else { return nil }
+        return unsafeBitCast(ptr, to: CGSSpacesFn.self)
+    }()
+    
+    private static let cgsRemoveWindowsFromSpaces: CGSSpacesFn? = {
+        guard let ptr = dlsym(UnsafeMutableRawPointer(bitPattern: -2), "CGSRemoveWindowsFromSpaces") else { return nil }
+        return unsafeBitCast(ptr, to: CGSSpacesFn.self)
+    }()
+    
+    private static let cgsOrderWindow: CGSOrderWindowFn? = {
+        guard let ptr = dlsym(UnsafeMutableRawPointer(bitPattern: -2), "CGSOrderWindow") else { return nil }
+        return unsafeBitCast(ptr, to: CGSOrderWindowFn.self)
+    }()
+
     static var fullscreenThreshold: Int {
         get {
             UserDefaults.standard.integer(
@@ -35,7 +63,7 @@ class SpaceHelper {
     static var isDragging: Bool { originalMousePoint != nil }
 
     // Core space switching implementation.
-    static func switchToSpace(_ spaceID: String, forceMissionControl: Bool = false) {
+    static func switchToSpace(_ spaceID: String, forceInstant: Bool = false) {
         lastProgrammaticSwitchTime = Date().timeIntervalSince1970
         guard !isSwitching else { return }
         isSwitching = true
@@ -55,7 +83,6 @@ class SpaceHelper {
         var targetGlobalNum: Int? = nil
         var shouldUseShortcut = true
         var targetIsFullscreen = false
-        var currentIsFullscreen = false
 
         if let state = getSystemState() {
             if let targetSpace = state.spaces.first(where: { $0.id == spaceID }) {
@@ -74,22 +101,34 @@ class SpaceHelper {
                     }
                 }
             }
-            
-            if let currentSpace = state.spaces.first(where: { $0.id == state.currentUUID }) {
-                currentIsFullscreen = currentSpace.isFullscreen
-            }
 
             // If we are already on the target space, stop.
             if state.currentUUID == spaceID { return }
-        }
-        
-        // Automate Mission Control for fullscreen transitions if forced.
-        if forceMissionControl && (targetIsFullscreen || currentIsFullscreen) {
-            if let num = targetNum {
-                switchViaMissionControl(to: num)
-                return
+            
+            // Gesture-based Space Switch handling
+            // We use the gesture method for all normal switches (no window moving).
+            if !isDragging, let targetSpace = state.spaces.first(where: { $0.id == spaceID }) {
+                let displayID = targetSpace.displayID
+                let isInstant = AppDelegate.shared.spaceManager?.instantSpaceSwitch == true
+                
+                if let liveCurrentID = getCurrentSpaceID(for: displayID) {
+                    let displaySpaces = state.spaces
+                        .filter { $0.displayID == displayID }
+                        .sorted { $0.num < $1.num }
+                    
+                    if let currentIndex = displaySpaces.firstIndex(where: { $0.id == liveCurrentID }),
+                       let targetIndex = displaySpaces.firstIndex(where: { $0.id == spaceID }) {
+                        let steps = targetIndex - currentIndex
+                        if steps != 0 {
+                            performSpaceSwitchGesture(steps: steps, targetDisplayID: displayID, isInstant: isInstant || forceInstant)
+                            return
+                        }
+                    }
+                }
             }
         }
+        
+
 
         if let state = getSystemState(),
             let targetSpace = state.spaces.first(where: { $0.id == spaceID })
@@ -146,10 +185,7 @@ class SpaceHelper {
             return
         }
 
-        // Last resort: Script Mission Control (it's slower and clunky)
-        if let num = targetNum {
-            switchViaMissionControl(to: num)
-        }
+
     }
 
     private static func switchByActivatingOwnWindow(for spaceID: String, isFullscreen: Bool) -> Bool
@@ -202,10 +238,80 @@ class SpaceHelper {
 
         return true
     }
+    
+    // MARK: - Instant Space Switch Helpers
+    
+    private static func postDockSwipe(phase: Int, directionRight: Bool, velocity: Double) -> Bool {
+        // Use Float.leastNonzeroMagnitude to precisely match FLT_TRUE_MIN used in ISS.c
+        // Double.leastNonzeroMagnitude is too small (e-324) and gets truncated to 0.0 by the OS when positive.
+        let progress: Double = directionRight ? Double(Float.leastNonzeroMagnitude) : -Double(Float.leastNonzeroMagnitude)
+        let vel: Double = directionRight ? velocity : -velocity
+        
+        guard let ev = CGEvent(source: nil) else { return false }
+        ev.setIntegerValueField(CGEventField(rawValue: 55)!, value: 30) // kCGSEventDockControl
+        ev.setIntegerValueField(CGEventField(rawValue: 110)!, value: 23) // kIOHIDEventTypeDockSwipe
+        ev.setIntegerValueField(CGEventField(rawValue: 132)!, value: Int64(phase)) // phase
+        ev.setDoubleValueField(CGEventField(rawValue: 124)!, value: progress)
+        ev.setIntegerValueField(CGEventField(rawValue: 123)!, value: 1) // horizontal motion
+        ev.setDoubleValueField(CGEventField(rawValue: 129)!, value: vel)
+        ev.setDoubleValueField(CGEventField(rawValue: 130)!, value: vel)
+        
+        // Use cgSessionEventTap to match ISS.c and prevent HID acceleration/mishandling
+        ev.post(tap: .cgSessionEventTap)
+        return true
+    }
+    
+    static func performSpaceSwitchGesture(steps: Int, targetDisplayID: String, isInstant: Bool) {
+        if steps == 0 { return }
+        
+        let directionRight = steps > 0 
+        let absSteps = abs(steps)
+        
+        // Use high velocity for instant switch (2000.0), lower for "normal" gesture-based switch (e.g. 50.0).
+        // Adjust the 50.0 value below to change the transition speed when "Instant Switch" is disabled.
+        let baseVelocity = isInstant ? 2000.0 : 52.0
+        let velocity = baseVelocity * Double(absSteps)
+        
+
+        
+        // Warp mouse if the active display isn't the target display
+        let originalLocation = CGEvent(source: nil)?.location ?? .zero
+        var warped = false
+        
+        if let currentDisplay = getCursorDisplayID(), currentDisplay.uppercased() != targetDisplayID.uppercased() {
+            // Find center of target display to warp the cursor
+            for screen in NSScreen.screens {
+                if let id = screen.deviceDescription[NSDeviceDescriptionKey("NSScreenNumber")] as? CGDirectDisplayID,
+                   let uuidRef = CGDisplayCreateUUIDFromDisplayID(id) {
+                    let uuid = uuidRef.takeRetainedValue()
+                    let uuidStr = (CFUUIDCreateString(nil, uuid) as String).uppercased()
+                    
+                    if uuidStr == targetDisplayID.uppercased() {
+                        let bounds = CGDisplayBounds(id)
+                        let center = CGPoint(x: bounds.midX, y: bounds.midY)
+                        CGWarpMouseCursorPosition(center)
+                        warped = true
+                        break
+                    }
+                }
+            }
+        }
+        
+        for _ in 0..<absSteps {
+            _ = postDockSwipe(phase: 1, directionRight: directionRight, velocity: velocity)
+            _ = postDockSwipe(phase: 2, directionRight: directionRight, velocity: velocity)
+            _ = postDockSwipe(phase: 4, directionRight: directionRight, velocity: velocity)
+        }
+        
+        if warped {
+            // Restore original position
+            CGWarpMouseCursorPosition(originalLocation)
+        }
+    }
 
     // MARK: - Window Moving Logic
     
-    static func dragActiveWindow(to spaceID: String) {
+    static func dragActiveWindow(to spaceID: String, forceInstant: Bool = false) {
         // Cancel any pending restoration from a previous "chained" move
         restorationTask?.cancel()
         restorationTask = nil
@@ -252,7 +358,7 @@ class SpaceHelper {
         
         // Trigger the space switch and track the movement.
         pendingMoveCount += 1
-        switchToSpace(spaceID)
+        switchToSpace(spaceID, forceInstant: forceInstant)
         
         // Schedule a safety fallback for cursor restoration.
         // Ensures the mouse is released after a timeout if the space change detection fails.
@@ -311,7 +417,7 @@ class SpaceHelper {
         DispatchQueue.main.asyncAfter(deadline: .now() + delay, execute: task)
     }
     
-    static func getActiveWindowFrame() -> CGRect? {
+    static func getActiveWindowInfo() -> (id: Int, pid: Int32, frame: CGRect)? {
         guard let frontApp = NSWorkspace.shared.frontmostApplication else { return nil }
         let pid = frontApp.processIdentifier
         
@@ -322,13 +428,32 @@ class SpaceHelper {
             if let windowPid = window[kCGWindowOwnerPID as String] as? Int,
                windowPid == pid,
                let layer = window[kCGWindowLayer as String] as? Int, layer == 0,
+               let wid = window[kCGWindowNumber as String] as? Int,
                let bounds = window[kCGWindowBounds as String] as? [String: Any],
                let x = bounds["X"] as? CGFloat, let y = bounds["Y"] as? CGFloat,
                let w = bounds["Width"] as? CGFloat, let h = bounds["Height"] as? CGFloat {
-                   return CGRect(x: x, y: y, width: w, height: h)
+                   return (id: wid, pid: Int32(pid), frame: CGRect(x: x, y: y, width: w, height: h))
                }
         }
         return nil
+    }
+
+    static func getWindowInfo(id: Int) -> (pid: Int32, frame: CGRect)? {
+        let options = CGWindowListOption(arrayLiteral: .optionIncludingWindow)
+        let windowList = CGWindowListCopyWindowInfo(options, CGWindowID(id)) as? [[String: Any]] ?? []
+        
+        if let window = windowList.first,
+           let pid = window[kCGWindowOwnerPID as String] as? Int32,
+           let bounds = window[kCGWindowBounds as String] as? [String: Any],
+           let x = bounds["X"] as? CGFloat, let y = bounds["Y"] as? CGFloat,
+           let w = bounds["Width"] as? CGFloat, let h = bounds["Height"] as? CGFloat {
+               return (pid: pid, frame: CGRect(x: x, y: y, width: w, height: h))
+        }
+        return nil
+    }
+
+    static func getActiveWindowFrame() -> CGRect? {
+        return getActiveWindowInfo()?.frame
     }
 
     private static func getOwnerPID(for spaceID: String) -> Int32? {
@@ -350,26 +475,7 @@ class SpaceHelper {
         return nil
     }
 
-    private static func switchViaMissionControl(to targetNum: Int) {
-        let source = """
-            tell application "Mission Control" to launch
-            tell application "System Events"
-                delay 0.3
-                try
-                    click button \(targetNum) of list 1 of group 2 of group 1 of group 1 of process "Dock"
-                on error
-                    key code 53 -- Esc to exit if failed
-                end try
-            end tell
-            """
 
-        DispatchQueue.global(qos: .userInitiated).async {
-            var error: NSDictionary?
-            if let scriptObject = NSAppleScript(source: source) {
-                scriptObject.executeAndReturnError(&error)
-            }
-        }
-    }
 
     // Shortcut configuration helpers.
 
@@ -717,6 +823,389 @@ class SpaceHelper {
             }
         }
         return visibleIDs
+    }
+
+    // MARK: - Window Enumeration
+
+    /// Filters a CGWindowList dictionary to real, visible app windows.
+    /// Excludes: non-layer-0, empty titles, tiny windows, invisible windows, and our own process.
+    private static func isValidWindow(
+        _ window: [String: Any], ourPID: Int32, minSize: CGFloat = 50
+    ) -> Bool {
+        guard let layer = window[kCGWindowLayer as String] as? Int, layer == 0,
+              let title = window[kCGWindowName as String] as? String, !title.isEmpty,
+              let pid = window[kCGWindowOwnerPID as String] as? Int, pid != Int(ourPID),
+              let bounds = window[kCGWindowBounds as String] as? [String: Any],
+              let w = bounds["Width"] as? CGFloat, let h = bounds["Height"] as? CGFloat,
+              w >= minSize, h >= minSize
+        else { return false }
+        // Reject invisible windows when the key is present.
+        if let alpha = window[kCGWindowAlpha as String] as? Double, alpha <= 0 { return false }
+        // Reject windows with sharing state "none" (hidden helper windows like WeChat background).
+        if let sharing = window[kCGWindowSharingState as String] as? Int, sharing == 0 { return false }
+        return true
+    }
+
+    static func getWindowsForAllSpaces(spaces: [DesktopSpace], spaceNames: [String: String]) -> String {
+        let conn = _CGSDefaultConnection()
+        let ourPID = ProcessInfo.processInfo.processIdentifier
+
+        // Pre-calculate screen mapping for efficiency as recommended by reviewer.
+        var screenMap: [String: String] = [:]
+        for screen in NSScreen.screens {
+            if let id = screen.deviceDescription[NSDeviceDescriptionKey("NSScreenNumber")] as? CGDirectDisplayID,
+               let uuidRef = CGDisplayCreateUUIDFromDisplayID(id) {
+                let uuid = uuidRef.takeRetainedValue()
+                let uuidStr = (CFUUIDCreateString(nil, uuid) as String).uppercased()
+                screenMap[uuidStr] = screen.localizedName
+            }
+        }
+
+        // Build PID → app bundle path cache from running applications.
+        // Only include apps with .regular activation policy (shown in Dock).
+        // This excludes background agents like Ollama, menu bar-only apps, etc.
+        var pidToAppPath: [Int32: String] = [:]
+        var axWindowIDs = Set<Int>()
+        for app in NSWorkspace.shared.runningApplications {
+            if app.activationPolicy == .regular, let path = app.bundleURL?.path {
+                pidToAppPath[app.processIdentifier] = path
+                
+                // Get all valid window IDs directly from the app's Accessibility hierarchy.
+                // This definitively eliminates closed/ghost windows that CGWindowList retains.
+                let appElement = AXUIElementCreateApplication(app.processIdentifier)
+                
+                let extractWID = { (element: AXUIElement) in
+                    var cgWID: CGWindowID = 0
+                    if _AXUIElementGetWindow(element, &cgWID) == 0 {
+                        axWindowIDs.insert(Int(cgWID))
+                    }
+                }
+                
+                // 1. Check standard AXWindows attribute
+                var windowsRef: CFTypeRef?
+                if AXUIElementCopyAttributeValue(appElement, kAXWindowsAttribute as CFString, &windowsRef) == .success,
+                   let axWindows = windowsRef as? [AXUIElement] {
+                    axWindows.forEach(extractWID)
+                }
+                
+                // 2. Check AXChildren for non-standard apps (e.g., Preview)
+                if app.bundleIdentifier == "com.apple.Preview" {
+                    var childrenRef: CFTypeRef?
+                    if AXUIElementCopyAttributeValue(appElement, kAXChildrenAttribute as CFString, &childrenRef) == .success,
+                       let axChildren = childrenRef as? [AXUIElement] {
+                        axChildren.forEach(extractWID)
+                    }
+                }
+            }
+        }
+
+        // Get ALL windows, not just on-screen, to include off-screen spaces.
+        let options = CGWindowListOption(arrayLiteral: .excludeDesktopElements)
+        guard let allWindows = CGWindowListCopyWindowInfo(options, kCGNullWindowID)
+                as? [[String: Any]]
+        else { return "" }
+
+        // Collect valid windows with their IDs.
+        var validWindows: [(wid: Int, dict: [String: Any])] = []
+        for window in allWindows {
+            guard isValidWindow(window, ourPID: ourPID),
+                  let wid = window[kCGWindowNumber as String] as? Int,
+                  let pid = window[kCGWindowOwnerPID as String] as? Int,
+                  pidToAppPath[Int32(pid)] != nil  // skip windows without bundle path
+            else { continue }
+            validWindows.append((wid: wid, dict: window))
+        }
+
+        // Known space IDs.
+        let knownSpaceIDs = Set(spaces.compactMap { Int($0.id) })
+        
+        // Get active space IDs
+        var activeSpaceIDs = Set<Int>()
+        if let displays = CGSCopyManagedDisplaySpaces(conn) as? [NSDictionary] {
+            for display in displays {
+                if let currentDict = display["Current Space"] as? [String: Any],
+                   let currentID = currentDict["ManagedSpaceID"] as? Int {
+                    activeSpaceIDs.insert(currentID)
+                }
+            }
+        }
+
+        var windowsBySpaceID: [String: [[String: Any]]] = [:]
+        
+        if let spacesForWindows = cgsCopySpacesForWindows {
+            // Query each window individually for its space assignment.
+            for (wid, dict) in validWindows {
+                let widArray = [wid as NSNumber] as CFArray
+                guard let result = spacesForWindows(conn, 7, widArray),
+                      let spaceIDs = result as? [NSNumber],
+                      let firstSpace = spaceIDs.first
+                else { continue }
+
+                let spaceID = firstSpace.intValue
+                guard knownSpaceIDs.contains(spaceID) else { continue }
+                
+                // AX Validation: If the window is on an ACTIVE space, it MUST be in axWindowIDs.
+                // If it's on an inactive space, AX can't see it anyway, so we allow it.
+                if activeSpaceIDs.contains(spaceID) {
+                    guard axWindowIDs.contains(wid) else { continue }
+                }
+                
+                windowsBySpaceID[String(spaceID), default: []].append(dict)
+            }
+        }
+
+        // Fallback: assign windows to current space per display if CGS API unavailable or empty.
+        if windowsBySpaceID.isEmpty {
+            // Build current-space-per-display map and fullscreen PID→space map.
+            guard let displays = CGSCopyManagedDisplaySpaces(conn) as? [NSDictionary] else { return "" }
+            let screenUUIDs = getAllDisplayUUIDs()
+            let mainUUID = screenUUIDs.first
+            var currentSpaceForDisplay: [String: String] = [:]
+            var fullscreenPIDToSpace: [Int32: String] = [:]
+
+            for display in displays {
+                guard let displayIDRaw = display["Display Identifier"] as? String,
+                      let spaces = display["Spaces"] as? [[String: Any]]
+                else { continue }
+                let displayID = normalizeDisplayID(displayIDRaw, mainUUID: mainUUID)
+
+                if let currentDict = display["Current Space"] as? [String: Any],
+                   let currentID = currentDict["ManagedSpaceID"] as? Int {
+                    currentSpaceForDisplay[displayID] = String(currentID)
+                }
+
+                for space in spaces {
+                    guard let managedID = space["ManagedSpaceID"] as? Int else { continue }
+                    if space["TileLayoutManager"] != nil {
+                        let sid = String(managedID)
+                        if let pid = getOwnerPID(for: sid) {
+                            fullscreenPIDToSpace[pid] = sid
+                        }
+                    }
+                }
+            }
+
+            // Only on-screen windows for fallback.
+            let onScreenOptions = CGWindowListOption(arrayLiteral: .optionOnScreenOnly, .excludeDesktopElements)
+            let onScreenWindows = CGWindowListCopyWindowInfo(onScreenOptions, kCGNullWindowID)
+                as? [[String: Any]] ?? []
+
+            for window in onScreenWindows {
+                guard isValidWindow(window, ourPID: ourPID),
+                      let wid = window[kCGWindowNumber as String] as? Int,
+                      axWindowIDs.contains(wid),
+                      let pid = window[kCGWindowOwnerPID as String] as? Int,
+                      pidToAppPath[Int32(pid)] != nil,
+                      let bounds = window[kCGWindowBounds as String] as? [String: Any],
+                      let x = bounds["X"] as? CGFloat, let y = bounds["Y"] as? CGFloat,
+                      let w = bounds["Width"] as? CGFloat, let h = bounds["Height"] as? CGFloat
+                else { continue }
+
+                let frame = CGRect(x: x, y: y, width: w, height: h)
+                guard let displayID = getWindowDisplayID(for: frame) else { continue }
+
+                let spaceID: String
+                if let fsSpace = fullscreenPIDToSpace[Int32(pid)] {
+                    spaceID = fsSpace
+                } else if let cs = currentSpaceForDisplay[displayID] {
+                    spaceID = cs
+                } else {
+                    continue
+                }
+
+                guard knownSpaceIDs.contains(Int(spaceID) ?? -1) else { continue }
+                windowsBySpaceID[spaceID, default: []].append(window)
+            }
+        }
+
+        // Build output sorted by display then number.
+        let sortedSpaces = spaces.sorted {
+            if $0.displayID != $1.displayID { return $0.displayID < $1.displayID }
+            return $0.num < $1.num
+        }
+
+        var output = ""
+        for space in sortedSpaces {
+            let name = spaceNames[space.id] ?? ""
+            let displayName = getDisplayName(for: space.displayID, screenMap: screenMap)
+            output += ">\(space.id)~\(name)~\(displayName)~\(space.num)\n"
+
+            guard let windows = windowsBySpaceID[space.id] else { continue }
+            for window in windows {
+                guard let wid = window[kCGWindowNumber as String] as? Int,
+                      let pid = window[kCGWindowOwnerPID as String] as? Int,
+                      let appPath = pidToAppPath[Int32(pid)]
+                else { continue }
+
+                let ownerName = window[kCGWindowOwnerName as String] as? String ?? ""
+                let title = window[kCGWindowName as String] as? String ?? ""
+                output += "  \(wid)|\(pid)|\(ownerName)|\(appPath)|\(title)\n"
+            }
+        }
+        return output
+    }
+
+    static func focusWindow(id windowID: Int, pid: Int32) {
+        // Use AXUIElement to find and raise the exact window by CGWindowID.
+        // This is more reliable than CGSOrderWindow for targeting a specific
+        // window when an app has multiple windows.
+        let appElement = AXUIElementCreateApplication(pid)
+        var windowsRef: CFTypeRef?
+        var raised = false
+
+        if AXUIElementCopyAttributeValue(appElement, kAXWindowsAttribute as CFString, &windowsRef) == .success,
+           let axWindows = windowsRef as? [AXUIElement] {
+            for axWindow in axWindows {
+                var cgWID: CGWindowID = 0
+                if _AXUIElementGetWindow(axWindow, &cgWID) == 0, cgWID == CGWindowID(windowID) {
+                    AXUIElementPerformAction(axWindow, kAXRaiseAction as CFString)
+                    raised = true
+                    break
+                }
+            }
+        }
+
+        // Fallback: use CGSOrderWindow if AX matching failed.
+        if !raised {
+            let conn = _CGSDefaultConnection()
+            if let fn = cgsOrderWindow {
+                _ = fn(conn, UInt32(windowID), 0, 0)
+            }
+        }
+
+        // Activate the app so it comes to foreground.
+        if let app = NSRunningApplication(processIdentifier: pid) {
+            app.activate(options: .activateIgnoringOtherApps)
+        }
+    }
+
+    /// Moves a specific window (by CGWindowID) between spaces.
+    /// Uses CGSAddWindowsToSpaces + CGSRemoveWindowsFromSpaces (proven in SpaceLabelWindow).
+    /// Now handles cross-monitor moves by repositioning the window via Accessibility API.
+    static func moveWindowToSpace(windowID: Int, fromSpaceID: Int, targetSpaceID: Int) {
+        let conn = _CGSDefaultConnection()
+        let windowArray = [windowID as NSNumber] as CFArray
+
+        // Cross-monitor move logic
+        let targetDisplayID = getDisplayID(for: String(targetSpaceID))
+        var sourceDisplayID: String? = nil
+        var windowPID: Int32? = nil
+        var windowFrame: CGRect? = nil
+        
+        if let info = getWindowInfo(id: windowID) {
+            windowPID = info.pid
+            windowFrame = info.frame
+            sourceDisplayID = getWindowDisplayID(for: info.frame)
+        }
+        
+        if let targetDisplay = targetDisplayID, 
+           let sourceDisplay = sourceDisplayID, 
+           targetDisplay != sourceDisplay,
+           let pid = windowPID, 
+           let frame = windowFrame {
+            print("SpaceHelper: Cross-monitor move detected (\(sourceDisplay) -> \(targetDisplay)). Repositioning window \(windowID).")
+            repositionWindowToDisplay(windowID: windowID, pid: pid, frame: frame, sourceDisplayID: sourceDisplay, targetDisplayID: targetDisplay)
+        }
+
+        // Add to target space first for visual stability.
+        if let addFn = cgsAddWindowsToSpaces {
+            addFn(conn, windowArray, [targetSpaceID as NSNumber] as CFArray)
+        }
+
+        // Then remove from source space.
+        if let removeFn = cgsRemoveWindowsFromSpaces {
+            removeFn(conn, windowArray, [fromSpaceID as NSNumber] as CFArray)
+        }
+    }
+
+    private static func repositionWindowToDisplay(windowID: Int, pid: Int32, frame: CGRect, sourceDisplayID: String, targetDisplayID: String) {
+        guard let sourceRect = getDisplayRect(for: sourceDisplayID),
+              let targetRect = getDisplayRect(for: targetDisplayID) else { return }
+        
+        // Calculate relative position (offset from source display top-left)
+        let relativeX = frame.origin.x - sourceRect.origin.x
+        let relativeY = frame.origin.y - sourceRect.origin.y
+        
+        // Apply same offset to target display
+        let newX = targetRect.origin.x + relativeX
+        let newY = targetRect.origin.y + relativeY
+        
+        let appElement = AXUIElementCreateApplication(pid)
+        var windowsRef: CFTypeRef?
+        if AXUIElementCopyAttributeValue(appElement, kAXWindowsAttribute as CFString, &windowsRef) == .success,
+           let axWindows = windowsRef as? [AXUIElement] {
+            for axWindow in axWindows {
+                var cgWID: CGWindowID = 0
+                if _AXUIElementGetWindow(axWindow, &cgWID) == 0, cgWID == CGWindowID(windowID) {
+                    var point = CGPoint(x: newX, y: newY)
+                    if let positionRef = AXValueCreate(.cgPoint, &point) {
+                        AXUIElementSetAttributeValue(axWindow, kAXPositionAttribute as CFString, positionRef)
+                        print("SpaceHelper: Repositioned window \(windowID) to \(newX), \(newY) on target display.")
+                    }
+                    break
+                }
+            }
+        }
+    }
+
+    /// Returns the display UUID that a specific space belongs to.
+    static func getDisplayID(for spaceID: String) -> String? {
+        let conn = _CGSDefaultConnection()
+        guard let displays = CGSCopyManagedDisplaySpaces(conn) as? [NSDictionary] else {
+            return nil
+        }
+        
+        let screenUUIDs = getAllDisplayUUIDs()
+        let mainScreenUUID = screenUUIDs.first
+
+        for display in displays {
+            if let rawID = display["Display Identifier"] as? String,
+               let spaces = display["Spaces"] as? [[String: Any]] {
+                let displayID = normalizeDisplayID(rawID, mainUUID: mainScreenUUID)
+                for space in spaces {
+                    if let managedID = space["ManagedSpaceID"] as? Int, String(managedID) == spaceID {
+                        return displayID
+                    }
+                }
+            }
+        }
+        return nil
+    }
+
+    /// Returns the bounds of a display given its UUID.
+    static func getDisplayRect(for uuid: String) -> CGRect? {
+        for screen in NSScreen.screens {
+            let id = screen.deviceDescription[NSDeviceDescriptionKey("NSScreenNumber")] as? CGDirectDisplayID ?? 0
+            guard let uuidRef = CGDisplayCreateUUIDFromDisplayID(id) else { continue }
+            let screenUUID = (CFUUIDCreateString(nil, uuidRef.takeRetainedValue()) as String).uppercased()
+            if screenUUID == uuid.uppercased() {
+                // Return bounds in CG coordinates (top-left origin)
+                return CGDisplayBounds(id)
+            }
+        }
+        return nil
+    }
+
+    /// Returns the ManagedSpaceIDs of the currently visible spaces (one per display).
+    static func getCurrentSpaceIDs() -> [String] {
+        let conn = _CGSDefaultConnection()
+        guard let displays = CGSCopyManagedDisplaySpaces(conn) as? [NSDictionary] else { return [] }
+        var ids: [String] = []
+        for display in displays {
+            if let currentDict = display["Current Space"] as? [String: Any],
+               let managedID = currentDict["ManagedSpaceID"] as? Int {
+                ids.append(String(managedID))
+            }
+        }
+        return ids
+    }
+
+    private static func getDisplayName(for uuidString: String, screenMap: [String: String]) -> String {
+        // Reviewer recommendation: Use case-insensitive comparison for robustness.
+        if let name = screenMap[uuidString.uppercased()] {
+            return name
+        }
+        return "Display"
     }
 
     static func detectSpaceChange() {

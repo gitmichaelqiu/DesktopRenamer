@@ -30,6 +30,7 @@ struct SwitchSettingsView: View {
                             Button("↺") {
                                 hotkeyManager.resetToDefault(for: .switchLeft)
                             }
+                            .disabled(hotkeyManager.isDefault(for: .switchLeft))
                         }
                     }
                     
@@ -53,6 +54,27 @@ struct SwitchSettingsView: View {
                             Button("↺") {
                                 hotkeyManager.resetToDefault(for: .switchRight)
                             }
+                            .disabled(hotkeyManager.isDefault(for: .switchRight))
+                        }
+                    }
+                    
+                    Divider()
+                    
+                    SettingsRow("Reload space labels") {
+                        HStack {
+                            Text(hotkeyManager.description(for: .reloadLabels))
+                                .foregroundColor(.secondary)
+                                .padding(.trailing, 8)
+                            
+                            Button("◉") {
+                                hotkeyManager.startListening(for: .reloadLabels)
+                            }
+                            .disabled(hotkeyManager.isListening)
+                            
+                            Button("↺") {
+                                hotkeyManager.resetToDefault(for: .reloadLabels)
+                            }
+                            .disabled(hotkeyManager.isDefault(for: .reloadLabels))
                         }
                     }
                 }
@@ -72,6 +94,7 @@ struct SwitchSettingsView: View {
                             Button("↺") {
                                 hotkeyManager.resetToDefault(for: .moveWindowPrevious)
                             }
+                            .disabled(hotkeyManager.isDefault(for: .moveWindowPrevious))
                         }
                     }
                     
@@ -91,6 +114,7 @@ struct SwitchSettingsView: View {
                             Button("↺") {
                                 hotkeyManager.resetToDefault(for: .moveWindowNext)
                             }
+                            .disabled(hotkeyManager.isDefault(for: .moveWindowNext))
                         }
                     }
                     
@@ -110,6 +134,47 @@ struct SwitchSettingsView: View {
                             Button("↺") {
                                 hotkeyManager.resetToDefault(for: .moveWindowNumber)
                             }
+                            .disabled(hotkeyManager.isDefault(for: .moveWindowNumber))
+                        }
+                    }
+                    
+                    Divider()
+                    
+                    SettingsRow("Move window to previous display") {
+                        HStack {
+                            Text(hotkeyManager.description(for: .moveWindowPreviousDisplay))
+                                .foregroundColor(.secondary)
+                                .padding(.trailing, 8)
+                            
+                            Button("◉") {
+                                hotkeyManager.startListening(for: .moveWindowPreviousDisplay)
+                            }
+                            .disabled(hotkeyManager.isListening)
+                            
+                            Button("↺") {
+                                hotkeyManager.resetToDefault(for: .moveWindowPreviousDisplay)
+                            }
+                            .disabled(hotkeyManager.isDefault(for: .moveWindowPreviousDisplay))
+                        }
+                    }
+                    
+                    Divider()
+                    
+                    SettingsRow("Move window to next display") {
+                        HStack {
+                            Text(hotkeyManager.description(for: .moveWindowNextDisplay))
+                                .foregroundColor(.secondary)
+                                .padding(.trailing, 8)
+                            
+                            Button("◉") {
+                                hotkeyManager.startListening(for: .moveWindowNextDisplay)
+                            }
+                            .disabled(hotkeyManager.isListening)
+                            
+                            Button("↺") {
+                                hotkeyManager.resetToDefault(for: .moveWindowNextDisplay)
+                            }
+                            .disabled(hotkeyManager.isDefault(for: .moveWindowNextDisplay))
                         }
                     }
                 }
@@ -120,9 +185,8 @@ struct SwitchSettingsView: View {
                         "Enable switch gesture override",
                         helperText:
                             "Replaces system switch gestures with instant space switching.\n\nRequired: You must disable 'Swipe between full screen apps' in System Settings → Trackpad → More Gestures or change to different number of fingers to prevent conflicts.\n\nNotice, you must click at the fullscreen app to make it active to avoid issues when leaving the app.",
-                        warningText: (permissionManager.isAccessibilityGranted
-                                      && permissionManager.isAutomationGranted)
-                        ? nil : "Requires Accessibility and Automation permissions."
+                        warningText: permissionManager.isAccessibilityGranted
+                        ? nil : "Requires Accessibility permission."
                     ) {
                         Toggle("", isOn: $gestureManager.isEnabled)
                             .toggleStyle(.switch)
@@ -130,8 +194,22 @@ struct SwitchSettingsView: View {
                     }
                     
                     if gestureManager.isEnabled {
-                        Divider()
+                        Divider()     
+
+                        SettingsRow(
+                            "Instant switch without animations",
+                            helperText:
+                                "Bypasses the macOS sliding animation using synthetic high-velocity gestures.\n\nRequires 'Swipe between full-screen applications' enabled in System Settings → Trackpad.\n\nRecommended: Disable 'Automatically rearrange spaces based on most recent use' in Desktop & Dock settings to prevent miscalculations.",
+                            warningText: permissionManager.isAccessibilityGranted
+                            ? nil : "Requires Accessibility permission."
+                        ) {
+                            Toggle("", isOn: $spaceManager.instantSpaceSwitch)
+                                .toggleStyle(.switch)
+                                .labelsHidden()
+                        }
                         
+                        Divider()
+
                         SettingsRow("Gesture type", helperText: "When set to 3 fingers, you can still use 4 fingers to trigger native swipe.") {
                             Picker("", selection: $gestureManager.fingerCount) {
                                 Text("3 Fingers").tag(3)
@@ -139,7 +217,7 @@ struct SwitchSettingsView: View {
                             }
                             .labelsHidden()
                         }
-                        
+
                         Divider()
                         
                         SettingsRow("Switch display with") {
@@ -165,22 +243,8 @@ struct SwitchSettingsView: View {
                     }
                 }
                 
-                // Advanced switching preferences.
+
                 SettingsSection("Advanced") {
-                    SettingsRow(
-                        "Force Mission Control for fullscreen apps",
-                        helperText:
-                            "When enabled, the app will always use Mission Control Automation for transitions to or from fullscreen apps. This is slower but more reliable on some systems.",
-                        warningText: (permissionManager.isAccessibilityGranted
-                                      && permissionManager.isAutomationGranted)
-                        ? nil : "Requires Accessibility and Automation permissions."
-                    ) {
-                        Toggle("", isOn: $spaceManager.forceMissionControlForFullscreen)
-                            .toggleStyle(.switch)
-                            .labelsHidden()
-                    }
-                }
-                SettingsSection(nil) {
                     SliderSettingsRow(
                         "Grab offset X",
                         helperText: "Adjust the position where the mouse grabs the window to move across spaces.",

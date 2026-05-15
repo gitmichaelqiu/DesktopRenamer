@@ -934,6 +934,17 @@ class SpaceLabelWindow: NSWindow {
         } else {
             isVisuallyVisible = labelManager?.showPreviewLabels ?? true
         }
+        
+        // Robust Fix: Suppress preview labels during space transitions if hideWhenSwitching is enabled.
+        if !isActiveMode && labelManager?.hideWhenSwitching == true {
+            let now = Date().timeIntervalSince1970
+            let timeSinceSwitch = now - SpaceHelper.lastProgrammaticSwitchTime
+            if timeSinceSwitch < 1.0 {
+                print("SpaceLabelWindow[\(self.spaceId)]: Suppressing preview label visibility during switch transition (\(String(format: "%.2f", timeSinceSwitch))s).")
+                isVisuallyVisible = false
+                scheduleVisibilityRetry(delay: 1.0 - timeSinceSwitch + 0.1)
+            }
+        }
 
         let shouldBeAnchor = !isVisuallyVisible
         if self.isInvisibleAnchorMode != shouldBeAnchor {

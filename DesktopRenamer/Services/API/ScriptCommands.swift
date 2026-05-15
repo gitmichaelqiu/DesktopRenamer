@@ -153,7 +153,7 @@ class SwitchToSpaceCommand: NSScriptCommand {
             if let manager = AppDelegate.shared.spaceManager {
                 // Resolve space object by identifier.
                 if let space = manager.spaceNameDict.first(where: { $0.id == spaceID }) {
-                    manager.switchToSpace(space)
+                    manager.switchToSpace(space, forceInstant: true)
                 }
             }
         }
@@ -224,6 +224,74 @@ class ReloadSpaceLabelsCommand: NSScriptCommand {
                 return true
             }
             return false
+        }
+    }
+}
+
+class GetWindowsCommand: NSScriptCommand {
+    override func performDefaultImplementation() -> Any? {
+        guard isAPIEnabled() else { return "API Disabled" }
+        
+        // Fetch necessary space data on the main thread.
+        let data: ([DesktopSpace], [String: String])? = runOnMain {
+            guard let manager = AppDelegate.shared.spaceManager else { return nil }
+            let spaces = manager.spaceNameDict
+            var names: [String: String] = [:]
+            for s in spaces {
+                names[s.id] = manager.getSpaceName(s.id)
+            }
+            return (spaces, names)
+        }
+        
+        guard let (spaces, names) = data else { return "" }
+        
+        // Perform heavy window enumeration on the background thread (NSScriptCommand defaults to background).
+        return SpaceHelper.getWindowsForAllSpaces(spaces: spaces, spaceNames: names)
+    }
+}
+
+class FocusWindowCommand: NSScriptCommand {
+    override func performDefaultImplementation() -> Any? {
+        guard isAPIEnabled() else { return nil }
+        guard let windowIDStr = self.directParameter as? String,
+              let windowID = Int(windowIDStr),
+              let arguments = self.evaluatedArguments,
+              let pidStr = arguments["ownerPID"] as? String,
+              let pid = Int32(pidStr)
+        else { return nil }
+
+        DispatchQueue.main.async {
+            SpaceHelper.focusWindow(id: windowID, pid: pid)
+        }
+        return nil
+    }
+}
+
+class MoveSpecificWindowToSpaceCommand: NSScriptCommand {
+    override func performDefaultImplementation() -> Any? {
+        guard isAPIEnabled() else { return nil }
+        guard let windowIDStr = self.directParameter as? String,
+              let windowID = Int(windowIDStr),
+              let arguments = self.evaluatedArguments,
+              let fromSpaceStr = arguments["fromSpace"] as? String,
+              let fromSpaceID = Int(fromSpaceStr),
+              let targetSpaceStr = arguments["targetSpace"] as? String,
+              let targetSpaceID = Int(targetSpaceStr)
+        else { return nil }
+
+        DispatchQueue.main.async {
+            SpaceHelper.moveWindowToSpace(windowID: windowID, fromSpaceID: fromSpaceID, targetSpaceID: targetSpaceID)
+        }
+        return nil
+    }
+}
+
+class GetCurrentSpaceIDCommand: NSScriptCommand {
+    override func performDefaultImplementation() -> Any? {
+        guard isAPIEnabled() else { return "API Disabled" }
+        return runOnMain {
+            let ids = SpaceHelper.getCurrentSpaceIDs()
+            return ids.joined(separator: ",")
         }
     }
 }
