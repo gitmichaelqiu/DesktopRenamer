@@ -134,7 +134,7 @@ struct SwitchSettingsView: View {
                         SettingsRow(
                             "Instant switch without animations",
                             helperText:
-                                "Bypasses the macOS sliding animation using synthetic high-velocity gestures.\n\nRequires 'Swipe between full-screen applications' enabled in System Settings → Trackpad.\nRecommended: Disable 'Automatically rearrange spaces based on most recent use' in Desktop & Dock settings to prevent miscalculations.",
+                                "Bypasses the macOS sliding animation using synthetic high-velocity gestures.\n\nRequires 'Swipe between full-screen applications' enabled in System Settings → Trackpad.\n\nRecommended: Disable 'Automatically rearrange spaces based on most recent use' in Desktop & Dock settings to prevent miscalculations.",
                             warningText: permissionManager.isAccessibilityGranted
                             ? nil : "Requires Accessibility permission."
                         ) {
@@ -144,7 +144,7 @@ struct SwitchSettingsView: View {
                         }
                         
                         Divider()
-                        
+
                         SettingsRow("Gesture type", helperText: "When set to 3 fingers, you can still use 4 fingers to trigger native swipe.") {
                             Picker("", selection: $gestureManager.fingerCount) {
                                 Text("3 Fingers").tag(3)
