@@ -695,17 +695,17 @@ class SpaceManager: ObservableObject {
         SpaceHelper.switchToSpace(space.id, forceInstant: forceInstant)
     }
     
-    func switchToPreviousSpace(onDisplayID displayID: String? = nil) {
+    func switchToPreviousSpace(onDisplayID displayID: String? = nil, forceInstant: Bool? = nil) {
         let targetDisplayID = displayID ?? spaceNameDict.first(where: { $0.id == currentSpaceUUID })?.displayID ?? currentDisplayID
         if let current = findBestCurrentSpace(for: targetDisplayID) {
-            proceedToSwitch(from: current, on: targetDisplayID, direction: -1)
+            proceedToSwitch(from: current, on: targetDisplayID, direction: -1, forceInstant: forceInstant ?? instantSpaceSwitch)
         }
     }
 
-    func switchToNextSpace(onDisplayID displayID: String? = nil) {
+    func switchToNextSpace(onDisplayID displayID: String? = nil, forceInstant: Bool? = nil) {
         let targetDisplayID = displayID ?? spaceNameDict.first(where: { $0.id == currentSpaceUUID })?.displayID ?? currentDisplayID
         if let current = findBestCurrentSpace(for: targetDisplayID) {
-            proceedToSwitch(from: current, on: targetDisplayID, direction: 1)
+            proceedToSwitch(from: current, on: targetDisplayID, direction: 1, forceInstant: forceInstant ?? instantSpaceSwitch)
         }
     }
 
@@ -733,7 +733,7 @@ class SpaceManager: ObservableObject {
         return spaceNameDict.first(where: { $0.displayID == displayID })
     }
 
-    private func proceedToSwitch(from current: DesktopSpace, on targetDisplayID: String, direction: Int) {
+    private func proceedToSwitch(from current: DesktopSpace, on targetDisplayID: String, direction: Int, forceInstant: Bool = false) {
         // Use spaces from the TARGET display
         let displaySpaces = spaceNameDict
             .filter { $0.displayID == targetDisplayID }
@@ -745,7 +745,7 @@ class SpaceManager: ObservableObject {
         guard targetIndex >= 0 && targetIndex < displaySpaces.count else { return }
         
         let target = displaySpaces[targetIndex]
-        switchToSpace(target)
+        switchToSpace(target, forceInstant: forceInstant)
     }
 
     // MARK: - Move Window Functions
