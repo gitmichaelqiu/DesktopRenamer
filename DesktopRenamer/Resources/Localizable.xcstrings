@@ -281,17 +281,6 @@
         }
       }
     },
-    "Automation" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "自动化"
-          }
-        }
-      }
-    },
     "Back" : {
       "localizations" : {
         "zh-Hans" : {
@@ -372,8 +361,15 @@
         }
       }
     },
-    "Bypasses the macOS sliding animation using synthetic high-velocity gestures.\n\nRequires 'Swipe between full-screen applications' enabled in System Settings → Trackpad.\nRecommended: Disable 'Automatically rearrange spaces based on most recent use' in Desktop & Dock settings to prevent miscalculations." : {
-
+    "Bypasses the macOS sliding animation using synthetic high-velocity gestures.\n\nRequires 'Swipe between full-screen applications' enabled in System Settings → Trackpad.\n\nRecommended: Disable 'Automatically rearrange spaces based on most recent use' in Desktop & Dock settings to prevent miscalculations." : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "使用高速滑动绕过 macOS 的滑动动画。\n\n需要启用“在全屏应用程序之间滑动”（可在“系统设置”→“触控板”中启用）。\n\n建议：在“桌面与程序坞”设置中禁用“根据最近使用情况自动重新排列空间”，以防止计算错误。"
+          }
+        }
+      }
     },
     "Cancel" : {
       "localizations" : {
@@ -471,19 +467,15 @@
     "DesktopRenamer" : {
       "shouldTranslate" : false
     },
-    "DesktopRenamer requires Accessibility and Automation permissions for hotkeys and trackpad overrides to function correctly.\n\nPlease enable them in System Settings → Privacy & Security." : {
-      "extractionState" : "stale",
+    "DesktopRenamer requires Accessibility permission for hotkeys and trackpad overrides to function correctly." : {
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "DesktopRenamer 需要辅助功能和自动化权限以设置快捷键和检测触控板滑动。\n\n请在系统设置 → 隐私 & 安全中启用。"
+            "value" : "DesktopRenamer 需要辅助权限以配置快捷键和触控板覆盖。"
           }
         }
       }
-    },
-    "DesktopRenamer requires Accessibility permission for hotkeys and trackpad overrides to function correctly.\n\nPlease enable them in System Settings → Privacy & Security." : {
-
     },
     "DesktopRenamer's GitHub" : {
       "localizations" : {
@@ -593,23 +585,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "字体大小"
-          }
-        }
-      }
-    },
-    "Force Mission Control for fullscreen apps" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Force Mission Control for fullscreen switching"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "强制使用调度中心以切换全屏 App"
           }
         }
       }
@@ -755,7 +730,14 @@
       }
     },
     "Instant switch without animations" : {
-
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "无动画快速切换"
+          }
+        }
+      }
     },
     "Keep visible on desktop" : {
       "localizations" : {
@@ -1312,28 +1294,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "在切换桌面，获取当前桌面时需要此权限。"
-          }
-        }
-      }
-    },
-    "Required for using Mission Control via AppleScript (System Events) to switch spaces when the fast-switch method falls back." : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "在切换桌面时，如果没有对应的系统快捷键，需要此权限。"
-          }
-        }
-      }
-    },
-    "Requires Accessibility and Automation permissions." : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "需要辅助和自动化权限。"
           }
         }
       }
@@ -2818,17 +2778,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "欢迎使用"
-          }
-        }
-      }
-    },
-    "When enabled, the app will always use Mission Control Automation for transitions to or from fullscreen apps. This is slower but more reliable on some systems." : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "若启用，App 会自动使用调度中心来切换全屏 App。虽然速度上更慢，但是十分稳定。"
           }
         }
       }

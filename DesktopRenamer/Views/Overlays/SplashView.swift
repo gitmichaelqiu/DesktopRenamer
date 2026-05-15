@@ -439,7 +439,7 @@ struct PermissionsPage: View {
                 Text("Require Permissions")
                     .font(.system(size: 30, weight: .bold, design: .rounded))
                 
-                Text("DesktopRenamer requires Accessibility permission for hotkeys and trackpad overrides to function correctly.\n\nPlease enable them in System Settings → Privacy & Security.")
+                Text("DesktopRenamer requires Accessibility permission for hotkeys and trackpad overrides to function correctly.")
                     .font(.body)
                     .foregroundColor(.secondary)
                     .multilineTextAlignment(.center)
