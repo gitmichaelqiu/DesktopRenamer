@@ -43,7 +43,7 @@ class SpaceManager: ObservableObject {
     static private let isAPIEnabledKey = "com.michaelqiu.desktoprenamer.isapienabled"
     static private let detectionMethodKey = "com.michaelqiu.desktoprenamer.detectionMethod"
     static private let isManualSpacesEnabledKey = "com.michaelqiu.desktoprenamer.ismanualspacesenabled"
-    static private let forceMissionControlForFullscreenKey = "com.michaelqiu.desktoprenamer.forceMissionControlForFullscreen"
+    static private let instantSpaceSwitchKey = "com.michaelqiu.desktoprenamer.instantSpaceSwitch"
     static private let grabOffsetXKey = "com.michaelqiu.desktoprenamer.grabOffsetX"
     static private let grabOffsetYKey = "com.michaelqiu.desktoprenamer.grabOffsetY"
     
@@ -98,9 +98,9 @@ class SpaceManager: ObservableObject {
     
     var isManualMode: Bool { detectionMethod == .manual }
     
-    @Published var forceMissionControlForFullscreen: Bool {
+    @Published var instantSpaceSwitch: Bool {
         didSet {
-            UserDefaults.standard.set(forceMissionControlForFullscreen, forKey: SpaceManager.forceMissionControlForFullscreenKey)
+            UserDefaults.standard.set(instantSpaceSwitch, forKey: SpaceManager.instantSpaceSwitchKey)
         }
     }
     
@@ -135,7 +135,7 @@ class SpaceManager: ObservableObject {
             self.detectionMethod = .automatic
         }
         
-        self.forceMissionControlForFullscreen = UserDefaults.standard.bool(forKey: SpaceManager.forceMissionControlForFullscreenKey)
+        self.instantSpaceSwitch = UserDefaults.standard.bool(forKey: SpaceManager.instantSpaceSwitchKey)
         
         self.grabOffsetX = UserDefaults.standard.object(forKey: SpaceManager.grabOffsetXKey) == nil ? 13.0 : UserDefaults.standard.double(forKey: SpaceManager.grabOffsetXKey)
         self.grabOffsetY = UserDefaults.standard.object(forKey: SpaceManager.grabOffsetYKey) == nil ? 25.0 : UserDefaults.standard.double(forKey: SpaceManager.grabOffsetYKey)
@@ -690,22 +690,22 @@ class SpaceManager: ObservableObject {
     
     // Space navigation and switching logic.
     
-    func switchToSpace(_ space: DesktopSpace) {
-        print("SpaceManager: switchToSpace(\(space.id)) on display \(space.displayID)")
-        SpaceHelper.switchToSpace(space.id, forceMissionControl: forceMissionControlForFullscreen)
+    func switchToSpace(_ space: DesktopSpace, forceInstant: Bool = false) {
+        print("SpaceManager: switchToSpace(\(space.id)) on display \(space.displayID) forceInstant: \(forceInstant)")
+        SpaceHelper.switchToSpace(space.id, forceInstant: forceInstant)
     }
     
-    func switchToPreviousSpace(onDisplayID displayID: String? = nil) {
+    func switchToPreviousSpace(onDisplayID displayID: String? = nil, forceInstant: Bool? = nil) {
         let targetDisplayID = displayID ?? spaceNameDict.first(where: { $0.id == currentSpaceUUID })?.displayID ?? currentDisplayID
         if let current = findBestCurrentSpace(for: targetDisplayID) {
-            proceedToSwitch(from: current, on: targetDisplayID, direction: -1)
+            proceedToSwitch(from: current, on: targetDisplayID, direction: -1, forceInstant: forceInstant ?? instantSpaceSwitch)
         }
     }
 
-    func switchToNextSpace(onDisplayID displayID: String? = nil) {
+    func switchToNextSpace(onDisplayID displayID: String? = nil, forceInstant: Bool? = nil) {
         let targetDisplayID = displayID ?? spaceNameDict.first(where: { $0.id == currentSpaceUUID })?.displayID ?? currentDisplayID
         if let current = findBestCurrentSpace(for: targetDisplayID) {
-            proceedToSwitch(from: current, on: targetDisplayID, direction: 1)
+            proceedToSwitch(from: current, on: targetDisplayID, direction: 1, forceInstant: forceInstant ?? instantSpaceSwitch)
         }
     }
 
@@ -733,7 +733,7 @@ class SpaceManager: ObservableObject {
         return spaceNameDict.first(where: { $0.displayID == displayID })
     }
 
-    private func proceedToSwitch(from current: DesktopSpace, on targetDisplayID: String, direction: Int) {
+    private func proceedToSwitch(from current: DesktopSpace, on targetDisplayID: String, direction: Int, forceInstant: Bool = false) {
         // Use spaces from the TARGET display
         let displaySpaces = spaceNameDict
             .filter { $0.displayID == targetDisplayID }
@@ -745,7 +745,7 @@ class SpaceManager: ObservableObject {
         guard targetIndex >= 0 && targetIndex < displaySpaces.count else { return }
         
         let target = displaySpaces[targetIndex]
-        switchToSpace(target)
+        switchToSpace(target, forceInstant: forceInstant)
     }
 
     // MARK: - Move Window Functions
@@ -784,7 +784,7 @@ class SpaceManager: ObservableObject {
               currentIndex < spaceList.count - 1 else { return }
         
         let target = spaceList[currentIndex + 1]
-        SpaceHelper.dragActiveWindow(to: target.id)
+        SpaceHelper.dragActiveWindow(to: target.id, forceInstant: true)
     }
 
     private func moveActiveWindowToNextSpaceLegacy() {
@@ -800,7 +800,7 @@ class SpaceManager: ObservableObject {
               currentIndex < spaceList.count - 1 else { return }
         
         let target = spaceList[currentIndex + 1]
-        SpaceHelper.dragActiveWindow(to: target.id)
+        SpaceHelper.dragActiveWindow(to: target.id, forceInstant: true)
     }
     
     func moveActiveWindowToPreviousSpace() {
@@ -830,7 +830,7 @@ class SpaceManager: ObservableObject {
               currentIndex > 0 else { return }
         
         let target = spaceList[currentIndex - 1]
-        SpaceHelper.dragActiveWindow(to: target.id)
+        SpaceHelper.dragActiveWindow(to: target.id, forceInstant: true)
     }
 
     private func moveActiveWindowToPreviousSpaceLegacy() {
@@ -846,20 +846,45 @@ class SpaceManager: ObservableObject {
               currentIndex > 0 else { return }
         
         let target = spaceList[currentIndex - 1]
-        SpaceHelper.dragActiveWindow(to: target.id)
+        SpaceHelper.dragActiveWindow(to: target.id, forceInstant: true)
     }
     
     func moveActiveWindowToSpace(number: Int) {
         if let target = spaceNameDict.first(where: { $0.num == number }) {
-            SpaceHelper.dragActiveWindow(to: target.id)
+            // BUG FIX: Prevent redundant move attempts if the target is already current.
+            if target.id == currentSpaceUUID { return }
+            SpaceHelper.dragActiveWindow(to: target.id, forceInstant: true)
         }
     }
     
     func moveActiveWindowToSpace(id: String) {
-        if let space = spaceNameDict.first(where: { $0.id == id }), space.isFullscreen {
+        // BUG FIX: Prevent redundant move attempts if the target is already current.
+        if id == currentSpaceUUID { return }
+        
+        guard let targetSpace = spaceNameDict.first(where: { $0.id == id }), !targetSpace.isFullscreen else {
             return
         }
-        SpaceHelper.dragActiveWindow(to: id)
+
+        // Robust Cross-Monitor Support: 
+        // If the target space is on a different monitor, we use the direct CGS+AX move method
+        // since the "swipe while dragging" gesture is limited to a single display.
+        if let windowInfo = SpaceHelper.getActiveWindowInfo() {
+            let sourceDisplayID = SpaceHelper.getWindowDisplayID(for: windowInfo.frame)
+            if let sourceDisplay = sourceDisplayID, sourceDisplay != targetSpace.displayID {
+                print("SpaceManager: Cross-monitor move requested (\(sourceDisplay) -> \(targetSpace.displayID)). Using robust method.")
+                
+                let fromSpaceID = Int(SpaceHelper.getCurrentSpaceID(for: sourceDisplay) ?? "0") ?? 0
+                let targetSpaceID = Int(id) ?? 0
+                
+                SpaceHelper.moveWindowToSpace(windowID: windowInfo.id, fromSpaceID: fromSpaceID, targetSpaceID: targetSpaceID)
+                
+                // Switch to the target space to follow the window
+                self.switchToSpace(targetSpace, forceInstant: true)
+                return
+            }
+        }
+        
+        SpaceHelper.dragActiveWindow(to: id, forceInstant: true)
     }
 
     func isFirstSpace(onDisplayID displayID: String? = nil) -> Bool {
@@ -883,6 +908,41 @@ class SpaceManager: ObservableObject {
             
         guard let currentIndex = displaySpaces.firstIndex(of: current) else { return false }
         return currentIndex == 0
+    }
+    
+    func moveActiveWindowToNextDisplay() {
+        moveActiveWindowToDisplay(offset: 1)
+    }
+
+    func moveActiveWindowToPreviousDisplay() {
+        moveActiveWindowToDisplay(offset: -1)
+    }
+
+    private func moveActiveWindowToDisplay(offset: Int) {
+        guard let windowInfo = SpaceHelper.getActiveWindowInfo() else { return }
+        let sourceDisplayID = SpaceHelper.getWindowDisplayID(for: windowInfo.frame) ?? self.currentDisplayID
+        
+        let displayIDs = SpaceHelper.getAllDisplayUUIDs()
+        guard displayIDs.count > 1 else { return }
+        
+        guard let currentIndex = displayIDs.firstIndex(of: sourceDisplayID) else { return }
+        
+        let targetIndex = (currentIndex + offset + displayIDs.count) % displayIDs.count
+        let targetDisplayID = displayIDs[targetIndex]
+        
+        // Find the current space on the target display
+        guard let targetSpaceIDStr = SpaceHelper.getCurrentSpaceID(for: targetDisplayID),
+              let targetSpace = spaceNameDict.first(where: { $0.id == targetSpaceIDStr }) else { return }
+        
+        // Perform move using the robust cross-monitor logic
+        let fromSpaceID = Int(SpaceHelper.getCurrentSpaceID(for: sourceDisplayID) ?? "0") ?? 0
+        let targetSpaceID = Int(targetSpaceIDStr) ?? 0
+        
+        print("SpaceManager: Moving active window to display \(targetDisplayID)")
+        SpaceHelper.moveWindowToSpace(windowID: windowInfo.id, fromSpaceID: fromSpaceID, targetSpaceID: targetSpaceID)
+        
+        // Switch to the target space to follow the window
+        self.switchToSpace(targetSpace, forceInstant: true)
     }
     
     func isLastSpace(onDisplayID displayID: String? = nil) -> Bool {

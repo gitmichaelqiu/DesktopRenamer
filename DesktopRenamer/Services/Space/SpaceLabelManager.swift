@@ -179,9 +179,12 @@ class SpaceLabelManager: ObservableObject {
                 if self?.hideWhenSwitching == true {
                     self?.hideAllPreviewLabels()
                 }
-                // We use currentDisplayID here to scope the refresh to the monitor that actually changed.
-                // This prevents focus hijacking where Monitor A switches and Monitor B accidentally steals focus back.
                 self?.updateAllWindowModes(forDisplay: self?.spaceManager?.currentDisplayID)
+                
+                Task { @MainActor in
+                    try? await Task.sleep(nanoseconds: 600_000_000)
+                    self?.updateAllWindowModes(forDisplay: self?.spaceManager?.currentDisplayID)
+                }
             }
             .store(in: &cancellables)
 
@@ -368,12 +371,16 @@ class SpaceLabelManager: ObservableObject {
     // Asserts that a window exists for the specified space, refreshing if already present.
     private func ensureWindow(for spaceId: String, name: String, displayID: String) {
         if let existingWindow = createdWindows[spaceId] {
-            if !existingWindow.isVisible {
-                existingWindow.refreshAppearance()
-            } else if existingWindow.displayID != displayID {
+            if existingWindow.displayID != displayID {
                 existingWindow.orderOut(nil)
                 createdWindows.removeValue(forKey: spaceId)
             } else {
+                // BUG FIX: Even if the window exists and is visible, we MUST update its mode
+                // (Active vs Preview) and refresh its appearance. Otherwise, labels can 
+                // get stuck in Preview mode when returning from fullscreen.
+                let isCurrent = (spaceId == spaceManager?.currentSpaceUUID)
+                existingWindow.setMode(isCurrentSpace: isCurrent)
+                existingWindow.refreshAppearance()
                 return
             }
         }

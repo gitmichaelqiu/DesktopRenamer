@@ -10,6 +10,9 @@ enum HotkeyType {
     case moveWindowNext
     case moveWindowPrevious
     case moveWindowNumber
+    case reloadLabels
+    case moveWindowNextDisplay
+    case moveWindowPreviousDisplay
 }
 
 class HotkeyManager: ObservableObject {
@@ -21,6 +24,9 @@ class HotkeyManager: ObservableObject {
     let moveWindowNextTriggered = PassthroughSubject<Void, Never>()
     let moveWindowPreviousTriggered = PassthroughSubject<Void, Never>()
     let moveWindowNumberTriggered = PassthroughSubject<Int, Never>()
+    let reloadLabelsTriggered = PassthroughSubject<Void, Never>()
+    let moveWindowNextDisplayTriggered = PassthroughSubject<Void, Never>()
+    let moveWindowPreviousDisplayTriggered = PassthroughSubject<Void, Never>()
 
     // Internal state
     @Published var mainShortcut: Shortcut {
@@ -64,6 +70,27 @@ class HotkeyManager: ObservableObject {
             registerShortcuts()
         }
     }
+    
+    @Published var reloadLabelsShortcut: Shortcut {
+        didSet {
+            saveShortcut(reloadLabelsShortcut, key: reloadLabelsKey)
+            registerShortcuts()
+        }
+    }
+    
+    @Published var moveWindowNextDisplayShortcut: Shortcut {
+        didSet {
+            saveShortcut(moveWindowNextDisplayShortcut, key: moveWindowNextDisplayKey)
+            registerShortcuts()
+        }
+    }
+    
+    @Published var moveWindowPreviousDisplayShortcut: Shortcut {
+        didSet {
+            saveShortcut(moveWindowPreviousDisplayShortcut, key: moveWindowPreviousDisplayKey)
+            registerShortcuts()
+        }
+    }
 
     @Published var isListening: Bool = false
     @Published var listeningType: HotkeyType? = nil
@@ -75,6 +102,9 @@ class HotkeyManager: ObservableObject {
     private var moveWindowNextHotKey: HotKey?
     private var moveWindowPreviousHotKey: HotKey?
     private var moveWindowNumberHotKeys: [HotKey] = []
+    private var reloadLabelsHotKey: HotKey?
+    private var moveWindowNextDisplayHotKey: HotKey?
+    private var moveWindowPreviousDisplayHotKey: HotKey?
     
     private var monitor: Any?
     
@@ -88,6 +118,9 @@ class HotkeyManager: ObservableObject {
     private let moveWindowNextKey = "HotkeyManager.MoveWindowNext"
     private let moveWindowPreviousKey = "HotkeyManager.MoveWindowPrevious"
     private let moveWindowNumberKey = "HotkeyManager.MoveWindowNumber"
+    private let reloadLabelsKey = "HotkeyManager.ReloadLabels"
+    private let moveWindowNextDisplayKey = "HotkeyManager.MoveWindowNextDisplay"
+    private let moveWindowPreviousDisplayKey = "HotkeyManager.MoveWindowPreviousDisplay"
 
     init() {
         // Load or default
@@ -103,6 +136,9 @@ class HotkeyManager: ObservableObject {
         self.moveWindowNextShortcut = Self.loadShortcut(key: moveWindowNextKey) ?? Shortcut(key: nil, modifiers: [])
         self.moveWindowPreviousShortcut = Self.loadShortcut(key: moveWindowPreviousKey) ?? Shortcut(key: nil, modifiers: [])
         self.moveWindowNumberShortcut = Self.loadShortcut(key: moveWindowNumberKey) ?? Shortcut(key: nil, modifiers: [])
+        self.reloadLabelsShortcut = Self.loadShortcut(key: reloadLabelsKey) ?? Shortcut(key: nil, modifiers: [])
+        self.moveWindowNextDisplayShortcut = Self.loadShortcut(key: moveWindowNextDisplayKey) ?? Shortcut(key: nil, modifiers: [])
+        self.moveWindowPreviousDisplayShortcut = Self.loadShortcut(key: moveWindowPreviousDisplayKey) ?? Shortcut(key: nil, modifiers: [])
         
         registerShortcuts()
     }
@@ -119,6 +155,9 @@ class HotkeyManager: ObservableObject {
         case .switchRight: return switchRightShortcut.description
         case .moveWindowNext: return moveWindowNextShortcut.description
         case .moveWindowPrevious: return moveWindowPreviousShortcut.description
+        case .reloadLabels: return reloadLabelsShortcut.description
+        case .moveWindowNextDisplay: return moveWindowNextDisplayShortcut.description
+        case .moveWindowPreviousDisplay: return moveWindowPreviousDisplayShortcut.description
         case .moveWindowNumber:
             if moveWindowNumberShortcut.modifiers.isEmpty {
                  return NSLocalizedString("Settings.Shortcuts.Unassgined", comment: "Unassigned")
@@ -180,6 +219,27 @@ class HotkeyManager: ObservableObject {
             moveWindowPreviousHotKey?.keyDownHandler = { [weak self] in self?.moveWindowPreviousTriggered.send() }
         }
         
+        // Reload Space Labels.
+        reloadLabelsHotKey = nil
+        if let key = reloadLabelsShortcut.hotkeyKey, let mods = reloadLabelsShortcut.hotkeyModifiers {
+            reloadLabelsHotKey = HotKey(key: key, modifiers: mods)
+            reloadLabelsHotKey?.keyDownHandler = { [weak self] in self?.reloadLabelsTriggered.send() }
+        }
+        
+        // Move Window to Next Display.
+        moveWindowNextDisplayHotKey = nil
+        if let key = moveWindowNextDisplayShortcut.hotkeyKey, let mods = moveWindowNextDisplayShortcut.hotkeyModifiers {
+            moveWindowNextDisplayHotKey = HotKey(key: key, modifiers: mods)
+            moveWindowNextDisplayHotKey?.keyDownHandler = { [weak self] in self?.moveWindowNextDisplayTriggered.send() }
+        }
+        
+        // Move Window to Previous Display.
+        moveWindowPreviousDisplayHotKey = nil
+        if let key = moveWindowPreviousDisplayShortcut.hotkeyKey, let mods = moveWindowPreviousDisplayShortcut.hotkeyModifiers {
+            moveWindowPreviousDisplayHotKey = HotKey(key: key, modifiers: mods)
+            moveWindowPreviousDisplayHotKey?.keyDownHandler = { [weak self] in self?.moveWindowPreviousDisplayTriggered.send() }
+        }
+        
         // Move Window Number (1-9).
         // We register hotkeys for Modifiers + 1...9
         let modSet = moveWindowNumberShortcut.modifiers.intersection([.command, .option, .control, .shift])
@@ -211,6 +271,9 @@ class HotkeyManager: ObservableObject {
         switchRightHotKey = nil
         moveWindowNextHotKey = nil
         moveWindowPreviousHotKey = nil
+        reloadLabelsHotKey = nil
+        moveWindowNextDisplayHotKey = nil
+        moveWindowPreviousDisplayHotKey = nil
         moveWindowNumberHotKeys.removeAll()
 
         removeKeyListener()
@@ -266,6 +329,9 @@ class HotkeyManager: ObservableObject {
         case .moveWindowNext: moveWindowNextShortcut = shortcut
         case .moveWindowPrevious: moveWindowPreviousShortcut = shortcut
         case .moveWindowNumber: moveWindowNumberShortcut = shortcut
+        case .reloadLabels: reloadLabelsShortcut = shortcut
+        case .moveWindowNextDisplay: moveWindowNextDisplayShortcut = shortcut
+        case .moveWindowPreviousDisplay: moveWindowPreviousDisplayShortcut = shortcut
         }
     }
     
@@ -283,6 +349,20 @@ class HotkeyManager: ObservableObject {
         }
     }
     
+    func isDefault(for type: HotkeyType) -> Bool {
+        switch type {
+        case .main: return mainShortcut == defaultMain
+        case .switchLeft: return switchLeftShortcut == defaultNone
+        case .switchRight: return switchRightShortcut == defaultNone
+        case .moveWindowNext: return moveWindowNextShortcut == defaultNone
+        case .moveWindowPrevious: return moveWindowPreviousShortcut == defaultNone
+        case .moveWindowNumber: return moveWindowNumberShortcut == defaultNone
+        case .reloadLabels: return reloadLabelsShortcut == defaultNone
+        case .moveWindowNextDisplay: return moveWindowNextDisplayShortcut == defaultNone
+        case .moveWindowPreviousDisplay: return moveWindowPreviousDisplayShortcut == defaultNone
+        }
+    }
+    
     func resetToDefault(for type: HotkeyType) {
         switch type {
         case .main: mainShortcut = defaultMain
@@ -291,6 +371,9 @@ class HotkeyManager: ObservableObject {
         case .moveWindowNext: moveWindowNextShortcut = defaultNone
         case .moveWindowPrevious: moveWindowPreviousShortcut = defaultNone
         case .moveWindowNumber: moveWindowNumberShortcut = defaultNone
+        case .reloadLabels: reloadLabelsShortcut = defaultNone
+        case .moveWindowNextDisplay: moveWindowNextDisplayShortcut = defaultNone
+        case .moveWindowPreviousDisplay: moveWindowPreviousDisplayShortcut = defaultNone
         }
     }
     

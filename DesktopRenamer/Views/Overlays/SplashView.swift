@@ -7,7 +7,7 @@ struct SplashView: View {
     
     @State private var currentPage = 0
     @State private var movingForward = true
-    private let totalPages = 8
+    private let totalPages = 9
 
     var body: some View {
         VStack(spacing: 0) {
@@ -33,9 +33,12 @@ struct SplashView: View {
                     RaycastFeaturePage(openURL: openURL)
                         .transition(pageTransition)
                 case 6:
-                    PermissionsPage()
+                    RaycastBatchMovePage()
                         .transition(pageTransition)
                 case 7:
+                    PermissionsPage()
+                        .transition(pageTransition)
+                case 8:
                     MoreAppsPage()
                         .transition(pageTransition)
                 default:
@@ -293,6 +296,7 @@ struct RenamePage: View {
 struct MissionControlPage: View {
     @AppStorage("kShowPreviewLabels") private var showPreviewLabels = true
     @AppStorage("kShowActiveLabels") private var showActiveLabels = true
+    @AppStorage("kShowOnDesktop") private var showOnDesktop = false
 
     var body: some View {
         VStack(spacing: 10) {
@@ -305,13 +309,21 @@ struct MissionControlPage: View {
                 label2: NSLocalizedString("Active Space Label", comment: "")
             )
             
-            HStack(spacing: 40) {
-                Toggle("Show preview labels", isOn: $showPreviewLabels)
-                    .toggleStyle(.switch)
-                Toggle("Show active space labels", isOn: $showActiveLabels)
-                    .toggleStyle(.switch)
+            VStack(spacing: 12) {
+                HStack(spacing: 40) {
+                    Toggle("Show preview labels", isOn: $showPreviewLabels)
+                        .toggleStyle(.switch)
+                    Toggle("Show active space labels", isOn: $showActiveLabels)
+                        .toggleStyle(.switch)
+                }
+                
+                if showActiveLabels {
+                    Toggle("Keep visible on desktop", isOn: $showOnDesktop)
+                        .toggleStyle(.switch)
+                        .padding(.bottom, 10)
+                }
             }
-            .padding(.bottom, 20)
+            .padding(.bottom, 10)
         }
     }
 }
@@ -420,6 +432,16 @@ struct RaycastFeaturePage: View {
     }
 }
 
+struct RaycastBatchMovePage: View {
+    var body: some View {
+        SingleVideoFeaturePage(
+            title: NSLocalizedString("Raycast: Batch Move", comment: ""),
+            subtitle: NSLocalizedString("Use the Raycast extension to move all windows of an app to another space in one command.", comment: ""),
+            videoName: "RaycastBatchMove"
+        )
+    }
+}
+
 struct PermissionsPage: View {
     @StateObject private var permissionManager = PermissionManager.shared
     
@@ -439,7 +461,7 @@ struct PermissionsPage: View {
                 Text("Require Permissions")
                     .font(.system(size: 30, weight: .bold, design: .rounded))
                 
-                Text("DesktopRenamer requires Accessibility and Automation permissions for hotkeys and trackpad overrides to function correctly.\n\nPlease enable them in System Settings → Privacy & Security.")
+                Text("DesktopRenamer requires Accessibility permission for hotkeys and trackpad overrides to function correctly.")
                     .font(.body)
                     .foregroundColor(.secondary)
                     .multilineTextAlignment(.center)
@@ -448,7 +470,6 @@ struct PermissionsPage: View {
             }
             
             HStack(spacing: 20) {
-                // Accessibility Button
                 Button(action: {
                     permissionManager.requestAccessibilityPermission()
                 }) {
@@ -465,24 +486,6 @@ struct PermissionsPage: View {
                     .cornerRadius(8)
                 }
                 .buttonStyle(PlainButtonStyle())
-                
-                // Automation Button
-                Button(action: {
-                    permissionManager.requestAutomationPermission()
-                }) {
-                    HStack {
-                        Image(systemName: permissionManager.isAutomationGranted ? "checkmark.circle.fill" : "xmark.circle.fill")
-                            .foregroundColor(permissionManager.isAutomationGranted ? .green : .white)
-                        Text("Automation")
-                            .fontWeight(.semibold)
-                    }
-                    .foregroundColor(.white)
-                    .padding(.vertical, 10)
-                    .padding(.horizontal, 20)
-                    .background(permissionManager.isAutomationGranted ? Color.blue : Color.red)
-                    .cornerRadius(8)
-                }
-                .buttonStyle(PlainButtonStyle())
             }
         }
         .padding()
@@ -490,6 +493,11 @@ struct PermissionsPage: View {
 }
 
 struct MoreAppsPage: View {
+    @Environment(\.colorScheme) var colorScheme
+    var iconSuffix: String {
+        colorScheme == .dark ? "_Dark" : "_Default"
+    }
+
     var body: some View {
         VStack(spacing: 24) {
             VStack(spacing: 8) {
@@ -506,7 +514,7 @@ struct MoreAppsPage: View {
             VStack(spacing: 12) {
                 // OptClicker
                 OtherAppRow(
-                    imageName: "OptClickerIcon_Default",
+                    imageName: "OptClickerIcon\(iconSuffix)",
                     appName: "OptClicker",
                     description: NSLocalizedString("Let you right-click with the Option key.", comment: ""),
                     url: "https://github.com/gitmichaelqiu/OptClicker"
@@ -514,7 +522,7 @@ struct MoreAppsPage: View {
                 
                 // SpaceSwitcher
                 OtherAppRow(
-                    imageName: "SpaceSwitcherIcon_Default",
+                    imageName: "SpaceSwitcherIcon\(iconSuffix)",
                     appName: "SpaceSwitcher",
                     description: NSLocalizedString("Control which app and dock to show in each space.", comment: ""),
                     url: "https://github.com/gitmichaelqiu/SpaceSwitcher"

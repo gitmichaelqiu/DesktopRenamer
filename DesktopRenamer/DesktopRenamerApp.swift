@@ -111,6 +111,25 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             .receive(on: DispatchQueue.main)
             .sink { [weak self] number in self?.spaceManager.moveActiveWindowToSpace(number: number) }
             .store(in: &cancellables)
+
+        hotkeyManager.reloadLabelsTriggered
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] in
+                Task { @MainActor in
+                    self?.statusBarController?.labelManager.reloadAllWindows()
+                }
+            }
+            .store(in: &cancellables)
+
+        hotkeyManager.moveWindowNextDisplayTriggered
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] in self?.spaceManager.moveActiveWindowToNextDisplay() }
+            .store(in: &cancellables)
+
+        hotkeyManager.moveWindowPreviousDisplayTriggered
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] in self?.spaceManager.moveActiveWindowToPreviousDisplay() }
+            .store(in: &cancellables)
     }
     
     func showSplashScreen(on parentWindow: NSWindow? = nil) {
@@ -188,8 +207,17 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     
     private func handleURL(_ url: URL) {
         guard url.scheme == "desktoprenamer",
-              let components = URLComponents(url: url, resolvingAgainstBaseURL: true),
-              components.host == "switch",
+              let components = URLComponents(url: url, resolvingAgainstBaseURL: true)
+        else { return }
+
+        if components.host == "settings" {
+            DispatchQueue.main.async {
+                self.statusBarController?.openSettingsWindow()
+            }
+            return
+        }
+
+        guard components.host == "switch",
               let queryItems = components.queryItems
         else { return }
 

@@ -5,7 +5,6 @@ class PermissionManager: ObservableObject {
     static let shared = PermissionManager()
 
     @Published var isAccessibilityGranted: Bool = false
-    @Published var isAutomationGranted: Bool = false
 
     private init() {
         checkPermissions()
@@ -27,17 +26,6 @@ class PermissionManager: ObservableObject {
             kAXTrustedCheckOptionPrompt.takeUnretainedValue() as String: false
         ]
         self.isAccessibilityGranted = AXIsProcessTrustedWithOptions(axOptions)
-
-        // Automation check.
-        let targetBundleID = "com.apple.systemevents"
-        let targetDesc = NSAppleEventDescriptor(bundleIdentifier: targetBundleID)
-        if let aeDesc = targetDesc.aeDesc {
-            let status = AEDeterminePermissionToAutomateTarget(
-                aeDesc, typeWildCard, typeWildCard, false)
-            self.isAutomationGranted = (status == noErr)
-        } else {
-            self.isAutomationGranted = false
-        }
     }
 
     func requestAccessibilityPermission() {
@@ -47,30 +35,6 @@ class PermissionManager: ObservableObject {
         let trusted = AXIsProcessTrustedWithOptions(axOptions)
         self.isAccessibilityGranted = trusted
         openSystemSettings(type: "Privacy_Accessibility")
-    }
-
-    func requestAutomationPermission() {
-        // Permission requests for recent macOS versions:
-        // Attempt to trigger the prompt via a simple AppleScript execution.
-        let scriptSource = "tell application \"System Events\" to get name"
-        if let script = NSAppleScript(source: scriptSource) {
-            var error: NSDictionary?
-            script.executeAndReturnError(&error)
-        }
-
-        // Fallback to standard API call.
-        let targetBundleID = "com.apple.systemevents"
-        let targetDesc = NSAppleEventDescriptor(bundleIdentifier: targetBundleID)
-        if let aeDesc = targetDesc.aeDesc {
-            let status = AEDeterminePermissionToAutomateTarget(
-                aeDesc, typeWildCard, typeWildCard, true)
-            self.isAutomationGranted = (status == noErr)
-        }
-
-        // Open System Settings if permission remains pending.
-        if !isAutomationGranted {
-            openSystemSettings(type: "Privacy_Automation")
-        }
     }
 
     func openSystemSettings(type: String) {

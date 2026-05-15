@@ -68,6 +68,40 @@
             <cocoa class="DesktopRenamer.MoveWindowToSpaceCommand"/>
             <direct-parameter description="The ID of the space to move the window to" type="text"/>
         </command>
-        
+
+        <command name="reload space labels" code="DskRRelL" description="Reload all space label windows to fix glitches">
+            <cocoa class="DesktopRenamer.ReloadSpaceLabelsCommand"/>
+            <result type="boolean" description="True if successful, false if API is disabled"/>
+        </command>
+
+        <command name="get windows" code="DskRGWin" description="Get all visible app windows grouped by space">
+            <cocoa class="DesktopRenamer.GetWindowsCommand"/>
+            <result type="text" description="Windows grouped by space, format: >SpaceHeader lines followed by indented window entries"/>
+        </command>
+
+        <command name="focus window" code="DskRFocW" description="Bring a specific window to the front">
+            <cocoa class="DesktopRenamer.FocusWindowCommand"/>
+            <direct-parameter description="The window ID (CGWindowID)" type="text"/>
+            <parameter name="pid" code="WPid" description="The owner process ID" type="text" optional="no">
+                <cocoa key="ownerPID"/>
+            </parameter>
+        </command>
+
+        <command name="move specific window" code="DskRMvSW" description="Move a specific window to a target space">
+            <cocoa class="DesktopRenamer.MoveSpecificWindowToSpaceCommand"/>
+            <direct-parameter description="The window ID (CGWindowID)" type="text"/>
+            <parameter name="from space" code="FmSp" description="The source space ID (ManagedSpaceID)" type="text" optional="no">
+                <cocoa key="fromSpace"/>
+            </parameter>
+            <parameter name="to space" code="MvSp" description="The target space ID (ManagedSpaceID)" type="text" optional="no">
+                <cocoa key="targetSpace"/>
+            </parameter>
+        </command>
+
+        <command name="get current space id" code="DskRGCID" description="Get the ManagedSpaceID(s) of the currently visible space(s)">
+            <cocoa class="DesktopRenamer.GetCurrentSpaceIDCommand"/>
+            <result type="text" description="Comma-separated ManagedSpaceIDs of currently visible spaces"/>
+        </command>
+
     </suite>
 </dictionary>
