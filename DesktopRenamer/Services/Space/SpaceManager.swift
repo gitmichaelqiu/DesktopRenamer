@@ -784,7 +784,7 @@ class SpaceManager: ObservableObject {
               currentIndex < spaceList.count - 1 else { return }
         
         let target = spaceList[currentIndex + 1]
-        SpaceHelper.dragActiveWindow(to: target.id)
+        SpaceHelper.dragActiveWindow(to: target.id, forceInstant: true)
     }
 
     private func moveActiveWindowToNextSpaceLegacy() {
@@ -800,7 +800,7 @@ class SpaceManager: ObservableObject {
               currentIndex < spaceList.count - 1 else { return }
         
         let target = spaceList[currentIndex + 1]
-        SpaceHelper.dragActiveWindow(to: target.id)
+        SpaceHelper.dragActiveWindow(to: target.id, forceInstant: true)
     }
     
     func moveActiveWindowToPreviousSpace() {
@@ -830,7 +830,7 @@ class SpaceManager: ObservableObject {
               currentIndex > 0 else { return }
         
         let target = spaceList[currentIndex - 1]
-        SpaceHelper.dragActiveWindow(to: target.id)
+        SpaceHelper.dragActiveWindow(to: target.id, forceInstant: true)
     }
 
     private func moveActiveWindowToPreviousSpaceLegacy() {
@@ -846,14 +846,14 @@ class SpaceManager: ObservableObject {
               currentIndex > 0 else { return }
         
         let target = spaceList[currentIndex - 1]
-        SpaceHelper.dragActiveWindow(to: target.id)
+        SpaceHelper.dragActiveWindow(to: target.id, forceInstant: true)
     }
     
     func moveActiveWindowToSpace(number: Int) {
         if let target = spaceNameDict.first(where: { $0.num == number }) {
             // BUG FIX: Prevent redundant move attempts if the target is already current.
             if target.id == currentSpaceUUID { return }
-            SpaceHelper.dragActiveWindow(to: target.id)
+            SpaceHelper.dragActiveWindow(to: target.id, forceInstant: true)
         }
     }
     
@@ -864,7 +864,7 @@ class SpaceManager: ObservableObject {
         if let space = spaceNameDict.first(where: { $0.id == id }), space.isFullscreen {
             return
         }
-        SpaceHelper.dragActiveWindow(to: id)
+        SpaceHelper.dragActiveWindow(to: id, forceInstant: true)
     }
 
     func isFirstSpace(onDisplayID displayID: String? = nil) -> Bool {
