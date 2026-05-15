@@ -861,9 +861,29 @@ class SpaceManager: ObservableObject {
         // BUG FIX: Prevent redundant move attempts if the target is already current.
         if id == currentSpaceUUID { return }
         
-        if let space = spaceNameDict.first(where: { $0.id == id }), space.isFullscreen {
+        guard let targetSpace = spaceNameDict.first(where: { $0.id == id }), !targetSpace.isFullscreen else {
             return
         }
+
+        // Robust Cross-Monitor Support: 
+        // If the target space is on a different monitor, we use the direct CGS+AX move method
+        // since the "swipe while dragging" gesture is limited to a single display.
+        if let windowInfo = SpaceHelper.getActiveWindowInfo() {
+            let sourceDisplayID = SpaceHelper.getWindowDisplayID(for: windowInfo.frame)
+            if let sourceDisplay = sourceDisplayID, sourceDisplay != targetSpace.displayID {
+                print("SpaceManager: Cross-monitor move requested (\(sourceDisplay) -> \(targetSpace.displayID)). Using robust method.")
+                
+                let fromSpaceID = Int(SpaceHelper.getCurrentSpaceID(for: sourceDisplay) ?? "0") ?? 0
+                let targetSpaceID = Int(id) ?? 0
+                
+                SpaceHelper.moveWindowToSpace(windowID: windowInfo.id, fromSpaceID: fromSpaceID, targetSpaceID: targetSpaceID)
+                
+                // Switch to the target space to follow the window
+                self.switchToSpace(targetSpace, forceInstant: true)
+                return
+            }
+        }
+        
         SpaceHelper.dragActiveWindow(to: id, forceInstant: true)
     }
 
