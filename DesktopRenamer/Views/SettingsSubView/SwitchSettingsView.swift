@@ -120,9 +120,8 @@ struct SwitchSettingsView: View {
                         "Enable switch gesture override",
                         helperText:
                             "Replaces system switch gestures with instant space switching.\n\nRequired: You must disable 'Swipe between full screen apps' in System Settings → Trackpad → More Gestures or change to different number of fingers to prevent conflicts.\n\nNotice, you must click at the fullscreen app to make it active to avoid issues when leaving the app.",
-                        warningText: (permissionManager.isAccessibilityGranted
-                                      && permissionManager.isAutomationGranted)
-                        ? nil : "Requires Accessibility and Automation permissions."
+                        warningText: permissionManager.isAccessibilityGranted
+                        ? nil : "Requires Accessibility permission."
                     ) {
                         Toggle("", isOn: $gestureManager.isEnabled)
                             .toggleStyle(.switch)
@@ -146,9 +145,8 @@ struct SwitchSettingsView: View {
                             "Instant switch without animations",
                             helperText:
                                 "Bypasses the macOS sliding animation using synthetic high-velocity gestures.\n\nRequires 'Swipe between full-screen applications' enabled in System Settings → Trackpad.\nRecommended: Disable 'Automatically rearrange spaces based on most recent use' in Desktop & Dock settings to prevent miscalculations.",
-                            warningText: (permissionManager.isAccessibilityGranted
-                                        && permissionManager.isAutomationGranted)
-                            ? nil : "Requires Accessibility and Automation permissions."
+                            warningText: permissionManager.isAccessibilityGranted
+                            ? nil : "Requires Accessibility permission."
                         ) {
                             Toggle("", isOn: $spaceManager.instantSpaceSwitch)
                                 .toggleStyle(.switch)
@@ -180,23 +178,7 @@ struct SwitchSettingsView: View {
                     }
                 }
                 
-                // Advanced switching preferences.
-                SettingsSection("Advanced") {                    
-                    Divider()
-                    
-                    SettingsRow(
-                        "Force Mission Control for fullscreen apps",
-                        helperText:
-                            "When enabled, the app will always use Mission Control Automation for transitions to or from fullscreen apps. This is slower but more reliable on some systems.",
-                        warningText: (permissionManager.isAccessibilityGranted
-                                      && permissionManager.isAutomationGranted)
-                        ? nil : "Requires Accessibility and Automation permissions."
-                    ) {
-                        Toggle("", isOn: $spaceManager.forceMissionControlForFullscreen)
-                            .toggleStyle(.switch)
-                            .labelsHidden()
-                    }
-                }
+
                 SettingsSection(nil) {
                     SliderSettingsRow(
                         "Grab offset X",

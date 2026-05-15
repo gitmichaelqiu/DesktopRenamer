@@ -439,7 +439,7 @@ struct PermissionsPage: View {
                 Text("Require Permissions")
                     .font(.system(size: 30, weight: .bold, design: .rounded))
                 
-                Text("DesktopRenamer requires Accessibility and Automation permissions for hotkeys and trackpad overrides to function correctly.\n\nPlease enable them in System Settings → Privacy & Security.")
+                Text("DesktopRenamer requires Accessibility permission for hotkeys and trackpad overrides to function correctly.\n\nPlease enable them in System Settings → Privacy & Security.")
                     .font(.body)
                     .foregroundColor(.secondary)
                     .multilineTextAlignment(.center)
@@ -448,7 +448,6 @@ struct PermissionsPage: View {
             }
             
             HStack(spacing: 20) {
-                // Accessibility Button
                 Button(action: {
                     permissionManager.requestAccessibilityPermission()
                 }) {
@@ -462,24 +461,6 @@ struct PermissionsPage: View {
                     .padding(.vertical, 10)
                     .padding(.horizontal, 20)
                     .background(permissionManager.isAccessibilityGranted ? Color.blue : Color.red)
-                    .cornerRadius(8)
-                }
-                .buttonStyle(PlainButtonStyle())
-                
-                // Automation Button
-                Button(action: {
-                    permissionManager.requestAutomationPermission()
-                }) {
-                    HStack {
-                        Image(systemName: permissionManager.isAutomationGranted ? "checkmark.circle.fill" : "xmark.circle.fill")
-                            .foregroundColor(permissionManager.isAutomationGranted ? .green : .white)
-                        Text("Automation")
-                            .fontWeight(.semibold)
-                    }
-                    .foregroundColor(.white)
-                    .padding(.vertical, 10)
-                    .padding(.horizontal, 20)
-                    .background(permissionManager.isAutomationGranted ? Color.blue : Color.red)
                     .cornerRadius(8)
                 }
                 .buttonStyle(PlainButtonStyle())
