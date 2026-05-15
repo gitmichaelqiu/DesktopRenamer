@@ -231,9 +231,22 @@ class ReloadSpaceLabelsCommand: NSScriptCommand {
 class GetWindowsCommand: NSScriptCommand {
     override func performDefaultImplementation() -> Any? {
         guard isAPIEnabled() else { return "API Disabled" }
-        return runOnMain {
-            return SpaceHelper.getWindowsForAllSpaces()
+        
+        // Fetch necessary space data on the main thread.
+        let data = runOnMain {
+            guard let manager = AppDelegate.shared.spaceManager else { return nil }
+            let spaces = manager.spaceNameDict
+            var names: [String: String] = [:]
+            for s in spaces {
+                names[s.id] = manager.getSpaceName(s.id)
+            }
+            return (spaces, names)
         }
+        
+        guard let (spaces, names) = data else { return "" }
+        
+        // Perform heavy window enumeration on the background thread (NSScriptCommand defaults to background).
+        return SpaceHelper.getWindowsForAllSpaces(spaces: spaces, spaceNames: names)
     }
 }
 

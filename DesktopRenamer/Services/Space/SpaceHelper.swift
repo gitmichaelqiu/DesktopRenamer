@@ -846,8 +846,7 @@ class SpaceHelper {
         return true
     }
 
-    static func getWindowsForAllSpaces() -> String {
-        guard let manager = AppDelegate.shared.spaceManager else { return "" }
+    static func getWindowsForAllSpaces(spaces: [DesktopSpace], spaceNames: [String: String]) -> String {
         let conn = _CGSDefaultConnection()
         let ourPID = ProcessInfo.processInfo.processIdentifier
 
@@ -917,8 +916,8 @@ class SpaceHelper {
             validWindows.append((wid: wid, dict: window))
         }
 
-        // Known space IDs from SpaceManager.
-        let knownSpaceIDs = Set(manager.spaceNameDict.compactMap { Int($0.id) })
+        // Known space IDs.
+        let knownSpaceIDs = Set(spaces.compactMap { Int($0.id) })
         
         // Get active space IDs
         var activeSpaceIDs = Set<Int>()
@@ -1020,14 +1019,14 @@ class SpaceHelper {
         }
 
         // Build output sorted by display then number.
-        let sortedSpaces = manager.spaceNameDict.sorted {
+        let sortedSpaces = spaces.sorted {
             if $0.displayID != $1.displayID { return $0.displayID < $1.displayID }
             return $0.num < $1.num
         }
 
         var output = ""
         for space in sortedSpaces {
-            let name = manager.getSpaceName(space.id)
+            let name = spaceNames[space.id] ?? ""
             let displayName = getDisplayName(for: space.displayID, screenMap: screenMap)
             output += ">\(space.id)~\(name)~\(displayName)~\(space.num)\n"
 
