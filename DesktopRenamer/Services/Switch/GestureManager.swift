@@ -434,6 +434,7 @@ class GestureManager: ObservableObject {
                         print("GestureManager: Triggered \(direction)")
 
                         // Fire a nil-target SpaceSwitchRequested so SpaceLabelManager can hide all active Preview Labels
+                        SpaceHelper.lastProgrammaticSwitchTime = Date().timeIntervalSince1970
                         NotificationCenter.default.post(
                             name: NSNotification.Name("SpaceSwitchRequested"), object: nil)
 
