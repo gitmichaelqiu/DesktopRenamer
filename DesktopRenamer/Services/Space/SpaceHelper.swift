@@ -57,7 +57,6 @@ class SpaceHelper {
         var targetGlobalNum: Int? = nil
         var shouldUseShortcut = true
         var targetIsFullscreen = false
-        var currentIsFullscreen = false
 
         if let state = getSystemState() {
             if let targetSpace = state.spaces.first(where: { $0.id == spaceID }) {
@@ -75,10 +74,6 @@ class SpaceHelper {
                         return 
                     }
                 }
-            }
-            
-            if let currentSpace = state.spaces.first(where: { $0.id == state.currentUUID }) {
-                currentIsFullscreen = currentSpace.isFullscreen
             }
 
             // If we are already on the target space, stop.
