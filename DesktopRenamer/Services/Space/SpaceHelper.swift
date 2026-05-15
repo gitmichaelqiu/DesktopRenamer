@@ -11,6 +11,32 @@ private func CGSCopyActiveMenuBarDisplayIdentifier(_ cid: Int32) -> CFString?
 private func _AXUIElementGetWindow(_ element: AXUIElement, _ windowID: inout CGWindowID) -> Int32
 
 class SpaceHelper {
+    // MARK: - Private CGS Functions Caching
+    
+    private typealias CGSCopySpacesForWindowsFn = @convention(c) (Int32, Int32, CFArray) -> CFArray?
+    private typealias CGSSpacesFn = @convention(c) (Int32, CFArray, CFArray) -> Void
+    private typealias CGSOrderWindowFn = @convention(c) (Int32, UInt32, Int32, UInt32) -> OSStatus
+    
+    private static let cgsCopySpacesForWindows: CGSCopySpacesForWindowsFn? = {
+        guard let ptr = dlsym(UnsafeMutableRawPointer(bitPattern: -2), "CGSCopySpacesForWindows") else { return nil }
+        return unsafeBitCast(ptr, to: CGSCopySpacesForWindowsFn.self)
+    }()
+    
+    private static let cgsAddWindowsToSpaces: CGSSpacesFn? = {
+        guard let ptr = dlsym(UnsafeMutableRawPointer(bitPattern: -2), "CGSAddWindowsToSpaces") else { return nil }
+        return unsafeBitCast(ptr, to: CGSSpacesFn.self)
+    }()
+    
+    private static let cgsRemoveWindowsFromSpaces: CGSSpacesFn? = {
+        guard let ptr = dlsym(UnsafeMutableRawPointer(bitPattern: -2), "CGSRemoveWindowsFromSpaces") else { return nil }
+        return unsafeBitCast(ptr, to: CGSSpacesFn.self)
+    }()
+    
+    private static let cgsOrderWindow: CGSOrderWindowFn? = {
+        guard let ptr = dlsym(UnsafeMutableRawPointer(bitPattern: -2), "CGSOrderWindow") else { return nil }
+        return unsafeBitCast(ptr, to: CGSOrderWindowFn.self)
+    }()
+
     static var fullscreenThreshold: Int {
         get {
             UserDefaults.standard.integer(
@@ -892,18 +918,9 @@ class SpaceHelper {
             }
         }
 
-        // Map windows to spaces via CGSCopySpacesForWindows (window → space mapping).
-        // Signature: (connection, spaceMask, windowIDArray) → CFArray of space IDs.
-        // spaceMask = 7 covers all space types (current | other | fullscreen).
-        typealias CGSCopySpacesForWindowsFn = @convention(c) (Int32, Int32, CFArray) -> CFArray?
-        let cgsSpacesForWindows: CGSCopySpacesForWindowsFn? = {
-            guard let ptr = dlsym(UnsafeMutableRawPointer(bitPattern: -2), "CGSCopySpacesForWindows") else { return nil }
-            return unsafeBitCast(ptr, to: CGSCopySpacesForWindowsFn.self)
-        }()
-
         var windowsBySpaceID: [String: [[String: Any]]] = [:]
-
-        if let spacesForWindows = cgsSpacesForWindows {
+        
+        if let spacesForWindows = cgsCopySpacesForWindows {
             // Query each window individually for its space assignment.
             for (wid, dict) in validWindows {
                 let widArray = [wid as NSNumber] as CFArray
@@ -1039,9 +1056,7 @@ class SpaceHelper {
         // Fallback: use CGSOrderWindow if AX matching failed.
         if !raised {
             let conn = _CGSDefaultConnection()
-            if let ptr = dlsym(UnsafeMutableRawPointer(bitPattern: -2), "CGSOrderWindow") {
-                typealias CGSOrderWindowFn = @convention(c) (Int32, UInt32, Int32, UInt32) -> OSStatus
-                let fn = unsafeBitCast(ptr, to: CGSOrderWindowFn.self)
+            if let fn = cgsOrderWindow {
                 _ = fn(conn, UInt32(windowID), 0, 0)
             }
         }
@@ -1080,17 +1095,13 @@ class SpaceHelper {
             repositionWindowToDisplay(windowID: windowID, pid: pid, frame: frame, sourceDisplayID: sourceDisplay, targetDisplayID: targetDisplay)
         }
 
-        typealias CGSSpacesFn = @convention(c) (Int32, CFArray, CFArray) -> Void
-
         // Add to target space first for visual stability.
-        if let addPtr = dlsym(UnsafeMutableRawPointer(bitPattern: -2), "CGSAddWindowsToSpaces") {
-            let addFn = unsafeBitCast(addPtr, to: CGSSpacesFn.self)
+        if let addFn = cgsAddWindowsToSpaces {
             addFn(conn, windowArray, [targetSpaceID as NSNumber] as CFArray)
         }
 
         // Then remove from source space.
-        if let removePtr = dlsym(UnsafeMutableRawPointer(bitPattern: -2), "CGSRemoveWindowsFromSpaces") {
-            let removeFn = unsafeBitCast(removePtr, to: CGSSpacesFn.self)
+        if let removeFn = cgsRemoveWindowsFromSpaces {
             removeFn(conn, windowArray, [fromSpaceID as NSNumber] as CFArray)
         }
     }
