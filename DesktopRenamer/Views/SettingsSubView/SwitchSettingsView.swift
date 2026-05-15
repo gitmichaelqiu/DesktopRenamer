@@ -129,17 +129,7 @@ struct SwitchSettingsView: View {
                     }
                     
                     if gestureManager.isEnabled {
-                        Divider()
-                        
-                        SettingsRow("Gesture type", helperText: "When set to 3 fingers, you can still use 4 fingers to trigger native swipe.") {
-                            Picker("", selection: $gestureManager.fingerCount) {
-                                Text("3 Fingers").tag(3)
-                                Text("4 Fingers").tag(4)
-                            }
-                            .labelsHidden()
-                        }
-                        
-                        Divider()
+                        Divider()     
 
                         SettingsRow(
                             "Instant switch without animations",
@@ -151,6 +141,16 @@ struct SwitchSettingsView: View {
                             Toggle("", isOn: $spaceManager.instantSpaceSwitch)
                                 .toggleStyle(.switch)
                                 .labelsHidden()
+                        }
+                        
+                        Divider()
+                        
+                        SettingsRow("Gesture type", helperText: "When set to 3 fingers, you can still use 4 fingers to trigger native swipe.") {
+                            Picker("", selection: $gestureManager.fingerCount) {
+                                Text("3 Fingers").tag(3)
+                                Text("4 Fingers").tag(4)
+                            }
+                            .labelsHidden()
                         }
 
                         Divider()
@@ -179,7 +179,7 @@ struct SwitchSettingsView: View {
                 }
                 
 
-                SettingsSection(nil) {
+                SettingsSection("Advanced") {
                     SliderSettingsRow(
                         "Grab offset X",
                         helperText: "Adjust the position where the mouse grabs the window to move across spaces.",
