@@ -37,7 +37,7 @@ class SpaceHelper {
     static var isDragging: Bool { originalMousePoint != nil }
 
     // Core space switching implementation.
-    static func switchToSpace(_ spaceID: String, forceMissionControl: Bool = false) {
+    static func switchToSpace(_ spaceID: String) {
         lastProgrammaticSwitchTime = Date().timeIntervalSince1970
         guard !isSwitching else { return }
         isSwitching = true
@@ -107,13 +107,7 @@ class SpaceHelper {
             }
         }
         
-        // Automate Mission Control for fullscreen transitions if forced.
-        if forceMissionControl && (targetIsFullscreen || currentIsFullscreen) {
-            if let num = targetNum {
-                switchViaMissionControl(to: num)
-                return
-            }
-        }
+
 
         if let state = getSystemState(),
             let targetSpace = state.spaces.first(where: { $0.id == spaceID })
@@ -170,10 +164,7 @@ class SpaceHelper {
             return
         }
 
-        // Last resort: Script Mission Control (it's slower and clunky)
-        if let num = targetNum {
-            switchViaMissionControl(to: num)
-        }
+
     }
 
     private static func switchByActivatingOwnWindow(for spaceID: String, isFullscreen: Bool) -> Bool
@@ -449,26 +440,7 @@ class SpaceHelper {
         return nil
     }
 
-    private static func switchViaMissionControl(to targetNum: Int) {
-        let source = """
-            tell application "Mission Control" to launch
-            tell application "System Events"
-                delay 0.3
-                try
-                    click button \(targetNum) of list 1 of group 2 of group 1 of group 1 of process "Dock"
-                on error
-                    key code 53 -- Esc to exit if failed
-                end try
-            end tell
-            """
 
-        DispatchQueue.global(qos: .userInitiated).async {
-            var error: NSDictionary?
-            if let scriptObject = NSAppleScript(source: source) {
-                scriptObject.executeAndReturnError(&error)
-            }
-        }
-    }
 
     // Shortcut configuration helpers.
 
