@@ -153,7 +153,7 @@ class SwitchToSpaceCommand: NSScriptCommand {
             if let manager = AppDelegate.shared.spaceManager {
                 // Resolve space object by identifier.
                 if let space = manager.spaceNameDict.first(where: { $0.id == spaceID }) {
-                    manager.switchToSpace(space)
+                    manager.switchToSpace(space, forceInstant: true)
                 }
             }
         }
