@@ -690,9 +690,9 @@ class SpaceManager: ObservableObject {
     
     // Space navigation and switching logic.
     
-    func switchToSpace(_ space: DesktopSpace) {
-        print("SpaceManager: switchToSpace(\(space.id)) on display \(space.displayID)")
-        SpaceHelper.switchToSpace(space.id)
+    func switchToSpace(_ space: DesktopSpace, forceInstant: Bool = false) {
+        print("SpaceManager: switchToSpace(\(space.id)) on display \(space.displayID) forceInstant: \(forceInstant)")
+        SpaceHelper.switchToSpace(space.id, forceInstant: forceInstant)
     }
     
     func switchToPreviousSpace(onDisplayID displayID: String? = nil) {
