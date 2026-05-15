@@ -257,7 +257,7 @@ class SpaceHelper {
         
         // Use high velocity for instant switch (2000.0), lower for "normal" gesture-based switch (e.g. 50.0).
         // Adjust the 50.0 value below to change the transition speed when "Instant Switch" is disabled.
-        let baseVelocity = isInstant ? 2000.0 : 50.0
+        let baseVelocity = isInstant ? 2000.0 : 52.0
         let velocity = baseVelocity * Double(absSteps)
         
 
