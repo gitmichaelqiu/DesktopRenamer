@@ -222,6 +222,7 @@
       }
     },
     "Advanced" : {
+      "extractionState" : "stale",
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
@@ -282,6 +283,7 @@
       }
     },
     "Automation" : {
+      "extractionState" : "stale",
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
@@ -471,6 +473,7 @@
       "shouldTranslate" : false
     },
     "DesktopRenamer requires Accessibility and Automation permissions for hotkeys and trackpad overrides to function correctly.\n\nPlease enable them in System Settings → Privacy & Security." : {
+      "extractionState" : "stale",
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
@@ -479,6 +482,9 @@
           }
         }
       }
+    },
+    "DesktopRenamer requires Accessibility permission for hotkeys and trackpad overrides to function correctly.\n\nPlease enable them in System Settings → Privacy & Security." : {
+
     },
     "DesktopRenamer's GitHub" : {
       "localizations" : {
@@ -593,6 +599,7 @@
       }
     },
     "Force Mission Control for fullscreen apps" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -747,6 +754,9 @@
           }
         }
       }
+    },
+    "Instant switch without animations" : {
+
     },
     "Keep visible on desktop" : {
       "localizations" : {
@@ -1308,6 +1318,7 @@
       }
     },
     "Required for using Mission Control via AppleScript (System Events) to switch spaces when the fast-switch method falls back." : {
+      "extractionState" : "stale",
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
@@ -1318,6 +1329,7 @@
       }
     },
     "Requires Accessibility and Automation permissions." : {
+      "extractionState" : "stale",
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
@@ -2494,9 +2506,6 @@
         }
       }
     },
-    "Skip space transition animations (Instant Switch)" : {
-
-    },
     "Space %lld" : {
       "localizations" : {
         "zh-Hans" : {
@@ -2815,6 +2824,7 @@
       }
     },
     "When enabled, the app will always use Mission Control Automation for transitions to or from fullscreen apps. This is slower but more reliable on some systems." : {
+      "extractionState" : "stale",
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {

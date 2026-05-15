@@ -37,7 +37,7 @@ class SpaceHelper {
     static var isDragging: Bool { originalMousePoint != nil }
 
     // Core space switching implementation.
-    static func switchToSpace(_ spaceID: String) {
+    static func switchToSpace(_ spaceID: String, forceInstant: Bool = false) {
         lastProgrammaticSwitchTime = Date().timeIntervalSince1970
         guard !isSwitching else { return }
         isSwitching = true
@@ -99,7 +99,7 @@ class SpaceHelper {
                        let targetIndex = displaySpaces.firstIndex(where: { $0.id == spaceID }) {
                         let steps = targetIndex - currentIndex
                         if steps != 0 {
-                            performSpaceSwitchGesture(steps: steps, targetDisplayID: displayID, isInstant: isInstant)
+                            performSpaceSwitchGesture(steps: steps, targetDisplayID: displayID, isInstant: isInstant || forceInstant)
                             return
                         }
                     }
@@ -290,7 +290,7 @@ class SpaceHelper {
 
     // MARK: - Window Moving Logic
     
-    static func dragActiveWindow(to spaceID: String) {
+    static func dragActiveWindow(to spaceID: String, forceInstant: Bool = false) {
         // Cancel any pending restoration from a previous "chained" move
         restorationTask?.cancel()
         restorationTask = nil
@@ -337,7 +337,7 @@ class SpaceHelper {
         
         // Trigger the space switch and track the movement.
         pendingMoveCount += 1
-        switchToSpace(spaceID)
+        switchToSpace(spaceID, forceInstant: forceInstant)
         
         // Schedule a safety fallback for cursor restoration.
         // Ensures the mouse is released after a timeout if the space change detection fails.
