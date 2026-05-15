@@ -30,6 +30,7 @@ struct SwitchSettingsView: View {
                             Button("↺") {
                                 hotkeyManager.resetToDefault(for: .switchLeft)
                             }
+                            .disabled(hotkeyManager.isDefault(for: .switchLeft))
                         }
                     }
                     
@@ -53,6 +54,7 @@ struct SwitchSettingsView: View {
                             Button("↺") {
                                 hotkeyManager.resetToDefault(for: .switchRight)
                             }
+                            .disabled(hotkeyManager.isDefault(for: .switchRight))
                         }
                     }
                     
@@ -72,6 +74,7 @@ struct SwitchSettingsView: View {
                             Button("↺") {
                                 hotkeyManager.resetToDefault(for: .reloadLabels)
                             }
+                            .disabled(hotkeyManager.isDefault(for: .reloadLabels))
                         }
                     }
                 }
@@ -91,6 +94,7 @@ struct SwitchSettingsView: View {
                             Button("↺") {
                                 hotkeyManager.resetToDefault(for: .moveWindowPrevious)
                             }
+                            .disabled(hotkeyManager.isDefault(for: .moveWindowPrevious))
                         }
                     }
                     
@@ -110,6 +114,7 @@ struct SwitchSettingsView: View {
                             Button("↺") {
                                 hotkeyManager.resetToDefault(for: .moveWindowNext)
                             }
+                            .disabled(hotkeyManager.isDefault(for: .moveWindowNext))
                         }
                     }
                     
@@ -129,6 +134,7 @@ struct SwitchSettingsView: View {
                             Button("↺") {
                                 hotkeyManager.resetToDefault(for: .moveWindowNumber)
                             }
+                            .disabled(hotkeyManager.isDefault(for: .moveWindowNumber))
                         }
                     }
                     
@@ -148,6 +154,7 @@ struct SwitchSettingsView: View {
                             Button("↺") {
                                 hotkeyManager.resetToDefault(for: .moveWindowPreviousDisplay)
                             }
+                            .disabled(hotkeyManager.isDefault(for: .moveWindowPreviousDisplay))
                         }
                     }
                     
@@ -167,6 +174,7 @@ struct SwitchSettingsView: View {
                             Button("↺") {
                                 hotkeyManager.resetToDefault(for: .moveWindowNextDisplay)
                             }
+                            .disabled(hotkeyManager.isDefault(for: .moveWindowNextDisplay))
                         }
                     }
                 }

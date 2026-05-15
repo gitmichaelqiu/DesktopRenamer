@@ -349,6 +349,20 @@ class HotkeyManager: ObservableObject {
         }
     }
     
+    func isDefault(for type: HotkeyType) -> Bool {
+        switch type {
+        case .main: return mainShortcut == defaultMain
+        case .switchLeft: return switchLeftShortcut == defaultNone
+        case .switchRight: return switchRightShortcut == defaultNone
+        case .moveWindowNext: return moveWindowNextShortcut == defaultNone
+        case .moveWindowPrevious: return moveWindowPreviousShortcut == defaultNone
+        case .moveWindowNumber: return moveWindowNumberShortcut == defaultNone
+        case .reloadLabels: return reloadLabelsShortcut == defaultNone
+        case .moveWindowNextDisplay: return moveWindowNextDisplayShortcut == defaultNone
+        case .moveWindowPreviousDisplay: return moveWindowPreviousDisplayShortcut == defaultNone
+        }
+    }
+    
     func resetToDefault(for type: HotkeyType) {
         switch type {
         case .main: mainShortcut = defaultMain
