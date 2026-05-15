@@ -83,6 +83,27 @@ class SpaceHelper {
 
             // If we are already on the target space, stop.
             if state.currentUUID == spaceID { return }
+            
+            // Instant Space Switch handling
+            // We disable instant switch during active window dragging operations to prevent dropping the window.
+            if !isDragging, AppDelegate.shared.spaceManager?.instantSpaceSwitch == true, let targetSpace = state.spaces.first(where: { $0.id == spaceID }) {
+                let displayID = targetSpace.displayID
+                
+                if let liveCurrentID = getCurrentSpaceID(for: displayID) {
+                    let displaySpaces = state.spaces
+                        .filter { $0.displayID == displayID }
+                        .sorted { $0.num < $1.num }
+                    
+                    if let currentIndex = displaySpaces.firstIndex(where: { $0.id == liveCurrentID }),
+                       let targetIndex = displaySpaces.firstIndex(where: { $0.id == spaceID }) {
+                        let steps = targetIndex - currentIndex
+                        if steps != 0 {
+                            performInstantSwitchGesture(steps: steps, targetDisplayID: displayID)
+                            return
+                        }
+                    }
+                }
+            }
         }
         
         // Automate Mission Control for fullscreen transitions if forced.
@@ -204,6 +225,71 @@ class SpaceHelper {
 
         return true
     }
+    
+    // MARK: - Instant Space Switch Helpers
+    
+    private static func postDockSwipe(phase: Int, directionRight: Bool, velocity: Double) -> Bool {
+        // Use Float.leastNonzeroMagnitude to precisely match FLT_TRUE_MIN used in ISS.c
+        // Double.leastNonzeroMagnitude is too small (e-324) and gets truncated to 0.0 by the OS when positive.
+        let progress: Double = directionRight ? Double(Float.leastNonzeroMagnitude) : -Double(Float.leastNonzeroMagnitude)
+        let vel: Double = directionRight ? velocity : -velocity
+        
+        guard let ev = CGEvent(source: nil) else { return false }
+        ev.setIntegerValueField(CGEventField(rawValue: 55)!, value: 30) // kCGSEventDockControl
+        ev.setIntegerValueField(CGEventField(rawValue: 110)!, value: 23) // kIOHIDEventTypeDockSwipe
+        ev.setIntegerValueField(CGEventField(rawValue: 132)!, value: Int64(phase)) // phase
+        ev.setDoubleValueField(CGEventField(rawValue: 124)!, value: progress)
+        ev.setIntegerValueField(CGEventField(rawValue: 123)!, value: 1) // horizontal motion
+        ev.setDoubleValueField(CGEventField(rawValue: 129)!, value: vel)
+        ev.setDoubleValueField(CGEventField(rawValue: 130)!, value: vel)
+        
+        // Use cgSessionEventTap to match ISS.c and prevent HID acceleration/mishandling
+        ev.post(tap: .cgSessionEventTap)
+        return true
+    }
+    
+    static func performInstantSwitchGesture(steps: Int, targetDisplayID: String) {
+        if steps == 0 { return }
+        
+        // Restore original correct logic: steps > 0 means target is to the right.
+        let directionRight = steps > 0 
+        let absSteps = abs(steps)
+        let velocity = 2000.0 * Double(absSteps)
+        
+        // Warp mouse if the active display isn't the target display
+        let originalLocation = CGEvent(source: nil)?.location ?? .zero
+        var warped = false
+        
+        if let currentDisplay = getCursorDisplayID(), currentDisplay.uppercased() != targetDisplayID.uppercased() {
+            // Find center of target display to warp the cursor
+            for screen in NSScreen.screens {
+                if let id = screen.deviceDescription[NSDeviceDescriptionKey("NSScreenNumber")] as? CGDirectDisplayID,
+                   let uuidRef = CGDisplayCreateUUIDFromDisplayID(id) {
+                    let uuid = uuidRef.takeRetainedValue()
+                    let uuidStr = (CFUUIDCreateString(nil, uuid) as String).uppercased()
+                    
+                    if uuidStr == targetDisplayID.uppercased() {
+                        let bounds = CGDisplayBounds(id)
+                        let center = CGPoint(x: bounds.midX, y: bounds.midY)
+                        CGWarpMouseCursorPosition(center)
+                        warped = true
+                        break
+                    }
+                }
+            }
+        }
+        
+        for _ in 0..<absSteps {
+            _ = postDockSwipe(phase: 1, directionRight: directionRight, velocity: velocity)
+            _ = postDockSwipe(phase: 2, directionRight: directionRight, velocity: velocity)
+            _ = postDockSwipe(phase: 4, directionRight: directionRight, velocity: velocity)
+        }
+        
+        if warped {
+            // Restore original position
+            CGWarpMouseCursorPosition(originalLocation)
+        }
+    }
 
     // MARK: - Window Moving Logic
     
@@ -313,7 +399,7 @@ class SpaceHelper {
         DispatchQueue.main.asyncAfter(deadline: .now() + delay, execute: task)
     }
     
-    static func getActiveWindowFrame() -> CGRect? {
+    static func getActiveWindowInfo() -> (id: Int, frame: CGRect)? {
         guard let frontApp = NSWorkspace.shared.frontmostApplication else { return nil }
         let pid = frontApp.processIdentifier
         
@@ -324,13 +410,18 @@ class SpaceHelper {
             if let windowPid = window[kCGWindowOwnerPID as String] as? Int,
                windowPid == pid,
                let layer = window[kCGWindowLayer as String] as? Int, layer == 0,
+               let wid = window[kCGWindowNumber as String] as? Int,
                let bounds = window[kCGWindowBounds as String] as? [String: Any],
                let x = bounds["X"] as? CGFloat, let y = bounds["Y"] as? CGFloat,
                let w = bounds["Width"] as? CGFloat, let h = bounds["Height"] as? CGFloat {
-                   return CGRect(x: x, y: y, width: w, height: h)
+                   return (id: wid, frame: CGRect(x: x, y: y, width: w, height: h))
                }
         }
         return nil
+    }
+
+    static func getActiveWindowFrame() -> CGRect? {
+        return getActiveWindowInfo()?.frame
     }
 
     private static func getOwnerPID(for spaceID: String) -> Int32? {
