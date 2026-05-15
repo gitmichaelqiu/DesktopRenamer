@@ -851,6 +851,17 @@ class SpaceHelper {
         let conn = _CGSDefaultConnection()
         let ourPID = ProcessInfo.processInfo.processIdentifier
 
+        // Pre-calculate screen mapping for efficiency as recommended by reviewer.
+        var screenMap: [String: String] = [:]
+        for screen in NSScreen.screens {
+            if let id = screen.deviceDescription[NSDeviceDescriptionKey("NSScreenNumber")] as? CGDirectDisplayID,
+               let uuidRef = CGDisplayCreateUUIDFromDisplayID(id) {
+                let uuid = uuidRef.takeRetainedValue()
+                let uuidStr = (CFUUIDCreateString(nil, uuid) as String).uppercased()
+                screenMap[uuidStr] = screen.localizedName
+            }
+        }
+
         // Build PID → app bundle path cache from running applications.
         // Only include apps with .regular activation policy (shown in Dock).
         // This excludes background agents like Ollama, menu bar-only apps, etc.
@@ -1015,7 +1026,7 @@ class SpaceHelper {
         var output = ""
         for space in sortedSpaces {
             let name = manager.getSpaceName(space.id)
-            let displayName = getDisplayName(for: space.displayID)
+            let displayName = getDisplayName(for: space.displayID, screenMap: screenMap)
             output += ">\(space.id)~\(name)~\(displayName)~\(space.num)\n"
 
             guard let windows = windowsBySpaceID[space.id] else { continue }
@@ -1188,14 +1199,10 @@ class SpaceHelper {
         return ids
     }
 
-    private static func getDisplayName(for uuidString: String) -> String {
-        for screen in NSScreen.screens {
-            guard let id = screen.deviceDescription[NSDeviceDescriptionKey("NSScreenNumber")] as? CGDirectDisplayID else { continue }
-            guard let uuid = CGDisplayCreateUUIDFromDisplayID(id)?.takeRetainedValue() else { continue }
-            let uuidStr = CFUUIDCreateString(nil, uuid) as String
-            if uuidStr == uuidString {
-                return screen.localizedName
-            }
+    private static func getDisplayName(for uuidString: String, screenMap: [String: String]) -> String {
+        // Reviewer recommendation: Use case-insensitive comparison for robustness.
+        if let name = screenMap[uuidString.uppercased()] {
+            return name
         }
         return "Display"
     }
