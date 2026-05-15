@@ -889,11 +889,13 @@ class SpaceHelper {
                     axWindows.forEach(extractWID)
                 }
                 
-                // 2. Check AXChildren (apps like Preview put their document windows here instead)
-                var childrenRef: CFTypeRef?
-                if AXUIElementCopyAttributeValue(appElement, kAXChildrenAttribute as CFString, &childrenRef) == .success,
-                   let axChildren = childrenRef as? [AXUIElement] {
-                    axChildren.forEach(extractWID)
+                // 2. Check AXChildren for non-standard apps (e.g., Preview)
+                if app.bundleIdentifier == "com.apple.Preview" {
+                    var childrenRef: CFTypeRef?
+                    if AXUIElementCopyAttributeValue(appElement, kAXChildrenAttribute as CFString, &childrenRef) == .success,
+                       let axChildren = childrenRef as? [AXUIElement] {
+                        axChildren.forEach(extractWID)
+                    }
                 }
             }
         }
