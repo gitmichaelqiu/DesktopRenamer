@@ -104,9 +104,7 @@ You can switch on/off the API in Settings → Advanced.
 
 You are welcome to create issues/suggestions in [GitHub Issues](https://github.com/gitmichaelqiu/DesktopRenamer/issues).
 
-For the issue that all of the spaces are marked as "Fullscreen", please check the [Troubleshoot](./Troubleshoot.md).
-
-If you have encountered any other bugs, please generate a bug report in DesktopRenamer Settings → General. This will help a lot for analyzing the bugs!
+If you are curious what I am doing on the project, go to the Issues page. The pinned issues are what I am focusing.
 
 ## 🙏 Acknowlegements
 
