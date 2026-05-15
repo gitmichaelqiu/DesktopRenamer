@@ -1200,6 +1200,16 @@
         }
       }
     },
+    "Raycast: Batch Move" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Raycast: 批量移动窗口"
+          }
+        }
+      }
+    },
     "Recorded: %lld" : {
       "localizations" : {
         "zh-Hans" : {
@@ -2767,6 +2777,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "排查桌面检测"
+          }
+        }
+      }
+    },
+    "Use the Raycast extension to move all windows of an app to another space in one command." : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "用 Raycast 拓展快速移动窗口到指定的桌面。"
           }
         }
       }

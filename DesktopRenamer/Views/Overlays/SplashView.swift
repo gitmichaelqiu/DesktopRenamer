@@ -7,7 +7,7 @@ struct SplashView: View {
     
     @State private var currentPage = 0
     @State private var movingForward = true
-    private let totalPages = 8
+    private let totalPages = 9
 
     var body: some View {
         VStack(spacing: 0) {
@@ -33,9 +33,12 @@ struct SplashView: View {
                     RaycastFeaturePage(openURL: openURL)
                         .transition(pageTransition)
                 case 6:
-                    PermissionsPage()
+                    RaycastBatchMovePage()
                         .transition(pageTransition)
                 case 7:
+                    PermissionsPage()
+                        .transition(pageTransition)
+                case 8:
                     MoreAppsPage()
                         .transition(pageTransition)
                 default:
@@ -293,6 +296,7 @@ struct RenamePage: View {
 struct MissionControlPage: View {
     @AppStorage("kShowPreviewLabels") private var showPreviewLabels = true
     @AppStorage("kShowActiveLabels") private var showActiveLabels = true
+    @AppStorage("kShowOnDesktop") private var showOnDesktop = false
 
     var body: some View {
         VStack(spacing: 10) {
@@ -305,13 +309,21 @@ struct MissionControlPage: View {
                 label2: NSLocalizedString("Active Space Label", comment: "")
             )
             
-            HStack(spacing: 40) {
-                Toggle("Show preview labels", isOn: $showPreviewLabels)
-                    .toggleStyle(.switch)
-                Toggle("Show active space labels", isOn: $showActiveLabels)
-                    .toggleStyle(.switch)
+            VStack(spacing: 12) {
+                HStack(spacing: 40) {
+                    Toggle("Show preview labels", isOn: $showPreviewLabels)
+                        .toggleStyle(.switch)
+                    Toggle("Show active space labels", isOn: $showActiveLabels)
+                        .toggleStyle(.switch)
+                }
+                
+                if showActiveLabels {
+                    Toggle("Keep visible on desktop", isOn: $showOnDesktop)
+                        .toggleStyle(.switch)
+                        .padding(.bottom, 10)
+                }
             }
-            .padding(.bottom, 20)
+            .padding(.bottom, 10)
         }
     }
 }
@@ -417,6 +429,16 @@ struct RaycastFeaturePage: View {
             .padding(.top, 8)
         }
         .padding(.top, 20)
+    }
+}
+
+struct RaycastBatchMovePage: View {
+    var body: some View {
+        SingleVideoFeaturePage(
+            title: NSLocalizedString("Raycast: Batch Move", comment: ""),
+            subtitle: NSLocalizedString("Use the Raycast extension to move all windows of an app to another space in one command.", comment: ""),
+            videoName: "RaycastBatchMove"
+        )
     }
 }
 
