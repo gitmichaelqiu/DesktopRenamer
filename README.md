@@ -42,6 +42,8 @@
 
 https://github.com/user-attachments/assets/2f1ad8b6-c003-4086-ae88-b0ed87ee4dd1
 
+https://github.com/user-attachments/assets/14342066-9e8b-4f76-8633-caf45aca1893
+
 <p align="center">
   <video src="./DesktopRenamer/Resources/Demo/Videos/RaycastBatchMove.mp4" width="100%" controls></video>
 </p>
