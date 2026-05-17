@@ -229,8 +229,8 @@ class SpaceLabelWindow: NSWindow {
     }
 
     // Standard OS window behavior overrides.
-    override var canBecomeKey: Bool { return true }
-    override var canBecomeMain: Bool { return true }
+    override var canBecomeKey: Bool { return SpaceHelper.isDragging }
+    override var canBecomeMain: Bool { return SpaceHelper.isDragging }
 
     // Binds the window to a specific space via private APIs.
     func bindToTargetSpace() {
