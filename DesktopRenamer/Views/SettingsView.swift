@@ -83,6 +83,7 @@ struct SettingsView: View {
                     .environment(\.settingsTab, .about)
             }
             .environmentObject(navigationState)
+            .environment(\.isSettingsPreRendering, true)
             .frame(width: CGFloat(defaultSettingsWindowWidth), height: CGFloat(defaultSettingsWindowHeight))
             .opacity(0.001)
             .allowsHitTesting(false)

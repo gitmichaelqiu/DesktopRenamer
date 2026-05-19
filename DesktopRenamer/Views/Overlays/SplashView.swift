@@ -146,6 +146,7 @@ class AutoPlayingVideoNSView: NSView {
     }
     
     func setupPlayer(with url: URL) {
+        cleanup()
         self.wantsLayer = true
         self.layer?.backgroundColor = NSColor.clear.cgColor
         
@@ -170,10 +171,9 @@ class AutoPlayingVideoNSView: NSView {
 
     func cleanup() {
         player?.pause()
-        player?.removeAllItems()
+        playerLayer.player = nil
         looper = nil
         player = nil
-        playerLayer.player = nil
     }
 }
 

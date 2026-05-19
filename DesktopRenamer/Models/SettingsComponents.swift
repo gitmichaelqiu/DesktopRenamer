@@ -18,6 +18,7 @@ class LoopVideoPlayerNSView: NSView {
     }
     
     func setupPlayer(with url: URL) {
+        cleanup()
         self.wantsLayer = true
         self.layer?.backgroundColor = NSColor.clear.cgColor
         
@@ -42,10 +43,9 @@ class LoopVideoPlayerNSView: NSView {
 
     func cleanup() {
         player?.pause()
-        player?.removeAllItems()
+        playerLayer.player = nil
         looper = nil
         player = nil
-        playerLayer.player = nil
     }
     
     override func scrollWheel(with event: NSEvent) {
@@ -53,7 +53,7 @@ class LoopVideoPlayerNSView: NSView {
     }
 }
 
-struct LoopVideoPlayerView: NSViewRepresentable {
+struct LoopVideoPlayerRepresentable: NSViewRepresentable {
     let videoURL: URL
     
     func makeNSView(context: Context) -> LoopVideoPlayerNSView {
@@ -73,6 +73,30 @@ struct LoopVideoPlayerView: NSViewRepresentable {
     }
     
     class Coordinator {}
+}
+
+struct IsSettingsPreRenderingKey: EnvironmentKey {
+    static let defaultValue = false
+}
+
+extension EnvironmentValues {
+    var isSettingsPreRendering: Bool {
+        get { self[IsSettingsPreRenderingKey.self] }
+        set { self[IsSettingsPreRenderingKey.self] = newValue }
+    }
+}
+
+struct LoopVideoPlayerView: View {
+    let videoURL: URL
+    @Environment(\.isSettingsPreRendering) private var isPreRendering
+    
+    var body: some View {
+        if isPreRendering {
+            Color.clear
+        } else {
+            LoopVideoPlayerRepresentable(videoURL: videoURL)
+        }
+    }
 }
 
 struct SettingsTabKey: EnvironmentKey {
