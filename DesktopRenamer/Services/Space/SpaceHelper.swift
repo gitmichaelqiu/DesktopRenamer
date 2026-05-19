@@ -440,6 +440,24 @@ class SpaceHelper {
         return nil
     }
 
+    static func getActiveWindowInfo(forPID pid: Int32) -> (id: Int, pid: Int32, frame: CGRect)? {
+        let options = CGWindowListOption(arrayLiteral: .excludeDesktopElements)
+        let windowList = CGWindowListCopyWindowInfo(options, kCGNullWindowID) as? [[String: Any]] ?? []
+        
+        for window in windowList {
+            if let windowPid = window[kCGWindowOwnerPID as String] as? Int,
+               windowPid == pid,
+               let layer = window[kCGWindowLayer as String] as? Int, layer == 0,
+               let wid = window[kCGWindowNumber as String] as? Int,
+               let bounds = window[kCGWindowBounds as String] as? [String: Any],
+               let x = bounds["X"] as? CGFloat, let y = bounds["Y"] as? CGFloat,
+               let w = bounds["Width"] as? CGFloat, let h = bounds["Height"] as? CGFloat {
+                   return (id: wid, pid: pid, frame: CGRect(x: x, y: y, width: w, height: h))
+               }
+        }
+        return nil
+    }
+
     static func getWindowInfo(id: Int) -> (pid: Int32, frame: CGRect)? {
         let options = CGWindowListOption(arrayLiteral: .optionIncludingWindow)
         let windowList = CGWindowListCopyWindowInfo(options, CGWindowID(id)) as? [[String: Any]] ?? []
