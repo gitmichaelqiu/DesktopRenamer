@@ -42,6 +42,7 @@ class SpaceHelper {
     // Tracks switching state to prevent recursion during transitions.
     private static var isSwitching = false
     static var lastProgrammaticSwitchTime: TimeInterval = 0
+    static var lastProgrammaticTargetSpaceID: String? = nil
     
     // Session state for active dragging operations.
     private static var originalMousePoint: CGPoint? = nil
@@ -52,6 +53,7 @@ class SpaceHelper {
     // Core space switching implementation.
     static func switchToSpace(_ spaceID: String, forceInstant: Bool = false) {
         lastProgrammaticSwitchTime = Date().timeIntervalSince1970
+        lastProgrammaticTargetSpaceID = spaceID
         guard !isSwitching else { return }
         isSwitching = true
 

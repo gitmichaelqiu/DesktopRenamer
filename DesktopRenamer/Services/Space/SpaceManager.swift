@@ -379,7 +379,7 @@ class SpaceManager: ObservableObject {
                             
                             // Switch back to previousUUID instantly to keep user in active space
                             if let targetSpaceObj = self.spaceNameDict.first(where: { $0.id == previousUUID }) {
-                                self.switchToSpace(targetSpaceObj, forceInstant: true)
+                                self.switchToSpace(targetSpaceObj, forceInstant: true, isManual: false)
                             }
                             
                             // Query and move the triggering window with a tiny delay (50ms) to allow window server to settle
@@ -398,6 +398,8 @@ class SpaceManager: ObservableObject {
                                     print("SpaceManager: Failed to capture active window for PID \(pid)")
                                 }
                             }
+                            // Synchronize currentSpaceUUID to targetUUID to prevent race conditions
+                            self.currentSpaceUUID = targetUUID
                             return
                         }
                     }
@@ -774,9 +776,11 @@ class SpaceManager: ObservableObject {
     
     // Space navigation and switching logic.
     
-    func switchToSpace(_ space: DesktopSpace, forceInstant: Bool = false) {
-        print("SpaceManager: switchToSpace(\(space.id)) on display \(space.displayID) forceInstant: \(forceInstant)")
-        self.lastManualSwitchTime = Date().timeIntervalSince1970
+    func switchToSpace(_ space: DesktopSpace, forceInstant: Bool = false, isManual: Bool = true) {
+        print("SpaceManager: switchToSpace(\(space.id)) on display \(space.displayID) forceInstant: \(forceInstant) isManual: \(isManual)")
+        if isManual {
+            self.lastManualSwitchTime = Date().timeIntervalSince1970
+        }
         SpaceHelper.switchToSpace(space.id, forceInstant: forceInstant)
     }
     
