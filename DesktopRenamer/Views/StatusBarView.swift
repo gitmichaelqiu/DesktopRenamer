@@ -101,6 +101,10 @@ class StatusBarController: NSObject {
         StatusBarController.statusItem.isVisible = !StatusBarController.isStatusBarHidden
         
         setupObservers()
+        
+        DispatchQueue.main.async {
+            self.openSettingsWindow(tab: .general)
+        }
     }
     
     deinit {
