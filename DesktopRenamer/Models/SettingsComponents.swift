@@ -64,15 +64,79 @@ struct LoopVideoPlayerView: NSViewRepresentable {
     }
 }
 
+class SettingsNavigationState: ObservableObject {
+    @Published var scrollToItemID: String? = nil
+    @Published var searchText: String = ""
+}
+
+func highlightedText(text: String, query: String) -> AttributedString {
+    var attributed = AttributedString(text)
+    guard !query.isEmpty else { return attributed }
+    
+    let lowerQuery = query.lowercased()
+    var searchStart = attributed.startIndex
+    
+    while searchStart < attributed.endIndex {
+        let remainingString = String(attributed[searchStart...].characters)
+        guard let range = remainingString.lowercased().range(of: lowerQuery) else { break }
+        
+        let matchStartIndex = remainingString.distance(from: remainingString.startIndex, to: range.lowerBound)
+        let matchLength = remainingString.distance(from: range.lowerBound, to: range.upperBound)
+        
+        let startIdx = attributed.index(searchStart, offsetByCharacters: matchStartIndex)
+        let endIdx = attributed.index(startIdx, offsetByCharacters: matchLength)
+        let targetRange = startIdx..<endIdx
+        
+        attributed[targetRange].foregroundColor = Color.blue
+        attributed[targetRange].inlinePresentationIntent = .stronglyEmphasized
+        
+        searchStart = endIdx
+    }
+    
+    return attributed
+}
+
+struct SettingsContainer<Content: View>: View {
+    let content: Content
+    @EnvironmentObject var navigationState: SettingsNavigationState
+    
+    init(@ViewBuilder content: () -> Content) {
+        self.content = content()
+    }
+    
+    var body: some View {
+        ScrollViewReader { proxy in
+            ScrollView {
+                content
+                    .padding(20)
+            }
+            .onChange(of: navigationState.scrollToItemID) { id in
+                if let id = id {
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
+                        withAnimation {
+                            proxy.scrollTo(id, anchor: .center)
+                        }
+                        DispatchQueue.main.async {
+                            navigationState.scrollToItemID = nil
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
 struct SettingsRow<Content: View>: View {
-    let title: LocalizedStringKey
+    let title: String
     let content: Content
     let helperText: LocalizedStringKey?
     let warningText: LocalizedStringKey?
     let demoVideoName: String?
+    
+    @EnvironmentObject var navigationState: SettingsNavigationState
 
     init(
-        _ title: LocalizedStringKey,
+        _ title: String,
         helperText: LocalizedStringKey? = nil,
         warningText: LocalizedStringKey? = nil,
         demoVideoName: String? = nil,
@@ -89,7 +153,7 @@ struct SettingsRow<Content: View>: View {
         VStack(alignment: .leading, spacing: 8) {
             HStack {
                 HStack(spacing: 4) {
-                    Text(title)
+                    Text(highlightedText(text: NSLocalizedString(title, comment: ""), query: navigationState.searchText))
                         .frame(alignment: .leading)
 
                     if let helperText = helperText {
@@ -121,6 +185,7 @@ struct SettingsRow<Content: View>: View {
         }
         .padding(.vertical, 6)
         .padding(.horizontal, 10)
+        .id(title)
     }
 }
 
@@ -230,7 +295,7 @@ private struct WarningInfoButton: View {
 }
 
 struct SliderSettingsRow<V>: View where V: BinaryFloatingPoint, V.Stride: BinaryFloatingPoint {
-    let title: LocalizedStringKey
+    let title: String
     @Binding var value: V
     let range: ClosedRange<V>
     let defaultValue: V
@@ -239,9 +304,11 @@ struct SliderSettingsRow<V>: View where V: BinaryFloatingPoint, V.Stride: Binary
     let warningText: LocalizedStringKey?
     let demoVideoName: String?
     let valueString: (V) -> String
+    
+    @EnvironmentObject var navigationState: SettingsNavigationState
 
     init(
-        _ title: LocalizedStringKey,
+        _ title: String,
         helperText: LocalizedStringKey? = nil,
         warningText: LocalizedStringKey? = nil,
         demoVideoName: String? = nil,
@@ -264,10 +331,9 @@ struct SliderSettingsRow<V>: View where V: BinaryFloatingPoint, V.Stride: Binary
 
     var body: some View {
         VStack(spacing: 6) {
-            // Row 1: Title + optional Helper + Spacer + Reset
             HStack {
                 HStack(spacing: 4) {
-                    Text(title)
+                    Text(highlightedText(text: NSLocalizedString(title, comment: ""), query: navigationState.searchText))
                     if let helperText = helperText {
                         HelperInfoButton(text: helperText)
                     }
@@ -287,7 +353,6 @@ struct SliderSettingsRow<V>: View where V: BinaryFloatingPoint, V.Stride: Binary
                 .disabled(value == defaultValue)
             }
 
-            // Row 2: Slider + Spacer + Value
             HStack {
                 if let step = step {
                     Slider(value: $value, in: range, step: V.Stride(step))
@@ -316,5 +381,6 @@ struct SliderSettingsRow<V>: View where V: BinaryFloatingPoint, V.Stride: Binary
         }
         .padding(.vertical, 8)
         .padding(.horizontal, 10)
+        .id(title)
     }
 }
