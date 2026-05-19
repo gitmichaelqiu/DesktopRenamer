@@ -180,7 +180,7 @@ struct SwitchSettingsView: View {
                 }
 
                 SettingsSection(nil) {
-                    SettingsRow("Toggle lock for current space") {
+                    SettingsRow("Toggle lock for current space", demoVideoName: "LockSpace") {
                         HStack {
                             Text(hotkeyManager.description(for: .toggleLock))
                                 .foregroundColor(.secondary)
