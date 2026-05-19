@@ -236,7 +236,7 @@ struct SettingsView: View {
                                                     .foregroundColor(.secondary)
                                                     .padding(.leading, 12)
                                                 
-                                                Text(highlightedText(text: item.title, query: searchText, color: .orange))
+                                                Text(highlightedText(text: item.title, query: searchText, color: nil))
                                                     .font(.system(size: 11, weight: .regular))
                                                     .foregroundColor(.secondary)
                                                     .lineLimit(1)
@@ -304,7 +304,7 @@ struct SettingsView: View {
                                                     .foregroundColor(.secondary)
                                                     .padding(.leading, 12)
                                                 
-                                                Text(highlightedText(text: item.title, query: searchText, color: .orange))
+                                                Text(highlightedText(text: item.title, query: searchText, color: nil))
                                                     .font(.system(size: 11, weight: .regular))
                                                     .foregroundColor(.secondary)
                                                     .lineLimit(1)
