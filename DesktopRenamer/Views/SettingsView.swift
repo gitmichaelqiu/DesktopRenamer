@@ -342,6 +342,7 @@ struct SettingsView: View {
                 }
             }
             .environmentObject(navigationState)
+            .environment(\.settingsTab, activeTab)
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
             .padding(.top, titleHeaderHeight)
 
