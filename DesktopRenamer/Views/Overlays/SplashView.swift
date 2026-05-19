@@ -7,7 +7,7 @@ struct SplashView: View {
     
     @State private var currentPage = 0
     @State private var movingForward = true
-    private let totalPages = 9
+    private let totalPages = 10
 
     var body: some View {
         VStack(spacing: 0) {
@@ -27,18 +27,21 @@ struct SplashView: View {
                     MenuBarSwitchPage()
                         .transition(pageTransition)
                 case 4:
-                    FastSwitchingPage()
+                    LockSpacePage()
                         .transition(pageTransition)
                 case 5:
-                    RaycastFeaturePage(openURL: openURL)
+                    FastSwitchingPage()
                         .transition(pageTransition)
                 case 6:
-                    RaycastBatchMovePage()
+                    RaycastFeaturePage(openURL: openURL)
                         .transition(pageTransition)
                 case 7:
-                    PermissionsPage()
+                    RaycastBatchMovePage()
                         .transition(pageTransition)
                 case 8:
+                    PermissionsPage()
+                        .transition(pageTransition)
+                case 9:
                     MoreAppsPage()
                         .transition(pageTransition)
                 default:
@@ -529,6 +532,67 @@ struct MoreAppsPage: View {
                 )
             }
             .padding(.horizontal, 40)
+        }
+        .padding()
+    }
+}
+
+struct LockSpacePage: View {
+    var body: some View {
+        VStack(spacing: 24) {
+            ZStack {
+                Circle()
+                    .fill(LinearGradient(gradient: Gradient(colors: [.blue, .purple]), startPoint: .topLeading, endPoint: .bottomTrailing))
+                    .frame(width: 90, height: 90)
+                    .shadow(color: .blue.opacity(0.3), radius: 10, x: 0, y: 5)
+                Image(systemName: "lock.fill")
+                    .font(.system(size: 40, weight: .light))
+                    .foregroundColor(.white)
+            }
+            
+            VStack(spacing: 12) {
+                Text(NSLocalizedString("Lock Your Spaces", comment: ""))
+                    .font(.system(size: 28, weight: .bold, design: .rounded))
+                
+                Text(NSLocalizedString("Prevent applications or macOS from automatically switching spaces. Keep your workspace focused by locking important desktops.", comment: ""))
+                    .font(.body)
+                    .foregroundColor(.secondary)
+                    .multilineTextAlignment(.center)
+                    .lineSpacing(6)
+                    .padding(.horizontal, 40)
+            }
+            
+            VStack(alignment: .leading, spacing: 16) {
+                HStack(spacing: 12) {
+                    Image(systemName: "menubar.rectangle")
+                        .font(.title2)
+                        .foregroundColor(.accentColor)
+                        .frame(width: 32)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(NSLocalizedString("Lock via Menu Bar", comment: ""))
+                            .font(.headline)
+                        Text(NSLocalizedString("Click the space status item in the menu bar and select \"Lock space\". A small lock icon will appear.", comment: ""))
+                            .font(.subheadline)
+                            .foregroundColor(.secondary)
+                    }
+                }
+                
+                HStack(spacing: 12) {
+                    Image(systemName: "macwindow")
+                        .font(.title2)
+                        .foregroundColor(.accentColor)
+                        .frame(width: 32)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(NSLocalizedString("Lock via Settings", comment: ""))
+                            .font(.headline)
+                        Text(NSLocalizedString("Open Settings, go to the \"Spaces\" tab, and toggle the lock icon next to any space.", comment: ""))
+                            .font(.subheadline)
+                            .foregroundColor(.secondary)
+                    }
+                }
+            }
+            .padding(.horizontal, 40)
+            .padding(.top, 10)
         }
         .padding()
     }

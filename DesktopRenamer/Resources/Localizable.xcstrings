@@ -811,6 +811,66 @@
         }
       }
     },
+    "Lock Your Spaces" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "锁定您的桌面"
+          }
+        }
+      }
+    },
+    "Lock via Menu Bar" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "通过菜单栏锁定"
+          }
+        }
+      }
+    },
+    "Lock via Settings" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "通过设置锁定"
+          }
+        }
+      }
+    },
+    "Prevent applications or macOS from automatically switching spaces. Keep your workspace focused by locking important desktops." : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "防止应用程序或 macOS 自动切换桌面。通过锁定重要桌面来保持您的工作区专注。"
+          }
+        }
+      }
+    },
+    "Click the space status item in the menu bar and select \"Lock space\". A small lock icon will appear." : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "在菜单栏中点击桌面状态项，然后选择“锁定当前桌面”。随后将显示一个小锁图标。"
+          }
+        }
+      }
+    },
+    "Open Settings, go to the \"Spaces\" tab, and toggle the lock icon next to any space." : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "打开设置，前往“桌面”选项卡，然后切换任何桌面旁边的锁图标。"
+          }
+        }
+      }
+    },
     "Manual" : {
       "localizations" : {
         "zh-Hans" : {
