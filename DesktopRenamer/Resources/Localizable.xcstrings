@@ -1110,6 +1110,9 @@
         }
       }
     },
+    "No results" : {
+
+    },
     "Not a fullscreen?" : {
       "localizations" : {
         "zh-Hans" : {
@@ -1463,6 +1466,9 @@
           }
         }
       }
+    },
+    "Search" : {
+
     },
     "See large, aesthetic name labels when you enter Mission Control, and discreet active labels when you switch spaces." : {
       "localizations" : {

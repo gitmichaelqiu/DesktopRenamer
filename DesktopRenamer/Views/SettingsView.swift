@@ -15,6 +15,17 @@ enum SettingsTab: String, CaseIterable, Identifiable {
         case .about: return "Settings.About"
         }
     }
+    
+    var localizedNameString: String {
+        switch self {
+        case .general: return "General"
+        case .space: return "Spaces"
+        case .labels: return "Labels"
+        case .sswitch: return "Switch"
+        case .permissions: return "Permissions"
+        case .about: return "About"
+        }
+    }
 
     var iconName: String {
         switch self {
@@ -27,6 +38,51 @@ enum SettingsTab: String, CaseIterable, Identifiable {
         }
     }
 }
+
+struct SearchableSettingItem: Identifiable {
+    let id = UUID()
+    let title: String
+    let tab: SettingsTab
+    let keywords: [String]
+}
+
+let searchableItems: [SearchableSettingItem] = [
+    // General
+    SearchableSettingItem(title: "Launch at Login", tab: .general, keywords: ["launch", "login", "autostart", "start", "boot", "startup"]),
+    SearchableSettingItem(title: "Menubar Icon Style", tab: .general, keywords: ["menu", "bar", "status", "icon", "number", "name", "badge"]),
+    SearchableSettingItem(title: "Silent Mode", tab: .general, keywords: ["silent", "hide", "mute", "quiet", "disturb", "notifications"]),
+    SearchableSettingItem(title: "Reset Settings", tab: .general, keywords: ["reset", "clear", "restore", "default", "factory"]),
+    
+    // Spaces
+    SearchableSettingItem(title: "Rename Spaces", tab: .space, keywords: ["rename", "name", "title", "label", "custom", "edit"]),
+    SearchableSettingItem(title: "Reorder Spaces", tab: .space, keywords: ["reorder", "arrange", "display", "monitor", "position"]),
+    
+    // Labels
+    SearchableSettingItem(title: "Show Preview Labels", tab: .labels, keywords: ["preview", "large", "label", "mission", "control"]),
+    SearchableSettingItem(title: "Hide When Switching Desktops", tab: .labels, keywords: ["hide", "switch", "fade", "transition"]),
+    SearchableSettingItem(title: "Preview Label Font/Window Size", tab: .labels, keywords: ["font", "size", "window", "padding", "scale", "appearance"]),
+    SearchableSettingItem(title: "Show Active Space Labels", tab: .labels, keywords: ["active", "corner", "slide", "desktop"]),
+    SearchableSettingItem(title: "Keep Active Label Visible on Desktop", tab: .labels, keywords: ["keep", "desktop", "visible", "persist", "always"]),
+    
+    // Switch
+    SearchableSettingItem(title: "Keyboard Shortcuts", tab: .sswitch, keywords: ["shortcuts", "keyboard", "hotkey", "keys", "bind"]),
+    SearchableSettingItem(title: "Switch to Previous/Next Space", tab: .sswitch, keywords: ["switch", "previous", "next", "left", "right", "shortcut"]),
+    SearchableSettingItem(title: "Reload Space Labels", tab: .sswitch, keywords: ["reload", "refresh", "label", "shortcut"]),
+    SearchableSettingItem(title: "Move Window to Previous/Next Desktop", tab: .sswitch, keywords: ["move", "window", "previous", "next", "desktop", "shortcut"]),
+    SearchableSettingItem(title: "Move Window to Desktop Number", tab: .sswitch, keywords: ["move", "window", "number", "desktop", "shortcut"]),
+    SearchableSettingItem(title: "Move Window to Previous/Next Display", tab: .sswitch, keywords: ["move", "window", "previous", "next", "display", "monitor", "shortcut"]),
+    SearchableSettingItem(title: "Restore Windows Moved by Lock", tab: .sswitch, keywords: ["restore", "window", "lock", "moved", "shortcut"]),
+    SearchableSettingItem(title: "Switch Gesture Override (Trackpad)", tab: .sswitch, keywords: ["gesture", "trackpad", "swipe", "override", "multitouch", "finger"]),
+    
+    // Permissions
+    SearchableSettingItem(title: "Accessibility Permission", tab: .permissions, keywords: ["accessibility", "permission", "grant", "system", "access"]),
+    SearchableSettingItem(title: "Screen Recording Permission", tab: .permissions, keywords: ["screen", "recording", "permission", "capture", "access"]),
+    
+    // About
+    SearchableSettingItem(title: "App Version Info", tab: .about, keywords: ["version", "about", "update", "check", "info"]),
+    SearchableSettingItem(title: "Check for Updates", tab: .about, keywords: ["update", "sparkle", "check", "version"]),
+    SearchableSettingItem(title: "GitHub / Support", tab: .about, keywords: ["github", "website", "developer", "contact", "support"])
+]
 
 // UI layout constants for consistent sizing.
 let sidebarWidth: CGFloat = 180
@@ -45,6 +101,7 @@ struct SettingsView: View {
     @EnvironmentObject var gestureManager: GestureManager
 
     @State private var selectedTab: SettingsTab?
+    @State private var searchText = ""
     
     init(spaceManager: SpaceManager, labelManager: SpaceLabelManager, initialTab: SettingsTab? = .general) {
         self.spaceManager = spaceManager
@@ -64,6 +121,16 @@ struct SettingsView: View {
         .frame(
             width: CGFloat(defaultSettingsWindowWidth), height: CGFloat(defaultSettingsWindowHeight)
         )
+        .onChange(of: searchText) { newValue in
+            if !newValue.isEmpty {
+                let tabs = filteredTabs
+                if let selected = selectedTab, !tabs.contains(selected) {
+                    selectedTab = tabs.first
+                } else if selectedTab == nil {
+                    selectedTab = tabs.first
+                }
+            }
+        }
     }
 
     struct ToolbarHider: ViewModifier {
@@ -76,13 +143,134 @@ struct SettingsView: View {
         }
     }
 
+    var filteredTabs: [SettingsTab] {
+        if searchText.isEmpty {
+            return SettingsTab.allCases
+        }
+        let query = searchText.lowercased()
+        return SettingsTab.allCases.filter { tab in
+            let matchesTabName = tab.rawValue.lowercased().contains(query) ||
+                                 tab.localizedNameString.lowercased().contains(query)
+            
+            let matchesSetting = searchableItems.contains { item in
+                item.tab == tab && (
+                    item.title.lowercased().contains(query) ||
+                    item.keywords.contains { $0.lowercased().contains(query) }
+                )
+            }
+            
+            return matchesTabName || matchesSetting
+        }
+    }
+
+    private var searchField: some View {
+        HStack(spacing: 6) {
+            Image(systemName: "magnifyingglass")
+                .foregroundColor(.secondary)
+                .font(.system(size: 13))
+            
+            TextField("Search", text: $searchText)
+                .textFieldStyle(.plain)
+                .font(.system(size: 13))
+                .foregroundColor(.primary)
+            
+            if !searchText.isEmpty {
+                Button {
+                    searchText = ""
+                } label: {
+                    Image(systemName: "xmark.circle.fill")
+                        .foregroundColor(.secondary)
+                        .font(.system(size: 13))
+                }
+                .buttonStyle(.plain)
+            }
+        }
+        .padding(.horizontal, 8)
+        .frame(height: 28)
+        .background(
+            RoundedRectangle(cornerRadius: 6, style: .continuous)
+                .fill(Color(nsColor: .controlBackgroundColor))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 6, style: .continuous)
+                        .stroke(Color.gray.opacity(0.15), lineWidth: 1)
+                )
+        )
+        .padding(.horizontal, 4)
+    }
+
+    private func highlightedText(text: String, query: String) -> AttributedString {
+        var attributed = AttributedString(text)
+        guard !query.isEmpty else { return attributed }
+        
+        let lowerQuery = query.lowercased()
+        var searchStart = attributed.startIndex
+        
+        while searchStart < attributed.endIndex {
+            let remainingString = String(attributed[searchStart...].characters)
+            guard let range = remainingString.lowercased().range(of: lowerQuery) else { break }
+            
+            let matchStartIndex = remainingString.distance(from: remainingString.startIndex, to: range.lowerBound)
+            let matchLength = remainingString.distance(from: range.lowerBound, to: range.upperBound)
+            
+            let startIdx = attributed.index(searchStart, offsetByCharacters: matchStartIndex)
+            let endIdx = attributed.index(startIdx, offsetByCharacters: matchLength)
+            let targetRange = startIdx..<endIdx
+            
+            attributed[targetRange].foregroundColor = Color.blue
+            attributed[targetRange].inlinePresentationIntent = .stronglyEmphasized
+            
+            searchStart = endIdx
+        }
+        
+        return attributed
+    }
+
     @ViewBuilder
     private var sidebar: some View {
         if #available(macOS 14.0, *) {
             List(selection: $selectedTab) {
                 Section {
-                    ForEach(SettingsTab.allCases) { tab in
-                        sidebarItem(for: tab)
+                    if filteredTabs.isEmpty {
+                        Text("No results")
+                            .font(.system(size: 13))
+                            .foregroundColor(.secondary)
+                            .padding(.leading, 8)
+                            .padding(.top, 4)
+                    } else {
+                        ForEach(filteredTabs) { tab in
+                            VStack(alignment: .leading, spacing: 2) {
+                                sidebarItem(for: tab)
+                                
+                                if !searchText.isEmpty {
+                                    let matchingItems = searchableItems.filter { item in
+                                        item.tab == tab && (
+                                            item.title.lowercased().contains(searchText.lowercased()) ||
+                                            item.keywords.contains { $0.lowercased().contains(searchText.lowercased()) }
+                                        )
+                                    }
+                                    
+                                    ForEach(matchingItems) { item in
+                                        Button {
+                                            selectedTab = tab
+                                        } label: {
+                                            HStack(spacing: 4) {
+                                                Image(systemName: "arrow.turn.down.right")
+                                                    .font(.system(size: 9))
+                                                    .foregroundColor(.secondary)
+                                                    .padding(.leading, 12)
+                                                
+                                                Text(highlightedText(text: item.title, query: searchText))
+                                                    .font(.system(size: 11, weight: .regular))
+                                                    .foregroundColor(.secondary)
+                                                    .lineLimit(1)
+                                            }
+                                        }
+                                        .buttonStyle(.plain)
+                                        .frame(height: 18)
+                                    }
+                                }
+                            }
+                        }
                     }
                 } header: {
                     VStack(alignment: .leading, spacing: 2) {
@@ -91,7 +279,10 @@ struct SettingsView: View {
                             .primary)
                         Text("Renamer").font(.custom("Syncopate-Bold", size: 21)).foregroundStyle(
                             .primary
-                        ).padding(.bottom, 20)
+                        ).padding(.bottom, 10)
+                        
+                        searchField
+                            .padding(.bottom, 12)
                     }
                 }
                 .collapsible(false)
@@ -105,8 +296,47 @@ struct SettingsView: View {
         } else {
             List(selection: $selectedTab) {
                 Section {
-                    ForEach(SettingsTab.allCases) { tab in
-                        sidebarItem(for: tab)
+                    if filteredTabs.isEmpty {
+                        Text("No results")
+                            .font(.system(size: 13))
+                            .foregroundColor(.secondary)
+                            .padding(.leading, 8)
+                            .padding(.top, 4)
+                    } else {
+                        ForEach(filteredTabs) { tab in
+                            VStack(alignment: .leading, spacing: 2) {
+                                sidebarItem(for: tab)
+                                
+                                if !searchText.isEmpty {
+                                    let matchingItems = searchableItems.filter { item in
+                                        item.tab == tab && (
+                                            item.title.lowercased().contains(searchText.lowercased()) ||
+                                            item.keywords.contains { $0.lowercased().contains(searchText.lowercased()) }
+                                        )
+                                    }
+                                    
+                                    ForEach(matchingItems) { item in
+                                        Button {
+                                            selectedTab = tab
+                                        } label: {
+                                            HStack(spacing: 4) {
+                                                Image(systemName: "arrow.turn.down.right")
+                                                    .font(.system(size: 9))
+                                                    .foregroundColor(.secondary)
+                                                    .padding(.leading, 12)
+                                                
+                                                Text(highlightedText(text: item.title, query: searchText))
+                                                    .font(.system(size: 11, weight: .regular))
+                                                    .foregroundColor(.secondary)
+                                                    .lineLimit(1)
+                                            }
+                                        }
+                                        .buttonStyle(.plain)
+                                        .frame(height: 18)
+                                    }
+                                }
+                            }
+                        }
                     }
                 } header: {
                     VStack(alignment: .leading, spacing: 0) {
@@ -115,7 +345,10 @@ struct SettingsView: View {
                             .primary)
                         Text("Renamer").font(.custom("Syncopate-Bold", size: 18)).foregroundStyle(
                             .primary
-                        ).padding(.bottom, 20)
+                        ).padding(.bottom, 10)
+                        
+                        searchField
+                            .padding(.bottom, 12)
                     }
                 }
                 .collapsible(false)
@@ -177,7 +410,8 @@ struct SettingsView: View {
     private func sidebarItem(for tab: SettingsTab) -> some View {
         NavigationLink(value: tab) {
             Label {
-                Text(tab.localizedName).font(.system(size: sidebarFontSize, weight: .medium))
+                Text(highlightedText(text: tab.localizedNameString, query: searchText))
+                    .font(.system(size: sidebarFontSize, weight: .medium))
                     .padding(.leading, 2)
             } icon: {
                 Image(systemName: tab.iconName).resizable().scaledToFit().frame(
