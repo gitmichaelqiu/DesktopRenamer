@@ -211,11 +211,12 @@ class StatusBarController: NSObject {
         
         let isLocked = spaceManager.lockedSpaceIDs.contains(spaceManager.currentSpaceUUID)
         let lockItem = NSMenuItem(
-            title: isLocked ? NSLocalizedString("Unlock Current Space", comment: "") : NSLocalizedString("Lock in Current Space", comment: ""),
+            title: NSLocalizedString("Lock in Current Space", comment: ""),
             action: #selector(toggleLockCurrentSpace),
             keyEquivalent: "l"
         )
         lockItem.target = self
+        lockItem.state = isLocked ? .on : .off
         lockItem.image = NSImage(systemSymbolName: isLocked ? "lock" : "lock.open", accessibilityDescription: nil)
         menu.addItem(lockItem)
     

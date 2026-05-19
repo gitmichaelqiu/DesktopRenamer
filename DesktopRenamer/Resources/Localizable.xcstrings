@@ -779,6 +779,12 @@
         }
       }
     },
+    "Lock in Current Space" : {
+
+    },
+    "Lock Space Settings" : {
+
+    },
     "Manual" : {
       "localizations" : {
         "zh-Hans" : {
@@ -1377,6 +1383,9 @@
           }
         }
       }
+    },
+    "Restore moved windows" : {
+
     },
     "Review" : {
       "localizations" : {
@@ -2781,6 +2790,9 @@
         }
       }
     },
+    "Unlock Current Space" : {
+
+    },
     "Use the Raycast extension to move all windows of an app to another space in one command." : {
       "localizations" : {
         "zh-Hans" : {
@@ -2841,6 +2853,9 @@
           }
         }
       }
+    },
+    "When switching back to a space manually, automatically restore any windows that were moved away due to programmatic activation on other spaces." : {
+
     },
     "Window size" : {
       "localizations" : {
