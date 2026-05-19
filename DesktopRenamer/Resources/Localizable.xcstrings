@@ -752,7 +752,6 @@
       }
     },
     "Instant switch without animations" : {
-      "extractionState" : "stale",
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
