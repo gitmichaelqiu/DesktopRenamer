@@ -52,6 +52,7 @@ let searchableItems: [SearchableSettingItem] = [
     SearchableSettingItem(title: "Menubar Icon Style", tab: .general, keywords: ["menu", "bar", "status", "icon", "number", "name", "badge"]),
     SearchableSettingItem(title: "Silent Mode", tab: .general, keywords: ["silent", "hide", "mute", "quiet", "disturb", "notifications"]),
     SearchableSettingItem(title: "Reset Settings", tab: .general, keywords: ["reset", "clear", "restore", "default", "factory"]),
+    SearchableSettingItem(title: "Check for Updates", tab: .general, keywords: ["update", "sparkle", "check", "version", "general"]),
     
     // Spaces
     SearchableSettingItem(title: "Rename Spaces", tab: .space, keywords: ["rename", "name", "title", "label", "custom", "edit"]),
@@ -79,8 +80,6 @@ let searchableItems: [SearchableSettingItem] = [
     SearchableSettingItem(title: "Screen Recording Permission", tab: .permissions, keywords: ["screen", "recording", "permission", "capture", "access"]),
     
     // About
-    SearchableSettingItem(title: "App Version Info", tab: .about, keywords: ["version", "about", "update", "check", "info"]),
-    SearchableSettingItem(title: "Check for Updates", tab: .about, keywords: ["update", "sparkle", "check", "version"]),
     SearchableSettingItem(title: "GitHub / Support", tab: .about, keywords: ["github", "website", "developer", "contact", "support"])
 ]
 
