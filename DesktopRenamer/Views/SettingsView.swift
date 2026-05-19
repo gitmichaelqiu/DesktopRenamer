@@ -100,6 +100,7 @@ struct SettingsView: View {
     @EnvironmentObject var hotkeyManager: HotkeyManager
     @EnvironmentObject var gestureManager: GestureManager
 
+    @StateObject private var navigationState = SettingsNavigationState()
     @State private var selectedTab: SettingsTab?
     @State private var searchText = ""
     
@@ -115,6 +116,7 @@ struct SettingsView: View {
         } detail: {
             detailView
         }
+        .environmentObject(navigationState)
         .navigationTitle("")
         .modifier(ToolbarHider())
         .edgesIgnoringSafeArea(.top)
@@ -122,6 +124,7 @@ struct SettingsView: View {
             width: CGFloat(defaultSettingsWindowWidth), height: CGFloat(defaultSettingsWindowHeight)
         )
         .onChange(of: searchText) { newValue in
+            navigationState.searchText = newValue
             if !newValue.isEmpty {
                 let tabs = filteredTabs
                 if let selected = selectedTab, !tabs.contains(selected) {
@@ -198,33 +201,6 @@ struct SettingsView: View {
         .padding(.horizontal, 4)
     }
 
-    private func highlightedText(text: String, query: String) -> AttributedString {
-        var attributed = AttributedString(text)
-        guard !query.isEmpty else { return attributed }
-        
-        let lowerQuery = query.lowercased()
-        var searchStart = attributed.startIndex
-        
-        while searchStart < attributed.endIndex {
-            let remainingString = String(attributed[searchStart...].characters)
-            guard let range = remainingString.lowercased().range(of: lowerQuery) else { break }
-            
-            let matchStartIndex = remainingString.distance(from: remainingString.startIndex, to: range.lowerBound)
-            let matchLength = remainingString.distance(from: range.lowerBound, to: range.upperBound)
-            
-            let startIdx = attributed.index(searchStart, offsetByCharacters: matchStartIndex)
-            let endIdx = attributed.index(startIdx, offsetByCharacters: matchLength)
-            let targetRange = startIdx..<endIdx
-            
-            attributed[targetRange].foregroundColor = Color.blue
-            attributed[targetRange].inlinePresentationIntent = .stronglyEmphasized
-            
-            searchStart = endIdx
-        }
-        
-        return attributed
-    }
-
     @ViewBuilder
     private var sidebar: some View {
         if #available(macOS 14.0, *) {
@@ -252,6 +228,7 @@ struct SettingsView: View {
                                     ForEach(matchingItems) { item in
                                         Button {
                                             selectedTab = tab
+                                            navigationState.scrollToItemID = item.title
                                         } label: {
                                             HStack(spacing: 4) {
                                                 Image(systemName: "arrow.turn.down.right")
@@ -270,6 +247,7 @@ struct SettingsView: View {
                                     }
                                 }
                             }
+                            .tag(tab)
                         }
                     }
                 } header: {
@@ -318,6 +296,7 @@ struct SettingsView: View {
                                     ForEach(matchingItems) { item in
                                         Button {
                                             selectedTab = tab
+                                            navigationState.scrollToItemID = item.title
                                         } label: {
                                             HStack(spacing: 4) {
                                                 Image(systemName: "arrow.turn.down.right")
@@ -336,6 +315,7 @@ struct SettingsView: View {
                                     }
                                 }
                             }
+                            .tag(tab)
                         }
                     }
                 } header: {
@@ -364,44 +344,39 @@ struct SettingsView: View {
 
     @ViewBuilder
     private var detailView: some View {
+        let activeTab = selectedTab ?? filteredTabs.first ?? .general
+        
         ZStack(alignment: .top) {
             ZStack(alignment: .top) {
-                if let tab = selectedTab {
-                    switch tab {
-                    case .general:
-                        GeneralSettingsView(spaceManager: spaceManager, labelManager: labelManager)
-                    case .space:
-                        SpaceEditView(spaceManager: spaceManager, labelManager: labelManager)
-                    case .labels:
-                        LabelSettingsView(labelManager: labelManager)
-                    case .sswitch:
-                        SwitchSettingsView()
-                    case .permissions:
-                        PermissionsSettingsView()
-                    case .about:
-                        AboutView()
-                    }
-                } else {
-                    Text("Select a category").foregroundColor(.secondary).frame(
-                        maxWidth: .infinity, maxHeight: .infinity)
+                switch activeTab {
+                case .general:
+                    GeneralSettingsView(spaceManager: spaceManager, labelManager: labelManager)
+                case .space:
+                    SpaceEditView(spaceManager: spaceManager, labelManager: labelManager)
+                case .labels:
+                    LabelSettingsView(labelManager: labelManager)
+                case .sswitch:
+                    SwitchSettingsView()
+                case .permissions:
+                    PermissionsSettingsView()
+                case .about:
+                    AboutView()
                 }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
             .padding(.top, titleHeaderHeight)
 
-            if let tab = selectedTab {
-                VStack(spacing: 0) {
-                    HStack {
-                        Text(tab.localizedName).font(.system(size: 20, weight: .semibold)).padding(
-                            .leading, 20)
-                        Spacer()
-                    }
-                    .frame(height: titleHeaderHeight)
-                    .background(.bar)
-                    Divider()
+            VStack(spacing: 0) {
+                HStack {
+                    Text(activeTab.localizedName).font(.system(size: 20, weight: .semibold)).padding(
+                        .leading, 20)
+                    Spacer()
                 }
-                .frame(maxHeight: .infinity, alignment: .top)
+                .frame(height: titleHeaderHeight)
+                .background(.bar)
+                Divider()
             }
+            .frame(maxHeight: .infinity, alignment: .top)
         }
         .edgesIgnoringSafeArea(.top)
     }
@@ -410,7 +385,7 @@ struct SettingsView: View {
     private func sidebarItem(for tab: SettingsTab) -> some View {
         NavigationLink(value: tab) {
             Label {
-                Text(highlightedText(text: tab.localizedNameString, query: searchText))
+                Text(tab.localizedNameString)
                     .font(.system(size: sidebarFontSize, weight: .medium))
                     .padding(.leading, 2)
             } icon: {
