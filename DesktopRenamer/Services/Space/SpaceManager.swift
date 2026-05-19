@@ -394,10 +394,6 @@ class SpaceManager: ObservableObject {
                                     }
                                 }
                             }
-                            
-                            // Synchronize currentSpaceUUID to targetUUID to prevent race conditions
-                            self.currentSpaceUUID = targetUUID
-                            return
                         }
                     }
                 }
