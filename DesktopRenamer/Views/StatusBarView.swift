@@ -179,31 +179,31 @@ class StatusBarController: NSObject {
         let width = max(textSize.width, lockRect.maxX + 1)
         let imageSize = NSSize(width: width, height: height)
         
-        let combinedImage = NSImage(size: imageSize)
-        combinedImage.lockFocus()
-        
-        // Step 1: Draw the space name text
-        baseName.draw(in: textRect, withAttributes: attributes)
-        
-        // Step 2: Erase a circular boundary around where the lock will be
-        let erasePadding: CGFloat = 1.5
-        let eraseRect = lockRect.insetBy(dx: -erasePadding, dy: -erasePadding)
-        let erasePath = NSBezierPath(ovalIn: eraseRect)
-        
-        if let context = NSGraphicsContext.current {
-            let originalOp = context.compositingOperation
-            context.compositingOperation = .destinationOut
-            NSColor.white.set()
-            erasePath.fill()
-            context.compositingOperation = originalOp
+        let combinedImage = NSImage(size: imageSize, flipped: false) { rect in
+            // Step 1: Draw the space name text
+            baseName.draw(in: textRect, withAttributes: attributes)
+            
+            // Step 2: Erase a circular boundary around where the lock will be
+            let erasePadding: CGFloat = 1.5
+            let eraseRect = lockRect.insetBy(dx: -erasePadding, dy: -erasePadding)
+            let erasePath = NSBezierPath(ovalIn: eraseRect)
+            
+            if let context = NSGraphicsContext.current {
+                let originalOp = context.compositingOperation
+                context.compositingOperation = .destinationOut
+                NSColor.white.set()
+                erasePath.fill()
+                context.compositingOperation = originalOp
+            }
+            
+            // Step 3: Draw the lock SF symbol on top
+            if let lockImg = lockImage {
+                lockImg.draw(in: lockRect, from: NSRect(origin: .zero, size: lockImg.size), operation: .sourceOver, fraction: 1.0)
+            }
+            
+            return true
         }
         
-        // Step 3: Draw the lock SF symbol on top
-        if let lockImg = lockImage {
-            lockImg.draw(in: lockRect, from: NSRect(origin: .zero, size: lockImg.size), operation: .sourceOver, fraction: 1.0)
-        }
-        
-        combinedImage.unlockFocus()
         combinedImage.isTemplate = true
         return combinedImage
     }
