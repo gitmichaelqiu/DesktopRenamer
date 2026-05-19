@@ -42,6 +42,12 @@
 
 https://github.com/user-attachments/assets/2f1ad8b6-c003-4086-ae88-b0ed87ee4dd1
 
+https://github.com/user-attachments/assets/14342066-9e8b-4f76-8633-caf45aca1893
+
+<p align="center">
+  <video src="./DesktopRenamer/Resources/Demo/Videos/RaycastBatchMove.mp4" width="100%" controls></video>
+</p>
+
 Switch desktops faster with ProMotion.
 
 **DesktopRenamer** is a macOS menubar app that shows your **customized** name of the current desktop.
@@ -104,9 +110,7 @@ You can switch on/off the API in Settings → Advanced.
 
 You are welcome to create issues/suggestions in [GitHub Issues](https://github.com/gitmichaelqiu/DesktopRenamer/issues).
 
-For the issue that all of the spaces are marked as "Fullscreen", please check the [Troubleshoot](./Troubleshoot.md).
-
-If you have encountered any other bugs, please generate a bug report in DesktopRenamer Settings → General. This will help a lot for analyzing the bugs!
+If you are curious what I am doing on the project, go to the Issues page. The pinned issues are what I am focusing.
 
 ## 🙏 Acknowlegements
 
@@ -116,6 +120,8 @@ This app uses the following packages:
 - [Sparkle by @sparkle-project](https://github.com/sparkle-project/Sparkle)
 
 Many thanks to all of these wonderful developers!
+
+See [Acknowledgements.pdf](https://github.com/gitmichaelqiu/DesktopRenamer/blob/main/DesktopRenamer/Resources/Acknowledgements/Acknowledgements.pdf) for licenses.
 
 ## ⭐ Support This Project
 

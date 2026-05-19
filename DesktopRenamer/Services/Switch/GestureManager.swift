@@ -114,7 +114,7 @@ class GestureManager: ObservableObject {
     private var lockedDirection: SwitchDirection? = nil
 
     // Sensitivity and timing configuration.
-    private let switchCooldown: TimeInterval = 0.35
+    private let switchCooldown: TimeInterval = 0.15
     // private let minSwipeDistance: Float = 0.10 // Moved to swipeThreshold
     private let consistencyThreshold: Float = 0.01  // 5% Minimum movement per finger (Anti-Tap)
     private let touchTimeout: TimeInterval = 0.15
