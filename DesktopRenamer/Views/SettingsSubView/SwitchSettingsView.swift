@@ -8,7 +8,7 @@ struct SwitchSettingsView: View {
     @StateObject private var permissionManager = PermissionManager.shared
     
     var body: some View {
-        SettingsContainer {
+        SettingsContainer(.sswitch) {
             VStack(alignment: .leading, spacing: 20) {
                 SettingsSection("Keyboard Shortcuts", helperText: "If you want to use Control + Arrow, disable the system's one in Settings → Keyboard → Keyboard Shortcuts... → Mission Control.") {
                     
@@ -312,7 +312,7 @@ struct SwitchSettingsView: View {
             }
             .frame(maxWidth: .infinity, alignment: .topLeading)
             .animation(.easeInOut(duration: 0.2), value: gestureManager.isEnabled)
+            .environment(\.settingsTab, .sswitch)
         }
-        .environment(\.settingsTab, .sswitch)
     }
 }

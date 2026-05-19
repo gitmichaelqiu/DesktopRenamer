@@ -4,7 +4,7 @@ struct PermissionsSettingsView: View {
     @StateObject private var permissionManager = PermissionManager.shared
     
     var body: some View {
-        SettingsContainer {
+        SettingsContainer(.permissions) {
             VStack(alignment: .leading, spacing: 20) {
                 SettingsSection("Permissions", helperText: "If the Settings show that the permission is granted but the app still does not have the permission, remove the app row in Settings and re-grant.") {
                     SettingsRow("Accessibility", helperText: "Required for injecting shortcuts to switch spaces, and reading active window information.") {
@@ -27,7 +27,7 @@ struct PermissionsSettingsView: View {
                 Spacer()
             }
             .frame(maxWidth: .infinity, alignment: .topLeading)
+            .environment(\.settingsTab, .permissions)
         }
-        .environment(\.settingsTab, .permissions)
     }
 }

@@ -432,7 +432,7 @@ struct GeneralSettingsView: View {
     @State private var showAddSpacesSheet: Bool = false
 
     var body: some View {
-        SettingsContainer {
+        SettingsContainer(.general) {
             VStack(alignment: .leading, spacing: 20) {
                 // General configuration options.
                 SettingsSection("Settings.General.General") {
@@ -599,6 +599,7 @@ struct GeneralSettingsView: View {
                 Spacer()
             }
             .frame(maxWidth: .infinity, alignment: .topLeading)
+            .environment(\.settingsTab, .general)
         }
         .onAppear { launchAtLogin = getLaunchAtLoginState() }
         .sheet(
@@ -611,7 +612,6 @@ struct GeneralSettingsView: View {
         .sheet(isPresented: $showAddSpacesSheet) { AddSpacesView(spaceManager: spaceManager) }
         .animation(.easeInOut(duration: 0.2), value: spaceManager.detectionMethod)
         .animation(.easeInOut(duration: 0.2), value: autoCheckUpdate)
-        .environment(\.settingsTab, .general)
     }
 
     private var bugReportSheet: some View {
