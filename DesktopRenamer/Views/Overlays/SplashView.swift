@@ -164,9 +164,29 @@ class AutoPlayingVideoNSView: NSView {
 
     override func viewWillMove(toWindow newWindow: NSWindow?) {
         super.viewWillMove(toWindow: newWindow)
-        if newWindow == nil {
+        
+        if let oldWindow = self.window {
+            NotificationCenter.default.removeObserver(self, name: NSWindow.willCloseNotification, object: oldWindow)
+        }
+        
+        if let newWindow = newWindow {
+            NotificationCenter.default.addObserver(
+                self,
+                selector: #selector(windowWillClose(_:)),
+                name: NSWindow.willCloseNotification,
+                object: newWindow
+            )
+        } else {
             cleanup()
         }
+    }
+    
+    @objc private func windowWillClose(_ notification: Notification) {
+        cleanup()
+    }
+
+    deinit {
+        NotificationCenter.default.removeObserver(self)
     }
 
     func cleanup() {
