@@ -103,6 +103,7 @@ class GestureManager: ObservableObject {
 
     // Internal state for active gesture tracking.
     fileprivate static var sharedManager: GestureManager?
+    static var lastTrackpadTouchTime: TimeInterval = 0
 
     // Per-finger tracking is used instead of a single centroid to allow for consistency verification.
     private var initialTouchPositions: [Int32: MTPoint] = [:]
@@ -500,6 +501,7 @@ private func mtCallback(
     device: MTDeviceRef, touchPointer: UnsafeMutableRawPointer, numFingers: Int32,
     timestamp: Double, frame: Int32
 ) {
+    GestureManager.lastTrackpadTouchTime = Date().timeIntervalSince1970
     guard let manager = GestureManager.sharedManager else { return }
 
     let typedPointer = touchPointer.assumingMemoryBound(to: MTTouch.self)
