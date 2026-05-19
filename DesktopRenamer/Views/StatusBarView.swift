@@ -208,6 +208,16 @@ class StatusBarController: NSObject {
         }
         self.renameItem = rename
         menu.addItem(rename)
+        
+        let isLocked = spaceManager.lockedSpaceIDs.contains(spaceManager.currentSpaceUUID)
+        let lockItem = NSMenuItem(
+            title: isLocked ? NSLocalizedString("Unlock Current Space", comment: "") : NSLocalizedString("Lock in Current Space", comment: ""),
+            action: #selector(toggleLockCurrentSpace),
+            keyEquivalent: "l"
+        )
+        lockItem.target = self
+        lockItem.image = NSImage(systemSymbolName: isLocked ? "lock" : "lock.open", accessibilityDescription: nil)
+        menu.addItem(lockItem)
     
         let showPreviewLabels = NSMenuItem(title: NSLocalizedString("Menu.ShowPreviewLabels", comment: "Toggle preview labels"), action: #selector(togglePreviewLabelsFromMenu), keyEquivalent: "p")
         showPreviewLabels.target = self
@@ -268,6 +278,11 @@ class StatusBarController: NSObject {
             return
         }
         spaceManager.moveActiveWindowToSpace(id: spaceID)
+    }
+    
+    @objc private func toggleLockCurrentSpace() {
+        spaceManager.toggleLockSpace(spaceManager.currentSpaceUUID)
+        rebuildMenu()
     }
     
     @objc func renameCurrentSpace() {
