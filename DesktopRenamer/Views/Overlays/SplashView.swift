@@ -181,12 +181,22 @@ struct SingleVideoFeaturePage: View {
                     .padding(.horizontal, 20)
             }
             
-            AutoPlayingVideoView(videoName: videoName)
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-                .cornerRadius(12)
-                .shadow(color: Color.black.opacity(0.15), radius: 8, x: 0, y: 4)
-                .padding(.horizontal, 20)
-                .padding(.bottom, 10)
+            GeometryReader { geo in
+                if videoName == "LockSpace" {
+                    let r: CGFloat = 1660.0 / 1080.0
+                    let targetHeight = geo.size.width / r
+                    AutoPlayingVideoView(videoName: videoName)
+                        .frame(width: geo.size.width, height: targetHeight)
+                        .position(x: geo.size.width / 2, y: targetHeight / 2)
+                } else {
+                    AutoPlayingVideoView(videoName: videoName)
+                        .frame(width: geo.size.width, height: geo.size.height)
+                }
+            }
+            .clipShape(RoundedRectangle(cornerRadius: 12))
+            .shadow(color: Color.black.opacity(0.15), radius: 8, x: 0, y: 4)
+            .padding(.horizontal, 20)
+            .padding(.bottom, 10)
         }
         .padding(.top, 30)
     }
@@ -313,18 +323,21 @@ struct MissionControlPage: View {
             )
             
             VStack(spacing: 12) {
-                HStack(spacing: 40) {
+                HStack(alignment: .top, spacing: 40) {
                     Toggle("Show preview labels", isOn: $showPreviewLabels)
                         .toggleStyle(.switch)
-                    Toggle("Show active space labels", isOn: $showActiveLabels)
-                        .toggleStyle(.switch)
+                    
+                    VStack(alignment: .leading, spacing: 8) {
+                        Toggle("Show active space labels", isOn: $showActiveLabels)
+                            .toggleStyle(.switch)
+                        
+                        if showActiveLabels {
+                            Toggle("Keep visible on desktop", isOn: $showOnDesktop)
+                                .toggleStyle(.switch)
+                        }
+                    }
                 }
-                
-                if showActiveLabels {
-                    Toggle("Keep visible on desktop", isOn: $showOnDesktop)
-                        .toggleStyle(.switch)
-                        .padding(.bottom, 10)
-                }
+                .padding(.bottom, 10)
             }
             .padding(.bottom, 10)
         }
@@ -346,6 +359,7 @@ struct MenuBarSwitchPage: View {
 
 struct FastSwitchingPage: View {
     @AppStorage("GestureManager.Enabled") private var gestureEnabled = false
+    @AppStorage("com.michaelqiu.desktoprenamer.instantSpaceSwitch") private var instantSpaceSwitch = false
 
     var body: some View {
         VStack(spacing: 10) {
@@ -355,9 +369,16 @@ struct FastSwitchingPage: View {
                 videoName: "SwitchOverride"
             )
             
-            Toggle("Enable switch gesture override", isOn: $gestureEnabled)
-                .toggleStyle(.switch)
-                .padding(.bottom, 20)
+            VStack(alignment: .leading, spacing: 8) {
+                Toggle("Enable switch gesture override", isOn: $gestureEnabled)
+                    .toggleStyle(.switch)
+                
+                if gestureEnabled {
+                    Toggle("Instant switch without animations", isOn: $instantSpaceSwitch)
+                        .toggleStyle(.switch)
+                }
+            }
+            .padding(.bottom, 20)
         }
     }
 }

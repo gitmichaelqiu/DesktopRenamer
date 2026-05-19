@@ -414,6 +414,7 @@
       }
     },
     "Click the space status item in the menu bar and select \"Lock space\". A small lock icon will appear." : {
+      "extractionState" : "stale",
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
@@ -822,6 +823,7 @@
       }
     },
     "Lock via Menu Bar" : {
+      "extractionState" : "stale",
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
@@ -832,6 +834,7 @@
       }
     },
     "Lock via Settings" : {
+      "extractionState" : "stale",
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
@@ -1201,6 +1204,7 @@
       }
     },
     "Open Settings, go to the \"Spaces\" tab, and toggle the lock icon next to any space." : {
+      "extractionState" : "stale",
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
