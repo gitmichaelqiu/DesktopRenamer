@@ -102,6 +102,9 @@ struct AboutView: View {
         .onAppear {
             navigationState.register(title: "GitHub / Support", tab: .about, keywords: ["github", "website", "developer", "contact", "support"])
         }
+        .onDisappear {
+            navigationState.unregister(title: "GitHub / Support", tab: .about)
+        }
         .environment(\.settingsTab, .about)
     }
 
