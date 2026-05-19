@@ -48,6 +48,7 @@ class SpaceHelper {
     private static var originalMousePoint: CGPoint? = nil
     private static var restorationTask: DispatchWorkItem? = nil
     private static var pendingMoveCount = 0
+    private static var isInstantDrag = false
     static var isDragging: Bool { originalMousePoint != nil }
 
     // Core space switching implementation.
@@ -311,6 +312,7 @@ class SpaceHelper {
         
         // Session Initialization: Capture original mouse state for the initial move.
         if originalMousePoint == nil {
+            isInstantDrag = forceInstant
             // Save starting location
             originalMousePoint = CGEvent(source: nil)?.location
             
@@ -344,7 +346,7 @@ class SpaceHelper {
                 downEvent.post(tap: .cghidEventTap)
             }
             
-            usleep(50000) // 0.05s grip
+            usleep(forceInstant ? 20000 : 50000) // 0.02s grip for instant switches, 0.05s otherwise
         }
         
         // Trigger the space switch and track the movement.
@@ -366,7 +368,8 @@ class SpaceHelper {
         // Only trigger the "Drop & Restore" if all pending moves are accounted for.
         // We replace the 2.0s safety timer with a quick 0.15s settle-and-restore.
         if pendingMoveCount == 0 {
-            scheduleRestoration(delay: 0.15)
+            let delay = isInstantDrag ? 0.01 : 0.15
+            scheduleRestoration(delay: delay)
         }
     }
     
@@ -377,6 +380,7 @@ class SpaceHelper {
         restorationTask?.cancel()
         
         let source = CGEventSource(stateID: .hidSystemState)
+        let isInstant = isInstantDrag
         let task = DispatchWorkItem { [originalPoint = originalMousePoint] in
             guard let restorePoint = originalPoint else { 
                 originalMousePoint = nil
@@ -392,7 +396,7 @@ class SpaceHelper {
             }
             
             // Restore the cursor position.
-            usleep(50000)
+            usleep(isInstant ? 5000 : 50000) // 5ms for instant switches, 50ms otherwise
             if let restoreEvent = CGEvent(mouseEventSource: source, mouseType: .mouseMoved, mouseCursorPosition: restorePoint, mouseButton: .left) {
                 restoreEvent.flags = []
                 restoreEvent.post(tap: .cghidEventTap)
