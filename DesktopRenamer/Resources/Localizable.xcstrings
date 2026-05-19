@@ -779,6 +779,26 @@
         }
       }
     },
+    "Lock current space" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "锁定当前桌面"
+          }
+        }
+      }
+    },
+    "Lock Current Space" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "锁定当前桌面"
+          }
+        }
+      }
+    },
     "Manual" : {
       "localizations" : {
         "zh-Hans" : {
@@ -1374,6 +1394,26 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "重置默认"
+          }
+        }
+      }
+    },
+    "Restore windows moved by lock" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "恢复被锁定移动的窗口"
+          }
+        }
+      }
+    },
+    "Restore Windows Moved by Lock (%d)" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "恢复被锁定移动的窗口 (%d)"
           }
         }
       }
@@ -2761,6 +2801,16 @@
         }
       }
     },
+    "Toggle lock for current space" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "切换当前桌面锁定"
+          }
+        }
+      }
+    },
     "Trackpad Switch Gesture Override" : {
       "localizations" : {
         "zh-Hans" : {
@@ -2777,6 +2827,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "排查桌面检测"
+          }
+        }
+      }
+    },
+    "Unlock space" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "解锁桌面"
           }
         }
       }

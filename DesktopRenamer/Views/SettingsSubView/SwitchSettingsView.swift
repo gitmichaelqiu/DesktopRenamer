@@ -178,6 +178,46 @@ struct SwitchSettingsView: View {
                         }
                     }
                 }
+
+                SettingsSection(nil) {
+                    SettingsRow("Toggle lock for current space") {
+                        HStack {
+                            Text(hotkeyManager.description(for: .toggleLock))
+                                .foregroundColor(.secondary)
+                                .padding(.trailing, 8)
+                            
+                            Button("◉") {
+                                hotkeyManager.startListening(for: .toggleLock)
+                            }
+                            .disabled(hotkeyManager.isListening)
+                            
+                            Button("↺") {
+                                hotkeyManager.resetToDefault(for: .toggleLock)
+                            }
+                            .disabled(hotkeyManager.isDefault(for: .toggleLock))
+                        }
+                    }
+                    
+                    Divider()
+                    
+                    SettingsRow("Restore windows moved by lock") {
+                        HStack {
+                            Text(hotkeyManager.description(for: .restoreWindows))
+                                .foregroundColor(.secondary)
+                                .padding(.trailing, 8)
+                            
+                            Button("◉") {
+                                hotkeyManager.startListening(for: .restoreWindows)
+                            }
+                            .disabled(hotkeyManager.isListening)
+                            
+                            Button("↺") {
+                                hotkeyManager.resetToDefault(for: .restoreWindows)
+                            }
+                            .disabled(hotkeyManager.isDefault(for: .restoreWindows))
+                        }
+                    }
+                }
                 
                 // Gesture-based switching configuration.
                 SettingsSection("Trackpad Switch Gesture Override") {
