@@ -15,7 +15,8 @@ struct SwitchSettingsView: View {
                     SettingsRow(
                         "Switch to previous space",
                         warningText: permissionManager.isAccessibilityGranted
-                        ? nil : "Requires Accessibility permission."
+                        ? nil : "Requires Accessibility permission.",
+                        demoVideoName: "SwitchSpace"
                     ) {
                         HStack {
                             Text(hotkeyManager.description(for: .switchLeft))
@@ -80,7 +81,7 @@ struct SwitchSettingsView: View {
                 }
                 
                 SettingsSection(nil) {
-                    SettingsRow("Move window to previous desktop") {
+                    SettingsRow("Move window to previous desktop", demoVideoName: "MoveWindow") {
                         HStack {
                             Text(hotkeyManager.description(for: .moveWindowPrevious))
                                 .foregroundColor(.secondary)
@@ -200,7 +201,7 @@ struct SwitchSettingsView: View {
                     
                     Divider()
                     
-                    SettingsRow("Restore windows moved by lock") {
+                    SettingsRow("Restore windows moved by lock", demoVideoName: "RaycastBatchMove") {
                         HStack {
                             Text(hotkeyManager.description(for: .restoreWindows))
                                 .foregroundColor(.secondary)
@@ -226,7 +227,8 @@ struct SwitchSettingsView: View {
                         helperText:
                             "Replaces system switch gestures with instant space switching.\n\nRequired: You must disable 'Swipe between full screen apps' in System Settings → Trackpad → More Gestures or change to different number of fingers to prevent conflicts.\n\nNotice, you must click at the fullscreen app to make it active to avoid issues when leaving the app.",
                         warningText: permissionManager.isAccessibilityGranted
-                        ? nil : "Requires Accessibility permission."
+                        ? nil : "Requires Accessibility permission.",
+                        demoVideoName: "SwitchOverride"
                     ) {
                         Toggle("", isOn: $gestureManager.isEnabled)
                             .toggleStyle(.switch)
