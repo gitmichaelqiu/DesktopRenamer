@@ -5,7 +5,7 @@ enum SettingsTab: String, CaseIterable, Identifiable {
 
     var id: String { self.rawValue }
 
-    var localizedName: LocalizedStringKey {
+    var localizedNameKey: String {
         switch self {
         case .general: return "Settings.General"
         case .space: return "Settings.Spaces"
@@ -15,17 +15,11 @@ enum SettingsTab: String, CaseIterable, Identifiable {
         case .about: return "Settings.About"
         }
     }
-    
-    var localizedNameString: String {
-        switch self {
-        case .general: return "General"
-        case .space: return "Spaces"
-        case .labels: return "Labels"
-        case .sswitch: return "Switch"
-        case .permissions: return "Permissions"
-        case .about: return "About"
-        }
+
+    var localizedName: LocalizedStringKey {
+        LocalizedStringKey(localizedNameKey)
     }
+    
 
     var iconName: String {
         switch self {
@@ -130,7 +124,7 @@ struct SettingsView: View {
         let query = searchText.lowercased()
         return SettingsTab.allCases.filter { tab in
             let matchesTabName = tab.rawValue.lowercased().contains(query) ||
-                                 tab.localizedNameString.lowercased().contains(query)
+                                 NSLocalizedString(tab.localizedNameKey, comment: "").lowercased().contains(query)
             
             let matchesSetting = navigationState.registeredItems.contains { item in
                 item.tab == tab && (
@@ -367,7 +361,7 @@ struct SettingsView: View {
     private func sidebarItem(for tab: SettingsTab) -> some View {
         NavigationLink(value: tab) {
             Label {
-                Text(tab.localizedNameString)
+                Text(tab.localizedName)
                     .font(.system(size: sidebarFontSize, weight: .medium))
                     .padding(.leading, 2)
             } icon: {
