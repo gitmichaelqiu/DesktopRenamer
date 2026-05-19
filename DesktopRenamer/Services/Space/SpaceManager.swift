@@ -372,7 +372,7 @@ class SpaceManager: ObservableObject {
                             
                             // Wait 50ms for the Window Server to settle, then drag-move the active window back to the locked space!
                             DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
-                                if let activeWin = SpaceHelper.getActiveWindowInfo() {
+                                if let activeWin = SpaceHelper.getActiveWindowInfo(forPID: pid) {
                                     print("SpaceManager: Physical drag-moving active window \(activeWin.id) to locked space \(previousUUID)")
                                     if let existing = self.movedWindowsOriginalSpaces[activeWin.id] {
                                         if existing.originalSpaceUUID == previousUUID {
