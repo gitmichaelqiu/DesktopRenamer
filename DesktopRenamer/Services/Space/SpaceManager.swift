@@ -389,10 +389,10 @@ class SpaceManager: ObservableObject {
                                     if self.lockSpaceOptionBringBack {
                                         self.movedWindowsOriginalSpaces[activeWin.id] = targetUUID
                                     }
-                                    let fromSpaceNum = self.spaceNameDict.first(where: { $0.id == targetUUID })?.num ?? 0
-                                    let targetSpaceNum = self.spaceNameDict.first(where: { $0.id == previousUUID })?.num ?? 0
+                                    let fromSpaceID = Int(targetUUID) ?? 0
+                                    let targetSpaceID = Int(previousUUID) ?? 0
                                     
-                                    SpaceHelper.moveWindowToSpace(windowID: activeWin.id, fromSpaceID: fromSpaceNum, targetSpaceID: targetSpaceNum)
+                                    SpaceHelper.moveWindowToSpace(windowID: activeWin.id, fromSpaceID: fromSpaceID, targetSpaceID: targetSpaceID)
                                     SpaceHelper.focusWindow(id: activeWin.id, pid: pid)
                                 } else {
                                     print("SpaceManager: Failed to capture active window for PID \(pid)")
@@ -408,9 +408,9 @@ class SpaceManager: ObservableObject {
                     let windowsToMoveBack = self.movedWindowsOriginalSpaces.filter { $0.value == targetUUID }
                     for (windowID, _) in windowsToMoveBack {
                         print("SpaceManager: Manual/UserInput switch to \(targetUUID) detected. Restoring window \(windowID) back to \(targetUUID)")
-                        let fromSpaceNum = self.spaceNameDict.first(where: { $0.id == previousUUID })?.num ?? 0
-                        let targetSpaceNum = self.spaceNameDict.first(where: { $0.id == targetUUID })?.num ?? 0
-                        SpaceHelper.moveWindowToSpace(windowID: windowID, fromSpaceID: fromSpaceNum, targetSpaceID: targetSpaceNum)
+                        let fromSpaceID = Int(previousUUID) ?? 0
+                        let targetSpaceID = Int(targetUUID) ?? 0
+                        SpaceHelper.moveWindowToSpace(windowID: windowID, fromSpaceID: fromSpaceID, targetSpaceID: targetSpaceID)
                         self.movedWindowsOriginalSpaces.removeValue(forKey: windowID)
                     }
                 }
@@ -961,7 +961,7 @@ class SpaceManager: ObservableObject {
                 print("SpaceManager: Cross-monitor move requested (\(sourceDisplay) -> \(targetSpace.displayID)). Using robust method.")
                 
                 let fromSpaceID = Int(SpaceHelper.getCurrentSpaceID(for: sourceDisplay) ?? "0") ?? 0
-                let targetSpaceID = targetSpace.num
+                let targetSpaceID = Int(targetSpace.id) ?? 0
                 
                 SpaceHelper.moveWindowToSpace(windowID: windowInfo.id, fromSpaceID: fromSpaceID, targetSpaceID: targetSpaceID)
                 
