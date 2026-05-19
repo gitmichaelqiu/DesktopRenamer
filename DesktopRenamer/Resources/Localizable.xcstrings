@@ -2790,9 +2790,6 @@
         }
       }
     },
-    "Unlock Current Space" : {
-
-    },
     "Use the Raycast extension to move all windows of an app to another space in one command." : {
       "localizations" : {
         "zh-Hans" : {
