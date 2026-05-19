@@ -366,13 +366,9 @@ class SpaceManager: ObservableObject {
                 if self.lockedSpaceIDs.contains(previousUUID) {
                     let now = Date().timeIntervalSince1970
                     let isOurAppManual = now - self.lastManualSwitchTime < 2.0
-                    let isTrackpadManual = now - GestureManager.lastTrackpadTouchTime < 1.5
+                    let isTrackpadManual = now - GestureManager.lastTrackpadSwipeTime < 1.5
                     
-                    let secondsSinceKey = CGEventSource.secondsSinceLastEventType(.combinedSessionState, eventType: .keyDown)
-                    let secondsSinceClick = CGEventSource.secondsSinceLastEventType(.combinedSessionState, eventType: .leftMouseDown)
-                    let isUserInputManual = secondsSinceKey < 1.5 || secondsSinceClick < 1.5
-                    
-                    let isManual = isOurAppManual || isTrackpadManual || isUserInputManual
+                    let isManual = isOurAppManual || isTrackpadManual
                     
                     if !isManual {
                         print("SpaceManager: Locked space switch detected from \(previousUUID) to \(targetUUID) (AUTOMATIC)")
