@@ -93,6 +93,7 @@ class SpaceManager: ObservableObject {
     @Published var lockedSpaceIDs: Set<String> = []
     @Published var movedWindowsOriginalSpaces: [Int: (originalSpaceUUID: String, currentSpaceUUID: String, pid: Int32)] = [:]
     var lastManualSwitchTime: TimeInterval = 0
+    private var lastManualSwitchTargetUUID: String? = nil
     
     @Published var detectionMethod: DetectionMethod {
         didSet {
@@ -356,7 +357,7 @@ class SpaceManager: ObservableObject {
                 // Check if previousUUID is in lockedSpaceIDs and this switch is not manual
                 if self.lockedSpaceIDs.contains(previousUUID) {
                     let now = Date().timeIntervalSince1970
-                    let isOurAppManual = now - self.lastManualSwitchTime < 2.0
+                    let isOurAppManual = (now - self.lastManualSwitchTime < 2.0) && (targetUUID == self.lastManualSwitchTargetUUID)
                     let isTrackpadManual = now - GestureManager.lastTrackpadSwipeTime < 1.5
                     
                     let isManual = isOurAppManual || isTrackpadManual
@@ -761,6 +762,7 @@ class SpaceManager: ObservableObject {
         print("SpaceManager: switchToSpace(\(space.id)) on display \(space.displayID) forceInstant: \(forceInstant) isManual: \(isManual)")
         if isManual {
             self.lastManualSwitchTime = Date().timeIntervalSince1970
+            self.lastManualSwitchTargetUUID = space.id
         }
         SpaceHelper.switchToSpace(space.id, forceInstant: forceInstant)
     }

@@ -785,9 +785,6 @@
     "Lock space in current desktop" : {
 
     },
-    "Lock Space Settings" : {
-
-    },
     "Manual" : {
       "localizations" : {
         "zh-Hans" : {
@@ -1386,9 +1383,6 @@
           }
         }
       }
-    },
-    "Restore moved windows" : {
-
     },
     "Restore Windows Moved by Lock (%d)" : {
 
@@ -2859,9 +2853,6 @@
           }
         }
       }
-    },
-    "When switching back to a space manually, automatically restore any windows that were moved away due to programmatic activation on other spaces." : {
-
     },
     "Window size" : {
       "localizations" : {
