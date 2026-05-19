@@ -2,7 +2,7 @@ import SwiftUI
 
 struct SpaceEditView: View {
     @ObservedObject var spaceManager: SpaceManager
-    @ObservedObject var labelManager: SpaceLabelManager
+    @EnvironmentObject var navigationState: SettingsNavigationState
     
     var body: some View {
         VStack(spacing: 0) {
@@ -29,6 +29,11 @@ struct SpaceEditView: View {
             }
         }
         .animation(.easeInOut(duration: 0.2), value: spaceManager.spaceNameDict)
+        .onAppear {
+            navigationState.register(title: "Rename Spaces", tab: .space, keywords: ["rename", "name", "title", "label", "custom", "edit"])
+            navigationState.register(title: "Reorder Spaces", tab: .space, keywords: ["reorder", "arrange", "display", "monitor", "position"])
+        }
+        .environment(\.settingsTab, .space)
     }
     
     private var sectionBackgroundColor: Color {

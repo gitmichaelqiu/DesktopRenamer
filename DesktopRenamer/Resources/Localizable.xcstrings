@@ -182,6 +182,7 @@
       }
     },
     "Add spaces" : {
+      "extractionState" : "stale",
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
@@ -272,6 +273,7 @@
       }
     },
     "Automatically download updates" : {
+      "extractionState" : "stale",
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
@@ -554,6 +556,7 @@
       }
     },
     "Fix automatic detection" : {
+      "extractionState" : "stale",
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
@@ -580,6 +583,7 @@
       }
     },
     "Font size" : {
+      "extractionState" : "stale",
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
@@ -590,6 +594,7 @@
       }
     },
     "Fullscreen detection method" : {
+      "extractionState" : "stale",
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
@@ -600,6 +605,7 @@
       }
     },
     "Generate bug report" : {
+      "extractionState" : "stale",
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
@@ -610,6 +616,7 @@
       }
     },
     "Gesture type" : {
+      "extractionState" : "stale",
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
@@ -630,6 +637,7 @@
       }
     },
     "Grab offset X" : {
+      "extractionState" : "stale",
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
@@ -640,6 +648,7 @@
       }
     },
     "Grab offset Y" : {
+      "extractionState" : "stale",
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
@@ -660,6 +669,7 @@
       }
     },
     "Hide menubar icon" : {
+      "extractionState" : "stale",
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
@@ -680,6 +690,7 @@
       }
     },
     "Hide when switching desktops" : {
+      "extractionState" : "stale",
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
@@ -730,6 +741,7 @@
       }
     },
     "Instant switch without animations" : {
+      "extractionState" : "stale",
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
@@ -989,6 +1001,7 @@
       }
     },
     "Move window to desktop number" : {
+      "extractionState" : "stale",
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
@@ -999,6 +1012,7 @@
       }
     },
     "Move window to next desktop" : {
+      "extractionState" : "stale",
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
@@ -1009,6 +1023,7 @@
       }
     },
     "Move window to next display" : {
+      "extractionState" : "stale",
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
@@ -1019,6 +1034,7 @@
       }
     },
     "Move window to previous desktop" : {
+      "extractionState" : "stale",
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
@@ -1029,6 +1045,7 @@
       }
     },
     "Move window to previous display" : {
+      "extractionState" : "stale",
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
@@ -1109,6 +1126,9 @@
           }
         }
       }
+    },
+    "No results" : {
+
     },
     "Not a fullscreen?" : {
       "localizations" : {
@@ -1241,6 +1261,7 @@
       }
     },
     "Reload space labels" : {
+      "extractionState" : "stale",
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
@@ -1399,6 +1420,7 @@
       }
     },
     "Restore windows moved by lock" : {
+      "extractionState" : "stale",
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
@@ -1429,6 +1451,7 @@
       }
     },
     "Review Splash" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -1464,6 +1487,9 @@
         }
       }
     },
+    "Search" : {
+
+    },
     "See large, aesthetic name labels when you enter Mission Control, and discreet active labels when you switch spaces." : {
       "localizations" : {
         "zh-Hans" : {
@@ -1475,6 +1501,7 @@
       }
     },
     "Select a category" : {
+      "extractionState" : "stale",
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
@@ -2613,6 +2640,7 @@
       }
     },
     "Switch display with" : {
+      "extractionState" : "stale",
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
@@ -2623,6 +2651,7 @@
       }
     },
     "Switch override threshold" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -2649,6 +2678,7 @@
       }
     },
     "Switch to next space" : {
+      "extractionState" : "stale",
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
@@ -2659,6 +2689,7 @@
       }
     },
     "Switch to previous space" : {
+      "extractionState" : "stale",
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
@@ -2802,6 +2833,7 @@
       }
     },
     "Toggle lock for current space" : {
+      "extractionState" : "stale",
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
@@ -2903,6 +2935,7 @@
       }
     },
     "Window size" : {
+      "extractionState" : "stale",
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {

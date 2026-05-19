@@ -46,6 +46,8 @@ class SpaceManager: ObservableObject {
     static private let instantSpaceSwitchKey = "com.michaelqiu.desktoprenamer.instantSpaceSwitch"
     static private let grabOffsetXKey = "com.michaelqiu.desktoprenamer.grabOffsetX"
     static private let grabOffsetYKey = "com.michaelqiu.desktoprenamer.grabOffsetY"
+    static private let lockedSpaceIDsKey = "com.michaelqiu.desktoprenamer.lockedSpaceIDs"
+    static private let movedWindowsOriginalSpacesKey = "com.michaelqiu.desktoprenamer.movedWindowsOriginalSpaces"
     
     @Published private(set) var currentSpaceUUID: String = ""
     @Published private(set) var currentRawSpaceUUID: String = ""
@@ -144,7 +146,7 @@ class SpaceManager: ObservableObject {
         
         self.instantSpaceSwitch = UserDefaults.standard.bool(forKey: SpaceManager.instantSpaceSwitchKey)
             
-        if let savedLocked = UserDefaults.standard.stringArray(forKey: "lockedSpaceIDs") {
+        if let savedLocked = UserDefaults.standard.stringArray(forKey: SpaceManager.lockedSpaceIDsKey) {
             self.lockedSpaceIDs = Set(savedLocked)
         }
         
@@ -177,7 +179,7 @@ class SpaceManager: ObservableObject {
         } else {
             lockedSpaceIDs.insert(spaceID)
         }
-        UserDefaults.standard.set(Array(lockedSpaceIDs), forKey: "lockedSpaceIDs")
+        UserDefaults.standard.set(Array(lockedSpaceIDs), forKey: SpaceManager.lockedSpaceIDsKey)
         objectWillChange.send()
     }
     
@@ -372,7 +374,7 @@ class SpaceManager: ObservableObject {
                             
                             // Wait 50ms for the Window Server to settle, then drag-move the active window back to the locked space!
                             DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
-                                if let activeWin = SpaceHelper.getActiveWindowInfo() {
+                                if let activeWin = SpaceHelper.getActiveWindowInfo(forPID: pid) {
                                     print("SpaceManager: Physical drag-moving active window \(activeWin.id) to locked space \(previousUUID)")
                                     if let existing = self.movedWindowsOriginalSpaces[activeWin.id] {
                                         if existing.originalSpaceUUID == previousUUID {
@@ -392,10 +394,6 @@ class SpaceManager: ObservableObject {
                                     }
                                 }
                             }
-                            
-                            // Synchronize currentSpaceUUID to targetUUID to prevent race conditions
-                            self.currentSpaceUUID = targetUUID
-                            return
                         }
                     }
                 }
@@ -770,7 +768,6 @@ class SpaceManager: ObservableObject {
     
     func switchToPreviousSpace(onDisplayID displayID: String? = nil, forceInstant: Bool? = nil) {
         let targetDisplayID = displayID ?? spaceNameDict.first(where: { $0.id == currentSpaceUUID })?.displayID ?? currentDisplayID
-        self.lastManualSwitchTime = Date().timeIntervalSince1970
         if let current = findBestCurrentSpace(for: targetDisplayID) {
             proceedToSwitch(from: current, on: targetDisplayID, direction: -1, forceInstant: forceInstant ?? instantSpaceSwitch)
         }
@@ -778,7 +775,6 @@ class SpaceManager: ObservableObject {
 
     func switchToNextSpace(onDisplayID displayID: String? = nil, forceInstant: Bool? = nil) {
         let targetDisplayID = displayID ?? spaceNameDict.first(where: { $0.id == currentSpaceUUID })?.displayID ?? currentDisplayID
-        self.lastManualSwitchTime = Date().timeIntervalSince1970
         if let current = findBestCurrentSpace(for: targetDisplayID) {
             proceedToSwitch(from: current, on: targetDisplayID, direction: 1, forceInstant: forceInstant ?? instantSpaceSwitch)
         }

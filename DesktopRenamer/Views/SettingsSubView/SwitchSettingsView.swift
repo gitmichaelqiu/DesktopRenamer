@@ -8,14 +8,14 @@ struct SwitchSettingsView: View {
     @StateObject private var permissionManager = PermissionManager.shared
     
     var body: some View {
-        ScrollView {
+        SettingsContainer(.sswitch) {
             VStack(alignment: .leading, spacing: 20) {
                 SettingsSection("Keyboard Shortcuts", helperText: "If you want to use Control + Arrow, disable the system's one in Settings → Keyboard → Keyboard Shortcuts... → Mission Control.") {
                     
                     SettingsRow(
                         "Switch to previous space",
                         warningText: permissionManager.isAccessibilityGranted
-                        ? nil : "Requires Accessibility permission."
+                        ? nil : "Requires Accessibility permission.",
                     ) {
                         HStack {
                             Text(hotkeyManager.description(for: .switchLeft))
@@ -226,7 +226,8 @@ struct SwitchSettingsView: View {
                         helperText:
                             "Replaces system switch gestures with instant space switching.\n\nRequired: You must disable 'Swipe between full screen apps' in System Settings → Trackpad → More Gestures or change to different number of fingers to prevent conflicts.\n\nNotice, you must click at the fullscreen app to make it active to avoid issues when leaving the app.",
                         warningText: permissionManager.isAccessibilityGranted
-                        ? nil : "Requires Accessibility permission."
+                        ? nil : "Requires Accessibility permission.",
+                        demoVideoName: "SwitchOverride"
                     ) {
                         Toggle("", isOn: $gestureManager.isEnabled)
                             .toggleStyle(.switch)
@@ -309,9 +310,9 @@ struct SwitchSettingsView: View {
                 
                 Spacer()
             }
-            .padding()
             .frame(maxWidth: .infinity, alignment: .topLeading)
             .animation(.easeInOut(duration: 0.2), value: gestureManager.isEnabled)
+            .environment(\.settingsTab, .sswitch)
         }
     }
 }

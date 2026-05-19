@@ -308,6 +308,8 @@ class StatusBarController: NSObject {
         restoreItem.image = NSImage(systemSymbolName: "arrow.uturn.backward", accessibilityDescription: nil)
         restoreItem.isEnabled = movedCount > 0
         menu.addItem(restoreItem)
+
+        menu.addItem(NSMenuItem.separator())
     
         let showPreviewLabels = NSMenuItem(title: NSLocalizedString("Menu.ShowPreviewLabels", comment: "Toggle preview labels"), action: #selector(togglePreviewLabelsFromMenu), keyEquivalent: "p")
         showPreviewLabels.target = self
