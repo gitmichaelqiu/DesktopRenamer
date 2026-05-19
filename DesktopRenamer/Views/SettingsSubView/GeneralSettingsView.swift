@@ -458,6 +458,17 @@ struct GeneralSettingsView: View {
                     }
                 }
                 
+                SettingsSection("Lock Space Settings") {
+                    SettingsRow(
+                        "Restore moved windows",
+                        helperText: "When switching back to a space manually, automatically restore any windows that were moved away due to programmatic activation on other spaces."
+                    ) {
+                        Toggle("", isOn: $spaceManager.lockSpaceOptionBringBack)
+                            .labelsHidden()
+                            .toggleStyle(.switch)
+                    }
+                }
+                
                 SettingsSection(nil) {
                     SettingsRow(
                         "Hide menubar icon",
