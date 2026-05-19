@@ -66,19 +66,14 @@ struct SettingsView: View {
     }
 
     var body: some View {
-        NavigationSplitView {
-            sidebar
-        } detail: {
-            detailView
-        }
-        .environmentObject(navigationState)
-        .navigationTitle("")
-        .modifier(ToolbarHider())
-        .edgesIgnoringSafeArea(.top)
-        .frame(
-            width: CGFloat(defaultSettingsWindowWidth), height: CGFloat(defaultSettingsWindowHeight)
-        )
-        .background(
+        ZStack {
+            NavigationSplitView {
+                sidebar
+            } detail: {
+                detailView
+            }
+            
+            // Pre-render settings views off-screen in the active root hierarchy to index them
             ZStack {
                 GeneralSettingsView(spaceManager: spaceManager, labelManager: labelManager)
                     .environment(\.settingsTab, .general)
@@ -94,9 +89,16 @@ struct SettingsView: View {
                     .environment(\.settingsTab, .about)
             }
             .environmentObject(navigationState)
-            .frame(width: 0, height: 0)
-            .opacity(0)
+            .frame(width: CGFloat(defaultSettingsWindowWidth), height: CGFloat(defaultSettingsWindowHeight))
+            .opacity(0.001)
             .allowsHitTesting(false)
+        }
+        .environmentObject(navigationState)
+        .navigationTitle("")
+        .modifier(ToolbarHider())
+        .edgesIgnoringSafeArea(.top)
+        .frame(
+            width: CGFloat(defaultSettingsWindowWidth), height: CGFloat(defaultSettingsWindowHeight)
         )
         .onChange(of: searchText) { newValue in
             navigationState.searchText = newValue
