@@ -245,7 +245,7 @@ struct SettingsContainer<Content: View>: View {
         ScrollViewReader { proxy in
             ScrollView {
                 content()
-                    .padding(20)
+                    .padding(16)
             }
             .environment(\.settingsTab, tab)
             .onChange(of: navigationState.scrollToItemID) { id in

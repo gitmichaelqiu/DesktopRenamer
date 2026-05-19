@@ -181,7 +181,7 @@ struct SwitchSettingsView: View {
 
                 SettingsSection(nil) {
                     SettingsRow("Toggle lock for current space",
-                        helperText("When a space switch is triggered by opening the window of an app, move that window back to the original space. This way, you are always focused in the locked space."),
+                        helperText: "When a space switch is triggered by opening the window of an app, move that window back to the original space. This way, you are always focused in the locked space.",
                         demoVideoName: "LockSpace"
                     ) {
                         HStack {
