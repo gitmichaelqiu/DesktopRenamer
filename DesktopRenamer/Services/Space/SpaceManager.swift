@@ -359,8 +359,9 @@ class SpaceManager: ObservableObject {
                     let now = Date().timeIntervalSince1970
                     let isOurAppManual = (now - self.lastManualSwitchTime < 2.0) && (targetUUID == self.lastManualSwitchTargetUUID)
                     let isTrackpadManual = now - GestureManager.lastTrackpadSwipeTime < 1.5
+                    let isOurAppProgrammatic = (now - SpaceHelper.lastProgrammaticSwitchTime < 2.0) && (targetUUID == SpaceHelper.lastProgrammaticTargetSpaceID)
                     
-                    let isManual = isOurAppManual || isTrackpadManual
+                    let isManual = isOurAppManual || isTrackpadManual || isOurAppProgrammatic
                     
                     if !isManual {
                         print("SpaceManager: Locked space switch detected from \(previousUUID) to \(targetUUID) (AUTOMATIC)")
