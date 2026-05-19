@@ -97,11 +97,14 @@ class SettingsNavigationState: ObservableObject {
     @Published var searchText: String = ""
     @Published var registeredItems: [SearchableSettingItem] = []
     
+    private var registeredTitles = Set<String>()
+    
     func register(title: String, tab: SettingsTab, keywords: [String] = []) {
-        let localizedTitle = NSLocalizedString(title, comment: "")
+        // Avoid duplicate registrations (synchronous Set checks to prevent async queue duplicates)
+        guard !registeredTitles.contains(title) else { return }
+        registeredTitles.insert(title)
         
-        // Avoid duplicate registrations
-        guard !registeredItems.contains(where: { $0.title == title }) else { return }
+        let localizedTitle = NSLocalizedString(title, comment: "")
         
         var generatedKeywords = keywords.map { $0.lowercased() }
         
