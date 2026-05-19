@@ -157,27 +157,70 @@ class StatusBarController: NSObject {
             .store(in: &cancellables)
     }
     
+    private func createLockedSpaceImage(baseName: String, font: NSFont) -> NSImage {
+        let attributes: [NSAttributedString.Key: Any] = [
+            .font: font,
+            .foregroundColor: NSColor.white
+        ]
+        let textSize = baseName.size(withAttributes: attributes)
+        
+        let lockSize = NSSize(width: 9, height: 9)
+        let lockImage = NSImage(systemSymbolName: "lock.fill", accessibilityDescription: nil)
+        
+        let height: CGFloat = 22
+        let textY = (height - textSize.height) / 2
+        let textRect = NSRect(x: 0, y: textY, width: textSize.width, height: textSize.height)
+        
+        // Position the lock partially overlapping the text on the top right
+        let lockX = textRect.maxX - 4
+        let lockY = textRect.maxY - 7
+        let lockRect = NSRect(x: lockX, y: lockY, width: lockSize.width, height: lockSize.height)
+        
+        let width = max(textSize.width, lockRect.maxX + 1)
+        let imageSize = NSSize(width: width, height: height)
+        
+        let combinedImage = NSImage(size: imageSize)
+        combinedImage.lockFocus()
+        
+        // Step 1: Draw the space name text
+        baseName.draw(in: textRect, withAttributes: attributes)
+        
+        // Step 2: Erase a circular boundary around where the lock will be
+        let erasePadding: CGFloat = 1.5
+        let eraseRect = lockRect.insetBy(dx: -erasePadding, dy: -erasePadding)
+        let erasePath = NSBezierPath(ovalIn: eraseRect)
+        
+        if let context = NSGraphicsContext.current {
+            let originalOp = context.compositingOperation
+            context.compositingOperation = .destinationOut
+            NSColor.white.set()
+            erasePath.fill()
+            context.compositingOperation = originalOp
+        }
+        
+        // Step 3: Draw the lock SF symbol on top
+        if let lockImg = lockImage {
+            lockImg.draw(in: lockRect, from: NSRect(origin: .zero, size: lockImg.size), operation: .sourceOver, fraction: 1.0)
+        }
+        
+        combinedImage.unlockFocus()
+        combinedImage.isTemplate = true
+        return combinedImage
+    }
+    
     private func updateStatusBarTitle() {
         if let button = StatusBarController.statusItem.button {
             let name = spaceManager.getSpaceName(spaceManager.currentSpaceUUID)
             let baseName = name.isEmpty ? " " : name
             
             if spaceManager.lockedSpaceIDs.contains(spaceManager.currentSpaceUUID) {
-                let font = button.font ?? NSFont.systemFont(ofSize: 13)
-                let attrString = NSMutableAttributedString(string: baseName, attributes: [
-                    .font: font
-                ])
-                
-                // Render a beautiful, small superscript lock symbol
-                let lockFont = NSFont.systemFont(ofSize: font.pointSize * 0.65)
-                let lockAttr = NSMutableAttributedString(string: " 🔒", attributes: [
-                    .font: lockFont,
-                    .baselineOffset: font.pointSize * 0.35
-                ])
-                attrString.append(lockAttr)
-                
-                button.attributedTitle = attrString
+                let font = button.font ?? NSFont.menuBarFont(ofSize: 0)
+                let lockedImage = createLockedSpaceImage(baseName: baseName, font: font)
+                button.attributedTitle = NSAttributedString(string: "")
+                button.title = ""
+                button.image = lockedImage
             } else {
+                button.image = nil
                 button.attributedTitle = NSAttributedString(string: "")
                 button.title = baseName
             }
