@@ -180,7 +180,10 @@ struct SwitchSettingsView: View {
                 }
 
                 SettingsSection(nil) {
-                    SettingsRow("Toggle lock for current space", demoVideoName: "LockSpace") {
+                    SettingsRow("Toggle lock for current space",
+                        helperText("When a space switch is triggered by opening the window of an app, move that window back to the original space. This way, you are always focused in the locked space."),
+                        demoVideoName: "LockSpace"
+                    ) {
                         HStack {
                             Text(hotkeyManager.description(for: .toggleLock))
                                 .foregroundColor(.secondary)
@@ -200,7 +203,9 @@ struct SwitchSettingsView: View {
                     
                     Divider()
                     
-                    SettingsRow("Restore windows moved by lock") {
+                    SettingsRow("Restore windows moved by lock",
+                        helperText: "Restore windows moved by lock to the last space that windows are manually assgined to."
+                    ) {
                         HStack {
                             Text(hotkeyManager.description(for: .restoreWindows))
                                 .foregroundColor(.secondary)
