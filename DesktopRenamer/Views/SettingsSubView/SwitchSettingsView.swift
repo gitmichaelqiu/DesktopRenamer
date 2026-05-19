@@ -16,7 +16,6 @@ struct SwitchSettingsView: View {
                         "Switch to previous space",
                         warningText: permissionManager.isAccessibilityGranted
                         ? nil : "Requires Accessibility permission.",
-                        demoVideoName: "SwitchSpace"
                     ) {
                         HStack {
                             Text(hotkeyManager.description(for: .switchLeft))
@@ -81,7 +80,7 @@ struct SwitchSettingsView: View {
                 }
                 
                 SettingsSection(nil) {
-                    SettingsRow("Move window to previous desktop", demoVideoName: "MoveWindow") {
+                    SettingsRow("Move window to previous desktop") {
                         HStack {
                             Text(hotkeyManager.description(for: .moveWindowPrevious))
                                 .foregroundColor(.secondary)
@@ -201,7 +200,7 @@ struct SwitchSettingsView: View {
                     
                     Divider()
                     
-                    SettingsRow("Restore windows moved by lock", demoVideoName: "RaycastBatchMove") {
+                    SettingsRow("Restore windows moved by lock") {
                         HStack {
                             Text(hotkeyManager.description(for: .restoreWindows))
                                 .foregroundColor(.secondary)

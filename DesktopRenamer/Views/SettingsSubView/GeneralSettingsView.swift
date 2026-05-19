@@ -451,7 +451,6 @@ struct GeneralSettingsView: View {
                         "Show active space labels",
                         helperText:
                             "The hidden label that slides into the corner of the active desktop.",
-                        demoVideoName: "ActiveLabel"
                     ) {
                         Toggle("", isOn: $labelManager.showActiveLabels)
                             .labelsHidden()
