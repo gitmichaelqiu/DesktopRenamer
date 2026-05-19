@@ -204,7 +204,7 @@ struct SwitchSettingsView: View {
                     Divider()
                     
                     SettingsRow("Restore windows moved by lock",
-                        helperText: "Restore windows moved by lock to the last space that windows are manually assgined to."
+                        helperText: "Restore windows moved by lock to the last space that windows are manually assigned to."
                     ) {
                         HStack {
                             Text(hotkeyManager.description(for: .restoreWindows))

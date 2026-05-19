@@ -5,7 +5,7 @@ enum SettingsTab: String, CaseIterable, Identifiable {
 
     var id: String { self.rawValue }
 
-    var localizedNameKey: String {
+    var localizedName: LocalizedStringResource {
         switch self {
         case .general: return "Settings.General"
         case .space: return "Settings.Spaces"
@@ -14,10 +14,6 @@ enum SettingsTab: String, CaseIterable, Identifiable {
         case .permissions: return "Permissions"
         case .about: return "Settings.About"
         }
-    }
-
-    var localizedName: LocalizedStringKey {
-        LocalizedStringKey(localizedNameKey)
     }
     
 
@@ -125,7 +121,7 @@ struct SettingsView: View {
         let query = searchText.lowercased()
         return SettingsTab.allCases.filter { tab in
             let matchesTabName = tab.rawValue.lowercased().contains(query) ||
-                                 NSLocalizedString(tab.localizedNameKey, comment: "").lowercased().contains(query)
+                                 String(localized: tab.localizedName).lowercased().contains(query)
             
             let matchesSetting = navigationState.registeredItems.contains { item in
                 item.tab == tab && (

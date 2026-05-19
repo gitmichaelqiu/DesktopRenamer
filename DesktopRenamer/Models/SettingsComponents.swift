@@ -265,7 +265,7 @@ struct SettingsContainer<Content: View>: View {
 }
 
 struct SettingsRow<Content: View>: View {
-    let title: String
+    let title: LocalizedStringResource
     let content: Content
     let helperText: LocalizedStringKey?
     let warningText: LocalizedStringKey?
@@ -275,7 +275,7 @@ struct SettingsRow<Content: View>: View {
     @EnvironmentObject var navigationState: SettingsNavigationState
 
     init(
-        _ title: String,
+        _ title: LocalizedStringResource,
         helperText: LocalizedStringKey? = nil,
         warningText: LocalizedStringKey? = nil,
         demoVideoName: String? = nil,
@@ -292,7 +292,7 @@ struct SettingsRow<Content: View>: View {
         VStack(alignment: .leading, spacing: 8) {
             HStack {
                 HStack(spacing: 4) {
-                    Text(highlightedText(text: NSLocalizedString(title, comment: ""), query: navigationState.searchText))
+                    Text(highlightedText(text: String(localized: title), query: navigationState.searchText))
                         .frame(alignment: .leading)
 
                     if let helperText = helperText {
@@ -324,12 +324,12 @@ struct SettingsRow<Content: View>: View {
         }
         .padding(.vertical, 6)
         .padding(.horizontal, 10)
-        .id(title)
+        .id(title.key)
         .onAppear {
-            navigationState.register(title: title, tab: currentTab)
+            navigationState.register(title: title.key, tab: currentTab)
         }
         .onDisappear {
-            navigationState.unregister(title: title, tab: currentTab)
+            navigationState.unregister(title: title.key, tab: currentTab)
         }
     }
 }
@@ -440,7 +440,7 @@ private struct WarningInfoButton: View {
 }
 
 struct SliderSettingsRow<V>: View where V: BinaryFloatingPoint, V.Stride: BinaryFloatingPoint {
-    let title: String
+    let title: LocalizedStringResource
     @Binding var value: V
     let range: ClosedRange<V>
     let defaultValue: V
@@ -454,7 +454,7 @@ struct SliderSettingsRow<V>: View where V: BinaryFloatingPoint, V.Stride: Binary
     @EnvironmentObject var navigationState: SettingsNavigationState
 
     init(
-        _ title: String,
+        _ title: LocalizedStringResource,
         helperText: LocalizedStringKey? = nil,
         warningText: LocalizedStringKey? = nil,
         demoVideoName: String? = nil,
@@ -479,7 +479,7 @@ struct SliderSettingsRow<V>: View where V: BinaryFloatingPoint, V.Stride: Binary
         VStack(spacing: 6) {
             HStack {
                 HStack(spacing: 4) {
-                    Text(highlightedText(text: NSLocalizedString(title, comment: ""), query: navigationState.searchText))
+                    Text(highlightedText(text: String(localized: title), query: navigationState.searchText))
                     if let helperText = helperText {
                         HelperInfoButton(text: helperText)
                     }
@@ -527,12 +527,12 @@ struct SliderSettingsRow<V>: View where V: BinaryFloatingPoint, V.Stride: Binary
         }
         .padding(.vertical, 8)
         .padding(.horizontal, 10)
-        .id(title)
+        .id(title.key)
         .onAppear {
-            navigationState.register(title: title, tab: currentTab)
+            navigationState.register(title: title.key, tab: currentTab)
         }
         .onDisappear {
-            navigationState.unregister(title: title, tab: currentTab)
+            navigationState.unregister(title: title.key, tab: currentTab)
         }
     }
 }
