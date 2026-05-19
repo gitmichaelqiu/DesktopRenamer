@@ -228,9 +228,11 @@ class SpaceLabelWindow: NSWindow {
         NotificationCenter.default.removeObserver(self)
     }
 
+    var canBecomeKeyOverride: Bool = false
+
     // Standard OS window behavior overrides.
-    override var canBecomeKey: Bool { return SpaceHelper.isDragging }
-    override var canBecomeMain: Bool { return SpaceHelper.isDragging }
+    override var canBecomeKey: Bool { return canBecomeKeyOverride }
+    override var canBecomeMain: Bool { return canBecomeKeyOverride }
 
     // Binds the window to a specific space via private APIs.
     func bindToTargetSpace() {

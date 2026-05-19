@@ -233,7 +233,9 @@ class SpaceHelper {
 
         // Force window activation.
         window.orderFrontRegardless()
+        window.canBecomeKeyOverride = true
         window.makeKey()
+        window.canBecomeKeyOverride = false
         NSApp.activate(ignoringOtherApps: true)
 
         return true
