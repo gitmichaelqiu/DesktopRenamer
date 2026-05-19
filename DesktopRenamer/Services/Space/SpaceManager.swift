@@ -1055,7 +1055,7 @@ class SpaceManager: ObservableObject {
             // All windows restored! Switch back to the user's initial space instantly after a short delay
             // to allow the last programmatic drag and OS space change state to fully settle.
             if let initialSpaceObj = self.spaceNameDict.first(where: { $0.id == initialSpaceUUID }) {
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) { [weak self] in
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [weak self] in
                     print("SpaceManager: All restorations complete. Switching back to initial space \(initialSpaceUUID)")
                     self?.switchToSpace(initialSpaceObj, forceInstant: true, isManual: true)
                 }
@@ -1070,17 +1070,17 @@ class SpaceManager: ObservableObject {
         if let currentSpaceObj = self.spaceNameDict.first(where: { $0.id == item.currentSpaceUUID }) {
             self.switchToSpace(currentSpaceObj, forceInstant: true, isManual: false)
             
-            // 2. Wait 80ms for the space switch to finish, focus the window, and drag it to originalSpaceUUID
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.08) { [weak self] in
+            // 2. Wait 600ms for the space switch to finish, focus the window, and drag it to originalSpaceUUID
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.60) { [weak self] in
                 SpaceHelper.focusWindow(id: item.windowID, pid: item.pid)
                 
-                // Wait 40ms for the window to raise/focus
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.04) {
+                // Wait 250ms for the window to raise/focus
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) {
                     SpaceHelper.dragActiveWindow(to: item.originalSpaceUUID, forceInstant: true)
                     self?.movedWindowsOriginalSpaces.removeValue(forKey: item.windowID)
                     
-                    // 3. Wait 200ms for the drag-move operation to fully complete before starting the next one!
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.20) {
+                    // 3. Wait 500ms for the drag-move operation to fully complete before starting the next one!
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.50) {
                         self?.restoreNextWindow(index: index + 1, list: list, initialSpaceUUID: initialSpaceUUID)
                     }
                 }
