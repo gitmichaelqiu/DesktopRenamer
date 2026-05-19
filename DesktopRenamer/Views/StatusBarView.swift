@@ -147,12 +147,40 @@ class StatusBarController: NSObject {
                 self?.rebuildMenu()
             }
             .store(in: &cancellables)
+            
+        spaceManager.$lockedSpaceIDs
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] _ in
+                self?.updateStatusBarTitle()
+                self?.rebuildMenu()
+            }
+            .store(in: &cancellables)
     }
     
     private func updateStatusBarTitle() {
         if let button = StatusBarController.statusItem.button {
             let name = spaceManager.getSpaceName(spaceManager.currentSpaceUUID)
-            button.title = name.isEmpty ? " " : name
+            let baseName = name.isEmpty ? " " : name
+            
+            if spaceManager.lockedSpaceIDs.contains(spaceManager.currentSpaceUUID) {
+                let font = button.font ?? NSFont.systemFont(ofSize: 13)
+                let attrString = NSMutableAttributedString(string: baseName, attributes: [
+                    .font: font
+                ])
+                
+                // Render a beautiful, small superscript lock symbol
+                let lockFont = NSFont.systemFont(ofSize: font.pointSize * 0.65)
+                let lockAttr = NSMutableAttributedString(string: " 🔒", attributes: [
+                    .font: lockFont,
+                    .baselineOffset: font.pointSize * 0.35
+                ])
+                attrString.append(lockAttr)
+                
+                button.attributedTitle = attrString
+            } else {
+                button.attributedTitle = NSAttributedString(string: "")
+                button.title = baseName
+            }
         }
     }
     
