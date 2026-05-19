@@ -140,6 +140,13 @@ class StatusBarController: NSObject {
                 self?.rebuildMenu()
             }
             .store(in: &cancellables)
+            
+        spaceManager.$movedWindowsOriginalSpaces
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] _ in
+                self?.rebuildMenu()
+            }
+            .store(in: &cancellables)
     }
     
     private func updateStatusBarTitle() {
@@ -219,6 +226,18 @@ class StatusBarController: NSObject {
         lockItem.state = isLocked ? .on : .off
         lockItem.image = NSImage(systemSymbolName: isLocked ? "lock" : "lock.open", accessibilityDescription: nil)
         menu.addItem(lockItem)
+        
+        let movedCount = spaceManager.movedWindowsOriginalSpaces.count
+        if movedCount > 0 {
+            let restoreItem = NSMenuItem(
+                title: String(format: NSLocalizedString("Restore Windows Moved by Lock (%d)", comment: ""), movedCount),
+                action: #selector(restoreAllMovedWindows),
+                keyEquivalent: ""
+            )
+            restoreItem.target = self
+            restoreItem.image = NSImage(systemSymbolName: "arrow.uturn.backward", accessibilityDescription: nil)
+            menu.addItem(restoreItem)
+        }
     
         let showPreviewLabels = NSMenuItem(title: NSLocalizedString("Menu.ShowPreviewLabels", comment: "Toggle preview labels"), action: #selector(togglePreviewLabelsFromMenu), keyEquivalent: "p")
         showPreviewLabels.target = self
@@ -284,6 +303,10 @@ class StatusBarController: NSObject {
     @objc private func toggleLockCurrentSpace() {
         spaceManager.toggleLockSpace(spaceManager.currentSpaceUUID)
         rebuildMenu()
+    }
+    
+    @objc private func restoreAllMovedWindows() {
+        spaceManager.restoreAllMovedWindows()
     }
     
     @objc func renameCurrentSpace() {
