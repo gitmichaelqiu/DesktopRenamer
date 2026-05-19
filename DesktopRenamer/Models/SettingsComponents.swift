@@ -69,7 +69,7 @@ class SettingsNavigationState: ObservableObject {
     @Published var searchText: String = ""
 }
 
-func highlightedText(text: String, query: String) -> AttributedString {
+func highlightedText(text: String, query: String, color: Color = .blue) -> AttributedString {
     var attributed = AttributedString(text)
     guard !query.isEmpty else { return attributed }
     
@@ -87,7 +87,7 @@ func highlightedText(text: String, query: String) -> AttributedString {
         let endIdx = attributed.index(startIdx, offsetByCharacters: matchLength)
         let targetRange = startIdx..<endIdx
         
-        attributed[targetRange].foregroundColor = Color.blue
+        attributed[targetRange].foregroundColor = color
         attributed[targetRange].inlinePresentationIntent = .stronglyEmphasized
         
         searchStart = endIdx
