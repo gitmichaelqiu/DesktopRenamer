@@ -1052,10 +1052,13 @@ class SpaceManager: ObservableObject {
     
     private func restoreNextWindow(index: Int, list: [(windowID: Int, originalSpaceUUID: String, currentSpaceUUID: String, pid: Int32)], initialSpaceUUID: String) {
         if index >= list.count {
-            // All windows restored! Switch back to the user's initial space instantly.
+            // All windows restored! Switch back to the user's initial space instantly after a short delay
+            // to allow the last programmatic drag and OS space change state to fully settle.
             if let initialSpaceObj = self.spaceNameDict.first(where: { $0.id == initialSpaceUUID }) {
-                print("SpaceManager: All restorations complete. Switching back to initial space \(initialSpaceUUID)")
-                self.switchToSpace(initialSpaceObj, forceInstant: true, isManual: true)
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) { [weak self] in
+                    print("SpaceManager: All restorations complete. Switching back to initial space \(initialSpaceUUID)")
+                    self?.switchToSpace(initialSpaceObj, forceInstant: true, isManual: true)
+                }
             }
             return
         }
