@@ -97,18 +97,16 @@ class SettingsNavigationState: ObservableObject {
     @Published var searchText: String = ""
     @Published var registeredItems: [SearchableSettingItem] = []
     
-    private var registeredTitles = Set<String>()
+    private var registeredTitlesCounts = [String: Int]()
     
     func register(title: String, tab: SettingsTab, keywords: [String] = []) {
-        // Avoid duplicate registrations (synchronous Set checks to prevent async queue duplicates)
         let registrationKey = "\(title)-\(tab.rawValue)"
-        guard !registeredTitles.contains(registrationKey) else { return }
-        registeredTitles.insert(registrationKey)
+        let count = registeredTitlesCounts[registrationKey] ?? 0
+        registeredTitlesCounts[registrationKey] = count + 1
         
-        print("SETTINGS REGISTER: '\(title)' under tab \(tab)")
+        guard count == 0 else { return }
         
         let localizedTitle = NSLocalizedString(title, comment: "")
-        
         var generatedKeywords = keywords.map { $0.lowercased() }
         
         let titleWords = localizedTitle.lowercased()
@@ -132,6 +130,20 @@ class SettingsNavigationState: ObservableObject {
         
         DispatchQueue.main.async {
             self.registeredItems.append(item)
+        }
+    }
+    
+    func unregister(title: String, tab: SettingsTab) {
+        let registrationKey = "\(title)-\(tab.rawValue)"
+        let count = registeredTitlesCounts[registrationKey] ?? 0
+        
+        if count <= 1 {
+            registeredTitlesCounts[registrationKey] = nil
+            DispatchQueue.main.async {
+                self.registeredItems.removeAll { $0.title == title && $0.tab == tab }
+            }
+        } else {
+            registeredTitlesCounts[registrationKey] = count - 1
         }
     }
 }
@@ -261,6 +273,9 @@ struct SettingsRow<Content: View>: View {
         .id(title)
         .onAppear {
             navigationState.register(title: title, tab: currentTab)
+        }
+        .onDisappear {
+            navigationState.unregister(title: title, tab: currentTab)
         }
     }
 }
@@ -461,6 +476,9 @@ struct SliderSettingsRow<V>: View where V: BinaryFloatingPoint, V.Stride: Binary
         .id(title)
         .onAppear {
             navigationState.register(title: title, tab: currentTab)
+        }
+        .onDisappear {
+            navigationState.unregister(title: title, tab: currentTab)
         }
     }
 }
