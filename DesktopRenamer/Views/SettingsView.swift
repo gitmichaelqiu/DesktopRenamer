@@ -93,6 +93,7 @@ struct SettingsView: View {
                 AboutView()
                     .environment(\.settingsTab, .about)
             }
+            .environmentObject(navigationState)
             .frame(width: 0, height: 0)
             .opacity(0)
             .allowsHitTesting(false)
@@ -339,6 +340,7 @@ struct SettingsView: View {
                     AboutView()
                 }
             }
+            .environmentObject(navigationState)
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
             .padding(.top, titleHeaderHeight)
 
