@@ -377,27 +377,22 @@ class SpaceManager: ObservableObject {
                             let appName = frontApp.localizedName ?? "App"
                             print("SpaceManager: Automatic switch triggered by \(appName) (PID: \(pid))")
                             
-                            // Switch back to previousUUID instantly to keep user in active space
-                            if let targetSpaceObj = self.spaceNameDict.first(where: { $0.id == previousUUID }) {
-                                self.switchToSpace(targetSpaceObj, forceInstant: true, isManual: false)
-                            }
-                            
-                            // Query and move the triggering window with a tiny delay (50ms) to allow window server to settle
+                            // Wait 50ms for the Window Server to settle, then drag-move the active window back to the locked space!
                             DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
-                                if let activeWin = SpaceHelper.getActiveWindowInfo(forPID: pid) {
-                                    print("SpaceManager: Delayed window detected: \(activeWin.id). Moving to locked space \(previousUUID)")
+                                if let activeWin = SpaceHelper.getActiveWindowInfo() {
+                                    print("SpaceManager: Physical drag-moving active window \(activeWin.id) to locked space \(previousUUID)")
                                     if self.lockSpaceOptionBringBack {
                                         self.movedWindowsOriginalSpaces[activeWin.id] = targetUUID
                                     }
-                                    let fromSpaceID = Int(targetUUID) ?? 0
-                                    let targetSpaceID = Int(previousUUID) ?? 0
-                                    
-                                    SpaceHelper.moveWindowToSpace(windowID: activeWin.id, fromSpaceID: fromSpaceID, targetSpaceID: targetSpaceID)
-                                    SpaceHelper.focusWindow(id: activeWin.id, pid: pid)
+                                    SpaceHelper.dragActiveWindow(to: previousUUID, forceInstant: true)
                                 } else {
-                                    print("SpaceManager: Failed to capture active window for PID \(pid)")
+                                    print("SpaceManager: Failed to capture active window to drag. Reverting space only.")
+                                    if let targetSpaceObj = self.spaceNameDict.first(where: { $0.id == previousUUID }) {
+                                        self.switchToSpace(targetSpaceObj, forceInstant: true, isManual: false)
+                                    }
                                 }
                             }
+                            
                             // Synchronize currentSpaceUUID to targetUUID to prevent race conditions
                             self.currentSpaceUUID = targetUUID
                             return
