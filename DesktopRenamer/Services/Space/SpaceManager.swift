@@ -372,21 +372,31 @@ class SpaceManager: ObservableObject {
                     
                     if !isManual {
                         print("SpaceManager: Locked space switch detected from \(previousUUID) to \(targetUUID) (AUTOMATIC)")
-                        if let activeWin = SpaceHelper.getActiveWindowInfo() {
-                            print("SpaceManager: Active window causing switch is \(activeWin.id). Moving to locked space \(previousUUID)")
-                            if self.lockSpaceOptionBringBack {
-                                self.movedWindowsOriginalSpaces[activeWin.id] = targetUUID
-                            }
+                        if let frontApp = NSWorkspace.shared.frontmostApplication {
+                            let pid = frontApp.processIdentifier
+                            let appName = frontApp.localizedName ?? "App"
+                            print("SpaceManager: Automatic switch triggered by \(appName) (PID: \(pid))")
                             
-                            let fromSpaceNum = self.spaceNameDict.first(where: { $0.id == targetUUID })?.num ?? 0
-                            let targetSpaceNum = self.spaceNameDict.first(where: { $0.id == previousUUID })?.num ?? 0
-                            
-                            // Move the window to the locked space
-                            SpaceHelper.moveWindowToSpace(windowID: activeWin.id, fromSpaceID: fromSpaceNum, targetSpaceID: targetSpaceNum)
-                            
-                            // Switch back to previousUUID instantly
+                            // Switch back to previousUUID instantly to keep user in active space
                             if let targetSpaceObj = self.spaceNameDict.first(where: { $0.id == previousUUID }) {
                                 self.switchToSpace(targetSpaceObj, forceInstant: true)
+                            }
+                            
+                            // Query and move the triggering window with a tiny delay (50ms) to allow window server to settle
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
+                                if let activeWin = SpaceHelper.getActiveWindowInfo(forPID: pid) {
+                                    print("SpaceManager: Delayed window detected: \(activeWin.id). Moving to locked space \(previousUUID)")
+                                    if self.lockSpaceOptionBringBack {
+                                        self.movedWindowsOriginalSpaces[activeWin.id] = targetUUID
+                                    }
+                                    let fromSpaceNum = self.spaceNameDict.first(where: { $0.id == targetUUID })?.num ?? 0
+                                    let targetSpaceNum = self.spaceNameDict.first(where: { $0.id == previousUUID })?.num ?? 0
+                                    
+                                    SpaceHelper.moveWindowToSpace(windowID: activeWin.id, fromSpaceID: fromSpaceNum, targetSpaceID: targetSpaceNum)
+                                    SpaceHelper.focusWindow(id: activeWin.id, pid: pid)
+                                } else {
+                                    print("SpaceManager: Failed to capture active window for PID \(pid)")
+                                }
                             }
                             return
                         }
