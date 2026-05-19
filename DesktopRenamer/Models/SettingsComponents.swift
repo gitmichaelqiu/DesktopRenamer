@@ -3,8 +3,12 @@ import AVKit
 import AVFoundation
 
 class LoopVideoPlayerNSView: NSView {
-    var playerLayer: AVPlayerLayer {
-        self.layer as! AVPlayerLayer
+    private var looper: AVPlayerLooper?
+    private var player: AVQueuePlayer?
+    private(set) var currentURL: URL?
+
+    var playerLayer: AVPlayerLayer? {
+        self.layer as? AVPlayerLayer
     }
     
     override func makeBackingLayer() -> CALayer {
@@ -14,7 +18,9 @@ class LoopVideoPlayerNSView: NSView {
         return layer
     }
     
-    func setupPlayer(with url: URL, coordinator: LoopVideoPlayerView.Coordinator) {
+    func setupPlayer(with url: URL) {
+        cleanup()
+        self.currentURL = url
         self.wantsLayer = true
         self.layer?.backgroundColor = NSColor.clear.cgColor
         
@@ -22,12 +28,47 @@ class LoopVideoPlayerNSView: NSView {
         let playerItem = AVPlayerItem(url: url)
         let playerLooper = AVPlayerLooper(player: player, templateItem: playerItem)
         
-        self.playerLayer.player = player
+        self.playerLayer?.player = player
         player.isMuted = true
         player.play()
         
-        coordinator.looper = playerLooper
-        coordinator.player = player
+        self.looper = playerLooper
+        self.player = player
+    }
+
+    override func viewWillMove(toWindow newWindow: NSWindow?) {
+        super.viewWillMove(toWindow: newWindow)
+        
+        if let oldWindow = self.window {
+            NotificationCenter.default.removeObserver(self, name: NSWindow.willCloseNotification, object: oldWindow)
+        }
+        
+        if let newWindow = newWindow {
+            NotificationCenter.default.addObserver(
+                self,
+                selector: #selector(windowWillClose(_:)),
+                name: NSWindow.willCloseNotification,
+                object: newWindow
+            )
+        } else {
+            cleanup()
+        }
+    }
+    
+    @objc private func windowWillClose(_ notification: Notification) {
+        cleanup()
+    }
+
+    deinit {
+        NotificationCenter.default.removeObserver(self)
+    }
+
+    func cleanup() {
+        player?.pause()
+        playerLayer?.player = nil
+        looper = nil
+        player = nil
+        currentURL = nil
     }
     
     override func scrollWheel(with event: NSEvent) {
@@ -35,32 +76,53 @@ class LoopVideoPlayerNSView: NSView {
     }
 }
 
-struct LoopVideoPlayerView: NSViewRepresentable {
+struct LoopVideoPlayerRepresentable: NSViewRepresentable {
     let videoURL: URL
     
     func makeNSView(context: Context) -> LoopVideoPlayerNSView {
         let view = LoopVideoPlayerNSView()
-        view.setupPlayer(with: videoURL, coordinator: context.coordinator)
+        view.setupPlayer(with: videoURL)
         return view
     }
     
-    func updateNSView(_ nsView: LoopVideoPlayerNSView, context: Context) {}
+    func updateNSView(_ nsView: LoopVideoPlayerNSView, context: Context) {
+        if nsView.currentURL != videoURL {
+            nsView.setupPlayer(with: videoURL)
+        }
+    }
     
     static func dismantleNSView(_ nsView: LoopVideoPlayerNSView, coordinator: Coordinator) {
-        coordinator.player?.pause()
-        coordinator.player?.removeAllItems()
-        coordinator.looper = nil
-        coordinator.player = nil
-        nsView.playerLayer.player = nil
+        nsView.cleanup()
     }
     
     func makeCoordinator() -> Coordinator {
         Coordinator()
     }
     
-    class Coordinator {
-        var looper: AVPlayerLooper?
-        var player: AVQueuePlayer?
+    class Coordinator {}
+}
+
+struct IsSettingsPreRenderingKey: EnvironmentKey {
+    static let defaultValue = false
+}
+
+extension EnvironmentValues {
+    var isSettingsPreRendering: Bool {
+        get { self[IsSettingsPreRenderingKey.self] }
+        set { self[IsSettingsPreRenderingKey.self] = newValue }
+    }
+}
+
+struct LoopVideoPlayerView: View {
+    let videoURL: URL
+    @Environment(\.isSettingsPreRendering) private var isPreRendering
+    
+    var body: some View {
+        if isPreRendering {
+            Color.clear
+        } else {
+            LoopVideoPlayerRepresentable(videoURL: videoURL)
+        }
     }
 }
 
@@ -180,7 +242,7 @@ struct SettingsContainer<Content: View>: View {
     let tab: SettingsTab
     let content: () -> Content
     @EnvironmentObject var navigationState: SettingsNavigationState
-    
+        
     init(_ tab: SettingsTab, @ViewBuilder content: @escaping () -> Content) {
         self.tab = tab
         self.content = content
@@ -190,7 +252,7 @@ struct SettingsContainer<Content: View>: View {
         ScrollViewReader { proxy in
             ScrollView {
                 content()
-                    .padding(20)
+                    .padding(16)
             }
             .environment(\.settingsTab, tab)
             .onChange(of: navigationState.scrollToItemID) { id in
@@ -210,7 +272,7 @@ struct SettingsContainer<Content: View>: View {
 }
 
 struct SettingsRow<Content: View>: View {
-    let title: String
+    let title: LocalizedStringResource
     let content: Content
     let helperText: LocalizedStringKey?
     let warningText: LocalizedStringKey?
@@ -220,7 +282,7 @@ struct SettingsRow<Content: View>: View {
     @EnvironmentObject var navigationState: SettingsNavigationState
 
     init(
-        _ title: String,
+        _ title: LocalizedStringResource,
         helperText: LocalizedStringKey? = nil,
         warningText: LocalizedStringKey? = nil,
         demoVideoName: String? = nil,
@@ -237,7 +299,7 @@ struct SettingsRow<Content: View>: View {
         VStack(alignment: .leading, spacing: 8) {
             HStack {
                 HStack(spacing: 4) {
-                    Text(highlightedText(text: NSLocalizedString(title, comment: ""), query: navigationState.searchText))
+                    Text(highlightedText(text: String(localized: title), query: navigationState.searchText))
                         .frame(alignment: .leading)
 
                     if let helperText = helperText {
@@ -269,12 +331,12 @@ struct SettingsRow<Content: View>: View {
         }
         .padding(.vertical, 6)
         .padding(.horizontal, 10)
-        .id(title)
+        .id(title.key)
         .onAppear {
-            navigationState.register(title: title, tab: currentTab)
+            navigationState.register(title: title.key, tab: currentTab)
         }
         .onDisappear {
-            navigationState.unregister(title: title, tab: currentTab)
+            navigationState.unregister(title: title.key, tab: currentTab)
         }
     }
 }
@@ -385,7 +447,7 @@ private struct WarningInfoButton: View {
 }
 
 struct SliderSettingsRow<V>: View where V: BinaryFloatingPoint, V.Stride: BinaryFloatingPoint {
-    let title: String
+    let title: LocalizedStringResource
     @Binding var value: V
     let range: ClosedRange<V>
     let defaultValue: V
@@ -399,7 +461,7 @@ struct SliderSettingsRow<V>: View where V: BinaryFloatingPoint, V.Stride: Binary
     @EnvironmentObject var navigationState: SettingsNavigationState
 
     init(
-        _ title: String,
+        _ title: LocalizedStringResource,
         helperText: LocalizedStringKey? = nil,
         warningText: LocalizedStringKey? = nil,
         demoVideoName: String? = nil,
@@ -424,7 +486,7 @@ struct SliderSettingsRow<V>: View where V: BinaryFloatingPoint, V.Stride: Binary
         VStack(spacing: 6) {
             HStack {
                 HStack(spacing: 4) {
-                    Text(highlightedText(text: NSLocalizedString(title, comment: ""), query: navigationState.searchText))
+                    Text(highlightedText(text: String(localized: title), query: navigationState.searchText))
                     if let helperText = helperText {
                         HelperInfoButton(text: helperText)
                     }
@@ -472,12 +534,12 @@ struct SliderSettingsRow<V>: View where V: BinaryFloatingPoint, V.Stride: Binary
         }
         .padding(.vertical, 8)
         .padding(.horizontal, 10)
-        .id(title)
+        .id(title.key)
         .onAppear {
-            navigationState.register(title: title, tab: currentTab)
+            navigationState.register(title: title.key, tab: currentTab)
         }
         .onDisappear {
-            navigationState.unregister(title: title, tab: currentTab)
+            navigationState.unregister(title: title.key, tab: currentTab)
         }
     }
 }

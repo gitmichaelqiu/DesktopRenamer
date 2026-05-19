@@ -30,8 +30,12 @@ struct SpaceEditView: View {
         }
         .animation(.easeInOut(duration: 0.2), value: spaceManager.spaceNameDict)
         .onAppear {
-            navigationState.register(title: "Rename Spaces", tab: .space, keywords: ["rename", "name", "title", "label", "custom", "edit"])
-            navigationState.register(title: "Reorder Spaces", tab: .space, keywords: ["reorder", "arrange", "display", "monitor", "position"])
+            navigationState.register(title: "Settings.Spaces.Edit.Name", tab: .space, keywords: ["rename", "name", "title", "label", "custom", "edit"])
+            navigationState.register(title: "Settings.Spaces.Edit.Actions", tab: .space, keywords: ["reorder", "arrange", "display", "monitor", "position"])
+        }
+        .onDisappear {
+            navigationState.unregister(title: "Settings.Spaces.Edit.Name", tab: .space)
+            navigationState.unregister(title: "Settings.Spaces.Edit.Actions", tab: .space)
         }
         .environment(\.settingsTab, .space)
     }
@@ -99,8 +103,12 @@ struct SpaceEditView: View {
         VStack(spacing: 0) {
             HStack(spacing: 10) {
                 Text("#").frame(width: 30, alignment: .leading)
-                Text(NSLocalizedString("Settings.Spaces.Edit.Name", comment: "")).frame(maxWidth: .infinity, alignment: .leading)
-                Text(NSLocalizedString("Settings.Spaces.Edit.Actions", comment: "")).frame(width: 60, alignment: .trailing)
+                Text(NSLocalizedString("Settings.Spaces.Edit.Name", comment: ""))
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .id("Settings.Spaces.Edit.Name")
+                Text(NSLocalizedString("Settings.Spaces.Edit.Actions", comment: ""))
+                    .frame(width: 60, alignment: .trailing)
+                    .id("Settings.Spaces.Edit.Actions")
             }
             .font(.caption)
             .foregroundColor(.secondary)
