@@ -177,7 +177,7 @@ struct SettingsView: View {
                 )
         )
         .padding(.leading, -4)
-        .padding(.trailing, -4)
+        .padding(.trailing, 12)
     }
 
     @ViewBuilder
