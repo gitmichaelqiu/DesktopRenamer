@@ -5,6 +5,7 @@ import AVFoundation
 class LoopVideoPlayerNSView: NSView {
     private var looper: AVPlayerLooper?
     private var player: AVQueuePlayer?
+    private(set) var currentURL: URL?
 
     var playerLayer: AVPlayerLayer? {
         self.layer as? AVPlayerLayer
@@ -19,6 +20,7 @@ class LoopVideoPlayerNSView: NSView {
     
     func setupPlayer(with url: URL) {
         cleanup()
+        self.currentURL = url
         self.wantsLayer = true
         self.layer?.backgroundColor = NSColor.clear.cgColor
         
@@ -66,6 +68,7 @@ class LoopVideoPlayerNSView: NSView {
         playerLayer?.player = nil
         looper = nil
         player = nil
+        currentURL = nil
     }
     
     override func scrollWheel(with event: NSEvent) {
@@ -82,7 +85,11 @@ struct LoopVideoPlayerRepresentable: NSViewRepresentable {
         return view
     }
     
-    func updateNSView(_ nsView: LoopVideoPlayerNSView, context: Context) {}
+    func updateNSView(_ nsView: LoopVideoPlayerNSView, context: Context) {
+        if nsView.currentURL != videoURL {
+            nsView.setupPlayer(with: videoURL)
+        }
+    }
     
     static func dismantleNSView(_ nsView: LoopVideoPlayerNSView, coordinator: Coordinator) {
         nsView.cleanup()
