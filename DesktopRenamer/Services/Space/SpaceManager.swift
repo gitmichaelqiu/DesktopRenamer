@@ -99,6 +99,9 @@ class SpaceManager: ObservableObject {
     @Published var lockedSpaceIDs: Set<String> = []
     var movedWindowsOriginalSpaces: [Int: (originalSpaceUUID: String, pid: Int32)] = [:]
     var lastManualSwitchTime: TimeInterval = 0
+    private var pendingRestoreTargetSpaceUUID: String? = nil
+    private var pendingRestoreSourceSpaceUUID: String? = nil
+    private var pendingRestoreWindows: [Int: (originalSpaceUUID: String, pid: Int32)] = [:]
     
     @Published var detectionMethod: DetectionMethod {
         didSet {
@@ -242,6 +245,32 @@ class SpaceManager: ObservableObject {
         }
 
         print("SpaceManager: handleSpaceChange(rawUUID: \(rawUUID), displayID: \(displayID), source: \(source))")
+
+        // Check if we just transitioned to the locked space to restore pending windows
+        if let restoreTarget = self.pendingRestoreTargetSpaceUUID,
+           let restoreSource = self.pendingRestoreSourceSpaceUUID,
+           rawUUID == restoreSource {
+            
+            let windowsToRestore = self.pendingRestoreWindows
+            // Clear pending restore state immediately to avoid re-triggering
+            self.pendingRestoreTargetSpaceUUID = nil
+            self.pendingRestoreSourceSpaceUUID = nil
+            self.pendingRestoreWindows = [:]
+            
+            // Give 50ms for the Window Server to settle and activate the app windows on this space
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
+                for (windowID, info) in windowsToRestore {
+                    print("SpaceManager: Actively restoring window \(windowID) back to \(restoreTarget) via physical drag")
+                    SpaceHelper.focusWindow(id: windowID, pid: info.pid)
+                    
+                    // Wait 30ms for focus, then drag it back!
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.03) {
+                        SpaceHelper.dragActiveWindow(to: restoreTarget, forceInstant: true)
+                        self.movedWindowsOriginalSpaces.removeValue(forKey: windowID)
+                    }
+                }
+            }
+        }
 
         
         var shouldUpdateWidget = false
@@ -407,21 +436,11 @@ class SpaceManager: ObservableObject {
                         // Switch back to previousUUID instantly to grab the window
                         if let prevSpaceObj = self.spaceNameDict.first(where: { $0.id == previousUUID }) {
                             print("SpaceManager: Switching back to \(previousUUID) instantly to pull back windows to \(targetUUID)")
-                            self.switchToSpace(prevSpaceObj, forceInstant: true, isManual: false)
+                            self.pendingRestoreTargetSpaceUUID = targetUUID
+                            self.pendingRestoreSourceSpaceUUID = previousUUID
+                            self.pendingRestoreWindows = windowsToMoveBack
                             
-                            // Wait 50ms for Space to settle, then focus and drag-move the window back!
-                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
-                                for (windowID, info) in windowsToMoveBack {
-                                    print("SpaceManager: Restoring window \(windowID) back to \(targetUUID) via physical drag")
-                                    SpaceHelper.focusWindow(id: windowID, pid: info.pid)
-                                    
-                                    // Give Window Server 30ms to focus the window, then drag it back!
-                                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.03) {
-                                        SpaceHelper.dragActiveWindow(to: targetUUID, forceInstant: true)
-                                        self.movedWindowsOriginalSpaces.removeValue(forKey: windowID)
-                                    }
-                                }
-                            }
+                            self.switchToSpace(prevSpaceObj, forceInstant: true, isManual: false)
                         }
                     }
                 }
