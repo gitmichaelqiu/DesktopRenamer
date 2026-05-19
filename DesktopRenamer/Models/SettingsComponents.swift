@@ -99,6 +99,12 @@ class SettingsNavigationState: ObservableObject {
     
     private var registeredTitlesCounts = [String: Int]()
     
+    private func extractKeywords(from string: String) -> [String] {
+        string.lowercased()
+            .components(separatedBy: CharacterSet.alphanumerics.inverted)
+            .filter { !$0.isEmpty && $0.count > 1 }
+    }
+    
     func register(title: String, tab: SettingsTab, keywords: [String] = []) {
         let registrationKey = "\(title)-\(tab.rawValue)"
         let count = registeredTitlesCounts[registrationKey] ?? 0
@@ -109,15 +115,8 @@ class SettingsNavigationState: ObservableObject {
         let localizedTitle = NSLocalizedString(title, comment: "")
         var generatedKeywords = keywords.map { $0.lowercased() }
         
-        let titleWords = localizedTitle.lowercased()
-            .components(separatedBy: CharacterSet.alphanumerics.inverted)
-            .filter { !$0.isEmpty && $0.count > 1 }
-        generatedKeywords.append(contentsOf: titleWords)
-        
-        let keyWords = title.lowercased()
-            .components(separatedBy: CharacterSet.alphanumerics.inverted)
-            .filter { !$0.isEmpty && $0.count > 1 }
-        generatedKeywords.append(contentsOf: keyWords)
+        generatedKeywords.append(contentsOf: extractKeywords(from: localizedTitle))
+        generatedKeywords.append(contentsOf: extractKeywords(from: title))
         
         let uniqueKeywords = Array(Set(generatedKeywords))
         
