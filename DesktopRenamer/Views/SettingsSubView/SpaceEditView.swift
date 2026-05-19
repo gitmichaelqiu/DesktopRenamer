@@ -190,7 +190,7 @@ struct SpaceEditView: View {
                 .foregroundColor(isLocked ? .accentColor : .secondary)
                 .frame(width: 16, height: 16)
         }
-        .help(isLocked ? "Unlock space" : "Lock space in current desktop")
+        .help(isLocked ? "Unlock space" : "Lock current space")
     }
     
     private func moveUpButton(for space: DesktopSpace, list: [DesktopSpace]) -> some View {

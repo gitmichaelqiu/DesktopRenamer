@@ -289,7 +289,7 @@ class StatusBarController: NSObject {
         
         let isLocked = spaceManager.lockedSpaceIDs.contains(spaceManager.currentSpaceUUID)
         let lockItem = NSMenuItem(
-            title: NSLocalizedString("Lock in Current Space", comment: ""),
+            title: NSLocalizedString("Lock Current Space", comment: ""),
             action: #selector(toggleLockCurrentSpace),
             keyEquivalent: "l"
         )

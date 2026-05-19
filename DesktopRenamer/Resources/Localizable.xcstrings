@@ -779,11 +779,25 @@
         }
       }
     },
-    "Lock in Current Space" : {
-
+    "Lock current space" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "锁定当前桌面"
+          }
+        }
+      }
     },
-    "Lock space in current desktop" : {
-
+    "Lock Current Space" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "锁定当前桌面"
+          }
+        }
+      }
     },
     "Manual" : {
       "localizations" : {
@@ -1384,8 +1398,25 @@
         }
       }
     },
+    "Restore windows moved by lock" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "恢复被锁定移动的窗口"
+          }
+        }
+      }
+    },
     "Restore Windows Moved by Lock (%d)" : {
-
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "恢复被锁定移动的窗口 (%d)"
+          }
+        }
+      }
     },
     "Review" : {
       "localizations" : {
@@ -2770,6 +2801,16 @@
         }
       }
     },
+    "Toggle lock for current space" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "切换当前桌面锁定"
+          }
+        }
+      }
+    },
     "Trackpad Switch Gesture Override" : {
       "localizations" : {
         "zh-Hans" : {
@@ -2791,7 +2832,14 @@
       }
     },
     "Unlock space" : {
-
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "解锁桌面"
+          }
+        }
+      }
     },
     "Use the Raycast extension to move all windows of an app to another space in one command." : {
       "localizations" : {
