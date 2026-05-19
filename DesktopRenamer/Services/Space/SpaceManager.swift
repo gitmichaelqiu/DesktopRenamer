@@ -768,7 +768,6 @@ class SpaceManager: ObservableObject {
     
     func switchToPreviousSpace(onDisplayID displayID: String? = nil, forceInstant: Bool? = nil) {
         let targetDisplayID = displayID ?? spaceNameDict.first(where: { $0.id == currentSpaceUUID })?.displayID ?? currentDisplayID
-        self.lastManualSwitchTime = Date().timeIntervalSince1970
         if let current = findBestCurrentSpace(for: targetDisplayID) {
             proceedToSwitch(from: current, on: targetDisplayID, direction: -1, forceInstant: forceInstant ?? instantSpaceSwitch)
         }
@@ -776,7 +775,6 @@ class SpaceManager: ObservableObject {
 
     func switchToNextSpace(onDisplayID displayID: String? = nil, forceInstant: Bool? = nil) {
         let targetDisplayID = displayID ?? spaceNameDict.first(where: { $0.id == currentSpaceUUID })?.displayID ?? currentDisplayID
-        self.lastManualSwitchTime = Date().timeIntervalSince1970
         if let current = findBestCurrentSpace(for: targetDisplayID) {
             proceedToSwitch(from: current, on: targetDisplayID, direction: 1, forceInstant: forceInstant ?? instantSpaceSwitch)
         }
