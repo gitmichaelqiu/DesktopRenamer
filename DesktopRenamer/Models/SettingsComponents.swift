@@ -1,40 +1,123 @@
 import SwiftUI
+import AVKit
+import AVFoundation
+
+class LoopVideoPlayerNSView: NSView {
+    var playerLayer: AVPlayerLayer {
+        self.layer as! AVPlayerLayer
+    }
+    
+    override func makeBackingLayer() -> CALayer {
+        let layer = AVPlayerLayer()
+        layer.videoGravity = .resizeAspect
+        layer.backgroundColor = NSColor.clear.cgColor
+        return layer
+    }
+    
+    func setupPlayer(with url: URL, coordinator: LoopVideoPlayerView.Coordinator) {
+        self.wantsLayer = true
+        self.layer?.backgroundColor = NSColor.clear.cgColor
+        
+        let player = AVQueuePlayer()
+        let playerItem = AVPlayerItem(url: url)
+        let playerLooper = AVPlayerLooper(player: player, templateItem: playerItem)
+        
+        self.playerLayer.player = player
+        player.isMuted = true
+        player.play()
+        
+        coordinator.looper = playerLooper
+        coordinator.player = player
+    }
+    
+    override func scrollWheel(with event: NSEvent) {
+        self.nextResponder?.scrollWheel(with: event)
+    }
+}
+
+struct LoopVideoPlayerView: NSViewRepresentable {
+    let videoURL: URL
+    
+    func makeNSView(context: Context) -> LoopVideoPlayerNSView {
+        let view = LoopVideoPlayerNSView()
+        view.setupPlayer(with: videoURL, coordinator: context.coordinator)
+        return view
+    }
+    
+    func updateNSView(_ nsView: LoopVideoPlayerNSView, context: Context) {}
+    
+    static func dismantleNSView(_ nsView: LoopVideoPlayerNSView, coordinator: Coordinator) {
+        coordinator.player?.pause()
+        coordinator.player?.removeAllItems()
+        coordinator.looper = nil
+        coordinator.player = nil
+        nsView.playerLayer.player = nil
+    }
+    
+    func makeCoordinator() -> Coordinator {
+        Coordinator()
+    }
+    
+    class Coordinator {
+        var looper: AVPlayerLooper?
+        var player: AVQueuePlayer?
+    }
+}
 
 struct SettingsRow<Content: View>: View {
     let title: LocalizedStringKey
     let content: Content
     let helperText: LocalizedStringKey?
     let warningText: LocalizedStringKey?
+    let demoVideoName: String?
 
     init(
-        _ title: LocalizedStringKey, helperText: LocalizedStringKey? = nil,
+        _ title: LocalizedStringKey,
+        helperText: LocalizedStringKey? = nil,
         warningText: LocalizedStringKey? = nil,
+        demoVideoName: String? = nil,
         @ViewBuilder content: () -> Content
     ) {
         self.title = title
         self.helperText = helperText
         self.warningText = warningText
+        self.demoVideoName = demoVideoName
         self.content = content()
     }
 
     var body: some View {
-        HStack {
-            HStack(spacing: 4) {
-                Text(title)
-                    .frame(alignment: .leading)
+        VStack(alignment: .leading, spacing: 8) {
+            HStack {
+                HStack(spacing: 4) {
+                    Text(title)
+                        .frame(alignment: .leading)
 
-                if let helperText = helperText {
-                    HelperInfoButton(text: helperText)
-                }
+                    if let helperText = helperText {
+                        HelperInfoButton(text: helperText)
+                    }
 
-                if let warningText = warningText {
-                    WarningInfoButton(text: warningText)
+                    if let warningText = warningText {
+                        WarningInfoButton(text: warningText)
+                    }
                 }
+                .frame(maxWidth: .infinity, alignment: .leading)
+
+                content
+                    .frame(alignment: .trailing)
             }
-            .frame(maxWidth: .infinity, alignment: .leading)
-
-            content
-                .frame(alignment: .trailing)
+            
+            if let videoName = demoVideoName,
+               let videoURL = Bundle.main.url(forResource: videoName, withExtension: "mp4") {
+                LoopVideoPlayerView(videoURL: videoURL)
+                    .frame(height: 180)
+                    .cornerRadius(8)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 8)
+                            .stroke(Color.gray.opacity(0.15), lineWidth: 1)
+                    )
+                    .padding(.top, 4)
+                    .padding(.bottom, 6)
+            }
         }
         .padding(.vertical, 6)
         .padding(.horizontal, 10)
@@ -96,7 +179,7 @@ struct SettingsSection<Content: View>: View {
     }
 }
 
-private struct HelperInfoButton: View {
+struct HelperInfoButton: View {
     let text: LocalizedStringKey
     @State private var showingPopover = false
 
@@ -154,12 +237,14 @@ struct SliderSettingsRow<V>: View where V: BinaryFloatingPoint, V.Stride: Binary
     let step: V?
     let helperText: LocalizedStringKey?
     let warningText: LocalizedStringKey?
+    let demoVideoName: String?
     let valueString: (V) -> String
 
     init(
         _ title: LocalizedStringKey,
         helperText: LocalizedStringKey? = nil,
         warningText: LocalizedStringKey? = nil,
+        demoVideoName: String? = nil,
         value: Binding<V>,
         range: ClosedRange<V>,
         defaultValue: V,
@@ -169,6 +254,7 @@ struct SliderSettingsRow<V>: View where V: BinaryFloatingPoint, V.Stride: Binary
         self.title = title
         self.helperText = helperText
         self.warningText = warningText
+        self.demoVideoName = demoVideoName
         self._value = value
         self.range = range
         self.defaultValue = defaultValue
@@ -213,6 +299,19 @@ struct SliderSettingsRow<V>: View where V: BinaryFloatingPoint, V.Stride: Binary
                     .monospacedDigit()
                     .foregroundColor(.secondary)
                     .frame(minWidth: 50, alignment: .trailing)
+            }
+            
+            if let videoName = demoVideoName,
+               let videoURL = Bundle.main.url(forResource: videoName, withExtension: "mp4") {
+                LoopVideoPlayerView(videoURL: videoURL)
+                    .frame(height: 180)
+                    .cornerRadius(8)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 8)
+                            .stroke(Color.gray.opacity(0.15), lineWidth: 1)
+                    )
+                    .padding(.top, 4)
+                    .padding(.bottom, 6)
             }
         }
         .padding(.vertical, 8)
