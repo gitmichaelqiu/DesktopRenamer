@@ -107,5 +107,6 @@ struct LabelSettingsView: View {
             .animation(.easeInOut(duration: 0.2), value: labelManager.showActiveLabels)
             .animation(.easeInOut(duration: 0.2), value: labelManager.showPreviewLabels)
         }
+        .environment(\.settingsTab, .labels)
     }
 }

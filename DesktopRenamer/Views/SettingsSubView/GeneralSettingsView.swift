@@ -611,6 +611,7 @@ struct GeneralSettingsView: View {
         .sheet(isPresented: $showAddSpacesSheet) { AddSpacesView(spaceManager: spaceManager) }
         .animation(.easeInOut(duration: 0.2), value: spaceManager.detectionMethod)
         .animation(.easeInOut(duration: 0.2), value: autoCheckUpdate)
+        .environment(\.settingsTab, .general)
     }
 
     private var bugReportSheet: some View {

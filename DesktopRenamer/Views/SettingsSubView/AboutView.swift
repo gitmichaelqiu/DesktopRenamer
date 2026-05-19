@@ -102,6 +102,7 @@ struct AboutView: View {
         .onAppear {
             navigationState.register(title: "GitHub / Support", tab: .about, keywords: ["github", "website", "developer", "contact", "support"])
         }
+        .environment(\.settingsTab, .about)
     }
 
     private func openAcknowledgements() {

@@ -28,5 +28,6 @@ struct PermissionsSettingsView: View {
             }
             .frame(maxWidth: .infinity, alignment: .topLeading)
         }
+        .environment(\.settingsTab, .permissions)
     }
 }

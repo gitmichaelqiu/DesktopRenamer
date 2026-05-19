@@ -33,6 +33,7 @@ struct SpaceEditView: View {
             navigationState.register(title: "Rename Spaces", tab: .space, keywords: ["rename", "name", "title", "label", "custom", "edit"])
             navigationState.register(title: "Reorder Spaces", tab: .space, keywords: ["reorder", "arrange", "display", "monitor", "position"])
         }
+        .environment(\.settingsTab, .space)
     }
     
     private var sectionBackgroundColor: Color {

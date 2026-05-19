@@ -313,5 +313,6 @@ struct SwitchSettingsView: View {
             .frame(maxWidth: .infinity, alignment: .topLeading)
             .animation(.easeInOut(duration: 0.2), value: gestureManager.isEnabled)
         }
+        .environment(\.settingsTab, .sswitch)
     }
 }
