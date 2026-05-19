@@ -3,6 +3,9 @@ import AVKit
 import AVFoundation
 
 class LoopVideoPlayerNSView: NSView {
+    private var looper: AVPlayerLooper?
+    private var player: AVQueuePlayer?
+
     var playerLayer: AVPlayerLayer {
         self.layer as! AVPlayerLayer
     }
@@ -14,7 +17,7 @@ class LoopVideoPlayerNSView: NSView {
         return layer
     }
     
-    func setupPlayer(with url: URL, coordinator: LoopVideoPlayerView.Coordinator) {
+    func setupPlayer(with url: URL) {
         self.wantsLayer = true
         self.layer?.backgroundColor = NSColor.clear.cgColor
         
@@ -26,8 +29,23 @@ class LoopVideoPlayerNSView: NSView {
         player.isMuted = true
         player.play()
         
-        coordinator.looper = playerLooper
-        coordinator.player = player
+        self.looper = playerLooper
+        self.player = player
+    }
+
+    override func viewWillMove(toWindow newWindow: NSWindow?) {
+        super.viewWillMove(toWindow: newWindow)
+        if newWindow == nil {
+            cleanup()
+        }
+    }
+
+    func cleanup() {
+        player?.pause()
+        player?.removeAllItems()
+        looper = nil
+        player = nil
+        playerLayer.player = nil
     }
     
     override func scrollWheel(with event: NSEvent) {
@@ -40,28 +58,21 @@ struct LoopVideoPlayerView: NSViewRepresentable {
     
     func makeNSView(context: Context) -> LoopVideoPlayerNSView {
         let view = LoopVideoPlayerNSView()
-        view.setupPlayer(with: videoURL, coordinator: context.coordinator)
+        view.setupPlayer(with: videoURL)
         return view
     }
     
     func updateNSView(_ nsView: LoopVideoPlayerNSView, context: Context) {}
     
     static func dismantleNSView(_ nsView: LoopVideoPlayerNSView, coordinator: Coordinator) {
-        coordinator.player?.pause()
-        coordinator.player?.removeAllItems()
-        coordinator.looper = nil
-        coordinator.player = nil
-        nsView.playerLayer.player = nil
+        nsView.cleanup()
     }
     
     func makeCoordinator() -> Coordinator {
         Coordinator()
     }
     
-    class Coordinator {
-        var looper: AVPlayerLooper?
-        var player: AVQueuePlayer?
-    }
+    class Coordinator {}
 }
 
 struct SettingsTabKey: EnvironmentKey {
@@ -180,7 +191,7 @@ struct SettingsContainer<Content: View>: View {
     let tab: SettingsTab
     let content: () -> Content
     @EnvironmentObject var navigationState: SettingsNavigationState
-    
+        
     init(_ tab: SettingsTab, @ViewBuilder content: @escaping () -> Content) {
         self.tab = tab
         self.content = content

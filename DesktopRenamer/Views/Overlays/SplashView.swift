@@ -130,35 +130,75 @@ struct SplashView: View {
     }
 }
 
-// Auto Playing Video View
+class AutoPlayingVideoNSView: NSView {
+    private var looper: AVPlayerLooper?
+    private var player: AVQueuePlayer?
+
+    var playerLayer: AVPlayerLayer {
+        self.layer as! AVPlayerLayer
+    }
+    
+    override func makeBackingLayer() -> CALayer {
+        let layer = AVPlayerLayer()
+        layer.videoGravity = .resizeAspectFill
+        layer.backgroundColor = NSColor.clear.cgColor
+        return layer
+    }
+    
+    func setupPlayer(with url: URL) {
+        self.wantsLayer = true
+        self.layer?.backgroundColor = NSColor.clear.cgColor
+        
+        let player = AVQueuePlayer()
+        let playerItem = AVPlayerItem(url: url)
+        let playerLooper = AVPlayerLooper(player: player, templateItem: playerItem)
+        
+        self.playerLayer.player = player
+        player.isMuted = true
+        player.play()
+        
+        self.looper = playerLooper
+        self.player = player
+    }
+
+    override func viewWillMove(toWindow newWindow: NSWindow?) {
+        super.viewWillMove(toWindow: newWindow)
+        if newWindow == nil {
+            cleanup()
+        }
+    }
+
+    func cleanup() {
+        player?.pause()
+        player?.removeAllItems()
+        looper = nil
+        player = nil
+        playerLayer.player = nil
+    }
+}
+
 struct AutoPlayingVideoView: NSViewRepresentable {
     let videoName: String
     
-    func makeNSView(context: Context) -> AVPlayerView {
-        let playerView = AVPlayerView()
-        playerView.controlsStyle = .none
-        playerView.videoGravity = .resizeAspectFill
-        
-        // Attempt to find the video file in the bundle
+    func makeNSView(context: Context) -> AutoPlayingVideoNSView {
+        let view = AutoPlayingVideoNSView()
         if let url = Bundle.main.url(forResource: videoName, withExtension: "mp4") {
-            let player = AVPlayer(url: url)
-            playerView.player = player
-            player.actionAtItemEnd = .none // Setup for looping
-            
-            NotificationCenter.default.addObserver(forName: .AVPlayerItemDidPlayToEndTime, object: player.currentItem, queue: .main) { _ in
-                player.seek(to: .zero)
-                player.play()
-            }
-            
-            player.play()
+            view.setupPlayer(with: url)
         }
-        
-        return playerView
+        return view
     }
     
-    func updateNSView(_ nsView: AVPlayerView, context: Context) {
-        // Handle updates if needed
+    func updateNSView(_ nsView: AutoPlayingVideoNSView, context: Context) {}
+    
+    static func dismantleNSView(_ nsView: AutoPlayingVideoNSView, coordinator: Coordinator) {
+        nsView.cleanup()
     }
+    
+    func makeCoordinator() -> Coordinator {
+        Coordinator()
+    }
+    
+    class Coordinator {}
 }
 
 // Reusable Page Templates
