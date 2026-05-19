@@ -336,12 +336,12 @@ struct MissionControlPage: View {
                                 .toggleStyle(.switch)
                         }
                     }
-                    .animation(.easeInOut(duration: 0.25), value: showActiveLabels)
                 }
                 .padding(.bottom, 10)
             }
             .padding(.bottom, 10)
         }
+        .animation(.easeInOut(duration: 0.25), value: showActiveLabels)
     }
 }
 
@@ -379,9 +379,9 @@ struct FastSwitchingPage: View {
                         .toggleStyle(.switch)
                 }
             }
-            .animation(.easeInOut(duration: 0.25), value: gestureEnabled)
             .padding(.bottom, 20)
         }
+        .animation(.easeInOut(duration: 0.25), value: gestureEnabled)
     }
 }
 
