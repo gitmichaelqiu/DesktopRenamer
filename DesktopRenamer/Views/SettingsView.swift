@@ -174,7 +174,8 @@ struct SettingsView: View {
                         .stroke(Color.gray.opacity(0.15), lineWidth: 1)
                 )
         )
-        .padding(.horizontal, 4)
+        .padding(.leading, -4)
+        .padding(.trailing, 4)
     }
 
     @ViewBuilder
