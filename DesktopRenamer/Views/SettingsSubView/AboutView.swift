@@ -15,6 +15,7 @@ struct AboutView: View {
     }
 
     @Environment(\.colorScheme) var colorScheme
+    @EnvironmentObject var navigationState: SettingsNavigationState
 
     var iconSuffix: String {
         colorScheme == .dark ? "_Dark" : "_Default"
@@ -97,6 +98,9 @@ struct AboutView: View {
             }
             .padding(30)
             .frame(maxWidth: .infinity, alignment: .leading)
+        }
+        .onAppear {
+            navigationState.register(title: "GitHub / Support", tab: .about, keywords: ["github", "website", "developer", "contact", "support"])
         }
     }
 

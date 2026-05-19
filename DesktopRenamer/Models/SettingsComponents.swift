@@ -64,9 +64,70 @@ struct LoopVideoPlayerView: NSViewRepresentable {
     }
 }
 
+struct SettingsTabKey: EnvironmentKey {
+    static let defaultValue: SettingsTab = .general
+}
+
+extension EnvironmentValues {
+    var settingsTab: SettingsTab {
+        get { self[SettingsTabKey.self] }
+        set { self[SettingsTabKey.self] }
+    }
+}
+
+struct SearchableSettingItem: Identifiable, Hashable {
+    let id = UUID()
+    let title: String
+    let localizedTitle: String
+    let tab: SettingsTab
+    let keywords: [String]
+    
+    func hash(into hasher: inout Hasher) {
+        hasher.combine(title)
+        hasher.combine(tab)
+    }
+    
+    static func == (lhs: SearchableSettingItem, rhs: SearchableSettingItem) -> Bool {
+        lhs.title == rhs.title && lhs.tab == rhs.tab
+    }
+}
+
 class SettingsNavigationState: ObservableObject {
     @Published var scrollToItemID: String? = nil
     @Published var searchText: String = ""
+    @Published var registeredItems: [SearchableSettingItem] = []
+    
+    func register(title: String, tab: SettingsTab, keywords: [String] = []) {
+        let localizedTitle = NSLocalizedString(title, comment: "")
+        
+        // Avoid duplicate registrations
+        guard !registeredItems.contains(where: { $0.title == title }) else { return }
+        
+        var generatedKeywords = keywords.map { $0.lowercased() }
+        
+        let titleWords = localizedTitle.lowercased()
+            .components(separatedBy: CharacterSet.alphanumerics.inverted)
+            .filter { !$0.isEmpty && $0.count > 1 }
+        generatedKeywords.append(contentsOf: titleWords)
+        
+        let keyWords = title.lowercased()
+            .components(separatedBy: CharacterSet.alphanumerics.inverted)
+            .filter { !$0.isEmpty && $0.count > 1 }
+        generatedKeywords.append(contentsOf: keyWords)
+        
+        let uniqueKeywords = Array(Set(generatedKeywords))
+        
+        let item = SearchableSettingItem(
+            title: title,
+            localizedTitle: localizedTitle,
+            tab: tab,
+            keywords: uniqueKeywords
+        )
+        
+        DispatchQueue.main.async {
+            self.registeredItems.append(item)
+        }
+    }
 }
 
 func highlightedText(text: String, query: String, color: Color? = .blue) -> AttributedString {
@@ -135,6 +196,7 @@ struct SettingsRow<Content: View>: View {
     let warningText: LocalizedStringKey?
     let demoVideoName: String?
     
+    @Environment(\.settingsTab) var currentTab
     @EnvironmentObject var navigationState: SettingsNavigationState
 
     init(
@@ -188,6 +250,9 @@ struct SettingsRow<Content: View>: View {
         .padding(.vertical, 6)
         .padding(.horizontal, 10)
         .id(title)
+        .onAppear {
+            navigationState.register(title: title, tab: currentTab)
+        }
     }
 }
 
@@ -307,6 +372,7 @@ struct SliderSettingsRow<V>: View where V: BinaryFloatingPoint, V.Stride: Binary
     let demoVideoName: String?
     let valueString: (V) -> String
     
+    @Environment(\.settingsTab) var currentTab
     @EnvironmentObject var navigationState: SettingsNavigationState
 
     init(
@@ -384,5 +450,8 @@ struct SliderSettingsRow<V>: View where V: BinaryFloatingPoint, V.Stride: Binary
         .padding(.vertical, 8)
         .padding(.horizontal, 10)
         .id(title)
+        .onAppear {
+            navigationState.register(title: title, tab: currentTab)
+        }
     }
 }

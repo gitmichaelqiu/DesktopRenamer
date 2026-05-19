@@ -39,51 +39,6 @@ enum SettingsTab: String, CaseIterable, Identifiable {
     }
 }
 
-struct SearchableSettingItem: Identifiable {
-    let id = UUID()
-    let title: String
-    let tab: SettingsTab
-    let keywords: [String]
-}
-
-let searchableItems: [SearchableSettingItem] = [
-    // General
-    SearchableSettingItem(title: "Launch at Login", tab: .general, keywords: ["launch", "login", "autostart", "start", "boot", "startup"]),
-    SearchableSettingItem(title: "Menubar Icon Style", tab: .general, keywords: ["menu", "bar", "status", "icon", "number", "name", "badge"]),
-    SearchableSettingItem(title: "Silent Mode", tab: .general, keywords: ["silent", "hide", "mute", "quiet", "disturb", "notifications"]),
-    SearchableSettingItem(title: "Reset Settings", tab: .general, keywords: ["reset", "clear", "restore", "default", "factory"]),
-    SearchableSettingItem(title: "Automatically check for updates", tab: .general, keywords: ["automatically", "check", "updates", "sparkle", "version", "general"]),
-    SearchableSettingItem(title: "Check for updates", tab: .general, keywords: ["update", "sparkle", "check", "version", "general"]),
-    
-    // Spaces
-    SearchableSettingItem(title: "Rename Spaces", tab: .space, keywords: ["rename", "name", "title", "label", "custom", "edit"]),
-    SearchableSettingItem(title: "Reorder Spaces", tab: .space, keywords: ["reorder", "arrange", "display", "monitor", "position"]),
-    
-    // Labels
-    SearchableSettingItem(title: "Show Preview Labels", tab: .labels, keywords: ["preview", "large", "label", "mission", "control"]),
-    SearchableSettingItem(title: "Hide When Switching Desktops", tab: .labels, keywords: ["hide", "switch", "fade", "transition"]),
-    SearchableSettingItem(title: "Preview Label Font/Window Size", tab: .labels, keywords: ["font", "size", "window", "padding", "scale", "appearance"]),
-    SearchableSettingItem(title: "Show Active Space Labels", tab: .labels, keywords: ["active", "corner", "slide", "desktop"]),
-    SearchableSettingItem(title: "Keep Active Label Visible on Desktop", tab: .labels, keywords: ["keep", "desktop", "visible", "persist", "always"]),
-    
-    // Switch
-    SearchableSettingItem(title: "Keyboard Shortcuts", tab: .sswitch, keywords: ["shortcuts", "keyboard", "hotkey", "keys", "bind"]),
-    SearchableSettingItem(title: "Switch to Previous/Next Space", tab: .sswitch, keywords: ["switch", "previous", "next", "left", "right", "shortcut"]),
-    SearchableSettingItem(title: "Reload Space Labels", tab: .sswitch, keywords: ["reload", "refresh", "label", "shortcut"]),
-    SearchableSettingItem(title: "Move Window to Previous/Next Desktop", tab: .sswitch, keywords: ["move", "window", "previous", "next", "desktop", "shortcut"]),
-    SearchableSettingItem(title: "Move Window to Desktop Number", tab: .sswitch, keywords: ["move", "window", "number", "desktop", "shortcut"]),
-    SearchableSettingItem(title: "Move Window to Previous/Next Display", tab: .sswitch, keywords: ["move", "window", "previous", "next", "display", "monitor", "shortcut"]),
-    SearchableSettingItem(title: "Restore Windows Moved by Lock", tab: .sswitch, keywords: ["restore", "window", "lock", "moved", "shortcut"]),
-    SearchableSettingItem(title: "Switch Gesture Override (Trackpad)", tab: .sswitch, keywords: ["gesture", "trackpad", "swipe", "override", "multitouch", "finger"]),
-    
-    // Permissions
-    SearchableSettingItem(title: "Accessibility Permission", tab: .permissions, keywords: ["accessibility", "permission", "grant", "system", "access"]),
-    SearchableSettingItem(title: "Screen Recording Permission", tab: .permissions, keywords: ["screen", "recording", "permission", "capture", "access"]),
-    
-    // About
-    SearchableSettingItem(title: "GitHub / Support", tab: .about, keywords: ["github", "website", "developer", "contact", "support"])
-]
-
 // UI layout constants for consistent sizing.
 let sidebarWidth: CGFloat = 180
 let defaultSettingsWindowWidth = 750
@@ -123,6 +78,25 @@ struct SettingsView: View {
         .frame(
             width: CGFloat(defaultSettingsWindowWidth), height: CGFloat(defaultSettingsWindowHeight)
         )
+        .background(
+            ZStack {
+                GeneralSettingsView(spaceManager: spaceManager, labelManager: labelManager)
+                    .environment(\.settingsTab, .general)
+                SpaceEditView(spaceManager: spaceManager)
+                    .environment(\.settingsTab, .space)
+                LabelSettingsView(labelManager: labelManager)
+                    .environment(\.settingsTab, .labels)
+                SwitchSettingsView()
+                    .environment(\.settingsTab, .sswitch)
+                PermissionsSettingsView()
+                    .environment(\.settingsTab, .permissions)
+                AboutView()
+                    .environment(\.settingsTab, .about)
+            }
+            .frame(width: 0, height: 0)
+            .opacity(0)
+            .allowsHitTesting(false)
+        )
         .onChange(of: searchText) { newValue in
             navigationState.searchText = newValue
             if !newValue.isEmpty {
@@ -136,7 +110,7 @@ struct SettingsView: View {
         }
     }
 
-    struct ToolbarHider: ViewModifier {
+    private struct ToolbarHider: ViewModifier {
         func body(content: Content) -> some View {
             if #available(macOS 14.0, *) {
                 content.toolbar(.hidden, for: .windowToolbar)
@@ -155,9 +129,10 @@ struct SettingsView: View {
             let matchesTabName = tab.rawValue.lowercased().contains(query) ||
                                  tab.localizedNameString.lowercased().contains(query)
             
-            let matchesSetting = searchableItems.contains { item in
+            let matchesSetting = navigationState.registeredItems.contains { item in
                 item.tab == tab && (
                     item.title.lowercased().contains(query) ||
+                    item.localizedTitle.lowercased().contains(query) ||
                     item.keywords.contains { $0.lowercased().contains(query) }
                 )
             }
@@ -218,9 +193,10 @@ struct SettingsView: View {
                                 sidebarItem(for: tab)
                                 
                                 if !searchText.isEmpty {
-                                    let matchingItems = searchableItems.filter { item in
+                                    let matchingItems = navigationState.registeredItems.filter { item in
                                         item.tab == tab && (
                                             item.title.lowercased().contains(searchText.lowercased()) ||
+                                            item.localizedTitle.lowercased().contains(searchText.lowercased()) ||
                                             item.keywords.contains { $0.lowercased().contains(searchText.lowercased()) }
                                         )
                                     }
@@ -236,7 +212,7 @@ struct SettingsView: View {
                                                     .foregroundColor(.secondary)
                                                     .padding(.leading, 12)
                                                 
-                                                Text(highlightedText(text: item.title, query: searchText, color: nil))
+                                                Text(highlightedText(text: item.localizedTitle, query: searchText, color: nil))
                                                     .font(.system(size: 11, weight: .regular))
                                                     .foregroundColor(.secondary)
                                                     .lineLimit(1)
@@ -286,9 +262,10 @@ struct SettingsView: View {
                                 sidebarItem(for: tab)
                                 
                                 if !searchText.isEmpty {
-                                    let matchingItems = searchableItems.filter { item in
+                                    let matchingItems = navigationState.registeredItems.filter { item in
                                         item.tab == tab && (
                                             item.title.lowercased().contains(searchText.lowercased()) ||
+                                            item.localizedTitle.lowercased().contains(searchText.lowercased()) ||
                                             item.keywords.contains { $0.lowercased().contains(searchText.lowercased()) }
                                         )
                                     }
@@ -304,7 +281,7 @@ struct SettingsView: View {
                                                     .foregroundColor(.secondary)
                                                     .padding(.leading, 12)
                                                 
-                                                Text(highlightedText(text: item.title, query: searchText, color: nil))
+                                                Text(highlightedText(text: item.localizedTitle, query: searchText, color: nil))
                                                     .font(.system(size: 11, weight: .regular))
                                                     .foregroundColor(.secondary)
                                                     .lineLimit(1)
@@ -337,7 +314,6 @@ struct SettingsView: View {
             .navigationSplitViewColumnWidth(
                 min: sidebarWidth, ideal: sidebarWidth, max: sidebarWidth
             )
-            .listStyle(.sidebar)
             .edgesIgnoringSafeArea(.top)
         }
     }
@@ -352,7 +328,7 @@ struct SettingsView: View {
                 case .general:
                     GeneralSettingsView(spaceManager: spaceManager, labelManager: labelManager)
                 case .space:
-                    SpaceEditView(spaceManager: spaceManager, labelManager: labelManager)
+                    SpaceEditView(spaceManager: spaceManager)
                 case .labels:
                     LabelSettingsView(labelManager: labelManager)
                 case .sswitch:
