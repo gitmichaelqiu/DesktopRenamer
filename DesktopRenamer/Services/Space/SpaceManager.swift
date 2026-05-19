@@ -89,12 +89,6 @@ class SpaceManager: ObservableObject {
     private var connectedDisplayUUIDs: Set<String> = []
     
     // Space locking state and configurations
-    static let kLockSpaceOptionBringBack = "lockSpaceOptionBringBack"
-    @Published var lockSpaceOptionBringBack: Bool {
-        didSet {
-            UserDefaults.standard.set(lockSpaceOptionBringBack, forKey: SpaceManager.kLockSpaceOptionBringBack)
-        }
-    }
     
     @Published var lockedSpaceIDs: Set<String> = []
     @Published var movedWindowsOriginalSpaces: [Int: (originalSpaceUUID: String, currentSpaceUUID: String, pid: Int32)] = [:]
@@ -148,9 +142,6 @@ class SpaceManager: ObservableObject {
         }
         
         self.instantSpaceSwitch = UserDefaults.standard.bool(forKey: SpaceManager.instantSpaceSwitchKey)
-        
-        self.lockSpaceOptionBringBack = UserDefaults.standard.object(forKey: SpaceManager.kLockSpaceOptionBringBack) == nil
-            ? true : UserDefaults.standard.bool(forKey: SpaceManager.kLockSpaceOptionBringBack)
             
         if let savedLocked = UserDefaults.standard.stringArray(forKey: "lockedSpaceIDs") {
             self.lockedSpaceIDs = Set(savedLocked)
@@ -381,17 +372,15 @@ class SpaceManager: ObservableObject {
                             DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
                                 if let activeWin = SpaceHelper.getActiveWindowInfo() {
                                     print("SpaceManager: Physical drag-moving active window \(activeWin.id) to locked space \(previousUUID)")
-                                    if self.lockSpaceOptionBringBack {
-                                        if let existing = self.movedWindowsOriginalSpaces[activeWin.id] {
-                                            if existing.originalSpaceUUID == previousUUID {
-                                                self.movedWindowsOriginalSpaces.removeValue(forKey: activeWin.id)
-                                                print("SpaceManager: Window \(activeWin.id) returned to original space \(previousUUID). Clearing tracking.")
-                                            } else {
-                                                self.movedWindowsOriginalSpaces[activeWin.id] = (originalSpaceUUID: existing.originalSpaceUUID, currentSpaceUUID: previousUUID, pid: activeWin.pid)
-                                            }
+                                    if let existing = self.movedWindowsOriginalSpaces[activeWin.id] {
+                                        if existing.originalSpaceUUID == previousUUID {
+                                            self.movedWindowsOriginalSpaces.removeValue(forKey: activeWin.id)
+                                            print("SpaceManager: Window \(activeWin.id) returned to original space \(previousUUID). Clearing tracking.")
                                         } else {
-                                            self.movedWindowsOriginalSpaces[activeWin.id] = (originalSpaceUUID: targetUUID, currentSpaceUUID: previousUUID, pid: activeWin.pid)
+                                            self.movedWindowsOriginalSpaces[activeWin.id] = (originalSpaceUUID: existing.originalSpaceUUID, currentSpaceUUID: previousUUID, pid: activeWin.pid)
                                         }
+                                    } else {
+                                        self.movedWindowsOriginalSpaces[activeWin.id] = (originalSpaceUUID: targetUUID, currentSpaceUUID: previousUUID, pid: activeWin.pid)
                                     }
                                     SpaceHelper.dragActiveWindow(to: previousUUID, forceInstant: true)
                                 } else {

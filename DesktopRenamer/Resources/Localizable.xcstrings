@@ -1390,6 +1390,9 @@
     "Restore moved windows" : {
 
     },
+    "Restore Windows Moved by Lock (%d)" : {
+
+    },
     "Review" : {
       "localizations" : {
         "zh-Hans" : {

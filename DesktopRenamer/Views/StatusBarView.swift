@@ -228,16 +228,15 @@ class StatusBarController: NSObject {
         menu.addItem(lockItem)
         
         let movedCount = spaceManager.movedWindowsOriginalSpaces.count
-        if movedCount > 0 {
-            let restoreItem = NSMenuItem(
-                title: String(format: NSLocalizedString("Restore Windows Moved by Lock (%d)", comment: ""), movedCount),
-                action: #selector(restoreAllMovedWindows),
-                keyEquivalent: ""
-            )
-            restoreItem.target = self
-            restoreItem.image = NSImage(systemSymbolName: "arrow.uturn.backward", accessibilityDescription: nil)
-            menu.addItem(restoreItem)
-        }
+        let restoreItem = NSMenuItem(
+            title: String(format: NSLocalizedString("Restore Windows Moved by Lock (%d)", comment: ""), movedCount),
+            action: #selector(restoreAllMovedWindows),
+            keyEquivalent: ""
+        )
+        restoreItem.target = self
+        restoreItem.image = NSImage(systemSymbolName: "arrow.uturn.backward", accessibilityDescription: nil)
+        restoreItem.isEnabled = movedCount > 0
+        menu.addItem(restoreItem)
     
         let showPreviewLabels = NSMenuItem(title: NSLocalizedString("Menu.ShowPreviewLabels", comment: "Toggle preview labels"), action: #selector(togglePreviewLabelsFromMenu), keyEquivalent: "p")
         showPreviewLabels.target = self
