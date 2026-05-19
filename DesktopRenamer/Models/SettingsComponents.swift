@@ -71,7 +71,7 @@ struct SettingsTabKey: EnvironmentKey {
 extension EnvironmentValues {
     var settingsTab: SettingsTab {
         get { self[SettingsTabKey.self] }
-        set { self[SettingsTabKey.self] }
+        set { self[SettingsTabKey.self] = newValue }
     }
 }
 
@@ -101,8 +101,11 @@ class SettingsNavigationState: ObservableObject {
     
     func register(title: String, tab: SettingsTab, keywords: [String] = []) {
         // Avoid duplicate registrations (synchronous Set checks to prevent async queue duplicates)
-        guard !registeredTitles.contains(title) else { return }
-        registeredTitles.insert(title)
+        let registrationKey = "\(title)-\(tab.rawValue)"
+        guard !registeredTitles.contains(registrationKey) else { return }
+        registeredTitles.insert(registrationKey)
+        
+        print("SETTINGS REGISTER: '\(title)' under tab \(tab)")
         
         let localizedTitle = NSLocalizedString(title, comment: "")
         
@@ -163,19 +166,22 @@ func highlightedText(text: String, query: String, color: Color? = .blue) -> Attr
 }
 
 struct SettingsContainer<Content: View>: View {
-    let content: Content
+    let tab: SettingsTab
+    let content: () -> Content
     @EnvironmentObject var navigationState: SettingsNavigationState
     
-    init(@ViewBuilder content: () -> Content) {
-        self.content = content()
+    init(_ tab: SettingsTab, @ViewBuilder content: @escaping () -> Content) {
+        self.tab = tab
+        self.content = content
     }
     
     var body: some View {
         ScrollViewReader { proxy in
             ScrollView {
-                content
+                content()
                     .padding(20)
             }
+            .environment(\.settingsTab, tab)
             .onChange(of: navigationState.scrollToItemID) { id in
                 if let id = id {
                     DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
