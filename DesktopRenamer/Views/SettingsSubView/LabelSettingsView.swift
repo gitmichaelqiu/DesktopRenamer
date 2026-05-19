@@ -4,7 +4,7 @@ struct LabelSettingsView: View {
     @ObservedObject var labelManager: SpaceLabelManager
 
     var body: some View {
-        ScrollView {
+        SettingsContainer {
             VStack(alignment: .leading, spacing: 20) {
                 SettingsSection("Preview Labels") {
                     SettingsRow(
@@ -104,7 +104,6 @@ struct LabelSettingsView: View {
                     }
                 }
             }
-            .padding()
             .animation(.easeInOut(duration: 0.2), value: labelManager.showActiveLabels)
             .animation(.easeInOut(duration: 0.2), value: labelManager.showPreviewLabels)
         }
