@@ -6,8 +6,8 @@ class LoopVideoPlayerNSView: NSView {
     private var looper: AVPlayerLooper?
     private var player: AVQueuePlayer?
 
-    var playerLayer: AVPlayerLayer {
-        self.layer as! AVPlayerLayer
+    var playerLayer: AVPlayerLayer? {
+        self.layer as? AVPlayerLayer
     }
     
     override func makeBackingLayer() -> CALayer {
@@ -26,7 +26,7 @@ class LoopVideoPlayerNSView: NSView {
         let playerItem = AVPlayerItem(url: url)
         let playerLooper = AVPlayerLooper(player: player, templateItem: playerItem)
         
-        self.playerLayer.player = player
+        self.playerLayer?.player = player
         player.isMuted = true
         player.play()
         
@@ -43,7 +43,7 @@ class LoopVideoPlayerNSView: NSView {
 
     func cleanup() {
         player?.pause()
-        playerLayer.player = nil
+        playerLayer?.player = nil
         looper = nil
         player = nil
     }
