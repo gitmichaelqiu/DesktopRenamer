@@ -941,10 +941,10 @@ class SpaceLabelWindow: NSWindow {
         if !isActiveMode && labelManager?.hideWhenSwitching == true {
             let now = Date().timeIntervalSince1970
             let timeSinceSwitch = now - SpaceHelper.lastProgrammaticSwitchTime
-            if timeSinceSwitch < 1.0 {
+            if timeSinceSwitch < 0.3 {
                 print("SpaceLabelWindow[\(self.spaceId)]: Suppressing preview label visibility during switch transition (\(String(format: "%.2f", timeSinceSwitch))s).")
                 isVisuallyVisible = false
-                scheduleVisibilityRetry(delay: 1.0 - timeSinceSwitch + 0.1)
+                scheduleVisibilityRetry(delay: 0.3 - timeSinceSwitch + 0.1)
             }
         }
 
@@ -961,7 +961,7 @@ class SpaceLabelWindow: NSWindow {
             // and calling orderFrontRegardless on the WRONG monitor causes a "snap-back".
             let now = Date().timeIntervalSince1970
             let timeSinceSwitch = now - SpaceHelper.lastProgrammaticSwitchTime
-            let inCoolingPeriod = timeSinceSwitch < 1.0
+            let inCoolingPeriod = timeSinceSwitch < 0.3
             
             if self.isActiveMode {
                 if !self.isVisible {
@@ -971,7 +971,7 @@ class SpaceLabelWindow: NSWindow {
                         self.hasOrderedInOnce = true
                     } else {
                         print("SpaceLabelWindow[\(self.spaceId)]: Suppressing orderFrontRegardless (Active) during switch cooling period (\(String(format: "%.2f", timeSinceSwitch))s). Scheduling retry.")
-                        scheduleVisibilityRetry(delay: 1.0 - timeSinceSwitch + 0.1)
+                        scheduleVisibilityRetry(delay: 0.3 - timeSinceSwitch + 0.1)
                     }
                 }
             } else if !hasOrderedInOnce {
@@ -982,7 +982,7 @@ class SpaceLabelWindow: NSWindow {
                     self.hasOrderedInOnce = true
                 } else {
                     print("SpaceLabelWindow[\(self.spaceId)]: Suppressing orderFrontRegardless (Preview) during switch cooling period (\(String(format: "%.2f", timeSinceSwitch))s). Scheduling retry.")
-                    scheduleVisibilityRetry(delay: 1.0 - timeSinceSwitch + 0.1)
+                    scheduleVisibilityRetry(delay: 0.3 - timeSinceSwitch + 0.1)
                 }
             }
         }
