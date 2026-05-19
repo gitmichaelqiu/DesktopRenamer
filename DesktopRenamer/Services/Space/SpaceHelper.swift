@@ -55,13 +55,18 @@ class SpaceHelper {
     static func switchToSpace(_ spaceID: String, forceInstant: Bool = false) {
         lastProgrammaticSwitchTime = Date().timeIntervalSince1970
         lastProgrammaticTargetSpaceID = spaceID
-        guard !isSwitching else { return }
-        isSwitching = true
+        
+        if !forceInstant {
+            guard !isSwitching else { return }
+            isSwitching = true
+        }
 
         defer {
-            // Short delay to allow OS animations to settle before allowing another switch
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                isSwitching = false
+            if !forceInstant {
+                // Short delay to allow OS animations to settle before allowing another switch
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                    isSwitching = false
+                }
             }
         }
 
