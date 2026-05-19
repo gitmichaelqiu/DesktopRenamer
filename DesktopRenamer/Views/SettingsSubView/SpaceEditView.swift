@@ -169,11 +169,28 @@ struct SpaceEditView: View {
     
     private func actionButtons(for space: DesktopSpace, in displayList: [DesktopSpace]) -> some View {
         HStack(spacing: 4) {
-            moveUpButton(for: space, list: displayList)
-            moveDownButton(for: space, list: displayList)
-            deleteButton(for: space)
+            if spaceManager.detectionMethod == .automatic {
+                lockButton(for: space)
+            } else {
+                moveUpButton(for: space, list: displayList)
+                moveDownButton(for: space, list: displayList)
+                deleteButton(for: space)
+            }
         }
         .buttonStyle(.borderless)
+    }
+
+    private func lockButton(for space: DesktopSpace) -> some View {
+        let isLocked = spaceManager.lockedSpaceIDs.contains(space.id)
+        return Button(action: {
+            spaceManager.toggleLockSpace(space.id)
+        }) {
+            Image(systemName: isLocked ? "lock.fill" : "lock.open")
+                .font(.system(size: 13, weight: .medium))
+                .foregroundColor(isLocked ? .accentColor : .secondary)
+                .frame(width: 16, height: 16)
+        }
+        .help(isLocked ? "Unlock space" : "Lock space in current desktop")
     }
     
     private func moveUpButton(for space: DesktopSpace, list: [DesktopSpace]) -> some View {
