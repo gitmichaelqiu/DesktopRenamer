@@ -46,6 +46,8 @@ class SpaceManager: ObservableObject {
     static private let instantSpaceSwitchKey = "com.michaelqiu.desktoprenamer.instantSpaceSwitch"
     static private let grabOffsetXKey = "com.michaelqiu.desktoprenamer.grabOffsetX"
     static private let grabOffsetYKey = "com.michaelqiu.desktoprenamer.grabOffsetY"
+    static private let lockedSpaceIDsKey = "com.michaelqiu.desktoprenamer.lockedSpaceIDs"
+    static private let movedWindowsOriginalSpacesKey = "com.michaelqiu.desktoprenamer.movedWindowsOriginalSpaces"
     
     @Published private(set) var currentSpaceUUID: String = ""
     @Published private(set) var currentRawSpaceUUID: String = ""
@@ -144,7 +146,7 @@ class SpaceManager: ObservableObject {
         
         self.instantSpaceSwitch = UserDefaults.standard.bool(forKey: SpaceManager.instantSpaceSwitchKey)
             
-        if let savedLocked = UserDefaults.standard.stringArray(forKey: "lockedSpaceIDs") {
+        if let savedLocked = UserDefaults.standard.stringArray(forKey: SpaceManager.lockedSpaceIDsKey) {
             self.lockedSpaceIDs = Set(savedLocked)
         }
         
@@ -177,7 +179,7 @@ class SpaceManager: ObservableObject {
         } else {
             lockedSpaceIDs.insert(spaceID)
         }
-        UserDefaults.standard.set(Array(lockedSpaceIDs), forKey: "lockedSpaceIDs")
+        UserDefaults.standard.set(Array(lockedSpaceIDs), forKey: SpaceManager.lockedSpaceIDsKey)
         objectWillChange.send()
     }
     
