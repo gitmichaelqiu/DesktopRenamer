@@ -432,7 +432,7 @@ struct GeneralSettingsView: View {
     @State private var showAddSpacesSheet: Bool = false
 
     var body: some View {
-        ScrollView {
+        SettingsContainer {
             VStack(alignment: .leading, spacing: 20) {
                 // General configuration options.
                 SettingsSection("Settings.General.General") {
@@ -598,7 +598,6 @@ struct GeneralSettingsView: View {
                 }
                 Spacer()
             }
-            .padding()
             .frame(maxWidth: .infinity, alignment: .topLeading)
         }
         .onAppear { launchAtLogin = getLaunchAtLoginState() }
