@@ -292,6 +292,9 @@ struct ListAreaView: View {
                                     proxy.scrollTo(index, anchor: .center)
                                 }
                             }
+                            .onAppear {
+                                proxy.scrollTo(viewModel.selectedRowIndex, anchor: .center)
+                            }
                         }
                     }
                 } else {
@@ -324,6 +327,9 @@ struct ListAreaView: View {
                                         proxy.scrollTo(index, anchor: .center)
                                     }
                                 }
+                                .onAppear {
+                                    proxy.scrollTo(viewModel.selectedRowIndex, anchor: .center)
+                                }
                             }
                         }
                         
@@ -354,6 +360,9 @@ struct ListAreaView: View {
                                     withAnimation(.easeInOut(duration: 0.12)) {
                                         proxy.scrollTo(index, anchor: .center)
                                     }
+                                }
+                                .onAppear {
+                                    proxy.scrollTo(viewModel.selectedRowIndex, anchor: .center)
                                 }
                             }
                         }
@@ -400,6 +409,11 @@ struct ListAreaView: View {
                                 .onChange(of: viewModel.selectedRowIndex) { index in
                                     withAnimation(.easeInOut(duration: 0.12)) {
                                         proxy.scrollTo(index, anchor: .center)
+                                    }
+                                }
+                                .onAppear {
+                                    DispatchQueue.main.async {
+                                        proxy.scrollTo(viewModel.selectedRowIndex, anchor: .center)
                                     }
                                 }
                             }
@@ -907,8 +921,21 @@ struct SpacesBottomBar: View {
 }
 
 class FocusTextField: NSTextField {
+    var onCommandEnter: (() -> Void)?
+
     override var acceptsFirstResponder: Bool {
         return true
+    }
+
+    override func performKeyEquivalent(with event: NSEvent) -> Bool {
+        if event.type == .keyDown {
+            let modifiers = event.modifierFlags.intersection(.deviceIndependentFlagsMask)
+            if modifiers == .command && (event.keyCode == 36 || event.keyCode == 76) {
+                onCommandEnter?()
+                return true
+            }
+        }
+        return super.performKeyEquivalent(with: event)
     }
 
     override func viewDidMoveToWindow() {
@@ -997,6 +1024,9 @@ struct SearchTextField: NSViewRepresentable {
     func makeNSView(context: Context) -> NSTextField {
         let textField = FocusTextField()
         textField.delegate = context.coordinator
+        textField.onCommandEnter = {
+            self.onCommandEnter?()
+        }
         textField.isBordered = false
         textField.drawsBackground = false
         textField.focusRingType = .none
@@ -1018,6 +1048,11 @@ struct SearchTextField: NSViewRepresentable {
     }
     
     func updateNSView(_ nsView: NSTextField, context: Context) {
+        if let focusField = nsView as? FocusTextField {
+            focusField.onCommandEnter = {
+                self.onCommandEnter?()
+            }
+        }
         if nsView.stringValue != text {
             nsView.stringValue = text
         }

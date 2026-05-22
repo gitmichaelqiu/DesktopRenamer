@@ -78,8 +78,17 @@
     "→ %@" : {
 
     },
+    "↵" : {
+
+    },
     "↺" : {
       "shouldTranslate" : false
+    },
+    "⌘↵" : {
+
+    },
+    "⌘K" : {
+
     },
     "◉" : {
       "shouldTranslate" : false
@@ -143,6 +152,9 @@
           }
         }
       }
+    },
+    "Actions" : {
+
     },
     "Active Space Label" : {
       "localizations" : {
@@ -1524,6 +1536,9 @@
         }
       }
     },
+    "Run Batch Move" : {
+
+    },
     "Save" : {
       "localizations" : {
         "zh-Hans" : {
@@ -2117,6 +2132,12 @@
     "Spaces:" : {
 
     },
+    "Stage Move to Desktop..." : {
+
+    },
+    "Stage to Space" : {
+
+    },
     "Stage: %@" : {
 
     },
@@ -2391,6 +2412,9 @@
           }
         }
       }
+    },
+    "Unstage Move" : {
+
     },
     "Use the Raycast extension to move all windows of an app to another space in one command." : {
       "localizations" : {
