@@ -140,6 +140,11 @@ struct LauncherView: View {
                             onEnter: {
                                 viewModel.executeRowAction()
                             },
+                            onCommandEnter: {
+                                if viewModel.activeCommand?.type == .batchMoveWindows {
+                                    viewModel.executeBatchMove()
+                                }
+                            },
                             onEscape: {
                                 viewModel.handleEscapeKey()
                             },
@@ -199,8 +204,12 @@ struct LauncherView: View {
                     .fill(colors.separator)
                     .frame(height: 1)
                 
-                // Spaces bottom bar
-                SpacesBottomBar(viewModel: viewModel, spaceManager: spaceManager)
+                // Bottom bar
+                if viewModel.activeCommand?.type == .batchMoveWindows {
+                    BatchMoveBottomBar(viewModel: viewModel)
+                } else {
+                    SpacesBottomBar(viewModel: viewModel, spaceManager: spaceManager)
+                }
             }
         }
         .frame(width: 580, height: 380)
@@ -350,41 +359,38 @@ struct ListAreaView: View {
                         }
                         
                     case .batchMoveWindows:
-                        let windows = viewModel.filteredWindows
-                        let hasStaged = !viewModel.stagedMoves.isEmpty
-                        let totalRows = (hasStaged ? 1 : 0) + windows.count
-                        
-                        if totalRows == 0 {
+                        let sections = viewModel.batchMoveSections
+                        if sections.isEmpty {
                             EmptyResultsView()
                         } else {
                             ScrollViewReader { proxy in
                                 ScrollView {
-                                    VStack(spacing: 4) {
-                                        ForEach(0..<totalRows, id: \.self) { i in
-                                            let isSelected = viewModel.selectedRowIndex == i
+                                    VStack(alignment: .leading, spacing: 4) {
+                                        ForEach(sections) { section in
+                                            ListSectionHeader(title: section.title, subtitle: section.subtitle)
                                             
-                                            if hasStaged && i == 0 {
-                                                // Confirm Batch Action Row
-                                                ConfirmBatchRowView(count: viewModel.stagedMoves.count, isSelected: isSelected)
-                                                    .contentShape(Rectangle())
-                                                    .onTapGesture {
-                                                        viewModel.selectedRowIndex = i
-                                                        viewModel.executeRowAction()
-                                                    }
-                                                    .id(i)
-                                            } else {
-                                                let wIndex = hasStaged ? i - 1 : i
-                                                let window = windows[wIndex]
-                                                let isStaged = viewModel.stagedMoves[window.id] != nil
-                                                let targetName = viewModel.stagedMoves[window.id]?.targetSpace.name ?? ""
+                                            ForEach(section.items) { item in
+                                                let isSelected = viewModel.selectedRowIndex == item.index
                                                 
-                                                WindowBatchRowView(window: window, isSelected: isSelected, isStaged: isStaged, targetSpaceName: targetName)
-                                                    .contentShape(Rectangle())
-                                                    .onTapGesture {
-                                                        viewModel.selectedRowIndex = i
-                                                        viewModel.executeRowAction()
-                                                    }
-                                                    .id(i)
+                                                switch item {
+                                                case .staged(let move, _):
+                                                    WindowBatchRowView(window: move.window, isSelected: isSelected, isStaged: true, targetSpaceName: move.targetSpace.name)
+                                                        .contentShape(Rectangle())
+                                                        .onTapGesture {
+                                                            viewModel.selectedRowIndex = item.index
+                                                            viewModel.executeRowAction()
+                                                        }
+                                                        .id(item.index)
+                                                        
+                                                case .unstaged(let window, _):
+                                                    WindowBatchRowView(window: window, isSelected: isSelected, isStaged: false, targetSpaceName: "")
+                                                        .contentShape(Rectangle())
+                                                        .onTapGesture {
+                                                            viewModel.selectedRowIndex = item.index
+                                                            viewModel.executeRowAction()
+                                                        }
+                                                        .id(item.index)
+                                                }
                                             }
                                         }
                                     }
@@ -671,13 +677,167 @@ struct WindowBatchRowView: View {
                         .stroke(colors.greenText.opacity(0.3), lineWidth: 1)
                 )
             } else {
-                KeycapView(text: "Stage ↵", isSelected: isSelected)
+                Text(window.space.name)
+                    .font(.system(size: 10, weight: .medium))
+                    .foregroundColor(colors.textSecondary)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 3.5)
+                    .background(colors.badgeBg)
+                    .cornerRadius(6)
             }
         }
         .padding(.horizontal, 10)
         .padding(.vertical, 6)
         .background(isSelected ? colors.rowHover : Color.clear)
         .cornerRadius(6)
+    }
+}
+
+struct ListSectionHeader: View {
+    let title: String
+    let subtitle: String
+    @Environment(\.colorScheme) var colorScheme
+    
+    var colors: ThemeColors {
+        ThemeColors(isDark: colorScheme == .dark)
+    }
+    
+    var body: some View {
+        HStack(spacing: 8) {
+            Text(title)
+                .font(.system(size: 11, weight: .semibold))
+                .foregroundColor(colors.textSecondary)
+            
+            Text(subtitle)
+                .font(.system(size: 11))
+                .foregroundColor(colors.textQuaternary)
+            
+            Spacer()
+        }
+        .padding(.horizontal, 12)
+        .padding(.top, 10)
+        .padding(.bottom, 4)
+    }
+}
+
+struct BatchMoveBottomBar: View {
+    @ObservedObject var viewModel: LauncherViewModel
+    @Environment(\.colorScheme) var colorScheme
+    
+    var colors: ThemeColors {
+        ThemeColors(isDark: colorScheme == .dark)
+    }
+    
+    var body: some View {
+        HStack(spacing: 8) {
+            // Left side: Active command pill matching Raycast look
+            HStack(spacing: 6) {
+                Image(systemName: viewModel.activeCommand?.iconName ?? "macwindow.badge.plus")
+                    .font(.system(size: 11, weight: .semibold))
+                    .foregroundColor(Color(red: 0.0, green: 0.55, blue: 1.0))
+                Text(viewModel.activeCommand?.title ?? "Batch Move Windows")
+                    .font(.system(size: 11, weight: .semibold))
+                    .foregroundColor(colors.textPrimary)
+            }
+            .padding(.horizontal, 10)
+            .padding(.vertical, 4)
+            .background(colors.badgeBg)
+            .clipShape(Capsule())
+            
+            Spacer()
+            
+            // Right side: Context-sensitive actions
+            HStack(spacing: 8) {
+                if viewModel.stagingWindow != nil {
+                    // Staging target space selection
+                    HStack(spacing: 4) {
+                        Text("Stage to Space")
+                            .font(.system(size: 11, weight: .medium))
+                            .foregroundColor(colors.textSecondary)
+                        Text("↵")
+                            .font(.system(size: 11, weight: .semibold))
+                            .foregroundColor(colors.textTertiary)
+                    }
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 4)
+                    .background(colors.badgeBg)
+                    .cornerRadius(4)
+                } else {
+                    // Selecting an item in batch move
+                    let items = viewModel.batchMoveSelectableItems
+                    let index = viewModel.selectedRowIndex
+                    
+                    if index >= 0 && index < items.count {
+                        let selectedItem = items[index]
+                        switch selectedItem {
+                        case .staged:
+                            HStack(spacing: 4) {
+                                Text("Unstage Move")
+                                    .font(.system(size: 11, weight: .medium))
+                                    .foregroundColor(colors.textSecondary)
+                                Text("↵")
+                                    .font(.system(size: 11, weight: .semibold))
+                                    .foregroundColor(colors.textQuaternary)
+                            }
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 4)
+                            .background(colors.badgeBg)
+                            .cornerRadius(4)
+                            
+                        case .unstaged:
+                            HStack(spacing: 4) {
+                                Text("Stage Move to Desktop...")
+                                    .font(.system(size: 11, weight: .medium))
+                                    .foregroundColor(colors.textSecondary)
+                                Text("↵")
+                                    .font(.system(size: 11, weight: .semibold))
+                                    .foregroundColor(colors.textQuaternary)
+                            }
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 4)
+                            .background(colors.badgeBg)
+                            .cornerRadius(4)
+                        }
+                    }
+                    
+                    // If there are staged moves, show run batch action
+                    if !viewModel.stagedMoves.isEmpty {
+                        HStack(spacing: 4) {
+                            Text("Run Batch Move")
+                                .font(.system(size: 11, weight: .semibold))
+                                .foregroundColor(colors.greenText)
+                            Text("⌘↵")
+                                .font(.system(size: 11, weight: .semibold))
+                                .foregroundColor(colors.greenText.opacity(0.8))
+                        }
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 4)
+                        .background(colors.greenText.opacity(0.1))
+                        .cornerRadius(4)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 4)
+                                .stroke(colors.greenText.opacity(0.3), lineWidth: 1)
+                        )
+                    }
+                }
+                
+                HStack(spacing: 4) {
+                    Text("Actions")
+                        .font(.system(size: 11, weight: .medium))
+                        .foregroundColor(colors.textSecondary)
+                    Text("⌘K")
+                        .font(.system(size: 11, weight: .semibold))
+                        .foregroundColor(colors.textQuaternary)
+                }
+                .padding(.horizontal, 8)
+                .padding(.vertical, 4)
+                .background(colors.badgeBg)
+                .cornerRadius(4)
+            }
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 10)
+        .background(colors.bottomBarBg)
     }
 }
 
@@ -790,6 +950,7 @@ struct SearchTextField: NSViewRepresentable {
     var onUpArrow: () -> Void
     var onDownArrow: () -> Void
     var onEnter: () -> Void
+    var onCommandEnter: (() -> Void)? = nil
     var onEscape: () -> Void
     var placeholder: String = "Type a command..."
     
@@ -814,7 +975,12 @@ struct SearchTextField: NSViewRepresentable {
                 parent.onDownArrow()
                 return true
             } else if commandSelector == #selector(NSResponder.insertNewline(_:)) {
-                parent.onEnter()
+                let isCommandPressed = NSEvent.modifierFlags.contains(.command)
+                if isCommandPressed, let onCommandEnter = parent.onCommandEnter {
+                    onCommandEnter()
+                } else {
+                    parent.onEnter()
+                }
                 return true
             } else if commandSelector == #selector(NSResponder.cancelOperation(_:)) {
                 parent.onEscape()

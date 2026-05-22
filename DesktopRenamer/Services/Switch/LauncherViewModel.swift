@@ -18,6 +18,40 @@ struct WindowEntry: Identifiable, Equatable {
     let space: SpaceGroup
 }
 
+enum BatchMoveItem: Identifiable, Equatable {
+    case staged(move: (window: WindowEntry, targetSpace: SpaceGroup), index: Int)
+    case unstaged(window: WindowEntry, index: Int)
+    
+    var id: String {
+        switch self {
+        case .staged(let move, _):
+            return "staged_\(move.window.id)"
+        case .unstaged(let window, _):
+            return "unstaged_\(window.id)"
+        }
+    }
+    
+    var index: Int {
+        switch self {
+        case .staged(_, let index):
+            return index
+        case .unstaged(_, let index):
+            return index
+        }
+    }
+    
+    static func == (lhs: BatchMoveItem, rhs: BatchMoveItem) -> Bool {
+        return lhs.id == rhs.id
+    }
+}
+
+struct BatchMoveSection: Identifiable {
+    var id: String { title }
+    let title: String
+    let subtitle: String
+    let items: [BatchMoveItem]
+}
+
 @MainActor class LauncherViewModel: ObservableObject {
     @Published var searchQuery: String = "" {
         didSet {
@@ -54,6 +88,7 @@ struct WindowEntry: Identifiable, Equatable {
     
     // For space renaming
     @Published var renameInputText: String = ""
+    private var batchMoveLastSelectedIndex: Int = 0
     
     var onClose: (() -> Void)?
     
@@ -119,6 +154,100 @@ struct WindowEntry: Identifiable, Equatable {
         }
     }
     
+    var filteredStagedMoves: [(window: WindowEntry, targetSpace: SpaceGroup)] {
+        let allStaged = stagedMoves.values.sorted { $0.window.title < $1.window.title }
+        if searchQuery.isEmpty {
+            return allStaged
+        } else {
+            let query = searchQuery.lowercased()
+            return allStaged.filter {
+                $0.window.title.lowercased().contains(query) ||
+                $0.window.ownerName.lowercased().contains(query) ||
+                $0.window.space.name.lowercased().contains(query)
+            }
+        }
+    }
+    
+    var filteredUnstagedWindows: [WindowEntry] {
+        let allUnstaged = currentWindows.filter { stagedMoves[$0.id] == nil }
+        if searchQuery.isEmpty {
+            return allUnstaged
+        } else {
+            let query = searchQuery.lowercased()
+            return allUnstaged.filter {
+                $0.title.lowercased().contains(query) ||
+                $0.ownerName.lowercased().contains(query) ||
+                $0.space.name.lowercased().contains(query)
+            }
+        }
+    }
+    
+    var batchMoveSelectableItems: [BatchMoveItem] {
+        var items: [BatchMoveItem] = []
+        
+        // 1. Staged items
+        let staged = filteredStagedMoves
+        for (idx, move) in staged.enumerated() {
+            items.append(.staged(move: move, index: idx))
+        }
+        
+        // 2. Unstaged items grouped by space
+        let unstaged = filteredUnstagedWindows
+        var itemIndex = staged.count
+        for space in currentSpaces {
+            let spaceWindows = unstaged.filter { $0.space.id == space.id }
+            if spaceWindows.isEmpty { continue }
+            for window in spaceWindows {
+                items.append(.unstaged(window: window, index: itemIndex))
+                itemIndex += 1
+            }
+        }
+        
+        return items
+    }
+    
+    var batchMoveSections: [BatchMoveSection] {
+        var sections: [BatchMoveSection] = []
+        let selectable = batchMoveSelectableItems
+        
+        // Group staged
+        let stagedItems = selectable.filter {
+            if case .staged = $0 { return true }
+            return false
+        }
+        if !stagedItems.isEmpty {
+            sections.append(BatchMoveSection(
+                title: "Staged Moves (Pending)",
+                subtitle: "\(stagedItems.count) items",
+                items: stagedItems
+            ))
+        }
+        
+        // Group unstaged by space
+        let unstagedItems = selectable.filter {
+            if case .unstaged = $0 { return true }
+            return false
+        }
+        
+        for space in currentSpaces {
+            let spaceItems = unstagedItems.filter {
+                if case .unstaged(let window, _) = $0, window.space.id == space.id {
+                    return true
+                }
+                return false
+            }
+            if !spaceItems.isEmpty {
+                sections.append(BatchMoveSection(
+                    title: space.name,
+                    subtitle: "\(spaceItems.count) windows",
+                    items: spaceItems
+                ))
+            }
+        }
+        
+        return sections
+    }
+    
     var filteredWindows: [WindowEntry] {
         if searchQuery.isEmpty {
             return currentWindows
@@ -145,8 +274,7 @@ struct WindowEntry: Identifiable, Equatable {
             case .listWindows:
                 return filteredWindows.count
             case .batchMoveWindows:
-                let extra = stagedMoves.isEmpty ? 0 : 1
-                return extra + filteredWindows.count
+                return batchMoveSelectableItems.count
             case .renameCurrentSpace:
                 return 1
             default:
@@ -274,6 +402,7 @@ struct WindowEntry: Identifiable, Equatable {
                 let space = spaces[index]
                 stagedMoves[staging.id] = (window: staging, targetSpace: space)
                 stagingWindow = nil
+                selectedRowIndex = batchMoveLastSelectedIndex
                 return
             }
             
@@ -294,16 +423,20 @@ struct WindowEntry: Identifiable, Equatable {
                 executeFocusWindow(windows[index])
                 
             case .batchMoveWindows:
-                let hasStaged = !stagedMoves.isEmpty
-                if hasStaged && index == 0 {
-                    // Confirm & Execute batch move
-                    executeBatchMove()
-                } else {
-                    // Stage this window
-                    let wIndex = hasStaged ? index - 1 : index
-                    let windows = filteredWindows
-                    guard wIndex >= 0 && wIndex < windows.count else { return }
-                    stagingWindow = windows[wIndex]
+                let items = batchMoveSelectableItems
+                guard index >= 0 && index < items.count else { return }
+                let selectedItem = items[index]
+                
+                switch selectedItem {
+                case .staged(let move, _):
+                    stagedMoves.removeValue(forKey: move.window.id)
+                    if selectedRowIndex >= batchMoveSelectableItems.count {
+                        selectedRowIndex = max(0, batchMoveSelectableItems.count - 1)
+                    }
+                case .unstaged(let window, _):
+                    batchMoveLastSelectedIndex = selectedRowIndex
+                    stagingWindow = window
+                    selectedRowIndex = 0
                 }
                 
             case .renameCurrentSpace:
@@ -497,6 +630,7 @@ struct WindowEntry: Identifiable, Equatable {
     func handleEscapeKey() {
         if stagingWindow != nil {
             stagingWindow = nil
+            selectedRowIndex = batchMoveLastSelectedIndex
         } else if activeCommand != nil {
             activeCommand = nil
         } else {
