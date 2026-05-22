@@ -14,13 +14,13 @@ struct LauncherView: View {
                 // Header (Typing Bar)
                 HStack(spacing: 12) {
                     Image(systemName: "magnifyingglass")
-                        .foregroundColor(.gray)
-                        .font(.system(size: 20))
+                        .foregroundColor(.blue)
+                        .font(.system(size: 18, weight: .semibold))
                     
                     if let active = viewModel.activeCommand {
                         HStack(spacing: 6) {
                             Text(active.title)
-                                .font(.system(size: 13, weight: .bold))
+                                .font(.system(size: 12, weight: .bold))
                                 .padding(.horizontal, 8)
                                 .padding(.vertical, 4)
                                 .background(Color.blue.opacity(0.2))
@@ -29,7 +29,7 @@ struct LauncherView: View {
                             
                             if let staging = viewModel.stagingWindow {
                                 Text("→ Stage: \(staging.ownerName)")
-                                    .font(.system(size: 13, weight: .semibold))
+                                    .font(.system(size: 12, weight: .semibold))
                                     .padding(.horizontal, 8)
                                     .padding(.vertical, 4)
                                     .background(Color.green.opacity(0.2))
@@ -44,13 +44,19 @@ struct LauncherView: View {
                     }
                     
                     if viewModel.activeCommand?.type == .renameCurrentSpace {
-                        TextField("New Space Name...", text: $viewModel.renameInputText, onCommit: {
-                            viewModel.executeRowAction()
-                        })
-                        .textFieldStyle(.plain)
-                        .font(.system(size: 18, weight: .regular))
-                        .foregroundColor(.white)
-                        .focusable(true)
+                        SearchTextField(
+                            text: $viewModel.renameInputText,
+                            onUpArrow: {},
+                            onDownArrow: {},
+                            onEnter: {
+                                viewModel.executeRowAction()
+                            },
+                            onEscape: {
+                                viewModel.handleEscapeKey()
+                            },
+                            placeholder: "New Space Name..."
+                        )
+                        .frame(height: 32)
                     } else {
                         SearchTextField(
                             text: $viewModel.searchQuery,
@@ -89,34 +95,41 @@ struct LauncherView: View {
                 
                 // Content area
                 if viewModel.activeCommand?.type == .renameCurrentSpace {
-                    VStack(spacing: 12) {
-                        Text("Rename current desktop space")
-                            .font(.system(size: 13, weight: .semibold))
-                            .foregroundColor(.secondary)
+                    VStack(spacing: 16) {
+                        Image(systemName: "pencil.and.outline")
+                            .font(.system(size: 32))
+                            .foregroundColor(.blue)
+                            .padding(.top, 40)
                         
-                        Button("Confirm Rename (Enter)") {
-                            viewModel.executeRowAction()
-                        }
-                        .keyboardShortcut(.defaultAction)
-                        .buttonStyle(.borderedProminent)
-                        .controlSize(.large)
+                        Text("Rename Current Desktop Space")
+                            .font(.system(size: 15, weight: .semibold))
+                            .foregroundColor(.white)
+                        
+                        Text("Type a new name above and press Enter to save")
+                            .font(.system(size: 12))
+                            .foregroundColor(.white.opacity(0.5))
+                        
+                        Spacer()
                     }
-                    .frame(height: 240)
+                    .frame(height: 260)
                     .frame(maxWidth: .infinity)
                 } else if viewModel.isExecutingBatchMove {
                     VStack(spacing: 16) {
                         ProgressView()
+                            .scaleEffect(1.2)
                         Text("Executing batch window moves...")
-                            .foregroundColor(.secondary)
+                            .font(.system(size: 13, weight: .medium))
+                            .foregroundColor(.white.opacity(0.7))
                     }
-                    .frame(height: 240)
+                    .frame(height: 260)
+                    .frame(maxWidth: .infinity)
                 } else {
                     ListAreaView(viewModel: viewModel)
                         .frame(height: 260)
                 }
                 
                 Divider()
-                    .background(Color.white.opacity(0.1))
+                    .background(Color.white.opacity(0.08))
                 
                 // Spaces bottom bar
                 SpacesBottomBar(spaceManager: spaceManager)
@@ -125,7 +138,7 @@ struct LauncherView: View {
         .frame(width: 580, height: 380)
         .overlay(
             RoundedRectangle(cornerRadius: 12)
-                .stroke(Color.white.opacity(0.15), lineWidth: 1)
+                .stroke(Color.white.opacity(0.12), lineWidth: 1)
         )
     }
 }
@@ -142,20 +155,27 @@ struct ListAreaView: View {
                     EmptyResultsView()
                 } else {
                     ScrollViewReader { proxy in
-                        List(0..<commands.count, id: \.self) { i in
-                            let cmd = commands[i]
-                            let isSelected = viewModel.selectedRowIndex == i
-                            CommandRowView(command: cmd, isSelected: isSelected)
-                                .contentShape(Rectangle())
-                                .onTapGesture {
-                                    viewModel.selectedRowIndex = i
-                                    viewModel.executeRowAction()
+                        ScrollView {
+                            VStack(spacing: 4) {
+                                ForEach(0..<commands.count, id: \.self) { i in
+                                    let cmd = commands[i]
+                                    let isSelected = viewModel.selectedRowIndex == i
+                                    CommandRowView(command: cmd, isSelected: isSelected)
+                                        .contentShape(Rectangle())
+                                        .onTapGesture {
+                                            viewModel.selectedRowIndex = i
+                                            viewModel.executeRowAction()
+                                        }
+                                        .id(i)
                                 }
-                                .id(i)
+                            }
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 8)
                         }
-                        .listStyle(.sidebar)
                         .onChange(of: viewModel.selectedRowIndex) { index in
-                            proxy.scrollTo(index, anchor: .center)
+                            withAnimation(.easeInOut(duration: 0.12)) {
+                                proxy.scrollTo(index, anchor: .center)
+                            }
                         }
                     }
                 }
@@ -167,20 +187,27 @@ struct ListAreaView: View {
                         EmptyResultsView()
                     } else {
                         ScrollViewReader { proxy in
-                            List(0..<spaces.count, id: \.self) { i in
-                                let space = spaces[i]
-                                let isSelected = viewModel.selectedRowIndex == i
-                                SpaceRowView(space: space, isSelected: isSelected)
-                                    .contentShape(Rectangle())
-                                    .onTapGesture {
-                                        viewModel.selectedRowIndex = i
-                                        viewModel.executeRowAction()
+                            ScrollView {
+                                VStack(spacing: 4) {
+                                    ForEach(0..<spaces.count, id: \.self) { i in
+                                        let space = spaces[i]
+                                        let isSelected = viewModel.selectedRowIndex == i
+                                        SpaceRowView(space: space, isSelected: isSelected)
+                                            .contentShape(Rectangle())
+                                            .onTapGesture {
+                                                viewModel.selectedRowIndex = i
+                                                viewModel.executeRowAction()
+                                            }
+                                            .id(i)
                                     }
-                                    .id(i)
+                                }
+                                .padding(.horizontal, 12)
+                                .padding(.vertical, 8)
                             }
-                            .listStyle(.sidebar)
                             .onChange(of: viewModel.selectedRowIndex) { index in
-                                proxy.scrollTo(index, anchor: .center)
+                                withAnimation(.easeInOut(duration: 0.12)) {
+                                    proxy.scrollTo(index, anchor: .center)
+                                }
                             }
                         }
                     }
@@ -192,20 +219,27 @@ struct ListAreaView: View {
                             EmptyResultsView()
                         } else {
                             ScrollViewReader { proxy in
-                                List(0..<spaces.count, id: \.self) { i in
-                                    let space = spaces[i]
-                                    let isSelected = viewModel.selectedRowIndex == i
-                                    SpaceRowView(space: space, isSelected: isSelected)
-                                        .contentShape(Rectangle())
-                                        .onTapGesture {
-                                            viewModel.selectedRowIndex = i
-                                            viewModel.executeRowAction()
+                                ScrollView {
+                                    VStack(spacing: 4) {
+                                        ForEach(0..<spaces.count, id: \.self) { i in
+                                            let space = spaces[i]
+                                            let isSelected = viewModel.selectedRowIndex == i
+                                            SpaceRowView(space: space, isSelected: isSelected)
+                                                .contentShape(Rectangle())
+                                                .onTapGesture {
+                                                    viewModel.selectedRowIndex = i
+                                                    viewModel.executeRowAction()
+                                                }
+                                                .id(i)
                                         }
-                                        .id(i)
+                                    }
+                                    .padding(.horizontal, 12)
+                                    .padding(.vertical, 8)
                                 }
-                                .listStyle(.sidebar)
                                 .onChange(of: viewModel.selectedRowIndex) { index in
-                                    proxy.scrollTo(index, anchor: .center)
+                                    withAnimation(.easeInOut(duration: 0.12)) {
+                                        proxy.scrollTo(index, anchor: .center)
+                                    }
                                 }
                             }
                         }
@@ -216,20 +250,27 @@ struct ListAreaView: View {
                             EmptyResultsView()
                         } else {
                             ScrollViewReader { proxy in
-                                List(0..<windows.count, id: \.self) { i in
-                                    let window = windows[i]
-                                    let isSelected = viewModel.selectedRowIndex == i
-                                    WindowRowView(window: window, isSelected: isSelected)
-                                        .contentShape(Rectangle())
-                                        .onTapGesture {
-                                            viewModel.selectedRowIndex = i
-                                            viewModel.executeRowAction()
+                                ScrollView {
+                                    VStack(spacing: 4) {
+                                        ForEach(0..<windows.count, id: \.self) { i in
+                                            let window = windows[i]
+                                            let isSelected = viewModel.selectedRowIndex == i
+                                            WindowRowView(window: window, isSelected: isSelected)
+                                                .contentShape(Rectangle())
+                                                .onTapGesture {
+                                                    viewModel.selectedRowIndex = i
+                                                    viewModel.executeRowAction()
+                                                }
+                                                .id(i)
                                         }
-                                        .id(i)
+                                    }
+                                    .padding(.horizontal, 12)
+                                    .padding(.vertical, 8)
                                 }
-                                .listStyle(.sidebar)
                                 .onChange(of: viewModel.selectedRowIndex) { index in
-                                    proxy.scrollTo(index, anchor: .center)
+                                    withAnimation(.easeInOut(duration: 0.12)) {
+                                        proxy.scrollTo(index, anchor: .center)
+                                    }
                                 }
                             }
                         }
@@ -243,36 +284,43 @@ struct ListAreaView: View {
                             EmptyResultsView()
                         } else {
                             ScrollViewReader { proxy in
-                                List(0..<totalRows, id: \.self) { i in
-                                    let isSelected = viewModel.selectedRowIndex == i
-                                    
-                                    if hasStaged && i == 0 {
-                                        // Confirm Batch Action Row
-                                        ConfirmBatchRowView(count: viewModel.stagedMoves.count, isSelected: isSelected)
-                                            .contentShape(Rectangle())
-                                            .onTapGesture {
-                                                viewModel.selectedRowIndex = i
-                                                viewModel.executeRowAction()
+                                ScrollView {
+                                    VStack(spacing: 4) {
+                                        ForEach(0..<totalRows, id: \.self) { i in
+                                            let isSelected = viewModel.selectedRowIndex == i
+                                            
+                                            if hasStaged && i == 0 {
+                                                // Confirm Batch Action Row
+                                                ConfirmBatchRowView(count: viewModel.stagedMoves.count, isSelected: isSelected)
+                                                    .contentShape(Rectangle())
+                                                    .onTapGesture {
+                                                        viewModel.selectedRowIndex = i
+                                                        viewModel.executeRowAction()
+                                                    }
+                                                    .id(i)
+                                            } else {
+                                                let wIndex = hasStaged ? i - 1 : i
+                                                let window = windows[wIndex]
+                                                let isStaged = viewModel.stagedMoves[window.id] != nil
+                                                let targetName = viewModel.stagedMoves[window.id]?.targetSpace.name ?? ""
+                                                
+                                                WindowBatchRowView(window: window, isSelected: isSelected, isStaged: isStaged, targetSpaceName: targetName)
+                                                    .contentShape(Rectangle())
+                                                    .onTapGesture {
+                                                        viewModel.selectedRowIndex = i
+                                                        viewModel.executeRowAction()
+                                                    }
+                                                    .id(i)
                                             }
-                                            .id(i)
-                                    } else {
-                                        let wIndex = hasStaged ? i - 1 : i
-                                        let window = windows[wIndex]
-                                        let isStaged = viewModel.stagedMoves[window.id] != nil
-                                        let targetName = viewModel.stagedMoves[window.id]?.targetSpace.name ?? ""
-                                        
-                                        WindowBatchRowView(window: window, isSelected: isSelected, isStaged: isStaged, targetSpaceName: targetName)
-                                            .contentShape(Rectangle())
-                                            .onTapGesture {
-                                                viewModel.selectedRowIndex = i
-                                                viewModel.executeRowAction()
-                                            }
-                                            .id(i)
+                                        }
                                     }
+                                    .padding(.horizontal, 12)
+                                    .padding(.vertical, 8)
                                 }
-                                .listStyle(.sidebar)
                                 .onChange(of: viewModel.selectedRowIndex) { index in
-                                    proxy.scrollTo(index, anchor: .center)
+                                    withAnimation(.easeInOut(duration: 0.12)) {
+                                        proxy.scrollTo(index, anchor: .center)
+                                    }
                                 }
                             }
                         }
@@ -288,15 +336,17 @@ struct ListAreaView: View {
 
 struct EmptyResultsView: View {
     var body: some View {
-        VStack {
+        VStack(spacing: 8) {
             Spacer()
-            Image(systemName: "exclamationmark.magnifyingglass")
-                .font(.system(size: 32))
-                .foregroundColor(.secondary)
-                .padding(.bottom, 8)
-            Text("No results found")
-                .font(.system(size: 14, weight: .semibold))
-                .foregroundColor(.secondary)
+            Image(systemName: "magnifyingglass.circle")
+                .font(.system(size: 36, weight: .light))
+                .foregroundColor(.white.opacity(0.3))
+            Text("No matching commands found")
+                .font(.system(size: 13, weight: .medium))
+                .foregroundColor(.white.opacity(0.6))
+            Text("Try searching for something else")
+                .font(.system(size: 11))
+                .foregroundColor(.white.opacity(0.3))
             Spacer()
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -310,19 +360,20 @@ struct CommandRowView: View {
     var body: some View {
         HStack(spacing: 12) {
             Image(systemName: command.iconName)
-                .font(.system(size: 16))
-                .frame(width: 24, height: 24)
-                .background(isSelected ? Color.white.opacity(0.15) : Color.white.opacity(0.08))
-                .cornerRadius(6)
+                .font(.system(size: 13, weight: .medium))
+                .foregroundColor(isSelected ? .white : .blue)
+                .frame(width: 28, height: 28)
+                .background(isSelected ? Color.blue.opacity(0.8) : Color.blue.opacity(0.15))
+                .cornerRadius(8)
             
             VStack(alignment: .leading, spacing: 2) {
                 Text(command.title)
-                    .font(.system(size: 14, weight: .medium))
+                    .font(.system(size: 13.5, weight: .semibold))
                     .foregroundColor(.white)
                 
                 Text(command.subtitle)
                     .font(.system(size: 11))
-                    .foregroundColor(.secondary)
+                    .foregroundColor(.white.opacity(0.5))
             }
             
             Spacer()
@@ -330,13 +381,24 @@ struct CommandRowView: View {
             if command.hasSubpage {
                 Image(systemName: "chevron.right")
                     .font(.system(size: 10, weight: .bold))
-                    .foregroundColor(.secondary)
+                    .foregroundColor(.white.opacity(0.4))
+                    .padding(.trailing, 4)
+            } else {
+                Text("Action")
+                    .font(.system(size: 10, weight: .semibold))
+                    .foregroundColor(isSelected ? .white : .white.opacity(0.6))
+                    .padding(.horizontal, 6)
+                    .padding(.vertical, 2)
+                    .background(Color.white.opacity(isSelected ? 0.2 : 0.08))
+                    .cornerRadius(4)
             }
         }
-        .padding(.horizontal, 10)
-        .padding(.vertical, 6)
-        .background(isSelected ? Color.blue.opacity(0.25) : Color.clear)
+        .padding(.horizontal, 12)
+        .padding(.vertical, 8)
+        .background(isSelected ? Color.white.opacity(0.12) : Color.clear)
         .cornerRadius(8)
+        .scaleEffect(isSelected ? 1.01 : 1.0)
+        .animation(.spring(response: 0.2, dampingFraction: 0.7), value: isSelected)
     }
 }
 
@@ -347,27 +409,38 @@ struct SpaceRowView: View {
     var body: some View {
         HStack(spacing: 12) {
             Image(systemName: "desktopcomputer")
-                .font(.system(size: 16))
-                .frame(width: 24, height: 24)
-                .background(Color.white.opacity(0.08))
-                .cornerRadius(6)
+                .font(.system(size: 13, weight: .medium))
+                .foregroundColor(isSelected ? .white : .purple)
+                .frame(width: 28, height: 28)
+                .background(isSelected ? Color.purple.opacity(0.8) : Color.purple.opacity(0.15))
+                .cornerRadius(8)
             
             VStack(alignment: .leading, spacing: 2) {
                 Text(space.name)
-                    .font(.system(size: 14, weight: .medium))
+                    .font(.system(size: 13.5, weight: .semibold))
                     .foregroundColor(.white)
                 
                 Text("\(space.displayName) · Space \(space.num)")
                     .font(.system(size: 11))
-                    .foregroundColor(.secondary)
+                    .foregroundColor(.white.opacity(0.5))
             }
             
             Spacer()
+            
+            Text("Switch")
+                .font(.system(size: 10, weight: .semibold))
+                .foregroundColor(isSelected ? .white : .white.opacity(0.6))
+                .padding(.horizontal, 6)
+                .padding(.vertical, 2)
+                .background(Color.white.opacity(isSelected ? 0.2 : 0.08))
+                .cornerRadius(4)
         }
-        .padding(.horizontal, 10)
-        .padding(.vertical, 6)
-        .background(isSelected ? Color.blue.opacity(0.25) : Color.clear)
+        .padding(.horizontal, 12)
+        .padding(.vertical, 8)
+        .background(isSelected ? Color.white.opacity(0.12) : Color.clear)
         .cornerRadius(8)
+        .scaleEffect(isSelected ? 1.01 : 1.0)
+        .animation(.spring(response: 0.2, dampingFraction: 0.7), value: isSelected)
     }
 }
 
@@ -380,26 +453,38 @@ struct WindowRowView: View {
             let appIcon = NSWorkspace.shared.icon(forFile: window.appPath)
             Image(nsImage: appIcon)
                 .resizable()
+                .aspectRatio(contentMode: .fit)
                 .frame(width: 24, height: 24)
-                .cornerRadius(4)
+                .cornerRadius(5)
+                .shadow(color: Color.black.opacity(0.2), radius: 2, x: 0, y: 1)
             
             VStack(alignment: .leading, spacing: 2) {
                 Text(window.title.isEmpty ? "(No Title)" : window.title)
-                    .font(.system(size: 14, weight: .medium))
+                    .font(.system(size: 13.5, weight: .semibold))
                     .foregroundColor(.white)
                     .lineLimit(1)
                 
                 Text("\(window.ownerName) · \(window.space.name)")
                     .font(.system(size: 11))
-                    .foregroundColor(.secondary)
+                    .foregroundColor(.white.opacity(0.5))
             }
             
             Spacer()
+            
+            Text("Focus")
+                .font(.system(size: 10, weight: .semibold))
+                .foregroundColor(isSelected ? .white : .white.opacity(0.6))
+                .padding(.horizontal, 6)
+                .padding(.vertical, 2)
+                .background(Color.white.opacity(isSelected ? 0.2 : 0.08))
+                .cornerRadius(4)
         }
-        .padding(.horizontal, 10)
-        .padding(.vertical, 6)
-        .background(isSelected ? Color.blue.opacity(0.25) : Color.clear)
+        .padding(.horizontal, 12)
+        .padding(.vertical, 8)
+        .background(isSelected ? Color.white.opacity(0.12) : Color.clear)
         .cornerRadius(8)
+        .scaleEffect(isSelected ? 1.01 : 1.0)
+        .animation(.spring(response: 0.2, dampingFraction: 0.7), value: isSelected)
     }
 }
 
@@ -410,20 +495,36 @@ struct ConfirmBatchRowView: View {
     var body: some View {
         HStack(spacing: 12) {
             Image(systemName: "checkmark.circle.fill")
-                .font(.system(size: 16))
-                .foregroundColor(.green)
-                .frame(width: 24, height: 24)
+                .font(.system(size: 14, weight: .semibold))
+                .foregroundColor(.white)
+                .frame(width: 28, height: 28)
+                .background(Color.green.opacity(0.8))
+                .cornerRadius(8)
             
             Text("Confirm & Execute Batch Move (\(count) window\(count == 1 ? "" : "s"))")
-                .font(.system(size: 14, weight: .bold))
+                .font(.system(size: 13.5, weight: .bold))
                 .foregroundColor(.green)
             
             Spacer()
+            
+            Text("Run")
+                .font(.system(size: 10, weight: .bold))
+                .foregroundColor(.white)
+                .padding(.horizontal, 8)
+                .padding(.vertical, 3)
+                .background(Color.green.opacity(0.8))
+                .cornerRadius(4)
         }
-        .padding(.horizontal, 10)
+        .padding(.horizontal, 12)
         .padding(.vertical, 8)
-        .background(isSelected ? Color.green.opacity(0.2) : Color.clear)
+        .background(isSelected ? Color.green.opacity(0.2) : Color.green.opacity(0.08))
         .cornerRadius(8)
+        .overlay(
+            RoundedRectangle(cornerRadius: 8)
+                .stroke(Color.green.opacity(0.3), lineWidth: 1)
+        )
+        .scaleEffect(isSelected ? 1.01 : 1.0)
+        .animation(.spring(response: 0.2, dampingFraction: 0.7), value: isSelected)
     }
 }
 
@@ -438,18 +539,20 @@ struct WindowBatchRowView: View {
             let appIcon = NSWorkspace.shared.icon(forFile: window.appPath)
             Image(nsImage: appIcon)
                 .resizable()
+                .aspectRatio(contentMode: .fit)
                 .frame(width: 24, height: 24)
-                .cornerRadius(4)
+                .cornerRadius(5)
+                .shadow(color: Color.black.opacity(0.2), radius: 2, x: 0, y: 1)
             
             VStack(alignment: .leading, spacing: 2) {
                 Text(window.title.isEmpty ? "(No Title)" : window.title)
-                    .font(.system(size: 14, weight: .medium))
+                    .font(.system(size: 13.5, weight: .semibold))
                     .foregroundColor(.white)
                     .lineLimit(1)
                 
                 Text("\(window.ownerName) · \(window.space.name)")
                     .font(.system(size: 11))
-                    .foregroundColor(.secondary)
+                    .foregroundColor(.white.opacity(0.5))
             }
             
             Spacer()
@@ -459,15 +562,25 @@ struct WindowBatchRowView: View {
                     .font(.system(size: 11, weight: .bold))
                     .padding(.horizontal, 8)
                     .padding(.vertical, 3)
-                    .background(Color.green.opacity(0.2))
+                    .background(Color.green.opacity(0.25))
                     .foregroundColor(.green)
                     .cornerRadius(6)
+            } else {
+                Text("Stage")
+                    .font(.system(size: 10, weight: .semibold))
+                    .foregroundColor(isSelected ? .white : .white.opacity(0.6))
+                    .padding(.horizontal, 6)
+                    .padding(.vertical, 2)
+                    .background(Color.white.opacity(isSelected ? 0.2 : 0.08))
+                    .cornerRadius(4)
             }
         }
-        .padding(.horizontal, 10)
-        .padding(.vertical, 6)
-        .background(isSelected ? Color.blue.opacity(0.25) : Color.clear)
+        .padding(.horizontal, 12)
+        .padding(.vertical, 8)
+        .background(isSelected ? Color.white.opacity(0.12) : Color.clear)
         .cornerRadius(8)
+        .scaleEffect(isSelected ? 1.01 : 1.0)
+        .animation(.spring(response: 0.2, dampingFraction: 0.7), value: isSelected)
     }
 }
 
@@ -478,7 +591,7 @@ struct SpacesBottomBar: View {
         HStack(spacing: 8) {
             Text("Spaces:")
                 .font(.system(size: 11, weight: .bold))
-                .foregroundColor(.secondary)
+                .foregroundColor(.white.opacity(0.4))
                 .padding(.trailing, 4)
             
             let spaces = spaceManager.currentDisplaySpaces
@@ -488,16 +601,21 @@ struct SpacesBottomBar: View {
                 let name = spaceManager.getSpaceName(space.id)
                 
                 Text(name)
-                    .font(.system(size: 11, weight: isCurrent ? .bold : .regular))
+                    .font(.system(size: 11, weight: isCurrent ? .bold : .medium))
                     .padding(.horizontal, 10)
-                    .padding(.vertical, 4)
+                    .padding(.vertical, 5)
                     .background(
                         isCurrent
-                        ? Color.blue.opacity(0.7)
-                        : Color.white.opacity(0.08)
+                        ? LinearGradient(colors: [Color.blue, Color.blue.opacity(0.85)], startPoint: .top, endPoint: .bottom)
+                        : LinearGradient(colors: [Color.white.opacity(0.12), Color.white.opacity(0.06)], startPoint: .top, endPoint: .bottom)
                     )
-                    .foregroundColor(isCurrent ? .white : .secondary)
-                    .cornerRadius(12)
+                    .foregroundColor(isCurrent ? .white : .white.opacity(0.8))
+                    .cornerRadius(8)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 8)
+                            .stroke(isCurrent ? Color.blue.opacity(0.5) : Color.white.opacity(0.1), lineWidth: 1)
+                    )
+                    .shadow(color: isCurrent ? Color.blue.opacity(0.3) : Color.clear, radius: 4, x: 0, y: 2)
                     .help("Click to switch, Option+Click to move active window.")
                     .contentShape(Rectangle())
                     .onTapGesture {
@@ -513,8 +631,34 @@ struct SpacesBottomBar: View {
             Spacer()
         }
         .padding(.horizontal, 16)
-        .padding(.vertical, 10)
-        .background(Color.black.opacity(0.15))
+        .padding(.vertical, 12)
+        .background(Color.black.opacity(0.35))
+    }
+}
+
+class FocusTextField: NSTextField {
+    override func viewDidMoveToWindow() {
+        super.viewDidMoveToWindow()
+        if window != nil {
+            NotificationCenter.default.addObserver(self, selector: #selector(windowDidBecomeKey), name: NSWindow.didBecomeKeyNotification, object: window)
+            if window?.isKeyWindow == true {
+                DispatchQueue.main.async { [weak self] in
+                    guard let self = self else { return }
+                    self.window?.makeFirstResponder(self)
+                }
+            }
+        }
+    }
+    
+    @objc private func windowDidBecomeKey() {
+        DispatchQueue.main.async { [weak self] in
+            guard let self = self else { return }
+            self.window?.makeFirstResponder(self)
+        }
+    }
+    
+    deinit {
+        NotificationCenter.default.removeObserver(self)
     }
 }
 
@@ -562,7 +706,7 @@ struct SearchTextField: NSViewRepresentable {
     }
     
     func makeNSView(context: Context) -> NSTextField {
-        let textField = NSTextField()
+        let textField = FocusTextField()
         textField.delegate = context.coordinator
         textField.placeholderString = placeholder
         textField.isBordered = false
@@ -571,11 +715,6 @@ struct SearchTextField: NSViewRepresentable {
         textField.textColor = .white
         textField.font = NSFont.systemFont(ofSize: 18, weight: .regular)
         textField.stringValue = text
-        
-        DispatchQueue.main.async {
-            textField.window?.makeFirstResponder(textField)
-        }
-        
         return textField
     }
     

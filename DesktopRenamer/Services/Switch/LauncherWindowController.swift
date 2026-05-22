@@ -20,7 +20,7 @@ class LauncherWindowController: NSWindowController, NSWindowDelegate {
     init() {
         let panel = LauncherNSPanel(
             contentRect: NSRect(x: 0, y: 0, width: 580, height: 380),
-            styleMask: [.borderless, .nonactivatingPanel],
+            styleMask: [.borderless],
             backing: .buffered,
             defer: false
         )
@@ -32,6 +32,7 @@ class LauncherWindowController: NSWindowController, NSWindowDelegate {
         panel.hasShadow = true
         panel.level = .statusBar
         panel.hidesOnDeactivate = false
+        panel.appearance = NSAppearance(named: .vibrantDark)
         
         super.init(window: panel)
         panel.delegate = self
