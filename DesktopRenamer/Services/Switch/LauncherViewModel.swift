@@ -49,6 +49,9 @@ struct WindowEntry: Identifiable, Equatable {
     }
     @Published var isExecutingBatchMove: Bool = false
     
+    // Captured active window before launcher gains focus
+    @Published var previouslyActiveWindow: (id: Int, pid: Int32, frame: CGRect)? = nil
+    
     // For space renaming
     @Published var renameInputText: String = ""
     
@@ -348,6 +351,7 @@ struct WindowEntry: Identifiable, Equatable {
     }
     
     func executeSwitchToDesktop(_ space: SpaceGroup) {
+        LauncherWindowController.shared.shouldRestoreFocus = false
         incrementCommandFrequency(LauncherCommandType.switchToDesktop.rawValue)
         if let manager = AppDelegate.shared.spaceManager,
            let desktopSpace = manager.spaceNameDict.first(where: { $0.id == space.id }) {
@@ -356,15 +360,68 @@ struct WindowEntry: Identifiable, Equatable {
         closeLauncher()
     }
     
-    func executeMoveWindow(_ space: SpaceGroup) {
-        incrementCommandFrequency(LauncherCommandType.moveWindow.rawValue)
-        if let manager = AppDelegate.shared.spaceManager {
-            manager.moveActiveWindowToSpace(id: space.id)
+    func executeSwitchToSpaceID(_ spaceID: String) {
+        LauncherWindowController.shared.shouldRestoreFocus = false
+        incrementCommandFrequency(LauncherCommandType.switchToDesktop.rawValue)
+        if let manager = AppDelegate.shared.spaceManager,
+           let desktopSpace = manager.spaceNameDict.first(where: { $0.id == spaceID }) {
+            manager.switchToSpace(desktopSpace, forceInstant: true)
         }
         closeLauncher()
     }
     
+    func executeMoveWindow(_ space: SpaceGroup) {
+        incrementCommandFrequency(LauncherCommandType.moveWindow.rawValue)
+        let handled = movePreviouslyActiveWindow(toSpaceID: space.id)
+        if !handled {
+            closeLauncher()
+        }
+    }
+    
+    @discardableResult
+    func movePreviouslyActiveWindow(toSpaceID spaceID: String) -> Bool {
+        guard let prevWindow = previouslyActiveWindow else { return false }
+        
+        let displayID = SpaceHelper.getWindowDisplayID(for: prevWindow.frame) ?? ""
+        let fromSpaceIDStr = SpaceHelper.getCurrentSpaceID(for: displayID) ?? "0"
+        
+        if spaceID == fromSpaceIDStr {
+            print("Launcher: Window \(prevWindow.id) is already on space \(spaceID). No move needed.")
+            return false
+        }
+        
+        let fromSpaceID = Int(fromSpaceIDStr) ?? 0
+        let targetSpaceID = Int(spaceID) ?? 0
+        
+        guard let manager = AppDelegate.shared.spaceManager,
+              let targetSpace = manager.spaceNameDict.first(where: { $0.id == spaceID }) else {
+            return false
+        }
+        
+        if targetSpace.displayID != displayID {
+            // Cross-monitor move
+            print("Launcher: Cross-monitor move window \(prevWindow.id) from space \(fromSpaceID) to space \(targetSpaceID)")
+            SpaceHelper.moveWindowToSpace(windowID: prevWindow.id, fromSpaceID: fromSpaceID, targetSpaceID: targetSpaceID)
+            manager.switchToSpace(targetSpace, forceInstant: true)
+            return false
+        } else {
+            // Same-monitor move: MUST use dragActiveWindow!
+            print("Launcher: Same-monitor move window \(prevWindow.id) from space \(fromSpaceID) to space \(targetSpaceID) using dragActiveWindow")
+            
+            // 1. Hide the launcher so focus goes back to the window
+            LauncherWindowController.shared.shouldRestoreFocus = true
+            closeLauncher()
+            
+            // 2. Perform the drag switch
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+                SpaceHelper.dragActiveWindow(to: spaceID, forceInstant: true)
+            }
+            return true
+        }
+    }
+    
     func executeFocusWindow(_ window: WindowEntry) {
+        LauncherWindowController.shared.shouldRestoreFocus = false
         incrementCommandFrequency(LauncherCommandType.listWindows.rawValue)
         SpaceHelper.focusWindow(id: window.id, pid: window.pid)
         closeLauncher()
@@ -399,15 +456,29 @@ struct WindowEntry: Identifiable, Equatable {
                 Thread.sleep(forTimeInterval: 0.6)
                 
                 for move in sourceMoves {
+                    if move.window.space.id == move.targetSpace.id {
+                        continue
+                    }
                     DispatchQueue.main.sync {
                         SpaceHelper.focusWindow(id: move.window.id, pid: move.window.pid)
                     }
                     Thread.sleep(forTimeInterval: 0.25)
                     
                     DispatchQueue.main.sync {
-                        if let fromSpaceID = Int(move.window.space.id),
-                           let targetSpaceID = Int(move.targetSpace.id) {
-                            SpaceHelper.moveWindowToSpace(windowID: move.window.id, fromSpaceID: fromSpaceID, targetSpaceID: targetSpaceID)
+                        if let manager = AppDelegate.shared.spaceManager,
+                           let sourceSpace = manager.spaceNameDict.first(where: { $0.id == move.window.space.id }),
+                           let targetSpace = manager.spaceNameDict.first(where: { $0.id == move.targetSpace.id }) {
+                            
+                            if sourceSpace.displayID != targetSpace.displayID {
+                                // Cross-monitor move
+                                if let fromSpaceID = Int(move.window.space.id),
+                                   let targetSpaceID = Int(move.targetSpace.id) {
+                                    SpaceHelper.moveWindowToSpace(windowID: move.window.id, fromSpaceID: fromSpaceID, targetSpaceID: targetSpaceID)
+                                }
+                            } else {
+                                // Same-monitor move
+                                SpaceHelper.dragActiveWindow(to: move.targetSpace.id, forceInstant: true)
+                            }
                         }
                     }
                     Thread.sleep(forTimeInterval: 0.5)
@@ -417,6 +488,7 @@ struct WindowEntry: Identifiable, Equatable {
             DispatchQueue.main.async {
                 self.isExecutingBatchMove = false
                 self.stagedMoves.removeAll()
+                LauncherWindowController.shared.shouldRestoreFocus = false
                 self.closeLauncher()
             }
         }
