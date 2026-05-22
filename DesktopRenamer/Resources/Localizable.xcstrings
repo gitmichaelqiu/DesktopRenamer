@@ -78,9 +78,6 @@
     "→ %@" : {
 
     },
-    "→ Stage: %@" : {
-
-    },
     "↺" : {
       "shouldTranslate" : false
     },
@@ -146,9 +143,6 @@
           }
         }
       }
-    },
-    "Action" : {
-
     },
     "Active Space Label" : {
       "localizations" : {
@@ -626,9 +620,6 @@
           }
         }
       }
-    },
-    "Focus" : {
-
     },
     "Font size" : {
       "localizations" : {
@@ -1128,6 +1119,9 @@
         }
       }
     },
+    "No commands or items matched your search query." : {
+
+    },
     "No editable spaces (fullscreen only)" : {
       "localizations" : {
         "zh-Hans" : {
@@ -1137,9 +1131,6 @@
           }
         }
       }
-    },
-    "No matching commands found" : {
-
     },
     "No new spaces detected yet..." : {
       "localizations" : {
@@ -1532,9 +1523,6 @@
           }
         }
       }
-    },
-    "Run" : {
-
     },
     "Save" : {
       "localizations" : {
@@ -2129,7 +2117,7 @@
     "Spaces:" : {
 
     },
-    "Stage" : {
+    "Stage: %@" : {
 
     },
     "Start" : {
@@ -2161,9 +2149,6 @@
           }
         }
       }
-    },
-    "Switch" : {
-
     },
     "Switch & Move" : {
       "localizations" : {
@@ -2393,9 +2378,6 @@
           }
         }
       }
-    },
-    "Try searching for something else" : {
-
     },
     "Type a new name above and press Enter to save" : {
 

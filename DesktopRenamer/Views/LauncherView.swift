@@ -1,16 +1,71 @@
 import SwiftUI
 import AppKit
 
+struct ThemeColors {
+    let isDark: Bool
+    
+    var backgroundOverlay: Color {
+        isDark ? Color(red: 0.08, green: 0.08, blue: 0.09).opacity(0.85) : Color(red: 0.95, green: 0.95, blue: 0.96).opacity(0.85)
+    }
+    
+    var textPrimary: Color {
+        isDark ? .white : Color(red: 0.12, green: 0.12, blue: 0.14)
+    }
+    
+    var textSecondary: Color {
+        isDark ? .white.opacity(0.7) : Color(red: 0.12, green: 0.12, blue: 0.14).opacity(0.7)
+    }
+    
+    var textTertiary: Color {
+        isDark ? .white.opacity(0.45) : Color(red: 0.12, green: 0.12, blue: 0.14).opacity(0.45)
+    }
+    
+    var textQuaternary: Color {
+        isDark ? .white.opacity(0.3) : Color(red: 0.12, green: 0.12, blue: 0.14).opacity(0.3)
+    }
+    
+    var border: Color {
+        isDark ? Color.white.opacity(0.12) : Color.black.opacity(0.12)
+    }
+    
+    var rowHover: Color {
+        isDark ? Color.white.opacity(0.08) : Color.black.opacity(0.05)
+    }
+    
+    var badgeBg: Color {
+        isDark ? Color.white.opacity(0.08) : Color.black.opacity(0.06)
+    }
+    
+    var badgeBorder: Color {
+        isDark ? Color.white.opacity(0.1) : Color.black.opacity(0.1)
+    }
+    
+    var separator: Color {
+        isDark ? Color.white.opacity(0.06) : Color.black.opacity(0.06)
+    }
+    
+    var bottomBarBg: Color {
+        isDark ? Color.black.opacity(0.15) : Color.black.opacity(0.05)
+    }
+    
+    var greenText: Color {
+        isDark ? Color.green : Color(red: 0.0, green: 0.5, blue: 0.15)
+    }
+}
+
 struct LauncherView: View {
     @ObservedObject var viewModel: LauncherViewModel
     @ObservedObject var spaceManager = AppDelegate.shared.spaceManager!
+    @Environment(\.colorScheme) var colorScheme
+    
+    var colors: ThemeColors {
+        ThemeColors(isDark: colorScheme == .dark)
+    }
     
     var body: some View {
         ZStack {
             VisualEffectView(material: .hudWindow, blendingMode: .withinWindow, state: .active)
-                .cornerRadius(12)
-            Color(red: 0.08, green: 0.08, blue: 0.09).opacity(0.85)
-                .cornerRadius(12)
+            colors.backgroundOverlay
             
             VStack(spacing: 0) {
                 // Header (Typing Bar)
@@ -25,12 +80,12 @@ struct LauncherView: View {
                                 .font(.system(size: 11, weight: .medium))
                                 .padding(.horizontal, 8)
                                 .padding(.vertical, 4)
-                                .background(Color.white.opacity(0.08))
-                                .foregroundColor(.white.opacity(0.8))
+                                .background(colors.badgeBg)
+                                .foregroundColor(colors.textSecondary)
                                 .cornerRadius(4)
                                 .overlay(
                                     RoundedRectangle(cornerRadius: 4)
-                                        .stroke(Color.white.opacity(0.1), lineWidth: 1)
+                                        .stroke(colors.badgeBorder, lineWidth: 1)
                                 )
                             
                             if let staging = viewModel.stagingWindow {
@@ -38,24 +93,25 @@ struct LauncherView: View {
                                     .font(.system(size: 11, weight: .medium))
                                     .padding(.horizontal, 8)
                                     .padding(.vertical, 4)
-                                    .background(Color.white.opacity(0.08))
-                                    .foregroundColor(.white.opacity(0.8))
+                                    .background(colors.badgeBg)
+                                    .foregroundColor(colors.textSecondary)
                                     .cornerRadius(4)
                                     .overlay(
                                         RoundedRectangle(cornerRadius: 4)
-                                            .stroke(Color.white.opacity(0.1), lineWidth: 1)
+                                            .stroke(colors.badgeBorder, lineWidth: 1)
                                     )
                             }
                             
                             Image(systemName: "chevron.right")
                                 .font(.system(size: 9, weight: .semibold))
-                                .foregroundColor(.white.opacity(0.3))
+                                .foregroundColor(colors.textQuaternary)
                         }
                     }
                     
                     if viewModel.activeCommand?.type == .renameCurrentSpace {
                         SearchTextField(
                             text: $viewModel.renameInputText,
+                            isDark: colors.isDark,
                             onUpArrow: {},
                             onDownArrow: {},
                             onEnter: {
@@ -70,6 +126,7 @@ struct LauncherView: View {
                     } else {
                         SearchTextField(
                             text: $viewModel.searchQuery,
+                            isDark: colors.isDark,
                             onUpArrow: {
                                 if viewModel.selectedRowIndex > 0 {
                                     viewModel.selectedRowIndex -= 1
@@ -101,7 +158,7 @@ struct LauncherView: View {
                 .padding(.vertical, 14)
                 
                 Rectangle()
-                    .fill(Color.white.opacity(0.06))
+                    .fill(colors.separator)
                     .frame(height: 1)
                 
                 // Content area
@@ -110,18 +167,18 @@ struct LauncherView: View {
                         Spacer()
                         Image(systemName: "pencil.line")
                             .font(.system(size: 28, weight: .light))
-                            .foregroundColor(.white.opacity(0.4))
+                            .foregroundColor(colors.textSecondary)
                         
                         Text("Rename Current Desktop Space")
                             .font(.system(size: 14, weight: .medium))
-                            .foregroundColor(.white)
+                            .foregroundColor(colors.textPrimary)
                         
                         Text("Type a new name above and press Enter to save")
                             .font(.system(size: 11))
-                            .foregroundColor(.white.opacity(0.4))
+                            .foregroundColor(colors.textTertiary)
                         Spacer()
                     }
-                    .frame(height: 260)
+                    .frame(maxHeight: .infinity)
                     .frame(maxWidth: .infinity)
                 } else if viewModel.isExecutingBatchMove {
                     VStack(spacing: 16) {
@@ -129,33 +186,39 @@ struct LauncherView: View {
                             .scaleEffect(1.2)
                         Text("Executing batch window moves...")
                             .font(.system(size: 13, weight: .medium))
-                            .foregroundColor(.white.opacity(0.7))
+                            .foregroundColor(colors.textSecondary)
                     }
-                    .frame(height: 260)
+                    .frame(maxHeight: .infinity)
                     .frame(maxWidth: .infinity)
                 } else {
                     ListAreaView(viewModel: viewModel)
-                        .frame(height: 260)
+                        .frame(maxHeight: .infinity)
                 }
                 
                 Rectangle()
-                    .fill(Color.white.opacity(0.06))
+                    .fill(colors.separator)
                     .frame(height: 1)
                 
                 // Spaces bottom bar
-                SpacesBottomBar(spaceManager: spaceManager)
+                SpacesBottomBar(viewModel: viewModel, spaceManager: spaceManager)
             }
         }
         .frame(width: 580, height: 380)
         .overlay(
-            RoundedRectangle(cornerRadius: 12)
-                .stroke(Color.white.opacity(0.12), lineWidth: 1)
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .stroke(colors.border, lineWidth: 1)
         )
+        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
     }
 }
 
 struct ListAreaView: View {
     @ObservedObject var viewModel: LauncherViewModel
+    @Environment(\.colorScheme) var colorScheme
+    
+    var colors: ThemeColors {
+        ThemeColors(isDark: colorScheme == .dark)
+    }
     
     var body: some View {
         VStack(spacing: 0) {
@@ -348,31 +411,43 @@ struct ListAreaView: View {
 struct KeycapView: View {
     let text: String
     let isSelected: Bool
+    var isGreenRow: Bool = false
+    @Environment(\.colorScheme) var colorScheme
+    
+    var colors: ThemeColors {
+        ThemeColors(isDark: colorScheme == .dark)
+    }
     
     var body: some View {
         Text(text)
             .font(.system(size: 11, weight: .medium))
-            .foregroundColor(isSelected ? Color.white.opacity(0.9) : Color.white.opacity(0.6))
+            .foregroundColor(isGreenRow && isSelected ? .white : (isSelected ? colors.textPrimary.opacity(0.9) : colors.textSecondary))
             .padding(.horizontal, 8)
             .padding(.vertical, 4)
-            .background(Color.white.opacity(isSelected ? 0.12 : 0.06))
+            .background(isGreenRow && isSelected ? Color.white.opacity(0.2) : colors.textPrimary.opacity(isSelected ? 0.12 : 0.06))
             .cornerRadius(4)
     }
 }
 
 struct EmptyResultsView: View {
+    @Environment(\.colorScheme) var colorScheme
+    
+    var colors: ThemeColors {
+        ThemeColors(isDark: colorScheme == .dark)
+    }
+    
     var body: some View {
         VStack(spacing: 6) {
             Spacer()
             Image(systemName: "magnifyingglass")
                 .font(.system(size: 24, weight: .light))
-                .foregroundColor(.white.opacity(0.2))
+                .foregroundColor(colors.textQuaternary)
             Text("No results")
                 .font(.system(size: 13, weight: .medium))
-                .foregroundColor(.white.opacity(0.5))
+                .foregroundColor(colors.textTertiary)
             Text("No commands or items matched your search query.")
                 .font(.system(size: 11))
-                .foregroundColor(.white.opacity(0.3))
+                .foregroundColor(colors.textQuaternary)
             Spacer()
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -382,6 +457,11 @@ struct EmptyResultsView: View {
 struct CommandRowView: View {
     let command: LauncherCommand
     let isSelected: Bool
+    @Environment(\.colorScheme) var colorScheme
+    
+    var colors: ThemeColors {
+        ThemeColors(isDark: colorScheme == .dark)
+    }
     
     var body: some View {
         HStack(spacing: 12) {
@@ -389,17 +469,17 @@ struct CommandRowView: View {
                 .font(.system(size: 13, weight: .semibold))
                 .foregroundColor(isSelected ? .white : Color(red: 0.0, green: 0.55, blue: 1.0))
                 .frame(width: 28, height: 28)
-                .background(isSelected ? Color(red: 0.0, green: 0.55, blue: 1.0) : Color.white.opacity(0.06))
+                .background(isSelected ? Color(red: 0.0, green: 0.55, blue: 1.0) : colors.badgeBg)
                 .cornerRadius(6)
             
             VStack(alignment: .leading, spacing: 2) {
                 Text(command.title)
                     .font(.system(size: 13, weight: .medium))
-                    .foregroundColor(isSelected ? .white : .white.opacity(0.95))
+                    .foregroundColor(colors.textPrimary)
                 
                 Text(command.subtitle)
                     .font(.system(size: 11))
-                    .foregroundColor(isSelected ? .white.opacity(0.7) : .white.opacity(0.45))
+                    .foregroundColor(isSelected ? colors.textSecondary : colors.textTertiary)
             }
             
             Spacer()
@@ -407,7 +487,7 @@ struct CommandRowView: View {
             if command.hasSubpage {
                 Image(systemName: "chevron.right")
                     .font(.system(size: 10, weight: .semibold))
-                    .foregroundColor(.white.opacity(isSelected ? 0.7 : 0.35))
+                    .foregroundColor(isSelected ? colors.textSecondary : colors.textTertiary)
                     .padding(.trailing, 4)
             } else {
                 KeycapView(text: "Action", isSelected: isSelected)
@@ -415,7 +495,7 @@ struct CommandRowView: View {
         }
         .padding(.horizontal, 10)
         .padding(.vertical, 6)
-        .background(isSelected ? Color.white.opacity(0.08) : Color.clear)
+        .background(isSelected ? colors.rowHover : Color.clear)
         .cornerRadius(6)
     }
 }
@@ -423,6 +503,11 @@ struct CommandRowView: View {
 struct SpaceRowView: View {
     let space: SpaceGroup
     let isSelected: Bool
+    @Environment(\.colorScheme) var colorScheme
+    
+    var colors: ThemeColors {
+        ThemeColors(isDark: colorScheme == .dark)
+    }
     
     var body: some View {
         HStack(spacing: 12) {
@@ -430,17 +515,17 @@ struct SpaceRowView: View {
                 .font(.system(size: 13, weight: .semibold))
                 .foregroundColor(isSelected ? .white : Color(red: 0.0, green: 0.55, blue: 1.0))
                 .frame(width: 28, height: 28)
-                .background(isSelected ? Color(red: 0.0, green: 0.55, blue: 1.0) : Color.white.opacity(0.06))
+                .background(isSelected ? Color(red: 0.0, green: 0.55, blue: 1.0) : colors.badgeBg)
                 .cornerRadius(6)
             
             VStack(alignment: .leading, spacing: 2) {
                 Text(space.name)
                     .font(.system(size: 13, weight: .medium))
-                    .foregroundColor(isSelected ? .white : .white.opacity(0.95))
+                    .foregroundColor(colors.textPrimary)
                 
                 Text("\(space.displayName) · Space \(space.num)")
                     .font(.system(size: 11))
-                    .foregroundColor(isSelected ? .white.opacity(0.7) : .white.opacity(0.45))
+                    .foregroundColor(isSelected ? colors.textSecondary : colors.textTertiary)
             }
             
             Spacer()
@@ -449,7 +534,7 @@ struct SpaceRowView: View {
         }
         .padding(.horizontal, 10)
         .padding(.vertical, 6)
-        .background(isSelected ? Color.white.opacity(0.08) : Color.clear)
+        .background(isSelected ? colors.rowHover : Color.clear)
         .cornerRadius(6)
     }
 }
@@ -457,6 +542,11 @@ struct SpaceRowView: View {
 struct WindowRowView: View {
     let window: WindowEntry
     let isSelected: Bool
+    @Environment(\.colorScheme) var colorScheme
+    
+    var colors: ThemeColors {
+        ThemeColors(isDark: colorScheme == .dark)
+    }
     
     var body: some View {
         HStack(spacing: 12) {
@@ -466,18 +556,18 @@ struct WindowRowView: View {
                 .aspectRatio(contentMode: .fit)
                 .frame(width: 20, height: 20)
                 .frame(width: 28, height: 28)
-                .background(Color.white.opacity(0.06))
+                .background(colors.badgeBg)
                 .cornerRadius(6)
             
             VStack(alignment: .leading, spacing: 2) {
                 Text(window.title.isEmpty ? "(No Title)" : window.title)
                     .font(.system(size: 13, weight: .medium))
-                    .foregroundColor(isSelected ? .white : .white.opacity(0.95))
+                    .foregroundColor(colors.textPrimary)
                     .lineLimit(1)
                 
                 Text("\(window.ownerName) · \(window.space.name)")
                     .font(.system(size: 11))
-                    .foregroundColor(isSelected ? .white.opacity(0.7) : .white.opacity(0.45))
+                    .foregroundColor(isSelected ? colors.textSecondary : colors.textTertiary)
             }
             
             Spacer()
@@ -486,7 +576,7 @@ struct WindowRowView: View {
         }
         .padding(.horizontal, 10)
         .padding(.vertical, 6)
-        .background(isSelected ? Color.white.opacity(0.08) : Color.clear)
+        .background(isSelected ? colors.rowHover : Color.clear)
         .cornerRadius(6)
     }
 }
@@ -494,31 +584,36 @@ struct WindowRowView: View {
 struct ConfirmBatchRowView: View {
     let count: Int
     let isSelected: Bool
+    @Environment(\.colorScheme) var colorScheme
+    
+    var colors: ThemeColors {
+        ThemeColors(isDark: colorScheme == .dark)
+    }
     
     var body: some View {
         HStack(spacing: 12) {
             Image(systemName: "checkmark.circle.fill")
                 .font(.system(size: 13, weight: .semibold))
-                .foregroundColor(.white)
+                .foregroundColor(isSelected ? colors.greenText : .white)
                 .frame(width: 28, height: 28)
-                .background(Color.green.opacity(0.8))
+                .background(isSelected ? .white : colors.greenText.opacity(0.8))
                 .cornerRadius(6)
             
             Text("Confirm & Execute Batch Move (\(count) window\(count == 1 ? "" : "s"))")
                 .font(.system(size: 13, weight: .semibold))
-                .foregroundColor(isSelected ? .white : .green)
+                .foregroundColor(isSelected ? .white : colors.greenText)
             
             Spacer()
             
-            KeycapView(text: "Run ↵", isSelected: isSelected)
+            KeycapView(text: "Run ↵", isSelected: isSelected, isGreenRow: true)
         }
         .padding(.horizontal, 10)
         .padding(.vertical, 6)
-        .background(Color.green.opacity(isSelected ? 0.15 : 0.06))
+        .background(isSelected ? colors.greenText : colors.greenText.opacity(0.06))
         .cornerRadius(6)
         .overlay(
             RoundedRectangle(cornerRadius: 6)
-                .stroke(Color.green.opacity(isSelected ? 0.3 : 0.1), lineWidth: 1)
+                .stroke(colors.greenText.opacity(isSelected ? 0.3 : 0.1), lineWidth: 1)
         )
     }
 }
@@ -528,6 +623,11 @@ struct WindowBatchRowView: View {
     let isSelected: Bool
     let isStaged: Bool
     let targetSpaceName: String
+    @Environment(\.colorScheme) var colorScheme
+    
+    var colors: ThemeColors {
+        ThemeColors(isDark: colorScheme == .dark)
+    }
     
     var body: some View {
         HStack(spacing: 12) {
@@ -537,18 +637,18 @@ struct WindowBatchRowView: View {
                 .aspectRatio(contentMode: .fit)
                 .frame(width: 20, height: 20)
                 .frame(width: 28, height: 28)
-                .background(Color.white.opacity(0.06))
+                .background(colors.badgeBg)
                 .cornerRadius(6)
             
             VStack(alignment: .leading, spacing: 2) {
                 Text(window.title.isEmpty ? "(No Title)" : window.title)
                     .font(.system(size: 13, weight: .medium))
-                    .foregroundColor(isSelected ? .white : .white.opacity(0.95))
+                    .foregroundColor(colors.textPrimary)
                     .lineLimit(1)
                 
                 Text("\(window.ownerName) · \(window.space.name)")
                     .font(.system(size: 11))
-                    .foregroundColor(isSelected ? .white.opacity(0.7) : .white.opacity(0.45))
+                    .foregroundColor(isSelected ? colors.textSecondary : colors.textTertiary)
             }
             
             Spacer()
@@ -556,19 +656,19 @@ struct WindowBatchRowView: View {
             if isStaged {
                 HStack(spacing: 4) {
                     Circle()
-                        .fill(Color.green)
+                        .fill(colors.greenText)
                         .frame(width: 5, height: 5)
                     Text("→ \(targetSpaceName)")
                         .font(.system(size: 10, weight: .medium))
-                        .foregroundColor(.green)
+                        .foregroundColor(colors.greenText)
                 }
                 .padding(.horizontal, 6)
                 .padding(.vertical, 3.5)
-                .background(Color.green.opacity(0.12))
+                .background(colors.greenText.opacity(0.12))
                 .cornerRadius(6)
                 .overlay(
                     RoundedRectangle(cornerRadius: 6)
-                        .stroke(Color.green.opacity(0.3), lineWidth: 1)
+                        .stroke(colors.greenText.opacity(0.3), lineWidth: 1)
                 )
             } else {
                 KeycapView(text: "Stage ↵", isSelected: isSelected)
@@ -576,19 +676,25 @@ struct WindowBatchRowView: View {
         }
         .padding(.horizontal, 10)
         .padding(.vertical, 6)
-        .background(isSelected ? Color.white.opacity(0.08) : Color.clear)
+        .background(isSelected ? colors.rowHover : Color.clear)
         .cornerRadius(6)
     }
 }
 
 struct SpacesBottomBar: View {
+    @ObservedObject var viewModel: LauncherViewModel
     @ObservedObject var spaceManager: SpaceManager
+    @Environment(\.colorScheme) var colorScheme
+    
+    var colors: ThemeColors {
+        ThemeColors(isDark: colorScheme == .dark)
+    }
     
     var body: some View {
         HStack(spacing: 8) {
             Text("Spaces:")
                 .font(.system(size: 11, weight: .semibold))
-                .foregroundColor(.white.opacity(0.35))
+                .foregroundColor(colors.textTertiary)
                 .padding(.trailing, 2)
             
             let spaces = spaceManager.currentDisplaySpaces
@@ -610,10 +716,10 @@ struct SpacesBottomBar: View {
                     } else {
                         Text(name)
                             .font(.system(size: 11, weight: .medium))
-                            .foregroundColor(.white.opacity(0.6))
+                            .foregroundColor(colors.textSecondary)
                             .padding(.horizontal, 10)
                             .padding(.vertical, 4)
-                            .background(Color.white.opacity(0.08))
+                            .background(colors.badgeBg)
                             .clipShape(Capsule())
                     }
                 }
@@ -621,9 +727,12 @@ struct SpacesBottomBar: View {
                 .onTapGesture {
                     let isOptionPressed = NSEvent.modifierFlags.contains(.option)
                     if isOptionPressed {
-                        spaceManager.moveActiveWindowToSpace(id: space.id)
+                        let handled = viewModel.movePreviouslyActiveWindow(toSpaceID: space.id)
+                        if !handled {
+                            viewModel.closeLauncher()
+                        }
                     } else {
-                        spaceManager.switchToSpace(space, forceInstant: true)
+                        viewModel.executeSwitchToSpaceID(space.id)
                     }
                 }
                 .help("Click to switch, Option+Click to move active window.")
@@ -633,7 +742,7 @@ struct SpacesBottomBar: View {
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 10)
-        .background(Color.black.opacity(0.15))
+        .background(colors.bottomBarBg)
     }
 }
 
@@ -677,6 +786,7 @@ class FocusTextField: NSTextField {
 
 struct SearchTextField: NSViewRepresentable {
     @Binding var text: String
+    var isDark: Bool
     var onUpArrow: () -> Void
     var onDownArrow: () -> Void
     var onEnter: () -> Void
@@ -724,13 +834,14 @@ struct SearchTextField: NSViewRepresentable {
         textField.isBordered = false
         textField.drawsBackground = false
         textField.focusRingType = .none
-        textField.textColor = .white
+        textField.textColor = isDark ? .white : NSColor(red: 0.12, green: 0.12, blue: 0.14, alpha: 1.0)
         textField.font = NSFont.systemFont(ofSize: 18, weight: .regular)
         
+        let placeholderColor = isDark ? NSColor.white.withAlphaComponent(0.35) : NSColor(red: 0.12, green: 0.12, blue: 0.14, alpha: 0.35)
         let placeholderAttr = NSAttributedString(
             string: placeholder,
             attributes: [
-                .foregroundColor: NSColor.white.withAlphaComponent(0.35),
+                .foregroundColor: placeholderColor,
                 .font: NSFont.systemFont(ofSize: 18, weight: .regular)
             ]
         )
@@ -744,10 +855,12 @@ struct SearchTextField: NSViewRepresentable {
         if nsView.stringValue != text {
             nsView.stringValue = text
         }
+        nsView.textColor = isDark ? .white : NSColor(red: 0.12, green: 0.12, blue: 0.14, alpha: 1.0)
+        let placeholderColor = isDark ? NSColor.white.withAlphaComponent(0.35) : NSColor(red: 0.12, green: 0.12, blue: 0.14, alpha: 0.35)
         let placeholderAttr = NSAttributedString(
             string: placeholder,
             attributes: [
-                .foregroundColor: NSColor.white.withAlphaComponent(0.35),
+                .foregroundColor: placeholderColor,
                 .font: NSFont.systemFont(ofSize: 18, weight: .regular)
             ]
         )
