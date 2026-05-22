@@ -37,11 +37,11 @@ class LauncherWindowController: NSWindowController, NSWindowDelegate {
         panel.delegate = self
         
         // Setup SwiftUI View
-        viewModel.onClose = { [weak self] in
+        self.viewModel.onClose = { [weak self] in
             self?.hide()
         }
         
-        let launcherView = LauncherView(viewModel: viewModel)
+        let launcherView = LauncherView(viewModel: self.viewModel)
         let hostingView = NSHostingView(rootView: launcherView)
         hostingView.frame = NSRect(x: 0, y: 0, width: 580, height: 380)
         

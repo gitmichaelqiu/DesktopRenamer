@@ -18,7 +18,7 @@ struct WindowEntry: Identifiable, Equatable {
     let space: SpaceGroup
 }
 
-class LauncherViewModel: ObservableObject {
+@MainActor class LauncherViewModel: ObservableObject {
     @Published var searchQuery: String = "" {
         didSet {
             selectedRowIndex = 0

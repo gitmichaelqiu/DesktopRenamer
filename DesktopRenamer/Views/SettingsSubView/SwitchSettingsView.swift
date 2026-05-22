@@ -77,6 +77,26 @@ struct SwitchSettingsView: View {
                             .disabled(hotkeyManager.isDefault(for: .reloadLabels))
                         }
                     }
+                    
+                    Divider()
+                    
+                    SettingsRow("Open Custom Launcher") {
+                        HStack {
+                            Text(hotkeyManager.description(for: .launcher))
+                                .foregroundColor(.secondary)
+                                .padding(.trailing, 8)
+                            
+                            Button("◉") {
+                                hotkeyManager.startListening(for: .launcher)
+                            }
+                            .disabled(hotkeyManager.isListening)
+                            
+                            Button("↺") {
+                                hotkeyManager.resetToDefault(for: .launcher)
+                            }
+                            .disabled(hotkeyManager.isDefault(for: .launcher))
+                        }
+                    }
                 }
                 
                 SettingsSection(nil) {
