@@ -418,22 +418,48 @@ class SpaceHelper {
     }
     
     static func getActiveWindowInfo() -> (id: Int, pid: Int32, frame: CGRect)? {
+        let ourPID = ProcessInfo.processInfo.processIdentifier
         guard let frontApp = NSWorkspace.shared.frontmostApplication else { return nil }
-        let pid = frontApp.processIdentifier
         
         let options = CGWindowListOption(arrayLiteral: .optionOnScreenOnly, .excludeDesktopElements)
         let windowList = CGWindowListCopyWindowInfo(options, kCGNullWindowID) as? [[String: Any]] ?? []
         
-        for window in windowList {
-            if let windowPid = window[kCGWindowOwnerPID as String] as? Int,
-               windowPid == pid,
-               let layer = window[kCGWindowLayer as String] as? Int, layer == 0,
-               let wid = window[kCGWindowNumber as String] as? Int,
-               let bounds = window[kCGWindowBounds as String] as? [String: Any],
-               let x = bounds["X"] as? CGFloat, let y = bounds["Y"] as? CGFloat,
-               let w = bounds["Width"] as? CGFloat, let h = bounds["Height"] as? CGFloat {
-                   return (id: wid, pid: Int32(pid), frame: CGRect(x: x, y: y, width: w, height: h))
-               }
+        if frontApp.processIdentifier == ourPID {
+            // Find the first window in Z-order that is layer 0, not our PID, has valid size, and belongs to a regular app.
+            for window in windowList {
+                guard let layer = window[kCGWindowLayer as String] as? Int, layer == 0,
+                      let windowPid = window[kCGWindowOwnerPID as String] as? Int,
+                      windowPid != Int(ourPID),
+                      let wid = window[kCGWindowNumber as String] as? Int,
+                      let bounds = window[kCGWindowBounds as String] as? [String: Any],
+                      let x = bounds["X"] as? CGFloat, let y = bounds["Y"] as? CGFloat,
+                      let w = bounds["Width"] as? CGFloat, let h = bounds["Height"] as? CGFloat,
+                      w >= 100, h >= 100
+                else { continue }
+                
+                // Ensure it's a regular application window (not a system overlay)
+                if let app = NSRunningApplication(processIdentifier: Int32(windowPid)),
+                   app.activationPolicy == .regular {
+                    let info = (id: wid, pid: Int32(windowPid), frame: CGRect(x: x, y: y, width: w, height: h))
+                    print("SpaceHelper: Captured active window ID: \(info.id), PID: \(info.pid), frame: \(info.frame) (using fallback scan)")
+                    return info
+                }
+            }
+        } else {
+            let pid = frontApp.processIdentifier
+            for window in windowList {
+                if let windowPid = window[kCGWindowOwnerPID as String] as? Int,
+                   windowPid == pid,
+                   let layer = window[kCGWindowLayer as String] as? Int, layer == 0,
+                   let wid = window[kCGWindowNumber as String] as? Int,
+                   let bounds = window[kCGWindowBounds as String] as? [String: Any],
+                   let x = bounds["X"] as? CGFloat, let y = bounds["Y"] as? CGFloat,
+                   let w = bounds["Width"] as? CGFloat, let h = bounds["Height"] as? CGFloat {
+                       let info = (id: wid, pid: Int32(pid), frame: CGRect(x: x, y: y, width: w, height: h))
+                       print("SpaceHelper: Captured active window ID: \(info.id), PID: \(info.pid), frame: \(info.frame)")
+                       return info
+                   }
+            }
         }
         return nil
     }

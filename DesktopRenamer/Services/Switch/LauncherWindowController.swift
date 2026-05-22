@@ -16,6 +16,7 @@ class LauncherWindowController: NSWindowController, NSWindowDelegate {
     static let shared = LauncherWindowController()
     
     private let viewModel = LauncherViewModel()
+    var shouldRestoreFocus = true
     
     init() {
         let panel = LauncherNSPanel(
@@ -32,7 +33,7 @@ class LauncherWindowController: NSWindowController, NSWindowDelegate {
         panel.hasShadow = true
         panel.level = .statusBar
         panel.hidesOnDeactivate = false
-        panel.appearance = NSAppearance(named: .vibrantDark)
+        panel.becomesKeyOnlyIfNeeded = false
         
         super.init(window: panel)
         panel.delegate = self
@@ -56,6 +57,11 @@ class LauncherWindowController: NSWindowController, NSWindowDelegate {
     func show() {
         guard let panel = window as? LauncherNSPanel else { return }
         
+        shouldRestoreFocus = true
+        
+        // Capture previously active window before we activate the launcher and take focus
+        viewModel.previouslyActiveWindow = SpaceHelper.getActiveWindowInfo()
+        
         // Center on screen with cursor
         centerOnActiveScreen()
         
@@ -66,8 +72,8 @@ class LauncherWindowController: NSWindowController, NSWindowDelegate {
         viewModel.stagingWindow = nil
         
         // Make key and focus
-        panel.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)
+        panel.makeKeyAndOrderFront(nil)
         
         // Post a notification to force focus
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
@@ -77,6 +83,12 @@ class LauncherWindowController: NSWindowController, NSWindowDelegate {
     
     func hide() {
         window?.orderOut(nil)
+        
+        if shouldRestoreFocus, let prev = viewModel.previouslyActiveWindow {
+            DispatchQueue.main.async {
+                SpaceHelper.focusWindow(id: prev.id, pid: prev.pid)
+            }
+        }
     }
     
     func toggle() {
