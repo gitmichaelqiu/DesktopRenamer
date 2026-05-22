@@ -2,44 +2,54 @@ import SwiftUI
 import AppKit
 
 struct LauncherView: View {
-    @StateObject var viewModel = LauncherViewModel()
+    @ObservedObject var viewModel: LauncherViewModel
     @ObservedObject var spaceManager = AppDelegate.shared.spaceManager!
     
     var body: some View {
         ZStack {
             VisualEffectView(material: .hudWindow, blendingMode: .withinWindow, state: .active)
                 .cornerRadius(12)
+            Color(red: 0.08, green: 0.08, blue: 0.09).opacity(0.85)
+                .cornerRadius(12)
             
             VStack(spacing: 0) {
                 // Header (Typing Bar)
                 HStack(spacing: 12) {
                     Image(systemName: "magnifyingglass")
-                        .foregroundColor(.blue)
-                        .font(.system(size: 18, weight: .semibold))
+                        .foregroundColor(Color(red: 0.0, green: 0.55, blue: 1.0))
+                        .font(.system(size: 20, weight: .regular))
                     
                     if let active = viewModel.activeCommand {
                         HStack(spacing: 6) {
                             Text(active.title)
-                                .font(.system(size: 12, weight: .bold))
+                                .font(.system(size: 11, weight: .medium))
                                 .padding(.horizontal, 8)
                                 .padding(.vertical, 4)
-                                .background(Color.blue.opacity(0.2))
-                                .foregroundColor(.blue)
-                                .cornerRadius(6)
+                                .background(Color.white.opacity(0.08))
+                                .foregroundColor(.white.opacity(0.8))
+                                .cornerRadius(4)
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 4)
+                                        .stroke(Color.white.opacity(0.1), lineWidth: 1)
+                                )
                             
                             if let staging = viewModel.stagingWindow {
-                                Text("→ Stage: \(staging.ownerName)")
-                                    .font(.system(size: 12, weight: .semibold))
+                                Text("Stage: \(staging.ownerName)")
+                                    .font(.system(size: 11, weight: .medium))
                                     .padding(.horizontal, 8)
                                     .padding(.vertical, 4)
-                                    .background(Color.green.opacity(0.2))
-                                    .foregroundColor(.green)
-                                    .cornerRadius(6)
+                                    .background(Color.white.opacity(0.08))
+                                    .foregroundColor(.white.opacity(0.8))
+                                    .cornerRadius(4)
+                                    .overlay(
+                                        RoundedRectangle(cornerRadius: 4)
+                                            .stroke(Color.white.opacity(0.1), lineWidth: 1)
+                                    )
                             }
                             
                             Image(systemName: "chevron.right")
-                                .font(.system(size: 10, weight: .bold))
-                                .foregroundColor(.gray)
+                                .font(.system(size: 9, weight: .semibold))
+                                .foregroundColor(.white.opacity(0.3))
                         }
                     }
                     
@@ -90,25 +100,25 @@ struct LauncherView: View {
                 .padding(.horizontal, 16)
                 .padding(.vertical, 14)
                 
-                Divider()
-                    .background(Color.white.opacity(0.1))
+                Rectangle()
+                    .fill(Color.white.opacity(0.06))
+                    .frame(height: 1)
                 
                 // Content area
                 if viewModel.activeCommand?.type == .renameCurrentSpace {
-                    VStack(spacing: 16) {
-                        Image(systemName: "pencil.and.outline")
-                            .font(.system(size: 32))
-                            .foregroundColor(.blue)
-                            .padding(.top, 40)
+                    VStack(spacing: 12) {
+                        Spacer()
+                        Image(systemName: "pencil.line")
+                            .font(.system(size: 28, weight: .light))
+                            .foregroundColor(.white.opacity(0.4))
                         
                         Text("Rename Current Desktop Space")
-                            .font(.system(size: 15, weight: .semibold))
+                            .font(.system(size: 14, weight: .medium))
                             .foregroundColor(.white)
                         
                         Text("Type a new name above and press Enter to save")
-                            .font(.system(size: 12))
-                            .foregroundColor(.white.opacity(0.5))
-                        
+                            .font(.system(size: 11))
+                            .foregroundColor(.white.opacity(0.4))
                         Spacer()
                     }
                     .frame(height: 260)
@@ -128,8 +138,9 @@ struct LauncherView: View {
                         .frame(height: 260)
                 }
                 
-                Divider()
-                    .background(Color.white.opacity(0.08))
+                Rectangle()
+                    .fill(Color.white.opacity(0.06))
+                    .frame(height: 1)
                 
                 // Spaces bottom bar
                 SpacesBottomBar(spaceManager: spaceManager)
@@ -334,17 +345,32 @@ struct ListAreaView: View {
     }
 }
 
+struct KeycapView: View {
+    let text: String
+    let isSelected: Bool
+    
+    var body: some View {
+        Text(text)
+            .font(.system(size: 11, weight: .medium))
+            .foregroundColor(isSelected ? Color.white.opacity(0.9) : Color.white.opacity(0.6))
+            .padding(.horizontal, 8)
+            .padding(.vertical, 4)
+            .background(Color.white.opacity(isSelected ? 0.12 : 0.06))
+            .cornerRadius(4)
+    }
+}
+
 struct EmptyResultsView: View {
     var body: some View {
-        VStack(spacing: 8) {
+        VStack(spacing: 6) {
             Spacer()
-            Image(systemName: "magnifyingglass.circle")
-                .font(.system(size: 36, weight: .light))
-                .foregroundColor(.white.opacity(0.3))
-            Text("No matching commands found")
+            Image(systemName: "magnifyingglass")
+                .font(.system(size: 24, weight: .light))
+                .foregroundColor(.white.opacity(0.2))
+            Text("No results")
                 .font(.system(size: 13, weight: .medium))
-                .foregroundColor(.white.opacity(0.6))
-            Text("Try searching for something else")
+                .foregroundColor(.white.opacity(0.5))
+            Text("No commands or items matched your search query.")
                 .font(.system(size: 11))
                 .foregroundColor(.white.opacity(0.3))
             Spacer()
@@ -360,45 +386,37 @@ struct CommandRowView: View {
     var body: some View {
         HStack(spacing: 12) {
             Image(systemName: command.iconName)
-                .font(.system(size: 13, weight: .medium))
-                .foregroundColor(isSelected ? .white : .blue)
+                .font(.system(size: 13, weight: .semibold))
+                .foregroundColor(isSelected ? .white : Color(red: 0.0, green: 0.55, blue: 1.0))
                 .frame(width: 28, height: 28)
-                .background(isSelected ? Color.blue.opacity(0.8) : Color.blue.opacity(0.15))
-                .cornerRadius(8)
+                .background(isSelected ? Color(red: 0.0, green: 0.55, blue: 1.0) : Color.white.opacity(0.06))
+                .cornerRadius(6)
             
             VStack(alignment: .leading, spacing: 2) {
                 Text(command.title)
-                    .font(.system(size: 13.5, weight: .semibold))
-                    .foregroundColor(.white)
+                    .font(.system(size: 13, weight: .medium))
+                    .foregroundColor(isSelected ? .white : .white.opacity(0.95))
                 
                 Text(command.subtitle)
                     .font(.system(size: 11))
-                    .foregroundColor(.white.opacity(0.5))
+                    .foregroundColor(isSelected ? .white.opacity(0.7) : .white.opacity(0.45))
             }
             
             Spacer()
             
             if command.hasSubpage {
                 Image(systemName: "chevron.right")
-                    .font(.system(size: 10, weight: .bold))
-                    .foregroundColor(.white.opacity(0.4))
+                    .font(.system(size: 10, weight: .semibold))
+                    .foregroundColor(.white.opacity(isSelected ? 0.7 : 0.35))
                     .padding(.trailing, 4)
             } else {
-                Text("Action")
-                    .font(.system(size: 10, weight: .semibold))
-                    .foregroundColor(isSelected ? .white : .white.opacity(0.6))
-                    .padding(.horizontal, 6)
-                    .padding(.vertical, 2)
-                    .background(Color.white.opacity(isSelected ? 0.2 : 0.08))
-                    .cornerRadius(4)
+                KeycapView(text: "Action", isSelected: isSelected)
             }
         }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 8)
-        .background(isSelected ? Color.white.opacity(0.12) : Color.clear)
-        .cornerRadius(8)
-        .scaleEffect(isSelected ? 1.01 : 1.0)
-        .animation(.spring(response: 0.2, dampingFraction: 0.7), value: isSelected)
+        .padding(.horizontal, 10)
+        .padding(.vertical, 6)
+        .background(isSelected ? Color.white.opacity(0.08) : Color.clear)
+        .cornerRadius(6)
     }
 }
 
@@ -409,38 +427,30 @@ struct SpaceRowView: View {
     var body: some View {
         HStack(spacing: 12) {
             Image(systemName: "desktopcomputer")
-                .font(.system(size: 13, weight: .medium))
-                .foregroundColor(isSelected ? .white : .purple)
+                .font(.system(size: 13, weight: .semibold))
+                .foregroundColor(isSelected ? .white : Color(red: 0.0, green: 0.55, blue: 1.0))
                 .frame(width: 28, height: 28)
-                .background(isSelected ? Color.purple.opacity(0.8) : Color.purple.opacity(0.15))
-                .cornerRadius(8)
+                .background(isSelected ? Color(red: 0.0, green: 0.55, blue: 1.0) : Color.white.opacity(0.06))
+                .cornerRadius(6)
             
             VStack(alignment: .leading, spacing: 2) {
                 Text(space.name)
-                    .font(.system(size: 13.5, weight: .semibold))
-                    .foregroundColor(.white)
+                    .font(.system(size: 13, weight: .medium))
+                    .foregroundColor(isSelected ? .white : .white.opacity(0.95))
                 
                 Text("\(space.displayName) · Space \(space.num)")
                     .font(.system(size: 11))
-                    .foregroundColor(.white.opacity(0.5))
+                    .foregroundColor(isSelected ? .white.opacity(0.7) : .white.opacity(0.45))
             }
             
             Spacer()
             
-            Text("Switch")
-                .font(.system(size: 10, weight: .semibold))
-                .foregroundColor(isSelected ? .white : .white.opacity(0.6))
-                .padding(.horizontal, 6)
-                .padding(.vertical, 2)
-                .background(Color.white.opacity(isSelected ? 0.2 : 0.08))
-                .cornerRadius(4)
+            KeycapView(text: "Switch ↵", isSelected: isSelected)
         }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 8)
-        .background(isSelected ? Color.white.opacity(0.12) : Color.clear)
-        .cornerRadius(8)
-        .scaleEffect(isSelected ? 1.01 : 1.0)
-        .animation(.spring(response: 0.2, dampingFraction: 0.7), value: isSelected)
+        .padding(.horizontal, 10)
+        .padding(.vertical, 6)
+        .background(isSelected ? Color.white.opacity(0.08) : Color.clear)
+        .cornerRadius(6)
     }
 }
 
@@ -454,37 +464,30 @@ struct WindowRowView: View {
             Image(nsImage: appIcon)
                 .resizable()
                 .aspectRatio(contentMode: .fit)
-                .frame(width: 24, height: 24)
-                .cornerRadius(5)
-                .shadow(color: Color.black.opacity(0.2), radius: 2, x: 0, y: 1)
+                .frame(width: 20, height: 20)
+                .frame(width: 28, height: 28)
+                .background(Color.white.opacity(0.06))
+                .cornerRadius(6)
             
             VStack(alignment: .leading, spacing: 2) {
                 Text(window.title.isEmpty ? "(No Title)" : window.title)
-                    .font(.system(size: 13.5, weight: .semibold))
-                    .foregroundColor(.white)
+                    .font(.system(size: 13, weight: .medium))
+                    .foregroundColor(isSelected ? .white : .white.opacity(0.95))
                     .lineLimit(1)
                 
                 Text("\(window.ownerName) · \(window.space.name)")
                     .font(.system(size: 11))
-                    .foregroundColor(.white.opacity(0.5))
+                    .foregroundColor(isSelected ? .white.opacity(0.7) : .white.opacity(0.45))
             }
             
             Spacer()
             
-            Text("Focus")
-                .font(.system(size: 10, weight: .semibold))
-                .foregroundColor(isSelected ? .white : .white.opacity(0.6))
-                .padding(.horizontal, 6)
-                .padding(.vertical, 2)
-                .background(Color.white.opacity(isSelected ? 0.2 : 0.08))
-                .cornerRadius(4)
+            KeycapView(text: "Focus ↵", isSelected: isSelected)
         }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 8)
-        .background(isSelected ? Color.white.opacity(0.12) : Color.clear)
-        .cornerRadius(8)
-        .scaleEffect(isSelected ? 1.01 : 1.0)
-        .animation(.spring(response: 0.2, dampingFraction: 0.7), value: isSelected)
+        .padding(.horizontal, 10)
+        .padding(.vertical, 6)
+        .background(isSelected ? Color.white.opacity(0.08) : Color.clear)
+        .cornerRadius(6)
     }
 }
 
@@ -495,36 +498,28 @@ struct ConfirmBatchRowView: View {
     var body: some View {
         HStack(spacing: 12) {
             Image(systemName: "checkmark.circle.fill")
-                .font(.system(size: 14, weight: .semibold))
+                .font(.system(size: 13, weight: .semibold))
                 .foregroundColor(.white)
                 .frame(width: 28, height: 28)
                 .background(Color.green.opacity(0.8))
-                .cornerRadius(8)
+                .cornerRadius(6)
             
             Text("Confirm & Execute Batch Move (\(count) window\(count == 1 ? "" : "s"))")
-                .font(.system(size: 13.5, weight: .bold))
-                .foregroundColor(.green)
+                .font(.system(size: 13, weight: .semibold))
+                .foregroundColor(isSelected ? .white : .green)
             
             Spacer()
             
-            Text("Run")
-                .font(.system(size: 10, weight: .bold))
-                .foregroundColor(.white)
-                .padding(.horizontal, 8)
-                .padding(.vertical, 3)
-                .background(Color.green.opacity(0.8))
-                .cornerRadius(4)
+            KeycapView(text: "Run ↵", isSelected: isSelected)
         }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 8)
-        .background(isSelected ? Color.green.opacity(0.2) : Color.green.opacity(0.08))
-        .cornerRadius(8)
+        .padding(.horizontal, 10)
+        .padding(.vertical, 6)
+        .background(Color.green.opacity(isSelected ? 0.15 : 0.06))
+        .cornerRadius(6)
         .overlay(
-            RoundedRectangle(cornerRadius: 8)
-                .stroke(Color.green.opacity(0.3), lineWidth: 1)
+            RoundedRectangle(cornerRadius: 6)
+                .stroke(Color.green.opacity(isSelected ? 0.3 : 0.1), lineWidth: 1)
         )
-        .scaleEffect(isSelected ? 1.01 : 1.0)
-        .animation(.spring(response: 0.2, dampingFraction: 0.7), value: isSelected)
     }
 }
 
@@ -540,47 +535,49 @@ struct WindowBatchRowView: View {
             Image(nsImage: appIcon)
                 .resizable()
                 .aspectRatio(contentMode: .fit)
-                .frame(width: 24, height: 24)
-                .cornerRadius(5)
-                .shadow(color: Color.black.opacity(0.2), radius: 2, x: 0, y: 1)
+                .frame(width: 20, height: 20)
+                .frame(width: 28, height: 28)
+                .background(Color.white.opacity(0.06))
+                .cornerRadius(6)
             
             VStack(alignment: .leading, spacing: 2) {
                 Text(window.title.isEmpty ? "(No Title)" : window.title)
-                    .font(.system(size: 13.5, weight: .semibold))
-                    .foregroundColor(.white)
+                    .font(.system(size: 13, weight: .medium))
+                    .foregroundColor(isSelected ? .white : .white.opacity(0.95))
                     .lineLimit(1)
                 
                 Text("\(window.ownerName) · \(window.space.name)")
                     .font(.system(size: 11))
-                    .foregroundColor(.white.opacity(0.5))
+                    .foregroundColor(isSelected ? .white.opacity(0.7) : .white.opacity(0.45))
             }
             
             Spacer()
             
             if isStaged {
-                Text("→ \(targetSpaceName)")
-                    .font(.system(size: 11, weight: .bold))
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 3)
-                    .background(Color.green.opacity(0.25))
-                    .foregroundColor(.green)
-                    .cornerRadius(6)
+                HStack(spacing: 4) {
+                    Circle()
+                        .fill(Color.green)
+                        .frame(width: 5, height: 5)
+                    Text("→ \(targetSpaceName)")
+                        .font(.system(size: 10, weight: .medium))
+                        .foregroundColor(.green)
+                }
+                .padding(.horizontal, 6)
+                .padding(.vertical, 3.5)
+                .background(Color.green.opacity(0.12))
+                .cornerRadius(6)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 6)
+                        .stroke(Color.green.opacity(0.3), lineWidth: 1)
+                )
             } else {
-                Text("Stage")
-                    .font(.system(size: 10, weight: .semibold))
-                    .foregroundColor(isSelected ? .white : .white.opacity(0.6))
-                    .padding(.horizontal, 6)
-                    .padding(.vertical, 2)
-                    .background(Color.white.opacity(isSelected ? 0.2 : 0.08))
-                    .cornerRadius(4)
+                KeycapView(text: "Stage ↵", isSelected: isSelected)
             }
         }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 8)
-        .background(isSelected ? Color.white.opacity(0.12) : Color.clear)
-        .cornerRadius(8)
-        .scaleEffect(isSelected ? 1.01 : 1.0)
-        .animation(.spring(response: 0.2, dampingFraction: 0.7), value: isSelected)
+        .padding(.horizontal, 10)
+        .padding(.vertical, 6)
+        .background(isSelected ? Color.white.opacity(0.08) : Color.clear)
+        .cornerRadius(6)
     }
 }
 
@@ -590,9 +587,9 @@ struct SpacesBottomBar: View {
     var body: some View {
         HStack(spacing: 8) {
             Text("Spaces:")
-                .font(.system(size: 11, weight: .bold))
-                .foregroundColor(.white.opacity(0.4))
-                .padding(.trailing, 4)
+                .font(.system(size: 11, weight: .semibold))
+                .foregroundColor(.white.opacity(0.35))
+                .padding(.trailing, 2)
             
             let spaces = spaceManager.currentDisplaySpaces
             
@@ -600,61 +597,77 @@ struct SpacesBottomBar: View {
                 let isCurrent = space.id == spaceManager.currentSpaceUUID
                 let name = spaceManager.getSpaceName(space.id)
                 
-                Text(name)
-                    .font(.system(size: 11, weight: isCurrent ? .bold : .medium))
-                    .padding(.horizontal, 10)
-                    .padding(.vertical, 5)
-                    .background(
-                        isCurrent
-                        ? LinearGradient(colors: [Color.blue, Color.blue.opacity(0.85)], startPoint: .top, endPoint: .bottom)
-                        : LinearGradient(colors: [Color.white.opacity(0.12), Color.white.opacity(0.06)], startPoint: .top, endPoint: .bottom)
-                    )
-                    .foregroundColor(isCurrent ? .white : .white.opacity(0.8))
-                    .cornerRadius(8)
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 8)
-                            .stroke(isCurrent ? Color.blue.opacity(0.5) : Color.white.opacity(0.1), lineWidth: 1)
-                    )
-                    .shadow(color: isCurrent ? Color.blue.opacity(0.3) : Color.clear, radius: 4, x: 0, y: 2)
-                    .help("Click to switch, Option+Click to move active window.")
-                    .contentShape(Rectangle())
-                    .onTapGesture {
-                        let isOptionPressed = NSEvent.modifierFlags.contains(.option)
-                        if isOptionPressed {
-                            spaceManager.moveActiveWindowToSpace(id: space.id)
-                        } else {
-                            spaceManager.switchToSpace(space, forceInstant: true)
-                        }
+                HStack {
+                    if isCurrent {
+                        Text(name)
+                            .font(.system(size: 11, weight: .semibold))
+                            .foregroundColor(.white)
+                            .padding(.horizontal, 10)
+                            .padding(.vertical, 4)
+                            .background(Color(red: 0.0, green: 0.55, blue: 1.0))
+                            .clipShape(Capsule())
+                            .shadow(color: Color(red: 0.0, green: 0.55, blue: 1.0).opacity(0.4), radius: 4, x: 0, y: 0)
+                    } else {
+                        Text(name)
+                            .font(.system(size: 11, weight: .medium))
+                            .foregroundColor(.white.opacity(0.6))
+                            .padding(.horizontal, 10)
+                            .padding(.vertical, 4)
+                            .background(Color.white.opacity(0.08))
+                            .clipShape(Capsule())
                     }
+                }
+                .contentShape(Rectangle())
+                .onTapGesture {
+                    let isOptionPressed = NSEvent.modifierFlags.contains(.option)
+                    if isOptionPressed {
+                        spaceManager.moveActiveWindowToSpace(id: space.id)
+                    } else {
+                        spaceManager.switchToSpace(space, forceInstant: true)
+                    }
+                }
+                .help("Click to switch, Option+Click to move active window.")
             }
             
             Spacer()
         }
         .padding(.horizontal, 16)
-        .padding(.vertical, 12)
-        .background(Color.black.opacity(0.35))
+        .padding(.vertical, 10)
+        .background(Color.black.opacity(0.15))
     }
 }
 
 class FocusTextField: NSTextField {
+    override var acceptsFirstResponder: Bool {
+        return true
+    }
+
     override func viewDidMoveToWindow() {
         super.viewDidMoveToWindow()
         if window != nil {
             NotificationCenter.default.addObserver(self, selector: #selector(windowDidBecomeKey), name: NSWindow.didBecomeKeyNotification, object: window)
+            NotificationCenter.default.addObserver(self, selector: #selector(forceFocus), name: NSNotification.Name("FocusLauncherTextField"), object: nil)
             if window?.isKeyWindow == true {
                 DispatchQueue.main.async { [weak self] in
-                    guard let self = self else { return }
-                    self.window?.makeFirstResponder(self)
+                    self?.forceFocus()
                 }
             }
+        } else {
+            NotificationCenter.default.removeObserver(self, name: NSWindow.didBecomeKeyNotification, object: nil)
+            NotificationCenter.default.removeObserver(self, name: NSNotification.Name("FocusLauncherTextField"), object: nil)
         }
     }
     
     @objc private func windowDidBecomeKey() {
         DispatchQueue.main.async { [weak self] in
-            guard let self = self else { return }
-            self.window?.makeFirstResponder(self)
+            self?.forceFocus()
         }
+    }
+    
+    @objc private func forceFocus() {
+        guard let window = self.window else { return }
+        window.makeFirstResponder(self)
+        self.currentEditor()?.selectAll(nil)
     }
     
     deinit {
@@ -708,12 +721,21 @@ struct SearchTextField: NSViewRepresentable {
     func makeNSView(context: Context) -> NSTextField {
         let textField = FocusTextField()
         textField.delegate = context.coordinator
-        textField.placeholderString = placeholder
         textField.isBordered = false
         textField.drawsBackground = false
         textField.focusRingType = .none
         textField.textColor = .white
         textField.font = NSFont.systemFont(ofSize: 18, weight: .regular)
+        
+        let placeholderAttr = NSAttributedString(
+            string: placeholder,
+            attributes: [
+                .foregroundColor: NSColor.white.withAlphaComponent(0.35),
+                .font: NSFont.systemFont(ofSize: 18, weight: .regular)
+            ]
+        )
+        textField.placeholderAttributedString = placeholderAttr
+        
         textField.stringValue = text
         return textField
     }
@@ -722,6 +744,14 @@ struct SearchTextField: NSViewRepresentable {
         if nsView.stringValue != text {
             nsView.stringValue = text
         }
+        let placeholderAttr = NSAttributedString(
+            string: placeholder,
+            attributes: [
+                .foregroundColor: NSColor.white.withAlphaComponent(0.35),
+                .font: NSFont.systemFont(ofSize: 18, weight: .regular)
+            ]
+        )
+        nsView.placeholderAttributedString = placeholderAttr
     }
 }
 

@@ -68,6 +68,11 @@ class LauncherWindowController: NSWindowController, NSWindowDelegate {
         // Make key and focus
         panel.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)
+        
+        // Post a notification to force focus
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
+            NotificationCenter.default.post(name: NSNotification.Name("FocusLauncherTextField"), object: nil)
+        }
     }
     
     func hide() {
