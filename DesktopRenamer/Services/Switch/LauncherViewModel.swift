@@ -649,6 +649,7 @@ struct BatchMoveSection: Identifiable {
         incrementCommandFrequency(LauncherCommandType.batchMoveWindows.rawValue)
         
         let moves = Array(stagedMoves.values)
+        let originalSpaceUUID = AppDelegate.shared.spaceManager?.currentSpaceUUID
         
         DispatchQueue.global(qos: .userInitiated).async { [weak self] in
             guard let self = self else { return }
@@ -697,6 +698,14 @@ struct BatchMoveSection: Identifiable {
                 self.isExecutingBatchMove = false
                 self.stagedMoves.removeAll()
                 LauncherWindowController.shared.shouldRestoreFocus = false
+                
+                if let manager = AppDelegate.shared.spaceManager,
+                   manager.returnToOriginalAfterBatchMove,
+                   let originalUUID = originalSpaceUUID,
+                   let targetSpace = manager.spaceNameDict.first(where: { $0.id == originalUUID }) {
+                    manager.switchToSpace(targetSpace, forceInstant: true)
+                }
+                
                 self.closeLauncher()
             }
         }
