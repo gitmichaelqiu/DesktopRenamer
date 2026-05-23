@@ -330,8 +330,10 @@ struct BatchMoveSection: Identifiable {
             guard let self = self else { return }
             var names: [String: String] = [:]
             DispatchQueue.main.sync {
-                for s in spaces {
-                    names[s.id] = manager.getSpaceName(s.id)
+                if let mgr = AppDelegate.shared.spaceManager {
+                    for s in spaces {
+                        names[s.id] = mgr.getSpaceName(s.id)
+                    }
                 }
             }
             
@@ -357,7 +359,7 @@ struct BatchMoveSection: Identifiable {
         return "Display"
     }
     
-    private static func parseWindowData(_ raw: String) -> (spaces: [SpaceGroup], windows: [WindowEntry]) {
+    private nonisolated static func parseWindowData(_ raw: String) -> (spaces: [SpaceGroup], windows: [WindowEntry]) {
         var spaces: [SpaceGroup] = []
         var windows: [WindowEntry] = []
         var currentSpace: SpaceGroup? = nil
