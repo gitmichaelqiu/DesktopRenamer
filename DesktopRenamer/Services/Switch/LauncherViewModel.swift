@@ -133,7 +133,7 @@ struct BatchMoveSection: Identifiable {
     }
 
     /// Checks whether `query` matches `target`, supporting pinyin input for CJK-localized strings.
-    /// e.g. typing "qiehuan" matches "切换桌面" (pinyin: qie huan zhuo mian).
+    /// e.g. typing "qiehuan" or "qie huan" matches "切换桌面" (pinyin: qie huan zhuo mian).
     private func matchesQuery(_ query: String, target: String) -> Bool {
         let lowerQuery = query.lowercased()
         let lowerTarget = target.lowercased()
@@ -143,7 +143,8 @@ struct BatchMoveSection: Identifiable {
         CFStringTransform(mutable, nil, kCFStringTransformToLatin, false)
         CFStringTransform(mutable, nil, kCFStringTransformStripDiacritics, false)
         let pinyin = (mutable as String).lowercased().replacingOccurrences(of: " ", with: "")
-        return pinyin.contains(lowerQuery)
+        let squashedQuery = lowerQuery.replacingOccurrences(of: " ", with: "")
+        return pinyin.contains(squashedQuery)
     }
 
     var filteredCommands: [LauncherCommand] {
