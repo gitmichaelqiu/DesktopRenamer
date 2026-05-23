@@ -483,6 +483,20 @@ struct CommandRowView: View {
         ThemeColors(isDark: colorScheme == .dark)
     }
     
+    private var toggleStatus: String? {
+        guard let labelManager = AppDelegate.shared.statusBarController?.labelManager else { return nil }
+        switch command.type {
+        case .toggleActiveLabel:
+            return labelManager.showActiveLabels ? "Enabled" : "Disabled"
+        case .togglePreviewLabel:
+            return labelManager.showPreviewLabels ? "Enabled" : "Disabled"
+        case .toggleActiveLabelVisibility:
+            return labelManager.showOnDesktop ? "Enabled" : "Disabled"
+        default:
+            return nil
+        }
+    }
+    
     var body: some View {
         HStack(spacing: 12) {
             Image(systemName: command.iconName)
@@ -496,15 +510,29 @@ struct CommandRowView: View {
                 Text(command.title)
                     .font(.system(size: 13, weight: .medium))
                     .foregroundColor(colors.textPrimary)
+                    .lineLimit(1)
                 
                 Text(command.subtitle)
                     .font(.system(size: 11))
                     .foregroundColor(isSelected ? colors.textSecondary : colors.textTertiary)
+                    .lineLimit(1)
             }
             
             Spacer()
             
-            if command.hasSubpage {
+            if let statusText = toggleStatus {
+                Text(statusText)
+                    .font(.system(size: 10, weight: .bold))
+                    .foregroundColor(statusText == "Enabled" ? colors.greenText : colors.textSecondary)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 3.5)
+                    .background(statusText == "Enabled" ? colors.greenText.opacity(0.12) : colors.badgeBg)
+                    .cornerRadius(6)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 6)
+                            .stroke(statusText == "Enabled" ? colors.greenText.opacity(0.3) : Color.clear, lineWidth: 1)
+                    )
+            } else if command.hasSubpage {
                 Image(systemName: "chevron.right")
                     .font(.system(size: 10, weight: .semibold))
                     .foregroundColor(isSelected ? colors.textSecondary : colors.textTertiary)
@@ -588,6 +616,7 @@ struct WindowRowView: View {
                 Text("\(window.ownerName) · \(window.space.name)")
                     .font(.system(size: 11))
                     .foregroundColor(isSelected ? colors.textSecondary : colors.textTertiary)
+                    .lineLimit(1)
             }
             
             Spacer()
@@ -669,6 +698,7 @@ struct WindowBatchRowView: View {
                 Text("\(window.ownerName) · \(window.space.name)")
                     .font(.system(size: 11))
                     .foregroundColor(isSelected ? colors.textSecondary : colors.textTertiary)
+                    .lineLimit(1)
             }
             
             Spacer()

@@ -147,11 +147,16 @@ struct BatchMoveSection: Identifiable {
     }
     
     var filteredSpaces: [SpaceGroup] {
+        var spaces = currentSpaces
+        if let staging = stagingWindow {
+            spaces = spaces.filter { $0.id != staging.space.id }
+        }
+        
         if searchQuery.isEmpty {
-            return currentSpaces
+            return spaces
         } else {
             let query = searchQuery.lowercased()
-            return currentSpaces.filter {
+            return spaces.filter {
                 $0.name.lowercased().contains(query) ||
                 $0.displayName.lowercased().contains(query) ||
                 "\($0.num)".contains(query)

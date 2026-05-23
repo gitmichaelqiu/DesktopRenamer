@@ -87,9 +87,6 @@
     "⌘↵" : {
 
     },
-    "⌘K" : {
-
-    },
     "◉" : {
       "shouldTranslate" : false
     },
@@ -152,9 +149,6 @@
           }
         }
       }
-    },
-    "Actions" : {
-
     },
     "Active Space Label" : {
       "localizations" : {
