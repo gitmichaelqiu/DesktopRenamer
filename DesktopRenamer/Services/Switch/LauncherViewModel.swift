@@ -132,6 +132,7 @@ struct BatchMoveSection: Identifiable {
         objectWillChange.send()
     }
     
+
     var filteredCommands: [LauncherCommand] {
         if searchQuery.isEmpty {
             return allCommands.sorted {
@@ -162,7 +163,7 @@ struct BatchMoveSection: Identifiable {
         if let staging = stagingWindow {
             spaces = spaces.filter { $0.id != staging.space.id }
         }
-        
+
         if searchQuery.isEmpty {
             return spaces
         } else {
@@ -478,20 +479,18 @@ struct BatchMoveSection: Identifiable {
             if let labelManager = AppDelegate.shared.statusBarController?.labelManager {
                 labelManager.reloadAllWindows()
             }
-            closeLauncher()
             HUDWindowController.shared.show(
                 message: NSLocalizedString("Space Labels Reloaded", comment: ""),
                 systemImage: "arrow.clockwise.circle.fill",
                 iconColor: .blue
             )
+            closeLauncher()
             
         case .toggleActiveLabel:
             incrementCommandFrequency(type.rawValue)
             if let labelManager = AppDelegate.shared.statusBarController?.labelManager {
                 labelManager.showActiveLabels.toggle()
                 let isEnabled = labelManager.showActiveLabels
-                closeLauncher()
-                
                 let status = isEnabled ? String(localized: "Enabled") : String(localized: "Disabled")
                 let msg = String(format: String(localized: "Active Space Label: %@"), status)
                 HUDWindowController.shared.show(
@@ -499,6 +498,7 @@ struct BatchMoveSection: Identifiable {
                     systemImage: isEnabled ? "checkmark.circle.fill" : "xmark.circle.fill",
                     iconColor: isEnabled ? .green : .red
                 )
+                closeLauncher()
             } else {
                 closeLauncher()
             }
@@ -508,8 +508,6 @@ struct BatchMoveSection: Identifiable {
             if let labelManager = AppDelegate.shared.statusBarController?.labelManager {
                 labelManager.showPreviewLabels.toggle()
                 let isEnabled = labelManager.showPreviewLabels
-                closeLauncher()
-                
                 let status = isEnabled ? String(localized: "Enabled") : String(localized: "Disabled")
                 let msg = String(format: String(localized: "Preview Space Labels: %@"), status)
                 HUDWindowController.shared.show(
@@ -517,6 +515,7 @@ struct BatchMoveSection: Identifiable {
                     systemImage: isEnabled ? "checkmark.circle.fill" : "xmark.circle.fill",
                     iconColor: isEnabled ? .green : .red
                 )
+                closeLauncher()
             } else {
                 closeLauncher()
             }
@@ -526,8 +525,6 @@ struct BatchMoveSection: Identifiable {
             if let labelManager = AppDelegate.shared.statusBarController?.labelManager {
                 labelManager.showOnDesktop.toggle()
                 let isEnabled = labelManager.showOnDesktop
-                closeLauncher()
-                
                 let status = isEnabled ? String(localized: "Enabled") : String(localized: "Disabled")
                 let msg = String(format: String(localized: "Keep visible on desktop: %@"), status)
                 HUDWindowController.shared.show(
@@ -535,6 +532,7 @@ struct BatchMoveSection: Identifiable {
                     systemImage: isEnabled ? "checkmark.circle.fill" : "xmark.circle.fill",
                     iconColor: isEnabled ? .green : .red
                 )
+                closeLauncher()
             } else {
                 closeLauncher()
             }
