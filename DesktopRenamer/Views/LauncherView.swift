@@ -461,7 +461,7 @@ struct KeycapView: View {
     }
     
     var body: some View {
-        Text(text)
+        Text(LocalizedStringKey(text))
             .font(.system(size: 10, weight: .medium))
             .foregroundColor(isGreenRow && isSelected ? .white : (isSelected ? colors.textPrimary : colors.textSecondary))
             .padding(.horizontal, 6)
@@ -557,7 +557,7 @@ struct CommandRowView: View {
             if let shortcut = shortcutText {
                 KeycapView(text: shortcut, isSelected: isSelected)
             } else if let statusText = toggleStatus {
-                Text(statusText)
+                Text(LocalizedStringKey(statusText))
                     .font(.system(size: 10, weight: .bold))
                     .foregroundColor(statusText == "Enabled" ? colors.greenText : colors.textSecondary)
                     .padding(.horizontal, 8)
