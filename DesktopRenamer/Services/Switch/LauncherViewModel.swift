@@ -58,7 +58,6 @@ struct BatchMoveSection: Identifiable {
             selectedRowIndex = 0
             isKeyboardSelection = true
             isBottomBarFocused = false
-            lastMouseLocation = NSEvent.mouseLocation
         }
     }
     @Published var selectedRowIndex: Int = 0
@@ -73,7 +72,6 @@ struct BatchMoveSection: Identifiable {
             selectedRowIndex = 0
             isKeyboardSelection = true
             isBottomBarFocused = false
-            lastMouseLocation = NSEvent.mouseLocation
             if activeCommand != nil {
                 loadData()
             }
@@ -84,7 +82,6 @@ struct BatchMoveSection: Identifiable {
     @Published var currentWindows: [WindowEntry] = []
     @Published var isLoadingData: Bool = false
     @Published var isKeyboardSelection: Bool = false
-    @Published var lastMouseLocation: CGPoint = .zero
     
     @Published var showCommandNumbers: Bool = false
     @Published var isBottomBarFocused: Bool = false
@@ -98,7 +95,6 @@ struct BatchMoveSection: Identifiable {
             selectedRowIndex = 0
             isKeyboardSelection = true
             isBottomBarFocused = false
-            lastMouseLocation = NSEvent.mouseLocation
         }
     }
     @Published var isExecutingBatchMove: Bool = false
@@ -455,7 +451,6 @@ struct BatchMoveSection: Identifiable {
                 switch selectedItem {
                 case .staged(let move, _):
                     stagedMoves.removeValue(forKey: move.window.id)
-                    lastMouseLocation = NSEvent.mouseLocation
                     if selectedRowIndex >= batchMoveSelectableItems.count {
                         selectedRowIndex = max(0, batchMoveSelectableItems.count - 1)
                     }
@@ -463,7 +458,6 @@ struct BatchMoveSection: Identifiable {
                     batchMoveLastSelectedIndex = selectedRowIndex
                     stagingWindow = window
                     selectedRowIndex = 0
-                    lastMouseLocation = NSEvent.mouseLocation
                 }
                 
             case .renameCurrentSpace:
