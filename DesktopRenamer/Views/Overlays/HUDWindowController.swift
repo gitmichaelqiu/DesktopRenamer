@@ -55,7 +55,7 @@ class HUDWindowController: NSWindowController {
     init() {
         let panel = HUDNSPanel(
             contentRect: NSRect(x: 0, y: 0, width: 280, height: 44),
-            styleMask: [.borderless, .nonactivatingPanel],
+            styleMask: [.borderless, .nonactivatingPanel, .resizable],
             backing: .buffered,
             defer: false
         )
@@ -88,9 +88,17 @@ class HUDWindowController: NSWindowController {
         if let existing = hostingView {
             existing.rootView = hudView
         } else {
+            let container = NSView(frame: NSRect(x: 0, y: 0, width: 280, height: 44))
+            container.translatesAutoresizingMaskIntoConstraints = true
+            
             let newView = NSHostingView(rootView: hudView)
             newView.sizingOptions = []
-            panel.contentView = newView
+            newView.translatesAutoresizingMaskIntoConstraints = true
+            newView.autoresizingMask = [.width, .height]
+            newView.frame = container.bounds
+            
+            container.addSubview(newView)
+            panel.contentView = container
             self.hostingView = newView
         }
         
