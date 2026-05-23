@@ -60,6 +60,11 @@ struct BatchMoveSection: Identifiable {
     }
     @Published var selectedRowIndex: Int = 0
     @Published var activeCommand: LauncherCommand? = nil {
+        willSet {
+            if activeCommand?.type == .batchMoveWindows && newValue?.type != .batchMoveWindows {
+                stagedMoves.removeAll()
+            }
+        }
         didSet {
             searchQuery = ""
             selectedRowIndex = 0
@@ -456,27 +461,56 @@ struct BatchMoveSection: Identifiable {
                 labelManager.reloadAllWindows()
             }
             closeLauncher()
+            HUDWindowController.shared.show(
+                message: "Space Labels Reloaded",
+                systemImage: "arrow.clockwise.circle.fill",
+                iconColor: .blue
+            )
             
         case .toggleActiveLabel:
             incrementCommandFrequency(type.rawValue)
             if let labelManager = AppDelegate.shared.statusBarController?.labelManager {
                 labelManager.showActiveLabels.toggle()
+                let isEnabled = labelManager.showActiveLabels
+                closeLauncher()
+                HUDWindowController.shared.show(
+                    message: "Active Space Label: \(isEnabled ? "Enabled" : "Disabled")",
+                    systemImage: isEnabled ? "checkmark.circle.fill" : "xmark.circle.fill",
+                    iconColor: isEnabled ? .green : .red
+                )
+            } else {
+                closeLauncher()
             }
-            closeLauncher()
             
         case .togglePreviewLabel:
             incrementCommandFrequency(type.rawValue)
             if let labelManager = AppDelegate.shared.statusBarController?.labelManager {
                 labelManager.showPreviewLabels.toggle()
+                let isEnabled = labelManager.showPreviewLabels
+                closeLauncher()
+                HUDWindowController.shared.show(
+                    message: "Preview Space Labels: \(isEnabled ? "Enabled" : "Disabled")",
+                    systemImage: isEnabled ? "checkmark.circle.fill" : "xmark.circle.fill",
+                    iconColor: isEnabled ? .green : .red
+                )
+            } else {
+                closeLauncher()
             }
-            closeLauncher()
             
         case .toggleActiveLabelVisibility:
             incrementCommandFrequency(type.rawValue)
             if let labelManager = AppDelegate.shared.statusBarController?.labelManager {
                 labelManager.showOnDesktop.toggle()
+                let isEnabled = labelManager.showOnDesktop
+                closeLauncher()
+                HUDWindowController.shared.show(
+                    message: "Keep visible on desktop: \(isEnabled ? "Enabled" : "Disabled")",
+                    systemImage: isEnabled ? "checkmark.circle.fill" : "xmark.circle.fill",
+                    iconColor: isEnabled ? .green : .red
+                )
+            } else {
+                closeLauncher()
             }
-            closeLauncher()
             
         default:
             break

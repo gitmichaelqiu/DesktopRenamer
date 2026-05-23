@@ -834,19 +834,6 @@ struct BatchMoveBottomBar: View {
                         )
                     }
                 }
-                
-                HStack(spacing: 4) {
-                    Text("Actions")
-                        .font(.system(size: 11, weight: .medium))
-                        .foregroundColor(colors.textSecondary)
-                    Text("⌘K")
-                        .font(.system(size: 11, weight: .semibold))
-                        .foregroundColor(colors.textQuaternary)
-                }
-                .padding(.horizontal, 8)
-                .padding(.vertical, 4)
-                .background(colors.badgeBg)
-                .cornerRadius(4)
             }
         }
         .padding(.horizontal, 16)
@@ -930,7 +917,9 @@ class FocusTextField: NSTextField {
     override func performKeyEquivalent(with event: NSEvent) -> Bool {
         if event.type == .keyDown {
             let modifiers = event.modifierFlags.intersection(.deviceIndependentFlagsMask)
-            if modifiers == .command && (event.keyCode == 36 || event.keyCode == 76) {
+            let hasCommand = modifiers.contains(.command)
+            let hasOtherModifiers = !modifiers.subtracting([.command, .numericPad, .function]).isEmpty
+            if hasCommand && !hasOtherModifiers && (event.keyCode == 36 || event.keyCode == 76) {
                 onCommandEnter?()
                 return true
             }
