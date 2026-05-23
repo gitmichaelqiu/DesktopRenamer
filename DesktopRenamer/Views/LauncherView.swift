@@ -178,11 +178,11 @@ struct LauncherView: View {
                             .font(.system(size: 28, weight: .light))
                             .foregroundColor(colors.textSecondary)
                         
-                        Text("Rename Current Space")
+                        Text(verbatim: String(localized: "Rename Current Space"))
                             .font(.system(size: 14, weight: .medium))
                             .foregroundColor(colors.textPrimary)
-                        
-                        Text("Type a new name above and press Enter to save")
+
+                        Text(verbatim: String(localized: "Type a new name above and press Enter to save"))
                             .font(.system(size: 11))
                             .foregroundColor(colors.textTertiary)
                         Spacer()
@@ -193,7 +193,7 @@ struct LauncherView: View {
                     VStack(spacing: 16) {
                         ProgressView()
                             .scaleEffect(1.2)
-                        Text("Executing batch window moves...")
+                        Text(verbatim: String(localized: "Executing batch window moves..."))
                             .font(.system(size: 13, weight: .medium))
                             .foregroundColor(colors.textSecondary)
                     }
@@ -490,10 +490,10 @@ struct EmptyResultsView: View {
             Image(systemName: "magnifyingglass")
                 .font(.system(size: 24, weight: .light))
                 .foregroundColor(colors.textQuaternary)
-            Text("No results")
+            Text(verbatim: String(localized: "No results"))
                 .font(.system(size: 13, weight: .medium))
                 .foregroundColor(colors.textTertiary)
-            Text("No commands matched your search query.")
+            Text(verbatim: String(localized: "No commands matched your search query."))
                 .font(.system(size: 11))
                 .foregroundColor(colors.textQuaternary)
             Spacer()
@@ -617,7 +617,7 @@ struct SpaceRowView: View {
                     .foregroundColor(colors.textPrimary)
                     .lineLimit(1)
                 
-                Text("\(space.displayName) · Space \(space.num)")
+                Text(verbatim: String(format: String(localized: "%@ · Space %lld"), space.displayName, space.num))
                     .font(.system(size: 11.5))
                     .foregroundColor(isSelected ? colors.textSecondary : colors.textTertiary)
                     .lineLimit(1)
@@ -668,19 +668,19 @@ struct WindowRowView: View {
                 )
             
             VStack(alignment: .leading, spacing: 2) {
-                Text(window.title.isEmpty ? "(No Title)" : window.title)
+                Text(window.title.isEmpty ? String(localized: "(No Title)") : window.title)
                     .font(.system(size: 13.5, weight: .semibold))
                     .foregroundColor(colors.textPrimary)
                     .lineLimit(1)
-                
-                Text("\(window.ownerName) · \(window.space.name)")
+
+                Text(verbatim: String(format: String(localized: "%@ · %@"), window.ownerName, window.space.name))
                     .font(.system(size: 11.5))
                     .foregroundColor(isSelected ? colors.textSecondary : colors.textTertiary)
                     .lineLimit(1)
             }
-            
+
             Spacer()
-            
+
             if let shortcut = shortcutText {
                 KeycapView(text: shortcut, isSelected: isSelected)
             } else {
@@ -716,7 +716,7 @@ struct ConfirmBatchRowView: View {
                 .background(isSelected ? .white : colors.greenText.opacity(0.8))
                 .cornerRadius(6)
             
-            Text("Confirm & Execute Batch Move (\(count) window\(count == 1 ? "" : "s"))")
+            Text(verbatim: String(format: String(localized: "Confirm & Execute Batch Move (%lld window%@)"), count, count == 1 ? "" : "s"))
                 .font(.system(size: 13, weight: .semibold))
                 .foregroundColor(isSelected ? .white : colors.greenText)
             
@@ -767,19 +767,19 @@ struct WindowBatchRowView: View {
                 )
             
             VStack(alignment: .leading, spacing: 2) {
-                Text(window.title.isEmpty ? "(No Title)" : window.title)
+                Text(window.title.isEmpty ? String(localized: "(No Title)") : window.title)
                     .font(.system(size: 13.5, weight: .semibold))
                     .foregroundColor(colors.textPrimary)
                     .lineLimit(1)
-                
-                Text("\(window.ownerName) · \(window.space.name)")
+
+                Text(verbatim: String(format: String(localized: "%@ · %@"), window.ownerName, window.space.name))
                     .font(.system(size: 11.5))
                     .foregroundColor(isSelected ? colors.textSecondary : colors.textTertiary)
                     .lineLimit(1)
             }
-            
+
             Spacer()
-            
+
             if let shortcut = shortcutText {
                 KeycapView(text: shortcut, isSelected: isSelected)
             } else if isStaged {
@@ -787,7 +787,7 @@ struct WindowBatchRowView: View {
                     Circle()
                         .fill(colors.greenText)
                         .frame(width: 5, height: 5)
-                    Text("→ \(targetSpaceName)")
+                    Text(verbatim: String(format: String(localized: "→ %@"), targetSpaceName))
                         .font(.system(size: 10, weight: .medium))
                         .foregroundColor(colors.greenText)
                 }
@@ -866,7 +866,7 @@ struct BatchMoveBottomBar: View {
                     Image(systemName: viewModel.activeCommand?.iconName ?? "macwindow.badge.plus")
                         .font(.system(size: 11, weight: .semibold))
                         .foregroundColor(Color(red: 0.0, green: 0.55, blue: 1.0))
-                    Text(viewModel.activeCommand?.title ?? "Batch Move Windows")
+                    Text(viewModel.activeCommand?.title ?? String(localized: "Batch Move Windows"))
                         .font(.system(size: 11, weight: .semibold))
                         .foregroundColor(colors.textPrimary)
                 }
@@ -902,7 +902,7 @@ struct BatchMoveBottomBar: View {
                 if viewModel.stagingWindow != nil {
                     // Staging target space selection
                     HStack(spacing: 4) {
-                        Text("Stage to Space")
+                        Text(verbatim: String(localized: "Stage to Space"))
                             .font(.system(size: 11, weight: .medium))
                             .foregroundColor(colors.textSecondary)
                         Text("↵")
@@ -923,7 +923,7 @@ struct BatchMoveBottomBar: View {
                         switch selectedItem {
                         case .staged:
                             HStack(spacing: 4) {
-                                Text("Unstage Move")
+                                Text(verbatim: String(localized: "Unstage Move"))
                                     .font(.system(size: 11, weight: .medium))
                                     .foregroundColor(colors.textSecondary)
                                 Text("↵")
@@ -937,7 +937,7 @@ struct BatchMoveBottomBar: View {
                             
                         case .unstaged:
                             HStack(spacing: 4) {
-                                Text("Stage Move to Desktop...")
+                                Text(verbatim: String(localized: "Stage Move to Desktop..."))
                                     .font(.system(size: 11, weight: .medium))
                                     .foregroundColor(colors.textSecondary)
                                 Text("↵")
@@ -954,7 +954,7 @@ struct BatchMoveBottomBar: View {
                     // If there are staged moves, show run batch action
                     if !viewModel.stagedMoves.isEmpty {
                         HStack(spacing: 4) {
-                            Text("Run Batch Move")
+                            Text(verbatim: String(localized: "Run Batch Move"))
                                 .font(.system(size: 11, weight: .semibold))
                                 .foregroundColor(colors.greenText)
                             Text("⌘↵")
@@ -990,7 +990,7 @@ struct SpacesBottomBar: View {
     
     var body: some View {
         HStack(spacing: 8) {
-            Text("Spaces:")
+            Text(verbatim: String(localized: "Spaces:"))
                 .font(.system(size: 11, weight: .semibold))
                 .foregroundColor(colors.textTertiary)
                 .padding(.trailing, 2)
@@ -1049,7 +1049,7 @@ struct SpacesBottomBar: View {
                 }
                 .buttonStyle(PlainButtonStyle())
                 .focusable(false)
-                .help("Click to switch, Option+Click to move active window.")
+                .help(String(localized: "Click to switch, Option+Click to move active window."))
             }
             
             Spacer()
@@ -1116,7 +1116,7 @@ struct CommandBottomBar: View {
                 switch type {
                 case .switchToDesktop:
                     HStack(spacing: 4) {
-                        Text("Switch Space")
+                        Text(verbatim: String(localized: "Switch Space"))
                             .font(.system(size: 11, weight: .medium))
                             .foregroundColor(colors.textSecondary)
                         Text("↵")
@@ -1127,10 +1127,10 @@ struct CommandBottomBar: View {
                     .padding(.vertical, 4)
                     .background(colors.badgeBg)
                     .clipShape(Capsule())
-                    
+
                 case .moveWindow:
                     HStack(spacing: 4) {
-                        Text("Move Window")
+                        Text(verbatim: String(localized: "Move Window"))
                             .font(.system(size: 11, weight: .medium))
                             .foregroundColor(colors.textSecondary)
                         Text("↵")
@@ -1141,10 +1141,10 @@ struct CommandBottomBar: View {
                     .padding(.vertical, 4)
                     .background(colors.badgeBg)
                     .clipShape(Capsule())
-                    
+
                 case .listWindows:
                     HStack(spacing: 4) {
-                        Text("Focus Window")
+                        Text(verbatim: String(localized: "Focus Window"))
                             .font(.system(size: 11, weight: .medium))
                             .foregroundColor(colors.textSecondary)
                         Text("↵")
@@ -1155,10 +1155,10 @@ struct CommandBottomBar: View {
                     .padding(.vertical, 4)
                     .background(colors.badgeBg)
                     .clipShape(Capsule())
-                    
+
                 case .renameCurrentSpace:
                     HStack(spacing: 4) {
-                        Text("Rename Space")
+                        Text(verbatim: String(localized: "Rename Space"))
                             .font(.system(size: 11, weight: .medium))
                             .foregroundColor(colors.textSecondary)
                         Text("↵")

@@ -12,6 +12,16 @@
       },
       "shouldTranslate" : false
     },
+    "(No Title)" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "（无标题）"
+          }
+        }
+      }
+    },
     " + Number" : {
       "localizations" : {
         "zh-Hans" : {
@@ -710,6 +720,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "切换窗口"
+          }
+        }
+      }
+    },
+    "Focus ↵" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "聚焦 ↵"
           }
         }
       }
@@ -1758,6 +1778,16 @@
         }
       }
     },
+    "Run ↵" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "执行 ↵"
+          }
+        }
+      }
+    },
     "Save" : {
       "localizations" : {
         "zh-Hans" : {
@@ -2570,6 +2600,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "切换桌面"
+          }
+        }
+      }
+    },
+    "Switch ↵" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "切换 ↵"
           }
         }
       }
