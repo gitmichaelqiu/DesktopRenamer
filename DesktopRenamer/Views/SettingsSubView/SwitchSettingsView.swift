@@ -244,6 +244,17 @@ struct SwitchSettingsView: View {
                     }
                 }
                 
+                SettingsSection("Launcher") {
+                    SettingsRow(
+                        "Return to Original Space",
+                        helperText: "Automatically return to your original desktop after moving windows to a different desktop."
+                    ) {
+                        Toggle("", isOn: $spaceManager.returnToOriginalAfterBatchMove)
+                            .toggleStyle(.switch)
+                            .labelsHidden()
+                    }
+                }
+                
                 // Gesture-based switching configuration.
                 SettingsSection("Trackpad Switch Gesture Override") {
                     SettingsRow(
