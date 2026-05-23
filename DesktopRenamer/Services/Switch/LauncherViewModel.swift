@@ -491,8 +491,11 @@ struct BatchMoveSection: Identifiable {
                 labelManager.showActiveLabels.toggle()
                 let isEnabled = labelManager.showActiveLabels
                 closeLauncher()
+                
+                let status = isEnabled ? String(localized: "Enabled") : String(localized: "Disabled")
+                let msg = String(format: String(localized: "Active Space Label: %@"), status)
                 HUDWindowController.shared.show(
-                    message: String(format: NSLocalizedString("Active Space Label: %@", comment: ""), isEnabled ? NSLocalizedString("Enabled", comment: "") : NSLocalizedString("Disabled", comment: "")),
+                    message: msg,
                     systemImage: isEnabled ? "checkmark.circle.fill" : "xmark.circle.fill",
                     iconColor: isEnabled ? .green : .red
                 )
@@ -506,8 +509,11 @@ struct BatchMoveSection: Identifiable {
                 labelManager.showPreviewLabels.toggle()
                 let isEnabled = labelManager.showPreviewLabels
                 closeLauncher()
+                
+                let status = isEnabled ? String(localized: "Enabled") : String(localized: "Disabled")
+                let msg = String(format: String(localized: "Preview Space Labels: %@"), status)
                 HUDWindowController.shared.show(
-                    message: String(format: NSLocalizedString("Preview Space Labels: %@", comment: ""), isEnabled ? NSLocalizedString("Enabled", comment: "") : NSLocalizedString("Disabled", comment: "")),
+                    message: msg,
                     systemImage: isEnabled ? "checkmark.circle.fill" : "xmark.circle.fill",
                     iconColor: isEnabled ? .green : .red
                 )
@@ -521,8 +527,11 @@ struct BatchMoveSection: Identifiable {
                 labelManager.showOnDesktop.toggle()
                 let isEnabled = labelManager.showOnDesktop
                 closeLauncher()
+                
+                let status = isEnabled ? String(localized: "Enabled") : String(localized: "Disabled")
+                let msg = String(format: String(localized: "Keep visible on desktop: %@"), status)
                 HUDWindowController.shared.show(
-                    message: String(format: NSLocalizedString("Keep visible on desktop: %@", comment: ""), isEnabled ? NSLocalizedString("Enabled", comment: "") : NSLocalizedString("Disabled", comment: "")),
+                    message: msg,
                     systemImage: isEnabled ? "checkmark.circle.fill" : "xmark.circle.fill",
                     iconColor: isEnabled ? .green : .red
                 )
