@@ -370,6 +370,16 @@
         }
       }
     },
+    "Automatically Return to Original Space" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "自动返回原桌面"
+          }
+        }
+      }
+    },
     "Automatically return to your original desktop after moving windows to a different desktop." : {
       "localizations" : {
         "zh-Hans" : {
@@ -740,17 +750,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "在设置 → 通用 → 修复参数检测"
-          }
-        }
-      }
-    },
-    "Focus ↵" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "聚焦 ↵"
           }
         }
       }
@@ -1783,16 +1782,6 @@
         }
       }
     },
-    "Return to Original Space" : {
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "返回原桌面"
-          }
-        }
-      }
-    },
     "Review" : {
       "localizations" : {
         "zh-Hans" : {
@@ -1815,17 +1804,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "浏览介绍"
-          }
-        }
-      }
-    },
-    "Run ↵" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "执行 ↵"
           }
         }
       }
@@ -2443,6 +2421,16 @@
         }
       }
     },
+    "Shortcuts" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "快捷键"
+          }
+        }
+      }
+    },
     "Show active space labels" : {
       "localizations" : {
         "zh-Hans" : {
@@ -2616,17 +2604,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "切换 & 移动"
-          }
-        }
-      }
-    },
-    "Switch ↵" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "切换 ↵"
           }
         }
       }

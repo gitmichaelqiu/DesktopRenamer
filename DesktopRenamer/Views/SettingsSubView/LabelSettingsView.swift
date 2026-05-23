@@ -2,6 +2,7 @@ import SwiftUI
 
 struct LabelSettingsView: View {
     @ObservedObject var labelManager: SpaceLabelManager
+    @EnvironmentObject var hotkeyManager: HotkeyManager
 
     var body: some View {
         SettingsContainer(.labels) {
@@ -101,6 +102,28 @@ struct LabelSettingsView: View {
                             step: 0.10,
                             valueString: { String(format: "%.2fx", $0) }
                         )
+                    }
+                }
+
+                if labelManager.showPreviewLabels || labelManager.showActiveLabels {
+                    SettingsSection("Shortcuts") {
+                        SettingsRow("Reload space labels") {
+                            HStack {
+                                Text(hotkeyManager.description(for: .reloadLabels))
+                                    .foregroundColor(.secondary)
+                                    .padding(.trailing, 8)
+                                
+                                Button("◉") {
+                                    hotkeyManager.startListening(for: .reloadLabels)
+                                }
+                                .disabled(hotkeyManager.isListening)
+                                
+                                Button("↺") {
+                                    hotkeyManager.resetToDefault(for: .reloadLabels)
+                                }
+                                .disabled(hotkeyManager.isDefault(for: .reloadLabels))
+                            }
+                        }
                     }
                 }
             }

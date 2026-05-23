@@ -57,46 +57,6 @@ struct SwitchSettingsView: View {
                             .disabled(hotkeyManager.isDefault(for: .switchRight))
                         }
                     }
-                    
-                    Divider()
-                    
-                    SettingsRow("Reload space labels") {
-                        HStack {
-                            Text(hotkeyManager.description(for: .reloadLabels))
-                                .foregroundColor(.secondary)
-                                .padding(.trailing, 8)
-                            
-                            Button("◉") {
-                                hotkeyManager.startListening(for: .reloadLabels)
-                            }
-                            .disabled(hotkeyManager.isListening)
-                            
-                            Button("↺") {
-                                hotkeyManager.resetToDefault(for: .reloadLabels)
-                            }
-                            .disabled(hotkeyManager.isDefault(for: .reloadLabels))
-                        }
-                    }
-                    
-                    Divider()
-                    
-                    SettingsRow("Open Launcher") {
-                        HStack {
-                            Text(hotkeyManager.description(for: .launcher))
-                                .foregroundColor(.secondary)
-                                .padding(.trailing, 8)
-                            
-                            Button("◉") {
-                                hotkeyManager.startListening(for: .launcher)
-                            }
-                            .disabled(hotkeyManager.isListening)
-                            
-                            Button("↺") {
-                                hotkeyManager.resetToDefault(for: .launcher)
-                            }
-                            .disabled(hotkeyManager.isDefault(for: .launcher))
-                        }
-                    }
                 }
                 
                 SettingsSection(nil) {
@@ -156,10 +116,10 @@ struct SwitchSettingsView: View {
                             }
                             .disabled(hotkeyManager.isDefault(for: .moveWindowNumber))
                         }
-                    }
-                    
-                    Divider()
-                    
+                    }   
+                }
+
+                SettingsSection(nil) {
                     SettingsRow("Move window to previous display") {
                         HStack {
                             Text(hotkeyManager.description(for: .moveWindowPreviousDisplay))
@@ -245,8 +205,28 @@ struct SwitchSettingsView: View {
                 }
                 
                 SettingsSection("Launcher") {
+                    SettingsRow("Open Launcher") {
+                        HStack {
+                            Text(hotkeyManager.description(for: .launcher))
+                                .foregroundColor(.secondary)
+                                .padding(.trailing, 8)
+                            
+                            Button("◉") {
+                                hotkeyManager.startListening(for: .launcher)
+                            }
+                            .disabled(hotkeyManager.isListening)
+                            
+                            Button("↺") {
+                                hotkeyManager.resetToDefault(for: .launcher)
+                            }
+                            .disabled(hotkeyManager.isDefault(for: .launcher))
+                        }
+                    }
+
+                    Divider()
+
                     SettingsRow(
-                        "Return to Original Space",
+                        "Automatically Return to Original Space",
                         helperText: "Automatically return to your original desktop after moving windows to a different desktop."
                     ) {
                         Toggle("", isOn: $spaceManager.returnToOriginalAfterBatchMove)
