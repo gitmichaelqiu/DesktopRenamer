@@ -105,16 +105,49 @@ struct LauncherView: View {
                                     viewModel.selectedRowIndex += 1
                                 }
                             },
+                            onLeftArrow: {
+                                if viewModel.isBottomBarFocused {
+                                    if viewModel.selectedSpaceIndex > 0 {
+                                        viewModel.selectedSpaceIndex -= 1
+                                    }
+                                    return true
+                                }
+                                return false
+                            },
+                            onRightArrow: {
+                                if viewModel.isBottomBarFocused {
+                                    let count = spaceManager.currentDisplaySpaces.count
+                                    if viewModel.selectedSpaceIndex < count - 1 {
+                                        viewModel.selectedSpaceIndex += 1
+                                    }
+                                    return true
+                                }
+                                return false
+                            },
                             onEnter: {
-                                viewModel.executeRowAction()
+                                if viewModel.isBottomBarFocused {
+                                    viewModel.executeBottomBarSpaceAction(isOption: false, isCommand: false)
+                                } else {
+                                    viewModel.executeRowAction()
+                                }
                             },
                             onCommandEnter: {
-                                if viewModel.activeCommand?.type == .batchMoveWindows {
+                                if viewModel.isBottomBarFocused {
+                                    viewModel.executeBottomBarSpaceAction(isOption: false, isCommand: true)
+                                } else if viewModel.activeCommand?.type == .batchMoveWindows {
                                     viewModel.executeBatchMove()
+                                }
+                            },
+                            onOptionEnter: {
+                                if viewModel.isBottomBarFocused {
+                                    viewModel.executeBottomBarSpaceAction(isOption: true, isCommand: false)
                                 }
                             },
                             onCommandNumber: { num in
                                 viewModel.executeNthRowAction(num - 1)
+                            },
+                            onTab: {
+                                viewModel.handleTabKey()
                             },
                             onEscape: {
                                 viewModel.handleEscapeKey()
@@ -215,8 +248,8 @@ struct ListAreaView: View {
                             VStack(spacing: 4) {
                                 ForEach(0..<commands.count, id: \.self) { i in
                                     let cmd = commands[i]
-                                    let isSelected = viewModel.selectedRowIndex == i
-                                    CommandRowView(command: cmd, isSelected: isSelected)
+                                    let isSelected = !viewModel.isBottomBarFocused && viewModel.selectedRowIndex == i
+                                    CommandRowView(command: cmd, isSelected: isSelected, shortcutText: viewModel.showCommandNumbers && i < 9 ? "⌘\(i + 1)" : nil)
                                         .contentShape(Rectangle())
                                         .onTapGesture {
                                             viewModel.isKeyboardSelection = true
@@ -256,8 +289,8 @@ struct ListAreaView: View {
                                 VStack(spacing: 4) {
                                     ForEach(0..<spaces.count, id: \.self) { i in
                                         let space = spaces[i]
-                                        let isSelected = viewModel.selectedRowIndex == i
-                                        SpaceRowView(space: space, isSelected: isSelected)
+                                        let isSelected = !viewModel.isBottomBarFocused && viewModel.selectedRowIndex == i
+                                        SpaceRowView(space: space, isSelected: isSelected, shortcutText: viewModel.showCommandNumbers && i < 9 ? "⌘\(i + 1)" : nil)
                                             .contentShape(Rectangle())
                                             .onTapGesture {
                                                 viewModel.isKeyboardSelection = true
@@ -300,8 +333,8 @@ struct ListAreaView: View {
                                     VStack(spacing: 4) {
                                         ForEach(0..<spaces.count, id: \.self) { i in
                                             let space = spaces[i]
-                                            let isSelected = viewModel.selectedRowIndex == i
-                                            SpaceRowView(space: space, isSelected: isSelected)
+                                            let isSelected = !viewModel.isBottomBarFocused && viewModel.selectedRowIndex == i
+                                            SpaceRowView(space: space, isSelected: isSelected, shortcutText: viewModel.showCommandNumbers && i < 9 ? "⌘\(i + 1)" : nil)
                                                 .contentShape(Rectangle())
                                                 .onTapGesture {
                                                     viewModel.isKeyboardSelection = true
@@ -343,8 +376,8 @@ struct ListAreaView: View {
                                     VStack(spacing: 4) {
                                         ForEach(0..<windows.count, id: \.self) { i in
                                             let window = windows[i]
-                                            let isSelected = viewModel.selectedRowIndex == i
-                                            WindowRowView(window: window, isSelected: isSelected)
+                                            let isSelected = !viewModel.isBottomBarFocused && viewModel.selectedRowIndex == i
+                                            WindowRowView(window: window, isSelected: isSelected, shortcutText: viewModel.showCommandNumbers && i < 9 ? "⌘\(i + 1)" : nil)
                                                 .contentShape(Rectangle())
                                                 .onTapGesture {
                                                     viewModel.isKeyboardSelection = true
@@ -388,11 +421,11 @@ struct ListAreaView: View {
                                             ListSectionHeader(title: section.title, subtitle: section.subtitle)
                                             
                                             ForEach(section.items) { item in
-                                                let isSelected = viewModel.selectedRowIndex == item.index
+                                                let isSelected = !viewModel.isBottomBarFocused && viewModel.selectedRowIndex == item.index
                                                 
                                                 switch item {
                                                 case .staged(let move, _):
-                                                    WindowBatchRowView(window: move.window, isSelected: isSelected, isStaged: true, targetSpaceName: move.targetSpace.name)
+                                                    WindowBatchRowView(window: move.window, isSelected: isSelected, isStaged: true, targetSpaceName: move.targetSpace.name, shortcutText: viewModel.showCommandNumbers && item.index < 9 ? "⌘\(item.index + 1)" : nil)
                                                         .contentShape(Rectangle())
                                                         .onTapGesture {
                                                             viewModel.isKeyboardSelection = true
@@ -408,7 +441,7 @@ struct ListAreaView: View {
                                                         .id(item.index)
                                                         
                                                 case .unstaged(let window, _):
-                                                    WindowBatchRowView(window: window, isSelected: isSelected, isStaged: false, targetSpaceName: "")
+                                                    WindowBatchRowView(window: window, isSelected: isSelected, isStaged: false, targetSpaceName: "", shortcutText: viewModel.showCommandNumbers && item.index < 9 ? "⌘\(item.index + 1)" : nil)
                                                         .contentShape(Rectangle())
                                                         .onTapGesture {
                                                             viewModel.isKeyboardSelection = true
@@ -508,6 +541,7 @@ struct EmptyResultsView: View {
 struct CommandRowView: View {
     let command: LauncherCommand
     let isSelected: Bool
+    var shortcutText: String? = nil
     @Environment(\.colorScheme) var colorScheme
     
     var colors: ThemeColors {
@@ -555,7 +589,9 @@ struct CommandRowView: View {
             
             Spacer()
             
-            if let statusText = toggleStatus {
+            if let shortcut = shortcutText {
+                KeycapView(text: shortcut, isSelected: isSelected)
+            } else if let statusText = toggleStatus {
                 Text(statusText)
                     .font(.system(size: 10, weight: .bold))
                     .foregroundColor(statusText == "Enabled" ? colors.greenText : colors.textSecondary)
@@ -586,6 +622,7 @@ struct CommandRowView: View {
 struct SpaceRowView: View {
     let space: SpaceGroup
     let isSelected: Bool
+    var shortcutText: String? = nil
     @Environment(\.colorScheme) var colorScheme
     
     var colors: ThemeColors {
@@ -619,7 +656,11 @@ struct SpaceRowView: View {
             
             Spacer()
             
-            KeycapView(text: "Switch ↵", isSelected: isSelected)
+            if let shortcut = shortcutText {
+                KeycapView(text: shortcut, isSelected: isSelected)
+            } else {
+                KeycapView(text: "Switch ↵", isSelected: isSelected)
+            }
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 8)
@@ -631,6 +672,7 @@ struct SpaceRowView: View {
 struct WindowRowView: View {
     let window: WindowEntry
     let isSelected: Bool
+    var shortcutText: String? = nil
     @Environment(\.colorScheme) var colorScheme
     
     var colors: ThemeColors {
@@ -666,7 +708,11 @@ struct WindowRowView: View {
             
             Spacer()
             
-            KeycapView(text: "Focus ↵", isSelected: isSelected)
+            if let shortcut = shortcutText {
+                KeycapView(text: shortcut, isSelected: isSelected)
+            } else {
+                KeycapView(text: "Focus ↵", isSelected: isSelected)
+            }
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 8)
@@ -717,6 +763,7 @@ struct WindowBatchRowView: View {
     let isSelected: Bool
     let isStaged: Bool
     let targetSpaceName: String
+    var shortcutText: String? = nil
     @Environment(\.colorScheme) var colorScheme
     
     var colors: ThemeColors {
@@ -752,7 +799,9 @@ struct WindowBatchRowView: View {
             
             Spacer()
             
-            if isStaged {
+            if let shortcut = shortcutText {
+                KeycapView(text: shortcut, isSelected: isSelected)
+            } else if isStaged {
                 HStack(spacing: 4) {
                     Circle()
                         .fill(colors.greenText)
@@ -964,12 +1013,14 @@ struct SpacesBottomBar: View {
             
             let spaces = spaceManager.currentDisplaySpaces
             
-            ForEach(spaces, id: \.id) { space in
+            ForEach(0..<spaces.count, id: \.self) { i in
+                let space = spaces[i]
                 let isCurrent = space.id == spaceManager.currentSpaceUUID
+                let isSpaceSelected = viewModel.isBottomBarFocused && i == viewModel.selectedSpaceIndex
                 let name = spaceManager.getSpaceName(space.id)
                 
                 HStack {
-                    if isCurrent {
+                    if isSpaceSelected {
                         Text(name)
                             .font(.system(size: 11, weight: .semibold))
                             .foregroundColor(.white)
@@ -977,7 +1028,19 @@ struct SpacesBottomBar: View {
                             .padding(.vertical, 4)
                             .background(Color(red: 0.0, green: 0.55, blue: 1.0))
                             .clipShape(Capsule())
+                            .overlay(
+                                Capsule()
+                                    .stroke(Color.white.opacity(0.4), lineWidth: 1)
+                            )
                             .shadow(color: Color(red: 0.0, green: 0.55, blue: 1.0).opacity(0.4), radius: 4, x: 0, y: 0)
+                    } else if isCurrent {
+                        Text(name)
+                            .font(.system(size: 11, weight: .semibold))
+                            .foregroundColor(Color(red: 0.0, green: 0.55, blue: 1.0))
+                            .padding(.horizontal, 10)
+                            .padding(.vertical, 4)
+                            .background(Color(red: 0.0, green: 0.55, blue: 1.0).opacity(0.15))
+                            .clipShape(Capsule())
                     } else {
                         Text(name)
                             .font(.system(size: 11, weight: .medium))
@@ -1007,10 +1070,10 @@ struct SpacesBottomBar: View {
             
             // Right side action indicator
             HStack(spacing: 4) {
-                Text("Action")
+                Text(viewModel.isBottomBarFocused ? "Switch / Move" : "Action")
                     .font(.system(size: 11, weight: .medium))
                     .foregroundColor(colors.textSecondary)
-                Text("↵")
+                Text(viewModel.isBottomBarFocused ? "↵ / ⌥↵" : "↵")
                     .font(.system(size: 11, weight: .semibold))
                     .foregroundColor(colors.textQuaternary)
             }
@@ -1125,6 +1188,7 @@ struct CommandBottomBar: View {
 
 class FocusTextField: NSTextField {
     var onCommandEnter: (() -> Void)?
+    var onOptionEnter: (() -> Void)?
     var onCommandNumber: ((Int) -> Void)?
 
     override var acceptsFirstResponder: Bool {
@@ -1135,20 +1199,28 @@ class FocusTextField: NSTextField {
         if event.type == .keyDown {
             let modifiers = event.modifierFlags.intersection(.deviceIndependentFlagsMask)
             let hasCommand = modifiers.contains(.command)
-            let hasOtherModifiers = !modifiers.subtracting([.command, .numericPad, .function]).isEmpty
-            if hasCommand && !hasOtherModifiers {
-                if event.keyCode == 36 || event.keyCode == 76 {
-                    onCommandEnter?()
+            let hasOption = modifiers.contains(.option)
+            let hasOtherModifiers = !modifiers.subtracting([.command, .option, .numericPad, .function]).isEmpty
+            
+            if !hasOtherModifiers {
+                if (hasCommand || hasOption) && (event.keyCode == 36 || event.keyCode == 76) {
+                    if hasCommand {
+                        onCommandEnter?()
+                    } else if hasOption {
+                        onOptionEnter?()
+                    }
                     return true
                 }
                 
-                if let chars = event.charactersIgnoringModifiers,
-                   chars.count == 1,
-                   let char = chars.first,
-                   let number = Int(String(char)),
-                   number >= 1 && number <= 9 {
-                    onCommandNumber?(number)
-                    return true
+                if hasCommand {
+                    if let chars = event.charactersIgnoringModifiers,
+                       chars.count == 1,
+                       let char = chars.first,
+                       let number = Int(String(char)),
+                       number >= 1 && number <= 9 {
+                        onCommandNumber?(number)
+                        return true
+                    }
                 }
             }
         }
@@ -1193,9 +1265,13 @@ struct SearchTextField: NSViewRepresentable {
     var isDark: Bool
     var onUpArrow: () -> Void
     var onDownArrow: () -> Void
+    var onLeftArrow: (() -> Bool)? = nil
+    var onRightArrow: (() -> Bool)? = nil
     var onEnter: () -> Void
     var onCommandEnter: (() -> Void)? = nil
+    var onOptionEnter: (() -> Void)? = nil
     var onCommandNumber: ((Int) -> Void)? = nil
+    var onTab: (() -> Void)? = nil
     var onEscape: () -> Void
     var placeholder: String = "Type a command..."
     
@@ -1219,10 +1295,24 @@ struct SearchTextField: NSViewRepresentable {
             } else if commandSelector == #selector(NSResponder.moveDown(_:)) {
                 parent.onDownArrow()
                 return true
+            } else if commandSelector == #selector(NSResponder.moveLeft(_:)) {
+                if parent.onLeftArrow?() == true {
+                    return true
+                }
+            } else if commandSelector == #selector(NSResponder.moveRight(_:)) {
+                if parent.onRightArrow?() == true {
+                    return true
+                }
+            } else if commandSelector == #selector(NSResponder.insertTab(_:)) || commandSelector == #selector(NSResponder.insertBacktab(_:)) {
+                parent.onTab?()
+                return true
             } else if commandSelector == #selector(NSResponder.insertNewline(_:)) {
                 let isCommandPressed = NSEvent.modifierFlags.contains(.command)
+                let isOptionPressed = NSEvent.modifierFlags.contains(.option)
                 if isCommandPressed, let onCommandEnter = parent.onCommandEnter {
                     onCommandEnter()
+                } else if isOptionPressed, let onOptionEnter = parent.onOptionEnter {
+                    onOptionEnter()
                 } else {
                     parent.onEnter()
                 }
@@ -1244,6 +1334,9 @@ struct SearchTextField: NSViewRepresentable {
         textField.delegate = context.coordinator
         textField.onCommandEnter = {
             self.onCommandEnter?()
+        }
+        textField.onOptionEnter = {
+            self.onOptionEnter?()
         }
         textField.onCommandNumber = { num in
             self.onCommandNumber?(num)
@@ -1272,6 +1365,9 @@ struct SearchTextField: NSViewRepresentable {
         if let focusField = nsView as? FocusTextField {
             focusField.onCommandEnter = {
                 self.onCommandEnter?()
+            }
+            focusField.onOptionEnter = {
+                self.onOptionEnter?()
             }
             focusField.onCommandNumber = { num in
                 self.onCommandNumber?(num)

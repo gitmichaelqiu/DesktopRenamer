@@ -48,6 +48,13 @@ class LauncherWindowController: NSWindowController, NSWindowDelegate {
         hostingView.frame = NSRect(x: 0, y: 0, width: 720, height: 450)
         
         panel.contentView = hostingView
+        
+        NSEvent.addLocalMonitorForEvents(matching: .flagsChanged) { [weak self] event in
+            guard let self = self else { return event }
+            let hasCommand = event.modifierFlags.contains(.command)
+            self.viewModel.showCommandNumbers = hasCommand
+            return event
+        }
     }
     
     required init?(coder: NSCoder) {
@@ -83,6 +90,7 @@ class LauncherWindowController: NSWindowController, NSWindowDelegate {
     
     func hide() {
         window?.orderOut(nil)
+        viewModel.showCommandNumbers = false
         
         if shouldRestoreFocus, let prev = viewModel.previouslyActiveWindow {
             DispatchQueue.main.async {

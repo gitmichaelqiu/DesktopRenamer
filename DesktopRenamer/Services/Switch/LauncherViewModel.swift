@@ -57,6 +57,7 @@ struct BatchMoveSection: Identifiable {
         didSet {
             selectedRowIndex = 0
             isKeyboardSelection = true
+            isBottomBarFocused = false
         }
     }
     @Published var selectedRowIndex: Int = 0
@@ -70,6 +71,7 @@ struct BatchMoveSection: Identifiable {
             searchQuery = ""
             selectedRowIndex = 0
             isKeyboardSelection = true
+            isBottomBarFocused = false
             if activeCommand != nil {
                 loadData()
             }
@@ -81,6 +83,10 @@ struct BatchMoveSection: Identifiable {
     @Published var isLoadingData: Bool = false
     @Published var isKeyboardSelection: Bool = false
     
+    @Published var showCommandNumbers: Bool = false
+    @Published var isBottomBarFocused: Bool = false
+    @Published var selectedSpaceIndex: Int = 0
+    
     // For batch window moves
     @Published var stagedMoves: [Int: (window: WindowEntry, targetSpace: SpaceGroup)] = [:]
     @Published var stagingWindow: WindowEntry? = nil {
@@ -88,6 +94,7 @@ struct BatchMoveSection: Identifiable {
             searchQuery = ""
             selectedRowIndex = 0
             isKeyboardSelection = true
+            isBottomBarFocused = false
         }
     }
     @Published var isExecutingBatchMove: Bool = false
@@ -678,7 +685,9 @@ struct BatchMoveSection: Identifiable {
     }
     
     func handleEscapeKey() {
-        if stagingWindow != nil {
+        if isBottomBarFocused {
+            isBottomBarFocused = false
+        } else if stagingWindow != nil {
             stagingWindow = nil
             selectedRowIndex = batchMoveLastSelectedIndex
         } else if activeCommand != nil {
@@ -688,11 +697,43 @@ struct BatchMoveSection: Identifiable {
         }
     }
     
+    func handleTabKey() {
+        guard activeCommand == nil else { return }
+        isBottomBarFocused.toggle()
+        if isBottomBarFocused {
+            if let manager = AppDelegate.shared.spaceManager {
+                let spaces = manager.currentDisplaySpaces
+                if let currentIndex = spaces.firstIndex(where: { $0.id == manager.currentSpaceUUID }) {
+                    selectedSpaceIndex = currentIndex
+                } else {
+                    selectedSpaceIndex = 0
+                }
+            }
+        }
+    }
+    
+    func executeBottomBarSpaceAction(isOption: Bool, isCommand: Bool) {
+        guard let manager = AppDelegate.shared.spaceManager else { return }
+        let spaces = manager.currentDisplaySpaces
+        guard selectedSpaceIndex >= 0 && selectedSpaceIndex < spaces.count else { return }
+        let space = spaces[selectedSpaceIndex]
+        
+        if isOption || isCommand {
+            let handled = movePreviouslyActiveWindow(toSpaceID: space.id)
+            if !handled {
+                closeLauncher()
+            }
+        } else {
+            executeSwitchToSpaceID(space.id)
+        }
+    }
+    
     func closeLauncher() {
         searchQuery = ""
         selectedRowIndex = 0
         activeCommand = nil
         stagingWindow = nil
+        isBottomBarFocused = false
         onClose?()
     }
 }
