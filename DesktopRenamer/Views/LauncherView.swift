@@ -86,7 +86,7 @@ struct LauncherView: View {
                             onEscape: {
                                 viewModel.handleEscapeKey()
                             },
-                            placeholder: "New Space Name..."
+                            placeholder: NSLocalizedString("New Space Name...", comment: "")
                         )
                         .frame(height: 44)
                     } else {
@@ -152,7 +152,7 @@ struct LauncherView: View {
                             onEscape: {
                                 viewModel.handleEscapeKey()
                             },
-                            placeholder: viewModel.activeCommand == nil ? "Search commands..." : (viewModel.stagingWindow != nil ? "Search target space..." : "Search items...")
+                            placeholder: viewModel.activeCommand == nil ? NSLocalizedString("Search commands...", comment: "") : (viewModel.stagingWindow != nil ? NSLocalizedString("Search target space...", comment: "") : NSLocalizedString("Search items...", comment: ""))
                         )
                         .frame(height: 44)
                     }
@@ -884,7 +884,7 @@ struct BatchMoveBottomBar: View {
                         Image(systemName: "square.and.arrow.down")
                             .font(.system(size: 10, weight: .semibold))
                             .foregroundColor(colors.greenText)
-                        Text("Stage: \(staging.ownerName)")
+                        Text(String(format: NSLocalizedString("Stage: %@", comment: ""), staging.ownerName))
                             .font(.system(size: 11, weight: .semibold))
                             .foregroundColor(colors.textPrimary)
                     }
@@ -1056,12 +1056,21 @@ struct SpacesBottomBar: View {
             
             // Right side action indicator
             HStack(spacing: 4) {
-                Text(viewModel.isBottomBarFocused ? "Switch / Move" : "Action")
-                    .font(.system(size: 11, weight: .medium))
-                    .foregroundColor(colors.textSecondary)
-                Text(viewModel.isBottomBarFocused ? "↵ / ⌥↵" : "↵")
-                    .font(.system(size: 11, weight: .semibold))
-                    .foregroundColor(colors.textQuaternary)
+                if viewModel.isBottomBarFocused {
+                    Text("Switch / Move")
+                        .font(.system(size: 11, weight: .medium))
+                        .foregroundColor(colors.textSecondary)
+                    Text("↵ / ⌥↵")
+                        .font(.system(size: 11, weight: .semibold))
+                        .foregroundColor(colors.textQuaternary)
+                } else {
+                    Text("Action")
+                        .font(.system(size: 11, weight: .medium))
+                        .foregroundColor(colors.textSecondary)
+                    Text("↵")
+                        .font(.system(size: 11, weight: .semibold))
+                        .foregroundColor(colors.textQuaternary)
+                }
             }
             .padding(.horizontal, 10)
             .padding(.vertical, 4)
