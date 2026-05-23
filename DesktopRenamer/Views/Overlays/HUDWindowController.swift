@@ -49,6 +49,7 @@ class HUDWindowController: NSWindowController {
     static let shared = HUDWindowController()
     
     private var hideTimer: Timer?
+    private var hostingView: NSHostingView<HUDView>?
     
     init() {
         let panel = HUDNSPanel(
@@ -79,14 +80,22 @@ class HUDWindowController: NSWindowController {
         // Cancel existing timer
         hideTimer?.invalidate()
         
-        // Set SwiftUI content view
+        // Update or set SwiftUI content view
         let hudView = HUDView(message: message, systemImage: systemImage, iconColor: iconColor)
-        let hostingView = NSHostingView(rootView: hudView)
         
-        // Size to fit content
-        let fittingSize = hostingView.fittingSize
-        panel.setContentSize(fittingSize)
-        panel.contentView = hostingView
+        if let existing = hostingView {
+            existing.rootView = hudView
+        } else {
+            let newView = NSHostingView(rootView: hudView)
+            panel.contentView = newView
+            self.hostingView = newView
+        }
+        
+        if let hostingView = self.hostingView {
+            // Size to fit content
+            let fittingSize = hostingView.fittingSize
+            panel.setContentSize(fittingSize)
+        }
         
         // Position at bottom center of active screen
         positionPanel(panel)
