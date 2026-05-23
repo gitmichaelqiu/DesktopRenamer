@@ -95,14 +95,12 @@ struct LauncherView: View {
                             isDark: colors.isDark,
                             onUpArrow: {
                                 viewModel.isKeyboardSelection = true
-                                viewModel.lastMouseLocation = NSEvent.mouseLocation
                                 if viewModel.selectedRowIndex > 0 {
                                     viewModel.selectedRowIndex -= 1
                                 }
                             },
                             onDownArrow: {
                                 viewModel.isKeyboardSelection = true
-                                viewModel.lastMouseLocation = NSEvent.mouseLocation
                                 if viewModel.selectedRowIndex < viewModel.visibleRowsCount - 1 {
                                     viewModel.selectedRowIndex += 1
                                 }
@@ -258,16 +256,6 @@ struct ListAreaView: View {
                                             viewModel.selectedRowIndex = i
                                             viewModel.executeRowAction()
                                         }
-                                        .onHover { isHovering in
-                                            if isHovering {
-                                                let mousePos = NSEvent.mouseLocation
-                                                if mousePos != viewModel.lastMouseLocation {
-                                                    viewModel.lastMouseLocation = mousePos
-                                                    viewModel.isKeyboardSelection = false
-                                                    viewModel.selectedRowIndex = i
-                                                }
-                                            }
-                                        }
                                         .id(i)
                                 }
                             }
@@ -302,16 +290,6 @@ struct ListAreaView: View {
                                                 viewModel.isKeyboardSelection = true
                                                 viewModel.selectedRowIndex = i
                                                 viewModel.executeRowAction()
-                                            }
-                                            .onHover { isHovering in
-                                                if isHovering {
-                                                    let mousePos = NSEvent.mouseLocation
-                                                    if mousePos != viewModel.lastMouseLocation {
-                                                        viewModel.lastMouseLocation = mousePos
-                                                        viewModel.isKeyboardSelection = false
-                                                        viewModel.selectedRowIndex = i
-                                                    }
-                                                }
                                             }
                                             .id(i)
                                     }
@@ -351,16 +329,6 @@ struct ListAreaView: View {
                                                     viewModel.selectedRowIndex = i
                                                     viewModel.executeRowAction()
                                                 }
-                                                .onHover { isHovering in
-                                                    if isHovering {
-                                                        let mousePos = NSEvent.mouseLocation
-                                                        if mousePos != viewModel.lastMouseLocation {
-                                                            viewModel.lastMouseLocation = mousePos
-                                                            viewModel.isKeyboardSelection = false
-                                                            viewModel.selectedRowIndex = i
-                                                        }
-                                                    }
-                                                }
                                                 .id(i)
                                         }
                                     }
@@ -397,16 +365,6 @@ struct ListAreaView: View {
                                                     viewModel.isKeyboardSelection = true
                                                     viewModel.selectedRowIndex = i
                                                     viewModel.executeRowAction()
-                                                }
-                                                .onHover { isHovering in
-                                                    if isHovering {
-                                                        let mousePos = NSEvent.mouseLocation
-                                                        if mousePos != viewModel.lastMouseLocation {
-                                                            viewModel.lastMouseLocation = mousePos
-                                                            viewModel.isKeyboardSelection = false
-                                                            viewModel.selectedRowIndex = i
-                                                        }
-                                                    }
                                                 }
                                                 .id(i)
                                         }
@@ -450,16 +408,6 @@ struct ListAreaView: View {
                                                             viewModel.selectedRowIndex = item.index
                                                             viewModel.executeRowAction()
                                                         }
-                                                        .onHover { isHovering in
-                                                            if isHovering {
-                                                                let mousePos = NSEvent.mouseLocation
-                                                                if mousePos != viewModel.lastMouseLocation {
-                                                                    viewModel.lastMouseLocation = mousePos
-                                                                    viewModel.isKeyboardSelection = false
-                                                                    viewModel.selectedRowIndex = item.index
-                                                                }
-                                                            }
-                                                        }
                                                         .id(item.index)
                                                         
                                                 case .unstaged(let window, _):
@@ -469,16 +417,6 @@ struct ListAreaView: View {
                                                             viewModel.isKeyboardSelection = true
                                                             viewModel.selectedRowIndex = item.index
                                                             viewModel.executeRowAction()
-                                                        }
-                                                        .onHover { isHovering in
-                                                            if isHovering {
-                                                                let mousePos = NSEvent.mouseLocation
-                                                                if mousePos != viewModel.lastMouseLocation {
-                                                                    viewModel.lastMouseLocation = mousePos
-                                                                    viewModel.isKeyboardSelection = false
-                                                                    viewModel.selectedRowIndex = item.index
-                                                                }
-                                                            }
                                                         }
                                                         .id(item.index)
                                                 }
@@ -569,6 +507,7 @@ struct CommandRowView: View {
     let isSelected: Bool
     var shortcutText: String? = nil
     @Environment(\.colorScheme) var colorScheme
+    @State private var isHovered = false
     
     var colors: ThemeColors {
         ThemeColors(isDark: colorScheme == .dark)
@@ -640,8 +579,11 @@ struct CommandRowView: View {
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 8)
-        .background(isSelected ? colors.rowHover : Color.clear)
+        .background(isSelected ? colors.rowHover : (isHovered ? colors.rowHover.opacity(0.5) : Color.clear))
         .cornerRadius(8)
+        .onHover { hovering in
+            isHovered = hovering
+        }
     }
 }
 
@@ -650,6 +592,7 @@ struct SpaceRowView: View {
     let isSelected: Bool
     var shortcutText: String? = nil
     @Environment(\.colorScheme) var colorScheme
+    @State private var isHovered = false
     
     var colors: ThemeColors {
         ThemeColors(isDark: colorScheme == .dark)
@@ -690,8 +633,11 @@ struct SpaceRowView: View {
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 8)
-        .background(isSelected ? colors.rowHover : Color.clear)
+        .background(isSelected ? colors.rowHover : (isHovered ? colors.rowHover.opacity(0.5) : Color.clear))
         .cornerRadius(8)
+        .onHover { hovering in
+            isHovered = hovering
+        }
     }
 }
 
@@ -700,6 +646,7 @@ struct WindowRowView: View {
     let isSelected: Bool
     var shortcutText: String? = nil
     @Environment(\.colorScheme) var colorScheme
+    @State private var isHovered = false
     
     var colors: ThemeColors {
         ThemeColors(isDark: colorScheme == .dark)
@@ -742,8 +689,11 @@ struct WindowRowView: View {
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 8)
-        .background(isSelected ? colors.rowHover : Color.clear)
+        .background(isSelected ? colors.rowHover : (isHovered ? colors.rowHover.opacity(0.5) : Color.clear))
         .cornerRadius(8)
+        .onHover { hovering in
+            isHovered = hovering
+        }
     }
 }
 
@@ -751,6 +701,7 @@ struct ConfirmBatchRowView: View {
     let count: Int
     let isSelected: Bool
     @Environment(\.colorScheme) var colorScheme
+    @State private var isHovered = false
     
     var colors: ThemeColors {
         ThemeColors(isDark: colorScheme == .dark)
@@ -775,12 +726,15 @@ struct ConfirmBatchRowView: View {
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 8)
-        .background(isSelected ? colors.greenText : colors.greenText.opacity(0.06))
+        .background(isSelected ? colors.greenText : (isHovered ? colors.greenText.opacity(0.5) : colors.greenText.opacity(0.06)))
         .cornerRadius(8)
         .overlay(
             RoundedRectangle(cornerRadius: 8)
                 .stroke(colors.greenText.opacity(isSelected ? 0.3 : 0.1), lineWidth: 1)
         )
+        .onHover { hovering in
+            isHovered = hovering
+        }
     }
 }
 
@@ -791,6 +745,7 @@ struct WindowBatchRowView: View {
     let targetSpaceName: String
     var shortcutText: String? = nil
     @Environment(\.colorScheme) var colorScheme
+    @State private var isHovered = false
     
     var colors: ThemeColors {
         ThemeColors(isDark: colorScheme == .dark)
@@ -860,8 +815,11 @@ struct WindowBatchRowView: View {
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 8)
-        .background(isSelected ? colors.rowHover : Color.clear)
+        .background(isSelected ? colors.rowHover : (isHovered ? colors.rowHover.opacity(0.5) : Color.clear))
         .cornerRadius(8)
+        .onHover { hovering in
+            isHovered = hovering
+        }
     }
 }
 
