@@ -71,35 +71,27 @@ struct LauncherView: View {
                 // Header (Typing Bar)
                 HStack(spacing: 12) {
                     Image(systemName: "magnifyingglass")
-                        .foregroundColor(Color(red: 0.0, green: 0.55, blue: 1.0))
-                        .font(.system(size: 20, weight: .regular))
+                        .foregroundColor(colors.textTertiary)
+                        .font(.system(size: 22, weight: .light))
                     
                     if let active = viewModel.activeCommand {
                         HStack(spacing: 6) {
                             Text(active.title)
-                                .font(.system(size: 11, weight: .medium))
-                                .padding(.horizontal, 8)
+                                .font(.system(size: 11, weight: .semibold))
+                                .padding(.horizontal, 10)
                                 .padding(.vertical, 4)
-                                .background(colors.badgeBg)
-                                .foregroundColor(colors.textSecondary)
-                                .cornerRadius(4)
-                                .overlay(
-                                    RoundedRectangle(cornerRadius: 4)
-                                        .stroke(colors.badgeBorder, lineWidth: 1)
-                                )
+                                .background(Color(red: 0.0, green: 0.55, blue: 1.0).opacity(0.12))
+                                .foregroundColor(Color(red: 0.0, green: 0.55, blue: 1.0))
+                                .cornerRadius(6)
                             
                             if let staging = viewModel.stagingWindow {
                                 Text("Stage: \(staging.ownerName)")
-                                    .font(.system(size: 11, weight: .medium))
-                                    .padding(.horizontal, 8)
+                                    .font(.system(size: 11, weight: .semibold))
+                                    .padding(.horizontal, 10)
                                     .padding(.vertical, 4)
-                                    .background(colors.badgeBg)
-                                    .foregroundColor(colors.textSecondary)
-                                    .cornerRadius(4)
-                                    .overlay(
-                                        RoundedRectangle(cornerRadius: 4)
-                                            .stroke(colors.badgeBorder, lineWidth: 1)
-                                    )
+                                    .background(colors.greenText.opacity(0.12))
+                                    .foregroundColor(colors.greenText)
+                                    .cornerRadius(6)
                             }
                             
                             Image(systemName: "chevron.right")
@@ -122,7 +114,7 @@ struct LauncherView: View {
                             },
                             placeholder: "New Space Name..."
                         )
-                        .frame(height: 32)
+                        .frame(height: 40)
                     } else {
                         SearchTextField(
                             text: $viewModel.searchQuery,
@@ -150,7 +142,7 @@ struct LauncherView: View {
                             },
                             placeholder: viewModel.activeCommand == nil ? "Search commands..." : (viewModel.stagingWindow != nil ? "Search target space..." : "Search items...")
                         )
-                        .frame(height: 32)
+                        .frame(height: 40)
                     }
                     
                     if viewModel.isLoadingData {
@@ -159,8 +151,8 @@ struct LauncherView: View {
                             .frame(width: 20, height: 20)
                     }
                 }
-                .padding(.horizontal, 16)
-                .padding(.vertical, 14)
+                .padding(.horizontal, 20)
+                .padding(.vertical, 18)
                 
                 Rectangle()
                     .fill(colors.separator)
@@ -212,7 +204,7 @@ struct LauncherView: View {
                 }
             }
         }
-        .frame(width: 580, height: 380)
+        .frame(width: 720, height: 450)
         .overlay(
             RoundedRectangle(cornerRadius: 16, style: .continuous)
                 .stroke(colors.border, lineWidth: 1)
@@ -239,7 +231,7 @@ struct ListAreaView: View {
                 } else {
                     ScrollViewReader { proxy in
                         ScrollView {
-                            VStack(spacing: 4) {
+                            VStack(spacing: 6) {
                                 ForEach(0..<commands.count, id: \.self) { i in
                                     let cmd = commands[i]
                                     let isSelected = viewModel.selectedRowIndex == i
@@ -252,8 +244,8 @@ struct ListAreaView: View {
                                         .id(i)
                                 }
                             }
-                            .padding(.horizontal, 12)
-                            .padding(.vertical, 8)
+                            .padding(.horizontal, 16)
+                            .padding(.vertical, 12)
                         }
                         .onChange(of: viewModel.selectedRowIndex) { index in
                             withAnimation(.easeInOut(duration: 0.12)) {
@@ -271,7 +263,7 @@ struct ListAreaView: View {
                     } else {
                         ScrollViewReader { proxy in
                             ScrollView {
-                                VStack(spacing: 4) {
+                                VStack(spacing: 6) {
                                     ForEach(0..<spaces.count, id: \.self) { i in
                                         let space = spaces[i]
                                         let isSelected = viewModel.selectedRowIndex == i
@@ -284,8 +276,8 @@ struct ListAreaView: View {
                                             .id(i)
                                     }
                                 }
-                                .padding(.horizontal, 12)
-                                .padding(.vertical, 8)
+                                .padding(.horizontal, 16)
+                                .padding(.vertical, 12)
                             }
                             .onChange(of: viewModel.selectedRowIndex) { index in
                                 withAnimation(.easeInOut(duration: 0.12)) {
@@ -306,7 +298,7 @@ struct ListAreaView: View {
                         } else {
                             ScrollViewReader { proxy in
                                 ScrollView {
-                                    VStack(spacing: 4) {
+                                    VStack(spacing: 6) {
                                         ForEach(0..<spaces.count, id: \.self) { i in
                                             let space = spaces[i]
                                             let isSelected = viewModel.selectedRowIndex == i
@@ -319,8 +311,8 @@ struct ListAreaView: View {
                                                 .id(i)
                                         }
                                     }
-                                    .padding(.horizontal, 12)
-                                    .padding(.vertical, 8)
+                                    .padding(.horizontal, 16)
+                                    .padding(.vertical, 12)
                                 }
                                 .onChange(of: viewModel.selectedRowIndex) { index in
                                     withAnimation(.easeInOut(duration: 0.12)) {
@@ -340,7 +332,7 @@ struct ListAreaView: View {
                         } else {
                             ScrollViewReader { proxy in
                                 ScrollView {
-                                    VStack(spacing: 4) {
+                                    VStack(spacing: 6) {
                                         ForEach(0..<windows.count, id: \.self) { i in
                                             let window = windows[i]
                                             let isSelected = viewModel.selectedRowIndex == i
@@ -353,8 +345,8 @@ struct ListAreaView: View {
                                                 .id(i)
                                         }
                                     }
-                                    .padding(.horizontal, 12)
-                                    .padding(.vertical, 8)
+                                    .padding(.horizontal, 16)
+                                    .padding(.vertical, 12)
                                 }
                                 .onChange(of: viewModel.selectedRowIndex) { index in
                                     withAnimation(.easeInOut(duration: 0.12)) {
@@ -374,7 +366,7 @@ struct ListAreaView: View {
                         } else {
                             ScrollViewReader { proxy in
                                 ScrollView {
-                                    VStack(alignment: .leading, spacing: 4) {
+                                    VStack(alignment: .leading, spacing: 6) {
                                         ForEach(sections) { section in
                                             ListSectionHeader(title: section.title, subtitle: section.subtitle)
                                             
@@ -403,8 +395,8 @@ struct ListAreaView: View {
                                             }
                                         }
                                     }
-                                    .padding(.horizontal, 12)
-                                    .padding(.vertical, 8)
+                                    .padding(.horizontal, 16)
+                                    .padding(.vertical, 12)
                                 }
                                 .onChange(of: viewModel.selectedRowIndex) { index in
                                     withAnimation(.easeInOut(duration: 0.12)) {
@@ -440,12 +432,18 @@ struct KeycapView: View {
     
     var body: some View {
         Text(text)
-            .font(.system(size: 11, weight: .medium))
-            .foregroundColor(isGreenRow && isSelected ? .white : (isSelected ? colors.textPrimary.opacity(0.9) : colors.textSecondary))
-            .padding(.horizontal, 8)
-            .padding(.vertical, 4)
-            .background(isGreenRow && isSelected ? Color.white.opacity(0.2) : colors.textPrimary.opacity(isSelected ? 0.12 : 0.06))
-            .cornerRadius(4)
+            .font(.system(size: 10, weight: .medium))
+            .foregroundColor(isGreenRow && isSelected ? .white : (isSelected ? colors.textPrimary : colors.textSecondary))
+            .padding(.horizontal, 6)
+            .padding(.vertical, 3)
+            .background(
+                isGreenRow && isSelected ? Color.white.opacity(0.2) : colors.badgeBg
+            )
+            .cornerRadius(5)
+            .overlay(
+                RoundedRectangle(cornerRadius: 5)
+                    .stroke(isGreenRow && isSelected ? Color.white.opacity(0.3) : colors.badgeBorder, lineWidth: 1)
+            )
     }
 }
 
@@ -500,20 +498,24 @@ struct CommandRowView: View {
     var body: some View {
         HStack(spacing: 12) {
             Image(systemName: command.iconName)
-                .font(.system(size: 13, weight: .semibold))
-                .foregroundColor(isSelected ? .white : Color(red: 0.0, green: 0.55, blue: 1.0))
-                .frame(width: 28, height: 28)
+                .font(.system(size: 12, weight: .medium))
+                .foregroundColor(isSelected ? .white : colors.textPrimary)
+                .frame(width: 26, height: 26)
                 .background(isSelected ? Color(red: 0.0, green: 0.55, blue: 1.0) : colors.badgeBg)
                 .cornerRadius(6)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 6)
+                        .stroke(isSelected ? Color.clear : colors.badgeBorder, lineWidth: 1)
+                )
             
             VStack(alignment: .leading, spacing: 2) {
                 Text(command.title)
-                    .font(.system(size: 13, weight: .medium))
+                    .font(.system(size: 13.5, weight: .semibold))
                     .foregroundColor(colors.textPrimary)
                     .lineLimit(1)
                 
                 Text(command.subtitle)
-                    .font(.system(size: 11))
+                    .font(.system(size: 11.5))
                     .foregroundColor(isSelected ? colors.textSecondary : colors.textTertiary)
                     .lineLimit(1)
             }
@@ -541,10 +543,10 @@ struct CommandRowView: View {
                 KeycapView(text: "Action", isSelected: isSelected)
             }
         }
-        .padding(.horizontal, 10)
-        .padding(.vertical, 6)
+        .padding(.horizontal, 14)
+        .padding(.vertical, 8)
         .background(isSelected ? colors.rowHover : Color.clear)
-        .cornerRadius(6)
+        .cornerRadius(8)
     }
 }
 
@@ -560,30 +562,36 @@ struct SpaceRowView: View {
     var body: some View {
         HStack(spacing: 12) {
             Image(systemName: "desktopcomputer")
-                .font(.system(size: 13, weight: .semibold))
-                .foregroundColor(isSelected ? .white : Color(red: 0.0, green: 0.55, blue: 1.0))
-                .frame(width: 28, height: 28)
+                .font(.system(size: 12, weight: .medium))
+                .foregroundColor(isSelected ? .white : colors.textPrimary)
+                .frame(width: 26, height: 26)
                 .background(isSelected ? Color(red: 0.0, green: 0.55, blue: 1.0) : colors.badgeBg)
                 .cornerRadius(6)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 6)
+                        .stroke(isSelected ? Color.clear : colors.badgeBorder, lineWidth: 1)
+                )
             
             VStack(alignment: .leading, spacing: 2) {
                 Text(space.name)
-                    .font(.system(size: 13, weight: .medium))
+                    .font(.system(size: 13.5, weight: .semibold))
                     .foregroundColor(colors.textPrimary)
+                    .lineLimit(1)
                 
                 Text("\(space.displayName) · Space \(space.num)")
-                    .font(.system(size: 11))
+                    .font(.system(size: 11.5))
                     .foregroundColor(isSelected ? colors.textSecondary : colors.textTertiary)
+                    .lineLimit(1)
             }
             
             Spacer()
             
             KeycapView(text: "Switch ↵", isSelected: isSelected)
         }
-        .padding(.horizontal, 10)
-        .padding(.vertical, 6)
+        .padding(.horizontal, 14)
+        .padding(.vertical, 8)
         .background(isSelected ? colors.rowHover : Color.clear)
-        .cornerRadius(6)
+        .cornerRadius(8)
     }
 }
 
@@ -603,18 +611,22 @@ struct WindowRowView: View {
                 .resizable()
                 .aspectRatio(contentMode: .fit)
                 .frame(width: 20, height: 20)
-                .frame(width: 28, height: 28)
+                .padding(4)
                 .background(colors.badgeBg)
                 .cornerRadius(6)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 6)
+                        .stroke(isSelected ? Color.clear : colors.badgeBorder, lineWidth: 1)
+                )
             
             VStack(alignment: .leading, spacing: 2) {
                 Text(window.title.isEmpty ? "(No Title)" : window.title)
-                    .font(.system(size: 13, weight: .medium))
+                    .font(.system(size: 13.5, weight: .semibold))
                     .foregroundColor(colors.textPrimary)
                     .lineLimit(1)
                 
                 Text("\(window.ownerName) · \(window.space.name)")
-                    .font(.system(size: 11))
+                    .font(.system(size: 11.5))
                     .foregroundColor(isSelected ? colors.textSecondary : colors.textTertiary)
                     .lineLimit(1)
             }
@@ -623,10 +635,10 @@ struct WindowRowView: View {
             
             KeycapView(text: "Focus ↵", isSelected: isSelected)
         }
-        .padding(.horizontal, 10)
-        .padding(.vertical, 6)
+        .padding(.horizontal, 14)
+        .padding(.vertical, 8)
         .background(isSelected ? colors.rowHover : Color.clear)
-        .cornerRadius(6)
+        .cornerRadius(8)
     }
 }
 
@@ -685,18 +697,22 @@ struct WindowBatchRowView: View {
                 .resizable()
                 .aspectRatio(contentMode: .fit)
                 .frame(width: 20, height: 20)
-                .frame(width: 28, height: 28)
+                .padding(4)
                 .background(colors.badgeBg)
                 .cornerRadius(6)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 6)
+                        .stroke(isSelected ? Color.clear : colors.badgeBorder, lineWidth: 1)
+                )
             
             VStack(alignment: .leading, spacing: 2) {
                 Text(window.title.isEmpty ? "(No Title)" : window.title)
-                    .font(.system(size: 13, weight: .medium))
+                    .font(.system(size: 13.5, weight: .semibold))
                     .foregroundColor(colors.textPrimary)
                     .lineLimit(1)
                 
                 Text("\(window.ownerName) · \(window.space.name)")
-                    .font(.system(size: 11))
+                    .font(.system(size: 11.5))
                     .foregroundColor(isSelected ? colors.textSecondary : colors.textTertiary)
                     .lineLimit(1)
             }
@@ -728,12 +744,16 @@ struct WindowBatchRowView: View {
                     .padding(.vertical, 3.5)
                     .background(colors.badgeBg)
                     .cornerRadius(6)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 6)
+                            .stroke(colors.badgeBorder, lineWidth: 1)
+                    )
             }
         }
-        .padding(.horizontal, 10)
-        .padding(.vertical, 6)
+        .padding(.horizontal, 14)
+        .padding(.vertical, 8)
         .background(isSelected ? colors.rowHover : Color.clear)
-        .cornerRadius(6)
+        .cornerRadius(8)
     }
 }
 
@@ -758,9 +778,9 @@ struct ListSectionHeader: View {
             
             Spacer()
         }
-        .padding(.horizontal, 12)
-        .padding(.top, 10)
-        .padding(.bottom, 4)
+        .padding(.horizontal, 16)
+        .padding(.top, 14)
+        .padding(.bottom, 6)
     }
 }
 
@@ -866,8 +886,8 @@ struct BatchMoveBottomBar: View {
                 }
             }
         }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 10)
+        .padding(.horizontal, 20)
+        .padding(.vertical, 12)
         .background(colors.bottomBarBg)
     }
 }
@@ -931,8 +951,8 @@ struct SpacesBottomBar: View {
             
             Spacer()
         }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 10)
+        .padding(.horizontal, 20)
+        .padding(.vertical, 12)
         .background(colors.bottomBarBg)
     }
 }
