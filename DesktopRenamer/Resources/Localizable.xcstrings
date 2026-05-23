@@ -370,6 +370,16 @@
         }
       }
     },
+    "Automatically return to your original desktop after moving windows to a different desktop." : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "在将窗口移动到其他桌面后，自动返回到您原本的桌面。"
+          }
+        }
+      }
+    },
     "Back" : {
       "localizations" : {
         "zh-Hans" : {
@@ -962,6 +972,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "键盘快捷键"
+          }
+        }
+      }
+    },
+    "Launcher" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "启动器"
           }
         }
       }
@@ -1759,6 +1779,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "将因锁定而被移动的窗口恢复到上次手动分配的桌面。"
+          }
+        }
+      }
+    },
+    "Return to Original Space" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "返回原桌面"
           }
         }
       }
