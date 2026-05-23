@@ -131,7 +131,20 @@ struct BatchMoveSection: Identifiable {
         UserDefaults.standard.set(frequencies, forKey: "LauncherCommandFrequency")
         objectWillChange.send()
     }
-    
+
+    /// Checks whether `query` matches `target`, supporting pinyin input for CJK-localized strings.
+    /// e.g. typing "qiehuan" matches "切换桌面" (pinyin: qie huan zhuo mian).
+    private func matchesQuery(_ query: String, target: String) -> Bool {
+        let lowerQuery = query.lowercased()
+        let lowerTarget = target.lowercased()
+        if lowerTarget.contains(lowerQuery) { return true }
+
+        let mutable = NSMutableString(string: target)
+        CFStringTransform(mutable, nil, kCFStringTransformToLatin, false)
+        CFStringTransform(mutable, nil, kCFStringTransformStripDiacritics, false)
+        let pinyin = (mutable as String).lowercased().replacingOccurrences(of: " ", with: "")
+        return pinyin.contains(lowerQuery)
+    }
 
     var filteredCommands: [LauncherCommand] {
         if searchQuery.isEmpty {
@@ -146,7 +159,7 @@ struct BatchMoveSection: Identifiable {
         } else {
             let query = searchQuery.lowercased()
             return allCommands.filter {
-                $0.title.lowercased().contains(query) || $0.subtitle.lowercased().contains(query)
+                matchesQuery(query, target: $0.title) || matchesQuery(query, target: $0.subtitle)
             }.sorted {
                 let freqA = getCommandFrequency($0.id)
                 let freqB = getCommandFrequency($1.id)
@@ -169,8 +182,8 @@ struct BatchMoveSection: Identifiable {
         } else {
             let query = searchQuery.lowercased()
             return spaces.filter {
-                $0.name.lowercased().contains(query) ||
-                $0.displayName.lowercased().contains(query) ||
+                matchesQuery(query, target: $0.name) ||
+                matchesQuery(query, target: $0.displayName) ||
                 "\($0.num)".contains(query)
             }
         }
@@ -183,9 +196,9 @@ struct BatchMoveSection: Identifiable {
         } else {
             let query = searchQuery.lowercased()
             return allStaged.filter {
-                $0.window.title.lowercased().contains(query) ||
-                $0.window.ownerName.lowercased().contains(query) ||
-                $0.window.space.name.lowercased().contains(query)
+                matchesQuery(query, target: $0.window.title) ||
+                matchesQuery(query, target: $0.window.ownerName) ||
+                matchesQuery(query, target: $0.window.space.name)
             }
         }
     }
@@ -197,9 +210,9 @@ struct BatchMoveSection: Identifiable {
         } else {
             let query = searchQuery.lowercased()
             return allUnstaged.filter {
-                $0.title.lowercased().contains(query) ||
-                $0.ownerName.lowercased().contains(query) ||
-                $0.space.name.lowercased().contains(query)
+                matchesQuery(query, target: $0.title) ||
+                matchesQuery(query, target: $0.ownerName) ||
+                matchesQuery(query, target: $0.space.name)
             }
         }
     }
@@ -276,9 +289,9 @@ struct BatchMoveSection: Identifiable {
         } else {
             let query = searchQuery.lowercased()
             return currentWindows.filter {
-                $0.title.lowercased().contains(query) ||
-                $0.ownerName.lowercased().contains(query) ||
-                $0.space.name.lowercased().contains(query)
+                matchesQuery(query, target: $0.title) ||
+                matchesQuery(query, target: $0.ownerName) ||
+                matchesQuery(query, target: $0.space.name)
             }
         }
     }
