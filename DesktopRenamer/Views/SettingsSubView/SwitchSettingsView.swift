@@ -80,7 +80,7 @@ struct SwitchSettingsView: View {
                     
                     Divider()
                     
-                    SettingsRow("Open Custom Launcher") {
+                    SettingsRow("Open Launcher") {
                         HStack {
                             Text(hotkeyManager.description(for: .launcher))
                                 .foregroundColor(.secondary)

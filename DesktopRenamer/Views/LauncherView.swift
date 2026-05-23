@@ -178,7 +178,7 @@ struct LauncherView: View {
                             .font(.system(size: 28, weight: .light))
                             .foregroundColor(colors.textSecondary)
                         
-                        Text("Rename Current Desktop Space")
+                        Text("Rename Current Space")
                             .font(.system(size: 14, weight: .medium))
                             .foregroundColor(colors.textPrimary)
                         
@@ -493,7 +493,7 @@ struct EmptyResultsView: View {
             Text("No results")
                 .font(.system(size: 13, weight: .medium))
                 .foregroundColor(colors.textTertiary)
-            Text("No commands or items matched your search query.")
+            Text("No commands matched your search query.")
                 .font(.system(size: 11))
                 .foregroundColor(colors.textQuaternary)
             Spacer()

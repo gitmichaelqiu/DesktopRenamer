@@ -339,7 +339,7 @@ class StatusBarController: NSObject {
         
         menu.addItem(NSMenuItem.separator())
         
-        let launcherItem = NSMenuItem(title: NSLocalizedString("Custom Launcher...", comment: ""), action: #selector(openLauncher), keyEquivalent: "")
+        let launcherItem = NSMenuItem(title: NSLocalizedString("Launcher...", comment: ""), action: #selector(openLauncher), keyEquivalent: "")
         launcherItem.image = NSImage(systemSymbolName: "command", accessibilityDescription: nil)
         launcherItem.target = self
         menu.addItem(launcherItem)

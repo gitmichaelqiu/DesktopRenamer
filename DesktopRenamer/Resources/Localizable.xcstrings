@@ -52,7 +52,8 @@
             "value" : "%1$@ · %2$@"
           }
         }
-      }
+      },
+      "shouldTranslate" : false
     },
     "%@ · Space %lld" : {
       "localizations" : {
@@ -60,6 +61,12 @@
           "stringUnit" : {
             "state" : "new",
             "value" : "%1$@ · Space %2$lld"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ · 桌面 %2$lld"
           }
         }
       }
@@ -76,19 +83,19 @@
       "shouldTranslate" : false
     },
     "→ %@" : {
-
+      "shouldTranslate" : false
     },
     "↵" : {
-
+      "shouldTranslate" : false
     },
     "↵ / ⌥↵" : {
-
+      "shouldTranslate" : false
     },
     "↺" : {
       "shouldTranslate" : false
     },
     "⌘↵" : {
-
+      "shouldTranslate" : false
     },
     "◉" : {
       "shouldTranslate" : false
@@ -154,7 +161,14 @@
       }
     },
     "Action" : {
-
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "操作"
+          }
+        }
+      }
     },
     "Active Space Label" : {
       "localizations" : {
@@ -447,7 +461,14 @@
       }
     },
     "Click to switch, Option+Click to move active window." : {
-
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "点击切换，Option+点击移动窗口。"
+          }
+        }
+      }
     },
     "Confirm & Execute Batch Move (%lld window%@)" : {
       "localizations" : {
@@ -455,6 +476,12 @@
           "stringUnit" : {
             "state" : "new",
             "value" : "Confirm & Execute Batch Move (%1$lld window%2$@)"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "确认 & 执行移动  (%1$lld 窗口%2$@)"
           }
         }
       }
@@ -508,9 +535,6 @@
           }
         }
       }
-    },
-    "Custom Launcher..." : {
-
     },
     "Desktop" : {
       "shouldTranslate" : false
@@ -569,7 +593,14 @@
       }
     },
     "Executing batch window moves..." : {
-
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "执行批量窗口移动..."
+          }
+        }
+      }
     },
     "Factory Reset" : {
       "localizations" : {
@@ -634,7 +665,14 @@
       }
     },
     "Focus Window" : {
-
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "切换窗口"
+          }
+        }
+      }
     },
     "Font size" : {
       "localizations" : {
@@ -823,6 +861,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "键盘快捷键"
+          }
+        }
+      }
+    },
+    "Launcher..." : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "启动器…"
           }
         }
       }
@@ -1033,7 +1081,14 @@
       }
     },
     "Move Window" : {
-
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "移动窗口"
+          }
+        }
+      }
     },
     "Move window to desktop number" : {
       "localizations" : {
@@ -1137,8 +1192,15 @@
         }
       }
     },
-    "No commands or items matched your search query." : {
-
+    "No commands matched your search query." : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "没有指令符合搜索。"
+          }
+        }
+      }
     },
     "No editable spaces (fullscreen only)" : {
       "localizations" : {
@@ -1206,8 +1268,15 @@
         }
       }
     },
-    "Open Custom Launcher" : {
-
+    "Open Launcher" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "打开启动期"
+          }
+        }
+      }
     },
     "Option + Click to Move" : {
       "localizations" : {
@@ -1360,11 +1429,25 @@
         }
       }
     },
-    "Rename Current Desktop Space" : {
-
+    "Rename Current Space" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "重命名当前桌面"
+          }
+        }
+      }
     },
     "Rename Space" : {
-
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "重命名桌面"
+          }
+        }
+      }
     },
     "Rename.Label" : {
       "extractionState" : "manual",
@@ -1546,7 +1629,14 @@
       }
     },
     "Run Batch Move" : {
-
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "批量移动窗口"
+          }
+        }
+      }
     },
     "Save" : {
       "localizations" : {
@@ -2139,16 +2229,44 @@
       }
     },
     "Spaces:" : {
-
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "桌面："
+          }
+        }
+      }
     },
     "Stage Move to Desktop..." : {
-
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "加入移动队列…"
+          }
+        }
+      }
     },
     "Stage to Space" : {
-
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "移动到桌面"
+          }
+        }
+      }
     },
     "Stage: %@" : {
-
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "队列: %@"
+          }
+        }
+      }
     },
     "Start" : {
       "localizations" : {
@@ -2181,7 +2299,14 @@
       }
     },
     "Switch / Move" : {
-
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "切换 / 移动"
+          }
+        }
+      }
     },
     "Switch & Move" : {
       "localizations" : {
@@ -2413,7 +2538,14 @@
       }
     },
     "Type a new name above and press Enter to save" : {
-
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "输入新名称并回车"
+          }
+        }
+      }
     },
     "Unlock space" : {
       "localizations" : {
@@ -2426,7 +2558,14 @@
       }
     },
     "Unstage Move" : {
-
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "移除队列"
+          }
+        }
+      }
     },
     "Use the Raycast extension to move all windows of an app to another space in one command." : {
       "localizations" : {
