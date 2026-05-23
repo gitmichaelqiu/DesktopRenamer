@@ -94,11 +94,13 @@ struct LauncherView: View {
                             text: $viewModel.searchQuery,
                             isDark: colors.isDark,
                             onUpArrow: {
+                                viewModel.isKeyboardSelection = true
                                 if viewModel.selectedRowIndex > 0 {
                                     viewModel.selectedRowIndex -= 1
                                 }
                             },
                             onDownArrow: {
+                                viewModel.isKeyboardSelection = true
                                 if viewModel.selectedRowIndex < viewModel.visibleRowsCount - 1 {
                                     viewModel.selectedRowIndex += 1
                                 }
@@ -110,6 +112,9 @@ struct LauncherView: View {
                                 if viewModel.activeCommand?.type == .batchMoveWindows {
                                     viewModel.executeBatchMove()
                                 }
+                            },
+                            onCommandNumber: { num in
+                                viewModel.executeNthRowAction(num - 1)
                             },
                             onEscape: {
                                 viewModel.handleEscapeKey()
@@ -207,15 +212,22 @@ struct ListAreaView: View {
                 } else {
                     ScrollViewReader { proxy in
                         ScrollView {
-                            VStack(spacing: 6) {
+                            VStack(spacing: 4) {
                                 ForEach(0..<commands.count, id: \.self) { i in
                                     let cmd = commands[i]
                                     let isSelected = viewModel.selectedRowIndex == i
                                     CommandRowView(command: cmd, isSelected: isSelected)
                                         .contentShape(Rectangle())
                                         .onTapGesture {
+                                            viewModel.isKeyboardSelection = true
                                             viewModel.selectedRowIndex = i
                                             viewModel.executeRowAction()
+                                        }
+                                        .onHover { isHovering in
+                                            if isHovering {
+                                                viewModel.isKeyboardSelection = false
+                                                viewModel.selectedRowIndex = i
+                                            }
                                         }
                                         .id(i)
                                 }
@@ -224,8 +236,10 @@ struct ListAreaView: View {
                             .padding(.vertical, 8)
                         }
                         .onChange(of: viewModel.selectedRowIndex) { index in
-                            withAnimation(.easeInOut(duration: 0.12)) {
-                                proxy.scrollTo(index, anchor: .center)
+                            if viewModel.isKeyboardSelection {
+                                withAnimation(.easeInOut(duration: 0.12)) {
+                                    proxy.scrollTo(index, anchor: .center)
+                                }
                             }
                         }
                     }
@@ -239,15 +253,22 @@ struct ListAreaView: View {
                     } else {
                         ScrollViewReader { proxy in
                             ScrollView {
-                                VStack(spacing: 6) {
+                                VStack(spacing: 4) {
                                     ForEach(0..<spaces.count, id: \.self) { i in
                                         let space = spaces[i]
                                         let isSelected = viewModel.selectedRowIndex == i
                                         SpaceRowView(space: space, isSelected: isSelected)
                                             .contentShape(Rectangle())
                                             .onTapGesture {
+                                                viewModel.isKeyboardSelection = true
                                                 viewModel.selectedRowIndex = i
                                                 viewModel.executeRowAction()
+                                            }
+                                            .onHover { isHovering in
+                                                if isHovering {
+                                                    viewModel.isKeyboardSelection = false
+                                                    viewModel.selectedRowIndex = i
+                                                }
                                             }
                                             .id(i)
                                     }
@@ -256,8 +277,10 @@ struct ListAreaView: View {
                                 .padding(.vertical, 8)
                             }
                             .onChange(of: viewModel.selectedRowIndex) { index in
-                                withAnimation(.easeInOut(duration: 0.12)) {
-                                    proxy.scrollTo(index, anchor: .center)
+                                if viewModel.isKeyboardSelection {
+                                    withAnimation(.easeInOut(duration: 0.12)) {
+                                        proxy.scrollTo(index, anchor: .center)
+                                    }
                                 }
                             }
                             .onAppear {
@@ -274,15 +297,22 @@ struct ListAreaView: View {
                         } else {
                             ScrollViewReader { proxy in
                                 ScrollView {
-                                    VStack(spacing: 6) {
+                                    VStack(spacing: 4) {
                                         ForEach(0..<spaces.count, id: \.self) { i in
                                             let space = spaces[i]
                                             let isSelected = viewModel.selectedRowIndex == i
                                             SpaceRowView(space: space, isSelected: isSelected)
                                                 .contentShape(Rectangle())
                                                 .onTapGesture {
+                                                    viewModel.isKeyboardSelection = true
                                                     viewModel.selectedRowIndex = i
                                                     viewModel.executeRowAction()
+                                                }
+                                                .onHover { isHovering in
+                                                    if isHovering {
+                                                        viewModel.isKeyboardSelection = false
+                                                        viewModel.selectedRowIndex = i
+                                                    }
                                                 }
                                                 .id(i)
                                         }
@@ -291,8 +321,10 @@ struct ListAreaView: View {
                                     .padding(.vertical, 8)
                                 }
                                 .onChange(of: viewModel.selectedRowIndex) { index in
-                                    withAnimation(.easeInOut(duration: 0.12)) {
-                                        proxy.scrollTo(index, anchor: .center)
+                                    if viewModel.isKeyboardSelection {
+                                        withAnimation(.easeInOut(duration: 0.12)) {
+                                            proxy.scrollTo(index, anchor: .center)
+                                        }
                                     }
                                 }
                                 .onAppear {
@@ -308,15 +340,22 @@ struct ListAreaView: View {
                         } else {
                             ScrollViewReader { proxy in
                                 ScrollView {
-                                    VStack(spacing: 6) {
+                                    VStack(spacing: 4) {
                                         ForEach(0..<windows.count, id: \.self) { i in
                                             let window = windows[i]
                                             let isSelected = viewModel.selectedRowIndex == i
                                             WindowRowView(window: window, isSelected: isSelected)
                                                 .contentShape(Rectangle())
                                                 .onTapGesture {
+                                                    viewModel.isKeyboardSelection = true
                                                     viewModel.selectedRowIndex = i
                                                     viewModel.executeRowAction()
+                                                }
+                                                .onHover { isHovering in
+                                                    if isHovering {
+                                                        viewModel.isKeyboardSelection = false
+                                                        viewModel.selectedRowIndex = i
+                                                    }
                                                 }
                                                 .id(i)
                                         }
@@ -325,8 +364,10 @@ struct ListAreaView: View {
                                     .padding(.vertical, 8)
                                 }
                                 .onChange(of: viewModel.selectedRowIndex) { index in
-                                    withAnimation(.easeInOut(duration: 0.12)) {
-                                        proxy.scrollTo(index, anchor: .center)
+                                    if viewModel.isKeyboardSelection {
+                                        withAnimation(.easeInOut(duration: 0.12)) {
+                                            proxy.scrollTo(index, anchor: .center)
+                                        }
                                     }
                                 }
                                 .onAppear {
@@ -342,7 +383,7 @@ struct ListAreaView: View {
                         } else {
                             ScrollViewReader { proxy in
                                 ScrollView {
-                                    VStack(alignment: .leading, spacing: 6) {
+                                    VStack(alignment: .leading, spacing: 4) {
                                         ForEach(sections) { section in
                                             ListSectionHeader(title: section.title, subtitle: section.subtitle)
                                             
@@ -354,8 +395,15 @@ struct ListAreaView: View {
                                                     WindowBatchRowView(window: move.window, isSelected: isSelected, isStaged: true, targetSpaceName: move.targetSpace.name)
                                                         .contentShape(Rectangle())
                                                         .onTapGesture {
+                                                            viewModel.isKeyboardSelection = true
                                                             viewModel.selectedRowIndex = item.index
                                                             viewModel.executeRowAction()
+                                                        }
+                                                        .onHover { isHovering in
+                                                            if isHovering {
+                                                                viewModel.isKeyboardSelection = false
+                                                                viewModel.selectedRowIndex = item.index
+                                                            }
                                                         }
                                                         .id(item.index)
                                                         
@@ -363,8 +411,15 @@ struct ListAreaView: View {
                                                     WindowBatchRowView(window: window, isSelected: isSelected, isStaged: false, targetSpaceName: "")
                                                         .contentShape(Rectangle())
                                                         .onTapGesture {
+                                                            viewModel.isKeyboardSelection = true
                                                             viewModel.selectedRowIndex = item.index
                                                             viewModel.executeRowAction()
+                                                        }
+                                                        .onHover { isHovering in
+                                                            if isHovering {
+                                                                viewModel.isKeyboardSelection = false
+                                                                viewModel.selectedRowIndex = item.index
+                                                            }
                                                         }
                                                         .id(item.index)
                                                 }
@@ -375,8 +430,10 @@ struct ListAreaView: View {
                                     .padding(.vertical, 8)
                                 }
                                 .onChange(of: viewModel.selectedRowIndex) { index in
-                                    withAnimation(.easeInOut(duration: 0.12)) {
-                                        proxy.scrollTo(index, anchor: .center)
+                                    if viewModel.isKeyboardSelection {
+                                        withAnimation(.easeInOut(duration: 0.12)) {
+                                            proxy.scrollTo(index, anchor: .center)
+                                        }
                                     }
                                 }
                                 .onAppear {
@@ -819,10 +876,10 @@ struct BatchMoveBottomBar: View {
                             .font(.system(size: 11, weight: .semibold))
                             .foregroundColor(colors.textTertiary)
                     }
-                    .padding(.horizontal, 8)
+                    .padding(.horizontal, 10)
                     .padding(.vertical, 4)
                     .background(colors.badgeBg)
-                    .cornerRadius(4)
+                    .clipShape(Capsule())
                 } else {
                     // Selecting an item in batch move
                     let items = viewModel.batchMoveSelectableItems
@@ -840,10 +897,10 @@ struct BatchMoveBottomBar: View {
                                     .font(.system(size: 11, weight: .semibold))
                                     .foregroundColor(colors.textQuaternary)
                             }
-                            .padding(.horizontal, 8)
+                            .padding(.horizontal, 10)
                             .padding(.vertical, 4)
                             .background(colors.badgeBg)
-                            .cornerRadius(4)
+                            .clipShape(Capsule())
                             
                         case .unstaged:
                             HStack(spacing: 4) {
@@ -854,10 +911,10 @@ struct BatchMoveBottomBar: View {
                                     .font(.system(size: 11, weight: .semibold))
                                     .foregroundColor(colors.textQuaternary)
                             }
-                            .padding(.horizontal, 8)
+                            .padding(.horizontal, 10)
                             .padding(.vertical, 4)
                             .background(colors.badgeBg)
-                            .cornerRadius(4)
+                            .clipShape(Capsule())
                         }
                     }
                     
@@ -871,12 +928,12 @@ struct BatchMoveBottomBar: View {
                                 .font(.system(size: 11, weight: .semibold))
                                 .foregroundColor(colors.greenText.opacity(0.8))
                         }
-                        .padding(.horizontal, 8)
+                        .padding(.horizontal, 10)
                         .padding(.vertical, 4)
                         .background(colors.greenText.opacity(0.1))
-                        .cornerRadius(4)
+                        .clipShape(Capsule())
                         .overlay(
-                            RoundedRectangle(cornerRadius: 4)
+                            Capsule()
                                 .stroke(colors.greenText.opacity(0.3), lineWidth: 1)
                         )
                     }
@@ -957,10 +1014,10 @@ struct SpacesBottomBar: View {
                     .font(.system(size: 11, weight: .semibold))
                     .foregroundColor(colors.textQuaternary)
             }
-            .padding(.horizontal, 8)
+            .padding(.horizontal, 10)
             .padding(.vertical, 4)
             .background(colors.badgeBg)
-            .cornerRadius(4)
+            .clipShape(Capsule())
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 10)
@@ -1008,10 +1065,10 @@ struct CommandBottomBar: View {
                             .font(.system(size: 11, weight: .semibold))
                             .foregroundColor(colors.textQuaternary)
                     }
-                    .padding(.horizontal, 8)
+                    .padding(.horizontal, 10)
                     .padding(.vertical, 4)
                     .background(colors.badgeBg)
-                    .cornerRadius(4)
+                    .clipShape(Capsule())
                     
                 case .moveWindow:
                     HStack(spacing: 4) {
@@ -1022,10 +1079,10 @@ struct CommandBottomBar: View {
                             .font(.system(size: 11, weight: .semibold))
                             .foregroundColor(colors.textQuaternary)
                     }
-                    .padding(.horizontal, 8)
+                    .padding(.horizontal, 10)
                     .padding(.vertical, 4)
                     .background(colors.badgeBg)
-                    .cornerRadius(4)
+                    .clipShape(Capsule())
                     
                 case .listWindows:
                     HStack(spacing: 4) {
@@ -1036,10 +1093,10 @@ struct CommandBottomBar: View {
                             .font(.system(size: 11, weight: .semibold))
                             .foregroundColor(colors.textQuaternary)
                     }
-                    .padding(.horizontal, 8)
+                    .padding(.horizontal, 10)
                     .padding(.vertical, 4)
                     .background(colors.badgeBg)
-                    .cornerRadius(4)
+                    .clipShape(Capsule())
                     
                 case .renameCurrentSpace:
                     HStack(spacing: 4) {
@@ -1050,10 +1107,10 @@ struct CommandBottomBar: View {
                             .font(.system(size: 11, weight: .semibold))
                             .foregroundColor(colors.textQuaternary)
                     }
-                    .padding(.horizontal, 8)
+                    .padding(.horizontal, 10)
                     .padding(.vertical, 4)
                     .background(colors.badgeBg)
-                    .cornerRadius(4)
+                    .clipShape(Capsule())
                     
                 default:
                     EmptyView()
@@ -1068,6 +1125,7 @@ struct CommandBottomBar: View {
 
 class FocusTextField: NSTextField {
     var onCommandEnter: (() -> Void)?
+    var onCommandNumber: ((Int) -> Void)?
 
     override var acceptsFirstResponder: Bool {
         return true
@@ -1078,9 +1136,20 @@ class FocusTextField: NSTextField {
             let modifiers = event.modifierFlags.intersection(.deviceIndependentFlagsMask)
             let hasCommand = modifiers.contains(.command)
             let hasOtherModifiers = !modifiers.subtracting([.command, .numericPad, .function]).isEmpty
-            if hasCommand && !hasOtherModifiers && (event.keyCode == 36 || event.keyCode == 76) {
-                onCommandEnter?()
-                return true
+            if hasCommand && !hasOtherModifiers {
+                if event.keyCode == 36 || event.keyCode == 76 {
+                    onCommandEnter?()
+                    return true
+                }
+                
+                if let chars = event.charactersIgnoringModifiers,
+                   chars.count == 1,
+                   let char = chars.first,
+                   let number = Int(String(char)),
+                   number >= 1 && number <= 9 {
+                    onCommandNumber?(number)
+                    return true
+                }
             }
         }
         return super.performKeyEquivalent(with: event)
@@ -1126,6 +1195,7 @@ struct SearchTextField: NSViewRepresentable {
     var onDownArrow: () -> Void
     var onEnter: () -> Void
     var onCommandEnter: (() -> Void)? = nil
+    var onCommandNumber: ((Int) -> Void)? = nil
     var onEscape: () -> Void
     var placeholder: String = "Type a command..."
     
@@ -1175,6 +1245,9 @@ struct SearchTextField: NSViewRepresentable {
         textField.onCommandEnter = {
             self.onCommandEnter?()
         }
+        textField.onCommandNumber = { num in
+            self.onCommandNumber?(num)
+        }
         textField.isBordered = false
         textField.drawsBackground = false
         textField.focusRingType = .none
@@ -1199,6 +1272,9 @@ struct SearchTextField: NSViewRepresentable {
         if let focusField = nsView as? FocusTextField {
             focusField.onCommandEnter = {
                 self.onCommandEnter?()
+            }
+            focusField.onCommandNumber = { num in
+                self.onCommandNumber?(num)
             }
         }
         if nsView.stringValue != text {

@@ -56,6 +56,7 @@ struct BatchMoveSection: Identifiable {
     @Published var searchQuery: String = "" {
         didSet {
             selectedRowIndex = 0
+            isKeyboardSelection = true
         }
     }
     @Published var selectedRowIndex: Int = 0
@@ -68,6 +69,7 @@ struct BatchMoveSection: Identifiable {
         didSet {
             searchQuery = ""
             selectedRowIndex = 0
+            isKeyboardSelection = true
             if activeCommand != nil {
                 loadData()
             }
@@ -77,6 +79,7 @@ struct BatchMoveSection: Identifiable {
     @Published var currentSpaces: [SpaceGroup] = []
     @Published var currentWindows: [WindowEntry] = []
     @Published var isLoadingData: Bool = false
+    @Published var isKeyboardSelection: Bool = false
     
     // For batch window moves
     @Published var stagedMoves: [Int: (window: WindowEntry, targetSpace: SpaceGroup)] = [:]
@@ -84,6 +87,7 @@ struct BatchMoveSection: Identifiable {
         didSet {
             searchQuery = ""
             selectedRowIndex = 0
+            isKeyboardSelection = true
         }
     }
     @Published var isExecutingBatchMove: Bool = false
@@ -664,6 +668,13 @@ struct BatchMoveSection: Identifiable {
                 self.closeLauncher()
             }
         }
+    }
+    
+    func executeNthRowAction(_ index: Int) {
+        guard index >= 0 && index < visibleRowsCount else { return }
+        isKeyboardSelection = true
+        selectedRowIndex = index
+        executeRowAction()
     }
     
     func handleEscapeKey() {

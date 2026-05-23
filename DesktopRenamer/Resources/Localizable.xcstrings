@@ -150,6 +150,9 @@
         }
       }
     },
+    "Action" : {
+
+    },
     "Active Space Label" : {
       "localizations" : {
         "zh-Hans" : {
@@ -627,6 +630,9 @@
         }
       }
     },
+    "Focus Window" : {
+
+    },
     "Font size" : {
       "localizations" : {
         "zh-Hans" : {
@@ -1023,6 +1029,9 @@
         }
       }
     },
+    "Move Window" : {
+
+    },
     "Move window to desktop number" : {
       "localizations" : {
         "zh-Hans" : {
@@ -1349,6 +1358,9 @@
       }
     },
     "Rename Current Desktop Space" : {
+
+    },
+    "Rename Space" : {
 
     },
     "Rename.Label" : {
