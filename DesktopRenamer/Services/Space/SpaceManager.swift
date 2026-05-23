@@ -48,6 +48,7 @@ class SpaceManager: ObservableObject {
     static private let grabOffsetYKey = "com.michaelqiu.desktoprenamer.grabOffsetY"
     static private let lockedSpaceIDsKey = "com.michaelqiu.desktoprenamer.lockedSpaceIDs"
     static private let movedWindowsOriginalSpacesKey = "com.michaelqiu.desktoprenamer.movedWindowsOriginalSpaces"
+    static private let returnToOriginalAfterBatchMoveKey = "com.michaelqiu.desktoprenamer.returnToOriginalAfterBatchMove"
     
     @Published private(set) var currentSpaceUUID: String = ""
     @Published private(set) var currentRawSpaceUUID: String = ""
@@ -97,6 +98,12 @@ class SpaceManager: ObservableObject {
     var lastManualSwitchTime: TimeInterval = 0
     private var lastManualSwitchTargetUUID: String? = nil
     
+    @Published var returnToOriginalAfterBatchMove: Bool {
+        didSet {
+            UserDefaults.standard.set(returnToOriginalAfterBatchMove, forKey: SpaceManager.returnToOriginalAfterBatchMoveKey)
+        }
+    }
+    
     @Published var detectionMethod: DetectionMethod {
         didSet {
             // Update storage and refresh whenever method changes
@@ -135,6 +142,8 @@ class SpaceManager: ObservableObject {
     init() {
         let legacyManual = UserDefaults.standard.bool(forKey: SpaceManager.isManualSpacesEnabledKey)
         let savedMethod = UserDefaults.standard.string(forKey: SpaceManager.detectionMethodKey)
+        
+        self.returnToOriginalAfterBatchMove = UserDefaults.standard.object(forKey: SpaceManager.returnToOriginalAfterBatchMoveKey) == nil ? true : UserDefaults.standard.bool(forKey: SpaceManager.returnToOriginalAfterBatchMoveKey)
         
         if let saved = savedMethod, let method = DetectionMethod(rawValue: saved) {
             self.detectionMethod = method
