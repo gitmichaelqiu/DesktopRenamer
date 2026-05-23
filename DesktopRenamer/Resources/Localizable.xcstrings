@@ -81,6 +81,9 @@
     "↵" : {
 
     },
+    "↵ / ⌥↵" : {
+
+    },
     "↺" : {
       "shouldTranslate" : false
     },
@@ -2176,6 +2179,9 @@
           }
         }
       }
+    },
+    "Switch / Move" : {
+
     },
     "Switch & Move" : {
       "localizations" : {

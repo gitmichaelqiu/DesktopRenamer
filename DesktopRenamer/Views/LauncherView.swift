@@ -1019,40 +1019,7 @@ struct SpacesBottomBar: View {
                 let isSpaceSelected = viewModel.isBottomBarFocused && i == viewModel.selectedSpaceIndex
                 let name = spaceManager.getSpaceName(space.id)
                 
-                HStack {
-                    if isSpaceSelected {
-                        Text(name)
-                            .font(.system(size: 11, weight: .semibold))
-                            .foregroundColor(.white)
-                            .padding(.horizontal, 10)
-                            .padding(.vertical, 4)
-                            .background(Color(red: 0.0, green: 0.55, blue: 1.0))
-                            .clipShape(Capsule())
-                            .overlay(
-                                Capsule()
-                                    .stroke(Color.white.opacity(0.4), lineWidth: 1)
-                            )
-                            .shadow(color: Color(red: 0.0, green: 0.55, blue: 1.0).opacity(0.4), radius: 4, x: 0, y: 0)
-                    } else if isCurrent {
-                        Text(name)
-                            .font(.system(size: 11, weight: .semibold))
-                            .foregroundColor(Color(red: 0.0, green: 0.55, blue: 1.0))
-                            .padding(.horizontal, 10)
-                            .padding(.vertical, 4)
-                            .background(Color(red: 0.0, green: 0.55, blue: 1.0).opacity(0.15))
-                            .clipShape(Capsule())
-                    } else {
-                        Text(name)
-                            .font(.system(size: 11, weight: .medium))
-                            .foregroundColor(colors.textSecondary)
-                            .padding(.horizontal, 10)
-                            .padding(.vertical, 4)
-                            .background(colors.badgeBg)
-                            .clipShape(Capsule())
-                    }
-                }
-                .contentShape(Rectangle())
-                .onTapGesture {
+                Button(action: {
                     let isOptionPressed = NSEvent.modifierFlags.contains(.option)
                     if isOptionPressed {
                         let handled = viewModel.movePreviouslyActiveWindow(toSpaceID: space.id)
@@ -1062,7 +1029,42 @@ struct SpacesBottomBar: View {
                     } else {
                         viewModel.executeSwitchToSpaceID(space.id)
                     }
+                }) {
+                    HStack {
+                        if isSpaceSelected {
+                            Text(name)
+                                .font(.system(size: 11, weight: .semibold))
+                                .foregroundColor(.white)
+                                .padding(.horizontal, 10)
+                                .padding(.vertical, 4)
+                                .background(Color(red: 0.0, green: 0.55, blue: 1.0))
+                                .clipShape(Capsule())
+                                .overlay(
+                                    Capsule()
+                                        .stroke(Color.white.opacity(0.4), lineWidth: 1)
+                                )
+                                .shadow(color: Color(red: 0.0, green: 0.55, blue: 1.0).opacity(0.4), radius: 4, x: 0, y: 0)
+                        } else if isCurrent {
+                            Text(name)
+                                .font(.system(size: 11, weight: .semibold))
+                                .foregroundColor(Color(red: 0.0, green: 0.55, blue: 1.0))
+                                .padding(.horizontal, 10)
+                                .padding(.vertical, 4)
+                                .background(Color(red: 0.0, green: 0.55, blue: 1.0).opacity(0.15))
+                                .clipShape(Capsule())
+                        } else {
+                            Text(name)
+                                .font(.system(size: 11, weight: .medium))
+                                .foregroundColor(colors.textSecondary)
+                                .padding(.horizontal, 10)
+                                .padding(.vertical, 4)
+                                .background(colors.badgeBg)
+                                .clipShape(Capsule())
+                        }
+                    }
                 }
+                .buttonStyle(PlainButtonStyle())
+                .focusable(false)
                 .help("Click to switch, Option+Click to move active window.")
             }
             
