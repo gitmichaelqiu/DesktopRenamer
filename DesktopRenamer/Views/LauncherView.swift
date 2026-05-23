@@ -1057,14 +1057,14 @@ struct SpacesBottomBar: View {
             // Right side action indicator
             HStack(spacing: 4) {
                 if viewModel.isBottomBarFocused {
-                    Text("Switch / Move")
+                    Text(LocalizedStringKey("Switch / Move"))
                         .font(.system(size: 11, weight: .medium))
                         .foregroundColor(colors.textSecondary)
                     Text("↵ / ⌥↵")
                         .font(.system(size: 11, weight: .semibold))
                         .foregroundColor(colors.textQuaternary)
                 } else {
-                    Text("Action")
+                    Text(LocalizedStringKey("Action"))
                         .font(.system(size: 11, weight: .medium))
                         .foregroundColor(colors.textSecondary)
                     Text("↵")
