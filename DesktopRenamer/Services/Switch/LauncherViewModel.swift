@@ -492,13 +492,15 @@ struct BatchMoveSection: Identifiable {
             if let labelManager = AppDelegate.shared.statusBarController?.labelManager {
                 labelManager.reloadAllWindows()
             }
-            HUDWindowController.shared.show(
-                message: NSLocalizedString("Space Labels Reloaded", comment: ""),
-                systemImage: "arrow.clockwise.circle.fill",
-                iconColor: .blue
-            )
             closeLauncher()
-            
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
+                HUDWindowController.shared.show(
+                    message: NSLocalizedString("Space Labels Reloaded", comment: ""),
+                    systemImage: "arrow.clockwise.circle.fill",
+                    iconColor: .blue
+                )
+            }
+
         case .toggleActiveLabel:
             incrementCommandFrequency(type.rawValue)
             if let labelManager = AppDelegate.shared.statusBarController?.labelManager {
@@ -506,16 +508,16 @@ struct BatchMoveSection: Identifiable {
                 let isEnabled = labelManager.showActiveLabels
                 let status = isEnabled ? String(localized: "Enabled") : String(localized: "Disabled")
                 let msg = String(format: String(localized: "Active Space Label: %@"), status)
-                HUDWindowController.shared.show(
-                    message: msg,
-                    systemImage: isEnabled ? "checkmark.circle.fill" : "xmark.circle.fill",
-                    iconColor: isEnabled ? .green : .red
-                )
+                let icon = isEnabled ? "checkmark.circle.fill" : "xmark.circle.fill"
+                let color: Color = isEnabled ? .green : .red
                 closeLauncher()
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
+                    HUDWindowController.shared.show(message: msg, systemImage: icon, iconColor: color)
+                }
             } else {
                 closeLauncher()
             }
-            
+
         case .togglePreviewLabel:
             incrementCommandFrequency(type.rawValue)
             if let labelManager = AppDelegate.shared.statusBarController?.labelManager {
@@ -523,16 +525,16 @@ struct BatchMoveSection: Identifiable {
                 let isEnabled = labelManager.showPreviewLabels
                 let status = isEnabled ? String(localized: "Enabled") : String(localized: "Disabled")
                 let msg = String(format: String(localized: "Preview Space Labels: %@"), status)
-                HUDWindowController.shared.show(
-                    message: msg,
-                    systemImage: isEnabled ? "checkmark.circle.fill" : "xmark.circle.fill",
-                    iconColor: isEnabled ? .green : .red
-                )
+                let icon = isEnabled ? "checkmark.circle.fill" : "xmark.circle.fill"
+                let color: Color = isEnabled ? .green : .red
                 closeLauncher()
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
+                    HUDWindowController.shared.show(message: msg, systemImage: icon, iconColor: color)
+                }
             } else {
                 closeLauncher()
             }
-            
+
         case .toggleActiveLabelVisibility:
             incrementCommandFrequency(type.rawValue)
             if let labelManager = AppDelegate.shared.statusBarController?.labelManager {
@@ -540,16 +542,16 @@ struct BatchMoveSection: Identifiable {
                 let isEnabled = labelManager.showOnDesktop
                 let status = isEnabled ? String(localized: "Enabled") : String(localized: "Disabled")
                 let msg = String(format: String(localized: "Keep visible on desktop: %@"), status)
-                HUDWindowController.shared.show(
-                    message: msg,
-                    systemImage: isEnabled ? "checkmark.circle.fill" : "xmark.circle.fill",
-                    iconColor: isEnabled ? .green : .red
-                )
+                let icon = isEnabled ? "checkmark.circle.fill" : "xmark.circle.fill"
+                let color: Color = isEnabled ? .green : .red
                 closeLauncher()
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
+                    HUDWindowController.shared.show(message: msg, systemImage: icon, iconColor: color)
+                }
             } else {
                 closeLauncher()
             }
-            
+
         default:
             break
         }
