@@ -1308,7 +1308,7 @@ struct SearchTextField: NSViewRepresentable {
             } else if commandSelector == #selector(NSResponder.insertTab(_:)) || commandSelector == #selector(NSResponder.insertBacktab(_:)) {
                 parent.onTab?()
                 return true
-            } else if commandSelector == #selector(NSResponder.insertNewline(_:)) {
+            } else if commandSelector == #selector(NSResponder.insertNewline(_:)) || commandSelector == #selector(NSResponder.insertNewlineIgnoringFieldEditor(_:)) {
                 let isCommandPressed = NSEvent.modifierFlags.contains(.command)
                 let isOptionPressed = NSEvent.modifierFlags.contains(.option)
                 if isCommandPressed, let onCommandEnter = parent.onCommandEnter {
