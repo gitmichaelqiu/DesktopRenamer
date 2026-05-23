@@ -5,7 +5,7 @@ struct ThemeColors {
     let isDark: Bool
     
     var backgroundOverlay: Color {
-        isDark ? Color(red: 0.08, green: 0.08, blue: 0.09).opacity(0.85) : Color(red: 0.95, green: 0.95, blue: 0.96).opacity(0.85)
+        isDark ? Color(red: 0.1, green: 0.1, blue: 0.11).opacity(0.65) : Color(red: 0.98, green: 0.98, blue: 0.99).opacity(0.65)
     }
     
     var textPrimary: Color {
@@ -25,23 +25,23 @@ struct ThemeColors {
     }
     
     var border: Color {
-        isDark ? Color.white.opacity(0.12) : Color.black.opacity(0.12)
+        isDark ? Color.white.opacity(0.1) : Color.black.opacity(0.08)
     }
     
     var rowHover: Color {
-        isDark ? Color.white.opacity(0.08) : Color.black.opacity(0.05)
+        isDark ? Color.white.opacity(0.12) : Color.black.opacity(0.08)
     }
     
     var badgeBg: Color {
-        isDark ? Color.white.opacity(0.08) : Color.black.opacity(0.06)
+        isDark ? Color.white.opacity(0.1) : Color.black.opacity(0.06)
     }
     
     var badgeBorder: Color {
-        isDark ? Color.white.opacity(0.1) : Color.black.opacity(0.1)
+        isDark ? Color.white.opacity(0.05) : Color.black.opacity(0.05)
     }
     
     var separator: Color {
-        isDark ? Color.white.opacity(0.06) : Color.black.opacity(0.06)
+        isDark ? Color.white.opacity(0.08) : Color.black.opacity(0.08)
     }
     
     var bottomBarBg: Color {
@@ -64,7 +64,7 @@ struct LauncherView: View {
     
     var body: some View {
         ZStack {
-            VisualEffectView(material: .hudWindow, blendingMode: .withinWindow, state: .active)
+            VisualEffectView(material: .popover, blendingMode: .behindWindow, state: .active)
             colors.backgroundOverlay
             
             VStack(spacing: 0) {
@@ -72,33 +72,7 @@ struct LauncherView: View {
                 HStack(spacing: 12) {
                     Image(systemName: "magnifyingglass")
                         .foregroundColor(colors.textTertiary)
-                        .font(.system(size: 22, weight: .light))
-                    
-                    if let active = viewModel.activeCommand {
-                        HStack(spacing: 6) {
-                            Text(active.title)
-                                .font(.system(size: 11, weight: .semibold))
-                                .padding(.horizontal, 10)
-                                .padding(.vertical, 4)
-                                .background(Color(red: 0.0, green: 0.55, blue: 1.0).opacity(0.12))
-                                .foregroundColor(Color(red: 0.0, green: 0.55, blue: 1.0))
-                                .cornerRadius(6)
-                            
-                            if let staging = viewModel.stagingWindow {
-                                Text("Stage: \(staging.ownerName)")
-                                    .font(.system(size: 11, weight: .semibold))
-                                    .padding(.horizontal, 10)
-                                    .padding(.vertical, 4)
-                                    .background(colors.greenText.opacity(0.12))
-                                    .foregroundColor(colors.greenText)
-                                    .cornerRadius(6)
-                            }
-                            
-                            Image(systemName: "chevron.right")
-                                .font(.system(size: 9, weight: .semibold))
-                                .foregroundColor(colors.textQuaternary)
-                        }
-                    }
+                        .font(.system(size: 20, weight: .regular))
                     
                     if viewModel.activeCommand?.type == .renameCurrentSpace {
                         SearchTextField(
@@ -114,7 +88,7 @@ struct LauncherView: View {
                             },
                             placeholder: "New Space Name..."
                         )
-                        .frame(height: 40)
+                        .frame(height: 44)
                     } else {
                         SearchTextField(
                             text: $viewModel.searchQuery,
@@ -142,7 +116,7 @@ struct LauncherView: View {
                             },
                             placeholder: viewModel.activeCommand == nil ? "Search commands..." : (viewModel.stagingWindow != nil ? "Search target space..." : "Search items...")
                         )
-                        .frame(height: 40)
+                        .frame(height: 44)
                     }
                     
                     if viewModel.isLoadingData {
@@ -151,8 +125,8 @@ struct LauncherView: View {
                             .frame(width: 20, height: 20)
                     }
                 }
-                .padding(.horizontal, 20)
-                .padding(.vertical, 18)
+                .padding(.horizontal, 16)
+                .padding(.vertical, 14)
                 
                 Rectangle()
                     .fill(colors.separator)
@@ -197,10 +171,12 @@ struct LauncherView: View {
                     .frame(height: 1)
                 
                 // Bottom bar
-                if viewModel.activeCommand?.type == .batchMoveWindows {
+                if viewModel.activeCommand == nil {
+                    SpacesBottomBar(viewModel: viewModel, spaceManager: spaceManager)
+                } else if viewModel.activeCommand?.type == .batchMoveWindows {
                     BatchMoveBottomBar(viewModel: viewModel)
                 } else {
-                    SpacesBottomBar(viewModel: viewModel, spaceManager: spaceManager)
+                    CommandBottomBar(viewModel: viewModel)
                 }
             }
         }
@@ -244,8 +220,8 @@ struct ListAreaView: View {
                                         .id(i)
                                 }
                             }
-                            .padding(.horizontal, 16)
-                            .padding(.vertical, 12)
+                            .padding(.horizontal, 10)
+                            .padding(.vertical, 8)
                         }
                         .onChange(of: viewModel.selectedRowIndex) { index in
                             withAnimation(.easeInOut(duration: 0.12)) {
@@ -276,8 +252,8 @@ struct ListAreaView: View {
                                             .id(i)
                                     }
                                 }
-                                .padding(.horizontal, 16)
-                                .padding(.vertical, 12)
+                                .padding(.horizontal, 10)
+                                .padding(.vertical, 8)
                             }
                             .onChange(of: viewModel.selectedRowIndex) { index in
                                 withAnimation(.easeInOut(duration: 0.12)) {
@@ -311,8 +287,8 @@ struct ListAreaView: View {
                                                 .id(i)
                                         }
                                     }
-                                    .padding(.horizontal, 16)
-                                    .padding(.vertical, 12)
+                                    .padding(.horizontal, 10)
+                                    .padding(.vertical, 8)
                                 }
                                 .onChange(of: viewModel.selectedRowIndex) { index in
                                     withAnimation(.easeInOut(duration: 0.12)) {
@@ -345,8 +321,8 @@ struct ListAreaView: View {
                                                 .id(i)
                                         }
                                     }
-                                    .padding(.horizontal, 16)
-                                    .padding(.vertical, 12)
+                                    .padding(.horizontal, 10)
+                                    .padding(.vertical, 8)
                                 }
                                 .onChange(of: viewModel.selectedRowIndex) { index in
                                     withAnimation(.easeInOut(duration: 0.12)) {
@@ -395,8 +371,8 @@ struct ListAreaView: View {
                                             }
                                         }
                                     }
-                                    .padding(.horizontal, 16)
-                                    .padding(.vertical, 12)
+                                    .padding(.horizontal, 10)
+                                    .padding(.vertical, 8)
                                 }
                                 .onChange(of: viewModel.selectedRowIndex) { index in
                                     withAnimation(.easeInOut(duration: 0.12)) {
@@ -543,7 +519,7 @@ struct CommandRowView: View {
                 KeycapView(text: "Action", isSelected: isSelected)
             }
         }
-        .padding(.horizontal, 14)
+        .padding(.horizontal, 12)
         .padding(.vertical, 8)
         .background(isSelected ? colors.rowHover : Color.clear)
         .cornerRadius(8)
@@ -588,7 +564,7 @@ struct SpaceRowView: View {
             
             KeycapView(text: "Switch ↵", isSelected: isSelected)
         }
-        .padding(.horizontal, 14)
+        .padding(.horizontal, 12)
         .padding(.vertical, 8)
         .background(isSelected ? colors.rowHover : Color.clear)
         .cornerRadius(8)
@@ -635,7 +611,7 @@ struct WindowRowView: View {
             
             KeycapView(text: "Focus ↵", isSelected: isSelected)
         }
-        .padding(.horizontal, 14)
+        .padding(.horizontal, 12)
         .padding(.vertical, 8)
         .background(isSelected ? colors.rowHover : Color.clear)
         .cornerRadius(8)
@@ -668,12 +644,12 @@ struct ConfirmBatchRowView: View {
             
             KeycapView(text: "Run ↵", isSelected: isSelected, isGreenRow: true)
         }
-        .padding(.horizontal, 10)
-        .padding(.vertical, 6)
+        .padding(.horizontal, 12)
+        .padding(.vertical, 8)
         .background(isSelected ? colors.greenText : colors.greenText.opacity(0.06))
-        .cornerRadius(6)
+        .cornerRadius(8)
         .overlay(
-            RoundedRectangle(cornerRadius: 6)
+            RoundedRectangle(cornerRadius: 8)
                 .stroke(colors.greenText.opacity(isSelected ? 0.3 : 0.1), lineWidth: 1)
         )
     }
@@ -750,7 +726,7 @@ struct WindowBatchRowView: View {
                     )
             }
         }
-        .padding(.horizontal, 14)
+        .padding(.horizontal, 12)
         .padding(.vertical, 8)
         .background(isSelected ? colors.rowHover : Color.clear)
         .cornerRadius(8)
@@ -778,9 +754,9 @@ struct ListSectionHeader: View {
             
             Spacer()
         }
-        .padding(.horizontal, 16)
-        .padding(.top, 14)
-        .padding(.bottom, 6)
+        .padding(.horizontal, 12)
+        .padding(.top, 10)
+        .padding(.bottom, 4)
     }
 }
 
@@ -794,19 +770,40 @@ struct BatchMoveBottomBar: View {
     
     var body: some View {
         HStack(spacing: 8) {
-            // Left side: Active command pill matching Raycast look
+            // Left side: Active command hierarchy matching Raycast look
             HStack(spacing: 6) {
-                Image(systemName: viewModel.activeCommand?.iconName ?? "macwindow.badge.plus")
-                    .font(.system(size: 11, weight: .semibold))
-                    .foregroundColor(Color(red: 0.0, green: 0.55, blue: 1.0))
-                Text(viewModel.activeCommand?.title ?? "Batch Move Windows")
-                    .font(.system(size: 11, weight: .semibold))
-                    .foregroundColor(colors.textPrimary)
+                HStack(spacing: 6) {
+                    Image(systemName: viewModel.activeCommand?.iconName ?? "macwindow.badge.plus")
+                        .font(.system(size: 11, weight: .semibold))
+                        .foregroundColor(Color(red: 0.0, green: 0.55, blue: 1.0))
+                    Text(viewModel.activeCommand?.title ?? "Batch Move Windows")
+                        .font(.system(size: 11, weight: .semibold))
+                        .foregroundColor(colors.textPrimary)
+                }
+                .padding(.horizontal, 10)
+                .padding(.vertical, 4)
+                .background(colors.badgeBg)
+                .clipShape(Capsule())
+                
+                if let staging = viewModel.stagingWindow {
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 9, weight: .semibold))
+                        .foregroundColor(colors.textQuaternary)
+                    
+                    HStack(spacing: 4) {
+                        Image(systemName: "square.and.arrow.down")
+                            .font(.system(size: 10, weight: .semibold))
+                            .foregroundColor(colors.greenText)
+                        Text("Stage: \(staging.ownerName)")
+                            .font(.system(size: 11, weight: .semibold))
+                            .foregroundColor(colors.textPrimary)
+                    }
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 4)
+                    .background(colors.badgeBg)
+                    .clipShape(Capsule())
+                }
             }
-            .padding(.horizontal, 10)
-            .padding(.vertical, 4)
-            .background(colors.badgeBg)
-            .clipShape(Capsule())
             
             Spacer()
             
@@ -886,8 +883,8 @@ struct BatchMoveBottomBar: View {
                 }
             }
         }
-        .padding(.horizontal, 20)
-        .padding(.vertical, 12)
+        .padding(.horizontal, 12)
+        .padding(.vertical, 10)
         .background(colors.bottomBarBg)
     }
 }
@@ -950,9 +947,121 @@ struct SpacesBottomBar: View {
             }
             
             Spacer()
+            
+            // Right side action indicator
+            HStack(spacing: 4) {
+                Text("Action")
+                    .font(.system(size: 11, weight: .medium))
+                    .foregroundColor(colors.textSecondary)
+                Text("↵")
+                    .font(.system(size: 11, weight: .semibold))
+                    .foregroundColor(colors.textQuaternary)
+            }
+            .padding(.horizontal, 8)
+            .padding(.vertical, 4)
+            .background(colors.badgeBg)
+            .cornerRadius(4)
         }
-        .padding(.horizontal, 20)
-        .padding(.vertical, 12)
+        .padding(.horizontal, 12)
+        .padding(.vertical, 10)
+        .background(colors.bottomBarBg)
+    }
+}
+
+struct CommandBottomBar: View {
+    @ObservedObject var viewModel: LauncherViewModel
+    @Environment(\.colorScheme) var colorScheme
+    
+    var colors: ThemeColors {
+        ThemeColors(isDark: colorScheme == .dark)
+    }
+    
+    var body: some View {
+        HStack(spacing: 8) {
+            // Left side: Active command pill matching Raycast look
+            if let active = viewModel.activeCommand {
+                HStack(spacing: 6) {
+                    Image(systemName: active.iconName)
+                        .font(.system(size: 11, weight: .semibold))
+                        .foregroundColor(Color(red: 0.0, green: 0.55, blue: 1.0))
+                    Text(active.title)
+                        .font(.system(size: 11, weight: .semibold))
+                        .foregroundColor(colors.textPrimary)
+                }
+                .padding(.horizontal, 10)
+                .padding(.vertical, 4)
+                .background(colors.badgeBg)
+                .clipShape(Capsule())
+            }
+            
+            Spacer()
+            
+            // Right side: Context-sensitive actions
+            if let type = viewModel.activeCommand?.type {
+                switch type {
+                case .switchToDesktop:
+                    HStack(spacing: 4) {
+                        Text("Switch Space")
+                            .font(.system(size: 11, weight: .medium))
+                            .foregroundColor(colors.textSecondary)
+                        Text("↵")
+                            .font(.system(size: 11, weight: .semibold))
+                            .foregroundColor(colors.textQuaternary)
+                    }
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 4)
+                    .background(colors.badgeBg)
+                    .cornerRadius(4)
+                    
+                case .moveWindow:
+                    HStack(spacing: 4) {
+                        Text("Move Window")
+                            .font(.system(size: 11, weight: .medium))
+                            .foregroundColor(colors.textSecondary)
+                        Text("↵")
+                            .font(.system(size: 11, weight: .semibold))
+                            .foregroundColor(colors.textQuaternary)
+                    }
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 4)
+                    .background(colors.badgeBg)
+                    .cornerRadius(4)
+                    
+                case .listWindows:
+                    HStack(spacing: 4) {
+                        Text("Focus Window")
+                            .font(.system(size: 11, weight: .medium))
+                            .foregroundColor(colors.textSecondary)
+                        Text("↵")
+                            .font(.system(size: 11, weight: .semibold))
+                            .foregroundColor(colors.textQuaternary)
+                    }
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 4)
+                    .background(colors.badgeBg)
+                    .cornerRadius(4)
+                    
+                case .renameCurrentSpace:
+                    HStack(spacing: 4) {
+                        Text("Rename Space")
+                            .font(.system(size: 11, weight: .medium))
+                            .foregroundColor(colors.textSecondary)
+                        Text("↵")
+                            .font(.system(size: 11, weight: .semibold))
+                            .foregroundColor(colors.textQuaternary)
+                    }
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 4)
+                    .background(colors.badgeBg)
+                    .cornerRadius(4)
+                    
+                default:
+                    EmptyView()
+                }
+            }
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 10)
         .background(colors.bottomBarBg)
     }
 }
@@ -1070,14 +1179,14 @@ struct SearchTextField: NSViewRepresentable {
         textField.drawsBackground = false
         textField.focusRingType = .none
         textField.textColor = isDark ? .white : NSColor(red: 0.12, green: 0.12, blue: 0.14, alpha: 1.0)
-        textField.font = NSFont.systemFont(ofSize: 18, weight: .regular)
+        textField.font = NSFont.systemFont(ofSize: 20, weight: .regular)
         
         let placeholderColor = isDark ? NSColor.white.withAlphaComponent(0.35) : NSColor(red: 0.12, green: 0.12, blue: 0.14, alpha: 0.35)
         let placeholderAttr = NSAttributedString(
             string: placeholder,
             attributes: [
                 .foregroundColor: placeholderColor,
-                .font: NSFont.systemFont(ofSize: 18, weight: .regular)
+                .font: NSFont.systemFont(ofSize: 20, weight: .regular)
             ]
         )
         textField.placeholderAttributedString = placeholderAttr
@@ -1101,7 +1210,7 @@ struct SearchTextField: NSViewRepresentable {
             string: placeholder,
             attributes: [
                 .foregroundColor: placeholderColor,
-                .font: NSFont.systemFont(ofSize: 18, weight: .regular)
+                .font: NSFont.systemFont(ofSize: 20, weight: .regular)
             ]
         )
         nsView.placeholderAttributedString = placeholderAttr
