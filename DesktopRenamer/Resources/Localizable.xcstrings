@@ -12,22 +12,22 @@
       },
       "shouldTranslate" : false
     },
-    "(No Title)" : {
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "（无标题）"
-          }
-        }
-      }
-    },
     " + Number" : {
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : " + 数字"
+          }
+        }
+      }
+    },
+    "(No Title)" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "（无标题）"
           }
         }
       }
@@ -77,6 +77,26 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "%1$@ · 桌面 %2$lld"
+          }
+        }
+      }
+    },
+    "%lld items" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld 个项目"
+          }
+        }
+      }
+    },
+    "%lld windows" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld 个窗口"
           }
         }
       }
@@ -714,22 +734,23 @@
         }
       }
     },
+    "Focus ↵" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "聚焦 ↵"
+          }
+        }
+      }
+    },
     "Focus Window" : {
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "切换窗口"
-          }
-        }
-      }
-    },
-    "Focus ↵" : {
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "聚焦 ↵"
           }
         }
       }
@@ -1768,22 +1789,23 @@
         }
       }
     },
+    "Run ↵" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "执行 ↵"
+          }
+        }
+      }
+    },
     "Run Batch Move" : {
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "批量移动窗口"
-          }
-        }
-      }
-    },
-    "Run ↵" : {
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "执行 ↵"
           }
         }
       }
@@ -2508,6 +2530,16 @@
         }
       }
     },
+    "Staged Moves (Pending)" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "暂存的移动（待执行）"
+          }
+        }
+      }
+    },
     "Start" : {
       "localizations" : {
         "zh-Hans" : {
@@ -2558,6 +2590,17 @@
         }
       }
     },
+    "Switch ↵" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "切换 ↵"
+          }
+        }
+      }
+    },
     "Switch Desktop" : {
       "localizations" : {
         "zh-Hans" : {
@@ -2600,16 +2643,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "切换桌面"
-          }
-        }
-      }
-    },
-    "Switch ↵" : {
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "切换 ↵"
           }
         }
       }

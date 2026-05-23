@@ -253,8 +253,8 @@ struct BatchMoveSection: Identifiable {
         }
         if !stagedItems.isEmpty {
             sections.append(BatchMoveSection(
-                title: "Staged Moves (Pending)",
-                subtitle: "\(stagedItems.count) items",
+                title: String(localized: "Staged Moves (Pending)"),
+                subtitle: String(format: String(localized: "%lld items"), stagedItems.count),
                 items: stagedItems
             ))
         }
@@ -275,7 +275,7 @@ struct BatchMoveSection: Identifiable {
             if !spaceItems.isEmpty {
                 sections.append(BatchMoveSection(
                     title: space.name,
-                    subtitle: "\(spaceItems.count) windows",
+                    subtitle: String(format: String(localized: "%lld windows"), spaceItems.count),
                     items: spaceItems
                 ))
             }
