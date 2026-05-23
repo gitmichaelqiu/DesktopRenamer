@@ -18,6 +18,9 @@ class LauncherWindowController: NSWindowController, NSWindowDelegate {
     private let viewModel = LauncherViewModel()
     var shouldRestoreFocus = true
     
+    private var isCommandKeyPressed = false
+    private var cmdLongPressWorkItem: DispatchWorkItem?
+    
     init() {
         let panel = LauncherNSPanel(
             contentRect: NSRect(x: 0, y: 0, width: 720, height: 450),
@@ -52,7 +55,32 @@ class LauncherWindowController: NSWindowController, NSWindowDelegate {
         NSEvent.addLocalMonitorForEvents(matching: .flagsChanged) { [weak self] event in
             guard let self = self else { return event }
             let hasCommand = event.modifierFlags.contains(.command)
-            self.viewModel.showCommandNumbers = hasCommand
+            
+            if hasCommand {
+                if !self.isCommandKeyPressed {
+                    self.isCommandKeyPressed = true
+                    self.cmdLongPressWorkItem?.cancel()
+                    let workItem = DispatchWorkItem { [weak self] in
+                        guard let self = self else { return }
+                        if self.isCommandKeyPressed {
+                            withAnimation(.easeInOut(duration: 0.12)) {
+                                self.viewModel.showCommandNumbers = true
+                            }
+                        }
+                    }
+                    self.cmdLongPressWorkItem = workItem
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.35, execute: workItem)
+                }
+            } else {
+                if self.isCommandKeyPressed {
+                    self.isCommandKeyPressed = false
+                    self.cmdLongPressWorkItem?.cancel()
+                    self.cmdLongPressWorkItem = nil
+                    withAnimation(.easeInOut(duration: 0.12)) {
+                        self.viewModel.showCommandNumbers = false
+                    }
+                }
+            }
             return event
         }
     }
@@ -90,6 +118,9 @@ class LauncherWindowController: NSWindowController, NSWindowDelegate {
     
     func hide() {
         window?.orderOut(nil)
+        isCommandKeyPressed = false
+        cmdLongPressWorkItem?.cancel()
+        cmdLongPressWorkItem = nil
         viewModel.showCommandNumbers = false
         
         if shouldRestoreFocus, let prev = viewModel.previouslyActiveWindow {
