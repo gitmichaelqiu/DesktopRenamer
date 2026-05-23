@@ -50,6 +50,7 @@ class HUDWindowController: NSWindowController {
     
     private var hideTimer: Timer?
     private var hostingView: NSHostingView<HUDView>?
+    private var showWorkItem: DispatchWorkItem?
     
     init() {
         let panel = HUDNSPanel(
@@ -77,8 +78,9 @@ class HUDWindowController: NSWindowController {
     func show(message: String, systemImage: String, iconColor: Color) {
         guard let panel = window as? HUDNSPanel else { return }
         
-        // Cancel existing timer
+        // Cancel existing timer and work item
         hideTimer?.invalidate()
+        showWorkItem?.cancel()
         
         // Update or set SwiftUI content view
         let hudView = HUDView(message: message, systemImage: systemImage, iconColor: iconColor)
@@ -87,32 +89,38 @@ class HUDWindowController: NSWindowController {
             existing.rootView = hudView
         } else {
             let newView = NSHostingView(rootView: hudView)
+            newView.sizingOptions = []
             panel.contentView = newView
             self.hostingView = newView
         }
         
-        if let hostingView = self.hostingView {
+        let workItem = DispatchWorkItem { [weak self] in
+            guard let self = self, let panel = self.window as? HUDNSPanel, let hostingView = self.hostingView else { return }
+            
             // Size to fit content
             let fittingSize = hostingView.fittingSize
             panel.setContentSize(fittingSize)
-        }
-        
-        // Position at bottom center of active screen
-        positionPanel(panel)
-        
-        // Anim fade in
-        panel.alphaValue = 0.0
-        panel.orderFrontRegardless()
-        
-        NSAnimationContext.runAnimationGroup { context in
-            context.duration = 0.12
-            panel.animator().alphaValue = 1.0
-        } completionHandler: {
-            // Auto hide after delay
-            self.hideTimer = Timer.scheduledTimer(withTimeInterval: 1.8, repeats: false) { [weak self] _ in
-                self?.hideWithAnimation()
+            
+            // Position at bottom center of active screen
+            self.positionPanel(panel)
+            
+            // Anim fade in
+            panel.alphaValue = 0.0
+            panel.orderFrontRegardless()
+            
+            NSAnimationContext.runAnimationGroup { context in
+                context.duration = 0.12
+                panel.animator().alphaValue = 1.0
+            } completionHandler: {
+                // Auto hide after delay
+                self.hideTimer = Timer.scheduledTimer(withTimeInterval: 1.8, repeats: false) { [weak self] _ in
+                    self?.hideWithAnimation()
+                }
             }
         }
+        
+        self.showWorkItem = workItem
+        DispatchQueue.main.async(execute: workItem)
     }
     
     private func positionPanel(_ panel: NSWindow) {
