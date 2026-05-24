@@ -454,6 +454,8 @@ struct KeycapView: View {
     let text: String
     let isSelected: Bool
     var isGreenRow: Bool = false
+    var verticalPadding: CGFloat = 3
+    var horizontalPadding: CGFloat = 6
     @Environment(\.colorScheme) var colorScheme
     
     var colors: ThemeColors {
@@ -464,8 +466,8 @@ struct KeycapView: View {
         Text(LocalizedStringKey(text))
             .font(.system(size: 10, weight: .medium))
             .foregroundColor(isGreenRow && isSelected ? .white : (isSelected ? colors.textPrimary : colors.textSecondary))
-            .padding(.horizontal, 6)
-            .padding(.vertical, 3)
+            .padding(.horizontal, horizontalPadding)
+            .padding(.vertical, verticalPadding)
             .background(
                 isGreenRow && isSelected ? Color.white.opacity(0.2) : colors.badgeBg
             )
@@ -1077,7 +1079,7 @@ struct SpacesBottomBar: View {
                             Text(LocalizedStringKey("Switch Space"))
                                 .font(.system(size: 11, weight: .medium))
                                 .foregroundColor(colors.textSecondary)
-                            KeycapView(text: "Tab", isSelected: false)
+                            KeycapView(text: "Tab", isSelected: false, verticalPadding: 1, horizontalPadding: 4)
                         }
                         .padding(.horizontal, 10)
                         .frame(height: 21)
