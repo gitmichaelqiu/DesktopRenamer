@@ -654,19 +654,62 @@ struct BatchMoveSection: Identifiable {
         DispatchQueue.global(qos: .userInitiated).async { [weak self] in
             guard let self = self else { return }
             
-            for move in moves {
-                if move.window.space.id == move.targetSpace.id {
-                    continue
-                }
-                
+            // Group moves by source space to switch spaces only once per source group
+            let movesBySource = Dictionary(grouping: moves, by: { $0.window.space.id })
+            
+            for (sourceId, sourceMoves) in movesBySource {
                 DispatchQueue.main.sync {
-                    if let fromSpaceID = Int(move.window.space.id),
-                       let targetSpaceID = Int(move.targetSpace.id) {
-                        SpaceHelper.moveWindowToSpace(windowID: move.window.id, fromSpaceID: fromSpaceID, targetSpaceID: targetSpaceID)
+                    if let manager = AppDelegate.shared.spaceManager,
+                       let spaceObj = manager.spaceNameDict.first(where: { $0.id == sourceId }) {
+                        manager.switchToSpace(spaceObj, forceInstant: true)
                     }
                 }
-                // Short sleep between moves to let window server process changes smoothly
-                Thread.sleep(forTimeInterval: 0.1)
+                Thread.sleep(forTimeInterval: 0.6) // Settle space switch
+                
+                for (index, move) in sourceMoves.enumerated() {
+                    if move.window.space.id == move.targetSpace.id {
+                        continue
+                    }
+                    
+                    // Focus the targeted window first
+                    DispatchQueue.main.sync {
+                        SpaceHelper.focusWindow(id: move.window.id, pid: move.window.pid)
+                    }
+                    Thread.sleep(forTimeInterval: 0.25)
+                    
+                    var didDrag = false
+                    DispatchQueue.main.sync {
+                        if let manager = AppDelegate.shared.spaceManager,
+                           let sourceSpace = manager.spaceNameDict.first(where: { $0.id == move.window.space.id }),
+                           let targetSpace = manager.spaceNameDict.first(where: { $0.id == move.targetSpace.id }) {
+                            
+                            if sourceSpace.displayID != targetSpace.displayID {
+                                // Cross-monitor moves: direct CGS/AX coordinates repositioning (highly reliable)
+                                if let fromSpaceID = Int(move.window.space.id),
+                                   let targetSpaceID = Int(move.targetSpace.id) {
+                                    SpaceHelper.moveWindowToSpace(windowID: move.window.id, fromSpaceID: fromSpaceID, targetSpaceID: targetSpaceID)
+                                }
+                            } else {
+                                // Same-monitor moves: simulated mouse dragging (required for third-party windows)
+                                SpaceHelper.dragActiveWindow(to: move.targetSpace.id, forceInstant: true)
+                                didDrag = true
+                            }
+                        }
+                    }
+                    Thread.sleep(forTimeInterval: 0.5) // Settle window movement/dragging
+                    
+                    // If we performed a same-monitor drag move, the active space has changed.
+                    // Switch back to the source space to process remaining windows in this source group.
+                    if didDrag && index < sourceMoves.count - 1 {
+                        DispatchQueue.main.sync {
+                            if let manager = AppDelegate.shared.spaceManager,
+                               let spaceObj = manager.spaceNameDict.first(where: { $0.id == sourceId }) {
+                                manager.switchToSpace(spaceObj, forceInstant: true)
+                            }
+                        }
+                        Thread.sleep(forTimeInterval: 0.6) // Settle space switch back
+                    }
+                }
             }
             
             DispatchQueue.main.async {
