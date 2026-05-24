@@ -451,7 +451,7 @@ struct ListAreaView: View {
 }
 
 struct KeycapView: View {
-    let text: String
+    let text: LocalizedStringKey
     let isSelected: Bool
     var isGreenRow: Bool = false
     var verticalPadding: CGFloat = 3
@@ -463,7 +463,7 @@ struct KeycapView: View {
     }
     
     var body: some View {
-        Text(LocalizedStringKey(text))
+        Text(text)
             .font(.system(size: 10, weight: .medium))
             .foregroundColor(isGreenRow && isSelected ? .white : (isSelected ? colors.textPrimary : colors.textSecondary))
             .padding(.horizontal, horizontalPadding)
@@ -561,7 +561,7 @@ struct CommandRowView: View {
             Spacer()
             
             if let shortcut = shortcutText {
-                KeycapView(text: shortcut, isSelected: isSelected)
+                KeycapView(text: LocalizedStringKey(shortcut), isSelected: isSelected)
             } else if let statusText = toggleStatus {
                 Text(LocalizedStringKey(statusText))
                     .font(.system(size: 10, weight: .bold))
@@ -632,7 +632,7 @@ struct SpaceRowView: View {
             Spacer()
             
             if let shortcut = shortcutText {
-                KeycapView(text: shortcut, isSelected: isSelected)
+                KeycapView(text: LocalizedStringKey(shortcut), isSelected: isSelected)
             } else {
                 KeycapView(text: "Switch ↵", isSelected: isSelected)
             }
@@ -688,7 +688,7 @@ struct WindowRowView: View {
             Spacer()
 
             if let shortcut = shortcutText {
-                KeycapView(text: shortcut, isSelected: isSelected)
+                KeycapView(text: LocalizedStringKey(shortcut), isSelected: isSelected)
             } else {
                 KeycapView(text: "Focus ↵", isSelected: isSelected)
             }
@@ -787,7 +787,7 @@ struct WindowBatchRowView: View {
             Spacer()
 
             if let shortcut = shortcutText {
-                KeycapView(text: shortcut, isSelected: isSelected)
+                KeycapView(text: LocalizedStringKey(shortcut), isSelected: isSelected)
             } else if isStaged {
                 HStack(spacing: 4) {
                     Circle()

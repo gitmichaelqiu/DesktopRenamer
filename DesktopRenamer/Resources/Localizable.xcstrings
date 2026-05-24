@@ -125,7 +125,7 @@
       "shouldTranslate" : false
     },
     "⌥↵" : {
-
+      "shouldTranslate" : false
     },
     "◉" : {
       "shouldTranslate" : false
@@ -750,6 +750,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "在设置 → 通用 → 修复参数检测"
+          }
+        }
+      }
+    },
+    "Focus ↵" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "聚焦 ↵"
           }
         }
       }
@@ -1808,6 +1818,16 @@
         }
       }
     },
+    "Run ↵" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "执行 ↵"
+          }
+        }
+      }
+    },
     "Run Batch Move" : {
       "localizations" : {
         "zh-Hans" : {
@@ -2588,17 +2608,6 @@
         }
       }
     },
-    "Switch / Move" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "切换 / 移动"
-          }
-        }
-      }
-    },
     "Switch & Move" : {
       "localizations" : {
         "zh-Hans" : {
@@ -2641,6 +2650,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "滑动距离"
+          }
+        }
+      }
+    },
+    "Switch ↵" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "切换 ↵"
           }
         }
       }
@@ -2700,6 +2719,9 @@
           }
         }
       }
+    },
+    "Tab" : {
+      "shouldTranslate" : false
     },
     "Take back control of your macOS spaces." : {
       "localizations" : {
@@ -2894,17 +2916,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "移除队列"
-          }
-        }
-      }
-    },
-    "Use Tab to switch spaces quickly" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "按 Tab 键快速切换桌面"
           }
         }
       }
