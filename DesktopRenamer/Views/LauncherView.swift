@@ -1089,15 +1089,34 @@ struct SpacesBottomBar: View {
                     .buttonStyle(PlainButtonStyle())
                 }
                 
-                HStack(spacing: 4) {
-                    if viewModel.isBottomBarFocused {
-                        Text(LocalizedStringKey("Switch / Move"))
+                if viewModel.isBottomBarFocused {
+                    HStack(spacing: 4) {
+                        Text(LocalizedStringKey("Switch Space"))
                             .font(.system(size: 11, weight: .medium))
                             .foregroundColor(colors.textSecondary)
-                        Text("↵ / ⌥↵")
+                        Text("↵")
                             .font(.system(size: 11, weight: .semibold))
                             .foregroundColor(colors.textQuaternary)
-                    } else {
+                    }
+                    .padding(.horizontal, 10)
+                    .frame(height: 21)
+                    .background(colors.badgeBg)
+                    .clipShape(Capsule())
+                    
+                    HStack(spacing: 4) {
+                        Text(LocalizedStringKey("Move Window"))
+                            .font(.system(size: 11, weight: .medium))
+                            .foregroundColor(colors.textSecondary)
+                        Text("⌥↵")
+                            .font(.system(size: 11, weight: .semibold))
+                            .foregroundColor(colors.textQuaternary)
+                    }
+                    .padding(.horizontal, 10)
+                    .frame(height: 21)
+                    .background(colors.badgeBg)
+                    .clipShape(Capsule())
+                } else {
+                    HStack(spacing: 4) {
                         Text(LocalizedStringKey("Action"))
                             .font(.system(size: 11, weight: .medium))
                             .foregroundColor(colors.textSecondary)
@@ -1105,11 +1124,11 @@ struct SpacesBottomBar: View {
                             .font(.system(size: 11, weight: .semibold))
                             .foregroundColor(colors.textQuaternary)
                     }
+                    .padding(.horizontal, 10)
+                    .frame(height: 21)
+                    .background(colors.badgeBg)
+                    .clipShape(Capsule())
                 }
-                .padding(.horizontal, 10)
-                .frame(height: 21)
-                .background(colors.badgeBg)
-                .clipShape(Capsule())
             }
         }
         .padding(.horizontal, 12)
