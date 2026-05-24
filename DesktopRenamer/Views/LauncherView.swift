@@ -1058,16 +1058,33 @@ struct SpacesBottomBar: View {
             
             Spacer()
             
-            // Right side action indicator
+            // Right side action indicators
             HStack(spacing: 8) {
                 if !viewModel.isBottomBarFocused {
-                    Text(LocalizedStringKey("Use Tab to switch spaces quickly"))
-                        .font(.system(size: 10.5))
-                        .foregroundColor(colors.textTertiary)
-                    
-                    Text("•")
-                        .font(.system(size: 10.5))
-                        .foregroundColor(colors.textQuaternary)
+                    Button(action: {
+                        viewModel.isBottomBarFocused = true
+                        viewModel.isKeyboardSelection = true
+                        
+                        let spaces = spaceManager.currentDisplaySpaces
+                        if let currentSpaceID = AppDelegate.shared.spaceManager?.currentSpaceUUID,
+                           let index = spaces.firstIndex(where: { $0.id == currentSpaceID }) {
+                            viewModel.selectedSpaceIndex = index
+                        } else {
+                            viewModel.selectedSpaceIndex = 0
+                        }
+                    }) {
+                        HStack(spacing: 6) {
+                            Text(LocalizedStringKey("Switch Space"))
+                                .font(.system(size: 11, weight: .medium))
+                                .foregroundColor(colors.textSecondary)
+                            KeycapView(text: "Tab", isSelected: false)
+                        }
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 4)
+                        .background(colors.badgeBg)
+                        .clipShape(Capsule())
+                    }
+                    .buttonStyle(PlainButtonStyle())
                 }
                 
                 HStack(spacing: 4) {
@@ -1087,11 +1104,11 @@ struct SpacesBottomBar: View {
                             .foregroundColor(colors.textQuaternary)
                     }
                 }
+                .padding(.horizontal, 10)
+                .padding(.vertical, 4)
+                .background(colors.badgeBg)
+                .clipShape(Capsule())
             }
-            .padding(.horizontal, 10)
-            .padding(.vertical, 4)
-            .background(colors.badgeBg)
-            .clipShape(Capsule())
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 10)
