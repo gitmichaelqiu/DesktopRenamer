@@ -224,8 +224,8 @@ struct LauncherView: View {
                 .stroke(colors.border, lineWidth: 1)
         )
         .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-        .shadow(color: Color.black.opacity(colors.isDark ? 0.35 : 0.18), radius: 20, x: 0, y: 10)
-        .padding(40)
+        .shadow(color: Color.black.opacity(colors.isDark ? 0.30 : 0.15), radius: 25, x: 0, y: 6)
+        .padding(60)
     }
 }
 
