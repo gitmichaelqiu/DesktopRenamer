@@ -2898,6 +2898,7 @@
       }
     },
     "Use Tab to switch spaces quickly" : {
+      "extractionState" : "stale",
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {

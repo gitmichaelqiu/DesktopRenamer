@@ -1080,7 +1080,7 @@ struct SpacesBottomBar: View {
                             KeycapView(text: "Tab", isSelected: false)
                         }
                         .padding(.horizontal, 10)
-                        .padding(.vertical, 4)
+                        .frame(height: 21)
                         .background(colors.badgeBg)
                         .clipShape(Capsule())
                     }
@@ -1105,7 +1105,7 @@ struct SpacesBottomBar: View {
                     }
                 }
                 .padding(.horizontal, 10)
-                .padding(.vertical, 4)
+                .frame(height: 21)
                 .background(colors.badgeBg)
                 .clipShape(Capsule())
             }
