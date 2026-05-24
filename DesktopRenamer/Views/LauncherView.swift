@@ -1075,11 +1075,13 @@ struct SpacesBottomBar: View {
                             viewModel.selectedSpaceIndex = 0
                         }
                     }) {
-                        HStack(spacing: 6) {
+                        HStack(spacing: 4) {
                             Text(LocalizedStringKey("Switch Space"))
                                 .font(.system(size: 11, weight: .medium))
                                 .foregroundColor(colors.textSecondary)
-                            KeycapView(text: "Tab", isSelected: false, verticalPadding: 1, horizontalPadding: 4)
+                            Text("Tab")
+                                .font(.system(size: 11, weight: .semibold))
+                                .foregroundColor(colors.textQuaternary)
                         }
                         .padding(.horizontal, 10)
                         .frame(height: 21)
