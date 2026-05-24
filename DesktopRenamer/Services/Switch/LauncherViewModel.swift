@@ -653,45 +653,20 @@ struct BatchMoveSection: Identifiable {
         
         DispatchQueue.global(qos: .userInitiated).async { [weak self] in
             guard let self = self else { return }
-            let movesBySource = Dictionary(grouping: moves, by: { $0.window.space.id })
             
-            for (sourceId, sourceMoves) in movesBySource {
-                DispatchQueue.main.sync {
-                    if let manager = AppDelegate.shared.spaceManager,
-                       let spaceObj = manager.spaceNameDict.first(where: { $0.id == sourceId }) {
-                        manager.switchToSpace(spaceObj, forceInstant: true)
-                    }
+            for move in moves {
+                if move.window.space.id == move.targetSpace.id {
+                    continue
                 }
-                Thread.sleep(forTimeInterval: 0.6)
                 
-                for move in sourceMoves {
-                    if move.window.space.id == move.targetSpace.id {
-                        continue
+                DispatchQueue.main.sync {
+                    if let fromSpaceID = Int(move.window.space.id),
+                       let targetSpaceID = Int(move.targetSpace.id) {
+                        SpaceHelper.moveWindowToSpace(windowID: move.window.id, fromSpaceID: fromSpaceID, targetSpaceID: targetSpaceID)
                     }
-                    DispatchQueue.main.sync {
-                        SpaceHelper.focusWindow(id: move.window.id, pid: move.window.pid)
-                    }
-                    Thread.sleep(forTimeInterval: 0.25)
-                    
-                    DispatchQueue.main.sync {
-                        if let manager = AppDelegate.shared.spaceManager,
-                           let sourceSpace = manager.spaceNameDict.first(where: { $0.id == move.window.space.id }),
-                           let targetSpace = manager.spaceNameDict.first(where: { $0.id == move.targetSpace.id }) {
-                            
-                            if sourceSpace.displayID != targetSpace.displayID {
-                                // Cross-monitor move
-                                if let fromSpaceID = Int(move.window.space.id),
-                                   let targetSpaceID = Int(move.targetSpace.id) {
-                                    SpaceHelper.moveWindowToSpace(windowID: move.window.id, fromSpaceID: fromSpaceID, targetSpaceID: targetSpaceID)
-                                }
-                            } else {
-                                // Same-monitor move
-                                SpaceHelper.dragActiveWindow(to: move.targetSpace.id, forceInstant: true)
-                            }
-                        }
-                    }
-                    Thread.sleep(forTimeInterval: 0.5)
                 }
+                // Short sleep between moves to let window server process changes smoothly
+                Thread.sleep(forTimeInterval: 0.1)
             }
             
             DispatchQueue.main.async {
@@ -699,11 +674,16 @@ struct BatchMoveSection: Identifiable {
                 self.stagedMoves.removeAll()
                 LauncherWindowController.shared.shouldRestoreFocus = false
                 
-                if let manager = AppDelegate.shared.spaceManager,
-                   manager.returnToOriginalAfterBatchMove,
-                   let originalUUID = originalSpaceUUID,
-                   let targetSpace = manager.spaceNameDict.first(where: { $0.id == originalUUID }) {
-                    manager.switchToSpace(targetSpace, forceInstant: true)
+                if let manager = AppDelegate.shared.spaceManager {
+                    if manager.returnToOriginalAfterBatchMove {
+                        if let originalUUID = originalSpaceUUID,
+                           let targetSpace = manager.spaceNameDict.first(where: { $0.id == originalUUID }) {
+                            manager.switchToSpace(targetSpace, forceInstant: true)
+                        }
+                    } else if let lastMove = moves.last,
+                              let targetSpace = manager.spaceNameDict.first(where: { $0.id == lastMove.targetSpace.id }) {
+                        manager.switchToSpace(targetSpace, forceInstant: true)
+                    }
                 }
                 
                 self.closeLauncher()
