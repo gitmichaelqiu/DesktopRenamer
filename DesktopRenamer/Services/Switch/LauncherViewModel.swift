@@ -110,14 +110,14 @@ struct BatchMoveSection: Identifiable {
     
     let allCommands: [LauncherCommand] = [
         LauncherCommand(type: .switchToDesktop, title: NSLocalizedString("Switch Desktop", comment: ""), subtitle: NSLocalizedString("Select a desktop to switch to", comment: ""), iconName: "desktopcomputer", hasSubpage: true),
-        LauncherCommand(type: .moveWindow, title: NSLocalizedString("Move Window to Desktop", comment: ""), subtitle: NSLocalizedString("Move the active window to a selected space", comment: ""), iconName: "macwindow.on.rectangle", hasSubpage: true),
+        LauncherCommand(type: .moveWindow, title: NSLocalizedString("Move Window to Desktop", comment: ""), subtitle: NSLocalizedString("Move the active window to a selected space", comment: ""), iconName: "macwindow.and.cursorarrow", hasSubpage: true),
         LauncherCommand(type: .listWindows, title: NSLocalizedString("Focus Window", comment: ""), subtitle: NSLocalizedString("Search and focus open application windows", comment: ""), iconName: "macwindow", hasSubpage: true),
-        LauncherCommand(type: .batchMoveWindows, title: NSLocalizedString("Batch Move Windows", comment: ""), subtitle: NSLocalizedString("Select and move multiple windows to a space", comment: ""), iconName: "macwindow.badge.plus", hasSubpage: true),
+        LauncherCommand(type: .batchMoveWindows, title: NSLocalizedString("Batch Move Windows", comment: ""), subtitle: NSLocalizedString("Select and move multiple windows to a space", comment: ""), iconName: "macwindow.on.rectangle", hasSubpage: true),
         LauncherCommand(type: .renameCurrentSpace, title: NSLocalizedString("Rename Current Space", comment: ""), subtitle: NSLocalizedString("Rename the current space to a new label", comment: ""), iconName: "pencil", hasSubpage: true),
         LauncherCommand(type: .reloadLabels, title: NSLocalizedString("Reload Space Labels", comment: ""), subtitle: NSLocalizedString("Force refresh all space name labels on displays", comment: ""), iconName: "arrow.clockwise", hasSubpage: false),
-        LauncherCommand(type: .toggleActiveLabel, title: NSLocalizedString("Toggle Active Space Label", comment: ""), subtitle: NSLocalizedString("Show or hide the active space label overlay", comment: ""), iconName: "switch.2", hasSubpage: false),
-        LauncherCommand(type: .togglePreviewLabel, title: NSLocalizedString("Toggle Preview Space Label", comment: ""), subtitle: NSLocalizedString("Show or hide the preview space labels overlay", comment: ""), iconName: "eye", hasSubpage: false),
-        LauncherCommand(type: .toggleActiveLabelVisibility, title: NSLocalizedString("Toggle Active Space Label Visibility", comment: ""), subtitle: NSLocalizedString("Pin space label on desktop or hide on apps", comment: ""), iconName: "square.dashed", hasSubpage: false)
+        LauncherCommand(type: .toggleActiveLabel, title: NSLocalizedString("Toggle Active Space Label", comment: ""), subtitle: NSLocalizedString("Show or hide the active space label overlay", comment: ""), iconName: "rectangle.inset.filled.and.cursorarrow", hasSubpage: false),
+        LauncherCommand(type: .togglePreviewLabel, title: NSLocalizedString("Toggle Preview Space Label", comment: ""), subtitle: NSLocalizedString("Show or hide the preview space labels overlay", comment: ""), iconName: "appwindow.swipe.rectangle", hasSubpage: false),
+        LauncherCommand(type: .toggleActiveLabelVisibility, title: NSLocalizedString("Toggle Active Space Label Visibility", comment: ""), subtitle: NSLocalizedString("Pin space label on desktop or hide on apps", comment: ""), iconName: "eye", hasSubpage: false)
     ]
     
     func getCommandFrequency(_ id: String) -> Int {
