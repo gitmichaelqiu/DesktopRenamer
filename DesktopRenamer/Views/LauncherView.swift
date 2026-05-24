@@ -509,19 +509,23 @@ struct CommandRowView: View {
     @Environment(\.colorScheme) var colorScheme
     @State private var isHovered = false
     
+    // Observers for settings changes to trigger auto-redraw of status labels
+    @AppStorage("kShowActiveLabels") private var showActiveLabels = true
+    @AppStorage("kShowPreviewLabels") private var showPreviewLabels = true
+    @AppStorage("kShowOnDesktop") private var showOnDesktop = false
+    
     var colors: ThemeColors {
         ThemeColors(isDark: colorScheme == .dark)
     }
     
     private var toggleStatus: String? {
-        guard let labelManager = AppDelegate.shared.statusBarController?.labelManager else { return nil }
         switch command.type {
         case .toggleActiveLabel:
-            return labelManager.showActiveLabels ? "Enabled" : "Disabled"
+            return showActiveLabels ? "Enabled" : "Disabled"
         case .togglePreviewLabel:
-            return labelManager.showPreviewLabels ? "Enabled" : "Disabled"
+            return showPreviewLabels ? "Enabled" : "Disabled"
         case .toggleActiveLabelVisibility:
-            return labelManager.showOnDesktop ? "Enabled" : "Disabled"
+            return showOnDesktop ? "Enabled" : "Disabled"
         default:
             return nil
         }
