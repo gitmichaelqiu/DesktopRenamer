@@ -1059,21 +1059,33 @@ struct SpacesBottomBar: View {
             Spacer()
             
             // Right side action indicator
-            HStack(spacing: 4) {
-                if viewModel.isBottomBarFocused {
-                    Text(LocalizedStringKey("Switch / Move"))
-                        .font(.system(size: 11, weight: .medium))
-                        .foregroundColor(colors.textSecondary)
-                    Text("↵ / ⌥↵")
-                        .font(.system(size: 11, weight: .semibold))
+            HStack(spacing: 8) {
+                if !viewModel.isBottomBarFocused {
+                    Text(LocalizedStringKey("Use Tab to switch spaces quickly"))
+                        .font(.system(size: 10.5))
+                        .foregroundColor(colors.textTertiary)
+                    
+                    Text("•")
+                        .font(.system(size: 10.5))
                         .foregroundColor(colors.textQuaternary)
-                } else {
-                    Text(LocalizedStringKey("Action"))
-                        .font(.system(size: 11, weight: .medium))
-                        .foregroundColor(colors.textSecondary)
-                    Text("↵")
-                        .font(.system(size: 11, weight: .semibold))
-                        .foregroundColor(colors.textQuaternary)
+                }
+                
+                HStack(spacing: 4) {
+                    if viewModel.isBottomBarFocused {
+                        Text(LocalizedStringKey("Switch / Move"))
+                            .font(.system(size: 11, weight: .medium))
+                            .foregroundColor(colors.textSecondary)
+                        Text("↵ / ⌥↵")
+                            .font(.system(size: 11, weight: .semibold))
+                            .foregroundColor(colors.textQuaternary)
+                    } else {
+                        Text(LocalizedStringKey("Action"))
+                            .font(.system(size: 11, weight: .medium))
+                            .foregroundColor(colors.textSecondary)
+                        Text("↵")
+                            .font(.system(size: 11, weight: .semibold))
+                            .foregroundColor(colors.textQuaternary)
+                    }
                 }
             }
             .padding(.horizontal, 10)

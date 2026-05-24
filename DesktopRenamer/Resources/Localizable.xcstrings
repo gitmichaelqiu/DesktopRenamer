@@ -2897,6 +2897,16 @@
         }
       }
     },
+    "Use Tab to switch spaces quickly" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "按 Tab 键快速切换桌面"
+          }
+        }
+      }
+    },
     "Use the Raycast extension to move all windows of an app to another space in one command." : {
       "localizations" : {
         "zh-Hans" : {
