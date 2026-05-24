@@ -749,6 +749,8 @@ struct BatchMoveSection: Identifiable {
             selectedRowIndex = batchMoveLastSelectedIndex
         } else if activeCommand != nil {
             activeCommand = nil
+        } else if !searchQuery.isEmpty {
+            searchQuery = ""
         } else {
             closeLauncher()
         }
