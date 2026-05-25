@@ -677,30 +677,16 @@ struct BatchMoveSection: Identifiable {
                     }
                     Thread.sleep(forTimeInterval: 0.25)
                     
-                    var didDrag = false
                     DispatchQueue.main.sync {
-                        if let manager = AppDelegate.shared.spaceManager,
-                           let sourceSpace = manager.spaceNameDict.first(where: { $0.id == move.window.space.id }),
-                           let targetSpace = manager.spaceNameDict.first(where: { $0.id == move.targetSpace.id }) {
-                            
-                            if sourceSpace.displayID != targetSpace.displayID {
-                                // Cross-monitor moves: direct CGS/AX coordinates repositioning (highly reliable)
-                                if let fromSpaceID = Int(move.window.space.id),
-                                   let targetSpaceID = Int(move.targetSpace.id) {
-                                    SpaceHelper.moveWindowToSpace(windowID: move.window.id, fromSpaceID: fromSpaceID, targetSpaceID: targetSpaceID)
-                                }
-                            } else {
-                                // Same-monitor moves: simulated mouse dragging (required for third-party windows)
-                                SpaceHelper.dragActiveWindow(to: move.targetSpace.id, forceInstant: true)
-                                didDrag = true
-                            }
+                        if let manager = AppDelegate.shared.spaceManager {
+                            manager.moveActiveWindowToSpace(id: move.targetSpace.id)
                         }
                     }
                     Thread.sleep(forTimeInterval: 0.5) // Settle window movement/dragging
                     
-                    // If we performed a same-monitor drag move, the active space has changed.
-                    // Switch back to the source space to process remaining windows in this source group.
-                    if didDrag && index < sourceMoves.count - 1 {
+                    // Since move active window to space may switch the active space,
+                    // we must switch BACK to the source space to process the next window in this group.
+                    if index < sourceMoves.count - 1 {
                         DispatchQueue.main.sync {
                             if let manager = AppDelegate.shared.spaceManager,
                                let spaceObj = manager.spaceNameDict.first(where: { $0.id == sourceId }) {

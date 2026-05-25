@@ -530,12 +530,28 @@ class SpaceManager: ObservableObject {
             return
         }
 
-        if currentSpaceUUID != cgsState.currentUUID {
-            handleSpaceChange(cgsState.currentUUID, isDesktop: true, ncCount: 0,
-                             displayID: cgsState.displayID, source: "Retry")
-            cancelSpaceChangeRetry()
+        let now = Date().timeIntervalSince1970
+        let isRecentManualSwitch = now - lastManualSwitchTime < 2.0
+        
+        if isRecentManualSwitch {
+            if let targetUUID = lastManualSwitchTargetUUID, cgsState.currentUUID == targetUUID {
+                if currentSpaceUUID != targetUUID {
+                    handleSpaceChange(targetUUID, isDesktop: true, ncCount: 0,
+                                     displayID: cgsState.displayID, source: "Retry")
+                }
+                cancelSpaceChangeRetry()
+            } else {
+                // Still transitioning, reschedule retry to check again later without reverting
+                scheduleSpaceChangeRetry()
+            }
         } else {
-            scheduleSpaceChangeRetry()
+            if currentSpaceUUID != cgsState.currentUUID {
+                handleSpaceChange(cgsState.currentUUID, isDesktop: true, ncCount: 0,
+                                 displayID: cgsState.displayID, source: "Retry")
+                cancelSpaceChangeRetry()
+            } else {
+                scheduleSpaceChangeRetry()
+            }
         }
     }
 
