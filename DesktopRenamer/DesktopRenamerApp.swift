@@ -145,6 +145,13 @@ class AppDelegate: NSObject, NSApplicationDelegate {
                 self?.spaceManager.restoreAllMovedWindows()
             }
             .store(in: &cancellables)
+
+        hotkeyManager.launcherTriggered
+            .receive(on: DispatchQueue.main)
+            .sink {
+                LauncherWindowController.shared.toggle()
+            }
+            .store(in: &cancellables)
     }
     
     func showSplashScreen(on parentWindow: NSWindow? = nil) {

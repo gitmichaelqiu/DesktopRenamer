@@ -339,6 +339,11 @@ class StatusBarController: NSObject {
         
         menu.addItem(NSMenuItem.separator())
         
+        let launcherItem = NSMenuItem(title: NSLocalizedString("Launcher...", comment: ""), action: #selector(openLauncher), keyEquivalent: "")
+        launcherItem.image = NSImage(systemSymbolName: "command", accessibilityDescription: nil)
+        launcherItem.target = self
+        menu.addItem(launcherItem)
+        
         let settingsItem = NSMenuItem(title: NSLocalizedString("Menu.Settings", comment: ""), action: #selector(openSettingsWindow), keyEquivalent: ",")
         settingsItem.image = NSImage(systemSymbolName: "gear", accessibilityDescription: nil)
         settingsItem.target = self
@@ -352,6 +357,10 @@ class StatusBarController: NSObject {
         menu.addItem(quitItem)
         
         StatusBarController.statusItem.menu = menu
+    }
+    
+    @objc private func openLauncher() {
+        LauncherWindowController.shared.show()
     }
     
     @objc func selectSpace(_ sender: NSMenuItem) {

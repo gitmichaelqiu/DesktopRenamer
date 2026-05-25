@@ -50,6 +50,10 @@ class SpaceHelper {
     private static var pendingMoveCount = 0
     private static var isInstantDrag = false
     static var isDragging: Bool { originalMousePoint != nil }
+    
+    // Minimum width and height for a window to be considered a regular app window in getActiveWindowInfo (filtering out small system utilities/status items).
+    private static let minActiveWindowWidth: CGFloat = 100
+    private static let minActiveWindowHeight: CGFloat = 100
 
     // Core space switching implementation.
     static func switchToSpace(_ spaceID: String, forceInstant: Bool = false) {
@@ -418,22 +422,48 @@ class SpaceHelper {
     }
     
     static func getActiveWindowInfo() -> (id: Int, pid: Int32, frame: CGRect)? {
+        let ourPID = ProcessInfo.processInfo.processIdentifier
         guard let frontApp = NSWorkspace.shared.frontmostApplication else { return nil }
-        let pid = frontApp.processIdentifier
         
         let options = CGWindowListOption(arrayLiteral: .optionOnScreenOnly, .excludeDesktopElements)
         let windowList = CGWindowListCopyWindowInfo(options, kCGNullWindowID) as? [[String: Any]] ?? []
         
-        for window in windowList {
-            if let windowPid = window[kCGWindowOwnerPID as String] as? Int,
-               windowPid == pid,
-               let layer = window[kCGWindowLayer as String] as? Int, layer == 0,
-               let wid = window[kCGWindowNumber as String] as? Int,
-               let bounds = window[kCGWindowBounds as String] as? [String: Any],
-               let x = bounds["X"] as? CGFloat, let y = bounds["Y"] as? CGFloat,
-               let w = bounds["Width"] as? CGFloat, let h = bounds["Height"] as? CGFloat {
-                   return (id: wid, pid: Int32(pid), frame: CGRect(x: x, y: y, width: w, height: h))
-               }
+        if frontApp.processIdentifier == ourPID {
+            // Find the first window in Z-order that is layer 0, not our PID, has valid size, and belongs to a regular app.
+            for window in windowList {
+                guard let layer = window[kCGWindowLayer as String] as? Int, layer == 0,
+                      let windowPid = window[kCGWindowOwnerPID as String] as? Int,
+                      windowPid != Int(ourPID),
+                      let wid = window[kCGWindowNumber as String] as? Int,
+                      let bounds = window[kCGWindowBounds as String] as? [String: Any],
+                      let x = bounds["X"] as? CGFloat, let y = bounds["Y"] as? CGFloat,
+                      let w = bounds["Width"] as? CGFloat, let h = bounds["Height"] as? CGFloat,
+                      w >= minActiveWindowWidth, h >= minActiveWindowHeight
+                else { continue }
+                
+                // Ensure it's a regular application window (not a system overlay)
+                if let app = NSRunningApplication(processIdentifier: Int32(windowPid)),
+                   app.activationPolicy == .regular {
+                    let info = (id: wid, pid: Int32(windowPid), frame: CGRect(x: x, y: y, width: w, height: h))
+                    print("SpaceHelper: Captured active window ID: \(info.id), PID: \(info.pid), frame: \(info.frame) (using fallback scan)")
+                    return info
+                }
+            }
+        } else {
+            let pid = frontApp.processIdentifier
+            for window in windowList {
+                if let windowPid = window[kCGWindowOwnerPID as String] as? Int,
+                   windowPid == pid,
+                   let layer = window[kCGWindowLayer as String] as? Int, layer == 0,
+                   let wid = window[kCGWindowNumber as String] as? Int,
+                   let bounds = window[kCGWindowBounds as String] as? [String: Any],
+                   let x = bounds["X"] as? CGFloat, let y = bounds["Y"] as? CGFloat,
+                   let w = bounds["Width"] as? CGFloat, let h = bounds["Height"] as? CGFloat {
+                       let info = (id: wid, pid: Int32(pid), frame: CGRect(x: x, y: y, width: w, height: h))
+                       print("SpaceHelper: Captured active window ID: \(info.id), PID: \(info.pid), frame: \(info.frame)")
+                       return info
+                   }
+            }
         }
         return nil
     }

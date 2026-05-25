@@ -48,6 +48,7 @@ class SpaceManager: ObservableObject {
     static private let grabOffsetYKey = "com.michaelqiu.desktoprenamer.grabOffsetY"
     static private let lockedSpaceIDsKey = "com.michaelqiu.desktoprenamer.lockedSpaceIDs"
     static private let movedWindowsOriginalSpacesKey = "com.michaelqiu.desktoprenamer.movedWindowsOriginalSpaces"
+    static private let returnToOriginalAfterBatchMoveKey = "com.michaelqiu.desktoprenamer.returnToOriginalAfterBatchMove"
     
     @Published private(set) var currentSpaceUUID: String = ""
     @Published private(set) var currentRawSpaceUUID: String = ""
@@ -97,6 +98,12 @@ class SpaceManager: ObservableObject {
     var lastManualSwitchTime: TimeInterval = 0
     private var lastManualSwitchTargetUUID: String? = nil
     
+    @Published var returnToOriginalAfterBatchMove: Bool {
+        didSet {
+            UserDefaults.standard.set(returnToOriginalAfterBatchMove, forKey: SpaceManager.returnToOriginalAfterBatchMoveKey)
+        }
+    }
+    
     @Published var detectionMethod: DetectionMethod {
         didSet {
             // Update storage and refresh whenever method changes
@@ -135,6 +142,8 @@ class SpaceManager: ObservableObject {
     init() {
         let legacyManual = UserDefaults.standard.bool(forKey: SpaceManager.isManualSpacesEnabledKey)
         let savedMethod = UserDefaults.standard.string(forKey: SpaceManager.detectionMethodKey)
+        
+        self.returnToOriginalAfterBatchMove = UserDefaults.standard.object(forKey: SpaceManager.returnToOriginalAfterBatchMoveKey) == nil ? true : UserDefaults.standard.bool(forKey: SpaceManager.returnToOriginalAfterBatchMoveKey)
         
         if let saved = savedMethod, let method = DetectionMethod(rawValue: saved) {
             self.detectionMethod = method
@@ -244,6 +253,19 @@ class SpaceManager: ObservableObject {
             guard let cgsState = SpaceHelper.getSystemState() else {
                 if source == "Monitor" { scheduleSpaceChangeRetry() }
                 return
+            }
+            
+            let now = Date().timeIntervalSince1970
+            let isRecentManualSwitch = now - lastManualSwitchTime < 2.0
+            
+            if isRecentManualSwitch, let targetUUID = lastManualSwitchTargetUUID {
+                if cgsState.currentUUID != targetUUID {
+                    print("SpaceManager: Stale space \(cgsState.currentUUID) detected during active switch to \(targetUUID) (source: \(source)). Ignoring.")
+                    if source == "Monitor" {
+                        scheduleSpaceChangeRetry()
+                    }
+                    return
+                }
             }
             
             // First, see which names are already taken by active UUIDs so we don't double-assign.
@@ -521,12 +543,28 @@ class SpaceManager: ObservableObject {
             return
         }
 
-        if currentSpaceUUID != cgsState.currentUUID {
-            handleSpaceChange(cgsState.currentUUID, isDesktop: true, ncCount: 0,
-                             displayID: cgsState.displayID, source: "Retry")
-            cancelSpaceChangeRetry()
+        let now = Date().timeIntervalSince1970
+        let isRecentManualSwitch = now - lastManualSwitchTime < 2.0
+        
+        if isRecentManualSwitch {
+            if let targetUUID = lastManualSwitchTargetUUID, cgsState.currentUUID == targetUUID {
+                if currentSpaceUUID != targetUUID {
+                    handleSpaceChange(targetUUID, isDesktop: true, ncCount: 0,
+                                     displayID: cgsState.displayID, source: "Retry")
+                }
+                cancelSpaceChangeRetry()
+            } else {
+                // Still transitioning, reschedule retry to check again later without reverting
+                scheduleSpaceChangeRetry()
+            }
         } else {
-            scheduleSpaceChangeRetry()
+            if currentSpaceUUID != cgsState.currentUUID {
+                handleSpaceChange(cgsState.currentUUID, isDesktop: true, ncCount: 0,
+                                 displayID: cgsState.displayID, source: "Retry")
+                cancelSpaceChangeRetry()
+            } else {
+                scheduleSpaceChangeRetry()
+            }
         }
     }
 
