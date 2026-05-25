@@ -687,20 +687,16 @@ struct BatchMoveSection: Identifiable {
         let moves = Array(stagedMoves.values)
         let originalSpaceUUID = AppDelegate.shared.spaceManager?.currentSpaceUUID
         
-        DispatchQueue.global(qos: .userInitiated).async { [weak self] in
-            guard let self = self else { return }
-            
+        Task {
             // Group moves by source space to switch spaces only once per source group
             let movesBySource = Dictionary(grouping: moves, by: { $0.window.space.id })
             
             for (sourceId, sourceMoves) in movesBySource {
-                DispatchQueue.main.sync {
-                    if let manager = AppDelegate.shared.spaceManager,
-                       let spaceObj = manager.spaceNameDict.first(where: { $0.id == sourceId }) {
-                        manager.switchToSpace(spaceObj, forceInstant: true)
-                    }
+                if let manager = AppDelegate.shared.spaceManager,
+                   let spaceObj = manager.spaceNameDict.first(where: { $0.id == sourceId }) {
+                    manager.switchToSpace(spaceObj, forceInstant: true)
                 }
-                Thread.sleep(forTimeInterval: 0.6) // Settle space switch
+                try? await Task.sleep(nanoseconds: 600_000_000) // 0.6s settle time
                 
                 for (index, move) in sourceMoves.enumerated() {
                     if move.window.space.id == move.targetSpace.id {
@@ -708,51 +704,43 @@ struct BatchMoveSection: Identifiable {
                     }
                     
                     // Focus the targeted window first
-                    DispatchQueue.main.sync {
-                        SpaceHelper.focusWindow(id: move.window.id, pid: move.window.pid)
-                    }
-                    Thread.sleep(forTimeInterval: 0.25)
+                    SpaceHelper.focusWindow(id: move.window.id, pid: move.window.pid)
+                    try? await Task.sleep(nanoseconds: 250_000_000) // 0.25s focus settle
                     
-                    DispatchQueue.main.sync {
-                        if let manager = AppDelegate.shared.spaceManager {
-                            manager.moveActiveWindowToSpace(id: move.targetSpace.id)
-                        }
+                    if let manager = AppDelegate.shared.spaceManager {
+                        manager.moveActiveWindowToSpace(id: move.targetSpace.id)
                     }
-                    Thread.sleep(forTimeInterval: 0.5) // Settle window movement/dragging
+                    try? await Task.sleep(nanoseconds: 500_000_000) // 0.5s movement settle
                     
                     // Since move active window to space may switch the active space,
                     // we must switch BACK to the source space to process the next window in this group.
                     if index < sourceMoves.count - 1 {
-                        DispatchQueue.main.sync {
-                            if let manager = AppDelegate.shared.spaceManager,
-                               let spaceObj = manager.spaceNameDict.first(where: { $0.id == sourceId }) {
-                                manager.switchToSpace(spaceObj, forceInstant: true)
-                            }
+                        if let manager = AppDelegate.shared.spaceManager,
+                           let spaceObj = manager.spaceNameDict.first(where: { $0.id == sourceId }) {
+                            manager.switchToSpace(spaceObj, forceInstant: true)
                         }
-                        Thread.sleep(forTimeInterval: 0.6) // Settle space switch back
+                        try? await Task.sleep(nanoseconds: 600_000_000) // 0.6s switch settle
                     }
                 }
             }
             
-            DispatchQueue.main.async {
-                self.isExecutingBatchMove = false
-                self.stagedMoves.removeAll()
-                LauncherWindowController.shared.shouldRestoreFocus = false
-                
-                if let manager = AppDelegate.shared.spaceManager {
-                    if manager.returnToOriginalAfterBatchMove {
-                        if let originalUUID = originalSpaceUUID,
-                           let targetSpace = manager.spaceNameDict.first(where: { $0.id == originalUUID }) {
-                            manager.switchToSpace(targetSpace, forceInstant: true)
-                        }
-                    } else if let lastMove = moves.last,
-                              let targetSpace = manager.spaceNameDict.first(where: { $0.id == lastMove.targetSpace.id }) {
+            self.isExecutingBatchMove = false
+            self.stagedMoves.removeAll()
+            LauncherWindowController.shared.shouldRestoreFocus = false
+            
+            if let manager = AppDelegate.shared.spaceManager {
+                if manager.returnToOriginalAfterBatchMove {
+                    if let originalUUID = originalSpaceUUID,
+                       let targetSpace = manager.spaceNameDict.first(where: { $0.id == originalUUID }) {
                         manager.switchToSpace(targetSpace, forceInstant: true)
                     }
+                } else if let lastMove = moves.last,
+                           let targetSpace = manager.spaceNameDict.first(where: { $0.id == lastMove.targetSpace.id }) {
+                    manager.switchToSpace(targetSpace, forceInstant: true)
                 }
-                
-                self.closeLauncher()
             }
+            
+            self.closeLauncher()
         }
     }
     
