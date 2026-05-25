@@ -255,6 +255,19 @@ class SpaceManager: ObservableObject {
                 return
             }
             
+            let now = Date().timeIntervalSince1970
+            let isRecentManualSwitch = now - lastManualSwitchTime < 2.0
+            
+            if isRecentManualSwitch, let targetUUID = lastManualSwitchTargetUUID {
+                if cgsState.currentUUID != targetUUID {
+                    print("SpaceManager: Stale space \(cgsState.currentUUID) detected during active switch to \(targetUUID) (source: \(source)). Ignoring.")
+                    if source == "Monitor" {
+                        scheduleSpaceChangeRetry()
+                    }
+                    return
+                }
+            }
+            
             // First, see which names are already taken by active UUIDs so we don't double-assign.
             var claimedNames: Set<String> = []
             let activeUUIDs = Set(cgsState.spaces.map { $0.id })
