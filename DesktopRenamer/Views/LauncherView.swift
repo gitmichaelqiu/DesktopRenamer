@@ -1330,6 +1330,8 @@ struct SearchTextField: NSViewRepresentable {
     
     class Coordinator: NSObject, NSTextFieldDelegate {
         var parent: SearchTextField
+        var lastPlaceholder: String? = nil
+        var lastIsDark: Bool? = nil
         
         init(_ parent: SearchTextField) {
             self.parent = parent
@@ -1385,20 +1387,26 @@ struct SearchTextField: NSViewRepresentable {
     func makeNSView(context: Context) -> NSTextField {
         let textField = FocusTextField()
         textField.delegate = context.coordinator
-        textField.onCommandEnter = {
-            self.onCommandEnter?()
+        
+        // Route closures safely and dynamically through the coordinator
+        textField.onCommandEnter = { [weak coordinator = context.coordinator] in
+            coordinator?.parent.onCommandEnter?()
         }
-        textField.onOptionEnter = {
-            self.onOptionEnter?()
+        textField.onOptionEnter = { [weak coordinator = context.coordinator] in
+            coordinator?.parent.onOptionEnter?()
         }
-        textField.onCommandNumber = { num in
-            self.onCommandNumber?(num)
+        textField.onCommandNumber = { [weak coordinator = context.coordinator] num in
+            coordinator?.parent.onCommandNumber?(num)
         }
+        
         textField.isBordered = false
         textField.drawsBackground = false
         textField.focusRingType = .none
         textField.textColor = isDark ? .white : NSColor(red: 0.12, green: 0.12, blue: 0.14, alpha: 1.0)
         textField.font = NSFont.systemFont(ofSize: 20, weight: .regular)
+        
+        context.coordinator.lastPlaceholder = placeholder
+        context.coordinator.lastIsDark = isDark
         
         let placeholderColor = isDark ? NSColor.white.withAlphaComponent(0.35) : NSColor(red: 0.12, green: 0.12, blue: 0.14, alpha: 0.35)
         let placeholderAttr = NSAttributedString(
@@ -1415,30 +1423,28 @@ struct SearchTextField: NSViewRepresentable {
     }
     
     func updateNSView(_ nsView: NSTextField, context: Context) {
-        if let focusField = nsView as? FocusTextField {
-            focusField.onCommandEnter = {
-                self.onCommandEnter?()
-            }
-            focusField.onOptionEnter = {
-                self.onOptionEnter?()
-            }
-            focusField.onCommandNumber = { num in
-                self.onCommandNumber?(num)
-            }
-        }
+        context.coordinator.parent = self
+        
         if nsView.stringValue != text {
             nsView.stringValue = text
         }
         nsView.textColor = isDark ? .white : NSColor(red: 0.12, green: 0.12, blue: 0.14, alpha: 1.0)
-        let placeholderColor = isDark ? NSColor.white.withAlphaComponent(0.35) : NSColor(red: 0.12, green: 0.12, blue: 0.14, alpha: 0.35)
-        let placeholderAttr = NSAttributedString(
-            string: placeholder,
-            attributes: [
-                .foregroundColor: placeholderColor,
-                .font: NSFont.systemFont(ofSize: 20, weight: .regular)
-            ]
-        )
-        nsView.placeholderAttributedString = placeholderAttr
+        
+        // Cache placeholder creation to avoid recreating it on every render cycle
+        if context.coordinator.lastPlaceholder != placeholder || context.coordinator.lastIsDark != isDark {
+            context.coordinator.lastPlaceholder = placeholder
+            context.coordinator.lastIsDark = isDark
+            
+            let placeholderColor = isDark ? NSColor.white.withAlphaComponent(0.35) : NSColor(red: 0.12, green: 0.12, blue: 0.14, alpha: 0.35)
+            let placeholderAttr = NSAttributedString(
+                string: placeholder,
+                attributes: [
+                    .foregroundColor: placeholderColor,
+                    .font: NSFont.systemFont(ofSize: 20, weight: .regular)
+                ]
+            )
+            nsView.placeholderAttributedString = placeholderAttr
+        }
     }
 }
 
