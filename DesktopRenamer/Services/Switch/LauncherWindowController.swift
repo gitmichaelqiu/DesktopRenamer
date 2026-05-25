@@ -20,6 +20,7 @@ class LauncherWindowController: NSWindowController, NSWindowDelegate {
     
     private var isCommandKeyPressed = false
     private var cmdLongPressWorkItem: DispatchWorkItem?
+    private var flagsChangedMonitor: Any?
     
     init() {
         let panel = LauncherNSPanel(
@@ -52,7 +53,7 @@ class LauncherWindowController: NSWindowController, NSWindowDelegate {
         
         panel.contentView = hostingView
         
-        NSEvent.addLocalMonitorForEvents(matching: .flagsChanged) { [weak self] event in
+        flagsChangedMonitor = NSEvent.addLocalMonitorForEvents(matching: .flagsChanged) { [weak self] event in
             guard let self = self else { return event }
             let hasCommand = event.modifierFlags.contains(.command)
             
@@ -87,6 +88,12 @@ class LauncherWindowController: NSWindowController, NSWindowDelegate {
     
     required init?(coder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
+    }
+    
+    deinit {
+        if let monitor = flagsChangedMonitor {
+            NSEvent.removeMonitor(monitor)
+        }
     }
     
     func show() {
