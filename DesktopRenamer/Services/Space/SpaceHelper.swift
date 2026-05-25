@@ -474,7 +474,7 @@ class SpaceHelper {
         
         for window in windowList {
             if let windowPid = window[kCGWindowOwnerPID as String] as? Int,
-               windowPid == pid,
+               windowPid == Int(pid),
                let layer = window[kCGWindowLayer as String] as? Int, layer == 0,
                let wid = window[kCGWindowNumber as String] as? Int,
                let bounds = window[kCGWindowBounds as String] as? [String: Any],
