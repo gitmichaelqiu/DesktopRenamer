@@ -363,10 +363,15 @@ struct BatchMoveSection: Identifiable {
         isLoadingData = true
         
         let spaces = manager.spaceNameDict
+        var names: [String: String] = [:]
+        for s in spaces {
+            names[s.id] = manager.getSpaceName(s.id)
+        }
+        
         self.currentSpaces = spaces.map { space in
             SpaceGroup(
                 id: space.id,
-                name: manager.getSpaceName(space.id),
+                name: names[space.id] ?? "",
                 displayName: getDisplayName(for: space.displayID),
                 num: space.num
             )
@@ -382,14 +387,6 @@ struct BatchMoveSection: Identifiable {
         // Query windows in background
         DispatchQueue.global(qos: .userInitiated).async { [weak self] in
             guard let self = self else { return }
-            var names: [String: String] = [:]
-            DispatchQueue.main.sync {
-                if let mgr = AppDelegate.shared.spaceManager {
-                    for s in spaces {
-                        names[s.id] = mgr.getSpaceName(s.id)
-                    }
-                }
-            }
             
             let raw = SpaceHelper.getWindowsForAllSpaces(spaces: spaces, spaceNames: names)
             let parsed = Self.parseWindowData(raw)
