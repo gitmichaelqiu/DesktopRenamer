@@ -2,7 +2,7 @@ import SwiftUI
 
 struct SpaceEditView: View {
     @ObservedObject var spaceManager: SpaceManager
-    @ObservedObject var labelManager: SpaceLabelManager
+    @EnvironmentObject var navigationState: SettingsNavigationState
     
     var body: some View {
         VStack(spacing: 0) {
@@ -29,6 +29,15 @@ struct SpaceEditView: View {
             }
         }
         .animation(.easeInOut(duration: 0.2), value: spaceManager.spaceNameDict)
+        .onAppear {
+            navigationState.register(title: "Settings.Spaces.Edit.Name", tab: .space, keywords: ["rename", "name", "title", "label", "custom", "edit"])
+            navigationState.register(title: "Settings.Spaces.Edit.Actions", tab: .space, keywords: ["reorder", "arrange", "display", "monitor", "position"])
+        }
+        .onDisappear {
+            navigationState.unregister(title: "Settings.Spaces.Edit.Name", tab: .space)
+            navigationState.unregister(title: "Settings.Spaces.Edit.Actions", tab: .space)
+        }
+        .environment(\.settingsTab, .space)
     }
     
     private var sectionBackgroundColor: Color {
@@ -94,8 +103,12 @@ struct SpaceEditView: View {
         VStack(spacing: 0) {
             HStack(spacing: 10) {
                 Text("#").frame(width: 30, alignment: .leading)
-                Text(NSLocalizedString("Settings.Spaces.Edit.Name", comment: "")).frame(maxWidth: .infinity, alignment: .leading)
-                Text(NSLocalizedString("Settings.Spaces.Edit.Actions", comment: "")).frame(width: 60, alignment: .trailing)
+                Text(NSLocalizedString("Settings.Spaces.Edit.Name", comment: ""))
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .id("Settings.Spaces.Edit.Name")
+                Text(NSLocalizedString("Settings.Spaces.Edit.Actions", comment: ""))
+                    .frame(width: 60, alignment: .trailing)
+                    .id("Settings.Spaces.Edit.Actions")
             }
             .font(.caption)
             .foregroundColor(.secondary)
@@ -169,11 +182,28 @@ struct SpaceEditView: View {
     
     private func actionButtons(for space: DesktopSpace, in displayList: [DesktopSpace]) -> some View {
         HStack(spacing: 4) {
-            moveUpButton(for: space, list: displayList)
-            moveDownButton(for: space, list: displayList)
-            deleteButton(for: space)
+            if spaceManager.detectionMethod == .automatic {
+                lockButton(for: space)
+            } else {
+                moveUpButton(for: space, list: displayList)
+                moveDownButton(for: space, list: displayList)
+                deleteButton(for: space)
+            }
         }
         .buttonStyle(.borderless)
+    }
+
+    private func lockButton(for space: DesktopSpace) -> some View {
+        let isLocked = spaceManager.lockedSpaceIDs.contains(space.id)
+        return Button(action: {
+            spaceManager.toggleLockSpace(space.id)
+        }) {
+            Image(systemName: isLocked ? "lock.fill" : "lock.open")
+                .font(.system(size: 13, weight: .medium))
+                .foregroundColor(isLocked ? .accentColor : .secondary)
+                .frame(width: 16, height: 16)
+        }
+        .help(isLocked ? "Unlock space" : "Lock current space")
     }
     
     private func moveUpButton(for space: DesktopSpace, list: [DesktopSpace]) -> some View {

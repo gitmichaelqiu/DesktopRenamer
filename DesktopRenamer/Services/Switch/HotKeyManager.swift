@@ -13,6 +13,9 @@ enum HotkeyType {
     case reloadLabels
     case moveWindowNextDisplay
     case moveWindowPreviousDisplay
+    case toggleLock
+    case restoreWindows
+    case launcher
 }
 
 class HotkeyManager: ObservableObject {
@@ -27,6 +30,9 @@ class HotkeyManager: ObservableObject {
     let reloadLabelsTriggered = PassthroughSubject<Void, Never>()
     let moveWindowNextDisplayTriggered = PassthroughSubject<Void, Never>()
     let moveWindowPreviousDisplayTriggered = PassthroughSubject<Void, Never>()
+    let toggleLockTriggered = PassthroughSubject<Void, Never>()
+    let restoreWindowsTriggered = PassthroughSubject<Void, Never>()
+    let launcherTriggered = PassthroughSubject<Void, Never>()
 
     // Internal state
     @Published var mainShortcut: Shortcut {
@@ -91,6 +97,27 @@ class HotkeyManager: ObservableObject {
             registerShortcuts()
         }
     }
+    
+    @Published var toggleLockShortcut: Shortcut {
+        didSet {
+            saveShortcut(toggleLockShortcut, key: toggleLockKey)
+            registerShortcuts()
+        }
+    }
+    
+    @Published var restoreWindowsShortcut: Shortcut {
+        didSet {
+            saveShortcut(restoreWindowsShortcut, key: restoreWindowsKey)
+            registerShortcuts()
+        }
+    }
+    
+    @Published var launcherShortcut: Shortcut {
+        didSet {
+            saveShortcut(launcherShortcut, key: launcherKey)
+            registerShortcuts()
+        }
+    }
 
     @Published var isListening: Bool = false
     @Published var listeningType: HotkeyType? = nil
@@ -105,6 +132,9 @@ class HotkeyManager: ObservableObject {
     private var reloadLabelsHotKey: HotKey?
     private var moveWindowNextDisplayHotKey: HotKey?
     private var moveWindowPreviousDisplayHotKey: HotKey?
+    private var toggleLockHotKey: HotKey?
+    private var restoreWindowsHotKey: HotKey?
+    private var launcherHotKey: HotKey?
     
     private var monitor: Any?
     
@@ -121,6 +151,9 @@ class HotkeyManager: ObservableObject {
     private let reloadLabelsKey = "HotkeyManager.ReloadLabels"
     private let moveWindowNextDisplayKey = "HotkeyManager.MoveWindowNextDisplay"
     private let moveWindowPreviousDisplayKey = "HotkeyManager.MoveWindowPreviousDisplay"
+    private let toggleLockKey = "HotkeyManager.ToggleLock"
+    private let restoreWindowsKey = "HotkeyManager.RestoreWindows"
+    private let launcherKey = "HotkeyManager.Launcher"
 
     init() {
         // Load or default
@@ -139,6 +172,9 @@ class HotkeyManager: ObservableObject {
         self.reloadLabelsShortcut = Self.loadShortcut(key: reloadLabelsKey) ?? Shortcut(key: nil, modifiers: [])
         self.moveWindowNextDisplayShortcut = Self.loadShortcut(key: moveWindowNextDisplayKey) ?? Shortcut(key: nil, modifiers: [])
         self.moveWindowPreviousDisplayShortcut = Self.loadShortcut(key: moveWindowPreviousDisplayKey) ?? Shortcut(key: nil, modifiers: [])
+        self.toggleLockShortcut = Self.loadShortcut(key: toggleLockKey) ?? Shortcut(key: nil, modifiers: [])
+        self.restoreWindowsShortcut = Self.loadShortcut(key: restoreWindowsKey) ?? Shortcut(key: nil, modifiers: [])
+        self.launcherShortcut = Self.loadShortcut(key: launcherKey) ?? Shortcut(key: nil, modifiers: [])
         
         registerShortcuts()
     }
@@ -158,6 +194,9 @@ class HotkeyManager: ObservableObject {
         case .reloadLabels: return reloadLabelsShortcut.description
         case .moveWindowNextDisplay: return moveWindowNextDisplayShortcut.description
         case .moveWindowPreviousDisplay: return moveWindowPreviousDisplayShortcut.description
+        case .toggleLock: return toggleLockShortcut.description
+        case .restoreWindows: return restoreWindowsShortcut.description
+        case .launcher: return launcherShortcut.description
         case .moveWindowNumber:
             if moveWindowNumberShortcut.modifiers.isEmpty {
                  return NSLocalizedString("Settings.Shortcuts.Unassgined", comment: "Unassigned")
@@ -240,6 +279,27 @@ class HotkeyManager: ObservableObject {
             moveWindowPreviousDisplayHotKey?.keyDownHandler = { [weak self] in self?.moveWindowPreviousDisplayTriggered.send() }
         }
         
+        // Toggle Lock.
+        toggleLockHotKey = nil
+        if let key = toggleLockShortcut.hotkeyKey, let mods = toggleLockShortcut.hotkeyModifiers {
+            toggleLockHotKey = HotKey(key: key, modifiers: mods)
+            toggleLockHotKey?.keyDownHandler = { [weak self] in self?.toggleLockTriggered.send() }
+        }
+        
+        // Restore Windows.
+        restoreWindowsHotKey = nil
+        if let key = restoreWindowsShortcut.hotkeyKey, let mods = restoreWindowsShortcut.hotkeyModifiers {
+            restoreWindowsHotKey = HotKey(key: key, modifiers: mods)
+            restoreWindowsHotKey?.keyDownHandler = { [weak self] in self?.restoreWindowsTriggered.send() }
+        }
+        
+        // Launcher.
+        launcherHotKey = nil
+        if let key = launcherShortcut.hotkeyKey, let mods = launcherShortcut.hotkeyModifiers {
+            launcherHotKey = HotKey(key: key, modifiers: mods)
+            launcherHotKey?.keyDownHandler = { [weak self] in self?.launcherTriggered.send() }
+        }
+        
         // Move Window Number (1-9).
         // We register hotkeys for Modifiers + 1...9
         let modSet = moveWindowNumberShortcut.modifiers.intersection([.command, .option, .control, .shift])
@@ -274,6 +334,9 @@ class HotkeyManager: ObservableObject {
         reloadLabelsHotKey = nil
         moveWindowNextDisplayHotKey = nil
         moveWindowPreviousDisplayHotKey = nil
+        toggleLockHotKey = nil
+        restoreWindowsHotKey = nil
+        launcherHotKey = nil
         moveWindowNumberHotKeys.removeAll()
 
         removeKeyListener()
@@ -332,6 +395,9 @@ class HotkeyManager: ObservableObject {
         case .reloadLabels: reloadLabelsShortcut = shortcut
         case .moveWindowNextDisplay: moveWindowNextDisplayShortcut = shortcut
         case .moveWindowPreviousDisplay: moveWindowPreviousDisplayShortcut = shortcut
+        case .toggleLock: toggleLockShortcut = shortcut
+        case .restoreWindows: restoreWindowsShortcut = shortcut
+        case .launcher: launcherShortcut = shortcut
         }
     }
     
@@ -360,6 +426,9 @@ class HotkeyManager: ObservableObject {
         case .reloadLabels: return reloadLabelsShortcut == defaultNone
         case .moveWindowNextDisplay: return moveWindowNextDisplayShortcut == defaultNone
         case .moveWindowPreviousDisplay: return moveWindowPreviousDisplayShortcut == defaultNone
+        case .toggleLock: return toggleLockShortcut == defaultNone
+        case .restoreWindows: return restoreWindowsShortcut == defaultNone
+        case .launcher: return launcherShortcut == defaultNone
         }
     }
     
@@ -374,6 +443,9 @@ class HotkeyManager: ObservableObject {
         case .reloadLabels: reloadLabelsShortcut = defaultNone
         case .moveWindowNextDisplay: moveWindowNextDisplayShortcut = defaultNone
         case .moveWindowPreviousDisplay: moveWindowPreviousDisplayShortcut = defaultNone
+        case .toggleLock: toggleLockShortcut = defaultNone
+        case .restoreWindows: restoreWindowsShortcut = defaultNone
+        case .launcher: launcherShortcut = defaultNone
         }
     }
     
@@ -411,6 +483,9 @@ class HotkeyManager: ObservableObject {
         mainHotKey = nil
         switchLeftHotKey = nil
         switchRightHotKey = nil
+        toggleLockHotKey = nil
+        restoreWindowsHotKey = nil
+        launcherHotKey = nil
         removeKeyListener()
     }
 }

@@ -22,6 +22,16 @@
         }
       }
     },
+    "(No Title)" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "（无标题）"
+          }
+        }
+      }
+    },
     "#" : {
       "localizations" : {
         "zh-Hans" : {
@@ -44,6 +54,53 @@
       },
       "shouldTranslate" : false
     },
+    "%@ · %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@ · %2$@"
+          }
+        }
+      },
+      "shouldTranslate" : false
+    },
+    "%@ · Space %lld" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@ · Space %2$lld"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ · 桌面 %2$lld"
+          }
+        }
+      }
+    },
+    "%lld items" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld 个项目"
+          }
+        }
+      }
+    },
+    "%lld windows" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld 个窗口"
+          }
+        }
+      }
+    },
     "© %@ Michael Yicheng Qiu" : {
       "localizations" : {
         "zh-Hans" : {
@@ -55,7 +112,19 @@
       },
       "shouldTranslate" : false
     },
+    "→ %@" : {
+      "shouldTranslate" : false
+    },
+    "↵" : {
+      "shouldTranslate" : false
+    },
     "↺" : {
+      "shouldTranslate" : false
+    },
+    "⌘↵" : {
+      "shouldTranslate" : false
+    },
+    "⌥↵" : {
       "shouldTranslate" : false
     },
     "◉" : {
@@ -121,12 +190,32 @@
         }
       }
     },
+    "Action" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "操作"
+          }
+        }
+      }
+    },
     "Active Space Label" : {
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "当前桌面标签"
+          }
+        }
+      }
+    },
+    "Active Space Label: %@" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "当前桌面标签：%@"
           }
         }
       }
@@ -281,12 +370,42 @@
         }
       }
     },
+    "Automatically Return to Original Space" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "自动返回原桌面"
+          }
+        }
+      }
+    },
+    "Automatically return to your original desktop after moving windows to a different desktop." : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "在将窗口移动到其他桌面后，自动返回到您原本的桌面。"
+          }
+        }
+      }
+    },
     "Back" : {
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "返回"
+          }
+        }
+      }
+    },
+    "Batch Move Windows" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "批量移动窗口"
           }
         }
       }
@@ -411,6 +530,32 @@
         }
       }
     },
+    "Click to switch, Option+Click to move active window." : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "点击切换，Option+点击移动窗口。"
+          }
+        }
+      }
+    },
+    "Confirm & Execute Batch Move (%lld window%@)" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Confirm & Execute Batch Move (%1$lld window%2$@)"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "确认 & 执行移动  (%1$lld 窗口%2$@)"
+          }
+        }
+      }
+    },
     "Control which app and dock to show in each space." : {
       "localizations" : {
         "zh-Hans" : {
@@ -497,6 +642,16 @@
         }
       }
     },
+    "Disabled" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已禁用"
+          }
+        }
+      }
+    },
     "Discover More Apps" : {
       "localizations" : {
         "zh-Hans" : {
@@ -513,6 +668,26 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "启用切换手势覆盖"
+          }
+        }
+      }
+    },
+    "Enabled" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已启用"
+          }
+        }
+      }
+    },
+    "Executing batch window moves..." : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "执行批量窗口移动..."
           }
         }
       }
@@ -579,12 +754,42 @@
         }
       }
     },
+    "Focus ↵" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "聚焦 ↵"
+          }
+        }
+      }
+    },
+    "Focus Window" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "切换窗口"
+          }
+        }
+      }
+    },
     "Font size" : {
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "字体大小"
+          }
+        }
+      }
+    },
+    "Force refresh all space name labels on displays" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "强制刷新显示器上的所有桌面名称标签"
           }
         }
       }
@@ -625,6 +830,17 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "开始使用"
+          }
+        }
+      }
+    },
+    "GitHub / Support" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "GitHub / 支持"
           }
         }
       }
@@ -749,12 +965,42 @@
         }
       }
     },
+    "Keep visible on desktop: %@" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "保持在桌面可见：%@"
+          }
+        }
+      }
+    },
     "Keyboard Shortcuts" : {
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "键盘快捷键"
+          }
+        }
+      }
+    },
+    "Launcher" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "启动器"
+          }
+        }
+      }
+    },
+    "Launcher..." : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "启动器…"
           }
         }
       }
@@ -775,6 +1021,36 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "链接"
+          }
+        }
+      }
+    },
+    "Lock current space" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "锁定当前桌面"
+          }
+        }
+      }
+    },
+    "Lock Current Space" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "锁定当前桌面"
+          }
+        }
+      }
+    },
+    "Lock Your Spaces" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "锁定您的桌面"
           }
         }
       }
@@ -805,23 +1081,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "最大指标: %lld"
-          }
-        }
-      }
-    },
-    "Menu.About" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "About DesktopRenamer"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "关于 DesktopRenamer"
           }
         }
       }
@@ -894,23 +1153,6 @@
         }
       }
     },
-    "Menu.ShowLabels" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Show Space Label Windows"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "显示桌面标签窗口"
-          }
-        }
-      }
-    },
     "Menu.ShowPreviewLabels" : {
       "comment" : "Toggle preview labels",
       "localizations" : {
@@ -964,6 +1206,36 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "更多 App"
+          }
+        }
+      }
+    },
+    "Move the active window to a selected space" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "将当前活跃窗口移动到选中的桌面"
+          }
+        }
+      }
+    },
+    "Move Window" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "移动窗口"
+          }
+        }
+      }
+    },
+    "Move Window to Desktop" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "将窗口移至桌面"
           }
         }
       }
@@ -1060,12 +1332,32 @@
         }
       }
     },
+    "New Space Name..." : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "新桌面名称..."
+          }
+        }
+      }
+    },
     "Next" : {
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "继续"
+          }
+        }
+      }
+    },
+    "No commands matched your search query." : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "没有指令符合搜索。"
           }
         }
       }
@@ -1086,6 +1378,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "未监测到新桌面…"
+          }
+        }
+      }
+    },
+    "No results" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No results"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "无结果"
           }
         }
       }
@@ -1120,6 +1428,16 @@
         }
       }
     },
+    "Open Launcher" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "打开启动器"
+          }
+        }
+      }
+    },
     "Option + Click to Move" : {
       "localizations" : {
         "zh-Hans" : {
@@ -1136,6 +1454,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "权限"
+          }
+        }
+      }
+    },
+    "Pin space label on desktop or hide on apps" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "将桌面标签固定在桌面上，或在打开应用时隐藏"
           }
         }
       }
@@ -1160,6 +1488,16 @@
         }
       }
     },
+    "Prevent applications or macOS from automatically switching spaces. Keep your workspace focused by locking important desktops." : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "防止应用程序或 macOS 自动切换桌面。通过锁定重要桌面来保持您的工作区专注。"
+          }
+        }
+      }
+    },
     "Preview Label" : {
       "localizations" : {
         "zh-Hans" : {
@@ -1176,6 +1514,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "预览标签"
+          }
+        }
+      }
+    },
+    "Preview Space Labels: %@" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "预览桌面标签：%@"
           }
         }
       }
@@ -1257,6 +1605,36 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "在菜单栏重命名"
+          }
+        }
+      }
+    },
+    "Rename Current Space" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "重命名当前桌面"
+          }
+        }
+      }
+    },
+    "Rename Space" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "重命名桌面"
+          }
+        }
+      }
+    },
+    "Rename the current space to a new label" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "重命名当前桌面空间的标签名称"
           }
         }
       }
@@ -1378,6 +1756,42 @@
         }
       }
     },
+    "Restore windows moved by lock" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "恢复被锁定移动的窗口"
+          }
+        }
+      }
+    },
+    "Restore Windows Moved by Lock (%d)" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "恢复被锁定移动的窗口 (%d)"
+          }
+        }
+      }
+    },
+    "Restore windows moved by lock to the last space that windows are manually assigned to." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Restore windows moved by lock to the last space that windows are manually assigned to."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "将因锁定而被移动的窗口恢复到上次手动分配的桌面。"
+          }
+        }
+      }
+    },
     "Review" : {
       "localizations" : {
         "zh-Hans" : {
@@ -1404,6 +1818,26 @@
         }
       }
     },
+    "Run ↵" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "执行 ↵"
+          }
+        }
+      }
+    },
+    "Run Batch Move" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "批量移动窗口"
+          }
+        }
+      }
+    },
     "Save" : {
       "localizations" : {
         "zh-Hans" : {
@@ -1424,6 +1858,62 @@
         }
       }
     },
+    "Search" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Search"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "搜索"
+          }
+        }
+      }
+    },
+    "Search and focus open application windows" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "搜索并跳转到打开的应用窗口"
+          }
+        }
+      }
+    },
+    "Search commands..." : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "搜索命令..."
+          }
+        }
+      }
+    },
+    "Search items..." : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "搜索项目..."
+          }
+        }
+      }
+    },
+    "Search target space..." : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "搜索目标桌面..."
+          }
+        }
+      }
+    },
     "See large, aesthetic name labels when you enter Mission Control, and discreet active labels when you switch spaces." : {
       "localizations" : {
         "zh-Hans" : {
@@ -1434,12 +1924,22 @@
         }
       }
     },
-    "Select a category" : {
+    "Select a desktop to switch to" : {
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "选择一个类别"
+            "value" : "选择要切换的桌面"
+          }
+        }
+      }
+    },
+    "Select and move multiple windows to a space" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "选择多个窗口并将其移动到指定桌面"
           }
         }
       }
@@ -1467,40 +1967,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "关于"
-          }
-        }
-      }
-    },
-    "Settings.About.Description" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "DesktopRenamer allows you to give custom names to macOS workspaces."
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "DesktopRenamer 允许你为 macOS 工作空间设置自定义名称。"
-          }
-        }
-      }
-    },
-    "Settings.About.Repo" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "GitHub Repository"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "GitHub 仓库"
           }
         }
       }
@@ -1539,81 +2005,13 @@
         }
       }
     },
-    "Settings.General.Advanced.APITest" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "API Test"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "API 测试"
-          }
-        }
-      }
-    },
-    "Settings.General.Advanced.APITest.All" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "All"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "所有"
-          }
-        }
-      }
-    },
-    "Settings.General.Advanced.APITest.Current" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Current"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "当前"
-          }
-        }
-      }
-    },
-    "Settings.General.Advanced.APITest.Return" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Return Value:"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "返回值:"
-          }
-        }
-      }
-    },
     "Settings.General.Advanced.EnableAPI" : {
       "extractionState" : "manual",
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Enable Space API"
+            "value" : "Enable SpaceAPI"
           }
         },
         "zh-Hans" : {
@@ -1654,57 +2052,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "登录时启动"
-          }
-        }
-      }
-    },
-    "Settings.General.General.LaunchAtLogin.Error" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Failed to toggle launch at login"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "无法设置登录时启动"
-          }
-        }
-      }
-    },
-    "Settings.General.General.ShowLabels" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Show space label windows"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "启用桌面标签窗口"
-          }
-        }
-      }
-    },
-    "Settings.General.GeneralLaunchAtLogin.Error.info" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Could not update login items"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "无法更新启动项"
           }
         }
       }
@@ -1807,40 +2154,6 @@
         }
       }
     },
-    "Settings.General.Reset.Body" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Reset all desktop names"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "重置所有桌面名称"
-          }
-        }
-      }
-    },
-    "Settings.General.Reset.Button" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Reset"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "重置"
-          }
-        }
-      }
-    },
     "Settings.General.Reset.Success.Info" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -1888,244 +2201,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "更新"
-          }
-        }
-      }
-    },
-    "Settings.General.Update.AutoCheck" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Automatically check for updates"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "自动检查更新"
-          }
-        }
-      }
-    },
-    "Settings.General.Update.Available.Button.Cancel" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Cancel"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "取消"
-          }
-        }
-      }
-    },
-    "Settings.General.Update.Available.Button.Update" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Update & Quit"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "更新并退出"
-          }
-        }
-      }
-    },
-    "Settings.General.Update.Available.Msg" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : " v%@ → v%@ is available.\nOpen the release page to download and install?"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "v%@ → v%@ 已就绪。\n是否打开发布页面下载并安装？"
-          }
-        }
-      }
-    },
-    "Settings.General.Update.Available.Notif.Msg" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "v%@ → v%@ is available. Click to open the release page."
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "v%@ → v%@ 已就绪。点击以打开发布页面。"
-          }
-        }
-      }
-    },
-    "Settings.General.Update.Available.Notif.Title" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "DesktopRenamer Update Available"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "DesktopRenamer 有可用更新"
-          }
-        }
-      }
-    },
-    "Settings.General.Update.Available.Title" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Update Available"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "更新可用"
-          }
-        }
-      }
-    },
-    "Settings.General.Update.Failed.Msg" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "DesktopRenamer could not connect to the update server. Please check your network."
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "DesktopRenamer 无法连接至更新服务器，请检查网络连接。"
-          }
-        }
-      }
-    },
-    "Settings.General.Update.Failed.Notif.Msg" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Could not connect to the update server. Please check your network."
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "无法连接至更新服务器，请检查网络连接。"
-          }
-        }
-      }
-    },
-    "Settings.General.Update.Failed.Notif.Title" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "DesktopRenamer Update Check Failed"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "DesktopRenamer 检查更新失败"
-          }
-        }
-      }
-    },
-    "Settings.General.Update.Failed.Title" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Update Check Failed"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "检查更新失败"
-          }
-        }
-      }
-    },
-    "Settings.General.Update.ManualCheck" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Check for updates"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "检查更新"
-          }
-        }
-      }
-    },
-    "Settings.General.Update.UpToDate.Msg" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "You are running the latest version (%@)."
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "你正在使用最新版本 (%@)。"
-          }
-        }
-      }
-    },
-    "Settings.General.Update.UpToDate.Title" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Up to Date"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "已是最新版"
           }
         }
       }
@@ -2265,23 +2340,6 @@
         }
       }
     },
-    "Settings.Spaces.Count" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%d spaces"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%d个桌面"
-          }
-        }
-      }
-    },
     "Settings.Spaces.Edit" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -2350,108 +2408,6 @@
         }
       }
     },
-    "Settings.Spaces.Edit.Help.Delete" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Delete desktop"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "删除桌面"
-          }
-        }
-      }
-    },
-    "Settings.Spaces.Edit.Help.Delete.Cannot" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Cannot delete current desktop"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "无法删除当前桌面"
-          }
-        }
-      }
-    },
-    "Settings.Spaces.Edit.Help.MoveDown" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Move desktop down"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "下移桌面"
-          }
-        }
-      }
-    },
-    "Settings.Spaces.Edit.Help.MoveDown.Cannot" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Cannot move down current desktop"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "无法下移当前桌面"
-          }
-        }
-      }
-    },
-    "Settings.Spaces.Edit.Help.MoveUp" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Move desktop up"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "上移桌面"
-          }
-        }
-      }
-    },
-    "Settings.Spaces.Edit.Help.MoveUp.Cannot" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Cannot move up current desktop"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "无法上移当前桌面"
-          }
-        }
-      }
-    },
     "Settings.Spaces.Edit.Name" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -2485,12 +2441,42 @@
         }
       }
     },
+    "Shortcuts" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "快捷键"
+          }
+        }
+      }
+    },
     "Show active space labels" : {
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "显示当前桌面标签"
+          }
+        }
+      }
+    },
+    "Show or hide the active space label overlay" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "显示或隐藏当前桌面的标签悬浮窗"
+          }
+        }
+      }
+    },
+    "Show or hide the preview space labels overlay" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "显示或隐藏预览桌面的标签悬浮窗"
           }
         }
       }
@@ -2515,6 +2501,16 @@
         }
       }
     },
+    "Space Labels Reloaded" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "桌面标签已重新加载"
+          }
+        }
+      }
+    },
     "Space.DefaultName" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -2528,6 +2524,56 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "桌面 %d"
+          }
+        }
+      }
+    },
+    "Spaces:" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "桌面："
+          }
+        }
+      }
+    },
+    "Stage Move to Desktop..." : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "加入移动队列…"
+          }
+        }
+      }
+    },
+    "Stage to Space" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "移动到桌面"
+          }
+        }
+      }
+    },
+    "Stage: %@" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "暂存：%@"
+          }
+        }
+      }
+    },
+    "Staged Moves (Pending)" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "暂存的移动（待执行）"
           }
         }
       }
@@ -2572,6 +2618,16 @@
         }
       }
     },
+    "Switch Desktop" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "切换桌面"
+          }
+        }
+      }
+    },
     "Switch display with" : {
       "localizations" : {
         "zh-Hans" : {
@@ -2594,6 +2650,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "滑动距离"
+          }
+        }
+      }
+    },
+    "Switch ↵" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "切换 ↵"
           }
         }
       }
@@ -2653,6 +2719,9 @@
           }
         }
       }
+    },
+    "Tab" : {
+      "shouldTranslate" : false
     },
     "Take back control of your macOS spaces." : {
       "localizations" : {
@@ -2761,6 +2830,46 @@
         }
       }
     },
+    "Toggle Active Space Label" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "切换显示当前桌面标签"
+          }
+        }
+      }
+    },
+    "Toggle Active Space Label Visibility" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "切换当前桌面标签是否可见"
+          }
+        }
+      }
+    },
+    "Toggle lock for current space" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "切换当前桌面锁定"
+          }
+        }
+      }
+    },
+    "Toggle Preview Space Label" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "切换显示预览桌面标签"
+          }
+        }
+      }
+    },
     "Trackpad Switch Gesture Override" : {
       "localizations" : {
         "zh-Hans" : {
@@ -2777,6 +2886,36 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "排查桌面检测"
+          }
+        }
+      }
+    },
+    "Type a new name above and press Enter to save" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "输入新名称并回车"
+          }
+        }
+      }
+    },
+    "Unlock space" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "解锁桌面"
+          }
+        }
+      }
+    },
+    "Unstage Move" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "移除队列"
           }
         }
       }
@@ -2832,6 +2971,22 @@
         }
       }
     },
+    "When a space switch is triggered by opening the window of an app, move that window back to the original space. This way, you are always focused in the locked space." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "When a space switch is triggered by opening the window of an app, move that window back to the original space. This way, you are always focused in the locked space."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "当打开某个应用程序的窗口触发桌面切换时，将该窗口移回原桌面。这样，您将始终专注于锁定的桌面。"
+          }
+        }
+      }
+    },
     "When set to 3 fingers, you can still use 4 fingers to trigger native swipe." : {
       "localizations" : {
         "zh-Hans" : {
@@ -2848,23 +3003,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "窗口大小"
-          }
-        }
-      }
-    },
-    "Window.Settings.Title" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "DesktopRenamer Settings"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "DesktopRenamer 设置"
           }
         }
       }

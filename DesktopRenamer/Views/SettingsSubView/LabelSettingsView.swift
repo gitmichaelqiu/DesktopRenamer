@@ -2,14 +2,16 @@ import SwiftUI
 
 struct LabelSettingsView: View {
     @ObservedObject var labelManager: SpaceLabelManager
+    @EnvironmentObject var hotkeyManager: HotkeyManager
 
     var body: some View {
-        ScrollView {
+        SettingsContainer(.labels) {
             VStack(alignment: .leading, spacing: 20) {
                 SettingsSection("Preview Labels") {
                     SettingsRow(
                         "Show preview labels",
-                        helperText: "The large label visible in Mission Control."
+                        helperText: "The large label visible in Mission Control.",
+                        demoVideoName: "MissionControl"
                     ) {
                         Toggle("", isOn: $labelManager.showPreviewLabels)
                             .toggleStyle(.switch)
@@ -58,7 +60,8 @@ struct LabelSettingsView: View {
                     SettingsRow(
                         "Show active space labels",
                         helperText:
-                            "The hidden label that slides into the corner of the active desktop."
+                            "The hidden label that slides into the corner of the active desktop.",
+                        demoVideoName: "ActiveLabel"
                     ) {
                         Toggle("", isOn: $labelManager.showActiveLabels)
                             .toggleStyle(.switch)
@@ -101,10 +104,32 @@ struct LabelSettingsView: View {
                         )
                     }
                 }
+
+                if labelManager.showPreviewLabels || labelManager.showActiveLabels {
+                    SettingsSection("Shortcuts") {
+                        SettingsRow("Reload space labels") {
+                            HStack {
+                                Text(hotkeyManager.description(for: .reloadLabels))
+                                    .foregroundColor(.secondary)
+                                    .padding(.trailing, 8)
+                                
+                                Button("◉") {
+                                    hotkeyManager.startListening(for: .reloadLabels)
+                                }
+                                .disabled(hotkeyManager.isListening)
+                                
+                                Button("↺") {
+                                    hotkeyManager.resetToDefault(for: .reloadLabels)
+                                }
+                                .disabled(hotkeyManager.isDefault(for: .reloadLabels))
+                            }
+                        }
+                    }
+                }
             }
-            .padding()
             .animation(.easeInOut(duration: 0.2), value: labelManager.showActiveLabels)
             .animation(.easeInOut(duration: 0.2), value: labelManager.showPreviewLabels)
+            .environment(\.settingsTab, .labels)
         }
     }
 }

@@ -103,6 +103,7 @@ class GestureManager: ObservableObject {
 
     // Internal state for active gesture tracking.
     fileprivate static var sharedManager: GestureManager?
+    static var lastTrackpadSwipeTime: TimeInterval = 0
 
     // Per-finger tracking is used instead of a single centroid to allow for consistency verification.
     private var initialTouchPositions: [Int32: MTPoint] = [:]
@@ -508,6 +509,10 @@ private func mtCallback(
 
     // Valid states: 1 (Hover/Range), 2 (Touching), 3 (Dragging), 4 (Lifting)
     let validTouches = touches.filter { $0.state > 0 && $0.state < 7 }
+
+    if validTouches.count >= 3 {
+        GestureManager.lastTrackpadSwipeTime = Date().timeIntervalSince1970
+    }
 
     // Calculate count from valid array, ignore raw numFingers if it mismatches active states
     let activeCount = validTouches.count

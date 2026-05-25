@@ -140,12 +140,90 @@ class StatusBarController: NSObject {
                 self?.rebuildMenu()
             }
             .store(in: &cancellables)
+            
+        spaceManager.$movedWindowsOriginalSpaces
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] _ in
+                self?.rebuildMenu()
+            }
+            .store(in: &cancellables)
+            
+        spaceManager.$lockedSpaceIDs
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] _ in
+                self?.updateStatusBarTitle()
+                self?.rebuildMenu()
+            }
+            .store(in: &cancellables)
+    }
+    
+    private func createLockedSpaceImage(baseName: String, font: NSFont) -> NSImage {
+        let attributes: [NSAttributedString.Key: Any] = [
+            .font: font,
+            .foregroundColor: NSColor.white
+        ]
+        let textSize = baseName.size(withAttributes: attributes)
+        
+        let lockSize = NSSize(width: 9, height: 9)
+        let lockImage = NSImage(systemSymbolName: "lock.fill", accessibilityDescription: nil)
+        
+        let height: CGFloat = 22
+        let textY = (height - textSize.height) / 2
+        let textRect = NSRect(x: 0, y: textY, width: textSize.width, height: textSize.height)
+        
+        // Position the lock partially overlapping the text on the top right
+        let lockX = textRect.maxX - 4
+        let lockY = textRect.maxY - 7
+        let lockRect = NSRect(x: lockX, y: lockY, width: lockSize.width, height: lockSize.height)
+        
+        let width = max(textSize.width, lockRect.maxX + 1)
+        let imageSize = NSSize(width: width, height: height)
+        
+        let combinedImage = NSImage(size: imageSize, flipped: false) { rect in
+            // Step 1: Draw the space name text
+            baseName.draw(in: textRect, withAttributes: attributes)
+            
+            // Step 2: Erase a circular boundary around where the lock will be
+            let erasePadding: CGFloat = 1.5
+            let eraseRect = lockRect.insetBy(dx: -erasePadding, dy: -erasePadding)
+            let erasePath = NSBezierPath(ovalIn: eraseRect)
+            
+            if let context = NSGraphicsContext.current {
+                let originalOp = context.compositingOperation
+                context.compositingOperation = .destinationOut
+                NSColor.white.set()
+                erasePath.fill()
+                context.compositingOperation = originalOp
+            }
+            
+            // Step 3: Draw the lock SF symbol on top
+            if let lockImg = lockImage {
+                lockImg.draw(in: lockRect, from: NSRect(origin: .zero, size: lockImg.size), operation: .sourceOver, fraction: 1.0)
+            }
+            
+            return true
+        }
+        
+        combinedImage.isTemplate = true
+        return combinedImage
     }
     
     private func updateStatusBarTitle() {
         if let button = StatusBarController.statusItem.button {
             let name = spaceManager.getSpaceName(spaceManager.currentSpaceUUID)
-            button.title = name.isEmpty ? " " : name
+            let baseName = name.isEmpty ? " " : name
+            
+            if spaceManager.lockedSpaceIDs.contains(spaceManager.currentSpaceUUID) {
+                let font = button.font ?? NSFont.menuBarFont(ofSize: 0)
+                let lockedImage = createLockedSpaceImage(baseName: baseName, font: font)
+                button.attributedTitle = NSAttributedString(string: "")
+                button.title = ""
+                button.image = lockedImage
+            } else {
+                button.image = nil
+                button.attributedTitle = NSAttributedString(string: "")
+                button.title = baseName
+            }
         }
     }
     
@@ -208,6 +286,30 @@ class StatusBarController: NSObject {
         }
         self.renameItem = rename
         menu.addItem(rename)
+        
+        let isLocked = spaceManager.lockedSpaceIDs.contains(spaceManager.currentSpaceUUID)
+        let lockItem = NSMenuItem(
+            title: NSLocalizedString("Lock Current Space", comment: ""),
+            action: #selector(toggleLockCurrentSpace),
+            keyEquivalent: "l"
+        )
+        lockItem.target = self
+        lockItem.state = isLocked ? .on : .off
+        lockItem.image = NSImage(systemSymbolName: isLocked ? "lock" : "lock.open", accessibilityDescription: nil)
+        menu.addItem(lockItem)
+        
+        let movedCount = spaceManager.movedWindowsOriginalSpaces.count
+        let restoreItem = NSMenuItem(
+            title: String(format: NSLocalizedString("Restore Windows Moved by Lock (%d)", comment: ""), movedCount),
+            action: #selector(restoreAllMovedWindows),
+            keyEquivalent: ""
+        )
+        restoreItem.target = self
+        restoreItem.image = NSImage(systemSymbolName: "arrow.uturn.backward", accessibilityDescription: nil)
+        restoreItem.isEnabled = movedCount > 0
+        menu.addItem(restoreItem)
+
+        menu.addItem(NSMenuItem.separator())
     
         let showPreviewLabels = NSMenuItem(title: NSLocalizedString("Menu.ShowPreviewLabels", comment: "Toggle preview labels"), action: #selector(togglePreviewLabelsFromMenu), keyEquivalent: "p")
         showPreviewLabels.target = self
@@ -237,6 +339,11 @@ class StatusBarController: NSObject {
         
         menu.addItem(NSMenuItem.separator())
         
+        let launcherItem = NSMenuItem(title: NSLocalizedString("Launcher...", comment: ""), action: #selector(openLauncher), keyEquivalent: "")
+        launcherItem.image = NSImage(systemSymbolName: "command", accessibilityDescription: nil)
+        launcherItem.target = self
+        menu.addItem(launcherItem)
+        
         let settingsItem = NSMenuItem(title: NSLocalizedString("Menu.Settings", comment: ""), action: #selector(openSettingsWindow), keyEquivalent: ",")
         settingsItem.image = NSImage(systemSymbolName: "gear", accessibilityDescription: nil)
         settingsItem.target = self
@@ -250,6 +357,10 @@ class StatusBarController: NSObject {
         menu.addItem(quitItem)
         
         StatusBarController.statusItem.menu = menu
+    }
+    
+    @objc private func openLauncher() {
+        LauncherWindowController.shared.show()
     }
     
     @objc func selectSpace(_ sender: NSMenuItem) {
@@ -268,6 +379,15 @@ class StatusBarController: NSObject {
             return
         }
         spaceManager.moveActiveWindowToSpace(id: spaceID)
+    }
+    
+    @objc private func toggleLockCurrentSpace() {
+        spaceManager.toggleLockSpace(spaceManager.currentSpaceUUID)
+        rebuildMenu()
+    }
+    
+    @objc private func restoreAllMovedWindows() {
+        spaceManager.restoreAllMovedWindows()
     }
     
     @objc func renameCurrentSpace() {

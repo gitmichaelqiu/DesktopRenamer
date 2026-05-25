@@ -130,6 +130,28 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             .receive(on: DispatchQueue.main)
             .sink { [weak self] in self?.spaceManager.moveActiveWindowToPreviousDisplay() }
             .store(in: &cancellables)
+
+        hotkeyManager.toggleLockTriggered
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] in
+                guard let self = self else { return }
+                self.spaceManager.toggleLockSpace(self.spaceManager.currentSpaceUUID)
+            }
+            .store(in: &cancellables)
+
+        hotkeyManager.restoreWindowsTriggered
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] in
+                self?.spaceManager.restoreAllMovedWindows()
+            }
+            .store(in: &cancellables)
+
+        hotkeyManager.launcherTriggered
+            .receive(on: DispatchQueue.main)
+            .sink {
+                LauncherWindowController.shared.toggle()
+            }
+            .store(in: &cancellables)
     }
     
     func showSplashScreen(on parentWindow: NSWindow? = nil) {

@@ -46,6 +46,9 @@ class SpaceManager: ObservableObject {
     static private let instantSpaceSwitchKey = "com.michaelqiu.desktoprenamer.instantSpaceSwitch"
     static private let grabOffsetXKey = "com.michaelqiu.desktoprenamer.grabOffsetX"
     static private let grabOffsetYKey = "com.michaelqiu.desktoprenamer.grabOffsetY"
+    static private let lockedSpaceIDsKey = "com.michaelqiu.desktoprenamer.lockedSpaceIDs"
+    static private let movedWindowsOriginalSpacesKey = "com.michaelqiu.desktoprenamer.movedWindowsOriginalSpaces"
+    static private let returnToOriginalAfterBatchMoveKey = "com.michaelqiu.desktoprenamer.returnToOriginalAfterBatchMove"
     
     @Published private(set) var currentSpaceUUID: String = ""
     @Published private(set) var currentRawSpaceUUID: String = ""
@@ -88,6 +91,19 @@ class SpaceManager: ObservableObject {
     // Display Cache
     private var connectedDisplayUUIDs: Set<String> = []
     
+    // Space locking state and configurations
+    
+    @Published var lockedSpaceIDs: Set<String> = []
+    @Published var movedWindowsOriginalSpaces: [Int: (originalSpaceUUID: String, currentSpaceUUID: String, pid: Int32)] = [:]
+    var lastManualSwitchTime: TimeInterval = 0
+    private var lastManualSwitchTargetUUID: String? = nil
+    
+    @Published var returnToOriginalAfterBatchMove: Bool {
+        didSet {
+            UserDefaults.standard.set(returnToOriginalAfterBatchMove, forKey: SpaceManager.returnToOriginalAfterBatchMoveKey)
+        }
+    }
+    
     @Published var detectionMethod: DetectionMethod {
         didSet {
             // Update storage and refresh whenever method changes
@@ -127,6 +143,8 @@ class SpaceManager: ObservableObject {
         let legacyManual = UserDefaults.standard.bool(forKey: SpaceManager.isManualSpacesEnabledKey)
         let savedMethod = UserDefaults.standard.string(forKey: SpaceManager.detectionMethodKey)
         
+        self.returnToOriginalAfterBatchMove = UserDefaults.standard.object(forKey: SpaceManager.returnToOriginalAfterBatchMoveKey) == nil ? true : UserDefaults.standard.bool(forKey: SpaceManager.returnToOriginalAfterBatchMoveKey)
+        
         if let saved = savedMethod, let method = DetectionMethod(rawValue: saved) {
             self.detectionMethod = method
         } else if legacyManual {
@@ -136,6 +154,10 @@ class SpaceManager: ObservableObject {
         }
         
         self.instantSpaceSwitch = UserDefaults.standard.bool(forKey: SpaceManager.instantSpaceSwitchKey)
+            
+        if let savedLocked = UserDefaults.standard.stringArray(forKey: SpaceManager.lockedSpaceIDsKey) {
+            self.lockedSpaceIDs = Set(savedLocked)
+        }
         
         self.grabOffsetX = UserDefaults.standard.object(forKey: SpaceManager.grabOffsetXKey) == nil ? 13.0 : UserDefaults.standard.double(forKey: SpaceManager.grabOffsetXKey)
         self.grabOffsetY = UserDefaults.standard.object(forKey: SpaceManager.grabOffsetYKey) == nil ? 25.0 : UserDefaults.standard.double(forKey: SpaceManager.grabOffsetYKey)
@@ -158,6 +180,16 @@ class SpaceManager: ObservableObject {
         NSWorkspace.shared.notificationCenter.addObserver(self, selector: #selector(systemDidWake), name: NSWorkspace.didWakeNotification, object: nil)
         
         refreshConnectedDisplays()
+    }
+    
+    func toggleLockSpace(_ spaceID: String) {
+        if lockedSpaceIDs.contains(spaceID) {
+            lockedSpaceIDs.remove(spaceID)
+        } else {
+            lockedSpaceIDs.insert(spaceID)
+        }
+        UserDefaults.standard.set(Array(lockedSpaceIDs), forKey: SpaceManager.lockedSpaceIDsKey)
+        objectWillChange.send()
     }
     
     deinit {
@@ -221,6 +253,19 @@ class SpaceManager: ObservableObject {
             guard let cgsState = SpaceHelper.getSystemState() else {
                 if source == "Monitor" { scheduleSpaceChangeRetry() }
                 return
+            }
+            
+            let now = Date().timeIntervalSince1970
+            let isRecentManualSwitch = now - lastManualSwitchTime < 2.0
+            
+            if isRecentManualSwitch, let targetUUID = lastManualSwitchTargetUUID {
+                if cgsState.currentUUID != targetUUID {
+                    print("SpaceManager: Stale space \(cgsState.currentUUID) detected during active switch to \(targetUUID) (source: \(source)). Ignoring.")
+                    if source == "Monitor" {
+                        scheduleSpaceChangeRetry()
+                    }
+                    return
+                }
             }
             
             // First, see which names are already taken by active UUIDs so we don't double-assign.
@@ -330,11 +375,55 @@ class SpaceManager: ObservableObject {
             }
             
             let previousUUID = self.currentSpaceUUID
+            let targetUUID = cgsState.currentUUID
 
-            if self.currentSpaceUUID != cgsState.currentUUID {
-                self.currentSpaceUUID = cgsState.currentUUID
+            if previousUUID != targetUUID {
+                // Check if previousUUID is in lockedSpaceIDs and this switch is not manual
+                if self.lockedSpaceIDs.contains(previousUUID) {
+                    let now = Date().timeIntervalSince1970
+                    let isOurAppManual = (now - self.lastManualSwitchTime < 2.0) && (targetUUID == self.lastManualSwitchTargetUUID)
+                    let isTrackpadManual = now - GestureManager.lastTrackpadSwipeTime < 1.5
+                    let isOurAppProgrammatic = (now - SpaceHelper.lastProgrammaticSwitchTime < 2.0) && (targetUUID == SpaceHelper.lastProgrammaticTargetSpaceID)
+                    
+                    let isManual = isOurAppManual || isTrackpadManual || isOurAppProgrammatic
+                    
+                    if !isManual {
+                        print("SpaceManager: Locked space switch detected from \(previousUUID) to \(targetUUID) (AUTOMATIC)")
+                        if let frontApp = NSWorkspace.shared.frontmostApplication {
+                            let pid = frontApp.processIdentifier
+                            let appName = frontApp.localizedName ?? "App"
+                            print("SpaceManager: Automatic switch triggered by \(appName) (PID: \(pid))")
+                            
+                            // Wait 50ms for the Window Server to settle, then drag-move the active window back to the locked space!
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
+                                if let activeWin = SpaceHelper.getActiveWindowInfo(forPID: pid) {
+                                    print("SpaceManager: Physical drag-moving active window \(activeWin.id) to locked space \(previousUUID)")
+                                    if let existing = self.movedWindowsOriginalSpaces[activeWin.id] {
+                                        if existing.originalSpaceUUID == previousUUID {
+                                            self.movedWindowsOriginalSpaces.removeValue(forKey: activeWin.id)
+                                            print("SpaceManager: Window \(activeWin.id) returned to original space \(previousUUID). Clearing tracking.")
+                                        } else {
+                                            self.movedWindowsOriginalSpaces[activeWin.id] = (originalSpaceUUID: existing.originalSpaceUUID, currentSpaceUUID: previousUUID, pid: activeWin.pid)
+                                        }
+                                    } else {
+                                        self.movedWindowsOriginalSpaces[activeWin.id] = (originalSpaceUUID: targetUUID, currentSpaceUUID: previousUUID, pid: activeWin.pid)
+                                    }
+                                    SpaceHelper.dragActiveWindow(to: previousUUID, forceInstant: true)
+                                } else {
+                                    print("SpaceManager: Failed to capture active window to drag. Reverting space only.")
+                                    if let targetSpaceObj = self.spaceNameDict.first(where: { $0.id == previousUUID }) {
+                                        self.switchToSpace(targetSpaceObj, forceInstant: true, isManual: false)
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+                
+                self.currentSpaceUUID = targetUUID
                 shouldUpdateWidget = true
             }
+            
             if self.currentDisplayID != cgsState.displayID {
                 self.currentDisplayID = cgsState.displayID
             }
@@ -454,12 +543,28 @@ class SpaceManager: ObservableObject {
             return
         }
 
-        if currentSpaceUUID != cgsState.currentUUID {
-            handleSpaceChange(cgsState.currentUUID, isDesktop: true, ncCount: 0,
-                             displayID: cgsState.displayID, source: "Retry")
-            cancelSpaceChangeRetry()
+        let now = Date().timeIntervalSince1970
+        let isRecentManualSwitch = now - lastManualSwitchTime < 2.0
+        
+        if isRecentManualSwitch {
+            if let targetUUID = lastManualSwitchTargetUUID, cgsState.currentUUID == targetUUID {
+                if currentSpaceUUID != targetUUID {
+                    handleSpaceChange(targetUUID, isDesktop: true, ncCount: 0,
+                                     displayID: cgsState.displayID, source: "Retry")
+                }
+                cancelSpaceChangeRetry()
+            } else {
+                // Still transitioning, reschedule retry to check again later without reverting
+                scheduleSpaceChangeRetry()
+            }
         } else {
-            scheduleSpaceChangeRetry()
+            if currentSpaceUUID != cgsState.currentUUID {
+                handleSpaceChange(cgsState.currentUUID, isDesktop: true, ncCount: 0,
+                                 displayID: cgsState.displayID, source: "Retry")
+                cancelSpaceChangeRetry()
+            } else {
+                scheduleSpaceChangeRetry()
+            }
         }
     }
 
@@ -690,8 +795,12 @@ class SpaceManager: ObservableObject {
     
     // Space navigation and switching logic.
     
-    func switchToSpace(_ space: DesktopSpace, forceInstant: Bool = false) {
-        print("SpaceManager: switchToSpace(\(space.id)) on display \(space.displayID) forceInstant: \(forceInstant)")
+    func switchToSpace(_ space: DesktopSpace, forceInstant: Bool = false, isManual: Bool = true) {
+        print("SpaceManager: switchToSpace(\(space.id)) on display \(space.displayID) forceInstant: \(forceInstant) isManual: \(isManual)")
+        if isManual {
+            self.lastManualSwitchTime = Date().timeIntervalSince1970
+            self.lastManualSwitchTargetUUID = space.id
+        }
         SpaceHelper.switchToSpace(space.id, forceInstant: forceInstant)
     }
     
@@ -874,7 +983,7 @@ class SpaceManager: ObservableObject {
                 print("SpaceManager: Cross-monitor move requested (\(sourceDisplay) -> \(targetSpace.displayID)). Using robust method.")
                 
                 let fromSpaceID = Int(SpaceHelper.getCurrentSpaceID(for: sourceDisplay) ?? "0") ?? 0
-                let targetSpaceID = Int(id) ?? 0
+                let targetSpaceID = Int(targetSpace.id) ?? 0
                 
                 SpaceHelper.moveWindowToSpace(windowID: windowInfo.id, fromSpaceID: fromSpaceID, targetSpaceID: targetSpaceID)
                 
@@ -965,5 +1074,54 @@ class SpaceManager: ObservableObject {
              
          guard let currentIndex = displaySpaces.firstIndex(of: current) else { return false }
          return currentIndex == displaySpaces.count - 1
+    }
+    
+    func restoreAllMovedWindows() {
+        let list = movedWindowsOriginalSpaces.map { (windowID: $0.key, originalSpaceUUID: $0.value.originalSpaceUUID, currentSpaceUUID: $0.value.currentSpaceUUID, pid: $0.value.pid) }
+        guard !list.isEmpty else { return }
+        
+        let initialSpaceUUID = self.currentSpaceUUID
+        restoreNextWindow(index: 0, list: list, initialSpaceUUID: initialSpaceUUID)
+    }
+    
+    private func restoreNextWindow(index: Int, list: [(windowID: Int, originalSpaceUUID: String, currentSpaceUUID: String, pid: Int32)], initialSpaceUUID: String) {
+        if index >= list.count {
+            // All windows restored! Switch back to the user's initial space instantly after a short delay
+            // to allow the last programmatic drag and OS space change state to fully settle.
+            if let initialSpaceObj = self.spaceNameDict.first(where: { $0.id == initialSpaceUUID }) {
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [weak self] in
+                    print("SpaceManager: All restorations complete. Switching back to initial space \(initialSpaceUUID)")
+                    self?.switchToSpace(initialSpaceObj, forceInstant: true, isManual: true)
+                }
+            }
+            return
+        }
+        
+        let item = list[index]
+        print("SpaceManager: Restoring window \(item.windowID) from \(item.currentSpaceUUID) back to \(item.originalSpaceUUID)")
+        
+        // 1. Switch to the window's current space instantly to grab it
+        if let currentSpaceObj = self.spaceNameDict.first(where: { $0.id == item.currentSpaceUUID }) {
+            self.switchToSpace(currentSpaceObj, forceInstant: true, isManual: false)
+            
+            // 2. Wait 600ms for the space switch to finish, focus the window, and drag it to originalSpaceUUID
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.60) { [weak self] in
+                SpaceHelper.focusWindow(id: item.windowID, pid: item.pid)
+                
+                // Wait 250ms for the window to raise/focus
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) {
+                    SpaceHelper.dragActiveWindow(to: item.originalSpaceUUID, forceInstant: true)
+                    self?.movedWindowsOriginalSpaces.removeValue(forKey: item.windowID)
+                    
+                    // 3. Wait 500ms for the drag-move operation to fully complete before starting the next one!
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.50) {
+                        self?.restoreNextWindow(index: index + 1, list: list, initialSpaceUUID: initialSpaceUUID)
+                    }
+                }
+            }
+        } else {
+            // Space not found, skip this one
+            self.restoreNextWindow(index: index + 1, list: list, initialSpaceUUID: initialSpaceUUID)
+        }
     }
 }
