@@ -15,13 +15,14 @@ struct AboutView: View {
     }
 
     @Environment(\.colorScheme) var colorScheme
+    @EnvironmentObject var navigationState: SettingsNavigationState
 
     var iconSuffix: String {
         colorScheme == .dark ? "_Dark" : "_Default"
     }
 
     var body: some View {
-        ScrollView {
+        SettingsContainer(.about) {
             VStack(alignment: .leading, spacing: 32) {
                 // Header Section
                 HStack(spacing: 20) {
@@ -48,7 +49,6 @@ struct AboutView: View {
                 }
 
 
-                // Links Section
                 VStack(alignment: .leading, spacing: 12) {
                     Text("Links")
                         .font(.headline)
@@ -62,6 +62,7 @@ struct AboutView: View {
                         AboutLinkRow(title: NSLocalizedString("My GitHub", comment: ""), url: "https://github.com/gitmichaelqiu")
                     }
                 }
+                .id("GitHub / Support")
 
                 // More Apps Section
                 VStack(alignment: .leading, spacing: 16) {
@@ -95,8 +96,13 @@ struct AboutView: View {
                     AboutButtonRow(title: "Acknowledgements.pdf", action: openAcknowledgements)
                 }
             }
-            .padding(30)
             .frame(maxWidth: .infinity, alignment: .leading)
+        }
+        .onAppear {
+            navigationState.register(title: "GitHub / Support", tab: .about, keywords: ["github", "website", "developer", "contact", "support"])
+        }
+        .onDisappear {
+            navigationState.unregister(title: "GitHub / Support", tab: .about)
         }
     }
 

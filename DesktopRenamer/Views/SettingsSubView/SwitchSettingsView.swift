@@ -8,14 +8,14 @@ struct SwitchSettingsView: View {
     @StateObject private var permissionManager = PermissionManager.shared
     
     var body: some View {
-        ScrollView {
+        SettingsContainer(.sswitch) {
             VStack(alignment: .leading, spacing: 20) {
                 SettingsSection("Keyboard Shortcuts", helperText: "If you want to use Control + Arrow, disable the system's one in Settings → Keyboard → Keyboard Shortcuts... → Mission Control.") {
                     
                     SettingsRow(
                         "Switch to previous space",
                         warningText: permissionManager.isAccessibilityGranted
-                        ? nil : "Requires Accessibility permission."
+                        ? nil : "Requires Accessibility permission.",
                     ) {
                         HStack {
                             Text(hotkeyManager.description(for: .switchLeft))
@@ -55,26 +55,6 @@ struct SwitchSettingsView: View {
                                 hotkeyManager.resetToDefault(for: .switchRight)
                             }
                             .disabled(hotkeyManager.isDefault(for: .switchRight))
-                        }
-                    }
-                    
-                    Divider()
-                    
-                    SettingsRow("Reload space labels") {
-                        HStack {
-                            Text(hotkeyManager.description(for: .reloadLabels))
-                                .foregroundColor(.secondary)
-                                .padding(.trailing, 8)
-                            
-                            Button("◉") {
-                                hotkeyManager.startListening(for: .reloadLabels)
-                            }
-                            .disabled(hotkeyManager.isListening)
-                            
-                            Button("↺") {
-                                hotkeyManager.resetToDefault(for: .reloadLabels)
-                            }
-                            .disabled(hotkeyManager.isDefault(for: .reloadLabels))
                         }
                     }
                 }
@@ -136,10 +116,10 @@ struct SwitchSettingsView: View {
                             }
                             .disabled(hotkeyManager.isDefault(for: .moveWindowNumber))
                         }
-                    }
-                    
-                    Divider()
-                    
+                    }   
+                }
+
+                SettingsSection(nil) {
                     SettingsRow("Move window to previous display") {
                         HStack {
                             Text(hotkeyManager.description(for: .moveWindowPreviousDisplay))
@@ -178,6 +158,82 @@ struct SwitchSettingsView: View {
                         }
                     }
                 }
+
+                SettingsSection(nil) {
+                    SettingsRow("Toggle lock for current space",
+                        helperText: "When a space switch is triggered by opening the window of an app, move that window back to the original space. This way, you are always focused in the locked space.",
+                        demoVideoName: "LockSpace"
+                    ) {
+                        HStack {
+                            Text(hotkeyManager.description(for: .toggleLock))
+                                .foregroundColor(.secondary)
+                                .padding(.trailing, 8)
+                            
+                            Button("◉") {
+                                hotkeyManager.startListening(for: .toggleLock)
+                            }
+                            .disabled(hotkeyManager.isListening)
+                            
+                            Button("↺") {
+                                hotkeyManager.resetToDefault(for: .toggleLock)
+                            }
+                            .disabled(hotkeyManager.isDefault(for: .toggleLock))
+                        }
+                    }
+                    
+                    Divider()
+                    
+                    SettingsRow("Restore windows moved by lock",
+                        helperText: "Restore windows moved by lock to the last space that windows are manually assigned to."
+                    ) {
+                        HStack {
+                            Text(hotkeyManager.description(for: .restoreWindows))
+                                .foregroundColor(.secondary)
+                                .padding(.trailing, 8)
+                            
+                            Button("◉") {
+                                hotkeyManager.startListening(for: .restoreWindows)
+                            }
+                            .disabled(hotkeyManager.isListening)
+                            
+                            Button("↺") {
+                                hotkeyManager.resetToDefault(for: .restoreWindows)
+                            }
+                            .disabled(hotkeyManager.isDefault(for: .restoreWindows))
+                        }
+                    }
+                }
+                
+                SettingsSection("Launcher") {
+                    SettingsRow("Open Launcher") {
+                        HStack {
+                            Text(hotkeyManager.description(for: .launcher))
+                                .foregroundColor(.secondary)
+                                .padding(.trailing, 8)
+                            
+                            Button("◉") {
+                                hotkeyManager.startListening(for: .launcher)
+                            }
+                            .disabled(hotkeyManager.isListening)
+                            
+                            Button("↺") {
+                                hotkeyManager.resetToDefault(for: .launcher)
+                            }
+                            .disabled(hotkeyManager.isDefault(for: .launcher))
+                        }
+                    }
+
+                    Divider()
+
+                    SettingsRow(
+                        "Automatically Return to Original Space",
+                        helperText: "Automatically return to your original desktop after moving windows to a different desktop."
+                    ) {
+                        Toggle("", isOn: $spaceManager.returnToOriginalAfterBatchMove)
+                            .toggleStyle(.switch)
+                            .labelsHidden()
+                    }
+                }
                 
                 // Gesture-based switching configuration.
                 SettingsSection("Trackpad Switch Gesture Override") {
@@ -186,7 +242,8 @@ struct SwitchSettingsView: View {
                         helperText:
                             "Replaces system switch gestures with instant space switching.\n\nRequired: You must disable 'Swipe between full screen apps' in System Settings → Trackpad → More Gestures or change to different number of fingers to prevent conflicts.\n\nNotice, you must click at the fullscreen app to make it active to avoid issues when leaving the app.",
                         warningText: permissionManager.isAccessibilityGranted
-                        ? nil : "Requires Accessibility permission."
+                        ? nil : "Requires Accessibility permission.",
+                        demoVideoName: "SwitchOverride"
                     ) {
                         Toggle("", isOn: $gestureManager.isEnabled)
                             .toggleStyle(.switch)
@@ -269,9 +326,9 @@ struct SwitchSettingsView: View {
                 
                 Spacer()
             }
-            .padding()
             .frame(maxWidth: .infinity, alignment: .topLeading)
             .animation(.easeInOut(duration: 0.2), value: gestureManager.isEnabled)
+            .environment(\.settingsTab, .sswitch)
         }
     }
 }

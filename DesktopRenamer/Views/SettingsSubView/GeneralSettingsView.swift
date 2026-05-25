@@ -432,7 +432,7 @@ struct GeneralSettingsView: View {
     @State private var showAddSpacesSheet: Bool = false
 
     var body: some View {
-        ScrollView {
+        SettingsContainer(.general) {
             VStack(alignment: .leading, spacing: 20) {
                 // General configuration options.
                 SettingsSection("Settings.General.General") {
@@ -450,7 +450,7 @@ struct GeneralSettingsView: View {
                     SettingsRow(
                         "Show active space labels",
                         helperText:
-                            "The hidden label that slides into the corner of the active desktop."
+                            "The hidden label that slides into the corner of the active desktop.",
                     ) {
                         Toggle("", isOn: $labelManager.showActiveLabels)
                             .labelsHidden()
@@ -598,8 +598,8 @@ struct GeneralSettingsView: View {
                 }
                 Spacer()
             }
-            .padding()
             .frame(maxWidth: .infinity, alignment: .topLeading)
+            .environment(\.settingsTab, .general)
         }
         .onAppear { launchAtLogin = getLaunchAtLoginState() }
         .sheet(

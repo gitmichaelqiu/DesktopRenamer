@@ -7,7 +7,7 @@ struct SplashView: View {
     
     @State private var currentPage = 0
     @State private var movingForward = true
-    private let totalPages = 9
+    private let totalPages = 10
 
     var body: some View {
         VStack(spacing: 0) {
@@ -27,18 +27,21 @@ struct SplashView: View {
                     MenuBarSwitchPage()
                         .transition(pageTransition)
                 case 4:
-                    FastSwitchingPage()
+                    LockSpacePage()
                         .transition(pageTransition)
                 case 5:
-                    RaycastFeaturePage(openURL: openURL)
+                    FastSwitchingPage()
                         .transition(pageTransition)
                 case 6:
-                    RaycastBatchMovePage()
+                    RaycastFeaturePage(openURL: openURL)
                         .transition(pageTransition)
                 case 7:
-                    PermissionsPage()
+                    RaycastBatchMovePage()
                         .transition(pageTransition)
                 case 8:
+                    PermissionsPage()
+                        .transition(pageTransition)
+                case 9:
                     MoreAppsPage()
                         .transition(pageTransition)
                 default:
@@ -127,35 +130,95 @@ struct SplashView: View {
     }
 }
 
-// Auto Playing Video View
+class AutoPlayingVideoNSView: NSView {
+    private var looper: AVPlayerLooper?
+    private var player: AVQueuePlayer?
+
+    var playerLayer: AVPlayerLayer? {
+        self.layer as? AVPlayerLayer
+    }
+    
+    override func makeBackingLayer() -> CALayer {
+        let layer = AVPlayerLayer()
+        layer.videoGravity = .resizeAspectFill
+        layer.backgroundColor = NSColor.clear.cgColor
+        return layer
+    }
+    
+    func setupPlayer(with url: URL) {
+        cleanup()
+        self.wantsLayer = true
+        self.layer?.backgroundColor = NSColor.clear.cgColor
+        
+        let player = AVQueuePlayer()
+        let playerItem = AVPlayerItem(url: url)
+        let playerLooper = AVPlayerLooper(player: player, templateItem: playerItem)
+        
+        self.playerLayer?.player = player
+        player.isMuted = true
+        player.play()
+        
+        self.looper = playerLooper
+        self.player = player
+    }
+
+    override func viewWillMove(toWindow newWindow: NSWindow?) {
+        super.viewWillMove(toWindow: newWindow)
+        
+        if let oldWindow = self.window {
+            NotificationCenter.default.removeObserver(self, name: NSWindow.willCloseNotification, object: oldWindow)
+        }
+        
+        if let newWindow = newWindow {
+            NotificationCenter.default.addObserver(
+                self,
+                selector: #selector(windowWillClose(_:)),
+                name: NSWindow.willCloseNotification,
+                object: newWindow
+            )
+        } else {
+            cleanup()
+        }
+    }
+    
+    @objc private func windowWillClose(_ notification: Notification) {
+        cleanup()
+    }
+
+    deinit {
+        NotificationCenter.default.removeObserver(self)
+    }
+
+    func cleanup() {
+        player?.pause()
+        playerLayer?.player = nil
+        looper = nil
+        player = nil
+    }
+}
+
 struct AutoPlayingVideoView: NSViewRepresentable {
     let videoName: String
     
-    func makeNSView(context: Context) -> AVPlayerView {
-        let playerView = AVPlayerView()
-        playerView.controlsStyle = .none
-        playerView.videoGravity = .resizeAspectFill
-        
-        // Attempt to find the video file in the bundle
+    func makeNSView(context: Context) -> AutoPlayingVideoNSView {
+        let view = AutoPlayingVideoNSView()
         if let url = Bundle.main.url(forResource: videoName, withExtension: "mp4") {
-            let player = AVPlayer(url: url)
-            playerView.player = player
-            player.actionAtItemEnd = .none // Setup for looping
-            
-            NotificationCenter.default.addObserver(forName: .AVPlayerItemDidPlayToEndTime, object: player.currentItem, queue: .main) { _ in
-                player.seek(to: .zero)
-                player.play()
-            }
-            
-            player.play()
+            view.setupPlayer(with: url)
         }
-        
-        return playerView
+        return view
     }
     
-    func updateNSView(_ nsView: AVPlayerView, context: Context) {
-        // Handle updates if needed
+    func updateNSView(_ nsView: AutoPlayingVideoNSView, context: Context) {}
+    
+    static func dismantleNSView(_ nsView: AutoPlayingVideoNSView, coordinator: Coordinator) {
+        nsView.cleanup()
     }
+    
+    func makeCoordinator() -> Coordinator {
+        Coordinator()
+    }
+    
+    class Coordinator {}
 }
 
 // Reusable Page Templates
@@ -178,12 +241,22 @@ struct SingleVideoFeaturePage: View {
                     .padding(.horizontal, 20)
             }
             
-            AutoPlayingVideoView(videoName: videoName)
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-                .cornerRadius(12)
-                .shadow(color: Color.black.opacity(0.15), radius: 8, x: 0, y: 4)
-                .padding(.horizontal, 20)
-                .padding(.bottom, 10)
+            GeometryReader { geo in
+                if videoName == "LockSpace" {
+                    let r: CGFloat = 1660.0 / 1080.0
+                    let targetHeight = geo.size.width / r
+                    AutoPlayingVideoView(videoName: videoName)
+                        .frame(width: geo.size.width, height: targetHeight)
+                        .position(x: geo.size.width / 2, y: targetHeight / 2)
+                } else {
+                    AutoPlayingVideoView(videoName: videoName)
+                        .frame(width: geo.size.width, height: geo.size.height)
+                }
+            }
+            .clipShape(RoundedRectangle(cornerRadius: 12))
+            .shadow(color: Color.black.opacity(0.15), radius: 8, x: 0, y: 4)
+            .padding(.horizontal, 20)
+            .padding(.bottom, 10)
         }
         .padding(.top, 30)
     }
@@ -310,21 +383,25 @@ struct MissionControlPage: View {
             )
             
             VStack(spacing: 12) {
-                HStack(spacing: 40) {
+                HStack(alignment: .top, spacing: 40) {
                     Toggle("Show preview labels", isOn: $showPreviewLabels)
                         .toggleStyle(.switch)
-                    Toggle("Show active space labels", isOn: $showActiveLabels)
-                        .toggleStyle(.switch)
+                    
+                    VStack(alignment: .leading, spacing: 8) {
+                        Toggle("Show active space labels", isOn: $showActiveLabels)
+                            .toggleStyle(.switch)
+                        
+                        if showActiveLabels {
+                            Toggle("Keep visible on desktop", isOn: $showOnDesktop)
+                                .toggleStyle(.switch)
+                        }
+                    }
                 }
-                
-                if showActiveLabels {
-                    Toggle("Keep visible on desktop", isOn: $showOnDesktop)
-                        .toggleStyle(.switch)
-                        .padding(.bottom, 10)
-                }
+                .padding(.bottom, 10)
             }
             .padding(.bottom, 10)
         }
+        .animation(.easeInOut(duration: 0.25), value: showActiveLabels)
     }
 }
 
@@ -343,6 +420,7 @@ struct MenuBarSwitchPage: View {
 
 struct FastSwitchingPage: View {
     @AppStorage("GestureManager.Enabled") private var gestureEnabled = false
+    @AppStorage("com.michaelqiu.desktoprenamer.instantSpaceSwitch") private var instantSpaceSwitch = false
 
     var body: some View {
         VStack(spacing: 10) {
@@ -352,10 +430,18 @@ struct FastSwitchingPage: View {
                 videoName: "SwitchOverride"
             )
             
-            Toggle("Enable switch gesture override", isOn: $gestureEnabled)
-                .toggleStyle(.switch)
-                .padding(.bottom, 20)
+            VStack(alignment: .leading, spacing: 8) {
+                Toggle("Enable switch gesture override", isOn: $gestureEnabled)
+                    .toggleStyle(.switch)
+                
+                if gestureEnabled {
+                    Toggle("Instant switch without animations", isOn: $instantSpaceSwitch)
+                        .toggleStyle(.switch)
+                }
+            }
+            .padding(.bottom, 20)
         }
+        .animation(.easeInOut(duration: 0.25), value: gestureEnabled)
     }
 }
 
@@ -531,6 +617,16 @@ struct MoreAppsPage: View {
             .padding(.horizontal, 40)
         }
         .padding()
+    }
+}
+
+struct LockSpacePage: View {
+    var body: some View {
+        SingleVideoFeaturePage(
+            title: NSLocalizedString("Lock Your Spaces", comment: ""),
+            subtitle: NSLocalizedString("Prevent applications or macOS from automatically switching spaces. Keep your workspace focused by locking important desktops.", comment: ""),
+            videoName: "LockSpace"
+        )
     }
 }
 
