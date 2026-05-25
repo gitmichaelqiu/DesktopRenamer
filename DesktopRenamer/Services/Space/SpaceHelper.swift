@@ -50,6 +50,10 @@ class SpaceHelper {
     private static var pendingMoveCount = 0
     private static var isInstantDrag = false
     static var isDragging: Bool { originalMousePoint != nil }
+    
+    // Minimum width and height for a window to be considered a regular app window in getActiveWindowInfo (filtering out small system utilities/status items).
+    private static let minActiveWindowWidth: CGFloat = 100
+    private static let minActiveWindowHeight: CGFloat = 100
 
     // Core space switching implementation.
     static func switchToSpace(_ spaceID: String, forceInstant: Bool = false) {
@@ -434,7 +438,7 @@ class SpaceHelper {
                       let bounds = window[kCGWindowBounds as String] as? [String: Any],
                       let x = bounds["X"] as? CGFloat, let y = bounds["Y"] as? CGFloat,
                       let w = bounds["Width"] as? CGFloat, let h = bounds["Height"] as? CGFloat,
-                      w >= 100, h >= 100
+                      w >= minActiveWindowWidth, h >= minActiveWindowHeight
                 else { continue }
                 
                 // Ensure it's a regular application window (not a system overlay)
