@@ -540,18 +540,30 @@
         }
       }
     },
-    "Confirm & Execute Batch Move (%lld window%@)" : {
+    "Confirm & Execute Batch Move (%lld windows)" : {
       "localizations" : {
         "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Confirm & Execute Batch Move (%1$lld window%2$@)"
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "Confirm & Execute Batch Move (%lld window)"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "Confirm & Execute Batch Move (%lld windows)"
+                }
+              }
+            }
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "确认 & 执行移动  (%1$lld 窗口%2$@)"
+            "value" : "确认 & 执行批量移动 (%lld 个窗口)"
           }
         }
       }

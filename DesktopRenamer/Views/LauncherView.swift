@@ -724,7 +724,7 @@ struct ConfirmBatchRowView: View {
                 .background(isSelected ? .white : colors.greenText.opacity(0.8))
                 .cornerRadius(6)
             
-            Text(verbatim: String(format: String(localized: "Confirm & Execute Batch Move (%lld window%@)"), count, count == 1 ? "" : "s"))
+            Text(verbatim: String(format: String(localized: "Confirm & Execute Batch Move (%lld windows)"), count))
                 .font(.system(size: 13, weight: .semibold))
                 .foregroundColor(isSelected ? .white : colors.greenText)
             
