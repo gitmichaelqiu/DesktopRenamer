@@ -7,6 +7,27 @@ struct SpaceGroup: Identifiable, Equatable {
     let name: String
     let displayName: String
     let num: Int
+    
+    // Caching transformed string for performance
+    let pinyinName: String
+    let pinyinDisplayName: String
+    
+    init(id: String, name: String, displayName: String, num: Int) {
+        self.id = id
+        self.name = name
+        self.displayName = displayName
+        self.num = num
+        
+        let mutableName = NSMutableString(string: name)
+        CFStringTransform(mutableName, nil, kCFStringTransformToLatin, false)
+        CFStringTransform(mutableName, nil, kCFStringTransformStripDiacritics, false)
+        self.pinyinName = (mutableName as String).lowercased().replacingOccurrences(of: " ", with: "")
+        
+        let mutableDisplayName = NSMutableString(string: displayName)
+        CFStringTransform(mutableDisplayName, nil, kCFStringTransformToLatin, false)
+        CFStringTransform(mutableDisplayName, nil, kCFStringTransformStripDiacritics, false)
+        self.pinyinDisplayName = (mutableDisplayName as String).lowercased().replacingOccurrences(of: " ", with: "")
+    }
 }
 
 struct WindowEntry: Identifiable, Equatable {
@@ -16,6 +37,29 @@ struct WindowEntry: Identifiable, Equatable {
     let appPath: String
     let title: String
     let space: SpaceGroup
+    
+    // Caching transformed string for performance
+    let pinyinTitle: String
+    let pinyinOwnerName: String
+    
+    init(id: Int, pid: Int32, ownerName: String, appPath: String, title: String, space: SpaceGroup) {
+        self.id = id
+        self.pid = pid
+        self.ownerName = ownerName
+        self.appPath = appPath
+        self.title = title
+        self.space = space
+        
+        let mutableTitle = NSMutableString(string: title)
+        CFStringTransform(mutableTitle, nil, kCFStringTransformToLatin, false)
+        CFStringTransform(mutableTitle, nil, kCFStringTransformStripDiacritics, false)
+        self.pinyinTitle = (mutableTitle as String).lowercased().replacingOccurrences(of: " ", with: "")
+        
+        let mutableOwnerName = NSMutableString(string: ownerName)
+        CFStringTransform(mutableOwnerName, nil, kCFStringTransformToLatin, false)
+        CFStringTransform(mutableOwnerName, nil, kCFStringTransformStripDiacritics, false)
+        self.pinyinOwnerName = (mutableOwnerName as String).lowercased().replacingOccurrences(of: " ", with: "")
+    }
 }
 
 enum BatchMoveItem: Identifiable, Equatable {
@@ -132,17 +176,11 @@ struct BatchMoveSection: Identifiable {
         objectWillChange.send()
     }
 
-    /// Checks whether `query` matches `target`, supporting pinyin input for CJK-localized strings.
+    /// Checks whether `query` matches `target` and its cached `pinyin`, supporting pinyin input for CJK-localized strings.
     /// e.g. typing "qiehuan" or "qie huan" matches "切换桌面" (pinyin: qie huan zhuo mian).
-    private func matchesQuery(_ query: String, target: String) -> Bool {
+    private func matchesQuery(_ query: String, target: String, pinyin: String) -> Bool {
         let lowerQuery = query.lowercased()
-        let lowerTarget = target.lowercased()
-        if lowerTarget.contains(lowerQuery) { return true }
-
-        let mutable = NSMutableString(string: target)
-        CFStringTransform(mutable, nil, kCFStringTransformToLatin, false)
-        CFStringTransform(mutable, nil, kCFStringTransformStripDiacritics, false)
-        let pinyin = (mutable as String).lowercased().replacingOccurrences(of: " ", with: "")
+        if target.lowercased().contains(lowerQuery) { return true }
         let squashedQuery = lowerQuery.replacingOccurrences(of: " ", with: "")
         return pinyin.contains(squashedQuery)
     }
@@ -160,7 +198,8 @@ struct BatchMoveSection: Identifiable {
         } else {
             let query = searchQuery.lowercased()
             return allCommands.filter {
-                matchesQuery(query, target: $0.title) || matchesQuery(query, target: $0.subtitle)
+                matchesQuery(query, target: $0.title, pinyin: $0.pinyinTitle) ||
+                matchesQuery(query, target: $0.subtitle, pinyin: $0.pinyinSubtitle)
             }.sorted {
                 let freqA = getCommandFrequency($0.id)
                 let freqB = getCommandFrequency($1.id)
@@ -183,8 +222,8 @@ struct BatchMoveSection: Identifiable {
         } else {
             let query = searchQuery.lowercased()
             return spaces.filter {
-                matchesQuery(query, target: $0.name) ||
-                matchesQuery(query, target: $0.displayName) ||
+                matchesQuery(query, target: $0.name, pinyin: $0.pinyinName) ||
+                matchesQuery(query, target: $0.displayName, pinyin: $0.pinyinDisplayName) ||
                 "\($0.num)".contains(query)
             }
         }
@@ -197,9 +236,9 @@ struct BatchMoveSection: Identifiable {
         } else {
             let query = searchQuery.lowercased()
             return allStaged.filter {
-                matchesQuery(query, target: $0.window.title) ||
-                matchesQuery(query, target: $0.window.ownerName) ||
-                matchesQuery(query, target: $0.window.space.name)
+                matchesQuery(query, target: $0.window.title, pinyin: $0.window.pinyinTitle) ||
+                matchesQuery(query, target: $0.window.ownerName, pinyin: $0.window.pinyinOwnerName) ||
+                matchesQuery(query, target: $0.window.space.name, pinyin: $0.window.space.pinyinName)
             }
         }
     }
@@ -211,9 +250,9 @@ struct BatchMoveSection: Identifiable {
         } else {
             let query = searchQuery.lowercased()
             return allUnstaged.filter {
-                matchesQuery(query, target: $0.title) ||
-                matchesQuery(query, target: $0.ownerName) ||
-                matchesQuery(query, target: $0.space.name)
+                matchesQuery(query, target: $0.title, pinyin: $0.pinyinTitle) ||
+                matchesQuery(query, target: $0.ownerName, pinyin: $0.pinyinOwnerName) ||
+                matchesQuery(query, target: $0.space.name, pinyin: $0.space.pinyinName)
             }
         }
     }
@@ -290,9 +329,9 @@ struct BatchMoveSection: Identifiable {
         } else {
             let query = searchQuery.lowercased()
             return currentWindows.filter {
-                matchesQuery(query, target: $0.title) ||
-                matchesQuery(query, target: $0.ownerName) ||
-                matchesQuery(query, target: $0.space.name)
+                matchesQuery(query, target: $0.title, pinyin: $0.pinyinTitle) ||
+                matchesQuery(query, target: $0.ownerName, pinyin: $0.pinyinOwnerName) ||
+                matchesQuery(query, target: $0.space.name, pinyin: $0.space.pinyinName)
             }
         }
     }
