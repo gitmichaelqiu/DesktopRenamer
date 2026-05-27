@@ -10,6 +10,7 @@ enum HotkeyType {
     case moveWindowNext
     case moveWindowPrevious
     case moveWindowNumber
+    case switchSpaceNumber
     case reloadLabels
     case moveWindowNextDisplay
     case moveWindowPreviousDisplay
@@ -27,6 +28,7 @@ class HotkeyManager: ObservableObject {
     let moveWindowNextTriggered = PassthroughSubject<Void, Never>()
     let moveWindowPreviousTriggered = PassthroughSubject<Void, Never>()
     let moveWindowNumberTriggered = PassthroughSubject<Int, Never>()
+    let switchSpaceNumberTriggered = PassthroughSubject<Int, Never>()
     let reloadLabelsTriggered = PassthroughSubject<Void, Never>()
     let moveWindowNextDisplayTriggered = PassthroughSubject<Void, Never>()
     let moveWindowPreviousDisplayTriggered = PassthroughSubject<Void, Never>()
@@ -73,6 +75,13 @@ class HotkeyManager: ObservableObject {
     @Published var moveWindowNumberShortcut: Shortcut { // Stores modifiers only for number-based space switching.
         didSet {
             saveShortcut(moveWindowNumberShortcut, key: moveWindowNumberKey)
+            registerShortcuts()
+        }
+    }
+    
+    @Published var switchSpaceNumberShortcut: Shortcut {
+        didSet {
+            saveShortcut(switchSpaceNumberShortcut, key: switchSpaceNumberKey)
             registerShortcuts()
         }
     }
@@ -129,6 +138,7 @@ class HotkeyManager: ObservableObject {
     private var moveWindowNextHotKey: HotKey?
     private var moveWindowPreviousHotKey: HotKey?
     private var moveWindowNumberHotKeys: [HotKey] = []
+    private var switchSpaceNumberHotKeys: [HotKey] = []
     private var reloadLabelsHotKey: HotKey?
     private var moveWindowNextDisplayHotKey: HotKey?
     private var moveWindowPreviousDisplayHotKey: HotKey?
@@ -148,6 +158,7 @@ class HotkeyManager: ObservableObject {
     private let moveWindowNextKey = "HotkeyManager.MoveWindowNext"
     private let moveWindowPreviousKey = "HotkeyManager.MoveWindowPrevious"
     private let moveWindowNumberKey = "HotkeyManager.MoveWindowNumber"
+    private let switchSpaceNumberKey = "HotkeyManager.SwitchSpaceNumber"
     private let reloadLabelsKey = "HotkeyManager.ReloadLabels"
     private let moveWindowNextDisplayKey = "HotkeyManager.MoveWindowNextDisplay"
     private let moveWindowPreviousDisplayKey = "HotkeyManager.MoveWindowPreviousDisplay"
@@ -169,6 +180,7 @@ class HotkeyManager: ObservableObject {
         self.moveWindowNextShortcut = Self.loadShortcut(key: moveWindowNextKey) ?? Shortcut(key: nil, modifiers: [])
         self.moveWindowPreviousShortcut = Self.loadShortcut(key: moveWindowPreviousKey) ?? Shortcut(key: nil, modifiers: [])
         self.moveWindowNumberShortcut = Self.loadShortcut(key: moveWindowNumberKey) ?? Shortcut(key: nil, modifiers: [])
+        self.switchSpaceNumberShortcut = Self.loadShortcut(key: switchSpaceNumberKey) ?? Shortcut(key: nil, modifiers: [])
         self.reloadLabelsShortcut = Self.loadShortcut(key: reloadLabelsKey) ?? Shortcut(key: nil, modifiers: [])
         self.moveWindowNextDisplayShortcut = Self.loadShortcut(key: moveWindowNextDisplayKey) ?? Shortcut(key: nil, modifiers: [])
         self.moveWindowPreviousDisplayShortcut = Self.loadShortcut(key: moveWindowPreviousDisplayKey) ?? Shortcut(key: nil, modifiers: [])
@@ -207,6 +219,18 @@ class HotkeyManager: ObservableObject {
             if moveWindowNumberShortcut.modifiers.contains(.option) { parts.append("⌥") }
             if moveWindowNumberShortcut.modifiers.contains(.control) { parts.append("^") }
             if moveWindowNumberShortcut.modifiers.contains(.shift) { parts.append("⇧") }
+            parts.append(NSLocalizedString(" + Number", comment: ""))
+            return parts.joined()
+        case .switchSpaceNumber:
+            if switchSpaceNumberShortcut.modifiers.isEmpty {
+                 return NSLocalizedString("Settings.Shortcuts.Unassgined", comment: "Unassigned")
+            }
+            // Manually construct description: Modifiers + Number
+            var parts: [String] = []
+            if switchSpaceNumberShortcut.modifiers.contains(.command) { parts.append("⌘") }
+            if switchSpaceNumberShortcut.modifiers.contains(.option) { parts.append("⌥") }
+            if switchSpaceNumberShortcut.modifiers.contains(.control) { parts.append("^") }
+            if switchSpaceNumberShortcut.modifiers.contains(.shift) { parts.append("⇧") }
             parts.append(NSLocalizedString(" + Number", comment: ""))
             return parts.joined()
         }
@@ -317,6 +341,24 @@ class HotkeyManager: ObservableObject {
                 moveWindowNumberHotKeys.append(hk)
             }
         }
+        
+        // Switch Space Number (1-9).
+        switchSpaceNumberHotKeys.removeAll()
+        let switchModSet = switchSpaceNumberShortcut.modifiers.intersection([.command, .option, .control, .shift])
+        if !switchModSet.isEmpty {
+            let numberKeys: [(Key, Int)] = [
+                (.one, 1), (.two, 2), (.three, 3), (.four, 4), (.five, 5),
+                (.six, 6), (.seven, 7), (.eight, 8), (.nine, 9)
+            ]
+            
+            for (key, number) in numberKeys {
+                let hk = HotKey(key: key, modifiers: switchModSet)
+                hk.keyDownHandler = { [weak self] in
+                    self?.switchSpaceNumberTriggered.send(number)
+                }
+                switchSpaceNumberHotKeys.append(hk)
+            }
+        }
     }
 
     // Hotkey recording/listening logic.
@@ -338,6 +380,7 @@ class HotkeyManager: ObservableObject {
         restoreWindowsHotKey = nil
         launcherHotKey = nil
         moveWindowNumberHotKeys.removeAll()
+        switchSpaceNumberHotKeys.removeAll()
 
         removeKeyListener()
 
@@ -351,7 +394,7 @@ class HotkeyManager: ObservableObject {
                 return nil
             }
             
-            if type == .moveWindowNumber {
+            if type == .moveWindowNumber || type == .switchSpaceNumber {
                 guard Shortcut.keyFromEvent(event) != nil else { return event }
                 let rawModifiers = event.modifierFlags.intersection([.command, .option, .control, .shift])
                 let cleanedModifiers = self.convertToHotkeyModifiers(rawModifiers)
@@ -392,6 +435,7 @@ class HotkeyManager: ObservableObject {
         case .moveWindowNext: moveWindowNextShortcut = shortcut
         case .moveWindowPrevious: moveWindowPreviousShortcut = shortcut
         case .moveWindowNumber: moveWindowNumberShortcut = shortcut
+        case .switchSpaceNumber: switchSpaceNumberShortcut = shortcut
         case .reloadLabels: reloadLabelsShortcut = shortcut
         case .moveWindowNextDisplay: moveWindowNextDisplayShortcut = shortcut
         case .moveWindowPreviousDisplay: moveWindowPreviousDisplayShortcut = shortcut
@@ -423,6 +467,7 @@ class HotkeyManager: ObservableObject {
         case .moveWindowNext: return moveWindowNextShortcut == defaultNone
         case .moveWindowPrevious: return moveWindowPreviousShortcut == defaultNone
         case .moveWindowNumber: return moveWindowNumberShortcut == defaultNone
+        case .switchSpaceNumber: return switchSpaceNumberShortcut == defaultNone
         case .reloadLabels: return reloadLabelsShortcut == defaultNone
         case .moveWindowNextDisplay: return moveWindowNextDisplayShortcut == defaultNone
         case .moveWindowPreviousDisplay: return moveWindowPreviousDisplayShortcut == defaultNone
@@ -440,6 +485,7 @@ class HotkeyManager: ObservableObject {
         case .moveWindowNext: moveWindowNextShortcut = defaultNone
         case .moveWindowPrevious: moveWindowPreviousShortcut = defaultNone
         case .moveWindowNumber: moveWindowNumberShortcut = defaultNone
+        case .switchSpaceNumber: switchSpaceNumberShortcut = defaultNone
         case .reloadLabels: reloadLabelsShortcut = defaultNone
         case .moveWindowNextDisplay: moveWindowNextDisplayShortcut = defaultNone
         case .moveWindowPreviousDisplay: moveWindowPreviousDisplayShortcut = defaultNone
@@ -486,6 +532,8 @@ class HotkeyManager: ObservableObject {
         toggleLockHotKey = nil
         restoreWindowsHotKey = nil
         launcherHotKey = nil
+        moveWindowNumberHotKeys.removeAll()
+        switchSpaceNumberHotKeys.removeAll()
         removeKeyListener()
     }
 }

@@ -57,10 +57,33 @@ struct SwitchSettingsView: View {
                             .disabled(hotkeyManager.isDefault(for: .switchRight))
                         }
                     }
+                    
+                    Divider()
+                    
+                    SettingsRow(
+                        "Switch to space number",
+                        helperText: "Press modifiers and a number to set the shortcut."
+                    ) {
+                        HStack {
+                            Text(hotkeyManager.description(for: .switchSpaceNumber))
+                                .foregroundColor(.secondary)
+                                .padding(.trailing, 8)
+                            
+                            Button("◉") {
+                                hotkeyManager.startListening(for: .switchSpaceNumber)
+                            }
+                            .disabled(hotkeyManager.isListening)
+                            
+                            Button("↺") {
+                                hotkeyManager.resetToDefault(for: .switchSpaceNumber)
+                            }
+                            .disabled(hotkeyManager.isDefault(for: .switchSpaceNumber))
+                        }
+                    }
                 }
                 
                 SettingsSection(nil) {
-                    SettingsRow("Move window to previous desktop") {
+                    SettingsRow("Move window to previous space") {
                         HStack {
                             Text(hotkeyManager.description(for: .moveWindowPrevious))
                                 .foregroundColor(.secondary)
@@ -80,7 +103,7 @@ struct SwitchSettingsView: View {
                     
                     Divider()
                     
-                    SettingsRow("Move window to next desktop") {
+                    SettingsRow("Move window to next space") {
                         HStack {
                             Text(hotkeyManager.description(for: .moveWindowNext))
                                 .foregroundColor(.secondary)
@@ -100,7 +123,7 @@ struct SwitchSettingsView: View {
                     
                     Divider()
                     
-                    SettingsRow("Move window to desktop number", helperText: "Press modifiers and a number to set the shortcut.") {
+                    SettingsRow("Move window to space number", helperText: "Press modifiers and a number to set the shortcut.") {
                         HStack {
                             Text(hotkeyManager.description(for: .moveWindowNumber))
                                 .foregroundColor(.secondary)
@@ -201,37 +224,6 @@ struct SwitchSettingsView: View {
                             }
                             .disabled(hotkeyManager.isDefault(for: .restoreWindows))
                         }
-                    }
-                }
-                
-                SettingsSection("Launcher") {
-                    SettingsRow("Open Launcher") {
-                        HStack {
-                            Text(hotkeyManager.description(for: .launcher))
-                                .foregroundColor(.secondary)
-                                .padding(.trailing, 8)
-                            
-                            Button("◉") {
-                                hotkeyManager.startListening(for: .launcher)
-                            }
-                            .disabled(hotkeyManager.isListening)
-                            
-                            Button("↺") {
-                                hotkeyManager.resetToDefault(for: .launcher)
-                            }
-                            .disabled(hotkeyManager.isDefault(for: .launcher))
-                        }
-                    }
-
-                    Divider()
-
-                    SettingsRow(
-                        "Automatically Return to Original Space",
-                        helperText: "Automatically return to your original desktop after moving windows to a different desktop."
-                    ) {
-                        Toggle("", isOn: $spaceManager.returnToOriginalAfterBatchMove)
-                            .toggleStyle(.switch)
-                            .labelsHidden()
                     }
                 }
                 

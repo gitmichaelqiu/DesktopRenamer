@@ -97,6 +97,32 @@ struct BatchMoveSection: Identifiable {
 }
 
 @MainActor class LauncherViewModel: ObservableObject {
+    @AppStorage("com.michaelqiu.desktoprenamer.automaticallyRankCommands") var automaticallyRankCommands: Bool = true
+    @AppStorage("com.michaelqiu.desktoprenamer.launcherManualCommandOrder") var launcherManualCommandOrder: String = ""
+
+    var manualCommandOrder: [String] {
+        if launcherManualCommandOrder.isEmpty {
+            return allCommands.map { $0.id }
+        }
+        let storedIds = launcherManualCommandOrder.components(separatedBy: ",")
+        var order = storedIds.filter { id in allCommands.contains(where: { $0.id == id }) }
+        for cmd in allCommands {
+            if !order.contains(cmd.id) {
+                order.append(cmd.id)
+            }
+        }
+        return order
+    }
+
+    func moveCommand(at index: Int, direction: Int) {
+        var order = manualCommandOrder
+        let targetIndex = index + direction
+        guard targetIndex >= 0 && targetIndex < order.count else { return }
+        order.swapAt(index, targetIndex)
+        launcherManualCommandOrder = order.joined(separator: ",")
+        objectWillChange.send()
+    }
+
     @Published var searchQuery: String = "" {
         didSet {
             selectedRowIndex = 0
@@ -185,29 +211,38 @@ struct BatchMoveSection: Identifiable {
         return pinyin.contains(squashedQuery)
     }
 
-    var filteredCommands: [LauncherCommand] {
-        if searchQuery.isEmpty {
-            return allCommands.sorted {
+    private func sortCommands(_ commands: [LauncherCommand]) -> [LauncherCommand] {
+        let order = manualCommandOrder
+        if automaticallyRankCommands {
+            return commands.sorted {
                 let freqA = getCommandFrequency($0.id)
                 let freqB = getCommandFrequency($1.id)
                 if freqA != freqB {
                     return freqA > freqB
                 }
-                return $0.title < $1.title
+                let idxA = order.firstIndex(of: $0.id) ?? Int.max
+                let idxB = order.firstIndex(of: $1.id) ?? Int.max
+                return idxA < idxB
             }
         } else {
+            return commands.sorted {
+                let idxA = order.firstIndex(of: $0.id) ?? Int.max
+                let idxB = order.firstIndex(of: $1.id) ?? Int.max
+                return idxA < idxB
+            }
+        }
+    }
+
+    var filteredCommands: [LauncherCommand] {
+        if searchQuery.isEmpty {
+            return sortCommands(allCommands)
+        } else {
             let query = searchQuery.lowercased()
-            return allCommands.filter {
+            let filtered = allCommands.filter {
                 matchesQuery(query, target: $0.title, pinyin: $0.pinyinTitle) ||
                 matchesQuery(query, target: $0.subtitle, pinyin: $0.pinyinSubtitle)
-            }.sorted {
-                let freqA = getCommandFrequency($0.id)
-                let freqB = getCommandFrequency($1.id)
-                if freqA != freqB {
-                    return freqA > freqB
-                }
-                return $0.title < $1.title
             }
+            return sortCommands(filtered)
         }
     }
     
