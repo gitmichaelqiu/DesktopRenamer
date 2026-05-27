@@ -204,37 +204,6 @@ struct SwitchSettingsView: View {
                     }
                 }
                 
-                SettingsSection("Launcher") {
-                    SettingsRow("Open Launcher") {
-                        HStack {
-                            Text(hotkeyManager.description(for: .launcher))
-                                .foregroundColor(.secondary)
-                                .padding(.trailing, 8)
-                            
-                            Button("◉") {
-                                hotkeyManager.startListening(for: .launcher)
-                            }
-                            .disabled(hotkeyManager.isListening)
-                            
-                            Button("↺") {
-                                hotkeyManager.resetToDefault(for: .launcher)
-                            }
-                            .disabled(hotkeyManager.isDefault(for: .launcher))
-                        }
-                    }
-
-                    Divider()
-
-                    SettingsRow(
-                        "Automatically Return to Original Space",
-                        helperText: "Automatically return to your original desktop after moving windows to a different desktop."
-                    ) {
-                        Toggle("", isOn: $spaceManager.returnToOriginalAfterBatchMove)
-                            .toggleStyle(.switch)
-                            .labelsHidden()
-                    }
-                }
-                
                 // Gesture-based switching configuration.
                 SettingsSection("Trackpad Switch Gesture Override") {
                     SettingsRow(

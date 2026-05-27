@@ -15,7 +15,7 @@ class LauncherNSPanel: NSPanel {
 class LauncherWindowController: NSWindowController, NSWindowDelegate {
     static let shared = LauncherWindowController()
     
-    private let viewModel = LauncherViewModel()
+    let viewModel = LauncherViewModel()
     var shouldRestoreFocus = true
     
     private var isCommandKeyPressed = false

@@ -1,7 +1,7 @@
 import SwiftUI
 
 enum SettingsTab: String, CaseIterable, Identifiable {
-    case general, space, labels, sswitch, permissions, about
+    case general, space, labels, sswitch, launcher, permissions, about
 
     var id: String { self.rawValue }
 
@@ -11,6 +11,7 @@ enum SettingsTab: String, CaseIterable, Identifiable {
         case .space: return "Settings.Spaces"
         case .labels: return "Settings.Labels"
         case .sswitch: return "Settings.Switch"
+        case .launcher: return "Settings.Launcher"
         case .permissions: return "Permissions"
         case .about: return "Settings.About"
         }
@@ -23,6 +24,7 @@ enum SettingsTab: String, CaseIterable, Identifiable {
         case .space: return "macwindow"
         case .labels: return "tag"
         case .sswitch: return "arrow.left.and.right.square"
+        case .launcher: return "command"
         case .permissions: return "lock.shield"
         case .about: return "info.circle"
         }
@@ -73,6 +75,8 @@ struct SettingsView: View {
                     .environment(\.settingsTab, .labels)
                 SwitchSettingsView()
                     .environment(\.settingsTab, .sswitch)
+                LauncherSettingsView()
+                    .environment(\.settingsTab, .launcher)
                 PermissionsSettingsView()
                     .environment(\.settingsTab, .permissions)
                 AboutView()
@@ -274,6 +278,8 @@ struct SettingsView: View {
                     LabelSettingsView(labelManager: labelManager)
                 case .sswitch:
                     SwitchSettingsView()
+                case .launcher:
+                    LauncherSettingsView()
                 case .permissions:
                     PermissionsSettingsView()
                 case .about:
