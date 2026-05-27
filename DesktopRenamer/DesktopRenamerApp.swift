@@ -111,6 +111,11 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             .receive(on: DispatchQueue.main)
             .sink { [weak self] number in self?.spaceManager.moveActiveWindowToSpace(number: number) }
             .store(in: &cancellables)
+            
+        hotkeyManager.switchSpaceNumberTriggered
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] number in self?.spaceManager.switchToSpace(number: number) }
+            .store(in: &cancellables)
 
         hotkeyManager.reloadLabelsTriggered
             .receive(on: DispatchQueue.main)

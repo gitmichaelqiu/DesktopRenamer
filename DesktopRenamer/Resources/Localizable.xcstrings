@@ -2769,6 +2769,22 @@
         }
       }
     },
+    "Switch to desktop number" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Switch to desktop number"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "切换到指定桌面"
+          }
+        }
+      }
+    },
     "Switch display with" : {
       "localizations" : {
         "zh-Hans" : {

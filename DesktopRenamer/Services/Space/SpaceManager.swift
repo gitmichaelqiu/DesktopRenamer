@@ -966,6 +966,12 @@ class SpaceManager: ObservableObject {
         }
     }
     
+    func switchToSpace(number: Int) {
+        if let target = spaceNameDict.first(where: { $0.num == number }) {
+            switchToSpace(target)
+        }
+    }
+    
     func moveActiveWindowToSpace(id: String) {
         // BUG FIX: Prevent redundant move attempts if the target is already current.
         if id == currentSpaceUUID { return }

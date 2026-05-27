@@ -57,6 +57,29 @@ struct SwitchSettingsView: View {
                             .disabled(hotkeyManager.isDefault(for: .switchRight))
                         }
                     }
+                    
+                    Divider()
+                    
+                    SettingsRow(
+                        "Switch to desktop number",
+                        helperText: "Press modifiers and a number to set the shortcut."
+                    ) {
+                        HStack {
+                            Text(hotkeyManager.description(for: .switchSpaceNumber))
+                                .foregroundColor(.secondary)
+                                .padding(.trailing, 8)
+                            
+                            Button("◉") {
+                                hotkeyManager.startListening(for: .switchSpaceNumber)
+                            }
+                            .disabled(hotkeyManager.isListening)
+                            
+                            Button("↺") {
+                                hotkeyManager.resetToDefault(for: .switchSpaceNumber)
+                            }
+                            .disabled(hotkeyManager.isDefault(for: .switchSpaceNumber))
+                        }
+                    }
                 }
                 
                 SettingsSection(nil) {
