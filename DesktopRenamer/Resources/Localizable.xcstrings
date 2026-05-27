@@ -81,6 +81,9 @@
         }
       }
     },
+    "%lld" : {
+      "shouldTranslate" : false
+    },
     "%lld items" : {
       "localizations" : {
         "zh-Hans" : {
@@ -370,7 +373,33 @@
         }
       }
     },
-    "Automatically Return to Original Space" : {
+    "Automatically rank commands" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "自动排序命令"
+          }
+        }
+      }
+    },
+    "Automatically rank commands based on their execution frequency. Turn off to manually reorder commands." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Automatically rank commands based on their execution frequency. Turn off to manually reorder commands."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "根据执行频率自动对命令进行排序。关闭以手动调整命令顺序。"
+          }
+        }
+      }
+    },
+    "Automatically return to original space" : {
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
@@ -907,7 +936,7 @@
         }
       }
     },
-    "Hide when switching desktops" : {
+    "Hide when switching spaces" : {
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
@@ -987,6 +1016,16 @@
         }
       }
     },
+    "Keep visible on space" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "在桌面可见"
+          }
+        }
+      }
+    },
     "Keyboard Shortcuts" : {
       "localizations" : {
         "zh-Hans" : {
@@ -997,12 +1036,34 @@
         }
       }
     },
-    "Launcher" : {
+    "Launcher Commands Ranking" : {
       "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Launcher Commands Ranking"
+          }
+        },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "启动器"
+            "value" : "启动器命令排序"
+          }
+        }
+      }
+    },
+    "Launcher Settings" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Launcher Settings"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "启动器设置"
           }
         }
       }
@@ -1252,26 +1313,6 @@
         }
       }
     },
-    "Move window to desktop number" : {
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "将窗口移至桌面n"
-          }
-        }
-      }
-    },
-    "Move window to next desktop" : {
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "将窗口移至下个桌面"
-          }
-        }
-      }
-    },
     "Move window to next display" : {
       "localizations" : {
         "zh-Hans" : {
@@ -1282,12 +1323,12 @@
         }
       }
     },
-    "Move window to previous desktop" : {
+    "Move window to next space" : {
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "将窗口移至上个桌面"
+            "value" : "将窗口移至下个桌面"
           }
         }
       }
@@ -1298,6 +1339,26 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "将窗口移至上个显示器"
+          }
+        }
+      }
+    },
+    "Move window to previous space" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "将窗口移至上个桌面"
+          }
+        }
+      }
+    },
+    "Move window to space number" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "将窗口移至桌面n"
           }
         }
       }
@@ -1360,6 +1421,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "继续"
+          }
+        }
+      }
+    },
+    "No commands found" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "无相关命令"
           }
         }
       }
@@ -1440,7 +1511,7 @@
         }
       }
     },
-    "Open Launcher" : {
+    "Open launcher" : {
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
@@ -2301,6 +2372,54 @@
         }
       }
     },
+    "Settings.Launcher" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Launcher"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "启动器"
+          }
+        }
+      }
+    },
+    "Settings.Launcher.Command.Actions" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Actions"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "操作"
+          }
+        }
+      }
+    },
+    "Settings.Launcher.Command.Name" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Command"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "命令"
+          }
+        }
+      }
+    },
     "Settings.Shortcuts.Hotkey.PressNew" : {
       "comment" : "Press new shortcut…",
       "localizations" : {
@@ -2630,6 +2749,16 @@
         }
       }
     },
+    "Switch ↵" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "切换 ↵"
+          }
+        }
+      }
+    },
     "Switch Desktop" : {
       "localizations" : {
         "zh-Hans" : {
@@ -2666,16 +2795,6 @@
         }
       }
     },
-    "Switch ↵" : {
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "切换 ↵"
-          }
-        }
-      }
-    },
     "Switch Space" : {
       "localizations" : {
         "zh-Hans" : {
@@ -2702,6 +2821,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "切换至上个桌面"
+          }
+        }
+      }
+    },
+    "Switch to space number" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "切换至桌面n"
           }
         }
       }

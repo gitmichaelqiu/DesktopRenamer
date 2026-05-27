@@ -22,7 +22,7 @@ struct LabelSettingsView: View {
                         Divider()
 
                         SettingsRow(
-                            "Hide when switching desktops",
+                            "Hide when switching spaces",
                             helperText:
                                 "Hide the space label window of the space that is being switched to immediately instead of hiding it after the space is switched."
                         ) {
@@ -72,7 +72,7 @@ struct LabelSettingsView: View {
                         Divider()
 
                         SettingsRow(
-                            "Keep visible on desktop",
+                            "Keep visible on space",
                             helperText:
                                 "If enabled, the label stays on the desktop instead of hiding.\n\nIf disabled, the label will only be visible in Mission Control.\n\nTip: You can drag the window to the screen edge to shrink it into a 'Picture-in-Picture' mode."
                         ) {
