@@ -220,14 +220,14 @@ struct BatchMoveSection: Identifiable {
                 if freqA != freqB {
                     return freqA > freqB
                 }
-                let idxA = order.firstIndex(of: $0.id) ?? 0
-                let idxB = order.firstIndex(of: $1.id) ?? 0
+                let idxA = order.firstIndex(of: $0.id) ?? Int.max
+                let idxB = order.firstIndex(of: $1.id) ?? Int.max
                 return idxA < idxB
             }
         } else {
             return commands.sorted {
-                let idxA = order.firstIndex(of: $0.id) ?? 0
-                let idxB = order.firstIndex(of: $1.id) ?? 0
+                let idxA = order.firstIndex(of: $0.id) ?? Int.max
+                let idxB = order.firstIndex(of: $1.id) ?? Int.max
                 return idxA < idxB
             }
         }
