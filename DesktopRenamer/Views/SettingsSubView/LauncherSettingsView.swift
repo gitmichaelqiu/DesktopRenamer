@@ -1,5 +1,6 @@
 import SwiftUI
 
+@MainActor
 struct LauncherSettingsView: View {
     @EnvironmentObject var spaceManager: SpaceManager
     @EnvironmentObject var hotkeyManager: HotkeyManager
