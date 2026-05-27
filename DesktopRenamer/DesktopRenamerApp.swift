@@ -264,11 +264,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
            let spaceNum = Int(numString) {
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
                 guard let manager = self.spaceManager else { return }
-                // Note: This matches the first found space by number, which may be ambiguous 
-                // on multi-monitor setups where numbers overlap.
-                if let space = manager.spaceNameDict.first(where: { $0.num == spaceNum }) {
-                    manager.switchToSpace(space)
-                }
+                manager.switchToSpace(number: spaceNum)
             }
         }
     }

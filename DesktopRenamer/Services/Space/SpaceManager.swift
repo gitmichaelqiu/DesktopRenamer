@@ -959,7 +959,7 @@ class SpaceManager: ObservableObject {
     }
     
     func moveActiveWindowToSpace(number: Int) {
-        if let target = spaceNameDict.first(where: { $0.num == number }) {
+        if let target = spaceNameDict.first(where: { $0.num == number && $0.displayID == currentDisplayID }) {
             // BUG FIX: Prevent redundant move attempts if the target is already current.
             if target.id == currentSpaceUUID { return }
             SpaceHelper.dragActiveWindow(to: target.id, forceInstant: true)
@@ -967,7 +967,7 @@ class SpaceManager: ObservableObject {
     }
     
     func switchToSpace(number: Int) {
-        if let target = spaceNameDict.first(where: { $0.num == number }) {
+        if let target = spaceNameDict.first(where: { $0.num == number && $0.displayID == currentDisplayID }) {
             switchToSpace(target)
         }
     }
