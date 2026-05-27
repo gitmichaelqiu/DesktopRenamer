@@ -11,7 +11,7 @@ struct LauncherSettingsView: View {
         SettingsContainer(.launcher) {
             VStack(alignment: .leading, spacing: 20) {
                 SettingsSection("Launcher Settings") {
-                    SettingsRow("Open Launcher") {
+                    SettingsRow("Open launcher") {
                         HStack {
                             Text(hotkeyManager.description(for: .launcher))
                                 .foregroundColor(.secondary)
@@ -32,7 +32,7 @@ struct LauncherSettingsView: View {
                     Divider()
 
                     SettingsRow(
-                        "Automatically Return to Original Space",
+                        "Automatically return to original space",
                         helperText: "Automatically return to your original desktop after moving windows to a different desktop."
                     ) {
                         Toggle("", isOn: $spaceManager.returnToOriginalAfterBatchMove)
@@ -43,7 +43,7 @@ struct LauncherSettingsView: View {
                 
                 SettingsSection("Launcher Commands Ranking") {
                     SettingsRow(
-                        "Automatically Rank Commands",
+                        "Automatically rank commands",
                         helperText: "Automatically rank commands based on their execution frequency. Turn off to manually reorder commands."
                     ) {
                         Toggle("", isOn: $viewModel.automaticallyRankCommands)

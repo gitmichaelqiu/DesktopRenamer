@@ -82,7 +82,7 @@
       }
     },
     "%lld" : {
-
+      "shouldTranslate" : false
     },
     "%lld items" : {
       "localizations" : {
@@ -373,14 +373,8 @@
         }
       }
     },
-    "Automatically Rank Commands" : {
+    "Automatically rank commands" : {
       "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Automatically Rank Commands"
-          }
-        },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
@@ -405,7 +399,7 @@
         }
       }
     },
-    "Automatically Return to Original Space" : {
+    "Automatically return to original space" : {
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
@@ -942,7 +936,7 @@
         }
       }
     },
-    "Hide when switching desktops" : {
+    "Hide when switching spaces" : {
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
@@ -1022,23 +1016,22 @@
         }
       }
     },
+    "Keep visible on space" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "在桌面可见"
+          }
+        }
+      }
+    },
     "Keyboard Shortcuts" : {
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "键盘快捷键"
-          }
-        }
-      }
-    },
-    "Launcher" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "启动器"
           }
         }
       }
@@ -1320,26 +1313,6 @@
         }
       }
     },
-    "Move window to desktop number" : {
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "将窗口移至桌面n"
-          }
-        }
-      }
-    },
-    "Move window to next desktop" : {
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "将窗口移至下个桌面"
-          }
-        }
-      }
-    },
     "Move window to next display" : {
       "localizations" : {
         "zh-Hans" : {
@@ -1350,12 +1323,12 @@
         }
       }
     },
-    "Move window to previous desktop" : {
+    "Move window to next space" : {
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "将窗口移至上个桌面"
+            "value" : "将窗口移至下个桌面"
           }
         }
       }
@@ -1366,6 +1339,26 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "将窗口移至上个显示器"
+          }
+        }
+      }
+    },
+    "Move window to previous space" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "将窗口移至上个桌面"
+          }
+        }
+      }
+    },
+    "Move window to space number" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "将窗口移至桌面n"
           }
         }
       }
@@ -1433,7 +1426,14 @@
       }
     },
     "No commands found" : {
-
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "无相关命令"
+          }
+        }
+      }
     },
     "No commands matched your search query." : {
       "localizations" : {
@@ -1511,7 +1511,7 @@
         }
       }
     },
-    "Open Launcher" : {
+    "Open launcher" : {
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
@@ -2769,22 +2769,6 @@
         }
       }
     },
-    "Switch to desktop number" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Switch to desktop number"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "切换到指定桌面"
-          }
-        }
-      }
-    },
     "Switch display with" : {
       "localizations" : {
         "zh-Hans" : {
@@ -2837,6 +2821,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "切换至上个桌面"
+          }
+        }
+      }
+    },
+    "Switch to space number" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "切换至桌面n"
           }
         }
       }

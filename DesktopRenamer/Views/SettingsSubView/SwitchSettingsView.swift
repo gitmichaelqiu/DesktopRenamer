@@ -61,7 +61,7 @@ struct SwitchSettingsView: View {
                     Divider()
                     
                     SettingsRow(
-                        "Switch to desktop number",
+                        "Switch to space number",
                         helperText: "Press modifiers and a number to set the shortcut."
                     ) {
                         HStack {
@@ -83,7 +83,7 @@ struct SwitchSettingsView: View {
                 }
                 
                 SettingsSection(nil) {
-                    SettingsRow("Move window to previous desktop") {
+                    SettingsRow("Move window to previous space") {
                         HStack {
                             Text(hotkeyManager.description(for: .moveWindowPrevious))
                                 .foregroundColor(.secondary)
@@ -103,7 +103,7 @@ struct SwitchSettingsView: View {
                     
                     Divider()
                     
-                    SettingsRow("Move window to next desktop") {
+                    SettingsRow("Move window to next space") {
                         HStack {
                             Text(hotkeyManager.description(for: .moveWindowNext))
                                 .foregroundColor(.secondary)
@@ -123,7 +123,7 @@ struct SwitchSettingsView: View {
                     
                     Divider()
                     
-                    SettingsRow("Move window to desktop number", helperText: "Press modifiers and a number to set the shortcut.") {
+                    SettingsRow("Move window to space number", helperText: "Press modifiers and a number to set the shortcut.") {
                         HStack {
                             Text(hotkeyManager.description(for: .moveWindowNumber))
                                 .foregroundColor(.secondary)
