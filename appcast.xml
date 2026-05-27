@@ -16,6 +16,7 @@
                 <enclosure url="https://raw.githubusercontent.com/gitmichaelqiu/DesktopRenamer/main/DesktopRenamer/Resources/Sparkle/DesktopRenamer33-28.delta" sparkle:deltaFrom="28" length="16850422" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="977824" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,uk" sparkle:edSignature="0OUloFXGuk6wratrtue+Os+v2I10QQzoYdJaZi8BoXnRMp/DEiCecFXZTYoSqEOh3Tq61HYSUMxCMaYxu7bhCA=="/>
                 <enclosure url="https://raw.githubusercontent.com/gitmichaelqiu/DesktopRenamer/main/DesktopRenamer/Resources/Sparkle/DesktopRenamer33-27.delta" sparkle:deltaFrom="27" length="17004110" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="977824" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,uk" sparkle:edSignature="E9O9uQHurhkD+ER3kRI+S7qSSeV2dWR8Hau2uOAeGaagZ1qo/yB1jDPin8/ppf+1uSGkQl3KY21QMmo0hac6Cw=="/>
             </sparkle:deltas>
+            <sparkle:releaseNotesLink>https://github.com/gitmichaelqiu/DesktopRenamer/releases/tag/v1.12.1</sparkle:releaseNotesLink>
         </item>
         <item>
             <title>1.12.0</title>
