@@ -6,6 +6,7 @@ struct SwitchSettingsView: View {
     @EnvironmentObject var gestureManager: GestureManager
     @EnvironmentObject var spaceManager: SpaceManager
     @EnvironmentObject var labelManager: SpaceLabelManager
+    @EnvironmentObject var navigationState: SettingsNavigationState
     @StateObject private var permissionManager = PermissionManager.shared
     
     @State private var showingAddExceptionSheet = false
@@ -388,6 +389,7 @@ struct SwitchSettingsView: View {
                             set: { spaceManager.appGrabExceptions[idx] = $0 }
                         )
                     )
+                    .environmentObject(navigationState)
                 } else {
                     Text("Error locating exception").padding()
                 }
@@ -542,18 +544,15 @@ struct EditAppExceptionView: View {
             .padding(.bottom, 5)
             
             // Sliders area
-            VStack(spacing: 16) {
-                VStack(alignment: .leading, spacing: 6) {
-                    HStack {
-                        Text("Grab Offset X")
-                            .fontWeight(.medium)
-                        Spacer()
-                        Text("\(Int(exception.grabOffsetX)) px")
-                            .font(.system(.body, design: .monospaced))
-                            .foregroundColor(.secondary)
-                    }
-                    Slider(value: $exception.grabOffsetX, in: 0...300, step: 1.0)
-                }
+            SettingsSection(nil) {
+                SliderSettingsRow(
+                    "Grab offset X",
+                    value: $exception.grabOffsetX,
+                    range: 0...300,
+                    defaultValue: spaceManager.grabOffsetX,
+                    step: 1.0,
+                    valueString: { String(format: "%.0f px", $0) }
+                )
                 .onChange(of: exception.grabOffsetX) { _ in
                     if previewActive {
                         warpCursorToPreview()
@@ -561,17 +560,16 @@ struct EditAppExceptionView: View {
                     }
                 }
                 
-                VStack(alignment: .leading, spacing: 6) {
-                    HStack {
-                        Text("Grab Offset Y")
-                            .fontWeight(.medium)
-                        Spacer()
-                        Text("\(Int(exception.grabOffsetY)) px")
-                            .font(.system(.body, design: .monospaced))
-                            .foregroundColor(.secondary)
-                    }
-                    Slider(value: $exception.grabOffsetY, in: 0...300, step: 1.0)
-                }
+                Divider()
+                
+                SliderSettingsRow(
+                    "Grab offset Y",
+                    value: $exception.grabOffsetY,
+                    range: 0...300,
+                    defaultValue: spaceManager.grabOffsetY,
+                    step: 1.0,
+                    valueString: { String(format: "%.0f px", $0) }
+                )
                 .onChange(of: exception.grabOffsetY) { _ in
                     if previewActive {
                         warpCursorToPreview()
