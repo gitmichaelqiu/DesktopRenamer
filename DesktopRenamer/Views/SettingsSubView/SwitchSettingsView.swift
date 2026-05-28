@@ -401,7 +401,6 @@ struct AddAppExceptionView: View {
     @Environment(\.presentationMode) var presentationMode
     
     @State private var runningApps: [RunningAppInfo] = []
-    @State private var selectedRunningAppID: String = ""
     
     struct RunningAppInfo: Identifiable, Hashable {
         var id: String { bundleIdentifier }
@@ -417,69 +416,54 @@ struct AddAppExceptionView: View {
                 .font(.title2)
                 .fontWeight(.bold)
             
-            Text("Select an active application below, or browse your disk to find an app bundle.")
+            Text("Select an active application below to add it as an exception.")
                 .font(.body)
                 .foregroundColor(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
             
-            VStack(alignment: .leading, spacing: 6) {
-                Text("Select from running applications:")
-                    .font(.subheadline)
-                    .fontWeight(.medium)
-                
-                if runningApps.isEmpty {
-                    Text("No running applications detected.")
-                        .font(.callout)
-                        .foregroundColor(.secondary)
-                        .italic()
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .padding(.vertical, 8)
-                } else {
-                    Picker(selection: $selectedRunningAppID, label: EmptyView()) {
-                        Text("Choose an application...").tag("")
-                        ForEach(runningApps) { app in
-                            Text(app.appName).tag(app.bundleIdentifier)
+            ScrollView {
+                VStack(spacing: 2) {
+                    ForEach(runningApps) { app in
+                        AppListItemView(icon: getAppIcon(bundleIdentifier: app.bundleIdentifier), name: app.appName, isSelectable: true) {
+                            let newException = AppGrabException(
+                                bundleIdentifier: app.bundleIdentifier,
+                                appName: app.appName,
+                                grabOffsetX: spaceManager.grabOffsetX,
+                                grabOffsetY: spaceManager.grabOffsetY
+                            )
+                            onAdd(newException)
+                            presentationMode.wrappedValue.dismiss()
                         }
                     }
-                    .pickerStyle(.menu)
-                    .labelsHidden()
-                    .frame(maxWidth: .infinity)
+                    
+                    Divider().padding(.vertical, 4)
+                    
+                    AppListItemView(icon: NSImage(), name: "Choose Application...", isSelectable: false) {
+                        selectAppFromFinder()
+                    }
                 }
+                .padding(4)
             }
-            
-            Spacer()
+            .frame(maxHeight: 220)
+            .background(
+                RoundedRectangle(cornerRadius: 8)
+                    .fill(Color(NSColor.controlBackgroundColor))
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 8)
+                    .stroke(Color.gray.opacity(0.15), lineWidth: 1)
+            )
             
             HStack {
-                Button("Browse Applications...") {
-                    selectAppFromFinder()
-                }
-                .buttonStyle(.bordered)
-                
                 Spacer()
-                
                 Button("Cancel") {
                     presentationMode.wrappedValue.dismiss()
                 }
                 .buttonStyle(.bordered)
-                
-                Button("Add") {
-                    if let app = runningApps.first(where: { $0.bundleIdentifier == selectedRunningAppID }) {
-                        let newException = AppGrabException(
-                            bundleIdentifier: app.bundleIdentifier,
-                            appName: app.appName,
-                            grabOffsetX: spaceManager.grabOffsetX,
-                            grabOffsetY: spaceManager.grabOffsetY
-                        )
-                        onAdd(newException)
-                        presentationMode.wrappedValue.dismiss()
-                    }
-                }
-                .disabled(selectedRunningAppID.isEmpty)
-                .buttonStyle(.borderedProminent)
             }
         }
         .padding(20)
-        .frame(width: 440, height: 240)
+        .frame(width: 400, height: 380)
         .onAppear {
             loadRunningApps()
         }
@@ -800,6 +784,49 @@ struct AppExceptionRow: View {
         }
         .padding(.vertical, 8)
         .padding(.horizontal, 12)
+    }
+}
+
+struct AppListItemView: View {
+    let icon: NSImage
+    let name: String
+    let isSelectable: Bool
+    let action: () -> Void
+    
+    @State private var isHovered = false
+    
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: 10) {
+                if isSelectable {
+                    Image(nsImage: icon)
+                        .resizable()
+                        .scaledToFit()
+                        .frame(width: 20, height: 20)
+                        .cornerRadius(4)
+                } else {
+                    Image(systemName: "folder.badge.plus")
+                        .font(.system(size: 16))
+                        .foregroundColor(.accentColor)
+                        .frame(width: 20, height: 20)
+                }
+                
+                Text(name)
+                    .font(.system(size: 13))
+                    .foregroundColor(isSelectable ? .primary : .accentColor)
+                
+                Spacer()
+            }
+            .padding(.vertical, 6)
+            .padding(.horizontal, 8)
+            .background(isHovered ? Color.gray.opacity(0.15) : Color.clear)
+            .cornerRadius(4)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .onHover { hovering in
+            isHovered = hovering
+        }
     }
 }
 
