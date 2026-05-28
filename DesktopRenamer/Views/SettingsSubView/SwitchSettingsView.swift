@@ -298,7 +298,7 @@ struct SwitchSettingsView: View {
                 }
                 
 
-                SettingsSection("Advanced") {
+                SettingsSection("Grabbing") {
                     SliderSettingsRow(
                         "Grab offset X",
                         helperText: "Adjust the position where the mouse grabs the window to move across spaces.",
@@ -321,8 +321,17 @@ struct SwitchSettingsView: View {
                     )
                 }
                 
-                SettingsSection("Per-App Grabbing Offsets") {
+                SettingsSection(nil) {
+                    SettingsRow("Exceptions") {
+                        Button("Add app exception...") {
+                            showingAddExceptionSheet = true
+                        }
+                        .buttonStyle(.plain)
+                        .foregroundColor(.accentColor)
+                    }
+                    
                     if spaceManager.appGrabExceptions.isEmpty {
+                        Divider()
                         HStack {
                             Spacer()
                             Text("No per-app exceptions defined. Standard grab offsets will be used for all apps.")
@@ -334,6 +343,7 @@ struct SwitchSettingsView: View {
                         .padding(.vertical, 16)
                         .padding(.horizontal, 12)
                     } else {
+                        Divider()
                         VStack(spacing: 0) {
                             ForEach(spaceManager.appGrabExceptions) { exception in
                                 AppExceptionRow(
@@ -354,19 +364,6 @@ struct SwitchSettingsView: View {
                             }
                         }
                     }
-                    
-                    Divider()
-                    
-                    HStack {
-                        Spacer()
-                        Button("Add App Exception...") {
-                            showingAddExceptionSheet = true
-                        }
-                        .buttonStyle(.bordered)
-                        .controlSize(.regular)
-                    }
-                    .padding(.vertical, 8)
-                    .padding(.horizontal, 12)
                 }
                 .animation(.easeInOut(duration: 0.2), value: spaceManager.appGrabExceptions)
                 
