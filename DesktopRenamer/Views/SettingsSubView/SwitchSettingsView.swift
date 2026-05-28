@@ -322,61 +322,48 @@ struct SwitchSettingsView: View {
                 
                 SettingsSection("Per-App Grabbing Offsets") {
                     if spaceManager.appGrabExceptions.isEmpty {
-                        Text("No per-app exceptions defined. Standard grab offsets will be used for all apps.")
-                            .font(.system(size: 12))
-                            .foregroundColor(.secondary)
-                            .padding(.vertical, 8)
+                        HStack {
+                            Spacer()
+                            Text("No per-app exceptions defined. Standard grab offsets will be used for all apps.")
+                                .font(.system(size: 12))
+                                .foregroundColor(.secondary)
+                                .multilineTextAlignment(.center)
+                            Spacer()
+                        }
+                        .padding(.vertical, 16)
+                        .padding(.horizontal, 12)
                     } else {
-                        VStack(spacing: 8) {
+                        VStack(spacing: 0) {
                             ForEach(spaceManager.appGrabExceptions) { exception in
-                                HStack {
-                                    Image(nsImage: getAppIcon(bundleIdentifier: exception.bundleIdentifier))
-                                        .resizable()
-                                        .scaledToFit()
-                                        .frame(width: 18, height: 18)
-                                    
-                                    Text(exception.appName)
-                                        .font(.system(size: 13, weight: .medium))
-                                    
-                                    Spacer()
-                                    
-                                    Text("X: \(Int(exception.grabOffsetX)) px, Y: \(Int(exception.grabOffsetY)) px")
-                                        .font(.system(size: 12))
-                                        .foregroundColor(.secondary)
-                                        .padding(.trailing, 10)
-                                    
-                                    Button {
-                                        editingException = exception
-                                    } label: {
-                                        Image(systemName: "slider.horizontal.3")
-                                    }
-                                    .buttonStyle(.borderless)
-                                    
-                                    Button {
+                                AppExceptionRow(
+                                    exception: exception,
+                                    onEdit: { editingException = exception },
+                                    onDelete: {
                                         if let idx = spaceManager.appGrabExceptions.firstIndex(where: { $0.bundleIdentifier == exception.bundleIdentifier }) {
                                             spaceManager.appGrabExceptions.remove(at: idx)
                                         }
-                                    } label: {
-                                        Image(systemName: "trash")
-                                            .foregroundColor(.red)
                                     }
-                                    .buttonStyle(.borderless)
-                                }
+                                )
                                 
                                 if exception.bundleIdentifier != spaceManager.appGrabExceptions.last?.bundleIdentifier {
-                                    Divider()
+                                    Divider().padding(.horizontal, 12)
                                 }
                             }
                         }
                     }
+                    
+                    Divider()
                     
                     HStack {
                         Spacer()
                         Button("Add App Exception...") {
                             showingAddExceptionSheet = true
                         }
+                        .buttonStyle(.bordered)
+                        .controlSize(.regular)
                     }
-                    .padding(.top, 8)
+                    .padding(.vertical, 8)
+                    .padding(.horizontal, 12)
                 }
                 
                 Spacer()
@@ -425,41 +412,55 @@ struct AddAppExceptionView: View {
     var onAdd: (AppGrabException) -> Void
     
     var body: some View {
-        VStack(spacing: 20) {
+        VStack(alignment: .leading, spacing: 16) {
             Text("Add App Exception")
-                .font(.headline)
+                .font(.title2)
+                .fontWeight(.bold)
             
-            Text("Select a currently running app, or choose one from your Applications folder.")
+            Text("Select an active application below, or browse your disk to find an app bundle.")
                 .font(.body)
                 .foregroundColor(.secondary)
-                .multilineTextAlignment(.center)
-                .padding(.horizontal)
+                .fixedSize(horizontal: false, vertical: true)
             
-            if runningApps.isEmpty {
-                Text("No running apps found...")
-                    .foregroundColor(.secondary)
-                    .italic()
-            } else {
-                Picker("Running Apps", selection: $selectedRunningAppID) {
-                    Text("Select a running app...").tag("")
-                    ForEach(runningApps) { app in
-                        Text(app.appName).tag(app.bundleIdentifier)
+            VStack(alignment: .leading, spacing: 6) {
+                Text("Select from running applications:")
+                    .font(.subheadline)
+                    .fontWeight(.medium)
+                
+                if runningApps.isEmpty {
+                    Text("No running applications detected.")
+                        .font(.callout)
+                        .foregroundColor(.secondary)
+                        .italic()
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(.vertical, 8)
+                } else {
+                    Picker(selection: $selectedRunningAppID, label: EmptyView()) {
+                        Text("Choose an application...").tag("")
+                        ForEach(runningApps) { app in
+                            Text(app.appName).tag(app.bundleIdentifier)
+                        }
                     }
+                    .pickerStyle(.menu)
+                    .labelsHidden()
+                    .frame(maxWidth: .infinity)
                 }
-                .pickerStyle(.menu)
-                .frame(width: 320)
             }
             
-            HStack(spacing: 12) {
-                Button("Select App Bundle...") {
+            Spacer()
+            
+            HStack {
+                Button("Browse Applications...") {
                     selectAppFromFinder()
                 }
+                .buttonStyle(.bordered)
                 
                 Spacer()
                 
                 Button("Cancel") {
                     presentationMode.wrappedValue.dismiss()
                 }
+                .buttonStyle(.bordered)
                 
                 Button("Add") {
                     if let app = runningApps.first(where: { $0.bundleIdentifier == selectedRunningAppID }) {
@@ -476,10 +477,9 @@ struct AddAppExceptionView: View {
                 .disabled(selectedRunningAppID.isEmpty)
                 .buttonStyle(.borderedProminent)
             }
-            .padding(.top, 10)
         }
-        .padding(25)
-        .frame(width: 420, height: 220)
+        .padding(20)
+        .frame(width: 440, height: 240)
         .onAppear {
             loadRunningApps()
         }
@@ -536,30 +536,39 @@ struct EditAppExceptionView: View {
     
     var body: some View {
         VStack(spacing: 20) {
-            HStack {
+            // Header
+            HStack(spacing: 12) {
                 Image(nsImage: getAppIcon(bundleIdentifier: exception.bundleIdentifier))
                     .resizable()
                     .scaledToFit()
-                    .frame(width: 32, height: 32)
+                    .frame(width: 40, height: 40)
+                    .cornerRadius(8)
                 
                 VStack(alignment: .leading, spacing: 2) {
                     Text(exception.appName)
-                        .font(.title2).fontWeight(.bold)
+                        .font(.title2)
+                        .fontWeight(.bold)
                     Text(exception.bundleIdentifier)
-                        .font(.caption).foregroundColor(.secondary).monospaced()
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                        .monospaced()
                 }
                 Spacer()
             }
-            .padding(.bottom, 10)
+            .padding(.bottom, 5)
             
-            VStack(spacing: 12) {
-                HStack {
-                    Text("Grab offset X")
-                        .frame(width: 90, alignment: .leading)
+            // Sliders area
+            VStack(spacing: 16) {
+                VStack(alignment: .leading, spacing: 6) {
+                    HStack {
+                        Text("Grab Offset X")
+                            .fontWeight(.medium)
+                        Spacer()
+                        Text("\(Int(exception.grabOffsetX)) px")
+                            .font(.system(.body, design: .monospaced))
+                            .foregroundColor(.secondary)
+                    }
                     Slider(value: $exception.grabOffsetX, in: 0...300, step: 1.0)
-                    Text("\(Int(exception.grabOffsetX)) px")
-                        .frame(width: 50, alignment: .trailing)
-                        .font(.system(.body, design: .monospaced))
                 }
                 .onChange(of: exception.grabOffsetX) { _ in
                     if previewActive {
@@ -568,13 +577,16 @@ struct EditAppExceptionView: View {
                     }
                 }
                 
-                HStack {
-                    Text("Grab offset Y")
-                        .frame(width: 90, alignment: .leading)
+                VStack(alignment: .leading, spacing: 6) {
+                    HStack {
+                        Text("Grab Offset Y")
+                            .fontWeight(.medium)
+                        Spacer()
+                        Text("\(Int(exception.grabOffsetY)) px")
+                            .font(.system(.body, design: .monospaced))
+                            .foregroundColor(.secondary)
+                    }
                     Slider(value: $exception.grabOffsetY, in: 0...300, step: 1.0)
-                    Text("\(Int(exception.grabOffsetY)) px")
-                        .frame(width: 50, alignment: .trailing)
-                        .font(.system(.body, design: .monospaced))
                 }
                 .onChange(of: exception.grabOffsetY) { _ in
                     if previewActive {
@@ -584,11 +596,10 @@ struct EditAppExceptionView: View {
                 }
             }
             
-            VStack(spacing: 8) {
+            // Preview & status area
+            VStack(spacing: 12) {
                 HStack {
-                    Button(action: {
-                        togglePreview()
-                    }) {
+                    Button(action: togglePreview) {
                         HStack {
                             Image(systemName: previewActive ? "eye.slash.fill" : "eye.fill")
                             Text(previewActive ? "Stop Preview" : "Preview Position")
@@ -597,7 +608,7 @@ struct EditAppExceptionView: View {
                     .buttonStyle(.bordered)
                     
                     if previewActive {
-                        Text("Arrow keys adjustment active. Press arrow keys to move.")
+                        Text("Use ← → ↑ ↓ keys to fine-tune")
                             .font(.caption)
                             .foregroundColor(.secondary)
                     }
@@ -605,23 +616,33 @@ struct EditAppExceptionView: View {
                 }
                 
                 if !feedbackText.isEmpty {
-                    HStack(spacing: 6) {
+                    HStack(spacing: 8) {
                         Image(systemName: isFeedbackSuccess ? "checkmark.circle.fill" : "exclamationmark.triangle.fill")
+                            .font(.system(size: 14, weight: .bold))
                             .foregroundColor(isFeedbackSuccess ? .green : .orange)
                         Text(feedbackText)
                             .font(.caption)
+                            .fontWeight(.medium)
                             .foregroundColor(isFeedbackSuccess ? .primary : .orange)
                         Spacer()
                     }
-                    .padding(8)
+                    .padding(.vertical, 8)
+                    .padding(.horizontal, 12)
                     .background(
-                        RoundedRectangle(cornerRadius: 6)
-                            .fill(isFeedbackSuccess ? Color.green.opacity(0.1) : Color.orange.opacity(0.1))
+                        RoundedRectangle(cornerRadius: 8)
+                            .fill(isFeedbackSuccess ? Color.green.opacity(0.08) : Color.orange.opacity(0.08))
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 8)
+                                    .stroke(isFeedbackSuccess ? Color.green.opacity(0.15) : Color.orange.opacity(0.15), lineWidth: 1)
+                            )
                     )
                 }
             }
-            .padding(.vertical, 8)
+            .padding(.vertical, 4)
             
+            Spacer()
+            
+            // Done Button
             HStack {
                 Spacer()
                 Button("Done") {
@@ -629,10 +650,12 @@ struct EditAppExceptionView: View {
                     presentationMode.wrappedValue.dismiss()
                 }
                 .buttonStyle(.borderedProminent)
+                .controlSize(.regular)
+                .keyboardShortcut(.return)
             }
         }
-        .padding(25)
-        .frame(width: 480, height: 350)
+        .padding(20)
+        .frame(width: 460, height: 400)
         .onDisappear {
             stopPreview()
         }
@@ -723,6 +746,60 @@ struct EditAppExceptionView: View {
             NSEvent.removeMonitor(monitor)
             keyMonitor = nil
         }
+    }
+}
+
+struct AppExceptionRow: View {
+    let exception: AppGrabException
+    let onEdit: () -> Void
+    let onDelete: () -> Void
+    
+    var body: some View {
+        HStack(spacing: 8) {
+            Image(nsImage: getAppIcon(bundleIdentifier: exception.bundleIdentifier))
+                .resizable()
+                .scaledToFit()
+                .frame(width: 20, height: 20)
+                .cornerRadius(4)
+            
+            VStack(alignment: .leading, spacing: 2) {
+                Text(exception.appName)
+                    .font(.system(size: 13, weight: .medium))
+                Text(exception.bundleIdentifier)
+                    .font(.system(size: 10))
+                    .foregroundColor(.secondary)
+                    .lineLimit(1)
+            }
+            
+            Spacer()
+            
+            HStack(spacing: 12) {
+                Text("X: \(Int(exception.grabOffsetX)) px, Y: \(Int(exception.grabOffsetY)) px")
+                    .font(.system(size: 12, design: .monospaced))
+                    .foregroundColor(.secondary)
+                
+                Button {
+                    onEdit()
+                } label: {
+                    Image(systemName: "slider.horizontal.3")
+                        .font(.system(size: 12, weight: .bold))
+                }
+                .buttonStyle(.plain)
+                .help("Edit Exception")
+                
+                Button {
+                    onDelete()
+                } label: {
+                    Image(systemName: "trash")
+                        .font(.system(size: 12, weight: .bold))
+                        .foregroundColor(.red)
+                }
+                .buttonStyle(.plain)
+                .help("Delete Exception")
+            }
+        }
+        .padding(.vertical, 8)
+        .padding(.horizontal, 12)
     }
 }
 
