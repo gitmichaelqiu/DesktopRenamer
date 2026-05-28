@@ -790,7 +790,7 @@ struct AppExceptionRow: View {
             
             HStack(spacing: 12) {
                 Text("X: \(Int(exception.grabOffsetX)) px, Y: \(Int(exception.grabOffsetY)) px")
-                    .font(.system(size: 12, design: .monospaced))
+                    .font(.system(size: 12))
                     .foregroundColor(.secondary)
                 
                 Button {
