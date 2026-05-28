@@ -865,5 +865,5 @@ private func getAppIcon(bundleIdentifier: String) -> NSImage {
     if let url = NSWorkspace.shared.urlForApplication(withBundleIdentifier: bundleIdentifier) {
         return NSWorkspace.shared.icon(forFile: url.path)
     }
-    return NSWorkspace.shared.icon(forFileType: "app")
+    return NSWorkspace.shared.icon(for: .application)
 }
