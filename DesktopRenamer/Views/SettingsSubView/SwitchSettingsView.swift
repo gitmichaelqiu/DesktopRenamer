@@ -663,10 +663,37 @@ struct EditAppExceptionView: View {
             return
         }
         
+        bringAppWindowToFront()
+        
         previewActive = true
         warpCursorToPreview()
         checkDraggability()
         startMonitoringKeys()
+    }
+    
+    private func bringAppWindowToFront() {
+        guard let runningApp = NSWorkspace.shared.runningApplications.first(where: { $0.bundleIdentifier == exception.bundleIdentifier }) else {
+            return
+        }
+        let pid = runningApp.processIdentifier
+        let appRef = AXUIElementCreateApplication(pid)
+        
+        var windowListRef: CFTypeRef?
+        let result = AXUIElementCopyAttributeValue(appRef, "AXWindows" as CFString, &windowListRef)
+        guard result == .success, let windows = windowListRef as? [AXUIElement], !windows.isEmpty else {
+            return
+        }
+        
+        for windowRef in windows {
+            // Unminimize if minimized
+            var minimizedRef: CFTypeRef?
+            if AXUIElementCopyAttributeValue(windowRef, "AXMinimized" as CFString, &minimizedRef) == .success,
+               let isMinimized = minimizedRef as? Bool, isMinimized {
+                AXUIElementSetAttributeValue(windowRef, "AXMinimized" as CFString, false as CFTypeRef)
+            }
+            // Raise window to front
+            AXUIElementPerformAction(windowRef, "AXRaise" as CFString)
+        }
     }
     
     private func stopPreview() {
