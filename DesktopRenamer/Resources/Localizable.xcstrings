@@ -94,9 +94,6 @@
         }
       }
     },
-    "%lld px" : {
-
-    },
     "%lld windows" : {
       "localizations" : {
         "zh-Hans" : {
@@ -448,9 +445,6 @@
         }
       }
     },
-    "Browse Applications..." : {
-
-    },
     "Bug Report Log Collection" : {
       "localizations" : {
         "en" : {
@@ -550,9 +544,6 @@
           }
         }
       }
-    },
-    "Choose an application..." : {
-
     },
     "Choose how the app determines if a space is a Desktop or a Fullscreen App.\n\nAutomatic: No extra actions required.\n\nMetric-based: Based on the thresold of a metric. May not work for multiple displays.\n\nManual: All spaces that are not added will be treated as fullscreen." : {
       "localizations" : {
@@ -923,9 +914,6 @@
         }
       }
     },
-    "Grab Offset X" : {
-
-    },
     "Grab offset Y" : {
       "localizations" : {
         "zh-Hans" : {
@@ -935,9 +923,6 @@
           }
         }
       }
-    },
-    "Grab Offset Y" : {
-
     },
     "Grant" : {
       "localizations" : {
@@ -1517,9 +1502,6 @@
         }
       }
     },
-    "No running applications detected." : {
-
-    },
     "Not a fullscreen?" : {
       "localizations" : {
         "zh-Hans" : {
@@ -2062,7 +2044,7 @@
         }
       }
     },
-    "Select an active application below, or browse your disk to find an app bundle." : {
+    "Select an active application below to add it as an exception." : {
 
     },
     "Select and move multiple windows to a space" : {
@@ -2074,9 +2056,6 @@
           }
         }
       }
-    },
-    "Select from running applications:" : {
-
     },
     "Settings" : {
       "localizations" : {

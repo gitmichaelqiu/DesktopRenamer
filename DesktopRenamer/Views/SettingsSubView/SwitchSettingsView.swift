@@ -578,55 +578,51 @@ struct EditAppExceptionView: View {
                 }
             }
             
-            // Preview & status area
-            VStack(spacing: 12) {
-                HStack {
-                    Button(action: togglePreview) {
-                        HStack {
-                            Image(systemName: previewActive ? "eye.slash.fill" : "eye.fill")
-                            Text(previewActive ? "Stop Preview" : "Preview Position")
-                        }
-                    }
-                    .buttonStyle(.bordered)
-                    
-                    if previewActive {
-                        Text("Use ← → ↑ ↓ keys to fine-tune")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                    }
+            // Feedback status area
+            if !feedbackText.isEmpty {
+                HStack(spacing: 8) {
+                    Image(systemName: isFeedbackSuccess ? "checkmark.circle.fill" : "exclamationmark.triangle.fill")
+                        .font(.system(size: 14, weight: .bold))
+                        .foregroundColor(isFeedbackSuccess ? .green : .orange)
+                    Text(feedbackText)
+                        .font(.caption)
+                        .fontWeight(.medium)
+                        .foregroundColor(isFeedbackSuccess ? .primary : .orange)
                     Spacer()
                 }
-                
-                if !feedbackText.isEmpty {
-                    HStack(spacing: 8) {
-                        Image(systemName: isFeedbackSuccess ? "checkmark.circle.fill" : "exclamationmark.triangle.fill")
-                            .font(.system(size: 14, weight: .bold))
-                            .foregroundColor(isFeedbackSuccess ? .green : .orange)
-                        Text(feedbackText)
-                            .font(.caption)
-                            .fontWeight(.medium)
-                            .foregroundColor(isFeedbackSuccess ? .primary : .orange)
-                        Spacer()
-                    }
-                    .padding(.vertical, 8)
-                    .padding(.horizontal, 12)
-                    .background(
-                        RoundedRectangle(cornerRadius: 8)
-                            .fill(isFeedbackSuccess ? Color.green.opacity(0.08) : Color.orange.opacity(0.08))
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 8)
-                                    .stroke(isFeedbackSuccess ? Color.green.opacity(0.15) : Color.orange.opacity(0.15), lineWidth: 1)
-                            )
-                    )
-                }
+                .padding(.vertical, 8)
+                .padding(.horizontal, 12)
+                .background(
+                    RoundedRectangle(cornerRadius: 8)
+                        .fill(isFeedbackSuccess ? Color.green.opacity(0.08) : Color.orange.opacity(0.08))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 8)
+                                .stroke(isFeedbackSuccess ? Color.green.opacity(0.15) : Color.orange.opacity(0.15), lineWidth: 1)
+                        )
+                )
+                .padding(.vertical, 4)
             }
-            .padding(.vertical, 4)
             
             Spacer()
             
-            // Done Button
+            // Bottom control row
             HStack {
+                Button(action: togglePreview) {
+                    HStack {
+                        Image(systemName: previewActive ? "eye.slash.fill" : "eye.fill")
+                        Text(previewActive ? "Stop Preview" : "Preview Position")
+                    }
+                }
+                .buttonStyle(.bordered)
+                
+                if previewActive {
+                    Text("Use ← → ↑ ↓ to fine-tune")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                }
+                
                 Spacer()
+                
                 Button("Done") {
                     stopPreview()
                     presentationMode.wrappedValue.dismiss()
