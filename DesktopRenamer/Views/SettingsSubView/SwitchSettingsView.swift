@@ -836,7 +836,7 @@ struct AppListItemView: View {
                         .frame(width: 20, height: 20)
                         .cornerRadius(4)
                 } else {
-                    Image(systemName: "folder.badge.plus")
+                    Image(systemName: "plus.app")
                         .font(.system(size: 16))
                         .foregroundColor(.accentColor)
                         .frame(width: 20, height: 20)
