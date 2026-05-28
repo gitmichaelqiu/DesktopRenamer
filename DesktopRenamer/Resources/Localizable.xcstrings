@@ -3094,7 +3094,7 @@
         }
       }
     },
-    "Use ← → ↑ ↓ keys to fine-tune" : {
+    "Use ← → ↑ ↓ to fine-tune" : {
 
     },
     "Use the Raycast extension to move all windows of an app to another space in one command." : {

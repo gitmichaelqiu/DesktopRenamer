@@ -552,10 +552,12 @@ struct EditAppExceptionView: View {
             SettingsSection(nil) {
                 SliderSettingsRow(
                     "Grab offset X",
-                    value: $exception.grabOffsetX,
+                    value: Binding(
+                        get: { exception.grabOffsetX },
+                        set: { exception.grabOffsetX = $0.rounded() }
+                    ),
                     range: 0...300,
                     defaultValue: spaceManager.grabOffsetX,
-                    step: 1.0,
                     valueString: { String(format: "%.0f px", $0) }
                 )
                 .onChange(of: exception.grabOffsetX) { _ in
@@ -569,10 +571,12 @@ struct EditAppExceptionView: View {
                 
                 SliderSettingsRow(
                     "Grab offset Y",
-                    value: $exception.grabOffsetY,
+                    value: Binding(
+                        get: { exception.grabOffsetY },
+                        set: { exception.grabOffsetY = $0.rounded() }
+                    ),
                     range: 0...300,
                     defaultValue: spaceManager.grabOffsetY,
-                    step: 1.0,
                     valueString: { String(format: "%.0f px", $0) }
                 )
                 .onChange(of: exception.grabOffsetY) { _ in
