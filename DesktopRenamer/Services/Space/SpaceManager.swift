@@ -49,6 +49,7 @@ class SpaceManager: ObservableObject {
     static private let lockedSpaceIDsKey = "com.michaelqiu.desktoprenamer.lockedSpaceIDs"
     static private let movedWindowsOriginalSpacesKey = "com.michaelqiu.desktoprenamer.movedWindowsOriginalSpaces"
     static private let returnToOriginalAfterBatchMoveKey = "com.michaelqiu.desktoprenamer.returnToOriginalAfterBatchMove"
+    static private let appGrabExceptionsKey = "com.michaelqiu.desktoprenamer.appGrabExceptions"
     
     @Published private(set) var currentSpaceUUID: String = ""
     @Published private(set) var currentRawSpaceUUID: String = ""
@@ -132,6 +133,14 @@ class SpaceManager: ObservableObject {
         }
     }
     
+    @Published var appGrabExceptions: [AppGrabException] = [] {
+        didSet {
+            if let data = try? JSONEncoder().encode(appGrabExceptions) {
+                UserDefaults.standard.set(data, forKey: SpaceManager.appGrabExceptionsKey)
+            }
+        }
+    }
+    
     static var isAPIEnabled: Bool {
         get { UserDefaults.standard.object(forKey: isAPIEnabledKey) == nil ? true : UserDefaults.standard.bool(forKey: isAPIEnabledKey) }
         set { UserDefaults.standard.set(newValue, forKey: isAPIEnabledKey) }
@@ -161,6 +170,13 @@ class SpaceManager: ObservableObject {
         
         self.grabOffsetX = UserDefaults.standard.object(forKey: SpaceManager.grabOffsetXKey) == nil ? 13.0 : UserDefaults.standard.double(forKey: SpaceManager.grabOffsetXKey)
         self.grabOffsetY = UserDefaults.standard.object(forKey: SpaceManager.grabOffsetYKey) == nil ? 25.0 : UserDefaults.standard.double(forKey: SpaceManager.grabOffsetYKey)
+        
+        if let data = UserDefaults.standard.data(forKey: SpaceManager.appGrabExceptionsKey),
+           let exceptions = try? JSONDecoder().decode([AppGrabException].self, from: data) {
+            self.appGrabExceptions = exceptions
+        } else {
+            self.appGrabExceptions = []
+        }
         
         loadSavedData()
         self.spaceAPI = SpaceAPI(spaceManager: self)
@@ -1130,4 +1146,12 @@ class SpaceManager: ObservableObject {
             self.restoreNextWindow(index: index + 1, list: list, initialSpaceUUID: initialSpaceUUID)
         }
     }
+}
+
+struct AppGrabException: Codable, Identifiable, Hashable {
+    var id: String { bundleIdentifier }
+    let bundleIdentifier: String
+    let appName: String
+    var grabOffsetX: Double
+    var grabOffsetY: Double
 }

@@ -1,4 +1,5 @@
 import SwiftUI
+import UniformTypeIdentifiers
 
 struct SwitchSettingsView: View {
     @EnvironmentObject var hotkeyManager: HotkeyManager
@@ -6,6 +7,9 @@ struct SwitchSettingsView: View {
     @EnvironmentObject var spaceManager: SpaceManager
     @EnvironmentObject var labelManager: SpaceLabelManager
     @StateObject private var permissionManager = PermissionManager.shared
+    
+    @State private var showingAddExceptionSheet = false
+    @State private var editingException: AppGrabException? = nil
     
     var body: some View {
         SettingsContainer(.sswitch) {
@@ -316,11 +320,415 @@ struct SwitchSettingsView: View {
                     )
                 }
                 
+                SettingsSection("Per-App Grabbing Offsets") {
+                    if spaceManager.appGrabExceptions.isEmpty {
+                        Text("No per-app exceptions defined. Standard grab offsets will be used for all apps.")
+                            .font(.system(size: 12))
+                            .foregroundColor(.secondary)
+                            .padding(.vertical, 8)
+                    } else {
+                        VStack(spacing: 8) {
+                            ForEach(spaceManager.appGrabExceptions) { exception in
+                                HStack {
+                                    Image(nsImage: getAppIcon(bundleIdentifier: exception.bundleIdentifier))
+                                        .resizable()
+                                        .scaledToFit()
+                                        .frame(width: 18, height: 18)
+                                    
+                                    Text(exception.appName)
+                                        .font(.system(size: 13, weight: .medium))
+                                    
+                                    Spacer()
+                                    
+                                    Text("X: \(Int(exception.grabOffsetX)) px, Y: \(Int(exception.grabOffsetY)) px")
+                                        .font(.system(size: 12))
+                                        .foregroundColor(.secondary)
+                                        .padding(.trailing, 10)
+                                    
+                                    Button {
+                                        editingException = exception
+                                    } label: {
+                                        Image(systemName: "slider.horizontal.3")
+                                    }
+                                    .buttonStyle(.borderless)
+                                    
+                                    Button {
+                                        if let idx = spaceManager.appGrabExceptions.firstIndex(where: { $0.bundleIdentifier == exception.bundleIdentifier }) {
+                                            spaceManager.appGrabExceptions.remove(at: idx)
+                                        }
+                                    } label: {
+                                        Image(systemName: "trash")
+                                            .foregroundColor(.red)
+                                    }
+                                    .buttonStyle(.borderless)
+                                }
+                                
+                                if exception.bundleIdentifier != spaceManager.appGrabExceptions.last?.bundleIdentifier {
+                                    Divider()
+                                }
+                            }
+                        }
+                    }
+                    
+                    HStack {
+                        Spacer()
+                        Button("Add App Exception...") {
+                            showingAddExceptionSheet = true
+                        }
+                    }
+                    .padding(.top, 8)
+                }
+                
                 Spacer()
             }
             .frame(maxWidth: .infinity, alignment: .topLeading)
             .animation(.easeInOut(duration: 0.2), value: gestureManager.isEnabled)
             .environment(\.settingsTab, .sswitch)
+            .sheet(isPresented: $showingAddExceptionSheet) {
+                AddAppExceptionView(spaceManager: spaceManager) { newException in
+                    spaceManager.appGrabExceptions.append(newException)
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
+                        editingException = newException
+                    }
+                }
+            }
+            .sheet(item: $editingException) { exception in
+                if let idx = spaceManager.appGrabExceptions.firstIndex(where: { $0.bundleIdentifier == exception.bundleIdentifier }) {
+                    EditAppExceptionView(
+                        spaceManager: spaceManager,
+                        exception: Binding(
+                            get: { spaceManager.appGrabExceptions[idx] },
+                            set: { spaceManager.appGrabExceptions[idx] = $0 }
+                        )
+                    )
+                } else {
+                    Text("Error locating exception").padding()
+                }
+            }
         }
     }
+}
+
+struct AddAppExceptionView: View {
+    @ObservedObject var spaceManager: SpaceManager
+    @Environment(\.presentationMode) var presentationMode
+    
+    @State private var runningApps: [RunningAppInfo] = []
+    @State private var selectedRunningAppID: String = ""
+    
+    struct RunningAppInfo: Identifiable, Hashable {
+        var id: String { bundleIdentifier }
+        let bundleIdentifier: String
+        let appName: String
+    }
+    
+    var onAdd: (AppGrabException) -> Void
+    
+    var body: some View {
+        VStack(spacing: 20) {
+            Text("Add App Exception")
+                .font(.headline)
+            
+            Text("Select a currently running app, or choose one from your Applications folder.")
+                .font(.body)
+                .foregroundColor(.secondary)
+                .multilineTextAlignment(.center)
+                .padding(.horizontal)
+            
+            if runningApps.isEmpty {
+                Text("No running apps found...")
+                    .foregroundColor(.secondary)
+                    .italic()
+            } else {
+                Picker("Running Apps", selection: $selectedRunningAppID) {
+                    Text("Select a running app...").tag("")
+                    ForEach(runningApps) { app in
+                        Text(app.appName).tag(app.bundleIdentifier)
+                    }
+                }
+                .pickerStyle(.menu)
+                .frame(width: 320)
+            }
+            
+            HStack(spacing: 12) {
+                Button("Select App Bundle...") {
+                    selectAppFromFinder()
+                }
+                
+                Spacer()
+                
+                Button("Cancel") {
+                    presentationMode.wrappedValue.dismiss()
+                }
+                
+                Button("Add") {
+                    if let app = runningApps.first(where: { $0.bundleIdentifier == selectedRunningAppID }) {
+                        let newException = AppGrabException(
+                            bundleIdentifier: app.bundleIdentifier,
+                            appName: app.appName,
+                            grabOffsetX: spaceManager.grabOffsetX,
+                            grabOffsetY: spaceManager.grabOffsetY
+                        )
+                        onAdd(newException)
+                        presentationMode.wrappedValue.dismiss()
+                    }
+                }
+                .disabled(selectedRunningAppID.isEmpty)
+                .buttonStyle(.borderedProminent)
+            }
+            .padding(.top, 10)
+        }
+        .padding(25)
+        .frame(width: 420, height: 220)
+        .onAppear {
+            loadRunningApps()
+        }
+    }
+    
+    private func loadRunningApps() {
+        let apps = NSWorkspace.shared.runningApplications
+            .filter { $0.activationPolicy == .regular && !($0.bundleIdentifier ?? "").isEmpty }
+            .map { RunningAppInfo(bundleIdentifier: $0.bundleIdentifier ?? "", appName: $0.localizedName ?? "") }
+            .sorted { $0.appName.localizedCompare($1.appName) == .orderedAscending }
+        
+        self.runningApps = apps
+    }
+    
+    private func selectAppFromFinder() {
+        let openPanel = NSOpenPanel()
+        openPanel.allowedContentTypes = [.application]
+        openPanel.canChooseDirectories = false
+        openPanel.canChooseFiles = true
+        openPanel.allowsMultipleSelection = false
+        openPanel.directoryURL = URL(fileURLWithPath: "/Applications")
+        
+        if openPanel.runModal() == .OK {
+            guard let url = openPanel.url else { return }
+            let appBundle = Bundle(url: url)
+            let bundleID = appBundle?.bundleIdentifier ?? ""
+            let appName = (appBundle?.object(forInfoDictionaryKey: "CFBundleDisplayName") as? String)
+                ?? (appBundle?.object(forInfoDictionaryKey: "CFBundleName") as? String)
+                ?? url.deletingPathExtension().lastPathComponent
+            
+            guard !bundleID.isEmpty else { return }
+            
+            let newException = AppGrabException(
+                bundleIdentifier: bundleID,
+                appName: appName,
+                grabOffsetX: spaceManager.grabOffsetX,
+                grabOffsetY: spaceManager.grabOffsetY
+            )
+            onAdd(newException)
+            presentationMode.wrappedValue.dismiss()
+        }
+    }
+}
+
+struct EditAppExceptionView: View {
+    @ObservedObject var spaceManager: SpaceManager
+    @Binding var exception: AppGrabException
+    @Environment(\.presentationMode) var presentationMode
+    
+    @State private var previewActive = false
+    @State private var keyMonitor: Any? = nil
+    @State private var feedbackText: String = ""
+    @State private var isFeedbackSuccess: Bool = false
+    
+    var body: some View {
+        VStack(spacing: 20) {
+            HStack {
+                Image(nsImage: getAppIcon(bundleIdentifier: exception.bundleIdentifier))
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: 32, height: 32)
+                
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(exception.appName)
+                        .font(.title2).fontWeight(.bold)
+                    Text(exception.bundleIdentifier)
+                        .font(.caption).foregroundColor(.secondary).monospaced()
+                }
+                Spacer()
+            }
+            .padding(.bottom, 10)
+            
+            VStack(spacing: 12) {
+                HStack {
+                    Text("Grab offset X")
+                        .frame(width: 90, alignment: .leading)
+                    Slider(value: $exception.grabOffsetX, in: 0...300, step: 1.0)
+                    Text("\(Int(exception.grabOffsetX)) px")
+                        .frame(width: 50, alignment: .trailing)
+                        .font(.system(.body, design: .monospaced))
+                }
+                .onChange(of: exception.grabOffsetX) { _ in
+                    if previewActive {
+                        warpCursorToPreview()
+                        checkDraggability()
+                    }
+                }
+                
+                HStack {
+                    Text("Grab offset Y")
+                        .frame(width: 90, alignment: .leading)
+                    Slider(value: $exception.grabOffsetY, in: 0...300, step: 1.0)
+                    Text("\(Int(exception.grabOffsetY)) px")
+                        .frame(width: 50, alignment: .trailing)
+                        .font(.system(.body, design: .monospaced))
+                }
+                .onChange(of: exception.grabOffsetY) { _ in
+                    if previewActive {
+                        warpCursorToPreview()
+                        checkDraggability()
+                    }
+                }
+            }
+            
+            VStack(spacing: 8) {
+                HStack {
+                    Button(action: {
+                        togglePreview()
+                    }) {
+                        HStack {
+                            Image(systemName: previewActive ? "eye.slash.fill" : "eye.fill")
+                            Text(previewActive ? "Stop Preview" : "Preview Position")
+                        }
+                    }
+                    .buttonStyle(.bordered)
+                    
+                    if previewActive {
+                        Text("Arrow keys adjustment active. Press arrow keys to move.")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
+                    Spacer()
+                }
+                
+                if !feedbackText.isEmpty {
+                    HStack(spacing: 6) {
+                        Image(systemName: isFeedbackSuccess ? "checkmark.circle.fill" : "exclamationmark.triangle.fill")
+                            .foregroundColor(isFeedbackSuccess ? .green : .orange)
+                        Text(feedbackText)
+                            .font(.caption)
+                            .foregroundColor(isFeedbackSuccess ? .primary : .orange)
+                        Spacer()
+                    }
+                    .padding(8)
+                    .background(
+                        RoundedRectangle(cornerRadius: 6)
+                            .fill(isFeedbackSuccess ? Color.green.opacity(0.1) : Color.orange.opacity(0.1))
+                    )
+                }
+            }
+            .padding(.vertical, 8)
+            
+            HStack {
+                Spacer()
+                Button("Done") {
+                    stopPreview()
+                    presentationMode.wrappedValue.dismiss()
+                }
+                .buttonStyle(.borderedProminent)
+            }
+        }
+        .padding(25)
+        .frame(width: 480, height: 350)
+        .onDisappear {
+            stopPreview()
+        }
+    }
+    
+    private func togglePreview() {
+        if previewActive {
+            stopPreview()
+        } else {
+            startPreview()
+        }
+    }
+    
+    private func startPreview() {
+        guard SpaceHelper.getAppWindowFrame(bundleIdentifier: exception.bundleIdentifier) != nil else {
+            feedbackText = "No visible window found for \(exception.appName). Please open a window of the app and make it visible."
+            isFeedbackSuccess = false
+            return
+        }
+        
+        previewActive = true
+        warpCursorToPreview()
+        checkDraggability()
+        startMonitoringKeys()
+    }
+    
+    private func stopPreview() {
+        previewActive = false
+        stopMonitoringKeys()
+    }
+    
+    private func warpCursorToPreview() {
+        guard let frame = SpaceHelper.getAppWindowFrame(bundleIdentifier: exception.bundleIdentifier) else { return }
+        let targetPoint = CGPoint(
+            x: frame.origin.x + CGFloat(exception.grabOffsetX),
+            y: frame.origin.y + CGFloat(exception.grabOffsetY)
+        )
+        CGWarpMouseCursorPosition(targetPoint)
+    }
+    
+    private func checkDraggability() {
+        let (status, working) = SpaceHelper.getGrabPositionStatus(
+            forBundleID: exception.bundleIdentifier,
+            x: exception.grabOffsetX,
+            y: exception.grabOffsetY
+        )
+        feedbackText = status
+        isFeedbackSuccess = working
+    }
+    
+    private func startMonitoringKeys() {
+        stopMonitoringKeys()
+        keyMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { event in
+            guard previewActive else { return event }
+            
+            switch event.keyCode {
+            case 123: // Left arrow
+                exception.grabOffsetX = max(0, exception.grabOffsetX - 1)
+                warpCursorToPreview()
+                checkDraggability()
+                return nil
+            case 124: // Right arrow
+                exception.grabOffsetX = min(300, exception.grabOffsetX + 1)
+                warpCursorToPreview()
+                checkDraggability()
+                return nil
+            case 125: // Down arrow
+                exception.grabOffsetY = min(300, exception.grabOffsetY + 1)
+                warpCursorToPreview()
+                checkDraggability()
+                return nil
+            case 126: // Up arrow
+                exception.grabOffsetY = max(0, exception.grabOffsetY - 1)
+                warpCursorToPreview()
+                checkDraggability()
+                return nil
+            case 53: // Esc
+                stopPreview()
+                return nil
+            default:
+                return event
+            }
+        }
+    }
+    
+    private func stopMonitoringKeys() {
+        if let monitor = keyMonitor {
+            NSEvent.removeMonitor(monitor)
+            keyMonitor = nil
+        }
+    }
+}
+
+private func getAppIcon(bundleIdentifier: String) -> NSImage {
+    if let url = NSWorkspace.shared.urlForApplication(withBundleIdentifier: bundleIdentifier) {
+        return NSWorkspace.shared.icon(forFile: url.path)
+    }
+    return NSWorkspace.shared.icon(forFileType: "app")
 }

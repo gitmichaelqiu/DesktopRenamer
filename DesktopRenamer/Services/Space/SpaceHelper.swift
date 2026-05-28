@@ -325,18 +325,28 @@ class SpaceHelper {
             // Save starting location
             originalMousePoint = CGEvent(source: nil)?.location
             
-            // Get Active Window Frame & Position to calculate grab point
-            guard let frame = getActiveWindowFrame() else {
+            // Get Active Window Info to calculate grab point
+            guard let activeWindowInfo = getActiveWindowInfo() else {
                 originalMousePoint = nil
                 return 
             }
+            
+            let frame = activeWindowInfo.frame
+            let pid = activeWindowInfo.pid
             
             let grabX: CGFloat
             let grabY: CGFloat
             
             if let sm = AppDelegate.shared.spaceManager {
-                grabX = frame.origin.x + CGFloat(sm.grabOffsetX)
-                grabY = frame.origin.y + CGFloat(sm.grabOffsetY)
+                if let bundleID = NSRunningApplication(processIdentifier: pid)?.bundleIdentifier,
+                   let exception = sm.appGrabExceptions.first(where: { $0.bundleIdentifier == bundleID }) {
+                    grabX = frame.origin.x + CGFloat(exception.grabOffsetX)
+                    grabY = frame.origin.y + CGFloat(exception.grabOffsetY)
+                    print("SpaceHelper: Using per-app grab exception (\(exception.grabOffsetX), \(exception.grabOffsetY)) for \(exception.appName) (\(bundleID))")
+                } else {
+                    grabX = frame.origin.x + CGFloat(sm.grabOffsetX)
+                    grabY = frame.origin.y + CGFloat(sm.grabOffsetY)
+                }
             } else {
                 grabX = frame.origin.x + 13
                 grabY = frame.origin.y + 25
@@ -1326,5 +1336,106 @@ class SpaceHelper {
         }
         let flippedY = NSMaxY(primaryScreen.frame) - point.y
         return screenFrame.contains(CGPoint(x: point.x, y: flippedY))
+    }
+
+    static func getAppWindowFrame(bundleIdentifier: String) -> CGRect? {
+        guard let runningApp = NSWorkspace.shared.runningApplications.first(where: { $0.bundleIdentifier == bundleIdentifier }) else {
+            return nil
+        }
+        let pid = runningApp.processIdentifier
+        
+        let options = CGWindowListOption(arrayLiteral: .optionOnScreenOnly, .excludeDesktopElements)
+        let windowList = CGWindowListCopyWindowInfo(options, kCGNullWindowID) as? [[String: Any]] ?? []
+        
+        for window in windowList {
+            if let windowPid = window[kCGWindowOwnerPID as String] as? Int,
+               windowPid == pid,
+               let layer = window[kCGWindowLayer as String] as? Int, layer == 0,
+               let bounds = window[kCGWindowBounds as String] as? [String: Any],
+               let x = bounds["X"] as? CGFloat, let y = bounds["Y"] as? CGFloat,
+               let w = bounds["Width"] as? CGFloat, let h = bounds["Height"] as? CGFloat,
+               w >= minActiveWindowWidth, h >= minActiveWindowHeight {
+                   return CGRect(x: x, y: y, width: w, height: h)
+               }
+        }
+        return nil
+    }
+
+    static func isPositionDraggable(at point: CGPoint) -> (isDraggable: Bool, role: String) {
+        let systemWide = AXUIElementCreateSystemWide()
+        var element: AXUIElement?
+        let result = AXUIElementCopyElementAtPosition(systemWide, Float(point.x), Float(point.y), &element)
+        
+        guard result == .success, let axElement = element else {
+            return (false, "Unknown")
+        }
+        
+        var roleRef: CFTypeRef?
+        let roleSuccess = AXUIElementCopyAttributeValue(axElement, kAXRoleAttribute as CFString, &roleRef)
+        let role = (roleRef as? String) ?? "Unknown"
+        
+        // Draggable roles include window background, title bar, toolbar, empty areas, etc.
+        // Interactive components like buttons, text inputs, sliders, lists, scroll areas, web views are not draggable.
+        let nonDraggableRoles = [
+            "AXButton", "AXTextField", "AXTextArea", "AXScrollBar",
+            "AXSlider", "AXWebArea", "AXPopUpButton", "AXCheckBox",
+            "AXRadioButton", "AXComboBox", "AXList", "AXTable",
+            "AXOutline", "AXBrowser", "AXMenuButton"
+        ]
+        
+        let draggableRoles = [
+            "AXWindow", "AXTitleBar", "AXToolbar", "AXHeaderArea", "AXSpacer"
+        ]
+        
+        let isDraggable: Bool
+        if nonDraggableRoles.contains(role) {
+            isDraggable = false
+        } else if draggableRoles.contains(role) {
+            isDraggable = true
+        } else if role == "AXStaticText" || role == "AXGroup" {
+            var parentRef: CFTypeRef?
+            if AXUIElementCopyAttributeValue(axElement, "AXParent" as CFString, &parentRef) == .success,
+               let parentVal = parentRef,
+               CFGetTypeID(parentVal) == AXUIElementGetTypeID() {
+                let parentElement = parentVal as! AXUIElement
+                var parentRoleRef: CFTypeRef?
+                if AXUIElementCopyAttributeValue(parentElement, kAXRoleAttribute as CFString, &parentRoleRef) == .success,
+                   let parentRole = parentRoleRef as? String {
+                    isDraggable = draggableRoles.contains(parentRole) || parentRole == "AXGroup"
+                } else {
+                    isDraggable = true
+                }
+            } else {
+                isDraggable = true
+            }
+        } else {
+            isDraggable = true
+        }
+        
+        return (isDraggable, role)
+    }
+
+    static func getGrabPositionStatus(forBundleID bundleID: String, x: Double, y: Double) -> (status: String, isLikelyWorking: Bool) {
+        let isGranted = AXIsProcessTrusted()
+        if !isGranted {
+            return ("Accessibility permission not granted", false)
+        }
+        
+        guard let frame = getAppWindowFrame(bundleIdentifier: bundleID) else {
+            return ("No visible window found", false)
+        }
+        
+        let point = CGPoint(x: frame.origin.x + CGFloat(x), y: frame.origin.y + CGFloat(y))
+        let (isDraggable, role) = isPositionDraggable(at: point)
+        
+        if !isDraggable {
+            return ("Cursor is on an interactive control (\(role))", false)
+        }
+        
+        if y > 60 {
+            return ("Cursor is too low (likely inside window content area)", false)
+        }
+        
+        return ("Likely working: Draggable (\(role))", true)
     }
 }
