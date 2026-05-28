@@ -256,7 +256,7 @@
     "Add App Exception" : {
 
     },
-    "Add App Exception..." : {
+    "Add app exception..." : {
 
     },
     "Add it as a space in\nSettings → General → Add spaces" : {
@@ -320,6 +320,7 @@
       }
     },
     "Advanced" : {
+      "extractionState" : "stale",
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
@@ -741,6 +742,9 @@
     "Error locating exception" : {
 
     },
+    "Exceptions" : {
+
+    },
     "Executing batch window moves..." : {
       "localizations" : {
         "zh-Hans" : {
@@ -923,6 +927,9 @@
           }
         }
       }
+    },
+    "Grabbing" : {
+
     },
     "Grant" : {
       "localizations" : {
@@ -1551,9 +1558,6 @@
           }
         }
       }
-    },
-    "Per-App Grabbing Offsets" : {
-
     },
     "Permissions" : {
       "localizations" : {

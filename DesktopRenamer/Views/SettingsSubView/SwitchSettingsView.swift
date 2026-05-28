@@ -326,8 +326,9 @@ struct SwitchSettingsView: View {
                         Button("Add app exception...") {
                             showingAddExceptionSheet = true
                         }
-                        .buttonStyle(.plain)
-                        .foregroundColor(.accentColor)
+                        .buttonStyle(.bordered)
+                        .controlSize(.regular)
+                        .padding(.vertical, 2)
                     }
                     
                     if spaceManager.appGrabExceptions.isEmpty {
