@@ -340,8 +340,10 @@ struct SwitchSettingsView: View {
                                     exception: exception,
                                     onEdit: { editingException = exception },
                                     onDelete: {
-                                        if let idx = spaceManager.appGrabExceptions.firstIndex(where: { $0.bundleIdentifier == exception.bundleIdentifier }) {
-                                            spaceManager.appGrabExceptions.remove(at: idx)
+                                        withAnimation(.easeInOut(duration: 0.2)) {
+                                            if let idx = spaceManager.appGrabExceptions.firstIndex(where: { $0.bundleIdentifier == exception.bundleIdentifier }) {
+                                                spaceManager.appGrabExceptions.remove(at: idx)
+                                            }
                                         }
                                     }
                                 )
@@ -366,6 +368,7 @@ struct SwitchSettingsView: View {
                     .padding(.vertical, 8)
                     .padding(.horizontal, 12)
                 }
+                .animation(.easeInOut(duration: 0.2), value: spaceManager.appGrabExceptions)
                 
                 Spacer()
             }
@@ -374,7 +377,9 @@ struct SwitchSettingsView: View {
             .environment(\.settingsTab, .sswitch)
             .sheet(isPresented: $showingAddExceptionSheet) {
                 AddAppExceptionView(spaceManager: spaceManager) { newException in
-                    spaceManager.appGrabExceptions.append(newException)
+                    withAnimation(.easeInOut(duration: 0.2)) {
+                        spaceManager.appGrabExceptions.append(newException)
+                    }
                     DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
                         editingException = newException
                     }
