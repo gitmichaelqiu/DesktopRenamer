@@ -722,6 +722,9 @@ struct EditAppExceptionView: View {
             case 53: // Esc
                 stopPreview()
                 return nil
+            case 36, 76: // Enter / Return
+                stopPreview()
+                return nil
             default:
                 return event
             }
