@@ -371,6 +371,22 @@ struct SwitchSettingsView: View {
             .frame(maxWidth: .infinity, alignment: .topLeading)
             .animation(.easeInOut(duration: 0.2), value: gestureManager.isEnabled)
             .environment(\.settingsTab, .sswitch)
+            .onAppear {
+                if let bundleID = spaceManager.autoEditBundleID {
+                    if let exception = spaceManager.appGrabExceptions.first(where: { $0.bundleIdentifier == bundleID }) {
+                        editingException = exception
+                    }
+                    spaceManager.autoEditBundleID = nil
+                }
+            }
+            .onChange(of: spaceManager.autoEditBundleID) { bundleID in
+                if let bundleID = bundleID {
+                    if let exception = spaceManager.appGrabExceptions.first(where: { $0.bundleIdentifier == bundleID }) {
+                        editingException = exception
+                    }
+                    spaceManager.autoEditBundleID = nil
+                }
+            }
             .sheet(isPresented: $showingAddExceptionSheet) {
                 AddAppExceptionView(spaceManager: spaceManager) { newException in
                     withAnimation(.easeInOut(duration: 0.2)) {
