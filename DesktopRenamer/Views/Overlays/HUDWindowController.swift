@@ -8,7 +8,6 @@ struct HUDView: View {
     let iconColor: Color
     let buttonTitle: String?
     let buttonAction: (() -> Void)?
-    @Environment(\.colorScheme) var colorScheme
 
     var body: some View {
         HStack(spacing: 10) {
@@ -18,7 +17,7 @@ struct HUDView: View {
 
             Text(message)
                 .font(.system(size: 13, weight: .semibold))
-                .foregroundColor(colorScheme == .dark ? .white : Color(red: 0.12, green: 0.12, blue: 0.14))
+                .foregroundColor(.primary)
                 .lineLimit(1)
             
             if let buttonTitle = buttonTitle, let buttonAction = buttonAction {
@@ -31,13 +30,13 @@ struct HUDView: View {
         }
         .padding(.horizontal, 18)
         .padding(.vertical, 10)
-        .hudBackground(colorScheme: colorScheme)
+        .hudBackground()
     }
 }
 
 extension View {
     @ViewBuilder
-    fileprivate func hudBackground(colorScheme: ColorScheme) -> some View {
+    fileprivate func hudBackground() -> some View {
         if #available(macOS 26.0, *) {
             self.glassEffect(.regular, in: Capsule())
         } else {
@@ -47,7 +46,7 @@ extension View {
             .clipShape(Capsule())
             .overlay(
                 Capsule()
-                    .stroke(colorScheme == .dark ? Color.white.opacity(0.1) : Color.black.opacity(0.08), lineWidth: 1)
+                    .stroke(Color.primary.opacity(0.09), lineWidth: 1)
             )
         }
     }
@@ -97,6 +96,7 @@ class HUDWindowController: NSWindowController {
     ) {
         guard let panel = window as? HUDNSPanel else { return }
 
+        panel.appearance = NSApp.effectiveAppearance
         hideTimer?.invalidate()
         
         panel.isInteractive = (buttonTitle != nil)
