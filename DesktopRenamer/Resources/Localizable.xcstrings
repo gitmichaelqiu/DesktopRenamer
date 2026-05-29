@@ -283,6 +283,9 @@
         }
       }
     },
+    "Add Exception" : {
+
+    },
     "Add it as a space in\nSettings → General → Add spaces" : {
       "localizations" : {
         "zh-Hans" : {
@@ -1492,6 +1495,9 @@
           }
         }
       }
+    },
+    "Moving window failed for %@" : {
+
     },
     "My GitHub" : {
       "localizations" : {

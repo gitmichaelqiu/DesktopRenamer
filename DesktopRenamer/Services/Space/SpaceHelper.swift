@@ -50,6 +50,7 @@ class SpaceHelper {
     private static var restorationTask: DispatchWorkItem? = nil
     private static var pendingMoveCount = 0
     private static var isInstantDrag = false
+    private static var targetSpaceID: String? = nil
     private static var draggedWindowID: Int? = nil
     private static var draggedWindowPID: Int32? = nil
     private static var draggedWindowBundleID: String? = nil
@@ -318,6 +319,7 @@ class SpaceHelper {
     // MARK: - Window Moving Logic
     
     static func dragActiveWindow(to spaceID: String, forceInstant: Bool = false) {
+        targetSpaceID = spaceID
         // Cancel any pending restoration from a previous "chained" move
         restorationTask?.cancel()
         restorationTask = nil
@@ -390,8 +392,23 @@ class SpaceHelper {
     }
     
     /// Fast-forwards the restoration process because we detected a successful space change.
-    static func signalSpaceSwitchComplete() {
+    static func signalSpaceSwitchComplete(arrivedAtSpaceID: String) {
         guard originalMousePoint != nil else { return }
+        
+        let arrivedUUID = arrivedAtSpaceID.uppercased()
+        let targetID = targetSpaceID?.uppercased() ?? ""
+        
+        // Prevent premature completion if we get notifications from other spaces.
+        // We match either the raw Wallpaper UUID (for manual mode) or the active ManagedSpaceID (for automatic mode).
+        let currentManagedSpaceIDs = getCurrentSpaceIDs().map { $0.uppercased() }
+        let isMatch = (arrivedUUID == targetID) || currentManagedSpaceIDs.contains(targetID)
+        
+        guard isMatch else {
+            print("SpaceHelper: Ignoring premature space change event to \(arrivedAtSpaceID) (waiting for \(targetSpaceID ?? ""))")
+            return
+        }
+        
+        print("SpaceHelper: Arrived at target space \(arrivedAtSpaceID). Completing move...")
         
         // Decrement pending moves
         pendingMoveCount = max(0, pendingMoveCount - 1)
@@ -447,6 +464,7 @@ class SpaceHelper {
             originalMousePoint = nil
             restorationTask = nil
             pendingMoveCount = 0
+            targetSpaceID = nil
             draggedWindowID = nil
             draggedWindowPID = nil
             draggedWindowBundleID = nil
