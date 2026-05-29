@@ -1418,24 +1418,24 @@ class SpaceHelper {
     static func getGrabPositionStatus(forBundleID bundleID: String, x: Double, y: Double) -> (status: String, isLikelyWorking: Bool) {
         let isGranted = AXIsProcessTrusted()
         if !isGranted {
-            return ("Accessibility permission not granted", false)
+            return (String(localized: "Accessibility permission not granted"), false)
         }
         
         guard let frame = getAppWindowFrame(bundleIdentifier: bundleID) else {
-            return ("No visible window found", false)
+            return (String(localized: "No visible window found"), false)
         }
         
         let point = CGPoint(x: frame.origin.x + CGFloat(x), y: frame.origin.y + CGFloat(y))
         let (isDraggable, role) = isPositionDraggable(at: point)
         
         if !isDraggable {
-            return ("Cursor is on an interactive control (\(role))", false)
+            return (String(format: String(localized: "Cursor is on an interactive control (%@)"), role), false)
         }
         
         if y > 60 {
-            return ("Cursor is too low (likely inside window content area)", false)
+            return (String(localized: "Cursor is too low (likely inside window content area)"), false)
         }
         
-        return ("Likely working: Draggable (\(role))", true)
+        return (String(format: String(localized: "Likely working: Draggable (%@)"), role), true)
     }
 }

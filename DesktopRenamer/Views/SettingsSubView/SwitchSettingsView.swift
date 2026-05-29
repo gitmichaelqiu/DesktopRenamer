@@ -656,7 +656,7 @@ struct EditAppExceptionView: View {
     
     private func startPreview() {
         guard SpaceHelper.getAppWindowFrame(bundleIdentifier: exception.bundleIdentifier) != nil else {
-            feedbackText = "No visible window found for \(exception.appName). Please open a window of the app and make it visible."
+            feedbackText = String(format: String(localized: "No visible window found for %@. Please open a window of the app and make it visible."), exception.appName)
             isFeedbackSuccess = false
             return
         }
