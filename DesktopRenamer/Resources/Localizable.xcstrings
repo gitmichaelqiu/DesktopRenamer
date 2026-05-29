@@ -183,6 +183,16 @@
         }
       }
     },
+    "Accessibility permission not granted" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "辅助权限未获取"
+          }
+        }
+      }
+    },
     "Acknowledgements" : {
       "localizations" : {
         "zh-Hans" : {
@@ -549,6 +559,16 @@
         }
       }
     },
+    "Choose Application..." : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "选择App…"
+          }
+        }
+      }
+    },
     "Choose how the app determines if a space is a Desktop or a Fullscreen App.\n\nAutomatic: No extra actions required.\n\nMetric-based: Based on the thresold of a metric. May not work for multiple displays.\n\nManual: All spaces that are not added will be treated as fullscreen." : {
       "localizations" : {
         "zh-Hans" : {
@@ -653,6 +673,26 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "指针"
+          }
+        }
+      }
+    },
+    "Cursor is on an interactive control (%@)" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "光标在App的交互区域(%@)"
+          }
+        }
+      }
+    },
+    "Cursor is too low (likely inside window content area)" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "光标太低 (可能在窗口的内容区域)"
           }
         }
       }
@@ -1158,6 +1198,16 @@
         }
       }
     },
+    "Likely working: Draggable (%@)" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "可能可用：可以拖拽 (%@)"
+          }
+        }
+      }
+    },
     "Links" : {
       "localizations" : {
         "zh-Hans" : {
@@ -1557,6 +1607,26 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "无结果"
+          }
+        }
+      }
+    },
+    "No visible window found" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "未找到可用窗口"
+          }
+        }
+      }
+    },
+    "No visible window found for %@. Please open a window of the app and make it visible." : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "未找到%@的可用窗口。请打开一个该App的窗口并让它可见。"
           }
         }
       }

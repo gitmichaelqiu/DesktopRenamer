@@ -367,8 +367,6 @@ struct SwitchSettingsView: View {
                     }
                 }
                 .animation(.easeInOut(duration: 0.2), value: spaceManager.appGrabExceptions)
-                
-                Spacer()
             }
             .frame(maxWidth: .infinity, alignment: .topLeading)
             .animation(.easeInOut(duration: 0.2), value: gestureManager.isEnabled)
@@ -443,7 +441,7 @@ struct AddAppExceptionView: View {
                     
                     Divider().padding(.vertical, 4)
                     
-                    AppListItemView(icon: NSImage(), name: "Choose Application...", isSelectable: false) {
+                    AppListItemView(icon: NSImage(), name: NSLocalizedString("Choose Application...", comment: ""), isSelectable: false) {
                         selectAppFromFinder()
                     }
                 }
