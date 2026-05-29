@@ -1,6 +1,7 @@
 import AppKit
 import CoreGraphics
 import Foundation
+import SwiftUI
 
 @_silgen_name("_CGSDefaultConnection") private func _CGSDefaultConnection() -> Int32
 @_silgen_name("CGSCopyManagedDisplaySpaces") private func CGSCopyManagedDisplaySpaces(_ cid: Int32)
@@ -49,6 +50,10 @@ class SpaceHelper {
     private static var restorationTask: DispatchWorkItem? = nil
     private static var pendingMoveCount = 0
     private static var isInstantDrag = false
+    private static var draggedWindowID: Int? = nil
+    private static var draggedWindowPID: Int32? = nil
+    private static var draggedWindowBundleID: String? = nil
+    private static var draggedWindowAppName: String? = nil
     static var isDragging: Bool { originalMousePoint != nil }
     
     // Minimum width and height for a window to be considered a regular app window in getActiveWindowInfo (filtering out small system utilities/status items).
@@ -331,6 +336,13 @@ class SpaceHelper {
                 return 
             }
             
+            draggedWindowID = activeWindowInfo.id
+            draggedWindowPID = activeWindowInfo.pid
+            if let runningApp = NSRunningApplication(processIdentifier: activeWindowInfo.pid) {
+                draggedWindowBundleID = runningApp.bundleIdentifier
+                draggedWindowAppName = runningApp.localizedName
+            }
+            
             let frame = activeWindowInfo.frame
             let pid = activeWindowInfo.pid
             
@@ -414,6 +426,16 @@ class SpaceHelper {
                 upEvent.post(tap: .cghidEventTap)
             }
             
+            // Verify window move success after a small delay
+            let winID = draggedWindowID
+            let bundleID = draggedWindowBundleID
+            let appName = draggedWindowAppName
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                if let winID = winID, let bundleID = bundleID, let appName = appName {
+                    verifyMoveSuccess(windowID: winID, bundleID: bundleID, appName: appName)
+                }
+            }
+            
             // Restore the cursor position.
             usleep(isInstant ? 5000 : 50000) // 5ms for instant switches, 50ms otherwise
             if let restoreEvent = CGEvent(mouseEventSource: source, mouseType: .mouseMoved, mouseCursorPosition: restorePoint, mouseButton: .left) {
@@ -425,10 +447,75 @@ class SpaceHelper {
             originalMousePoint = nil
             restorationTask = nil
             pendingMoveCount = 0
+            draggedWindowID = nil
+            draggedWindowPID = nil
+            draggedWindowBundleID = nil
+            draggedWindowAppName = nil
         }
         
         restorationTask = task
         DispatchQueue.main.asyncAfter(deadline: .now() + delay, execute: task)
+    }
+    
+    private static func verifyMoveSuccess(windowID: Int, bundleID: String, appName: String) {
+        // Query visible windows on the screen
+        let options = CGWindowListOption(arrayLiteral: .optionOnScreenOnly, .excludeDesktopElements)
+        let windowList = CGWindowListCopyWindowInfo(options, kCGNullWindowID) as? [[String: Any]] ?? []
+        
+        let isStillVisible = windowList.contains { window in
+            if let id = window[kCGWindowNumber as String] as? Int, id == windowID {
+                return true
+            }
+            return false
+        }
+        
+        if !isStillVisible {
+            print("SpaceHelper: Window move failed for \(appName) (ID: \(windowID), BundleID: \(bundleID))")
+            
+            // Trigger failure HUD notification
+            DispatchQueue.main.async {
+                handleMoveFailure(bundleID: bundleID, appName: appName)
+            }
+        } else {
+            print("SpaceHelper: Window move succeeded for \(appName) (ID: \(windowID))")
+        }
+    }
+    
+    private static func handleMoveFailure(bundleID: String, appName: String) {
+        guard let sm = AppDelegate.shared.spaceManager else { return }
+        
+        let hasException = sm.appGrabExceptions.contains(where: { $0.bundleIdentifier == bundleID })
+        
+        let message = String(format: String(localized: "Moving window failed for %@"), appName)
+        let buttonTitle = hasException ? String(localized: "Edit Exception") : String(localized: "Add Exception")
+        
+        HUDWindowController.shared.show(
+            message: message,
+            systemImage: "exclamationmark.triangle.fill",
+            iconColor: .orange,
+            buttonTitle: buttonTitle
+        ) {
+            DispatchQueue.main.async {
+                if !hasException {
+                    // Automatically add the exception with default grab values
+                    let newException = AppGrabException(
+                        bundleIdentifier: bundleID,
+                        appName: appName,
+                        grabOffsetX: sm.grabOffsetX,
+                        grabOffsetY: sm.grabOffsetY
+                    )
+                    withAnimation {
+                        sm.appGrabExceptions.append(newException)
+                    }
+                }
+                
+                // Set autoEditBundleID to open the editor sheet
+                sm.autoEditBundleID = bundleID
+                
+                // Open Settings settings switch tab
+                AppDelegate.shared.statusBarController?.openSettingsWindow(tab: .sswitch)
+            }
+        }
     }
     
     static func getActiveWindowInfo() -> (id: Int, pid: Int32, frame: CGRect)? {
