@@ -54,6 +54,7 @@ class SpaceManager: ObservableObject {
     @Published private(set) var currentSpaceUUID: String = ""
     @Published private(set) var currentRawSpaceUUID: String = ""
     @Published private(set) var currentDisplayID: String = "Main"
+    @Published var autoEditBundleID: String? = nil
     
     // Tracks active space per display to ensure local switching context
     private(set) var currentSpaceByDisplay: [String: String] = [:]
