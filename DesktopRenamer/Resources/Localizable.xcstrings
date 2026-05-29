@@ -254,10 +254,24 @@
       }
     },
     "Add App Exception" : {
-
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "添加App特例"
+          }
+        }
+      }
     },
     "Add app exception..." : {
-
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "添加App特例..."
+          }
+        }
+      }
     },
     "Add it as a space in\nSettings → General → Add spaces" : {
       "localizations" : {
@@ -315,17 +329,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "调整桌面/全屏检测参数"
-          }
-        }
-      }
-    },
-    "Advanced" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "高级"
           }
         }
       }
@@ -655,7 +658,14 @@
       }
     },
     "Delete Exception" : {
-
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "删除特例"
+          }
+        }
+      }
     },
     "Desktop" : {
       "shouldTranslate" : false
@@ -714,10 +724,24 @@
       }
     },
     "Done" : {
-
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "完成"
+          }
+        }
+      }
     },
     "Edit Exception" : {
-
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "编辑特例"
+          }
+        }
+      }
     },
     "Enable switch gesture override" : {
       "localizations" : {
@@ -740,10 +764,24 @@
       }
     },
     "Error locating exception" : {
-
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "加载特例出错"
+          }
+        }
+      }
     },
     "Exceptions" : {
-
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "特例"
+          }
+        }
+      }
     },
     "Executing batch window moves..." : {
       "localizations" : {
@@ -929,7 +967,14 @@
       }
     },
     "Grabbing" : {
-
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "抓取"
+          }
+        }
+      }
     },
     "Grant" : {
       "localizations" : {
@@ -1491,7 +1536,14 @@
       }
     },
     "No per-app exceptions defined. Standard grab offsets will be used for all apps." : {
-
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "无App特例。标准抓取位置会用于所有App。"
+          }
+        }
+      }
     },
     "No results" : {
       "localizations" : {
@@ -1630,7 +1682,14 @@
       }
     },
     "Preview Position" : {
-
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "预览位置"
+          }
+        }
+      }
     },
     "Preview Space Labels: %@" : {
       "localizations" : {
@@ -2049,7 +2108,14 @@
       }
     },
     "Select an active application below to add it as an exception." : {
-
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "选择正在运行的App定义特例。"
+          }
+        }
+      }
     },
     "Select and move multiple windows to a space" : {
       "localizations" : {
@@ -2764,7 +2830,14 @@
       }
     },
     "Stop Preview" : {
-
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "停止预览"
+          }
+        }
+      }
     },
     "Suggested Threshold: %lld" : {
       "localizations" : {
@@ -3098,8 +3171,15 @@
         }
       }
     },
-    "Use ← → ↑ ↓ to fine-tune" : {
-
+    "Use ← → ↑ ↓ to fine-tune, Esc to exit" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "使用 ← → ↑ ↓ 调整位置, Esc 退出"
+          }
+        }
+      }
     },
     "Use the Raycast extension to move all windows of an app to another space in one command." : {
       "localizations" : {
@@ -3196,7 +3276,8 @@
             "value" : "X: %1$lld px, Y: %2$lld px"
           }
         }
-      }
+      },
+      "shouldTranslate" : false
     }
   },
   "version" : "1.1"

@@ -623,7 +623,7 @@ struct EditAppExceptionView: View {
                 .buttonStyle(.bordered)
                 
                 if previewActive {
-                    Text("Use ← → ↑ ↓ to fine-tune")
+                    Text("Use ← → ↑ ↓ to fine-tune, Esc to exit")
                         .font(.caption)
                         .foregroundColor(.secondary)
                 }
