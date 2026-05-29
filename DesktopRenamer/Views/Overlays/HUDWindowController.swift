@@ -6,6 +6,8 @@ struct HUDView: View {
     let message: String
     let systemImage: String
     let iconColor: Color
+    let buttonTitle: String?
+    let buttonAction: (() -> Void)?
     @Environment(\.colorScheme) var colorScheme
 
     var body: some View {
@@ -21,6 +23,14 @@ struct HUDView: View {
                 .font(.system(size: 13, weight: .semibold))
                 .foregroundColor(colorScheme == .dark ? .white : Color(red: 0.12, green: 0.12, blue: 0.14))
                 .lineLimit(1)
+            
+            if let buttonTitle = buttonTitle, let buttonAction = buttonAction {
+                Button(buttonTitle) {
+                    buttonAction()
+                }
+                .buttonStyle(.borderedProminent)
+                .controlSize(.small)
+            }
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 10)
@@ -36,8 +46,9 @@ struct HUDView: View {
 }
 
 class HUDNSPanel: NSPanel {
-    override var canBecomeKey: Bool { false }
-    override var canBecomeMain: Bool { false }
+    var isInteractive: Bool = false
+    override var canBecomeKey: Bool { isInteractive }
+    override var canBecomeMain: Bool { isInteractive }
 }
 
 class HUDWindowController: NSWindowController {
@@ -69,20 +80,35 @@ class HUDWindowController: NSWindowController {
         fatalError("init(coder:) has not been implemented")
     }
 
-    func show(message: String, systemImage: String, iconColor: Color) {
+    func show(
+        message: String,
+        systemImage: String,
+        iconColor: Color,
+        buttonTitle: String? = nil,
+        buttonAction: (() -> Void)? = nil
+    ) {
         guard let panel = window as? HUDNSPanel else { return }
 
         hideTimer?.invalidate()
+        
+        panel.isInteractive = (buttonTitle != nil)
+        panel.becomesKeyOnlyIfNeeded = (buttonTitle != nil)
 
-        let hudView = HUDView(message: message, systemImage: systemImage, iconColor: iconColor)
+        let hudView = HUDView(
+            message: message,
+            systemImage: systemImage,
+            iconColor: iconColor,
+            buttonTitle: buttonTitle,
+            buttonAction: {
+                buttonAction?()
+                self.hideWithAnimation()
+            }
+        )
 
         if let existing = hostingView {
             existing.rootView = hudView
         } else {
             // Wrap in a container to break the autolayout feedback loop.
-            // Setting NSHostingView directly as contentView causes the
-            // SwiftUI layout to retrigger constraint updates, which
-            // retrigger SwiftUI layout, ad infinitum → crash.
             let container = NSView(frame: NSRect(x: 0, y: 0, width: 280, height: 44))
             container.autoresizingMask = [.width, .height]
 
@@ -109,7 +135,8 @@ class HUDWindowController: NSWindowController {
         panel.alphaValue = 1.0
         panel.orderFrontRegardless()
 
-        hideTimer = Timer.scheduledTimer(withTimeInterval: 1.8, repeats: false) { [weak self] _ in
+        let duration = (buttonTitle != nil) ? 5.0 : 1.8
+        hideTimer = Timer.scheduledTimer(withTimeInterval: duration, repeats: false) { [weak self] _ in
             self?.hideWithAnimation()
         }
     }
