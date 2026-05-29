@@ -11,13 +11,10 @@ struct HUDView: View {
     @Environment(\.colorScheme) var colorScheme
 
     var body: some View {
-        HStack(spacing: 12) {
+        HStack(spacing: 10) {
             Image(systemName: systemImage)
-                .font(.system(size: 14, weight: .bold))
+                .font(.system(size: 15, weight: .semibold))
                 .foregroundColor(iconColor)
-                .frame(width: 22, height: 22)
-                .background(iconColor.opacity(0.15))
-                .clipShape(Circle())
 
             Text(message)
                 .font(.system(size: 13, weight: .semibold))
@@ -32,16 +29,27 @@ struct HUDView: View {
                 .controlSize(.small)
             }
         }
-        .padding(.horizontal, 16)
+        .padding(.horizontal, 18)
         .padding(.vertical, 10)
-        .background(
-            VisualEffectView(material: .hudWindow, blendingMode: .withinWindow, state: .active)
-        )
-        .cornerRadius(16)
-        .overlay(
-            RoundedRectangle(cornerRadius: 16)
-                .stroke(colorScheme == .dark ? Color.white.opacity(0.1) : Color.black.opacity(0.08), lineWidth: 1)
-        )
+        .hudBackground(colorScheme: colorScheme)
+    }
+}
+
+extension View {
+    @ViewBuilder
+    fileprivate func hudBackground(colorScheme: ColorScheme) -> some View {
+        if #available(macOS 26.0, *) {
+            self.glassEffect(.regular, in: Capsule())
+        } else {
+            self.background(
+                VisualEffectView(material: .hudWindow, blendingMode: .withinWindow, state: .active)
+            )
+            .clipShape(Capsule())
+            .overlay(
+                Capsule()
+                    .stroke(colorScheme == .dark ? Color.white.opacity(0.1) : Color.black.opacity(0.08), lineWidth: 1)
+            )
+        }
     }
 }
 
