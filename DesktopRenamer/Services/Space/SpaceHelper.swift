@@ -345,48 +345,20 @@ class SpaceHelper {
                 draggedWindowAppName = runningApp.localizedName
             }
             
-            // Programmatic Move for WeChat:
-            // WeChat's custom window controls and sandboxing prevent reliable simulated dragging.
-            // We use direct CGS+AX APIs to assign the window to the target space instead.
-            if draggedWindowBundleID == "com.tencent.xinWeChat" {
-                let displayID = getWindowDisplayID(for: activeWindowInfo.frame) ?? getCursorDisplayID() ?? "Main"
-                if let fromSpaceStr = getCurrentSpaceID(for: displayID),
-                   let fromSpaceID = Int(fromSpaceStr),
-                   let targetSpaceInt = Int(spaceID) {
-                    
-                    print("SpaceHelper: WeChat programmatic move from \(fromSpaceID) to \(targetSpaceInt)")
-                    moveWindowToSpace(windowID: activeWindowInfo.id, fromSpaceID: fromSpaceID, targetSpaceID: targetSpaceInt)
-                    
-                    // Trigger space switch to target space
-                    switchToSpace(spaceID, forceInstant: forceInstant)
-                    
-                    // Trigger focus and activation of the window on the new space after a short delay
-                    let winID = activeWindowInfo.id
-                    let pid = activeWindowInfo.pid
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-                        focusWindow(id: winID, pid: pid)
-                    }
-                    
-                    // Reset session state and return early
-                    originalMousePoint = nil
-                    restorationTask = nil
-                    pendingMoveCount = 0
-                    SpaceHelper.targetSpaceID = nil
-                    draggedWindowID = nil
-                    draggedWindowPID = nil
-                    draggedWindowBundleID = nil
-                    draggedWindowAppName = nil
-                    return
-                }
-            }
-            
             let frame = activeWindowInfo.frame
             let pid = activeWindowInfo.pid
+            let isWeChat = draggedWindowBundleID == "com.tencent.xinWeChat"
             
             let grabX: CGFloat
             let grabY: CGFloat
             
-            if let sm = AppDelegate.shared.spaceManager {
+            if isWeChat {
+                // Dynamic grab point for WeChat:
+                // We use (w - 200) relative to window width and Y = 20 which lands on the safe draggable area of the chat pane header.
+                grabX = frame.origin.x + frame.width - 200
+                grabY = frame.origin.y + 20
+                print("SpaceHelper: Using dynamic WeChat grab point (\(frame.width - 200), 20)")
+            } else if let sm = AppDelegate.shared.spaceManager {
                 if let bundleID = NSRunningApplication(processIdentifier: pid)?.bundleIdentifier,
                    let exception = sm.appGrabExceptions.first(where: { $0.bundleIdentifier == bundleID }) {
                     grabX = frame.origin.x + CGFloat(exception.grabOffsetX)
@@ -420,10 +392,11 @@ class SpaceHelper {
             let dragPoint = CGPoint(x: grabPoint.x + 2, y: grabPoint.y)
             if let dragEvent = CGEvent(mouseEventSource: source, mouseType: .leftMouseDragged, mouseCursorPosition: dragPoint, mouseButton: .left) {
                 dragEvent.flags = []
+                dragEvent.setIntegerValueField(CGEventField(rawValue: 2)!, value: 2) // kCGEventAssociatedMouseDeltaX
+                dragEvent.setIntegerValueField(CGEventField(rawValue: 3)!, value: 0) // kCGEventAssociatedMouseDeltaY
                 dragEvent.post(tap: .cgSessionEventTap)
             }
             
-            let isWeChat = draggedWindowBundleID == "com.tencent.xinWeChat"
             let totalGripTime = isWeChat ? 150000 : (forceInstant ? 20000 : 50000)
             let remainingTime = max(0, totalGripTime - 10000)
             if remainingTime > 0 {
