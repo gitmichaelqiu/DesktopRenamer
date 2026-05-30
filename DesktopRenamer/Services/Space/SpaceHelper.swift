@@ -371,12 +371,12 @@ class SpaceHelper {
             // Move to grab point and Down
             if let moveEvent = CGEvent(mouseEventSource: source, mouseType: .mouseMoved, mouseCursorPosition: grabPoint, mouseButton: .left) {
                 moveEvent.flags = []
-                moveEvent.post(tap: .cghidEventTap)
+                moveEvent.post(tap: .cgSessionEventTap)
             }
             
             if let downEvent = CGEvent(mouseEventSource: source, mouseType: .leftMouseDown, mouseCursorPosition: grabPoint, mouseButton: .left) {
                 downEvent.flags = []
-                downEvent.post(tap: .cghidEventTap)
+                downEvent.post(tap: .cgSessionEventTap)
             }
             
             usleep(10000) // 10ms grip before drag
@@ -385,7 +385,7 @@ class SpaceHelper {
             let dragPoint = CGPoint(x: grabPoint.x + 2, y: grabPoint.y)
             if let dragEvent = CGEvent(mouseEventSource: source, mouseType: .leftMouseDragged, mouseCursorPosition: dragPoint, mouseButton: .left) {
                 dragEvent.flags = []
-                dragEvent.post(tap: .cghidEventTap)
+                dragEvent.post(tap: .cgSessionEventTap)
             }
             
             let isWeChat = draggedWindowBundleID == "com.tencent.xinWeChat"
@@ -454,7 +454,7 @@ class SpaceHelper {
             // Release the window (Mouse Up).
             if let upEvent = CGEvent(mouseEventSource: source, mouseType: .leftMouseUp, mouseCursorPosition: CGEvent(source: nil)?.location ?? .zero, mouseButton: .left) {
                 upEvent.flags = []
-                upEvent.post(tap: .cghidEventTap)
+                upEvent.post(tap: .cgSessionEventTap)
             }
             
             // Verify window move success after a small delay
@@ -471,7 +471,7 @@ class SpaceHelper {
             usleep(isInstant ? 5000 : 50000) // 5ms for instant switches, 50ms otherwise
             if let restoreEvent = CGEvent(mouseEventSource: source, mouseType: .mouseMoved, mouseCursorPosition: restorePoint, mouseButton: .left) {
                 restoreEvent.flags = []
-                restoreEvent.post(tap: .cghidEventTap)
+                restoreEvent.post(tap: .cgSessionEventTap)
             }
             
             // Reset session state.
@@ -741,8 +741,8 @@ class SpaceHelper {
         keyDown.flags = .maskControl
         keyUp.flags = .maskControl
 
-        keyDown.post(tap: .cghidEventTap)
-        keyUp.post(tap: .cghidEventTap)
+        keyDown.post(tap: .cgSessionEventTap)
+        keyUp.post(tap: .cgSessionEventTap)
 
         return true
     }
