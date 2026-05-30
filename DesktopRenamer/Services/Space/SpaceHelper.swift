@@ -570,6 +570,10 @@ class SpaceHelper {
                       w >= minActiveWindowWidth, h >= minActiveWindowHeight
                 else { continue }
                 
+                // Reject transparent or non-shared utility windows
+                if let alpha = window[kCGWindowAlpha as String] as? Double, alpha <= 0.1 { continue }
+                if let sharing = window[kCGWindowSharingState as String] as? Int, sharing == 0 { continue }
+                
                 // Ensure it's a regular application window (not a system overlay)
                 if let app = NSRunningApplication(processIdentifier: Int32(windowPid)),
                    app.activationPolicy == .regular {
@@ -588,6 +592,12 @@ class SpaceHelper {
                    let bounds = window[kCGWindowBounds as String] as? [String: Any],
                    let x = bounds["X"] as? CGFloat, let y = bounds["Y"] as? CGFloat,
                    let w = bounds["Width"] as? CGFloat, let h = bounds["Height"] as? CGFloat {
+                       
+                       // Apply the same strict filtering for foreign windows to avoid capturing transparent/overlay helper windows!
+                       if w < minActiveWindowWidth || h < minActiveWindowHeight { continue }
+                       if let alpha = window[kCGWindowAlpha as String] as? Double, alpha <= 0.1 { continue }
+                       if let sharing = window[kCGWindowSharingState as String] as? Int, sharing == 0 { continue }
+                       
                        let info = (id: wid, pid: Int32(pid), frame: CGRect(x: x, y: y, width: w, height: h))
                        print("SpaceHelper: Captured active window ID: \(info.id), PID: \(info.pid), frame: \(info.frame)")
                        return info
@@ -609,6 +619,12 @@ class SpaceHelper {
                let bounds = window[kCGWindowBounds as String] as? [String: Any],
                let x = bounds["X"] as? CGFloat, let y = bounds["Y"] as? CGFloat,
                let w = bounds["Width"] as? CGFloat, let h = bounds["Height"] as? CGFloat {
+                   
+                   // Apply filtering
+                   if w < minActiveWindowWidth || h < minActiveWindowHeight { continue }
+                   if let alpha = window[kCGWindowAlpha as String] as? Double, alpha <= 0.1 { continue }
+                   if let sharing = window[kCGWindowSharingState as String] as? Int, sharing == 0 { continue }
+                   
                    return (id: wid, pid: pid, frame: CGRect(x: x, y: y, width: w, height: h))
                }
         }
