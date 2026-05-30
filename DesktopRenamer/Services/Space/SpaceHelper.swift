@@ -347,23 +347,18 @@ class SpaceHelper {
             
             let frame = activeWindowInfo.frame
             let pid = activeWindowInfo.pid
-            let isWeChat = draggedWindowBundleID == "com.tencent.xinWeChat"
             
             let grabX: CGFloat
             let grabY: CGFloat
+            var shouldDragFirst = false
             
-            if isWeChat {
-                // Dynamic grab point for WeChat:
-                // We use (w - 200) relative to window width and Y = 20 which lands on the safe draggable area of the chat pane header.
-                grabX = frame.origin.x + frame.width - 200
-                grabY = frame.origin.y + 20
-                print("SpaceHelper: Using dynamic WeChat grab point (\(frame.width - 200), 20)")
-            } else if let sm = AppDelegate.shared.spaceManager {
+            if let sm = AppDelegate.shared.spaceManager {
                 if let bundleID = NSRunningApplication(processIdentifier: pid)?.bundleIdentifier,
                    let exception = sm.appGrabExceptions.first(where: { $0.bundleIdentifier == bundleID }) {
                     grabX = frame.origin.x + CGFloat(exception.grabOffsetX)
                     grabY = frame.origin.y + CGFloat(exception.grabOffsetY)
-                    print("SpaceHelper: Using per-app grab exception (\(exception.grabOffsetX), \(exception.grabOffsetY)) for \(exception.appName) (\(bundleID))")
+                    shouldDragFirst = exception.shouldDragBeforeSwitch
+                    print("SpaceHelper: Using per-app grab exception (\(exception.grabOffsetX), \(exception.grabOffsetY)) for \(exception.appName) (\(bundleID)), dragBeforeSwitch=\(shouldDragFirst)")
                 } else {
                     grabX = frame.origin.x + CGFloat(sm.grabOffsetX)
                     grabY = frame.origin.y + CGFloat(sm.grabOffsetY)
@@ -381,8 +376,8 @@ class SpaceHelper {
                 moveEvent.post(tap: .cgSessionEventTap)
             }
             
-            if isWeChat {
-                usleep(50000) // 50ms settle after move for WeChat
+            if shouldDragFirst {
+                usleep(50000) // 50ms settle after move for drag-first path
             }
             
             if let downEvent = CGEvent(mouseEventSource: source, mouseType: .leftMouseDown, mouseCursorPosition: grabPoint, mouseButton: .left) {
@@ -390,23 +385,27 @@ class SpaceHelper {
                 downEvent.post(tap: .cgSessionEventTap)
             }
             
-            usleep(isWeChat ? 50000 : 10000) // 50ms grip for WeChat, 10ms otherwise
+            usleep(shouldDragFirst ? 50000 : 10000) // 50ms grip for drag-first, 10ms otherwise
             
-            if isWeChat {
-                // Post multiple drag events to engage WeChat's custom drag loop
-                var currentPoint = grabPoint
-                let steps = 10
-                let stepX: CGFloat = 10
-                for _ in 1...steps {
-                    currentPoint = CGPoint(x: currentPoint.x + stepX, y: currentPoint.y)
-                    if let dragEvent = CGEvent(mouseEventSource: source, mouseType: .leftMouseDragged, mouseCursorPosition: currentPoint, mouseButton: .left) {
-                        dragEvent.flags = []
-                        dragEvent.setIntegerValueField(CGEventField(rawValue: 2)!, value: Int64(stepX)) // kCGEventAssociatedMouseDeltaX
-                        dragEvent.setIntegerValueField(CGEventField(rawValue: 3)!, value: 0) // kCGEventAssociatedMouseDeltaY
-                        dragEvent.post(tap: .cgSessionEventTap)
-                    }
-                    usleep(15000) // 15ms delay per step (150ms total)
+            if shouldDragFirst {
+                // Drag 5px to the right and then reverse it back before switching spaces
+                let dragAmount: CGFloat = 5
+                let dragPoint = CGPoint(x: grabPoint.x + dragAmount, y: grabPoint.y)
+                if let dragEvent = CGEvent(mouseEventSource: source, mouseType: .leftMouseDragged, mouseCursorPosition: dragPoint, mouseButton: .left) {
+                    dragEvent.flags = []
+                    dragEvent.setIntegerValueField(CGEventField(rawValue: 2)!, value: Int64(dragAmount)) // kCGEventAssociatedMouseDeltaX
+                    dragEvent.setIntegerValueField(CGEventField(rawValue: 3)!, value: 0) // kCGEventAssociatedMouseDeltaY
+                    dragEvent.post(tap: .cgSessionEventTap)
                 }
+                usleep(30000) // 30ms settle
+                
+                if let dragBackEvent = CGEvent(mouseEventSource: source, mouseType: .leftMouseDragged, mouseCursorPosition: grabPoint, mouseButton: .left) {
+                    dragBackEvent.flags = []
+                    dragBackEvent.setIntegerValueField(CGEventField(rawValue: 2)!, value: Int64(-dragAmount)) // kCGEventAssociatedMouseDeltaX
+                    dragBackEvent.setIntegerValueField(CGEventField(rawValue: 3)!, value: 0) // kCGEventAssociatedMouseDeltaY
+                    dragBackEvent.post(tap: .cgSessionEventTap)
+                }
+                usleep(30000) // 30ms settle
             } else {
                 // Post a tiny drag event to initiate the window drag tracking loop on standard windows
                 let dragPoint = CGPoint(x: grabPoint.x + 2, y: grabPoint.y)

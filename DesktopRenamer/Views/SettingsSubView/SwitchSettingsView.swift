@@ -597,6 +597,20 @@ struct EditAppExceptionView: View {
                         checkDraggability()
                     }
                 }
+                
+                Divider()
+                
+                SettingsRow(
+                    "Drag window slightly before switching",
+                    helperText: "For custom-drawn or sandboxed windows (like WeChat) that require mouse movement to start dragging. Performs a 5px drag and reverses it before the space switch."
+                ) {
+                    Toggle("", isOn: Binding(
+                        get: { exception.dragBeforeSwitch ?? false },
+                        set: { exception.dragBeforeSwitch = $0 }
+                    ))
+                    .toggleStyle(.switch)
+                    .labelsHidden()
+                }
             }
             
             // Feedback status area
