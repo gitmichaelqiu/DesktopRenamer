@@ -381,26 +381,46 @@ class SpaceHelper {
                 moveEvent.post(tap: .cgSessionEventTap)
             }
             
+            if isWeChat {
+                usleep(50000) // 50ms settle after move for WeChat
+            }
+            
             if let downEvent = CGEvent(mouseEventSource: source, mouseType: .leftMouseDown, mouseCursorPosition: grabPoint, mouseButton: .left) {
                 downEvent.flags = []
                 downEvent.post(tap: .cgSessionEventTap)
             }
             
-            usleep(10000) // 10ms grip before drag
+            usleep(isWeChat ? 50000 : 10000) // 50ms grip for WeChat, 10ms otherwise
             
-            // Post a tiny drag event to initiate the window drag tracking loop on custom windows (e.g. WeChat)
-            let dragPoint = CGPoint(x: grabPoint.x + 2, y: grabPoint.y)
-            if let dragEvent = CGEvent(mouseEventSource: source, mouseType: .leftMouseDragged, mouseCursorPosition: dragPoint, mouseButton: .left) {
-                dragEvent.flags = []
-                dragEvent.setIntegerValueField(CGEventField(rawValue: 2)!, value: 2) // kCGEventAssociatedMouseDeltaX
-                dragEvent.setIntegerValueField(CGEventField(rawValue: 3)!, value: 0) // kCGEventAssociatedMouseDeltaY
-                dragEvent.post(tap: .cgSessionEventTap)
-            }
-            
-            let totalGripTime = isWeChat ? 150000 : (forceInstant ? 20000 : 50000)
-            let remainingTime = max(0, totalGripTime - 10000)
-            if remainingTime > 0 {
-                usleep(useconds_t(remainingTime))
+            if isWeChat {
+                // Post multiple drag events to engage WeChat's custom drag loop
+                var currentPoint = grabPoint
+                let steps = 10
+                let stepX: CGFloat = 10
+                for _ in 1...steps {
+                    currentPoint = CGPoint(x: currentPoint.x + stepX, y: currentPoint.y)
+                    if let dragEvent = CGEvent(mouseEventSource: source, mouseType: .leftMouseDragged, mouseCursorPosition: currentPoint, mouseButton: .left) {
+                        dragEvent.flags = []
+                        dragEvent.setIntegerValueField(CGEventField(rawValue: 2)!, value: Int64(stepX)) // kCGEventAssociatedMouseDeltaX
+                        dragEvent.setIntegerValueField(CGEventField(rawValue: 3)!, value: 0) // kCGEventAssociatedMouseDeltaY
+                        dragEvent.post(tap: .cgSessionEventTap)
+                    }
+                    usleep(15000) // 15ms delay per step (150ms total)
+                }
+            } else {
+                // Post a tiny drag event to initiate the window drag tracking loop on standard windows
+                let dragPoint = CGPoint(x: grabPoint.x + 2, y: grabPoint.y)
+                if let dragEvent = CGEvent(mouseEventSource: source, mouseType: .leftMouseDragged, mouseCursorPosition: dragPoint, mouseButton: .left) {
+                    dragEvent.flags = []
+                    dragEvent.setIntegerValueField(CGEventField(rawValue: 2)!, value: 2) // kCGEventAssociatedMouseDeltaX
+                    dragEvent.setIntegerValueField(CGEventField(rawValue: 3)!, value: 0) // kCGEventAssociatedMouseDeltaY
+                    dragEvent.post(tap: .cgSessionEventTap)
+                }
+                
+                let remainingTime = max(0, (forceInstant ? 20000 : 50000) - 10000)
+                if remainingTime > 0 {
+                    usleep(useconds_t(remainingTime))
+                }
             }
         }
         
