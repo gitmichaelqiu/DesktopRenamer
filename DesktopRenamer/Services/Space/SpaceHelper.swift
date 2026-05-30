@@ -345,6 +345,41 @@ class SpaceHelper {
                 draggedWindowAppName = runningApp.localizedName
             }
             
+            // Programmatic Move for WeChat:
+            // WeChat's custom window controls and sandboxing prevent reliable simulated dragging.
+            // We use direct CGS+AX APIs to assign the window to the target space instead.
+            if draggedWindowBundleID == "com.tencent.xinWeChat" {
+                let displayID = getWindowDisplayID(for: activeWindowInfo.frame) ?? getCursorDisplayID() ?? "Main"
+                if let fromSpaceStr = getCurrentSpaceID(for: displayID),
+                   let fromSpaceID = Int(fromSpaceStr),
+                   let targetSpaceInt = Int(spaceID) {
+                    
+                    print("SpaceHelper: WeChat programmatic move from \(fromSpaceID) to \(targetSpaceInt)")
+                    moveWindowToSpace(windowID: activeWindowInfo.id, fromSpaceID: fromSpaceID, targetSpaceID: targetSpaceInt)
+                    
+                    // Trigger space switch to target space
+                    switchToSpace(spaceID, forceInstant: forceInstant)
+                    
+                    // Trigger focus and activation of the window on the new space after a short delay
+                    let winID = activeWindowInfo.id
+                    let pid = activeWindowInfo.pid
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                        focusWindow(id: winID, pid: pid)
+                    }
+                    
+                    // Reset session state and return early
+                    originalMousePoint = nil
+                    restorationTask = nil
+                    pendingMoveCount = 0
+                    SpaceHelper.targetSpaceID = nil
+                    draggedWindowID = nil
+                    draggedWindowPID = nil
+                    draggedWindowBundleID = nil
+                    draggedWindowAppName = nil
+                    return
+                }
+            }
+            
             let frame = activeWindowInfo.frame
             let pid = activeWindowInfo.pid
             
