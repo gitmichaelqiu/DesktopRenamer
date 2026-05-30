@@ -379,7 +379,21 @@ class SpaceHelper {
                 downEvent.post(tap: .cghidEventTap)
             }
             
-            usleep(forceInstant ? 20000 : 50000) // 0.02s grip for instant switches, 0.05s otherwise
+            usleep(10000) // 10ms grip before drag
+            
+            // Post a tiny drag event to initiate the window drag tracking loop on custom windows (e.g. WeChat)
+            let dragPoint = CGPoint(x: grabPoint.x + 2, y: grabPoint.y)
+            if let dragEvent = CGEvent(mouseEventSource: source, mouseType: .leftMouseDragged, mouseCursorPosition: dragPoint, mouseButton: .left) {
+                dragEvent.flags = []
+                dragEvent.post(tap: .cghidEventTap)
+            }
+            
+            let isWeChat = draggedWindowBundleID == "com.tencent.xinWeChat"
+            let totalGripTime = isWeChat ? 150000 : (forceInstant ? 20000 : 50000)
+            let remainingTime = max(0, totalGripTime - 10000)
+            if remainingTime > 0 {
+                usleep(useconds_t(remainingTime))
+            }
         }
         
         // Trigger the space switch and track the movement.
