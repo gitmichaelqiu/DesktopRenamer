@@ -1166,6 +1166,22 @@ struct SpacesBottomBar: View {
                     }
                     .padding(.trailing, viewModel.isBottomBarFocused ? 270 : 210)
                 }
+                .mask(
+                    HStack(spacing: 0) {
+                        Rectangle()
+                            .fill(Color.black)
+                        
+                        LinearGradient(
+                            gradient: Gradient(colors: [.black, .clear]),
+                            startPoint: .leading,
+                            endPoint: .trailing
+                        )
+                        .frame(width: 32)
+                        
+                        Color.clear
+                            .frame(width: viewModel.isBottomBarFocused ? 270 : 210)
+                    }
+                )
                 .onAppear {
                     scrollProxy.scrollTo(spaceManager.currentSpaceUUID, anchor: UnitPoint(x: 0.33, y: 0.5))
                 }
@@ -1202,27 +1218,17 @@ struct SpacesBottomBar: View {
                 }
             }
             
-            // Right-aligned Actions & Blur Cover
+            // Right-aligned Actions Overlay (Transparent background, no seams)
             HStack(spacing: 0) {
                 Spacer()
                 
-                // Left fading blur edge to sneak space capsules below it
-                VisualEffectView(material: .hudWindow, blendingMode: .withinWindow)
-                    .frame(width: 32)
-                    .mask(
-                        LinearGradient(
-                            gradient: Gradient(colors: [.clear, .black]),
-                            startPoint: .leading,
-                            endPoint: .trailing
-                        )
-                    )
-                
-                // Solid glass background containing the divider and action capsules
                 HStack(spacing: 12) {
+                    // Separator divider
                     Rectangle()
                         .fill(colors.border)
                         .frame(width: 1, height: 16)
                     
+                    // Right side action indicators
                     HStack(spacing: 8) {
                         if !viewModel.isBottomBarFocused {
                             Button(action: {
@@ -1288,14 +1294,12 @@ struct SpacesBottomBar: View {
                     }
                 }
                 .padding(.leading, 12)
-                .background(
-                    VisualEffectView(material: .hudWindow, blendingMode: .withinWindow)
-                )
+                .background(Color.clear)
             }
             .frame(maxHeight: .infinity)
         }
         .padding(.horizontal, 18)
-        .padding(.vertical, 10)
+        .frame(height: 46)
         .background(colors.bottomBarBg)
     }
 }
