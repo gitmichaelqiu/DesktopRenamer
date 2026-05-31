@@ -607,7 +607,7 @@ struct CommandRowView: View {
                 KeycapView(text: LocalStringKey_compat(shortcut), isSelected: isSelected)
             } else if let statusText = toggleStatus {
                 Text(LocalizedStringKey(statusText))
-                    .font(.system(.caption2, design: .monospaced))
+                    .font(.system(.caption2))
                     .fontWeight(.bold)
                     .foregroundColor(statusText == "Enabled" ? colors.greenText : colors.textSecondary)
                     .padding(.horizontal, 8)
@@ -900,7 +900,7 @@ struct WindowBatchRowView: View {
                 KeycapView(text: LocalizedStringKey(shortcut), isSelected: isSelected)
             } else if isStaged {
                 Text(stagedActionText)
-                    .font(.system(.caption2, design: .monospaced))
+                    .font(.system(.caption2))
                     .fontWeight(.medium)
                     .foregroundColor(colors.greenText)
                     .padding(.horizontal, 6)
@@ -913,7 +913,7 @@ struct WindowBatchRowView: View {
                     )
             } else {
                 Text(window.space.name)
-                    .font(.system(.caption2, design: .monospaced))
+                    .font(.system(.caption2))
                     .fontWeight(.medium)
                     .foregroundColor(colors.textSecondary)
                     .padding(.horizontal, 8)
@@ -1024,7 +1024,7 @@ struct BatchMoveBottomBar: View {
                     HStack(spacing: 4) {
                         Text(verbatim: String(localized: "Stage to Space"))
                         Text("↵")
-                            .font(.system(.caption2, design: .monospaced))
+                            .font(.system(.caption2))
                             .fontWeight(.bold)
                     }
                     .modifier(BottomBarCapsule(isSelected: false, isActive: false, colorScheme: colorScheme))
@@ -1050,7 +1050,7 @@ struct BatchMoveBottomBar: View {
                                 HStack(spacing: 4) {
                                     Text(verbatim: String(localized: isMove ? "Unstage Move" : "Unstage Action"))
                                     Text("↵")
-                                        .font(.system(.caption2, design: .monospaced))
+                                        .font(.system(.caption2))
                                         .fontWeight(.bold)
                                 }
                                 .modifier(BottomBarCapsule(isSelected: false, isActive: false, colorScheme: colorScheme))
@@ -1065,7 +1065,7 @@ struct BatchMoveBottomBar: View {
                                 HStack(spacing: 4) {
                                     Text(verbatim: String(localized: "Stage Move to Desktop..."))
                                     Text("↵")
-                                        .font(.system(.caption2, design: .monospaced))
+                                        .font(.system(.caption2))
                                         .fontWeight(.bold)
                                 }
                                 .modifier(BottomBarCapsule(isSelected: false, isActive: false, colorScheme: colorScheme))
@@ -1077,7 +1077,7 @@ struct BatchMoveBottomBar: View {
                                 HStack(spacing: 4) {
                                     Text(verbatim: String(localized: "Actions"))
                                     Text("⌘K")
-                                        .font(.system(.caption2, design: .monospaced))
+                                        .font(.system(.caption2))
                                         .fontWeight(.bold)
                                 }
                                 .modifier(BottomBarCapsule(isSelected: false, isActive: false, colorScheme: colorScheme))
@@ -1094,7 +1094,7 @@ struct BatchMoveBottomBar: View {
                         HStack(spacing: 4) {
                             Text(verbatim: String(localized: "Run Batch Actions"))
                             Text("⌘↵")
-                                .font(.system(.caption2, design: .monospaced))
+                                .font(.system(.caption2))
                                 .fontWeight(.bold)
                         }
                         .modifier(BottomBarCapsule(isSelected: true, isActive: false, isGreen: true, colorScheme: colorScheme))
@@ -1176,7 +1176,7 @@ struct SpacesBottomBar: View {
                         HStack(spacing: 4) {
                             Text(LocalizedStringKey("Switch Space"))
                             Text("Tab")
-                                .font(.system(.caption2, design: .monospaced))
+                                .font(.system(.caption2))
                                 .fontWeight(.semibold)
                         }
                         .modifier(BottomBarCapsule(isSelected: false, isActive: false, colorScheme: colorScheme))
@@ -1188,7 +1188,7 @@ struct SpacesBottomBar: View {
                     HStack(spacing: 4) {
                         Text(LocalizedStringKey("Switch Space"))
                         Text("↵")
-                            .font(.system(.caption2, design: .monospaced))
+                            .font(.system(.caption2))
                             .fontWeight(.bold)
                     }
                     .modifier(BottomBarCapsule(isSelected: false, isActive: false, colorScheme: colorScheme))
@@ -1200,7 +1200,7 @@ struct SpacesBottomBar: View {
                     HStack(spacing: 4) {
                         Text(LocalizedStringKey("Move Window"))
                         Text("⌥↵")
-                            .font(.system(.caption2, design: .monospaced))
+                            .font(.system(.caption2))
                             .fontWeight(.bold)
                     }
                     .modifier(BottomBarCapsule(isSelected: false, isActive: false, colorScheme: colorScheme))
@@ -1212,7 +1212,7 @@ struct SpacesBottomBar: View {
                     HStack(spacing: 4) {
                         Text(LocalizedStringKey("Action"))
                         Text("↵")
-                            .font(.system(.caption2, design: .monospaced))
+                            .font(.system(.caption2))
                             .fontWeight(.bold)
                     }
                     .modifier(BottomBarCapsule(isSelected: false, isActive: false, colorScheme: colorScheme))
@@ -1262,7 +1262,7 @@ struct CommandBottomBar: View {
                     HStack(spacing: 4) {
                         Text(verbatim: String(localized: "Switch Space"))
                         Text("↵")
-                            .font(.system(.caption2, design: .monospaced))
+                            .font(.system(.caption2))
                             .fontWeight(.bold)
                     }
                     .modifier(BottomBarCapsule(isSelected: false, isActive: false, colorScheme: colorScheme))
@@ -1275,7 +1275,7 @@ struct CommandBottomBar: View {
                     HStack(spacing: 4) {
                         Text(verbatim: String(localized: "Move Window"))
                         Text("↵")
-                            .font(.system(.caption2, design: .monospaced))
+                            .font(.system(.caption2))
                             .fontWeight(.bold)
                     }
                     .modifier(BottomBarCapsule(isSelected: false, isActive: false, colorScheme: colorScheme))
@@ -1288,7 +1288,7 @@ struct CommandBottomBar: View {
                     HStack(spacing: 4) {
                         Text(verbatim: String(localized: "Focus Window"))
                         Text("↵")
-                            .font(.system(.caption2, design: .monospaced))
+                            .font(.system(.caption2))
                             .fontWeight(.bold)
                     }
                     .modifier(BottomBarCapsule(isSelected: false, isActive: false, colorScheme: colorScheme))
@@ -1301,7 +1301,7 @@ struct CommandBottomBar: View {
                     HStack(spacing: 4) {
                         Text(verbatim: String(localized: "Rename Space"))
                         Text("↵")
-                            .font(.system(.caption2, design: .monospaced))
+                            .font(.system(.caption2))
                             .fontWeight(.bold)
                     }
                     .modifier(BottomBarCapsule(isSelected: false, isActive: false, colorScheme: colorScheme))
