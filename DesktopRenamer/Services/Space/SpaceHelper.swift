@@ -393,8 +393,8 @@ class SpaceHelper {
                 let dragPoint = CGPoint(x: grabPoint.x + dragAmount, y: grabPoint.y)
                 if let dragEvent = CGEvent(mouseEventSource: source, mouseType: .leftMouseDragged, mouseCursorPosition: dragPoint, mouseButton: .left) {
                     dragEvent.flags = []
-                    dragEvent.setIntegerValueField(CGEventField(rawValue: 2)!, value: Int64(dragAmount)) // kCGEventAssociatedMouseDeltaX
-                    dragEvent.setIntegerValueField(CGEventField(rawValue: 3)!, value: 0) // kCGEventAssociatedMouseDeltaY
+                    dragEvent.setIntegerValueField(.mouseEventDeltaX, value: Int64(dragAmount)) // kCGEventAssociatedMouseDeltaX
+                    dragEvent.setIntegerValueField(.mouseEventDeltaY, value: 0) // kCGEventAssociatedMouseDeltaY
                     dragEvent.post(tap: .cgSessionEventTap)
                 }
                 usleep(30000) // 30ms settle
