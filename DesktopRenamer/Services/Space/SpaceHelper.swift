@@ -1239,7 +1239,7 @@ class SpaceHelper {
         for space in sortedSpaces {
             let name = spaceNames[space.id] ?? ""
             let displayName = getDisplayName(for: space.displayID, screenMap: screenMap)
-            output += ">\(space.id)~\(name)~\(displayName)~\(space.num)\n"
+            output += ">\(space.id)~\(name)~\(displayName)~\(space.num)~\(space.isFullscreen ? "1" : "0")\n"
 
             guard let windows = windowsBySpaceID[space.id] else { continue }
             for window in windows {

@@ -1011,6 +1011,26 @@
         }
       }
     },
+    "Enter Full Screen" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "进入全屏"
+          }
+        }
+      }
+    },
+    "Exit Full Screen" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "退出全屏"
+          }
+        }
+      }
+    },
     "Fullscreen detection method" : {
       "localizations" : {
         "zh-Hans" : {
