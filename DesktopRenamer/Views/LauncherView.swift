@@ -1606,22 +1606,12 @@ struct CommandKOverlayView: View {
     
     var body: some View {
         ZStack {
-            // Glassy background dimming
-            Group {
-                if #available(macOS 26.0, *) {
-                    Group {
-                        Color.black.opacity(colorScheme == .dark ? 0.35 : 0.15)
-                    }
-                    .glassEffect(.regular, in: Rectangle())
-                } else {
-                    VisualEffectView(material: .hudWindow, blendingMode: .withinWindow, state: .active)
-                        .opacity(0.85)
+            // Semi-transparent background dimming
+            Color.black.opacity(colorScheme == .dark ? 0.35 : 0.15)
+                .edgesIgnoringSafeArea(.all)
+                .onTapGesture {
+                    viewModel.commandKTargetWindow = nil
                 }
-            }
-            .edgesIgnoringSafeArea(.all)
-            .onTapGesture {
-                viewModel.commandKTargetWindow = nil
-            }
             
             // Centered panel card
             VStack(spacing: 0) {
