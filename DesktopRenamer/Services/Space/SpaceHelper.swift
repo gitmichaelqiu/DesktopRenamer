@@ -988,11 +988,15 @@ class SpaceHelper {
                 let isFullscreen = space["TileLayoutManager"] != nil
 
                 var appName: String? = nil
+                var appPath: String? = nil
                 var globalShortcutNum: Int? = nil
 
                 if isFullscreen {
                     if let p = space["pid"] as? Int32 ?? space["owner pid"] as? Int32 {
-                        appName = NSRunningApplication(processIdentifier: p)?.localizedName
+                        if let runningApp = NSRunningApplication(processIdentifier: p) {
+                            appName = runningApp.localizedName
+                            appPath = runningApp.bundleURL?.path
+                        }
                     }
                 } else {
                     globalDesktopCounter += 1
@@ -1008,6 +1012,7 @@ class SpaceHelper {
                         displayID: displayID,
                         isFullscreen: isFullscreen,
                         appName: appName,
+                        appPath: appPath,
                         globalShortcutNum: globalShortcutNum
                     ))
 
@@ -1238,7 +1243,7 @@ class SpaceHelper {
         for space in sortedSpaces {
             let name = spaceNames[space.id] ?? ""
             let displayName = getDisplayName(for: space.displayID, screenMap: screenMap)
-            output += ">\(space.id)~\(name)~\(displayName)~\(space.num)~\(space.isFullscreen ? "1" : "0")\n"
+            output += ">\(space.id)~\(name)~\(displayName)~\(space.num)~\(space.isFullscreen ? "1" : "0")~\(space.appPath ?? "")\n"
 
             guard let windows = windowsBySpaceID[space.id] else { continue }
             for window in windows {

@@ -8,17 +8,19 @@ struct SpaceGroup: Identifiable, Equatable {
     let displayName: String
     let num: Int
     let isFullscreen: Bool
+    let appPath: String?
     
     // Caching transformed string for performance
     let pinyinName: String
     let pinyinDisplayName: String
     
-    init(id: String, name: String, displayName: String, num: Int, isFullscreen: Bool) {
+    init(id: String, name: String, displayName: String, num: Int, isFullscreen: Bool, appPath: String? = nil) {
         self.id = id
         self.name = name
         self.displayName = displayName
         self.num = num
         self.isFullscreen = isFullscreen
+        self.appPath = appPath
         
         let mutableName = NSMutableString(string: name)
         CFStringTransform(mutableName, nil, kCFStringTransformToLatin, false)
@@ -545,7 +547,8 @@ struct BatchMoveSection: Identifiable {
                 name: names[space.id] ?? "",
                 displayName: getDisplayName(for: space.displayID),
                 num: space.num,
-                isFullscreen: space.isFullscreen
+                isFullscreen: space.isFullscreen,
+                appPath: space.appPath
             )
         }
         
@@ -593,12 +596,14 @@ struct BatchMoveSection: Identifiable {
                 let parts = line.dropFirst().components(separatedBy: "~")
                 if parts.count >= 4 {
                     let isFS = parts.count >= 5 ? (parts[4] == "1") : false
+                    let appPath = (parts.count >= 6 && !parts[5].isEmpty) ? parts[5] : nil
                     let space = SpaceGroup(
                         id: parts[0],
                         name: parts[1].isEmpty ? "Space \(parts[3])" : parts[1],
                         displayName: parts[2],
                         num: Int(parts[3]) ?? 0,
-                        isFullscreen: isFS
+                        isFullscreen: isFS,
+                        appPath: appPath
                     )
                     currentSpace = space
                     spaces.append(space)

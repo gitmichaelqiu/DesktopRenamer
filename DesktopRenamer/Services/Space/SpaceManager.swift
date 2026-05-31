@@ -621,9 +621,10 @@ class SpaceManager: ObservableObject {
         }
         
         let widgetSpaces = sortedSpaces.map { space in
-            WidgetSpace(
+            let defaultName = space.isFullscreen ? (space.appName ?? "Fullscreen") : String(format: NSLocalizedString("Space.DefaultName", comment: ""), space.num)
+            return WidgetSpace(
                 id: space.id,
-                name: space.customName.isEmpty ? String(format: NSLocalizedString("Space.DefaultName", comment: ""), space.num) : space.customName,
+                name: space.customName.isEmpty ? defaultName : space.customName,
                 num: space.num,
                 displayID: space.displayID
             )
@@ -634,7 +635,10 @@ class SpaceManager: ObservableObject {
         }
         
         // Some simple fields for basic widgets to use
-        let allSpaceNames = sortedSpaces.map { $0.customName.isEmpty ? "\($0.num)" : $0.customName }
+        let allSpaceNames = sortedSpaces.map { space in
+            if !space.customName.isEmpty { return space.customName }
+            return space.isFullscreen ? (space.appName ?? "Fullscreen") : "\(space.num)"
+        }
         defaults.set(allSpaceNames, forKey: "widget_allSpaces")
         
         defaults.set(name, forKey: "widget_spaceName")
@@ -758,9 +762,14 @@ class SpaceManager: ObservableObject {
         }
         if spaceUUID == "FULLSCREEN" { return "Fullscreen" }
         
-        var ret = spaceNameDict.first(where: {$0.id == spaceUUID})?.customName
+        let matched = spaceNameDict.first(where: { $0.id == spaceUUID })
+        var ret = matched?.customName
         if ret == nil || ret == "" {
-            ret = String(format: NSLocalizedString("Space.DefaultName", comment: ""), getSpaceNum(spaceUUID))
+            if matched?.isFullscreen == true {
+                ret = matched?.appName ?? "Fullscreen"
+            } else {
+                ret = String(format: NSLocalizedString("Space.DefaultName", comment: ""), getSpaceNum(spaceUUID))
+            }
         }
         return ret ?? ""
     }

@@ -677,16 +677,32 @@ struct SpaceRowView: View {
     
     var body: some View {
         HStack(spacing: 12) {
-            Image(systemName: "desktopcomputer")
-                .font(.system(size: 12, weight: .medium))
-                .foregroundColor(colors.textPrimary)
-                .frame(width: 28, height: 28)
-                .background(colors.badgeBg)
-                .cornerRadius(6)
-                .overlay(
-                    RoundedRectangle(cornerRadius: 6)
-                        .stroke(colors.badgeBorder, lineWidth: 1)
-                )
+            if space.isFullscreen, let appPath = space.appPath {
+                let appIcon = NSWorkspace.shared.icon(forFile: appPath)
+                Image(nsImage: appIcon)
+                    .resizable()
+                    .aspectRatio(contentMode: .fit)
+                    .frame(width: 20, height: 20)
+                    .padding(4)
+                    .frame(width: 28, height: 28)
+                    .background(colors.badgeBg)
+                    .cornerRadius(6)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 6)
+                            .stroke(colors.badgeBorder, lineWidth: 1)
+                    )
+            } else {
+                Image(systemName: "desktopcomputer")
+                    .font(.system(size: 12, weight: .medium))
+                    .foregroundColor(colors.textPrimary)
+                    .frame(width: 28, height: 28)
+                    .background(colors.badgeBg)
+                    .cornerRadius(6)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 6)
+                            .stroke(colors.badgeBorder, lineWidth: 1)
+                    )
+            }
             
             VStack(alignment: .leading, spacing: 2) {
                 Text(space.name)
@@ -695,10 +711,17 @@ struct SpaceRowView: View {
                     .foregroundColor(colors.textPrimary)
                     .lineLimit(1)
                 
-                Text(verbatim: String(format: String(localized: "%@ · Space %lld"), space.displayName, space.num))
-                    .font(.subheadline)
-                    .foregroundColor(isSelected ? colors.textSecondary : colors.textTertiary)
-                    .lineLimit(1)
+                if space.isFullscreen {
+                    Text(verbatim: String(format: String(localized: "%@ · Fullscreen"), space.displayName))
+                        .font(.subheadline)
+                        .foregroundColor(isSelected ? colors.textSecondary : colors.textTertiary)
+                        .lineLimit(1)
+                } else {
+                    Text(verbatim: String(format: String(localized: "%@ · Space %lld"), space.displayName, space.num))
+                        .font(.subheadline)
+                        .foregroundColor(isSelected ? colors.textSecondary : colors.textTertiary)
+                        .lineLimit(1)
+                }
             }
             
             Spacer()

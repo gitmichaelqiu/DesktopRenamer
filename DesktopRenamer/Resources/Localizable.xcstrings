@@ -3531,6 +3531,16 @@
         }
       },
       "shouldTranslate" : false
+    },
+    "%@ · Fullscreen" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ · 全屏"
+          }
+        }
+      }
     }
   },
   "version" : "1.1"
