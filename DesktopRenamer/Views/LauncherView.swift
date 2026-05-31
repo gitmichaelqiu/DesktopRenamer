@@ -858,22 +858,17 @@ struct WindowBatchRowView: View {
             if let shortcut = shortcutText {
                 KeycapView(text: LocalizedStringKey(shortcut), isSelected: isSelected)
             } else if isStaged {
-                HStack(spacing: 4) {
-                    Circle()
-                        .fill(colors.greenText)
-                        .frame(width: 5, height: 5)
-                    Text(stagedActionText)
-                        .font(.system(size: 10, weight: .medium))
-                        .foregroundColor(colors.greenText)
-                }
-                .padding(.horizontal, 6)
-                .padding(.vertical, 3.5)
-                .background(colors.greenText.opacity(0.12))
-                .cornerRadius(6)
-                .overlay(
-                    RoundedRectangle(cornerRadius: 6)
-                        .stroke(colors.greenText.opacity(0.3), lineWidth: 1)
-                )
+                Text(stagedActionText)
+                    .font(.system(size: 10, weight: .medium))
+                    .foregroundColor(colors.greenText)
+                    .padding(.horizontal, 6)
+                    .padding(.vertical, 3.5)
+                    .background(colors.greenText.opacity(0.12))
+                    .cornerRadius(6)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 6)
+                            .stroke(colors.greenText.opacity(0.3), lineWidth: 1)
+                    )
             } else {
                 Text(window.space.name)
                     .font(.system(size: 10, weight: .medium))
