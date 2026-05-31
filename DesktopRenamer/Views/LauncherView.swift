@@ -255,7 +255,7 @@ struct LauncherView: View {
                 }
             }
             .blur(radius: viewModel.commandKTargetWindow != nil ? 10 : 0)
-            .animation(.easeInOut(duration: 0.2), value: viewModel.commandKTargetWindow != nil)
+            .animation(.easeInOut(duration: 0.12), value: viewModel.commandKTargetWindow != nil)
             
             if let targetWindow = viewModel.commandKTargetWindow {
                 CommandKOverlayView(viewModel: viewModel, window: targetWindow)
