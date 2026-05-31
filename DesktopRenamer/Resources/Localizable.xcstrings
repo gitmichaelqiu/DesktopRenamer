@@ -121,6 +121,9 @@
     "↺" : {
       "shouldTranslate" : false
     },
+    "⇥" : {
+
+    },
     "⌘%lld" : {
       "shouldTranslate" : false
     },
@@ -1542,6 +1545,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "移动至%@"
+          }
+        }
+      }
+    },
+    "Move to..." : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "加入移动队列…"
           }
         }
       }
@@ -3022,16 +3035,6 @@
         }
       }
     },
-    "Move to..." : {
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "加入移动队列…"
-          }
-        }
-      }
-    },
     "Stage" : {
       "localizations" : {
         "zh-Hans" : {
@@ -3223,9 +3226,6 @@
           }
         }
       }
-    },
-    "Tab" : {
-      "shouldTranslate" : false
     },
     "Take back control of your macOS spaces." : {
       "localizations" : {

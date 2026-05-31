@@ -992,10 +992,10 @@ struct BatchMoveBottomBar: View {
             HStack(spacing: 6) {
                 HStack(spacing: 6) {
                     Image(systemName: viewModel.activeCommand?.iconName ?? "macwindow.badge.plus")
-                        .font(.caption.weight(.semibold))
+                        .font(.subheadline.weight(.semibold))
                         .foregroundColor(Color.accentColor)
                     Text(viewModel.activeCommand?.title ?? String(localized: "Batch Move Windows"))
-                        .font(.caption)
+                        .font(.subheadline)
                         .fontWeight(.semibold)
                         .foregroundColor(colors.textPrimary)
                 }
@@ -1008,10 +1008,10 @@ struct BatchMoveBottomBar: View {
                     
                     HStack(spacing: 4) {
                         Image(systemName: "square.and.arrow.down")
-                            .font(.caption.weight(.semibold))
+                            .font(.subheadline.weight(.semibold))
                             .foregroundColor(colors.greenText)
                         Text(String(format: NSLocalizedString("Stage: %@", comment: ""), staging.ownerName))
-                            .font(.caption)
+                            .font(.subheadline)
                             .fontWeight(.semibold)
                             .foregroundColor(colors.textPrimary)
                     }
@@ -1054,7 +1054,7 @@ struct BatchMoveBottomBar: View {
                                 HStack(spacing: 4) {
                                     Text(verbatim: String(localized: isMove ? "Unstage Move" : "Unstage Action"))
                                     Text("↵")
-                                        .font(.system(.caption2))
+                                        .font(.system(.subheadline))
                                         .fontWeight(.bold)
                                 }
                                 .modifier(BottomBarCapsule(isSelected: false, isActive: false, colorScheme: colorScheme))
@@ -1069,7 +1069,7 @@ struct BatchMoveBottomBar: View {
                                 HStack(spacing: 4) {
                                     Text(verbatim: String(localized: "Move to..."))
                                     Text("↵")
-                                        .font(.system(.caption2))
+                                        .font(.system(.subheadline))
                                         .fontWeight(.bold)
                                 }
                                 .modifier(BottomBarCapsule(isSelected: false, isActive: false, colorScheme: colorScheme))
@@ -1081,7 +1081,7 @@ struct BatchMoveBottomBar: View {
                                 HStack(spacing: 4) {
                                     Text(verbatim: String(localized: "Actions"))
                                     Text("⌘K")
-                                        .font(.system(.caption2))
+                                        .font(.system(.subheadline))
                                         .fontWeight(.bold)
                                 }
                                 .modifier(BottomBarCapsule(isSelected: false, isActive: false, colorScheme: colorScheme))
@@ -1098,7 +1098,7 @@ struct BatchMoveBottomBar: View {
                         HStack(spacing: 4) {
                             Text(verbatim: String(localized: "Run Batch Actions"))
                             Text("⌘↵")
-                                .font(.system(.caption2))
+                                .font(.system(.subheadline))
                                 .fontWeight(.bold)
                         }
                         .modifier(BottomBarCapsule(isSelected: true, isActive: false, isGreen: true, colorScheme: colorScheme))
@@ -1128,7 +1128,7 @@ struct SpacesBottomBar: View {
     var body: some View {
         HStack(spacing: 8) {
             Text(verbatim: String(localized: "Spaces:"))
-                .font(.caption)
+                .font(.subheadline)
                 .fontWeight(.semibold)
                 .foregroundColor(colors.textTertiary)
                 .padding(.trailing, 2)
@@ -1180,8 +1180,8 @@ struct SpacesBottomBar: View {
                         HStack(spacing: 4) {
                             Text(LocalizedStringKey("Switch Space"))
                             Text("⇥")
-                                .font(.system(.caption2))
-                                .fontWeight(.semibold)
+                                .font(.system(.subheadline))
+                                .fontWeight(.bold)
                         }
                         .modifier(BottomBarCapsule(isSelected: false, isActive: false, colorScheme: colorScheme))
                     }
@@ -1192,7 +1192,7 @@ struct SpacesBottomBar: View {
                     HStack(spacing: 4) {
                         Text(LocalizedStringKey("Switch Space"))
                         Text("↵")
-                            .font(.system(.caption2))
+                            .font(.system(.subheadline))
                             .fontWeight(.bold)
                     }
                     .modifier(BottomBarCapsule(isSelected: false, isActive: false, colorScheme: colorScheme))
@@ -1204,7 +1204,7 @@ struct SpacesBottomBar: View {
                     HStack(spacing: 4) {
                         Text(LocalizedStringKey("Move Window"))
                         Text("⌥↵")
-                            .font(.system(.caption2))
+                            .font(.system(.subheadline))
                             .fontWeight(.bold)
                     }
                     .modifier(BottomBarCapsule(isSelected: false, isActive: false, colorScheme: colorScheme))
@@ -1216,7 +1216,7 @@ struct SpacesBottomBar: View {
                     HStack(spacing: 4) {
                         Text(LocalizedStringKey("Action"))
                         Text("↵")
-                            .font(.system(.caption2))
+                            .font(.system(.subheadline))
                             .fontWeight(.bold)
                     }
                     .modifier(BottomBarCapsule(isSelected: false, isActive: false, colorScheme: colorScheme))
@@ -1247,10 +1247,10 @@ struct CommandBottomBar: View {
             if let active = viewModel.activeCommand {
                 HStack(spacing: 6) {
                     Image(systemName: active.iconName)
-                        .font(.caption.weight(.semibold))
+                        .font(.subheadline.weight(.semibold))
                         .foregroundColor(Color.accentColor)
                     Text(active.title)
-                        .font(.caption)
+                        .font(.subheadline)
                         .fontWeight(.semibold)
                         .foregroundColor(colors.textPrimary)
                 }
@@ -1266,7 +1266,7 @@ struct CommandBottomBar: View {
                     HStack(spacing: 4) {
                         Text(verbatim: String(localized: "Switch Space"))
                         Text("↵")
-                            .font(.system(.caption2))
+                            .font(.system(.subheadline))
                             .fontWeight(.bold)
                     }
                     .modifier(BottomBarCapsule(isSelected: false, isActive: false, colorScheme: colorScheme))
@@ -1279,7 +1279,7 @@ struct CommandBottomBar: View {
                     HStack(spacing: 4) {
                         Text(verbatim: String(localized: "Move Window"))
                         Text("↵")
-                            .font(.system(.caption2))
+                            .font(.system(.subheadline))
                             .fontWeight(.bold)
                     }
                     .modifier(BottomBarCapsule(isSelected: false, isActive: false, colorScheme: colorScheme))
@@ -1292,7 +1292,7 @@ struct CommandBottomBar: View {
                     HStack(spacing: 4) {
                         Text(verbatim: String(localized: "Focus Window"))
                         Text("↵")
-                            .font(.system(.caption2))
+                            .font(.system(.subheadline))
                             .fontWeight(.bold)
                     }
                     .modifier(BottomBarCapsule(isSelected: false, isActive: false, colorScheme: colorScheme))
@@ -1305,7 +1305,7 @@ struct CommandBottomBar: View {
                     HStack(spacing: 4) {
                         Text(verbatim: String(localized: "Rename Space"))
                         Text("↵")
-                            .font(.system(.caption2))
+                            .font(.system(.subheadline))
                             .fontWeight(.bold)
                     }
                     .modifier(BottomBarCapsule(isSelected: false, isActive: false, colorScheme: colorScheme))
@@ -1833,10 +1833,10 @@ struct BottomBarCapsule: ViewModifier {
     
     func body(content: Content) -> some View {
         content
-            .font(.caption)
+            .font(.subheadline)
             .fontWeight(isSelected || isActive ? .semibold : .medium)
-            .padding(.horizontal, 10)
-            .frame(height: 22)
+            .padding(.horizontal, 12)
+            .frame(height: 26)
             .background(
                 ZStack {
                     if isSelected {
