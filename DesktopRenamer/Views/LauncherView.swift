@@ -579,13 +579,13 @@ struct CommandRowView: View {
         HStack(spacing: 12) {
             Image(systemName: command.iconName)
                 .font(.system(size: 12, weight: .medium))
-                .foregroundColor(isSelected ? .white : colors.textPrimary)
+                .foregroundColor(colors.textPrimary)
                 .frame(width: 28, height: 28)
-                .background(isSelected ? Color.accentColor : colors.badgeBg)
+                .background(colors.badgeBg)
                 .cornerRadius(6)
                 .overlay(
                     RoundedRectangle(cornerRadius: 6)
-                        .stroke(isSelected ? Color.clear : colors.badgeBorder, lineWidth: 1)
+                        .stroke(colors.badgeBorder, lineWidth: 1)
                 )
             
             VStack(alignment: .leading, spacing: 2) {
@@ -633,9 +633,9 @@ struct CommandRowView: View {
             ZStack {
                 if isSelected {
                     RoundedRectangle(cornerRadius: 8, style: .continuous)
-                        .fill(Color.accentColor.opacity(0.12))
+                        .fill(Color.primary.opacity(0.08))
                     RoundedRectangle(cornerRadius: 8, style: .continuous)
-                        .stroke(Color.accentColor.opacity(0.24), lineWidth: 1)
+                        .stroke(Color.primary.opacity(0.15), lineWidth: 1)
                 } else if isHovered {
                     RoundedRectangle(cornerRadius: 8, style: .continuous)
                         .fill(Color.primary.opacity(0.05))
@@ -668,13 +668,13 @@ struct SpaceRowView: View {
         HStack(spacing: 12) {
             Image(systemName: "desktopcomputer")
                 .font(.system(size: 12, weight: .medium))
-                .foregroundColor(isSelected ? .white : colors.textPrimary)
+                .foregroundColor(colors.textPrimary)
                 .frame(width: 28, height: 28)
-                .background(isSelected ? Color.accentColor : colors.badgeBg)
+                .background(colors.badgeBg)
                 .cornerRadius(6)
                 .overlay(
                     RoundedRectangle(cornerRadius: 6)
-                        .stroke(isSelected ? Color.clear : colors.badgeBorder, lineWidth: 1)
+                        .stroke(colors.badgeBorder, lineWidth: 1)
                 )
             
             VStack(alignment: .leading, spacing: 2) {
@@ -704,9 +704,9 @@ struct SpaceRowView: View {
             ZStack {
                 if isSelected {
                     RoundedRectangle(cornerRadius: 8, style: .continuous)
-                        .fill(Color.accentColor.opacity(0.12))
+                        .fill(Color.primary.opacity(0.08))
                     RoundedRectangle(cornerRadius: 8, style: .continuous)
-                        .stroke(Color.accentColor.opacity(0.24), lineWidth: 1)
+                        .stroke(Color.primary.opacity(0.15), lineWidth: 1)
                 } else if isHovered {
                     RoundedRectangle(cornerRadius: 8, style: .continuous)
                         .fill(Color.primary.opacity(0.05))
@@ -743,7 +743,7 @@ struct WindowRowView: View {
                 .cornerRadius(6)
                 .overlay(
                     RoundedRectangle(cornerRadius: 6)
-                        .stroke(isSelected ? Color.clear : colors.badgeBorder, lineWidth: 1)
+                        .stroke(colors.badgeBorder, lineWidth: 1)
                 )
             
             VStack(alignment: .leading, spacing: 2) {
@@ -773,9 +773,9 @@ struct WindowRowView: View {
             ZStack {
                 if isSelected {
                     RoundedRectangle(cornerRadius: 8, style: .continuous)
-                        .fill(Color.accentColor.opacity(0.12))
+                        .fill(Color.primary.opacity(0.08))
                     RoundedRectangle(cornerRadius: 8, style: .continuous)
-                        .stroke(Color.accentColor.opacity(0.24), lineWidth: 1)
+                        .stroke(Color.primary.opacity(0.15), lineWidth: 1)
                 } else if isHovered {
                     RoundedRectangle(cornerRadius: 8, style: .continuous)
                         .fill(Color.primary.opacity(0.05))
@@ -856,7 +856,7 @@ struct WindowBatchRowView: View {
                 .cornerRadius(6)
                 .overlay(
                     RoundedRectangle(cornerRadius: 6)
-                        .stroke(isSelected ? Color.clear : colors.badgeBorder, lineWidth: 1)
+                        .stroke(colors.badgeBorder, lineWidth: 1)
                 )
             
             VStack(alignment: .leading, spacing: 2) {
@@ -932,9 +932,9 @@ struct WindowBatchRowView: View {
             ZStack {
                 if isSelected {
                     RoundedRectangle(cornerRadius: 8, style: .continuous)
-                        .fill(Color.accentColor.opacity(0.12))
+                        .fill(Color.primary.opacity(0.08))
                     RoundedRectangle(cornerRadius: 8, style: .continuous)
-                        .stroke(Color.accentColor.opacity(0.24), lineWidth: 1)
+                        .stroke(Color.primary.opacity(0.15), lineWidth: 1)
                 } else if isHovered {
                     RoundedRectangle(cornerRadius: 8, style: .continuous)
                         .fill(Color.primary.opacity(0.05))
@@ -1606,12 +1606,22 @@ struct CommandKOverlayView: View {
     
     var body: some View {
         ZStack {
-            // Semi-transparent background dimming
-            Color.black.opacity(colorScheme == .dark ? 0.4 : 0.2)
-                .edgesIgnoringSafeArea(.all)
-                .onTapGesture {
-                    viewModel.commandKTargetWindow = nil
+            // Glassy background dimming
+            Group {
+                if #available(macOS 26.0, *) {
+                    Group {
+                        Color.black.opacity(colorScheme == .dark ? 0.35 : 0.15)
+                    }
+                    .glassEffect(.regular, in: Rectangle())
+                } else {
+                    VisualEffectView(material: .hudWindow, blendingMode: .withinWindow, state: .active)
+                        .opacity(0.85)
                 }
+            }
+            .edgesIgnoringSafeArea(.all)
+            .onTapGesture {
+                viewModel.commandKTargetWindow = nil
+            }
             
             // Centered panel card
             VStack(spacing: 0) {
@@ -1737,9 +1747,9 @@ struct CommandKActionRowView: View {
             ZStack {
                 if isSelected {
                     RoundedRectangle(cornerRadius: 6, style: .continuous)
-                        .fill(Color.accentColor.opacity(0.12))
+                        .fill(Color.primary.opacity(0.08))
                     RoundedRectangle(cornerRadius: 6, style: .continuous)
-                        .stroke(Color.accentColor.opacity(0.24), lineWidth: 1)
+                        .stroke(Color.primary.opacity(0.15), lineWidth: 1)
                 } else if isHovered {
                     RoundedRectangle(cornerRadius: 6, style: .continuous)
                         .fill(Color.primary.opacity(0.05))
@@ -1834,7 +1844,7 @@ struct BottomBarCapsule: ViewModifier {
             .background(
                 ZStack {
                     if isSelected {
-                        isGreen ? Color.green : Color.accentColor
+                        isGreen ? Color.green : Color.primary.opacity(0.08)
                     } else if isActive {
                         isGreen ? Color.green.opacity(0.15) : Color.accentColor.opacity(0.15)
                     } else {
@@ -1843,17 +1853,17 @@ struct BottomBarCapsule: ViewModifier {
                 }
             )
             .foregroundColor(
-                isSelected ? .white : (isActive ? (isGreen ? Color.green : Color.accentColor) : .secondary)
+                isActive ? (isGreen ? Color.green : Color.accentColor) : (isSelected ? .primary : .secondary)
             )
             .clipShape(Capsule())
             .overlay(
                 Capsule()
                     .stroke(
-                        isSelected ? Color.white.opacity(0.2) : (isActive ? (isGreen ? Color.green.opacity(0.2) : Color.accentColor.opacity(0.2)) : Color.primary.opacity(0.08)),
+                        isSelected ? Color.primary.opacity(0.15) : (isActive ? (isGreen ? Color.green.opacity(0.2) : Color.accentColor.opacity(0.2)) : Color.primary.opacity(0.08)),
                         lineWidth: 1
                     )
             )
-            .shadow(color: isSelected ? (isGreen ? Color.green.opacity(0.25) : Color.accentColor.opacity(0.25)) : Color.clear, radius: 3, x: 0, y: 1)
+            .shadow(color: isSelected ? (isGreen ? Color.green.opacity(0.25) : Color.primary.opacity(0.1)) : Color.clear, radius: 3, x: 0, y: 1)
     }
 }
 
