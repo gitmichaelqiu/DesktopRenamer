@@ -1256,6 +1256,21 @@ class SpaceHelper {
         return output
     }
 
+    static func getAXWindow(id windowID: Int, pid: Int32) -> AXUIElement? {
+        let appElement = AXUIElementCreateApplication(pid)
+        var windowsRef: CFTypeRef?
+        if AXUIElementCopyAttributeValue(appElement, kAXWindowsAttribute as CFString, &windowsRef) == .success,
+           let axWindows = windowsRef as? [AXUIElement] {
+            for axWindow in axWindows {
+                var cgWID: CGWindowID = 0
+                if _AXUIElementGetWindow(axWindow, &cgWID) == 0, cgWID == CGWindowID(windowID) {
+                    return axWindow
+                }
+            }
+        }
+        return nil
+    }
+
     static func focusWindow(id windowID: Int, pid: Int32) {
         // Use AXUIElement to find and raise the exact window by CGWindowID.
         // This is more reliable than CGSOrderWindow for targeting a specific

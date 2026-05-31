@@ -62,14 +62,51 @@ struct WindowEntry: Identifiable, Equatable {
     }
 }
 
+enum BatchStagedActionType: Equatable {
+    case move(targetSpace: SpaceGroup)
+    case close
+    case minimize
+    case hide
+    case fullscreen
+    case quit
+    case restore
+    case restoreTo(targetSpace: SpaceGroup)
+    
+    var description: String {
+        switch self {
+        case .move(let space):
+            return "→ \(space.name)"
+        case .close:
+            return "→ Close"
+        case .minimize:
+            return "→ Minimize"
+        case .hide:
+            return "→ Hide"
+        case .fullscreen:
+            return "→ Fullscreen"
+        case .quit:
+            return "→ Quit"
+        case .restore:
+            return "→ Restore"
+        case .restoreTo(let space):
+            return "→ Restore to \(space.name)"
+        }
+    }
+}
+
+struct BatchStagedAction: Equatable {
+    let window: WindowEntry
+    let actionType: BatchStagedActionType
+}
+
 enum BatchMoveItem: Identifiable, Equatable {
-    case staged(move: (window: WindowEntry, targetSpace: SpaceGroup), index: Int)
+    case staged(action: BatchStagedAction, index: Int)
     case unstaged(window: WindowEntry, index: Int)
     
     var id: String {
         switch self {
-        case .staged(let move, _):
-            return "staged_\(move.window.id)"
+        case .staged(let action, _):
+            return "staged_\(action.window.id)"
         case .unstaged(let window, _):
             return "unstaged_\(window.id)"
         }
@@ -158,7 +195,7 @@ struct BatchMoveSection: Identifiable {
     @Published var selectedSpaceIndex: Int = 0
     
     // For batch window moves
-    @Published var stagedMoves: [Int: (window: WindowEntry, targetSpace: SpaceGroup)] = [:]
+    @Published var stagedMoves: [Int: BatchStagedAction] = [:]
     @Published var stagingWindow: WindowEntry? = nil {
         didSet {
             searchQuery = ""
@@ -168,6 +205,17 @@ struct BatchMoveSection: Identifiable {
         }
     }
     @Published var isExecutingBatchMove: Bool = false
+    
+    // Command K Panel Overlay State
+    @Published var commandKTargetWindow: WindowEntry? = nil {
+        didSet {
+            if commandKTargetWindow != nil {
+                commandKSelectedIndex = 0
+            }
+        }
+    }
+    @Published var commandKSelectedIndex: Int = 0
+    @Published var isStagingForRestoreTo: Bool = false
     
     // Captured active window before launcher gains focus
     @Published var previouslyActiveWindow: (id: Int, pid: Int32, frame: CGRect)? = nil
@@ -264,7 +312,7 @@ struct BatchMoveSection: Identifiable {
         }
     }
     
-    var filteredStagedMoves: [(window: WindowEntry, targetSpace: SpaceGroup)] {
+    var filteredStagedActions: [BatchStagedAction] {
         let allStaged = stagedMoves.values.sorted { $0.window.title < $1.window.title }
         if searchQuery.isEmpty {
             return allStaged
@@ -296,9 +344,9 @@ struct BatchMoveSection: Identifiable {
         var items: [BatchMoveItem] = []
         
         // 1. Staged items
-        let staged = filteredStagedMoves
-        for (idx, move) in staged.enumerated() {
-            items.append(.staged(move: move, index: idx))
+        let staged = filteredStagedActions
+        for (idx, action) in staged.enumerated() {
+            items.append(.staged(action: action, index: idx))
         }
         
         // 2. Unstaged items grouped by space
@@ -358,6 +406,101 @@ struct BatchMoveSection: Identifiable {
         return sections
     }
     
+    func isWindowMinimizedOrAppHidden(_ window: WindowEntry) -> (minimized: Bool, hidden: Bool) {
+        var isMin = false
+        var isHid = false
+        
+        if let app = NSRunningApplication(processIdentifier: window.pid) {
+            isHid = app.isHidden
+        }
+        
+        if let axWindow = SpaceHelper.getAXWindow(id: window.id, pid: window.pid) {
+            var minimizedRef: CFTypeRef?
+            if AXUIElementCopyAttributeValue(axWindow, kAXMinimizedAttribute as CFString, &minimizedRef) == .success,
+               let isMinimized = minimizedRef as? Bool {
+                isMin = isMinimized
+            }
+        }
+        
+        return (minimized: isMin, hidden: isHid)
+    }
+    
+    func getAvailableCommandKActions(for window: WindowEntry) -> [BatchStagedActionType] {
+        let (minimized, hidden) = isWindowMinimizedOrAppHidden(window)
+        if minimized || hidden {
+            return [.close, .restore, .restoreTo(targetSpace: SpaceGroup(id: "", name: "", displayName: "", num: 0)), .fullscreen, .quit]
+        } else {
+            return [.close, .minimize, .hide, .fullscreen, .quit]
+        }
+    }
+    
+    var commandKActions: [BatchStagedActionType] {
+        guard let window = commandKTargetWindow else { return [] }
+        return getAvailableCommandKActions(for: window)
+    }
+    
+    func showCommandKPanel() {
+        let items = batchMoveSelectableItems
+        let index = selectedRowIndex
+        guard index >= 0 && index < items.count else { return }
+        let selectedItem = items[index]
+        
+        switch selectedItem {
+        case .staged(let action, _):
+            commandKTargetWindow = action.window
+            let available = getAvailableCommandKActions(for: action.window)
+            if let matchedIndex = available.firstIndex(where: { type in
+                switch (type, action.actionType) {
+                case (.close, .close), (.minimize, .minimize), (.hide, .hide), (.fullscreen, .fullscreen), (.quit, .quit), (.restore, .restore):
+                    return true
+                case (.restoreTo, .restoreTo):
+                    return true
+                default:
+                    return false
+                }
+            }) {
+                commandKSelectedIndex = matchedIndex
+            } else {
+                commandKSelectedIndex = 0
+            }
+        case .unstaged(let window, _):
+            commandKTargetWindow = window
+            commandKSelectedIndex = 0
+        }
+    }
+    
+    func selectPreviousCommandKAction() {
+        let count = commandKActions.count
+        if count > 0 {
+            commandKSelectedIndex = (commandKSelectedIndex - 1 + count) % count
+        }
+    }
+    
+    func selectNextCommandKAction() {
+        let count = commandKActions.count
+        if count > 0 {
+            commandKSelectedIndex = (commandKSelectedIndex + 1) % count
+        }
+    }
+    
+    func executeCommandKAction() {
+        guard let window = commandKTargetWindow else { return }
+        let available = commandKActions
+        guard commandKSelectedIndex >= 0 && commandKSelectedIndex < available.count else { return }
+        let action = available[commandKSelectedIndex]
+        
+        switch action {
+        case .restoreTo:
+            isStagingForRestoreTo = true
+            stagingWindow = window
+            commandKTargetWindow = nil
+            selectedRowIndex = 0
+        default:
+            stagedMoves[window.id] = BatchStagedAction(window: window, actionType: action)
+            commandKTargetWindow = nil
+        }
+    }
+
     var filteredWindows: [WindowEntry] {
         if searchQuery.isEmpty {
             return currentWindows
@@ -509,7 +652,14 @@ struct BatchMoveSection: Identifiable {
                 let spaces = filteredSpaces
                 guard index >= 0 && index < spaces.count else { return }
                 let space = spaces[index]
-                stagedMoves[staging.id] = (window: staging, targetSpace: space)
+                
+                if isStagingForRestoreTo {
+                    stagedMoves[staging.id] = BatchStagedAction(window: staging, actionType: .restoreTo(targetSpace: space))
+                    isStagingForRestoreTo = false
+                } else {
+                    stagedMoves[staging.id] = BatchStagedAction(window: staging, actionType: .move(targetSpace: space))
+                }
+                
                 stagingWindow = nil
                 selectedRowIndex = batchMoveLastSelectedIndex
                 return
@@ -537,13 +687,14 @@ struct BatchMoveSection: Identifiable {
                 let selectedItem = items[index]
                 
                 switch selectedItem {
-                case .staged(let move, _):
-                    stagedMoves.removeValue(forKey: move.window.id)
+                case .staged(let action, _):
+                    stagedMoves.removeValue(forKey: action.window.id)
                     if selectedRowIndex >= batchMoveSelectableItems.count {
                         selectedRowIndex = max(0, batchMoveSelectableItems.count - 1)
                     }
                 case .unstaged(let window, _):
                     batchMoveLastSelectedIndex = selectedRowIndex
+                    isStagingForRestoreTo = false
                     stagingWindow = window
                     selectedRowIndex = 0
                 }
@@ -719,44 +870,126 @@ struct BatchMoveSection: Identifiable {
         isExecutingBatchMove = true
         incrementCommandFrequency(LauncherCommandType.batchMoveWindows.rawValue)
         
-        let moves = Array(stagedMoves.values)
+        let actions = Array(stagedMoves.values)
         let originalSpaceUUID = AppDelegate.shared.spaceManager?.currentSpaceUUID
         
         Task {
-            // Group moves by source space to switch spaces only once per source group
-            let movesBySource = Dictionary(grouping: moves, by: { $0.window.space.id })
+            // 1. Filter space-move actions
+            let spaceMoveActions = actions.filter {
+                switch $0.actionType {
+                case .move, .restoreTo: return true
+                default: return false
+                }
+            }
             
-            for (sourceId, sourceMoves) in movesBySource {
-                if let manager = AppDelegate.shared.spaceManager,
-                   let spaceObj = manager.spaceNameDict.first(where: { $0.id == sourceId }) {
-                    manager.switchToSpace(spaceObj, forceInstant: true)
+            // 2. Filter static actions
+            let staticActions = actions.filter {
+                switch $0.actionType {
+                case .move, .restoreTo: return false
+                default: return true
                 }
-                try? await Task.sleep(nanoseconds: 600_000_000) // 0.6s settle time
+            }
+            
+            // 3. Execute space moves grouped by source space
+            if !spaceMoveActions.isEmpty {
+                let movesBySource = Dictionary(grouping: spaceMoveActions, by: { $0.window.space.id })
                 
-                for (index, move) in sourceMoves.enumerated() {
-                    if move.window.space.id == move.targetSpace.id {
-                        continue
+                for (sourceId, sourceActions) in movesBySource {
+                    if let manager = AppDelegate.shared.spaceManager,
+                       let spaceObj = manager.spaceNameDict.first(where: { $0.id == sourceId }) {
+                        manager.switchToSpace(spaceObj, forceInstant: true)
                     }
+                    try? await Task.sleep(nanoseconds: 600_000_000) // 0.6s settle time
                     
-                    // Focus the targeted window first
-                    SpaceHelper.focusWindow(id: move.window.id, pid: move.window.pid)
-                    try? await Task.sleep(nanoseconds: 250_000_000) // 0.25s focus settle
-                    
-                    if let manager = AppDelegate.shared.spaceManager {
-                        manager.moveActiveWindowToSpace(id: move.targetSpace.id)
-                    }
-                    try? await Task.sleep(nanoseconds: 500_000_000) // 0.5s movement settle
-                    
-                    // Since move active window to space may switch the active space,
-                    // we must switch BACK to the source space to process the next window in this group.
-                    if index < sourceMoves.count - 1 {
-                        if let manager = AppDelegate.shared.spaceManager,
-                           let spaceObj = manager.spaceNameDict.first(where: { $0.id == sourceId }) {
-                            manager.switchToSpace(spaceObj, forceInstant: true)
+                    for (index, action) in sourceActions.enumerated() {
+                        let targetSpaceID: String
+                        
+                        switch action.actionType {
+                        case .move(let space):
+                            targetSpaceID = space.id
+                        case .restoreTo(let space):
+                            targetSpaceID = space.id
+                            // Contextual Restore: unhide app and/or unminimize window first
+                            if let app = NSRunningApplication(processIdentifier: action.window.pid) {
+                                app.unhide()
+                            }
+                            if let axWindow = SpaceHelper.getAXWindow(id: action.window.id, pid: action.window.pid) {
+                                AXUIElementSetAttributeValue(axWindow, kAXMinimizedAttribute as CFString, false as CFTypeRef)
+                            }
+                            try? await Task.sleep(nanoseconds: 300_000_000) // 0.3s restore settle
+                        default:
+                            continue
                         }
-                        try? await Task.sleep(nanoseconds: 600_000_000) // 0.6s switch settle
+                        
+                        if action.window.space.id == targetSpaceID {
+                            continue
+                        }
+                        
+                        // Focus the targeted window first
+                        SpaceHelper.focusWindow(id: action.window.id, pid: action.window.pid)
+                        try? await Task.sleep(nanoseconds: 250_000_000) // 0.25s focus settle
+                        
+                        if let manager = AppDelegate.shared.spaceManager {
+                            manager.moveActiveWindowToSpace(id: targetSpaceID)
+                        }
+                        try? await Task.sleep(nanoseconds: 500_000_000) // 0.5s movement settle
+                        
+                        // Switch back to source space
+                        if index < sourceActions.count - 1 {
+                            if let manager = AppDelegate.shared.spaceManager,
+                               let spaceObj = manager.spaceNameDict.first(where: { $0.id == sourceId }) {
+                                manager.switchToSpace(spaceObj, forceInstant: true)
+                            }
+                            try? await Task.sleep(nanoseconds: 600_000_000) // 0.6s switch settle
+                        }
                     }
                 }
+            }
+            
+            // 4. Execute other actions (Close, Minimize, Hide, Fullscreen, Quit, Restore)
+            for action in staticActions {
+                switch action.actionType {
+                case .close:
+                    if let axWindow = SpaceHelper.getAXWindow(id: action.window.id, pid: action.window.pid) {
+                        var closeButtonRef: CFTypeRef?
+                        if AXUIElementCopyAttributeValue(axWindow, kAXCloseButtonAttribute as CFString, &closeButtonRef) == .success,
+                           let closeButton = closeButtonRef {
+                            AXUIElementPerformAction(closeButton as! AXUIElement, kAXPressAction as CFString)
+                        }
+                    }
+                case .minimize:
+                    if let axWindow = SpaceHelper.getAXWindow(id: action.window.id, pid: action.window.pid) {
+                        AXUIElementSetAttributeValue(axWindow, kAXMinimizedAttribute as CFString, true as CFTypeRef)
+                    }
+                case .hide:
+                    if let app = NSRunningApplication(processIdentifier: action.window.pid) {
+                        app.hide()
+                    }
+                case .fullscreen:
+                    if let axWindow = SpaceHelper.getAXWindow(id: action.window.id, pid: action.window.pid) {
+                        var isFS = false
+                        var fullScreenRef: CFTypeRef?
+                        if AXUIElementCopyAttributeValue(axWindow, "AXFullScreen" as CFString, &fullScreenRef) == .success,
+                           let fs = fullScreenRef as? Bool {
+                            isFS = fs
+                        }
+                        AXUIElementSetAttributeValue(axWindow, "AXFullScreen" as CFString, !isFS as CFTypeRef)
+                    }
+                case .quit:
+                    if let app = NSRunningApplication(processIdentifier: action.window.pid) {
+                        app.terminate()
+                    }
+                case .restore:
+                    if let app = NSRunningApplication(processIdentifier: action.window.pid) {
+                        app.unhide()
+                    }
+                    if let axWindow = SpaceHelper.getAXWindow(id: action.window.id, pid: action.window.pid) {
+                        AXUIElementSetAttributeValue(axWindow, kAXMinimizedAttribute as CFString, false as CFTypeRef)
+                    }
+                default:
+                    break
+                }
+                try? await Task.sleep(nanoseconds: 150_000_000) // 150ms delay between commands
             }
             
             self.isExecutingBatchMove = false
@@ -769,9 +1002,18 @@ struct BatchMoveSection: Identifiable {
                        let targetSpace = manager.spaceNameDict.first(where: { $0.id == originalUUID }) {
                         manager.switchToSpace(targetSpace, forceInstant: true)
                     }
-                } else if let lastMove = moves.last,
-                           let targetSpace = manager.spaceNameDict.first(where: { $0.id == lastMove.targetSpace.id }) {
-                    manager.switchToSpace(targetSpace, forceInstant: true)
+                } else if let lastMoveAction = spaceMoveActions.last {
+                    let lastTargetSpaceID: String
+                    switch lastMoveAction.actionType {
+                    case .move(let space), .restoreTo(let space):
+                        lastTargetSpaceID = space.id
+                    default:
+                        lastTargetSpaceID = ""
+                    }
+                    if !lastTargetSpaceID.isEmpty,
+                       let targetSpace = manager.spaceNameDict.first(where: { $0.id == lastTargetSpaceID }) {
+                        manager.switchToSpace(targetSpace, forceInstant: true)
+                    }
                 }
             }
             
@@ -791,6 +1033,7 @@ struct BatchMoveSection: Identifiable {
             isBottomBarFocused = false
         } else if stagingWindow != nil {
             stagingWindow = nil
+            isStagingForRestoreTo = false
             selectedRowIndex = batchMoveLastSelectedIndex
         } else if activeCommand != nil {
             activeCommand = nil
