@@ -183,6 +183,16 @@
         }
       }
     },
+    "Accessibility permission not granted" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "辅助权限未获取"
+          }
+        }
+      }
+    },
     "Acknowledgements" : {
       "localizations" : {
         "zh-Hans" : {
@@ -253,6 +263,36 @@
         }
       }
     },
+    "Add App Exception" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "添加App特例"
+          }
+        }
+      }
+    },
+    "Add app exception..." : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "添加App特例..."
+          }
+        }
+      }
+    },
+    "Add Exception" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "添加特例"
+          }
+        }
+      }
+    },
     "Add it as a space in\nSettings → General → Add spaces" : {
       "localizations" : {
         "zh-Hans" : {
@@ -309,16 +349,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "调整桌面/全屏检测参数"
-          }
-        }
-      }
-    },
-    "Advanced" : {
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "高级"
           }
         }
       }
@@ -539,6 +569,16 @@
         }
       }
     },
+    "Choose Application..." : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "选择App…"
+          }
+        }
+      }
+    },
     "Choose how the app determines if a space is a Desktop or a Fullscreen App.\n\nAutomatic: No extra actions required.\n\nMetric-based: Based on the thresold of a metric. May not work for multiple displays.\n\nManual: All spaces that are not added will be treated as fullscreen." : {
       "localizations" : {
         "zh-Hans" : {
@@ -647,6 +687,36 @@
         }
       }
     },
+    "Cursor is on an interactive control (%@)" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "光标在App的交互区域(%@)"
+          }
+        }
+      }
+    },
+    "Cursor is too low (likely inside window content area)" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "光标太低 (可能在窗口的内容区域)"
+          }
+        }
+      }
+    },
+    "Delete Exception" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "删除特例"
+          }
+        }
+      }
+    },
     "Desktop" : {
       "shouldTranslate" : false
     },
@@ -703,6 +773,36 @@
         }
       }
     },
+    "Done" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "完成"
+          }
+        }
+      }
+    },
+    "Drag window slightly before switching" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "在切换窗口前轻微拖动"
+          }
+        }
+      }
+    },
+    "Edit Exception" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "编辑特例"
+          }
+        }
+      }
+    },
     "Enable switch gesture override" : {
       "localizations" : {
         "zh-Hans" : {
@@ -719,6 +819,26 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "已启用"
+          }
+        }
+      }
+    },
+    "Error locating exception" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "加载特例出错"
+          }
+        }
+      }
+    },
+    "Exceptions" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "特例"
           }
         }
       }
@@ -825,6 +945,16 @@
         }
       }
     },
+    "For custom-drawn windows (like WeChat) that require mouse movement to start dragging. Enabling this may resolve some window movement failures." : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "对于自建套件的窗口（如微信），需要轻微拖动窗口才能跨桌面移动。启用可以解决部分失败。"
+          }
+        }
+      }
+    },
     "Force refresh all space name labels on displays" : {
       "localizations" : {
         "zh-Hans" : {
@@ -906,6 +1036,16 @@
         }
       }
     },
+    "Grabbing" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "抓取"
+          }
+        }
+      }
+    },
     "Grant" : {
       "localizations" : {
         "zh-Hans" : {
@@ -942,6 +1082,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "切换时隐藏"
+          }
+        }
+      }
+    },
+    "Hold the Option key while swiping on the trackpad to move the active window to the adjacent space." : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "切换时按住Option将当前窗口移动到相邻桌面。"
           }
         }
       }
@@ -1084,6 +1234,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "用 Option 键模拟右键。"
+          }
+        }
+      }
+    },
+    "Likely working: Draggable (%@)" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "可能可用：可以拖拽 (%@)"
           }
         }
       }
@@ -1373,6 +1533,26 @@
         }
       }
     },
+    "Move window when holding Option" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "按住Option以移动窗口"
+          }
+        }
+      }
+    },
+    "Moving window failed for %@" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "移动%@窗口失败"
+          }
+        }
+      }
+    },
     "My GitHub" : {
       "localizations" : {
         "en" : {
@@ -1465,6 +1645,16 @@
         }
       }
     },
+    "No per-app exceptions defined. Standard grab offsets will be used for all apps." : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "无App特例。标准抓取位置会用于所有App。"
+          }
+        }
+      }
+    },
     "No results" : {
       "localizations" : {
         "en" : {
@@ -1477,6 +1667,26 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "无结果"
+          }
+        }
+      }
+    },
+    "No visible window found" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "未找到可用窗口"
+          }
+        }
+      }
+    },
+    "No visible window found for %@. Please open a window of the app and make it visible." : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "未找到%@的可用窗口。请打开一个该App的窗口并让它可见。"
           }
         }
       }
@@ -1597,6 +1807,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "预览标签"
+          }
+        }
+      }
+    },
+    "Preview Position" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "预览位置"
           }
         }
       }
@@ -2013,6 +2233,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "选择要切换的桌面"
+          }
+        }
+      }
+    },
+    "Select an active application below to add it as an exception." : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "选择正在运行的App定义特例。"
           }
         }
       }
@@ -2729,6 +2959,16 @@
         }
       }
     },
+    "Stop Preview" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "停止预览"
+          }
+        }
+      }
+    },
     "Suggested Threshold: %lld" : {
       "localizations" : {
         "zh-Hans" : {
@@ -3061,6 +3301,16 @@
         }
       }
     },
+    "Use ← → ↑ ↓ to fine-tune, Esc to exit" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "使用 ← → ↑ ↓ 调整位置, Esc 退出"
+          }
+        }
+      }
+    },
     "Use the Raycast extension to move all windows of an app to another space in one command." : {
       "localizations" : {
         "zh-Hans" : {
@@ -3147,6 +3397,17 @@
           }
         }
       }
+    },
+    "X: %lld px, Y: %lld px" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "X: %1$lld px, Y: %2$lld px"
+          }
+        }
+      },
+      "shouldTranslate" : false
     }
   },
   "version" : "1.1"

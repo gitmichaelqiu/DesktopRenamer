@@ -6,38 +6,56 @@ struct HUDView: View {
     let message: String
     let systemImage: String
     let iconColor: Color
-    @Environment(\.colorScheme) var colorScheme
+    let buttonTitle: String?
+    let buttonAction: (() -> Void)?
 
     var body: some View {
-        HStack(spacing: 12) {
+        HStack(spacing: 10) {
             Image(systemName: systemImage)
-                .font(.system(size: 14, weight: .bold))
+                .font(.system(size: 15, weight: .semibold))
                 .foregroundColor(iconColor)
-                .frame(width: 22, height: 22)
-                .background(iconColor.opacity(0.15))
-                .clipShape(Circle())
 
             Text(message)
                 .font(.system(size: 13, weight: .semibold))
-                .foregroundColor(colorScheme == .dark ? .white : Color(red: 0.12, green: 0.12, blue: 0.14))
+                .foregroundColor(.primary)
                 .lineLimit(1)
+            
+            if let buttonTitle = buttonTitle, let buttonAction = buttonAction {
+                Button(buttonTitle) {
+                    buttonAction()
+                }
+                .buttonStyle(.borderedProminent)
+                .controlSize(.small)
+            }
         }
-        .padding(.horizontal, 16)
+        .padding(.horizontal, 18)
         .padding(.vertical, 10)
-        .background(
-            VisualEffectView(material: .hudWindow, blendingMode: .withinWindow, state: .active)
-        )
-        .cornerRadius(16)
-        .overlay(
-            RoundedRectangle(cornerRadius: 16)
-                .stroke(colorScheme == .dark ? Color.white.opacity(0.1) : Color.black.opacity(0.08), lineWidth: 1)
-        )
+        .hudBackground()
+    }
+}
+
+extension View {
+    @ViewBuilder
+    fileprivate func hudBackground() -> some View {
+        if #available(macOS 26.0, *) {
+            self.glassEffect(.regular, in: Capsule())
+        } else {
+            self.background(
+                VisualEffectView(material: .hudWindow, blendingMode: .withinWindow, state: .active)
+            )
+            .clipShape(Capsule())
+            .overlay(
+                Capsule()
+                    .stroke(Color.primary.opacity(0.09), lineWidth: 1)
+            )
+        }
     }
 }
 
 class HUDNSPanel: NSPanel {
-    override var canBecomeKey: Bool { false }
-    override var canBecomeMain: Bool { false }
+    var isInteractive: Bool = false
+    override var canBecomeKey: Bool { isInteractive }
+    override var canBecomeMain: Bool { isInteractive }
 }
 
 class HUDWindowController: NSWindowController {
@@ -69,20 +87,36 @@ class HUDWindowController: NSWindowController {
         fatalError("init(coder:) has not been implemented")
     }
 
-    func show(message: String, systemImage: String, iconColor: Color) {
+    func show(
+        message: String,
+        systemImage: String,
+        iconColor: Color,
+        buttonTitle: String? = nil,
+        buttonAction: (() -> Void)? = nil
+    ) {
         guard let panel = window as? HUDNSPanel else { return }
 
+        panel.appearance = NSApp.effectiveAppearance
         hideTimer?.invalidate()
+        
+        panel.isInteractive = (buttonTitle != nil)
+        panel.becomesKeyOnlyIfNeeded = (buttonTitle != nil)
 
-        let hudView = HUDView(message: message, systemImage: systemImage, iconColor: iconColor)
+        let hudView = HUDView(
+            message: message,
+            systemImage: systemImage,
+            iconColor: iconColor,
+            buttonTitle: buttonTitle,
+            buttonAction: {
+                buttonAction?()
+                self.hideWithAnimation()
+            }
+        )
 
         if let existing = hostingView {
             existing.rootView = hudView
         } else {
             // Wrap in a container to break the autolayout feedback loop.
-            // Setting NSHostingView directly as contentView causes the
-            // SwiftUI layout to retrigger constraint updates, which
-            // retrigger SwiftUI layout, ad infinitum → crash.
             let container = NSView(frame: NSRect(x: 0, y: 0, width: 280, height: 44))
             container.autoresizingMask = [.width, .height]
 
@@ -109,7 +143,8 @@ class HUDWindowController: NSWindowController {
         panel.alphaValue = 1.0
         panel.orderFrontRegardless()
 
-        hideTimer = Timer.scheduledTimer(withTimeInterval: 1.8, repeats: false) { [weak self] _ in
+        let duration = (buttonTitle != nil) ? 5.0 : 1.8
+        hideTimer = Timer.scheduledTimer(withTimeInterval: duration, repeats: false) { [weak self] _ in
             self?.hideWithAnimation()
         }
     }
