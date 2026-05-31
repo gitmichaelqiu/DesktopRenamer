@@ -1015,21 +1015,6 @@ struct BatchMoveBottomBar: View {
                                 .padding(.vertical, 4)
                                 .background(colors.badgeBg)
                                 .clipShape(Capsule())
-                                
-                                if !isMove {
-                                    HStack(spacing: 4) {
-                                        Text(verbatim: String(localized: "Actions"))
-                                            .font(.system(size: 11, weight: .medium))
-                                            .foregroundColor(colors.textSecondary)
-                                        Text("⌘K")
-                                            .font(.system(size: 11, weight: .semibold))
-                                            .foregroundColor(colors.textQuaternary)
-                                    }
-                                    .padding(.horizontal, 10)
-                                    .padding(.vertical, 4)
-                                    .background(colors.badgeBg)
-                                    .clipShape(Capsule())
-                                }
                             }
                             
                         case .unstaged:

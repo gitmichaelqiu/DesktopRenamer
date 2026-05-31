@@ -446,26 +446,8 @@ struct BatchMoveSection: Identifiable {
         let selectedItem = items[index]
         
         switch selectedItem {
-        case .staged(let action, _):
-            if case .move = action.actionType {
-                return
-            }
-            commandKTargetWindow = action.window
-            let available = getAvailableCommandKActions(for: action.window)
-            if let matchedIndex = available.firstIndex(where: { type in
-                switch (type, action.actionType) {
-                case (.close, .close), (.minimize, .minimize), (.hide, .hide), (.fullscreen, .fullscreen), (.quit, .quit), (.restore, .restore):
-                    return true
-                case (.restoreTo, .restoreTo):
-                    return true
-                default:
-                    return false
-                }
-            }) {
-                commandKSelectedIndex = matchedIndex
-            } else {
-                commandKSelectedIndex = 0
-            }
+        case .staged:
+            return
         case .unstaged(let window, _):
             commandKTargetWindow = window
             commandKSelectedIndex = 0
