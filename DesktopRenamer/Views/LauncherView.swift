@@ -1688,9 +1688,8 @@ struct CommandKOverlayView: View {
                             
                             Spacer()
                             
-                            if viewModel.showCommandNumbers {
-                                KeycapView(text: "⌘\(idx + 1)", isSelected: isSelected)
-                            }
+                            KeycapView(text: "⌘\(idx + 1)", isSelected: isSelected)
+                                .opacity(viewModel.showCommandNumbers ? 1 : 0)
                         }
                         .padding(.horizontal, 12)
                         .padding(.vertical, 8)
