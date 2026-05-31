@@ -1443,7 +1443,7 @@ struct SearchTextField: NSViewRepresentable {
     var onCommandK: (() -> Void)? = nil
     var placeholder: String = "Type a command..."
     
-    class Coordinator: NSObject, NSTextFieldDelegate {
+    class Coordinator: NSObject, NSTextFieldDelegate, NSTextViewDelegate {
         var parent: SearchTextField
         var lastPlaceholder: String? = nil
         var lastIsDark: Bool? = nil
@@ -1458,7 +1458,14 @@ struct SearchTextField: NSViewRepresentable {
             }
         }
         
-        func control(_ control: NSControl, textView: NSTextView, shouldChangeTextIn ranges: [NSValue], replacementStrings: [String]?) -> Bool {
+        func textView(_ textView: NSTextView, shouldChangeTextIn affectedCharRange: NSRange, replacementString: String?) -> Bool {
+            if parent.isTypingDisabled {
+                return false
+            }
+            return true
+        }
+        
+        func textView(_ textView: NSTextView, shouldChangeTextInRanges affectedRanges: [NSValue], replacementStrings: [String]?) -> Bool {
             if parent.isTypingDisabled {
                 return false
             }
