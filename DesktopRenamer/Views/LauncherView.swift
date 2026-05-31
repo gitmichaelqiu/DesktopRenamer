@@ -1859,12 +1859,12 @@ struct CommandKActionRowView: View {
     
     private func getActionLabel(for action: BatchStagedActionType) -> String {
         switch action {
-        case .close: return NSLocalizedString("Close Window", comment: "")
-        case .minimize: return NSLocalizedString("Minimize Window", comment: "")
-        case .hide: return NSLocalizedString("Hide App", comment: "")
-        case .fullscreen: return NSLocalizedString("Toggle Fullscreen", comment: "")
-        case .quit: return NSLocalizedString("Quit App", comment: "")
-        case .restore: return NSLocalizedString("Restore Window", comment: "")
+        case .close: return NSLocalizedString("Close", comment: "")
+        case .minimize: return NSLocalizedString("Minimize", comment: "")
+        case .hide: return NSLocalizedString("Hide", comment: "")
+        case .fullscreen: return NSLocalizedString("Fullscreen", comment: "")
+        case .quit: return NSLocalizedString("Quit", comment: "")
+        case .restore: return NSLocalizedString("Restore", comment: "")
         case .restoreTo: return NSLocalizedString("Restore to...", comment: "")
         case .move(let space): return String(format: NSLocalizedString("Move to %@", comment: ""), space.name)
         }

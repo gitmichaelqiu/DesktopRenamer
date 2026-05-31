@@ -122,13 +122,13 @@
       "shouldTranslate" : false
     },
     "⌘%lld" : {
-
+      "shouldTranslate" : false
     },
     "⌘↵" : {
       "shouldTranslate" : false
     },
     "⌘K" : {
-
+      "shouldTranslate" : false
     },
     "⌥↵" : {
       "shouldTranslate" : false
@@ -217,10 +217,24 @@
       }
     },
     "Actions" : {
-
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "操作"
+          }
+        }
+      }
     },
     "Active" : {
-
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "活跃"
+          }
+        }
+      }
     },
     "Active Space Label" : {
       "localizations" : {
@@ -618,8 +632,15 @@
         }
       }
     },
-    "Close Window" : {
-
+    "Close" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "关闭"
+          }
+        }
+      }
     },
     "Confirm & Execute Batch Move (%lld windows)" : {
       "localizations" : {
@@ -977,6 +998,16 @@
         }
       }
     },
+    "Fullscreen" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "全屏"
+          }
+        }
+      }
+    },
     "Fullscreen detection method" : {
       "localizations" : {
         "zh-Hans" : {
@@ -1069,10 +1100,24 @@
       }
     },
     "Hidden" : {
-
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "隐藏"
+          }
+        }
+      }
     },
-    "Hide App" : {
-
+    "Hide" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "隐藏"
+          }
+        }
+      }
     },
     "Hide menubar icon" : {
       "localizations" : {
@@ -1451,11 +1496,25 @@
         }
       }
     },
-    "Minimize Window" : {
-
+    "Minimize" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "最小化"
+          }
+        }
+      }
     },
     "Minimized" : {
-
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "最小化"
+          }
+        }
+      }
     },
     "More Apps" : {
       "localizations" : {
@@ -1478,7 +1537,14 @@
       }
     },
     "Move to %@" : {
-
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "移动至%@"
+          }
+        }
+      }
     },
     "Move Window" : {
       "localizations" : {
@@ -1868,8 +1934,15 @@
         }
       }
     },
-    "Quit App" : {
-
+    "Quit" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "退出"
+          }
+        }
+      }
     },
     "Raycast Integration" : {
       "localizations" : {
@@ -2089,11 +2162,25 @@
         }
       }
     },
-    "Restore to..." : {
-
+    "Restore" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "恢复"
+          }
+        }
+      }
     },
-    "Restore Window" : {
-
+    "Restore to..." : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "恢复至..."
+          }
+        }
+      }
     },
     "Restore windows moved by lock" : {
       "localizations" : {
@@ -2168,15 +2255,11 @@
       }
     },
     "Run Batch Actions" : {
-
-    },
-    "Run Batch Move" : {
-      "extractionState" : "stale",
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "批量移动窗口"
+            "value" : "批量操作"
           }
         }
       }
@@ -3271,9 +3354,6 @@
         }
       }
     },
-    "Toggle Fullscreen" : {
-
-    },
     "Toggle lock for current space" : {
       "localizations" : {
         "zh-Hans" : {
@@ -3330,17 +3410,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "解锁桌面"
-          }
-        }
-      }
-    },
-    "Unstage Move" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "移除队列"
           }
         }
       }
