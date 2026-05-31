@@ -1126,177 +1126,193 @@ struct SpacesBottomBar: View {
     }
     
     var body: some View {
-        ZStack(alignment: .leading) {
-            // Scrollable spaces list
-            ScrollViewReader { scrollProxy in
-                ScrollView(.horizontal, showsIndicators: false) {
-                    HStack(spacing: 8) {
-                        Text(verbatim: String(localized: "Spaces:"))
-                            .font(.subheadline)
-                            .fontWeight(.semibold)
-                            .foregroundColor(colors.textTertiary)
-                            .padding(.trailing, 2)
-                        
-                        let spaces = spaceManager.currentDisplaySpaces
-                        ForEach(0..<spaces.count, id: \.self) { i in
-                            let space = spaces[i]
-                            let isCurrent = space.id == spaceManager.currentSpaceUUID
-                            let isSpaceSelected = viewModel.isBottomBarFocused && i == viewModel.selectedSpaceIndex
-                            let name = spaceManager.getSpaceName(space.id)
-                            
-                            Button(action: {
-                                let isOptionPressed = NSEvent.modifierFlags.contains(.option)
-                                if isOptionPressed {
-                                    let handled = viewModel.movePreviouslyActiveWindow(toSpaceID: space.id)
-                                    if !handled {
-                                        viewModel.closeLauncher()
-                                    }
-                                } else {
-                                    viewModel.executeSwitchToSpaceID(space.id)
-                                }
-                            }) {
-                                Text(name)
-                                    .modifier(BottomBarCapsule(isSelected: isSpaceSelected, isActive: isCurrent, colorScheme: colorScheme))
-                            }
-                            .buttonStyle(PlainButtonStyle())
-                            .focusable(false)
-                            .help(String(localized: "Click to switch, Option+Click to move active window."))
-                            .id(space.id)
-                        }
-                    }
-                    .padding(.trailing, viewModel.isBottomBarFocused ? 270 : 210)
-                }
-                .mask(
-                    HStack(spacing: 0) {
-                        Rectangle()
-                            .fill(Color.black)
-                        
-                        LinearGradient(
-                            gradient: Gradient(colors: [.black, .clear]),
-                            startPoint: .leading,
-                            endPoint: .trailing
-                        )
-                        .frame(width: 32)
-                        
-                        Color.clear
-                            .frame(width: viewModel.isBottomBarFocused ? 270 : 210)
-                    }
-                )
-                .onAppear {
-                    scrollProxy.scrollTo(spaceManager.currentSpaceUUID, anchor: UnitPoint(x: 0.33, y: 0.5))
-                }
-                .onChange(of: spaceManager.currentSpaceUUID) { currentSpaceID in
-                    withAnimation(.easeInOut(duration: 0.15)) {
-                        scrollProxy.scrollTo(currentSpaceID, anchor: UnitPoint(x: 0.33, y: 0.5))
-                    }
-                }
-                .onChange(of: viewModel.selectedSpaceIndex) { selectedIndex in
-                    if viewModel.isBottomBarFocused {
-                        let spaces = spaceManager.currentDisplaySpaces
-                        if selectedIndex >= 0 && selectedIndex < spaces.count {
-                            let spaceID = spaces[selectedIndex].id
-                            withAnimation(.easeInOut(duration: 0.15)) {
-                                scrollProxy.scrollTo(spaceID, anchor: UnitPoint(x: 0.33, y: 0.5))
-                            }
-                        }
-                    }
-                }
-                .onChange(of: viewModel.isBottomBarFocused) { isFocused in
-                    let spaces = spaceManager.currentDisplaySpaces
-                    if isFocused {
-                        if viewModel.selectedSpaceIndex >= 0 && viewModel.selectedSpaceIndex < spaces.count {
-                            let spaceID = spaces[viewModel.selectedSpaceIndex].id
-                            withAnimation(.easeInOut(duration: 0.15)) {
-                                scrollProxy.scrollTo(spaceID, anchor: UnitPoint(x: 0.33, y: 0.5))
-                            }
-                        }
-                    } else {
-                        withAnimation(.easeInOut(duration: 0.15)) {
-                            scrollProxy.scrollTo(spaceManager.currentSpaceUUID, anchor: UnitPoint(x: 0.33, y: 0.5))
-                        }
-                    }
-                }
-            }
+        HStack(spacing: 0) {
+            // Static "Spaces:" label on the left (unscrollable)
+            Text(verbatim: String(localized: "Spaces:"))
+                .font(.subheadline)
+                .fontWeight(.semibold)
+                .foregroundColor(colors.textTertiary)
+                .padding(.trailing, 8)
+                .layoutPriority(1)
             
-            // Right-aligned Actions Overlay (Transparent background, no seams)
-            HStack(spacing: 0) {
-                Spacer()
-                
-                HStack(spacing: 12) {
-                    // Separator divider
-                    Rectangle()
-                        .fill(colors.border)
-                        .frame(width: 1, height: 16)
-                    
-                    // Right side action indicators
-                    HStack(spacing: 8) {
-                        if !viewModel.isBottomBarFocused {
-                            Button(action: {
-                                viewModel.isBottomBarFocused = true
-                                viewModel.isKeyboardSelection = true
+            ZStack(alignment: .leading) {
+                // Scrollable spaces list
+                ScrollViewReader { scrollProxy in
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        HStack(spacing: 8) {
+                            let spaces = spaceManager.currentDisplaySpaces
+                            ForEach(0..<spaces.count, id: \.self) { i in
+                                let space = spaces[i]
+                                let isCurrent = space.id == spaceManager.currentSpaceUUID
+                                let isSpaceSelected = viewModel.isBottomBarFocused && i == viewModel.selectedSpaceIndex
+                                let name = spaceManager.getSpaceName(space.id)
                                 
-                                let spaces = spaceManager.currentDisplaySpaces
-                                if let currentSpaceID = AppDelegate.shared.spaceManager?.currentSpaceUUID,
-                                   let index = spaces.firstIndex(where: { $0.id == currentSpaceID }) {
-                                    viewModel.selectedSpaceIndex = index
-                                } else {
-                                    viewModel.selectedSpaceIndex = 0
+                                Button(action: {
+                                    let isOptionPressed = NSEvent.modifierFlags.contains(.option)
+                                    if isOptionPressed {
+                                        let handled = viewModel.movePreviouslyActiveWindow(toSpaceID: space.id)
+                                        if !handled {
+                                            viewModel.closeLauncher()
+                                        }
+                                    } else {
+                                        viewModel.executeSwitchToSpaceID(space.id)
+                                    }
+                                }) {
+                                    Text(name)
+                                        .modifier(BottomBarCapsule(isSelected: isSpaceSelected, isActive: isCurrent, colorScheme: colorScheme))
                                 }
-                            }) {
+                                .buttonStyle(PlainButtonStyle())
+                                .focusable(false)
+                                .help(String(localized: "Click to switch, Option+Click to move active window."))
+                                .id(space.id)
+                            }
+                        }
+                        .padding(.leading, 32)
+                        .padding(.trailing, viewModel.isBottomBarFocused ? 302 : 242)
+                    }
+                    .mask(
+                        HStack(spacing: 0) {
+                            // Left fade edge
+                            LinearGradient(
+                                gradient: Gradient(colors: [.clear, .black]),
+                                startPoint: .leading,
+                                endPoint: .trailing
+                            )
+                            .frame(width: 32)
+                            
+                            // Middle opaque region
+                            Rectangle()
+                                .fill(Color.black)
+                            
+                            // Right fade edge
+                            LinearGradient(
+                                gradient: Gradient(colors: [.black, .clear]),
+                                startPoint: .leading,
+                                endPoint: .trailing
+                            )
+                            .frame(width: 32)
+                            
+                            // Trailing transparent region under action capsules
+                            Color.clear
+                                .frame(width: viewModel.isBottomBarFocused ? 270 : 210)
+                        }
+                    )
+                    .onAppear {
+                        scrollProxy.scrollTo(spaceManager.currentSpaceUUID, anchor: UnitPoint(x: 0.31, y: 0.5))
+                    }
+                    .onChange(of: spaceManager.currentSpaceUUID) { currentSpaceID in
+                        withAnimation(.easeInOut(duration: 0.15)) {
+                            scrollProxy.scrollTo(currentSpaceID, anchor: UnitPoint(x: 0.31, y: 0.5))
+                        }
+                    }
+                    .onChange(of: viewModel.selectedSpaceIndex) { selectedIndex in
+                        if viewModel.isBottomBarFocused {
+                            let spaces = spaceManager.currentDisplaySpaces
+                            if selectedIndex >= 0 && selectedIndex < spaces.count {
+                                let spaceID = spaces[selectedIndex].id
+                                withAnimation(.easeInOut(duration: 0.15)) {
+                                    scrollProxy.scrollTo(spaceID, anchor: UnitPoint(x: 0.31, y: 0.5))
+                                }
+                            }
+                        }
+                    }
+                    .onChange(of: viewModel.isBottomBarFocused) { isFocused in
+                        let spaces = spaceManager.currentDisplaySpaces
+                        if isFocused {
+                            if viewModel.selectedSpaceIndex >= 0 && viewModel.selectedSpaceIndex < spaces.count {
+                                let spaceID = spaces[viewModel.selectedSpaceIndex].id
+                                withAnimation(.easeInOut(duration: 0.15)) {
+                                    scrollProxy.scrollTo(spaceID, anchor: UnitPoint(x: 0.31, y: 0.5))
+                                }
+                            }
+                        } else {
+                            withAnimation(.easeInOut(duration: 0.15)) {
+                                scrollProxy.scrollTo(spaceManager.currentSpaceUUID, anchor: UnitPoint(x: 0.31, y: 0.5))
+                            }
+                        }
+                    }
+                }
+                
+                // Right-aligned Actions Overlay (Transparent background, no seams)
+                HStack(spacing: 0) {
+                    Spacer()
+                    
+                    HStack(spacing: 12) {
+                        // Separator divider
+                        Rectangle()
+                            .fill(colors.border)
+                            .frame(width: 1, height: 16)
+                        
+                        // Right side action indicators
+                        HStack(spacing: 8) {
+                            if !viewModel.isBottomBarFocused {
+                                Button(action: {
+                                    viewModel.isBottomBarFocused = true
+                                    viewModel.isKeyboardSelection = true
+                                    
+                                    let spaces = spaceManager.currentDisplaySpaces
+                                    if let currentSpaceID = AppDelegate.shared.spaceManager?.currentSpaceUUID,
+                                       let index = spaces.firstIndex(where: { $0.id == currentSpaceID }) {
+                                        viewModel.selectedSpaceIndex = index
+                                    } else {
+                                        viewModel.selectedSpaceIndex = 0
+                                    }
+                                }) {
+                                    HStack(spacing: 4) {
+                                        Text(LocalizedStringKey("Switch Space"))
+                                        Text("⇥")
+                                            .font(.system(.subheadline))
+                                            .fontWeight(.bold)
+                                    }
+                                    .modifier(BottomBarCapsule(isSelected: false, isActive: false, colorScheme: colorScheme))
+                                }
+                                .buttonStyle(PlainButtonStyle())
+                            }
+                            
+                            if viewModel.isBottomBarFocused {
                                 HStack(spacing: 4) {
                                     Text(LocalizedStringKey("Switch Space"))
-                                    Text("⇥")
+                                    Text("↵")
                                         .font(.system(.subheadline))
                                         .fontWeight(.bold)
                                 }
                                 .modifier(BottomBarCapsule(isSelected: false, isActive: false, colorScheme: colorScheme))
-                            }
-                            .buttonStyle(PlainButtonStyle())
-                        }
-                        
-                        if viewModel.isBottomBarFocused {
-                            HStack(spacing: 4) {
-                                Text(LocalizedStringKey("Switch Space"))
-                                Text("↵")
-                                    .font(.system(.subheadline))
-                                    .fontWeight(.bold)
-                            }
-                            .modifier(BottomBarCapsule(isSelected: false, isActive: false, colorScheme: colorScheme))
-                            .contentShape(Rectangle())
-                            .onTapGesture {
-                                viewModel.executeBottomBarSpaceAction(isOption: false, isCommand: false)
-                            }
-                            
-                            HStack(spacing: 4) {
-                                Text(LocalizedStringKey("Move Window"))
-                                Text("⌥↵")
-                                    .font(.system(.subheadline))
-                                    .fontWeight(.bold)
-                            }
-                            .modifier(BottomBarCapsule(isSelected: false, isActive: false, colorScheme: colorScheme))
-                            .contentShape(Rectangle())
-                            .onTapGesture {
-                                viewModel.executeBottomBarSpaceAction(isOption: true, isCommand: false)
-                            }
-                        } else {
-                            HStack(spacing: 4) {
-                                Text(LocalizedStringKey("Action"))
-                                Text("↵")
-                                    .font(.system(.subheadline))
-                                    .fontWeight(.bold)
-                            }
-                            .modifier(BottomBarCapsule(isSelected: false, isActive: false, colorScheme: colorScheme))
-                            .contentShape(Rectangle())
-                            .onTapGesture {
-                                viewModel.executeRowAction()
+                                .contentShape(Rectangle())
+                                .onTapGesture {
+                                    viewModel.executeBottomBarSpaceAction(isOption: false, isCommand: false)
+                                }
+                                
+                                HStack(spacing: 4) {
+                                    Text(LocalizedStringKey("Move Window"))
+                                    Text("⌥↵")
+                                        .font(.system(.subheadline))
+                                        .fontWeight(.bold)
+                                }
+                                .modifier(BottomBarCapsule(isSelected: false, isActive: false, colorScheme: colorScheme))
+                                .contentShape(Rectangle())
+                                .onTapGesture {
+                                    viewModel.executeBottomBarSpaceAction(isOption: true, isCommand: false)
+                                }
+                            } else {
+                                HStack(spacing: 4) {
+                                    Text(LocalizedStringKey("Action"))
+                                    Text("↵")
+                                        .font(.system(.subheadline))
+                                        .fontWeight(.bold)
+                                }
+                                .modifier(BottomBarCapsule(isSelected: false, isActive: false, colorScheme: colorScheme))
+                                .contentShape(Rectangle())
+                                .onTapGesture {
+                                    viewModel.executeRowAction()
+                                }
                             }
                         }
                     }
+                    .padding(.leading, 12)
+                    .background(Color.clear)
                 }
-                .padding(.leading, 12)
-                .background(Color.clear)
+                .frame(maxHeight: .infinity)
             }
-            .frame(maxHeight: .infinity)
         }
         .padding(.horizontal, 18)
         .frame(height: 46)
