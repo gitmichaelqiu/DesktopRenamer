@@ -1354,24 +1354,7 @@ class FocusTextField: NSTextField {
         return true
     }
 
-    override func keyDown(with event: NSEvent) {
-        if isTypingDisabled {
-            let modifiers = event.modifierFlags.intersection(.deviceIndependentFlagsMask)
-            let hasCommand = modifiers.contains(.command)
-            let hasOption = modifiers.contains(.option)
-            let keyCode = event.keyCode
-            let isSpecialKey = (keyCode == 53 || keyCode == 36 || keyCode == 76 ||
-                                keyCode == 126 || keyCode == 125 || keyCode == 123 || keyCode == 124 ||
-                                keyCode == 48)
-            if isSpecialKey || hasCommand || hasOption {
-                super.keyDown(with: event)
-            } else {
-                return
-            }
-        } else {
-            super.keyDown(with: event)
-        }
-    }
+
 
     override func performKeyEquivalent(with event: NSEvent) -> Bool {
         if event.type == .keyDown {
@@ -1473,6 +1456,13 @@ struct SearchTextField: NSViewRepresentable {
             if let textField = obj.object as? NSTextField {
                 parent.text = textField.stringValue
             }
+        }
+        
+        func control(_ control: NSControl, textView: NSTextView, shouldChangeTextIn ranges: [NSValue], replacementStrings: [String]?) -> Bool {
+            if parent.isTypingDisabled {
+                return false
+            }
+            return true
         }
         
         func control(_ control: NSControl, textView: NSTextView, doCommandBy commandSelector: Selector) -> Bool {
