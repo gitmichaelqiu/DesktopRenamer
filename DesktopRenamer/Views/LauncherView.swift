@@ -189,7 +189,7 @@ struct LauncherView: View {
                             onCommandK: {
                                 if viewModel.commandKTargetWindow != nil {
                                     viewModel.commandKTargetWindow = nil
-                                } else if viewModel.activeCommand?.type == .batchMoveWindows {
+                                } else if viewModel.activeCommand?.type == .batchMoveWindows && viewModel.stagingWindow == nil {
                                     viewModel.showCommandKPanel()
                                 }
                             },
