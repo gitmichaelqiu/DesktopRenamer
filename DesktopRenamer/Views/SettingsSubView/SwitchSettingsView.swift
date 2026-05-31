@@ -602,7 +602,7 @@ struct EditAppExceptionView: View {
                 
                 SettingsRow(
                     "Drag window slightly before switching",
-                    helperText: "For custom-drawn or sandboxed windows (like WeChat) that require mouse movement to start dragging. Performs a 5px drag and reverses it before the space switch."
+                    helperText: "For custom-drawn windows (like WeChat) that require mouse movement to start dragging. Enabling this may resolve some window movement failures."
                 ) {
                     Toggle("", isOn: Binding(
                         get: { exception.dragBeforeSwitch ?? false },

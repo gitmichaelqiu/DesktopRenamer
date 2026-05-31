@@ -284,7 +284,14 @@
       }
     },
     "Add Exception" : {
-
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "添加特例"
+          }
+        }
+      }
     },
     "Add it as a space in\nSettings → General → Add spaces" : {
       "localizations" : {
@@ -776,6 +783,16 @@
         }
       }
     },
+    "Drag window slightly before switching" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "在切换窗口前轻微拖动"
+          }
+        }
+      }
+    },
     "Edit Exception" : {
       "localizations" : {
         "zh-Hans" : {
@@ -924,6 +941,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "字体大小"
+          }
+        }
+      }
+    },
+    "For custom-drawn windows (like WeChat) that require mouse movement to start dragging. Enabling this may resolve some window movement failures." : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "对于自建套件的窗口（如微信），需要轻微拖动窗口才能跨桌面移动。启用可以解决部分失败。"
           }
         }
       }
@@ -1497,7 +1524,14 @@
       }
     },
     "Moving window failed for %@" : {
-
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "移动%@窗口失败"
+          }
+        }
+      }
     },
     "My GitHub" : {
       "localizations" : {
