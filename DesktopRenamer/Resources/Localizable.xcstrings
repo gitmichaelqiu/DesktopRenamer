@@ -1086,8 +1086,15 @@
         }
       }
     },
-    "Hold the Option (⌥) key while swiping on the trackpad to move the active window to the adjacent space." : {
-
+    "Hold the Option key while swiping on the trackpad to move the active window to the adjacent space." : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "切换时按住Option将当前窗口移动到相邻桌面。"
+          }
+        }
+      }
     },
     "If enabled, the label stays on the desktop instead of hiding.\n\nIf disabled, the label will only be visible in Mission Control.\n\nTip: You can drag the window to the screen edge to shrink it into a 'Picture-in-Picture' mode." : {
       "localizations" : {
@@ -1527,7 +1534,14 @@
       }
     },
     "Move window when holding Option" : {
-
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "按住Option以移动窗口"
+          }
+        }
+      }
     },
     "Moving window failed for %@" : {
       "localizations" : {
