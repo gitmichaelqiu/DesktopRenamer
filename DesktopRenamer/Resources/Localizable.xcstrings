@@ -3022,7 +3022,7 @@
         }
       }
     },
-    "Stage Move to Desktop..." : {
+    "Move to..." : {
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
@@ -3032,12 +3032,12 @@
         }
       }
     },
-    "Stage to Space" : {
+    "Stage" : {
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "移动到桌面"
+            "value" : "暂存"
           }
         }
       }

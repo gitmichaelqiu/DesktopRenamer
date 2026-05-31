@@ -334,7 +334,8 @@ struct ListAreaView: View {
                                     }
                                 }
                                 .padding(.horizontal, 10)
-                                .padding(.vertical, 8)
+                                .padding(.top, 0)
+                                .padding(.bottom, 8)
                             }
                             .onChange(of: viewModel.selectedRowIndex) { index in
                                 if viewModel.isKeyboardSelection {
@@ -372,7 +373,8 @@ struct ListAreaView: View {
                                         }
                                     }
                                     .padding(.horizontal, 10)
-                                    .padding(.vertical, 8)
+                                    .padding(.top, 0)
+                                    .padding(.bottom, 8)
                                 }
                                 .onChange(of: viewModel.selectedRowIndex) { index in
                                     if viewModel.isKeyboardSelection {
@@ -409,7 +411,8 @@ struct ListAreaView: View {
                                         }
                                     }
                                     .padding(.horizontal, 10)
-                                    .padding(.vertical, 8)
+                                    .padding(.top, 0)
+                                    .padding(.bottom, 8)
                                 }
                                 .onChange(of: viewModel.selectedRowIndex) { index in
                                     if viewModel.isKeyboardSelection {
@@ -463,7 +466,8 @@ struct ListAreaView: View {
                                         }
                                     }
                                     .padding(.horizontal, 10)
-                                    .padding(.vertical, 8)
+                                    .padding(.top, 0)
+                                    .padding(.bottom, 8)
                                 }
                                 .onChange(of: viewModel.selectedRowIndex) { index in
                                     if viewModel.isKeyboardSelection {
@@ -616,7 +620,7 @@ struct CommandRowView: View {
                     .cornerRadius(6)
                     .overlay(
                         RoundedRectangle(cornerRadius: 6)
-                            .stroke(statusText == "Enabled" ? colors.greenText.opacity(0.3) : Color.clear, lineWidth: 1)
+                            .stroke(statusText == "Enabled" ? colors.greenText.opacity(0.3) : colors.badgeBorder, lineWidth: 1)
                     )
             } else if command.hasSubpage {
                 Image(systemName: "chevron.right")
@@ -1022,7 +1026,7 @@ struct BatchMoveBottomBar: View {
                 if viewModel.stagingWindow != nil {
                     // Staging target space selection
                     HStack(spacing: 4) {
-                        Text(verbatim: String(localized: "Stage to Space"))
+                        Text(verbatim: String(localized: "Stage"))
                         Text("↵")
                             .font(.system(.caption2))
                             .fontWeight(.bold)
@@ -1063,7 +1067,7 @@ struct BatchMoveBottomBar: View {
                         case .unstaged:
                             HStack(spacing: 8) {
                                 HStack(spacing: 4) {
-                                    Text(verbatim: String(localized: "Stage Move to Desktop..."))
+                                    Text(verbatim: String(localized: "Move to..."))
                                     Text("↵")
                                         .font(.system(.caption2))
                                         .fontWeight(.bold)
@@ -1175,7 +1179,7 @@ struct SpacesBottomBar: View {
                     }) {
                         HStack(spacing: 4) {
                             Text(LocalizedStringKey("Switch Space"))
-                            Text("Tab")
+                            Text("⇥")
                                 .font(.system(.caption2))
                                 .fontWeight(.semibold)
                         }
@@ -1825,6 +1829,8 @@ struct BottomBarCapsule: ViewModifier {
     var isGreen: Bool = false
     let colorScheme: ColorScheme
     
+    @State private var isHovered: Bool = false
+    
     func body(content: Content) -> some View {
         content
             .font(.caption)
@@ -1836,24 +1842,27 @@ struct BottomBarCapsule: ViewModifier {
                     if isSelected {
                         isGreen ? Color.green : Color.primary.opacity(0.08)
                     } else if isActive {
-                        isGreen ? Color.green.opacity(0.15) : Color.accentColor.opacity(0.15)
+                        isGreen ? Color.green.opacity(isHovered ? 0.25 : 0.15) : Color.accentColor.opacity(isHovered ? 0.25 : 0.15)
                     } else {
-                        Color.primary.opacity(0.06)
+                        Color.primary.opacity(isHovered ? 0.12 : 0.06)
                     }
                 }
             )
             .foregroundColor(
-                isActive ? (isGreen ? Color.green : Color.accentColor) : (isSelected ? .primary : .secondary)
+                isActive ? (isGreen ? Color.green : Color.accentColor) : (isSelected || isHovered ? .primary : .secondary)
             )
             .clipShape(Capsule())
             .overlay(
                 Capsule()
                     .stroke(
-                        isSelected ? Color.primary.opacity(0.15) : (isActive ? (isGreen ? Color.green.opacity(0.2) : Color.accentColor.opacity(0.2)) : Color.primary.opacity(0.08)),
+                        isSelected ? Color.primary.opacity(0.15) : (isActive ? (isGreen ? Color.green.opacity(isHovered ? 0.4 : 0.2) : Color.accentColor.opacity(isHovered ? 0.4 : 0.2)) : Color.primary.opacity(isHovered ? 0.25 : 0.08)),
                         lineWidth: 1
                     )
             )
             .shadow(color: isSelected ? (isGreen ? Color.green.opacity(0.25) : Color.primary.opacity(0.1)) : Color.clear, radius: 3, x: 0, y: 1)
+            .onHover { hovering in
+                isHovered = hovering
+            }
     }
 }
 
