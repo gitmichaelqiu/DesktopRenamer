@@ -825,7 +825,29 @@ struct WindowBatchRowView: View {
                     .foregroundColor(colors.textPrimary)
                     .lineLimit(1)
 
-                Text(verbatim: String(format: String(localized: "%@ · %@"), window.ownerName, window.space.name))
+                let stateLabel: String = {
+                    var isMin = false
+                    var isHid = false
+                    if let app = NSRunningApplication(processIdentifier: window.pid) {
+                        isHid = app.isHidden
+                    }
+                    if let axWindow = SpaceHelper.getAXWindow(id: window.id, pid: window.pid) {
+                        var minimizedRef: CFTypeRef?
+                        if AXUIElementCopyAttributeValue(axWindow, kAXMinimizedAttribute as CFString, &minimizedRef) == .success,
+                           let isMinimized = minimizedRef as? Bool {
+                            isMin = isMinimized
+                        }
+                    }
+                    if isMin {
+                        return NSLocalizedString("Minimized", comment: "")
+                    } else if isHid {
+                        return NSLocalizedString("Hidden", comment: "")
+                    } else {
+                        return NSLocalizedString("Active", comment: "")
+                    }
+                }()
+
+                Text(verbatim: String(format: "%@ · %@ · %@", window.ownerName, window.space.name, stateLabel))
                     .font(.system(size: 11.5))
                     .foregroundColor(isSelected ? colors.textSecondary : colors.textTertiary)
                     .lineLimit(1)
