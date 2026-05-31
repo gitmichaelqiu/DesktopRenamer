@@ -988,6 +988,10 @@ struct BatchMoveBottomBar: View {
                     .padding(.vertical, 4)
                     .background(colors.badgeBg)
                     .clipShape(Capsule())
+                    .contentShape(Rectangle())
+                    .onTapGesture {
+                        viewModel.executeRowAction()
+                    }
                 } else {
                     // Selecting an item in batch move
                     let items = viewModel.batchMoveSelectableItems
@@ -1015,6 +1019,10 @@ struct BatchMoveBottomBar: View {
                                 .padding(.vertical, 4)
                                 .background(colors.badgeBg)
                                 .clipShape(Capsule())
+                                .contentShape(Rectangle())
+                                .onTapGesture {
+                                    viewModel.executeRowAction()
+                                }
                             }
                             
                         case .unstaged:
@@ -1031,6 +1039,10 @@ struct BatchMoveBottomBar: View {
                                 .padding(.vertical, 4)
                                 .background(colors.badgeBg)
                                 .clipShape(Capsule())
+                                .contentShape(Rectangle())
+                                .onTapGesture {
+                                    viewModel.executeRowAction()
+                                }
                                 
                                 HStack(spacing: 4) {
                                     Text(verbatim: String(localized: "Actions"))
@@ -1044,6 +1056,10 @@ struct BatchMoveBottomBar: View {
                                 .padding(.vertical, 4)
                                 .background(colors.badgeBg)
                                 .clipShape(Capsule())
+                                .contentShape(Rectangle())
+                                .onTapGesture {
+                                    viewModel.showCommandKPanel()
+                                }
                             }
                         }
                     }
@@ -1066,6 +1082,10 @@ struct BatchMoveBottomBar: View {
                             Capsule()
                                 .stroke(colors.greenText.opacity(0.3), lineWidth: 1)
                         )
+                        .contentShape(Rectangle())
+                        .onTapGesture {
+                            viewModel.executeBatchMove()
+                        }
                     }
                 }
             }
@@ -1195,6 +1215,10 @@ struct SpacesBottomBar: View {
                     .frame(height: 21)
                     .background(colors.badgeBg)
                     .clipShape(Capsule())
+                    .contentShape(Rectangle())
+                    .onTapGesture {
+                        viewModel.executeBottomBarSpaceAction(isOption: false, isCommand: false)
+                    }
                     
                     HStack(spacing: 4) {
                         Text(LocalizedStringKey("Move Window"))
@@ -1208,6 +1232,10 @@ struct SpacesBottomBar: View {
                     .frame(height: 21)
                     .background(colors.badgeBg)
                     .clipShape(Capsule())
+                    .contentShape(Rectangle())
+                    .onTapGesture {
+                        viewModel.executeBottomBarSpaceAction(isOption: true, isCommand: false)
+                    }
                 } else {
                     HStack(spacing: 4) {
                         Text(LocalizedStringKey("Action"))
@@ -1221,6 +1249,10 @@ struct SpacesBottomBar: View {
                     .frame(height: 21)
                     .background(colors.badgeBg)
                     .clipShape(Capsule())
+                    .contentShape(Rectangle())
+                    .onTapGesture {
+                        viewModel.executeRowAction()
+                    }
                 }
             }
         }
@@ -1274,6 +1306,10 @@ struct CommandBottomBar: View {
                     .padding(.vertical, 4)
                     .background(colors.badgeBg)
                     .clipShape(Capsule())
+                    .contentShape(Rectangle())
+                    .onTapGesture {
+                        viewModel.executeRowAction()
+                    }
 
                 case .moveWindow:
                     HStack(spacing: 4) {
@@ -1288,6 +1324,10 @@ struct CommandBottomBar: View {
                     .padding(.vertical, 4)
                     .background(colors.badgeBg)
                     .clipShape(Capsule())
+                    .contentShape(Rectangle())
+                    .onTapGesture {
+                        viewModel.executeRowAction()
+                    }
 
                 case .listWindows:
                     HStack(spacing: 4) {
@@ -1302,6 +1342,10 @@ struct CommandBottomBar: View {
                     .padding(.vertical, 4)
                     .background(colors.badgeBg)
                     .clipShape(Capsule())
+                    .contentShape(Rectangle())
+                    .onTapGesture {
+                        viewModel.executeRowAction()
+                    }
 
                 case .renameCurrentSpace:
                     HStack(spacing: 4) {
@@ -1316,6 +1360,10 @@ struct CommandBottomBar: View {
                     .padding(.vertical, 4)
                     .background(colors.badgeBg)
                     .clipShape(Capsule())
+                    .contentShape(Rectangle())
+                    .onTapGesture {
+                        viewModel.executeRowAction()
+                    }
                     
                 default:
                     EmptyView()
