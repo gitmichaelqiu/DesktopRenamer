@@ -70,6 +70,7 @@ struct LauncherView: View {
                     Image(systemName: "magnifyingglass")
                         .foregroundColor(.secondary)
                         .font(.system(size: 16, weight: .medium))
+                        .frame(width: 28, height: 28)
                     
                     if viewModel.activeCommand?.type == .renameCurrentSpace {
                         SearchTextField(
@@ -202,7 +203,7 @@ struct LauncherView: View {
                     }
                 }
                 .frame(height: 52)
-                .padding(.horizontal, 16)
+                .padding(.horizontal, 18)
                 
                 Divider()
                 
@@ -259,12 +260,7 @@ struct LauncherView: View {
             }
         }
         .frame(width: 720, height: 450)
-        .background(.ultraThinMaterial)
-        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-        .overlay(
-            RoundedRectangle(cornerRadius: 16, style: .continuous)
-                .stroke(colors.border, lineWidth: 1)
-        )
+        .launcherBackground(cornerRadius: 16, borderColor: colors.border)
         .shadow(color: Color.black.opacity(colorScheme == .dark ? 0.45 : 0.20), radius: 24, x: 0, y: 12)
         .padding(60)
     }
@@ -507,18 +503,19 @@ struct KeycapView: View {
     
     var body: some View {
         Text(text)
-            .font(.system(.caption2, design: .monospaced))
-            .fontWeight(.medium)
-            .foregroundColor(isGreenRow && isSelected ? .white : (isSelected ? colors.textPrimary : colors.textSecondary))
+            .font(.system(size: 10, weight: .semibold))
+            .foregroundColor(isSelected ? .white : colors.textSecondary)
             .padding(.horizontal, horizontalPadding)
             .padding(.vertical, verticalPadding)
             .background(
-                isGreenRow && isSelected ? Color.white.opacity(0.2) : colors.badgeBg
+                isSelected
+                    ? Color.white.opacity(0.20)
+                    : colors.badgeBg
             )
-            .cornerRadius(4)
+            .cornerRadius(5)
             .overlay(
-                RoundedRectangle(cornerRadius: 4)
-                    .stroke(isGreenRow && isSelected ? Color.white.opacity(0.3) : colors.badgeBorder, lineWidth: 1)
+                RoundedRectangle(cornerRadius: 5)
+                    .stroke(isSelected ? Color.white.opacity(0.30) : colors.badgeBorder, lineWidth: 1)
             )
     }
 }
@@ -583,7 +580,7 @@ struct CommandRowView: View {
             Image(systemName: command.iconName)
                 .font(.system(size: 12, weight: .medium))
                 .foregroundColor(isSelected ? .white : colors.textPrimary)
-                .frame(width: 26, height: 26)
+                .frame(width: 28, height: 28)
                 .background(isSelected ? Color.accentColor : colors.badgeBg)
                 .cornerRadius(6)
                 .overlay(
@@ -630,10 +627,21 @@ struct CommandRowView: View {
                 KeycapView(text: "Action", isSelected: isSelected)
             }
         }
-        .padding(.horizontal, 12)
+        .padding(.horizontal, 8)
         .padding(.vertical, 8)
-        .background(isSelected ? colors.rowHover : (isHovered ? colors.rowHover.opacity(0.5) : Color.clear))
-        .cornerRadius(8)
+        .background(
+            ZStack {
+                if isSelected {
+                    RoundedRectangle(cornerRadius: 8, style: .continuous)
+                        .fill(Color.accentColor.opacity(0.12))
+                    RoundedRectangle(cornerRadius: 8, style: .continuous)
+                        .stroke(Color.accentColor.opacity(0.24), lineWidth: 1)
+                } else if isHovered {
+                    RoundedRectangle(cornerRadius: 8, style: .continuous)
+                        .fill(Color.primary.opacity(0.05))
+                }
+            }
+        )
         .onHover { hovering in
             isHovered = hovering
         }
@@ -661,7 +669,7 @@ struct SpaceRowView: View {
             Image(systemName: "desktopcomputer")
                 .font(.system(size: 12, weight: .medium))
                 .foregroundColor(isSelected ? .white : colors.textPrimary)
-                .frame(width: 26, height: 26)
+                .frame(width: 28, height: 28)
                 .background(isSelected ? Color.accentColor : colors.badgeBg)
                 .cornerRadius(6)
                 .overlay(
@@ -690,10 +698,21 @@ struct SpaceRowView: View {
                 KeycapView(text: "Switch ↵", isSelected: isSelected)
             }
         }
-        .padding(.horizontal, 12)
+        .padding(.horizontal, 8)
         .padding(.vertical, 8)
-        .background(isSelected ? colors.rowHover : (isHovered ? colors.rowHover.opacity(0.5) : Color.clear))
-        .cornerRadius(8)
+        .background(
+            ZStack {
+                if isSelected {
+                    RoundedRectangle(cornerRadius: 8, style: .continuous)
+                        .fill(Color.accentColor.opacity(0.12))
+                    RoundedRectangle(cornerRadius: 8, style: .continuous)
+                        .stroke(Color.accentColor.opacity(0.24), lineWidth: 1)
+                } else if isHovered {
+                    RoundedRectangle(cornerRadius: 8, style: .continuous)
+                        .fill(Color.primary.opacity(0.05))
+                }
+            }
+        )
         .onHover { hovering in
             isHovered = hovering
         }
@@ -719,6 +738,7 @@ struct WindowRowView: View {
                 .aspectRatio(contentMode: .fit)
                 .frame(width: 20, height: 20)
                 .padding(4)
+                .frame(width: 28, height: 28)
                 .background(colors.badgeBg)
                 .cornerRadius(6)
                 .overlay(
@@ -747,10 +767,21 @@ struct WindowRowView: View {
                 KeycapView(text: "Focus ↵", isSelected: isSelected)
             }
         }
-        .padding(.horizontal, 12)
+        .padding(.horizontal, 8)
         .padding(.vertical, 8)
-        .background(isSelected ? colors.rowHover : (isHovered ? colors.rowHover.opacity(0.5) : Color.clear))
-        .cornerRadius(8)
+        .background(
+            ZStack {
+                if isSelected {
+                    RoundedRectangle(cornerRadius: 8, style: .continuous)
+                        .fill(Color.accentColor.opacity(0.12))
+                    RoundedRectangle(cornerRadius: 8, style: .continuous)
+                        .stroke(Color.accentColor.opacity(0.24), lineWidth: 1)
+                } else if isHovered {
+                    RoundedRectangle(cornerRadius: 8, style: .continuous)
+                        .fill(Color.primary.opacity(0.05))
+                }
+            }
+        )
         .onHover { hovering in
             isHovered = hovering
         }
@@ -785,7 +816,7 @@ struct ConfirmBatchRowView: View {
             
             KeycapView(text: "Run ↵", isSelected: isSelected, isGreenRow: true)
         }
-        .padding(.horizontal, 12)
+        .padding(.horizontal, 8)
         .padding(.vertical, 8)
         .background(isSelected ? colors.greenText : (isHovered ? colors.greenText.opacity(0.5) : colors.greenText.opacity(0.06)))
         .cornerRadius(8)
@@ -820,6 +851,7 @@ struct WindowBatchRowView: View {
                 .aspectRatio(contentMode: .fit)
                 .frame(width: 20, height: 20)
                 .padding(4)
+                .frame(width: 28, height: 28)
                 .background(colors.badgeBg)
                 .cornerRadius(6)
                 .overlay(
@@ -894,10 +926,21 @@ struct WindowBatchRowView: View {
                     )
             }
         }
-        .padding(.horizontal, 12)
+        .padding(.horizontal, 8)
         .padding(.vertical, 8)
-        .background(isSelected ? colors.rowHover : (isHovered ? colors.rowHover.opacity(0.5) : Color.clear))
-        .cornerRadius(8)
+        .background(
+            ZStack {
+                if isSelected {
+                    RoundedRectangle(cornerRadius: 8, style: .continuous)
+                        .fill(Color.accentColor.opacity(0.12))
+                    RoundedRectangle(cornerRadius: 8, style: .continuous)
+                        .stroke(Color.accentColor.opacity(0.24), lineWidth: 1)
+                } else if isHovered {
+                    RoundedRectangle(cornerRadius: 8, style: .continuous)
+                        .fill(Color.primary.opacity(0.05))
+                }
+            }
+        )
         .onHover { hovering in
             isHovered = hovering
         }
@@ -925,7 +968,7 @@ struct ListSectionHeader: View {
             
             Spacer()
         }
-        .padding(.horizontal, 12)
+        .padding(.horizontal, 8)
         .padding(.top, 10)
         .padding(.bottom, 4)
     }
@@ -952,10 +995,7 @@ struct BatchMoveBottomBar: View {
                         .fontWeight(.semibold)
                         .foregroundColor(colors.textPrimary)
                 }
-                .padding(.horizontal, 10)
-                .padding(.vertical, 4)
-                .background(colors.badgeBg)
-                .clipShape(Capsule())
+                .modifier(BottomBarCapsule(isSelected: false, isActive: true, colorScheme: colorScheme))
                 
                 if let staging = viewModel.stagingWindow {
                     Image(systemName: "chevron.right")
@@ -971,10 +1011,7 @@ struct BatchMoveBottomBar: View {
                             .fontWeight(.semibold)
                             .foregroundColor(colors.textPrimary)
                     }
-                    .padding(.horizontal, 10)
-                    .padding(.vertical, 4)
-                    .background(colors.badgeBg)
-                    .clipShape(Capsule())
+                    .modifier(BottomBarCapsule(isSelected: false, isActive: false, colorScheme: colorScheme))
                 }
             }
             
@@ -986,18 +1023,11 @@ struct BatchMoveBottomBar: View {
                     // Staging target space selection
                     HStack(spacing: 4) {
                         Text(verbatim: String(localized: "Stage to Space"))
-                            .font(.caption)
-                            .fontWeight(.medium)
-                            .foregroundColor(colors.textSecondary)
                         Text("↵")
                             .font(.system(.caption2, design: .monospaced))
                             .fontWeight(.bold)
-                            .foregroundColor(colors.textTertiary)
                     }
-                    .padding(.horizontal, 10)
-                    .padding(.vertical, 4)
-                    .background(colors.badgeBg)
-                    .clipShape(Capsule())
+                    .modifier(BottomBarCapsule(isSelected: false, isActive: false, colorScheme: colorScheme))
                     .contentShape(Rectangle())
                     .onTapGesture {
                         viewModel.executeRowAction()
@@ -1019,18 +1049,11 @@ struct BatchMoveBottomBar: View {
                             HStack(spacing: 8) {
                                 HStack(spacing: 4) {
                                     Text(verbatim: String(localized: isMove ? "Unstage Move" : "Unstage Action"))
-                                        .font(.caption)
-                                        .fontWeight(.medium)
-                                        .foregroundColor(colors.textSecondary)
                                     Text("↵")
                                         .font(.system(.caption2, design: .monospaced))
                                         .fontWeight(.bold)
-                                        .foregroundColor(colors.textQuaternary)
                                 }
-                                .padding(.horizontal, 10)
-                                .padding(.vertical, 4)
-                                .background(colors.badgeBg)
-                                .clipShape(Capsule())
+                                .modifier(BottomBarCapsule(isSelected: false, isActive: false, colorScheme: colorScheme))
                                 .contentShape(Rectangle())
                                 .onTapGesture {
                                     viewModel.executeRowAction()
@@ -1041,18 +1064,11 @@ struct BatchMoveBottomBar: View {
                             HStack(spacing: 8) {
                                 HStack(spacing: 4) {
                                     Text(verbatim: String(localized: "Stage Move to Desktop..."))
-                                        .font(.caption)
-                                        .fontWeight(.medium)
-                                        .foregroundColor(colors.textSecondary)
                                     Text("↵")
                                         .font(.system(.caption2, design: .monospaced))
                                         .fontWeight(.bold)
-                                        .foregroundColor(colors.textQuaternary)
                                 }
-                                .padding(.horizontal, 10)
-                                .padding(.vertical, 4)
-                                .background(colors.badgeBg)
-                                .clipShape(Capsule())
+                                .modifier(BottomBarCapsule(isSelected: false, isActive: false, colorScheme: colorScheme))
                                 .contentShape(Rectangle())
                                 .onTapGesture {
                                     viewModel.executeRowAction()
@@ -1060,18 +1076,11 @@ struct BatchMoveBottomBar: View {
                                 
                                 HStack(spacing: 4) {
                                     Text(verbatim: String(localized: "Actions"))
-                                        .font(.caption)
-                                        .fontWeight(.medium)
-                                        .foregroundColor(colors.textSecondary)
                                     Text("⌘K")
                                         .font(.system(.caption2, design: .monospaced))
                                         .fontWeight(.bold)
-                                        .foregroundColor(colors.textQuaternary)
                                 }
-                                .padding(.horizontal, 10)
-                                .padding(.vertical, 4)
-                                .background(colors.badgeBg)
-                                .clipShape(Capsule())
+                                .modifier(BottomBarCapsule(isSelected: false, isActive: false, colorScheme: colorScheme))
                                 .contentShape(Rectangle())
                                 .onTapGesture {
                                     viewModel.showCommandKPanel()
@@ -1084,22 +1093,11 @@ struct BatchMoveBottomBar: View {
                     if !viewModel.stagedMoves.isEmpty {
                         HStack(spacing: 4) {
                             Text(verbatim: String(localized: "Run Batch Actions"))
-                                .font(.caption)
-                                .fontWeight(.semibold)
-                                .foregroundColor(colors.greenText)
                             Text("⌘↵")
                                 .font(.system(.caption2, design: .monospaced))
                                 .fontWeight(.bold)
-                                .foregroundColor(colors.greenText.opacity(0.8))
                         }
-                        .padding(.horizontal, 10)
-                        .padding(.vertical, 4)
-                        .background(colors.greenText.opacity(0.1))
-                        .clipShape(Capsule())
-                        .overlay(
-                            Capsule()
-                                .stroke(colors.greenText.opacity(0.3), lineWidth: 1)
-                        )
+                        .modifier(BottomBarCapsule(isSelected: true, isActive: false, isGreen: true, colorScheme: colorScheme))
                         .contentShape(Rectangle())
                         .onTapGesture {
                             viewModel.executeBatchMove()
@@ -1108,7 +1106,7 @@ struct BatchMoveBottomBar: View {
                 }
             }
         }
-        .padding(.horizontal, 12)
+        .padding(.horizontal, 18)
         .padding(.vertical, 10)
         .background(colors.bottomBarBg)
     }
@@ -1150,41 +1148,8 @@ struct SpacesBottomBar: View {
                         viewModel.executeSwitchToSpaceID(space.id)
                     }
                 }) {
-                    HStack {
-                        if isSpaceSelected {
-                            Text(name)
-                                .font(.caption)
-                                .fontWeight(.semibold)
-                                .foregroundColor(.white)
-                                .padding(.horizontal, 10)
-                                .padding(.vertical, 4)
-                                .background(Color.accentColor)
-                                .clipShape(Capsule())
-                                .overlay(
-                                    Capsule()
-                                        .stroke(Color.white.opacity(0.25), lineWidth: 1)
-                                )
-                                .shadow(color: Color.accentColor.opacity(0.35), radius: 3, x: 0, y: 1)
-                        } else if isCurrent {
-                            Text(name)
-                                .font(.caption)
-                                .fontWeight(.semibold)
-                                .foregroundColor(Color.accentColor)
-                                .padding(.horizontal, 10)
-                                .padding(.vertical, 4)
-                                .background(Color.accentColor.opacity(0.15))
-                                .clipShape(Capsule())
-                        } else {
-                            Text(name)
-                                .font(.caption)
-                                .fontWeight(.medium)
-                                .foregroundColor(colors.textSecondary)
-                                .padding(.horizontal, 10)
-                                .padding(.vertical, 4)
-                                .background(colors.badgeBg)
-                                .clipShape(Capsule())
-                        }
-                    }
+                    Text(name)
+                        .modifier(BottomBarCapsule(isSelected: isSpaceSelected, isActive: isCurrent, colorScheme: colorScheme))
                 }
                 .buttonStyle(PlainButtonStyle())
                 .focusable(false)
@@ -1210,18 +1175,11 @@ struct SpacesBottomBar: View {
                     }) {
                         HStack(spacing: 4) {
                             Text(LocalizedStringKey("Switch Space"))
-                                .font(.caption)
-                                .fontWeight(.medium)
-                                .foregroundColor(colors.textSecondary)
                             Text("Tab")
                                 .font(.system(.caption2, design: .monospaced))
                                 .fontWeight(.semibold)
-                                .foregroundColor(colors.textQuaternary)
                         }
-                        .padding(.horizontal, 10)
-                        .frame(height: 21)
-                        .background(colors.badgeBg)
-                        .clipShape(Capsule())
+                        .modifier(BottomBarCapsule(isSelected: false, isActive: false, colorScheme: colorScheme))
                     }
                     .buttonStyle(PlainButtonStyle())
                 }
@@ -1229,18 +1187,11 @@ struct SpacesBottomBar: View {
                 if viewModel.isBottomBarFocused {
                     HStack(spacing: 4) {
                         Text(LocalizedStringKey("Switch Space"))
-                            .font(.caption)
-                            .fontWeight(.medium)
-                            .foregroundColor(colors.textSecondary)
                         Text("↵")
                             .font(.system(.caption2, design: .monospaced))
                             .fontWeight(.bold)
-                            .foregroundColor(colors.textQuaternary)
                     }
-                    .padding(.horizontal, 10)
-                    .frame(height: 21)
-                    .background(colors.badgeBg)
-                    .clipShape(Capsule())
+                    .modifier(BottomBarCapsule(isSelected: false, isActive: false, colorScheme: colorScheme))
                     .contentShape(Rectangle())
                     .onTapGesture {
                         viewModel.executeBottomBarSpaceAction(isOption: false, isCommand: false)
@@ -1248,18 +1199,11 @@ struct SpacesBottomBar: View {
                     
                     HStack(spacing: 4) {
                         Text(LocalizedStringKey("Move Window"))
-                            .font(.caption)
-                            .fontWeight(.medium)
-                            .foregroundColor(colors.textSecondary)
                         Text("⌥↵")
                             .font(.system(.caption2, design: .monospaced))
                             .fontWeight(.bold)
-                            .foregroundColor(colors.textQuaternary)
                     }
-                    .padding(.horizontal, 10)
-                    .frame(height: 21)
-                    .background(colors.badgeBg)
-                    .clipShape(Capsule())
+                    .modifier(BottomBarCapsule(isSelected: false, isActive: false, colorScheme: colorScheme))
                     .contentShape(Rectangle())
                     .onTapGesture {
                         viewModel.executeBottomBarSpaceAction(isOption: true, isCommand: false)
@@ -1267,18 +1211,11 @@ struct SpacesBottomBar: View {
                 } else {
                     HStack(spacing: 4) {
                         Text(LocalizedStringKey("Action"))
-                            .font(.caption)
-                            .fontWeight(.medium)
-                            .foregroundColor(colors.textSecondary)
                         Text("↵")
                             .font(.system(.caption2, design: .monospaced))
                             .fontWeight(.bold)
-                            .foregroundColor(colors.textQuaternary)
                     }
-                    .padding(.horizontal, 10)
-                    .frame(height: 21)
-                    .background(colors.badgeBg)
-                    .clipShape(Capsule())
+                    .modifier(BottomBarCapsule(isSelected: false, isActive: false, colorScheme: colorScheme))
                     .contentShape(Rectangle())
                     .onTapGesture {
                         viewModel.executeRowAction()
@@ -1286,7 +1223,7 @@ struct SpacesBottomBar: View {
                 }
             }
         }
-        .padding(.horizontal, 12)
+        .padding(.horizontal, 18)
         .padding(.vertical, 10)
         .background(colors.bottomBarBg)
     }
@@ -1313,10 +1250,7 @@ struct CommandBottomBar: View {
                         .fontWeight(.semibold)
                         .foregroundColor(colors.textPrimary)
                 }
-                .padding(.horizontal, 10)
-                .padding(.vertical, 4)
-                .background(colors.badgeBg)
-                .clipShape(Capsule())
+                .modifier(BottomBarCapsule(isSelected: false, isActive: true, colorScheme: colorScheme))
             }
             
             Spacer()
@@ -1327,18 +1261,11 @@ struct CommandBottomBar: View {
                 case .switchToDesktop:
                     HStack(spacing: 4) {
                         Text(verbatim: String(localized: "Switch Space"))
-                            .font(.caption)
-                            .fontWeight(.medium)
-                            .foregroundColor(colors.textSecondary)
                         Text("↵")
                             .font(.system(.caption2, design: .monospaced))
                             .fontWeight(.bold)
-                            .foregroundColor(colors.textQuaternary)
                     }
-                    .padding(.horizontal, 10)
-                    .padding(.vertical, 4)
-                    .background(colors.badgeBg)
-                    .clipShape(Capsule())
+                    .modifier(BottomBarCapsule(isSelected: false, isActive: false, colorScheme: colorScheme))
                     .contentShape(Rectangle())
                     .onTapGesture {
                         viewModel.executeRowAction()
@@ -1347,18 +1274,11 @@ struct CommandBottomBar: View {
                 case .moveWindow:
                     HStack(spacing: 4) {
                         Text(verbatim: String(localized: "Move Window"))
-                            .font(.caption)
-                            .fontWeight(.medium)
-                            .foregroundColor(colors.textSecondary)
                         Text("↵")
                             .font(.system(.caption2, design: .monospaced))
                             .fontWeight(.bold)
-                            .foregroundColor(colors.textQuaternary)
                     }
-                    .padding(.horizontal, 10)
-                    .padding(.vertical, 4)
-                    .background(colors.badgeBg)
-                    .clipShape(Capsule())
+                    .modifier(BottomBarCapsule(isSelected: false, isActive: false, colorScheme: colorScheme))
                     .contentShape(Rectangle())
                     .onTapGesture {
                         viewModel.executeRowAction()
@@ -1367,18 +1287,11 @@ struct CommandBottomBar: View {
                 case .listWindows:
                     HStack(spacing: 4) {
                         Text(verbatim: String(localized: "Focus Window"))
-                            .font(.caption)
-                            .fontWeight(.medium)
-                            .foregroundColor(colors.textSecondary)
                         Text("↵")
                             .font(.system(.caption2, design: .monospaced))
                             .fontWeight(.bold)
-                            .foregroundColor(colors.textQuaternary)
                     }
-                    .padding(.horizontal, 10)
-                    .padding(.vertical, 4)
-                    .background(colors.badgeBg)
-                    .clipShape(Capsule())
+                    .modifier(BottomBarCapsule(isSelected: false, isActive: false, colorScheme: colorScheme))
                     .contentShape(Rectangle())
                     .onTapGesture {
                         viewModel.executeRowAction()
@@ -1387,18 +1300,11 @@ struct CommandBottomBar: View {
                 case .renameCurrentSpace:
                     HStack(spacing: 4) {
                         Text(verbatim: String(localized: "Rename Space"))
-                            .font(.caption)
-                            .fontWeight(.medium)
-                            .foregroundColor(colors.textSecondary)
                         Text("↵")
                             .font(.system(.caption2, design: .monospaced))
                             .fontWeight(.bold)
-                            .foregroundColor(colors.textQuaternary)
                     }
-                    .padding(.horizontal, 10)
-                    .padding(.vertical, 4)
-                    .background(colors.badgeBg)
-                    .clipShape(Capsule())
+                    .modifier(BottomBarCapsule(isSelected: false, isActive: false, colorScheme: colorScheme))
                     .contentShape(Rectangle())
                     .onTapGesture {
                         viewModel.executeRowAction()
@@ -1409,7 +1315,7 @@ struct CommandBottomBar: View {
                 }
             }
         }
-        .padding(.horizontal, 12)
+        .padding(.horizontal, 18)
         .padding(.vertical, 10)
         .background(colors.bottomBarBg)
     }
@@ -1792,12 +1698,7 @@ struct CommandKOverlayView: View {
                 .padding(8)
             }
             .frame(width: 380)
-            .background(.thinMaterial)
-            .cornerRadius(12)
-            .overlay(
-                RoundedRectangle(cornerRadius: 12)
-                    .stroke(colors.border, lineWidth: 1)
-            )
+            .launcherBackground(cornerRadius: 12, borderColor: colors.border)
             .shadow(color: Color.black.opacity(colorScheme == .dark ? 0.4 : 0.2), radius: 15, x: 0, y: 8)
         }
     }
@@ -1832,8 +1733,19 @@ struct CommandKActionRowView: View {
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 8)
-        .background(isSelected ? colors.rowHover : (isHovered ? colors.rowHover.opacity(0.5) : Color.clear))
-        .cornerRadius(6)
+        .background(
+            ZStack {
+                if isSelected {
+                    RoundedRectangle(cornerRadius: 6, style: .continuous)
+                        .fill(Color.accentColor.opacity(0.12))
+                    RoundedRectangle(cornerRadius: 6, style: .continuous)
+                        .stroke(Color.accentColor.opacity(0.24), lineWidth: 1)
+                } else if isHovered {
+                    RoundedRectangle(cornerRadius: 6, style: .continuous)
+                        .fill(Color.primary.opacity(0.05))
+                }
+            }
+        )
         .contentShape(Rectangle())
         .onHover { hovering in
             isHovered = hovering
@@ -1890,3 +1802,58 @@ struct VisualEffectView: NSViewRepresentable {
         nsView.state = state
     }
 }
+
+extension View {
+    @ViewBuilder
+    func launcherBackground(cornerRadius: CGFloat, borderColor: Color) -> some View {
+        if #available(macOS 26.0, *) {
+            self.glassEffect(.regular, in: RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
+        } else {
+            self.background(.ultraThinMaterial)
+                .clipShape(RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
+                .overlay(
+                    RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+                        .stroke(borderColor, lineWidth: 1)
+                )
+        }
+    }
+}
+
+struct BottomBarCapsule: ViewModifier {
+    let isSelected: Bool
+    let isActive: Bool
+    var isGreen: Bool = false
+    let colorScheme: ColorScheme
+    
+    func body(content: Content) -> some View {
+        content
+            .font(.caption)
+            .fontWeight(isSelected || isActive ? .semibold : .medium)
+            .padding(.horizontal, 10)
+            .frame(height: 22)
+            .background(
+                ZStack {
+                    if isSelected {
+                        isGreen ? Color.green : Color.accentColor
+                    } else if isActive {
+                        isGreen ? Color.green.opacity(0.15) : Color.accentColor.opacity(0.15)
+                    } else {
+                        Color.primary.opacity(0.06)
+                    }
+                }
+            )
+            .foregroundColor(
+                isSelected ? .white : (isActive ? (isGreen ? Color.green : Color.accentColor) : .secondary)
+            )
+            .clipShape(Capsule())
+            .overlay(
+                Capsule()
+                    .stroke(
+                        isSelected ? Color.white.opacity(0.2) : (isActive ? (isGreen ? Color.green.opacity(0.2) : Color.accentColor.opacity(0.2)) : Color.primary.opacity(0.08)),
+                        lineWidth: 1
+                    )
+            )
+            .shadow(color: isSelected ? (isGreen ? Color.green.opacity(0.25) : Color.accentColor.opacity(0.25)) : Color.clear, radius: 3, x: 0, y: 1)
+    }
+}
+
