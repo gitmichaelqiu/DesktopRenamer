@@ -447,6 +447,9 @@ struct BatchMoveSection: Identifiable {
         
         switch selectedItem {
         case .staged(let action, _):
+            if case .move = action.actionType {
+                return
+            }
             commandKTargetWindow = action.window
             let available = getAvailableCommandKActions(for: action.window)
             if let matchedIndex = available.firstIndex(where: { type in

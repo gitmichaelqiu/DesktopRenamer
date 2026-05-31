@@ -115,9 +115,6 @@
       },
       "shouldTranslate" : false
     },
-    "→ %@" : {
-      "shouldTranslate" : false
-    },
     "↵" : {
       "shouldTranslate" : false
     },
@@ -126,6 +123,9 @@
     },
     "⌘↵" : {
       "shouldTranslate" : false
+    },
+    "⌘K" : {
+
     },
     "⌥↵" : {
       "shouldTranslate" : false
@@ -212,6 +212,12 @@
           }
         }
       }
+    },
+    "Actions" : {
+
+    },
+    "Active" : {
+
     },
     "Active Space Label" : {
       "localizations" : {
@@ -608,6 +614,9 @@
           }
         }
       }
+    },
+    "Close Window" : {
+
     },
     "Confirm & Execute Batch Move (%lld windows)" : {
       "localizations" : {
@@ -1056,6 +1065,12 @@
         }
       }
     },
+    "Hidden" : {
+
+    },
+    "Hide App" : {
+
+    },
     "Hide menubar icon" : {
       "localizations" : {
         "zh-Hans" : {
@@ -1433,6 +1448,12 @@
         }
       }
     },
+    "Minimize Window" : {
+
+    },
+    "Minimized" : {
+
+    },
     "More Apps" : {
       "localizations" : {
         "zh-Hans" : {
@@ -1452,6 +1473,9 @@
           }
         }
       }
+    },
+    "Move to %@" : {
+
     },
     "Move Window" : {
       "localizations" : {
@@ -1841,6 +1865,9 @@
         }
       }
     },
+    "Quit App" : {
+
+    },
     "Raycast Integration" : {
       "localizations" : {
         "zh-Hans" : {
@@ -2059,6 +2086,12 @@
         }
       }
     },
+    "Restore to..." : {
+
+    },
+    "Restore Window" : {
+
+    },
     "Restore windows moved by lock" : {
       "localizations" : {
         "zh-Hans" : {
@@ -2131,7 +2164,11 @@
         }
       }
     },
+    "Run Batch Actions" : {
+
+    },
     "Run Batch Move" : {
+      "extractionState" : "stale",
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
@@ -3231,6 +3268,9 @@
         }
       }
     },
+    "Toggle Fullscreen" : {
+
+    },
     "Toggle lock for current space" : {
       "localizations" : {
         "zh-Hans" : {
@@ -3291,7 +3331,11 @@
         }
       }
     },
+    "Unstage Action" : {
+
+    },
     "Unstage Move" : {
+      "extractionState" : "stale",
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {

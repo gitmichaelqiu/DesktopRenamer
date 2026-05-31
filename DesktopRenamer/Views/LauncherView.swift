@@ -93,6 +93,7 @@ struct LauncherView: View {
                         SearchTextField(
                             text: $viewModel.searchQuery,
                             isDark: colors.isDark,
+                            isTypingDisabled: viewModel.commandKTargetWindow != nil,
                             onUpArrow: {
                                 if viewModel.commandKTargetWindow != nil {
                                     viewModel.selectPreviousCommandKAction()
@@ -163,8 +164,16 @@ struct LauncherView: View {
                                 }
                             },
                             onCommandNumber: { num in
-                                if viewModel.commandKTargetWindow != nil { return }
-                                viewModel.executeNthRowAction(num - 1)
+                                if viewModel.commandKTargetWindow != nil {
+                                    let actions = viewModel.commandKActions
+                                    let index = num - 1
+                                    if index >= 0 && index < actions.count {
+                                        viewModel.commandKSelectedIndex = index
+                                        viewModel.executeCommandKAction()
+                                    }
+                                } else {
+                                    viewModel.executeNthRowAction(num - 1)
+                                }
                             },
                             onTab: {
                                 if viewModel.commandKTargetWindow != nil { return }
@@ -965,10 +974,15 @@ struct BatchMoveBottomBar: View {
                     if index >= 0 && index < items.count {
                         let selectedItem = items[index]
                         switch selectedItem {
-                        case .staged:
+                        case .staged(let action, _):
+                            let isMove = {
+                                if case .move = action.actionType { return true }
+                                return false
+                            }()
+                            
                             HStack(spacing: 8) {
                                 HStack(spacing: 4) {
-                                    Text(verbatim: String(localized: "Unstage Action"))
+                                    Text(verbatim: String(localized: isMove ? "Unstage Move" : "Unstage Action"))
                                         .font(.system(size: 11, weight: .medium))
                                         .foregroundColor(colors.textSecondary)
                                     Text("↵")
@@ -980,18 +994,20 @@ struct BatchMoveBottomBar: View {
                                 .background(colors.badgeBg)
                                 .clipShape(Capsule())
                                 
-                                HStack(spacing: 4) {
-                                    Text(verbatim: String(localized: "Actions"))
-                                        .font(.system(size: 11, weight: .medium))
-                                        .foregroundColor(colors.textSecondary)
-                                    Text("⌘K")
-                                        .font(.system(size: 11, weight: .semibold))
-                                        .foregroundColor(colors.textQuaternary)
+                                if !isMove {
+                                    HStack(spacing: 4) {
+                                        Text(verbatim: String(localized: "Actions"))
+                                            .font(.system(size: 11, weight: .medium))
+                                            .foregroundColor(colors.textSecondary)
+                                        Text("⌘K")
+                                            .font(.system(size: 11, weight: .semibold))
+                                            .foregroundColor(colors.textQuaternary)
+                                    }
+                                    .padding(.horizontal, 10)
+                                    .padding(.vertical, 4)
+                                    .background(colors.badgeBg)
+                                    .clipShape(Capsule())
                                 }
-                                .padding(.horizontal, 10)
-                                .padding(.vertical, 4)
-                                .background(colors.badgeBg)
-                                .clipShape(Capsule())
                             }
                             
                         case .unstaged:
@@ -1310,9 +1326,29 @@ class FocusTextField: NSTextField {
     var onOptionEnter: (() -> Void)?
     var onCommandNumber: ((Int) -> Void)?
     var onCommandK: (() -> Void)?
+    var isTypingDisabled: Bool = false
 
     override var acceptsFirstResponder: Bool {
         return true
+    }
+
+    override func keyDown(with event: NSEvent) {
+        if isTypingDisabled {
+            let modifiers = event.modifierFlags.intersection(.deviceIndependentFlagsMask)
+            let hasCommand = modifiers.contains(.command)
+            let hasOption = modifiers.contains(.option)
+            let keyCode = event.keyCode
+            let isSpecialKey = (keyCode == 53 || keyCode == 36 || keyCode == 76 ||
+                                keyCode == 126 || keyCode == 125 || keyCode == 123 || keyCode == 124 ||
+                                keyCode == 48)
+            if isSpecialKey || hasCommand || hasOption {
+                super.keyDown(with: event)
+            } else {
+                return
+            }
+        } else {
+            super.keyDown(with: event)
+        }
     }
 
     override func performKeyEquivalent(with event: NSEvent) -> Bool {
@@ -1388,6 +1424,7 @@ class FocusTextField: NSTextField {
 struct SearchTextField: NSViewRepresentable {
     @Binding var text: String
     var isDark: Bool
+    var isTypingDisabled: Bool = false
     var onUpArrow: () -> Void
     var onDownArrow: () -> Void
     var onLeftArrow: (() -> Bool)? = nil
@@ -1474,6 +1511,7 @@ struct SearchTextField: NSViewRepresentable {
         textField.onCommandK = { [weak coordinator = context.coordinator] in
             coordinator?.parent.onCommandK?()
         }
+        textField.isTypingDisabled = isTypingDisabled
         
         textField.isBordered = false
         textField.drawsBackground = false
@@ -1500,6 +1538,10 @@ struct SearchTextField: NSViewRepresentable {
     
     func updateNSView(_ nsView: NSTextField, context: Context) {
         context.coordinator.parent = self
+        
+        if let focusField = nsView as? FocusTextField {
+            focusField.isTypingDisabled = isTypingDisabled
+        }
         
         if nsView.stringValue != text {
             nsView.stringValue = text
@@ -1627,10 +1669,13 @@ struct CommandKOverlayView: View {
                             
                             Spacer()
                             
-                            if isSelected {
-                                Image(systemName: "checkmark")
-                                    .font(.system(size: 11, weight: .semibold))
-                                    .foregroundColor(colors.greenText)
+                            HStack(spacing: 6) {
+                                KeycapView(text: "⌘\(idx + 1)", isSelected: isSelected)
+                                if isSelected {
+                                    Image(systemName: "checkmark")
+                                        .font(.system(size: 11, weight: .semibold))
+                                        .foregroundColor(colors.greenText)
+                                }
                             }
                         }
                         .padding(.horizontal, 12)
