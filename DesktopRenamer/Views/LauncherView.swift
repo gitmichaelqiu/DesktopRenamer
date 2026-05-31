@@ -1678,6 +1678,11 @@ struct CommandKOverlayView: View {
                         .background(isSelected ? colors.rowHover : Color.clear)
                         .cornerRadius(6)
                         .contentShape(Rectangle())
+                        .onHover { hovering in
+                            if hovering {
+                                viewModel.commandKSelectedIndex = idx
+                            }
+                        }
                         .onTapGesture {
                             viewModel.commandKSelectedIndex = idx
                             viewModel.executeCommandKAction()
