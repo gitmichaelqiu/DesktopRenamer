@@ -3424,6 +3424,28 @@
         }
       }
     },
+    "Unstage Action" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "取消暂存"
+          }
+        }
+      }
+    },
+    "Unstage Move" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "取消暂存"
+          }
+        }
+      }
+    },
     "Use ← → ↑ ↓ to fine-tune, Esc to exit" : {
       "localizations" : {
         "zh-Hans" : {
@@ -3497,26 +3519,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "当打开某个应用程序的窗口触发桌面切换时，将该窗口移回原桌面。这样，您将始终专注于锁定的桌面。"
-          }
-        }
-      }
-    },
-    "Unstage Action" : {
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "取消暂存"
-          }
-        }
-      }
-    },
-    "Unstage Move" : {
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "取消暂存"
           }
         }
       }

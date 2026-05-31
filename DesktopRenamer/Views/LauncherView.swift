@@ -435,8 +435,9 @@ struct ListAreaView: View {
                             ScrollViewReader { proxy in
                                 ScrollView {
                                     VStack(alignment: .leading, spacing: 4) {
-                                        ForEach(sections) { section in
-                                            ListSectionHeader(title: section.title, subtitle: section.subtitle)
+                                        ForEach(0..<sections.count, id: \.self) { sIdx in
+                                            let section = sections[sIdx]
+                                            ListSectionHeader(title: section.title, subtitle: section.subtitle, isFirst: sIdx == 0)
                                             
                                             ForEach(section.items) { item in
                                                 let isSelected = !viewModel.isBottomBarFocused && viewModel.selectedRowIndex == item.index
@@ -953,6 +954,7 @@ struct WindowBatchRowView: View {
 struct ListSectionHeader: View {
     let title: String
     let subtitle: String
+    var isFirst: Bool = false
     @Environment(\.colorScheme) var colorScheme
     
     var colors: ThemeColors {
@@ -972,7 +974,7 @@ struct ListSectionHeader: View {
             Spacer()
         }
         .padding(.horizontal, 8)
-        .padding(.top, 10)
+        .padding(.top, isFirst ? 0 : 10)
         .padding(.bottom, 4)
     }
 }
