@@ -1411,6 +1411,35 @@ class FocusTextField: NSTextField {
     }
 }
 
+class BlockTypingFormatter: Formatter {
+    var isTypingDisabled: () -> Bool
+    
+    init(isTypingDisabled: @escaping () -> Bool) {
+        self.isTypingDisabled = isTypingDisabled
+        super.init()
+    }
+    
+    required init?(coder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
+    }
+    
+    override func string(for obj: Any?) -> String? {
+        return obj as? String
+    }
+    
+    override func getObjectValue(_ obj: AutoreleasingUnsafeMutablePointer<AnyObject?>?, for string: String, errorDescription error: AutoreleasingUnsafeMutablePointer<NSString?>?) -> Bool {
+        obj?.pointee = string as AnyObject
+        return true
+    }
+    
+    override func isPartialStringValid(_ partialString: String, newEditingString newString: AutoreleasingUnsafeMutablePointer<NSString?>?, errorDescription error: AutoreleasingUnsafeMutablePointer<NSString?>?) -> Bool {
+        if isTypingDisabled() {
+            return false
+        }
+        return true
+    }
+}
+
 struct SearchTextField: NSViewRepresentable {
     @Binding var text: String
     var isDark: Bool
@@ -1501,6 +1530,11 @@ struct SearchTextField: NSViewRepresentable {
     func makeNSView(context: Context) -> NSTextField {
         let textField = FocusTextField()
         textField.delegate = context.coordinator
+        
+        let formatter = BlockTypingFormatter(isTypingDisabled: { [weak coordinator = context.coordinator] in
+            coordinator?.parent.isTypingDisabled ?? false
+        })
+        textField.formatter = formatter
         
         // Route closures safely and dynamically through the coordinator
         textField.onCommandEnter = { [weak coordinator = context.coordinator] in
