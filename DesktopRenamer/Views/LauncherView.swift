@@ -506,20 +506,27 @@ struct KeycapView: View {
     }
     
     var body: some View {
+        let isSelectedWhiteStyle = isSelected && (colorScheme == .dark || isGreenRow)
+        
         Text(text)
             .font(.system(size: 10, weight: .semibold))
-            .foregroundColor(isSelected ? .white : colors.textSecondary)
+            .foregroundColor(isSelected ? (isSelectedWhiteStyle ? .white : colors.textPrimary) : colors.textSecondary)
             .padding(.horizontal, horizontalPadding)
             .padding(.vertical, verticalPadding)
             .background(
                 isSelected
-                    ? Color.white.opacity(0.20)
+                    ? (isSelectedWhiteStyle ? Color.white.opacity(0.20) : Color.primary.opacity(0.12))
                     : colors.badgeBg
             )
             .cornerRadius(5)
             .overlay(
                 RoundedRectangle(cornerRadius: 5)
-                    .stroke(isSelected ? Color.white.opacity(0.30) : colors.badgeBorder, lineWidth: 1)
+                    .stroke(
+                        isSelected
+                            ? (isSelectedWhiteStyle ? Color.white.opacity(0.30) : Color.primary.opacity(0.18))
+                            : colors.badgeBorder,
+                        lineWidth: 1
+                    )
             )
     }
 }
@@ -1943,7 +1950,7 @@ struct BottomBarCapsule: ViewModifier {
                         }
                     } else {
                         if isSelected {
-                            isActive ? Color.primary.opacity(0.16) : Color.primary.opacity(0.08)
+                            isActive ? Color.primary.opacity(0.24) : Color.primary.opacity(0.16)
                         } else if isActive {
                             Color.primary.opacity(isHovered ? 0.22 : 0.14)
                         } else {
@@ -1961,8 +1968,8 @@ struct BottomBarCapsule: ViewModifier {
                 Capsule()
                     .stroke(
                         isGreen ? (isSelected ? Color.primary.opacity(0.15) : (isActive ? greenBgColor.opacity(isHovered ? 0.4 : 0.2) : Color.primary.opacity(isHovered ? 0.25 : 0.08)))
-                                : (isSelected ? Color.primary.opacity(0.15) : (isActive ? Color.primary.opacity(isHovered ? 0.35 : 0.22) : Color.primary.opacity(isHovered ? 0.25 : 0.08))),
-                        lineWidth: 1
+                                : (isSelected ? (isActive ? Color.primary.opacity(0.48) : Color.primary.opacity(0.40)) : (isActive ? Color.primary.opacity(isHovered ? 0.35 : 0.22) : Color.primary.opacity(isHovered ? 0.25 : 0.08))),
+                        lineWidth: (isSelected && !isGreen) ? 1.5 : 1
                     )
             )
             .shadow(color: isSelected ? (isGreen ? greenBgColor.opacity(0.25) : Color.primary.opacity(0.1)) : Color.clear, radius: 3, x: 0, y: 1)
