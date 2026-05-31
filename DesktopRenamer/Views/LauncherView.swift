@@ -1966,7 +1966,7 @@ struct BottomBarCapsule: ViewModifier {
             .clipShape(Capsule())
             .overlay(
                 Capsule()
-                    .stroke(
+                    .strokeBorder(
                         isGreen ? (isSelected ? Color.primary.opacity(0.15) : (isActive ? greenBgColor.opacity(isHovered ? 0.4 : 0.2) : Color.primary.opacity(isHovered ? 0.25 : 0.08)))
                                 : (isSelected ? (isActive ? Color.primary.opacity(0.48) : Color.primary.opacity(0.40)) : (isActive ? Color.primary.opacity(isHovered ? 0.35 : 0.22) : Color.primary.opacity(isHovered ? 0.25 : 0.08))),
                         lineWidth: (isSelected && !isGreen) ? 1.5 : 1
