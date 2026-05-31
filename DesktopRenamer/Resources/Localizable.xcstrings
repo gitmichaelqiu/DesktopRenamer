@@ -121,6 +121,9 @@
     "↺" : {
       "shouldTranslate" : false
     },
+    "⌘%lld" : {
+
+    },
     "⌘↵" : {
       "shouldTranslate" : false
     },
@@ -3330,9 +3333,6 @@
           }
         }
       }
-    },
-    "Unstage Action" : {
-
     },
     "Unstage Move" : {
       "extractionState" : "stale",

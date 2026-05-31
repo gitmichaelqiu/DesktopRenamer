@@ -1669,13 +1669,8 @@ struct CommandKOverlayView: View {
                             
                             Spacer()
                             
-                            HStack(spacing: 6) {
+                            if viewModel.showCommandNumbers {
                                 KeycapView(text: "⌘\(idx + 1)", isSelected: isSelected)
-                                if isSelected {
-                                    Image(systemName: "checkmark")
-                                        .font(.system(size: 11, weight: .semibold))
-                                        .foregroundColor(colors.greenText)
-                                }
                             }
                         }
                         .padding(.horizontal, 12)
