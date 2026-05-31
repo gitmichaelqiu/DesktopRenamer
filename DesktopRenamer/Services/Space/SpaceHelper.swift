@@ -407,19 +407,24 @@ class SpaceHelper {
                 }
                 usleep(30000) // 30ms settle
             } else {
-                // Post a tiny drag event to initiate the window drag tracking loop on standard windows
-                let dragPoint = CGPoint(x: grabPoint.x + 2, y: grabPoint.y)
+                // Post a tiny drag event to initiate the window drag tracking loop on standard windows and reverse it to keep position aligned
+                let dragAmount: CGFloat = 2
+                let dragPoint = CGPoint(x: grabPoint.x + dragAmount, y: grabPoint.y)
                 if let dragEvent = CGEvent(mouseEventSource: source, mouseType: .leftMouseDragged, mouseCursorPosition: dragPoint, mouseButton: .left) {
                     dragEvent.flags = []
-                    dragEvent.setIntegerValueField(CGEventField(rawValue: 2)!, value: 2) // kCGEventAssociatedMouseDeltaX
+                    dragEvent.setIntegerValueField(CGEventField(rawValue: 2)!, value: Int64(dragAmount)) // kCGEventAssociatedMouseDeltaX
                     dragEvent.setIntegerValueField(CGEventField(rawValue: 3)!, value: 0) // kCGEventAssociatedMouseDeltaY
                     dragEvent.post(tap: .cgSessionEventTap)
                 }
+                usleep(15000) // 15ms settle
                 
-                let remainingTime = max(0, (forceInstant ? 20000 : 50000) - 10000)
-                if remainingTime > 0 {
-                    usleep(useconds_t(remainingTime))
+                if let dragBackEvent = CGEvent(mouseEventSource: source, mouseType: .leftMouseDragged, mouseCursorPosition: grabPoint, mouseButton: .left) {
+                    dragBackEvent.flags = []
+                    dragBackEvent.setIntegerValueField(CGEventField(rawValue: 2)!, value: Int64(-dragAmount)) // kCGEventAssociatedMouseDeltaX
+                    dragBackEvent.setIntegerValueField(CGEventField(rawValue: 3)!, value: 0) // kCGEventAssociatedMouseDeltaY
+                    dragBackEvent.post(tap: .cgSessionEventTap)
                 }
+                usleep(15000) // 15ms settle
             }
         }
         
