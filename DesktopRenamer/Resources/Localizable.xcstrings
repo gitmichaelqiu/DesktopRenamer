@@ -3424,28 +3424,6 @@
         }
       }
     },
-    "Unstage Action" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "取消暂存"
-          }
-        }
-      }
-    },
-    "Unstage Move" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "取消暂存"
-          }
-        }
-      }
-    },
     "Use ← → ↑ ↓ to fine-tune, Esc to exit" : {
       "localizations" : {
         "zh-Hans" : {
