@@ -285,6 +285,17 @@ struct SwitchSettingsView: View {
                         
                         Divider()
                         
+                        SettingsRow(
+                            "Move window when holding Option",
+                            helperText: "Hold the Option (⌥) key while swiping on the trackpad to move the active window to the adjacent space."
+                        ) {
+                            Toggle("", isOn: $gestureManager.moveWindowOnOption)
+                                .toggleStyle(.switch)
+                                .labelsHidden()
+                        }
+                        
+                        Divider()
+                        
                         SliderSettingsRow(
                             "Switch override threshold",
                             helperText: "Controls how much distance the fingers have to move before switching the desktop.",

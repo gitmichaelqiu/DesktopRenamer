@@ -61,6 +61,7 @@ class GestureManager: ObservableObject {
     private let kFingerCount = "GestureManager.FingerCount"
     private let kSwitchOverride = "GestureManager.SwitchOverride"
     private let kSwipeThreshold = "GestureManager.SwipeThreshold"
+    private let kMoveWindowOnOption = "GestureManager.MoveWindowOnOption"
 
     public enum SwitchOverrideMode: String, CaseIterable, Identifiable {
         case cursor = "Cursor"
@@ -91,6 +92,12 @@ class GestureManager: ObservableObject {
     @Published var swipeThreshold: Float {
         didSet {
             UserDefaults.standard.set(swipeThreshold, forKey: kSwipeThreshold)
+        }
+    }
+
+    @Published var moveWindowOnOption: Bool {
+        didSet {
+            UserDefaults.standard.set(moveWindowOnOption, forKey: kMoveWindowOnOption)
         }
     }
 
@@ -141,6 +148,10 @@ class GestureManager: ObservableObject {
         self.swipeThreshold =
             UserDefaults.standard.object(forKey: kSwipeThreshold) == nil
             ? 0.10 : UserDefaults.standard.float(forKey: kSwipeThreshold)
+
+        self.moveWindowOnOption =
+            UserDefaults.standard.object(forKey: kMoveWindowOnOption) == nil
+            ? false : UserDefaults.standard.bool(forKey: kMoveWindowOnOption)
 
         GestureManager.sharedManager = self
 
@@ -476,13 +487,23 @@ class GestureManager: ObservableObject {
 
         DispatchQueue.main.async { [weak self] in
             guard let self = self else { return }
-            let targetDisplayID = (self.switchOverride == .cursor) ? SpaceHelper.getCursorDisplayID() : nil
-
-            switch direction {
-            case .next:
-                sm.switchToNextSpace(onDisplayID: targetDisplayID)
-            case .previous:
-                sm.switchToPreviousSpace(onDisplayID: targetDisplayID)
+            
+            let isHoldingOption = NSEvent.modifierFlags.contains(.option)
+            if self.moveWindowOnOption && isHoldingOption {
+                switch direction {
+                case .next:
+                    sm.moveActiveWindowToNextSpace()
+                case .previous:
+                    sm.moveActiveWindowToPreviousSpace()
+                }
+            } else {
+                let targetDisplayID = (self.switchOverride == .cursor) ? SpaceHelper.getCursorDisplayID() : nil
+                switch direction {
+                case .next:
+                    sm.switchToNextSpace(onDisplayID: targetDisplayID)
+                case .previous:
+                    sm.switchToPreviousSpace(onDisplayID: targetDisplayID)
+                }
             }
         }
     }
