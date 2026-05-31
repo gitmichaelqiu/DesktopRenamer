@@ -1006,6 +1006,20 @@ class SpaceManager: ObservableObject {
             return
         }
 
+        // Un-fullscreen first if current space is fullscreen
+        if let currentSpaceObj = spaceNameDict.first(where: { $0.id == currentSpaceUUID }), currentSpaceObj.isFullscreen {
+            if let windowInfo = SpaceHelper.getActiveWindowInfo() {
+                if let axWindow = SpaceHelper.getAXWindow(id: windowInfo.id, pid: windowInfo.pid) {
+                    AXUIElementSetAttributeValue(axWindow, "AXFullScreen" as CFString, false as CFTypeRef)
+                    // Wait for the exit-fullscreen animation to complete
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) {
+                        self.moveActiveWindowToSpace(id: id)
+                    }
+                    return
+                }
+            }
+        }
+
         // Robust Cross-Monitor Support: 
         // If the target space is on a different monitor, we use the direct CGS+AX move method
         // since the "swipe while dragging" gesture is limited to a single display.

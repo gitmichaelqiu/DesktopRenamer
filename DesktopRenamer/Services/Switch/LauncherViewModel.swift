@@ -932,6 +932,22 @@ struct BatchMoveSection: Identifiable {
                         SpaceHelper.focusWindow(id: action.window.id, pid: action.window.pid)
                         try? await Task.sleep(nanoseconds: 250_000_000) // 0.25s focus settle
                         
+                        // Un-fullscreen first if the window is currently in a fullscreen space
+                        if action.window.space.isFullscreen {
+                            var axWindow = SpaceHelper.getAXWindow(id: action.window.id, pid: action.window.pid)
+                            if axWindow == nil {
+                                if let app = NSRunningApplication(processIdentifier: action.window.pid) {
+                                    app.activate(options: .activateIgnoringOtherApps)
+                                    try? await Task.sleep(nanoseconds: 400_000_000)
+                                    axWindow = SpaceHelper.getAXWindow(id: action.window.id, pid: action.window.pid)
+                                }
+                            }
+                            if let targetAXWindow = axWindow {
+                                AXUIElementSetAttributeValue(targetAXWindow, "AXFullScreen" as CFString, false as CFTypeRef)
+                                try? await Task.sleep(nanoseconds: 1_200_000_000) // Wait for exit-fullscreen animation to settle
+                            }
+                        }
+                        
                         if let manager = AppDelegate.shared.spaceManager {
                             manager.moveActiveWindowToSpace(id: targetSpaceID)
                         }
@@ -952,7 +968,8 @@ struct BatchMoveSection: Identifiable {
             // 4. Execute other actions (Close, Minimize, Hide, Fullscreen, Quit, Restore)
             for action in staticActions {
                 let windowSpaceID = action.window.space.id
-                let requiresAX = (action.actionType == .close || action.actionType == .minimize || action.actionType == .enterFullScreen || action.actionType == .exitFullScreen || action.actionType == .restore)
+                let isFullscreenWindow = action.window.space.isFullscreen
+                let requiresAX = (action.actionType == .close || action.actionType == .minimize || action.actionType == .enterFullScreen || action.actionType == .exitFullScreen || action.actionType == .restore || (action.actionType == .hide && isFullscreenWindow))
                 
                 // If the target window is on a different space, switch to its space first so AX APIs can access it.
                 if requiresAX,
@@ -961,6 +978,22 @@ struct BatchMoveSection: Identifiable {
                    let spaceObj = manager.spaceNameDict.first(where: { $0.id == windowSpaceID }) {
                     manager.switchToSpace(spaceObj, forceInstant: true)
                     try? await Task.sleep(nanoseconds: 600_000_000) // 0.6s settle time
+                }
+                
+                // Un-fullscreen first if the window is currently fullscreen and the action requires it
+                if isFullscreenWindow && (action.actionType == .close || action.actionType == .minimize || action.actionType == .hide) {
+                    var axWindow = SpaceHelper.getAXWindow(id: action.window.id, pid: action.window.pid)
+                    if axWindow == nil {
+                        if let app = NSRunningApplication(processIdentifier: action.window.pid) {
+                            app.activate(options: .activateIgnoringOtherApps)
+                            try? await Task.sleep(nanoseconds: 400_000_000)
+                            axWindow = SpaceHelper.getAXWindow(id: action.window.id, pid: action.window.pid)
+                        }
+                    }
+                    if let targetAXWindow = axWindow {
+                        AXUIElementSetAttributeValue(targetAXWindow, "AXFullScreen" as CFString, false as CFTypeRef)
+                        try? await Task.sleep(nanoseconds: 1_200_000_000) // Wait for exit-fullscreen animation to settle
+                    }
                 }
                 
                 switch action.actionType {
