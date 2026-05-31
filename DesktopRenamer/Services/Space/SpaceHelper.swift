@@ -353,7 +353,7 @@ class SpaceHelper {
             var shouldDragFirst = false
             
             if let sm = AppDelegate.shared.spaceManager {
-                if let bundleID = NSRunningApplication(processIdentifier: pid)?.bundleIdentifier,
+                if let bundleID = draggedWindowBundleID,
                    let exception = sm.appGrabExceptions.first(where: { $0.bundleIdentifier == bundleID }) {
                     grabX = frame.origin.x + CGFloat(exception.grabOffsetX)
                     grabY = frame.origin.y + CGFloat(exception.grabOffsetY)
