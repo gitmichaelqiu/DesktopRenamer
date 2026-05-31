@@ -933,28 +933,64 @@ struct BatchMoveSection: Identifiable {
             
             // 4. Execute other actions (Close, Minimize, Hide, Fullscreen, Quit, Restore)
             for action in staticActions {
+                let windowSpaceID = action.window.space.id
+                let requiresAX = (action.actionType == .close || action.actionType == .minimize || action.actionType == .fullscreen || action.actionType == .restore)
+                
+                // If the target window is on a different space, switch to its space first so AX APIs can access it.
+                if requiresAX,
+                   let manager = AppDelegate.shared.spaceManager,
+                   manager.currentSpaceUUID != windowSpaceID,
+                   let spaceObj = manager.spaceNameDict.first(where: { $0.id == windowSpaceID }) {
+                    manager.switchToSpace(spaceObj, forceInstant: true)
+                    try? await Task.sleep(nanoseconds: 600_000_000) // 0.6s settle time
+                }
+                
                 switch action.actionType {
                 case .close:
-                    if let axWindow = SpaceHelper.getAXWindow(id: action.window.id, pid: action.window.pid) {
+                    var axWindow = SpaceHelper.getAXWindow(id: action.window.id, pid: action.window.pid)
+                    if axWindow == nil {
+                        if let app = NSRunningApplication(processIdentifier: action.window.pid) {
+                            app.activate(options: .activateIgnoringOtherApps)
+                            try? await Task.sleep(nanoseconds: 400_000_000)
+                            axWindow = SpaceHelper.getAXWindow(id: action.window.id, pid: action.window.pid)
+                        }
+                    }
+                    if let targetAXWindow = axWindow {
                         var closeButtonRef: CFTypeRef?
-                        if AXUIElementCopyAttributeValue(axWindow, kAXCloseButtonAttribute as CFString, &closeButtonRef) == .success,
+                        if AXUIElementCopyAttributeValue(targetAXWindow, kAXCloseButtonAttribute as CFString, &closeButtonRef) == .success,
                            let closeButton = closeButtonRef {
                             AXUIElementPerformAction(closeButton as! AXUIElement, kAXPressAction as CFString)
                         }
                     }
                 case .minimize:
-                    if let axWindow = SpaceHelper.getAXWindow(id: action.window.id, pid: action.window.pid) {
-                        AXUIElementSetAttributeValue(axWindow, kAXMinimizedAttribute as CFString, true as CFTypeRef)
+                    var axWindow = SpaceHelper.getAXWindow(id: action.window.id, pid: action.window.pid)
+                    if axWindow == nil {
+                        if let app = NSRunningApplication(processIdentifier: action.window.pid) {
+                            app.activate(options: .activateIgnoringOtherApps)
+                            try? await Task.sleep(nanoseconds: 400_000_000)
+                            axWindow = SpaceHelper.getAXWindow(id: action.window.id, pid: action.window.pid)
+                        }
+                    }
+                    if let targetAXWindow = axWindow {
+                        AXUIElementSetAttributeValue(targetAXWindow, kAXMinimizedAttribute as CFString, true as CFTypeRef)
                     }
                 case .hide:
                     if let app = NSRunningApplication(processIdentifier: action.window.pid) {
                         app.hide()
                     }
                 case .fullscreen:
-                    if let axWindow = SpaceHelper.getAXWindow(id: action.window.id, pid: action.window.pid) {
+                    var axWindow = SpaceHelper.getAXWindow(id: action.window.id, pid: action.window.pid)
+                    if axWindow == nil {
+                        if let app = NSRunningApplication(processIdentifier: action.window.pid) {
+                            app.activate(options: .activateIgnoringOtherApps)
+                            try? await Task.sleep(nanoseconds: 400_000_000)
+                            axWindow = SpaceHelper.getAXWindow(id: action.window.id, pid: action.window.pid)
+                        }
+                    }
+                    if let targetAXWindow = axWindow {
                         var isFS = false
                         var fullScreenRef: CFTypeRef?
-                        if AXUIElementCopyAttributeValue(axWindow, "AXFullScreen" as CFString, &fullScreenRef) == .success,
+                        if AXUIElementCopyAttributeValue(targetAXWindow, "AXFullScreen" as CFString, &fullScreenRef) == .success,
                            let fsRef = fullScreenRef {
                             if CFGetTypeID(fsRef) == CFBooleanGetTypeID() {
                                 isFS = CFBooleanGetValue((fsRef as! CFBoolean))
@@ -964,7 +1000,7 @@ struct BatchMoveSection: Identifiable {
                                 isFS = b
                             }
                         }
-                        AXUIElementSetAttributeValue(axWindow, "AXFullScreen" as CFString, !isFS as CFTypeRef)
+                        AXUIElementSetAttributeValue(targetAXWindow, "AXFullScreen" as CFString, !isFS as CFTypeRef)
                         // Fullscreen transition takes significant time on macOS. Sleep 1.0s to let the animation start/complete
                         try? await Task.sleep(nanoseconds: 1_000_000_000)
                     }
@@ -976,8 +1012,16 @@ struct BatchMoveSection: Identifiable {
                     if let app = NSRunningApplication(processIdentifier: action.window.pid) {
                         app.unhide()
                     }
-                    if let axWindow = SpaceHelper.getAXWindow(id: action.window.id, pid: action.window.pid) {
-                        AXUIElementSetAttributeValue(axWindow, kAXMinimizedAttribute as CFString, false as CFTypeRef)
+                    var axWindow = SpaceHelper.getAXWindow(id: action.window.id, pid: action.window.pid)
+                    if axWindow == nil {
+                        if let app = NSRunningApplication(processIdentifier: action.window.pid) {
+                            app.activate(options: .activateIgnoringOtherApps)
+                            try? await Task.sleep(nanoseconds: 400_000_000)
+                            axWindow = SpaceHelper.getAXWindow(id: action.window.id, pid: action.window.pid)
+                        }
+                    }
+                    if let targetAXWindow = axWindow {
+                        AXUIElementSetAttributeValue(targetAXWindow, kAXMinimizedAttribute as CFString, false as CFTypeRef)
                     }
                 default:
                     break
