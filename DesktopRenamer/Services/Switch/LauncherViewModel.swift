@@ -970,10 +970,18 @@ struct BatchMoveSection: Identifiable {
                         var isFS = false
                         var fullScreenRef: CFTypeRef?
                         if AXUIElementCopyAttributeValue(axWindow, "AXFullScreen" as CFString, &fullScreenRef) == .success,
-                           let fs = fullScreenRef as? Bool {
-                            isFS = fs
+                           let fsRef = fullScreenRef {
+                            if CFGetTypeID(fsRef) == CFBooleanGetTypeID() {
+                                isFS = CFBooleanGetValue((fsRef as! CFBoolean))
+                            } else if let num = fsRef as? NSNumber {
+                                isFS = num.boolValue
+                            } else if let b = fsRef as? Bool {
+                                isFS = b
+                            }
                         }
                         AXUIElementSetAttributeValue(axWindow, "AXFullScreen" as CFString, !isFS as CFTypeRef)
+                        // Fullscreen transition takes significant time on macOS. Sleep 1.0s to let the animation start/complete
+                        try? await Task.sleep(nanoseconds: 1_000_000_000)
                     }
                 case .quit:
                     if let app = NSRunningApplication(processIdentifier: action.window.pid) {
