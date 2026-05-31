@@ -254,6 +254,8 @@ struct LauncherView: View {
                     CommandBottomBar(viewModel: viewModel)
                 }
             }
+            .blur(radius: viewModel.commandKTargetWindow != nil ? 10 : 0)
+            .animation(.easeInOut(duration: 0.2), value: viewModel.commandKTargetWindow != nil)
             
             if let targetWindow = viewModel.commandKTargetWindow {
                 CommandKOverlayView(viewModel: viewModel, window: targetWindow)
@@ -1698,8 +1700,8 @@ struct CommandKOverlayView: View {
     
     var body: some View {
         ZStack {
-            // Semi-transparent background dimming (dark theme) or frosted shine (light theme)
-            (colorScheme == .dark ? Color.black.opacity(0.35) : Color.white.opacity(0.15))
+            // Subtle separation overlay (dimming in dark theme, neutral in light theme)
+            (colorScheme == .dark ? Color.black.opacity(0.25) : Color.black.opacity(0.03))
                 .edgesIgnoringSafeArea(.all)
                 .onTapGesture {
                     viewModel.commandKTargetWindow = nil
