@@ -304,7 +304,9 @@ struct BatchMoveSection: Identifiable {
     var filteredSpaces: [SpaceGroup] {
         var spaces = currentSpaces
         if let staging = stagingWindow {
-            spaces = spaces.filter { $0.id != staging.space.id }
+            spaces = spaces.filter { $0.id != staging.space.id && !$0.isFullscreen }
+        } else if activeCommand?.type == .moveWindow {
+            spaces = spaces.filter { !$0.isFullscreen }
         }
 
         if searchQuery.isEmpty {
