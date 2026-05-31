@@ -337,8 +337,7 @@ struct ListAreaView: View {
                                     }
                                 }
                                 .padding(.horizontal, 10)
-                                .padding(.top, 0)
-                                .padding(.bottom, 8)
+                                .padding(.vertical, 8)
                             }
                             .onChange(of: viewModel.selectedRowIndex) { index in
                                 if viewModel.isKeyboardSelection {
@@ -376,8 +375,7 @@ struct ListAreaView: View {
                                         }
                                     }
                                     .padding(.horizontal, 10)
-                                    .padding(.top, 0)
-                                    .padding(.bottom, 8)
+                                    .padding(.vertical, 8)
                                 }
                                 .onChange(of: viewModel.selectedRowIndex) { index in
                                     if viewModel.isKeyboardSelection {
@@ -414,8 +412,7 @@ struct ListAreaView: View {
                                         }
                                     }
                                     .padding(.horizontal, 10)
-                                    .padding(.top, 0)
-                                    .padding(.bottom, 8)
+                                    .padding(.vertical, 8)
                                 }
                                 .onChange(of: viewModel.selectedRowIndex) { index in
                                     if viewModel.isKeyboardSelection {
@@ -469,8 +466,7 @@ struct ListAreaView: View {
                                         }
                                     }
                                     .padding(.horizontal, 10)
-                                    .padding(.top, 0)
-                                    .padding(.bottom, 8)
+                                    .padding(.vertical, 8)
                                 }
                                 .onChange(of: viewModel.selectedRowIndex) { index in
                                     if viewModel.isKeyboardSelection {
@@ -614,16 +610,16 @@ struct CommandRowView: View {
                 KeycapView(text: LocalStringKey_compat(shortcut), isSelected: isSelected)
             } else if let statusText = toggleStatus {
                 Text(LocalizedStringKey(statusText))
-                    .font(.system(.caption2))
-                    .fontWeight(.bold)
+                    .font(.subheadline)
+                    .fontWeight(.semibold)
                     .foregroundColor(statusText == "Enabled" ? colors.greenText : colors.textSecondary)
                     .padding(.horizontal, 8)
-                    .padding(.vertical, 3.5)
+                    .padding(.vertical, 3)
                     .background(statusText == "Enabled" ? colors.greenText.opacity(0.12) : colors.badgeBg)
                     .cornerRadius(6)
                     .overlay(
                         RoundedRectangle(cornerRadius: 6)
-                            .stroke(statusText == "Enabled" ? colors.greenText.opacity(0.3) : colors.badgeBorder, lineWidth: 1)
+                            .stroke(statusText == "Enabled" ? colors.greenText.opacity(0.35) : colors.badgeBorder, lineWidth: 1)
                     )
             } else if command.hasSubpage {
                 Image(systemName: "chevron.right")
@@ -907,28 +903,28 @@ struct WindowBatchRowView: View {
                 KeycapView(text: LocalizedStringKey(shortcut), isSelected: isSelected)
             } else if isStaged {
                 Text(stagedActionText)
-                    .font(.system(.caption2))
-                    .fontWeight(.medium)
+                    .font(.subheadline)
+                    .fontWeight(.semibold)
                     .foregroundColor(colors.greenText)
-                    .padding(.horizontal, 6)
-                    .padding(.vertical, 3.5)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 3)
                     .background(colors.greenText.opacity(0.12))
-                    .cornerRadius(4)
+                    .cornerRadius(6)
                     .overlay(
-                        RoundedRectangle(cornerRadius: 4)
-                            .stroke(colors.greenText.opacity(0.3), lineWidth: 1)
+                        RoundedRectangle(cornerRadius: 6)
+                            .stroke(colors.greenText.opacity(0.35), lineWidth: 1)
                     )
             } else {
                 Text(window.space.name)
-                    .font(.system(.caption2))
+                    .font(.subheadline)
                     .fontWeight(.medium)
                     .foregroundColor(colors.textSecondary)
                     .padding(.horizontal, 8)
-                    .padding(.vertical, 3.5)
+                    .padding(.vertical, 3)
                     .background(colors.badgeBg)
-                    .cornerRadius(4)
+                    .cornerRadius(6)
                     .overlay(
-                        RoundedRectangle(cornerRadius: 4)
+                        RoundedRectangle(cornerRadius: 6)
                             .stroke(colors.badgeBorder, lineWidth: 1)
                     )
             }
