@@ -260,6 +260,7 @@ struct LauncherView: View {
             }
         }
         .frame(width: 720, height: 450)
+        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
         .launcherBackground(cornerRadius: 16, borderColor: colors.border)
         .shadow(color: Color.black.opacity(colorScheme == .dark ? 0.45 : 0.20), radius: 24, x: 0, y: 12)
         .padding(60)
@@ -1697,8 +1698,8 @@ struct CommandKOverlayView: View {
     
     var body: some View {
         ZStack {
-            // Semi-transparent background dimming
-            Color.black.opacity(colorScheme == .dark ? 0.35 : 0.15)
+            // Semi-transparent background dimming (dark theme) or frosted shine (light theme)
+            (colorScheme == .dark ? Color.black.opacity(0.35) : Color.white.opacity(0.15))
                 .edgesIgnoringSafeArea(.all)
                 .onTapGesture {
                     viewModel.commandKTargetWindow = nil
