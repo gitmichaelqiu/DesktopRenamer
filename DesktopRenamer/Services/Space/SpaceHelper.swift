@@ -346,7 +346,6 @@ class SpaceHelper {
             }
             
             let frame = activeWindowInfo.frame
-            
             let grabX: CGFloat
             let grabY: CGFloat
             var shouldDragFirst = false
