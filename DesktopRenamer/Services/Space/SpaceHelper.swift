@@ -346,7 +346,6 @@ class SpaceHelper {
             }
             
             let frame = activeWindowInfo.frame
-            let pid = activeWindowInfo.pid
             
             let grabX: CGFloat
             let grabY: CGFloat
@@ -1541,7 +1540,6 @@ class SpaceHelper {
         }
         
         var roleRef: CFTypeRef?
-        let roleSuccess = AXUIElementCopyAttributeValue(axElement, kAXRoleAttribute as CFString, &roleRef)
         let role = (roleRef as? String) ?? "Unknown"
         
         // Draggable roles include window background, title bar, toolbar, empty areas, etc.
