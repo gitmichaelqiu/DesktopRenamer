@@ -1695,35 +1695,14 @@ struct CommandKOverlayView: View {
                         let action = actions[idx]
                         let isSelected = viewModel.commandKSelectedIndex == idx
                         
-                        HStack(spacing: 10) {
-                            Image(systemName: getIconName(for: action))
-                                .font(.system(size: 13, weight: .medium))
-                                .frame(width: 16)
-                                .foregroundColor(isSelected ? colors.textPrimary : colors.textSecondary)
-                            
-                            Text(getActionLabel(for: action))
-                                .font(.system(size: 13, weight: isSelected ? .medium : .regular))
-                                .foregroundColor(colors.textPrimary)
-                            
-                            Spacer()
-                            
-                            KeycapView(text: "⌘\(idx + 1)", isSelected: isSelected)
-                                .opacity(viewModel.showCommandNumbers ? 1 : 0)
-                        }
-                        .padding(.horizontal, 12)
-                        .padding(.vertical, 8)
-                        .background(isSelected ? colors.rowHover : Color.clear)
-                        .cornerRadius(6)
-                        .contentShape(Rectangle())
-                        .onHover { hovering in
-                            if hovering {
-                                viewModel.commandKSelectedIndex = idx
-                            }
-                        }
-                        .onTapGesture {
-                            viewModel.commandKSelectedIndex = idx
-                            viewModel.executeCommandKAction()
-                        }
+                        CommandKActionRowView(
+                            action: action,
+                            isSelected: isSelected,
+                            showCommandNumbers: viewModel.showCommandNumbers,
+                            idx: idx,
+                            colors: colors,
+                            viewModel: viewModel
+                        )
                     }
                 }
                 .padding(8)
@@ -1738,6 +1717,47 @@ struct CommandKOverlayView: View {
                     .stroke(colors.border, lineWidth: 1)
             )
             .shadow(color: Color.black.opacity(colorScheme == .dark ? 0.4 : 0.2), radius: 15, x: 0, y: 8)
+        }
+    }
+}
+
+struct CommandKActionRowView: View {
+    let action: BatchStagedActionType
+    let isSelected: Bool
+    let showCommandNumbers: Bool
+    let idx: Int
+    let colors: ThemeColors
+    @ObservedObject var viewModel: LauncherViewModel
+    
+    @State private var isHovered = false
+    
+    var body: some View {
+        HStack(spacing: 10) {
+            Image(systemName: getIconName(for: action))
+                .font(.system(size: 13, weight: .medium))
+                .frame(width: 16)
+                .foregroundColor(isSelected ? colors.textPrimary : colors.textSecondary)
+            
+            Text(getActionLabel(for: action))
+                .font(.system(size: 13, weight: isSelected ? .medium : .regular))
+                .foregroundColor(colors.textPrimary)
+            
+            Spacer()
+            
+            KeycapView(text: "⌘\(idx + 1)", isSelected: isSelected)
+                .opacity(showCommandNumbers ? 1 : 0)
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 8)
+        .background(isSelected ? colors.rowHover : (isHovered ? colors.rowHover.opacity(0.5) : Color.clear))
+        .cornerRadius(6)
+        .contentShape(Rectangle())
+        .onHover { hovering in
+            isHovered = hovering
+        }
+        .onTapGesture {
+            viewModel.commandKSelectedIndex = idx
+            viewModel.executeCommandKAction()
         }
     }
     
