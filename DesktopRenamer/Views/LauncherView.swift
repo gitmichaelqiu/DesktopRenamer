@@ -5,51 +5,51 @@ struct ThemeColors {
     let isDark: Bool
     
     var backgroundOverlay: Color {
-        isDark ? Color(red: 0.1, green: 0.1, blue: 0.11).opacity(0.65) : Color(red: 0.98, green: 0.98, blue: 0.99).opacity(0.65)
+        Color.clear
     }
     
     var textPrimary: Color {
-        isDark ? .white : Color(red: 0.12, green: 0.12, blue: 0.14)
+        .primary
     }
     
     var textSecondary: Color {
-        isDark ? .white.opacity(0.7) : Color(red: 0.12, green: 0.12, blue: 0.14).opacity(0.7)
+        .secondary
     }
     
     var textTertiary: Color {
-        isDark ? .white.opacity(0.45) : Color(red: 0.12, green: 0.12, blue: 0.14).opacity(0.45)
+        .secondary.opacity(0.65)
     }
     
     var textQuaternary: Color {
-        isDark ? .white.opacity(0.3) : Color(red: 0.12, green: 0.12, blue: 0.14).opacity(0.3)
+        .secondary.opacity(0.4)
     }
     
     var border: Color {
-        isDark ? Color.white.opacity(0.1) : Color.black.opacity(0.08)
+        Color(nsColor: .separatorColor)
     }
     
     var rowHover: Color {
-        isDark ? Color.white.opacity(0.12) : Color.black.opacity(0.08)
+        Color.primary.opacity(0.08)
     }
     
     var badgeBg: Color {
-        isDark ? Color.white.opacity(0.1) : Color.black.opacity(0.06)
+        Color.primary.opacity(0.06)
     }
     
     var badgeBorder: Color {
-        isDark ? Color.white.opacity(0.05) : Color.black.opacity(0.05)
+        Color.primary.opacity(0.08)
     }
     
     var separator: Color {
-        isDark ? Color.white.opacity(0.08) : Color.black.opacity(0.08)
+        Color(nsColor: .separatorColor)
     }
     
     var bottomBarBg: Color {
-        isDark ? Color.black.opacity(0.15) : Color.black.opacity(0.05)
+        Color.primary.opacity(0.01)
     }
     
     var greenText: Color {
-        isDark ? Color.green : Color(red: 0.0, green: 0.5, blue: 0.15)
+        Color.green
     }
 }
 
@@ -64,15 +64,12 @@ struct LauncherView: View {
     
     var body: some View {
         ZStack {
-            VisualEffectView(material: .popover, blendingMode: .behindWindow, state: .active)
-            colors.backgroundOverlay
-            
             VStack(spacing: 0) {
                 // Header (Typing Bar)
                 HStack(spacing: 12) {
                     Image(systemName: "magnifyingglass")
-                        .foregroundColor(colors.textTertiary)
-                        .font(.system(size: 20, weight: .regular))
+                        .foregroundColor(.secondary)
+                        .font(.system(size: 16, weight: .medium))
                     
                     if viewModel.activeCommand?.type == .renameCurrentSpace {
                         SearchTextField(
@@ -88,7 +85,7 @@ struct LauncherView: View {
                             },
                             placeholder: NSLocalizedString("New Space Name...", comment: "")
                         )
-                        .frame(height: 44)
+                        .frame(height: 36)
                     } else {
                         SearchTextField(
                             text: $viewModel.searchQuery,
@@ -195,7 +192,7 @@ struct LauncherView: View {
                             },
                             placeholder: viewModel.activeCommand == nil ? NSLocalizedString("Search commands...", comment: "") : (viewModel.stagingWindow != nil ? NSLocalizedString("Search target space...", comment: "") : NSLocalizedString("Search items...", comment: ""))
                         )
-                        .frame(height: 44)
+                        .frame(height: 36)
                     }
                     
                     if viewModel.isLoadingData {
@@ -204,12 +201,10 @@ struct LauncherView: View {
                             .frame(width: 20, height: 20)
                     }
                 }
+                .frame(height: 52)
                 .padding(.horizontal, 16)
-                .padding(.vertical, 14)
                 
-                Rectangle()
-                    .fill(colors.separator)
-                    .frame(height: 1)
+                Divider()
                 
                 // Content area
                 if viewModel.activeCommand?.type == .renameCurrentSpace {
@@ -217,15 +212,16 @@ struct LauncherView: View {
                         Spacer()
                         Image(systemName: "pencil.line")
                             .font(.system(size: 28, weight: .light))
-                            .foregroundColor(colors.textSecondary)
+                            .foregroundColor(.secondary)
                         
                         Text(verbatim: String(localized: "Rename Current Space"))
-                            .font(.system(size: 14, weight: .medium))
-                            .foregroundColor(colors.textPrimary)
-
+                            .font(.body)
+                            .fontWeight(.medium)
+                            .foregroundColor(.primary)
+ 
                         Text(verbatim: String(localized: "Type a new name above and press Enter to save"))
-                            .font(.system(size: 11))
-                            .foregroundColor(colors.textTertiary)
+                            .font(.subheadline)
+                            .foregroundColor(.secondary)
                         Spacer()
                     }
                     .frame(maxHeight: .infinity)
@@ -235,8 +231,9 @@ struct LauncherView: View {
                         ProgressView()
                             .scaleEffect(1.2)
                         Text(verbatim: String(localized: "Executing batch window moves..."))
-                            .font(.system(size: 13, weight: .medium))
-                            .foregroundColor(colors.textSecondary)
+                            .font(.body)
+                            .fontWeight(.medium)
+                            .foregroundColor(.secondary)
                     }
                     .frame(maxHeight: .infinity)
                     .frame(maxWidth: .infinity)
@@ -245,9 +242,7 @@ struct LauncherView: View {
                         .frame(maxHeight: .infinity)
                 }
                 
-                Rectangle()
-                    .fill(colors.separator)
-                    .frame(height: 1)
+                Divider()
                 
                 // Bottom bar
                 if viewModel.activeCommand == nil {
@@ -264,12 +259,13 @@ struct LauncherView: View {
             }
         }
         .frame(width: 720, height: 450)
+        .background(.ultraThinMaterial)
+        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
         .overlay(
             RoundedRectangle(cornerRadius: 16, style: .continuous)
                 .stroke(colors.border, lineWidth: 1)
         )
-        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-        .shadow(color: Color.black.opacity(colors.isDark ? 0.30 : 0.15), radius: 25, x: 0, y: 6)
+        .shadow(color: Color.black.opacity(colorScheme == .dark ? 0.45 : 0.20), radius: 24, x: 0, y: 12)
         .padding(60)
     }
 }
@@ -511,16 +507,17 @@ struct KeycapView: View {
     
     var body: some View {
         Text(text)
-            .font(.system(size: 10, weight: .medium))
+            .font(.system(.caption2, design: .monospaced))
+            .fontWeight(.medium)
             .foregroundColor(isGreenRow && isSelected ? .white : (isSelected ? colors.textPrimary : colors.textSecondary))
             .padding(.horizontal, horizontalPadding)
             .padding(.vertical, verticalPadding)
             .background(
                 isGreenRow && isSelected ? Color.white.opacity(0.2) : colors.badgeBg
             )
-            .cornerRadius(5)
+            .cornerRadius(4)
             .overlay(
-                RoundedRectangle(cornerRadius: 5)
+                RoundedRectangle(cornerRadius: 4)
                     .stroke(isGreenRow && isSelected ? Color.white.opacity(0.3) : colors.badgeBorder, lineWidth: 1)
             )
     }
@@ -540,10 +537,11 @@ struct EmptyResultsView: View {
                 .font(.system(size: 24, weight: .light))
                 .foregroundColor(colors.textQuaternary)
             Text(verbatim: String(localized: "No results"))
-                .font(.system(size: 13, weight: .medium))
+                .font(.body)
+                .fontWeight(.medium)
                 .foregroundColor(colors.textTertiary)
             Text(verbatim: String(localized: "No commands matched your search query."))
-                .font(.system(size: 11))
+                .font(.subheadline)
                 .foregroundColor(colors.textQuaternary)
             Spacer()
         }
@@ -586,7 +584,7 @@ struct CommandRowView: View {
                 .font(.system(size: 12, weight: .medium))
                 .foregroundColor(isSelected ? .white : colors.textPrimary)
                 .frame(width: 26, height: 26)
-                .background(isSelected ? Color(red: 0.0, green: 0.55, blue: 1.0) : colors.badgeBg)
+                .background(isSelected ? Color.accentColor : colors.badgeBg)
                 .cornerRadius(6)
                 .overlay(
                     RoundedRectangle(cornerRadius: 6)
@@ -595,12 +593,13 @@ struct CommandRowView: View {
             
             VStack(alignment: .leading, spacing: 2) {
                 Text(command.title)
-                    .font(.system(size: 13.5, weight: .semibold))
+                    .font(.body)
+                    .fontWeight(.semibold)
                     .foregroundColor(colors.textPrimary)
                     .lineLimit(1)
                 
                 Text(command.subtitle)
-                    .font(.system(size: 11.5))
+                    .font(.subheadline)
                     .foregroundColor(isSelected ? colors.textSecondary : colors.textTertiary)
                     .lineLimit(1)
             }
@@ -608,10 +607,11 @@ struct CommandRowView: View {
             Spacer()
             
             if let shortcut = shortcutText {
-                KeycapView(text: LocalizedStringKey(shortcut), isSelected: isSelected)
+                KeycapView(text: LocalStringKey_compat(shortcut), isSelected: isSelected)
             } else if let statusText = toggleStatus {
                 Text(LocalizedStringKey(statusText))
-                    .font(.system(size: 10, weight: .bold))
+                    .font(.system(.caption2, design: .monospaced))
+                    .fontWeight(.bold)
                     .foregroundColor(statusText == "Enabled" ? colors.greenText : colors.textSecondary)
                     .padding(.horizontal, 8)
                     .padding(.vertical, 3.5)
@@ -623,7 +623,7 @@ struct CommandRowView: View {
                     )
             } else if command.hasSubpage {
                 Image(systemName: "chevron.right")
-                    .font(.system(size: 10, weight: .semibold))
+                    .font(.caption.weight(.semibold))
                     .foregroundColor(isSelected ? colors.textSecondary : colors.textTertiary)
                     .padding(.trailing, 4)
             } else {
@@ -637,6 +637,11 @@ struct CommandRowView: View {
         .onHover { hovering in
             isHovered = hovering
         }
+    }
+    
+    // Helper to safely wrap dynamic String to LocalizedStringKey
+    private func LocalStringKey_compat(_ str: String) -> LocalizedStringKey {
+        return LocalizedStringKey(str)
     }
 }
 
@@ -657,7 +662,7 @@ struct SpaceRowView: View {
                 .font(.system(size: 12, weight: .medium))
                 .foregroundColor(isSelected ? .white : colors.textPrimary)
                 .frame(width: 26, height: 26)
-                .background(isSelected ? Color(red: 0.0, green: 0.55, blue: 1.0) : colors.badgeBg)
+                .background(isSelected ? Color.accentColor : colors.badgeBg)
                 .cornerRadius(6)
                 .overlay(
                     RoundedRectangle(cornerRadius: 6)
@@ -666,12 +671,13 @@ struct SpaceRowView: View {
             
             VStack(alignment: .leading, spacing: 2) {
                 Text(space.name)
-                    .font(.system(size: 13.5, weight: .semibold))
+                    .font(.body)
+                    .fontWeight(.semibold)
                     .foregroundColor(colors.textPrimary)
                     .lineLimit(1)
                 
                 Text(verbatim: String(format: String(localized: "%@ · Space %lld"), space.displayName, space.num))
-                    .font(.system(size: 11.5))
+                    .font(.subheadline)
                     .foregroundColor(isSelected ? colors.textSecondary : colors.textTertiary)
                     .lineLimit(1)
             }
@@ -722,12 +728,13 @@ struct WindowRowView: View {
             
             VStack(alignment: .leading, spacing: 2) {
                 Text(window.title.isEmpty ? String(localized: "(No Title)") : window.title)
-                    .font(.system(size: 13.5, weight: .semibold))
+                    .font(.body)
+                    .fontWeight(.semibold)
                     .foregroundColor(colors.textPrimary)
                     .lineLimit(1)
 
                 Text(verbatim: String(format: String(localized: "%@ · %@"), window.ownerName, window.space.name))
-                    .font(.system(size: 11.5))
+                    .font(.subheadline)
                     .foregroundColor(isSelected ? colors.textSecondary : colors.textTertiary)
                     .lineLimit(1)
             }
@@ -763,14 +770,15 @@ struct ConfirmBatchRowView: View {
     var body: some View {
         HStack(spacing: 12) {
             Image(systemName: "checkmark.circle.fill")
-                .font(.system(size: 13, weight: .semibold))
+                .font(.body.weight(.semibold))
                 .foregroundColor(isSelected ? colors.greenText : .white)
                 .frame(width: 28, height: 28)
                 .background(isSelected ? .white : colors.greenText.opacity(0.8))
                 .cornerRadius(6)
             
             Text(verbatim: String(format: String(localized: "Confirm & Execute Batch Move (%lld windows)"), count))
-                .font(.system(size: 13, weight: .semibold))
+                .font(.body)
+                .fontWeight(.semibold)
                 .foregroundColor(isSelected ? .white : colors.greenText)
             
             Spacer()
@@ -821,7 +829,8 @@ struct WindowBatchRowView: View {
             
             VStack(alignment: .leading, spacing: 2) {
                 Text(window.title.isEmpty ? String(localized: "(No Title)") : window.title)
-                    .font(.system(size: 13.5, weight: .semibold))
+                    .font(.body)
+                    .fontWeight(.semibold)
                     .foregroundColor(colors.textPrimary)
                     .lineLimit(1)
 
@@ -848,7 +857,7 @@ struct WindowBatchRowView: View {
                 }()
 
                 Text(verbatim: String(format: "%@ · %@ · %@", window.ownerName, window.space.name, stateLabel))
-                    .font(.system(size: 11.5))
+                    .font(.subheadline)
                     .foregroundColor(isSelected ? colors.textSecondary : colors.textTertiary)
                     .lineLimit(1)
             }
@@ -859,26 +868,28 @@ struct WindowBatchRowView: View {
                 KeycapView(text: LocalizedStringKey(shortcut), isSelected: isSelected)
             } else if isStaged {
                 Text(stagedActionText)
-                    .font(.system(size: 10, weight: .medium))
+                    .font(.system(.caption2, design: .monospaced))
+                    .fontWeight(.medium)
                     .foregroundColor(colors.greenText)
                     .padding(.horizontal, 6)
                     .padding(.vertical, 3.5)
                     .background(colors.greenText.opacity(0.12))
-                    .cornerRadius(6)
+                    .cornerRadius(4)
                     .overlay(
-                        RoundedRectangle(cornerRadius: 6)
+                        RoundedRectangle(cornerRadius: 4)
                             .stroke(colors.greenText.opacity(0.3), lineWidth: 1)
                     )
             } else {
                 Text(window.space.name)
-                    .font(.system(size: 10, weight: .medium))
+                    .font(.system(.caption2, design: .monospaced))
+                    .fontWeight(.medium)
                     .foregroundColor(colors.textSecondary)
                     .padding(.horizontal, 8)
                     .padding(.vertical, 3.5)
                     .background(colors.badgeBg)
-                    .cornerRadius(6)
+                    .cornerRadius(4)
                     .overlay(
-                        RoundedRectangle(cornerRadius: 6)
+                        RoundedRectangle(cornerRadius: 4)
                             .stroke(colors.badgeBorder, lineWidth: 1)
                     )
             }
@@ -934,10 +945,11 @@ struct BatchMoveBottomBar: View {
             HStack(spacing: 6) {
                 HStack(spacing: 6) {
                     Image(systemName: viewModel.activeCommand?.iconName ?? "macwindow.badge.plus")
-                        .font(.system(size: 11, weight: .semibold))
-                        .foregroundColor(Color(red: 0.0, green: 0.55, blue: 1.0))
+                        .font(.caption.weight(.semibold))
+                        .foregroundColor(Color.accentColor)
                     Text(viewModel.activeCommand?.title ?? String(localized: "Batch Move Windows"))
-                        .font(.system(size: 11, weight: .semibold))
+                        .font(.caption)
+                        .fontWeight(.semibold)
                         .foregroundColor(colors.textPrimary)
                 }
                 .padding(.horizontal, 10)
@@ -952,10 +964,11 @@ struct BatchMoveBottomBar: View {
                     
                     HStack(spacing: 4) {
                         Image(systemName: "square.and.arrow.down")
-                            .font(.system(size: 10, weight: .semibold))
+                            .font(.caption.weight(.semibold))
                             .foregroundColor(colors.greenText)
                         Text(String(format: NSLocalizedString("Stage: %@", comment: ""), staging.ownerName))
-                            .font(.system(size: 11, weight: .semibold))
+                            .font(.caption)
+                            .fontWeight(.semibold)
                             .foregroundColor(colors.textPrimary)
                     }
                     .padding(.horizontal, 10)
@@ -973,10 +986,12 @@ struct BatchMoveBottomBar: View {
                     // Staging target space selection
                     HStack(spacing: 4) {
                         Text(verbatim: String(localized: "Stage to Space"))
-                            .font(.system(size: 11, weight: .medium))
+                            .font(.caption)
+                            .fontWeight(.medium)
                             .foregroundColor(colors.textSecondary)
                         Text("↵")
-                            .font(.system(size: 11, weight: .semibold))
+                            .font(.system(.caption2, design: .monospaced))
+                            .fontWeight(.bold)
                             .foregroundColor(colors.textTertiary)
                     }
                     .padding(.horizontal, 10)
@@ -1004,10 +1019,12 @@ struct BatchMoveBottomBar: View {
                             HStack(spacing: 8) {
                                 HStack(spacing: 4) {
                                     Text(verbatim: String(localized: isMove ? "Unstage Move" : "Unstage Action"))
-                                        .font(.system(size: 11, weight: .medium))
+                                        .font(.caption)
+                                        .fontWeight(.medium)
                                         .foregroundColor(colors.textSecondary)
                                     Text("↵")
-                                        .font(.system(size: 11, weight: .semibold))
+                                        .font(.system(.caption2, design: .monospaced))
+                                        .fontWeight(.bold)
                                         .foregroundColor(colors.textQuaternary)
                                 }
                                 .padding(.horizontal, 10)
@@ -1024,10 +1041,12 @@ struct BatchMoveBottomBar: View {
                             HStack(spacing: 8) {
                                 HStack(spacing: 4) {
                                     Text(verbatim: String(localized: "Stage Move to Desktop..."))
-                                        .font(.system(size: 11, weight: .medium))
+                                        .font(.caption)
+                                        .fontWeight(.medium)
                                         .foregroundColor(colors.textSecondary)
                                     Text("↵")
-                                        .font(.system(size: 11, weight: .semibold))
+                                        .font(.system(.caption2, design: .monospaced))
+                                        .fontWeight(.bold)
                                         .foregroundColor(colors.textQuaternary)
                                 }
                                 .padding(.horizontal, 10)
@@ -1041,10 +1060,12 @@ struct BatchMoveBottomBar: View {
                                 
                                 HStack(spacing: 4) {
                                     Text(verbatim: String(localized: "Actions"))
-                                        .font(.system(size: 11, weight: .medium))
+                                        .font(.caption)
+                                        .fontWeight(.medium)
                                         .foregroundColor(colors.textSecondary)
                                     Text("⌘K")
-                                        .font(.system(size: 11, weight: .semibold))
+                                        .font(.system(.caption2, design: .monospaced))
+                                        .fontWeight(.bold)
                                         .foregroundColor(colors.textQuaternary)
                                 }
                                 .padding(.horizontal, 10)
@@ -1063,10 +1084,12 @@ struct BatchMoveBottomBar: View {
                     if !viewModel.stagedMoves.isEmpty {
                         HStack(spacing: 4) {
                             Text(verbatim: String(localized: "Run Batch Actions"))
-                                .font(.system(size: 11, weight: .semibold))
+                                .font(.caption)
+                                .fontWeight(.semibold)
                                 .foregroundColor(colors.greenText)
                             Text("⌘↵")
-                                .font(.system(size: 11, weight: .semibold))
+                                .font(.system(.caption2, design: .monospaced))
+                                .fontWeight(.bold)
                                 .foregroundColor(colors.greenText.opacity(0.8))
                         }
                         .padding(.horizontal, 10)
@@ -1103,7 +1126,8 @@ struct SpacesBottomBar: View {
     var body: some View {
         HStack(spacing: 8) {
             Text(verbatim: String(localized: "Spaces:"))
-                .font(.system(size: 11, weight: .semibold))
+                .font(.caption)
+                .fontWeight(.semibold)
                 .foregroundColor(colors.textTertiary)
                 .padding(.trailing, 2)
             
@@ -1129,28 +1153,31 @@ struct SpacesBottomBar: View {
                     HStack {
                         if isSpaceSelected {
                             Text(name)
-                                .font(.system(size: 11, weight: .semibold))
+                                .font(.caption)
+                                .fontWeight(.semibold)
                                 .foregroundColor(.white)
                                 .padding(.horizontal, 10)
                                 .padding(.vertical, 4)
-                                .background(Color(red: 0.0, green: 0.55, blue: 1.0))
+                                .background(Color.accentColor)
                                 .clipShape(Capsule())
                                 .overlay(
                                     Capsule()
-                                        .stroke(Color.white.opacity(0.4), lineWidth: 1)
+                                        .stroke(Color.white.opacity(0.25), lineWidth: 1)
                                 )
-                                .shadow(color: Color(red: 0.0, green: 0.55, blue: 1.0).opacity(0.4), radius: 4, x: 0, y: 0)
+                                .shadow(color: Color.accentColor.opacity(0.35), radius: 3, x: 0, y: 1)
                         } else if isCurrent {
                             Text(name)
-                                .font(.system(size: 11, weight: .semibold))
-                                .foregroundColor(Color(red: 0.0, green: 0.55, blue: 1.0))
+                                .font(.caption)
+                                .fontWeight(.semibold)
+                                .foregroundColor(Color.accentColor)
                                 .padding(.horizontal, 10)
                                 .padding(.vertical, 4)
-                                .background(Color(red: 0.0, green: 0.55, blue: 1.0).opacity(0.15))
+                                .background(Color.accentColor.opacity(0.15))
                                 .clipShape(Capsule())
                         } else {
                             Text(name)
-                                .font(.system(size: 11, weight: .medium))
+                                .font(.caption)
+                                .fontWeight(.medium)
                                 .foregroundColor(colors.textSecondary)
                                 .padding(.horizontal, 10)
                                 .padding(.vertical, 4)
@@ -1183,10 +1210,12 @@ struct SpacesBottomBar: View {
                     }) {
                         HStack(spacing: 4) {
                             Text(LocalizedStringKey("Switch Space"))
-                                .font(.system(size: 11, weight: .medium))
+                                .font(.caption)
+                                .fontWeight(.medium)
                                 .foregroundColor(colors.textSecondary)
                             Text("Tab")
-                                .font(.system(size: 11, weight: .semibold))
+                                .font(.system(.caption2, design: .monospaced))
+                                .fontWeight(.semibold)
                                 .foregroundColor(colors.textQuaternary)
                         }
                         .padding(.horizontal, 10)
@@ -1200,10 +1229,12 @@ struct SpacesBottomBar: View {
                 if viewModel.isBottomBarFocused {
                     HStack(spacing: 4) {
                         Text(LocalizedStringKey("Switch Space"))
-                            .font(.system(size: 11, weight: .medium))
+                            .font(.caption)
+                            .fontWeight(.medium)
                             .foregroundColor(colors.textSecondary)
                         Text("↵")
-                            .font(.system(size: 11, weight: .semibold))
+                            .font(.system(.caption2, design: .monospaced))
+                            .fontWeight(.bold)
                             .foregroundColor(colors.textQuaternary)
                     }
                     .padding(.horizontal, 10)
@@ -1217,10 +1248,12 @@ struct SpacesBottomBar: View {
                     
                     HStack(spacing: 4) {
                         Text(LocalizedStringKey("Move Window"))
-                            .font(.system(size: 11, weight: .medium))
+                            .font(.caption)
+                            .fontWeight(.medium)
                             .foregroundColor(colors.textSecondary)
                         Text("⌥↵")
-                            .font(.system(size: 11, weight: .semibold))
+                            .font(.system(.caption2, design: .monospaced))
+                            .fontWeight(.bold)
                             .foregroundColor(colors.textQuaternary)
                     }
                     .padding(.horizontal, 10)
@@ -1234,10 +1267,12 @@ struct SpacesBottomBar: View {
                 } else {
                     HStack(spacing: 4) {
                         Text(LocalizedStringKey("Action"))
-                            .font(.system(size: 11, weight: .medium))
+                            .font(.caption)
+                            .fontWeight(.medium)
                             .foregroundColor(colors.textSecondary)
                         Text("↵")
-                            .font(.system(size: 11, weight: .semibold))
+                            .font(.system(.caption2, design: .monospaced))
+                            .fontWeight(.bold)
                             .foregroundColor(colors.textQuaternary)
                     }
                     .padding(.horizontal, 10)
@@ -1271,10 +1306,11 @@ struct CommandBottomBar: View {
             if let active = viewModel.activeCommand {
                 HStack(spacing: 6) {
                     Image(systemName: active.iconName)
-                        .font(.system(size: 11, weight: .semibold))
-                        .foregroundColor(Color(red: 0.0, green: 0.55, blue: 1.0))
+                        .font(.caption.weight(.semibold))
+                        .foregroundColor(Color.accentColor)
                     Text(active.title)
-                        .font(.system(size: 11, weight: .semibold))
+                        .font(.caption)
+                        .fontWeight(.semibold)
                         .foregroundColor(colors.textPrimary)
                 }
                 .padding(.horizontal, 10)
@@ -1291,10 +1327,12 @@ struct CommandBottomBar: View {
                 case .switchToDesktop:
                     HStack(spacing: 4) {
                         Text(verbatim: String(localized: "Switch Space"))
-                            .font(.system(size: 11, weight: .medium))
+                            .font(.caption)
+                            .fontWeight(.medium)
                             .foregroundColor(colors.textSecondary)
                         Text("↵")
-                            .font(.system(size: 11, weight: .semibold))
+                            .font(.system(.caption2, design: .monospaced))
+                            .fontWeight(.bold)
                             .foregroundColor(colors.textQuaternary)
                     }
                     .padding(.horizontal, 10)
@@ -1309,10 +1347,12 @@ struct CommandBottomBar: View {
                 case .moveWindow:
                     HStack(spacing: 4) {
                         Text(verbatim: String(localized: "Move Window"))
-                            .font(.system(size: 11, weight: .medium))
+                            .font(.caption)
+                            .fontWeight(.medium)
                             .foregroundColor(colors.textSecondary)
                         Text("↵")
-                            .font(.system(size: 11, weight: .semibold))
+                            .font(.system(.caption2, design: .monospaced))
+                            .fontWeight(.bold)
                             .foregroundColor(colors.textQuaternary)
                     }
                     .padding(.horizontal, 10)
@@ -1327,10 +1367,12 @@ struct CommandBottomBar: View {
                 case .listWindows:
                     HStack(spacing: 4) {
                         Text(verbatim: String(localized: "Focus Window"))
-                            .font(.system(size: 11, weight: .medium))
+                            .font(.caption)
+                            .fontWeight(.medium)
                             .foregroundColor(colors.textSecondary)
                         Text("↵")
-                            .font(.system(size: 11, weight: .semibold))
+                            .font(.system(.caption2, design: .monospaced))
+                            .fontWeight(.bold)
                             .foregroundColor(colors.textQuaternary)
                     }
                     .padding(.horizontal, 10)
@@ -1345,10 +1387,12 @@ struct CommandBottomBar: View {
                 case .renameCurrentSpace:
                     HStack(spacing: 4) {
                         Text(verbatim: String(localized: "Rename Space"))
-                            .font(.system(size: 11, weight: .medium))
+                            .font(.caption)
+                            .fontWeight(.medium)
                             .foregroundColor(colors.textSecondary)
                         Text("↵")
-                            .font(.system(size: 11, weight: .semibold))
+                            .font(.system(.caption2, design: .monospaced))
+                            .fontWeight(.bold)
                             .foregroundColor(colors.textQuaternary)
                     }
                     .padding(.horizontal, 10)
@@ -1597,18 +1641,17 @@ struct SearchTextField: NSViewRepresentable {
         textField.isBordered = false
         textField.drawsBackground = false
         textField.focusRingType = .none
-        textField.textColor = isDark ? .white : NSColor(red: 0.12, green: 0.12, blue: 0.14, alpha: 1.0)
-        textField.font = NSFont.systemFont(ofSize: 20, weight: .regular)
+        textField.textColor = .labelColor
+        textField.font = NSFont.systemFont(ofSize: 16, weight: .regular)
         
         context.coordinator.lastPlaceholder = placeholder
         context.coordinator.lastIsDark = isDark
         
-        let placeholderColor = isDark ? NSColor.white.withAlphaComponent(0.35) : NSColor(red: 0.12, green: 0.12, blue: 0.14, alpha: 0.35)
         let placeholderAttr = NSAttributedString(
             string: placeholder,
             attributes: [
-                .foregroundColor: placeholderColor,
-                .font: NSFont.systemFont(ofSize: 20, weight: .regular)
+                .foregroundColor: NSColor.placeholderTextColor,
+                .font: NSFont.systemFont(ofSize: 16, weight: .regular)
             ]
         )
         textField.placeholderAttributedString = placeholderAttr
@@ -1627,19 +1670,18 @@ struct SearchTextField: NSViewRepresentable {
         if nsView.stringValue != text {
             nsView.stringValue = text
         }
-        nsView.textColor = isDark ? .white : NSColor(red: 0.12, green: 0.12, blue: 0.14, alpha: 1.0)
+        nsView.textColor = .labelColor
         
         // Cache placeholder creation to avoid recreating it on every render cycle
         if context.coordinator.lastPlaceholder != placeholder || context.coordinator.lastIsDark != isDark {
             context.coordinator.lastPlaceholder = placeholder
             context.coordinator.lastIsDark = isDark
             
-            let placeholderColor = isDark ? NSColor.white.withAlphaComponent(0.35) : NSColor(red: 0.12, green: 0.12, blue: 0.14, alpha: 0.35)
             let placeholderAttr = NSAttributedString(
                 string: placeholder,
                 attributes: [
-                    .foregroundColor: placeholderColor,
-                    .font: NSFont.systemFont(ofSize: 20, weight: .regular)
+                    .foregroundColor: NSColor.placeholderTextColor,
+                    .font: NSFont.systemFont(ofSize: 16, weight: .regular)
                 ]
             )
             nsView.placeholderAttributedString = placeholderAttr
@@ -1684,12 +1726,13 @@ struct CommandKOverlayView: View {
                     
                     VStack(alignment: .leading, spacing: 2) {
                         Text(window.title.isEmpty ? String(localized: "(No Title)") : window.title)
-                            .font(.system(size: 14, weight: .bold))
+                            .font(.body)
+                            .fontWeight(.bold)
                             .foregroundColor(colors.textPrimary)
                             .lineLimit(1)
                         
                         Text(window.ownerName)
-                            .font(.system(size: 11))
+                            .font(.subheadline)
                             .foregroundColor(colors.textSecondary)
                             .lineLimit(1)
                     }
@@ -1700,36 +1743,34 @@ struct CommandKOverlayView: View {
                     let (minimized, hidden) = viewModel.isWindowMinimizedOrAppHidden(window)
                     if minimized {
                         Text(verbatim: String(localized: "Minimized"))
-                            .font(.system(size: 9, weight: .semibold))
+                            .font(.system(.caption2, design: .default))
+                            .fontWeight(.bold)
                             .foregroundColor(.orange)
                             .padding(.horizontal, 6)
                             .padding(.vertical, 2.5)
-                            .background(Color.orange.opacity(0.15))
-                            .cornerRadius(4)
+                            .background(Color.orange.opacity(0.15), in: RoundedRectangle(cornerRadius: 4))
                     } else if hidden {
                         Text(verbatim: String(localized: "Hidden"))
-                            .font(.system(size: 9, weight: .semibold))
+                            .font(.system(.caption2, design: .default))
+                            .fontWeight(.bold)
                             .foregroundColor(.blue)
                             .padding(.horizontal, 6)
                             .padding(.vertical, 2.5)
-                            .background(Color.blue.opacity(0.15))
-                            .cornerRadius(4)
+                            .background(Color.blue.opacity(0.15), in: RoundedRectangle(cornerRadius: 4))
                     } else {
                         Text(verbatim: String(localized: "Active"))
-                            .font(.system(size: 9, weight: .semibold))
+                            .font(.system(.caption2, design: .default))
+                            .fontWeight(.bold)
                             .foregroundColor(colors.greenText)
                             .padding(.horizontal, 6)
                             .padding(.vertical, 2.5)
-                            .background(colors.greenText.opacity(0.15))
-                            .cornerRadius(4)
+                            .background(colors.greenText.opacity(0.15), in: RoundedRectangle(cornerRadius: 4))
                     }
                 }
                 .padding(.horizontal, 16)
                 .padding(.vertical, 16)
                 
-                Rectangle()
-                    .fill(colors.separator)
-                    .frame(height: 1)
+                Divider()
                 
                 // Actions List
                 let actions = viewModel.commandKActions
@@ -1751,9 +1792,7 @@ struct CommandKOverlayView: View {
                 .padding(8)
             }
             .frame(width: 380)
-            .background(
-                VisualEffectView(material: .hudWindow, blendingMode: .withinWindow, state: .active)
-            )
+            .background(.thinMaterial)
             .cornerRadius(12)
             .overlay(
                 RoundedRectangle(cornerRadius: 12)
@@ -1777,12 +1816,13 @@ struct CommandKActionRowView: View {
     var body: some View {
         HStack(spacing: 10) {
             Image(systemName: getIconName(for: action))
-                .font(.system(size: 13, weight: .medium))
+                .font(.body.weight(.medium))
                 .frame(width: 16)
                 .foregroundColor(isSelected ? colors.textPrimary : colors.textSecondary)
             
             Text(getActionLabel(for: action))
-                .font(.system(size: 13, weight: isSelected ? .medium : .regular))
+                .font(.body)
+                .fontWeight(isSelected ? .semibold : .regular)
                 .foregroundColor(colors.textPrimary)
             
             Spacer()
