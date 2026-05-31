@@ -1852,7 +1852,8 @@ struct CommandKActionRowView: View {
         case .close: return "xmark"
         case .minimize: return "minus"
         case .hide: return "eye.slash"
-        case .fullscreen: return "arrow.up.left.and.arrow.down.right"
+        case .enterFullScreen: return "arrow.up.left.and.arrow.down.right"
+        case .exitFullScreen: return "arrow.down.right.and.arrow.up.left"
         case .quit: return "power"
         case .restore: return "arrow.uturn.backward"
         case .restoreTo: return "arrow.forward.square"
@@ -1865,7 +1866,8 @@ struct CommandKActionRowView: View {
         case .close: return NSLocalizedString("Close", comment: "")
         case .minimize: return NSLocalizedString("Minimize", comment: "")
         case .hide: return NSLocalizedString("Hide", comment: "")
-        case .fullscreen: return NSLocalizedString("Fullscreen", comment: "")
+        case .enterFullScreen: return NSLocalizedString("Enter Full Screen", comment: "")
+        case .exitFullScreen: return NSLocalizedString("Exit Full Screen", comment: "")
         case .quit: return NSLocalizedString("Quit", comment: "")
         case .restore: return NSLocalizedString("Restore", comment: "")
         case .restoreTo: return NSLocalizedString("Restore to...", comment: "")
@@ -1918,6 +1920,10 @@ struct BottomBarCapsule: ViewModifier {
     
     @State private var isHovered: Bool = false
     
+    var greenBgColor: Color {
+        colorScheme == .dark ? Color(red: 0.16, green: 0.48, blue: 0.26) : Color(red: 0.12, green: 0.44, blue: 0.22)
+    }
+    
     func body(content: Content) -> some View {
         content
             .font(.subheadline)
@@ -1926,27 +1932,39 @@ struct BottomBarCapsule: ViewModifier {
             .frame(height: 26)
             .background(
                 ZStack {
-                    if isSelected {
-                        isGreen ? Color.green : Color.primary.opacity(0.08)
-                    } else if isActive {
-                        isGreen ? Color.green.opacity(isHovered ? 0.25 : 0.15) : Color.accentColor.opacity(isHovered ? 0.25 : 0.15)
+                    if isGreen {
+                        if isSelected {
+                            greenBgColor.opacity(isHovered ? 0.9 : 1.0)
+                        } else if isActive {
+                            greenBgColor.opacity(isHovered ? 0.25 : 0.15)
+                        } else {
+                            Color.primary.opacity(isHovered ? 0.12 : 0.06)
+                        }
                     } else {
-                        Color.primary.opacity(isHovered ? 0.12 : 0.06)
+                        if isSelected {
+                            isActive ? Color.primary.opacity(0.16) : Color.primary.opacity(0.08)
+                        } else if isActive {
+                            Color.primary.opacity(isHovered ? 0.22 : 0.14)
+                        } else {
+                            Color.primary.opacity(isHovered ? 0.12 : 0.06)
+                        }
                     }
                 }
             )
             .foregroundColor(
-                isActive ? (isGreen ? Color.green : Color.accentColor) : (isSelected || isHovered ? .primary : .secondary)
+                isGreen ? (isSelected ? .white : (isActive ? greenBgColor : (isHovered ? greenBgColor : .secondary)))
+                        : (isActive ? .primary : (isSelected || isHovered ? .primary : .secondary))
             )
             .clipShape(Capsule())
             .overlay(
                 Capsule()
                     .stroke(
-                        isSelected ? Color.primary.opacity(0.15) : (isActive ? (isGreen ? Color.green.opacity(isHovered ? 0.4 : 0.2) : Color.accentColor.opacity(isHovered ? 0.4 : 0.2)) : Color.primary.opacity(isHovered ? 0.25 : 0.08)),
+                        isGreen ? (isSelected ? Color.primary.opacity(0.15) : (isActive ? greenBgColor.opacity(isHovered ? 0.4 : 0.2) : Color.primary.opacity(isHovered ? 0.25 : 0.08)))
+                                : (isSelected ? Color.primary.opacity(0.15) : (isActive ? Color.primary.opacity(isHovered ? 0.35 : 0.22) : Color.primary.opacity(isHovered ? 0.25 : 0.08))),
                         lineWidth: 1
                     )
             )
-            .shadow(color: isSelected ? (isGreen ? Color.green.opacity(0.25) : Color.primary.opacity(0.1)) : Color.clear, radius: 3, x: 0, y: 1)
+            .shadow(color: isSelected ? (isGreen ? greenBgColor.opacity(0.25) : Color.primary.opacity(0.1)) : Color.clear, radius: 3, x: 0, y: 1)
             .onHover { hovering in
                 isHovered = hovering
             }
