@@ -1151,6 +1151,7 @@ struct SpacesBottomBar: View {
     @ObservedObject var viewModel: LauncherViewModel
     @ObservedObject var spaceManager: SpaceManager
     @Environment(\.colorScheme) var colorScheme
+    @State private var actionsWidth: CGFloat = 210
     
     var colors: ThemeColors {
         ThemeColors(isDark: colorScheme == .dark)
@@ -1199,7 +1200,7 @@ struct SpacesBottomBar: View {
                             }
                         }
                         .padding(.leading, 32)
-                        .padding(.trailing, viewModel.isBottomBarFocused ? 302 : 242)
+                        .padding(.trailing, actionsWidth + 12 + 32)
                     }
                     .mask(
                         HStack(spacing: 0) {
@@ -1225,7 +1226,7 @@ struct SpacesBottomBar: View {
                             
                             // Trailing transparent region under action capsules
                             Color.clear
-                                .frame(width: viewModel.isBottomBarFocused ? 270 : 210)
+                                .frame(width: actionsWidth + 12)
                         }
                     )
                     .onAppear {
@@ -1340,7 +1341,12 @@ struct SpacesBottomBar: View {
                         }
                     }
                     .padding(.leading, 12)
-                    .background(Color.clear)
+                    .background(
+                        GeometryReader { geometry in
+                            Color.clear
+                                .preference(key: WidthPreferenceKey.self, value: geometry.size.width)
+                        }
+                    )
                 }
                 .frame(maxHeight: .infinity)
             }
@@ -1348,6 +1354,9 @@ struct SpacesBottomBar: View {
         .padding(.horizontal, 18)
         .frame(height: 46)
         .background(colors.bottomBarBg)
+        .onPreferenceChange(WidthPreferenceKey.self) { width in
+            self.actionsWidth = width
+        }
     }
 }
 
@@ -1999,6 +2008,13 @@ struct BottomBarCapsule: ViewModifier {
             .onHover { hovering in
                 isHovered = hovering
             }
+    }
+}
+
+struct WidthPreferenceKey: PreferenceKey {
+    static var defaultValue: CGFloat = 210
+    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
+        value = nextValue()
     }
 }
 
