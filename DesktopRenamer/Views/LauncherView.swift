@@ -999,7 +999,7 @@ struct ListSectionHeader: View {
             
             Text(subtitle)
                 .font(.system(size: 11))
-                .foregroundColor(colors.textQuaternary)
+                .foregroundColor(colors.textSecondary)
             
             Spacer()
         }
