@@ -663,6 +663,17 @@ class SpaceHelper {
         return nil
     }
 
+    static func getWindowSpaceID(id: Int) -> String? {
+        let conn = _CGSDefaultConnection()
+        let widArray = [id as NSNumber] as CFArray
+        if let result = CGSCopySpacesForWindows(conn, 7, widArray),
+           let spaceIDs = result as? [NSNumber],
+           let firstSpace = spaceIDs.first {
+            return String(firstSpace.intValue)
+        }
+        return nil
+    }
+
     static func getActiveWindowFrame() -> CGRect? {
         return getActiveWindowInfo()?.frame
     }
