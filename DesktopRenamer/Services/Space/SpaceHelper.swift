@@ -1565,6 +1565,7 @@ class SpaceHelper {
         }
         
         var roleRef: CFTypeRef?
+        AXUIElementCopyAttributeValue(axElement, kAXRoleAttribute as CFString, &roleRef)
         let role = (roleRef as? String) ?? "Unknown"
         
         // Draggable roles include window background, title bar, toolbar, empty areas, etc.
