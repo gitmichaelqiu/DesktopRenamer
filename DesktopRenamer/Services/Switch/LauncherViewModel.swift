@@ -140,6 +140,24 @@ struct BatchMoveSection: Identifiable {
     let items: [BatchMoveItem]
 }
 
+struct ListWindowsItem: Identifiable, Equatable {
+    let window: WindowEntry
+    let index: Int
+    
+    var id: String { "list_window_\(window.id)" }
+    
+    static func == (lhs: ListWindowsItem, rhs: ListWindowsItem) -> Bool {
+        return lhs.window.id == rhs.window.id && lhs.index == rhs.index
+    }
+}
+
+struct ListWindowsSection: Identifiable {
+    var id: String { title }
+    let title: String
+    let subtitle: String
+    let items: [ListWindowsItem]
+}
+
 @MainActor class LauncherViewModel: ObservableObject {
     @AppStorage("com.michaelqiu.desktoprenamer.automaticallyRankCommands") var automaticallyRankCommands: Bool = true
     @AppStorage("com.michaelqiu.desktoprenamer.launcherManualCommandOrder") var launcherManualCommandOrder: String = ""
@@ -230,7 +248,7 @@ struct BatchMoveSection: Identifiable {
     
     // For space renaming
     @Published var renameInputText: String = ""
-    private var batchMoveLastSelectedIndex: Int = 0
+    var batchMoveLastSelectedIndex: Int = 0
     
     var onClose: (() -> Void)?
     
@@ -440,11 +458,35 @@ struct BatchMoveSection: Identifiable {
         let isFS = window.space.isFullscreen
         let fullscreenAction: BatchStagedActionType = isFS ? .exitFullScreen : .enterFullScreen
         
+        var actions: [BatchStagedActionType] = []
         if minimized || hidden {
-            return [.close, .restore, .restoreTo(targetSpace: SpaceGroup(id: "", name: "", displayName: "", num: 0, isFullscreen: false)), fullscreenAction, .quit]
+            actions = [.close, .restore, .restoreTo(targetSpace: SpaceGroup(id: "", name: "", displayName: "", num: 0, isFullscreen: false)), fullscreenAction, .quit]
         } else {
-            return [.close, .minimize, .hide, fullscreenAction, .quit]
+            actions = [.close, .minimize, .hide, fullscreenAction, .quit]
         }
+        
+        if activeCommand?.type == .listWindows {
+            if let manager = AppDelegate.shared.spaceManager {
+                let spacesToMove = manager.spaceNameDict.filter { !$0.isFullscreen && $0.id != window.space.id }
+                for space in spacesToMove {
+                    let group = SpaceGroup(
+                        id: space.id,
+                        name: manager.getSpaceName(space.id),
+                        displayName: getDisplayName(for: space.displayID),
+                        num: space.num,
+                        isFullscreen: false,
+                        appPath: space.appPath
+                    )
+                    if minimized || hidden {
+                        actions.append(.restoreTo(targetSpace: group))
+                    } else {
+                        actions.append(.move(targetSpace: group))
+                    }
+                }
+            }
+        }
+        
+        return actions
     }
     
     var commandKActions: [BatchStagedActionType] {
@@ -674,6 +716,33 @@ struct BatchMoveSection: Identifiable {
                     }
                     try? await Task.sleep(nanoseconds: 500_000_000)
                 }
+            case .move(let space):
+                if window.space.id != space.id {
+                    // Focus the window
+                    SpaceHelper.focusWindow(id: window.id, pid: window.pid)
+                    try? await Task.sleep(nanoseconds: 250_000_000)
+                    
+                    // Un-fullscreen first if the window is currently in a fullscreen space
+                    if window.space.isFullscreen {
+                        var axFSWindow = SpaceHelper.getAXWindow(id: window.id, pid: window.pid)
+                        if axFSWindow == nil {
+                            if let app = NSRunningApplication(processIdentifier: window.pid) {
+                                app.activate(options: .activateIgnoringOtherApps)
+                                try? await Task.sleep(nanoseconds: 400_000_000)
+                                axFSWindow = SpaceHelper.getAXWindow(id: window.id, pid: window.pid)
+                            }
+                        }
+                        if let targetAXFSWindow = axFSWindow {
+                            AXUIElementSetAttributeValue(targetAXFSWindow, "AXFullScreen" as CFString, false as CFTypeRef)
+                            try? await Task.sleep(nanoseconds: 1_200_000_000)
+                        }
+                    }
+                    
+                    if let manager = AppDelegate.shared.spaceManager {
+                        manager.moveActiveWindowToSpace(id: space.id)
+                    }
+                    try? await Task.sleep(nanoseconds: 500_000_000)
+                }
             default:
                 break
             }
@@ -705,6 +774,32 @@ struct BatchMoveSection: Identifiable {
                 matchesQuery(query, target: $0.space.name, pinyin: $0.space.pinyinName)
             }
         }
+    }
+    
+    var listWindowsSections: [ListWindowsSection] {
+        var sections: [ListWindowsSection] = []
+        let windows = filteredWindows
+        
+        var windowToGlobalIndex: [Int: Int] = [:]
+        for (idx, w) in windows.enumerated() {
+            windowToGlobalIndex[w.id] = idx
+        }
+        
+        for space in currentSpaces {
+            let spaceWindows = windows.filter { $0.space.id == space.id }
+            if spaceWindows.isEmpty { continue }
+            
+            let items = spaceWindows.map { w in
+                ListWindowsItem(window: w, index: windowToGlobalIndex[w.id]!)
+            }
+            
+            sections.append(ListWindowsSection(
+                title: space.name,
+                subtitle: String(format: space.isFullscreen ? String(localized: "Fullscreen") : String(localized: "%lld windows"), items.count),
+                items: items
+            ))
+        }
+        return sections
     }
     
     var visibleRowsCount: Int {
@@ -771,7 +866,7 @@ struct BatchMoveSection: Identifiable {
         }
     }
     
-    private func getDisplayName(for uuidString: String) -> String {
+    func getDisplayName(for uuidString: String) -> String {
         for screen in NSScreen.screens {
             guard let id = screen.deviceDescription[NSDeviceDescriptionKey("NSScreenNumber")] as? CGDirectDisplayID else { continue }
             guard let uuid = CGDisplayCreateUUIDFromDisplayID(id)?.takeRetainedValue() else { continue }

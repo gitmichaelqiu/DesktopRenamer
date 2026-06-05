@@ -65,6 +65,16 @@
       },
       "shouldTranslate" : false
     },
+    "%@ · Fullscreen" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ · 全屏"
+          }
+        }
+      }
+    },
     "%@ · Space %lld" : {
       "localizations" : {
         "en" : {
@@ -971,6 +981,9 @@
         }
       }
     },
+    "Focus" : {
+
+    },
     "Focus ↵" : {
       "localizations" : {
         "zh-Hans" : {
@@ -982,6 +995,7 @@
       }
     },
     "Focus Window" : {
+      "extractionState" : "stale",
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
@@ -1330,6 +1344,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "链接"
+          }
+        }
+      }
+    },
+    "List Windows" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "窗口列表"
           }
         }
       }
@@ -2324,11 +2348,22 @@
       }
     },
     "Search and focus open application windows" : {
+      "extractionState" : "stale",
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "搜索并跳转到打开的应用窗口"
+          }
+        }
+      }
+    },
+    "Search and manage open application windows" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "搜索并管理打开的应用窗口"
           }
         }
       }
@@ -3531,16 +3566,6 @@
         }
       },
       "shouldTranslate" : false
-    },
-    "%@ · Fullscreen" : {
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%@ · 全屏"
-          }
-        }
-      }
     }
   },
   "version" : "1.1"

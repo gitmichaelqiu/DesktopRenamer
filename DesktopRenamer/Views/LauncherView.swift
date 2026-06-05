@@ -84,6 +84,7 @@ struct LauncherView: View {
                             onEscape: {
                                 viewModel.handleEscapeKey()
                             },
+                            onKeyEquivalent: { _ in false },
                             placeholder: NSLocalizedString("New Space Name...", comment: "")
                         )
                         .frame(height: 36)
@@ -190,6 +191,9 @@ struct LauncherView: View {
                                 } else if (viewModel.activeCommand?.type == .batchMoveWindows || viewModel.activeCommand?.type == .listWindows) && viewModel.stagingWindow == nil {
                                     viewModel.showCommandKPanel()
                                 }
+                            },
+                            onKeyEquivalent: { event in
+                                return self.handleTextFieldKeyEquivalent(event)
                             },
                             placeholder: viewModel.activeCommand == nil ? NSLocalizedString("Search commands...", comment: "") : (viewModel.stagingWindow != nil ? NSLocalizedString("Search target space...", comment: "") : NSLocalizedString("Search items...", comment: ""))
                         )
@@ -391,24 +395,32 @@ struct ListAreaView: View {
                         }
                         
                     case .listWindows:
-                        let windows = viewModel.filteredWindows
-                        if windows.isEmpty {
+                        let sections = viewModel.listWindowsSections
+                        if sections.isEmpty {
                             EmptyResultsView()
                         } else {
                             ScrollViewReader { proxy in
                                 ScrollView {
-                                    VStack(spacing: 4) {
-                                        ForEach(0..<windows.count, id: \.self) { i in
-                                            let window = windows[i]
-                                            let isSelected = !viewModel.isBottomBarFocused && viewModel.selectedRowIndex == i
-                                            WindowRowView(window: window, isSelected: isSelected, shortcutText: viewModel.showCommandNumbers && viewModel.commandKTargetWindow == nil && i < 9 ? "⌘\(i + 1)" : nil)
+                                    VStack(alignment: .leading, spacing: 4) {
+                                        ForEach(0..<sections.count, id: \.self) { sIdx in
+                                            let section = sections[sIdx]
+                                            ListSectionHeader(title: section.title, subtitle: section.subtitle, isFirst: sIdx == 0)
+                                            
+                                            ForEach(section.items) { item in
+                                                let isSelected = !viewModel.isBottomBarFocused && viewModel.selectedRowIndex == item.index
+                                                WindowRowView(
+                                                    window: item.window,
+                                                    isSelected: isSelected,
+                                                    shortcutText: viewModel.showCommandNumbers && viewModel.commandKTargetWindow == nil && item.index < 9 ? "⌘\(item.index + 1)" : nil
+                                                )
                                                 .contentShape(Rectangle())
                                                 .onTapGesture {
                                                     viewModel.isKeyboardSelection = true
-                                                    viewModel.selectedRowIndex = i
+                                                    viewModel.selectedRowIndex = item.index
                                                     viewModel.executeRowAction()
                                                 }
-                                                .id(i)
+                                                .id(item.index)
+                                            }
                                         }
                                     }
                                     .padding(.horizontal, 10)
@@ -1471,15 +1483,18 @@ class FocusTextField: NSTextField {
     var onOptionEnter: (() -> Void)?
     var onCommandNumber: ((Int) -> Void)?
     var onCommandK: (() -> Void)?
+    var onKeyEquivalent: ((NSEvent) -> Bool)?
     var isTypingDisabled: Bool = false
 
     override var acceptsFirstResponder: Bool {
         return true
     }
 
-
-
     override func performKeyEquivalent(with event: NSEvent) -> Bool {
+        if let handled = onKeyEquivalent?(event), handled {
+            return true
+        }
+        
         if event.type == .keyDown {
             let modifiers = event.modifierFlags.intersection(.deviceIndependentFlagsMask)
             let hasCommand = modifiers.contains(.command)
@@ -1593,6 +1608,7 @@ struct SearchTextField: NSViewRepresentable {
     var onTab: (() -> Void)? = nil
     var onEscape: () -> Void
     var onCommandK: (() -> Void)? = nil
+    var onKeyEquivalent: ((NSEvent) -> Bool)? = nil
     var placeholder: String = "Type a command..."
     
     class Coordinator: NSObject, NSTextFieldDelegate, NSTextViewDelegate {
@@ -1687,6 +1703,7 @@ struct SearchTextField: NSViewRepresentable {
         textField.onCommandK = { [weak coordinator = context.coordinator] in
             coordinator?.parent.onCommandK?()
         }
+        textField.onKeyEquivalent = onKeyEquivalent
         textField.isTypingDisabled = isTypingDisabled
         
         textField.isBordered = false
@@ -1716,6 +1733,7 @@ struct SearchTextField: NSViewRepresentable {
         
         if let focusField = nsView as? FocusTextField {
             focusField.isTypingDisabled = isTypingDisabled
+            focusField.onKeyEquivalent = onKeyEquivalent
         }
         
         if nsView.stringValue != text {
@@ -1924,7 +1942,7 @@ struct CommandKActionRowView: View {
         case .exitFullScreen: return NSLocalizedString("Exit Full Screen", comment: "")
         case .quit: return NSLocalizedString("Quit", comment: "")
         case .restore: return NSLocalizedString("Restore", comment: "")
-        case .restoreTo: return NSLocalizedString("Restore to...", comment: "")
+        case .restoreTo(let space): return space.name.isEmpty ? NSLocalizedString("Restore to...", comment: "") : String(format: NSLocalizedString("Restore to %@", comment: ""), space.name)
         case .move(let space): return String(format: NSLocalizedString("Move to %@", comment: ""), space.name)
         }
     }
@@ -2029,6 +2047,99 @@ struct WidthPreferenceKey: PreferenceKey {
     static var defaultValue: CGFloat = 210
     static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
         value = nextValue()
+    }
+}
+
+extension LauncherView {
+    private func handleTextFieldKeyEquivalent(_ event: NSEvent) -> Bool {
+        guard event.type == .keyDown else { return false }
+        
+        let modifiers = event.modifierFlags.intersection(.deviceIndependentFlagsMask)
+        let hasCommand = modifiers.contains(.command)
+        let hasShift = modifiers.contains(.shift)
+        let hasOption = modifiers.contains(.option)
+        let hasControl = modifiers.contains(.control)
+        
+        // Direct window shortcuts for .listWindows (cmd + m, cmd + shift + m/w/n/r/f/h/q)
+        if viewModel.activeCommand?.type == .listWindows,
+           viewModel.commandKTargetWindow == nil,
+           viewModel.stagingWindow == nil {
+            
+            let windows = viewModel.filteredWindows
+            let index = viewModel.selectedRowIndex
+            if index >= 0 && index < windows.count {
+                let window = windows[index]
+                
+                if hasCommand && !hasOption && !hasControl {
+                    if let chars = event.charactersIgnoringModifiers?.lowercased(), chars.count == 1 {
+                        let char = chars.first!
+                        
+                        if !hasShift && char == "m" {
+                            // cmd + m: Move to Current Desktop
+                            if let currentSpaceUUID = AppDelegate.shared.spaceManager?.currentSpaceUUID,
+                               let manager = AppDelegate.shared.spaceManager {
+                                if let spaceObj = manager.spaceNameDict.first(where: { $0.id == currentSpaceUUID }) {
+                                    let spaceGroup = SpaceGroup(
+                                        id: spaceObj.id,
+                                        name: manager.getSpaceName(spaceObj.id),
+                                        displayName: viewModel.getDisplayName(for: spaceObj.displayID),
+                                        num: spaceObj.num,
+                                        isFullscreen: spaceObj.isFullscreen,
+                                        appPath: spaceObj.appPath
+                                    )
+                                    let (minimized, hidden) = viewModel.isWindowMinimizedOrAppHidden(window)
+                                    if minimized || hidden {
+                                        viewModel.executeActionImmediately(window: window, actionType: .restoreTo(targetSpace: spaceGroup))
+                                    } else {
+                                        viewModel.executeActionImmediately(window: window, actionType: .move(targetSpace: spaceGroup))
+                                    }
+                                }
+                            }
+                            return true
+                        } else if hasShift {
+                            switch char {
+                            case "m":
+                                // cmd + shift + m: Move to Desktop... (show space selector)
+                                viewModel.batchMoveLastSelectedIndex = viewModel.selectedRowIndex
+                                viewModel.stagingWindow = window
+                                viewModel.isExecutingRestoreToImmediately = true
+                                viewModel.selectedRowIndex = 0
+                                return true
+                            case "w":
+                                // cmd + shift + w: Close Window
+                                viewModel.executeActionImmediately(window: window, actionType: .close)
+                                return true
+                            case "n":
+                                // cmd + shift + n: Minimize Window
+                                viewModel.executeActionImmediately(window: window, actionType: .minimize)
+                                return true
+                            case "r":
+                                // cmd + shift + r: Restore Window
+                                viewModel.executeActionImmediately(window: window, actionType: .restore)
+                                return true
+                            case "f":
+                                // cmd + shift + f: Toggle Full Screen
+                                let isFS = window.space.isFullscreen
+                                let action: BatchStagedActionType = isFS ? .exitFullScreen : .enterFullScreen
+                                viewModel.executeActionImmediately(window: window, actionType: action)
+                                return true
+                            case "h":
+                                // cmd + shift + h: Hide Application
+                                viewModel.executeActionImmediately(window: window, actionType: .hide)
+                                return true
+                            case "q":
+                                // cmd + shift + q: Quit Application
+                                viewModel.executeActionImmediately(window: window, actionType: .quit)
+                                return true
+                            default:
+                                break
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        return false
     }
 }
 
