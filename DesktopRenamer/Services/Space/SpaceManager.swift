@@ -25,11 +25,17 @@ struct LogEntry: Identifiable, CustomStringConvertible {
     let isDesktop: Bool
     let ncCount: Int
     let action: String
-    
+
+    // Cached DateFormatter — creating one per access is expensive and not thread-safe.
+    private static let logDateFormatter: DateFormatter = {
+        let f = DateFormatter()
+        f.dateFormat = "HH:mm:ss.SSS"
+        f.locale = Locale(identifier: "en_US_POSIX")
+        return f
+    }()
+
     var description: String {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "HH:mm:ss.SSS"
-        return "[\(formatter.string(from: timestamp))] ACTION: \(action) | UUID: \(spaceUUID) | Desktop: \(isDesktop) | NC: \(ncCount)"
+        return "[\(Self.logDateFormatter.string(from: timestamp))] ACTION: \(action) | UUID: \(spaceUUID) | Desktop: \(isDesktop) | NC: \(ncCount)"
     }
 }
 
