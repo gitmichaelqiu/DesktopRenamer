@@ -460,9 +460,9 @@ struct ListWindowsSection: Identifiable {
         
         var actions: [BatchStagedActionType] = []
         if minimized || hidden {
-            actions = [.close, .restore, .restoreTo(targetSpace: SpaceGroup(id: "", name: "", displayName: "", num: 0, isFullscreen: false)), fullscreenAction, .quit]
+            actions = [.close, .restore, fullscreenAction, .quit]
         } else {
-            actions = [.close, .minimize, .hide, .move(targetSpace: SpaceGroup(id: "", name: "", displayName: "", num: 0, isFullscreen: false)), fullscreenAction, .quit]
+            actions = [.close, .minimize, .hide, fullscreenAction, .quit]
         }
         
         return actions
@@ -516,38 +516,11 @@ struct ListWindowsSection: Identifiable {
         guard commandKSelectedIndex >= 0 && commandKSelectedIndex < available.count else { return }
         let action = available[commandKSelectedIndex]
         
+        commandKTargetWindow = nil
         if activeCommand?.type == .listWindows {
-            switch action {
-            case .restoreTo(let space), .move(let space):
-                if space.name.isEmpty {
-                    isExecutingRestoreToImmediately = true
-                    stagingWindow = window
-                    commandKTargetWindow = nil
-                    selectedRowIndex = 0
-                } else {
-                    commandKTargetWindow = nil
-                    executeActionImmediately(window: window, actionType: action)
-                }
-            default:
-                commandKTargetWindow = nil
-                executeActionImmediately(window: window, actionType: action)
-            }
+            executeActionImmediately(window: window, actionType: action)
         } else {
-            switch action {
-            case .restoreTo(let space), .move(let space):
-                if space.name.isEmpty {
-                    isStagingForRestoreTo = true
-                    stagingWindow = window
-                    commandKTargetWindow = nil
-                    selectedRowIndex = 0
-                } else {
-                    stagedMoves[window.id] = BatchStagedAction(window: window, actionType: action)
-                    commandKTargetWindow = nil
-                }
-            default:
-                stagedMoves[window.id] = BatchStagedAction(window: window, actionType: action)
-                commandKTargetWindow = nil
-            }
+            stagedMoves[window.id] = BatchStagedAction(window: window, actionType: action)
         }
     }
     
@@ -943,14 +916,14 @@ struct ListWindowsSection: Identifiable {
                 guard index >= 0 && index < spaces.count else { return }
                 let space = spaces[index]
                 
-                if isStagingForRestoreTo {
-                    stagedMoves[staging.id] = BatchStagedAction(window: staging, actionType: .restoreTo(targetSpace: space))
-                    isStagingForRestoreTo = false
-                } else if isExecutingRestoreToImmediately {
+                let (minimized, hidden) = isWindowMinimizedOrAppHidden(staging)
+                let actionType: BatchStagedActionType = (minimized || hidden) ? .restoreTo(targetSpace: space) : .move(targetSpace: space)
+                
+                if isExecutingRestoreToImmediately {
                     isExecutingRestoreToImmediately = false
-                    executeActionImmediately(window: staging, actionType: .restoreTo(targetSpace: space))
+                    executeActionImmediately(window: staging, actionType: actionType)
                 } else {
-                    stagedMoves[staging.id] = BatchStagedAction(window: staging, actionType: .move(targetSpace: space))
+                    stagedMoves[staging.id] = BatchStagedAction(window: staging, actionType: actionType)
                 }
                 
                 stagingWindow = nil
