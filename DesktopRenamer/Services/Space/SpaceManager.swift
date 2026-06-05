@@ -651,8 +651,7 @@ class SpaceManager: ObservableObject {
         defaults.set(num, forKey: "widget_spaceNum")
         defaults.set(isDesktop, forKey: "widget_isDesktop")
         defaults.set(currentSpaceUUID, forKey: "widget_currentSpaceUUID")
-        
-        defaults.synchronize()
+
         WidgetCenter.shared.reloadAllTimelines()
     }
     
@@ -745,7 +744,6 @@ class SpaceManager: ObservableObject {
         if let data = try? JSONEncoder().encode(indexCache) {
             UserDefaults.standard.set(data, forKey: SpaceManager.indexCacheKey)
         }
-        UserDefaults.standard.synchronize()
     }
 
     func getSpaceNum(_ spaceUUID: String) -> Int {

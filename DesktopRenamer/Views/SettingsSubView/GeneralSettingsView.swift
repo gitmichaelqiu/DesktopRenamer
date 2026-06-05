@@ -803,7 +803,6 @@ struct GeneralSettingsView: View {
             if result == .alertFirstButtonReturn {
                 if let bundleID = Bundle.main.bundleIdentifier {
                     UserDefaults.standard.removePersistentDomain(forName: bundleID)
-                    UserDefaults.standard.synchronize()
                 }
 
                 NSApp.terminate(nil)
