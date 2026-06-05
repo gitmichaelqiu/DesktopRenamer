@@ -187,7 +187,7 @@ struct LauncherView: View {
                             onCommandK: {
                                 if viewModel.commandKTargetWindow != nil {
                                     viewModel.commandKTargetWindow = nil
-                                } else if viewModel.activeCommand?.type == .batchMoveWindows && viewModel.stagingWindow == nil {
+                                } else if (viewModel.activeCommand?.type == .batchMoveWindows || viewModel.activeCommand?.type == .listWindows) && viewModel.stagingWindow == nil {
                                     viewModel.showCommandKPanel()
                                 }
                             },
@@ -1416,16 +1416,30 @@ struct CommandBottomBar: View {
                     }
 
                 case .listWindows:
-                    HStack(spacing: 4) {
-                        Text(verbatim: String(localized: "Focus Window"))
-                        Text("↵")
-                            .font(.system(.subheadline))
-                            .fontWeight(.bold)
-                    }
-                    .modifier(BottomBarCapsule(isSelected: false, isActive: false, colorScheme: colorScheme))
-                    .contentShape(Rectangle())
-                    .onTapGesture {
-                        viewModel.executeRowAction()
+                    HStack(spacing: 8) {
+                        HStack(spacing: 4) {
+                            Text(verbatim: String(localized: "Focus"))
+                            Text("↵")
+                                .font(.system(.subheadline))
+                                .fontWeight(.bold)
+                        }
+                        .modifier(BottomBarCapsule(isSelected: false, isActive: false, colorScheme: colorScheme))
+                        .contentShape(Rectangle())
+                        .onTapGesture {
+                            viewModel.executeRowAction()
+                        }
+                        
+                        HStack(spacing: 4) {
+                            Text(verbatim: String(localized: "Actions"))
+                            Text("⌘K")
+                                .font(.system(.subheadline))
+                                .fontWeight(.bold)
+                        }
+                        .modifier(BottomBarCapsule(isSelected: false, isActive: false, colorScheme: colorScheme))
+                        .contentShape(Rectangle())
+                        .onTapGesture {
+                            viewModel.showCommandKPanel()
+                        }
                     }
 
                 case .renameCurrentSpace:
