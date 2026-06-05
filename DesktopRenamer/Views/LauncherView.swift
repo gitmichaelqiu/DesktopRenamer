@@ -1352,7 +1352,6 @@ struct SpacesBottomBar: View {
                             }
                         }
                     }
-                    .id(viewModel.isBottomBarFocused)
                     .padding(.leading, 12)
                     .background(
                         GeometryReader { geometry in
@@ -1368,9 +1367,14 @@ struct SpacesBottomBar: View {
         .frame(height: 46)
         .background(colors.bottomBarBg)
         .onPreferenceChange(WidthPreferenceKey.self) { width in
+            guard width > 0 else { return }
             DispatchQueue.main.async {
-                withAnimation(.spring(response: 0.35, dampingFraction: 0.85)) {
+                if self.actionsWidth == 210 {
                     self.actionsWidth = width
+                } else {
+                    withAnimation(.spring(response: 0.35, dampingFraction: 0.85)) {
+                        self.actionsWidth = width
+                    }
                 }
             }
         }
