@@ -40,6 +40,10 @@ class SpaceHelper {
     private static var globalEventMonitor: Any?
     private static var localEventMonitor: Any?
 
+    // Tokens for block-based notification observers (required for proper cleanup).
+    private static var spaceChangeObserver: NSObjectProtocol?
+    private static var appActivationObserver: NSObjectProtocol?
+
     // Tracks switching state to prevent recursion during transitions.
     private static var isSwitching = false
     static var lastProgrammaticSwitchTime: TimeInterval = 0
@@ -779,10 +783,10 @@ class SpaceHelper {
     static func startMonitoring(onChange: @escaping (String, Bool, Int, String) -> Void) {
         onSpaceChange = onChange
 
-        NSWorkspace.shared.notificationCenter.addObserver(
+        spaceChangeObserver = NSWorkspace.shared.notificationCenter.addObserver(
             forName: NSWorkspace.activeSpaceDidChangeNotification, object: nil, queue: .main
         ) { _ in detectSpaceChange() }
-        NSWorkspace.shared.notificationCenter.addObserver(
+        appActivationObserver = NSWorkspace.shared.notificationCenter.addObserver(
             forName: NSWorkspace.didActivateApplicationNotification, object: nil, queue: .main
         ) { _ in detectSpaceChange() }
 
@@ -798,8 +802,14 @@ class SpaceHelper {
     }
 
     static func stopMonitoring() {
-        DistributedNotificationCenter.default().removeObserver(self)
-        NSWorkspace.shared.notificationCenter.removeObserver(self)
+        if let observer = spaceChangeObserver {
+            NSWorkspace.shared.notificationCenter.removeObserver(observer)
+            spaceChangeObserver = nil
+        }
+        if let observer = appActivationObserver {
+            NSWorkspace.shared.notificationCenter.removeObserver(observer)
+            appActivationObserver = nil
+        }
         if let monitor = globalEventMonitor {
             NSEvent.removeMonitor(monitor)
             globalEventMonitor = nil
