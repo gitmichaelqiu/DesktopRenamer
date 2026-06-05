@@ -180,10 +180,13 @@ class SpaceLabelManager: ObservableObject {
                     self?.hideAllPreviewLabels()
                 }
                 self?.updateAllWindowModes(forDisplay: self?.spaceManager?.currentDisplayID)
-                
+
                 Task { @MainActor in
                     try? await Task.sleep(nanoseconds: 600_000_000)
-                    self?.updateAllWindowModes(forDisplay: self?.spaceManager?.currentDisplayID)
+                    // Restore ALL displays — hideAllPreviewLabels hid everything,
+                    // but the filtered call above only restored the current display.
+                    // Without this unfiltered call, labels on other displays stay hidden forever.
+                    self?.updateAllWindowModes()
                 }
             }
             .store(in: &cancellables)
