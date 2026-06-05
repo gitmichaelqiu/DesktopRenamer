@@ -944,9 +944,11 @@ class SpaceHelper {
     }
 
     private static func normalizeDisplayID(_ id: String, mainUUID: String?) -> String {
-        guard let main = mainUUID else { return id.uppercased() }
-        let result = id == "Main" ? main : id
-        return result.uppercased()
+        let cleanId = id.trimmingCharacters(in: .whitespacesAndNewlines)
+        if cleanId.isEmpty || cleanId.uppercased() == "MAIN" || cleanId.uppercased() == "UNKNOWN" {
+            return mainUUID?.uppercased() ?? "MAIN"
+        }
+        return cleanId.uppercased()
     }
 
     static func getSystemState(onDisplayID specificDisplayID: String? = nil) -> (
