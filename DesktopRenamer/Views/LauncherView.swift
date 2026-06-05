@@ -1356,7 +1356,26 @@ struct SpacesBottomBar: View {
                     .background(
                         GeometryReader { geometry in
                             Color.clear
-                                .preference(key: WidthPreferenceKey.self, value: geometry.size.width)
+                                .onAppear {
+                                    DispatchQueue.main.async {
+                                        let w = geometry.size.width
+                                        if w > 0 {
+                                            self.actionsWidth = w
+                                        }
+                                    }
+                                }
+                                .onChange(of: geometry.size.width) { newWidth in
+                                    guard newWidth > 0 else { return }
+                                    DispatchQueue.main.async {
+                                        if self.actionsWidth == 210 {
+                                            self.actionsWidth = newWidth
+                                        } else {
+                                            withAnimation(.spring(response: 0.35, dampingFraction: 0.85)) {
+                                                self.actionsWidth = newWidth
+                                            }
+                                        }
+                                    }
+                                }
                         }
                     )
                 }
@@ -1366,18 +1385,6 @@ struct SpacesBottomBar: View {
         .padding(.horizontal, 18)
         .frame(height: 46)
         .background(colors.bottomBarBg)
-        .onPreferenceChange(WidthPreferenceKey.self) { width in
-            guard width > 0 else { return }
-            DispatchQueue.main.async {
-                if self.actionsWidth == 210 {
-                    self.actionsWidth = width
-                } else {
-                    withAnimation(.spring(response: 0.35, dampingFraction: 0.85)) {
-                        self.actionsWidth = width
-                    }
-                }
-            }
-        }
     }
 }
 
