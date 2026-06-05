@@ -1035,6 +1035,9 @@
         }
       }
     },
+    "Fullscreen" : {
+
+    },
     "Fullscreen detection method" : {
       "localizations" : {
         "zh-Hans" : {
@@ -1589,6 +1592,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "加入移动队列…"
+          }
+        }
+      }
+    },
+    "Move" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "移动"
           }
         }
       }
@@ -2218,6 +2231,9 @@
           }
         }
       }
+    },
+    "Restore to %@" : {
+
     },
     "Restore to..." : {
       "localizations" : {

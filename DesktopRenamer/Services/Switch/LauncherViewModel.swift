@@ -462,28 +462,7 @@ struct ListWindowsSection: Identifiable {
         if minimized || hidden {
             actions = [.close, .restore, .restoreTo(targetSpace: SpaceGroup(id: "", name: "", displayName: "", num: 0, isFullscreen: false)), fullscreenAction, .quit]
         } else {
-            actions = [.close, .minimize, .hide, fullscreenAction, .quit]
-        }
-        
-        if activeCommand?.type == .listWindows {
-            if let manager = AppDelegate.shared.spaceManager {
-                let spacesToMove = manager.spaceNameDict.filter { !$0.isFullscreen && $0.id != window.space.id }
-                for space in spacesToMove {
-                    let group = SpaceGroup(
-                        id: space.id,
-                        name: manager.getSpaceName(space.id),
-                        displayName: getDisplayName(for: space.displayID),
-                        num: space.num,
-                        isFullscreen: false,
-                        appPath: space.appPath
-                    )
-                    if minimized || hidden {
-                        actions.append(.restoreTo(targetSpace: group))
-                    } else {
-                        actions.append(.move(targetSpace: group))
-                    }
-                }
-            }
+            actions = [.close, .minimize, .hide, .move(targetSpace: SpaceGroup(id: "", name: "", displayName: "", num: 0, isFullscreen: false)), fullscreenAction, .quit]
         }
         
         return actions
@@ -539,22 +518,32 @@ struct ListWindowsSection: Identifiable {
         
         if activeCommand?.type == .listWindows {
             switch action {
-            case .restoreTo:
-                isExecutingRestoreToImmediately = true
-                stagingWindow = window
-                commandKTargetWindow = nil
-                selectedRowIndex = 0
+            case .restoreTo(let space), .move(let space):
+                if space.name.isEmpty {
+                    isExecutingRestoreToImmediately = true
+                    stagingWindow = window
+                    commandKTargetWindow = nil
+                    selectedRowIndex = 0
+                } else {
+                    commandKTargetWindow = nil
+                    executeActionImmediately(window: window, actionType: action)
+                }
             default:
                 commandKTargetWindow = nil
                 executeActionImmediately(window: window, actionType: action)
             }
         } else {
             switch action {
-            case .restoreTo:
-                isStagingForRestoreTo = true
-                stagingWindow = window
-                commandKTargetWindow = nil
-                selectedRowIndex = 0
+            case .restoreTo(let space), .move(let space):
+                if space.name.isEmpty {
+                    isStagingForRestoreTo = true
+                    stagingWindow = window
+                    commandKTargetWindow = nil
+                    selectedRowIndex = 0
+                } else {
+                    stagedMoves[window.id] = BatchStagedAction(window: window, actionType: action)
+                    commandKTargetWindow = nil
+                }
             default:
                 stagedMoves[window.id] = BatchStagedAction(window: window, actionType: action)
                 commandKTargetWindow = nil
@@ -774,6 +763,13 @@ struct ListWindowsSection: Identifiable {
                 matchesQuery(query, target: $0.space.name, pinyin: $0.space.pinyinName)
             }
         }
+    }
+    
+    var selectedWindowForListWindows: WindowEntry? {
+        let windows = filteredWindows
+        let index = selectedRowIndex
+        guard index >= 0 && index < windows.count else { return nil }
+        return windows[index]
     }
     
     var listWindowsSections: [ListWindowsSection] {

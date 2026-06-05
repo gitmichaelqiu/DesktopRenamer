@@ -1367,7 +1367,9 @@ struct SpacesBottomBar: View {
         .frame(height: 46)
         .background(colors.bottomBarBg)
         .onPreferenceChange(WidthPreferenceKey.self) { width in
-            self.actionsWidth = width
+            withAnimation(.spring(response: 0.35, dampingFraction: 0.85)) {
+                self.actionsWidth = width
+            }
         }
     }
 }
@@ -1385,15 +1387,34 @@ struct CommandBottomBar: View {
             // Left side: Active command pill matching Raycast look
             if let active = viewModel.activeCommand {
                 HStack(spacing: 6) {
-                    Image(systemName: active.iconName)
-                        .font(.subheadline.weight(.semibold))
-                        .foregroundColor(Color.accentColor)
-                    Text(active.title)
-                        .font(.subheadline)
-                        .fontWeight(.semibold)
-                        .foregroundColor(colors.textPrimary)
+                    HStack(spacing: 6) {
+                        Image(systemName: active.iconName)
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundColor(Color.accentColor)
+                        Text(active.title)
+                            .font(.subheadline)
+                            .fontWeight(.semibold)
+                            .foregroundColor(colors.textPrimary)
+                    }
+                    .modifier(BottomBarCapsule(isSelected: false, isActive: true, colorScheme: colorScheme))
+                    
+                    if let staging = viewModel.stagingWindow {
+                        Image(systemName: "chevron.right")
+                            .font(.system(size: 9, weight: .semibold))
+                            .foregroundColor(colors.textQuaternary)
+                        
+                        HStack(spacing: 4) {
+                            Image(systemName: "square.and.arrow.down")
+                                .font(.subheadline.weight(.semibold))
+                                .foregroundColor(colors.greenText)
+                            Text(String(format: NSLocalizedString("Move: %@", comment: ""), staging.ownerName))
+                                .font(.subheadline)
+                                .fontWeight(.semibold)
+                                .foregroundColor(colors.textPrimary)
+                        }
+                        .modifier(BottomBarCapsule(isSelected: false, isActive: false, colorScheme: colorScheme))
+                    }
                 }
-                .modifier(BottomBarCapsule(isSelected: false, isActive: true, colorScheme: colorScheme))
             }
             
             Spacer()
@@ -1428,9 +1449,9 @@ struct CommandBottomBar: View {
                     }
 
                 case .listWindows:
-                    HStack(spacing: 8) {
+                    if viewModel.stagingWindow != nil {
                         HStack(spacing: 4) {
-                            Text(verbatim: String(localized: "Focus"))
+                            Text(verbatim: String(localized: "Move"))
                             Text("↵")
                                 .font(.system(.subheadline))
                                 .fontWeight(.bold)
@@ -1440,17 +1461,48 @@ struct CommandBottomBar: View {
                         .onTapGesture {
                             viewModel.executeRowAction()
                         }
-                        
-                        HStack(spacing: 4) {
-                            Text(verbatim: String(localized: "Actions"))
-                            Text("⌘K")
-                                .font(.system(.subheadline))
-                                .fontWeight(.bold)
-                        }
-                        .modifier(BottomBarCapsule(isSelected: false, isActive: false, colorScheme: colorScheme))
-                        .contentShape(Rectangle())
-                        .onTapGesture {
-                            viewModel.showCommandKPanel()
+                    } else {
+                        HStack(spacing: 8) {
+                            HStack(spacing: 4) {
+                                Text(verbatim: String(localized: "Focus"))
+                                Text("↵")
+                                    .font(.system(.subheadline))
+                                    .fontWeight(.bold)
+                            }
+                            .modifier(BottomBarCapsule(isSelected: false, isActive: false, colorScheme: colorScheme))
+                            .contentShape(Rectangle())
+                            .onTapGesture {
+                                viewModel.executeRowAction()
+                            }
+                            
+                            HStack(spacing: 4) {
+                                Text(verbatim: String(localized: "Move"))
+                                Text("⌘M")
+                                    .font(.system(.subheadline))
+                                    .fontWeight(.bold)
+                            }
+                            .modifier(BottomBarCapsule(isSelected: false, isActive: false, colorScheme: colorScheme))
+                            .contentShape(Rectangle())
+                            .onTapGesture {
+                                if let window = viewModel.selectedWindowForListWindows {
+                                    viewModel.batchMoveLastSelectedIndex = viewModel.selectedRowIndex
+                                    viewModel.stagingWindow = window
+                                    viewModel.isExecutingRestoreToImmediately = true
+                                    viewModel.selectedRowIndex = 0
+                                }
+                            }
+                            
+                            HStack(spacing: 4) {
+                                Text(verbatim: String(localized: "Actions"))
+                                Text("⌘K")
+                                    .font(.system(.subheadline))
+                                    .fontWeight(.bold)
+                            }
+                            .modifier(BottomBarCapsule(isSelected: false, isActive: false, colorScheme: colorScheme))
+                            .contentShape(Rectangle())
+                            .onTapGesture {
+                                viewModel.showCommandKPanel()
+                            }
                         }
                     }
 
@@ -1943,7 +1995,7 @@ struct CommandKActionRowView: View {
         case .quit: return NSLocalizedString("Quit", comment: "")
         case .restore: return NSLocalizedString("Restore", comment: "")
         case .restoreTo(let space): return space.name.isEmpty ? NSLocalizedString("Restore to...", comment: "") : String(format: NSLocalizedString("Restore to %@", comment: ""), space.name)
-        case .move(let space): return String(format: NSLocalizedString("Move to %@", comment: ""), space.name)
+        case .move(let space): return space.name.isEmpty ? NSLocalizedString("Move to...", comment: "") : String(format: NSLocalizedString("Move to %@", comment: ""), space.name)
         }
     }
 }
@@ -2074,37 +2126,15 @@ extension LauncherView {
                     if let chars = event.charactersIgnoringModifiers?.lowercased(), chars.count == 1 {
                         let char = chars.first!
                         
-                        if !hasShift && char == "m" {
-                            // cmd + m: Move to Current Desktop
-                            if let currentSpaceUUID = AppDelegate.shared.spaceManager?.currentSpaceUUID,
-                               let manager = AppDelegate.shared.spaceManager {
-                                if let spaceObj = manager.spaceNameDict.first(where: { $0.id == currentSpaceUUID }) {
-                                    let spaceGroup = SpaceGroup(
-                                        id: spaceObj.id,
-                                        name: manager.getSpaceName(spaceObj.id),
-                                        displayName: viewModel.getDisplayName(for: spaceObj.displayID),
-                                        num: spaceObj.num,
-                                        isFullscreen: spaceObj.isFullscreen,
-                                        appPath: spaceObj.appPath
-                                    )
-                                    let (minimized, hidden) = viewModel.isWindowMinimizedOrAppHidden(window)
-                                    if minimized || hidden {
-                                        viewModel.executeActionImmediately(window: window, actionType: .restoreTo(targetSpace: spaceGroup))
-                                    } else {
-                                        viewModel.executeActionImmediately(window: window, actionType: .move(targetSpace: spaceGroup))
-                                    }
-                                }
-                            }
+                        if char == "m" {
+                            // cmd + m: Move to Desktop... (show space selector)
+                            viewModel.batchMoveLastSelectedIndex = viewModel.selectedRowIndex
+                            viewModel.stagingWindow = window
+                            viewModel.isExecutingRestoreToImmediately = true
+                            viewModel.selectedRowIndex = 0
                             return true
                         } else if hasShift {
                             switch char {
-                            case "m":
-                                // cmd + shift + m: Move to Desktop... (show space selector)
-                                viewModel.batchMoveLastSelectedIndex = viewModel.selectedRowIndex
-                                viewModel.stagingWindow = window
-                                viewModel.isExecutingRestoreToImmediately = true
-                                viewModel.selectedRowIndex = 0
-                                return true
                             case "w":
                                 // cmd + shift + w: Close Window
                                 viewModel.executeActionImmediately(window: window, actionType: .close)
