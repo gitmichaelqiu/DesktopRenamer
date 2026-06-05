@@ -143,6 +143,9 @@
     "⌘K" : {
       "shouldTranslate" : false
     },
+    "⌘M" : {
+      "shouldTranslate" : false
+    },
     "⌥↵" : {
       "shouldTranslate" : false
     },
@@ -982,7 +985,14 @@
       }
     },
     "Focus" : {
-
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "切换"
+          }
+        }
+      }
     },
     "Focus ↵" : {
       "localizations" : {
@@ -990,17 +1000,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "聚焦 ↵"
-          }
-        }
-      }
-    },
-    "Focus Window" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "切换窗口"
           }
         }
       }
@@ -1036,7 +1035,14 @@
       }
     },
     "Fullscreen" : {
-
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "全屏"
+          }
+        }
+      }
     },
     "Fullscreen detection method" : {
       "localizations" : {
@@ -1566,6 +1572,16 @@
         }
       }
     },
+    "Move" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "移动"
+          }
+        }
+      }
+    },
     "Move the active window to a selected space" : {
       "localizations" : {
         "zh-Hans" : {
@@ -1592,16 +1608,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "加入移动队列…"
-          }
-        }
-      }
-    },
-    "Move" : {
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "移动"
           }
         }
       }
@@ -1692,6 +1698,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "按住Option以移动窗口"
+          }
+        }
+      }
+    },
+    "Move: %@" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "移动: %@"
           }
         }
       }
@@ -2233,7 +2249,14 @@
       }
     },
     "Restore to %@" : {
-
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "恢复至%@"
+          }
+        }
+      }
     },
     "Restore to..." : {
       "localizations" : {
@@ -2359,17 +2382,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "搜索"
-          }
-        }
-      }
-    },
-    "Search and focus open application windows" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "搜索并跳转到打开的应用窗口"
           }
         }
       }
