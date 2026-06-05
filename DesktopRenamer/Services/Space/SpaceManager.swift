@@ -374,13 +374,13 @@ class SpaceManager: ObservableObject {
                 self.spaceNameDict = newSpaceList
                 
                 // Update index cache with currently detected spaces.
-                // We do NOT aggressively clear the entire cache here to preserve names for displays 
+                // We do NOT aggressively clear the entire cache here to preserve names for displays
                 // that might be temporarily undetected or in a transient state.
-                var displayDesktopCounters: [String: Int] = [:]
+                var cacheCounters: [String: Int] = [:]
                 for space in self.spaceNameDict where !space.isFullscreen {
-                    let count = displayDesktopCounters[space.displayID, default: 0] + 1
-                    displayDesktopCounters[space.displayID] = count
-                    
+                    let count = cacheCounters[space.displayID, default: 0] + 1
+                    cacheCounters[space.displayID] = count
+
                     if !space.customName.isEmpty {
                         let key = "\(space.displayID)|Desktop|\(count)"
                         self.indexCache[key] = space.customName
