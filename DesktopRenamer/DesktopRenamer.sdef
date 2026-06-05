@@ -8,6 +8,11 @@
             <result type="boolean" description="The new visibility state (true = visible)"/>
         </command>
         
+        <command name="toggle launcher" code="DskRTlau" description="Toggle the launcher window visibility">
+            <cocoa class="DesktopRenamer.ToggleLauncherCommand"/>
+            <result type="boolean" description="The new visibility state (true = visible)"/>
+        </command>
+        
         <command name="toggle labels" code="DskRTLab" description="Toggle both Active &amp; Preview Label Windows">
             <cocoa class="DesktopRenamer.ToggleLabelsCommand"/>
             <result type="boolean" description="The new enabled state (true = enabled)"/>

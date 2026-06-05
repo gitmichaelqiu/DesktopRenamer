@@ -34,6 +34,16 @@ class ToggleMenubarCommand: NSScriptCommand {
     }
 }
 
+class ToggleLauncherCommand: NSScriptCommand {
+    override func performDefaultImplementation() -> Any? {
+        guard isAPIEnabled() else { return false }
+        return runOnMain {
+            LauncherWindowController.shared.toggle()
+            return LauncherWindowController.shared.window?.isVisible == true
+        }
+    }
+}
+
 
 class ToggleActiveLabelCommand: NSScriptCommand {
     override func performDefaultImplementation() -> Any? {
