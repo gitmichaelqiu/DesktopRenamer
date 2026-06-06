@@ -716,11 +716,7 @@ class SpaceLabelWindow: NSWindow {
                 }
             } else {
                 updateVisuals()
-                self.alphaValue = 1.0
                 self.animator().setFrame(NSRect(origin: newOrigin, size: newSize), display: true)
-                if (self.contentView?.alphaValue ?? 0) < 1.0 {
-                    self.contentView?.animator().alphaValue = 1.0
-                }
             }
         } else {
             updateVisuals()
