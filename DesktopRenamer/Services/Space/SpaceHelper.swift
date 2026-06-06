@@ -327,9 +327,16 @@ class SpaceHelper {
         // Cancel any pending restoration from a previous "chained" move
         restorationTask?.cancel()
         restorationTask = nil
-        
+
+        // Hide preview labels before any mouse manipulation. The later switchToSpace call
+        // also posts SpaceSwitchRequested, but in the meantime the simulated mouse events
+        // (move, down, drag) would otherwise show labels while the app window is being
+        // grabbed for the drag-move. Post immediately so labels are hidden throughout.
+        NotificationCenter.default.post(
+            name: NSNotification.Name("SpaceSwitchRequested"), object: nil)
+
         let source = CGEventSource(stateID: .hidSystemState)
-        
+
         // Session Initialization: Capture original mouse state for the initial move.
         if originalMousePoint == nil {
             isInstantDrag = forceInstant
