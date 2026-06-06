@@ -132,6 +132,7 @@ class SpaceLabelManager: ObservableObject {
     }
 
     deinit {
+        NotificationCenter.default.removeObserver(self)
         let windows = createdWindows.values
         Task { @MainActor in
             for window in windows { window.orderOut(nil) }
@@ -199,15 +200,16 @@ class SpaceLabelManager: ObservableObject {
             }
             .store(in: &cancellables)
 
-        NotificationCenter.default.publisher(for: NSNotification.Name("SpaceSwitchRequested"))
-            .receive(on: DispatchQueue.main)
-            .sink { [weak self] _ in
-                if self?.hideWhenSwitching == true {
-                    self?.hideAllPreviewLabels()
-                }
-            }
-            .store(in: &cancellables)
+        NotificationCenter.default.addObserver(
+            self, selector: #selector(handleSpaceSwitchRequested),
+            name: NSNotification.Name("SpaceSwitchRequested"), object: nil)
 
+    }
+
+    @objc private func handleSpaceSwitchRequested() {
+        if hideWhenSwitching {
+            hideAllPreviewLabels()
+        }
     }
 
     private func syncWindowsWithDict() {
