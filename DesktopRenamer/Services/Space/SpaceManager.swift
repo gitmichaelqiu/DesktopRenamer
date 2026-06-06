@@ -98,6 +98,11 @@ class SpaceManager: ObservableObject {
     
     // Display Cache
     private var connectedDisplayUUIDs: Set<String> = []
+
+    // Periodic space layout check to detect new spaces created in Mission Control
+    // without an explicit space switch event.
+    private var spaceLayoutCheckTimer: Timer?
+    private let spaceLayoutCheckInterval: TimeInterval = 5.0
     
     // Space locking state and configurations
     
@@ -203,6 +208,7 @@ class SpaceManager: ObservableObject {
         NSWorkspace.shared.notificationCenter.addObserver(self, selector: #selector(systemDidWake), name: NSWorkspace.didWakeNotification, object: nil)
         
         refreshConnectedDisplays()
+        startPeriodicSpaceLayoutCheck()
     }
     
     func toggleLockSpace(_ spaceID: String) {
@@ -216,6 +222,7 @@ class SpaceManager: ObservableObject {
     }
     
     deinit {
+        stopPeriodicSpaceLayoutCheck()
         NotificationCenter.default.removeObserver(self)
     }
     
@@ -675,7 +682,36 @@ class SpaceManager: ObservableObject {
     }
     
     func prepareForTermination() {
+        stopPeriodicSpaceLayoutCheck()
         DistributedNotificationCenter.default().postNotificationName(SpaceAPI.apiToggleNotification, object: nil, userInfo: ["isEnabled": false], deliverImmediately: true)
+    }
+
+    // MARK: - Periodic Space Layout Check
+
+    private func startPeriodicSpaceLayoutCheck() {
+        stopPeriodicSpaceLayoutCheck()
+        spaceLayoutCheckTimer = Timer.scheduledTimer(withTimeInterval: spaceLayoutCheckInterval, repeats: true) { [weak self] _ in
+            self?.checkForNewSpaces()
+        }
+    }
+
+    private func stopPeriodicSpaceLayoutCheck() {
+        spaceLayoutCheckTimer?.invalidate()
+        spaceLayoutCheckTimer = nil
+    }
+
+    /// Lightweight check that compares the current CGS space set against
+    /// spaceNameDict. If new spaces exist (e.g., created in Mission Control on an
+    /// external display) without a space switch having occurred, triggers a full
+    /// detection refresh to pick them up.
+    private func checkForNewSpaces() {
+        guard detectionMethod == .automatic else { return }
+        guard let cgsState = SpaceHelper.getSystemState() else { return }
+        let cgsIDs = Set(cgsState.spaces.map { $0.id })
+        let currentIDs = Set(spaceNameDict.map { $0.id })
+        guard cgsIDs != currentIDs else { return }
+        print("SpaceManager: Detected space layout change (CGS: \(cgsIDs.count) vs cached: \(currentIDs.count)). Refreshing...")
+        refreshSpaceState()
     }
     
     private func loadSavedData() {
