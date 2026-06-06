@@ -199,7 +199,8 @@ class SpaceLabelWindow: NSWindow {
         // Collection Behavior
         // Note: .canJoinAllSpaces is excluded as it interferes with space switching.
         // .fullScreenAuxiliary is retained to allow visibility over fullscreen apps.
-        self.collectionBehavior = [.managed, .participatesInCycle, .fullScreenAuxiliary, .ignoresCycle]
+        // .ignoresCycle prevents label windows from appearing in Alt+Tab window cycling.
+        self.collectionBehavior = [.managed, .fullScreenAuxiliary, .ignoresCycle]
 
         // Observers
         self.spaceManager.$spaceNameDict
@@ -982,6 +983,16 @@ class SpaceLabelWindow: NSWindow {
                     self.hasOrderedInOnce = true
                 } else {
                     print("SpaceLabelWindow[\(self.spaceId)]: Suppressing orderFrontRegardless (Preview) during switch cooling period (\(String(format: "%.2f", timeSinceSwitch))s). Scheduling retry.")
+                    scheduleVisibilityRetry(delay: 0.3 - timeSinceSwitch + 0.1)
+                }
+            } else if !self.isVisible {
+                // Safety: Window was ordered out externally (e.g., by switchByActivatingOwnWindow
+                // which hides other labels via orderOut during drag-based switching).
+                // Preview labels only order front once, so re-order it now to recover.
+                if !inCoolingPeriod {
+                    print("SpaceLabelWindow[\(self.spaceId)]: orderFrontRegardless() for background preview (re-order after external orderOut).")
+                    self.orderFrontRegardless()
+                } else {
                     scheduleVisibilityRetry(delay: 0.3 - timeSinceSwitch + 0.1)
                 }
             }
