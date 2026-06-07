@@ -60,7 +60,60 @@ class SpaceHelper {
     private static var draggedWindowBundleID: String? = nil
     private static var draggedWindowAppName: String? = nil
     static var isDragging: Bool { originalMousePoint != nil }
-    
+
+    // Self-calibrating velocity system: measures switch completion time per display
+    // and computes a velocity multiplier so external displays match the built-in speed.
+    private static var gestureTimingStart: TimeInterval = 0
+    private static var gestureTimingDisplayID: String = ""
+    // Rolling window of switch durations keyed by display identifier.
+    private static var switchDurations: [String: [TimeInterval]] = [:]
+    private static let calibrationMaxSamples = 5
+    // Baseline = average switch time on the built-in display.
+    private static var baselineDuration: TimeInterval = 0
+
+    /// Call this when a gesture-based space switch starts.
+    static func beginGestureTiming(for displayID: String) {
+        gestureTimingStart = Date().timeIntervalSince1970
+        gestureTimingDisplayID = displayID
+    }
+
+    /// Call this when the space change completes (activeSpaceDidChangeNotification).
+    /// Stores the measured duration and updates the baseline if this was the built-in display.
+    static func endGestureTiming() {
+        guard gestureTimingStart > 0, !gestureTimingDisplayID.isEmpty else { return }
+        let duration = Date().timeIntervalSince1970 - gestureTimingStart
+        let displayID = gestureTimingDisplayID
+
+        var samples = switchDurations[displayID, default: []]
+        samples.append(duration)
+        if samples.count > calibrationMaxSamples { samples.removeFirst() }
+        switchDurations[displayID] = samples
+
+        // If this is the built-in display, update the baseline
+        for screen in NSScreen.screens {
+            guard let screenID = screen.deviceDescription[NSDeviceDescriptionKey("NSScreenNumber")] as? CGDirectDisplayID else { continue }
+            guard CGDisplayIsBuiltin(screenID) != 0 else { continue }
+            let uuidStr = CGDisplayCreateUUIDFromDisplayID(screenID).map { CFUUIDCreateString(nil, $0.takeRetainedValue()) as String }
+            if uuidStr?.uppercased() == displayID.uppercased() || "\(screenID)" == displayID {
+                baselineDuration = samples.reduce(0, +) / Double(samples.count)
+                break
+            }
+        }
+
+        gestureTimingStart = 0
+        gestureTimingDisplayID = ""
+    }
+
+    /// Returns a velocity multiplier so this display's switch time
+    /// approximately matches the built-in display baseline.
+    static func multiplierForDisplay(_ displayID: String) -> Double {
+        guard baselineDuration > 0 else { return 1.0 }
+        guard let samples = switchDurations[displayID], !samples.isEmpty else { return 1.0 }
+        let avg = samples.reduce(0, +) / Double(samples.count)
+        let ratio = avg / baselineDuration
+        return max(1.0, min(ratio, 5.0))
+    }
+
     // Minimum width and height for a window to be considered a regular app window in getActiveWindowInfo (filtering out small system utilities/status items).
     private static let minActiveWindowWidth: CGFloat = 100
     private static let minActiveWindowHeight: CGFloat = 100
@@ -274,24 +327,24 @@ class SpaceHelper {
     
     static func performSpaceSwitchGesture(steps: Int, targetDisplayID: String, isInstant: Bool) {
         if steps == 0 { return }
-        
-        let directionRight = steps > 0 
+
+        let directionRight = steps > 0
         let absSteps = abs(steps)
-        
-        // Use high velocity for instant switch (2000.0), lower for "normal" gesture-based switch (e.g. 50.0).
-        // Adjust the 50.0 value below to change the transition speed when "Instant Switch" is disabled.
+
+        // Record timing for self-calibrating velocity.
+        beginGestureTiming(for: targetDisplayID)
+
         let baseVelocity = isInstant ? 2000.0 : 52.0
 
 
-        // Resolve target display via NSScreen and compute velocity with external-display multiplier.
-        var displayMultiplier: Double = 1.0
+        // Resolve target display via NSScreen and apply self-calibrated velocity multiplier.
+        var displayMultiplier = multiplierForDisplay(targetDisplayID)
         var targetScreen: NSScreen?
         for screen in NSScreen.screens {
             guard let screenID = screen.deviceDescription[NSDeviceDescriptionKey("NSScreenNumber")] as? CGDirectDisplayID else { continue }
             if CGDisplayCreateUUIDFromDisplayID(screenID).map({ CFUUIDCreateString(nil, $0.takeRetainedValue()) as String })?.uppercased() == targetDisplayID.uppercased()
                 || "\(screenID)" == targetDisplayID {
                 targetScreen = screen
-                if CGDisplayIsBuiltin(screenID) == 0 { displayMultiplier = 1.5 }
                 break
             }
         }
@@ -1470,6 +1523,9 @@ class SpaceHelper {
     }
 
     static func detectSpaceChange() {
+        // Record switch completion time for self-calibrating velocity.
+        endGestureTiming()
+
         getRawSpaceUUID { spaceUUID, isDesktop, ncCnt, displayID in
             onSpaceChange?(spaceUUID, isDesktop, ncCnt, displayID)
         }
