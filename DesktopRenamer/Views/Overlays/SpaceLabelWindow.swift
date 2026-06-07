@@ -939,7 +939,10 @@ class SpaceLabelWindow: NSWindow {
         // hidden — switchByActivatingOwnWindow may have already ordered it front and made it key.
         // Use a longer cooling period on multi-display setups where animations
         // (especially on external displays) may take longer to complete.
-        let coolingPeriod: TimeInterval = (NSScreen.screens.count > 1) ? 0.5 : 0.3
+        // Drag-based switches (window moves) are slower because they fall through to
+        // switchByActivatingOwnWindow instead of the gesture method. Use a longer
+        // cooling period so labels don't appear before the animation completes.
+        let coolingPeriod: TimeInterval = SpaceHelper.isDragging ? 0.6 : 0.3
         if labelManager?.hideWhenSwitching == true {
             let now = Date().timeIntervalSince1970
             let timeSinceSwitch = now - SpaceHelper.lastProgrammaticSwitchTime
@@ -963,7 +966,10 @@ class SpaceLabelWindow: NSWindow {
             // and calling orderFrontRegardless on the WRONG monitor causes a "snap-back".
             let now = Date().timeIntervalSince1970
             let timeSinceSwitch = now - SpaceHelper.lastProgrammaticSwitchTime
-            let coolingPeriod: TimeInterval = (NSScreen.screens.count > 1) ? 0.5 : 0.3
+            // Drag-based switches (window moves) are slower because they fall through to
+        // switchByActivatingOwnWindow instead of the gesture method. Use a longer
+        // cooling period so labels don't appear before the animation completes.
+        let coolingPeriod: TimeInterval = SpaceHelper.isDragging ? 0.6 : 0.3
             let inCoolingPeriod = timeSinceSwitch < coolingPeriod
 
             if self.isActiveMode {
