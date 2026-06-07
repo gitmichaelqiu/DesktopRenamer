@@ -200,10 +200,9 @@ class SpaceHelper {
             // If we are already on the target space, stop.
             if state.currentUUID == spaceID { return }
             
-            // Gesture-based Space Switch handling.
-            // Always use this when possible — it avoids involving label windows
-            // (which can cause snap-back) and works during drag operations too.
-            if let targetSpace = state.spaces.first(where: { $0.id == spaceID }) {
+            // Gesture-based Space Switch handling
+            // We use the gesture method for all normal switches (no window moving).
+            if !isDragging, let targetSpace = state.spaces.first(where: { $0.id == spaceID }) {
                 let displayID = targetSpace.displayID
                 if let liveCurrentID = getCurrentSpaceID(for: displayID) {
                     let displaySpaces = state.spaces
@@ -319,14 +318,17 @@ class SpaceHelper {
         // This forces the OS to switch to the target window.
         // For Fullscreen targets: We MUST NOT hide the desktop window. Doing so removes the app's
         // anchor on the main desktop, causing the OS to panic and revert to the previous space.
-        if !isFullscreen {
+        // During drag operations labels are already alpha=0 from hideImmediately, so skip.
+        if !isFullscreen, !isDragging {
             for other in windowsToHide {
                 other.orderOut(nil)
             }
         }
 
-        // Force window activation.
-        window.orderFrontRegardless()
+        // Activate the app on the target window's space.
+        // makeKey already orders the window forward; orderFrontRegardless is
+        // redundant and makes the label aggressively frontmost, acting as an
+        // anchor that can cause the OS to snap back to this space later.
         window.canBecomeKeyOverride = true
         window.makeKey()
         window.canBecomeKeyOverride = false
