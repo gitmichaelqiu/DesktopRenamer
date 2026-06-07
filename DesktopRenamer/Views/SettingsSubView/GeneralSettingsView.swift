@@ -191,15 +191,6 @@ struct GeneralSettingsView: View {
             .environment(\.settingsTab, .general)
         }
         .onAppear { launchAtLogin = getLaunchAtLoginState() }
-        .sheet(
-    }
-
-        guard let window = NSApp.keyWindow else {
-            alert.runModal()
-            return
-        }
-
-        alert.beginSheetModal(for: window) { _ in }
     }
 
     private func getLaunchAtLoginState() -> Bool {
