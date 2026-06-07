@@ -130,7 +130,7 @@ struct SpaceEditView: View {
                         HStack(spacing: 10) {
                             spaceNumberView(for: space).frame(width: 30, alignment: .leading)
                             spaceNameEditor(for: space).frame(maxWidth: .infinity)
-                            actionButtons(for: space).frame(width: 40, alignment: .trailing)
+                            actionButtons(for: space).frame(width: 20, alignment: .trailing)
                         }
                         .padding(.horizontal, 12)
                         .padding(.vertical, 6)
