@@ -250,18 +250,6 @@ struct SwitchSettingsView: View {
                     if gestureManager.isEnabled {
                         Divider()
 
-                        SliderSettingsRow(
-                            "Target switch duration",
-                            helperText: "Set to 0 for instant switching (bypasses the macOS sliding animation). Otherwise the velocity is calibrated per display (cached across restarts) so the actual switch time converges to this value.",
-                            value: $gestureManager.switchDuration,
-                            range: 0...1.0,
-                            defaultValue: 0.25,
-                            step: 0.05,
-                            valueString: { $0 == 0 ? "Instant" : String(format: "%.2fs", $0) }
-                        )
-
-                        Divider()
-
                         SettingsRow("Gesture type", helperText: "When set to 3 fingers, you can still use 4 fingers to trigger native swipe.") {
                             Picker("", selection: $gestureManager.fingerCount) {
                                 Text("3 Fingers").tag(3)
@@ -292,6 +280,18 @@ struct SwitchSettingsView: View {
                                 .labelsHidden()
                         }
                         
+                        Divider()
+
+                        SliderSettingsRow(
+                            "Target switch duration",
+                            helperText: "Set to 0 for instant switching (bypasses the macOS sliding animation). Otherwise the velocity is calibrated per display (cached across restarts) so the actual switch time converges to this value.",
+                            value: $gestureManager.switchDuration,
+                            range: 0...1.0,
+                            defaultValue: 0.25,
+                            step: 0.05,
+                            valueString: { $0 == 0 ? "Instant" : String(format: "%.2fs", $0) }
+                        )
+
                         Divider()
                         
                         SliderSettingsRow(
