@@ -199,7 +199,8 @@ class SpaceLabelWindow: NSWindow {
         // Collection Behavior
         // Note: .canJoinAllSpaces is excluded as it interferes with space switching.
         // .fullScreenAuxiliary is retained to allow visibility over fullscreen apps.
-        self.collectionBehavior = [.managed, .participatesInCycle, .fullScreenAuxiliary, .ignoresCycle]
+        // .ignoresCycle prevents label windows from appearing in Alt+Tab window cycling.
+        self.collectionBehavior = [.managed, .fullScreenAuxiliary, .ignoresCycle]
 
         // Observers
         self.spaceManager.$spaceNameDict
@@ -715,11 +716,7 @@ class SpaceLabelWindow: NSWindow {
                 }
             } else {
                 updateVisuals()
-                self.alphaValue = 1.0
                 self.animator().setFrame(NSRect(origin: newOrigin, size: newSize), display: true)
-                if (self.contentView?.alphaValue ?? 0) < 1.0 {
-                    self.contentView?.animator().alphaValue = 1.0
-                }
             }
         } else {
             updateVisuals()
@@ -937,14 +934,19 @@ class SpaceLabelWindow: NSWindow {
             isVisuallyVisible = labelManager?.showPreviewLabels ?? true
         }
         
-        // Robust Fix: Suppress preview labels during space transitions if hideWhenSwitching is enabled.
-        if !isActiveMode && labelManager?.hideWhenSwitching == true {
+        // Robust Fix: Suppress all labels during space transitions when hideWhenSwitching is enabled.
+        // Previously only preview labels were suppressed, but the active label also needs to stay
+        // hidden — switchByActivatingOwnWindow may have already ordered it front and made it key.
+        // Use a longer cooling period on multi-display setups where animations
+        // (especially on external displays) may take longer to complete.
+        let coolingPeriod: TimeInterval = 0.3
+        if labelManager?.hideWhenSwitching == true {
             let now = Date().timeIntervalSince1970
             let timeSinceSwitch = now - SpaceHelper.lastProgrammaticSwitchTime
-            if timeSinceSwitch < 0.3 {
-                print("SpaceLabelWindow[\(self.spaceId)]: Suppressing preview label visibility during switch transition (\(String(format: "%.2f", timeSinceSwitch))s).")
+            if timeSinceSwitch < coolingPeriod {
+                print("SpaceLabelWindow[\(self.spaceId)]: Suppressing label visibility during switch transition (\(String(format: "%.2f", timeSinceSwitch))s).")
                 isVisuallyVisible = false
-                scheduleVisibilityRetry(delay: 0.3 - timeSinceSwitch + 0.1)
+                scheduleVisibilityRetry(delay: coolingPeriod - timeSinceSwitch + 0.1)
             }
         }
 
@@ -961,8 +963,9 @@ class SpaceLabelWindow: NSWindow {
             // and calling orderFrontRegardless on the WRONG monitor causes a "snap-back".
             let now = Date().timeIntervalSince1970
             let timeSinceSwitch = now - SpaceHelper.lastProgrammaticSwitchTime
-            let inCoolingPeriod = timeSinceSwitch < 0.3
-            
+            let coolingPeriod: TimeInterval = 0.3
+            let inCoolingPeriod = timeSinceSwitch < coolingPeriod
+
             if self.isActiveMode {
                 if !self.isVisible {
                     if !inCoolingPeriod {
@@ -971,7 +974,7 @@ class SpaceLabelWindow: NSWindow {
                         self.hasOrderedInOnce = true
                     } else {
                         print("SpaceLabelWindow[\(self.spaceId)]: Suppressing orderFrontRegardless (Active) during switch cooling period (\(String(format: "%.2f", timeSinceSwitch))s). Scheduling retry.")
-                        scheduleVisibilityRetry(delay: 0.3 - timeSinceSwitch + 0.1)
+                        scheduleVisibilityRetry(delay: coolingPeriod - timeSinceSwitch + 0.1)
                     }
                 }
             } else if !hasOrderedInOnce {
@@ -982,12 +985,24 @@ class SpaceLabelWindow: NSWindow {
                     self.hasOrderedInOnce = true
                 } else {
                     print("SpaceLabelWindow[\(self.spaceId)]: Suppressing orderFrontRegardless (Preview) during switch cooling period (\(String(format: "%.2f", timeSinceSwitch))s). Scheduling retry.")
-                    scheduleVisibilityRetry(delay: 0.3 - timeSinceSwitch + 0.1)
+                    scheduleVisibilityRetry(delay: coolingPeriod - timeSinceSwitch + 0.1)
+                }
+            } else if !self.isVisible {
+                // Safety: Window was ordered out externally (e.g., by switchByActivatingOwnWindow
+                // which hides other labels via orderOut during drag-based switching).
+                // Preview labels only order front once, so re-order it now to recover.
+                if !inCoolingPeriod {
+                    print("SpaceLabelWindow[\(self.spaceId)]: orderFrontRegardless() for background preview (re-order after external orderOut).")
+                    self.orderFrontRegardless()
+                } else {
+                    scheduleVisibilityRetry(delay: coolingPeriod - timeSinceSwitch + 0.1)
                 }
             }
         }
 
-        self.alphaValue = 1.0
+        if isVisuallyVisible {
+            self.alphaValue = 1.0
+        }
         let targetContentAlpha: CGFloat = isVisuallyVisible ? 1.0 : 0.0
 
         if animated {
@@ -1010,7 +1025,7 @@ class SpaceLabelWindow: NSWindow {
 
     private func scheduleVisibilityRetry(delay: TimeInterval) {
         let task = DispatchWorkItem { [weak self] in
-            self?.updateVisibility(animated: true)
+            self?.updateVisibility(animated: false)
         }
         self.pendingVisibilityTask = task
         DispatchQueue.main.asyncAfter(deadline: .now() + max(0.01, delay), execute: task)

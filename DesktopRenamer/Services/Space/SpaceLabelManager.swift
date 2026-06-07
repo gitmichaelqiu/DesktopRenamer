@@ -74,6 +74,7 @@ class SpaceLabelManager: ObservableObject {
     private var createdWindows: [String: SpaceLabelWindow] = [:]
     private weak var spaceManager: SpaceManager?
     private var cancellables = Set<AnyCancellable>()
+    private var delayedRestoreWorkItem: DispatchWorkItem?
 
     init(spaceManager: SpaceManager) {
         self.spaceManager = spaceManager
@@ -132,6 +133,7 @@ class SpaceLabelManager: ObservableObject {
     }
 
     deinit {
+        NotificationCenter.default.removeObserver(self)
         let windows = createdWindows.values
         Task { @MainActor in
             for window in windows { window.orderOut(nil) }
@@ -176,15 +178,36 @@ class SpaceLabelManager: ObservableObject {
             .dropFirst()
             .receive(on: DispatchQueue.main)
             .sink { [weak self] _ in
-                if self?.hideWhenSwitching == true {
-                    self?.hideAllPreviewLabels()
+                guard let self = self else { return }
+                // Cancel any pending delayed restore from a previous rapid switch
+                // so the old restore doesn't fire in the middle of a new transition.
+                self.delayedRestoreWorkItem?.cancel()
+                self.delayedRestoreWorkItem = nil
+
+                if self.hideWhenSwitching {
+                    let isRecent = Date().timeIntervalSince1970 - SpaceHelper.lastProgrammaticSwitchTime < 1.0
+                    if isRecent {
+                        // Programmatic switch: labels were already hidden by
+                        // handleSpaceSwitchRequested before the animation started.
+                        // Skip immediate restore — the settling delay handles it.
+                        self.hideAllPreviewLabels()
+                    } else {
+                        // Native OS switch (app activation, Cmd+Tab): no
+                        // SpaceSwitchRequested was posted, show labels normally.
+                        self.updateAllWindowModes(forDisplay: self.spaceManager?.currentDisplayID)
+                    }
+                } else {
+                    self.updateAllWindowModes(forDisplay: self.spaceManager?.currentDisplayID)
                 }
-                self?.updateAllWindowModes(forDisplay: self?.spaceManager?.currentDisplayID)
-                
-                Task { @MainActor in
-                    try? await Task.sleep(nanoseconds: 600_000_000)
-                    self?.updateAllWindowModes(forDisplay: self?.spaceManager?.currentDisplayID)
+
+                let workItem = DispatchWorkItem { [weak self] in
+                    // Restore ALL displays — hideAllPreviewLabels hid everything,
+                    // and when hideWhenSwitching is on the current display was not
+                    // restored either. This unfiltered call is the sole restore point.
+                    self?.updateAllWindowModes()
                 }
+                self.delayedRestoreWorkItem = workItem
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.6, execute: workItem)
             }
             .store(in: &cancellables)
 
@@ -192,35 +215,52 @@ class SpaceLabelManager: ObservableObject {
             .receive(on: DispatchQueue.main)
             .sink { [weak self] _ in
                 self?.recalculateUnifiedSize()
-                self?.syncWindowsWithDict()
+                // When hideWhenSwitching is on, don't restore labels here —
+                // the settling delay in the currentSpaceUUID observer is
+                // the sole restore point. syncWindowsWithDict still creates
+                // and removes windows, it just skips the final updateAllWindowModes.
+                self?.syncWindowsWithDict(updateModes: self?.hideWhenSwitching != true)
             }
             .store(in: &cancellables)
 
-        NotificationCenter.default.publisher(for: NSNotification.Name("SpaceSwitchRequested"))
-            .receive(on: DispatchQueue.main)
-            .sink { [weak self] _ in
-                if self?.hideWhenSwitching == true {
-                    self?.hideAllPreviewLabels()
-                }
-            }
-            .store(in: &cancellables)
+        NotificationCenter.default.addObserver(
+            self, selector: #selector(handleSpaceSwitchRequested),
+            name: NSNotification.Name("SpaceSwitchRequested"), object: nil)
 
     }
 
-    private func syncWindowsWithDict() {
+    @objc private func handleSpaceSwitchRequested() {
+        // Cancel any pending delayed restore from a previous switch at the START
+        // of each new switch (before currentSpaceUUID changes), so the old
+        // restore never fires mid-transition of the next switch.
+        // This may be called from a background thread (GestureManager's MT callback),
+        // so dispatch to main for thread-safe access.
+        DispatchQueue.main.async { [weak self] in
+            guard let self = self else { return }
+            self.delayedRestoreWorkItem?.cancel()
+            self.delayedRestoreWorkItem = nil
+            if self.hideWhenSwitching {
+                self.hideAllPreviewLabels()
+            }
+        }
+    }
+
+    private func syncWindowsWithDict(updateModes: Bool = true) {
         guard let spaceManager = spaceManager else { return }
         let allSpaces = spaceManager.spaceNameDict
-        
+
         // Add windows for new spaces.
         for space in allSpaces {
-            ensureWindow(for: space.id, name: space.customName, displayID: space.displayID)
+            ensureWindow(for: space.id, name: space.customName, displayID: space.displayID, updateMode: updateModes)
         }
-        
+
         // Remove windows for spaces that no longer exist.
         cleanupRedundantWindows()
-        
-        // Update window modes to ensure consistent visibility.
-        updateAllWindowModes()
+
+        // Only restore label modes when hideWhenSwitching is off.
+        if updateModes {
+            updateAllWindowModes()
+        }
     }
 
     // Removes windows for obsolete spaces.
@@ -290,18 +330,9 @@ class SpaceLabelManager: ObservableObject {
     }
 
     private func updateAllWindowModes(forDisplay displayID: String? = nil) {
-        let detectionMethod = spaceManager?.detectionMethod
-        if detectionMethod == .automatic {
-            Task { @MainActor in
-                let visibleUUIDs = SpaceHelper.getVisibleSystemSpaceIDs()
-                self.applyVisibility(visibleUUIDs, forDisplay: displayID)
-            }
-        } else {
-            SpaceHelper.getVisibleSpaceUUIDs { [weak self] visibleUUIDs in
-                Task { @MainActor [weak self] in
-                    self?.applyVisibility(visibleUUIDs, forDisplay: displayID)
-                }
-            }
+        Task { @MainActor in
+            let visibleUUIDs = SpaceHelper.getVisibleSystemSpaceIDs()
+            self.applyVisibility(visibleUUIDs, forDisplay: displayID)
         }
     }
 
@@ -351,36 +382,30 @@ class SpaceLabelManager: ObservableObject {
             // created on the 'source' desktop instead of the 'destination' fullscreen app.
             try? await Task.sleep(nanoseconds: 500_000_000)
 
-            if spaceManager?.detectionMethod == .automatic {
-                guard let state = SpaceHelper.getSystemState() else { return }
-                if state.currentUUID == spaceId {
-                    self.ensureWindow(for: spaceId, name: name, displayID: state.displayID)
-                }
-            } else {
-                SpaceHelper.getRawSpaceUUID { [weak self] confirmedSpaceId, _, _, liveDisplayID in
-                    Task { @MainActor [weak self] in
-                        if confirmedSpaceId == spaceId {
-                            self?.ensureWindow(for: spaceId, name: name, displayID: liveDisplayID)
-                        }
-                    }
-                }
+            guard let state = SpaceHelper.getSystemState() else { return }
+            if state.currentUUID == spaceId {
+                self.ensureWindow(for: spaceId, name: name, displayID: state.displayID)
             }
         }
     }
 
     // Asserts that a window exists for the specified space, refreshing if already present.
-    private func ensureWindow(for spaceId: String, name: String, displayID: String) {
+    private func ensureWindow(for spaceId: String, name: String, displayID: String, updateMode: Bool = true) {
         if let existingWindow = createdWindows[spaceId] {
             if existingWindow.displayID != displayID {
                 existingWindow.orderOut(nil)
                 createdWindows.removeValue(forKey: spaceId)
             } else {
                 // BUG FIX: Even if the window exists and is visible, we MUST update its mode
-                // (Active vs Preview) and refresh its appearance. Otherwise, labels can 
+                // (Active vs Preview) and refresh its appearance. Otherwise, labels can
                 // get stuck in Preview mode when returning from fullscreen.
-                let isCurrent = (spaceId == spaceManager?.currentSpaceUUID)
-                existingWindow.setMode(isCurrentSpace: isCurrent)
-                existingWindow.refreshAppearance()
+                // During a switch (updateMode: false), skip this — setMode + refreshAppearance
+                // both call updateVisibility which can make labels visible prematurely.
+                if updateMode {
+                    let isCurrent = (spaceId == spaceManager?.currentSpaceUUID)
+                    existingWindow.setMode(isCurrentSpace: isCurrent)
+                    existingWindow.refreshAppearance()
+                }
                 return
             }
         }

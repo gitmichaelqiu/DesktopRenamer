@@ -1,6 +1,7 @@
 import AppKit
 import CoreGraphics
 import Foundation
+import SwiftUI
 
 @_silgen_name("_CGSDefaultConnection") private func _CGSDefaultConnection() -> Int32
 @_silgen_name("CGSCopyManagedDisplaySpaces") private func CGSCopyManagedDisplaySpaces(_ cid: Int32)
@@ -24,20 +25,13 @@ private func CGSOrderWindow(_ cid: Int32, _ windowID: UInt32, _ op: Int32, _ rel
 
 class SpaceHelper {
 
-    static var fullscreenThreshold: Int {
-        get {
-            UserDefaults.standard.integer(
-                forKey: "com.michaelqiu.desktoprenamer.fullscreenthreshold")
-        }
-        set {
-            UserDefaults.standard.set(
-                newValue, forKey: "com.michaelqiu.desktoprenamer.fullscreenthreshold")
-        }
-    }
-
     private static var onSpaceChange: ((String, Bool, Int, String) -> Void)?
     private static var globalEventMonitor: Any?
     private static var localEventMonitor: Any?
+
+    // Tokens for block-based notification observers (required for proper cleanup).
+    private static var spaceChangeObserver: NSObjectProtocol?
+    private static var appActivationObserver: NSObjectProtocol?
 
     // Tracks switching state to prevent recursion during transitions.
     private static var isSwitching = false
@@ -49,8 +43,140 @@ class SpaceHelper {
     private static var restorationTask: DispatchWorkItem? = nil
     private static var pendingMoveCount = 0
     private static var isInstantDrag = false
+    private static var targetSpaceID: String? = nil
+    private static var draggedWindowID: Int? = nil
+    private static var draggedWindowPID: Int32? = nil
+    private static var draggedWindowBundleID: String? = nil
+    private static var draggedWindowAppName: String? = nil
     static var isDragging: Bool { originalMousePoint != nil }
-    
+
+    // Velocity calibration — adjusts multiplier per display so measured switch
+    // time converges to the user-configured target duration (default 0.35s).
+    // Multipliers are cached in UserDefaults for persistence across restarts.
+    // Two-point calibration: measures switch time at velocity 52 (native) and
+    // at velocity 104 (2×), then computes the actual non-linear exponent p from
+    // the two data points.  This gives an accurate velocity multiplier for any
+    private static var gestureTimingStart: TimeInterval = 0
+    private static var gestureTimingDisplayID: String = ""
+
+    private static let calibrationKey = "GestureManager.CachedCalibrations"
+    private static let targetDurationKey = "GestureManager.SwitchDuration"
+    private static let defaultTargetDuration: TimeInterval = 0.30
+    private static let minMultiplier: Double = 0.1
+    private static let maxMultiplier: Double = 10.0
+
+    /// The user's target switch duration — 0 means instant mode.
+    static var targetDuration: TimeInterval {
+        guard UserDefaults.standard.object(forKey: targetDurationKey) != nil else {
+            return defaultTargetDuration
+        }
+        return UserDefaults.standard.double(forKey: targetDurationKey)
+    }
+
+    struct DisplayCalibration: Codable {
+        var avg52: Double
+        var avg104: Double
+    }
+
+    // Cached calibrations keyed by display (direction-agnostic).
+    private static var displayCalibrations: [String: DisplayCalibration] = {
+        guard let data = UserDefaults.standard.data(forKey: calibrationKey),
+              let dict = try? JSONDecoder().decode([String: DisplayCalibration].self, from: data)
+        else { return [:] }
+        return dict
+    }()
+
+    // Phase 1: 3 samples at velocity 52. Phase 2: 3 samples at velocity 104.
+    private static var phase1Samples: [String: [TimeInterval]] = [:]
+    private static var phase2Samples: [String: [TimeInterval]] = [:]
+    private static let phaseSamplesNeeded = 3
+    private static let phase1Velocity: Double = 52.0
+    private static let phase2Velocity: Double = 104.0
+
+    /// Returns a stable velocity multiplier based on empirical curve.
+    static func multiplierForDisplay(_ displayID: String) -> Double {
+        let target = targetDuration
+        guard target > 0 else { return 1.0 }
+        
+        guard let cal = displayCalibrations[displayID] else { return 1.0 }
+        
+        let p = log(cal.avg52 / cal.avg104) / log(0.5)
+        let clampedP = min(-0.1, max(-3.0, p))
+        
+        let ratio = target / cal.avg52
+        let multiplier = pow(ratio, 1.0 / clampedP)
+        return max(minMultiplier, min(maxMultiplier, multiplier))
+    }
+
+    /// Returns the velocity to use for the current calibration phase.
+    static func velocityForPhase(displayID: String) -> Double {
+        if displayCalibrations[displayID] != nil {
+            return phase1Velocity * multiplierForDisplay(displayID)
+        }
+        
+        let phase1Count = phase1Samples[displayID]?.count ?? 0
+        let phase2Count = phase2Samples[displayID]?.count ?? 0
+        
+        if phase1Count < phaseSamplesNeeded { return phase1Velocity }
+        if phase2Count < phaseSamplesNeeded { return phase2Velocity }
+        
+        return phase1Velocity * multiplierForDisplay(displayID)
+    }
+
+    static func beginGestureTiming(for displayID: String) {
+        gestureTimingStart = Date().timeIntervalSince1970
+        gestureTimingDisplayID = displayID
+    }
+
+    static func endGestureTiming() {
+        guard gestureTimingStart > 0, !gestureTimingDisplayID.isEmpty else { return }
+        
+        let duration = Date().timeIntervalSince1970 - gestureTimingStart
+        let displayID = gestureTimingDisplayID
+        
+        // Reset state
+        gestureTimingStart = 0
+        gestureTimingDisplayID = ""
+        
+        // Sanity check
+        guard duration > 0.05 && duration < 2.0 else { return }
+
+        // If already calibrated, no need to record samples
+        if displayCalibrations[displayID] != nil { return }
+
+        let phase1Count = phase1Samples[displayID]?.count ?? 0
+        let phase2Count = phase2Samples[displayID]?.count ?? 0
+
+        if phase1Count < phaseSamplesNeeded {
+            var s = phase1Samples[displayID, default: []]
+            s.append(duration)
+            phase1Samples[displayID] = s
+        } else if phase2Count < phaseSamplesNeeded {
+            var s = phase2Samples[displayID, default: []]
+            s.append(duration)
+            phase2Samples[displayID] = s
+        }
+
+        tryLockCalibration(for: displayID)
+    }
+
+    private static func tryLockCalibration(for displayID: String) {
+        guard displayCalibrations[displayID] == nil else { return }
+
+        let p1 = phase1Samples[displayID] ?? []
+        let p2 = phase2Samples[displayID] ?? []
+        guard p1.count >= phaseSamplesNeeded, p2.count >= phaseSamplesNeeded else { return }
+
+        let avg52 = p1.reduce(0, +) / Double(p1.count)
+        let avg104 = p2.reduce(0, +) / Double(p2.count)
+        guard avg52 > 0, avg104 > 0 else { return }
+
+        displayCalibrations[displayID] = DisplayCalibration(avg52: avg52, avg104: avg104)
+        if let data = try? JSONEncoder().encode(displayCalibrations) {
+            UserDefaults.standard.set(data, forKey: calibrationKey)
+        }
+    }
+
     // Minimum width and height for a window to be considered a regular app window in getActiveWindowInfo (filtering out small system utilities/status items).
     private static let minActiveWindowWidth: CGFloat = 100
     private static let minActiveWindowHeight: CGFloat = 100
@@ -108,18 +234,16 @@ class SpaceHelper {
             // We use the gesture method for all normal switches (no window moving).
             if !isDragging, let targetSpace = state.spaces.first(where: { $0.id == spaceID }) {
                 let displayID = targetSpace.displayID
-                let isInstant = AppDelegate.shared.spaceManager?.instantSpaceSwitch == true
-                
                 if let liveCurrentID = getCurrentSpaceID(for: displayID) {
                     let displaySpaces = state.spaces
                         .filter { $0.displayID == displayID }
                         .sorted { $0.num < $1.num }
-                    
+
                     if let currentIndex = displaySpaces.firstIndex(where: { $0.id == liveCurrentID }),
                        let targetIndex = displaySpaces.firstIndex(where: { $0.id == spaceID }) {
                         let steps = targetIndex - currentIndex
                         if steps != 0 {
-                            performSpaceSwitchGesture(steps: steps, targetDisplayID: displayID, isInstant: isInstant || forceInstant)
+                            performSpaceSwitchGesture(steps: steps, targetDisplayID: displayID, forceInstant: forceInstant)
                             return
                         }
                     }
@@ -224,13 +348,16 @@ class SpaceHelper {
         // This forces the OS to switch to the target window.
         // For Fullscreen targets: We MUST NOT hide the desktop window. Doing so removes the app's
         // anchor on the main desktop, causing the OS to panic and revert to the previous space.
-        if !isFullscreen {
+        // During drag operations labels are already alpha=0 from hideImmediately, so skip.
+        if !isFullscreen, !isDragging {
             for other in windowsToHide {
                 other.orderOut(nil)
             }
         }
 
-        // Force window activation.
+        // Force window activation. orderFrontRegardless is critical —
+        // without it the OS doesn't recognise the space switch intent
+        // and the move silently fails.
         window.orderFrontRegardless()
         window.canBecomeKeyOverride = true
         window.makeKey()
@@ -262,39 +389,51 @@ class SpaceHelper {
         return true
     }
     
-    static func performSpaceSwitchGesture(steps: Int, targetDisplayID: String, isInstant: Bool) {
+    static func performSpaceSwitchGesture(steps: Int, targetDisplayID: String, forceInstant: Bool = false) {
         if steps == 0 { return }
-        
-        let directionRight = steps > 0 
-        let absSteps = abs(steps)
-        
-        // Use high velocity for instant switch (2000.0), lower for "normal" gesture-based switch (e.g. 50.0).
-        // Adjust the 50.0 value below to change the transition speed when "Instant Switch" is disabled.
-        let baseVelocity = isInstant ? 2000.0 : 52.0
-        let velocity = baseVelocity * Double(absSteps)
-        
 
-        
-        // Warp mouse if the active display isn't the target display
+        let directionRight = steps > 0
+        let absSteps = abs(steps)
+
+        let target = targetDuration
+        let velocity: Double
+        if target <= 0 || forceInstant {
+            // Instant mode — use the same 2000 base velocity as the old toggle,
+            // no calibration needed.
+            velocity = 2000.0 * Double(absSteps)
+        } else {
+            // Calibrated mode — record timing and use phase-appropriate velocity.
+            // Phase 1 (first 3): native 52 → baseline measurement.
+            // Phase 2 (next 3): 2× 104 → second data point.
+            // Locked: computed multiplier applied to 52.
+            beginGestureTiming(for: targetDisplayID)
+            let phaseVelocity = velocityForPhase(displayID: targetDisplayID)
+            velocity = phaseVelocity * Double(absSteps)
+        }
+
+        // Resolve target display via NSScreen.
+        var targetScreen: NSScreen?
+        for screen in NSScreen.screens {
+            guard let screenID = screen.deviceDescription[NSDeviceDescriptionKey("NSScreenNumber")] as? CGDirectDisplayID else { continue }
+            if CGDisplayCreateUUIDFromDisplayID(screenID).map({ CFUUIDCreateString(nil, $0.takeRetainedValue()) as String })?.uppercased() == targetDisplayID.uppercased()
+                || "\(screenID)" == targetDisplayID {
+                targetScreen = screen
+                break
+            }
+        }
+
+        // Warp mouse to target display only when cursor is on a different display.
+        // Compare by NSScreen objects (not identifier strings) to avoid format mismatches.
         let originalLocation = CGEvent(source: nil)?.location ?? .zero
         var warped = false
-        
-        if let currentDisplay = getCursorDisplayID(), currentDisplay.uppercased() != targetDisplayID.uppercased() {
-            // Find center of target display to warp the cursor
-            for screen in NSScreen.screens {
-                if let id = screen.deviceDescription[NSDeviceDescriptionKey("NSScreenNumber")] as? CGDirectDisplayID,
-                   let uuidRef = CGDisplayCreateUUIDFromDisplayID(id) {
-                    let uuid = uuidRef.takeRetainedValue()
-                    let uuidStr = (CFUUIDCreateString(nil, uuid) as String).uppercased()
-                    
-                    if uuidStr == targetDisplayID.uppercased() {
-                        let bounds = CGDisplayBounds(id)
-                        let center = CGPoint(x: bounds.midX, y: bounds.midY)
-                        CGWarpMouseCursorPosition(center)
-                        warped = true
-                        break
-                    }
-                }
+        if let targetScreen = targetScreen {
+            let cursorPoint = NSEvent.mouseLocation
+            let cursorScreen = NSScreen.screens.first { NSMouseInRect(cursorPoint, $0.frame, false) }
+            if cursorScreen != targetScreen {
+                let screenID = targetScreen.deviceDescription[NSDeviceDescriptionKey("NSScreenNumber")] as? CGDirectDisplayID ?? 0
+                let bounds = CGDisplayBounds(screenID)
+                CGWarpMouseCursorPosition(CGPoint(x: bounds.midX, y: bounds.midY))
+                warped = true
             }
         }
         
@@ -313,30 +452,55 @@ class SpaceHelper {
     // MARK: - Window Moving Logic
     
     static func dragActiveWindow(to spaceID: String, forceInstant: Bool = false) {
+        targetSpaceID = spaceID
         // Cancel any pending restoration from a previous "chained" move
         restorationTask?.cancel()
         restorationTask = nil
-        
+
+        // Hide preview labels before any mouse manipulation. The later switchToSpace call
+        // also posts SpaceSwitchRequested, but in the meantime the simulated mouse events
+        // (move, down, drag) would otherwise show labels while the app window is being
+        // grabbed for the drag-move. Post immediately so labels are hidden throughout.
+        NotificationCenter.default.post(
+            name: NSNotification.Name("SpaceSwitchRequested"), object: nil)
+
         let source = CGEventSource(stateID: .hidSystemState)
-        
+
         // Session Initialization: Capture original mouse state for the initial move.
         if originalMousePoint == nil {
             isInstantDrag = forceInstant
             // Save starting location
             originalMousePoint = CGEvent(source: nil)?.location
             
-            // Get Active Window Frame & Position to calculate grab point
-            guard let frame = getActiveWindowFrame() else {
+            // Get Active Window Info to calculate grab point
+            guard let activeWindowInfo = getActiveWindowInfo() else {
                 originalMousePoint = nil
                 return 
             }
             
+            draggedWindowID = activeWindowInfo.id
+            draggedWindowPID = activeWindowInfo.pid
+            if let runningApp = NSRunningApplication(processIdentifier: activeWindowInfo.pid) {
+                draggedWindowBundleID = runningApp.bundleIdentifier
+                draggedWindowAppName = runningApp.localizedName
+            }
+            
+            let frame = activeWindowInfo.frame
             let grabX: CGFloat
             let grabY: CGFloat
+            var shouldDragFirst = false
             
             if let sm = AppDelegate.shared.spaceManager {
-                grabX = frame.origin.x + CGFloat(sm.grabOffsetX)
-                grabY = frame.origin.y + CGFloat(sm.grabOffsetY)
+                if let bundleID = draggedWindowBundleID,
+                   let exception = sm.appGrabExceptions.first(where: { $0.bundleIdentifier == bundleID }) {
+                    grabX = frame.origin.x + CGFloat(exception.grabOffsetX)
+                    grabY = frame.origin.y + CGFloat(exception.grabOffsetY)
+                    shouldDragFirst = exception.shouldDragBeforeSwitch
+                    print("SpaceHelper: Using per-app grab exception (\(exception.grabOffsetX), \(exception.grabOffsetY)) for \(exception.appName) (\(bundleID)), dragBeforeSwitch=\(shouldDragFirst)")
+                } else {
+                    grabX = frame.origin.x + CGFloat(sm.grabOffsetX)
+                    grabY = frame.origin.y + CGFloat(sm.grabOffsetY)
+                }
             } else {
                 grabX = frame.origin.x + 13
                 grabY = frame.origin.y + 25
@@ -347,15 +511,47 @@ class SpaceHelper {
             // Move to grab point and Down
             if let moveEvent = CGEvent(mouseEventSource: source, mouseType: .mouseMoved, mouseCursorPosition: grabPoint, mouseButton: .left) {
                 moveEvent.flags = []
-                moveEvent.post(tap: .cghidEventTap)
+                moveEvent.post(tap: .cgSessionEventTap)
+            }
+            
+            if shouldDragFirst {
+                usleep(50000) // 50ms settle after move for drag-first path
             }
             
             if let downEvent = CGEvent(mouseEventSource: source, mouseType: .leftMouseDown, mouseCursorPosition: grabPoint, mouseButton: .left) {
                 downEvent.flags = []
-                downEvent.post(tap: .cghidEventTap)
+                downEvent.post(tap: .cgSessionEventTap)
             }
             
-            usleep(forceInstant ? 20000 : 50000) // 0.02s grip for instant switches, 0.05s otherwise
+            usleep(shouldDragFirst ? 50000 : 10000) // 50ms grip for drag-first, 10ms otherwise
+            
+            if shouldDragFirst {
+                // Drag 5px to the right and then reverse it back before switching spaces
+                let dragAmount: CGFloat = 5
+                let dragPoint = CGPoint(x: grabPoint.x + dragAmount, y: grabPoint.y)
+                if let dragEvent = CGEvent(mouseEventSource: source, mouseType: .leftMouseDragged, mouseCursorPosition: dragPoint, mouseButton: .left) {
+                    dragEvent.flags = []
+                    dragEvent.setIntegerValueField(.mouseEventDeltaX, value: Int64(dragAmount)) // kCGEventAssociatedMouseDeltaX
+                    dragEvent.setIntegerValueField(.mouseEventDeltaY, value: 0) // kCGEventAssociatedMouseDeltaY
+                    dragEvent.post(tap: .cgSessionEventTap)
+                }
+                usleep(30000) // 30ms settle
+                
+                if let dragBackEvent = CGEvent(mouseEventSource: source, mouseType: .leftMouseDragged, mouseCursorPosition: grabPoint, mouseButton: .left) {
+                    dragBackEvent.flags = []
+                    dragBackEvent.setIntegerValueField(.mouseEventDeltaX, value: Int64(-dragAmount)) // kCGEventAssociatedMouseDeltaX
+                    dragBackEvent.setIntegerValueField(.mouseEventDeltaY, value: 0) // kCGEventAssociatedMouseDeltaY
+                    dragBackEvent.post(tap: .cgSessionEventTap)
+                }
+                usleep(30000) // 30ms settle
+            } else {
+                // Standard windows with native titlebars automatically bind to the cursor on mouseDown.
+                // We bypass drag simulation entirely to prevent unnecessary window shifting.
+                let remainingTime = max(0, (forceInstant ? 20000 : 50000) - 10000)
+                if remainingTime > 0 {
+                    usleep(useconds_t(remainingTime))
+                }
+            }
         }
         
         // Trigger the space switch and track the movement.
@@ -368,8 +564,23 @@ class SpaceHelper {
     }
     
     /// Fast-forwards the restoration process because we detected a successful space change.
-    static func signalSpaceSwitchComplete() {
+    static func signalSpaceSwitchComplete(arrivedAtSpaceID: String) {
         guard originalMousePoint != nil else { return }
+        
+        let arrivedUUID = arrivedAtSpaceID.uppercased()
+        let targetID = targetSpaceID?.uppercased() ?? ""
+        
+        // Prevent premature completion if we get notifications from other spaces.
+        // We match either the raw Wallpaper UUID (for manual mode) or the active ManagedSpaceID (for automatic mode).
+        let currentManagedSpaceIDs = getCurrentSpaceIDs().map { $0.uppercased() }
+        let isMatch = (arrivedUUID == targetID) || currentManagedSpaceIDs.contains(targetID)
+        
+        guard isMatch else {
+            print("SpaceHelper: Ignoring premature space change event to \(arrivedAtSpaceID) (waiting for \(targetSpaceID ?? ""))")
+            return
+        }
+        
+        print("SpaceHelper: Arrived at target space \(arrivedAtSpaceID). Completing move...")
         
         // Decrement pending moves
         pendingMoveCount = max(0, pendingMoveCount - 1)
@@ -401,24 +612,100 @@ class SpaceHelper {
             // Release the window (Mouse Up).
             if let upEvent = CGEvent(mouseEventSource: source, mouseType: .leftMouseUp, mouseCursorPosition: CGEvent(source: nil)?.location ?? .zero, mouseButton: .left) {
                 upEvent.flags = []
-                upEvent.post(tap: .cghidEventTap)
+                upEvent.post(tap: .cgSessionEventTap)
+            }
+            
+            // Verify window move success after a small delay
+            let winID = draggedWindowID
+            let bundleID = draggedWindowBundleID
+            let appName = draggedWindowAppName
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                if let winID = winID, let bundleID = bundleID, let appName = appName {
+                    verifyMoveSuccess(windowID: winID, bundleID: bundleID, appName: appName)
+                }
             }
             
             // Restore the cursor position.
             usleep(isInstant ? 5000 : 50000) // 5ms for instant switches, 50ms otherwise
             if let restoreEvent = CGEvent(mouseEventSource: source, mouseType: .mouseMoved, mouseCursorPosition: restorePoint, mouseButton: .left) {
                 restoreEvent.flags = []
-                restoreEvent.post(tap: .cghidEventTap)
+                restoreEvent.post(tap: .cgSessionEventTap)
             }
             
             // Reset session state.
             originalMousePoint = nil
             restorationTask = nil
             pendingMoveCount = 0
+            targetSpaceID = nil
+            draggedWindowID = nil
+            draggedWindowPID = nil
+            draggedWindowBundleID = nil
+            draggedWindowAppName = nil
         }
         
         restorationTask = task
         DispatchQueue.main.asyncAfter(deadline: .now() + delay, execute: task)
+    }
+    
+    private static func verifyMoveSuccess(windowID: Int, bundleID: String, appName: String) {
+        // Query visible windows on the screen
+        let options = CGWindowListOption(arrayLiteral: .optionOnScreenOnly, .excludeDesktopElements)
+        let windowList = CGWindowListCopyWindowInfo(options, kCGNullWindowID) as? [[String: Any]] ?? []
+        
+        let isStillVisible = windowList.contains { window in
+            if let id = window[kCGWindowNumber as String] as? Int, id == windowID {
+                return true
+            }
+            return false
+        }
+        
+        if !isStillVisible {
+            print("SpaceHelper: Window move failed for \(appName) (ID: \(windowID), BundleID: \(bundleID))")
+            
+            // Trigger failure HUD notification
+            DispatchQueue.main.async {
+                handleMoveFailure(bundleID: bundleID, appName: appName)
+            }
+        } else {
+            print("SpaceHelper: Window move succeeded for \(appName) (ID: \(windowID))")
+        }
+    }
+    
+    private static func handleMoveFailure(bundleID: String, appName: String) {
+        guard let sm = AppDelegate.shared.spaceManager else { return }
+        
+        let hasException = sm.appGrabExceptions.contains(where: { $0.bundleIdentifier == bundleID })
+        
+        let message = String(format: String(localized: "Moving window failed for %@"), appName)
+        let buttonTitle = hasException ? String(localized: "Edit Exception") : String(localized: "Add Exception")
+        
+        HUDWindowController.shared.show(
+            message: message,
+            systemImage: "exclamationmark.triangle.fill",
+            iconColor: .orange,
+            buttonTitle: buttonTitle
+        ) {
+            DispatchQueue.main.async {
+                if !hasException {
+                    // Automatically add the exception with default grab values
+                    let newException = AppGrabException(
+                        bundleIdentifier: bundleID,
+                        appName: appName,
+                        grabOffsetX: sm.grabOffsetX,
+                        grabOffsetY: sm.grabOffsetY
+                    )
+                    withAnimation {
+                        sm.appGrabExceptions.append(newException)
+                    }
+                }
+                
+                // Set autoEditBundleID to open the editor sheet
+                sm.autoEditBundleID = bundleID
+                
+                // Open Settings settings switch tab
+                AppDelegate.shared.statusBarController?.openSettingsWindow(tab: .sswitch)
+            }
+        }
     }
     
     static func getActiveWindowInfo() -> (id: Int, pid: Int32, frame: CGRect)? {
@@ -441,6 +728,10 @@ class SpaceHelper {
                       w >= minActiveWindowWidth, h >= minActiveWindowHeight
                 else { continue }
                 
+                // Reject transparent or non-shared utility windows
+                if let alpha = window[kCGWindowAlpha as String] as? Double, alpha <= 0.1 { continue }
+                if let sharing = window[kCGWindowSharingState as String] as? Int, sharing == 0 { continue }
+                
                 // Ensure it's a regular application window (not a system overlay)
                 if let app = NSRunningApplication(processIdentifier: Int32(windowPid)),
                    app.activationPolicy == .regular {
@@ -459,6 +750,12 @@ class SpaceHelper {
                    let bounds = window[kCGWindowBounds as String] as? [String: Any],
                    let x = bounds["X"] as? CGFloat, let y = bounds["Y"] as? CGFloat,
                    let w = bounds["Width"] as? CGFloat, let h = bounds["Height"] as? CGFloat {
+                       
+                       // Apply the same strict filtering for foreign windows to avoid capturing transparent/overlay helper windows!
+                       if w < minActiveWindowWidth || h < minActiveWindowHeight { continue }
+                       if let alpha = window[kCGWindowAlpha as String] as? Double, alpha <= 0.1 { continue }
+                       if let sharing = window[kCGWindowSharingState as String] as? Int, sharing == 0 { continue }
+                       
                        let info = (id: wid, pid: Int32(pid), frame: CGRect(x: x, y: y, width: w, height: h))
                        print("SpaceHelper: Captured active window ID: \(info.id), PID: \(info.pid), frame: \(info.frame)")
                        return info
@@ -480,6 +777,12 @@ class SpaceHelper {
                let bounds = window[kCGWindowBounds as String] as? [String: Any],
                let x = bounds["X"] as? CGFloat, let y = bounds["Y"] as? CGFloat,
                let w = bounds["Width"] as? CGFloat, let h = bounds["Height"] as? CGFloat {
+                   
+                   // Apply filtering
+                   if w < minActiveWindowWidth || h < minActiveWindowHeight { continue }
+                   if let alpha = window[kCGWindowAlpha as String] as? Double, alpha <= 0.1 { continue }
+                   if let sharing = window[kCGWindowSharingState as String] as? Int, sharing == 0 { continue }
+                   
                    return (id: wid, pid: pid, frame: CGRect(x: x, y: y, width: w, height: h))
                }
         }
@@ -496,6 +799,17 @@ class SpaceHelper {
            let x = bounds["X"] as? CGFloat, let y = bounds["Y"] as? CGFloat,
            let w = bounds["Width"] as? CGFloat, let h = bounds["Height"] as? CGFloat {
                return (pid: pid, frame: CGRect(x: x, y: y, width: w, height: h))
+        }
+        return nil
+    }
+
+    static func getWindowSpaceID(id: Int) -> String? {
+        let conn = _CGSDefaultConnection()
+        let widArray = [id as NSNumber] as CFArray
+        if let result = CGSCopySpacesForWindows(conn, 7, widArray),
+           let spaceIDs = result as? [NSNumber],
+           let firstSpace = spaceIDs.first {
+            return String(firstSpace.intValue)
         }
         return nil
     }
@@ -596,8 +910,8 @@ class SpaceHelper {
         keyDown.flags = .maskControl
         keyUp.flags = .maskControl
 
-        keyDown.post(tap: .cghidEventTap)
-        keyUp.post(tap: .cghidEventTap)
+        keyDown.post(tap: .cgSessionEventTap)
+        keyUp.post(tap: .cgSessionEventTap)
 
         return true
     }
@@ -605,10 +919,10 @@ class SpaceHelper {
     static func startMonitoring(onChange: @escaping (String, Bool, Int, String) -> Void) {
         onSpaceChange = onChange
 
-        NSWorkspace.shared.notificationCenter.addObserver(
+        spaceChangeObserver = NSWorkspace.shared.notificationCenter.addObserver(
             forName: NSWorkspace.activeSpaceDidChangeNotification, object: nil, queue: .main
         ) { _ in detectSpaceChange() }
-        NSWorkspace.shared.notificationCenter.addObserver(
+        appActivationObserver = NSWorkspace.shared.notificationCenter.addObserver(
             forName: NSWorkspace.didActivateApplicationNotification, object: nil, queue: .main
         ) { _ in detectSpaceChange() }
 
@@ -624,8 +938,14 @@ class SpaceHelper {
     }
 
     static func stopMonitoring() {
-        DistributedNotificationCenter.default().removeObserver(self)
-        NSWorkspace.shared.notificationCenter.removeObserver(self)
+        if let observer = spaceChangeObserver {
+            NSWorkspace.shared.notificationCenter.removeObserver(observer)
+            spaceChangeObserver = nil
+        }
+        if let observer = appActivationObserver {
+            NSWorkspace.shared.notificationCenter.removeObserver(observer)
+            appActivationObserver = nil
+        }
         if let monitor = globalEventMonitor {
             NSEvent.removeMonitor(monitor)
             globalEventMonitor = nil
@@ -716,41 +1036,6 @@ class SpaceHelper {
         }
     }
 
-    static func getVisibleSpaceUUIDs(completion: @escaping (Set<String>) -> Void) {
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-            let options = CGWindowListOption(arrayLiteral: .optionOnScreenOnly)
-            let windowList =
-                CGWindowListCopyWindowInfo(options, kCGNullWindowID) as? [[String: Any]] ?? []
-            let screens = NSScreen.screens
-            var visibleUUIDs = Set<String>()
-
-            if screens.isEmpty {
-                completion([])
-                return
-            }
-            for screen in screens {
-                for window in windowList {
-                    guard let bounds = window[kCGWindowBounds as String] as? [String: Any],
-                        let x = bounds["X"] as? CGFloat, let y = bounds["Y"] as? CGFloat,
-                        let w = bounds["Width"] as? CGFloat, let h = bounds["Height"] as? CGFloat
-                    else { continue }
-                    if isPoint(CGPoint(x: x + w / 2, y: y + h / 2), inside: screen.frame) {
-                        if let owner = window[kCGWindowOwnerName as String] as? String,
-                            owner == "Dock",
-                            let name = window[kCGWindowName as String] as? String,
-                            name.starts(with: "Wallpaper-")
-                        {
-                            let uuid = String(name.dropFirst("Wallpaper-".count))
-                            visibleUUIDs.insert(uuid.isEmpty ? "MAIN" : uuid)
-                            break
-                        }
-                    }
-                }
-            }
-            completion(visibleUUIDs)
-        }
-    }
-
     static func getAllDisplayUUIDs() -> [String] {
         return NSScreen.screens.compactMap { screen -> String? in
             guard let id = screen.deviceDescription[NSDeviceDescriptionKey("NSScreenNumber")] as? CGDirectDisplayID else { return nil }
@@ -760,9 +1045,11 @@ class SpaceHelper {
     }
 
     private static func normalizeDisplayID(_ id: String, mainUUID: String?) -> String {
-        guard let main = mainUUID else { return id.uppercased() }
-        let result = id == "Main" ? main : id
-        return result.uppercased()
+        let cleanId = id.trimmingCharacters(in: .whitespacesAndNewlines)
+        if cleanId.isEmpty || cleanId.uppercased() == "MAIN" || cleanId.uppercased() == "UNKNOWN" {
+            return mainUUID?.uppercased() ?? "MAIN"
+        }
+        return cleanId.uppercased()
     }
 
     static func getSystemState(onDisplayID specificDisplayID: String? = nil) -> (
@@ -824,11 +1111,15 @@ class SpaceHelper {
                 let isFullscreen = space["TileLayoutManager"] != nil
 
                 var appName: String? = nil
+                var appPath: String? = nil
                 var globalShortcutNum: Int? = nil
 
                 if isFullscreen {
                     if let p = space["pid"] as? Int32 ?? space["owner pid"] as? Int32 {
-                        appName = NSRunningApplication(processIdentifier: p)?.localizedName
+                        if let runningApp = NSRunningApplication(processIdentifier: p) {
+                            appName = runningApp.localizedName
+                            appPath = runningApp.bundleURL?.path
+                        }
                     }
                 } else {
                     globalDesktopCounter += 1
@@ -844,6 +1135,7 @@ class SpaceHelper {
                         displayID: displayID,
                         isFullscreen: isFullscreen,
                         appName: appName,
+                        appPath: appPath,
                         globalShortcutNum: globalShortcutNum
                     ))
 
@@ -1074,7 +1366,7 @@ class SpaceHelper {
         for space in sortedSpaces {
             let name = spaceNames[space.id] ?? ""
             let displayName = getDisplayName(for: space.displayID, screenMap: screenMap)
-            output += ">\(space.id)~\(name)~\(displayName)~\(space.num)\n"
+            output += ">\(space.id)~\(name)~\(displayName)~\(space.num)~\(space.isFullscreen ? "1" : "0")~\(space.appPath ?? "")\n"
 
             guard let windows = windowsBySpaceID[space.id] else { continue }
             for window in windows {
@@ -1089,6 +1381,21 @@ class SpaceHelper {
             }
         }
         return output
+    }
+
+    static func getAXWindow(id windowID: Int, pid: Int32) -> AXUIElement? {
+        let appElement = AXUIElementCreateApplication(pid)
+        var windowsRef: CFTypeRef?
+        if AXUIElementCopyAttributeValue(appElement, kAXWindowsAttribute as CFString, &windowsRef) == .success,
+           let axWindows = windowsRef as? [AXUIElement] {
+            for axWindow in axWindows {
+                var cgWID: CGWindowID = 0
+                if _AXUIElementGetWindow(axWindow, &cgWID) == 0, cgWID == CGWindowID(windowID) {
+                    return axWindow
+                }
+            }
+        }
+        return nil
     }
 
     static func focusWindow(id windowID: Int, pid: Int32) {
@@ -1212,14 +1519,18 @@ class SpaceHelper {
         return nil
     }
 
-    /// Returns the bounds of a display given its UUID.
+    /// Returns the bounds of a display given its UUID or CGS numeric identifier.
     static func getDisplayRect(for uuid: String) -> CGRect? {
         for screen in NSScreen.screens {
             let id = screen.deviceDescription[NSDeviceDescriptionKey("NSScreenNumber")] as? CGDirectDisplayID ?? 0
-            guard let uuidRef = CGDisplayCreateUUIDFromDisplayID(id) else { continue }
-            let screenUUID = (CFUUIDCreateString(nil, uuidRef.takeRetainedValue()) as String).uppercased()
-            if screenUUID == uuid.uppercased() {
-                // Return bounds in CG coordinates (top-left origin)
+            if let uuidRef = CGDisplayCreateUUIDFromDisplayID(id) {
+                let screenUUID = (CFUUIDCreateString(nil, uuidRef.takeRetainedValue()) as String).uppercased()
+                if screenUUID == uuid.uppercased() {
+                    return CGDisplayBounds(id)
+                }
+            }
+            // Fallback: CGS numeric identifier (e.g. "2")
+            if "\(id)" == uuid {
                 return CGDisplayBounds(id)
             }
         }
@@ -1249,6 +1560,9 @@ class SpaceHelper {
     }
 
     static func detectSpaceChange() {
+        // Record switch completion time for self-calibrating velocity.
+        endGestureTiming()
+
         getRawSpaceUUID { spaceUUID, isDesktop, ncCnt, displayID in
             onSpaceChange?(spaceUUID, isDesktop, ncCnt, displayID)
         }
@@ -1326,5 +1640,106 @@ class SpaceHelper {
         }
         let flippedY = NSMaxY(primaryScreen.frame) - point.y
         return screenFrame.contains(CGPoint(x: point.x, y: flippedY))
+    }
+
+    static func getAppWindowFrame(bundleIdentifier: String) -> CGRect? {
+        guard let runningApp = NSWorkspace.shared.runningApplications.first(where: { $0.bundleIdentifier == bundleIdentifier }) else {
+            return nil
+        }
+        let pid = runningApp.processIdentifier
+        
+        let options = CGWindowListOption(arrayLiteral: .optionOnScreenOnly, .excludeDesktopElements)
+        let windowList = CGWindowListCopyWindowInfo(options, kCGNullWindowID) as? [[String: Any]] ?? []
+        
+        for window in windowList {
+            if let windowPid = window[kCGWindowOwnerPID as String] as? Int,
+               windowPid == pid,
+               let layer = window[kCGWindowLayer as String] as? Int, layer == 0,
+               let bounds = window[kCGWindowBounds as String] as? [String: Any],
+               let x = bounds["X"] as? CGFloat, let y = bounds["Y"] as? CGFloat,
+               let w = bounds["Width"] as? CGFloat, let h = bounds["Height"] as? CGFloat,
+               w >= minActiveWindowWidth, h >= minActiveWindowHeight {
+                   return CGRect(x: x, y: y, width: w, height: h)
+               }
+        }
+        return nil
+    }
+
+    static func isPositionDraggable(at point: CGPoint) -> (isDraggable: Bool, role: String) {
+        let systemWide = AXUIElementCreateSystemWide()
+        var element: AXUIElement?
+        let result = AXUIElementCopyElementAtPosition(systemWide, Float(point.x), Float(point.y), &element)
+        
+        guard result == .success, let axElement = element else {
+            return (false, "Unknown")
+        }
+        
+        var roleRef: CFTypeRef?
+        AXUIElementCopyAttributeValue(axElement, kAXRoleAttribute as CFString, &roleRef)
+        let role = (roleRef as? String) ?? "Unknown"
+        
+        // Draggable roles include window background, title bar, toolbar, empty areas, etc.
+        // Interactive components like buttons, text inputs, sliders, lists, scroll areas, web views are not draggable.
+        let nonDraggableRoles = [
+            "AXButton", "AXTextField", "AXTextArea", "AXScrollBar",
+            "AXSlider", "AXWebArea", "AXPopUpButton", "AXCheckBox",
+            "AXRadioButton", "AXComboBox", "AXList", "AXTable",
+            "AXOutline", "AXBrowser", "AXMenuButton"
+        ]
+        
+        let draggableRoles = [
+            "AXWindow", "AXTitleBar", "AXToolbar", "AXHeaderArea", "AXSpacer"
+        ]
+        
+        let isDraggable: Bool
+        if nonDraggableRoles.contains(role) {
+            isDraggable = false
+        } else if draggableRoles.contains(role) {
+            isDraggable = true
+        } else if role == "AXStaticText" || role == "AXGroup" {
+            var parentRef: CFTypeRef?
+            if AXUIElementCopyAttributeValue(axElement, "AXParent" as CFString, &parentRef) == .success,
+               let parentVal = parentRef,
+               CFGetTypeID(parentVal) == AXUIElementGetTypeID() {
+                let parentElement = parentVal as! AXUIElement
+                var parentRoleRef: CFTypeRef?
+                if AXUIElementCopyAttributeValue(parentElement, kAXRoleAttribute as CFString, &parentRoleRef) == .success,
+                   let parentRole = parentRoleRef as? String {
+                    isDraggable = draggableRoles.contains(parentRole) || parentRole == "AXGroup"
+                } else {
+                    isDraggable = true
+                }
+            } else {
+                isDraggable = true
+            }
+        } else {
+            isDraggable = true
+        }
+        
+        return (isDraggable, role)
+    }
+
+    static func getGrabPositionStatus(forBundleID bundleID: String, x: Double, y: Double) -> (status: String, isLikelyWorking: Bool) {
+        let isGranted = AXIsProcessTrusted()
+        if !isGranted {
+            return (String(localized: "Accessibility permission not granted"), false)
+        }
+        
+        guard let frame = getAppWindowFrame(bundleIdentifier: bundleID) else {
+            return (String(localized: "No visible window found"), false)
+        }
+        
+        let point = CGPoint(x: frame.origin.x + CGFloat(x), y: frame.origin.y + CGFloat(y))
+        let (isDraggable, role) = isPositionDraggable(at: point)
+        
+        if !isDraggable {
+            return (String(format: String(localized: "Cursor is on an interactive control (%@)"), role), false)
+        }
+        
+        if y > 60 {
+            return (String(localized: "Cursor is too low (likely inside window content area)"), false)
+        }
+        
+        return (String(format: String(localized: "Likely working: Draggable (%@)"), role), true)
     }
 }

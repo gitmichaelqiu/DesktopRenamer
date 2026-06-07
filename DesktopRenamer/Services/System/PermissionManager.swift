@@ -6,10 +6,13 @@ class PermissionManager: ObservableObject {
 
     @Published var isAccessibilityGranted: Bool = false
 
+    // Token for the block-based observer — required for proper cleanup.
+    private var becomeActiveObserver: NSObjectProtocol?
+
     private init() {
         checkPermissions()
         // Re-verify permissions when the application returns to the foreground.
-        NotificationCenter.default.addObserver(
+        becomeActiveObserver = NotificationCenter.default.addObserver(
             forName: NSApplication.didBecomeActiveNotification, object: nil, queue: .main
         ) { [weak self] _ in
             self?.checkPermissions()
@@ -17,7 +20,9 @@ class PermissionManager: ObservableObject {
     }
 
     deinit {
-        NotificationCenter.default.removeObserver(self)
+        if let observer = becomeActiveObserver {
+            NotificationCenter.default.removeObserver(observer)
+        }
     }
 
     func checkPermissions() {

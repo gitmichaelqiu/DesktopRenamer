@@ -19,16 +19,25 @@ extension NSApplication {
     }
 }
 
-class UpdateManager {
+class UpdateManager: NSObject, SPUStandardUserDriverDelegate {
     static let shared = UpdateManager()
     
-    let updaterController: SPUStandardUpdaterController
+    var updaterController: SPUStandardUpdaterController!
     
-    private init() {
+    private override init() {
+        super.init()
         self.updaterController = SPUStandardUpdaterController(
             startingUpdater: true,
             updaterDelegate: nil,
-            userDriverDelegate: nil
+            userDriverDelegate: self
         )
+    }
+    
+    var supportsGentleScheduledUpdateReminders: Bool {
+        return true
+    }
+    
+    func standardUserDriverShouldHandleShowingScheduledUpdate(_ update: SUAppcastItem, andInImmediateFocus immediateFocus: Bool) -> Bool {
+        return true
     }
 }

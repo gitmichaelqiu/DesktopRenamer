@@ -107,7 +107,7 @@ struct SpaceEditView: View {
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .id("Settings.Spaces.Edit.Name")
                 Text(NSLocalizedString("Settings.Spaces.Edit.Actions", comment: ""))
-                    .frame(width: 60, alignment: .trailing)
+                    .frame(width: 40, alignment: .trailing)
                     .id("Settings.Spaces.Edit.Actions")
             }
             .font(.caption)
@@ -130,7 +130,7 @@ struct SpaceEditView: View {
                         HStack(spacing: 10) {
                             spaceNumberView(for: space).frame(width: 30, alignment: .leading)
                             spaceNameEditor(for: space).frame(maxWidth: .infinity)
-                            actionButtons(for: space, in: displaySpaces).frame(width: 60, alignment: .trailing)
+                            actionButtons(for: space).frame(width: 20, alignment: .trailing)
                         }
                         .padding(.horizontal, 12)
                         .padding(.vertical, 6)
@@ -180,15 +180,9 @@ struct SpaceEditView: View {
         .textFieldStyle(.roundedBorder)
     }
     
-    private func actionButtons(for space: DesktopSpace, in displayList: [DesktopSpace]) -> some View {
+    private func actionButtons(for space: DesktopSpace) -> some View {
         HStack(spacing: 4) {
-            if spaceManager.detectionMethod == .automatic {
-                lockButton(for: space)
-            } else {
-                moveUpButton(for: space, list: displayList)
-                moveDownButton(for: space, list: displayList)
-                deleteButton(for: space)
-            }
+            lockButton(for: space)
         }
         .buttonStyle(.borderless)
     }
@@ -206,33 +200,6 @@ struct SpaceEditView: View {
         .help(isLocked ? "Unlock space" : "Lock current space")
     }
     
-    private func moveUpButton(for space: DesktopSpace, list: [DesktopSpace]) -> some View {
-        let isFirst = list.first?.id == space.id
-        return Button(action: { moveRowUp(space) }) {
-            Image(systemName: "chevron.up").frame(width: 16, height: 16)
-        }
-        .disabled(isFirst || spaceManager.detectionMethod == .automatic)
-        .opacity(isFirst || spaceManager.detectionMethod == .automatic ? 0.3 : 1.0)
-    }
-    
-    private func moveDownButton(for space: DesktopSpace, list: [DesktopSpace]) -> some View {
-        let isLast = list.last?.id == space.id
-        return Button(action: { moveRowDown(space) }) {
-            Image(systemName: "chevron.down").frame(width: 16, height: 16)
-        }
-        .disabled(isLast || spaceManager.detectionMethod == .automatic)
-        .opacity(isLast || spaceManager.detectionMethod == .automatic ? 0.3 : 1.0)
-    }
-    
-    private func deleteButton(for space: DesktopSpace) -> some View {
-        Button(action: { deleteRow(space) }) {
-            Image(systemName: "trash").frame(width: 16, height: 16)
-                .foregroundColor(isCurrentSpace(space) ? Color.secondary : .red)
-        }
-        .disabled(isCurrentSpace(space) || spaceManager.detectionMethod == .automatic)
-        .opacity(isCurrentSpace(space) || spaceManager.detectionMethod == .automatic ? 0.3 : 1.0)
-    }
-    
     private func spaceNumberText(for space: DesktopSpace) -> String {
         isCurrentSpace(space) ? "[\(space.num)]" : "\(space.num)"
     }
@@ -245,58 +212,9 @@ struct SpaceEditView: View {
         space.id == spaceManager.currentSpaceUUID
     }
     
-    private func moveRowUp(_ space: DesktopSpace) {
-        guard spaceManager.detectionMethod != .automatic else { return }
-        var allSpaces = spaceManager.spaceNameDict
-        let siblings = allSpaces.filter { $0.displayID == space.displayID }.sorted { $0.num < $1.num }
-        guard let currentIndex = siblings.firstIndex(where: { $0.id == space.id }), currentIndex > 0 else { return }
-        let prevSpace = siblings[currentIndex - 1]
-        if let idx1 = allSpaces.firstIndex(where: { $0.id == space.id }), let idx2 = allSpaces.firstIndex(where: { $0.id == prevSpace.id }) {
-            withAnimation(.easeInOut(duration: 0.2)) {
-                let tempNum = allSpaces[idx1].num
-                allSpaces[idx1].num = allSpaces[idx2].num
-                allSpaces[idx2].num = tempNum
-                saveAndRefresh(allSpaces)
-            }
-        }
-    }
-    
-    private func moveRowDown(_ space: DesktopSpace) {
-        guard spaceManager.detectionMethod != .automatic else { return }
-        var allSpaces = spaceManager.spaceNameDict
-        let siblings = allSpaces.filter { $0.displayID == space.displayID }.sorted { $0.num < $1.num }
-        guard let currentIndex = siblings.firstIndex(where: { $0.id == space.id }), currentIndex < siblings.count - 1 else { return }
-        let nextSpace = siblings[currentIndex + 1]
-        if let idx1 = allSpaces.firstIndex(where: { $0.id == space.id }), let idx2 = allSpaces.firstIndex(where: { $0.id == nextSpace.id }) {
-            withAnimation(.easeInOut(duration: 0.2)) {
-                let tempNum = allSpaces[idx1].num
-                allSpaces[idx1].num = allSpaces[idx2].num
-                allSpaces[idx2].num = tempNum
-                saveAndRefresh(allSpaces)
-            }
-        }
-    }
-    
-    private func deleteRow(_ space: DesktopSpace) {
-        guard spaceManager.detectionMethod != .automatic else { return }
-        withAnimation(.easeInOut(duration: 0.2)) {
-            var allSpaces = spaceManager.spaceNameDict
-            allSpaces.removeAll(where: { $0.id == space.id })
-            let displayID = space.displayID
-            var siblings = allSpaces.filter { $0.displayID == displayID }.sorted { $0.num < $1.num }
-            for (index, _) in siblings.enumerated() { siblings[index].num = index + 1 }
-            allSpaces.removeAll(where: { $0.displayID == displayID })
-            allSpaces.append(contentsOf: siblings)
-            saveAndRefresh(allSpaces)
-        }
-    }
     
     private func updateSpaceName(_ space: DesktopSpace, _ newName: String) {
         spaceManager.renameSpace(space.id, to: newName)
     }
     
-    private func saveAndRefresh(_ newSpaces: [DesktopSpace]) {
-        spaceManager.spaceNameDict = newSpaces
-        spaceManager.saveSpaces()
-    }
 }
