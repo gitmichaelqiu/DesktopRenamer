@@ -998,7 +998,9 @@ class SpaceLabelWindow: NSWindow {
             }
         }
 
-        self.alphaValue = 1.0
+        if isVisuallyVisible {
+            self.alphaValue = 1.0
+        }
         let targetContentAlpha: CGFloat = isVisuallyVisible ? 1.0 : 0.0
 
         if animated {

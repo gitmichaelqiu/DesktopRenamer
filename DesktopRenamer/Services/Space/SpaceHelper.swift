@@ -200,9 +200,10 @@ class SpaceHelper {
             // If we are already on the target space, stop.
             if state.currentUUID == spaceID { return }
             
-            // Gesture-based Space Switch handling
-            // We use the gesture method for all normal switches (no window moving).
-            if !isDragging, let targetSpace = state.spaces.first(where: { $0.id == spaceID }) {
+            // Gesture-based Space Switch handling.
+            // Always use this when possible — it avoids involving label windows
+            // (which can cause snap-back) and works during drag operations too.
+            if let targetSpace = state.spaces.first(where: { $0.id == spaceID }) {
                 let displayID = targetSpace.displayID
                 if let liveCurrentID = getCurrentSpaceID(for: displayID) {
                     let displaySpaces = state.spaces
