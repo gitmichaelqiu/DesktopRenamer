@@ -138,7 +138,13 @@ class SpaceHelper {
         }
         guard allSamples.count >= calibrationSamples else { return }
         let baseline = allSamples.reduce(0, +) / Double(allSamples.count)
-        let multiplier = baseline / target
+        // Square-root dampening: the relationship between dock-swipe velocity
+        // and actual switch duration is non-linear, so a linear multiplier
+        // (baseline/target) overshoots badly — at 2.4× the switch is nearly
+        // instant instead of the intended 0.25s.  sqrt() produces a gentler
+        // correction that converges to the target without overshooting.
+        let ratio = baseline / target
+        let multiplier = sqrt(ratio)
         displayMultipliers[displayID] = max(minMultiplier, min(maxMultiplier, multiplier))
         // Persist so the value survives restarts.
         if let data = try? JSONEncoder().encode(displayMultipliers) {
