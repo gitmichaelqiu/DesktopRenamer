@@ -1025,7 +1025,7 @@ class SpaceLabelWindow: NSWindow {
 
     private func scheduleVisibilityRetry(delay: TimeInterval) {
         let task = DispatchWorkItem { [weak self] in
-            self?.updateVisibility(animated: true)
+            self?.updateVisibility(animated: false)
         }
         self.pendingVisibilityTask = task
         DispatchQueue.main.asyncAfter(deadline: .now() + max(0.01, delay), execute: task)
