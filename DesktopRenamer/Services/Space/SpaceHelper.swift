@@ -325,10 +325,10 @@ class SpaceHelper {
             }
         }
 
-        // Activate the app on the target window's space.
-        // makeKey already orders the window forward; orderFrontRegardless is
-        // redundant and makes the label aggressively frontmost, acting as an
-        // anchor that can cause the OS to snap back to this space later.
+        // Force window activation. orderFrontRegardless is critical —
+        // without it the OS doesn't recognise the space switch intent
+        // and the move silently fails.
+        window.orderFrontRegardless()
         window.canBecomeKeyOverride = true
         window.makeKey()
         window.canBecomeKeyOverride = false
