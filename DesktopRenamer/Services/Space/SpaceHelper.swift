@@ -290,20 +290,30 @@ class SpaceHelper {
         var warped = false
         
         if let currentDisplay = getCursorDisplayID(), currentDisplay.uppercased() != targetDisplayID.uppercased() {
-            // Find center of target display to warp the cursor
+            // Find center of target display to warp the cursor.
+            // CGS "Display Identifier" can be a UUID or a numeric string (e.g. "2")
+            // depending on the display. We try both matching strategies.
             for screen in NSScreen.screens {
-                if let id = screen.deviceDescription[NSDeviceDescriptionKey("NSScreenNumber")] as? CGDirectDisplayID,
-                   let uuidRef = CGDisplayCreateUUIDFromDisplayID(id) {
+                guard let screenID = screen.deviceDescription[NSDeviceDescriptionKey("NSScreenNumber")] as? CGDirectDisplayID else { continue }
+
+                // Strategy 1: screen CFUUID matches targetDisplayID (UUID-format identifier)
+                if let uuidRef = CGDisplayCreateUUIDFromDisplayID(screenID) {
                     let uuid = uuidRef.takeRetainedValue()
                     let uuidStr = (CFUUIDCreateString(nil, uuid) as String).uppercased()
-                    
                     if uuidStr == targetDisplayID.uppercased() {
-                        let bounds = CGDisplayBounds(id)
-                        let center = CGPoint(x: bounds.midX, y: bounds.midY)
-                        CGWarpMouseCursorPosition(center)
+                        let bounds = CGDisplayBounds(screenID)
+                        CGWarpMouseCursorPosition(CGPoint(x: bounds.midX, y: bounds.midY))
                         warped = true
                         break
                     }
+                }
+
+                // Strategy 2: CGS numeric identifier (e.g. "2") matches targetDisplayID
+                if "\(screenID)" == targetDisplayID {
+                    let bounds = CGDisplayBounds(screenID)
+                    CGWarpMouseCursorPosition(CGPoint(x: bounds.midX, y: bounds.midY))
+                    warped = true
+                    break
                 }
             }
         }
@@ -1425,14 +1435,18 @@ class SpaceHelper {
         return nil
     }
 
-    /// Returns the bounds of a display given its UUID.
+    /// Returns the bounds of a display given its UUID or CGS numeric identifier.
     static func getDisplayRect(for uuid: String) -> CGRect? {
         for screen in NSScreen.screens {
             let id = screen.deviceDescription[NSDeviceDescriptionKey("NSScreenNumber")] as? CGDirectDisplayID ?? 0
-            guard let uuidRef = CGDisplayCreateUUIDFromDisplayID(id) else { continue }
-            let screenUUID = (CFUUIDCreateString(nil, uuidRef.takeRetainedValue()) as String).uppercased()
-            if screenUUID == uuid.uppercased() {
-                // Return bounds in CG coordinates (top-left origin)
+            if let uuidRef = CGDisplayCreateUUIDFromDisplayID(id) {
+                let screenUUID = (CFUUIDCreateString(nil, uuidRef.takeRetainedValue()) as String).uppercased()
+                if screenUUID == uuid.uppercased() {
+                    return CGDisplayBounds(id)
+                }
+            }
+            // Fallback: CGS numeric identifier (e.g. "2")
+            if "\(id)" == uuid {
                 return CGDisplayBounds(id)
             }
         }
