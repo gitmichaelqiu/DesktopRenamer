@@ -127,20 +127,22 @@ class SpaceHelper {
         recentDurations[bucketKey] = window
         let avg = window.reduce(0, +) / Double(window.count)
 
-        // Skip if within tolerance
-        let absError = abs(avg - target)
-        guard absError > tolerance else { return }
+        // Only adjust when slower than target — never decrease the multiplier.
+        // Decreasing makes the switch slower over time, and when the animation
+        // becomes barely perceptible the user thinks it wasn't triggered and
+        // swipes again, stacking two switches and skipping multiple spaces.
+        guard avg > target + tolerance else { return }
 
         // Proportional step: grows with error so large deviations correct quickly
         // while small deviations are fine-tuned. At exactly tolerance → 0.03 step.
+        let absError = avg - target
         let ratio = absError / tolerance
         let step = min(stepMax, stepBase * ratio)
 
         var multipliers = cachedMultipliers
         let current = multipliers[displayID] ?? 1.0
-        let adjDirection: Double = avg > target ? 1.0 : -1.0
-        let newValue = current + step * adjDirection
-        multipliers[displayID] = max(minMultiplier, min(maxMultiplier, newValue))
+        let newValue = current + step
+        multipliers[displayID] = min(maxMultiplier, newValue)
         cachedMultipliers = multipliers
     }
 
