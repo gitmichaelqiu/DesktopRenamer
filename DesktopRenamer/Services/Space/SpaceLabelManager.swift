@@ -185,10 +185,17 @@ class SpaceLabelManager: ObservableObject {
                 self.delayedRestoreWorkItem = nil
 
                 if self.hideWhenSwitching {
-                    self.hideAllPreviewLabels()
-                    // When hideWhenSwitching is on, skip the immediate restore.
-                    // The settling delay below handles restoring labels after the
-                    // animation completes — its duration varies by machine/display.
+                    let isRecent = Date().timeIntervalSince1970 - SpaceHelper.lastProgrammaticSwitchTime < 1.0
+                    if isRecent {
+                        // Programmatic switch: labels were already hidden by
+                        // handleSpaceSwitchRequested before the animation started.
+                        // Skip immediate restore — the settling delay handles it.
+                        self.hideAllPreviewLabels()
+                    } else {
+                        // Native OS switch (app activation, Cmd+Tab): no
+                        // SpaceSwitchRequested was posted, show labels normally.
+                        self.updateAllWindowModes(forDisplay: self.spaceManager?.currentDisplayID)
+                    }
                 } else {
                     self.updateAllWindowModes(forDisplay: self.spaceManager?.currentDisplayID)
                 }
