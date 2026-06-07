@@ -295,18 +295,9 @@ class SpaceLabelManager: ObservableObject {
     }
 
     private func updateAllWindowModes(forDisplay displayID: String? = nil) {
-        let detectionMethod = spaceManager?.detectionMethod
-        if detectionMethod == .automatic {
-            Task { @MainActor in
-                let visibleUUIDs = SpaceHelper.getVisibleSystemSpaceIDs()
-                self.applyVisibility(visibleUUIDs, forDisplay: displayID)
-            }
-        } else {
-            SpaceHelper.getVisibleSpaceUUIDs { [weak self] visibleUUIDs in
-                Task { @MainActor [weak self] in
-                    self?.applyVisibility(visibleUUIDs, forDisplay: displayID)
-                }
-            }
+        Task { @MainActor in
+            let visibleUUIDs = SpaceHelper.getVisibleSystemSpaceIDs()
+            self.applyVisibility(visibleUUIDs, forDisplay: displayID)
         }
     }
 
@@ -356,19 +347,9 @@ class SpaceLabelManager: ObservableObject {
             // created on the 'source' desktop instead of the 'destination' fullscreen app.
             try? await Task.sleep(nanoseconds: 500_000_000)
 
-            if spaceManager?.detectionMethod == .automatic {
-                guard let state = SpaceHelper.getSystemState() else { return }
-                if state.currentUUID == spaceId {
-                    self.ensureWindow(for: spaceId, name: name, displayID: state.displayID)
-                }
-            } else {
-                SpaceHelper.getRawSpaceUUID { [weak self] confirmedSpaceId, _, _, liveDisplayID in
-                    Task { @MainActor [weak self] in
-                        if confirmedSpaceId == spaceId {
-                            self?.ensureWindow(for: spaceId, name: name, displayID: liveDisplayID)
-                        }
-                    }
-                }
+            guard let state = SpaceHelper.getSystemState() else { return }
+            if state.currentUUID == spaceId {
+                self.ensureWindow(for: spaceId, name: name, displayID: state.displayID)
             }
         }
     }

@@ -325,13 +325,6 @@ class StatusBarController: NSObject {
         self.showActiveLabelsMenuItem = showActiveLabels
         menu.addItem(showActiveLabels)
 
-        if spaceManager.detectionMethod != .automatic {
-            let troubleshootItem = NSMenuItem(title: NSLocalizedString("Troubleshoot Space Detection", comment: ""), action: #selector(troubleshootSpaceDetection), keyEquivalent: "")
-            troubleshootItem.image = NSImage(systemSymbolName: "wrench.and.screwdriver", accessibilityDescription: nil)
-            troubleshootItem.target = self
-            menu.addItem(troubleshootItem)
-        }
-
         let reloadLabels = NSMenuItem(title: NSLocalizedString("Reload Space Labels", comment: "Reload Space Label Windows to fix glitches"), action: #selector(reloadLabelsFromMenu), keyEquivalent: "")
         reloadLabels.target = self
         reloadLabels.image = NSImage(systemSymbolName: "arrow.clockwise", accessibilityDescription: nil)
@@ -416,52 +409,6 @@ class StatusBarController: NSObject {
         labelManager.reloadAllWindows()
     }
         
-    @objc private func troubleshootSpaceDetection() {
-        openSettingsWindow()
-        
-        var alertTitle = ""
-        var alertMessage = ""
-        
-        switch spaceManager.detectionMethod {
-        case .automatic:
-            if spaceManager.currentSpaceUUID == "FULLSCREEN" {
-                 alertTitle = NSLocalizedString("Not a fullscreen?", comment: "")
-                 alertMessage = NSLocalizedString("There are no parameters to adjust for Automatic detection.\nIf the issue still happens, switch to other methods.", comment: "")
-            } else {
-                 alertTitle = NSLocalizedString("Not a space?", comment: "")
-                 alertMessage = NSLocalizedString("There are no parameters to adjust for Automatic detection.\nIf the issue still happens, switch to other methods.", comment: "")
-            }
-            
-        case .metric:
-            if spaceManager.currentSpaceUUID == "FULLSCREEN" {
-                alertTitle = NSLocalizedString("Not a fullscreen?", comment: "")
-                alertMessage = NSLocalizedString("Fix this issue in\nSettings → General → Fix automatic space detection", comment: "")
-            } else {
-                alertTitle = NSLocalizedString("Not a space?", comment: "")
-                alertMessage = NSLocalizedString("Fix this issue in\nSettings → General → Fix automatic space detection", comment: "")
-            }
-            
-        case .manual:
-            if spaceManager.currentSpaceUUID == "FULLSCREEN" {
-                alertTitle = NSLocalizedString("Not a fullscreen?", comment: "")
-                alertMessage = NSLocalizedString("Add it as a space in\nSettings → General → Add spaces", comment: "")
-            } else {
-                alertTitle = NSLocalizedString("Not a space?", comment: "")
-                alertMessage = NSLocalizedString("Remove it in\nSettings → Spaces\n(Switch to other space first)", comment: "")
-            }
-        }
-        
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
-            guard let window = self.settingsWindowController?.window else { return }
-            let alert = NSAlert()
-            alert.messageText = alertTitle
-            alert.informativeText = alertMessage
-            alert.alertStyle = .informational
-            alert.addButton(withTitle: "OK")
-            alert.beginSheetModal(for: window, completionHandler: nil)
-        }
-    }
-
     @objc func openSettingsWindow() {
         openSettingsWindow(tab: .general)
     }

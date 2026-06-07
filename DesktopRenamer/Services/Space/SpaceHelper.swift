@@ -25,17 +25,6 @@ private func CGSOrderWindow(_ cid: Int32, _ windowID: UInt32, _ op: Int32, _ rel
 
 class SpaceHelper {
 
-    static var fullscreenThreshold: Int {
-        get {
-            UserDefaults.standard.integer(
-                forKey: "com.michaelqiu.desktoprenamer.fullscreenthreshold")
-        }
-        set {
-            UserDefaults.standard.set(
-                newValue, forKey: "com.michaelqiu.desktoprenamer.fullscreenthreshold")
-        }
-    }
-
     private static var onSpaceChange: ((String, Bool, Int, String) -> Void)?
     private static var globalEventMonitor: Any?
     private static var localEventMonitor: Any?
@@ -1007,41 +996,6 @@ class SpaceHelper {
                 }
             }
             completion(uuid, hasFinderDesktop, ncCnt, displayIdentifier)
-        }
-    }
-
-    static func getVisibleSpaceUUIDs(completion: @escaping (Set<String>) -> Void) {
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-            let options = CGWindowListOption(arrayLiteral: .optionOnScreenOnly)
-            let windowList =
-                CGWindowListCopyWindowInfo(options, kCGNullWindowID) as? [[String: Any]] ?? []
-            let screens = NSScreen.screens
-            var visibleUUIDs = Set<String>()
-
-            if screens.isEmpty {
-                completion([])
-                return
-            }
-            for screen in screens {
-                for window in windowList {
-                    guard let bounds = window[kCGWindowBounds as String] as? [String: Any],
-                        let x = bounds["X"] as? CGFloat, let y = bounds["Y"] as? CGFloat,
-                        let w = bounds["Width"] as? CGFloat, let h = bounds["Height"] as? CGFloat
-                    else { continue }
-                    if isPoint(CGPoint(x: x + w / 2, y: y + h / 2), inside: screen.frame) {
-                        if let owner = window[kCGWindowOwnerName as String] as? String,
-                            owner == "Dock",
-                            let name = window[kCGWindowName as String] as? String,
-                            name.starts(with: "Wallpaper-")
-                        {
-                            let uuid = String(name.dropFirst("Wallpaper-".count))
-                            visibleUUIDs.insert(uuid.isEmpty ? "MAIN" : uuid)
-                            break
-                        }
-                    }
-                }
-            }
-            completion(visibleUUIDs)
         }
     }
 
