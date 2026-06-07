@@ -200,7 +200,11 @@ class SpaceLabelManager: ObservableObject {
             .receive(on: DispatchQueue.main)
             .sink { [weak self] _ in
                 self?.recalculateUnifiedSize()
-                self?.syncWindowsWithDict()
+                // When hideWhenSwitching is on, don't restore labels here —
+                // the settling delay in the currentSpaceUUID observer is
+                // the sole restore point. syncWindowsWithDict still creates
+                // and removes windows, it just skips the final updateAllWindowModes.
+                self?.syncWindowsWithDict(updateModes: self?.hideWhenSwitching != true)
             }
             .store(in: &cancellables)
 
@@ -216,20 +220,22 @@ class SpaceLabelManager: ObservableObject {
         }
     }
 
-    private func syncWindowsWithDict() {
+    private func syncWindowsWithDict(updateModes: Bool = true) {
         guard let spaceManager = spaceManager else { return }
         let allSpaces = spaceManager.spaceNameDict
-        
+
         // Add windows for new spaces.
         for space in allSpaces {
             ensureWindow(for: space.id, name: space.customName, displayID: space.displayID)
         }
-        
+
         // Remove windows for spaces that no longer exist.
         cleanupRedundantWindows()
-        
-        // Update window modes to ensure consistent visibility.
-        updateAllWindowModes()
+
+        // Only restore label modes when hideWhenSwitching is off.
+        if updateModes {
+            updateAllWindowModes()
+        }
     }
 
     // Removes windows for obsolete spaces.
