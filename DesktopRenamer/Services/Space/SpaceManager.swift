@@ -213,7 +213,12 @@ class SpaceManager: ObservableObject {
     }
     
     deinit {
-        stopPeriodicSpaceLayoutCheck()
+        // Timer invalidation is not thread-safe; deinit can run on any thread.
+        if let timer = spaceLayoutCheckTimer {
+            DispatchQueue.main.async {
+                timer.invalidate()
+            }
+        }
         NotificationCenter.default.removeObserver(self)
     }
     

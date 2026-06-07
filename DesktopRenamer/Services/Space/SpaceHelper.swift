@@ -113,6 +113,8 @@ class SpaceHelper {
         let displayID = gestureTimingDisplayID
         gestureTimingStart = 0
         gestureTimingDisplayID = ""
+        // Discard anomalous durations from failed/cancelled gestures.
+        guard duration < 2.0 else { return }
         recordGestureDuration(duration, for: displayID)
     }
 

@@ -317,19 +317,10 @@ class ExecuteWindowActionCommand: NSScriptCommand {
               let actionName = arguments["actionName"] as? String
         else { return nil }
         
-        let semaphore = DispatchSemaphore(value: 0)
-        
+        // Fire-and-forget: the command returns nil, so there is no need to block
+        // the calling thread. All other AppleScript commands use the same pattern.
         Task { @MainActor in
             await executeActionAsync(windowID: windowID, pid: pid, actionName: actionName)
-            semaphore.signal()
-        }
-        
-        if Thread.isMainThread {
-            while semaphore.wait(timeout: .now() + 0.05) == .timedOut {
-                RunLoop.current.run(mode: .default, before: Date(timeIntervalSinceNow: 0.05))
-            }
-        } else {
-            _ = semaphore.wait(timeout: .now() + 5.0)
         }
         return nil
     }
