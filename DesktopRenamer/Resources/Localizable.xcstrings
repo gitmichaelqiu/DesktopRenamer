@@ -407,22 +407,6 @@
         }
       }
     },
-    "Bug Report Log Collection" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Bug Report Collection"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "收集 Bug 报告"
-          }
-        }
-      }
-    },
     "Button.Cancel" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -873,16 +857,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "全屏"
-          }
-        }
-      }
-    },
-    "Generate bug report" : {
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "生成 Bug 报告"
           }
         }
       }
@@ -1643,16 +1617,6 @@
         }
       }
     },
-    "Please go through all spaces that may be helpful in analyzing the bug. The log is updating in real-time." : {
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "请遍历所有可能对分析 Bug 有用的桌面。以下报告实时更新。"
-          }
-        }
-      }
-    },
     "Press modifiers and a number to set the shortcut." : {
       "localizations" : {
         "zh-Hans" : {
@@ -2039,16 +2003,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "批量操作"
-          }
-        }
-      }
-    },
-    "Save Log" : {
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "保存报告"
           }
         }
       }
@@ -2791,26 +2745,6 @@
         }
       }
     },
-    "Start" : {
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "开始"
-          }
-        }
-      }
-    },
-    "Stop" : {
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "停止"
-          }
-        }
-      }
-    },
     "Stop Preview" : {
       "localizations" : {
         "zh-Hans" : {
@@ -2953,26 +2887,6 @@
         }
       }
     },
-    "Thank You!" : {
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "感谢！"
-          }
-        }
-      }
-    },
-    "The bug report log has been successfully saved. This will greatly help in fixing issues!" : {
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Bug 报告已保存。这将对解决 Bug 提供重要帮助！"
-          }
-        }
-      }
-    },
     "The hidden label that slides into the corner of the active desktop." : {
       "localizations" : {
         "en" : {
@@ -2996,16 +2910,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "调度中心预览的大标签。"
-          }
-        }
-      }
-    },
-    "This generates a log that is helpful for the developers to debug." : {
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "这会创建一个对解决 Bug 很有帮助的日志。"
           }
         }
       }
