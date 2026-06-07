@@ -61,24 +61,39 @@ class SpaceHelper {
     private static var draggedWindowAppName: String? = nil
     static var isDragging: Bool { originalMousePoint != nil }
 
-    // Self-calibrating velocity — incremental feedback adjustment.
-    // Measures actual switch completion time per display and adjusts velocity
-    // by a small fixed step (±5%) per measurement, converging to the built-in
-    // display's speed without the noise amplification of ratio-based multipliers.
+    // Velocity calibration — adjusts multiplier per display so measured switch
+    // time converges to the user-configured target duration (default 0.35s).
+    // Multipliers are cached in UserDefaults for persistence across restarts.
     private static var gestureTimingStart: TimeInterval = 0
     private static var gestureTimingDisplayID: String = ""
 
-    // Rolling average of built-in display switch times (the reference baseline).
-    private static var baselineSamples: [TimeInterval] = []
-    private static let baselineMaxSamples = 10
-    private static var baselineAverage: TimeInterval = 0
-
-    // Per-display velocity multipliers, adjusted incrementally.
-    private static var displayMultipliers: [String: Double] = [:]
-    private static let tolerance: TimeInterval = 0.04       // ±40ms — don't adjust if within this
+    private static let calibrationKey = "GestureManager.CachedMultipliers"
+    private static let targetDurationKey = "GestureManager.SwitchDuration"
+    private static let defaultTargetDuration: TimeInterval = 0.35
+    private static let tolerance: TimeInterval = 0.04       // ±40ms deadband
     private static let adjustmentStep: Double = 0.05        // ±5% per measurement
-    private static let minMultiplier: Double = 0.5
-    private static let maxMultiplier: Double = 3.0
+    private static let minMultiplier: Double = 0.3
+    private static let maxMultiplier: Double = 5.0
+    private static let instantVelocity: Double = 3000.0
+
+    /// The user's target switch duration — 0 means instant mode.
+    static var targetDuration: TimeInterval {
+        let stored = UserDefaults.standard.double(forKey: targetDurationKey)
+        return stored > 0 ? stored : defaultTargetDuration
+    }
+
+    private static var cachedMultipliers: [String: Double] {
+        get {
+            guard let data = UserDefaults.standard.data(forKey: calibrationKey),
+                  let dict = try? JSONDecoder().decode([String: Double].self, from: data)
+            else { return [:] }
+            return dict
+        }
+        set {
+            guard let data = try? JSONEncoder().encode(newValue) else { return }
+            UserDefaults.standard.set(data, forKey: calibrationKey)
+        }
+    }
 
     static func beginGestureTiming(for displayID: String) {
         gestureTimingStart = Date().timeIntervalSince1970
@@ -95,33 +110,28 @@ class SpaceHelper {
     }
 
     private static func recordGestureDuration(_ duration: TimeInterval, for displayID: String) {
-        // Check if this is the built-in display — update baseline
-        for screen in NSScreen.screens {
-            guard let screenID = screen.deviceDescription[NSDeviceDescriptionKey("NSScreenNumber")] as? CGDirectDisplayID else { continue }
-            guard CGDisplayIsBuiltin(screenID) != 0 else { continue }
-            let uuidStr = CGDisplayCreateUUIDFromDisplayID(screenID).map { CFUUIDCreateString(nil, $0.takeRetainedValue()) as String }
-            guard uuidStr?.uppercased() == displayID.uppercased() || "\(screenID)" == displayID else { continue }
-            // This is the built-in display — accumulate baseline
-            baselineSamples.append(duration)
-            if baselineSamples.count > baselineMaxSamples { baselineSamples.removeFirst() }
-            baselineAverage = baselineSamples.reduce(0, +) / Double(baselineSamples.count)
-            return
-        }
+        let target = targetDuration
+        // Instant mode: no calibration needed
+        guard target > 0 else { return }
+        // Skip if within tolerance
+        guard abs(duration - target) > tolerance else { return }
 
-        // External display — adjust multiplier incrementally if outside tolerance
-        guard baselineAverage > 0 else { return }
-        guard abs(duration - baselineAverage) > tolerance else { return }
-
-        let current = displayMultipliers[displayID] ?? 1.0
-        let direction: Double = duration > baselineAverage ? 1.0 : -1.0
+        var multipliers = cachedMultipliers
+        let current = multipliers[displayID] ?? 1.0
+        let direction: Double = duration > target ? 1.0 : -1.0
         let newValue = current + adjustmentStep * direction
-        displayMultipliers[displayID] = max(minMultiplier, min(maxMultiplier, newValue))
+        multipliers[displayID] = max(minMultiplier, min(maxMultiplier, newValue))
+        cachedMultipliers = multipliers
     }
 
-    /// Returns a velocity multiplier for the given display, adjusted
-    /// incrementally so switch time converges to the built-in baseline.
+    /// Returns a velocity multiplier for the display, loaded from cache.
+    /// The multiplier is adjusted incrementally by recordGestureDuration()
+    /// to converge the measured switch time to the user's target.
     static func multiplierForDisplay(_ displayID: String) -> Double {
-        return displayMultipliers[displayID] ?? 1.0
+        let target = targetDuration
+        // Instant mode — no multiplier needed
+        guard target > 0 else { return 1.0 }
+        return cachedMultipliers[displayID] ?? 1.0
     }
 
     // Minimum width and height for a window to be considered a regular app window in getActiveWindowInfo (filtering out small system utilities/status items).
@@ -341,14 +351,20 @@ class SpaceHelper {
         let directionRight = steps > 0
         let absSteps = abs(steps)
 
-        // Record timing for self-calibrating velocity.
-        beginGestureTiming(for: targetDisplayID)
+        let target = targetDuration
+        let velocity: Double
+        if target <= 0 {
+            // Instant mode — fixed high velocity, no calibration
+            velocity = instantVelocity * Double(absSteps)
+        } else {
+            // Calibrated mode — record timing and apply per-display multiplier
+            beginGestureTiming(for: targetDisplayID)
+            let baseVelocity = isInstant ? 2000.0 : 52.0
+            let displayMultiplier = multiplierForDisplay(targetDisplayID)
+            velocity = baseVelocity * Double(absSteps) * displayMultiplier
+        }
 
-        let baseVelocity = isInstant ? 2000.0 : 52.0
-
-
-        // Resolve target display via NSScreen and apply self-calibrated velocity multiplier.
-        var displayMultiplier = multiplierForDisplay(targetDisplayID)
+        // Resolve target display via NSScreen.
         var targetScreen: NSScreen?
         for screen in NSScreen.screens {
             guard let screenID = screen.deviceDescription[NSDeviceDescriptionKey("NSScreenNumber")] as? CGDirectDisplayID else { continue }
@@ -358,7 +374,6 @@ class SpaceHelper {
                 break
             }
         }
-        let velocity = baseVelocity * Double(absSteps) * displayMultiplier
 
         // Warp mouse to target display only when cursor is on a different display.
         // Compare by NSScreen objects (not identifier strings) to avoid format mismatches.

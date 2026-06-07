@@ -261,7 +261,19 @@ struct SwitchSettingsView: View {
                                 .toggleStyle(.switch)
                                 .labelsHidden()
                         }
-                        
+
+                        Divider()
+
+                        SliderSettingsRow(
+                            "Target switch duration",
+                            helperText: "Set to 0 for instant switching. Otherwise the velocity is calibrated so the measured switch time matches this value (per display, cached across restarts).",
+                            value: $gestureManager.switchDuration,
+                            range: 0...1.0,
+                            defaultValue: 0.35,
+                            step: 0.05,
+                            valueString: { $0 == 0 ? "Instant" : String(format: "%.2fs", $0) }
+                        )
+
                         Divider()
 
                         SettingsRow("Gesture type", helperText: "When set to 3 fingers, you can still use 4 fingers to trigger native swipe.") {
