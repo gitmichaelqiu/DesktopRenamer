@@ -67,15 +67,19 @@ class SpaceHelper {
     private static var gestureTimingStart: TimeInterval = 0
     private static var gestureTimingDisplayID: String = ""
 
+    // Rolling average of recent measured durations per display (filters transient noise).
+    private static var recentDurations: [String: [TimeInterval]] = [:]
+    private static let averageWindow = 3
+
     private static let calibrationKey = "GestureManager.CachedMultipliers"
     private static let targetDurationKey = "GestureManager.SwitchDuration"
     private static let defaultTargetDuration: TimeInterval = 0.25
-    private static let tolerance: TimeInterval = 0.04       // ±40ms deadband
+    private static let tolerance: TimeInterval = 0.05       // ±50ms deadband
     private static let minMultiplier: Double = 0.3
     private static let maxMultiplier: Double = 5.0
-    // Adaptive step: 0.05 at tolerance, grows proportionally, capped at 0.15.
-    private static let stepBase: Double = 0.05
-    private static let stepMax: Double = 0.15
+    // Adaptive step: 0.03 at tolerance, grows proportionally, capped at 0.12.
+    private static let stepBase: Double = 0.03
+    private static let stepMax: Double = 0.12
 
     /// The user's target switch duration — 0 means instant mode.
     static var targetDuration: TimeInterval {
@@ -116,18 +120,27 @@ class SpaceHelper {
         let target = targetDuration
         // Instant mode: no calibration needed
         guard target > 0 else { return }
+
+        // Smooth individual measurements with a rolling average to avoid
+        // chasing transient noise (GPU load, OS scheduling jitter, etc.).
+        var window = recentDurations[displayID, default: []]
+        window.append(duration)
+        if window.count > averageWindow { window.removeFirst() }
+        recentDurations[displayID] = window
+        let avg = window.reduce(0, +) / Double(window.count)
+
         // Skip if within tolerance
-        let absError = abs(duration - target)
+        let absError = abs(avg - target)
         guard absError > tolerance else { return }
 
         // Proportional step: grows with error so large deviations correct quickly
-        // while small deviations are fine-tuned. At exactly tolerance → 0.05 step.
+        // while small deviations are fine-tuned. At exactly tolerance → 0.03 step.
         let ratio = absError / tolerance
         let step = min(stepMax, stepBase * ratio)
 
         var multipliers = cachedMultipliers
         let current = multipliers[displayID] ?? 1.0
-        let direction: Double = duration > target ? 1.0 : -1.0
+        let direction: Double = avg > target ? 1.0 : -1.0
         let newValue = current + step * direction
         multipliers[displayID] = max(minMultiplier, min(maxMultiplier, newValue))
         cachedMultipliers = multipliers
