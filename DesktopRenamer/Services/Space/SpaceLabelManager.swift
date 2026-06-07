@@ -223,8 +223,18 @@ class SpaceLabelManager: ObservableObject {
     }
 
     @objc private func handleSpaceSwitchRequested() {
-        if hideWhenSwitching {
-            hideAllPreviewLabels()
+        // Cancel any pending delayed restore from a previous switch at the START
+        // of each new switch (before currentSpaceUUID changes), so the old
+        // restore never fires mid-transition of the next switch.
+        // This may be called from a background thread (GestureManager's MT callback),
+        // so dispatch to main for thread-safe access.
+        DispatchQueue.main.async { [weak self] in
+            guard let self = self else { return }
+            self.delayedRestoreWorkItem?.cancel()
+            self.delayedRestoreWorkItem = nil
+            if self.hideWhenSwitching {
+                self.hideAllPreviewLabels()
+            }
         }
     }
 
