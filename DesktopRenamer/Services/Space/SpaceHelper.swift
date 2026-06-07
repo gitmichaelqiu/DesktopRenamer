@@ -67,7 +67,7 @@ class SpaceHelper {
     private static let targetDurationKey = "GestureManager.SwitchDuration"
     private static let defaultTargetDuration: TimeInterval = 0.25
     private static let tolerance: TimeInterval = 0.05       // ±50ms deadband
-    private static let minMultiplier: Double = 0.3
+    private static let minMultiplier: Double = 0.7
     private static let maxMultiplier: Double = 5.0
     // Adaptive step: 0.03 at tolerance, grows proportionally, capped at 0.12.
     private static let stepBase: Double = 0.03
@@ -127,22 +127,20 @@ class SpaceHelper {
         recentDurations[bucketKey] = window
         let avg = window.reduce(0, +) / Double(window.count)
 
-        // Only adjust when slower than target — never decrease the multiplier.
-        // Decreasing makes the switch slower over time, and when the animation
-        // becomes barely perceptible the user thinks it wasn't triggered and
-        // swipes again, stacking two switches and skipping multiple spaces.
-        guard avg > target + tolerance else { return }
-
         // Proportional step: grows with error so large deviations correct quickly
         // while small deviations are fine-tuned. At exactly tolerance → 0.03 step.
-        let absError = avg - target
+        let absError = abs(avg - target)
         let ratio = absError / tolerance
         let step = min(stepMax, stepBase * ratio)
 
         var multipliers = cachedMultipliers
         let current = multipliers[displayID] ?? 1.0
-        let newValue = current + step
-        multipliers[displayID] = min(maxMultiplier, newValue)
+        let direction: Double = avg > target ? 1.0 : -1.0
+        let newValue = current + step * direction
+        // Clamp to [minMultiplier, maxMultiplier]. minMultiplier (0.7) ensures
+        // the animation stays fast enough to be perceptible — below this the
+        // user thinks the swipe wasn't triggered and double-swipes, skipping spaces.
+        multipliers[displayID] = max(minMultiplier, min(maxMultiplier, newValue))
         cachedMultipliers = multipliers
     }
 
