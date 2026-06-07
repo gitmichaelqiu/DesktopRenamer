@@ -376,7 +376,12 @@ class SpaceHelper {
             // when alternating swipe directions.
             let dirLabel = directionRight ? "right" : "left"
             beginGestureTiming(for: targetDisplayID, direction: dirLabel)
-            velocity = 52.0 * Double(absSteps) * multiplierForDisplay(targetDisplayID)
+            // Force multiplier=1.0 during calibration so baseline is always
+            // measured at native speed, regardless of cached multipliers.
+            let bucket = "\(targetDisplayID)|\(dirLabel)"
+            let isCalibrating = (baselineSamples[bucket]?.count ?? 0) < calibrationSamples
+            let multiplier = isCalibrating ? 1.0 : multiplierForDisplay(targetDisplayID)
+            velocity = 52.0 * Double(absSteps) * multiplier
         }
 
         // Resolve target display via NSScreen.
