@@ -165,7 +165,7 @@ class GestureManager: ObservableObject {
 
         self.switchDuration =
             UserDefaults.standard.object(forKey: kSwitchDuration) == nil
-            ? 0.35 : UserDefaults.standard.double(forKey: kSwitchDuration)
+            ? 0.25 : UserDefaults.standard.double(forKey: kSwitchDuration)
 
         GestureManager.sharedManager = self
 

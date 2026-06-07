@@ -69,7 +69,7 @@ class SpaceHelper {
 
     private static let calibrationKey = "GestureManager.CachedMultipliers"
     private static let targetDurationKey = "GestureManager.SwitchDuration"
-    private static let defaultTargetDuration: TimeInterval = 0.35
+    private static let defaultTargetDuration: TimeInterval = 0.25
     private static let tolerance: TimeInterval = 0.04       // ±40ms deadband
     private static let minMultiplier: Double = 0.3
     private static let maxMultiplier: Double = 5.0
@@ -79,8 +79,10 @@ class SpaceHelper {
 
     /// The user's target switch duration — 0 means instant mode.
     static var targetDuration: TimeInterval {
-        let stored = UserDefaults.standard.double(forKey: targetDurationKey)
-        return stored > 0 ? stored : defaultTargetDuration
+        guard UserDefaults.standard.object(forKey: targetDurationKey) != nil else {
+            return defaultTargetDuration
+        }
+        return UserDefaults.standard.double(forKey: targetDurationKey)
     }
 
     private static var cachedMultipliers: [String: Double] {

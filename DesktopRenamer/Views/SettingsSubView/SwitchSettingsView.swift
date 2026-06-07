@@ -255,7 +255,7 @@ struct SwitchSettingsView: View {
                             helperText: "Set to 0 for instant switching (bypasses the macOS sliding animation). Otherwise the velocity is calibrated per display (cached across restarts) so the actual switch time converges to this value.",
                             value: $gestureManager.switchDuration,
                             range: 0...1.0,
-                            defaultValue: 0.35,
+                            defaultValue: 0.25,
                             step: 0.05,
                             valueString: { $0 == 0 ? "Instant" : String(format: "%.2fs", $0) }
                         )

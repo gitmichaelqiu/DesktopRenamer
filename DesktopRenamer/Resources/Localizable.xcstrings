@@ -579,6 +579,7 @@
       }
     },
     "Bypasses the macOS sliding animation using synthetic high-velocity gestures.\n\nRequires 'Swipe between full-screen applications' enabled in System Settings → Trackpad.\n\nRecommended: Disable 'Automatically rearrange spaces based on most recent use' in Desktop & Dock settings to prevent miscalculations." : {
+      "extractionState" : "stale",
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
@@ -1236,6 +1237,7 @@
       }
     },
     "Instant switch without animations" : {
+      "extractionState" : "stale",
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
@@ -2466,7 +2468,7 @@
         }
       }
     },
-    "Set to 0 for instant switching. Otherwise the velocity is calibrated so the measured switch time matches this value (per display, cached across restarts)." : {
+    "Set to 0 for instant switching (bypasses the macOS sliding animation). Otherwise the velocity is calibrated per display (cached across restarts) so the actual switch time converges to this value." : {
 
     },
     "Settings" : {
