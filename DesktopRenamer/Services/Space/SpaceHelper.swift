@@ -53,27 +53,19 @@ class SpaceHelper {
     // Velocity calibration — adjusts multiplier per display so measured switch
     // time converges to the user-configured target duration (default 0.35s).
     // Multipliers are cached in UserDefaults for persistence across restarts.
+    // One-shot calibration: measure raw switch time at multiplier=1.0 for
+    // the first N switches per display+direction, then lock the multiplier
+    // at baseline / target.  No further adjustments — the velocity stays stable.
     private static var gestureTimingStart: TimeInterval = 0
     private static var gestureTimingDisplayID: String = ""
     private static var gestureTimingDirection: String = ""
 
-    // Rolling average of recent measured durations per display+direction
-    // (e.g. "UUID|right"). Separate windows prevent oscillations when the
-    // user alternates swipe directions with different baseline timings.
-    private static var recentDurations: [String: [TimeInterval]] = [:]
-    private static let averageWindow = 5
-
     private static let calibrationKey = "GestureManager.CachedMultipliers"
+    private static let baselineKey = "GestureManager.SwitchBaselines"
     private static let targetDurationKey = "GestureManager.SwitchDuration"
     private static let defaultTargetDuration: TimeInterval = 0.25
-    private static let tolerance: TimeInterval = 0.05       // ±50ms deadband
-    private static let minMultiplier: Double = 0.7
-    private static let maxMultiplier: Double = 5.0
-    // Adaptive step: 0.03 at tolerance, grows proportionally, capped at 0.10.
-    private static let stepBase: Double = 0.03
-    private static let stepMax: Double = 0.10
-    // Tiny adjustments (<1%) cause gradual drift over many swipes.
-    private static let minStep: Double = 0.01
+    private static let minMultiplier: Double = 0.5
+    private static let maxMultiplier: Double = 6.0
 
     /// The user's target switch duration — 0 means instant mode.
     static var targetDuration: TimeInterval {
@@ -83,17 +75,24 @@ class SpaceHelper {
         return UserDefaults.standard.double(forKey: targetDurationKey)
     }
 
-    private static var cachedMultipliers: [String: Double] {
-        get {
-            guard let data = UserDefaults.standard.data(forKey: calibrationKey),
-                  let dict = try? JSONDecoder().decode([String: Double].self, from: data)
-            else { return [:] }
-            return dict
-        }
-        set {
-            guard let data = try? JSONEncoder().encode(newValue) else { return }
-            UserDefaults.standard.set(data, forKey: calibrationKey)
-        }
+    // Cached multipliers keyed by display (direction-agnostic).
+    private static var displayMultipliers: [String: Double] = {
+        guard let data = UserDefaults.standard.data(forKey: calibrationKey),
+              let dict = try? JSONDecoder().decode([String: Double].self, from: data)
+        else { return [:] }
+        return dict
+    }()
+    // Baseline samples: after collecting 'calibrationSamples' measurements the
+    // multiplier is computed and locked.
+    private static var baselineSamples: [String: [TimeInterval]] = [:]
+    private static let calibrationSamples = 3
+
+    /// Returns a stable velocity multiplier.  Returns cached value if available,
+    /// otherwise 1.0 (native speed) until enough baseline data is collected.
+    static func multiplierForDisplay(_ displayID: String) -> Double {
+        let target = targetDuration
+        guard target > 0 else { return 1.0 }
+        return displayMultipliers[displayID] ?? 1.0
     }
 
     static func beginGestureTiming(for displayID: String, direction: String = "") {
@@ -110,53 +109,41 @@ class SpaceHelper {
         gestureTimingStart = 0
         gestureTimingDisplayID = ""
         gestureTimingDirection = ""
-        // Discard anomalous durations from failed/cancelled gestures.
         guard duration < 2.0 else { return }
-        recordGestureDuration(duration, for: displayID, direction: direction)
+        // Collect a baseline sample at multiplier=1.0 (first N switches).
+        // Once enough samples are gathered, compute the multiplier once.
+        let bucket = direction.isEmpty ? displayID : "\(displayID)|\(direction)"
+        var samples = baselineSamples[bucket, default: []]
+        if samples.count < calibrationSamples {
+            samples.append(duration)
+            baselineSamples[bucket] = samples
+        }
+        // Try to lock (or update) the multiplier whenever we have enough data.
+        maybeLockMultiplier(for: displayID)
     }
 
-    private static func recordGestureDuration(_ duration: TimeInterval, for displayID: String, direction: String = "") {
+    /// If we have enough baseline samples, compute multiplier = baseline / target
+    /// and lock it.  Re-computes when `targetDuration` changes (read from UD each call).
+    private static func maybeLockMultiplier(for displayID: String) {
         let target = targetDuration
-        // Instant mode: no calibration needed
         guard target > 0 else { return }
 
-        // Use separate rolling windows per direction so alternating swipe
-        // directions don't cross-contaminate the average and cause oscillation.
-        let bucketKey = direction.isEmpty ? displayID : "\(displayID)|\(direction)"
-        var window = recentDurations[bucketKey, default: []]
-        window.append(duration)
-        if window.count > averageWindow { window.removeFirst() }
-        recentDurations[bucketKey] = window
-        let avg = window.reduce(0, +) / Double(window.count)
-
-        // Proportional step: grows with error so large deviations correct quickly
-        // while small deviations are fine-tuned. At exactly tolerance → 0.03 step.
-        let absError = abs(avg - target)
-        let ratio = absError / tolerance
-        var step = min(stepMax, stepBase * ratio)
-        // Skip sub-1% adjustments — they accumulate over many swipes causing
-        // the multiplier to drift without ever converging to a stable value.
-        guard step >= minStep else { return }
-
-        var multipliers = cachedMultipliers
-        let current = multipliers[displayID] ?? 1.0
-        let direction: Double = avg > target ? 1.0 : -1.0
-        let newValue = current + step * direction
-        // Clamp to [minMultiplier, maxMultiplier]. minMultiplier (0.7) ensures
-        // the animation stays fast enough to be perceptible — below this the
-        // user thinks the swipe wasn't triggered and double-swipes, skipping spaces.
-        multipliers[displayID] = max(minMultiplier, min(maxMultiplier, newValue))
-        cachedMultipliers = multipliers
-    }
-
-    /// Returns a velocity multiplier for the display, loaded from cache.
-    /// The multiplier is adjusted incrementally by recordGestureDuration()
-    /// to converge the measured switch time to the user's target.
-    static func multiplierForDisplay(_ displayID: String) -> Double {
-        let target = targetDuration
-        // Instant mode — no multiplier needed
-        guard target > 0 else { return 1.0 }
-        return cachedMultipliers[displayID] ?? 1.0
+        // Collect all direction buckets for this display.
+        let prefix = "\(displayID)|"
+        var allSamples: [TimeInterval] = []
+        for (key, samples) in baselineSamples {
+            if key == displayID || key.hasPrefix(prefix) {
+                allSamples.append(contentsOf: samples)
+            }
+        }
+        guard allSamples.count >= calibrationSamples else { return }
+        let baseline = allSamples.reduce(0, +) / Double(allSamples.count)
+        let multiplier = baseline / target
+        displayMultipliers[displayID] = max(minMultiplier, min(maxMultiplier, multiplier))
+        // Persist so the value survives restarts.
+        if let data = try? JSONEncoder().encode(displayMultipliers) {
+            UserDefaults.standard.set(data, forKey: calibrationKey)
+        }
     }
 
     // Minimum width and height for a window to be considered a regular app window in getActiveWindowInfo (filtering out small system utilities/status items).
