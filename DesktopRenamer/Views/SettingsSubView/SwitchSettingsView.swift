@@ -289,7 +289,7 @@ struct SwitchSettingsView: View {
                             range: 0...1.0,
                             defaultValue: 0.25,
                             step: 0.05,
-                            valueString: { $0 == 0 ? "Instant" : String(format: "%.2fs", $0) }
+                            valueString: {String(format: "%.2fs", $0) }
                         )
 
                         Divider()
