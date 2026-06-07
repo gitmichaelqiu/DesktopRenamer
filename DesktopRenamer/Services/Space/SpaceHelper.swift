@@ -172,9 +172,17 @@ class SpaceHelper {
 
         // For target duration T: multiplier = (avg52 / T)^(1/clampedP)
         let target = targetDuration
+        guard avg52 > target else {
+            // Already faster than target — keep native speed (multiplier = 1.0).
+            // Slowing down via a low multiplier makes the animation imperceptible
+            // on fast displays, causing the user to think the swipe wasn't
+            // triggered and double-swipe, skipping spaces.
+            displayMultipliers[displayID] = 1.0
+            if let data = try? JSONEncoder().encode(displayMultipliers) { UserDefaults.standard.set(data, forKey: calibrationKey) }
+            return
+        }
         let ratio = avg52 / target
         let multiplier = pow(ratio, 1.0 / clampedP)
-
         displayMultipliers[displayID] = max(minMultiplier, min(maxMultiplier, multiplier))
         if let data = try? JSONEncoder().encode(displayMultipliers) {
             UserDefaults.standard.set(data, forKey: calibrationKey)
