@@ -25,11 +25,17 @@ struct LogEntry: Identifiable, CustomStringConvertible {
     let isDesktop: Bool
     let ncCount: Int
     let action: String
-    
+
+    // Cached DateFormatter — creating one per access is expensive and not thread-safe.
+    private static let logDateFormatter: DateFormatter = {
+        let f = DateFormatter()
+        f.dateFormat = "HH:mm:ss.SSS"
+        f.locale = Locale(identifier: "en_US_POSIX")
+        return f
+    }()
+
     var description: String {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "HH:mm:ss.SSS"
-        return "[\(formatter.string(from: timestamp))] ACTION: \(action) | UUID: \(spaceUUID) | Desktop: \(isDesktop) | NC: \(ncCount)"
+        return "[\(Self.logDateFormatter.string(from: timestamp))] ACTION: \(action) | UUID: \(spaceUUID) | Desktop: \(isDesktop) | NC: \(ncCount)"
     }
 }
 
@@ -43,7 +49,6 @@ class SpaceManager: ObservableObject {
     static private let isAPIEnabledKey = "com.michaelqiu.desktoprenamer.isapienabled"
     static private let detectionMethodKey = "com.michaelqiu.desktoprenamer.detectionMethod"
     static private let isManualSpacesEnabledKey = "com.michaelqiu.desktoprenamer.ismanualspacesenabled"
-    static private let instantSpaceSwitchKey = "com.michaelqiu.desktoprenamer.instantSpaceSwitch"
     static private let grabOffsetXKey = "com.michaelqiu.desktoprenamer.grabOffsetX"
     static private let grabOffsetYKey = "com.michaelqiu.desktoprenamer.grabOffsetY"
     static private let lockedSpaceIDsKey = "com.michaelqiu.desktoprenamer.lockedSpaceIDs"
@@ -92,6 +97,11 @@ class SpaceManager: ObservableObject {
     
     // Display Cache
     private var connectedDisplayUUIDs: Set<String> = []
+
+    // Periodic space layout check to detect new spaces created in Mission Control
+    // without an explicit space switch event.
+    private var spaceLayoutCheckTimer: Timer?
+    private let spaceLayoutCheckInterval: TimeInterval = 5.0
     
     // Space locking state and configurations
     
@@ -115,13 +125,7 @@ class SpaceManager: ObservableObject {
     }
     
     var isManualMode: Bool { detectionMethod == .manual }
-    
-    @Published var instantSpaceSwitch: Bool {
-        didSet {
-            UserDefaults.standard.set(instantSpaceSwitch, forKey: SpaceManager.instantSpaceSwitchKey)
-        }
-    }
-    
+
     @Published var grabOffsetX: Double {
         didSet {
             UserDefaults.standard.set(grabOffsetX, forKey: SpaceManager.grabOffsetXKey)
@@ -163,8 +167,6 @@ class SpaceManager: ObservableObject {
             self.detectionMethod = .automatic
         }
         
-        self.instantSpaceSwitch = UserDefaults.standard.bool(forKey: SpaceManager.instantSpaceSwitchKey)
-            
         if let savedLocked = UserDefaults.standard.stringArray(forKey: SpaceManager.lockedSpaceIDsKey) {
             self.lockedSpaceIDs = Set(savedLocked)
         }
@@ -197,6 +199,7 @@ class SpaceManager: ObservableObject {
         NSWorkspace.shared.notificationCenter.addObserver(self, selector: #selector(systemDidWake), name: NSWorkspace.didWakeNotification, object: nil)
         
         refreshConnectedDisplays()
+        startPeriodicSpaceLayoutCheck()
     }
     
     func toggleLockSpace(_ spaceID: String) {
@@ -210,6 +213,12 @@ class SpaceManager: ObservableObject {
     }
     
     deinit {
+        // Timer invalidation is not thread-safe; deinit can run on any thread.
+        if let timer = spaceLayoutCheckTimer {
+            DispatchQueue.main.async {
+                timer.invalidate()
+            }
+        }
         NotificationCenter.default.removeObserver(self)
     }
     
@@ -374,13 +383,13 @@ class SpaceManager: ObservableObject {
                 self.spaceNameDict = newSpaceList
                 
                 // Update index cache with currently detected spaces.
-                // We do NOT aggressively clear the entire cache here to preserve names for displays 
+                // We do NOT aggressively clear the entire cache here to preserve names for displays
                 // that might be temporarily undetected or in a transient state.
-                var displayDesktopCounters: [String: Int] = [:]
+                var cacheCounters: [String: Int] = [:]
                 for space in self.spaceNameDict where !space.isFullscreen {
-                    let count = displayDesktopCounters[space.displayID, default: 0] + 1
-                    displayDesktopCounters[space.displayID] = count
-                    
+                    let count = cacheCounters[space.displayID, default: 0] + 1
+                    cacheCounters[space.displayID] = count
+
                     if !space.customName.isEmpty {
                         let key = "\(space.displayID)|Desktop|\(count)"
                         self.indexCache[key] = space.customName
@@ -621,9 +630,10 @@ class SpaceManager: ObservableObject {
         }
         
         let widgetSpaces = sortedSpaces.map { space in
-            WidgetSpace(
+            let defaultName = space.isFullscreen ? (space.appName ?? "Fullscreen") : String(format: NSLocalizedString("Space.DefaultName", comment: ""), space.num)
+            return WidgetSpace(
                 id: space.id,
-                name: space.customName.isEmpty ? String(format: NSLocalizedString("Space.DefaultName", comment: ""), space.num) : space.customName,
+                name: space.customName.isEmpty ? defaultName : space.customName,
                 num: space.num,
                 displayID: space.displayID
             )
@@ -634,15 +644,17 @@ class SpaceManager: ObservableObject {
         }
         
         // Some simple fields for basic widgets to use
-        let allSpaceNames = sortedSpaces.map { $0.customName.isEmpty ? "\($0.num)" : $0.customName }
+        let allSpaceNames = sortedSpaces.map { space in
+            if !space.customName.isEmpty { return space.customName }
+            return space.isFullscreen ? (space.appName ?? "Fullscreen") : "\(space.num)"
+        }
         defaults.set(allSpaceNames, forKey: "widget_allSpaces")
         
         defaults.set(name, forKey: "widget_spaceName")
         defaults.set(num, forKey: "widget_spaceNum")
         defaults.set(isDesktop, forKey: "widget_isDesktop")
         defaults.set(currentSpaceUUID, forKey: "widget_currentSpaceUUID")
-        
-        defaults.synchronize()
+
         WidgetCenter.shared.reloadAllTimelines()
     }
     
@@ -666,7 +678,36 @@ class SpaceManager: ObservableObject {
     }
     
     func prepareForTermination() {
+        stopPeriodicSpaceLayoutCheck()
         DistributedNotificationCenter.default().postNotificationName(SpaceAPI.apiToggleNotification, object: nil, userInfo: ["isEnabled": false], deliverImmediately: true)
+    }
+
+    // MARK: - Periodic Space Layout Check
+
+    private func startPeriodicSpaceLayoutCheck() {
+        stopPeriodicSpaceLayoutCheck()
+        spaceLayoutCheckTimer = Timer.scheduledTimer(withTimeInterval: spaceLayoutCheckInterval, repeats: true) { [weak self] _ in
+            self?.checkForNewSpaces()
+        }
+    }
+
+    private func stopPeriodicSpaceLayoutCheck() {
+        spaceLayoutCheckTimer?.invalidate()
+        spaceLayoutCheckTimer = nil
+    }
+
+    /// Lightweight check that compares the current CGS space set against
+    /// spaceNameDict. If new spaces exist (e.g., created in Mission Control on an
+    /// external display) without a space switch having occurred, triggers a full
+    /// detection refresh to pick them up.
+    private func checkForNewSpaces() {
+        guard detectionMethod == .automatic else { return }
+        guard let cgsState = SpaceHelper.getSystemState() else { return }
+        let cgsIDs = Set(cgsState.spaces.map { $0.id })
+        let currentIDs = Set(spaceNameDict.map { $0.id })
+        guard cgsIDs != currentIDs else { return }
+        print("SpaceManager: Detected space layout change (CGS: \(cgsIDs.count) vs cached: \(currentIDs.count)). Refreshing...")
+        refreshSpaceState()
     }
     
     private func loadSavedData() {
@@ -735,7 +776,6 @@ class SpaceManager: ObservableObject {
         if let data = try? JSONEncoder().encode(indexCache) {
             UserDefaults.standard.set(data, forKey: SpaceManager.indexCacheKey)
         }
-        UserDefaults.standard.synchronize()
     }
 
     func getSpaceNum(_ spaceUUID: String) -> Int {
@@ -758,9 +798,14 @@ class SpaceManager: ObservableObject {
         }
         if spaceUUID == "FULLSCREEN" { return "Fullscreen" }
         
-        var ret = spaceNameDict.first(where: {$0.id == spaceUUID})?.customName
+        let matched = spaceNameDict.first(where: { $0.id == spaceUUID })
+        var ret = matched?.customName
         if ret == nil || ret == "" {
-            ret = String(format: NSLocalizedString("Space.DefaultName", comment: ""), getSpaceNum(spaceUUID))
+            if matched?.isFullscreen == true {
+                ret = matched?.appName ?? "Fullscreen"
+            } else {
+                ret = String(format: NSLocalizedString("Space.DefaultName", comment: ""), getSpaceNum(spaceUUID))
+            }
         }
         return ret ?? ""
     }
@@ -824,14 +869,14 @@ class SpaceManager: ObservableObject {
     func switchToPreviousSpace(onDisplayID displayID: String? = nil, forceInstant: Bool? = nil) {
         let targetDisplayID = displayID ?? spaceNameDict.first(where: { $0.id == currentSpaceUUID })?.displayID ?? currentDisplayID
         if let current = findBestCurrentSpace(for: targetDisplayID) {
-            proceedToSwitch(from: current, on: targetDisplayID, direction: -1, forceInstant: forceInstant ?? instantSpaceSwitch)
+            proceedToSwitch(from: current, on: targetDisplayID, direction: -1, forceInstant: forceInstant ?? false)
         }
     }
 
     func switchToNextSpace(onDisplayID displayID: String? = nil, forceInstant: Bool? = nil) {
         let targetDisplayID = displayID ?? spaceNameDict.first(where: { $0.id == currentSpaceUUID })?.displayID ?? currentDisplayID
         if let current = findBestCurrentSpace(for: targetDisplayID) {
-            proceedToSwitch(from: current, on: targetDisplayID, direction: 1, forceInstant: forceInstant ?? instantSpaceSwitch)
+            proceedToSwitch(from: current, on: targetDisplayID, direction: 1, forceInstant: forceInstant ?? false)
         }
     }
 
@@ -995,6 +1040,20 @@ class SpaceManager: ObservableObject {
         
         guard let targetSpace = spaceNameDict.first(where: { $0.id == id }), !targetSpace.isFullscreen else {
             return
+        }
+
+        // Un-fullscreen first if current space is fullscreen
+        if let currentSpaceObj = spaceNameDict.first(where: { $0.id == currentSpaceUUID }), currentSpaceObj.isFullscreen {
+            if let windowInfo = SpaceHelper.getActiveWindowInfo() {
+                if let axWindow = SpaceHelper.getAXWindow(id: windowInfo.id, pid: windowInfo.pid) {
+                    AXUIElementSetAttributeValue(axWindow, "AXFullScreen" as CFString, false as CFTypeRef)
+                    // Wait for the exit-fullscreen animation to complete
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) {
+                        self.moveActiveWindowToSpace(id: id)
+                    }
+                    return
+                }
+            }
         }
 
         // Robust Cross-Monitor Support: 

@@ -7,16 +7,20 @@ struct SpaceGroup: Identifiable, Equatable {
     let name: String
     let displayName: String
     let num: Int
+    let isFullscreen: Bool
+    let appPath: String?
     
     // Caching transformed string for performance
     let pinyinName: String
     let pinyinDisplayName: String
     
-    init(id: String, name: String, displayName: String, num: Int) {
+    init(id: String, name: String, displayName: String, num: Int, isFullscreen: Bool, appPath: String? = nil) {
         self.id = id
         self.name = name
         self.displayName = displayName
         self.num = num
+        self.isFullscreen = isFullscreen
+        self.appPath = appPath
         
         let mutableName = NSMutableString(string: name)
         CFStringTransform(mutableName, nil, kCFStringTransformToLatin, false)
@@ -62,14 +66,54 @@ struct WindowEntry: Identifiable, Equatable {
     }
 }
 
+enum BatchStagedActionType: Equatable {
+    case move(targetSpace: SpaceGroup)
+    case close
+    case minimize
+    case hide
+    case enterFullScreen
+    case exitFullScreen
+    case quit
+    case restore
+    case restoreTo(targetSpace: SpaceGroup)
+    
+    var description: String {
+        switch self {
+        case .move(let space):
+            return "→ \(space.name)"
+        case .close:
+            return "→ Close"
+        case .minimize:
+            return "→ Minimize"
+        case .hide:
+            return "→ Hide"
+        case .enterFullScreen:
+            return "→ Enter Full Screen"
+        case .exitFullScreen:
+            return "→ Exit Full Screen"
+        case .quit:
+            return "→ Quit"
+        case .restore:
+            return "→ Restore"
+        case .restoreTo(let space):
+            return "→ Restore to \(space.name)"
+        }
+    }
+}
+
+struct BatchStagedAction: Equatable {
+    let window: WindowEntry
+    let actionType: BatchStagedActionType
+}
+
 enum BatchMoveItem: Identifiable, Equatable {
-    case staged(move: (window: WindowEntry, targetSpace: SpaceGroup), index: Int)
+    case staged(action: BatchStagedAction, index: Int)
     case unstaged(window: WindowEntry, index: Int)
     
     var id: String {
         switch self {
-        case .staged(let move, _):
-            return "staged_\(move.window.id)"
+        case .staged(let action, _):
+            return "staged_\(action.window.id)"
         case .unstaged(let window, _):
             return "unstaged_\(window.id)"
         }
@@ -94,6 +138,24 @@ struct BatchMoveSection: Identifiable {
     let title: String
     let subtitle: String
     let items: [BatchMoveItem]
+}
+
+struct ListWindowsItem: Identifiable, Equatable {
+    let window: WindowEntry
+    let index: Int
+    
+    var id: String { "list_window_\(window.id)" }
+    
+    static func == (lhs: ListWindowsItem, rhs: ListWindowsItem) -> Bool {
+        return lhs.window.id == rhs.window.id && lhs.index == rhs.index
+    }
+}
+
+struct ListWindowsSection: Identifiable {
+    var id: String { title }
+    let title: String
+    let subtitle: String
+    let items: [ListWindowsItem]
 }
 
 @MainActor class LauncherViewModel: ObservableObject {
@@ -158,7 +220,7 @@ struct BatchMoveSection: Identifiable {
     @Published var selectedSpaceIndex: Int = 0
     
     // For batch window moves
-    @Published var stagedMoves: [Int: (window: WindowEntry, targetSpace: SpaceGroup)] = [:]
+    @Published var stagedMoves: [Int: BatchStagedAction] = [:]
     @Published var stagingWindow: WindowEntry? = nil {
         didSet {
             searchQuery = ""
@@ -169,19 +231,31 @@ struct BatchMoveSection: Identifiable {
     }
     @Published var isExecutingBatchMove: Bool = false
     
+    // Command K Panel Overlay State
+    @Published var commandKTargetWindow: WindowEntry? = nil {
+        didSet {
+            if commandKTargetWindow != nil {
+                commandKSelectedIndex = 0
+            }
+        }
+    }
+    @Published var commandKSelectedIndex: Int = 0
+    @Published var isStagingForRestoreTo: Bool = false
+    @Published var isExecutingRestoreToImmediately: Bool = false
+    
     // Captured active window before launcher gains focus
     @Published var previouslyActiveWindow: (id: Int, pid: Int32, frame: CGRect)? = nil
     
     // For space renaming
     @Published var renameInputText: String = ""
-    private var batchMoveLastSelectedIndex: Int = 0
+    var batchMoveLastSelectedIndex: Int = 0
     
     var onClose: (() -> Void)?
     
     let allCommands: [LauncherCommand] = [
         LauncherCommand(type: .switchToDesktop, title: NSLocalizedString("Switch Desktop", comment: ""), subtitle: NSLocalizedString("Select a desktop to switch to", comment: ""), iconName: "desktopcomputer", hasSubpage: true),
         LauncherCommand(type: .moveWindow, title: NSLocalizedString("Move Window to Desktop", comment: ""), subtitle: NSLocalizedString("Move the active window to a selected space", comment: ""), iconName: "macwindow.and.cursorarrow", hasSubpage: true),
-        LauncherCommand(type: .listWindows, title: NSLocalizedString("Focus Window", comment: ""), subtitle: NSLocalizedString("Search and focus open application windows", comment: ""), iconName: "macwindow", hasSubpage: true),
+        LauncherCommand(type: .listWindows, title: NSLocalizedString("List Windows", comment: ""), subtitle: NSLocalizedString("Search and manage open application windows", comment: ""), iconName: "macwindow", hasSubpage: true),
         LauncherCommand(type: .batchMoveWindows, title: NSLocalizedString("Batch Move Windows", comment: ""), subtitle: NSLocalizedString("Select and move multiple windows to a space", comment: ""), iconName: "macwindow.on.rectangle", hasSubpage: true),
         LauncherCommand(type: .renameCurrentSpace, title: NSLocalizedString("Rename Current Space", comment: ""), subtitle: NSLocalizedString("Rename the current space to a new label", comment: ""), iconName: "pencil", hasSubpage: true),
         LauncherCommand(type: .reloadLabels, title: NSLocalizedString("Reload Space Labels", comment: ""), subtitle: NSLocalizedString("Force refresh all space name labels on displays", comment: ""), iconName: "arrow.clockwise", hasSubpage: false),
@@ -249,7 +323,9 @@ struct BatchMoveSection: Identifiable {
     var filteredSpaces: [SpaceGroup] {
         var spaces = currentSpaces
         if let staging = stagingWindow {
-            spaces = spaces.filter { $0.id != staging.space.id }
+            spaces = spaces.filter { $0.id != staging.space.id && !$0.isFullscreen }
+        } else if activeCommand?.type == .moveWindow {
+            spaces = spaces.filter { !$0.isFullscreen }
         }
 
         if searchQuery.isEmpty {
@@ -264,7 +340,7 @@ struct BatchMoveSection: Identifiable {
         }
     }
     
-    var filteredStagedMoves: [(window: WindowEntry, targetSpace: SpaceGroup)] {
+    var filteredStagedActions: [BatchStagedAction] {
         let allStaged = stagedMoves.values.sorted { $0.window.title < $1.window.title }
         if searchQuery.isEmpty {
             return allStaged
@@ -296,9 +372,9 @@ struct BatchMoveSection: Identifiable {
         var items: [BatchMoveItem] = []
         
         // 1. Staged items
-        let staged = filteredStagedMoves
-        for (idx, move) in staged.enumerated() {
-            items.append(.staged(move: move, index: idx))
+        let staged = filteredStagedActions
+        for (idx, action) in staged.enumerated() {
+            items.append(.staged(action: action, index: idx))
         }
         
         // 2. Unstaged items grouped by space
@@ -358,6 +434,297 @@ struct BatchMoveSection: Identifiable {
         return sections
     }
     
+    func isWindowMinimizedOrAppHidden(_ window: WindowEntry) -> (minimized: Bool, hidden: Bool) {
+        var isMin = false
+        var isHid = false
+        
+        if let app = NSRunningApplication(processIdentifier: window.pid) {
+            isHid = app.isHidden
+        }
+        
+        if let axWindow = SpaceHelper.getAXWindow(id: window.id, pid: window.pid) {
+            var minimizedRef: CFTypeRef?
+            if AXUIElementCopyAttributeValue(axWindow, kAXMinimizedAttribute as CFString, &minimizedRef) == .success,
+               let isMinimized = minimizedRef as? Bool {
+                isMin = isMinimized
+            }
+        }
+        
+        return (minimized: isMin, hidden: isHid)
+    }
+    
+    func getAvailableCommandKActions(for window: WindowEntry) -> [BatchStagedActionType] {
+        let (minimized, hidden) = isWindowMinimizedOrAppHidden(window)
+        let isFS = window.space.isFullscreen
+        let fullscreenAction: BatchStagedActionType = isFS ? .exitFullScreen : .enterFullScreen
+        
+        var actions: [BatchStagedActionType] = []
+        if minimized || hidden {
+            actions = [.close, .restore, fullscreenAction, .quit]
+        } else {
+            actions = [.close, .minimize, .hide, fullscreenAction, .quit]
+        }
+        
+        return actions
+    }
+    
+    var commandKActions: [BatchStagedActionType] {
+        guard let window = commandKTargetWindow else { return [] }
+        return getAvailableCommandKActions(for: window)
+    }
+    
+    func showCommandKPanel() {
+        if activeCommand?.type == .listWindows {
+            let windows = filteredWindows
+            let index = selectedRowIndex
+            guard index >= 0 && index < windows.count else { return }
+            commandKTargetWindow = windows[index]
+            commandKSelectedIndex = 0
+        } else {
+            let items = batchMoveSelectableItems
+            let index = selectedRowIndex
+            guard index >= 0 && index < items.count else { return }
+            let selectedItem = items[index]
+            
+            switch selectedItem {
+            case .staged:
+                return
+            case .unstaged(let window, _):
+                commandKTargetWindow = window
+                commandKSelectedIndex = 0
+            }
+        }
+    }
+    
+    func selectPreviousCommandKAction() {
+        let count = commandKActions.count
+        if count > 0 {
+            commandKSelectedIndex = (commandKSelectedIndex - 1 + count) % count
+        }
+    }
+    
+    func selectNextCommandKAction() {
+        let count = commandKActions.count
+        if count > 0 {
+            commandKSelectedIndex = (commandKSelectedIndex + 1) % count
+        }
+    }
+    
+    func executeCommandKAction() {
+        guard let window = commandKTargetWindow else { return }
+        let available = commandKActions
+        guard commandKSelectedIndex >= 0 && commandKSelectedIndex < available.count else { return }
+        let action = available[commandKSelectedIndex]
+        
+        commandKTargetWindow = nil
+        if activeCommand?.type == .listWindows {
+            executeActionImmediately(window: window, actionType: action)
+        } else {
+            stagedMoves[window.id] = BatchStagedAction(window: window, actionType: action)
+        }
+    }
+    
+    func executeActionImmediately(window: WindowEntry, actionType: BatchStagedActionType) {
+        let originalSpaceUUID = AppDelegate.shared.spaceManager?.currentSpaceUUID
+        
+        Task {
+            let windowSpaceID = window.space.id
+            let isFullscreenWindow = window.space.isFullscreen
+            let requiresAX = (actionType == .close || actionType == .minimize || actionType == .enterFullScreen || actionType == .exitFullScreen || actionType == .restore || (actionType == .hide && isFullscreenWindow))
+            
+            // If the target window is on a different space, switch to its space first so AX APIs can access it.
+            if requiresAX,
+               let manager = AppDelegate.shared.spaceManager,
+               manager.currentSpaceUUID != windowSpaceID,
+               let spaceObj = manager.spaceNameDict.first(where: { $0.id == windowSpaceID }) {
+                manager.switchToSpace(spaceObj, forceInstant: true)
+                try? await Task.sleep(nanoseconds: 600_000_000) // 0.6s settle time
+            }
+            
+            // Un-fullscreen first if the window is currently fullscreen and the action requires it
+            if isFullscreenWindow && (actionType == .close || actionType == .minimize || actionType == .hide) {
+                var axWindow = SpaceHelper.getAXWindow(id: window.id, pid: window.pid)
+                if axWindow == nil {
+                    if let app = NSRunningApplication(processIdentifier: window.pid) {
+                        app.activate(options: .activateIgnoringOtherApps)
+                        try? await Task.sleep(nanoseconds: 400_000_000)
+                        axWindow = SpaceHelper.getAXWindow(id: window.id, pid: window.pid)
+                    }
+                }
+                if let targetAXWindow = axWindow {
+                    AXUIElementSetAttributeValue(targetAXWindow, "AXFullScreen" as CFString, false as CFTypeRef)
+                    try? await Task.sleep(nanoseconds: 1_200_000_000) // Wait for exit-fullscreen animation to settle
+                }
+            }
+            
+            switch actionType {
+            case .close:
+                var axWindow = SpaceHelper.getAXWindow(id: window.id, pid: window.pid)
+                if axWindow == nil {
+                    if let app = NSRunningApplication(processIdentifier: window.pid) {
+                        app.activate(options: .activateIgnoringOtherApps)
+                        try? await Task.sleep(nanoseconds: 400_000_000)
+                        axWindow = SpaceHelper.getAXWindow(id: window.id, pid: window.pid)
+                    }
+                }
+                if let targetAXWindow = axWindow {
+                    var closeButtonRef: CFTypeRef?
+                    if AXUIElementCopyAttributeValue(targetAXWindow, kAXCloseButtonAttribute as CFString, &closeButtonRef) == .success,
+                       let closeButton = closeButtonRef {
+                        AXUIElementPerformAction(closeButton as! AXUIElement, kAXPressAction as CFString)
+                    }
+                }
+            case .minimize:
+                var axWindow = SpaceHelper.getAXWindow(id: window.id, pid: window.pid)
+                if axWindow == nil {
+                    if let app = NSRunningApplication(processIdentifier: window.pid) {
+                        app.activate(options: .activateIgnoringOtherApps)
+                        try? await Task.sleep(nanoseconds: 400_000_000)
+                        axWindow = SpaceHelper.getAXWindow(id: window.id, pid: window.pid)
+                    }
+                }
+                if let targetAXWindow = axWindow {
+                    AXUIElementSetAttributeValue(targetAXWindow, kAXMinimizedAttribute as CFString, true as CFTypeRef)
+                }
+            case .hide:
+                if let app = NSRunningApplication(processIdentifier: window.pid) {
+                    app.hide()
+                }
+            case .enterFullScreen:
+                var axWindow = SpaceHelper.getAXWindow(id: window.id, pid: window.pid)
+                if axWindow == nil {
+                    if let app = NSRunningApplication(processIdentifier: window.pid) {
+                        app.activate(options: .activateIgnoringOtherApps)
+                        try? await Task.sleep(nanoseconds: 400_000_000)
+                        axWindow = SpaceHelper.getAXWindow(id: window.id, pid: window.pid)
+                    }
+                }
+                if let targetAXWindow = axWindow {
+                    AXUIElementSetAttributeValue(targetAXWindow, "AXFullScreen" as CFString, true as CFTypeRef)
+                    try? await Task.sleep(nanoseconds: 1_000_000_000)
+                }
+            case .exitFullScreen:
+                var axWindow = SpaceHelper.getAXWindow(id: window.id, pid: window.pid)
+                if axWindow == nil {
+                    if let app = NSRunningApplication(processIdentifier: window.pid) {
+                        app.activate(options: .activateIgnoringOtherApps)
+                        try? await Task.sleep(nanoseconds: 400_000_000)
+                        axWindow = SpaceHelper.getAXWindow(id: window.id, pid: window.pid)
+                    }
+                }
+                if let targetAXWindow = axWindow {
+                    AXUIElementSetAttributeValue(targetAXWindow, "AXFullScreen" as CFString, false as CFTypeRef)
+                    try? await Task.sleep(nanoseconds: 1_000_000_000)
+                }
+            case .quit:
+                if let app = NSRunningApplication(processIdentifier: window.pid) {
+                    app.terminate()
+                }
+            case .restore:
+                if let app = NSRunningApplication(processIdentifier: window.pid) {
+                    app.unhide()
+                }
+                var axWindow = SpaceHelper.getAXWindow(id: window.id, pid: window.pid)
+                if axWindow == nil {
+                    if let app = NSRunningApplication(processIdentifier: window.pid) {
+                        app.activate(options: .activateIgnoringOtherApps)
+                        try? await Task.sleep(nanoseconds: 400_000_000)
+                        axWindow = SpaceHelper.getAXWindow(id: window.id, pid: window.pid)
+                    }
+                }
+                if let targetAXWindow = axWindow {
+                    AXUIElementSetAttributeValue(targetAXWindow, kAXMinimizedAttribute as CFString, false as CFTypeRef)
+                }
+            case .restoreTo(let space):
+                if let app = NSRunningApplication(processIdentifier: window.pid) {
+                    app.unhide()
+                }
+                var axWindow = SpaceHelper.getAXWindow(id: window.id, pid: window.pid)
+                if axWindow == nil {
+                    if let app = NSRunningApplication(processIdentifier: window.pid) {
+                        app.activate(options: .activateIgnoringOtherApps)
+                        try? await Task.sleep(nanoseconds: 400_000_000)
+                        axWindow = SpaceHelper.getAXWindow(id: window.id, pid: window.pid)
+                    }
+                }
+                if let targetAXWindow = axWindow {
+                    AXUIElementSetAttributeValue(targetAXWindow, kAXMinimizedAttribute as CFString, false as CFTypeRef)
+                }
+                try? await Task.sleep(nanoseconds: 300_000_000) // 0.3s restore settle
+                
+                if window.space.id != space.id {
+                    // Focus the window
+                    SpaceHelper.focusWindow(id: window.id, pid: window.pid)
+                    try? await Task.sleep(nanoseconds: 250_000_000)
+                    
+                    // Un-fullscreen first if the window is currently in a fullscreen space
+                    if window.space.isFullscreen {
+                        var axFSWindow = SpaceHelper.getAXWindow(id: window.id, pid: window.pid)
+                        if axFSWindow == nil {
+                            if let app = NSRunningApplication(processIdentifier: window.pid) {
+                                app.activate(options: .activateIgnoringOtherApps)
+                                try? await Task.sleep(nanoseconds: 400_000_000)
+                                axFSWindow = SpaceHelper.getAXWindow(id: window.id, pid: window.pid)
+                            }
+                        }
+                        if let targetAXFSWindow = axFSWindow {
+                            AXUIElementSetAttributeValue(targetAXFSWindow, "AXFullScreen" as CFString, false as CFTypeRef)
+                            try? await Task.sleep(nanoseconds: 1_200_000_000)
+                        }
+                    }
+                    
+                    if let manager = AppDelegate.shared.spaceManager {
+                        manager.moveActiveWindowToSpace(id: space.id)
+                    }
+                    try? await Task.sleep(nanoseconds: 500_000_000)
+                }
+            case .move(let space):
+                if window.space.id != space.id {
+                    // Focus the window
+                    SpaceHelper.focusWindow(id: window.id, pid: window.pid)
+                    try? await Task.sleep(nanoseconds: 250_000_000)
+                    
+                    // Un-fullscreen first if the window is currently in a fullscreen space
+                    if window.space.isFullscreen {
+                        var axFSWindow = SpaceHelper.getAXWindow(id: window.id, pid: window.pid)
+                        if axFSWindow == nil {
+                            if let app = NSRunningApplication(processIdentifier: window.pid) {
+                                app.activate(options: .activateIgnoringOtherApps)
+                                try? await Task.sleep(nanoseconds: 400_000_000)
+                                axFSWindow = SpaceHelper.getAXWindow(id: window.id, pid: window.pid)
+                            }
+                        }
+                        if let targetAXFSWindow = axFSWindow {
+                            AXUIElementSetAttributeValue(targetAXFSWindow, "AXFullScreen" as CFString, false as CFTypeRef)
+                            try? await Task.sleep(nanoseconds: 1_200_000_000)
+                        }
+                    }
+                    
+                    if let manager = AppDelegate.shared.spaceManager {
+                        manager.moveActiveWindowToSpace(id: space.id)
+                    }
+                    try? await Task.sleep(nanoseconds: 500_000_000)
+                }
+            default:
+                break
+            }
+            
+            // Return to original space
+            if let originalUUID = originalSpaceUUID,
+               let manager = AppDelegate.shared.spaceManager,
+               manager.returnToOriginalAfterBatchMove {
+                if manager.currentSpaceUUID != originalUUID,
+                   let targetSpace = manager.spaceNameDict.first(where: { $0.id == originalUUID }) {
+                    manager.switchToSpace(targetSpace, forceInstant: true)
+                }
+            }
+            
+            await MainActor.run {
+                self.loadData()
+            }
+        }
+    }
+
     var filteredWindows: [WindowEntry] {
         if searchQuery.isEmpty {
             return currentWindows
@@ -369,6 +736,39 @@ struct BatchMoveSection: Identifiable {
                 matchesQuery(query, target: $0.space.name, pinyin: $0.space.pinyinName)
             }
         }
+    }
+    
+    var selectedWindowForListWindows: WindowEntry? {
+        let windows = filteredWindows
+        let index = selectedRowIndex
+        guard index >= 0 && index < windows.count else { return nil }
+        return windows[index]
+    }
+    
+    var listWindowsSections: [ListWindowsSection] {
+        var sections: [ListWindowsSection] = []
+        let windows = filteredWindows
+        
+        var windowToGlobalIndex: [Int: Int] = [:]
+        for (idx, w) in windows.enumerated() {
+            windowToGlobalIndex[w.id] = idx
+        }
+        
+        for space in currentSpaces {
+            let spaceWindows = windows.filter { $0.space.id == space.id }
+            if spaceWindows.isEmpty { continue }
+            
+            let items = spaceWindows.map { w in
+                ListWindowsItem(window: w, index: windowToGlobalIndex[w.id]!)
+            }
+            
+            sections.append(ListWindowsSection(
+                title: space.name,
+                subtitle: String(format: space.isFullscreen ? String(localized: "Fullscreen") : String(localized: "%lld windows"), items.count),
+                items: items
+            ))
+        }
+        return sections
     }
     
     var visibleRowsCount: Int {
@@ -408,7 +808,9 @@ struct BatchMoveSection: Identifiable {
                 id: space.id,
                 name: names[space.id] ?? "",
                 displayName: getDisplayName(for: space.displayID),
-                num: space.num
+                num: space.num,
+                isFullscreen: space.isFullscreen,
+                appPath: space.appPath
             )
         }
         
@@ -433,7 +835,7 @@ struct BatchMoveSection: Identifiable {
         }
     }
     
-    private func getDisplayName(for uuidString: String) -> String {
+    func getDisplayName(for uuidString: String) -> String {
         for screen in NSScreen.screens {
             guard let id = screen.deviceDescription[NSDeviceDescriptionKey("NSScreenNumber")] as? CGDirectDisplayID else { continue }
             guard let uuid = CGDisplayCreateUUIDFromDisplayID(id)?.takeRetainedValue() else { continue }
@@ -455,11 +857,15 @@ struct BatchMoveSection: Identifiable {
             if line.hasPrefix(">") {
                 let parts = line.dropFirst().components(separatedBy: "~")
                 if parts.count >= 4 {
+                    let isFS = parts.count >= 5 ? (parts[4] == "1") : false
+                    let appPath = (parts.count >= 6 && !parts[5].isEmpty) ? parts[5] : nil
                     let space = SpaceGroup(
                         id: parts[0],
                         name: parts[1].isEmpty ? "Space \(parts[3])" : parts[1],
                         displayName: parts[2],
-                        num: Int(parts[3]) ?? 0
+                        num: Int(parts[3]) ?? 0,
+                        isFullscreen: isFS,
+                        appPath: appPath
                     )
                     currentSpace = space
                     spaces.append(space)
@@ -509,7 +915,17 @@ struct BatchMoveSection: Identifiable {
                 let spaces = filteredSpaces
                 guard index >= 0 && index < spaces.count else { return }
                 let space = spaces[index]
-                stagedMoves[staging.id] = (window: staging, targetSpace: space)
+                
+                let (minimized, hidden) = isWindowMinimizedOrAppHidden(staging)
+                let actionType: BatchStagedActionType = (minimized || hidden) ? .restoreTo(targetSpace: space) : .move(targetSpace: space)
+                
+                if isExecutingRestoreToImmediately {
+                    isExecutingRestoreToImmediately = false
+                    executeActionImmediately(window: staging, actionType: actionType)
+                } else {
+                    stagedMoves[staging.id] = BatchStagedAction(window: staging, actionType: actionType)
+                }
+                
                 stagingWindow = nil
                 selectedRowIndex = batchMoveLastSelectedIndex
                 return
@@ -537,13 +953,14 @@ struct BatchMoveSection: Identifiable {
                 let selectedItem = items[index]
                 
                 switch selectedItem {
-                case .staged(let move, _):
-                    stagedMoves.removeValue(forKey: move.window.id)
+                case .staged(let action, _):
+                    stagedMoves.removeValue(forKey: action.window.id)
                     if selectedRowIndex >= batchMoveSelectableItems.count {
                         selectedRowIndex = max(0, batchMoveSelectableItems.count - 1)
                     }
                 case .unstaged(let window, _):
                     batchMoveLastSelectedIndex = selectedRowIndex
+                    isStagingForRestoreTo = false
                     stagingWindow = window
                     selectedRowIndex = 0
                 }
@@ -719,44 +1136,211 @@ struct BatchMoveSection: Identifiable {
         isExecutingBatchMove = true
         incrementCommandFrequency(LauncherCommandType.batchMoveWindows.rawValue)
         
-        let moves = Array(stagedMoves.values)
+        let actions = Array(stagedMoves.values)
         let originalSpaceUUID = AppDelegate.shared.spaceManager?.currentSpaceUUID
         
         Task {
-            // Group moves by source space to switch spaces only once per source group
-            let movesBySource = Dictionary(grouping: moves, by: { $0.window.space.id })
+            // 1. Filter space-move actions
+            let spaceMoveActions = actions.filter {
+                switch $0.actionType {
+                case .move, .restoreTo: return true
+                default: return false
+                }
+            }
             
-            for (sourceId, sourceMoves) in movesBySource {
-                if let manager = AppDelegate.shared.spaceManager,
-                   let spaceObj = manager.spaceNameDict.first(where: { $0.id == sourceId }) {
-                    manager.switchToSpace(spaceObj, forceInstant: true)
+            // 2. Filter static actions
+            let staticActions = actions.filter {
+                switch $0.actionType {
+                case .move, .restoreTo: return false
+                default: return true
                 }
-                try? await Task.sleep(nanoseconds: 600_000_000) // 0.6s settle time
+            }
+            
+            // 3. Execute space moves grouped by source space
+            if !spaceMoveActions.isEmpty {
+                let movesBySource = Dictionary(grouping: spaceMoveActions, by: { $0.window.space.id })
                 
-                for (index, move) in sourceMoves.enumerated() {
-                    if move.window.space.id == move.targetSpace.id {
-                        continue
+                for (sourceId, sourceActions) in movesBySource {
+                    if let manager = AppDelegate.shared.spaceManager,
+                       let spaceObj = manager.spaceNameDict.first(where: { $0.id == sourceId }) {
+                        manager.switchToSpace(spaceObj, forceInstant: true)
                     }
+                    try? await Task.sleep(nanoseconds: 600_000_000) // 0.6s settle time
                     
-                    // Focus the targeted window first
-                    SpaceHelper.focusWindow(id: move.window.id, pid: move.window.pid)
-                    try? await Task.sleep(nanoseconds: 250_000_000) // 0.25s focus settle
-                    
-                    if let manager = AppDelegate.shared.spaceManager {
-                        manager.moveActiveWindowToSpace(id: move.targetSpace.id)
-                    }
-                    try? await Task.sleep(nanoseconds: 500_000_000) // 0.5s movement settle
-                    
-                    // Since move active window to space may switch the active space,
-                    // we must switch BACK to the source space to process the next window in this group.
-                    if index < sourceMoves.count - 1 {
-                        if let manager = AppDelegate.shared.spaceManager,
-                           let spaceObj = manager.spaceNameDict.first(where: { $0.id == sourceId }) {
-                            manager.switchToSpace(spaceObj, forceInstant: true)
+                    for (index, action) in sourceActions.enumerated() {
+                        let targetSpaceID: String
+                        
+                        switch action.actionType {
+                        case .move(let space):
+                            targetSpaceID = space.id
+                        case .restoreTo(let space):
+                            targetSpaceID = space.id
+                            // Contextual Restore: unhide app and/or unminimize window first
+                            if let app = NSRunningApplication(processIdentifier: action.window.pid) {
+                                app.unhide()
+                            }
+                            if let axWindow = SpaceHelper.getAXWindow(id: action.window.id, pid: action.window.pid) {
+                                AXUIElementSetAttributeValue(axWindow, kAXMinimizedAttribute as CFString, false as CFTypeRef)
+                            }
+                            try? await Task.sleep(nanoseconds: 300_000_000) // 0.3s restore settle
+                        default:
+                            continue
                         }
-                        try? await Task.sleep(nanoseconds: 600_000_000) // 0.6s switch settle
+                        
+                        if action.window.space.id == targetSpaceID {
+                            continue
+                        }
+                        
+                        // Focus the targeted window first
+                        SpaceHelper.focusWindow(id: action.window.id, pid: action.window.pid)
+                        try? await Task.sleep(nanoseconds: 250_000_000) // 0.25s focus settle
+                        
+                        // Un-fullscreen first if the window is currently in a fullscreen space
+                        if action.window.space.isFullscreen {
+                            var axWindow = SpaceHelper.getAXWindow(id: action.window.id, pid: action.window.pid)
+                            if axWindow == nil {
+                                if let app = NSRunningApplication(processIdentifier: action.window.pid) {
+                                    app.activate(options: .activateIgnoringOtherApps)
+                                    try? await Task.sleep(nanoseconds: 400_000_000)
+                                    axWindow = SpaceHelper.getAXWindow(id: action.window.id, pid: action.window.pid)
+                                }
+                            }
+                            if let targetAXWindow = axWindow {
+                                AXUIElementSetAttributeValue(targetAXWindow, "AXFullScreen" as CFString, false as CFTypeRef)
+                                try? await Task.sleep(nanoseconds: 1_200_000_000) // Wait for exit-fullscreen animation to settle
+                            }
+                        }
+                        
+                        if let manager = AppDelegate.shared.spaceManager {
+                            manager.moveActiveWindowToSpace(id: targetSpaceID)
+                        }
+                        try? await Task.sleep(nanoseconds: 500_000_000) // 0.5s movement settle
+                        
+                        // Switch back to source space
+                        if index < sourceActions.count - 1 {
+                            if let manager = AppDelegate.shared.spaceManager,
+                               let spaceObj = manager.spaceNameDict.first(where: { $0.id == sourceId }) {
+                                manager.switchToSpace(spaceObj, forceInstant: true)
+                            }
+                            try? await Task.sleep(nanoseconds: 600_000_000) // 0.6s switch settle
+                        }
                     }
                 }
+            }
+            
+            // 4. Execute other actions (Close, Minimize, Hide, Fullscreen, Quit, Restore)
+            for action in staticActions {
+                let windowSpaceID = action.window.space.id
+                let isFullscreenWindow = action.window.space.isFullscreen
+                let requiresAX = (action.actionType == .close || action.actionType == .minimize || action.actionType == .enterFullScreen || action.actionType == .exitFullScreen || action.actionType == .restore || (action.actionType == .hide && isFullscreenWindow))
+                
+                // If the target window is on a different space, switch to its space first so AX APIs can access it.
+                if requiresAX,
+                   let manager = AppDelegate.shared.spaceManager,
+                   manager.currentSpaceUUID != windowSpaceID,
+                   let spaceObj = manager.spaceNameDict.first(where: { $0.id == windowSpaceID }) {
+                    manager.switchToSpace(spaceObj, forceInstant: true)
+                    try? await Task.sleep(nanoseconds: 600_000_000) // 0.6s settle time
+                }
+                
+                // Un-fullscreen first if the window is currently fullscreen and the action requires it
+                if isFullscreenWindow && (action.actionType == .close || action.actionType == .minimize || action.actionType == .hide) {
+                    var axWindow = SpaceHelper.getAXWindow(id: action.window.id, pid: action.window.pid)
+                    if axWindow == nil {
+                        if let app = NSRunningApplication(processIdentifier: action.window.pid) {
+                            app.activate(options: .activateIgnoringOtherApps)
+                            try? await Task.sleep(nanoseconds: 400_000_000)
+                            axWindow = SpaceHelper.getAXWindow(id: action.window.id, pid: action.window.pid)
+                        }
+                    }
+                    if let targetAXWindow = axWindow {
+                        AXUIElementSetAttributeValue(targetAXWindow, "AXFullScreen" as CFString, false as CFTypeRef)
+                        try? await Task.sleep(nanoseconds: 1_200_000_000) // Wait for exit-fullscreen animation to settle
+                    }
+                }
+                
+                switch action.actionType {
+                case .close:
+                    var axWindow = SpaceHelper.getAXWindow(id: action.window.id, pid: action.window.pid)
+                    if axWindow == nil {
+                        if let app = NSRunningApplication(processIdentifier: action.window.pid) {
+                            app.activate(options: .activateIgnoringOtherApps)
+                            try? await Task.sleep(nanoseconds: 400_000_000)
+                            axWindow = SpaceHelper.getAXWindow(id: action.window.id, pid: action.window.pid)
+                        }
+                    }
+                    if let targetAXWindow = axWindow {
+                        var closeButtonRef: CFTypeRef?
+                        if AXUIElementCopyAttributeValue(targetAXWindow, kAXCloseButtonAttribute as CFString, &closeButtonRef) == .success,
+                           let closeButton = closeButtonRef {
+                            AXUIElementPerformAction(closeButton as! AXUIElement, kAXPressAction as CFString)
+                        }
+                    }
+                case .minimize:
+                    var axWindow = SpaceHelper.getAXWindow(id: action.window.id, pid: action.window.pid)
+                    if axWindow == nil {
+                        if let app = NSRunningApplication(processIdentifier: action.window.pid) {
+                            app.activate(options: .activateIgnoringOtherApps)
+                            try? await Task.sleep(nanoseconds: 400_000_000)
+                            axWindow = SpaceHelper.getAXWindow(id: action.window.id, pid: action.window.pid)
+                        }
+                    }
+                    if let targetAXWindow = axWindow {
+                        AXUIElementSetAttributeValue(targetAXWindow, kAXMinimizedAttribute as CFString, true as CFTypeRef)
+                    }
+                case .hide:
+                    if let app = NSRunningApplication(processIdentifier: action.window.pid) {
+                        app.hide()
+                    }
+                case .enterFullScreen:
+                    var axWindow = SpaceHelper.getAXWindow(id: action.window.id, pid: action.window.pid)
+                    if axWindow == nil {
+                        if let app = NSRunningApplication(processIdentifier: action.window.pid) {
+                            app.activate(options: .activateIgnoringOtherApps)
+                            try? await Task.sleep(nanoseconds: 400_000_000)
+                            axWindow = SpaceHelper.getAXWindow(id: action.window.id, pid: action.window.pid)
+                        }
+                    }
+                    if let targetAXWindow = axWindow {
+                        AXUIElementSetAttributeValue(targetAXWindow, "AXFullScreen" as CFString, true as CFTypeRef)
+                        try? await Task.sleep(nanoseconds: 1_000_000_000)
+                    }
+                case .exitFullScreen:
+                    var axWindow = SpaceHelper.getAXWindow(id: action.window.id, pid: action.window.pid)
+                    if axWindow == nil {
+                        if let app = NSRunningApplication(processIdentifier: action.window.pid) {
+                            app.activate(options: .activateIgnoringOtherApps)
+                            try? await Task.sleep(nanoseconds: 400_000_000)
+                            axWindow = SpaceHelper.getAXWindow(id: action.window.id, pid: action.window.pid)
+                        }
+                    }
+                    if let targetAXWindow = axWindow {
+                        AXUIElementSetAttributeValue(targetAXWindow, "AXFullScreen" as CFString, false as CFTypeRef)
+                        try? await Task.sleep(nanoseconds: 1_000_000_000)
+                    }
+                case .quit:
+                    if let app = NSRunningApplication(processIdentifier: action.window.pid) {
+                        app.terminate()
+                    }
+                case .restore:
+                    if let app = NSRunningApplication(processIdentifier: action.window.pid) {
+                        app.unhide()
+                    }
+                    var axWindow = SpaceHelper.getAXWindow(id: action.window.id, pid: action.window.pid)
+                    if axWindow == nil {
+                        if let app = NSRunningApplication(processIdentifier: action.window.pid) {
+                            app.activate(options: .activateIgnoringOtherApps)
+                            try? await Task.sleep(nanoseconds: 400_000_000)
+                            axWindow = SpaceHelper.getAXWindow(id: action.window.id, pid: action.window.pid)
+                        }
+                    }
+                    if let targetAXWindow = axWindow {
+                        AXUIElementSetAttributeValue(targetAXWindow, kAXMinimizedAttribute as CFString, false as CFTypeRef)
+                    }
+                default:
+                    break
+                }
+                try? await Task.sleep(nanoseconds: 150_000_000) // 150ms delay between commands
             }
             
             self.isExecutingBatchMove = false
@@ -769,9 +1353,18 @@ struct BatchMoveSection: Identifiable {
                        let targetSpace = manager.spaceNameDict.first(where: { $0.id == originalUUID }) {
                         manager.switchToSpace(targetSpace, forceInstant: true)
                     }
-                } else if let lastMove = moves.last,
-                           let targetSpace = manager.spaceNameDict.first(where: { $0.id == lastMove.targetSpace.id }) {
-                    manager.switchToSpace(targetSpace, forceInstant: true)
+                } else if let lastMoveAction = spaceMoveActions.last {
+                    let lastTargetSpaceID: String
+                    switch lastMoveAction.actionType {
+                    case .move(let space), .restoreTo(let space):
+                        lastTargetSpaceID = space.id
+                    default:
+                        lastTargetSpaceID = ""
+                    }
+                    if !lastTargetSpaceID.isEmpty,
+                       let targetSpace = manager.spaceNameDict.first(where: { $0.id == lastTargetSpaceID }) {
+                        manager.switchToSpace(targetSpace, forceInstant: true)
+                    }
                 }
             }
             
@@ -791,6 +1384,8 @@ struct BatchMoveSection: Identifiable {
             isBottomBarFocused = false
         } else if stagingWindow != nil {
             stagingWindow = nil
+            isStagingForRestoreTo = false
+            isExecutingRestoreToImmediately = false
             selectedRowIndex = batchMoveLastSelectedIndex
         } else if activeCommand != nil {
             activeCommand = nil

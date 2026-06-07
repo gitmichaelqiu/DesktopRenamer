@@ -8,6 +8,11 @@
             <result type="boolean" description="The new visibility state (true = visible)"/>
         </command>
         
+        <command name="toggle launcher" code="DskRTlau" description="Toggle the launcher window visibility">
+            <cocoa class="DesktopRenamer.ToggleLauncherCommand"/>
+            <result type="boolean" description="The new visibility state (true = visible)"/>
+        </command>
+        
         <command name="toggle labels" code="DskRTLab" description="Toggle both Active &amp; Preview Label Windows">
             <cocoa class="DesktopRenamer.ToggleLabelsCommand"/>
             <result type="boolean" description="The new enabled state (true = enabled)"/>
@@ -84,6 +89,17 @@
             <direct-parameter description="The window ID (CGWindowID)" type="text"/>
             <parameter name="pid" code="WPid" description="The owner process ID" type="text" optional="no">
                 <cocoa key="ownerPID"/>
+            </parameter>
+        </command>
+
+        <command name="execute window action" code="DskREwAc" description="Execute a control action on a window (e.g. close, minimize, hide, enterFullScreen, exitFullScreen, quit, restore)">
+            <cocoa class="DesktopRenamer.ExecuteWindowActionCommand"/>
+            <direct-parameter description="The window ID (CGWindowID)" type="text"/>
+            <parameter name="pid" code="WPid" description="The owner process ID" type="text" optional="no">
+                <cocoa key="ownerPID"/>
+            </parameter>
+            <parameter name="action" code="WAct" description="The action to perform (close, minimize, hide, enterFullScreen, exitFullScreen, quit, restore)" type="text" optional="no">
+                <cocoa key="actionName"/>
             </parameter>
         </command>
 

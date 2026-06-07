@@ -65,6 +65,16 @@
       },
       "shouldTranslate" : false
     },
+    "%@ · Fullscreen" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ · 全屏"
+          }
+        }
+      }
+    },
     "%@ · Space %lld" : {
       "localizations" : {
         "en" : {
@@ -115,16 +125,25 @@
       },
       "shouldTranslate" : false
     },
-    "→ %@" : {
-      "shouldTranslate" : false
-    },
     "↵" : {
       "shouldTranslate" : false
     },
     "↺" : {
       "shouldTranslate" : false
     },
+    "⇥" : {
+      "shouldTranslate" : false
+    },
+    "⌘%lld" : {
+      "shouldTranslate" : false
+    },
     "⌘↵" : {
+      "shouldTranslate" : false
+    },
+    "⌘K" : {
+      "shouldTranslate" : false
+    },
+    "⌘M" : {
       "shouldTranslate" : false
     },
     "⌥↵" : {
@@ -209,6 +228,26 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "操作"
+          }
+        }
+      }
+    },
+    "Actions" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "操作"
+          }
+        }
+      }
+    },
+    "Active" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "活跃"
           }
         }
       }
@@ -539,16 +578,6 @@
         }
       }
     },
-    "Bypasses the macOS sliding animation using synthetic high-velocity gestures.\n\nRequires 'Swipe between full-screen applications' enabled in System Settings → Trackpad.\n\nRecommended: Disable 'Automatically rearrange spaces based on most recent use' in Desktop & Dock settings to prevent miscalculations." : {
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "使用高速滑动绕过 macOS 的滑动动画。\n\n需要启用“在全屏应用程序之间滑动”（可在“系统设置”→“触控板”中启用）。\n\n建议：在“桌面与程序坞”设置中禁用“根据最近使用情况自动重新排列空间”，以防止计算错误。"
-          }
-        }
-      }
-    },
     "Cancel" : {
       "localizations" : {
         "zh-Hans" : {
@@ -605,6 +634,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "点击切换，Option+点击移动窗口。"
+          }
+        }
+      }
+    },
+    "Close" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "关闭"
           }
         }
       }
@@ -823,6 +862,16 @@
         }
       }
     },
+    "Enter Full Screen" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "进入全屏"
+          }
+        }
+      }
+    },
     "Error locating exception" : {
       "localizations" : {
         "zh-Hans" : {
@@ -849,6 +898,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "执行批量窗口移动..."
+          }
+        }
+      }
+    },
+    "Exit Full Screen" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "退出全屏"
           }
         }
       }
@@ -915,22 +974,22 @@
         }
       }
     },
+    "Focus" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "切换"
+          }
+        }
+      }
+    },
     "Focus ↵" : {
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "聚焦 ↵"
-          }
-        }
-      }
-    },
-    "Focus Window" : {
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "切换窗口"
           }
         }
       }
@@ -961,6 +1020,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "强制刷新显示器上的所有桌面名称标签"
+          }
+        }
+      }
+    },
+    "Fullscreen" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "全屏"
           }
         }
       }
@@ -1056,6 +1125,26 @@
         }
       }
     },
+    "Hidden" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "隐藏"
+          }
+        }
+      }
+    },
+    "Hide" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "隐藏"
+          }
+        }
+      }
+    },
     "Hide menubar icon" : {
       "localizations" : {
         "zh-Hans" : {
@@ -1132,16 +1221,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "安装 Raycast 拓展"
-          }
-        }
-      }
-    },
-    "Instant switch without animations" : {
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "无动画快速切换"
           }
         }
       }
@@ -1254,6 +1333,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "链接"
+          }
+        }
+      }
+    },
+    "List Windows" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "窗口列表"
           }
         }
       }
@@ -1433,6 +1522,26 @@
         }
       }
     },
+    "Minimize" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "最小化"
+          }
+        }
+      }
+    },
+    "Minimized" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "最小化"
+          }
+        }
+      }
+    },
     "More Apps" : {
       "localizations" : {
         "zh-Hans" : {
@@ -1443,12 +1552,42 @@
         }
       }
     },
+    "Move" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "移动"
+          }
+        }
+      }
+    },
     "Move the active window to a selected space" : {
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "将当前活跃窗口移动到选中的桌面"
+          }
+        }
+      }
+    },
+    "Move to %@" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "移动至%@"
+          }
+        }
+      }
+    },
+    "Move to..." : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "加入移动队列…"
           }
         }
       }
@@ -1539,6 +1678,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "按住Option以移动窗口"
+          }
+        }
+      }
+    },
+    "Move: %@" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "移动: %@"
           }
         }
       }
@@ -1841,6 +1990,16 @@
         }
       }
     },
+    "Quit" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "退出"
+          }
+        }
+      }
+    },
     "Raycast Integration" : {
       "localizations" : {
         "zh-Hans" : {
@@ -2059,6 +2218,36 @@
         }
       }
     },
+    "Restore" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "恢复"
+          }
+        }
+      }
+    },
+    "Restore to %@" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "恢复至%@"
+          }
+        }
+      }
+    },
+    "Restore to..." : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "恢复至..."
+          }
+        }
+      }
+    },
     "Restore windows moved by lock" : {
       "localizations" : {
         "zh-Hans" : {
@@ -2131,12 +2320,12 @@
         }
       }
     },
-    "Run Batch Move" : {
+    "Run Batch Actions" : {
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "批量移动窗口"
+            "value" : "批量操作"
           }
         }
       }
@@ -2177,12 +2366,12 @@
         }
       }
     },
-    "Search and focus open application windows" : {
+    "Search and manage open application windows" : {
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "搜索并跳转到打开的应用窗口"
+            "value" : "搜索并管理打开的应用窗口"
           }
         }
       }
@@ -2253,6 +2442,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "选择多个窗口并将其移动到指定桌面"
+          }
+        }
+      }
+    },
+    "Set to 0 for instant switching (bypasses the macOS sliding animation). Otherwise the velocity is calibrated per display (cached across restarts) so the actual switch time converges to this value." : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "设为0以跳过切换动画。否则切换速度会反复调整直到达到目标时长，可能需要多次切换。"
           }
         }
       }
@@ -2899,22 +3098,12 @@
         }
       }
     },
-    "Stage Move to Desktop..." : {
+    "Stage" : {
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "加入移动队列…"
-          }
-        }
-      }
-    },
-    "Stage to Space" : {
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "移动到桌面"
+            "value" : "暂存"
           }
         }
       }
@@ -3019,6 +3208,16 @@
         }
       }
     },
+    "Switch duration" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "切换时长"
+          }
+        }
+      }
+    },
     "Switch override threshold" : {
       "localizations" : {
         "en" : {
@@ -3100,9 +3299,6 @@
           }
         }
       }
-    },
-    "Tab" : {
-      "shouldTranslate" : false
     },
     "Take back control of your macOS spaces." : {
       "localizations" : {
@@ -3287,16 +3483,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "解锁桌面"
-          }
-        }
-      }
-    },
-    "Unstage Move" : {
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "移除队列"
           }
         }
       }

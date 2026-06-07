@@ -5,51 +5,51 @@ struct ThemeColors {
     let isDark: Bool
     
     var backgroundOverlay: Color {
-        isDark ? Color(red: 0.1, green: 0.1, blue: 0.11).opacity(0.65) : Color(red: 0.98, green: 0.98, blue: 0.99).opacity(0.65)
+        Color.clear
     }
     
     var textPrimary: Color {
-        isDark ? .white : Color(red: 0.12, green: 0.12, blue: 0.14)
+        .primary
     }
     
     var textSecondary: Color {
-        isDark ? .white.opacity(0.7) : Color(red: 0.12, green: 0.12, blue: 0.14).opacity(0.7)
+        .secondary
     }
     
     var textTertiary: Color {
-        isDark ? .white.opacity(0.45) : Color(red: 0.12, green: 0.12, blue: 0.14).opacity(0.45)
+        .secondary.opacity(0.65)
     }
     
     var textQuaternary: Color {
-        isDark ? .white.opacity(0.3) : Color(red: 0.12, green: 0.12, blue: 0.14).opacity(0.3)
+        .secondary.opacity(0.4)
     }
     
     var border: Color {
-        isDark ? Color.white.opacity(0.1) : Color.black.opacity(0.08)
+        Color(nsColor: .separatorColor)
     }
     
     var rowHover: Color {
-        isDark ? Color.white.opacity(0.12) : Color.black.opacity(0.08)
+        Color.primary.opacity(0.08)
     }
     
     var badgeBg: Color {
-        isDark ? Color.white.opacity(0.1) : Color.black.opacity(0.06)
+        Color.primary.opacity(0.06)
     }
     
     var badgeBorder: Color {
-        isDark ? Color.white.opacity(0.05) : Color.black.opacity(0.05)
+        Color.primary.opacity(0.08)
     }
     
     var separator: Color {
-        isDark ? Color.white.opacity(0.08) : Color.black.opacity(0.08)
+        Color(nsColor: .separatorColor)
     }
     
     var bottomBarBg: Color {
-        isDark ? Color.black.opacity(0.15) : Color.black.opacity(0.05)
+        Color.primary.opacity(0.01)
     }
     
     var greenText: Color {
-        isDark ? Color.green : Color(red: 0.0, green: 0.5, blue: 0.15)
+        Color.green
     }
 }
 
@@ -64,15 +64,13 @@ struct LauncherView: View {
     
     var body: some View {
         ZStack {
-            VisualEffectView(material: .popover, blendingMode: .behindWindow, state: .active)
-            colors.backgroundOverlay
-            
             VStack(spacing: 0) {
                 // Header (Typing Bar)
                 HStack(spacing: 12) {
                     Image(systemName: "magnifyingglass")
-                        .foregroundColor(colors.textTertiary)
-                        .font(.system(size: 20, weight: .regular))
+                        .foregroundColor(.secondary)
+                        .font(.system(size: 16, weight: .medium))
+                        .frame(width: 28, height: 28)
                     
                     if viewModel.activeCommand?.type == .renameCurrentSpace {
                         SearchTextField(
@@ -86,26 +84,39 @@ struct LauncherView: View {
                             onEscape: {
                                 viewModel.handleEscapeKey()
                             },
+                            onKeyEquivalent: { _ in false },
                             placeholder: NSLocalizedString("New Space Name...", comment: "")
                         )
-                        .frame(height: 44)
+                        .frame(height: 36)
                     } else {
                         SearchTextField(
                             text: $viewModel.searchQuery,
                             isDark: colors.isDark,
+                            isTypingDisabled: viewModel.commandKTargetWindow != nil,
                             onUpArrow: {
-                                viewModel.isKeyboardSelection = true
-                                if viewModel.selectedRowIndex > 0 {
-                                    viewModel.selectedRowIndex -= 1
+                                if viewModel.commandKTargetWindow != nil {
+                                    viewModel.selectPreviousCommandKAction()
+                                } else {
+                                    viewModel.isKeyboardSelection = true
+                                    if viewModel.selectedRowIndex > 0 {
+                                        viewModel.selectedRowIndex -= 1
+                                    }
                                 }
                             },
                             onDownArrow: {
-                                viewModel.isKeyboardSelection = true
-                                if viewModel.selectedRowIndex < viewModel.visibleRowsCount - 1 {
-                                    viewModel.selectedRowIndex += 1
+                                if viewModel.commandKTargetWindow != nil {
+                                    viewModel.selectNextCommandKAction()
+                                } else {
+                                    viewModel.isKeyboardSelection = true
+                                    if viewModel.selectedRowIndex < viewModel.visibleRowsCount - 1 {
+                                        viewModel.selectedRowIndex += 1
+                                    }
                                 }
                             },
                             onLeftArrow: {
+                                if viewModel.commandKTargetWindow != nil {
+                                    return true
+                                }
                                 if viewModel.isBottomBarFocused {
                                     if viewModel.selectedSpaceIndex > 0 {
                                         viewModel.selectedSpaceIndex -= 1
@@ -115,6 +126,9 @@ struct LauncherView: View {
                                 return false
                             },
                             onRightArrow: {
+                                if viewModel.commandKTargetWindow != nil {
+                                    return true
+                                }
                                 if viewModel.isBottomBarFocused {
                                     let count = spaceManager.currentDisplaySpaces.count
                                     if viewModel.selectedSpaceIndex < count - 1 {
@@ -125,36 +139,65 @@ struct LauncherView: View {
                                 return false
                             },
                             onEnter: {
-                                if viewModel.isBottomBarFocused {
+                                if viewModel.commandKTargetWindow != nil {
+                                    viewModel.executeCommandKAction()
+                                } else if viewModel.isBottomBarFocused {
                                     viewModel.executeBottomBarSpaceAction(isOption: false, isCommand: false)
                                 } else {
                                     viewModel.executeRowAction()
                                 }
                             },
                             onCommandEnter: {
-                                if viewModel.isBottomBarFocused {
+                                if viewModel.commandKTargetWindow != nil {
+                                    viewModel.executeCommandKAction()
+                                } else if viewModel.isBottomBarFocused {
                                     viewModel.executeBottomBarSpaceAction(isOption: false, isCommand: true)
                                 } else if viewModel.activeCommand?.type == .batchMoveWindows {
                                     viewModel.executeBatchMove()
                                 }
                             },
                             onOptionEnter: {
+                                if viewModel.commandKTargetWindow != nil { return }
                                 if viewModel.isBottomBarFocused {
                                     viewModel.executeBottomBarSpaceAction(isOption: true, isCommand: false)
                                 }
                             },
                             onCommandNumber: { num in
-                                viewModel.executeNthRowAction(num - 1)
+                                if viewModel.commandKTargetWindow != nil {
+                                    let actions = viewModel.commandKActions
+                                    let index = num - 1
+                                    if index >= 0 && index < actions.count {
+                                        viewModel.commandKSelectedIndex = index
+                                        viewModel.executeCommandKAction()
+                                    }
+                                } else {
+                                    viewModel.executeNthRowAction(num - 1)
+                                }
                             },
                             onTab: {
+                                if viewModel.commandKTargetWindow != nil { return }
                                 viewModel.handleTabKey()
                             },
                             onEscape: {
-                                viewModel.handleEscapeKey()
+                                if viewModel.commandKTargetWindow != nil {
+                                    viewModel.commandKTargetWindow = nil
+                                } else {
+                                    viewModel.handleEscapeKey()
+                                }
+                            },
+                            onCommandK: {
+                                if viewModel.commandKTargetWindow != nil {
+                                    viewModel.commandKTargetWindow = nil
+                                } else if (viewModel.activeCommand?.type == .batchMoveWindows || viewModel.activeCommand?.type == .listWindows) && viewModel.stagingWindow == nil {
+                                    viewModel.showCommandKPanel()
+                                }
+                            },
+                            onKeyEquivalent: { event in
+                                return self.handleTextFieldKeyEquivalent(event)
                             },
                             placeholder: viewModel.activeCommand == nil ? NSLocalizedString("Search commands...", comment: "") : (viewModel.stagingWindow != nil ? NSLocalizedString("Search target space...", comment: "") : NSLocalizedString("Search items...", comment: ""))
                         )
-                        .frame(height: 44)
+                        .frame(height: 36)
                     }
                     
                     if viewModel.isLoadingData {
@@ -163,12 +206,10 @@ struct LauncherView: View {
                             .frame(width: 20, height: 20)
                     }
                 }
-                .padding(.horizontal, 16)
-                .padding(.vertical, 14)
+                .frame(height: 52)
+                .padding(.horizontal, 18)
                 
-                Rectangle()
-                    .fill(colors.separator)
-                    .frame(height: 1)
+                Divider()
                 
                 // Content area
                 if viewModel.activeCommand?.type == .renameCurrentSpace {
@@ -176,15 +217,16 @@ struct LauncherView: View {
                         Spacer()
                         Image(systemName: "pencil.line")
                             .font(.system(size: 28, weight: .light))
-                            .foregroundColor(colors.textSecondary)
+                            .foregroundColor(.secondary)
                         
                         Text(verbatim: String(localized: "Rename Current Space"))
-                            .font(.system(size: 14, weight: .medium))
-                            .foregroundColor(colors.textPrimary)
-
+                            .font(.body)
+                            .fontWeight(.medium)
+                            .foregroundColor(.primary)
+ 
                         Text(verbatim: String(localized: "Type a new name above and press Enter to save"))
-                            .font(.system(size: 11))
-                            .foregroundColor(colors.textTertiary)
+                            .font(.subheadline)
+                            .foregroundColor(.secondary)
                         Spacer()
                     }
                     .frame(maxHeight: .infinity)
@@ -194,8 +236,9 @@ struct LauncherView: View {
                         ProgressView()
                             .scaleEffect(1.2)
                         Text(verbatim: String(localized: "Executing batch window moves..."))
-                            .font(.system(size: 13, weight: .medium))
-                            .foregroundColor(colors.textSecondary)
+                            .font(.body)
+                            .fontWeight(.medium)
+                            .foregroundColor(.secondary)
                     }
                     .frame(maxHeight: .infinity)
                     .frame(maxWidth: .infinity)
@@ -204,9 +247,7 @@ struct LauncherView: View {
                         .frame(maxHeight: .infinity)
                 }
                 
-                Rectangle()
-                    .fill(colors.separator)
-                    .frame(height: 1)
+                Divider()
                 
                 // Bottom bar
                 if viewModel.activeCommand == nil {
@@ -217,14 +258,17 @@ struct LauncherView: View {
                     CommandBottomBar(viewModel: viewModel)
                 }
             }
+            .blur(radius: viewModel.commandKTargetWindow != nil ? 10 : 0)
+            .animation(.easeInOut(duration: 0.12), value: viewModel.commandKTargetWindow != nil)
+            
+            if let targetWindow = viewModel.commandKTargetWindow {
+                CommandKOverlayView(viewModel: viewModel, window: targetWindow)
+            }
         }
         .frame(width: 720, height: 450)
-        .overlay(
-            RoundedRectangle(cornerRadius: 16, style: .continuous)
-                .stroke(colors.border, lineWidth: 1)
-        )
         .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-        .shadow(color: Color.black.opacity(colors.isDark ? 0.30 : 0.15), radius: 25, x: 0, y: 6)
+        .launcherBackground(cornerRadius: 16, borderColor: colors.border)
+        .shadow(color: Color.black.opacity(colorScheme == .dark ? 0.45 : 0.20), radius: 24, x: 0, y: 12)
         .padding(60)
     }
 }
@@ -251,7 +295,7 @@ struct ListAreaView: View {
                                 ForEach(0..<commands.count, id: \.self) { i in
                                     let cmd = commands[i]
                                     let isSelected = !viewModel.isBottomBarFocused && viewModel.selectedRowIndex == i
-                                    CommandRowView(command: cmd, isSelected: isSelected, shortcutText: viewModel.showCommandNumbers && i < 9 ? "⌘\(i + 1)" : nil)
+                                    CommandRowView(command: cmd, isSelected: isSelected, shortcutText: viewModel.showCommandNumbers && viewModel.commandKTargetWindow == nil && i < 9 ? "⌘\(i + 1)" : nil)
                                         .contentShape(Rectangle())
                                         .onTapGesture {
                                             viewModel.isKeyboardSelection = true
@@ -286,7 +330,7 @@ struct ListAreaView: View {
                                     ForEach(0..<spaces.count, id: \.self) { i in
                                         let space = spaces[i]
                                         let isSelected = !viewModel.isBottomBarFocused && viewModel.selectedRowIndex == i
-                                        SpaceRowView(space: space, isSelected: isSelected, shortcutText: viewModel.showCommandNumbers && i < 9 ? "⌘\(i + 1)" : nil)
+                                        SpaceRowView(space: space, isSelected: isSelected, shortcutText: viewModel.showCommandNumbers && viewModel.commandKTargetWindow == nil && i < 9 ? "⌘\(i + 1)" : nil)
                                             .contentShape(Rectangle())
                                             .onTapGesture {
                                                 viewModel.isKeyboardSelection = true
@@ -324,7 +368,7 @@ struct ListAreaView: View {
                                         ForEach(0..<spaces.count, id: \.self) { i in
                                             let space = spaces[i]
                                             let isSelected = !viewModel.isBottomBarFocused && viewModel.selectedRowIndex == i
-                                            SpaceRowView(space: space, isSelected: isSelected, shortcutText: viewModel.showCommandNumbers && i < 9 ? "⌘\(i + 1)" : nil)
+                                            SpaceRowView(space: space, isSelected: isSelected, shortcutText: viewModel.showCommandNumbers && viewModel.commandKTargetWindow == nil && i < 9 ? "⌘\(i + 1)" : nil)
                                                 .contentShape(Rectangle())
                                                 .onTapGesture {
                                                     viewModel.isKeyboardSelection = true
@@ -351,24 +395,32 @@ struct ListAreaView: View {
                         }
                         
                     case .listWindows:
-                        let windows = viewModel.filteredWindows
-                        if windows.isEmpty {
+                        let sections = viewModel.listWindowsSections
+                        if sections.isEmpty {
                             EmptyResultsView()
                         } else {
                             ScrollViewReader { proxy in
                                 ScrollView {
-                                    VStack(spacing: 4) {
-                                        ForEach(0..<windows.count, id: \.self) { i in
-                                            let window = windows[i]
-                                            let isSelected = !viewModel.isBottomBarFocused && viewModel.selectedRowIndex == i
-                                            WindowRowView(window: window, isSelected: isSelected, shortcutText: viewModel.showCommandNumbers && i < 9 ? "⌘\(i + 1)" : nil)
+                                    VStack(alignment: .leading, spacing: 4) {
+                                        ForEach(0..<sections.count, id: \.self) { sIdx in
+                                            let section = sections[sIdx]
+                                            ListSectionHeader(title: section.title, subtitle: section.subtitle, isFirst: sIdx == 0)
+                                            
+                                            ForEach(section.items) { item in
+                                                let isSelected = !viewModel.isBottomBarFocused && viewModel.selectedRowIndex == item.index
+                                                WindowRowView(
+                                                    window: item.window,
+                                                    isSelected: isSelected,
+                                                    shortcutText: viewModel.showCommandNumbers && viewModel.commandKTargetWindow == nil && item.index < 9 ? "⌘\(item.index + 1)" : nil
+                                                )
                                                 .contentShape(Rectangle())
                                                 .onTapGesture {
                                                     viewModel.isKeyboardSelection = true
-                                                    viewModel.selectedRowIndex = i
+                                                    viewModel.selectedRowIndex = item.index
                                                     viewModel.executeRowAction()
                                                 }
-                                                .id(i)
+                                                .id(item.index)
+                                            }
                                         }
                                     }
                                     .padding(.horizontal, 10)
@@ -395,15 +447,16 @@ struct ListAreaView: View {
                             ScrollViewReader { proxy in
                                 ScrollView {
                                     VStack(alignment: .leading, spacing: 4) {
-                                        ForEach(sections) { section in
-                                            ListSectionHeader(title: section.title, subtitle: section.subtitle)
+                                        ForEach(0..<sections.count, id: \.self) { sIdx in
+                                            let section = sections[sIdx]
+                                            ListSectionHeader(title: section.title, subtitle: section.subtitle, isFirst: sIdx == 0)
                                             
                                             ForEach(section.items) { item in
                                                 let isSelected = !viewModel.isBottomBarFocused && viewModel.selectedRowIndex == item.index
                                                 
                                                 switch item {
                                                 case .staged(let move, _):
-                                                    WindowBatchRowView(window: move.window, isSelected: isSelected, isStaged: true, targetSpaceName: move.targetSpace.name, shortcutText: viewModel.showCommandNumbers && item.index < 9 ? "⌘\(item.index + 1)" : nil)
+                                                    WindowBatchRowView(window: move.window, isSelected: isSelected, isStaged: true, stagedActionText: move.actionType.description, shortcutText: viewModel.showCommandNumbers && viewModel.commandKTargetWindow == nil && item.index < 9 ? "⌘\(item.index + 1)" : nil)
                                                         .contentShape(Rectangle())
                                                         .onTapGesture {
                                                             viewModel.isKeyboardSelection = true
@@ -413,7 +466,7 @@ struct ListAreaView: View {
                                                         .id(item.index)
                                                         
                                                 case .unstaged(let window, _):
-                                                    WindowBatchRowView(window: window, isSelected: isSelected, isStaged: false, targetSpaceName: "", shortcutText: viewModel.showCommandNumbers && item.index < 9 ? "⌘\(item.index + 1)" : nil)
+                                                    WindowBatchRowView(window: window, isSelected: isSelected, isStaged: false, stagedActionText: "", shortcutText: viewModel.showCommandNumbers && viewModel.commandKTargetWindow == nil && item.index < 9 ? "⌘\(item.index + 1)" : nil)
                                                         .contentShape(Rectangle())
                                                         .onTapGesture {
                                                             viewModel.isKeyboardSelection = true
@@ -465,18 +518,27 @@ struct KeycapView: View {
     }
     
     var body: some View {
+        let isSelectedWhiteStyle = isSelected && (colorScheme == .dark || isGreenRow)
+        
         Text(text)
-            .font(.system(size: 10, weight: .medium))
-            .foregroundColor(isGreenRow && isSelected ? .white : (isSelected ? colors.textPrimary : colors.textSecondary))
+            .font(.system(size: 10, weight: .semibold))
+            .foregroundColor(isSelected ? (isSelectedWhiteStyle ? .white : colors.textPrimary) : colors.textSecondary)
             .padding(.horizontal, horizontalPadding)
             .padding(.vertical, verticalPadding)
             .background(
-                isGreenRow && isSelected ? Color.white.opacity(0.2) : colors.badgeBg
+                isSelected
+                    ? (isSelectedWhiteStyle ? Color.white.opacity(0.20) : Color.primary.opacity(0.12))
+                    : colors.badgeBg
             )
             .cornerRadius(5)
             .overlay(
                 RoundedRectangle(cornerRadius: 5)
-                    .stroke(isGreenRow && isSelected ? Color.white.opacity(0.3) : colors.badgeBorder, lineWidth: 1)
+                    .stroke(
+                        isSelected
+                            ? (isSelectedWhiteStyle ? Color.white.opacity(0.30) : Color.primary.opacity(0.18))
+                            : colors.badgeBorder,
+                        lineWidth: 1
+                    )
             )
     }
 }
@@ -495,10 +557,11 @@ struct EmptyResultsView: View {
                 .font(.system(size: 24, weight: .light))
                 .foregroundColor(colors.textQuaternary)
             Text(verbatim: String(localized: "No results"))
-                .font(.system(size: 13, weight: .medium))
+                .font(.body)
+                .fontWeight(.medium)
                 .foregroundColor(colors.textTertiary)
             Text(verbatim: String(localized: "No commands matched your search query."))
-                .font(.system(size: 11))
+                .font(.subheadline)
                 .foregroundColor(colors.textQuaternary)
             Spacer()
         }
@@ -539,23 +602,24 @@ struct CommandRowView: View {
         HStack(spacing: 12) {
             Image(systemName: command.iconName)
                 .font(.system(size: 12, weight: .medium))
-                .foregroundColor(isSelected ? .white : colors.textPrimary)
-                .frame(width: 26, height: 26)
-                .background(isSelected ? Color(red: 0.0, green: 0.55, blue: 1.0) : colors.badgeBg)
+                .foregroundColor(colors.textPrimary)
+                .frame(width: 28, height: 28)
+                .background(colors.badgeBg)
                 .cornerRadius(6)
                 .overlay(
                     RoundedRectangle(cornerRadius: 6)
-                        .stroke(isSelected ? Color.clear : colors.badgeBorder, lineWidth: 1)
+                        .stroke(colors.badgeBorder, lineWidth: 1)
                 )
             
             VStack(alignment: .leading, spacing: 2) {
                 Text(command.title)
-                    .font(.system(size: 13.5, weight: .semibold))
+                    .font(.body)
+                    .fontWeight(.semibold)
                     .foregroundColor(colors.textPrimary)
                     .lineLimit(1)
                 
                 Text(command.subtitle)
-                    .font(.system(size: 11.5))
+                    .font(.subheadline)
                     .foregroundColor(isSelected ? colors.textSecondary : colors.textTertiary)
                     .lineLimit(1)
             }
@@ -563,35 +627,52 @@ struct CommandRowView: View {
             Spacer()
             
             if let shortcut = shortcutText {
-                KeycapView(text: LocalizedStringKey(shortcut), isSelected: isSelected)
+                KeycapView(text: LocalStringKey_compat(shortcut), isSelected: isSelected)
             } else if let statusText = toggleStatus {
                 Text(LocalizedStringKey(statusText))
-                    .font(.system(size: 10, weight: .bold))
+                    .font(.subheadline)
+                    .fontWeight(.semibold)
                     .foregroundColor(statusText == "Enabled" ? colors.greenText : colors.textSecondary)
                     .padding(.horizontal, 8)
-                    .padding(.vertical, 3.5)
+                    .padding(.vertical, 3)
                     .background(statusText == "Enabled" ? colors.greenText.opacity(0.12) : colors.badgeBg)
                     .cornerRadius(6)
                     .overlay(
                         RoundedRectangle(cornerRadius: 6)
-                            .stroke(statusText == "Enabled" ? colors.greenText.opacity(0.3) : Color.clear, lineWidth: 1)
+                            .stroke(statusText == "Enabled" ? colors.greenText.opacity(0.35) : colors.badgeBorder, lineWidth: 1)
                     )
             } else if command.hasSubpage {
                 Image(systemName: "chevron.right")
-                    .font(.system(size: 10, weight: .semibold))
+                    .font(.caption.weight(.semibold))
                     .foregroundColor(isSelected ? colors.textSecondary : colors.textTertiary)
                     .padding(.trailing, 4)
             } else {
                 KeycapView(text: "Action", isSelected: isSelected)
             }
         }
-        .padding(.horizontal, 12)
+        .padding(.horizontal, 8)
         .padding(.vertical, 8)
-        .background(isSelected ? colors.rowHover : (isHovered ? colors.rowHover.opacity(0.5) : Color.clear))
-        .cornerRadius(8)
+        .background(
+            ZStack {
+                if isSelected {
+                    RoundedRectangle(cornerRadius: 8, style: .continuous)
+                        .fill(Color.primary.opacity(0.08))
+                    RoundedRectangle(cornerRadius: 8, style: .continuous)
+                        .stroke(Color.primary.opacity(0.15), lineWidth: 1)
+                } else if isHovered {
+                    RoundedRectangle(cornerRadius: 8, style: .continuous)
+                        .fill(Color.primary.opacity(0.05))
+                }
+            }
+        )
         .onHover { hovering in
             isHovered = hovering
         }
+    }
+    
+    // Helper to safely wrap dynamic String to LocalizedStringKey
+    private func LocalStringKey_compat(_ str: String) -> LocalizedStringKey {
+        return LocalizedStringKey(str)
     }
 }
 
@@ -608,27 +689,51 @@ struct SpaceRowView: View {
     
     var body: some View {
         HStack(spacing: 12) {
-            Image(systemName: "desktopcomputer")
-                .font(.system(size: 12, weight: .medium))
-                .foregroundColor(isSelected ? .white : colors.textPrimary)
-                .frame(width: 26, height: 26)
-                .background(isSelected ? Color(red: 0.0, green: 0.55, blue: 1.0) : colors.badgeBg)
-                .cornerRadius(6)
-                .overlay(
-                    RoundedRectangle(cornerRadius: 6)
-                        .stroke(isSelected ? Color.clear : colors.badgeBorder, lineWidth: 1)
-                )
+            if space.isFullscreen, let appPath = space.appPath {
+                let appIcon = NSWorkspace.shared.icon(forFile: appPath)
+                Image(nsImage: appIcon)
+                    .resizable()
+                    .aspectRatio(contentMode: .fit)
+                    .frame(width: 20, height: 20)
+                    .padding(4)
+                    .frame(width: 28, height: 28)
+                    .background(colors.badgeBg)
+                    .cornerRadius(6)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 6)
+                            .stroke(colors.badgeBorder, lineWidth: 1)
+                    )
+            } else {
+                Image(systemName: "desktopcomputer")
+                    .font(.system(size: 12, weight: .medium))
+                    .foregroundColor(colors.textPrimary)
+                    .frame(width: 28, height: 28)
+                    .background(colors.badgeBg)
+                    .cornerRadius(6)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 6)
+                            .stroke(colors.badgeBorder, lineWidth: 1)
+                    )
+            }
             
             VStack(alignment: .leading, spacing: 2) {
                 Text(space.name)
-                    .font(.system(size: 13.5, weight: .semibold))
+                    .font(.body)
+                    .fontWeight(.semibold)
                     .foregroundColor(colors.textPrimary)
                     .lineLimit(1)
                 
-                Text(verbatim: String(format: String(localized: "%@ · Space %lld"), space.displayName, space.num))
-                    .font(.system(size: 11.5))
-                    .foregroundColor(isSelected ? colors.textSecondary : colors.textTertiary)
-                    .lineLimit(1)
+                if space.isFullscreen {
+                    Text(verbatim: String(format: String(localized: "%@ · Fullscreen"), space.displayName))
+                        .font(.subheadline)
+                        .foregroundColor(isSelected ? colors.textSecondary : colors.textTertiary)
+                        .lineLimit(1)
+                } else {
+                    Text(verbatim: String(format: String(localized: "%@ · Space %lld"), space.displayName, space.num))
+                        .font(.subheadline)
+                        .foregroundColor(isSelected ? colors.textSecondary : colors.textTertiary)
+                        .lineLimit(1)
+                }
             }
             
             Spacer()
@@ -639,10 +744,21 @@ struct SpaceRowView: View {
                 KeycapView(text: "Switch ↵", isSelected: isSelected)
             }
         }
-        .padding(.horizontal, 12)
+        .padding(.horizontal, 8)
         .padding(.vertical, 8)
-        .background(isSelected ? colors.rowHover : (isHovered ? colors.rowHover.opacity(0.5) : Color.clear))
-        .cornerRadius(8)
+        .background(
+            ZStack {
+                if isSelected {
+                    RoundedRectangle(cornerRadius: 8, style: .continuous)
+                        .fill(Color.primary.opacity(0.08))
+                    RoundedRectangle(cornerRadius: 8, style: .continuous)
+                        .stroke(Color.primary.opacity(0.15), lineWidth: 1)
+                } else if isHovered {
+                    RoundedRectangle(cornerRadius: 8, style: .continuous)
+                        .fill(Color.primary.opacity(0.05))
+                }
+            }
+        )
         .onHover { hovering in
             isHovered = hovering
         }
@@ -668,21 +784,23 @@ struct WindowRowView: View {
                 .aspectRatio(contentMode: .fit)
                 .frame(width: 20, height: 20)
                 .padding(4)
+                .frame(width: 28, height: 28)
                 .background(colors.badgeBg)
                 .cornerRadius(6)
                 .overlay(
                     RoundedRectangle(cornerRadius: 6)
-                        .stroke(isSelected ? Color.clear : colors.badgeBorder, lineWidth: 1)
+                        .stroke(colors.badgeBorder, lineWidth: 1)
                 )
             
             VStack(alignment: .leading, spacing: 2) {
                 Text(window.title.isEmpty ? String(localized: "(No Title)") : window.title)
-                    .font(.system(size: 13.5, weight: .semibold))
+                    .font(.body)
+                    .fontWeight(.semibold)
                     .foregroundColor(colors.textPrimary)
                     .lineLimit(1)
 
                 Text(verbatim: String(format: String(localized: "%@ · %@"), window.ownerName, window.space.name))
-                    .font(.system(size: 11.5))
+                    .font(.subheadline)
                     .foregroundColor(isSelected ? colors.textSecondary : colors.textTertiary)
                     .lineLimit(1)
             }
@@ -695,10 +813,21 @@ struct WindowRowView: View {
                 KeycapView(text: "Focus ↵", isSelected: isSelected)
             }
         }
-        .padding(.horizontal, 12)
+        .padding(.horizontal, 8)
         .padding(.vertical, 8)
-        .background(isSelected ? colors.rowHover : (isHovered ? colors.rowHover.opacity(0.5) : Color.clear))
-        .cornerRadius(8)
+        .background(
+            ZStack {
+                if isSelected {
+                    RoundedRectangle(cornerRadius: 8, style: .continuous)
+                        .fill(Color.primary.opacity(0.08))
+                    RoundedRectangle(cornerRadius: 8, style: .continuous)
+                        .stroke(Color.primary.opacity(0.15), lineWidth: 1)
+                } else if isHovered {
+                    RoundedRectangle(cornerRadius: 8, style: .continuous)
+                        .fill(Color.primary.opacity(0.05))
+                }
+            }
+        )
         .onHover { hovering in
             isHovered = hovering
         }
@@ -718,21 +847,22 @@ struct ConfirmBatchRowView: View {
     var body: some View {
         HStack(spacing: 12) {
             Image(systemName: "checkmark.circle.fill")
-                .font(.system(size: 13, weight: .semibold))
+                .font(.body.weight(.semibold))
                 .foregroundColor(isSelected ? colors.greenText : .white)
                 .frame(width: 28, height: 28)
                 .background(isSelected ? .white : colors.greenText.opacity(0.8))
                 .cornerRadius(6)
             
             Text(verbatim: String(format: String(localized: "Confirm & Execute Batch Move (%lld windows)"), count))
-                .font(.system(size: 13, weight: .semibold))
+                .font(.body)
+                .fontWeight(.semibold)
                 .foregroundColor(isSelected ? .white : colors.greenText)
             
             Spacer()
             
             KeycapView(text: "Run ↵", isSelected: isSelected, isGreenRow: true)
         }
-        .padding(.horizontal, 12)
+        .padding(.horizontal, 8)
         .padding(.vertical, 8)
         .background(isSelected ? colors.greenText : (isHovered ? colors.greenText.opacity(0.5) : colors.greenText.opacity(0.06)))
         .cornerRadius(8)
@@ -750,7 +880,7 @@ struct WindowBatchRowView: View {
     let window: WindowEntry
     let isSelected: Bool
     let isStaged: Bool
-    let targetSpaceName: String
+    let stagedActionText: String
     var shortcutText: String? = nil
     @Environment(\.colorScheme) var colorScheme
     @State private var isHovered = false
@@ -767,21 +897,45 @@ struct WindowBatchRowView: View {
                 .aspectRatio(contentMode: .fit)
                 .frame(width: 20, height: 20)
                 .padding(4)
+                .frame(width: 28, height: 28)
                 .background(colors.badgeBg)
                 .cornerRadius(6)
                 .overlay(
                     RoundedRectangle(cornerRadius: 6)
-                        .stroke(isSelected ? Color.clear : colors.badgeBorder, lineWidth: 1)
+                        .stroke(colors.badgeBorder, lineWidth: 1)
                 )
             
             VStack(alignment: .leading, spacing: 2) {
                 Text(window.title.isEmpty ? String(localized: "(No Title)") : window.title)
-                    .font(.system(size: 13.5, weight: .semibold))
+                    .font(.body)
+                    .fontWeight(.semibold)
                     .foregroundColor(colors.textPrimary)
                     .lineLimit(1)
 
-                Text(verbatim: String(format: String(localized: "%@ · %@"), window.ownerName, window.space.name))
-                    .font(.system(size: 11.5))
+                let stateLabel: String = {
+                    var isMin = false
+                    var isHid = false
+                    if let app = NSRunningApplication(processIdentifier: window.pid) {
+                        isHid = app.isHidden
+                    }
+                    if let axWindow = SpaceHelper.getAXWindow(id: window.id, pid: window.pid) {
+                        var minimizedRef: CFTypeRef?
+                        if AXUIElementCopyAttributeValue(axWindow, kAXMinimizedAttribute as CFString, &minimizedRef) == .success,
+                           let isMinimized = minimizedRef as? Bool {
+                            isMin = isMinimized
+                        }
+                    }
+                    if isMin {
+                        return NSLocalizedString("Minimized", comment: "")
+                    } else if isHid {
+                        return NSLocalizedString("Hidden", comment: "")
+                    } else {
+                        return NSLocalizedString("Active", comment: "")
+                    }
+                }()
+
+                Text(verbatim: String(format: "%@ · %@ · %@", window.ownerName, window.space.name, stateLabel))
+                    .font(.subheadline)
                     .foregroundColor(isSelected ? colors.textSecondary : colors.textTertiary)
                     .lineLimit(1)
             }
@@ -791,28 +945,25 @@ struct WindowBatchRowView: View {
             if let shortcut = shortcutText {
                 KeycapView(text: LocalizedStringKey(shortcut), isSelected: isSelected)
             } else if isStaged {
-                HStack(spacing: 4) {
-                    Circle()
-                        .fill(colors.greenText)
-                        .frame(width: 5, height: 5)
-                    Text(verbatim: String(format: String(localized: "→ %@"), targetSpaceName))
-                        .font(.system(size: 10, weight: .medium))
-                        .foregroundColor(colors.greenText)
-                }
-                .padding(.horizontal, 6)
-                .padding(.vertical, 3.5)
-                .background(colors.greenText.opacity(0.12))
-                .cornerRadius(6)
-                .overlay(
-                    RoundedRectangle(cornerRadius: 6)
-                        .stroke(colors.greenText.opacity(0.3), lineWidth: 1)
-                )
+                Text(stagedActionText)
+                    .font(.subheadline)
+                    .fontWeight(.semibold)
+                    .foregroundColor(colors.greenText)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 3)
+                    .background(colors.greenText.opacity(0.12))
+                    .cornerRadius(6)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 6)
+                            .stroke(colors.greenText.opacity(0.35), lineWidth: 1)
+                    )
             } else {
                 Text(window.space.name)
-                    .font(.system(size: 10, weight: .medium))
+                    .font(.subheadline)
+                    .fontWeight(.medium)
                     .foregroundColor(colors.textSecondary)
                     .padding(.horizontal, 8)
-                    .padding(.vertical, 3.5)
+                    .padding(.vertical, 3)
                     .background(colors.badgeBg)
                     .cornerRadius(6)
                     .overlay(
@@ -821,10 +972,21 @@ struct WindowBatchRowView: View {
                     )
             }
         }
-        .padding(.horizontal, 12)
+        .padding(.horizontal, 8)
         .padding(.vertical, 8)
-        .background(isSelected ? colors.rowHover : (isHovered ? colors.rowHover.opacity(0.5) : Color.clear))
-        .cornerRadius(8)
+        .background(
+            ZStack {
+                if isSelected {
+                    RoundedRectangle(cornerRadius: 8, style: .continuous)
+                        .fill(Color.primary.opacity(0.08))
+                    RoundedRectangle(cornerRadius: 8, style: .continuous)
+                        .stroke(Color.primary.opacity(0.15), lineWidth: 1)
+                } else if isHovered {
+                    RoundedRectangle(cornerRadius: 8, style: .continuous)
+                        .fill(Color.primary.opacity(0.05))
+                }
+            }
+        )
         .onHover { hovering in
             isHovered = hovering
         }
@@ -834,6 +996,7 @@ struct WindowBatchRowView: View {
 struct ListSectionHeader: View {
     let title: String
     let subtitle: String
+    var isFirst: Bool = false
     @Environment(\.colorScheme) var colorScheme
     
     var colors: ThemeColors {
@@ -848,12 +1011,12 @@ struct ListSectionHeader: View {
             
             Text(subtitle)
                 .font(.system(size: 11))
-                .foregroundColor(colors.textQuaternary)
+                .foregroundColor(colors.textSecondary)
             
             Spacer()
         }
-        .padding(.horizontal, 12)
-        .padding(.top, 10)
+        .padding(.horizontal, 8)
+        .padding(.top, isFirst ? 0 : 10)
         .padding(.bottom, 4)
     }
 }
@@ -872,16 +1035,14 @@ struct BatchMoveBottomBar: View {
             HStack(spacing: 6) {
                 HStack(spacing: 6) {
                     Image(systemName: viewModel.activeCommand?.iconName ?? "macwindow.badge.plus")
-                        .font(.system(size: 11, weight: .semibold))
-                        .foregroundColor(Color(red: 0.0, green: 0.55, blue: 1.0))
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundColor(Color.accentColor)
                     Text(viewModel.activeCommand?.title ?? String(localized: "Batch Move Windows"))
-                        .font(.system(size: 11, weight: .semibold))
+                        .font(.subheadline)
+                        .fontWeight(.semibold)
                         .foregroundColor(colors.textPrimary)
                 }
-                .padding(.horizontal, 10)
-                .padding(.vertical, 4)
-                .background(colors.badgeBg)
-                .clipShape(Capsule())
+                .modifier(BottomBarCapsule(isSelected: false, isActive: true, colorScheme: colorScheme))
                 
                 if let staging = viewModel.stagingWindow {
                     Image(systemName: "chevron.right")
@@ -890,16 +1051,14 @@ struct BatchMoveBottomBar: View {
                     
                     HStack(spacing: 4) {
                         Image(systemName: "square.and.arrow.down")
-                            .font(.system(size: 10, weight: .semibold))
+                            .font(.subheadline.weight(.semibold))
                             .foregroundColor(colors.greenText)
                         Text(String(format: NSLocalizedString("Stage: %@", comment: ""), staging.ownerName))
-                            .font(.system(size: 11, weight: .semibold))
+                            .font(.subheadline)
+                            .fontWeight(.semibold)
                             .foregroundColor(colors.textPrimary)
                     }
-                    .padding(.horizontal, 10)
-                    .padding(.vertical, 4)
-                    .background(colors.badgeBg)
-                    .clipShape(Capsule())
+                    .modifier(BottomBarCapsule(isSelected: false, isActive: false, colorScheme: colorScheme))
                 }
             }
             
@@ -910,17 +1069,16 @@ struct BatchMoveBottomBar: View {
                 if viewModel.stagingWindow != nil {
                     // Staging target space selection
                     HStack(spacing: 4) {
-                        Text(verbatim: String(localized: "Stage to Space"))
-                            .font(.system(size: 11, weight: .medium))
-                            .foregroundColor(colors.textSecondary)
+                        Text(verbatim: String(localized: "Stage"))
                         Text("↵")
-                            .font(.system(size: 11, weight: .semibold))
-                            .foregroundColor(colors.textTertiary)
+                            .font(.system(.caption2))
+                            .fontWeight(.bold)
                     }
-                    .padding(.horizontal, 10)
-                    .padding(.vertical, 4)
-                    .background(colors.badgeBg)
-                    .clipShape(Capsule())
+                    .modifier(BottomBarCapsule(isSelected: false, isActive: false, colorScheme: colorScheme))
+                    .contentShape(Rectangle())
+                    .onTapGesture {
+                        viewModel.executeRowAction()
+                    }
                 } else {
                     // Selecting an item in batch move
                     let items = viewModel.batchMoveSelectableItems
@@ -929,59 +1087,73 @@ struct BatchMoveBottomBar: View {
                     if index >= 0 && index < items.count {
                         let selectedItem = items[index]
                         switch selectedItem {
-                        case .staged:
-                            HStack(spacing: 4) {
-                                Text(verbatim: String(localized: "Unstage Move"))
-                                    .font(.system(size: 11, weight: .medium))
-                                    .foregroundColor(colors.textSecondary)
-                                Text("↵")
-                                    .font(.system(size: 11, weight: .semibold))
-                                    .foregroundColor(colors.textQuaternary)
+                        case .staged(let action, _):
+                            let isMove = {
+                                if case .move = action.actionType { return true }
+                                return false
+                            }()
+                            
+                            HStack(spacing: 8) {
+                                HStack(spacing: 4) {
+                                    Text(verbatim: String(localized: isMove ? "Unstage Move" : "Unstage Action"))
+                                    Text("↵")
+                                        .font(.system(.subheadline))
+                                        .fontWeight(.bold)
+                                }
+                                .modifier(BottomBarCapsule(isSelected: false, isActive: false, colorScheme: colorScheme))
+                                .contentShape(Rectangle())
+                                .onTapGesture {
+                                    viewModel.executeRowAction()
+                                }
                             }
-                            .padding(.horizontal, 10)
-                            .padding(.vertical, 4)
-                            .background(colors.badgeBg)
-                            .clipShape(Capsule())
                             
                         case .unstaged:
-                            HStack(spacing: 4) {
-                                Text(verbatim: String(localized: "Stage Move to Desktop..."))
-                                    .font(.system(size: 11, weight: .medium))
-                                    .foregroundColor(colors.textSecondary)
-                                Text("↵")
-                                    .font(.system(size: 11, weight: .semibold))
-                                    .foregroundColor(colors.textQuaternary)
+                            HStack(spacing: 8) {
+                                HStack(spacing: 4) {
+                                    Text(verbatim: String(localized: "Move to..."))
+                                    Text("↵")
+                                        .font(.system(.subheadline))
+                                        .fontWeight(.bold)
+                                }
+                                .modifier(BottomBarCapsule(isSelected: false, isActive: false, colorScheme: colorScheme))
+                                .contentShape(Rectangle())
+                                .onTapGesture {
+                                    viewModel.executeRowAction()
+                                }
+                                
+                                HStack(spacing: 4) {
+                                    Text(verbatim: String(localized: "Actions"))
+                                    Text("⌘K")
+                                        .font(.system(.subheadline))
+                                        .fontWeight(.bold)
+                                }
+                                .modifier(BottomBarCapsule(isSelected: false, isActive: false, colorScheme: colorScheme))
+                                .contentShape(Rectangle())
+                                .onTapGesture {
+                                    viewModel.showCommandKPanel()
+                                }
                             }
-                            .padding(.horizontal, 10)
-                            .padding(.vertical, 4)
-                            .background(colors.badgeBg)
-                            .clipShape(Capsule())
                         }
                     }
                     
                     // If there are staged moves, show run batch action
                     if !viewModel.stagedMoves.isEmpty {
                         HStack(spacing: 4) {
-                            Text(verbatim: String(localized: "Run Batch Move"))
-                                .font(.system(size: 11, weight: .semibold))
-                                .foregroundColor(colors.greenText)
+                            Text(verbatim: String(localized: "Run Batch Actions"))
                             Text("⌘↵")
-                                .font(.system(size: 11, weight: .semibold))
-                                .foregroundColor(colors.greenText.opacity(0.8))
+                                .font(.system(.subheadline))
+                                .fontWeight(.bold)
                         }
-                        .padding(.horizontal, 10)
-                        .padding(.vertical, 4)
-                        .background(colors.greenText.opacity(0.1))
-                        .clipShape(Capsule())
-                        .overlay(
-                            Capsule()
-                                .stroke(colors.greenText.opacity(0.3), lineWidth: 1)
-                        )
+                        .modifier(BottomBarCapsule(isSelected: true, isActive: false, isGreen: true, colorScheme: colorScheme))
+                        .contentShape(Rectangle())
+                        .onTapGesture {
+                            viewModel.executeBatchMove()
+                        }
                     }
                 }
             }
         }
-        .padding(.horizontal, 12)
+        .padding(.horizontal, 18)
         .padding(.vertical, 10)
         .background(colors.bottomBarBg)
     }
@@ -997,147 +1169,186 @@ struct SpacesBottomBar: View {
     }
     
     var body: some View {
-        HStack(spacing: 8) {
+        HStack(spacing: 0) {
+            // Static "Spaces:" label on the left (unscrollable)
             Text(verbatim: String(localized: "Spaces:"))
-                .font(.system(size: 11, weight: .semibold))
+                .font(.subheadline)
+                .fontWeight(.semibold)
                 .foregroundColor(colors.textTertiary)
-                .padding(.trailing, 2)
+                .padding(.trailing, 8)
+                .layoutPriority(1)
             
-            let spaces = spaceManager.currentDisplaySpaces
-            
-            ForEach(0..<spaces.count, id: \.self) { i in
-                let space = spaces[i]
-                let isCurrent = space.id == spaceManager.currentSpaceUUID
-                let isSpaceSelected = viewModel.isBottomBarFocused && i == viewModel.selectedSpaceIndex
-                let name = spaceManager.getSpaceName(space.id)
-                
-                Button(action: {
-                    let isOptionPressed = NSEvent.modifierFlags.contains(.option)
-                    if isOptionPressed {
-                        let handled = viewModel.movePreviouslyActiveWindow(toSpaceID: space.id)
-                        if !handled {
-                            viewModel.closeLauncher()
+            // Scrollable spaces list
+            ScrollViewReader { scrollProxy in
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 8) {
+                        let spaces = spaceManager.currentDisplaySpaces
+                        ForEach(0..<spaces.count, id: \.self) { i in
+                            let space = spaces[i]
+                            let isCurrent = space.id == spaceManager.currentSpaceUUID
+                            let isSpaceSelected = viewModel.isBottomBarFocused && i == viewModel.selectedSpaceIndex
+                            let name = spaceManager.getSpaceName(space.id)
+                            
+                            Button(action: {
+                                let isOptionPressed = NSEvent.modifierFlags.contains(.option)
+                                if isOptionPressed {
+                                    let handled = viewModel.movePreviouslyActiveWindow(toSpaceID: space.id)
+                                    if !handled {
+                                        viewModel.closeLauncher()
+                                    }
+                                } else {
+                                    viewModel.executeSwitchToSpaceID(space.id)
+                                }
+                            }) {
+                                Text(name)
+                                    .modifier(BottomBarCapsule(isSelected: isSpaceSelected, isActive: isCurrent, colorScheme: colorScheme))
+                            }
+                            .buttonStyle(PlainButtonStyle())
+                            .focusable(false)
+                            .help(String(localized: "Click to switch, Option+Click to move active window."))
+                            .id(space.id)
+                        }
+                    }
+                    .padding(.leading, 32)
+                    .padding(.trailing, 32)
+                }
+                .mask(
+                    HStack(spacing: 0) {
+                        // Left fade edge
+                        LinearGradient(
+                            gradient: Gradient(colors: [.clear, .black]),
+                            startPoint: .leading,
+                            endPoint: .trailing
+                        )
+                        .frame(width: 32)
+                        
+                        // Middle opaque region
+                        Rectangle()
+                            .fill(Color.black)
+                        
+                        // Right fade edge
+                        LinearGradient(
+                            gradient: Gradient(colors: [.black, .clear]),
+                            startPoint: .leading,
+                            endPoint: .trailing
+                        )
+                        .frame(width: 32)
+                    }
+                )
+                .onAppear {
+                    scrollProxy.scrollTo(spaceManager.currentSpaceUUID, anchor: UnitPoint(x: 0.31, y: 0.5))
+                }
+                .onChange(of: spaceManager.currentSpaceUUID) { currentSpaceID in
+                    withAnimation(.easeInOut(duration: 0.15)) {
+                        scrollProxy.scrollTo(currentSpaceID, anchor: UnitPoint(x: 0.31, y: 0.5))
+                    }
+                }
+                .onChange(of: viewModel.selectedSpaceIndex) { selectedIndex in
+                    if viewModel.isBottomBarFocused {
+                        let spaces = spaceManager.currentDisplaySpaces
+                        if selectedIndex >= 0 && selectedIndex < spaces.count {
+                            let spaceID = spaces[selectedIndex].id
+                            withAnimation(.easeInOut(duration: 0.15)) {
+                                scrollProxy.scrollTo(spaceID, anchor: UnitPoint(x: 0.31, y: 0.5))
+                            }
+                        }
+                    }
+                }
+                .onChange(of: viewModel.isBottomBarFocused) { isFocused in
+                    let spaces = spaceManager.currentDisplaySpaces
+                    if isFocused {
+                        if viewModel.selectedSpaceIndex >= 0 && viewModel.selectedSpaceIndex < spaces.count {
+                            let spaceID = spaces[viewModel.selectedSpaceIndex].id
+                            withAnimation(.easeInOut(duration: 0.15)) {
+                                scrollProxy.scrollTo(spaceID, anchor: UnitPoint(x: 0.31, y: 0.5))
+                            }
                         }
                     } else {
-                        viewModel.executeSwitchToSpaceID(space.id)
-                    }
-                }) {
-                    HStack {
-                        if isSpaceSelected {
-                            Text(name)
-                                .font(.system(size: 11, weight: .semibold))
-                                .foregroundColor(.white)
-                                .padding(.horizontal, 10)
-                                .padding(.vertical, 4)
-                                .background(Color(red: 0.0, green: 0.55, blue: 1.0))
-                                .clipShape(Capsule())
-                                .overlay(
-                                    Capsule()
-                                        .stroke(Color.white.opacity(0.4), lineWidth: 1)
-                                )
-                                .shadow(color: Color(red: 0.0, green: 0.55, blue: 1.0).opacity(0.4), radius: 4, x: 0, y: 0)
-                        } else if isCurrent {
-                            Text(name)
-                                .font(.system(size: 11, weight: .semibold))
-                                .foregroundColor(Color(red: 0.0, green: 0.55, blue: 1.0))
-                                .padding(.horizontal, 10)
-                                .padding(.vertical, 4)
-                                .background(Color(red: 0.0, green: 0.55, blue: 1.0).opacity(0.15))
-                                .clipShape(Capsule())
-                        } else {
-                            Text(name)
-                                .font(.system(size: 11, weight: .medium))
-                                .foregroundColor(colors.textSecondary)
-                                .padding(.horizontal, 10)
-                                .padding(.vertical, 4)
-                                .background(colors.badgeBg)
-                                .clipShape(Capsule())
+                        withAnimation(.easeInOut(duration: 0.15)) {
+                            scrollProxy.scrollTo(spaceManager.currentSpaceUUID, anchor: UnitPoint(x: 0.31, y: 0.5))
                         }
                     }
                 }
-                .buttonStyle(PlainButtonStyle())
-                .focusable(false)
-                .help(String(localized: "Click to switch, Option+Click to move active window."))
             }
             
-            Spacer()
-            
-            // Right side action indicators
-            HStack(spacing: 8) {
-                if !viewModel.isBottomBarFocused {
-                    Button(action: {
-                        viewModel.isBottomBarFocused = true
-                        viewModel.isKeyboardSelection = true
-                        
-                        let spaces = spaceManager.currentDisplaySpaces
-                        if let currentSpaceID = AppDelegate.shared.spaceManager?.currentSpaceUUID,
-                           let index = spaces.firstIndex(where: { $0.id == currentSpaceID }) {
-                            viewModel.selectedSpaceIndex = index
-                        } else {
-                            viewModel.selectedSpaceIndex = 0
+            // Actions Overlay (No longer overlapping, placed in-line)
+            HStack(spacing: 12) {
+                // Separator divider
+                Rectangle()
+                    .fill(colors.border)
+                    .frame(width: 1, height: 16)
+                
+                // Right side action indicators
+                HStack(spacing: 8) {
+                    if !viewModel.isBottomBarFocused {
+                        Button(action: {
+                            viewModel.isBottomBarFocused = true
+                            viewModel.isKeyboardSelection = true
+                            
+                            let spaces = spaceManager.currentDisplaySpaces
+                            if let currentSpaceID = AppDelegate.shared.spaceManager?.currentSpaceUUID,
+                               let index = spaces.firstIndex(where: { $0.id == currentSpaceID }) {
+                                viewModel.selectedSpaceIndex = index
+                            } else {
+                                viewModel.selectedSpaceIndex = 0
+                            }
+                        }) {
+                            HStack(spacing: 4) {
+                                Text(LocalizedStringKey("Switch Space"))
+                                Text("⇥")
+                                    .font(.system(.subheadline))
+                                    .fontWeight(.bold)
+                            }
+                            .modifier(BottomBarCapsule(isSelected: false, isActive: false, colorScheme: colorScheme))
                         }
-                    }) {
+                        .buttonStyle(PlainButtonStyle())
+                    }
+                    
+                    if viewModel.isBottomBarFocused {
                         HStack(spacing: 4) {
                             Text(LocalizedStringKey("Switch Space"))
-                                .font(.system(size: 11, weight: .medium))
-                                .foregroundColor(colors.textSecondary)
-                            Text("Tab")
-                                .font(.system(size: 11, weight: .semibold))
-                                .foregroundColor(colors.textQuaternary)
+                            Text("↵")
+                                .font(.system(.subheadline))
+                                .fontWeight(.bold)
                         }
-                        .padding(.horizontal, 10)
-                        .frame(height: 21)
-                        .background(colors.badgeBg)
-                        .clipShape(Capsule())
+                        .modifier(BottomBarCapsule(isSelected: false, isActive: false, colorScheme: colorScheme))
+                        .contentShape(Rectangle())
+                        .onTapGesture {
+                            viewModel.executeBottomBarSpaceAction(isOption: false, isCommand: false)
+                        }
+                        
+                        HStack(spacing: 4) {
+                            Text(LocalizedStringKey("Move Window"))
+                            Text("⌥↵")
+                                .font(.system(.subheadline))
+                                .fontWeight(.bold)
+                        }
+                        .modifier(BottomBarCapsule(isSelected: false, isActive: false, colorScheme: colorScheme))
+                        .contentShape(Rectangle())
+                        .onTapGesture {
+                            viewModel.executeBottomBarSpaceAction(isOption: true, isCommand: false)
+                        }
+                    } else {
+                        HStack(spacing: 4) {
+                            Text(LocalizedStringKey("Action"))
+                            Text("↵")
+                                .font(.system(.subheadline))
+                                .fontWeight(.bold)
+                        }
+                        .modifier(BottomBarCapsule(isSelected: false, isActive: false, colorScheme: colorScheme))
+                        .contentShape(Rectangle())
+                        .onTapGesture {
+                            viewModel.executeRowAction()
+                        }
                     }
-                    .buttonStyle(PlainButtonStyle())
-                }
-                
-                if viewModel.isBottomBarFocused {
-                    HStack(spacing: 4) {
-                        Text(LocalizedStringKey("Switch Space"))
-                            .font(.system(size: 11, weight: .medium))
-                            .foregroundColor(colors.textSecondary)
-                        Text("↵")
-                            .font(.system(size: 11, weight: .semibold))
-                            .foregroundColor(colors.textQuaternary)
-                    }
-                    .padding(.horizontal, 10)
-                    .frame(height: 21)
-                    .background(colors.badgeBg)
-                    .clipShape(Capsule())
-                    
-                    HStack(spacing: 4) {
-                        Text(LocalizedStringKey("Move Window"))
-                            .font(.system(size: 11, weight: .medium))
-                            .foregroundColor(colors.textSecondary)
-                        Text("⌥↵")
-                            .font(.system(size: 11, weight: .semibold))
-                            .foregroundColor(colors.textQuaternary)
-                    }
-                    .padding(.horizontal, 10)
-                    .frame(height: 21)
-                    .background(colors.badgeBg)
-                    .clipShape(Capsule())
-                } else {
-                    HStack(spacing: 4) {
-                        Text(LocalizedStringKey("Action"))
-                            .font(.system(size: 11, weight: .medium))
-                            .foregroundColor(colors.textSecondary)
-                        Text("↵")
-                            .font(.system(size: 11, weight: .semibold))
-                            .foregroundColor(colors.textQuaternary)
-                    }
-                    .padding(.horizontal, 10)
-                    .frame(height: 21)
-                    .background(colors.badgeBg)
-                    .clipShape(Capsule())
                 }
             }
+            .padding(.leading, 12)
         }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 10)
+        .padding(.horizontal, 18)
+        .frame(height: 46)
         .background(colors.bottomBarBg)
+        .animation(.spring(response: 0.35, dampingFraction: 0.85), value: viewModel.isBottomBarFocused)
     }
 }
 
@@ -1154,17 +1365,34 @@ struct CommandBottomBar: View {
             // Left side: Active command pill matching Raycast look
             if let active = viewModel.activeCommand {
                 HStack(spacing: 6) {
-                    Image(systemName: active.iconName)
-                        .font(.system(size: 11, weight: .semibold))
-                        .foregroundColor(Color(red: 0.0, green: 0.55, blue: 1.0))
-                    Text(active.title)
-                        .font(.system(size: 11, weight: .semibold))
-                        .foregroundColor(colors.textPrimary)
+                    HStack(spacing: 6) {
+                        Image(systemName: active.iconName)
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundColor(Color.accentColor)
+                        Text(active.title)
+                            .font(.subheadline)
+                            .fontWeight(.semibold)
+                            .foregroundColor(colors.textPrimary)
+                    }
+                    .modifier(BottomBarCapsule(isSelected: false, isActive: true, colorScheme: colorScheme))
+                    
+                    if let staging = viewModel.stagingWindow {
+                        Image(systemName: "chevron.right")
+                            .font(.system(size: 9, weight: .semibold))
+                            .foregroundColor(colors.textQuaternary)
+                        
+                        HStack(spacing: 4) {
+                            Image(systemName: "square.and.arrow.down")
+                                .font(.subheadline.weight(.semibold))
+                                .foregroundColor(colors.greenText)
+                            Text(String(format: NSLocalizedString("Move: %@", comment: ""), staging.ownerName))
+                                .font(.subheadline)
+                                .fontWeight(.semibold)
+                                .foregroundColor(colors.textPrimary)
+                        }
+                        .modifier(BottomBarCapsule(isSelected: false, isActive: false, colorScheme: colorScheme))
+                    }
                 }
-                .padding(.horizontal, 10)
-                .padding(.vertical, 4)
-                .background(colors.badgeBg)
-                .clipShape(Capsule())
             }
             
             Spacer()
@@ -1175,65 +1403,106 @@ struct CommandBottomBar: View {
                 case .switchToDesktop:
                     HStack(spacing: 4) {
                         Text(verbatim: String(localized: "Switch Space"))
-                            .font(.system(size: 11, weight: .medium))
-                            .foregroundColor(colors.textSecondary)
                         Text("↵")
-                            .font(.system(size: 11, weight: .semibold))
-                            .foregroundColor(colors.textQuaternary)
+                            .font(.system(.subheadline))
+                            .fontWeight(.bold)
                     }
-                    .padding(.horizontal, 10)
-                    .padding(.vertical, 4)
-                    .background(colors.badgeBg)
-                    .clipShape(Capsule())
+                    .modifier(BottomBarCapsule(isSelected: false, isActive: false, colorScheme: colorScheme))
+                    .contentShape(Rectangle())
+                    .onTapGesture {
+                        viewModel.executeRowAction()
+                    }
 
                 case .moveWindow:
                     HStack(spacing: 4) {
                         Text(verbatim: String(localized: "Move Window"))
-                            .font(.system(size: 11, weight: .medium))
-                            .foregroundColor(colors.textSecondary)
                         Text("↵")
-                            .font(.system(size: 11, weight: .semibold))
-                            .foregroundColor(colors.textQuaternary)
+                            .font(.system(.subheadline))
+                            .fontWeight(.bold)
                     }
-                    .padding(.horizontal, 10)
-                    .padding(.vertical, 4)
-                    .background(colors.badgeBg)
-                    .clipShape(Capsule())
+                    .modifier(BottomBarCapsule(isSelected: false, isActive: false, colorScheme: colorScheme))
+                    .contentShape(Rectangle())
+                    .onTapGesture {
+                        viewModel.executeRowAction()
+                    }
 
                 case .listWindows:
-                    HStack(spacing: 4) {
-                        Text(verbatim: String(localized: "Focus Window"))
-                            .font(.system(size: 11, weight: .medium))
-                            .foregroundColor(colors.textSecondary)
-                        Text("↵")
-                            .font(.system(size: 11, weight: .semibold))
-                            .foregroundColor(colors.textQuaternary)
+                    if viewModel.stagingWindow != nil {
+                        HStack(spacing: 4) {
+                            Text(verbatim: String(localized: "Move"))
+                            Text("↵")
+                                .font(.system(.subheadline))
+                                .fontWeight(.bold)
+                        }
+                        .modifier(BottomBarCapsule(isSelected: false, isActive: false, colorScheme: colorScheme))
+                        .contentShape(Rectangle())
+                        .onTapGesture {
+                            viewModel.executeRowAction()
+                        }
+                    } else {
+                        HStack(spacing: 8) {
+                            HStack(spacing: 4) {
+                                Text(verbatim: String(localized: "Focus"))
+                                Text("↵")
+                                    .font(.system(.subheadline))
+                                    .fontWeight(.bold)
+                            }
+                            .modifier(BottomBarCapsule(isSelected: false, isActive: false, colorScheme: colorScheme))
+                            .contentShape(Rectangle())
+                            .onTapGesture {
+                                viewModel.executeRowAction()
+                            }
+                            
+                            HStack(spacing: 4) {
+                                Text(verbatim: String(localized: "Move"))
+                                Text("⌘M")
+                                    .font(.system(.subheadline))
+                                    .fontWeight(.bold)
+                            }
+                            .modifier(BottomBarCapsule(isSelected: false, isActive: false, colorScheme: colorScheme))
+                            .contentShape(Rectangle())
+                            .onTapGesture {
+                                if let window = viewModel.selectedWindowForListWindows {
+                                    viewModel.batchMoveLastSelectedIndex = viewModel.selectedRowIndex
+                                    viewModel.stagingWindow = window
+                                    viewModel.isExecutingRestoreToImmediately = true
+                                    viewModel.selectedRowIndex = 0
+                                }
+                            }
+                            
+                            HStack(spacing: 4) {
+                                Text(verbatim: String(localized: "Actions"))
+                                Text("⌘K")
+                                    .font(.system(.subheadline))
+                                    .fontWeight(.bold)
+                            }
+                            .modifier(BottomBarCapsule(isSelected: false, isActive: false, colorScheme: colorScheme))
+                            .contentShape(Rectangle())
+                            .onTapGesture {
+                                viewModel.showCommandKPanel()
+                            }
+                        }
                     }
-                    .padding(.horizontal, 10)
-                    .padding(.vertical, 4)
-                    .background(colors.badgeBg)
-                    .clipShape(Capsule())
 
                 case .renameCurrentSpace:
                     HStack(spacing: 4) {
                         Text(verbatim: String(localized: "Rename Space"))
-                            .font(.system(size: 11, weight: .medium))
-                            .foregroundColor(colors.textSecondary)
                         Text("↵")
-                            .font(.system(size: 11, weight: .semibold))
-                            .foregroundColor(colors.textQuaternary)
+                            .font(.system(.subheadline))
+                            .fontWeight(.bold)
                     }
-                    .padding(.horizontal, 10)
-                    .padding(.vertical, 4)
-                    .background(colors.badgeBg)
-                    .clipShape(Capsule())
+                    .modifier(BottomBarCapsule(isSelected: false, isActive: false, colorScheme: colorScheme))
+                    .contentShape(Rectangle())
+                    .onTapGesture {
+                        viewModel.executeRowAction()
+                    }
                     
                 default:
                     EmptyView()
                 }
             }
         }
-        .padding(.horizontal, 12)
+        .padding(.horizontal, 18)
         .padding(.vertical, 10)
         .background(colors.bottomBarBg)
     }
@@ -1243,12 +1512,19 @@ class FocusTextField: NSTextField {
     var onCommandEnter: (() -> Void)?
     var onOptionEnter: (() -> Void)?
     var onCommandNumber: ((Int) -> Void)?
+    var onCommandK: (() -> Void)?
+    var onKeyEquivalent: ((NSEvent) -> Bool)?
+    var isTypingDisabled: Bool = false
 
     override var acceptsFirstResponder: Bool {
         return true
     }
 
     override func performKeyEquivalent(with event: NSEvent) -> Bool {
+        if let handled = onKeyEquivalent?(event), handled {
+            return true
+        }
+        
         if event.type == .keyDown {
             let modifiers = event.modifierFlags.intersection(.deviceIndependentFlagsMask)
             let hasCommand = modifiers.contains(.command)
@@ -1272,6 +1548,11 @@ class FocusTextField: NSTextField {
                        let number = Int(String(char)),
                        number >= 1 && number <= 9 {
                         onCommandNumber?(number)
+                        return true
+                    }
+                    
+                    if event.charactersIgnoringModifiers?.lowercased() == "k" {
+                        onCommandK?()
                         return true
                     }
                 }
@@ -1313,9 +1594,39 @@ class FocusTextField: NSTextField {
     }
 }
 
+class BlockTypingFormatter: Formatter {
+    var isTypingDisabled: () -> Bool
+    
+    init(isTypingDisabled: @escaping () -> Bool) {
+        self.isTypingDisabled = isTypingDisabled
+        super.init()
+    }
+    
+    required init?(coder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
+    }
+    
+    override func string(for obj: Any?) -> String? {
+        return obj as? String
+    }
+    
+    override func getObjectValue(_ obj: AutoreleasingUnsafeMutablePointer<AnyObject?>?, for string: String, errorDescription error: AutoreleasingUnsafeMutablePointer<NSString?>?) -> Bool {
+        obj?.pointee = string as AnyObject
+        return true
+    }
+    
+    override func isPartialStringValid(_ partialString: String, newEditingString newString: AutoreleasingUnsafeMutablePointer<NSString?>?, errorDescription error: AutoreleasingUnsafeMutablePointer<NSString?>?) -> Bool {
+        if isTypingDisabled() {
+            return false
+        }
+        return true
+    }
+}
+
 struct SearchTextField: NSViewRepresentable {
     @Binding var text: String
     var isDark: Bool
+    var isTypingDisabled: Bool = false
     var onUpArrow: () -> Void
     var onDownArrow: () -> Void
     var onLeftArrow: (() -> Bool)? = nil
@@ -1326,9 +1637,11 @@ struct SearchTextField: NSViewRepresentable {
     var onCommandNumber: ((Int) -> Void)? = nil
     var onTab: (() -> Void)? = nil
     var onEscape: () -> Void
+    var onCommandK: (() -> Void)? = nil
+    var onKeyEquivalent: ((NSEvent) -> Bool)? = nil
     var placeholder: String = "Type a command..."
     
-    class Coordinator: NSObject, NSTextFieldDelegate {
+    class Coordinator: NSObject, NSTextFieldDelegate, NSTextViewDelegate {
         var parent: SearchTextField
         var lastPlaceholder: String? = nil
         var lastIsDark: Bool? = nil
@@ -1341,6 +1654,20 @@ struct SearchTextField: NSViewRepresentable {
             if let textField = obj.object as? NSTextField {
                 parent.text = textField.stringValue
             }
+        }
+        
+        func textView(_ textView: NSTextView, shouldChangeTextIn affectedCharRange: NSRange, replacementString: String?) -> Bool {
+            if parent.isTypingDisabled {
+                return false
+            }
+            return true
+        }
+        
+        func textView(_ textView: NSTextView, shouldChangeTextInRanges affectedRanges: [NSValue], replacementStrings: [String]?) -> Bool {
+            if parent.isTypingDisabled {
+                return false
+            }
+            return true
         }
         
         func control(_ control: NSControl, textView: NSTextView, doCommandBy commandSelector: Selector) -> Bool {
@@ -1388,6 +1715,11 @@ struct SearchTextField: NSViewRepresentable {
         let textField = FocusTextField()
         textField.delegate = context.coordinator
         
+        let formatter = BlockTypingFormatter(isTypingDisabled: { [weak coordinator = context.coordinator] in
+            coordinator?.parent.isTypingDisabled ?? false
+        })
+        textField.formatter = formatter
+        
         // Route closures safely and dynamically through the coordinator
         textField.onCommandEnter = { [weak coordinator = context.coordinator] in
             coordinator?.parent.onCommandEnter?()
@@ -1398,22 +1730,26 @@ struct SearchTextField: NSViewRepresentable {
         textField.onCommandNumber = { [weak coordinator = context.coordinator] num in
             coordinator?.parent.onCommandNumber?(num)
         }
+        textField.onCommandK = { [weak coordinator = context.coordinator] in
+            coordinator?.parent.onCommandK?()
+        }
+        textField.onKeyEquivalent = onKeyEquivalent
+        textField.isTypingDisabled = isTypingDisabled
         
         textField.isBordered = false
         textField.drawsBackground = false
         textField.focusRingType = .none
-        textField.textColor = isDark ? .white : NSColor(red: 0.12, green: 0.12, blue: 0.14, alpha: 1.0)
-        textField.font = NSFont.systemFont(ofSize: 20, weight: .regular)
+        textField.textColor = .labelColor
+        textField.font = NSFont.systemFont(ofSize: 16, weight: .regular)
         
         context.coordinator.lastPlaceholder = placeholder
         context.coordinator.lastIsDark = isDark
         
-        let placeholderColor = isDark ? NSColor.white.withAlphaComponent(0.35) : NSColor(red: 0.12, green: 0.12, blue: 0.14, alpha: 0.35)
         let placeholderAttr = NSAttributedString(
             string: placeholder,
             attributes: [
-                .foregroundColor: placeholderColor,
-                .font: NSFont.systemFont(ofSize: 20, weight: .regular)
+                .foregroundColor: NSColor.placeholderTextColor,
+                .font: NSFont.systemFont(ofSize: 16, weight: .regular)
             ]
         )
         textField.placeholderAttributedString = placeholderAttr
@@ -1425,25 +1761,219 @@ struct SearchTextField: NSViewRepresentable {
     func updateNSView(_ nsView: NSTextField, context: Context) {
         context.coordinator.parent = self
         
+        if let focusField = nsView as? FocusTextField {
+            focusField.isTypingDisabled = isTypingDisabled
+            focusField.onKeyEquivalent = onKeyEquivalent
+        }
+        
         if nsView.stringValue != text {
             nsView.stringValue = text
         }
-        nsView.textColor = isDark ? .white : NSColor(red: 0.12, green: 0.12, blue: 0.14, alpha: 1.0)
+        nsView.textColor = .labelColor
         
         // Cache placeholder creation to avoid recreating it on every render cycle
         if context.coordinator.lastPlaceholder != placeholder || context.coordinator.lastIsDark != isDark {
             context.coordinator.lastPlaceholder = placeholder
             context.coordinator.lastIsDark = isDark
             
-            let placeholderColor = isDark ? NSColor.white.withAlphaComponent(0.35) : NSColor(red: 0.12, green: 0.12, blue: 0.14, alpha: 0.35)
             let placeholderAttr = NSAttributedString(
                 string: placeholder,
                 attributes: [
-                    .foregroundColor: placeholderColor,
-                    .font: NSFont.systemFont(ofSize: 20, weight: .regular)
+                    .foregroundColor: NSColor.placeholderTextColor,
+                    .font: NSFont.systemFont(ofSize: 16, weight: .regular)
                 ]
             )
             nsView.placeholderAttributedString = placeholderAttr
+        }
+    }
+}
+
+struct CommandKOverlayView: View {
+    @ObservedObject var viewModel: LauncherViewModel
+    let window: WindowEntry
+    @Environment(\.colorScheme) var colorScheme
+    
+    var colors: ThemeColors {
+        ThemeColors(isDark: colorScheme == .dark)
+    }
+    
+    var body: some View {
+        ZStack {
+            // Subtle separation overlay (dimming in dark theme, neutral in light theme)
+            (colorScheme == .dark ? Color.black.opacity(0.25) : Color.black.opacity(0.03))
+                .edgesIgnoringSafeArea(.all)
+                .onTapGesture {
+                    viewModel.commandKTargetWindow = nil
+                }
+            
+            // Centered panel card
+            VStack(spacing: 0) {
+                // Header details
+                HStack(spacing: 12) {
+                    let appIcon = NSWorkspace.shared.icon(forFile: window.appPath)
+                    Image(nsImage: appIcon)
+                        .resizable()
+                        .aspectRatio(contentMode: .fit)
+                        .frame(width: 32, height: 32)
+                        .padding(4)
+                        .background(colors.badgeBg)
+                        .cornerRadius(8)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 8)
+                                .stroke(colors.badgeBorder, lineWidth: 1)
+                        )
+                    
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(window.title.isEmpty ? String(localized: "(No Title)") : window.title)
+                            .font(.body)
+                            .fontWeight(.bold)
+                            .foregroundColor(colors.textPrimary)
+                            .lineLimit(1)
+                        
+                        Text(window.ownerName)
+                            .font(.subheadline)
+                            .foregroundColor(colors.textSecondary)
+                            .lineLimit(1)
+                    }
+                    
+                    Spacer()
+                    
+                    // State Badges
+                    let (minimized, hidden) = viewModel.isWindowMinimizedOrAppHidden(window)
+                    if minimized {
+                        Text(verbatim: String(localized: "Minimized"))
+                            .font(.system(.caption2, design: .default))
+                            .fontWeight(.bold)
+                            .foregroundColor(.orange)
+                            .padding(.horizontal, 6)
+                            .padding(.vertical, 2.5)
+                            .background(Color.orange.opacity(0.15), in: RoundedRectangle(cornerRadius: 4))
+                    } else if hidden {
+                        Text(verbatim: String(localized: "Hidden"))
+                            .font(.system(.caption2, design: .default))
+                            .fontWeight(.bold)
+                            .foregroundColor(.blue)
+                            .padding(.horizontal, 6)
+                            .padding(.vertical, 2.5)
+                            .background(Color.blue.opacity(0.15), in: RoundedRectangle(cornerRadius: 4))
+                    } else {
+                        Text(verbatim: String(localized: "Active"))
+                            .font(.system(.caption2, design: .default))
+                            .fontWeight(.bold)
+                            .foregroundColor(colors.greenText)
+                            .padding(.horizontal, 6)
+                            .padding(.vertical, 2.5)
+                            .background(colors.greenText.opacity(0.15), in: RoundedRectangle(cornerRadius: 4))
+                    }
+                }
+                .padding(.horizontal, 16)
+                .padding(.vertical, 16)
+                
+                Divider()
+                
+                // Actions List
+                let actions = viewModel.commandKActions
+                VStack(spacing: 2) {
+                    ForEach(0..<actions.count, id: \.self) { idx in
+                        let action = actions[idx]
+                        let isSelected = viewModel.commandKSelectedIndex == idx
+                        
+                        CommandKActionRowView(
+                            action: action,
+                            isSelected: isSelected,
+                            showCommandNumbers: viewModel.showCommandNumbers,
+                            idx: idx,
+                            colors: colors,
+                            viewModel: viewModel
+                        )
+                    }
+                }
+                .padding(8)
+            }
+            .frame(width: 380)
+            .launcherBackground(cornerRadius: 12, borderColor: colors.border)
+            .shadow(color: Color.black.opacity(colorScheme == .dark ? 0.4 : 0.2), radius: 15, x: 0, y: 8)
+        }
+    }
+}
+
+struct CommandKActionRowView: View {
+    let action: BatchStagedActionType
+    let isSelected: Bool
+    let showCommandNumbers: Bool
+    let idx: Int
+    let colors: ThemeColors
+    @ObservedObject var viewModel: LauncherViewModel
+    
+    @State private var isHovered = false
+    
+    var body: some View {
+        HStack(spacing: 10) {
+            Image(systemName: getIconName(for: action))
+                .font(.body.weight(.medium))
+                .frame(width: 16)
+                .foregroundColor(isSelected ? colors.textPrimary : colors.textSecondary)
+            
+            Text(getActionLabel(for: action))
+                .font(.body)
+                .fontWeight(isSelected ? .semibold : .regular)
+                .foregroundColor(colors.textPrimary)
+            
+            Spacer()
+            
+            KeycapView(text: "⌘\(idx + 1)", isSelected: isSelected)
+                .opacity(showCommandNumbers ? 1 : 0)
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 8)
+        .background(
+            ZStack {
+                if isSelected {
+                    RoundedRectangle(cornerRadius: 6, style: .continuous)
+                        .fill(Color.primary.opacity(0.08))
+                    RoundedRectangle(cornerRadius: 6, style: .continuous)
+                        .stroke(Color.primary.opacity(0.15), lineWidth: 1)
+                } else if isHovered {
+                    RoundedRectangle(cornerRadius: 6, style: .continuous)
+                        .fill(Color.primary.opacity(0.05))
+                }
+            }
+        )
+        .contentShape(Rectangle())
+        .onHover { hovering in
+            isHovered = hovering
+        }
+        .onTapGesture {
+            viewModel.commandKSelectedIndex = idx
+            viewModel.executeCommandKAction()
+        }
+    }
+    
+    private func getIconName(for action: BatchStagedActionType) -> String {
+        switch action {
+        case .close: return "xmark"
+        case .minimize: return "minus"
+        case .hide: return "eye.slash"
+        case .enterFullScreen: return "arrow.up.left.and.arrow.down.right"
+        case .exitFullScreen: return "arrow.down.right.and.arrow.up.left"
+        case .quit: return "power"
+        case .restore: return "arrow.uturn.backward"
+        case .restoreTo: return "arrow.forward.square"
+        case .move: return "arrow.right.square"
+        }
+    }
+    
+    private func getActionLabel(for action: BatchStagedActionType) -> String {
+        switch action {
+        case .close: return NSLocalizedString("Close", comment: "")
+        case .minimize: return NSLocalizedString("Minimize", comment: "")
+        case .hide: return NSLocalizedString("Hide", comment: "")
+        case .enterFullScreen: return NSLocalizedString("Enter Full Screen", comment: "")
+        case .exitFullScreen: return NSLocalizedString("Exit Full Screen", comment: "")
+        case .quit: return NSLocalizedString("Quit", comment: "")
+        case .restore: return NSLocalizedString("Restore", comment: "")
+        case .restoreTo(let space): return space.name.isEmpty ? NSLocalizedString("Restore to...", comment: "") : String(format: NSLocalizedString("Restore to %@", comment: ""), space.name)
+        case .move(let space): return space.name.isEmpty ? NSLocalizedString("Move to...", comment: "") : String(format: NSLocalizedString("Move to %@", comment: ""), space.name)
         }
     }
 }
@@ -1467,3 +1997,157 @@ struct VisualEffectView: NSViewRepresentable {
         nsView.state = state
     }
 }
+
+extension View {
+    @ViewBuilder
+    func launcherBackground(cornerRadius: CGFloat, borderColor: Color) -> some View {
+        if #available(macOS 26.0, *) {
+            self.glassEffect(.regular, in: RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
+        } else {
+            self.background(.ultraThinMaterial)
+                .clipShape(RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
+                .overlay(
+                    RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+                        .stroke(borderColor, lineWidth: 1)
+                )
+        }
+    }
+}
+
+struct BottomBarCapsule: ViewModifier {
+    let isSelected: Bool
+    let isActive: Bool
+    var isGreen: Bool = false
+    let colorScheme: ColorScheme
+    
+    @State private var isHovered: Bool = false
+    
+    var greenBgColor: Color {
+        colorScheme == .dark ? Color(red: 0.16, green: 0.48, blue: 0.26) : Color(red: 0.12, green: 0.44, blue: 0.22)
+    }
+    
+    func body(content: Content) -> some View {
+        content
+            .font(.subheadline)
+            .fontWeight(isSelected || isActive ? .semibold : .medium)
+            .padding(.horizontal, 12)
+            .frame(height: 26)
+            .background(
+                ZStack {
+                    if isGreen {
+                        if isSelected {
+                            greenBgColor.opacity(isHovered ? 0.9 : 1.0)
+                        } else if isActive {
+                            greenBgColor.opacity(isHovered ? 0.25 : 0.15)
+                        } else {
+                            Color.primary.opacity(isHovered ? 0.12 : 0.06)
+                        }
+                    } else {
+                        if isSelected {
+                            isActive ? Color.primary.opacity(0.24) : Color.primary.opacity(0.16)
+                        } else if isActive {
+                            Color.primary.opacity(isHovered ? 0.22 : 0.14)
+                        } else {
+                            Color.primary.opacity(isHovered ? 0.12 : 0.06)
+                        }
+                    }
+                }
+            )
+            .foregroundColor(
+                isGreen ? (isSelected ? .white : (isActive ? greenBgColor : (isHovered ? greenBgColor : .secondary)))
+                        : (isActive ? .primary : (isSelected || isHovered ? .primary : .secondary))
+            )
+            .clipShape(Capsule())
+            .overlay(
+                Capsule()
+                    .strokeBorder(
+                        isGreen ? (isSelected ? Color.primary.opacity(0.15) : (isActive ? greenBgColor.opacity(isHovered ? 0.4 : 0.2) : Color.primary.opacity(isHovered ? 0.25 : 0.08)))
+                                : (isSelected ? (isActive ? Color.primary.opacity(0.48) : Color.primary.opacity(0.40)) : (isActive ? Color.primary.opacity(isHovered ? 0.35 : 0.22) : Color.primary.opacity(isHovered ? 0.25 : 0.08))),
+                        lineWidth: (isSelected && !isGreen) ? 1.5 : 1
+                    )
+            )
+            .shadow(color: isSelected ? (isGreen ? greenBgColor.opacity(0.25) : Color.primary.opacity(0.1)) : Color.clear, radius: 3, x: 0, y: 1)
+            .onHover { hovering in
+                isHovered = hovering
+            }
+    }
+}
+
+struct WidthPreferenceKey: PreferenceKey {
+    static var defaultValue: CGFloat = 210
+    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
+        value = nextValue()
+    }
+}
+
+extension LauncherView {
+    private func handleTextFieldKeyEquivalent(_ event: NSEvent) -> Bool {
+        guard event.type == .keyDown else { return false }
+        
+        let modifiers = event.modifierFlags.intersection(.deviceIndependentFlagsMask)
+        let hasCommand = modifiers.contains(.command)
+        let hasShift = modifiers.contains(.shift)
+        let hasOption = modifiers.contains(.option)
+        let hasControl = modifiers.contains(.control)
+        
+        // Direct window shortcuts for .listWindows (cmd + m, cmd + shift + m/w/n/r/f/h/q)
+        if viewModel.activeCommand?.type == .listWindows,
+           viewModel.commandKTargetWindow == nil,
+           viewModel.stagingWindow == nil {
+            
+            let windows = viewModel.filteredWindows
+            let index = viewModel.selectedRowIndex
+            if index >= 0 && index < windows.count {
+                let window = windows[index]
+                
+                if hasCommand && !hasOption && !hasControl {
+                    if let chars = event.charactersIgnoringModifiers?.lowercased(), chars.count == 1 {
+                        let char = chars.first!
+                        
+                        if char == "m" {
+                            // cmd + m: Move to Desktop... (show space selector)
+                            viewModel.batchMoveLastSelectedIndex = viewModel.selectedRowIndex
+                            viewModel.stagingWindow = window
+                            viewModel.isExecutingRestoreToImmediately = true
+                            viewModel.selectedRowIndex = 0
+                            return true
+                        } else if hasShift {
+                            switch char {
+                            case "w":
+                                // cmd + shift + w: Close Window
+                                viewModel.executeActionImmediately(window: window, actionType: .close)
+                                return true
+                            case "n":
+                                // cmd + shift + n: Minimize Window
+                                viewModel.executeActionImmediately(window: window, actionType: .minimize)
+                                return true
+                            case "r":
+                                // cmd + shift + r: Restore Window
+                                viewModel.executeActionImmediately(window: window, actionType: .restore)
+                                return true
+                            case "f":
+                                // cmd + shift + f: Toggle Full Screen
+                                let isFS = window.space.isFullscreen
+                                let action: BatchStagedActionType = isFS ? .exitFullScreen : .enterFullScreen
+                                viewModel.executeActionImmediately(window: window, actionType: action)
+                                return true
+                            case "h":
+                                // cmd + shift + h: Hide Application
+                                viewModel.executeActionImmediately(window: window, actionType: .hide)
+                                return true
+                            case "q":
+                                // cmd + shift + q: Quit Application
+                                viewModel.executeActionImmediately(window: window, actionType: .quit)
+                                return true
+                            default:
+                                break
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        return false
+    }
+}
+

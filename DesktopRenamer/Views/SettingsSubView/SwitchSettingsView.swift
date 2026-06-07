@@ -248,20 +248,6 @@ struct SwitchSettingsView: View {
                     }
                     
                     if gestureManager.isEnabled {
-                        Divider()     
-
-                        SettingsRow(
-                            "Instant switch without animations",
-                            helperText:
-                                "Bypasses the macOS sliding animation using synthetic high-velocity gestures.\n\nRequires 'Swipe between full-screen applications' enabled in System Settings → Trackpad.\n\nRecommended: Disable 'Automatically rearrange spaces based on most recent use' in Desktop & Dock settings to prevent miscalculations.",
-                            warningText: permissionManager.isAccessibilityGranted
-                            ? nil : "Requires Accessibility permission."
-                        ) {
-                            Toggle("", isOn: $spaceManager.instantSpaceSwitch)
-                                .toggleStyle(.switch)
-                                .labelsHidden()
-                        }
-                        
                         Divider()
 
                         SettingsRow("Gesture type", helperText: "When set to 3 fingers, you can still use 4 fingers to trigger native swipe.") {
@@ -294,6 +280,18 @@ struct SwitchSettingsView: View {
                                 .labelsHidden()
                         }
                         
+                        Divider()
+
+                        SliderSettingsRow(
+                            "Switch duration",
+                            helperText: "Set to 0 for instant switching (bypasses the macOS sliding animation). Otherwise the velocity is calibrated per display (cached across restarts) so the actual switch time converges to this value.",
+                            value: $gestureManager.switchDuration,
+                            range: 0...1.0,
+                            defaultValue: 0.25,
+                            step: 0.05,
+                            valueString: {String(format: "%.2fs", $0) }
+                        )
+
                         Divider()
                         
                         SliderSettingsRow(
