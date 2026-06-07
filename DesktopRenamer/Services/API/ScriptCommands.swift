@@ -378,7 +378,8 @@ class ExecuteWindowActionCommand: NSScriptCommand {
             if let targetAXWindow = axWindow {
                 var closeButtonRef: CFTypeRef?
                 if AXUIElementCopyAttributeValue(targetAXWindow, kAXCloseButtonAttribute as CFString, &closeButtonRef) == .success,
-                   let closeButton = closeButtonRef {
+                   let closeButton = closeButtonRef,
+                   CFGetTypeID(closeButton) == AXUIElementGetTypeID() {
                     AXUIElementPerformAction(closeButton as! AXUIElement, kAXPressAction as CFString)
                 }
             }

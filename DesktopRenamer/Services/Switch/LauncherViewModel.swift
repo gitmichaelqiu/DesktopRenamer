@@ -570,7 +570,8 @@ struct ListWindowsSection: Identifiable {
                 if let targetAXWindow = axWindow {
                     var closeButtonRef: CFTypeRef?
                     if AXUIElementCopyAttributeValue(targetAXWindow, kAXCloseButtonAttribute as CFString, &closeButtonRef) == .success,
-                       let closeButton = closeButtonRef {
+                       let closeButton = closeButtonRef,
+                       CFGetTypeID(closeButton) == AXUIElementGetTypeID() {
                         AXUIElementPerformAction(closeButton as! AXUIElement, kAXPressAction as CFString)
                     }
                 }
@@ -759,7 +760,7 @@ struct ListWindowsSection: Identifiable {
             if spaceWindows.isEmpty { continue }
             
             let items = spaceWindows.map { w in
-                ListWindowsItem(window: w, index: windowToGlobalIndex[w.id]!)
+                ListWindowsItem(window: w, index: windowToGlobalIndex[w.id] ?? 0)
             }
             
             sections.append(ListWindowsSection(
