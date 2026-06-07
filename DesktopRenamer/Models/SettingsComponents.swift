@@ -503,7 +503,7 @@ struct SliderSettingsRow<V>: View where V: BinaryFloatingPoint, V.Stride: Binary
                     }
                 }
                 .help("Reset to default")
-                .disabled(value == defaultValue)
+                .disabled(abs(value - defaultValue) < 0.001)
             }
 
             HStack {

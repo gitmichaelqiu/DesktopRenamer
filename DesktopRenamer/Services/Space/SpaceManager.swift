@@ -3,27 +3,6 @@ import AppKit
 import SwiftUI
 import WidgetKit
 
-struct LogEntry: Identifiable, CustomStringConvertible {
-    let id = UUID()
-    let timestamp: Date
-    let spaceUUID: String
-    let isDesktop: Bool
-    let ncCount: Int
-    let action: String
-
-    // Cached DateFormatter — creating one per access is expensive and not thread-safe.
-    private static let logDateFormatter: DateFormatter = {
-        let f = DateFormatter()
-        f.dateFormat = "HH:mm:ss.SSS"
-        f.locale = Locale(identifier: "en_US_POSIX")
-        return f
-    }()
-
-    var description: String {
-        return "[\(Self.logDateFormatter.string(from: timestamp))] ACTION: \(action) | UUID: \(spaceUUID) | Desktop: \(isDesktop) | NC: \(ncCount)"
-    }
-}
-
 class SpaceManager: ObservableObject {
     // App group ID for sharing data with the widget extension
     static let appGroupId = "group.com.michaelqiu.DesktopRenamer"
@@ -61,9 +40,6 @@ class SpaceManager: ObservableObject {
     
     @Published var currentNcCount: Int = 0
     @Published var currentIsDesktop: Bool = false
-    
-    @Published var isBugReportActive: Bool = false
-    @Published private(set) var bugReportLog: [LogEntry] = []
     
     // Widget Debouncer
     private var widgetUpdateWorkItem: DispatchWorkItem?
@@ -429,10 +405,6 @@ class SpaceManager: ObservableObject {
                 shouldUpdateWidget = true
             }
             
-            if isBugReportActive {
-                bugReportLog.append(LogEntry(timestamp: Date(), spaceUUID: cgsState.currentUUID, isDesktop: currentIsDesktop, ncCount: 0, action: "CGS Update (\(source))"))
-            }
-
             // If no space change was detected from a monitor event, schedule
             // verification retries. Cmd+Tab can fire notifications before CGS
             // state stabilizes, causing stale labels when hideWhenSwitching is off.
@@ -558,16 +530,6 @@ class SpaceManager: ObservableObject {
         defaults.set(currentSpaceUUID, forKey: "widget_currentSpaceUUID")
 
         WidgetCenter.shared.reloadAllTimelines()
-    }
-    
-    func startBugReportLogging() {
-        bugReportLog = [LogEntry(timestamp: Date(), spaceUUID: currentRawSpaceUUID, isDesktop: currentIsDesktop, ncCount: currentNcCount, action: "--- START ---")]
-        isBugReportActive = true
-    }
-
-    func stopBugReportLogging() {
-        bugReportLog.append(LogEntry(timestamp: Date(), spaceUUID: currentRawSpaceUUID, isDesktop: currentIsDesktop, ncCount: currentNcCount, action: "--- STOP ---"))
-        isBugReportActive = false
     }
     
     func prepareForTermination() {

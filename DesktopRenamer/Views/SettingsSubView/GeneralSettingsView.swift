@@ -79,7 +79,6 @@ struct GeneralSettingsView: View {
     @State private var isAPIEnabled: Bool = SpaceManager.isAPIEnabled
     @State private var isStatusBarHidden: Bool = StatusBarController.isStatusBarHidden
 
-    @State private var showLogSheet: Bool = false
 
     var body: some View {
         SettingsContainer(.general) {
@@ -160,26 +159,6 @@ struct GeneralSettingsView: View {
 
                 SettingsSection("Settings.General.Advanced") {
                     SettingsRow(
-                        "Generate bug report",
-                        helperText:
-                            "This generates a log that is helpful for the developers to debug."
-                    ) {
-                        Button(action: {
-                            if spaceManager.isBugReportActive {
-                                spaceManager.stopBugReportLogging()
-                            } else {
-                                spaceManager.startBugReportLogging()
-                                showLogSheet = true
-                            }
-                        }) {
-                            Text(spaceManager.isBugReportActive ? "Stop" : "Start")
-                        }
-                        .keyboardShortcut("b")
-                    }
-
-                    Divider()
-
-                    SettingsRow(
                         "Settings.General.Advanced.EnableAPI",
                         helperText: "Allow other apps to get space names."
                     ) {
@@ -213,119 +192,7 @@ struct GeneralSettingsView: View {
         }
         .onAppear { launchAtLogin = getLaunchAtLoginState() }
         .sheet(
-            isPresented: $showLogSheet,
-            onDismiss: { if spaceManager.isBugReportActive { spaceManager.stopBugReportLogging() } }
-        ) { bugReportSheet }
-        .animation(.easeInOut(duration: 0.2), value: autoCheckUpdate)
     }
-
-    private var bugReportSheet: some View {
-        VStack(spacing: 15) {
-            HStack {
-                Text("Bug Report Log Collection")
-                    .font(.title2).fontWeight(.bold)
-                Spacer()
-            }
-            .padding(.bottom, 5)
-
-            Text(
-                "Please go through all spaces that may be helpful in analyzing the bug. The log is updating in real-time."
-            )
-            .font(.body)
-            .foregroundColor(.secondary)
-            .multilineTextAlignment(.leading)
-
-            ScrollView {
-                ScrollViewReader { proxy in
-                    VStack(alignment: .leading, spacing: 4) {
-                        ForEach(spaceManager.bugReportLog.indices, id: \.self) { index in
-                            let entry = spaceManager.bugReportLog[index]
-                            let isLatest = index == spaceManager.bugReportLog.count - 1
-
-                            Text(entry.description)
-                                .font(.system(.footnote, design: .monospaced))
-                                .foregroundColor(
-                                    isLatest ? .accentColor : Color(NSColor.controlTextColor)
-                                )
-                                .id(entry.id)
-                        }
-                    }
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .onReceive(spaceManager.$bugReportLog) { log in
-                        if let last = log.last {
-                            DispatchQueue.main.async {
-                                proxy.scrollTo(last.id, anchor: .bottom)
-                            }
-                        }
-                    }
-                }
-            }
-            .frame(height: 250)
-            .background(Color(NSColor.textBackgroundColor))
-            .cornerRadius(8)
-            .overlay(
-                RoundedRectangle(cornerRadius: 6)
-                    .stroke(Color.gray.opacity(0.2), lineWidth: 1)
-            )
-
-            HStack {
-                Button("Cancel") {
-                    spaceManager.stopBugReportLogging()
-                    showLogSheet = false
-                }
-                Spacer()
-                Button("Save Log") {
-                    saveLog()
-                }
-                .keyboardShortcut(.return)
-                .buttonStyle(.borderedProminent)
-            }
-        }
-        .padding()
-        .frame(minWidth: 500, minHeight: 400)
-    }
-
-    private func saveLog() {
-        let logContent = spaceManager.bugReportLog.map { $0.description }.joined(separator: "\n")
-        guard let data = logContent.data(using: .utf8) else { return }
-
-        let savePanel = NSSavePanel()
-        savePanel.canCreateDirectories = true
-        savePanel.showsTagField = false
-
-        let formatter = ISO8601DateFormatter()
-        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
-        let timestamp = formatter.string(from: Date()).replacingOccurrences(of: ":", with: "-")
-
-        savePanel.nameFieldStringValue = "DesktopRenamer_BugReport_\(timestamp).log"
-        savePanel.allowedContentTypes = [.log, .plainText]
-
-        guard let window = NSApp.suitableSheetWindow else { return }
-
-        savePanel.beginSheetModal(for: window) { result in
-            if result == .OK, let url = savePanel.url {
-                do {
-                    try data.write(to: url)
-                    self.spaceManager.stopBugReportLogging()
-                    self.showLogSheet = false
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-                        self.showThankYouAlert()
-                    }
-                } catch {
-                    print("Error saving file: \(error)")
-                }
-            }
-        }
-    }
-
-    private func showThankYouAlert() {
-        let alert = NSAlert()
-        alert.messageText = NSLocalizedString("Thank You!", comment: "")
-        alert.informativeText = NSLocalizedString(
-            "The bug report log has been successfully saved. This will greatly help in fixing issues!",
-            comment: "")
-        alert.alertStyle = .informational
-        alert.addButton(withTitle: NSLocalizedString("Button.OK", comment: ""))
 
         guard let window = NSApp.keyWindow else {
             alert.runModal()
