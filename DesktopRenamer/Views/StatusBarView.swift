@@ -367,7 +367,7 @@ class StatusBarController: NSObject {
         guard let spaceID = sender.representedObject as? String else { return }
         if spaceID == spaceManager.currentSpaceUUID { return }
         if let space = spaceManager.spaceNameDict.first(where: { $0.id == spaceID }) {
-            spaceManager.switchToSpace(space, forceInstant: spaceManager.instantSpaceSwitch)
+            spaceManager.switchToSpace(space, forceInstant: gestureManager.switchDuration <= 0)
         }
     }
     

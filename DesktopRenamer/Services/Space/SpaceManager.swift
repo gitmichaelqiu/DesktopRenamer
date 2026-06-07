@@ -49,7 +49,6 @@ class SpaceManager: ObservableObject {
     static private let isAPIEnabledKey = "com.michaelqiu.desktoprenamer.isapienabled"
     static private let detectionMethodKey = "com.michaelqiu.desktoprenamer.detectionMethod"
     static private let isManualSpacesEnabledKey = "com.michaelqiu.desktoprenamer.ismanualspacesenabled"
-    static private let instantSpaceSwitchKey = "com.michaelqiu.desktoprenamer.instantSpaceSwitch"
     static private let grabOffsetXKey = "com.michaelqiu.desktoprenamer.grabOffsetX"
     static private let grabOffsetYKey = "com.michaelqiu.desktoprenamer.grabOffsetY"
     static private let lockedSpaceIDsKey = "com.michaelqiu.desktoprenamer.lockedSpaceIDs"
@@ -126,13 +125,7 @@ class SpaceManager: ObservableObject {
     }
     
     var isManualMode: Bool { detectionMethod == .manual }
-    
-    @Published var instantSpaceSwitch: Bool {
-        didSet {
-            UserDefaults.standard.set(instantSpaceSwitch, forKey: SpaceManager.instantSpaceSwitchKey)
-        }
-    }
-    
+
     @Published var grabOffsetX: Double {
         didSet {
             UserDefaults.standard.set(grabOffsetX, forKey: SpaceManager.grabOffsetXKey)
@@ -174,8 +167,6 @@ class SpaceManager: ObservableObject {
             self.detectionMethod = .automatic
         }
         
-        self.instantSpaceSwitch = UserDefaults.standard.bool(forKey: SpaceManager.instantSpaceSwitchKey)
-            
         if let savedLocked = UserDefaults.standard.stringArray(forKey: SpaceManager.lockedSpaceIDsKey) {
             self.lockedSpaceIDs = Set(savedLocked)
         }
@@ -873,14 +864,14 @@ class SpaceManager: ObservableObject {
     func switchToPreviousSpace(onDisplayID displayID: String? = nil, forceInstant: Bool? = nil) {
         let targetDisplayID = displayID ?? spaceNameDict.first(where: { $0.id == currentSpaceUUID })?.displayID ?? currentDisplayID
         if let current = findBestCurrentSpace(for: targetDisplayID) {
-            proceedToSwitch(from: current, on: targetDisplayID, direction: -1, forceInstant: forceInstant ?? instantSpaceSwitch)
+            proceedToSwitch(from: current, on: targetDisplayID, direction: -1, forceInstant: forceInstant ?? false)
         }
     }
 
     func switchToNextSpace(onDisplayID displayID: String? = nil, forceInstant: Bool? = nil) {
         let targetDisplayID = displayID ?? spaceNameDict.first(where: { $0.id == currentSpaceUUID })?.displayID ?? currentDisplayID
         if let current = findBestCurrentSpace(for: targetDisplayID) {
-            proceedToSwitch(from: current, on: targetDisplayID, direction: 1, forceInstant: forceInstant ?? instantSpaceSwitch)
+            proceedToSwitch(from: current, on: targetDisplayID, direction: 1, forceInstant: forceInstant ?? false)
         }
     }
 

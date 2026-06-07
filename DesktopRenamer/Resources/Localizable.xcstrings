@@ -2466,6 +2466,9 @@
         }
       }
     },
+    "Set to 0 for instant switching. Otherwise the velocity is calibrated so the measured switch time matches this value (per display, cached across restarts)." : {
+
+    },
     "Settings" : {
       "localizations" : {
         "zh-Hans" : {
@@ -3309,6 +3312,9 @@
           }
         }
       }
+    },
+    "Target switch duration" : {
+
     },
     "Thank You!" : {
       "localizations" : {

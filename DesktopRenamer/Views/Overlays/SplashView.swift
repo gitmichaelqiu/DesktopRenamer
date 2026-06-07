@@ -420,7 +420,6 @@ struct MenuBarSwitchPage: View {
 
 struct FastSwitchingPage: View {
     @AppStorage("GestureManager.Enabled") private var gestureEnabled = false
-    @AppStorage("com.michaelqiu.desktoprenamer.instantSpaceSwitch") private var instantSpaceSwitch = false
 
     var body: some View {
         VStack(spacing: 10) {
@@ -429,15 +428,10 @@ struct FastSwitchingPage: View {
                 subtitle: NSLocalizedString("Bypass native macOS animation lag. Enable trackpad overrides or hotkeys for instant, zero-delay switching.", comment: ""),
                 videoName: "SwitchOverride"
             )
-            
+
             VStack(alignment: .leading, spacing: 8) {
                 Toggle("Enable switch gesture override", isOn: $gestureEnabled)
                     .toggleStyle(.switch)
-                
-                if gestureEnabled {
-                    Toggle("Instant switch without animations", isOn: $instantSpaceSwitch)
-                        .toggleStyle(.switch)
-                }
             }
             .padding(.bottom, 20)
         }

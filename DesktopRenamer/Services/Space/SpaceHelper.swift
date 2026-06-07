@@ -71,10 +71,11 @@ class SpaceHelper {
     private static let targetDurationKey = "GestureManager.SwitchDuration"
     private static let defaultTargetDuration: TimeInterval = 0.35
     private static let tolerance: TimeInterval = 0.04       // ±40ms deadband
-    private static let adjustmentStep: Double = 0.05        // ±5% per measurement
     private static let minMultiplier: Double = 0.3
     private static let maxMultiplier: Double = 5.0
-    private static let instantVelocity: Double = 3000.0
+    // Adaptive step: 0.05 at tolerance, grows proportionally, capped at 0.15.
+    private static let stepBase: Double = 0.05
+    private static let stepMax: Double = 0.15
 
     /// The user's target switch duration — 0 means instant mode.
     static var targetDuration: TimeInterval {
@@ -114,12 +115,18 @@ class SpaceHelper {
         // Instant mode: no calibration needed
         guard target > 0 else { return }
         // Skip if within tolerance
-        guard abs(duration - target) > tolerance else { return }
+        let absError = abs(duration - target)
+        guard absError > tolerance else { return }
+
+        // Proportional step: grows with error so large deviations correct quickly
+        // while small deviations are fine-tuned. At exactly tolerance → 0.05 step.
+        let ratio = absError / tolerance
+        let step = min(stepMax, stepBase * ratio)
 
         var multipliers = cachedMultipliers
         let current = multipliers[displayID] ?? 1.0
         let direction: Double = duration > target ? 1.0 : -1.0
-        let newValue = current + adjustmentStep * direction
+        let newValue = current + step * direction
         multipliers[displayID] = max(minMultiplier, min(maxMultiplier, newValue))
         cachedMultipliers = multipliers
     }
@@ -191,18 +198,16 @@ class SpaceHelper {
             // We use the gesture method for all normal switches (no window moving).
             if !isDragging, let targetSpace = state.spaces.first(where: { $0.id == spaceID }) {
                 let displayID = targetSpace.displayID
-                let isInstant = AppDelegate.shared.spaceManager?.instantSpaceSwitch == true
-                
                 if let liveCurrentID = getCurrentSpaceID(for: displayID) {
                     let displaySpaces = state.spaces
                         .filter { $0.displayID == displayID }
                         .sorted { $0.num < $1.num }
-                    
+
                     if let currentIndex = displaySpaces.firstIndex(where: { $0.id == liveCurrentID }),
                        let targetIndex = displaySpaces.firstIndex(where: { $0.id == spaceID }) {
                         let steps = targetIndex - currentIndex
                         if steps != 0 {
-                            performSpaceSwitchGesture(steps: steps, targetDisplayID: displayID, isInstant: isInstant || forceInstant)
+                            performSpaceSwitchGesture(steps: steps, targetDisplayID: displayID, forceInstant: forceInstant)
                             return
                         }
                     }
@@ -345,7 +350,7 @@ class SpaceHelper {
         return true
     }
     
-    static func performSpaceSwitchGesture(steps: Int, targetDisplayID: String, isInstant: Bool) {
+    static func performSpaceSwitchGesture(steps: Int, targetDisplayID: String, forceInstant: Bool = false) {
         if steps == 0 { return }
 
         let directionRight = steps > 0
@@ -353,15 +358,14 @@ class SpaceHelper {
 
         let target = targetDuration
         let velocity: Double
-        if target <= 0 {
-            // Instant mode — fixed high velocity, no calibration
-            velocity = instantVelocity * Double(absSteps)
+        if target <= 0 || forceInstant {
+            // Instant mode — use the same 2000 base velocity as the old toggle,
+            // no calibration needed.
+            velocity = 2000.0 * Double(absSteps)
         } else {
             // Calibrated mode — record timing and apply per-display multiplier
             beginGestureTiming(for: targetDisplayID)
-            let baseVelocity = isInstant ? 2000.0 : 52.0
-            let displayMultiplier = multiplierForDisplay(targetDisplayID)
-            velocity = baseVelocity * Double(absSteps) * displayMultiplier
+            velocity = 52.0 * Double(absSteps) * multiplierForDisplay(targetDisplayID)
         }
 
         // Resolve target display via NSScreen.
