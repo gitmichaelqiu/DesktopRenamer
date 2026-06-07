@@ -179,14 +179,18 @@ class SpaceLabelManager: ObservableObject {
             .sink { [weak self] _ in
                 if self?.hideWhenSwitching == true {
                     self?.hideAllPreviewLabels()
+                    // When hideWhenSwitching is on, skip the immediate restore.
+                    // The settling delay below handles restoring labels after the
+                    // animation completes — its duration varies by machine/display.
+                } else {
+                    self?.updateAllWindowModes(forDisplay: self?.spaceManager?.currentDisplayID)
                 }
-                self?.updateAllWindowModes(forDisplay: self?.spaceManager?.currentDisplayID)
 
                 Task { @MainActor in
                     try? await Task.sleep(nanoseconds: 600_000_000)
                     // Restore ALL displays — hideAllPreviewLabels hid everything,
-                    // but the filtered call above only restored the current display.
-                    // Without this unfiltered call, labels on other displays stay hidden forever.
+                    // and when hideWhenSwitching is on the current display was not
+                    // restored either. This unfiltered call is the sole restore point.
                     self?.updateAllWindowModes()
                 }
             }
