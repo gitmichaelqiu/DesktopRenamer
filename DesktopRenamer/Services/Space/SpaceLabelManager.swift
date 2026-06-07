@@ -74,6 +74,7 @@ class SpaceLabelManager: ObservableObject {
     private var createdWindows: [String: SpaceLabelWindow] = [:]
     private weak var spaceManager: SpaceManager?
     private var cancellables = Set<AnyCancellable>()
+    private var delayedRestoreWorkItem: DispatchWorkItem?
 
     init(spaceManager: SpaceManager) {
         self.spaceManager = spaceManager
@@ -177,22 +178,29 @@ class SpaceLabelManager: ObservableObject {
             .dropFirst()
             .receive(on: DispatchQueue.main)
             .sink { [weak self] _ in
-                if self?.hideWhenSwitching == true {
-                    self?.hideAllPreviewLabels()
+                guard let self = self else { return }
+                // Cancel any pending delayed restore from a previous rapid switch
+                // so the old restore doesn't fire in the middle of a new transition.
+                self.delayedRestoreWorkItem?.cancel()
+                self.delayedRestoreWorkItem = nil
+
+                if self.hideWhenSwitching {
+                    self.hideAllPreviewLabels()
                     // When hideWhenSwitching is on, skip the immediate restore.
                     // The settling delay below handles restoring labels after the
                     // animation completes — its duration varies by machine/display.
                 } else {
-                    self?.updateAllWindowModes(forDisplay: self?.spaceManager?.currentDisplayID)
+                    self.updateAllWindowModes(forDisplay: self.spaceManager?.currentDisplayID)
                 }
 
-                Task { @MainActor in
-                    try? await Task.sleep(nanoseconds: 600_000_000)
+                let workItem = DispatchWorkItem { [weak self] in
                     // Restore ALL displays — hideAllPreviewLabels hid everything,
                     // and when hideWhenSwitching is on the current display was not
                     // restored either. This unfiltered call is the sole restore point.
                     self?.updateAllWindowModes()
                 }
+                self.delayedRestoreWorkItem = workItem
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.6, execute: workItem)
             }
             .store(in: &cancellables)
 
