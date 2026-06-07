@@ -56,16 +56,14 @@ class SpaceHelper {
     // Two-point calibration: measures switch time at velocity 52 (native) and
     // at velocity 104 (2×), then computes the actual non-linear exponent p from
     // the two data points.  This gives an accurate velocity multiplier for any
-    // target duration without assuming a linear velocity–duration relationship.
     private static var gestureTimingStart: TimeInterval = 0
     private static var gestureTimingDisplayID: String = ""
-    private static var gestureTimingDirection: String = ""
 
-    private static let calibrationKey = "GestureManager.CachedMultipliers"
+    private static let calibrationKey = "GestureManager.CachedCalibrations"
     private static let targetDurationKey = "GestureManager.SwitchDuration"
-    private static let defaultTargetDuration: TimeInterval = 0.25
-    private static let minMultiplier: Double = 0.5
-    private static let maxMultiplier: Double = 6.0
+    private static let defaultTargetDuration: TimeInterval = 0.30
+    private static let minMultiplier: Double = 0.1
+    private static let maxMultiplier: Double = 10.0
 
     /// The user's target switch duration — 0 means instant mode.
     static var targetDuration: TimeInterval {
@@ -75,13 +73,19 @@ class SpaceHelper {
         return UserDefaults.standard.double(forKey: targetDurationKey)
     }
 
-    // Cached multipliers keyed by display (direction-agnostic).
-    private static var displayMultipliers: [String: Double] = {
+    struct DisplayCalibration: Codable {
+        var avg52: Double
+        var avg104: Double
+    }
+
+    // Cached calibrations keyed by display (direction-agnostic).
+    private static var displayCalibrations: [String: DisplayCalibration] = {
         guard let data = UserDefaults.standard.data(forKey: calibrationKey),
-              let dict = try? JSONDecoder().decode([String: Double].self, from: data)
+              let dict = try? JSONDecoder().decode([String: DisplayCalibration].self, from: data)
         else { return [:] }
         return dict
     }()
+
     // Phase 1: 3 samples at velocity 52. Phase 2: 3 samples at velocity 104.
     private static var phase1Samples: [String: [TimeInterval]] = [:]
     private static var phase2Samples: [String: [TimeInterval]] = [:]
@@ -89,105 +93,86 @@ class SpaceHelper {
     private static let phase1Velocity: Double = 52.0
     private static let phase2Velocity: Double = 104.0
 
-    /// Returns a stable velocity multiplier.  Uses cached value if available,
-    /// otherwise returns 1.0 during calibration phases.
+    /// Returns a stable velocity multiplier based on empirical curve.
     static func multiplierForDisplay(_ displayID: String) -> Double {
         let target = targetDuration
         guard target > 0 else { return 1.0 }
-        return displayMultipliers[displayID] ?? 1.0
+        
+        guard let cal = displayCalibrations[displayID] else { return 1.0 }
+        
+        let p = log(cal.avg52 / cal.avg104) / log(0.5)
+        let clampedP = min(-0.1, max(-3.0, p))
+        
+        let ratio = target / cal.avg52
+        let multiplier = pow(ratio, 1.0 / clampedP)
+        return max(minMultiplier, min(maxMultiplier, multiplier))
     }
 
     /// Returns the velocity to use for the current calibration phase.
-    /// Phase 1 (first 3 samples): native 52 velocity → baseline measurement.
-    /// Phase 2 (next 3 samples): 2× velocity → second measurement point.
-    /// Locked: computed multiplier applied to 52.
-    static func velocityForPhase(bucket: String, displayID: String) -> Double {
-        let phase1Count = phase1Samples[bucket]?.count ?? 0
-        let phase2Count = phase2Samples[bucket]?.count ?? 0
+    static func velocityForPhase(displayID: String) -> Double {
+        if displayCalibrations[displayID] != nil {
+            return phase1Velocity * multiplierForDisplay(displayID)
+        }
+        
+        let phase1Count = phase1Samples[displayID]?.count ?? 0
+        let phase2Count = phase2Samples[displayID]?.count ?? 0
+        
         if phase1Count < phaseSamplesNeeded { return phase1Velocity }
         if phase2Count < phaseSamplesNeeded { return phase2Velocity }
-        // Locked — use calibrated multiplier
-        return phase1Velocity * (displayMultipliers[displayID] ?? 1.0)
+        
+        return phase1Velocity * multiplierForDisplay(displayID)
     }
 
-    static func beginGestureTiming(for displayID: String, direction: String = "") {
+    static func beginGestureTiming(for displayID: String) {
         gestureTimingStart = Date().timeIntervalSince1970
         gestureTimingDisplayID = displayID
-        gestureTimingDirection = direction
     }
 
     static func endGestureTiming() {
         guard gestureTimingStart > 0, !gestureTimingDisplayID.isEmpty else { return }
+        
         let duration = Date().timeIntervalSince1970 - gestureTimingStart
         let displayID = gestureTimingDisplayID
-        let direction = gestureTimingDirection
+        
+        // Reset state
         gestureTimingStart = 0
         gestureTimingDisplayID = ""
-        gestureTimingDirection = ""
-        guard duration < 2.0 else { return }
+        
+        // Sanity check
+        guard duration > 0.05 && duration < 2.0 else { return }
 
-        let bucket = direction.isEmpty ? displayID : "\(displayID)|\(direction)"
-        let phase1Count = phase1Samples[bucket]?.count ?? 0
-        let phase2Count = phase2Samples[bucket]?.count ?? 0
+        // If already calibrated, no need to record samples
+        if displayCalibrations[displayID] != nil { return }
+
+        let phase1Count = phase1Samples[displayID]?.count ?? 0
+        let phase2Count = phase2Samples[displayID]?.count ?? 0
 
         if phase1Count < phaseSamplesNeeded {
-            // Phase 1: collected at native 52 velocity
-            var s = phase1Samples[bucket, default: []]
+            var s = phase1Samples[displayID, default: []]
             s.append(duration)
-            phase1Samples[bucket] = s
+            phase1Samples[displayID] = s
         } else if phase2Count < phaseSamplesNeeded {
-            // Phase 2: collected at 2× 104 velocity
-            var s = phase2Samples[bucket, default: []]
+            var s = phase2Samples[displayID, default: []]
             s.append(duration)
-            phase2Samples[bucket] = s
+            phase2Samples[displayID] = s
         }
 
-        // Both phases complete → compute exponent p and lock multiplier
         tryLockCalibration(for: displayID)
     }
 
     private static func tryLockCalibration(for displayID: String) {
-        guard displayMultipliers[displayID] == nil else { return } // already locked
+        guard displayCalibrations[displayID] == nil else { return }
 
-        let prefix = "\(displayID)|"
-        func collect(_ dict: [String: [TimeInterval]]) -> [TimeInterval] {
-            var all: [TimeInterval] = []
-            for (k, v) in dict { if k == displayID || k.hasPrefix(prefix) { all.append(contentsOf: v) } }
-            return all
-        }
-        let p1 = collect(phase1Samples)
-        let p2 = collect(phase2Samples)
+        let p1 = phase1Samples[displayID] ?? []
+        let p2 = phase2Samples[displayID] ?? []
         guard p1.count >= phaseSamplesNeeded, p2.count >= phaseSamplesNeeded else { return }
 
         let avg52 = p1.reduce(0, +) / Double(p1.count)
         let avg104 = p2.reduce(0, +) / Double(p2.count)
         guard avg52 > 0, avg104 > 0 else { return }
 
-        // Compute the actual exponent p from two measured points:
-        //   duration ∝ velocity^p
-        //   avg52 = c * 52^p, avg104 = c * 104^p
-        //   avg52 / avg104 = (52/104)^p = 0.5^p
-        //   p = log(avg52 / avg104) / log(0.5)
-        // p is NEGATIVE (higher velocity produces shorter duration).
-        let p = log(avg52 / avg104) / log(0.5)
-        // Clamp p to a reasonable range (larger |p| = more sensitive to velocity).
-        let clampedP = min(-0.1, max(-3.0, p))
-
-        // For target duration T: velocity_multiplier = (T / avg52)^(1/p)
-        // Since p < 0, when T < avg52 (need to speed up), (T/avg52)^(1/p) > 1. ✓
-        let target = targetDuration
-        guard avg52 > target else {
-            // Already faster than target — keep native speed. Slowing down
-            // (multiplier < 1) makes the animation imperceptible on fast
-            // displays, causing the user to double-swipe and skip spaces.
-            displayMultipliers[displayID] = 1.0
-            if let data = try? JSONEncoder().encode(displayMultipliers) { UserDefaults.standard.set(data, forKey: calibrationKey) }
-            return
-        }
-        let ratio = target / avg52
-        let multiplier = pow(ratio, 1.0 / clampedP)
-        displayMultipliers[displayID] = max(minMultiplier, min(maxMultiplier, multiplier))
-        if let data = try? JSONEncoder().encode(displayMultipliers) {
+        displayCalibrations[displayID] = DisplayCalibration(avg52: avg52, avg104: avg104)
+        if let data = try? JSONEncoder().encode(displayCalibrations) {
             UserDefaults.standard.set(data, forKey: calibrationKey)
         }
     }
@@ -420,11 +405,9 @@ class SpaceHelper {
             // Calibrated mode — record timing and use phase-appropriate velocity.
             // Phase 1 (first 3): native 52 → baseline measurement.
             // Phase 2 (next 3): 2× 104 → second data point.
-            // Locked: 52 × calibrated multiplier.
-            let dirLabel = directionRight ? "right" : "left"
-            beginGestureTiming(for: targetDisplayID, direction: dirLabel)
-            let bucket = "\(targetDisplayID)|\(dirLabel)"
-            let phaseVelocity = velocityForPhase(bucket: bucket, displayID: targetDisplayID)
+            // Locked: computed multiplier applied to 52.
+            beginGestureTiming(for: targetDisplayID)
+            let phaseVelocity = velocityForPhase(displayID: targetDisplayID)
             velocity = phaseVelocity * Double(absSteps)
         }
 
