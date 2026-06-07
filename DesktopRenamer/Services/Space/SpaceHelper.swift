@@ -164,24 +164,27 @@ class SpaceHelper {
         guard avg52 > 0, avg104 > 0 else { return }
 
         // Compute the actual exponent p from two measured points:
-        //   duration ∝ velocity^p  →  avg52 / avg104 = (52 / 104)^p = 0.5^p
+        //   duration ∝ velocity^p
+        //   avg52 = c * 52^p, avg104 = c * 104^p
+        //   avg52 / avg104 = (52/104)^p = 0.5^p
         //   p = log(avg52 / avg104) / log(0.5)
+        // p is NEGATIVE (higher velocity produces shorter duration).
         let p = log(avg52 / avg104) / log(0.5)
-        // Sanity: clamp p to [0.3, 3.0] (reasonable range for real displays)
-        let clampedP = max(0.3, min(3.0, p))
+        // Clamp p to a reasonable range (larger |p| = more sensitive to velocity).
+        let clampedP = min(-0.1, max(-3.0, p))
 
-        // For target duration T: multiplier = (avg52 / T)^(1/clampedP)
+        // For target duration T: velocity_multiplier = (T / avg52)^(1/p)
+        // Since p < 0, when T < avg52 (need to speed up), (T/avg52)^(1/p) > 1. ✓
         let target = targetDuration
         guard avg52 > target else {
-            // Already faster than target — keep native speed (multiplier = 1.0).
-            // Slowing down via a low multiplier makes the animation imperceptible
-            // on fast displays, causing the user to think the swipe wasn't
-            // triggered and double-swipe, skipping spaces.
+            // Already faster than target — keep native speed. Slowing down
+            // (multiplier < 1) makes the animation imperceptible on fast
+            // displays, causing the user to double-swipe and skip spaces.
             displayMultipliers[displayID] = 1.0
             if let data = try? JSONEncoder().encode(displayMultipliers) { UserDefaults.standard.set(data, forKey: calibrationKey) }
             return
         }
-        let ratio = avg52 / target
+        let ratio = target / avg52
         let multiplier = pow(ratio, 1.0 / clampedP)
         displayMultipliers[displayID] = max(minMultiplier, min(maxMultiplier, multiplier))
         if let data = try? JSONEncoder().encode(displayMultipliers) {
