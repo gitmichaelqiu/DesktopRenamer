@@ -281,40 +281,34 @@ class SpaceHelper {
         // Use high velocity for instant switch (2000.0), lower for "normal" gesture-based switch (e.g. 50.0).
         // Adjust the 50.0 value below to change the transition speed when "Instant Switch" is disabled.
         let baseVelocity = isInstant ? 2000.0 : 52.0
-        let velocity = baseVelocity * Double(absSteps)
-        
 
-        
-        // Warp mouse if the active display isn't the target display
+
+        // Resolve target display via NSScreen and compute velocity with external-display multiplier.
+        var displayMultiplier: Double = 1.0
+        var targetScreen: NSScreen?
+        for screen in NSScreen.screens {
+            guard let screenID = screen.deviceDescription[NSDeviceDescriptionKey("NSScreenNumber")] as? CGDirectDisplayID else { continue }
+            if CGDisplayCreateUUIDFromDisplayID(screenID).map({ CFUUIDCreateString(nil, $0.takeRetainedValue()) as String })?.uppercased() == targetDisplayID.uppercased()
+                || "\(screenID)" == targetDisplayID {
+                targetScreen = screen
+                if CGDisplayIsBuiltin(screenID) == 0 { displayMultiplier = 1.5 }
+                break
+            }
+        }
+        let velocity = baseVelocity * Double(absSteps) * displayMultiplier
+
+        // Warp mouse to target display only when cursor is on a different display.
+        // Compare by NSScreen objects (not identifier strings) to avoid format mismatches.
         let originalLocation = CGEvent(source: nil)?.location ?? .zero
         var warped = false
-        
-        if let currentDisplay = getCursorDisplayID(), currentDisplay.uppercased() != targetDisplayID.uppercased() {
-            // Find center of target display to warp the cursor.
-            // CGS "Display Identifier" can be a UUID or a numeric string (e.g. "2")
-            // depending on the display. We try both matching strategies.
-            for screen in NSScreen.screens {
-                guard let screenID = screen.deviceDescription[NSDeviceDescriptionKey("NSScreenNumber")] as? CGDirectDisplayID else { continue }
-
-                // Strategy 1: screen CFUUID matches targetDisplayID (UUID-format identifier)
-                if let uuidRef = CGDisplayCreateUUIDFromDisplayID(screenID) {
-                    let uuid = uuidRef.takeRetainedValue()
-                    let uuidStr = (CFUUIDCreateString(nil, uuid) as String).uppercased()
-                    if uuidStr == targetDisplayID.uppercased() {
-                        let bounds = CGDisplayBounds(screenID)
-                        CGWarpMouseCursorPosition(CGPoint(x: bounds.midX, y: bounds.midY))
-                        warped = true
-                        break
-                    }
-                }
-
-                // Strategy 2: CGS numeric identifier (e.g. "2") matches targetDisplayID
-                if "\(screenID)" == targetDisplayID {
-                    let bounds = CGDisplayBounds(screenID)
-                    CGWarpMouseCursorPosition(CGPoint(x: bounds.midX, y: bounds.midY))
-                    warped = true
-                    break
-                }
+        if let targetScreen = targetScreen {
+            let cursorPoint = NSEvent.mouseLocation
+            let cursorScreen = NSScreen.screens.first { NSMouseInRect(cursorPoint, $0.frame, false) }
+            if cursorScreen != targetScreen {
+                let screenID = targetScreen.deviceDescription[NSDeviceDescriptionKey("NSScreenNumber")] as? CGDirectDisplayID ?? 0
+                let bounds = CGDisplayBounds(screenID)
+                CGWarpMouseCursorPosition(CGPoint(x: bounds.midX, y: bounds.midY))
+                warped = true
             }
         }
         
