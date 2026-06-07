@@ -61,7 +61,7 @@ class SpaceHelper {
     // (e.g. "UUID|right"). Separate windows prevent oscillations when the
     // user alternates swipe directions with different baseline timings.
     private static var recentDurations: [String: [TimeInterval]] = [:]
-    private static let averageWindow = 3
+    private static let averageWindow = 5
 
     private static let calibrationKey = "GestureManager.CachedMultipliers"
     private static let targetDurationKey = "GestureManager.SwitchDuration"
@@ -69,9 +69,11 @@ class SpaceHelper {
     private static let tolerance: TimeInterval = 0.05       // ±50ms deadband
     private static let minMultiplier: Double = 0.7
     private static let maxMultiplier: Double = 5.0
-    // Adaptive step: 0.03 at tolerance, grows proportionally, capped at 0.12.
+    // Adaptive step: 0.03 at tolerance, grows proportionally, capped at 0.10.
     private static let stepBase: Double = 0.03
-    private static let stepMax: Double = 0.12
+    private static let stepMax: Double = 0.10
+    // Tiny adjustments (<1%) cause gradual drift over many swipes.
+    private static let minStep: Double = 0.01
 
     /// The user's target switch duration — 0 means instant mode.
     static var targetDuration: TimeInterval {
@@ -131,7 +133,10 @@ class SpaceHelper {
         // while small deviations are fine-tuned. At exactly tolerance → 0.03 step.
         let absError = abs(avg - target)
         let ratio = absError / tolerance
-        let step = min(stepMax, stepBase * ratio)
+        var step = min(stepMax, stepBase * ratio)
+        // Skip sub-1% adjustments — they accumulate over many swipes causing
+        // the multiplier to drift without ever converging to a stable value.
+        guard step >= minStep else { return }
 
         var multipliers = cachedMultipliers
         let current = multipliers[displayID] ?? 1.0
