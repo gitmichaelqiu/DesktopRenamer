@@ -107,7 +107,7 @@ struct SpaceEditView: View {
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .id("Settings.Spaces.Edit.Name")
                 Text(NSLocalizedString("Settings.Spaces.Edit.Actions", comment: ""))
-                    .frame(width: 60, alignment: .trailing)
+                    .frame(width: 40, alignment: .trailing)
                     .id("Settings.Spaces.Edit.Actions")
             }
             .font(.caption)
@@ -130,7 +130,7 @@ struct SpaceEditView: View {
                         HStack(spacing: 10) {
                             spaceNumberView(for: space).frame(width: 30, alignment: .leading)
                             spaceNameEditor(for: space).frame(maxWidth: .infinity)
-                            actionButtons(for: space, in: displaySpaces).frame(width: 60, alignment: .trailing)
+                            actionButtons(for: space).frame(width: 40, alignment: .trailing)
                         }
                         .padding(.horizontal, 12)
                         .padding(.vertical, 6)
@@ -180,7 +180,7 @@ struct SpaceEditView: View {
         .textFieldStyle(.roundedBorder)
     }
     
-    private func actionButtons(for space: DesktopSpace, in displayList: [DesktopSpace]) -> some View {
+    private func actionButtons(for space: DesktopSpace) -> some View {
         HStack(spacing: 4) {
             lockButton(for: space)
         }

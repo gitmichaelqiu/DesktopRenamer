@@ -44,6 +44,7 @@
       "shouldTranslate" : false
     },
     "%@" : {
+      "extractionState" : "stale",
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
@@ -153,6 +154,7 @@
       "shouldTranslate" : false
     },
     "1. Go through desktops" : {
+      "extractionState" : "stale",
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
@@ -163,6 +165,7 @@
       }
     },
     "2. Go through fullscreen" : {
+      "extractionState" : "stale",
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
@@ -293,6 +296,7 @@
       }
     },
     "Add" : {
+      "extractionState" : "stale",
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
@@ -333,6 +337,7 @@
       }
     },
     "Add it as a space in\nSettings → General → Add spaces" : {
+      "extractionState" : "stale",
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
@@ -343,6 +348,7 @@
       }
     },
     "Add New Spaces" : {
+      "extractionState" : "stale",
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
@@ -353,6 +359,7 @@
       }
     },
     "Add spaces" : {
+      "extractionState" : "stale",
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
@@ -363,6 +370,7 @@
       }
     },
     "Adjust Fullscreen Threshold" : {
+      "extractionState" : "stale",
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
@@ -383,6 +391,7 @@
       }
     },
     "Adjust the threshold for metric-based detection." : {
+      "extractionState" : "stale",
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
@@ -423,6 +432,7 @@
       }
     },
     "Automatic" : {
+      "extractionState" : "stale",
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
@@ -609,6 +619,7 @@
       }
     },
     "Choose how the app determines if a space is a Desktop or a Fullscreen App.\n\nAutomatic: No extra actions required.\n\nMetric-based: Based on the thresold of a metric. May not work for multiple displays.\n\nManual: All spaces that are not added will be treated as fullscreen." : {
+      "extractionState" : "stale",
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
@@ -707,6 +718,7 @@
       }
     },
     "Current Metric: %lld" : {
+      "extractionState" : "stale",
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
@@ -939,6 +951,7 @@
       }
     },
     "Fix" : {
+      "extractionState" : "stale",
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
@@ -949,6 +962,7 @@
       }
     },
     "Fix automatic detection" : {
+      "extractionState" : "stale",
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
@@ -959,6 +973,7 @@
       }
     },
     "Fix this issue in\nSettings → General → Fix automatic space detection" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -1035,6 +1050,7 @@
       }
     },
     "Fullscreen detection method" : {
+      "extractionState" : "stale",
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
@@ -1378,6 +1394,7 @@
       }
     },
     "Manual" : {
+      "extractionState" : "stale",
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
@@ -1388,6 +1405,7 @@
       }
     },
     "Manually register new desktop spaces." : {
+      "extractionState" : "stale",
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
@@ -1398,6 +1416,7 @@
       }
     },
     "Max Metric: %lld" : {
+      "extractionState" : "stale",
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
@@ -1493,6 +1512,7 @@
       }
     },
     "Metric-based" : {
+      "extractionState" : "stale",
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
@@ -1503,6 +1523,7 @@
       }
     },
     "Metric: %lld" : {
+      "extractionState" : "stale",
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
@@ -1513,6 +1534,7 @@
       }
     },
     "Min Metric: %lld" : {
+      "extractionState" : "stale",
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
@@ -1785,6 +1807,7 @@
       }
     },
     "No new spaces detected yet..." : {
+      "extractionState" : "stale",
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
@@ -1841,6 +1864,7 @@
       }
     },
     "Not a fullscreen?" : {
+      "extractionState" : "stale",
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
@@ -1851,6 +1875,7 @@
       }
     },
     "Not a space?" : {
+      "extractionState" : "stale",
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
@@ -1861,6 +1886,7 @@
       }
     },
     "Not enough data collected." : {
+      "extractionState" : "stale",
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
@@ -2021,6 +2047,7 @@
       }
     },
     "Recorded: %lld" : {
+      "extractionState" : "stale",
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
@@ -2052,6 +2079,7 @@
       }
     },
     "Remove it in\nSettings → Spaces\n(Switch to other space first)" : {
+      "extractionState" : "stale",
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
@@ -2331,6 +2359,7 @@
       }
     },
     "Save" : {
+      "extractionState" : "stale",
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
@@ -2569,6 +2598,7 @@
       }
     },
     "Settings.General.Method.Auto" : {
+      "extractionState" : "stale",
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
@@ -2579,6 +2609,7 @@
       }
     },
     "Settings.General.Method.Manual" : {
+      "extractionState" : "stale",
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
@@ -2589,6 +2620,7 @@
       }
     },
     "Settings.General.Method.Metric" : {
+      "extractionState" : "stale",
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
@@ -3052,6 +3084,7 @@
       }
     },
     "Space %lld" : {
+      "extractionState" : "stale",
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
@@ -3159,6 +3192,7 @@
       }
     },
     "Suggested Threshold: %lld" : {
+      "extractionState" : "stale",
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
@@ -3275,6 +3309,7 @@
       }
     },
     "Switch to the desktops you want to add.\nThey will appear in the list below." : {
+      "extractionState" : "stale",
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
@@ -3321,6 +3356,7 @@
       }
     },
     "The automatic method does not work on your device, please switch to the manual method." : {
+      "extractionState" : "stale",
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
@@ -3368,6 +3404,7 @@
       }
     },
     "There are no parameters to adjust for Automatic detection.\nIf the issue still happens, switch to other methods." : {
+      "extractionState" : "stale",
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
@@ -3388,6 +3425,7 @@
       }
     },
     "This is the key parameter in the detection of fullscreen.\n\nAt the right hand side, you can acquire a suggested value. You need to go requested desktops or fullscreen (not necessarily all of them). During this process, do not stop at the spaces that do not match the request.\n\nThe threshold should be between the two extreme values shown." : {
+      "extractionState" : "stale",
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
@@ -3398,6 +3436,7 @@
       }
     },
     "Threshold Value" : {
+      "extractionState" : "stale",
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
@@ -3458,6 +3497,7 @@
       }
     },
     "Troubleshoot Space Detection" : {
+      "extractionState" : "stale",
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
@@ -3519,6 +3559,7 @@
       "shouldTranslate" : false
     },
     "Value" : {
+      "extractionState" : "stale",
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
