@@ -53,15 +53,15 @@ class SpaceHelper {
     // Velocity calibration — adjusts multiplier per display so measured switch
     // time converges to the user-configured target duration (default 0.35s).
     // Multipliers are cached in UserDefaults for persistence across restarts.
-    // One-shot calibration: measure raw switch time at multiplier=1.0 for
-    // the first N switches per display+direction, then lock the multiplier
-    // at baseline / target.  No further adjustments — the velocity stays stable.
+    // Two-point calibration: measures switch time at velocity 52 (native) and
+    // at velocity 104 (2×), then computes the actual non-linear exponent p from
+    // the two data points.  This gives an accurate velocity multiplier for any
+    // target duration without assuming a linear velocity–duration relationship.
     private static var gestureTimingStart: TimeInterval = 0
     private static var gestureTimingDisplayID: String = ""
     private static var gestureTimingDirection: String = ""
 
     private static let calibrationKey = "GestureManager.CachedMultipliers"
-    private static let baselineKey = "GestureManager.SwitchBaselines"
     private static let targetDurationKey = "GestureManager.SwitchDuration"
     private static let defaultTargetDuration: TimeInterval = 0.25
     private static let minMultiplier: Double = 0.5
@@ -82,17 +82,32 @@ class SpaceHelper {
         else { return [:] }
         return dict
     }()
-    // Baseline samples: after collecting 'calibrationSamples' measurements the
-    // multiplier is computed and locked.
-    private static var baselineSamples: [String: [TimeInterval]] = [:]
-    private static let calibrationSamples = 3
+    // Phase 1: 3 samples at velocity 52. Phase 2: 3 samples at velocity 104.
+    private static var phase1Samples: [String: [TimeInterval]] = [:]
+    private static var phase2Samples: [String: [TimeInterval]] = [:]
+    private static let phaseSamplesNeeded = 3
+    private static let phase1Velocity: Double = 52.0
+    private static let phase2Velocity: Double = 104.0
 
-    /// Returns a stable velocity multiplier.  Returns cached value if available,
-    /// otherwise 1.0 (native speed) until enough baseline data is collected.
+    /// Returns a stable velocity multiplier.  Uses cached value if available,
+    /// otherwise returns 1.0 during calibration phases.
     static func multiplierForDisplay(_ displayID: String) -> Double {
         let target = targetDuration
         guard target > 0 else { return 1.0 }
         return displayMultipliers[displayID] ?? 1.0
+    }
+
+    /// Returns the velocity to use for the current calibration phase.
+    /// Phase 1 (first 3 samples): native 52 velocity → baseline measurement.
+    /// Phase 2 (next 3 samples): 2× velocity → second measurement point.
+    /// Locked: computed multiplier applied to 52.
+    static func velocityForPhase(bucket: String, displayID: String) -> Double {
+        let phase1Count = phase1Samples[bucket]?.count ?? 0
+        let phase2Count = phase2Samples[bucket]?.count ?? 0
+        if phase1Count < phaseSamplesNeeded { return phase1Velocity }
+        if phase2Count < phaseSamplesNeeded { return phase2Velocity }
+        // Locked — use calibrated multiplier
+        return phase1Velocity * (displayMultipliers[displayID] ?? 1.0)
     }
 
     static func beginGestureTiming(for displayID: String, direction: String = "") {
@@ -110,43 +125,57 @@ class SpaceHelper {
         gestureTimingDisplayID = ""
         gestureTimingDirection = ""
         guard duration < 2.0 else { return }
-        // Collect a baseline sample at multiplier=1.0 (first N switches).
-        // Once enough samples are gathered, compute the multiplier once.
+
         let bucket = direction.isEmpty ? displayID : "\(displayID)|\(direction)"
-        var samples = baselineSamples[bucket, default: []]
-        if samples.count < calibrationSamples {
-            samples.append(duration)
-            baselineSamples[bucket] = samples
+        let phase1Count = phase1Samples[bucket]?.count ?? 0
+        let phase2Count = phase2Samples[bucket]?.count ?? 0
+
+        if phase1Count < phaseSamplesNeeded {
+            // Phase 1: collected at native 52 velocity
+            var s = phase1Samples[bucket, default: []]
+            s.append(duration)
+            phase1Samples[bucket] = s
+        } else if phase2Count < phaseSamplesNeeded {
+            // Phase 2: collected at 2× 104 velocity
+            var s = phase2Samples[bucket, default: []]
+            s.append(duration)
+            phase2Samples[bucket] = s
         }
-        // Try to lock (or update) the multiplier whenever we have enough data.
-        maybeLockMultiplier(for: displayID)
+
+        // Both phases complete → compute exponent p and lock multiplier
+        tryLockCalibration(for: displayID)
     }
 
-    /// If we have enough baseline samples, compute multiplier = baseline / target
-    /// and lock it.  Re-computes when `targetDuration` changes (read from UD each call).
-    private static func maybeLockMultiplier(for displayID: String) {
-        let target = targetDuration
-        guard target > 0 else { return }
+    private static func tryLockCalibration(for displayID: String) {
+        guard displayMultipliers[displayID] == nil else { return } // already locked
 
-        // Collect all direction buckets for this display.
         let prefix = "\(displayID)|"
-        var allSamples: [TimeInterval] = []
-        for (key, samples) in baselineSamples {
-            if key == displayID || key.hasPrefix(prefix) {
-                allSamples.append(contentsOf: samples)
-            }
+        func collect(_ dict: [String: [TimeInterval]]) -> [TimeInterval] {
+            var all: [TimeInterval] = []
+            for (k, v) in dict { if k == displayID || k.hasPrefix(prefix) { all.append(contentsOf: v) } }
+            return all
         }
-        guard allSamples.count >= calibrationSamples else { return }
-        let baseline = allSamples.reduce(0, +) / Double(allSamples.count)
-        // Square-root dampening: the relationship between dock-swipe velocity
-        // and actual switch duration is non-linear, so a linear multiplier
-        // (baseline/target) overshoots badly — at 2.4× the switch is nearly
-        // instant instead of the intended 0.25s.  sqrt() produces a gentler
-        // correction that converges to the target without overshooting.
-        let ratio = baseline / target
-        let multiplier = sqrt(ratio)
+        let p1 = collect(phase1Samples)
+        let p2 = collect(phase2Samples)
+        guard p1.count >= phaseSamplesNeeded, p2.count >= phaseSamplesNeeded else { return }
+
+        let avg52 = p1.reduce(0, +) / Double(p1.count)
+        let avg104 = p2.reduce(0, +) / Double(p2.count)
+        guard avg52 > 0, avg104 > 0 else { return }
+
+        // Compute the actual exponent p from two measured points:
+        //   duration ∝ velocity^p  →  avg52 / avg104 = (52 / 104)^p = 0.5^p
+        //   p = log(avg52 / avg104) / log(0.5)
+        let p = log(avg52 / avg104) / log(0.5)
+        // Sanity: clamp p to [0.3, 3.0] (reasonable range for real displays)
+        let clampedP = max(0.3, min(3.0, p))
+
+        // For target duration T: multiplier = (avg52 / T)^(1/clampedP)
+        let target = targetDuration
+        let ratio = avg52 / target
+        let multiplier = pow(ratio, 1.0 / clampedP)
+
         displayMultipliers[displayID] = max(minMultiplier, min(maxMultiplier, multiplier))
-        // Persist so the value survives restarts.
         if let data = try? JSONEncoder().encode(displayMultipliers) {
             UserDefaults.standard.set(data, forKey: calibrationKey)
         }
@@ -377,17 +406,15 @@ class SpaceHelper {
             // no calibration needed.
             velocity = 2000.0 * Double(absSteps)
         } else {
-            // Calibrated mode — record timing and apply per-display multiplier,
-            // with separate rolling windows per direction to prevent oscillation
-            // when alternating swipe directions.
+            // Calibrated mode — record timing and use phase-appropriate velocity.
+            // Phase 1 (first 3): native 52 → baseline measurement.
+            // Phase 2 (next 3): 2× 104 → second data point.
+            // Locked: 52 × calibrated multiplier.
             let dirLabel = directionRight ? "right" : "left"
             beginGestureTiming(for: targetDisplayID, direction: dirLabel)
-            // Force multiplier=1.0 during calibration so baseline is always
-            // measured at native speed, regardless of cached multipliers.
             let bucket = "\(targetDisplayID)|\(dirLabel)"
-            let isCalibrating = (baselineSamples[bucket]?.count ?? 0) < calibrationSamples
-            let multiplier = isCalibrating ? 1.0 : multiplierForDisplay(targetDisplayID)
-            velocity = 52.0 * Double(absSteps) * multiplier
+            let phaseVelocity = velocityForPhase(bucket: bucket, displayID: targetDisplayID)
+            velocity = phaseVelocity * Double(absSteps)
         }
 
         // Resolve target display via NSScreen.
