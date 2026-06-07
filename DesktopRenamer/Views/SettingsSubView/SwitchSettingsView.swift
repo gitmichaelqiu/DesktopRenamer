@@ -283,7 +283,7 @@ struct SwitchSettingsView: View {
                         Divider()
 
                         SliderSettingsRow(
-                            "Target switch duration",
+                            "Switch duration",
                             helperText: "Set to 0 for instant switching (bypasses the macOS sliding animation). Otherwise the velocity is calibrated per display (cached across restarts) so the actual switch time converges to this value.",
                             value: $gestureManager.switchDuration,
                             range: 0...1.0,

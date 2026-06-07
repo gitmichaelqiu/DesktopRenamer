@@ -578,17 +578,6 @@
         }
       }
     },
-    "Bypasses the macOS sliding animation using synthetic high-velocity gestures.\n\nRequires 'Swipe between full-screen applications' enabled in System Settings → Trackpad.\n\nRecommended: Disable 'Automatically rearrange spaces based on most recent use' in Desktop & Dock settings to prevent miscalculations." : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "使用高速滑动绕过 macOS 的滑动动画。\n\n需要启用“在全屏应用程序之间滑动”（可在“系统设置”→“触控板”中启用）。\n\n建议：在“桌面与程序坞”设置中禁用“根据最近使用情况自动重新排列空间”，以防止计算错误。"
-          }
-        }
-      }
-    },
     "Cancel" : {
       "localizations" : {
         "zh-Hans" : {
@@ -1232,17 +1221,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "安装 Raycast 拓展"
-          }
-        }
-      }
-    },
-    "Instant switch without animations" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "无动画快速切换"
           }
         }
       }
@@ -2469,7 +2447,14 @@
       }
     },
     "Set to 0 for instant switching (bypasses the macOS sliding animation). Otherwise the velocity is calibrated per display (cached across restarts) so the actual switch time converges to this value." : {
-
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "设为0以跳过切换动画。否则切换速度会反复调整直到达到目标时长，可能需要多次切换。"
+          }
+        }
+      }
     },
     "Settings" : {
       "localizations" : {
@@ -3223,6 +3208,16 @@
         }
       }
     },
+    "Switch duration" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "切换时长"
+          }
+        }
+      }
+    },
     "Switch override threshold" : {
       "localizations" : {
         "en" : {
@@ -3314,9 +3309,6 @@
           }
         }
       }
-    },
-    "Target switch duration" : {
-
     },
     "Thank You!" : {
       "localizations" : {
