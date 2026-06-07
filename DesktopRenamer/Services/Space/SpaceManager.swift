@@ -87,7 +87,11 @@ class SpaceManager: ObservableObject {
     private let spaceLayoutCheckInterval: TimeInterval = 5.0
     
     // Space locking state and configurations
-    
+
+    // Prevents unbounded recursive retry in moveActiveWindowToSpace when
+    // AXFullScreen=false is silently ignored by the target app.
+    private var fullscreenExitRetrying: Set<String> = []
+
     @Published var lockedSpaceIDs: Set<String> = []
     @Published var movedWindowsOriginalSpaces: [Int: (originalSpaceUUID: String, currentSpaceUUID: String, pid: Int32)] = [:]
     var lastManualSwitchTime: TimeInterval = 0
@@ -922,23 +926,29 @@ class SpaceManager: ObservableObject {
     func moveActiveWindowToSpace(id: String) {
         // BUG FIX: Prevent redundant move attempts if the target is already current.
         if id == currentSpaceUUID { return }
-        
+
         guard let targetSpace = spaceNameDict.first(where: { $0.id == id }), !targetSpace.isFullscreen else {
             return
         }
 
         // Un-fullscreen first if current space is fullscreen
         if let currentSpaceObj = spaceNameDict.first(where: { $0.id == currentSpaceUUID }), currentSpaceObj.isFullscreen {
+            // Guard against unbounded recursive retry: if the AX exit is silently
+            // ignored (sandboxed app, slow animation) we would loop forever.
+            guard fullscreenExitRetrying.insert(id).inserted else { return }
+
             if let windowInfo = SpaceHelper.getActiveWindowInfo() {
                 if let axWindow = SpaceHelper.getAXWindow(id: windowInfo.id, pid: windowInfo.pid) {
                     AXUIElementSetAttributeValue(axWindow, "AXFullScreen" as CFString, false as CFTypeRef)
                     // Wait for the exit-fullscreen animation to complete
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) {
-                        self.moveActiveWindowToSpace(id: id)
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) { [weak self] in
+                        self?.fullscreenExitRetrying.remove(id)
+                        self?.moveActiveWindowToSpace(id: id)
                     }
                     return
                 }
             }
+            fullscreenExitRetrying.remove(id)
         }
 
         // Robust Cross-Monitor Support: 
