@@ -226,7 +226,7 @@ class SpaceLabelManager: ObservableObject {
 
         // Add windows for new spaces.
         for space in allSpaces {
-            ensureWindow(for: space.id, name: space.customName, displayID: space.displayID)
+            ensureWindow(for: space.id, name: space.customName, displayID: space.displayID, updateMode: updateModes)
         }
 
         // Remove windows for spaces that no longer exist.
@@ -365,18 +365,22 @@ class SpaceLabelManager: ObservableObject {
     }
 
     // Asserts that a window exists for the specified space, refreshing if already present.
-    private func ensureWindow(for spaceId: String, name: String, displayID: String) {
+    private func ensureWindow(for spaceId: String, name: String, displayID: String, updateMode: Bool = true) {
         if let existingWindow = createdWindows[spaceId] {
             if existingWindow.displayID != displayID {
                 existingWindow.orderOut(nil)
                 createdWindows.removeValue(forKey: spaceId)
             } else {
                 // BUG FIX: Even if the window exists and is visible, we MUST update its mode
-                // (Active vs Preview) and refresh its appearance. Otherwise, labels can 
+                // (Active vs Preview) and refresh its appearance. Otherwise, labels can
                 // get stuck in Preview mode when returning from fullscreen.
-                let isCurrent = (spaceId == spaceManager?.currentSpaceUUID)
-                existingWindow.setMode(isCurrentSpace: isCurrent)
-                existingWindow.refreshAppearance()
+                // During a switch (updateMode: false), skip this — setMode + refreshAppearance
+                // both call updateVisibility which can make labels visible prematurely.
+                if updateMode {
+                    let isCurrent = (spaceId == spaceManager?.currentSpaceUUID)
+                    existingWindow.setMode(isCurrentSpace: isCurrent)
+                    existingWindow.refreshAppearance()
+                }
                 return
             }
         }
