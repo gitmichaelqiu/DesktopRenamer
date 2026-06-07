@@ -55,8 +55,11 @@ class SpaceHelper {
     // Multipliers are cached in UserDefaults for persistence across restarts.
     private static var gestureTimingStart: TimeInterval = 0
     private static var gestureTimingDisplayID: String = ""
+    private static var gestureTimingDirection: String = ""
 
-    // Rolling average of recent measured durations per display (filters transient noise).
+    // Rolling average of recent measured durations per display+direction
+    // (e.g. "UUID|right"). Separate windows prevent oscillations when the
+    // user alternates swipe directions with different baseline timings.
     private static var recentDurations: [String: [TimeInterval]] = [:]
     private static let averageWindow = 3
 
@@ -91,33 +94,37 @@ class SpaceHelper {
         }
     }
 
-    static func beginGestureTiming(for displayID: String) {
+    static func beginGestureTiming(for displayID: String, direction: String = "") {
         gestureTimingStart = Date().timeIntervalSince1970
         gestureTimingDisplayID = displayID
+        gestureTimingDirection = direction
     }
 
     static func endGestureTiming() {
         guard gestureTimingStart > 0, !gestureTimingDisplayID.isEmpty else { return }
         let duration = Date().timeIntervalSince1970 - gestureTimingStart
         let displayID = gestureTimingDisplayID
+        let direction = gestureTimingDirection
         gestureTimingStart = 0
         gestureTimingDisplayID = ""
+        gestureTimingDirection = ""
         // Discard anomalous durations from failed/cancelled gestures.
         guard duration < 2.0 else { return }
-        recordGestureDuration(duration, for: displayID)
+        recordGestureDuration(duration, for: displayID, direction: direction)
     }
 
-    private static func recordGestureDuration(_ duration: TimeInterval, for displayID: String) {
+    private static func recordGestureDuration(_ duration: TimeInterval, for displayID: String, direction: String = "") {
         let target = targetDuration
         // Instant mode: no calibration needed
         guard target > 0 else { return }
 
-        // Smooth individual measurements with a rolling average to avoid
-        // chasing transient noise (GPU load, OS scheduling jitter, etc.).
-        var window = recentDurations[displayID, default: []]
+        // Use separate rolling windows per direction so alternating swipe
+        // directions don't cross-contaminate the average and cause oscillation.
+        let bucketKey = direction.isEmpty ? displayID : "\(displayID)|\(direction)"
+        var window = recentDurations[bucketKey, default: []]
         window.append(duration)
         if window.count > averageWindow { window.removeFirst() }
-        recentDurations[displayID] = window
+        recentDurations[bucketKey] = window
         let avg = window.reduce(0, +) / Double(window.count)
 
         // Skip if within tolerance
@@ -131,8 +138,8 @@ class SpaceHelper {
 
         var multipliers = cachedMultipliers
         let current = multipliers[displayID] ?? 1.0
-        let direction: Double = avg > target ? 1.0 : -1.0
-        let newValue = current + step * direction
+        let adjDirection: Double = avg > target ? 1.0 : -1.0
+        let newValue = current + step * adjDirection
         multipliers[displayID] = max(minMultiplier, min(maxMultiplier, newValue))
         cachedMultipliers = multipliers
     }
@@ -372,8 +379,11 @@ class SpaceHelper {
             // no calibration needed.
             velocity = 2000.0 * Double(absSteps)
         } else {
-            // Calibrated mode — record timing and apply per-display multiplier
-            beginGestureTiming(for: targetDisplayID)
+            // Calibrated mode — record timing and apply per-display multiplier,
+            // with separate rolling windows per direction to prevent oscillation
+            // when alternating swipe directions.
+            let dirLabel = directionRight ? "right" : "left"
+            beginGestureTiming(for: targetDisplayID, direction: dirLabel)
             velocity = 52.0 * Double(absSteps) * multiplierForDisplay(targetDisplayID)
         }
 
