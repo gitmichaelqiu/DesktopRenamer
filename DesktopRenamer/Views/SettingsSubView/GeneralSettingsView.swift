@@ -313,17 +313,9 @@ struct GeneralSettingsView: View {
                         Text("Recording system events...")
                             .font(.headline)
                             .foregroundColor(.red)
-                        Text("Now go ahead and reproduce the bug:")
+                        Text("Reproduce the bug, then click Stop.")
                             .font(.body)
                             .foregroundColor(.secondary)
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text("• Switch spaces using gestures, keyboard, or mouse")
-                            Text("• Move windows between spaces")
-                            Text("• Perform any other actions that trigger the bug")
-                            Text("• Pay attention to label behavior during switches")
-                        }
-                        .font(.callout)
-                        .foregroundColor(.secondary)
                         .padding(.leading, 8)
                     }
                     .padding(.vertical, 10)
