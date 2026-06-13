@@ -521,6 +521,9 @@
         }
       }
     },
+    "Collect Diagnostic Events" : {
+
+    },
     "Confirm & Execute Batch Move (%lld windows)" : {
       "localizations" : {
         "en" : {
@@ -2754,6 +2757,12 @@
         }
       }
     },
+    "Start" : {
+
+    },
+    "Stop" : {
+
+    },
     "Stop Preview" : {
       "localizations" : {
         "zh-Hans" : {
@@ -3059,6 +3068,9 @@
           }
         }
       }
+    },
+    "When enabled, all system events are recorded in a session buffer. Reproduce the bug, then stop and generate the report to include the full event timeline." : {
+
     },
     "When set to 3 fingers, you can still use 4 fingers to trigger native swipe." : {
       "localizations" : {

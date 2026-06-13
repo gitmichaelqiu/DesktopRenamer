@@ -172,25 +172,41 @@ struct GeneralSettingsView: View {
                     Divider()
 
                     SettingsRow(
-                        "Collect Diagnostic Events",
-                        helperText: "When enabled, all system events are recorded in a session buffer. Reproduce the bug, then stop and generate the report to include the full event timeline."
+                        "Collect Diagnostic Events"
                     ) {
-                        Button(isCollecting ? "Stop" : "Start") {
-                            if isCollecting {
-                                DiagnosticEventLog.shared.stopCollection()
-                            } else {
-                                DiagnosticEventLog.shared.startCollection()
+                        HStack(spacing: 8) {
+                            Button(isCollecting ? "Stop" : "Start") {
+                                if isCollecting {
+                                    DiagnosticEventLog.shared.stopCollection()
+                                } else {
+                                    DiagnosticEventLog.shared.startCollection()
+                                }
+                                isCollecting = DiagnosticEventLog.shared.isCollecting
                             }
-                            isCollecting = DiagnosticEventLog.shared.isCollecting
+                            .foregroundStyle(isCollecting ? Color.red : Color.primary)
+
+                            let count = DiagnosticEventLog.shared.sessionEvents.count
+                            if count > 0 {
+                                Text("\(count) events")
+                                    .font(.caption)
+                                    .foregroundColor(.secondary)
+                                    .monospacedDigit()
+                            } else if isCollecting {
+                                Text("recording…")
+                                    .font(.caption)
+                                    .foregroundColor(.red)
+                                    .monospacedDigit()
+                            }
                         }
-                        .foregroundStyle(isCollecting ? Color.red : Color.primary)
                     }
 
                     Divider()
 
                     SettingsRow(
                         "Generate Diagnostic Report",
-                        helperText: "Saves a comprehensive diagnostic log file to help debug issues."
+                        helperText: DiagnosticEventLog.shared.sessionEvents.isEmpty
+                            ? "Saves a comprehensive diagnostic log file to help debug issues."
+                            : "Session has \(DiagnosticEventLog.shared.sessionEvents.count) events. Saves snapshot + event timeline."
                     ) {
                         Button("Generate") {
                             saveDiagnosticReport()
