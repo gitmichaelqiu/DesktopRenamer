@@ -373,7 +373,7 @@ struct GeneralSettingsView: View {
                 }
 
                 // Live log preview
-                if phase != .saved {
+                if phase != .idle && phase != .saved {
                 VStack(alignment: .leading, spacing: 4) {
                     Text("Event Log (\(DiagnosticEventLog.shared.sessionEvents.count) recorded, ring buffer: \(DiagnosticEventLog.shared.formattedRing().components(separatedBy: "\n").count) lines)")
                         .font(.caption)
