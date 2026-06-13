@@ -83,6 +83,9 @@
     "%lld" : {
       "shouldTranslate" : false
     },
+    "%lld events captured." : {
+
+    },
     "%lld items" : {
       "localizations" : {
         "zh-Hans" : {
@@ -102,6 +105,18 @@
           }
         }
       }
+    },
+    "• Move windows between spaces" : {
+
+    },
+    "• Pay attention to label behavior during switches" : {
+
+    },
+    "• Perform any other actions that trigger the bug" : {
+
+    },
+    "• Switch spaces using gestures, keyboard, or mouse" : {
+
     },
     "© %@ Michael Yicheng Qiu" : {
       "localizations" : {
@@ -501,6 +516,12 @@
         }
       }
     },
+    "Click Save Report to generate the full diagnostic log." : {
+
+    },
+    "Click Start to begin recording system events." : {
+
+    },
     "Click to switch, Option+Click to move active window." : {
       "localizations" : {
         "zh-Hans" : {
@@ -744,6 +765,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "加载特例出错"
+          }
+        }
+      }
+    },
+    "Event Log (%lld recorded, ring buffer: %lld lines)" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Event Log (%1$lld recorded, ring buffer: %2$lld lines)"
           }
         }
       }
@@ -1580,6 +1611,9 @@
         }
       }
     },
+    "Now go ahead and reproduce the bug:" : {
+
+    },
     "Open" : {
 
     },
@@ -1722,6 +1756,12 @@
           }
         }
       }
+    },
+    "Recording complete!" : {
+
+    },
+    "Recording system events..." : {
+
     },
     "Reload space labels" : {
       "localizations" : {
@@ -2111,9 +2151,6 @@
           }
         }
       }
-    },
-    "Session recorded %lld events. Save the report to include the full timeline." : {
-
     },
     "Set to 0 for instant switching (bypasses the macOS sliding animation). Otherwise the velocity is calibrated per display (cached across restarts) so the actual switch time converges to this value." : {
       "localizations" : {
@@ -2757,16 +2794,10 @@
         }
       }
     },
-    "Start" : {
-
-    },
     "Start collection, reproduce the bug, then stop and save the full diagnostic report." : {
 
     },
-    "Start collection, reproduce the bug, then stop and save the report." : {
-
-    },
-    "Stop" : {
+    "Start Recording" : {
 
     },
     "Stop Preview" : {
@@ -2778,6 +2809,9 @@
           }
         }
       }
+    },
+    "Stop Recording" : {
+
     },
     "Switch & Move" : {
       "localizations" : {
@@ -2937,6 +2971,9 @@
           }
         }
       }
+    },
+    "Then reproduce the bug you encountered." : {
+
     },
     "Toggle Active Space Label" : {
       "localizations" : {

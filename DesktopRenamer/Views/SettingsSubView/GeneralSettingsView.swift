@@ -411,8 +411,6 @@ struct GeneralSettingsView: View {
                     case .done:
                         Button("Save Report") {
                             saveReport()
-                            cleanup()
-                            dismiss()
                         }
                         .buttonStyle(.borderedProminent)
                     }
@@ -455,6 +453,8 @@ struct GeneralSettingsView: View {
             guard let window = NSApp.suitableSheetWindow else { return }
             panel.beginSheetModal(for: window) { result in
                 if result == .OK, let url = panel.url { try? data.write(to: url) }
+                self.cleanup()
+                self.dismiss()
             }
         }
     }
