@@ -14,6 +14,9 @@ class SpaceAPI {
     // Use weak to avoid retain cycle (SpaceManager owns API, API shouldn't strongly own SpaceManager)
     private weak var spaceManager: SpaceManager?
     private var cancellables = Set<AnyCancellable>()
+
+    /// Whether the DNC listener is active (Combine pipeline has subscriptions).
+    var hasActiveListeners: Bool { !cancellables.isEmpty }
     
     init(spaceManager: SpaceManager) {
         self.spaceManager = spaceManager

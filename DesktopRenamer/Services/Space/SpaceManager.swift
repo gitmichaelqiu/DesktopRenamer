@@ -1016,6 +1016,39 @@ class SpaceManager: ObservableObject {
          return currentIndex == displaySpaces.count - 1
     }
     
+    // MARK: - Diagnostic Report Accessors
+
+    /// Returns a human-readable description of the last wake time, including
+    /// remaining cooling time if we are still in the post-wake stabilization window.
+    var lastWakeTimeAgo: String {
+        let elapsed = Date().timeIntervalSince(lastWakeTime)
+        if elapsed < wakeCoolingDuration {
+            let remaining = wakeCoolingDuration - elapsed
+            return "cooling (\(String(format: "%.1f", remaining))s remaining, started \(String(format: "%.1f", elapsed))s ago)"
+        }
+        return "\(String(format: "%.1f", elapsed))s ago"
+    }
+
+    /// Space change retry count / max for diagnostic reports.
+    var spaceChangeRetryInfo: String {
+        "\(spaceChangeRetryCount)/\(maxSpaceChangeRetries)"
+    }
+
+    /// Fullscreen exit retry set contents for diagnostic reports.
+    var fullscreenExitRetryingInfo: String {
+        fullscreenExitRetrying.isEmpty ? "(empty)" : fullscreenExitRetrying.sorted().joined(separator: ", ")
+    }
+
+    /// Connected display UUIDs for diagnostic reports.
+    var connectedDisplayUUIDsInfo: String {
+        connectedDisplayUUIDs.isEmpty ? "(none)" : connectedDisplayUUIDs.sorted().joined(separator: ", ")
+    }
+
+    /// Last manual switch target space UUID for diagnostic reports.
+    var lastManualSwitchTargetUUIDInfo: String {
+        lastManualSwitchTargetUUID ?? "nil"
+    }
+
     func restoreAllMovedWindows() {
         let list = movedWindowsOriginalSpaces.map { (windowID: $0.key, originalSpaceUUID: $0.value.originalSpaceUUID, currentSpaceUUID: $0.value.currentSpaceUUID, pid: $0.value.pid) }
         guard !list.isEmpty else { return }

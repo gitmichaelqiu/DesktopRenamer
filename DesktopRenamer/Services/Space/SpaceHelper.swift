@@ -50,6 +50,26 @@ class SpaceHelper {
     private static var draggedWindowAppName: String? = nil
     static var isDragging: Bool { originalMousePoint != nil }
 
+    /// Full drag state summary for diagnostic reports.
+    static var dragStateInfo: String {
+        let wid = draggedWindowID.map { "\($0)" } ?? "nil"
+        let pid = draggedWindowPID.map { "\($0)" } ?? "nil"
+        let bundle = draggedWindowBundleID ?? "nil"
+        let app = draggedWindowAppName ?? "nil"
+        let target = targetSpaceID ?? "nil"
+        let mouse = originalMousePoint.map { "(\($0.x), \($0.y))" } ?? "nil"
+        return """
+          draggedWindowID: \(wid)
+          draggedWindowPID: \(pid)
+          draggedWindowBundleID: \(bundle)
+          draggedWindowAppName: \(app)
+          targetSpaceID: \(target)
+          isInstantDrag: \(isInstantDrag)
+          pendingMoveCount: \(pendingMoveCount)
+          originalMousePoint: \(mouse)
+        """
+    }
+
     // Velocity calibration — adjusts multiplier per display so measured switch
     // time converges to the user-configured target duration (default 0.35s).
     // Multipliers are cached in UserDefaults for persistence across restarts.
@@ -92,6 +112,29 @@ class SpaceHelper {
     private static let phaseSamplesNeeded = 3
     private static let phase1Velocity: Double = 52.0
     private static let phase2Velocity: Double = 104.0
+
+    /// Calibration state summary for diagnostic reports: per-display avg values.
+    static var displayCalibrationsInfo: String {
+        guard !displayCalibrations.isEmpty else { return "  (none)\n" }
+        var s = ""
+        for (displayID, cal) in displayCalibrations {
+            s += "  \(displayID): avg52=\(String(format: "%.4f", cal.avg52)) avg104=\(String(format: "%.4f", cal.avg104))\n"
+        }
+        return s
+    }
+
+    /// Calibration phase sample counts for diagnostic reports.
+    static var phaseSampleCountsInfo: String {
+        let allIDs = Set(phase1Samples.keys).union(phase2Samples.keys)
+        guard !allIDs.isEmpty else { return "  (no samples)\n" }
+        var s = ""
+        for did in allIDs.sorted() {
+            let p1 = phase1Samples[did]?.count ?? 0
+            let p2 = phase2Samples[did]?.count ?? 0
+            s += "  \(did): phase1=\(p1) phase2=\(p2)\n"
+        }
+        return s
+    }
 
     /// Returns a stable velocity multiplier based on empirical curve.
     static func multiplierForDisplay(_ displayID: String) -> Double {
