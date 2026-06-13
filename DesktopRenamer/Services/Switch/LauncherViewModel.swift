@@ -516,6 +516,7 @@ struct ListWindowsSection: Identifiable {
         guard commandKSelectedIndex >= 0 && commandKSelectedIndex < available.count else { return }
         let action = available[commandKSelectedIndex]
         
+        DiagnosticEventLog.shared.record(subsystem: "Launcher", level: "info", "executeCommandKAction: window=\(window.title) (id=\(window.id)), action=\(action.description)")
         commandKTargetWindow = nil
         if activeCommand?.type == .listWindows {
             executeActionImmediately(window: window, actionType: action)
@@ -526,11 +527,13 @@ struct ListWindowsSection: Identifiable {
     
     func executeActionImmediately(window: WindowEntry, actionType: BatchStagedActionType) {
         let originalSpaceUUID = AppDelegate.shared.spaceManager?.currentSpaceUUID
+        DiagnosticEventLog.shared.record(subsystem: "Launcher", level: "info", "executeActionImmediately: window=\(window.title) (id=\(window.id)), actionType=\(actionType.description), originalSpaceUUID=\(originalSpaceUUID ?? "nil")")
         
         Task {
             let windowSpaceID = window.space.id
             let isFullscreenWindow = window.space.isFullscreen
             let requiresAX = (actionType == .close || actionType == .minimize || actionType == .enterFullScreen || actionType == .exitFullScreen || actionType == .restore || (actionType == .hide && isFullscreenWindow))
+            DiagnosticEventLog.shared.record(subsystem: "Launcher", level: "info", "executeActionImmediately: Task started. requiresAX=\(requiresAX), isFullscreenWindow=\(isFullscreenWindow)")
             
             // If the target window is on a different space, switch to its space first so AX APIs can access it.
             if requiresAX,
@@ -976,6 +979,7 @@ struct ListWindowsSection: Identifiable {
     }
     
     private func executeSimpleCommand(_ type: LauncherCommandType) {
+        DiagnosticEventLog.shared.record(subsystem: "Launcher", level: "info", "executeSimpleCommand: \(type.rawValue)")
         switch type {
         case .reloadLabels:
             incrementCommandFrequency(type.rawValue)
@@ -1048,6 +1052,7 @@ struct ListWindowsSection: Identifiable {
     }
     
     func executeSwitchToDesktop(_ space: SpaceGroup) {
+        DiagnosticEventLog.shared.record(subsystem: "Launcher", level: "info", "executeSwitchToDesktop: space=\(space.name) (id=\(space.id))")
         LauncherWindowController.shared.shouldRestoreFocus = false
         incrementCommandFrequency(LauncherCommandType.switchToDesktop.rawValue)
         if let manager = AppDelegate.shared.spaceManager,
@@ -1058,6 +1063,7 @@ struct ListWindowsSection: Identifiable {
     }
     
     func executeSwitchToSpaceID(_ spaceID: String) {
+        DiagnosticEventLog.shared.record(subsystem: "Launcher", level: "info", "executeSwitchToSpaceID: spaceID=\(spaceID)")
         LauncherWindowController.shared.shouldRestoreFocus = false
         incrementCommandFrequency(LauncherCommandType.switchToDesktop.rawValue)
         if let manager = AppDelegate.shared.spaceManager,
@@ -1068,6 +1074,7 @@ struct ListWindowsSection: Identifiable {
     }
     
     func executeMoveWindow(_ space: SpaceGroup) {
+        DiagnosticEventLog.shared.record(subsystem: "Launcher", level: "info", "executeMoveWindow: space=\(space.name) (id=\(space.id))")
         incrementCommandFrequency(LauncherCommandType.moveWindow.rawValue)
         let handled = movePreviouslyActiveWindow(toSpaceID: space.id)
         if !handled {
@@ -1077,10 +1084,14 @@ struct ListWindowsSection: Identifiable {
     
     @discardableResult
     func movePreviouslyActiveWindow(toSpaceID spaceID: String) -> Bool {
-        guard let prevWindow = previouslyActiveWindow else { return false }
+        guard let prevWindow = previouslyActiveWindow else {
+            DiagnosticEventLog.shared.record(subsystem: "Launcher", level: "warning", "movePreviouslyActiveWindow: previouslyActiveWindow is nil")
+            return false
+        }
         
         let displayID = SpaceHelper.getWindowDisplayID(for: prevWindow.frame) ?? ""
         let fromSpaceIDStr = SpaceHelper.getCurrentSpaceID(for: displayID) ?? "0"
+        DiagnosticEventLog.shared.record(subsystem: "Launcher", level: "info", "movePreviouslyActiveWindow: window=\(prevWindow.id), fromSpace=\(fromSpaceIDStr), targetSpace=\(spaceID)")
         
         if spaceID == fromSpaceIDStr {
             print("Launcher: Window \(prevWindow.id) is already on space \(spaceID). No move needed.")
@@ -1092,17 +1103,20 @@ struct ListWindowsSection: Identifiable {
         
         guard let manager = AppDelegate.shared.spaceManager,
               let targetSpace = manager.spaceNameDict.first(where: { $0.id == spaceID }) else {
+            DiagnosticEventLog.shared.record(subsystem: "Launcher", level: "warning", "movePreviouslyActiveWindow: targetSpace object not found for ID \(spaceID)")
             return false
         }
         
         if targetSpace.displayID != displayID {
             // Cross-monitor move
+            DiagnosticEventLog.shared.record(subsystem: "Launcher", level: "info", "movePreviouslyActiveWindow: Cross-monitor move window \(prevWindow.id) from space \(fromSpaceID) to space \(targetSpaceID)")
             print("Launcher: Cross-monitor move window \(prevWindow.id) from space \(fromSpaceID) to space \(targetSpaceID)")
             SpaceHelper.moveWindowToSpace(windowID: prevWindow.id, fromSpaceID: fromSpaceID, targetSpaceID: targetSpaceID)
             manager.switchToSpace(targetSpace, forceInstant: true)
             return false
         } else {
             // Same-monitor move: MUST use dragActiveWindow!
+            DiagnosticEventLog.shared.record(subsystem: "Launcher", level: "info", "movePreviouslyActiveWindow: Same-monitor move window \(prevWindow.id) from space \(fromSpaceID) to space \(targetSpaceID) using dragActiveWindow")
             print("Launcher: Same-monitor move window \(prevWindow.id) from space \(fromSpaceID) to space \(targetSpaceID) using dragActiveWindow")
             
             // 1. Hide the launcher so focus goes back to the window
@@ -1118,6 +1132,7 @@ struct ListWindowsSection: Identifiable {
     }
     
     func executeFocusWindow(_ window: WindowEntry) {
+        DiagnosticEventLog.shared.record(subsystem: "Launcher", level: "info", "executeFocusWindow: window=\(window.title) (id=\(window.id), pid=\(window.pid))")
         LauncherWindowController.shared.shouldRestoreFocus = false
         incrementCommandFrequency(LauncherCommandType.listWindows.rawValue)
         SpaceHelper.focusWindow(id: window.id, pid: window.pid)
@@ -1125,6 +1140,7 @@ struct ListWindowsSection: Identifiable {
     }
     
     func executeRenameCurrentSpace(_ newName: String) {
+        DiagnosticEventLog.shared.record(subsystem: "Launcher", level: "info", "executeRenameCurrentSpace: newName=\(newName)")
         incrementCommandFrequency(LauncherCommandType.renameCurrentSpace.rawValue)
         if let manager = AppDelegate.shared.spaceManager {
             manager.renameSpace(manager.currentSpaceUUID, to: newName)
@@ -1139,6 +1155,7 @@ struct ListWindowsSection: Identifiable {
         
         let actions = Array(stagedMoves.values)
         let originalSpaceUUID = AppDelegate.shared.spaceManager?.currentSpaceUUID
+        DiagnosticEventLog.shared.record(subsystem: "Launcher", level: "info", "executeBatchMove: Starting batch move. Actions count=\(actions.count), originalSpaceUUID=\(originalSpaceUUID ?? "nil")")
         
         Task {
             // 1. Filter space-move actions
@@ -1162,6 +1179,7 @@ struct ListWindowsSection: Identifiable {
                 let movesBySource = Dictionary(grouping: spaceMoveActions, by: { $0.window.space.id })
                 
                 for (sourceId, sourceActions) in movesBySource {
+                    DiagnosticEventLog.shared.record(subsystem: "Launcher", level: "info", "executeBatchMove: Group sourceID=\(sourceId), sourceActions count=\(sourceActions.count)")
                     if let manager = AppDelegate.shared.spaceManager,
                        let spaceObj = manager.spaceNameDict.first(where: { $0.id == sourceId }) {
                         manager.switchToSpace(spaceObj, forceInstant: true)
@@ -1177,6 +1195,7 @@ struct ListWindowsSection: Identifiable {
                         case .restoreTo(let space):
                             targetSpaceID = space.id
                             // Contextual Restore: unhide app and/or unminimize window first
+                            DiagnosticEventLog.shared.record(subsystem: "Launcher", level: "info", "executeBatchMove: Restore context for window id=\(action.window.id) pid=\(action.window.pid)")
                             if let app = NSRunningApplication(processIdentifier: action.window.pid) {
                                 app.unhide()
                             }
@@ -1188,6 +1207,7 @@ struct ListWindowsSection: Identifiable {
                             continue
                         }
                         
+                        DiagnosticEventLog.shared.record(subsystem: "Launcher", level: "info", "executeBatchMove: Move window id=\(action.window.id) from space=\(action.window.space.id) to space=\(targetSpaceID)")
                         if action.window.space.id == targetSpaceID {
                             continue
                         }
@@ -1198,6 +1218,7 @@ struct ListWindowsSection: Identifiable {
                         
                         // Un-fullscreen first if the window is currently in a fullscreen space
                         if action.window.space.isFullscreen {
+                            DiagnosticEventLog.shared.record(subsystem: "Launcher", level: "info", "executeBatchMove: Un-fullscreen window id=\(action.window.id)")
                             var axWindow = SpaceHelper.getAXWindow(id: action.window.id, pid: action.window.pid)
                             if axWindow == nil {
                                 if let app = NSRunningApplication(processIdentifier: action.window.pid) {
@@ -1234,6 +1255,8 @@ struct ListWindowsSection: Identifiable {
                 let windowSpaceID = action.window.space.id
                 let isFullscreenWindow = action.window.space.isFullscreen
                 let requiresAX = (action.actionType == .close || action.actionType == .minimize || action.actionType == .enterFullScreen || action.actionType == .exitFullScreen || action.actionType == .restore || (action.actionType == .hide && isFullscreenWindow))
+                
+                DiagnosticEventLog.shared.record(subsystem: "Launcher", level: "info", "executeBatchMove: Static action: type=\(action.actionType.description), window id=\(action.window.id), app=\(action.window.ownerName), requiresAX=\(requiresAX)")
                 
                 // If the target window is on a different space, switch to its space first so AX APIs can access it.
                 if requiresAX,
@@ -1344,6 +1367,7 @@ struct ListWindowsSection: Identifiable {
                 try? await Task.sleep(nanoseconds: 150_000_000) // 150ms delay between commands
             }
             
+            DiagnosticEventLog.shared.record(subsystem: "Launcher", level: "info", "executeBatchMove: Finished batch move execution.")
             self.isExecutingBatchMove = false
             self.stagedMoves.removeAll()
             LauncherWindowController.shared.shouldRestoreFocus = false

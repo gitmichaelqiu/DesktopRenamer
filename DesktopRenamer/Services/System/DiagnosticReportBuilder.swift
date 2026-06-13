@@ -36,6 +36,8 @@ public class DiagnosticEventLog {
         let ev = DiagnosticEvent(timestamp: Date(), subsystem: subsystem, level: level, message: message)
 
         lock.lock()
+        defer { lock.unlock() }
+        
         if ring.count < capacity {
             ring.append(ev)
         } else {
@@ -44,21 +46,6 @@ public class DiagnosticEventLog {
         }
         if isCollecting {
             sessionEvents.append(ev)
-        }
-        lock.unlock()
-        let event = DiagnosticEvent(timestamp: Date(), subsystem: subsystem, level: level, message: message)
-
-        // Ring buffer (always active)
-        if ring.count < capacity {
-            ring.append(event)
-        } else {
-            ring[nextIndex % capacity] = event
-            nextIndex += 1
-        }
-
-        // Session buffer (only during collection mode)
-        if isCollecting {
-            sessionEvents.append(event)
         }
     }
 
@@ -192,10 +179,16 @@ struct DiagnosticReportBuilder {
         s += "lockedSpaceIDs.count: \(sm.lockedSpaceIDs.count)\n"
         s += "movedWindowsOriginalSpaces.count: \(sm.movedWindowsOriginalSpaces.count)\n"
         s += "lastManualSwitchTime: \(sm.lastManualSwitchTime)\n"
+        s += "currentSpaceByDisplay:\n"
+        for (displayID, spaceID) in sm.currentSpaceByDisplay {
+            s += "  Display \(displayID) -> Space \(spaceID)\n"
+        }
         for space in sm.spaceNameDict {
             let name = sm.getSpaceName(space.id)
             s += "  Space id=\(space.id) num=\(space.num) display=\(space.displayID) FS=\(space.isFullscreen ? 1 : 0) name=\"\(name)\" app=\"\(space.appName ?? "")\"\n"
         }
+        s += "Raw CGS Managed Display Spaces:\n"
+        s += SpaceHelper.getRawCGSDisplaySpacesDescription()
         return s
     }
 
@@ -331,6 +324,7 @@ struct DiagnosticReportBuilder {
             "kShowPreviewLabels", "kShowActiveLabels", "kShowOnDesktop", "kHideWhenSwitching",
             "kActiveFontScale", "kPreviewFontScale", "kActivePaddingScale", "kPreviewPaddingScale",
             "kGlobalIsDocked", "kGlobalDockEdge", "kGlobalCenterX", "kGlobalCenterY",
+            "HasInitializedDefaults", "hasSeenSplashScreen",
         ]
         for key in keys {
             if let val = ud.object(forKey: key) {

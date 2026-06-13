@@ -1555,6 +1555,35 @@ class SpaceHelper {
         return ids
     }
 
+    /// Returns a formatted description of the raw display spaces managed by macOS.
+    static func getRawCGSDisplaySpacesDescription() -> String {
+        let conn = _CGSDefaultConnection()
+        guard let displays = CGSCopyManagedDisplaySpaces(conn) as? [NSDictionary] else {
+            return "  CGSCopyManagedDisplaySpaces: nil or unavailable\n"
+        }
+        var s = ""
+        for (idx, display) in displays.enumerated() {
+            let displayID = display["Display Identifier"] as? String ?? "Unknown"
+            s += "  Display [\(idx)] ID=\(displayID):\n"
+            if let currentSpace = display["Current Space"] as? [String: Any],
+               let currentID = currentSpace["ManagedSpaceID"] as? Int {
+                s += "    Current Space ManagedSpaceID: \(currentID)\n"
+            }
+            if let spaces = display["Spaces"] as? [[String: Any]] {
+                s += "    Spaces:\n"
+                for space in spaces {
+                    if let spaceID = space["ManagedSpaceID"] as? Int {
+                        let isFS = space["TileLayoutManager"] != nil
+                        let spaceType = space["Space Type"] as? Int ?? -1
+                        let pid = space["pid"] as? Int32 ?? space["owner pid"] as? Int32 ?? 0
+                        s += "      - ManagedSpaceID: \(spaceID) (Type: \(spaceType), isFullscreen: \(isFS ? 1 : 0), PID: \(pid))\n"
+                    }
+                }
+            }
+        }
+        return s
+    }
+
     private static func getDisplayName(for uuidString: String, screenMap: [String: String]) -> String {
         // Reviewer recommendation: Use case-insensitive comparison for robustness.
         if let name = screenMap[uuidString.uppercased()] {
