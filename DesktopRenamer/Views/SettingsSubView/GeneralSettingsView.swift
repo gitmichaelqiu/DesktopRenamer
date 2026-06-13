@@ -170,6 +170,17 @@ struct GeneralSettingsView: View {
 
                     Divider()
 
+                    SettingsRow(
+                        "Generate Diagnostic Report",
+                        helperText: "Saves a comprehensive diagnostic log file to help debug issues."
+                    ) {
+                        Button("Generate") {
+                            saveDiagnosticReport()
+                        }
+                    }
+
+                    Divider()
+
                     SettingsRow("Review Splash", helperText: "View the welcome screen again.") {
                         Button("Review") {
                             AppDelegate.shared.showSplashScreen(on: NSApp.suitableSheetWindow)
@@ -247,6 +258,26 @@ struct GeneralSettingsView: View {
                     successAlert.addButton(withTitle: NSLocalizedString("Button.OK", comment: ""))
                     successAlert.beginSheetModal(for: window) { _ in }
                 }
+            }
+        }
+    }
+
+    private func saveDiagnosticReport() {
+        let report = DiagnosticReportBuilder.generate()
+        guard let data = report.data(using: .utf8) else { return }
+
+        let panel = NSSavePanel()
+        panel.canCreateDirectories = true
+        panel.showsTagField = false
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyyMMdd_HHmmss"
+        panel.nameFieldStringValue = "DesktopRenamer_Diagnostic_\(formatter.string(from: Date())).log"
+        panel.allowedContentTypes = [.log, .plainText]
+
+        guard let window = NSApp.suitableSheetWindow else { return }
+        panel.beginSheetModal(for: window) { result in
+            if result == .OK, let url = panel.url {
+                try? data.write(to: url)
             }
         }
     }
