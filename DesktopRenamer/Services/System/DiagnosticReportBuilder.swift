@@ -1,4 +1,5 @@
 import AppKit
+import Darwin.sys.sysctl
 import Foundation
 
 // MARK: - Diagnostic Event Log
@@ -119,6 +120,9 @@ struct DiagnosticReportBuilder {
         sections.append(makeHotkeys())
         sections.append(makeDragState())
         sections.append(makeCalibration())
+        sections.append(makeSpaceManagerInternals())
+        sections.append(makeSpaceAPIState())
+        sections.append(makeUpdaterState())
         sections.append(makeEventLog())
         sections.append(makeWindowList())
         sections.append(makeUserDefaultsDump())
@@ -157,6 +161,34 @@ struct DiagnosticReportBuilder {
             let isBuiltin = CGDisplayIsBuiltin(id) != 0
             s += "  Screen \(i): \"\(screen.localizedName)\" \(Int(bounds.width))×\(Int(bounds.height)) isBuiltin=\(isBuiltin ? 1 : 0)\n"
         }
+        // Hardware details
+        let processCount = ProcessInfo.processInfo.processorCount
+        let activeCount = ProcessInfo.processInfo.activeProcessorCount
+
+        var hwModel = "?"
+        var hwModelRaw: [CChar] = Array(repeating: 0, count: 256)
+        var size = MemoryLayout<[CChar]>.stride
+        if sysctlbyname("hw.model", &hwModelRaw, &size, nil, 0) == 0 {
+            hwModel = String(cString: hwModelRaw)
+        }
+
+        var cpuBrand = "?"
+        var cpuRaw: [CChar] = Array(repeating: 0, count: 256)
+        size = MemoryLayout<[CChar]>.stride
+        if sysctlbyname("machdep.cpu.brand_string", &cpuRaw, &size, nil, 0) == 0 {
+            cpuBrand = String(cString: cpuRaw)
+        }
+
+        #if arch(arm64)
+        let arch = "Apple Silicon (arm64)"
+        #else
+        let arch = "Intel (x86_64)"
+        #endif
+
+        s += "Hardware Model: \(hwModel)\n"
+        s += "CPU: \(cpuBrand)\n"
+        s += "Architecture: \(arch)\n"
+        s += "Processor Count: \(processCount) logical, \(activeCount) active\n"
         return s
     }
 
@@ -176,8 +208,20 @@ struct DiagnosticReportBuilder {
         s += "currentIsDesktop: \(sm.currentIsDesktop)\n"
         s += "currentNcCount: \(sm.currentNcCount)\n"
         s += "spaceNameDict.count: \(sm.spaceNameDict.count)\n"
-        s += "lockedSpaceIDs.count: \(sm.lockedSpaceIDs.count)\n"
-        s += "movedWindowsOriginalSpaces.count: \(sm.movedWindowsOriginalSpaces.count)\n"
+        s += "lockedSpaceIDs (\(sm.lockedSpaceIDs.count)): "
+        if sm.lockedSpaceIDs.isEmpty {
+            s += "(none)\n"
+        } else {
+            s += sm.lockedSpaceIDs.sorted().joined(separator: ", ") + "\n"
+        }
+        s += "movedWindowsOriginalSpaces (\(sm.movedWindowsOriginalSpaces.count)):\n"
+        if sm.movedWindowsOriginalSpaces.isEmpty {
+            s += "  (none)\n"
+        } else {
+            for (windowID, entry) in sm.movedWindowsOriginalSpaces {
+                s += "  windowID=\(windowID) originalSpace=\(entry.originalSpaceUUID) currentSpace=\(entry.currentSpaceUUID) pid=\(entry.pid)\n"
+            }
+        }
         s += "lastManualSwitchTime: \(sm.lastManualSwitchTime)\n"
         s += "currentSpaceByDisplay:\n"
         for (displayID, spaceID) in sm.currentSpaceByDisplay {
@@ -231,6 +275,7 @@ struct DiagnosticReportBuilder {
             return s
         }
         let shortcuts = [
+            ("Main", hk.mainShortcut),
             ("Switch Left", hk.switchLeftShortcut),
             ("Switch Right", hk.switchRightShortcut),
             ("Move Window Next", hk.moveWindowNextShortcut),
@@ -261,18 +306,63 @@ struct DiagnosticReportBuilder {
     private static func makeDragState() -> String {
         var s = "─── Drag State ───\n"
         s += "isDragging: \(SpaceHelper.isDragging)\n"
+        s += SpaceHelper.dragStateInfo
         return s
     }
 
     private static func makeCalibration() -> String {
         var s = "─── Calibration ───\n"
         s += "targetDuration: \(SpaceHelper.targetDuration)\n"
+        s += "Display Calibrations:\n"
+        s += SpaceHelper.displayCalibrationsInfo
+        s += "Phase Sample Counts:\n"
+        s += SpaceHelper.phaseSampleCountsInfo
+        return s
+    }
+
+    private static func makeSpaceManagerInternals() -> String {
+        guard let sm = AppDelegate.shared.spaceManager else {
+            return "─── SpaceManager Internals ───\nSpaceManager: nil\n"
+        }
+        var s = "─── SpaceManager Internals ───\n"
+        s += "lastWakeTime: \(sm.lastWakeTimeAgo)\n"
+        s += "spaceChangeRetry: \(sm.spaceChangeRetryInfo)\n"
+        s += "fullscreenExitRetrying: \(sm.fullscreenExitRetryingInfo)\n"
+        s += "connectedDisplayUUIDs: \(sm.connectedDisplayUUIDsInfo)\n"
+        s += "lastManualSwitchTargetUUID: \(sm.lastManualSwitchTargetUUIDInfo)\n"
+        s += "autoEditBundleID: \(sm.autoEditBundleID ?? "nil")\n"
+        return s
+    }
+
+    private static func makeSpaceAPIState() -> String {
+        var s = "─── SpaceAPI State ───\n"
+        s += "isAPIEnabled: \(SpaceManager.isAPIEnabled)\n"
+        if let api = AppDelegate.shared.spaceManager?.spaceAPI {
+            s += "hasActiveListeners: \(api.hasActiveListeners)\n"
+        } else {
+            s += "spaceAPI: nil\n"
+        }
+        return s
+    }
+
+    private static func makeUpdaterState() -> String {
+        var s = "─── Sparkle Updater ───\n"
+        let updater = UpdateManager.shared.updaterController.updater
+        s += "automaticallyChecksForUpdates: \(updater.automaticallyChecksForUpdates)\n"
+        s += "automaticallyDownloadsUpdates: \(updater.automaticallyDownloadsUpdates)\n"
         return s
     }
 
     private static func makeEventLog() -> String {
         let log = DiagnosticEventLog.shared
-        var s = "─── Event Log (Ring Buffer) ───\n"
+        var s = "─── Event Log ───\n"
+        s += "isCollecting: \(log.isCollecting)\n"
+        if let startTime = log.collectionStartTime {
+            let df = DateFormatter()
+            df.dateFormat = "yyyy-MM-dd HH:mm:ss"
+            s += "collectionStartTime: \(df.string(from: startTime))\n"
+        }
+        s += "\n─── Event Log (Ring Buffer) ───\n"
         s += log.formattedRing()
         s += "\n"
 
@@ -325,6 +415,10 @@ struct DiagnosticReportBuilder {
             "kActiveFontScale", "kPreviewFontScale", "kActivePaddingScale", "kPreviewPaddingScale",
             "kGlobalIsDocked", "kGlobalDockEdge", "kGlobalCenterX", "kGlobalCenterY",
             "HasInitializedDefaults", "hasSeenSplashScreen",
+            "LauncherCommandFrequency",
+            "com.michaelqiu.desktoprenamer.automaticallyRankCommands",
+            "com.michaelqiu.desktoprenamer.launcherManualCommandOrder",
+            "isStatusBarHidden",
         ]
         for key in keys {
             if let val = ud.object(forKey: key) {
