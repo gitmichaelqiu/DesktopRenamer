@@ -341,11 +341,12 @@ struct GeneralSettingsView: View {
 
                 case .saved:
                     VStack(spacing: 12) {
+                        Spacer()
                         Image(systemName: "checkmark.circle.fill")
-                            .font(.system(size: 40))
+                            .font(.system(size: 48))
                             .foregroundColor(.green)
                         Text("Thank you!")
-                            .font(.title2).fontWeight(.bold)
+                            .font(.title).fontWeight(.bold)
 
                         Text("Your diagnostic report has been saved.")
                             .font(.body)
@@ -360,23 +361,19 @@ struct GeneralSettingsView: View {
                                 .truncationMode(.middle)
                         }
 
-                        Text("To report the issue, please open a GitHub issue and attach the saved file.")
+                        Text("Open a GitHub issue and attach the saved file to report the problem.")
                             .font(.subheadline)
                             .foregroundColor(.secondary)
                             .multilineTextAlignment(.center)
                             .fixedSize(horizontal: false, vertical: true)
-
-                        Button {
-                            NSWorkspace.shared.open(URL(string: "https://github.com/gitmichaelqiu/DesktopRenamer/issues")!)
-                        } label: {
-                            Label("Report on GitHub", systemImage: "arrow.up.forward.app")
-                        }
-                        .buttonStyle(.borderedProminent)
+                        Spacer()
                     }
                     .padding(.vertical, 10)
+                    .frame(maxWidth: .infinity)
                 }
 
                 // Live log preview
+                if phase != .saved {
                 VStack(alignment: .leading, spacing: 4) {
                     Text("Event Log (\(DiagnosticEventLog.shared.sessionEvents.count) recorded, ring buffer: \(DiagnosticEventLog.shared.formattedRing().components(separatedBy: "\n").count) lines)")
                         .font(.caption)
@@ -409,12 +406,15 @@ struct GeneralSettingsView: View {
                             .stroke(Color.gray.opacity(0.2), lineWidth: 1)
                     )
                 }
+                }
 
                 Spacer()
-
-                // Bottom action buttons
                 HStack {
-                    Button("Cancel") { cleanup(); dismiss() }
+                    if phase == .saved {
+                        Button("Close") { cleanup(); dismiss() }
+                    } else {
+                        Button("Cancel") { cleanup(); dismiss() }
+                    }
 
                     Spacer()
 
@@ -445,7 +445,10 @@ struct GeneralSettingsView: View {
                         .buttonStyle(.borderedProminent)
 
                     case .saved:
-                        Button("Close") { cleanup(); dismiss() }
+                        Button("Report on GitHub") {
+                            NSWorkspace.shared.open(URL(string: "https://github.com/gitmichaelqiu/DesktopRenamer/issues")!)
+                        }
+                        .buttonStyle(.borderedProminent)
                     }
                 }
             }
