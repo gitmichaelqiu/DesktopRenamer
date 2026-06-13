@@ -203,6 +203,7 @@ class SpaceManager: ObservableObject {
     }
     
     private func handleSpaceChange(_ rawUUID: String, isDesktop: Bool, ncCount: Int, displayID: String, source: String) {
+        DiagnosticEventLog.shared.record(subsystem: "SpaceManager", level: "info", "handleSpaceChange(display=\(displayID), source=\(source))")
         if SpaceHelper.isDragging {
             SpaceHelper.signalSpaceSwitchComplete(arrivedAtSpaceID: rawUUID)
         }

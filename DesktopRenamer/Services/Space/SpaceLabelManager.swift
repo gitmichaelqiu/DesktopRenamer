@@ -187,13 +187,10 @@ class SpaceLabelManager: ObservableObject {
                 if self.hideWhenSwitching {
                     let isRecent = Date().timeIntervalSince1970 - SpaceHelper.lastProgrammaticSwitchTime < 1.0
                     if isRecent {
-                        // Programmatic switch: labels were already hidden by
-                        // handleSpaceSwitchRequested before the animation started.
-                        // Skip immediate restore — the settling delay handles it.
+                        DiagnosticEventLog.shared.record(subsystem: "Labels", level: "info", "programmatic switch — hiding labels")
                         self.hideAllPreviewLabels()
                     } else {
-                        // Native OS switch (app activation, Cmd+Tab): no
-                        // SpaceSwitchRequested was posted, show labels normally.
+                        DiagnosticEventLog.shared.record(subsystem: "Labels", level: "info", "native switch — restoring immediately")
                         self.updateAllWindowModes(forDisplay: self.spaceManager?.currentDisplayID)
                     }
                 } else {
@@ -204,6 +201,7 @@ class SpaceLabelManager: ObservableObject {
                     // Restore ALL displays — hideAllPreviewLabels hid everything,
                     // and when hideWhenSwitching is on the current display was not
                     // restored either. This unfiltered call is the sole restore point.
+                    DiagnosticEventLog.shared.record(subsystem: "Labels", level: "info", "delayed restore firing")
                     self?.updateAllWindowModes()
                 }
                 self.delayedRestoreWorkItem = workItem
@@ -362,6 +360,7 @@ class SpaceLabelManager: ObservableObject {
     }
 
     private func hideAllPreviewLabels() {
+        DiagnosticEventLog.shared.record(subsystem: "Labels", level: "info", "hideAllPreviewLabels (windows=\(createdWindows.count))")
         for window in createdWindows.values {
             window.hideImmediately()
         }

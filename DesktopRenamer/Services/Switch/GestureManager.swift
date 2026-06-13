@@ -496,6 +496,7 @@ class GestureManager: ObservableObject {
     }
 
     private func triggerSwitch(direction: SwitchDirection) {
+        DiagnosticEventLog.shared.record(subsystem: "GestureManager", level: "info", "triggerSwitch(\(direction))")
         lastSwitchTime = Date().timeIntervalSince1970
         guard let sm = spaceManager, self.isEnabled else { return }
 

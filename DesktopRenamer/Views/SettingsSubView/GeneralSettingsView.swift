@@ -78,6 +78,7 @@ struct GeneralSettingsView: View {
     @State private var isResetting: Bool = false
     @State private var isAPIEnabled: Bool = SpaceManager.isAPIEnabled
     @State private var isStatusBarHidden: Bool = StatusBarController.isStatusBarHidden
+    @State private var isCollecting: Bool = DiagnosticEventLog.shared.isCollecting
 
 
     var body: some View {
@@ -166,6 +167,23 @@ struct GeneralSettingsView: View {
                             .onChange(of: isAPIEnabled) { _ in
                                 spaceManager.spaceAPI?.toggleAPIState()
                             }
+                    }
+
+                    Divider()
+
+                    SettingsRow(
+                        "Collect Diagnostic Events",
+                        helperText: "When enabled, all system events are recorded in a session buffer. Reproduce the bug, then stop and generate the report to include the full event timeline."
+                    ) {
+                        Button(isCollecting ? "Stop" : "Start") {
+                            if isCollecting {
+                                DiagnosticEventLog.shared.stopCollection()
+                            } else {
+                                DiagnosticEventLog.shared.startCollection()
+                            }
+                            isCollecting = DiagnosticEventLog.shared.isCollecting
+                        }
+                        .foregroundStyle(isCollecting ? Color.red : Color.primary)
                     }
 
                     Divider()

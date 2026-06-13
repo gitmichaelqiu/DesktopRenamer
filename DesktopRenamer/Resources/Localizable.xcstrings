@@ -861,6 +861,12 @@
         }
       }
     },
+    "Generate" : {
+
+    },
+    "Generate Diagnostic Report" : {
+
+    },
     "Gesture type" : {
       "localizations" : {
         "zh-Hans" : {
@@ -2006,6 +2012,9 @@
           }
         }
       }
+    },
+    "Saves a comprehensive diagnostic log file to help debug issues." : {
+
     },
     "Search" : {
       "localizations" : {

@@ -183,9 +183,10 @@ class SpaceHelper {
 
     // Core space switching implementation.
     static func switchToSpace(_ spaceID: String, forceInstant: Bool = false) {
+        DiagnosticEventLog.shared.record(subsystem: "SpaceHelper", level: "info", "switchToSpace(\(spaceID), forceInstant=\(forceInstant))")
         lastProgrammaticSwitchTime = Date().timeIntervalSince1970
         lastProgrammaticTargetSpaceID = spaceID
-        
+
         if !forceInstant {
             guard !isSwitching else { return }
             isSwitching = true
@@ -355,9 +356,8 @@ class SpaceHelper {
             }
         }
 
-        // Force window activation. orderFrontRegardless is critical —
-        // without it the OS doesn't recognise the space switch intent
-        // and the move silently fails.
+        // Force window activation.
+        DiagnosticEventLog.shared.record(subsystem: "SpaceHelper", level: "info", "switchByActivatingOwnWindow space=\(spaceID)")
         window.orderFrontRegardless()
         window.canBecomeKeyOverride = true
         window.makeKey()
@@ -390,6 +390,7 @@ class SpaceHelper {
     }
     
     static func performSpaceSwitchGesture(steps: Int, targetDisplayID: String, forceInstant: Bool = false) {
+        DiagnosticEventLog.shared.record(subsystem: "SpaceHelper", level: "info", "gesture steps=\(steps) display=\(targetDisplayID)")
         if steps == 0 { return }
 
         let directionRight = steps > 0
@@ -452,6 +453,7 @@ class SpaceHelper {
     // MARK: - Window Moving Logic
     
     static func dragActiveWindow(to spaceID: String, forceInstant: Bool = false) {
+        DiagnosticEventLog.shared.record(subsystem: "SpaceHelper", level: "info", "dragActiveWindow → \(spaceID)")
         targetSpaceID = spaceID
         // Cancel any pending restoration from a previous "chained" move
         restorationTask?.cancel()
@@ -565,6 +567,7 @@ class SpaceHelper {
     
     /// Fast-forwards the restoration process because we detected a successful space change.
     static func signalSpaceSwitchComplete(arrivedAtSpaceID: String) {
+        DiagnosticEventLog.shared.record(subsystem: "SpaceHelper", level: "info", "signalSpaceSwitchComplete(\(arrivedAtSpaceID))")
         guard originalMousePoint != nil else { return }
         
         let arrivedUUID = arrivedAtSpaceID.uppercased()
@@ -660,6 +663,7 @@ class SpaceHelper {
         }
         
         if !isStillVisible {
+            DiagnosticEventLog.shared.record(subsystem: "SpaceHelper", level: "error", "Window move FAILED for \(appName) (ID: \(windowID))")
             print("SpaceHelper: Window move failed for \(appName) (ID: \(windowID), BundleID: \(bundleID))")
             
             // Trigger failure HUD notification
@@ -1560,6 +1564,7 @@ class SpaceHelper {
     }
 
     static func detectSpaceChange() {
+        DiagnosticEventLog.shared.record(subsystem: "SpaceHelper", level: "info", "detectSpaceChange")
         // Record switch completion time for self-calibrating velocity.
         endGestureTiming()
 
