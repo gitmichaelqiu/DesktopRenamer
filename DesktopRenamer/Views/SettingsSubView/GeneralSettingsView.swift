@@ -273,11 +273,13 @@ struct GeneralSettingsView: View {
         @State private var phase: Phase = .idle
         @State private var refreshCounter = 0
         @State private var timer: Timer? = nil
+        @State private var savedURL: URL? = nil
 
         enum Phase {
             case idle       // Show "Start" button
             case recording  // Show "Stop" button + hint
             case done       // Show event count + "Save Report"
+            case saved      // Show thank-you + link to GitHub Issues
         }
 
         var body: some View {
@@ -334,6 +336,42 @@ struct GeneralSettingsView: View {
                         Text("Click Save Report to generate the full diagnostic log.")
                             .font(.body)
                             .foregroundColor(.secondary)
+                    }
+                    .padding(.vertical, 10)
+
+                case .saved:
+                    VStack(spacing: 12) {
+                        Image(systemName: "checkmark.circle.fill")
+                            .font(.system(size: 40))
+                            .foregroundColor(.green)
+                        Text("Thank you!")
+                            .font(.title2).fontWeight(.bold)
+
+                        Text("Your diagnostic report has been saved.")
+                            .font(.body)
+                            .foregroundColor(.secondary)
+
+                        if let url = savedURL {
+                            Text(url.path)
+                                .font(.system(.caption, design: .monospaced))
+                                .foregroundColor(.secondary)
+                                .textSelection(.enabled)
+                                .lineLimit(2)
+                                .truncationMode(.middle)
+                        }
+
+                        Text("To report the issue, please open a GitHub issue and attach the saved file.")
+                            .font(.subheadline)
+                            .foregroundColor(.secondary)
+                            .multilineTextAlignment(.center)
+                            .fixedSize(horizontal: false, vertical: true)
+
+                        Button {
+                            NSWorkspace.shared.open(URL(string: "https://github.com/gitmichaelqiu/DesktopRenamer/issues")!)
+                        } label: {
+                            Label("Report on GitHub", systemImage: "arrow.up.forward.app")
+                        }
+                        .buttonStyle(.borderedProminent)
                     }
                     .padding(.vertical, 10)
                 }
@@ -405,6 +443,9 @@ struct GeneralSettingsView: View {
                             saveReport()
                         }
                         .buttonStyle(.borderedProminent)
+
+                    case .saved:
+                        Button("Close") { cleanup(); dismiss() }
                     }
                 }
             }
@@ -444,9 +485,14 @@ struct GeneralSettingsView: View {
             panel.allowedContentTypes = [.log, .plainText]
             guard let window = NSApp.suitableSheetWindow else { return }
             panel.beginSheetModal(for: window) { result in
-                if result == .OK, let url = panel.url { try? data.write(to: url) }
-                self.cleanup()
-                self.dismiss()
+                if result == .OK, let url = panel.url {
+                    try? data.write(to: url)
+                    self.savedURL = url
+                    self.phase = .saved
+                } else {
+                    self.cleanup()
+                    self.dismiss()
+                }
             }
         }
     }
