@@ -83,9 +83,6 @@
     "%lld" : {
       "shouldTranslate" : false
     },
-    "%lld events" : {
-
-    },
     "%lld items" : {
       "localizations" : {
         "zh-Hans" : {
@@ -524,9 +521,6 @@
         }
       }
     },
-    "Collect Diagnostic Events" : {
-
-    },
     "Confirm & Execute Batch Move (%lld windows)" : {
       "localizations" : {
         "en" : {
@@ -660,6 +654,9 @@
           }
         }
       }
+    },
+    "Diagnostic Report" : {
+
     },
     "Disabled" : {
       "localizations" : {
@@ -866,12 +863,6 @@
           }
         }
       }
-    },
-    "Generate" : {
-
-    },
-    "Generate Diagnostic Report" : {
-
     },
     "Gesture type" : {
       "localizations" : {
@@ -1589,6 +1580,9 @@
         }
       }
     },
+    "Open" : {
+
+    },
     "Open launcher" : {
       "localizations" : {
         "zh-Hans" : {
@@ -1728,9 +1722,6 @@
           }
         }
       }
-    },
-    "recording…" : {
-
     },
     "Reload space labels" : {
       "localizations" : {
@@ -2022,7 +2013,7 @@
         }
       }
     },
-    "Saves a comprehensive diagnostic log file to help debug issues." : {
+    "Save Report" : {
 
     },
     "Search" : {
@@ -2121,7 +2112,7 @@
         }
       }
     },
-    "Session has %lld events. Saves snapshot + event timeline." : {
+    "Session recorded %lld events. Save the report to include the full timeline." : {
 
     },
     "Set to 0 for instant switching (bypasses the macOS sliding animation). Otherwise the velocity is calibrated per display (cached across restarts) so the actual switch time converges to this value." : {
@@ -2767,6 +2758,12 @@
       }
     },
     "Start" : {
+
+    },
+    "Start collection, reproduce the bug, then stop and save the full diagnostic report." : {
+
+    },
+    "Start collection, reproduce the bug, then stop and save the report." : {
 
     },
     "Stop" : {

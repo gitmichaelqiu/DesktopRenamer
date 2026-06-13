@@ -270,75 +270,179 @@ struct GeneralSettingsView: View {
     /// Diagnostic collection sheet — start/stop recording and save the report.
     struct DiagnosticSheetView: View {
         @Environment(\.dismiss) var dismiss
-        @State private var isCollecting = DiagnosticEventLog.shared.isCollecting
-        @State private var refresh = UUID()
+        @State private var phase: Phase = .idle
+        @State private var refreshCounter = 0
+        @State private var timer: Timer? = nil
+
+        enum Phase {
+            case idle       // Show "Start" button
+            case recording  // Show "Stop" button + hint
+            case done       // Show event count + "Save Report"
+        }
 
         var body: some View {
-            VStack(spacing: 15) {
+            VStack(spacing: 16) {
+                // Header
                 HStack {
                     Text("Diagnostic Report")
                         .font(.title2).fontWeight(.bold)
                     Spacer()
-
-                    Button(isCollecting ? "Stop" : "Start") {
-                        if isCollecting {
-                            DiagnosticEventLog.shared.stopCollection()
-                        } else {
-                            DiagnosticEventLog.shared.startCollection()
-                        }
-                        isCollecting = DiagnosticEventLog.shared.isCollecting
-                        refresh = UUID()
-                    }
-                    .foregroundStyle(isCollecting ? Color.red : Color.primary)
                 }
 
-                let count = DiagnosticEventLog.shared.sessionEvents.count
-                Text(count > 0
-                    ? "Session recorded \(count) events. Save the report to include the full timeline."
-                    : "Start collection, reproduce the bug, then stop and save the report."
-                )
-                .font(.body)
-                .foregroundColor(.secondary)
+                // Phase-specific content
+                switch phase {
+                case .idle:
+                    VStack(spacing: 8) {
+                        Image(systemName: "antenna.radiowaves.left.and.right")
+                            .font(.system(size: 32))
+                            .foregroundColor(.secondary)
+                        Text("Click Start to begin recording system events.")
+                            .font(.body)
+                            .foregroundColor(.secondary)
+                        Text("Then reproduce the bug you encountered.")
+                            .font(.body)
+                            .foregroundColor(.secondary)
+                    }
+                    .padding(.vertical, 20)
 
-                ScrollView {
-                    ScrollViewReader { proxy in
-                        VStack(alignment: .leading, spacing: 2) {
-                            let ring = DiagnosticEventLog.shared.formattedRing()
-                            let ringLines = ring.components(separatedBy: "\n")
-                            ForEach(Array(ringLines.enumerated()), id: \.offset) { i, line in
-                                Text(line)
-                                    .font(.system(.footnote, design: .monospaced))
-                                    .foregroundColor(Color(NSColor.textColor))
-                                    .id(i)
+                case .recording:
+                    VStack(spacing: 8) {
+                        Image(systemName: "record.circle")
+                            .font(.system(size: 32))
+                            .foregroundColor(.red)
+                        Text("Recording system events...")
+                            .font(.headline)
+                            .foregroundColor(.red)
+                        Text("Now go ahead and reproduce the bug:")
+                            .font(.body)
+                            .foregroundColor(.secondary)
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text("• Switch spaces using gestures, keyboard, or mouse")
+                            Text("• Move windows between spaces")
+                            Text("• Perform any other actions that trigger the bug")
+                            Text("• Pay attention to label behavior during switches")
+                        }
+                        .font(.callout)
+                        .foregroundColor(.secondary)
+                        .padding(.leading, 8)
+                    }
+                    .padding(.vertical, 10)
+
+                case .done:
+                    VStack(spacing: 8) {
+                        let count = DiagnosticEventLog.shared.sessionEvents.count
+                        Image(systemName: "checkmark.circle")
+                            .font(.system(size: 32))
+                            .foregroundColor(.green)
+                        Text("Recording complete!")
+                            .font(.headline)
+                        Text("\(count) events captured.")
+                            .font(.body)
+                            .foregroundColor(.secondary)
+                        Text("Click Save Report to generate the full diagnostic log.")
+                            .font(.body)
+                            .foregroundColor(.secondary)
+                    }
+                    .padding(.vertical, 10)
+                }
+
+                // Live log preview
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Event Log (\(DiagnosticEventLog.shared.sessionEvents.count) recorded, ring buffer: \(DiagnosticEventLog.shared.formattedRing().components(separatedBy: "\n").count) lines)")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+
+                    let ringLogLines = DiagnosticEventLog.shared.formattedRing().components(separatedBy: "\n")
+                    ScrollView {
+                        ScrollViewReader { proxy in
+                            VStack(alignment: .leading, spacing: 2) {
+                                ForEach(Array(ringLogLines.enumerated()), id: \.offset) { i, line in
+                                    Text(line)
+                                        .font(.system(.footnote, design: .monospaced))
+                                        .foregroundColor(Color(NSColor.textColor))
+                                        .id(i)
+                                }
+                            }
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .onChange(of: refreshCounter) { _ in
+                                if !ringLogLines.isEmpty {
+                                    proxy.scrollTo(ringLogLines.count - 1, anchor: .bottom)
+                                }
                             }
                         }
-                        .frame(maxWidth: .infinity, alignment: .leading)
                     }
+                    .frame(height: 200)
+                    .background(Color(NSColor.textBackgroundColor))
+                    .cornerRadius(8)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 6)
+                            .stroke(Color.gray.opacity(0.2), lineWidth: 1)
+                    )
                 }
-                .frame(height: 300)
-                .background(Color(NSColor.textBackgroundColor))
-                .cornerRadius(8)
-                .overlay(
-                    RoundedRectangle(cornerRadius: 6)
-                        .stroke(Color.gray.opacity(0.2), lineWidth: 1)
-                )
 
+                Spacer()
+
+                // Bottom action buttons
                 HStack {
-                    Button("Cancel") { dismiss() }
+                    Button("Cancel") { cleanup(); dismiss() }
+
                     Spacer()
-                    Button("Save Report") {
-                        save()
-                        dismiss()
+
+                    switch phase {
+                    case .idle:
+                        Button("Start Recording") {
+                            DiagnosticEventLog.shared.startCollection()
+                            phase = .recording
+                            startLiveRefresh()
+                        }
+                        .buttonStyle(.borderedProminent)
+
+                    case .recording:
+                        Button("Stop Recording") {
+                            DiagnosticEventLog.shared.stopCollection()
+                            stopLiveRefresh()
+                            refreshCounter += 1
+                            phase = .done
+                        }
+                        .foregroundStyle(Color.red)
+                        .buttonStyle(.borderedProminent)
+                        .tint(Color.red)
+
+                    case .done:
+                        Button("Save Report") {
+                            saveReport()
+                            cleanup()
+                            dismiss()
+                        }
+                        .buttonStyle(.borderedProminent)
                     }
-                    .keyboardShortcut(.return)
-                    .buttonStyle(.borderedProminent)
                 }
             }
             .padding()
-            .frame(minWidth: 600, minHeight: 420)
+            .frame(minWidth: 620, minHeight: 480)
+            .onDisappear { cleanup() }
         }
 
-        private func save() {
+        private func startLiveRefresh() {
+            stopLiveRefresh()
+            timer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { _ in
+                refreshCounter += 1
+            }
+        }
+
+        private func stopLiveRefresh() {
+            timer?.invalidate()
+            timer = nil
+        }
+
+        private func cleanup() {
+            stopLiveRefresh()
+            if DiagnosticEventLog.shared.isCollecting {
+                DiagnosticEventLog.shared.stopCollection()
+            }
+        }
+
+        private func saveReport() {
             let report = DiagnosticReportBuilder.generate()
             guard let data = report.data(using: .utf8) else { return }
             let panel = NSSavePanel()
