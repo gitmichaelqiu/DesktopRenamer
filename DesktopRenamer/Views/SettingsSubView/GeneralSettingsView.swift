@@ -78,7 +78,7 @@ struct GeneralSettingsView: View {
     @State private var isResetting: Bool = false
     @State private var isAPIEnabled: Bool = SpaceManager.isAPIEnabled
     @State private var isStatusBarHidden: Bool = StatusBarController.isStatusBarHidden
-    @State private var isCollecting: Bool = DiagnosticEventLog.shared.isCollecting
+    @State private var showDiagnosticSheet: Bool = false
 
 
     var body: some View {
@@ -172,44 +172,11 @@ struct GeneralSettingsView: View {
                     Divider()
 
                     SettingsRow(
-                        "Collect Diagnostic Events"
+                        "Diagnostic Report",
+                        helperText: "Start collection, reproduce the bug, then stop and save the full diagnostic report."
                     ) {
-                        HStack(spacing: 8) {
-                            Button(isCollecting ? "Stop" : "Start") {
-                                if isCollecting {
-                                    DiagnosticEventLog.shared.stopCollection()
-                                } else {
-                                    DiagnosticEventLog.shared.startCollection()
-                                }
-                                isCollecting = DiagnosticEventLog.shared.isCollecting
-                            }
-                            .foregroundStyle(isCollecting ? Color.red : Color.primary)
-
-                            let count = DiagnosticEventLog.shared.sessionEvents.count
-                            if count > 0 {
-                                Text("\(count) events")
-                                    .font(.caption)
-                                    .foregroundColor(.secondary)
-                                    .monospacedDigit()
-                            } else if isCollecting {
-                                Text("recording…")
-                                    .font(.caption)
-                                    .foregroundColor(.red)
-                                    .monospacedDigit()
-                            }
-                        }
-                    }
-
-                    Divider()
-
-                    SettingsRow(
-                        "Generate Diagnostic Report",
-                        helperText: DiagnosticEventLog.shared.sessionEvents.isEmpty
-                            ? "Saves a comprehensive diagnostic log file to help debug issues."
-                            : "Session has \(DiagnosticEventLog.shared.sessionEvents.count) events. Saves snapshot + event timeline."
-                    ) {
-                        Button("Generate") {
-                            saveDiagnosticReport()
+                        Button("Open") {
+                            showDiagnosticSheet = true
                         }
                     }
 
@@ -236,6 +203,9 @@ struct GeneralSettingsView: View {
             .environment(\.settingsTab, .general)
         }
         .onAppear { launchAtLogin = getLaunchAtLoginState() }
+        .sheet(isPresented: $showDiagnosticSheet) {
+            DiagnosticSheetView()
+        }
     }
 
     private func getLaunchAtLoginState() -> Bool {
@@ -296,22 +266,91 @@ struct GeneralSettingsView: View {
         }
     }
 
-    private func saveDiagnosticReport() {
-        let report = DiagnosticReportBuilder.generate()
-        guard let data = report.data(using: .utf8) else { return }
 
-        let panel = NSSavePanel()
-        panel.canCreateDirectories = true
-        panel.showsTagField = false
-        let formatter = DateFormatter()
-        formatter.dateFormat = "yyyyMMdd_HHmmss"
-        panel.nameFieldStringValue = "DesktopRenamer_Diagnostic_\(formatter.string(from: Date())).log"
-        panel.allowedContentTypes = [.log, .plainText]
+    /// Diagnostic collection sheet — start/stop recording and save the report.
+    struct DiagnosticSheetView: View {
+        @Environment(\.dismiss) var dismiss
+        @State private var isCollecting = DiagnosticEventLog.shared.isCollecting
+        @State private var refresh = UUID()
 
-        guard let window = NSApp.suitableSheetWindow else { return }
-        panel.beginSheetModal(for: window) { result in
-            if result == .OK, let url = panel.url {
-                try? data.write(to: url)
+        var body: some View {
+            VStack(spacing: 15) {
+                HStack {
+                    Text("Diagnostic Report")
+                        .font(.title2).fontWeight(.bold)
+                    Spacer()
+
+                    Button(isCollecting ? "Stop" : "Start") {
+                        if isCollecting {
+                            DiagnosticEventLog.shared.stopCollection()
+                        } else {
+                            DiagnosticEventLog.shared.startCollection()
+                        }
+                        isCollecting = DiagnosticEventLog.shared.isCollecting
+                        refresh = UUID()
+                    }
+                    .foregroundStyle(isCollecting ? Color.red : Color.primary)
+                }
+
+                let count = DiagnosticEventLog.shared.sessionEvents.count
+                Text(count > 0
+                    ? "Session recorded \(count) events. Save the report to include the full timeline."
+                    : "Start collection, reproduce the bug, then stop and save the report."
+                )
+                .font(.body)
+                .foregroundColor(.secondary)
+
+                ScrollView {
+                    ScrollViewReader { proxy in
+                        VStack(alignment: .leading, spacing: 2) {
+                            let ring = DiagnosticEventLog.shared.formattedRing()
+                            let ringLines = ring.components(separatedBy: "\n")
+                            ForEach(Array(ringLines.enumerated()), id: \.offset) { i, line in
+                                Text(line)
+                                    .font(.system(.footnote, design: .monospaced))
+                                    .foregroundColor(Color(NSColor.textColor))
+                                    .id(i)
+                            }
+                        }
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                    }
+                }
+                .frame(height: 300)
+                .background(Color(NSColor.textBackgroundColor))
+                .cornerRadius(8)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 6)
+                        .stroke(Color.gray.opacity(0.2), lineWidth: 1)
+                )
+
+                HStack {
+                    Button("Cancel") { dismiss() }
+                    Spacer()
+                    Button("Save Report") {
+                        save()
+                        dismiss()
+                    }
+                    .keyboardShortcut(.return)
+                    .buttonStyle(.borderedProminent)
+                }
+            }
+            .padding()
+            .frame(minWidth: 600, minHeight: 420)
+        }
+
+        private func save() {
+            let report = DiagnosticReportBuilder.generate()
+            guard let data = report.data(using: .utf8) else { return }
+            let panel = NSSavePanel()
+            panel.canCreateDirectories = true
+            panel.showsTagField = false
+            let fmt = DateFormatter()
+            fmt.dateFormat = "yyyyMMdd_HHmmss"
+            panel.nameFieldStringValue = "DesktopRenamer_Diagnostic_\(fmt.string(from: Date())).log"
+            panel.allowedContentTypes = [.log, .plainText]
+            guard let window = NSApp.suitableSheetWindow else { return }
+            panel.beginSheetModal(for: window) { result in
+                if result == .OK, let url = panel.url { try? data.write(to: url) }
             }
         }
     }

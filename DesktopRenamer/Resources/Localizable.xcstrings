@@ -83,6 +83,9 @@
     "%lld" : {
       "shouldTranslate" : false
     },
+    "%lld events" : {
+
+    },
     "%lld items" : {
       "localizations" : {
         "zh-Hans" : {
@@ -1726,6 +1729,9 @@
         }
       }
     },
+    "recording…" : {
+
+    },
     "Reload space labels" : {
       "localizations" : {
         "zh-Hans" : {
@@ -2114,6 +2120,9 @@
           }
         }
       }
+    },
+    "Session has %lld events. Saves snapshot + event timeline." : {
+
     },
     "Set to 0 for instant switching (bypasses the macOS sliding animation). Otherwise the velocity is calibrated per display (cached across restarts) so the actual switch time converges to this value." : {
       "localizations" : {
@@ -3068,9 +3077,6 @@
           }
         }
       }
-    },
-    "When enabled, all system events are recorded in a session buffer. Reproduce the bug, then stop and generate the report to include the full event timeline." : {
-
     },
     "When set to 3 fingers, you can still use 4 fingers to trigger native swipe." : {
       "localizations" : {
