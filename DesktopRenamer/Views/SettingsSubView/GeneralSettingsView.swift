@@ -295,6 +295,7 @@ struct GeneralSettingsView: View {
                 switch phase {
                 case .idle:
                     VStack(spacing: 8) {
+                        Spacer()
                         Image(systemName: "antenna.radiowaves.left.and.right")
                             .font(.system(size: 32))
                             .foregroundColor(.secondary)
@@ -304,6 +305,7 @@ struct GeneralSettingsView: View {
                         Text("Then reproduce the bug you encountered.")
                             .font(.body)
                             .foregroundColor(.secondary)
+                        Spacer()
                     }
                     .padding(.vertical, 20)
 
@@ -407,8 +409,10 @@ struct GeneralSettingsView: View {
                     )
                 }
                 }
+                if phase == .recording || phase == .done {
+                    Spacer()
+                }
 
-                Spacer()
                 HStack {
                     if phase == .saved {
                         Button("Close") { cleanup(); dismiss() }
