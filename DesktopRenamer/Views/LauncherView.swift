@@ -2104,7 +2104,7 @@ extension LauncherView {
                     if let chars = event.charactersIgnoringModifiers?.lowercased(), chars.count == 1 {
                         let char = chars.first!
                         
-                        if char == "m" {
+                        if char == "m" && !hasShift {
                             // cmd + m: Move to Desktop... (show space selector)
                             viewModel.batchMoveLastSelectedIndex = viewModel.selectedRowIndex
                             viewModel.stagingWindow = window
@@ -2117,8 +2117,8 @@ extension LauncherView {
                                 // cmd + shift + w: Close Window
                                 viewModel.executeActionImmediately(window: window, actionType: .close)
                                 return true
-                            case "n":
-                                // cmd + shift + n: Minimize Window
+                            case "m":
+                                // cmd + shift + m: Minimize Window
                                 viewModel.executeActionImmediately(window: window, actionType: .minimize)
                                 return true
                             case "r":
