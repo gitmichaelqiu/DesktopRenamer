@@ -254,9 +254,9 @@ struct ListWindowsSection: Identifiable {
     
     let allCommands: [LauncherCommand] = [
         LauncherCommand(type: .switchToDesktop, title: NSLocalizedString("Switch Desktop", comment: ""), subtitle: NSLocalizedString("Select a desktop to switch to", comment: ""), iconName: "desktopcomputer", hasSubpage: true),
-        LauncherCommand(type: .moveWindow, title: NSLocalizedString("Move Window to Desktop", comment: ""), subtitle: NSLocalizedString("Move the active window to a selected space", comment: ""), iconName: "macwindow.and.cursorarrow", hasSubpage: true),
+        LauncherCommand(type: .moveWindow, title: NSLocalizedString("Move Window", comment: ""), subtitle: NSLocalizedString("Move the active window to a selected space", comment: ""), iconName: "macwindow.and.cursorarrow", hasSubpage: true),
         LauncherCommand(type: .listWindows, title: NSLocalizedString("List Windows", comment: ""), subtitle: NSLocalizedString("Search and manage open application windows", comment: ""), iconName: "macwindow", hasSubpage: true),
-        LauncherCommand(type: .batchMoveWindows, title: NSLocalizedString("Batch Move Windows", comment: ""), subtitle: NSLocalizedString("Select and move multiple windows to a space", comment: ""), iconName: "macwindow.on.rectangle", hasSubpage: true),
+        LauncherCommand(type: .batchMoveWindows, title: NSLocalizedString("Manage Windows", comment: ""), subtitle: NSLocalizedString("Stage and execute window operations across desktops", comment: ""), iconName: "macwindow.on.rectangle", hasSubpage: true),
         LauncherCommand(type: .renameCurrentSpace, title: NSLocalizedString("Rename Current Space", comment: ""), subtitle: NSLocalizedString("Rename the current space to a new label", comment: ""), iconName: "pencil", hasSubpage: true),
         LauncherCommand(type: .reloadLabels, title: NSLocalizedString("Reload Space Labels", comment: ""), subtitle: NSLocalizedString("Force refresh all space name labels on displays", comment: ""), iconName: "arrow.clockwise", hasSubpage: false),
         LauncherCommand(type: .toggleActiveLabel, title: NSLocalizedString("Toggle Active Space Label", comment: ""), subtitle: NSLocalizedString("Show or hide the active space label overlay", comment: ""), iconName: "rectangle.inset.filled.and.cursorarrow", hasSubpage: false),
