@@ -1227,7 +1227,7 @@ class SpaceHelper {
               w >= minSize, h >= minSize
         else { return false }
         // Reject invisible windows when the key is present.
-        if let alpha = window[kCGWindowAlpha as String] as? Double, alpha <= 0 { return false }
+        if let alpha = window[kCGWindowAlpha as String] as? Double, alpha < 0 { return false }
         // Reject windows with sharing state "none" (hidden helper windows like WeChat background).
         if let sharing = window[kCGWindowSharingState as String] as? Int, sharing == 0 { return false }
         return true
@@ -1253,28 +1253,36 @@ class SpaceHelper {
         // This excludes background agents like Ollama, menu bar-only apps, etc.
         var pidToAppPath: [Int32: String] = [:]
         var axWindowIDs = Set<Int>()
+        var minimizedAXWindowIDs = Set<Int>()
         for app in NSWorkspace.shared.runningApplications {
             if app.activationPolicy == .regular, let path = app.bundleURL?.path {
                 pidToAppPath[app.processIdentifier] = path
-                
+
                 // Get all valid window IDs directly from the app's Accessibility hierarchy.
                 // This definitively eliminates closed/ghost windows that CGWindowList retains.
                 let appElement = AXUIElementCreateApplication(app.processIdentifier)
-                
+
                 let extractWID = { (element: AXUIElement) in
                     var cgWID: CGWindowID = 0
                     if _AXUIElementGetWindow(element, &cgWID) == 0 {
-                        axWindowIDs.insert(Int(cgWID))
+                        let wid = Int(cgWID)
+                        axWindowIDs.insert(wid)
+                        // Check per-window AXMinimized attribute (boolean)
+                        var minimizedRef: CFTypeRef?
+                        if AXUIElementCopyAttributeValue(element, kAXMinimizedAttribute as CFString, &minimizedRef) == .success,
+                           let isMin = minimizedRef as? Bool, isMin {
+                            minimizedAXWindowIDs.insert(wid)
+                        }
                     }
                 }
-                
-                // 1. Check standard AXWindows attribute
+
+                // 1. Check standard AXWindows attribute (open windows)
                 var windowsRef: CFTypeRef?
                 if AXUIElementCopyAttributeValue(appElement, kAXWindowsAttribute as CFString, &windowsRef) == .success,
                    let axWindows = windowsRef as? [AXUIElement] {
                     axWindows.forEach(extractWID)
                 }
-                
+
                 // 2. Check AXChildren for non-standard apps (e.g., Preview)
                 if app.bundleIdentifier == "com.apple.Preview" {
                     var childrenRef: CFTypeRef?
@@ -1424,7 +1432,9 @@ class SpaceHelper {
 
                 let ownerName = window[kCGWindowOwnerName as String] as? String ?? ""
                 let title = window[kCGWindowName as String] as? String ?? ""
-                output += "  \(wid)|\(pid)|\(ownerName)|\(appPath)|\(title)\n"
+                let isMinimized = minimizedAXWindowIDs.contains(wid) ? "1" : "0"
+                let isHidden = (NSRunningApplication(processIdentifier: Int32(pid))?.isHidden ?? false) ? "1" : "0"
+                output += "  \(wid)|\(pid)|\(ownerName)|\(appPath)|\(title)|\(isMinimized)|\(isHidden)\n"
             }
         }
         return output
