@@ -2813,6 +2813,16 @@
         }
       }
     },
+    "Show on Desktop" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "在桌面显示"
+          }
+        }
+      }
+    },
     "Show or hide the active space label overlay" : {
       "localizations" : {
         "zh-Hans" : {
