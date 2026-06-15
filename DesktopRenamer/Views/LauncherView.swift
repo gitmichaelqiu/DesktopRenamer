@@ -817,12 +817,12 @@ struct WindowRowView: View {
 
             HStack(spacing: 4) {
                 if window.isHidden {
-                    WindowStateBadge(label: "Hidden", color: .purple)
+                    WindowStateBadge(label: String(localized: "Hidden"), color: .purple)
                 } else if window.isMinimized {
-                    WindowStateBadge(label: "Minimized", color: .orange)
+                    WindowStateBadge(label: String(localized: "Minimized"), color: .orange)
                 }
                 if window.space.isFullscreen {
-                    WindowStateBadge(label: "Full Screen", color: .blue)
+                    WindowStateBadge(label: String(localized: "Full Screen"), color: .blue)
                 }
 
                 if let shortcut = shortcutText {
@@ -934,12 +934,12 @@ struct WindowBatchRowView: View {
             HStack(spacing: 4) {
                 if !isStaged {
                     if window.isHidden {
-                        WindowStateBadge(label: "Hidden", color: .purple)
+                        WindowStateBadge(label: String(localized: "Hidden"), color: .purple)
                     } else if window.isMinimized {
-                        WindowStateBadge(label: "Minimized", color: .orange)
+                        WindowStateBadge(label: String(localized: "Minimized"), color: .orange)
                     }
                     if window.space.isFullscreen {
-                        WindowStateBadge(label: "Full Screen", color: .blue)
+                        WindowStateBadge(label: String(localized: "Full Screen"), color: .blue)
                     }
                 }
 
@@ -1830,12 +1830,12 @@ struct CommandKOverlayView: View {
                     // State Badges
                     HStack(spacing: 4) {
                         if window.isHidden {
-                            WindowStateBadge(label: "Hidden", color: .purple)
+                            WindowStateBadge(label: String(localized: "Hidden"), color: .purple)
                         } else if window.isMinimized {
-                            WindowStateBadge(label: "Minimized", color: .orange)
+                            WindowStateBadge(label: String(localized: "Minimized"), color: .orange)
                         }
                         if window.space.isFullscreen {
-                            WindowStateBadge(label: "Full Screen", color: .blue)
+                            WindowStateBadge(label: String(localized: "Full Screen"), color: .blue)
                         }
                     }
                 }
