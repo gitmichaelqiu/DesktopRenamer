@@ -330,7 +330,7 @@ struct ListAreaView: View {
                                     ForEach(0..<spaces.count, id: \.self) { i in
                                         let space = spaces[i]
                                         let isSelected = !viewModel.isBottomBarFocused && viewModel.selectedRowIndex == i
-                                        SpaceRowView(space: space, isSelected: isSelected, shortcutText: viewModel.showCommandNumbers && viewModel.commandKTargetWindow == nil && i < 9 ? "⌘\(i + 1)" : nil)
+                                        SpaceRowView(space: space, isSelected: isSelected, isCurrent: AppDelegate.shared.spaceManager?.currentSpaceUUID == space.id, shortcutText: viewModel.showCommandNumbers && viewModel.commandKTargetWindow == nil && i < 9 ? "⌘\(i + 1)" : nil)
                                             .contentShape(Rectangle())
                                             .onTapGesture {
                                                 viewModel.isKeyboardSelection = true
@@ -368,7 +368,7 @@ struct ListAreaView: View {
                                         ForEach(0..<spaces.count, id: \.self) { i in
                                             let space = spaces[i]
                                             let isSelected = !viewModel.isBottomBarFocused && viewModel.selectedRowIndex == i
-                                            SpaceRowView(space: space, isSelected: isSelected, shortcutText: viewModel.showCommandNumbers && viewModel.commandKTargetWindow == nil && i < 9 ? "⌘\(i + 1)" : nil)
+                                            SpaceRowView(space: space, isSelected: isSelected, isCurrent: AppDelegate.shared.spaceManager?.currentSpaceUUID == space.id, shortcutText: viewModel.showCommandNumbers && viewModel.commandKTargetWindow == nil && i < 9 ? "⌘\(i + 1)" : nil)
                                                 .contentShape(Rectangle())
                                                 .onTapGesture {
                                                     viewModel.isKeyboardSelection = true
@@ -673,6 +673,7 @@ struct CommandRowView: View {
 struct SpaceRowView: View {
     let space: SpaceGroup
     let isSelected: Bool
+    let isCurrent: Bool
     var shortcutText: String? = nil
     @Environment(\.colorScheme) var colorScheme
     @State private var isHovered = false
@@ -717,7 +718,11 @@ struct SpaceRowView: View {
             }
             
             Spacer()
-            
+
+            if isCurrent {
+                WindowStateBadge(label: String(localized: "Current"), color: .blue)
+            }
+
             if let shortcut = shortcutText {
                 KeycapView(text: LocalizedStringKey(shortcut), isSelected: isSelected)
             } else {
