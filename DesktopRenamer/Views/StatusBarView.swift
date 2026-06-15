@@ -324,6 +324,17 @@ class StatusBarController: NSObject {
         restoreItem.isEnabled = movedCount > 0
         menu.addItem(restoreItem)
 
+        let cleanItem = NSMenuItem(
+            title: NSLocalizedString("Clean Queues", comment: ""),
+            action: #selector(cleanQueues),
+            keyEquivalent: ""
+        )
+        cleanItem.target = self
+        cleanItem.image = NSImage(systemSymbolName: "trash", accessibilityDescription: nil)
+        cleanItem.isAlternate = true
+        cleanItem.keyEquivalentModifierMask = .option
+        menu.addItem(cleanItem)
+
         menu.addItem(NSMenuItem.separator())
     
         let showPreviewLabels = NSMenuItem(title: NSLocalizedString("Menu.ShowPreviewLabels", comment: "Toggle preview labels"), action: #selector(togglePreviewLabelsFromMenu), keyEquivalent: "p")
@@ -402,7 +413,12 @@ class StatusBarController: NSObject {
     @objc private func restoreAllMovedWindows() {
         spaceManager.restoreAllMovedWindows()
     }
-    
+
+    @objc private func cleanQueues() {
+        spaceManager.cleanMovedWindows()
+        rebuildMenu()
+    }
+
     @objc func renameCurrentSpace() {
         if spaceManager.getSpaceNum(spaceManager.currentSpaceUUID) == 0 { return }
         guard let button = StatusBarController.statusItem.button else { return }
