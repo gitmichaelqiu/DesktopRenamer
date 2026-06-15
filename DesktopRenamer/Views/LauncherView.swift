@@ -694,12 +694,12 @@ struct SpaceRowView: View {
                 Image(nsImage: appIcon)
                     .resizable()
                     .aspectRatio(contentMode: .fit)
-                    .frame(width: 28, height: 28)
+                    .frame(width: 32, height: 32)
             } else {
                 Image(systemName: "desktopcomputer")
                     .font(.system(size: 15, weight: .medium))
                     .foregroundColor(colors.textPrimary)
-                    .frame(width: 28, height: 28)
+                    .frame(width: 32, height: 32)
             }
             
             VStack(alignment: .leading, spacing: 2) {
