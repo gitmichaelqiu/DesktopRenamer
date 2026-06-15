@@ -245,23 +245,31 @@ class StatusBarController: NSObject {
 
             for space in currentDisplaySpaces {
                 let name = spaceManager.getSpaceName(space.id)
+                let isLocked = spaceManager.lockedSpaceIDs.contains(space.id)
+
                 let item = NSMenuItem(title: name, action: #selector(selectSpace(_:)), keyEquivalent: "")
                 item.target = self
                 item.representedObject = space.id
-                
+                if isLocked {
+                    item.image = NSImage(systemSymbolName: "lock.fill", accessibilityDescription: nil)
+                }
+
                 if space.id == spaceManager.currentSpaceUUID {
                     item.state = .on
                 } else {
                     item.state = .off
                 }
-                
+
                 menu.addItem(item)
-                
+
                 // Alternate item for window movement.
                 let moveName = "→ " + name
                 let altItem = NSMenuItem(title: moveName, action: #selector(moveWindowToSpace(_:)), keyEquivalent: "")
                 altItem.target = self
                 altItem.representedObject = space.id
+                if isLocked {
+                    altItem.image = NSImage(systemSymbolName: "lock.fill", accessibilityDescription: nil)
+                }
                 altItem.isAlternate = true
                 altItem.keyEquivalentModifierMask = .option
                 altItem.state = item.state
