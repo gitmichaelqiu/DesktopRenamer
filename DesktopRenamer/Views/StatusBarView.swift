@@ -269,15 +269,17 @@ class StatusBarController: NSObject {
             }
             menu.addItem(NSMenuItem.separator())
         }
-        
+
+        let isCurrentFullscreen = spaceManager.spaceNameDict.first(where: { $0.id == spaceManager.currentSpaceUUID })?.isFullscreen ?? false
+
         let rename = NSMenuItem(
             title: NSLocalizedString("Menu.RenameCurrentSpace", comment: ""),
             action: nil,
             keyEquivalent: "r"
         )
         rename.image = NSImage(systemSymbolName: "pencil.line", accessibilityDescription: nil)
-        
-        if spaceManager.getSpaceNum(spaceManager.currentSpaceUUID) == 0 {
+
+        if spaceManager.getSpaceNum(spaceManager.currentSpaceUUID) == 0 || isCurrentFullscreen {
             rename.isEnabled = false
         } else {
             rename.isEnabled = true
@@ -290,12 +292,13 @@ class StatusBarController: NSObject {
         let isLocked = spaceManager.lockedSpaceIDs.contains(spaceManager.currentSpaceUUID)
         let lockItem = NSMenuItem(
             title: NSLocalizedString("Lock Current Space", comment: ""),
-            action: #selector(toggleLockCurrentSpace),
+            action: isCurrentFullscreen ? nil : #selector(toggleLockCurrentSpace),
             keyEquivalent: "l"
         )
         lockItem.target = self
         lockItem.state = isLocked ? .on : .off
         lockItem.image = NSImage(systemSymbolName: isLocked ? "lock" : "lock.open", accessibilityDescription: nil)
+        lockItem.isEnabled = !isCurrentFullscreen
         menu.addItem(lockItem)
         
         let movedCount = spaceManager.movedWindowsOriginalSpaces.count
