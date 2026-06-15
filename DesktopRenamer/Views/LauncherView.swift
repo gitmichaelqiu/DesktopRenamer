@@ -694,26 +694,12 @@ struct SpaceRowView: View {
                 Image(nsImage: appIcon)
                     .resizable()
                     .aspectRatio(contentMode: .fit)
-                    .frame(width: 20, height: 20)
-                    .padding(4)
                     .frame(width: 28, height: 28)
-                    .background(colors.badgeBg)
-                    .cornerRadius(6)
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 6)
-                            .stroke(colors.badgeBorder, lineWidth: 1)
-                    )
             } else {
                 Image(systemName: "desktopcomputer")
-                    .font(.system(size: 12, weight: .medium))
+                    .font(.system(size: 15, weight: .medium))
                     .foregroundColor(colors.textPrimary)
                     .frame(width: 28, height: 28)
-                    .background(colors.badgeBg)
-                    .cornerRadius(6)
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 6)
-                            .stroke(colors.badgeBorder, lineWidth: 1)
-                    )
             }
             
             VStack(alignment: .leading, spacing: 2) {
