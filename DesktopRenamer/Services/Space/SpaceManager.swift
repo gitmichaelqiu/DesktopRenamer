@@ -1067,6 +1067,7 @@ class SpaceManager: ObservableObject {
     }
 
     private func pruneStaleMovedWindows() {
+        guard !SpaceHelper.isDragging else { return }
         var staleKeys: [Int] = []
         for (windowID, entry) in movedWindowsOriginalSpaces {
             guard let actualCgsSpaceID = SpaceHelper.getWindowSpaceID(id: windowID) else {
