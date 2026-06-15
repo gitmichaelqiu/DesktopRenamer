@@ -601,15 +601,9 @@ struct CommandRowView: View {
     var body: some View {
         HStack(spacing: 12) {
             Image(systemName: command.iconName)
-                .font(.system(size: 12, weight: .medium))
+                .font(.system(size: 17, weight: .medium))
                 .foregroundColor(colors.textPrimary)
-                .frame(width: 28, height: 28)
-                .background(colors.badgeBg)
-                .cornerRadius(6)
-                .overlay(
-                    RoundedRectangle(cornerRadius: 6)
-                        .stroke(colors.badgeBorder, lineWidth: 1)
-                )
+                .frame(width: 32, height: 32)
             
             VStack(alignment: .leading, spacing: 2) {
                 Text(command.title)
@@ -697,7 +691,7 @@ struct SpaceRowView: View {
                     .frame(width: 32, height: 32)
             } else {
                 Image(systemName: "desktopcomputer")
-                    .font(.system(size: 15, weight: .medium))
+                    .font(.system(size: 17, weight: .medium))
                     .foregroundColor(colors.textPrimary)
                     .frame(width: 32, height: 32)
             }
