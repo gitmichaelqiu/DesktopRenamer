@@ -300,7 +300,19 @@ class StatusBarController: NSObject {
         lockItem.image = NSImage(systemSymbolName: isLocked ? "lock" : "lock.open", accessibilityDescription: nil)
         lockItem.isEnabled = !isCurrentFullscreen
         menu.addItem(lockItem)
-        
+
+        let allLocked = spaceManager.spaceNameDict.allSatisfy { $0.isFullscreen || spaceManager.lockedSpaceIDs.contains($0.id) }
+        let lockAllItem = NSMenuItem(
+            title: allLocked ? NSLocalizedString("Unlock All", comment: "") : NSLocalizedString("Lock All", comment: ""),
+            action: #selector(toggleLockAllSpaces),
+            keyEquivalent: ""
+        )
+        lockAllItem.target = self
+        lockAllItem.image = NSImage(systemSymbolName: allLocked ? "lock.open" : "lock", accessibilityDescription: nil)
+        lockAllItem.isAlternate = true
+        lockAllItem.keyEquivalentModifierMask = .option
+        menu.addItem(lockAllItem)
+
         let movedCount = spaceManager.movedWindowsOriginalSpaces.count
         let restoreItem = NSMenuItem(
             title: String(format: NSLocalizedString("Restore Windows Moved by Lock (%d)", comment: ""), movedCount),
@@ -381,7 +393,12 @@ class StatusBarController: NSObject {
         spaceManager.toggleLockSpace(spaceManager.currentSpaceUUID)
         rebuildMenu()
     }
-    
+
+    @objc private func toggleLockAllSpaces() {
+        spaceManager.toggleLockAllSpaces()
+        rebuildMenu()
+    }
+
     @objc private func restoreAllMovedWindows() {
         spaceManager.restoreAllMovedWindows()
     }
