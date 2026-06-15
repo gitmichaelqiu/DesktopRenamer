@@ -153,6 +153,22 @@ class SpaceManager: ObservableObject {
         UserDefaults.standard.set(Array(lockedSpaceIDs), forKey: SpaceManager.lockedSpaceIDsKey)
         objectWillChange.send()
     }
+
+    func toggleLockAllSpaces() {
+        let allNonFullscreen = spaceNameDict.filter { !$0.isFullscreen }.map { $0.id }
+        let allLocked = allNonFullscreen.allSatisfy { lockedSpaceIDs.contains($0) }
+        if allLocked {
+            for id in allNonFullscreen { lockedSpaceIDs.remove(id) }
+        } else {
+            for id in allNonFullscreen { lockedSpaceIDs.insert(id) }
+        }
+        UserDefaults.standard.set(Array(lockedSpaceIDs), forKey: SpaceManager.lockedSpaceIDsKey)
+        objectWillChange.send()
+    }
+
+    func cleanMovedWindows() {
+        movedWindowsOriginalSpaces.removeAll()
+    }
     
     deinit {
         // Timer invalidation is not thread-safe; deinit can run on any thread.
