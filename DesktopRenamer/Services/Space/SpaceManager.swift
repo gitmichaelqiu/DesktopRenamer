@@ -405,6 +405,7 @@ class SpaceManager: ObservableObject {
                 }
                 
                 self.currentSpaceUUID = targetUUID
+                self.pruneStaleMovedWindows()
                 shouldUpdateWidget = true
             }
             
