@@ -293,7 +293,7 @@ class StatusBarController: NSObject {
         let isLocked = spaceManager.lockedSpaceIDs.contains(spaceManager.currentSpaceUUID)
 
         let lockItem = NSMenuItem(
-            title: NSLocalizedString("Lock Current Space", comment: ""),
+            title: isLocked ? NSLocalizedString("Unlock Current Space", comment: "") : NSLocalizedString("Lock Current Space", comment: ""),
             action: isCurrentFullscreen ? nil : #selector(toggleLockCurrentSpace),
             keyEquivalent: ""
         )
