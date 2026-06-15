@@ -245,14 +245,13 @@ class StatusBarController: NSObject {
 
             for space in currentDisplaySpaces {
                 let name = spaceManager.getSpaceName(space.id)
-                let isLocked = spaceManager.lockedSpaceIDs.contains(space.id)
+                let locked = spaceManager.lockedSpaceIDs.contains(space.id)
+                let label = locked ? "\(name) \u{1F512}" : name
+                let moveLabel = locked ? "\u{2192} \(name) \u{1F512}" : "\u{2192} \(name)"
 
-                let item = NSMenuItem(title: name, action: #selector(selectSpace(_:)), keyEquivalent: "")
+                let item = NSMenuItem(title: label, action: #selector(selectSpace(_:)), keyEquivalent: "")
                 item.target = self
                 item.representedObject = space.id
-                if isLocked {
-                    item.image = NSImage(systemSymbolName: "lock.fill", accessibilityDescription: nil)
-                }
 
                 if space.id == spaceManager.currentSpaceUUID {
                     item.state = .on
@@ -263,13 +262,9 @@ class StatusBarController: NSObject {
                 menu.addItem(item)
 
                 // Alternate item for window movement.
-                let moveName = "→ " + name
-                let altItem = NSMenuItem(title: moveName, action: #selector(moveWindowToSpace(_:)), keyEquivalent: "")
+                let altItem = NSMenuItem(title: moveLabel, action: #selector(moveWindowToSpace(_:)), keyEquivalent: "")
                 altItem.target = self
                 altItem.representedObject = space.id
-                if isLocked {
-                    altItem.image = NSImage(systemSymbolName: "lock.fill", accessibilityDescription: nil)
-                }
                 altItem.isAlternate = true
                 altItem.keyEquivalentModifierMask = .option
                 altItem.state = item.state
