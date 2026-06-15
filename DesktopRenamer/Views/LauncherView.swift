@@ -765,6 +765,22 @@ struct SpaceRowView: View {
     }
 }
 
+struct WindowStateBadge: View {
+    let label: String
+    let color: Color
+
+    var body: some View {
+        Text(label)
+            .font(.caption2)
+            .fontWeight(.medium)
+            .foregroundColor(color)
+            .padding(.horizontal, 5)
+            .padding(.vertical, 1)
+            .background(color.opacity(0.15))
+            .cornerRadius(4)
+    }
+}
+
 struct WindowRowView: View {
     let window: WindowEntry
     let isSelected: Bool
@@ -799,10 +815,21 @@ struct WindowRowView: View {
                     .foregroundColor(colors.textPrimary)
                     .lineLimit(1)
 
-                Text(verbatim: String(format: String(localized: "%@ · %@"), window.ownerName, window.space.name))
-                    .font(.subheadline)
-                    .foregroundColor(isSelected ? colors.textSecondary : colors.textTertiary)
-                    .lineLimit(1)
+                HStack(spacing: 4) {
+                    Text(verbatim: String(format: "%@ · %@", window.ownerName, window.space.name))
+                        .font(.subheadline)
+                        .foregroundColor(isSelected ? colors.textSecondary : colors.textTertiary)
+                        .lineLimit(1)
+
+                    if window.isHidden {
+                        WindowStateBadge(label: "Hidden", color: .purple)
+                    } else if window.isMinimized {
+                        WindowStateBadge(label: "Minimized", color: .orange)
+                    }
+                    if window.space.isFullscreen {
+                        WindowStateBadge(label: "Full Screen", color: .blue)
+                    }
+                }
             }
 
             Spacer()
@@ -912,32 +939,23 @@ struct WindowBatchRowView: View {
                     .foregroundColor(colors.textPrimary)
                     .lineLimit(1)
 
-                let stateLabel: String = {
-                    var isMin = false
-                    var isHid = false
-                    if let app = NSRunningApplication(processIdentifier: window.pid) {
-                        isHid = app.isHidden
-                    }
-                    if let axWindow = SpaceHelper.getAXWindow(id: window.id, pid: window.pid) {
-                        var minimizedRef: CFTypeRef?
-                        if AXUIElementCopyAttributeValue(axWindow, kAXMinimizedAttribute as CFString, &minimizedRef) == .success,
-                           let isMinimized = minimizedRef as? Bool {
-                            isMin = isMinimized
+                HStack(spacing: 4) {
+                    Text(verbatim: String(format: "%@ · %@", window.ownerName, window.space.name))
+                        .font(.subheadline)
+                        .foregroundColor(isSelected ? colors.textSecondary : colors.textTertiary)
+                        .lineLimit(1)
+
+                    if !isStaged {
+                        if window.isHidden {
+                            WindowStateBadge(label: "Hidden", color: .purple)
+                        } else if window.isMinimized {
+                            WindowStateBadge(label: "Minimized", color: .orange)
+                        }
+                        if window.space.isFullscreen {
+                            WindowStateBadge(label: "Full Screen", color: .blue)
                         }
                     }
-                    if isMin {
-                        return NSLocalizedString("Minimized", comment: "")
-                    } else if isHid {
-                        return NSLocalizedString("Hidden", comment: "")
-                    } else {
-                        return NSLocalizedString("Active", comment: "")
-                    }
-                }()
-
-                Text(verbatim: String(format: "%@ · %@ · %@", window.ownerName, window.space.name, stateLabel))
-                    .font(.subheadline)
-                    .foregroundColor(isSelected ? colors.textSecondary : colors.textTertiary)
-                    .lineLimit(1)
+                }
             }
 
             Spacer()
@@ -1839,31 +1857,15 @@ struct CommandKOverlayView: View {
                     Spacer()
                     
                     // State Badges
-                    let (minimized, hidden) = viewModel.isWindowMinimizedOrAppHidden(window)
-                    if minimized {
-                        Text(verbatim: String(localized: "Minimized"))
-                            .font(.system(.caption2, design: .default))
-                            .fontWeight(.bold)
-                            .foregroundColor(.orange)
-                            .padding(.horizontal, 6)
-                            .padding(.vertical, 2.5)
-                            .background(Color.orange.opacity(0.15), in: RoundedRectangle(cornerRadius: 4))
-                    } else if hidden {
-                        Text(verbatim: String(localized: "Hidden"))
-                            .font(.system(.caption2, design: .default))
-                            .fontWeight(.bold)
-                            .foregroundColor(.blue)
-                            .padding(.horizontal, 6)
-                            .padding(.vertical, 2.5)
-                            .background(Color.blue.opacity(0.15), in: RoundedRectangle(cornerRadius: 4))
-                    } else {
-                        Text(verbatim: String(localized: "Active"))
-                            .font(.system(.caption2, design: .default))
-                            .fontWeight(.bold)
-                            .foregroundColor(colors.greenText)
-                            .padding(.horizontal, 6)
-                            .padding(.vertical, 2.5)
-                            .background(colors.greenText.opacity(0.15), in: RoundedRectangle(cornerRadius: 4))
+                    HStack(spacing: 4) {
+                        if window.isHidden {
+                            WindowStateBadge(label: "Hidden", color: .purple)
+                        } else if window.isMinimized {
+                            WindowStateBadge(label: "Minimized", color: .orange)
+                        }
+                        if window.space.isFullscreen {
+                            WindowStateBadge(label: "Full Screen", color: .blue)
+                        }
                     }
                 }
                 .padding(.horizontal, 16)

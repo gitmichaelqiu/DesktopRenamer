@@ -41,19 +41,23 @@ struct WindowEntry: Identifiable, Equatable {
     let appPath: String
     let title: String
     let space: SpaceGroup
-    
+    let isMinimized: Bool
+    let isHidden: Bool
+
     // Caching transformed string for performance
     let pinyinTitle: String
     let pinyinOwnerName: String
-    
-    init(id: Int, pid: Int32, ownerName: String, appPath: String, title: String, space: SpaceGroup) {
+
+    init(id: Int, pid: Int32, ownerName: String, appPath: String, title: String, space: SpaceGroup, isMinimized: Bool = false, isHidden: Bool = false) {
         self.id = id
         self.pid = pid
         self.ownerName = ownerName
         self.appPath = appPath
         self.title = title
         self.space = space
-        
+        self.isMinimized = isMinimized
+        self.isHidden = isHidden
+
         let mutableTitle = NSMutableString(string: title)
         CFStringTransform(mutableTitle, nil, kCFStringTransformToLatin, false)
         CFStringTransform(mutableTitle, nil, kCFStringTransformStripDiacritics, false)
@@ -881,14 +885,29 @@ struct ListWindowsSection: Identifiable {
                     if let wid = Int(parts[0]), let pid = Int32(parts[1]) {
                         let ownerName = parts[2]
                         let appPath = parts[3]
-                        let title = parts[4...].joined(separator: "|")
+                        // New 7-field format: wid|pid|owner|appPath|title...|isMinimized|isHidden
+                        // Legacy 5-field format: wid|pid|owner|appPath|title
+                        let title: String
+                        let isMinimized: Bool
+                        let isHidden: Bool
+                        if parts.count >= 7 {
+                            title = parts[4..<(parts.count - 2)].joined(separator: "|")
+                            isMinimized = parts[parts.count - 2] == "1"
+                            isHidden = parts[parts.count - 1] == "1"
+                        } else {
+                            title = parts[4...].joined(separator: "|")
+                            isMinimized = false
+                            isHidden = false
+                        }
                         let entry = WindowEntry(
                             id: wid,
                             pid: pid,
                             ownerName: ownerName,
                             appPath: appPath,
                             title: title,
-                            space: space
+                            space: space,
+                            isMinimized: isMinimized,
+                            isHidden: isHidden
                         )
                         windows.append(entry)
                     }
