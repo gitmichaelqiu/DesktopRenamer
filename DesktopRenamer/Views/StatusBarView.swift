@@ -156,7 +156,7 @@ class StatusBarController: NSObject {
             }
             .store(in: &cancellables)
 
-        labelManager.$hideActiveLabel
+        labelManager.$showOnDesktop
             .receive(on: DispatchQueue.main)
             .sink { [weak self] _ in
                 self?.rebuildMenu()
@@ -376,17 +376,15 @@ class StatusBarController: NSObject {
         menu.addItem(showActiveLabels)
 
         if labelManager.showActiveLabels {
-            let hideLabel = NSMenuItem(
-                title: labelManager.hideActiveLabel
-                    ? NSLocalizedString("Show Active Label", comment: "")
-                    : NSLocalizedString("Hide Active Label", comment: ""),
-                action: #selector(toggleActiveLabelVisibility),
+            let showOnDesktop = NSMenuItem(
+                title: NSLocalizedString("Show on Desktop", comment: ""),
+                action: #selector(toggleShowOnDesktop),
                 keyEquivalent: ""
             )
-            hideLabel.target = self
-            hideLabel.indentationLevel = 1
-            hideLabel.image = NSImage(systemSymbolName: labelManager.hideActiveLabel ? "eye" : "eye.slash", accessibilityDescription: nil)
-            menu.addItem(hideLabel)
+            showOnDesktop.target = self
+            showOnDesktop.state = labelManager.showOnDesktop ? .on : .off
+            showOnDesktop.image = NSImage(systemSymbolName: "desktopcomputer", accessibilityDescription: nil)
+            menu.addItem(showOnDesktop)
         }
 
         let reloadLabels = NSMenuItem(title: NSLocalizedString("Reload Space Labels", comment: "Reload Space Label Windows to fix glitches"), action: #selector(reloadLabelsFromMenu), keyEquivalent: "")
@@ -479,8 +477,8 @@ class StatusBarController: NSObject {
         rebuildMenu()
     }
 
-    @objc private func toggleActiveLabelVisibility() {
-        labelManager.toggleActiveLabelVisibility()
+    @objc private func toggleShowOnDesktop() {
+        labelManager.toggleShowOnDesktop()
         rebuildMenu()
     }
 
