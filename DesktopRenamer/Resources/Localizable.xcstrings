@@ -43,17 +43,6 @@
       },
       "shouldTranslate" : false
     },
-    "%@ · %@" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "%1$@ · %2$@"
-          }
-        }
-      },
-      "shouldTranslate" : false
-    },
     "%@ · Fullscreen" : {
       "localizations" : {
         "zh-Hans" : {
@@ -84,7 +73,14 @@
       "shouldTranslate" : false
     },
     "%lld events captured." : {
-
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已捕获%lld个事件。"
+          }
+        }
+      }
     },
     "%lld items" : {
       "localizations" : {
@@ -105,18 +101,6 @@
           }
         }
       }
-    },
-    "• Move windows between spaces" : {
-
-    },
-    "• Pay attention to label behavior during switches" : {
-
-    },
-    "• Perform any other actions that trigger the bug" : {
-
-    },
-    "• Switch spaces using gestures, keyboard, or mouse" : {
-
     },
     "© %@ Michael Yicheng Qiu" : {
       "localizations" : {
@@ -222,16 +206,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "操作"
-          }
-        }
-      }
-    },
-    "Active" : {
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "活跃"
           }
         }
       }
@@ -517,10 +491,24 @@
       }
     },
     "Click Save Report to generate the full diagnostic log." : {
-
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "点击保存报告以生成完整诊断报告。"
+          }
+        }
+      }
     },
     "Click Start to begin recording system events." : {
-
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "点击开始以记录系统事件。"
+          }
+        }
+      }
     },
     "Click to switch, Option+Click to move active window." : {
       "localizations" : {
@@ -677,7 +665,14 @@
       }
     },
     "Diagnostic Report" : {
-
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "诊断报告"
+          }
+        }
+      }
     },
     "Disabled" : {
       "localizations" : {
@@ -775,6 +770,12 @@
           "stringUnit" : {
             "state" : "new",
             "value" : "Event Log (%1$lld recorded, ring buffer: %2$lld lines)"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "事件记录 (已记录%1$lld行, 缓存: %2$lld行)"
           }
         }
       }
@@ -881,6 +882,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "强制刷新显示器上的所有桌面名称标签"
+          }
+        }
+      }
+    },
+    "Full Screen" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "全屏"
           }
         }
       }
@@ -1218,6 +1229,16 @@
         }
       }
     },
+    "Manage Windows" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "管理窗口"
+          }
+        }
+      }
+    },
     "Menu.Quit" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -1379,16 +1400,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "移动窗口"
-          }
-        }
-      }
-    },
-    "Move Window to Desktop" : {
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "将窗口移至桌面"
           }
         }
       }
@@ -1611,11 +1622,25 @@
         }
       }
     },
-    "Now go ahead and reproduce the bug:" : {
-
-    },
     "Open" : {
-
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "打开"
+          }
+        }
+      }
+    },
+    "Open a GitHub issue and attach the saved file to report the problem." : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "打开GitHub并提交问题。"
+          }
+        }
+      }
     },
     "Open launcher" : {
       "localizations" : {
@@ -1758,10 +1783,24 @@
       }
     },
     "Recording complete!" : {
-
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "记录完成！"
+          }
+        }
+      }
     },
     "Recording system events..." : {
-
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "记录系统事件..."
+          }
+        }
+      }
     },
     "Reload space labels" : {
       "localizations" : {
@@ -1877,6 +1916,26 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "反馈"
+          }
+        }
+      }
+    },
+    "Report on GitHub" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "报告至GitHub"
+          }
+        }
+      }
+    },
+    "Reproduce the bug, then click Stop." : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "重现bug并点击提交"
           }
         }
       }
@@ -2054,7 +2113,14 @@
       }
     },
     "Save Report" : {
-
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "保存报告"
+          }
+        }
+      }
     },
     "Search" : {
       "localizations" : {
@@ -2138,16 +2204,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "选择正在运行的App定义特例。"
-          }
-        }
-      }
-    },
-    "Select and move multiple windows to a space" : {
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "选择多个窗口并将其移动到指定桌面"
           }
         }
       }
@@ -2774,6 +2830,16 @@
         }
       }
     },
+    "Stage and execute window operations across desktops" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "对所有桌面的窗口进行管理。"
+          }
+        }
+      }
+    },
     "Stage: %@" : {
       "localizations" : {
         "zh-Hans" : {
@@ -2795,10 +2861,24 @@
       }
     },
     "Start collection, reproduce the bug, then stop and save the full diagnostic report." : {
-
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "开始收集事件，重现bug，并保存完整的诊断报告。"
+          }
+        }
+      }
     },
     "Start Recording" : {
-
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "开始记录"
+          }
+        }
+      }
     },
     "Stop Preview" : {
       "localizations" : {
@@ -2811,7 +2891,14 @@
       }
     },
     "Stop Recording" : {
-
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "停止记录"
+          }
+        }
+      }
     },
     "Switch & Move" : {
       "localizations" : {
@@ -2945,6 +3032,16 @@
         }
       }
     },
+    "Thank you!" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "万分感谢！"
+          }
+        }
+      }
+    },
     "The hidden label that slides into the corner of the active desktop." : {
       "localizations" : {
         "en" : {
@@ -2973,7 +3070,14 @@
       }
     },
     "Then reproduce the bug you encountered." : {
-
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "重现遇到的问题。"
+          }
+        }
+      }
     },
     "Toggle Active Space Label" : {
       "localizations" : {
@@ -3142,6 +3246,16 @@
         }
       },
       "shouldTranslate" : false
+    },
+    "Your diagnostic report has been saved." : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "诊断报告已保存。"
+          }
+        }
+      }
     }
   },
   "version" : "1.1"
