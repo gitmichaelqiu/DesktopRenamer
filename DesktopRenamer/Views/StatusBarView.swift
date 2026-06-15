@@ -322,12 +322,12 @@ class StatusBarController: NSObject {
         let lockAllItem = NSMenuItem(
             title: allLocked ? NSLocalizedString("Unlock All", comment: "") : NSLocalizedString("Lock All", comment: ""),
             action: #selector(toggleLockAllSpaces),
-            keyEquivalent: ""
+            keyEquivalent: "l"
         )
         lockAllItem.target = self
         lockAllItem.image = NSImage(systemSymbolName: allLocked ? "lock.open" : "lock", accessibilityDescription: nil)
         lockAllItem.isAlternate = true
-        lockAllItem.keyEquivalentModifierMask = .option
+        lockAllItem.keyEquivalentModifierMask = [.command, .option]
         menu.addItem(lockAllItem)
 
         let movedCount = spaceManager.movedWindowsOriginalSpaces.count
