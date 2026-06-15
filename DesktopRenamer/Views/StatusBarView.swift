@@ -295,7 +295,7 @@ class StatusBarController: NSObject {
         let lockItem = NSMenuItem(
             title: NSLocalizedString("Lock Current Space", comment: ""),
             action: isCurrentFullscreen ? nil : #selector(toggleLockCurrentSpace),
-            keyEquivalent: "l"
+            keyEquivalent: ""
         )
         lockItem.target = self
         lockItem.state = isLocked ? .on : .off
@@ -376,7 +376,6 @@ class StatusBarController: NSObject {
         quitItem.target = self
         menu.addItem(quitItem)
 
-        menu.delegate = self
         StatusBarController.statusItem.menu = menu
     }
     
@@ -533,26 +532,6 @@ extension StatusBarController: NSWindowDelegate {
         if notification.object as? NSWindow == settingsWindowController?.window {
             DispatchQueue.main.async { NSApp.setActivationPolicy(.accessory) }
             settingsWindowController = nil
-        }
-    }
-}
-
-extension StatusBarController: NSMenuDelegate {
-    func menuWillOpen(_ menu: NSMenu) {
-        let optionDown = NSEvent.modifierFlags.contains(.option)
-        for item in menu.items {
-            switch item.action {
-            case #selector(toggleLockCurrentSpace):
-                item.isHidden = optionDown
-            case #selector(toggleLockAllSpaces):
-                item.isHidden = !optionDown
-            case #selector(restoreAllMovedWindows):
-                item.isHidden = optionDown
-            case #selector(cleanQueues):
-                item.isHidden = !optionDown
-            default:
-                break
-            }
         }
     }
 }
