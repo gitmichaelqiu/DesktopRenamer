@@ -1049,7 +1049,25 @@ class SpaceManager: ObservableObject {
         lastManualSwitchTargetUUID ?? "nil"
     }
 
+    private func pruneStaleMovedWindows() {
+        var staleKeys: [Int] = []
+        for (windowID, entry) in movedWindowsOriginalSpaces {
+            guard let actualCgsSpaceID = SpaceHelper.getWindowSpaceID(id: windowID) else {
+                staleKeys.append(windowID)
+                continue
+            }
+            if actualCgsSpaceID != entry.currentSpaceUUID {
+                print("SpaceManager: Pruning window \(windowID) from restore queue — expected \(entry.currentSpaceUUID), actual \(actualCgsSpaceID)")
+                staleKeys.append(windowID)
+            }
+        }
+        for key in staleKeys {
+            movedWindowsOriginalSpaces.removeValue(forKey: key)
+        }
+    }
+
     func restoreAllMovedWindows() {
+        pruneStaleMovedWindows()
         let list = movedWindowsOriginalSpaces.map { (windowID: $0.key, originalSpaceUUID: $0.value.originalSpaceUUID, currentSpaceUUID: $0.value.currentSpaceUUID, pid: $0.value.pid) }
         guard !list.isEmpty else { return }
         
