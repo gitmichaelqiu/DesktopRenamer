@@ -651,7 +651,7 @@ struct CommandRowView: View {
             }
         }
         .padding(.horizontal, 8)
-        .padding(.vertical, 8)
+        .padding(.vertical, 10)
         .background(
             ZStack {
                 if isSelected {
@@ -745,7 +745,7 @@ struct SpaceRowView: View {
             }
         }
         .padding(.horizontal, 8)
-        .padding(.vertical, 8)
+        .padding(.vertical, 10)
         .background(
             ZStack {
                 if isSelected {
@@ -771,11 +771,11 @@ struct WindowStateBadge: View {
 
     var body: some View {
         Text(label)
-            .font(.caption2)
+            .font(.caption)
             .fontWeight(.medium)
             .foregroundColor(color)
-            .padding(.horizontal, 5)
-            .padding(.vertical, 1)
+            .padding(.horizontal, 6)
+            .padding(.vertical, 2)
             .background(color.opacity(0.15))
             .cornerRadius(4)
     }
@@ -798,16 +798,8 @@ struct WindowRowView: View {
             Image(nsImage: appIcon)
                 .resizable()
                 .aspectRatio(contentMode: .fit)
-                .frame(width: 20, height: 20)
-                .padding(4)
-                .frame(width: 28, height: 28)
-                .background(colors.badgeBg)
-                .cornerRadius(6)
-                .overlay(
-                    RoundedRectangle(cornerRadius: 6)
-                        .stroke(colors.badgeBorder, lineWidth: 1)
-                )
-            
+                .frame(width: 24, height: 24)
+
             VStack(alignment: .leading, spacing: 2) {
                 Text(window.title.isEmpty ? String(localized: "(No Title)") : window.title)
                     .font(.body)
@@ -815,33 +807,33 @@ struct WindowRowView: View {
                     .foregroundColor(colors.textPrimary)
                     .lineLimit(1)
 
-                HStack(spacing: 4) {
-                    Text(verbatim: String(format: "%@ · %@", window.ownerName, window.space.name))
-                        .font(.subheadline)
-                        .foregroundColor(isSelected ? colors.textSecondary : colors.textTertiary)
-                        .lineLimit(1)
-
-                    if window.isHidden {
-                        WindowStateBadge(label: "Hidden", color: .purple)
-                    } else if window.isMinimized {
-                        WindowStateBadge(label: "Minimized", color: .orange)
-                    }
-                    if window.space.isFullscreen {
-                        WindowStateBadge(label: "Full Screen", color: .blue)
-                    }
-                }
+                Text(window.ownerName)
+                    .font(.subheadline)
+                    .foregroundColor(isSelected ? colors.textSecondary : colors.textTertiary)
+                    .lineLimit(1)
             }
 
             Spacer()
 
-            if let shortcut = shortcutText {
-                KeycapView(text: LocalizedStringKey(shortcut), isSelected: isSelected)
-            } else {
-                KeycapView(text: "Focus ↵", isSelected: isSelected)
+            HStack(spacing: 4) {
+                if window.isHidden {
+                    WindowStateBadge(label: "Hidden", color: .purple)
+                } else if window.isMinimized {
+                    WindowStateBadge(label: "Minimized", color: .orange)
+                }
+                if window.space.isFullscreen {
+                    WindowStateBadge(label: "Full Screen", color: .blue)
+                }
+
+                if let shortcut = shortcutText {
+                    KeycapView(text: LocalizedStringKey(shortcut), isSelected: isSelected)
+                } else {
+                    KeycapView(text: "Focus ↵", isSelected: isSelected)
+                }
             }
         }
         .padding(.horizontal, 8)
-        .padding(.vertical, 8)
+        .padding(.vertical, 10)
         .background(
             ZStack {
                 if isSelected {
@@ -922,16 +914,8 @@ struct WindowBatchRowView: View {
             Image(nsImage: appIcon)
                 .resizable()
                 .aspectRatio(contentMode: .fit)
-                .frame(width: 20, height: 20)
-                .padding(4)
-                .frame(width: 28, height: 28)
-                .background(colors.badgeBg)
-                .cornerRadius(6)
-                .overlay(
-                    RoundedRectangle(cornerRadius: 6)
-                        .stroke(colors.badgeBorder, lineWidth: 1)
-                )
-            
+                .frame(width: 24, height: 24)
+
             VStack(alignment: .leading, spacing: 2) {
                 Text(window.title.isEmpty ? String(localized: "(No Title)") : window.title)
                     .font(.body)
@@ -939,59 +923,46 @@ struct WindowBatchRowView: View {
                     .foregroundColor(colors.textPrimary)
                     .lineLimit(1)
 
-                HStack(spacing: 4) {
-                    Text(verbatim: String(format: "%@ · %@", window.ownerName, window.space.name))
-                        .font(.subheadline)
-                        .foregroundColor(isSelected ? colors.textSecondary : colors.textTertiary)
-                        .lineLimit(1)
-
-                    if !isStaged {
-                        if window.isHidden {
-                            WindowStateBadge(label: "Hidden", color: .purple)
-                        } else if window.isMinimized {
-                            WindowStateBadge(label: "Minimized", color: .orange)
-                        }
-                        if window.space.isFullscreen {
-                            WindowStateBadge(label: "Full Screen", color: .blue)
-                        }
-                    }
-                }
+                Text(window.ownerName)
+                    .font(.subheadline)
+                    .foregroundColor(isSelected ? colors.textSecondary : colors.textTertiary)
+                    .lineLimit(1)
             }
 
             Spacer()
 
-            if let shortcut = shortcutText {
-                KeycapView(text: LocalizedStringKey(shortcut), isSelected: isSelected)
-            } else if isStaged {
-                Text(stagedActionText)
-                    .font(.subheadline)
-                    .fontWeight(.semibold)
-                    .foregroundColor(colors.greenText)
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 3)
-                    .background(colors.greenText.opacity(0.12))
-                    .cornerRadius(6)
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 6)
-                            .stroke(colors.greenText.opacity(0.35), lineWidth: 1)
-                    )
-            } else {
-                Text(window.space.name)
-                    .font(.subheadline)
-                    .fontWeight(.medium)
-                    .foregroundColor(colors.textSecondary)
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 3)
-                    .background(colors.badgeBg)
-                    .cornerRadius(6)
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 6)
-                            .stroke(colors.badgeBorder, lineWidth: 1)
-                    )
+            HStack(spacing: 4) {
+                if !isStaged {
+                    if window.isHidden {
+                        WindowStateBadge(label: "Hidden", color: .purple)
+                    } else if window.isMinimized {
+                        WindowStateBadge(label: "Minimized", color: .orange)
+                    }
+                    if window.space.isFullscreen {
+                        WindowStateBadge(label: "Full Screen", color: .blue)
+                    }
+                }
+
+                if let shortcut = shortcutText {
+                    KeycapView(text: LocalizedStringKey(shortcut), isSelected: isSelected)
+                } else if isStaged {
+                    Text(stagedActionText)
+                        .font(.subheadline)
+                        .fontWeight(.semibold)
+                        .foregroundColor(colors.greenText)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 3)
+                        .background(colors.greenText.opacity(0.12))
+                        .cornerRadius(6)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 6)
+                                .stroke(colors.greenText.opacity(0.35), lineWidth: 1)
+                        )
+                }
             }
         }
         .padding(.horizontal, 8)
-        .padding(.vertical, 8)
+        .padding(.vertical, 10)
         .background(
             ZStack {
                 if isSelected {
