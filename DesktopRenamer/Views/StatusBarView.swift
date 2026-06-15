@@ -155,8 +155,15 @@ class StatusBarController: NSObject {
                 self?.rebuildMenu()
             }
             .store(in: &cancellables)
+
+        labelManager.$hideActiveLabel
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] _ in
+                self?.rebuildMenu()
+            }
+            .store(in: &cancellables)
     }
-    
+
     private func createLockedSpaceImage(baseName: String, font: NSFont) -> NSImage {
         let attributes: [NSAttributedString.Key: Any] = [
             .font: font,
@@ -368,6 +375,20 @@ class StatusBarController: NSObject {
         self.showActiveLabelsMenuItem = showActiveLabels
         menu.addItem(showActiveLabels)
 
+        if labelManager.showActiveLabels {
+            let hideLabel = NSMenuItem(
+                title: labelManager.hideActiveLabel
+                    ? NSLocalizedString("Show Active Label", comment: "")
+                    : NSLocalizedString("Hide Active Label", comment: ""),
+                action: #selector(toggleActiveLabelVisibility),
+                keyEquivalent: ""
+            )
+            hideLabel.target = self
+            hideLabel.indentationLevel = 1
+            hideLabel.image = NSImage(systemSymbolName: labelManager.hideActiveLabel ? "eye" : "eye.slash", accessibilityDescription: nil)
+            menu.addItem(hideLabel)
+        }
+
         let reloadLabels = NSMenuItem(title: NSLocalizedString("Reload Space Labels", comment: "Reload Space Label Windows to fix glitches"), action: #selector(reloadLabelsFromMenu), keyEquivalent: "")
         reloadLabels.target = self
         reloadLabels.image = NSImage(systemSymbolName: "arrow.clockwise", accessibilityDescription: nil)
@@ -455,6 +476,11 @@ class StatusBarController: NSObject {
 
     @objc private func togglePreviewLabelsFromMenu() {
         labelManager.togglePreviewLabels()
+        rebuildMenu()
+    }
+
+    @objc private func toggleActiveLabelVisibility() {
+        labelManager.toggleActiveLabelVisibility()
         rebuildMenu()
     }
 

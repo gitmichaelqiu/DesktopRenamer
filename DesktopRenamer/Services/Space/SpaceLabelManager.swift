@@ -34,6 +34,7 @@ class SpaceLabelManager: ObservableObject {
             updateWindows()
         }
     }
+    @Published var hideActiveLabel: Bool
     @Published var showOnDesktop: Bool {
         didSet {
             saveSettings()
@@ -96,6 +97,7 @@ class SpaceLabelManager: ObservableObject {
             UserDefaults.standard.object(forKey: kShowPreviewLabels) == nil
             ? true : UserDefaults.standard.bool(forKey: kShowPreviewLabels)
         self.hideWhenSwitching = UserDefaults.standard.bool(forKey: kHideWhenSwitching)
+        self.hideActiveLabel = false
         self.showActiveLabels =
             UserDefaults.standard.object(forKey: kShowActiveLabels) == nil
             ? true : UserDefaults.standard.bool(forKey: kShowActiveLabels)
@@ -457,5 +459,10 @@ class SpaceLabelManager: ObservableObject {
 
     func togglePreviewLabels() {
         showPreviewLabels.toggle()
+    }
+
+    func toggleActiveLabelVisibility() {
+        hideActiveLabel.toggle()
+        updateWindows()
     }
 }

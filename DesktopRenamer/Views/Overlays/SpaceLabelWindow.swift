@@ -406,7 +406,7 @@ class SpaceLabelWindow: NSWindow {
         let wasHidden = self.contentView?.alphaValue == 0
         
         // Pre-calculate visibility to avoid "flashing" or "stuttering" during mode change
-        let willBeVisible = isCurrentSpace ? (labelManager?.showActiveLabels ?? true) : (labelManager?.showPreviewLabels ?? true)
+        let willBeVisible = isCurrentSpace ? ((labelManager?.showActiveLabels ?? true) && !(labelManager?.hideActiveLabel ?? false)) : (labelManager?.showPreviewLabels ?? true)
         
         self.isActiveMode = isCurrentSpace
         self.isInvisibleAnchorMode = !willBeVisible
