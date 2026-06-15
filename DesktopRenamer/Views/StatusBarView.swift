@@ -229,11 +229,11 @@ class StatusBarController: NSObject {
     
     private func lockedMenuTitle(_ base: String) -> NSAttributedString {
         let font = NSFont.menuFont(ofSize: 0)
-        let attrStr = NSMutableAttributedString(string: base + "  ", attributes: [.font: font])
+        let attrStr = NSMutableAttributedString(string: base, attributes: [.font: font])
         let attach = NSTextAttachment()
         attach.image = NSImage(systemSymbolName: "lock.fill", accessibilityDescription: nil)
-        let h = font.capHeight
-        attach.bounds = CGRect(x: 0, y: -font.descender, width: h, height: h)
+        let h = font.capHeight * 0.85
+        attach.bounds = CGRect(x: 0, y: -font.descender * 0.5, width: h, height: h)
         attrStr.append(NSAttributedString(attachment: attach))
         return attrStr
     }
