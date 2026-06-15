@@ -505,10 +505,10 @@ class GestureManager: ObservableObject {
 
             let isHoldingOption = NSEvent.modifierFlags.contains(.option)
             if self.moveWindowOnOption && isHoldingOption {
-                // If the current space is a fullscreen app, exit fullscreen first, then move the window.
+                // If the current space is a fullscreen app, just exit fullscreen.
                 if sm.spaceNameDict.first(where: { $0.id == sm.currentSpaceUUID })?.isFullscreen == true {
                     Task { @MainActor in
-                        await Self.exitFullscreenAndMoveWindow(sm: sm, direction: direction)
+                        await Self.exitFullscreen()
                     }
                 } else {
                     switch direction {
@@ -531,10 +531,9 @@ class GestureManager: ObservableObject {
     }
 
     @MainActor
-    private static func exitFullscreenAndMoveWindow(sm: SpaceManager, direction: SwitchDirection) async {
+    private static func exitFullscreen() async {
         guard let activeInfo = SpaceHelper.getActiveWindowInfo() else { return }
 
-        // Exit fullscreen via AX API
         var axWindow = SpaceHelper.getAXWindow(id: activeInfo.id, pid: activeInfo.pid)
         if axWindow == nil {
             if let app = NSRunningApplication(processIdentifier: activeInfo.pid) {
@@ -545,15 +544,6 @@ class GestureManager: ObservableObject {
         }
         if let targetAXWindow = axWindow {
             AXUIElementSetAttributeValue(targetAXWindow, "AXFullScreen" as CFString, false as CFTypeRef)
-            try? await Task.sleep(nanoseconds: 1_200_000_000)
-        }
-
-        // Now move the window to the adjacent space
-        switch direction {
-        case .next:
-            sm.moveActiveWindowToNextSpace()
-        case .previous:
-            sm.moveActiveWindowToPreviousSpace()
         }
     }
 }
