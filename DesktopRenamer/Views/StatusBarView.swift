@@ -379,7 +379,7 @@ class StatusBarController: NSObject {
             let showOnDesktop = NSMenuItem(
                 title: NSLocalizedString("Show on Desktop", comment: ""),
                 action: #selector(toggleShowOnDesktop),
-                keyEquivalent: ""
+                keyEquivalent: "d"
             )
             showOnDesktop.target = self
             showOnDesktop.state = labelManager.showOnDesktop ? .on : .off
