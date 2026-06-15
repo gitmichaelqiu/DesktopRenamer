@@ -771,11 +771,11 @@ struct WindowStateBadge: View {
 
     var body: some View {
         Text(label)
-            .font(.caption)
+            .font(.footnote)
             .fontWeight(.semibold)
             .foregroundColor(color)
-            .padding(.horizontal, 8)
-            .padding(.vertical, 3)
+            .padding(.horizontal, 10)
+            .padding(.vertical, 4)
             .background(color.opacity(0.15))
             .cornerRadius(4)
     }
