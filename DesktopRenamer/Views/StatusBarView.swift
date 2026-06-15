@@ -311,7 +311,7 @@ class StatusBarController: NSObject {
         let lockItem = NSMenuItem(
             title: isLocked ? NSLocalizedString("Unlock Current Space", comment: "") : NSLocalizedString("Lock Current Space", comment: ""),
             action: isCurrentFullscreen ? nil : #selector(toggleLockCurrentSpace),
-            keyEquivalent: ""
+            keyEquivalent: "l"
         )
         lockItem.target = self
         lockItem.state = isLocked ? .on : .off
