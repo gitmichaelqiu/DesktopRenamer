@@ -493,9 +493,16 @@ struct GeneralSettingsView: View {
             guard let window = NSApp.suitableSheetWindow else { return }
             panel.beginSheetModal(for: window) { result in
                 if result == .OK, let url = panel.url {
-                    try? data.write(to: url)
-                    self.savedURL = url
-                    self.phase = .saved
+                    do {
+                        try data.write(to: url)
+                        self.savedURL = url
+                        self.phase = .saved
+                    } catch {
+                        let alert = NSAlert()
+                        alert.messageText = String(localized: "Failed to Save Report")
+                        alert.informativeText = error.localizedDescription
+                        alert.runModal()
+                    }
                 } else {
                     self.cleanup()
                     self.dismiss()
