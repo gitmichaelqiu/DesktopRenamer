@@ -289,31 +289,30 @@ class StatusBarController: NSObject {
         self.renameItem = rename
         menu.addItem(rename)
         
-        let optionDown = NSEvent.modifierFlags.contains(.option)
         let allLocked = spaceManager.spaceNameDict.allSatisfy { $0.isFullscreen || spaceManager.lockedSpaceIDs.contains($0.id) }
         let isLocked = spaceManager.lockedSpaceIDs.contains(spaceManager.currentSpaceUUID)
 
-        if optionDown {
-            let lockAllItem = NSMenuItem(
-                title: allLocked ? NSLocalizedString("Unlock All", comment: "") : NSLocalizedString("Lock All", comment: ""),
-                action: #selector(toggleLockAllSpaces),
-                keyEquivalent: ""
-            )
-            lockAllItem.target = self
-            lockAllItem.image = NSImage(systemSymbolName: allLocked ? "lock.open" : "lock", accessibilityDescription: nil)
-            menu.addItem(lockAllItem)
-        } else {
-            let lockItem = NSMenuItem(
-                title: NSLocalizedString("Lock Current Space", comment: ""),
-                action: isCurrentFullscreen ? nil : #selector(toggleLockCurrentSpace),
-                keyEquivalent: "l"
-            )
-            lockItem.target = self
-            lockItem.state = isLocked ? .on : .off
-            lockItem.image = NSImage(systemSymbolName: isLocked ? "lock" : "lock.open", accessibilityDescription: nil)
-            lockItem.isEnabled = !isCurrentFullscreen
-            menu.addItem(lockItem)
-        }
+        let lockItem = NSMenuItem(
+            title: NSLocalizedString("Lock Current Space", comment: ""),
+            action: isCurrentFullscreen ? nil : #selector(toggleLockCurrentSpace),
+            keyEquivalent: "l"
+        )
+        lockItem.target = self
+        lockItem.state = isLocked ? .on : .off
+        lockItem.image = NSImage(systemSymbolName: isLocked ? "lock" : "lock.open", accessibilityDescription: nil)
+        lockItem.isEnabled = !isCurrentFullscreen
+        menu.addItem(lockItem)
+
+        let lockAllItem = NSMenuItem(
+            title: allLocked ? NSLocalizedString("Unlock All", comment: "") : NSLocalizedString("Lock All", comment: ""),
+            action: #selector(toggleLockAllSpaces),
+            keyEquivalent: ""
+        )
+        lockAllItem.target = self
+        lockAllItem.image = NSImage(systemSymbolName: allLocked ? "lock.open" : "lock", accessibilityDescription: nil)
+        lockAllItem.isAlternate = true
+        lockAllItem.keyEquivalentModifierMask = .option
+        menu.addItem(lockAllItem)
 
         let movedCount = spaceManager.movedWindowsOriginalSpaces.count
         let restoreItem = NSMenuItem(
@@ -376,7 +375,8 @@ class StatusBarController: NSObject {
         quitItem.image = NSImage(systemSymbolName: "xmark.rectangle", accessibilityDescription: nil)
         quitItem.target = self
         menu.addItem(quitItem)
-        
+
+        menu.delegate = self
         StatusBarController.statusItem.menu = menu
     }
     
@@ -533,6 +533,26 @@ extension StatusBarController: NSWindowDelegate {
         if notification.object as? NSWindow == settingsWindowController?.window {
             DispatchQueue.main.async { NSApp.setActivationPolicy(.accessory) }
             settingsWindowController = nil
+        }
+    }
+}
+
+extension StatusBarController: NSMenuDelegate {
+    func menuWillOpen(_ menu: NSMenu) {
+        let optionDown = NSEvent.modifierFlags.contains(.option)
+        for item in menu.items {
+            switch item.action {
+            case #selector(toggleLockCurrentSpace):
+                item.isHidden = optionDown
+            case #selector(toggleLockAllSpaces):
+                item.isHidden = !optionDown
+            case #selector(restoreAllMovedWindows):
+                item.isHidden = optionDown
+            case #selector(cleanQueues):
+                item.isHidden = !optionDown
+            default:
+                break
+            }
         }
     }
 }
