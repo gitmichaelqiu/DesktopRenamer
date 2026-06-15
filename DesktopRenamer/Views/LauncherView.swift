@@ -521,7 +521,7 @@ struct KeycapView: View {
         let isSelectedWhiteStyle = isSelected && (colorScheme == .dark || isGreenRow)
         
         Text(text)
-            .font(.system(size: 10, weight: .semibold))
+            .font(.system(size: 11, weight: .semibold))
             .foregroundColor(isSelected ? (isSelectedWhiteStyle ? .white : colors.textPrimary) : colors.textSecondary)
             .padding(.horizontal, horizontalPadding)
             .padding(.vertical, verticalPadding)
@@ -651,7 +651,7 @@ struct CommandRowView: View {
             }
         }
         .padding(.horizontal, 8)
-        .padding(.vertical, 10)
+        .padding(.vertical, 8)
         .background(
             ZStack {
                 if isSelected {
@@ -745,7 +745,7 @@ struct SpaceRowView: View {
             }
         }
         .padding(.horizontal, 8)
-        .padding(.vertical, 10)
+        .padding(.vertical, 8)
         .background(
             ZStack {
                 if isSelected {
@@ -772,10 +772,10 @@ struct WindowStateBadge: View {
     var body: some View {
         Text(label)
             .font(.caption)
-            .fontWeight(.medium)
+            .fontWeight(.semibold)
             .foregroundColor(color)
-            .padding(.horizontal, 6)
-            .padding(.vertical, 2)
+            .padding(.horizontal, 8)
+            .padding(.vertical, 3)
             .background(color.opacity(0.15))
             .cornerRadius(4)
     }
@@ -798,7 +798,7 @@ struct WindowRowView: View {
             Image(nsImage: appIcon)
                 .resizable()
                 .aspectRatio(contentMode: .fit)
-                .frame(width: 24, height: 24)
+                .frame(width: 32, height: 32)
 
             VStack(alignment: .leading, spacing: 2) {
                 Text(window.title.isEmpty ? String(localized: "(No Title)") : window.title)
@@ -833,7 +833,7 @@ struct WindowRowView: View {
             }
         }
         .padding(.horizontal, 8)
-        .padding(.vertical, 10)
+        .padding(.vertical, 8)
         .background(
             ZStack {
                 if isSelected {
@@ -914,7 +914,7 @@ struct WindowBatchRowView: View {
             Image(nsImage: appIcon)
                 .resizable()
                 .aspectRatio(contentMode: .fit)
-                .frame(width: 24, height: 24)
+                .frame(width: 32, height: 32)
 
             VStack(alignment: .leading, spacing: 2) {
                 Text(window.title.isEmpty ? String(localized: "(No Title)") : window.title)
@@ -962,7 +962,7 @@ struct WindowBatchRowView: View {
             }
         }
         .padding(.horizontal, 8)
-        .padding(.vertical, 10)
+        .padding(.vertical, 8)
         .background(
             ZStack {
                 if isSelected {
