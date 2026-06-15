@@ -463,11 +463,18 @@ struct ListWindowsSection: Identifiable {
         let fullscreenAction: BatchStagedActionType = isFS ? .exitFullScreen : .enterFullScreen
         
         var actions: [BatchStagedActionType] = []
+        actions.append(.close)
         if minimized || hidden {
-            actions = [.close, .restore, fullscreenAction, .quit]
-        } else {
-            actions = [.close, .minimize, .hide, fullscreenAction, .quit]
+            actions.append(.restore)
         }
+        if !minimized {
+            actions.append(.minimize)
+        }
+        if !hidden {
+            actions.append(.hide)
+        }
+        actions.append(fullscreenAction)
+        actions.append(.quit)
         
         return actions
     }
