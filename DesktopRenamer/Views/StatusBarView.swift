@@ -342,7 +342,7 @@ class StatusBarController: NSObject {
         menu.addItem(restoreItem)
 
         let cleanItem = NSMenuItem(
-            title: NSLocalizedString("Clean Queues", comment: ""),
+            title: NSLocalizedString("Clean Restoration Queues", comment: ""),
             action: #selector(cleanQueues),
             keyEquivalent: ""
         )
