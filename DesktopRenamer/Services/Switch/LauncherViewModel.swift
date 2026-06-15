@@ -1166,6 +1166,27 @@ struct ListWindowsSection: Identifiable {
         }
         closeLauncher()
     }
+
+    func showRenameDialog(for space: SpaceGroup) {
+        let alert = NSAlert()
+        alert.messageText = String(localized: "Rename Space")
+        alert.informativeText = String(localized: "Enter a new name for \"\(space.name)\":")
+        alert.addButton(withTitle: String(localized: "Rename"))
+        alert.addButton(withTitle: String(localized: "Cancel"))
+
+        let textField = NSTextField(frame: NSRect(x: 0, y: 0, width: 200, height: 24))
+        textField.stringValue = space.name
+        alert.accessoryView = textField
+
+        let response = alert.runModal()
+        if response == .alertFirstButtonReturn {
+            let newName = textField.stringValue.trimmingCharacters(in: .whitespacesAndNewlines)
+            if !newName.isEmpty, let manager = AppDelegate.shared.spaceManager {
+                manager.renameSpace(space.id, to: newName)
+            }
+        }
+    }
+
     
     func executeBatchMove() {
         guard !stagedMoves.isEmpty else { return }

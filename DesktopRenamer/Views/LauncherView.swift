@@ -154,6 +154,8 @@ struct LauncherView: View {
                                     viewModel.executeBottomBarSpaceAction(isOption: false, isCommand: true)
                                 } else if viewModel.activeCommand?.type == .batchMoveWindows {
                                     viewModel.executeBatchMove()
+                                } else if viewModel.activeCommand?.type == .switchToDesktop || viewModel.activeCommand?.type == .moveWindow {
+                                    viewModel.executeRowAction()
                                 }
                             },
                             onOptionEnter: {
@@ -2105,6 +2107,23 @@ extension LauncherView {
                 }
             }
         }
+
+        // Cmd+R: Rename selected space in .switchToDesktop mode
+        if viewModel.activeCommand?.type == .switchToDesktop,
+           hasCommand && !hasShift && !hasOption && !hasControl,
+           let chars = event.charactersIgnoringModifiers?.lowercased(),
+           chars == "r" {
+            let spaces = viewModel.filteredSpaces
+            let index = viewModel.selectedRowIndex
+            if index >= 0 && index < spaces.count {
+                let space = spaces[index]
+                if !space.isFullscreen {
+                    viewModel.showRenameDialog(for: space)
+                }
+            }
+            return true
+        }
+
         return false
     }
 }
