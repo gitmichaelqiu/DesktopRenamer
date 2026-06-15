@@ -227,6 +227,17 @@ class StatusBarController: NSObject {
         }
     }
     
+    private func lockedMenuTitle(_ base: String) -> NSAttributedString {
+        let font = NSFont.menuFont(ofSize: 0)
+        let attrStr = NSMutableAttributedString(string: base + "  ", attributes: [.font: font])
+        let attach = NSTextAttachment()
+        attach.image = NSImage(systemSymbolName: "lock.fill", accessibilityDescription: nil)
+        let h = font.capHeight
+        attach.bounds = CGRect(x: 0, y: -font.descender, width: h, height: h)
+        attrStr.append(NSAttributedString(attachment: attach))
+        return attrStr
+    }
+
     private func rebuildMenu() {
         let menu = NSMenu()
         
@@ -246,10 +257,11 @@ class StatusBarController: NSObject {
             for space in currentDisplaySpaces {
                 let name = spaceManager.getSpaceName(space.id)
                 let locked = spaceManager.lockedSpaceIDs.contains(space.id)
-                let label = locked ? "\(name) \u{1F512}" : name
-                let moveLabel = locked ? "\u{2192} \(name) \u{1F512}" : "\u{2192} \(name)"
+                let label = locked ? lockedMenuTitle(name) : NSAttributedString(string: name, attributes: [.font: NSFont.menuFont(ofSize: 0)])
+                let moveLabel = locked ? lockedMenuTitle("\u{2192} \(name)") : NSAttributedString(string: "\u{2192} \(name)", attributes: [.font: NSFont.menuFont(ofSize: 0)])
 
-                let item = NSMenuItem(title: label, action: #selector(selectSpace(_:)), keyEquivalent: "")
+                let item = NSMenuItem(title: "", action: #selector(selectSpace(_:)), keyEquivalent: "")
+                item.attributedTitle = label
                 item.target = self
                 item.representedObject = space.id
 
@@ -262,7 +274,8 @@ class StatusBarController: NSObject {
                 menu.addItem(item)
 
                 // Alternate item for window movement.
-                let altItem = NSMenuItem(title: moveLabel, action: #selector(moveWindowToSpace(_:)), keyEquivalent: "")
+                let altItem = NSMenuItem(title: "", action: #selector(moveWindowToSpace(_:)), keyEquivalent: "")
+                altItem.attributedTitle = moveLabel
                 altItem.target = self
                 altItem.representedObject = space.id
                 altItem.isAlternate = true
