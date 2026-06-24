@@ -288,12 +288,6 @@ class SpaceHelper {
                        let targetIndex = displaySpaces.firstIndex(where: { $0.id == spaceID }) {
                         let steps = targetIndex - currentIndex
                         if steps != 0 {
-                            if shouldSwitchToSpaceUsingSLS() {
-                                if switchSpaceUsingSLSOperation(displayUUID: displayID, spaceID: Int(spaceID) ?? 0) {
-                                    restoreFocusAfterSLSSwitch(spaceID: spaceID)
-                                    return
-                                }
-                            }
                             performSpaceSwitchGesture(steps: steps, targetDisplayID: displayID, forceInstant: forceInstant)
                             return
                         }
@@ -655,8 +649,16 @@ class SpaceHelper {
         ev.setDoubleValueField(CGEventField(rawValue: 129)!, value: vel)
         ev.setDoubleValueField(CGEventField(rawValue: 130)!, value: vel)
         
+        var eventToPost = ev
+        let os = ProcessInfo.processInfo.operatingSystemVersion
+        if os.majorVersion >= 27 {
+            if let augmented = GestureAugmentor.augmentEvent(ev)?.takeRetainedValue() {
+                eventToPost = augmented
+            }
+        }
+        
         // Use cgSessionEventTap to match ISS.c and prevent HID acceleration/mishandling
-        ev.post(tap: .cgSessionEventTap)
+        eventToPost.post(tap: .cgSessionEventTap)
         return true
     }
     
