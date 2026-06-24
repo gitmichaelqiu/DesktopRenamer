@@ -246,12 +246,17 @@ class SpaceLabelWindow: NSWindow {
 
         CGSAddWindowsToSpaces(cid, winID, targetSpaces)
         
-        if let currentSpacesCF = CGSCopySpacesForWindows(cid, 7, winID),
-           let currentSpaces = currentSpacesCF as? [NSNumber] {
-            let spacesToRemove = currentSpaces.filter { $0.intValue != targetSpaceInt }
-            if !spacesToRemove.isEmpty {
-                CGSRemoveWindowsFromSpaces(cid, winID, spacesToRemove as CFArray)
-            }
+        let currentSpacesCF = CGSCopySpacesForWindows(cid, 7, winID)
+        let currentSpaces = (currentSpacesCF as? [NSNumber])?.map { $0.intValue } ?? []
+        
+        print("SpaceLabelWindow[\(self.spaceId)]: bindToTargetSpace. Window Number: \(self.windowNumber). Current spaces: \(currentSpaces). Target space: \(targetSpaceInt)")
+        DiagnosticEventLog.shared.record(subsystem: "SpaceLabelWindow", "bindToTargetSpace[\(self.spaceId)]: win=\(self.windowNumber), currentSpaces=\(currentSpaces), target=\(targetSpaceInt)")
+        
+        let spacesToRemove = currentSpaces.filter { $0 != targetSpaceInt }
+        if !spacesToRemove.isEmpty {
+            print("SpaceLabelWindow[\(self.spaceId)]: Removing window \(self.windowNumber) from spaces: \(spacesToRemove)")
+            let removeCF = spacesToRemove.map { NSNumber(value: $0) } as CFArray
+            CGSRemoveWindowsFromSpaces(cid, winID, removeCF)
         }
     }
 
@@ -931,6 +936,9 @@ class SpaceLabelWindow: NSWindow {
                 scheduleVisibilityRetry(delay: coolingPeriod - timeSinceSwitch + 0.1)
             }
         }
+
+        print("SpaceLabelWindow[\(self.spaceId)]: updateVisibility. isVisible: \(self.isVisible), isVisuallyVisible: \(isVisuallyVisible), level: \(self.level.rawValue), isActiveMode: \(self.isActiveMode)")
+        DiagnosticEventLog.shared.record(subsystem: "SpaceLabelWindow", "updateVisibility[\(self.spaceId)]: isVisible=\(self.isVisible), visually=\(isVisuallyVisible), level=\(self.level.rawValue), active=\(self.isActiveMode)")
 
         let shouldBeAnchor = !isVisuallyVisible
         if self.isInvisibleAnchorMode != shouldBeAnchor {

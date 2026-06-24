@@ -506,6 +506,7 @@ class SpaceHelper {
         
         let options = CGWindowListOption(arrayLiteral: .excludeDesktopElements)
         guard let windowList = CGWindowListCopyWindowInfo(options, kCGNullWindowID) as? [[String: Any]] else {
+            print("SpaceHelper: Failed to copy window list")
             return nil
         }
         
@@ -525,11 +526,16 @@ class SpaceHelper {
             let wIDArray = [wID as NSNumber] as CFArray
             if let result = CGSCopySpacesForWindows(conn, 7, wIDArray),
                let spaceIDs = result as? [NSNumber] {
-                if spaceIDs.contains(where: { $0.intValue == targetSpaceInt }) {
+                let spaceInts = spaceIDs.map { $0.intValue }
+                if spaceInts.contains(targetSpaceInt) {
+                    let appName = window[kCGWindowOwnerName as String] as? String ?? "Unknown"
+                    print("SpaceHelper: Found top window on Space \(spaceID): \(appName) (PID: \(pid), WindowID: \(wID), Spaces: \(spaceInts))")
+                    DiagnosticEventLog.shared.record(subsystem: "SpaceHelper", "Found top window on Space \(spaceID): \(appName) (PID: \(pid), WindowID: \(wID), Spaces: \(spaceInts))")
                     return (Int32(pid), wID)
                 }
             }
         }
+        print("SpaceHelper: No top window found on Space \(spaceID)")
         return nil
     }
 
@@ -538,10 +544,15 @@ class SpaceHelper {
         var windowsValue: AnyObject?
         let result = AXUIElementCopyAttributeValue(appRef, kAXWindowsAttribute as CFString, &windowsValue)
         
+        print("SpaceHelper: focusWindowViaAccessibility pid \(pid), windowID \(windowID). Copy windows result: \(result.rawValue)")
+        DiagnosticEventLog.shared.record(subsystem: "SpaceHelper", "focusWindowViaAccessibility pid \(pid), windowID \(windowID). result=\(result.rawValue)")
+        
         guard result == .success, let windows = windowsValue as? [AXUIElement] else {
+            print("SpaceHelper: Failed to copy windows for PID \(pid)")
             return false
         }
         
+        print("SpaceHelper: App PID \(pid) has \(windows.count) windows in accessibility")
         for windowRef in windows {
             var wID: CGWindowID = 0
             if _AXUIElementGetWindow(windowRef, &wID) == 0, Int(wID) == windowID {
@@ -549,6 +560,7 @@ class SpaceHelper {
                 AXUIElementSetAttributeValue(windowRef, kAXMainAttribute as CFString, kCFBooleanTrue)
                 AXUIElementSetAttributeValue(windowRef, kAXFocusedAttribute as CFString, kCFBooleanTrue)
                 print("SpaceHelper: Successfully focused window \(windowID) via AX API")
+                DiagnosticEventLog.shared.record(subsystem: "SpaceHelper", "Successfully focused window \(windowID) via AX API")
                 return true
             }
         }
@@ -559,13 +571,18 @@ class SpaceHelper {
             AXUIElementSetAttributeValue(firstWindow, kAXMainAttribute as CFString, kCFBooleanTrue)
             AXUIElementSetAttributeValue(firstWindow, kAXFocusedAttribute as CFString, kCFBooleanTrue)
             print("SpaceHelper: Focused first window of PID \(pid) via AX API fallback")
+            DiagnosticEventLog.shared.record(subsystem: "SpaceHelper", "Focused first window of PID \(pid) via AX API fallback")
             return true
         }
         
+        print("SpaceHelper: No windows found to focus for PID \(pid)")
         return false
     }
 
     static func restoreFocusAfterSLSSwitch(spaceID: String, immediate: Bool = false) {
+        print("SpaceHelper: restoreFocusAfterSLSSwitch for Space \(spaceID), immediate: \(immediate)")
+        DiagnosticEventLog.shared.record(subsystem: "SpaceHelper", "restoreFocusAfterSLSSwitch for Space \(spaceID), immediate: \(immediate)")
+        
         // Post-switch settlement: Activate target space owner app if fullscreen
         if let pid = getOwnerPID(for: spaceID),
            let app = NSRunningApplication(processIdentifier: pid) {
