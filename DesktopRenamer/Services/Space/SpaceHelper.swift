@@ -667,8 +667,12 @@ class SpaceHelper {
         DiagnosticEventLog.shared.record(subsystem: "SpaceHelper", level: "info", "gesture steps=\(steps) display=\(targetDisplayID)")
         if steps == 0 { return }
 
-        let directionRight = steps > 0
-        let absSteps = abs(steps)
+        // macOS 27 interprets swipe directions opposite of the expected behavior,
+        // so we invert the step direction to compensate.
+        let os = ProcessInfo.processInfo.operatingSystemVersion
+        let adjustedSteps = os.majorVersion >= 27 ? -steps : steps
+        let directionRight = adjustedSteps > 0
+        let absSteps = abs(adjustedSteps)
 
         let target = targetDuration
         let velocity: Double
