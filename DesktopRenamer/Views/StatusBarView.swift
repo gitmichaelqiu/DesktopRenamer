@@ -558,12 +558,18 @@ extension StatusBarController: NSMenuItemValidation {
                current.isFullscreen {
                 return false
             }
-            
+
             guard let spaceID = menuItem.representedObject as? String else { return true }
             if let space = spaceManager.spaceNameDict.first(where: { $0.id == spaceID }) {
                 return !space.isFullscreen
             }
         }
+
+        if menuItem.action == #selector(restoreAllMovedWindows) ||
+           menuItem.action == #selector(cleanQueues) {
+            return spaceManager.movedWindowsOriginalSpaces.count > 0
+        }
+
         return true
     }
 }
