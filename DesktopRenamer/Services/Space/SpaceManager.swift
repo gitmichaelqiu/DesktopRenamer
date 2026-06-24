@@ -337,6 +337,18 @@ class SpaceManager: ObservableObject {
                 }
             }
             
+            // STABILITY GUARD: Reject partial space lists to prevent corrupting
+            // saved state. Transient CGS failures can return fewer spaces,
+            // which would erase user data if saved.
+            let isPartialList = !self.spaceNameDict.isEmpty && newSpaceList.count < self.spaceNameDict.count
+            if isPartialList && newSpaceList.count <= 1 {
+                print("SpaceManager: Rejecting partial space list (\(newSpaceList.count) vs cached \(self.spaceNameDict.count)). Skipping update.")
+                if !cgsState.currentUUID.isEmpty {
+                    self.currentSpaceUUID = cgsState.currentUUID
+                }
+                return
+            }
+
             if self.spaceNameDict != newSpaceList {
                 self.spaceNameDict = newSpaceList
                 
