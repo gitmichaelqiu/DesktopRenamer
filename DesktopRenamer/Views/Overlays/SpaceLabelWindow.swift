@@ -971,6 +971,7 @@ class SpaceLabelWindow: NSWindow {
                     if !inCoolingPeriod {
                         print("SpaceLabelWindow[\(self.spaceId)]: orderFrontRegardless() for ACTIVE space.")
                         self.orderFrontRegardless()
+                        self.bindToTargetSpace()
                         self.hasOrderedInOnce = true
                     } else {
                         print("SpaceLabelWindow[\(self.spaceId)]: Suppressing orderFrontRegardless (Active) during switch cooling period (\(String(format: "%.2f", timeSinceSwitch))s). Scheduling retry.")
@@ -982,6 +983,7 @@ class SpaceLabelWindow: NSWindow {
                 if !inCoolingPeriod {
                     print("SpaceLabelWindow[\(self.spaceId)]: Initial orderFrontRegardless() for background preview.")
                     self.orderFrontRegardless()
+                    self.bindToTargetSpace()
                     self.hasOrderedInOnce = true
                 } else {
                     print("SpaceLabelWindow[\(self.spaceId)]: Suppressing orderFrontRegardless (Preview) during switch cooling period (\(String(format: "%.2f", timeSinceSwitch))s). Scheduling retry.")
@@ -994,6 +996,7 @@ class SpaceLabelWindow: NSWindow {
                 if !inCoolingPeriod {
                     print("SpaceLabelWindow[\(self.spaceId)]: orderFrontRegardless() for background preview (re-order after external orderOut).")
                     self.orderFrontRegardless()
+                    self.bindToTargetSpace()
                 } else {
                     scheduleVisibilityRetry(delay: coolingPeriod - timeSinceSwitch + 0.1)
                 }
