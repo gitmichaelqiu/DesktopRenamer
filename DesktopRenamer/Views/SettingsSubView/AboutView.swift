@@ -87,11 +87,6 @@ struct AboutView: View {
                     }
                 }
 
-                // Demo Videos Section
-                if UserDefaults.standard.bool(forKey: "ShowDemoVideos") {
-                    DemoVideosSection()
-                }
-
                 // Acknowledgements Section
                 VStack(alignment: .leading, spacing: 12) {
                     Text("Acknowledgements")
@@ -115,48 +110,6 @@ struct AboutView: View {
         if let path = Bundle.main.path(forResource: "Acknowledgements", ofType: "pdf") {
             let url = URL(fileURLWithPath: path)
             NSWorkspace.shared.open(url)
-        }
-    }
-}
-
-// MARK: - Demo Videos
-
-private let demoVideos: [(name: String, title: String)] = [
-    ("Rename", "Rename Space"),
-    ("SwitchSpace", "Switch Space"),
-    ("SwitchOverride", "Override Switch"),
-    ("LockSpace", "Lock Space"),
-    ("MoveWindow", "Move Window"),
-    ("RaycastBatchMove", "Batch Move"),
-    ("MissionControl", "Mission Control"),
-    ("ActiveLabel", "Active Label"),
-]
-
-private struct DemoVideosSection: View {
-    var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            Text("Demo Videos")
-                .font(.headline)
-                .foregroundColor(.primary)
-
-            LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 16) {
-                ForEach(demoVideos, id: \.name) { video in
-                    VStack(spacing: 6) {
-                        AutoPlayingVideoView(videoName: video.name)
-                            .frame(height: 100)
-                            .clipShape(RoundedRectangle(cornerRadius: 8))
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 8)
-                                    .stroke(Color.gray.opacity(0.2), lineWidth: 1)
-                            )
-
-                        Text(video.title)
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                            .lineLimit(1)
-                    }
-                }
-            }
         }
     }
 }
