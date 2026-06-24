@@ -500,7 +500,7 @@ class SpaceHelper {
         return false
     }
     
-    private static func getTopPID(forSpace spaceID: String) -> Int32? {
+    private static func getTopWindowInfo(forSpace spaceID: String) -> (pid: Int32, windowID: Int)? {
         guard let targetSpaceInt = Int(spaceID) else { return nil }
         let conn = _CGSDefaultConnection()
         
@@ -526,41 +526,78 @@ class SpaceHelper {
             if let result = CGSCopySpacesForWindows(conn, 7, wIDArray),
                let spaceIDs = result as? [NSNumber] {
                 if spaceIDs.contains(where: { $0.intValue == targetSpaceInt }) {
-                    return Int32(pid)
+                    return (Int32(pid), wID)
                 }
             }
         }
         return nil
     }
 
-    private static func restoreFocusAfterSLSSwitch(spaceID: String) {
+    private static func focusWindowViaAccessibility(pid: Int32, windowID: Int) -> Bool {
+        let appRef = AXUIElementCreateApplication(pid)
+        var windowsValue: AnyObject?
+        let result = AXUIElementCopyAttributeValue(appRef, kAXWindowsAttribute as CFString, &windowsValue)
+        
+        guard result == .success, let windows = windowsValue as? [AXUIElement] else {
+            return false
+        }
+        
+        for windowRef in windows {
+            var wID: CGWindowID = 0
+            if _AXUIElementGetWindow(windowRef, &wID) == 0, Int(wID) == windowID {
+                AXUIElementPerformAction(windowRef, kAXRaiseAction as CFString)
+                AXUIElementSetAttributeValue(windowRef, kAXMainAttribute as CFString, kCFBooleanTrue)
+                AXUIElementSetAttributeValue(windowRef, kAXFocusedAttribute as CFString, kCFBooleanTrue)
+                print("SpaceHelper: Successfully focused window \(windowID) via AX API")
+                return true
+            }
+        }
+        
+        // Fallback: Focus first window
+        if let firstWindow = windows.first {
+            AXUIElementPerformAction(firstWindow, kAXRaiseAction as CFString)
+            AXUIElementSetAttributeValue(firstWindow, kAXMainAttribute as CFString, kCFBooleanTrue)
+            AXUIElementSetAttributeValue(firstWindow, kAXFocusedAttribute as CFString, kCFBooleanTrue)
+            print("SpaceHelper: Focused first window of PID \(pid) via AX API fallback")
+            return true
+        }
+        
+        return false
+    }
+
+    static func restoreFocusAfterSLSSwitch(spaceID: String, immediate: Bool = false) {
         // Post-switch settlement: Activate target space owner app if fullscreen
         if let pid = getOwnerPID(for: spaceID),
            let app = NSRunningApplication(processIdentifier: pid) {
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
+            let delay = immediate ? 0.05 : 0.15
+            DispatchQueue.main.asyncAfter(deadline: .now() + delay) {
                 app.activate(options: .activateIgnoringOtherApps)
             }
             return
         }
         
-        // Otherwise, find the active window on that space and activate its application to refresh the menu bar
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) {
-            if let pid = getTopPID(forSpace: spaceID),
-               let app = NSRunningApplication(processIdentifier: pid) {
-                print("SpaceHelper: Activating top window app \(app.localizedName ?? "") (PID: \(pid)) on Space \(spaceID)")
-                
-                // Force menu bar refresh by toggle-activating ourselves first
-                NSApp.activate(ignoringOtherApps: true)
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
-                    app.activate(options: .activateIgnoringOtherApps)
+        let delay = immediate ? 0.05 : 0.45
+        DispatchQueue.main.asyncAfter(deadline: .now() + delay) {
+            guard let topWinInfo = getTopWindowInfo(forSpace: spaceID) else {
+                // Fallback: Activate Finder to reset the menu bar
+                print("SpaceHelper: No top window found on Space \(spaceID). Activating Finder.")
+                if let finder = NSRunningApplication.runningApplications(withBundleIdentifier: "com.apple.finder").first {
+                    finder.activate(options: .activateIgnoringOtherApps)
                 }
                 return
             }
             
-            // Fallback: Activate Finder to reset the menu bar
-            print("SpaceHelper: No top window found on Space \(spaceID). Activating Finder.")
-            if let finder = NSRunningApplication.runningApplications(withBundleIdentifier: "com.apple.finder").first {
-                finder.activate(options: .activateIgnoringOtherApps)
+            let pid = topWinInfo.pid
+            let windowID = topWinInfo.windowID
+            
+            if let app = NSRunningApplication(processIdentifier: pid) {
+                print("SpaceHelper: Activating top window app \(app.localizedName ?? "") (PID: \(pid), Window: \(windowID)) on Space \(spaceID)")
+                
+                // 1. Activate application
+                app.activate(options: .activateIgnoringOtherApps)
+                
+                // 2. Focus the specific window via Accessibility API
+                _ = focusWindowViaAccessibility(pid: pid, windowID: windowID)
             }
         }
     }
