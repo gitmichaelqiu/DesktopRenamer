@@ -449,6 +449,29 @@ class SpaceLabelManager: ObservableObject {
             ensureWindow(for: space.id, name: space.customName, displayID: space.displayID)
         }
         updateAllWindowModes()
+
+        // SAFETY: 2 seconds after seeding, verify no labels are stranded on the
+        // wrong space. Preview labels that failed CGS binding would otherwise
+        // cluster on the current desktop.
+        DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) { [weak self] in
+            self?.verifyLabelBinding()
+        }
+    }
+
+    /// Verifies that preview label windows are assigned to their correct space.
+    /// If a preview label is detected on the current space (binding failure),
+    /// it is hidden to prevent visual clustering.
+    private func verifyLabelBinding() {
+        guard let currentSpaceID = spaceManager?.currentSpaceUUID else { return }
+        for (spaceId, window) in createdWindows {
+            guard !window.isActiveMode, window.windowNumber > 0 else { continue }
+            let currentSpaces = SpaceHelper.getWindowCurrentSpaces(windowID: window.windowNumber)
+            if currentSpaces.isEmpty { continue }
+            if currentSpaces.contains(currentSpaceID) && spaceId != currentSpaceID {
+                print("SpaceLabelManager: Safety — preview label \(spaceId) found on current space. Hiding.")
+                window.hideImmediately()
+            }
+        }
     }
 
     func toggleActiveLabels() {

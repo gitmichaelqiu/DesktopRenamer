@@ -70,7 +70,7 @@ class SpaceLabelWindow: NSWindow {
     private weak var labelManager: SpaceLabelManager?
 
     // State
-    private var isActiveMode: Bool = true
+    var isActiveMode: Bool = true
     private var isDragging = false
     private var lastDragPoint: NSPoint = .zero
     private var pendingVisibilityTask: DispatchWorkItem?
@@ -240,24 +240,38 @@ class SpaceLabelWindow: NSWindow {
     func bindToTargetSpace() {
         let cid = _CGSDefaultConnection()
         guard let targetSpaceInt = Int(self.spaceId) else { return }
-        
+
         let winID = [NSNumber(value: self.windowNumber)] as CFArray
         let targetSpaces = [NSNumber(value: targetSpaceInt)] as CFArray
 
         CGSAddWindowsToSpaces(cid, winID, targetSpaces)
-        
+
         let currentSpacesCF = CGSCopySpacesForWindows(cid, 7, winID)
         let currentSpaces = (currentSpacesCF as? [NSNumber])?.map { $0.intValue } ?? []
-        
+
         print("SpaceLabelWindow[\(self.spaceId)]: bindToTargetSpace. Window Number: \(self.windowNumber). Current spaces: \(currentSpaces). Target space: \(targetSpaceInt)")
         DiagnosticEventLog.shared.record(subsystem: "SpaceLabelWindow", "bindToTargetSpace[\(self.spaceId)]: win=\(self.windowNumber), currentSpaces=\(currentSpaces), target=\(targetSpaceInt)")
-        
+
         let spacesToRemove = currentSpaces.filter { $0 != targetSpaceInt }
         if !spacesToRemove.isEmpty {
             print("SpaceLabelWindow[\(self.spaceId)]: Removing window \(self.windowNumber) from spaces: \(spacesToRemove)")
             let removeCF = spacesToRemove.map { NSNumber(value: $0) } as CFArray
             CGSRemoveWindowsFromSpaces(cid, winID, removeCF)
         }
+    }
+
+    /// Returns true if this window is currently assigned to its target space by the CGS window server.
+    private func isBoundToTargetSpace() -> Bool {
+        guard windowNumber > 0 else { return false }
+        let currentSpaces = SpaceHelper.getWindowCurrentSpaces(windowID: windowNumber)
+        return currentSpaces.contains(spaceId)
+    }
+
+    /// Returns true if this window currently belongs to the active space.
+    private func isOnCurrentSpace() -> Bool {
+        guard windowNumber > 0 else { return false }
+        let currentSpaces = SpaceHelper.getWindowCurrentSpaces(windowID: windowNumber)
+        return currentSpaces.contains(spaceManager.currentSpaceUUID)
     }
 
     // Workaround to maintain window rendering during space transitions.
@@ -683,7 +697,14 @@ class SpaceLabelWindow: NSWindow {
                 self.contentView?.layer?.cornerRadius = 12
                 self.contentView?.isHidden = false
             } else {
-                self.level = .floating  // Always floating to ensure space-specific behavior and prevent desktop-level stacking in macOS 27
+                // macOS < 27: Use .normal for preview labels so they don't float above
+                // app windows if CGS space isolation fails. macOS 27+ keeps .floating
+                // since SLS operations handle space transitions correctly.
+                if ProcessInfo.processInfo.operatingSystemVersion.majorVersion >= 27 {
+                    self.level = .floating
+                } else {
+                    self.level = self.isActiveMode ? .floating : .normal
+                }
                 self.label.isHidden = false
                 self.handleView.isHidden = true
                 self.contentView?.layer?.cornerRadius = 20
@@ -975,10 +996,19 @@ class SpaceLabelWindow: NSWindow {
             } else if !hasOrderedInOnce {
                 // For preview windows (on background spaces), we ONLY order front once.
                 if !inCoolingPeriod {
-                    print("SpaceLabelWindow[\(self.spaceId)]: Initial orderFrontRegardless() for background preview.")
-                    self.orderFrontRegardless()
-                    self.bindToTargetSpace()
-                    self.hasOrderedInOnce = true
+                    // SAFETY GUARD: Only order front if the window is actually bound
+                    // to its target space (or at least not on the current space).
+                    // If CGSAddWindowsToSpaces failed silently, ordering front would
+                    // place this label on the wrong (current) desktop, causing clustering.
+                    if isBoundToTargetSpace() || !isOnCurrentSpace() {
+                        print("SpaceLabelWindow[\(self.spaceId)]: Initial orderFrontRegardless() for background preview.")
+                        self.orderFrontRegardless()
+                        self.bindToTargetSpace()
+                        self.hasOrderedInOnce = true
+                    } else {
+                        print("SpaceLabelWindow[\(self.spaceId)]: Binding check failed — preview label would appear on wrong space. Staying hidden.")
+                        self.bindToTargetSpace()
+                    }
                 } else {
                     print("SpaceLabelWindow[\(self.spaceId)]: Suppressing orderFrontRegardless (Preview) during switch cooling period (\(String(format: "%.2f", timeSinceSwitch))s). Scheduling retry.")
                     scheduleVisibilityRetry(delay: coolingPeriod - timeSinceSwitch + 0.1)
@@ -988,9 +1018,14 @@ class SpaceLabelWindow: NSWindow {
                 // which hides other labels via orderOut during drag-based switching).
                 // Preview labels only order front once, so re-order it now to recover.
                 if !inCoolingPeriod {
-                    print("SpaceLabelWindow[\(self.spaceId)]: orderFrontRegardless() for background preview (re-order after external orderOut).")
-                    self.orderFrontRegardless()
-                    self.bindToTargetSpace()
+                    if isBoundToTargetSpace() || !isOnCurrentSpace() {
+                        print("SpaceLabelWindow[\(self.spaceId)]: orderFrontRegardless() for background preview (re-order after external orderOut).")
+                        self.orderFrontRegardless()
+                        self.bindToTargetSpace()
+                    } else {
+                        print("SpaceLabelWindow[\(self.spaceId)]: Re-order blocked — preview label would appear on wrong space.")
+                        self.bindToTargetSpace()
+                    }
                 } else {
                     scheduleVisibilityRetry(delay: coolingPeriod - timeSinceSwitch + 0.1)
                 }
