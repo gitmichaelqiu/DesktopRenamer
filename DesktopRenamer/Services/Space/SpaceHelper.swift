@@ -826,6 +826,18 @@ class SpaceHelper {
                     dragBackEvent.post(tap: .cgSessionEventTap)
                 }
                 usleep(30000) // 30ms settle
+
+                // If the window drifted from its original position after the drag-back,
+                // warp the cursor to maintain the correct grab offset so the window
+                // isn't "dragged behind" during the space switch.
+                if let actual = getWindowInfo(id: activeWindowInfo.id) {
+                    let dx = actual.frame.origin.x - frame.origin.x
+                    let dy = actual.frame.origin.y - frame.origin.y
+                    if abs(dx) >= 1 || abs(dy) >= 1 {
+                        let correctedGrabPoint = CGPoint(x: grabPoint.x + dx, y: grabPoint.y + dy)
+                        CGWarpMouseCursorPosition(correctedGrabPoint)
+                    }
+                }
             } else {
                 // Standard windows with native titlebars automatically bind to the cursor on mouseDown.
                 // We bypass drag simulation entirely to prevent unnecessary window shifting.
