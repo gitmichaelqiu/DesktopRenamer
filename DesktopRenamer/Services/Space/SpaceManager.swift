@@ -407,14 +407,16 @@ class SpaceManager: ObservableObject {
                 self.currentSpaceUUID = targetUUID
                 self.pruneStaleMovedWindows()
                 shouldUpdateWidget = true
-                
-                // If it was a programmatic SLS switch, restore focus now that the space switch is complete!
+
+                // If it was a programmatic space switch on macOS 27+, restore focus
+                // now that the space change is complete. On older macOS the native gesture
+                // path handles focus correctly on its own.
                 let now = Date().timeIntervalSince1970
-                let isSLSSwitch = SpaceHelper.shouldSwitchToSpaceUsingSLS() &&
-                                  (now - SpaceHelper.lastProgrammaticSwitchTime < 2.0) &&
-                                  (targetUUID == SpaceHelper.lastProgrammaticTargetSpaceID)
-                if isSLSSwitch {
-                    print("SpaceManager: Programmatic SLS space switch confirmed. Restoring focus on Space \(targetUUID).")
+                let isProgrammatic = SpaceHelper.shouldSwitchToSpaceUsingSLS() &&
+                                     (now - SpaceHelper.lastProgrammaticSwitchTime < 2.0) &&
+                                     (targetUUID == SpaceHelper.lastProgrammaticTargetSpaceID)
+                if isProgrammatic {
+                    print("SpaceManager: Programmatic space switch confirmed. Restoring focus on Space \(targetUUID).")
                     SpaceHelper.restoreFocusAfterSLSSwitch(spaceID: targetUUID, immediate: true)
                 }
             }
