@@ -12,6 +12,9 @@ struct SwitchSettingsView: View {
     @State private var showingAddExceptionSheet = false
     @State private var editingException: AppGrabException? = nil
     
+    @AppStorage("com.michaelqiu.desktoprenamer.debug.spaceSwitchMethod") private var spaceSwitchMethod: Int = 0
+    @State private var showDebugSettings = false
+    
     var body: some View {
         SettingsContainer(.sswitch) {
             VStack(alignment: .leading, spacing: 20) {
@@ -376,11 +379,30 @@ struct SwitchSettingsView: View {
                     }
                 }
                 .animation(.easeInOut(duration: 0.2), value: spaceManager.appGrabExceptions)
+                
+                #if DEBUG
+                if showDebugSettings {
+                    SettingsSection("Debug Settings (Developer Only)") {
+                        SettingsRow(
+                            "Space switch method",
+                            helperText: "Manually force a switching method or let the app auto-detect (Legacy Swipe for < macOS 27, SLS Operation for >= macOS 27)."
+                        ) {
+                            Picker("", selection: $spaceSwitchMethod) {
+                                Text("Automatic").tag(0)
+                                Text("Force Legacy Swipe").tag(1)
+                                Text("Force SLS Operation").tag(2)
+                            }
+                            .labelsHidden()
+                        }
+                    }
+                }
+                #endif
             }
             .frame(maxWidth: .infinity, alignment: .topLeading)
             .animation(.easeInOut(duration: 0.2), value: gestureManager.isEnabled)
             .environment(\.settingsTab, .sswitch)
             .onAppear {
+                showDebugSettings = UserDefaults.standard.bool(forKey: "com.michaelqiu.desktoprenamer.showDebugSettings")
                 if let bundleID = spaceManager.autoEditBundleID {
                     if let exception = spaceManager.appGrabExceptions.first(where: { $0.bundleIdentifier == bundleID }) {
                         editingException = exception
