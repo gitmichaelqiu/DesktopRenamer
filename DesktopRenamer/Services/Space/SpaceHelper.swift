@@ -49,6 +49,7 @@ class SpaceHelper {
     private static var draggedWindowPID: Int32? = nil
     private static var draggedWindowBundleID: String? = nil
     private static var draggedWindowAppName: String? = nil
+    private static var draggedWindowOriginalFrame: CGRect? = nil
     static var isDragging: Bool { originalMousePoint != nil }
 
     /// Full drag state summary for diagnostic reports.
@@ -764,6 +765,7 @@ class SpaceHelper {
                 draggedWindowBundleID = runningApp.bundleIdentifier
                 draggedWindowAppName = runningApp.localizedName
             }
+            draggedWindowOriginalFrame = activeWindowInfo.frame
             
             let frame = activeWindowInfo.frame
             let grabX: CGFloat
@@ -895,6 +897,25 @@ class SpaceHelper {
                 upEvent.flags = []
                 upEvent.post(tap: .cgSessionEventTap)
             }
+
+            // Restore window to its original position if it shifted during drag-before-switch.
+            if let frame = draggedWindowOriginalFrame, let wid = draggedWindowID, let pid = draggedWindowPID {
+                let appElement = AXUIElementCreateApplication(pid)
+                var windowsRef: CFTypeRef?
+                if AXUIElementCopyAttributeValue(appElement, kAXWindowsAttribute as CFString, &windowsRef) == .success,
+                   let axWindows = windowsRef as? [AXUIElement] {
+                    for axWindow in axWindows {
+                        var cgWID: CGWindowID = 0
+                        if _AXUIElementGetWindow(axWindow, &cgWID) == 0, cgWID == CGWindowID(wid) {
+                            var point = frame.origin
+                            if let positionRef = AXValueCreate(.cgPoint, &point) {
+                                AXUIElementSetAttributeValue(axWindow, kAXPositionAttribute as CFString, positionRef)
+                            }
+                            break
+                        }
+                    }
+                }
+            }
             
             // Verify window move success after a small delay
             let winID = draggedWindowID
@@ -922,6 +943,7 @@ class SpaceHelper {
             draggedWindowPID = nil
             draggedWindowBundleID = nil
             draggedWindowAppName = nil
+            draggedWindowOriginalFrame = nil
         }
         
         restorationTask = task
