@@ -500,6 +500,16 @@ class SpaceHelper {
         return false
     }
     
+    private static func hasAXWindows(pid: Int32) -> Bool {
+        let appRef = AXUIElementCreateApplication(pid)
+        var windowsValue: AnyObject?
+        let result = AXUIElementCopyAttributeValue(appRef, kAXWindowsAttribute as CFString, &windowsValue)
+        guard result == .success, let windows = windowsValue as? [AXUIElement] else {
+            return false
+        }
+        return !windows.isEmpty
+    }
+
     private static func getTopWindowInfo(forSpace spaceID: String) -> (pid: Int32, windowID: Int)? {
         guard let targetSpaceInt = Int(spaceID) else { return nil }
         let conn = _CGSDefaultConnection()
@@ -517,6 +527,10 @@ class SpaceHelper {
                   let wID = window[kCGWindowNumber as String] as? Int,
                   let pid = window[kCGWindowOwnerPID as String] as? Int,
                   pid != ourPID,
+                  let app = NSRunningApplication(processIdentifier: Int32(pid)),
+                  app.activationPolicy == .regular,
+                  hasAXWindows(pid: Int32(pid)),
+                  (window[kCGWindowAlpha as String] as? Double ?? 1.0) > 0.1,
                   let bounds = window[kCGWindowBounds as String] as? [String: Any],
                   let w = bounds["Width"] as? CGFloat, let h = bounds["Height"] as? CGFloat,
                   w > 100, h > 100
@@ -527,7 +541,7 @@ class SpaceHelper {
             if let result = CGSCopySpacesForWindows(conn, 7, wIDArray),
                let spaceIDs = result as? [NSNumber] {
                 let spaceInts = spaceIDs.map { $0.intValue }
-                if spaceInts.contains(targetSpaceInt) {
+                if spaceInts.contains(targetSpaceInt), spaceInts.count == 1 {
                     let appName = window[kCGWindowOwnerName as String] as? String ?? "Unknown"
                     print("SpaceHelper: Found top window on Space \(spaceID): \(appName) (PID: \(pid), WindowID: \(wID), Spaces: \(spaceInts))")
                     DiagnosticEventLog.shared.record(subsystem: "SpaceHelper", "Found top window on Space \(spaceID): \(appName) (PID: \(pid), WindowID: \(wID), Spaces: \(spaceInts))")
