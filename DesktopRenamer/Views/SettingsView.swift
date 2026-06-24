@@ -65,6 +65,7 @@ struct SettingsView: View {
                 detailView
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
+            .background { SidebarStyleConfigurator() }
             
             // Pre-render settings views off-screen in the active root hierarchy to index them
             ZStack {
@@ -116,6 +117,42 @@ struct SettingsView: View {
             } else {
                 content
             }
+        }
+    }
+
+    /// HSplitView creates a plain NSSplitView without sidebar behavior,
+    /// causing the first pane to appear dimmed. This configures the split
+    /// view items to use `.sidebar` behavior so the list renders correctly.
+    private struct SidebarStyleConfigurator: NSViewRepresentable {
+        func makeNSView(context: Context) -> NSView {
+            DispatchQueue.main.async {
+                for window in NSApp.windows where window.identifier?.rawValue == "SettingsWindow" {
+                    guard let splitView = findSplitView(in: window.contentView) else { continue }
+                    configureSidebar(in: splitView)
+                }
+            }
+            return NSView()
+        }
+
+        func updateNSView(_ nsView: NSView, context: Context) {}
+
+        private func findSplitView(in view: NSView?) -> NSSplitView? {
+            guard let view = view else { return nil }
+            if let splitView = view as? NSSplitView { return splitView }
+            for subview in view.subviews {
+                if let found = findSplitView(in: subview) { return found }
+            }
+            return nil
+        }
+
+        private func configureSidebar(in splitView: NSSplitView) {
+            guard let delegate = splitView.delegate else { return }
+            let obj = delegate as AnyObject
+            guard let items = obj.value(forKey: "splitViewItems") as? [AnyObject] else { return }
+            for item in items {
+                item.setValue(false, forKey: "canCollapse")
+            }
+            items.first?.setValue(1, forKey: "behavior")  // 1 = .sidebar
         }
     }
 
