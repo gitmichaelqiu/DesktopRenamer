@@ -41,6 +41,7 @@ class SpaceHelper {
     // Session state for active dragging operations.
     private static var originalMousePoint: CGPoint? = nil
     private static var restorationTask: DispatchWorkItem? = nil
+    private static var pendingFocusTask: DispatchWorkItem? = nil
     private static var pendingMoveCount = 0
     private static var isInstantDrag = false
     private static var targetSpaceID: String? = nil
@@ -597,18 +598,21 @@ class SpaceHelper {
         print("SpaceHelper: restoreFocusAfterSLSSwitch for Space \(spaceID), immediate: \(immediate)")
         DiagnosticEventLog.shared.record(subsystem: "SpaceHelper", "restoreFocusAfterSLSSwitch for Space \(spaceID), immediate: \(immediate)")
         
-        // Post-switch settlement: Activate target space owner app if fullscreen
-        if let pid = getOwnerPID(for: spaceID),
-           let app = NSRunningApplication(processIdentifier: pid) {
-            let delay = immediate ? 0.05 : 0.15
-            DispatchQueue.main.asyncAfter(deadline: .now() + delay) {
-                app.activate(options: .activateIgnoringOtherApps)
-            }
-            return
-        }
+        pendingFocusTask?.cancel()
         
-        let delay = immediate ? 0.05 : 0.45
-        DispatchQueue.main.asyncAfter(deadline: .now() + delay) {
+        // Use 350ms for immediate switches so it runs after transition slide animations settle.
+        // This is key to preventing glitched, mangled, or stacked menu bar items.
+        let delay = immediate ? 0.35 : 0.45
+        
+        let task = DispatchWorkItem {
+            // Post-switch settlement: Activate target space owner app if fullscreen
+            if let pid = getOwnerPID(for: spaceID),
+               let app = NSRunningApplication(processIdentifier: pid) {
+                print("SpaceHelper: Activating fullscreen owner app (PID: \(pid)) on Space \(spaceID)")
+                app.activate(options: .activateIgnoringOtherApps)
+                return
+            }
+            
             guard let topWinInfo = getTopWindowInfo(forSpace: spaceID) else {
                 // Fallback: Activate Finder to reset the menu bar
                 print("SpaceHelper: No top window found on Space \(spaceID). Activating Finder.")
@@ -631,6 +635,9 @@ class SpaceHelper {
                 _ = focusWindowViaAccessibility(pid: pid, windowID: windowID)
             }
         }
+        
+        pendingFocusTask = task
+        DispatchQueue.main.asyncAfter(deadline: .now() + delay, execute: task)
     }
 
     private static func postDockSwipe(phase: Int, directionRight: Bool, velocity: Double) -> Bool {
