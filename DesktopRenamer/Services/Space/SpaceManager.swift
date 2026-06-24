@@ -343,6 +343,7 @@ class SpaceManager: ObservableObject {
             let isPartialList = !self.spaceNameDict.isEmpty && newSpaceList.count < self.spaceNameDict.count
             if isPartialList && newSpaceList.count <= 1 {
                 print("SpaceManager: Rejecting partial space list (\(newSpaceList.count) vs cached \(self.spaceNameDict.count)). Skipping update.")
+                DiagnosticEventLog.shared.record(subsystem: "SpaceManager", level: "warning", "Rejected partial space list: new=\(newSpaceList.count), cached=\(self.spaceNameDict.count), source=\(source)")
                 if !cgsState.currentUUID.isEmpty {
                     self.currentSpaceUUID = cgsState.currentUUID
                 }

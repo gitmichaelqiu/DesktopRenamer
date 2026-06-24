@@ -264,14 +264,18 @@ class SpaceLabelWindow: NSWindow {
     private func isBoundToTargetSpace() -> Bool {
         guard windowNumber > 0 else { return false }
         let currentSpaces = SpaceHelper.getWindowCurrentSpaces(windowID: windowNumber)
-        return currentSpaces.contains(spaceId)
+        let bound = currentSpaces.contains(spaceId)
+        DiagnosticEventLog.shared.record(subsystem: "SpaceLabelWindow", level: "info", "isBoundToTargetSpace[\(self.spaceId)]: win=\(self.windowNumber), bound=\(bound), spaces=\(currentSpaces.sorted().joined(separator: ","))")
+        return bound
     }
 
     /// Returns true if this window currently belongs to the active space.
     private func isOnCurrentSpace() -> Bool {
         guard windowNumber > 0 else { return false }
         let currentSpaces = SpaceHelper.getWindowCurrentSpaces(windowID: windowNumber)
-        return currentSpaces.contains(spaceManager.currentSpaceUUID)
+        let onCurrent = currentSpaces.contains(spaceManager.currentSpaceUUID)
+        DiagnosticEventLog.shared.record(subsystem: "SpaceLabelWindow", level: "info", "isOnCurrentSpace[\(self.spaceId)]: win=\(self.windowNumber), onCurrent=\(onCurrent), currentSpace=\(spaceManager.currentSpaceUUID)")
+        return onCurrent
     }
 
     // Workaround to maintain window rendering during space transitions.
@@ -1007,6 +1011,7 @@ class SpaceLabelWindow: NSWindow {
                         self.hasOrderedInOnce = true
                     } else {
                         print("SpaceLabelWindow[\(self.spaceId)]: Binding check failed — preview label would appear on wrong space. Staying hidden.")
+                        DiagnosticEventLog.shared.record(subsystem: "SpaceLabelWindow", level: "warning", "BLOCKED orderFrontRegardless for preview label \(self.spaceId): bound=\(isBoundToTargetSpace()), onCurrent=\(isOnCurrentSpace())")
                         self.bindToTargetSpace()
                     }
                 } else {
@@ -1024,6 +1029,7 @@ class SpaceLabelWindow: NSWindow {
                         self.bindToTargetSpace()
                     } else {
                         print("SpaceLabelWindow[\(self.spaceId)]: Re-order blocked — preview label would appear on wrong space.")
+                        DiagnosticEventLog.shared.record(subsystem: "SpaceLabelWindow", level: "warning", "BLOCKED re-order for preview label \(self.spaceId): bound=\(isBoundToTargetSpace()), onCurrent=\(isOnCurrentSpace())")
                         self.bindToTargetSpace()
                     }
                 } else {

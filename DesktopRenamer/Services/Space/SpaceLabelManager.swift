@@ -469,6 +469,7 @@ class SpaceLabelManager: ObservableObject {
             if currentSpaces.isEmpty { continue }
             if currentSpaces.contains(currentSpaceID) && spaceId != currentSpaceID {
                 print("SpaceLabelManager: Safety — preview label \(spaceId) found on current space. Hiding.")
+                DiagnosticEventLog.shared.record(subsystem: "SpaceLabelManager", level: "warning", "Safety: preview label \(spaceId) on wrong space (current=\(currentSpaceID)). Hiding.")
                 window.hideImmediately()
             }
         }
