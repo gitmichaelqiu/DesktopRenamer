@@ -247,14 +247,12 @@ struct SettingsView: View {
             List(selection: $selectedTab) {
                 sidebarContent(titleSize: 21, spacing: 2)
             }
-            .listStyle(.sidebar)
             .scrollDisabled(true)
             .edgesIgnoringSafeArea(.top)
         } else {
             List(selection: $selectedTab) {
                 sidebarContent(titleSize: 18, spacing: 0)
             }
-            .listStyle(.sidebar)
             .scrollDisabled(true)
             .edgesIgnoringSafeArea(.top)
         }
