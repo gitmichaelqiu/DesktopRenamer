@@ -39,53 +39,26 @@ extension View {
     }
 }
 
-/// Traverses the SettingsWindow's view hierarchy to find the NSSplitView
-/// and disables collapse on all its split view items. This is needed because
-/// SwiftUI's NavigationSplitView uses internal NSSplitViewItem subclasses
-/// that may bypass method swizzling of `canCollapse`.
-// MARK: - Split View Delegate Proxy
-
-/// Proxies NSSplitViewDelegate, returning false for
-/// splitViewCanCollapseSubview:subview: while forwarding all other
-/// delegate messages to the original delegate (SwiftUI's internal one).
-fileprivate class SplitViewDelegateProxy: NSObject, NSSplitViewDelegate {
-    weak var originalDelegate: NSSplitViewDelegate?
-
-    init(original: NSSplitViewDelegate?) {
-        self.originalDelegate = original
-        super.init()
-    }
-
-    override func responds(to aSelector: Selector!) -> Bool {
-        if aSelector == NSSelectorFromString("splitViewCanCollapseSubview:subview:") {
-            return true
-        }
-        return originalDelegate?.responds(to: aSelector) ?? false
-    }
-
-    override func forwardingTarget(for aSelector: Selector!) -> Any? {
-        originalDelegate
-    }
-
-    func splitViewCanCollapseSubview(_ splitView: NSSplitView, subview: NSView) -> Bool {
-        return false
-    }
-}
-
+/// SwiftUI's NavigationSplitView uses private NSSplitViewItem subclasses
+/// that override `canCollapse`, bypassing swizzling on the parent class.
+/// This finds the actual item instances and patches `canCollapse` on the
+/// subclass directly via method_setImplementation.
 struct SidebarCollapseDisabler: NSViewRepresentable {
-    final class Coordinator {
-        fileprivate var delegateProxy: SplitViewDelegateProxy?
-    }
-
-    func makeCoordinator() -> Coordinator { Coordinator() }
-
     func makeNSView(context: Context) -> NSView {
         DispatchQueue.main.async {
             for window in NSApp.windows where window.identifier?.rawValue == "SettingsWindow" {
                 guard let splitView = findSplitView(in: window.contentView) else { continue }
-                let proxy = SplitViewDelegateProxy(original: splitView.delegate as? NSSplitViewDelegate)
-                context.coordinator.delegateProxy = proxy
-                splitView.delegate = proxy
+                guard let delegate = splitView.delegate else { continue }
+                let delegateObject = delegate as AnyObject
+                guard let items = delegateObject.value(forKey: "splitViewItems") as? [AnyObject],
+                      let firstItem = items.first else { continue }
+
+                let cls: AnyClass = object_getClass(firstItem)!
+                let selector = NSSelectorFromString("canCollapse")
+                guard let method = class_getInstanceMethod(cls, selector) else { continue }
+
+                let block: @convention(block) (AnyObject) -> Bool = { _ in false }
+                method_setImplementation(method, imp_implementationWithBlock(block as Any))
             }
         }
         return NSView()
@@ -109,39 +82,39 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     var statusBarController: StatusBarController?
     var hotkeyManager: HotkeyManager!
     var gestureManager: GestureManager!
-    
+
     private var cancellables = Set<AnyCancellable>()
     var splashWindowController: NSWindowController?
-    
+
     func applicationDidFinishLaunching(_ notification: Notification) {
         AppDelegate.shared = self
-        
+
         NSApp.setActivationPolicy(.accessory)
-        
+
         let hasInitialized = UserDefaults.standard.bool(forKey: "HasInitializedDefaults")
         if !hasInitialized {
             try? SMAppService.mainApp.register()
             UserDefaults.standard.set(true, forKey: "HasInitializedDefaults")
         }
-        
+
         // Check for first launch to present onboarding splash screen.
         let hasSeenSplash = UserDefaults.standard.bool(forKey: "hasSeenSplashScreen")
         if !hasSeenSplash {
             showSplashScreen()
         }
-        
+
         self.hotkeyManager = HotkeyManager()
-        
+
         DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
             self.spaceManager = SpaceManager()
             self.gestureManager = GestureManager(spaceManager: self.spaceManager)
-            
+
             self.statusBarController = StatusBarController(
                 spaceManager: self.spaceManager,
                 hotkeyManager: self.hotkeyManager,
                 gestureManager: self.gestureManager
             )
-            
+
             self.setupHotkeyBindings()
         }
 
@@ -149,33 +122,33 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             _ = UpdateManager.shared
         }
     }
-    
+
     private func setupHotkeyBindings() {
         hotkeyManager.switchLeftTriggered
             .receive(on: DispatchQueue.main)
             .sink { [weak self] in self?.spaceManager.switchToPreviousSpace() }
             .store(in: &cancellables)
-            
+
         hotkeyManager.switchRightTriggered
             .receive(on: DispatchQueue.main)
             .sink { [weak self] in self?.spaceManager.switchToNextSpace() }
             .store(in: &cancellables)
-            
+
         hotkeyManager.moveWindowNextTriggered
             .receive(on: DispatchQueue.main)
             .sink { [weak self] in self?.spaceManager.moveActiveWindowToNextSpace() }
             .store(in: &cancellables)
-            
+
         hotkeyManager.moveWindowPreviousTriggered
             .receive(on: DispatchQueue.main)
             .sink { [weak self] in self?.spaceManager.moveActiveWindowToPreviousSpace() }
             .store(in: &cancellables)
-            
+
         hotkeyManager.moveWindowNumberTriggered
             .receive(on: DispatchQueue.main)
             .sink { [weak self] number in self?.spaceManager.moveActiveWindowToSpace(number: number) }
             .store(in: &cancellables)
-            
+
         hotkeyManager.switchSpaceNumberTriggered
             .receive(on: DispatchQueue.main)
             .sink { [weak self] number in self?.spaceManager.switchToSpace(number: number) }
@@ -222,7 +195,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             }
             .store(in: &cancellables)
     }
-    
+
     func showSplashScreen(on parentWindow: NSWindow? = nil) {
         if let existing = splashWindowController {
             if let window = existing.window, window.isVisible {
@@ -231,11 +204,11 @@ class AppDelegate: NSObject, NSApplicationDelegate {
                 return
             }
         }
-        
+
         let splashView = SplashView { [weak self] in
             Task { @MainActor in
                 UserDefaults.standard.set(true, forKey: "hasSeenSplashScreen")
-                
+
                 if let gestureManager = self?.gestureManager {
                     gestureManager.isEnabled = UserDefaults.standard.bool(forKey: "GestureManager.Enabled")
                 }
@@ -243,19 +216,19 @@ class AppDelegate: NSObject, NSApplicationDelegate {
                     labelManager.showPreviewLabels = UserDefaults.standard.object(forKey: "kShowPreviewLabels") == nil ? true : UserDefaults.standard.bool(forKey: "kShowPreviewLabels")
                     labelManager.showActiveLabels = UserDefaults.standard.object(forKey: "kShowActiveLabels") == nil ? true : UserDefaults.standard.bool(forKey: "kShowActiveLabels")
                 }
-                
+
                 if let parent = parentWindow, let sheet = self?.splashWindowController?.window {
                     parent.endSheet(sheet)
                 } else {
                     self?.splashWindowController?.close()
                     self?.splashWindowController = nil
                 }
-                
+
                 // Automatically switch to About page of settings.
                 self?.statusBarController?.openSettingsWindow(tab: .about)
             }
         }
-        
+
         let hostingController = NSHostingController(rootView: splashView)
         let window = NSWindow(
             contentRect: NSRect(x: 0, y: 0, width: 550, height: 450),
@@ -263,15 +236,15 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             backing: .buffered,
             defer: false
         )
-        
+
         window.titlebarAppearsTransparent = true
         window.titleVisibility = .hidden
         window.isMovableByWindowBackground = true
         window.contentViewController = hostingController
-        
+
         let windowController = NSWindowController(window: window)
         self.splashWindowController = windowController
-        
+
         if let parent = parentWindow {
             parent.beginSheet(window) { _ in
                 self.splashWindowController = nil
@@ -282,20 +255,20 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             NSApp.activate(ignoringOtherApps: true)
         }
     }
-    
+
     func applicationWillTerminate(_ notification: Notification) {
         spaceManager?.prepareForTermination()
     }
-    
+
     func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
         statusBarController?.openSettingsWindow()
         return true
     }
-    
+
     func application(_ application: NSApplication, open urls: [URL]) {
         for url in urls { handleURL(url) }
     }
-    
+
     private func handleURL(_ url: URL) {
         guard url.scheme == "desktoprenamer",
               let components = URLComponents(url: url, resolvingAgainstBaseURL: true)
@@ -322,7 +295,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             }
             return
         }
-        
+
         // Fallback to number-based switching if UUID is missing or unavailable (Legacy support).
         if let numString = queryItems.first(where: { $0.name == "num" })?.value,
            let spaceNum = Int(numString) {
@@ -337,11 +310,11 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 @main
 struct DesktopRenamerApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
-    
+
     init() {
         NSSplitViewItem.swizzle()
     }
-    
+
     var body: some Scene {
         Settings {
             EmptyView()
