@@ -648,6 +648,7 @@ class SpaceHelper {
         ev.setIntegerValueField(CGEventField(rawValue: 123)!, value: 1) // horizontal motion
         ev.setDoubleValueField(CGEventField(rawValue: 129)!, value: vel)
         ev.setDoubleValueField(CGEventField(rawValue: 130)!, value: vel)
+        ev.setIntegerValueField(CGEventField(rawValue: 115)!, value: directionRight ? 8 : 4) // swipe mask: right=8, left=4
         
         var eventToPost = ev
         let os = ProcessInfo.processInfo.operatingSystemVersion
