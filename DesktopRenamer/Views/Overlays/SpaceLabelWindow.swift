@@ -666,7 +666,11 @@ class SpaceLabelWindow: NSWindow {
             self.backgroundColor = .clear  // RE-ASSERT TRANSPARENCY
 
             if self.isInvisibleAnchorMode {
-                self.level = .normal  // CRITICAL: Floating windows don't switch spaces. Normal windows do.
+                if ProcessInfo.processInfo.operatingSystemVersion.majorVersion >= 27 {
+                    self.level = .floating // On macOS 27+, keep floating at all times to prevent replication/stacking
+                } else {
+                    self.level = .normal  // CRITICAL: Floating windows don't switch spaces. Normal windows do.
+                }
                 self.label.isHidden = true
                 self.handleView.isHidden = true
                 self.contentView?.layer?.cornerRadius = 0
@@ -679,7 +683,7 @@ class SpaceLabelWindow: NSWindow {
                 self.contentView?.layer?.cornerRadius = 12
                 self.contentView?.isHidden = false
             } else {
-                self.level = isCurrentSpace ? .floating : .normal  // Restore for visibility, normal for background spaces to prevent stacking
+                self.level = .floating  // Always floating to ensure space-specific behavior and prevent desktop-level stacking in macOS 27
                 self.label.isHidden = false
                 self.handleView.isHidden = true
                 self.contentView?.layer?.cornerRadius = 20
@@ -960,8 +964,8 @@ class SpaceLabelWindow: NSWindow {
                 if !self.isVisible {
                     if !inCoolingPeriod {
                         print("SpaceLabelWindow[\(self.spaceId)]: orderFrontRegardless() for ACTIVE space.")
+                        self.bindToTargetSpace() // Bind first to prevent appearing on current space!
                         self.orderFrontRegardless()
-                        self.bindToTargetSpace()
                         self.hasOrderedInOnce = true
                     } else {
                         print("SpaceLabelWindow[\(self.spaceId)]: Suppressing orderFrontRegardless (Active) during switch cooling period (\(String(format: "%.2f", timeSinceSwitch))s). Scheduling retry.")
@@ -972,8 +976,8 @@ class SpaceLabelWindow: NSWindow {
                 // For preview windows (on background spaces), we ONLY order front once.
                 if !inCoolingPeriod {
                     print("SpaceLabelWindow[\(self.spaceId)]: Initial orderFrontRegardless() for background preview.")
+                    self.bindToTargetSpace() // Bind first to prevent appearing on current space!
                     self.orderFrontRegardless()
-                    self.bindToTargetSpace()
                     self.hasOrderedInOnce = true
                 } else {
                     print("SpaceLabelWindow[\(self.spaceId)]: Suppressing orderFrontRegardless (Preview) during switch cooling period (\(String(format: "%.2f", timeSinceSwitch))s). Scheduling retry.")
@@ -985,8 +989,8 @@ class SpaceLabelWindow: NSWindow {
                 // Preview labels only order front once, so re-order it now to recover.
                 if !inCoolingPeriod {
                     print("SpaceLabelWindow[\(self.spaceId)]: orderFrontRegardless() for background preview (re-order after external orderOut).")
+                    self.bindToTargetSpace() // Bind first to prevent appearing on current space!
                     self.orderFrontRegardless()
-                    self.bindToTargetSpace()
                 } else {
                     scheduleVisibilityRetry(delay: coolingPeriod - timeSinceSwitch + 0.1)
                 }
