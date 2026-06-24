@@ -316,7 +316,8 @@ struct SettingsRow<Content: View>: View {
                     .frame(alignment: .trailing)
             }
             
-            if let videoName = demoVideoName,
+            if UserDefaults.standard.bool(forKey: "ShowDemoVideos"),
+               let videoName = demoVideoName,
                let videoURL = Bundle.main.url(forResource: videoName, withExtension: "mp4") {
                 LoopVideoPlayerView(videoURL: videoURL)
                     .frame(height: 180)
@@ -518,8 +519,9 @@ struct SliderSettingsRow<V>: View where V: BinaryFloatingPoint, V.Stride: Binary
                     .foregroundColor(.secondary)
                     .frame(minWidth: 50, alignment: .trailing)
             }
-            
-            if let videoName = demoVideoName,
+
+            if UserDefaults.standard.bool(forKey: "ShowDemoVideos"),
+               let videoName = demoVideoName,
                let videoURL = Bundle.main.url(forResource: videoName, withExtension: "mp4") {
                 LoopVideoPlayerView(videoURL: videoURL)
                     .frame(height: 180)
