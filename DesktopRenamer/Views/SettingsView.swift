@@ -59,14 +59,14 @@ struct SettingsView: View {
 
     var body: some View {
         ZStack {
-            HStack(spacing: 0) {
+            NavigationSplitView(columnVisibility: .constant(.all)) {
                 sidebar
-                    .frame(width: sidebarWidth)
-                Divider()
+            } detail: {
                 detailView
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
-            
+            .modifier(RemoveSidebarToggle())
+            .background(CollapseButtonRemover())
+
             // Pre-render settings views off-screen in the active root hierarchy to index them
             ZStack {
                 GeneralSettingsView(spaceManager: spaceManager, labelManager: labelManager)
@@ -92,7 +92,6 @@ struct SettingsView: View {
         }
         .environmentObject(navigationState)
         .navigationTitle("")
-        .modifier(ToolbarHider())
         .edgesIgnoringSafeArea(.top)
         .frame(
             width: CGFloat(defaultSettingsWindowWidth), height: CGFloat(defaultSettingsWindowHeight)
@@ -110,12 +109,62 @@ struct SettingsView: View {
         }
     }
 
+    /// Removes the sidebar toggle from the toolbar (macOS 14+) to prevent the
+    /// collapse affordance from appearing on the NavigationSplitView divider.
+    private struct RemoveSidebarToggle: ViewModifier {
+        func body(content: Content) -> some View {
+            if #available(macOS 14.0, *) {
+                content.toolbar(removing: .sidebarToggle)
+            } else {
+                content
+            }
+        }
+    }
+
     private struct ToolbarHider: ViewModifier {
         func body(content: Content) -> some View {
             if #available(macOS 14.0, *) {
                 content.toolbar(.hidden, for: .windowToolbar)
             } else {
                 content
+            }
+        }
+    }
+
+    /// Hides the NavigationSplitView collapse affordance by traversing the
+    /// split view's subview hierarchy and hiding any view positioned near the
+    /// divider that looks like a collapse button (small, clickable control).
+    private struct CollapseButtonRemover: NSViewRepresentable {
+        func makeNSView(context: Context) -> NSView {
+            DispatchQueue.main.async {
+                guard let window = NSApp.windows.first(where: { $0.identifier?.rawValue == "SettingsWindow" }),
+                      let splitView = findSplitView(in: window.contentView)
+                else { return }
+                let dividerX = splitView.convert(CGPoint(x: sidebarWidth, y: 0), to: nil).x
+                hideViewsNearDivider(in: splitView, dividerX: dividerX)
+            }
+            return NSView()
+        }
+
+        func updateNSView(_ nsView: NSView, context: Context) {}
+
+        private func findSplitView(in view: NSView?) -> NSSplitView? {
+            guard let view = view else { return nil }
+            if let splitView = view as? NSSplitView { return splitView }
+            for subview in view.subviews {
+                if let found = findSplitView(in: subview) { return found }
+            }
+            return nil
+        }
+
+        private func hideViewsNearDivider(in view: NSView, dividerX: CGFloat) {
+            for subview in view.subviews {
+                let frameInWindow = subview.convert(subview.bounds, to: nil)
+                if abs(frameInWindow.midX - dividerX) < 25 && frameInWindow.width < 30 && frameInWindow.height < 30 {
+                    subview.isHidden = true
+                } else {
+                    hideViewsNearDivider(in: subview, dividerX: dividerX)
+                }
             }
         }
     }
@@ -247,12 +296,14 @@ struct SettingsView: View {
             List(selection: $selectedTab) {
                 sidebarContent(titleSize: 21, spacing: 2)
             }
+            .listStyle(.sidebar)
             .scrollDisabled(true)
             .edgesIgnoringSafeArea(.top)
         } else {
             List(selection: $selectedTab) {
                 sidebarContent(titleSize: 18, spacing: 0)
             }
+            .listStyle(.sidebar)
             .scrollDisabled(true)
             .edgesIgnoringSafeArea(.top)
         }
