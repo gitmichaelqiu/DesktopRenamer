@@ -7,6 +7,7 @@ import QuartzCore
 @_silgen_name("CGSCopyManagedDisplaySpaces") private func CGSCopyManagedDisplaySpaces(_ cid: Int32) -> CFArray?
 @_silgen_name("CGSAddWindowsToSpaces") private func CGSAddWindowsToSpaces(_ cid: Int32, _ windows: CFArray, _ spaces: CFArray)
 @_silgen_name("CGSRemoveWindowsFromSpaces") private func CGSRemoveWindowsFromSpaces(_ cid: Int32, _ windows: CFArray, _ spaces: CFArray)
+@_silgen_name("CGSCopySpacesForWindows") private func CGSCopySpacesForWindows(_ cid: Int32, _ mask: Int32, _ windows: CFArray) -> CFArray?
 
 // Handle view displayed when the window is docked to a screen edge.
 class CollapsibleHandleView: NSView {
@@ -238,38 +239,19 @@ class SpaceLabelWindow: NSWindow {
     // Binds the window to a specific space via private APIs.
     func bindToTargetSpace() {
         let cid = _CGSDefaultConnection()
-        guard let displays = CGSCopyManagedDisplaySpaces(cid) as? [NSDictionary] else { return }
-
         guard let targetSpaceInt = Int(self.spaceId) else { return }
-        
-        var currentSpaceInt: Int? = nil
-        // Find which space the window is currently on (it drops onto the active space by default)
-        for display in displays {
-            if let currentDict = display["Current Space"] as? [String: Any],
-               let currentID = currentDict["ManagedSpaceID"] as? Int {
-                // Determine if the target space is on this display.
-                // If the target space is NOT the current space, we need to move it.
-                // It's possible the window got assigned to the current space of the display it was created on.
-                if let spaces = display["Spaces"] as? [[String: Any]] {
-                    for space in spaces {
-                        if let managedID = space["ManagedSpaceID"] as? Int, managedID == targetSpaceInt {
-                            // Target space is on this display! We assume the window was created on this display's current space.
-                            currentSpaceInt = currentID
-                            break
-                        }
-                    }
-                }
-            }
-        }
         
         let winID = [NSNumber(value: self.windowNumber)] as CFArray
         let targetSpaces = [NSNumber(value: targetSpaceInt)] as CFArray
 
         CGSAddWindowsToSpaces(cid, winID, targetSpaces)
         
-        if let current = currentSpaceInt, current != targetSpaceInt {
-            let currentSpaces = [NSNumber(value: current)] as CFArray
-            CGSRemoveWindowsFromSpaces(cid, winID, currentSpaces)
+        if let currentSpacesCF = CGSCopySpacesForWindows(cid, 7, winID),
+           let currentSpaces = currentSpacesCF as? [NSNumber] {
+            let spacesToRemove = currentSpaces.filter { $0.intValue != targetSpaceInt }
+            if !spacesToRemove.isEmpty {
+                CGSRemoveWindowsFromSpaces(cid, winID, spacesToRemove as CFArray)
+            }
         }
     }
 
@@ -692,7 +674,7 @@ class SpaceLabelWindow: NSWindow {
                 self.contentView?.layer?.cornerRadius = 12
                 self.contentView?.isHidden = false
             } else {
-                self.level = .floating  // Restore for visibility
+                self.level = isCurrentSpace ? .floating : .normal  // Restore for visibility, normal for background spaces to prevent stacking
                 self.label.isHidden = false
                 self.handleView.isHidden = true
                 self.contentView?.layer?.cornerRadius = 20
@@ -1001,6 +983,10 @@ class SpaceLabelWindow: NSWindow {
                     scheduleVisibilityRetry(delay: coolingPeriod - timeSinceSwitch + 0.1)
                 }
             }
+        }
+
+        if self.isVisible {
+            self.bindToTargetSpace()
         }
 
         if isVisuallyVisible {
