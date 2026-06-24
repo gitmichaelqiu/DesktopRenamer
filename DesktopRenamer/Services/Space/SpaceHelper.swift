@@ -1123,6 +1123,16 @@ class SpaceHelper {
         return nil
     }
 
+    /// Returns the set of space IDs a window is currently assigned to by the CGS window server.
+    static func getWindowCurrentSpaces(windowID: Int) -> Set<String> {
+        let conn = _CGSDefaultConnection()
+        let widArray = [windowID as NSNumber] as CFArray
+        guard let result = CGSCopySpacesForWindows(conn, 7, widArray) as? [NSNumber] else {
+            return []
+        }
+        return Set(result.map { String($0.intValue) })
+    }
+
     static func getActiveWindowFrame() -> CGRect? {
         return getActiveWindowInfo()?.frame
     }
