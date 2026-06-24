@@ -59,15 +59,12 @@ struct SettingsView: View {
 
     var body: some View {
         ZStack {
-            NavigationSplitView(columnVisibility: .constant(.all)) {
+            HSplitView {
                 sidebar
-            } detail: {
+                    .frame(minWidth: sidebarWidth, maxWidth: sidebarWidth)
                 detailView
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
-            .background {
-                SidebarCollapseDisabler()
-            }
-            .modifier(SidebarToggleRemover())
             
             // Pre-render settings views off-screen in the active root hierarchy to index them
             ZStack {
@@ -116,16 +113,6 @@ struct SettingsView: View {
         func body(content: Content) -> some View {
             if #available(macOS 14.0, *) {
                 content.toolbar(.hidden, for: .windowToolbar)
-            } else {
-                content
-            }
-        }
-    }
-
-    private struct SidebarToggleRemover: ViewModifier {
-        func body(content: Content) -> some View {
-            if #available(macOS 14.0, *) {
-                content.toolbar(removing: .sidebarToggle)
             } else {
                 content
             }
@@ -260,19 +247,12 @@ struct SettingsView: View {
                 sidebarContent(titleSize: 21, spacing: 2)
             }
             .scrollDisabled(true)
-            .removeSidebarToggle()
-            .navigationSplitViewColumnWidth(
-                min: sidebarWidth, ideal: sidebarWidth, max: sidebarWidth
-            )
             .edgesIgnoringSafeArea(.top)
         } else {
             List(selection: $selectedTab) {
                 sidebarContent(titleSize: 18, spacing: 0)
             }
             .scrollDisabled(true)
-            .navigationSplitViewColumnWidth(
-                min: sidebarWidth, ideal: sidebarWidth, max: sidebarWidth
-            )
             .edgesIgnoringSafeArea(.top)
         }
     }
