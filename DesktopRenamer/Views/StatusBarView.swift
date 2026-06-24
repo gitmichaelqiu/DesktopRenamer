@@ -511,7 +511,9 @@ class StatusBarController: NSObject {
         window.titleVisibility = .hidden
         window.titlebarAppearsTransparent = true
         window.titlebarSeparatorStyle = .none
-        window.toolbar = nil
+        // Don't nil the toolbar — NavigationSplitView on macOS 14+ creates its
+        // own internal toolbar, and SwiftUI's toolbar(removing: .sidebarToggle)
+        // modifier needs it to exist in order to suppress the toggle.
         window.center()
         window.minSize = NSSize(width: defaultSettingsWindowWidth, height: defaultSettingsWindowHeight)
         window.collectionBehavior = [.participatesInCycle]
