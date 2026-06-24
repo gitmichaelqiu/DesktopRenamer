@@ -29,53 +29,6 @@ extension NSSplitViewItem {
     }
 }
 
-@available(macOS 14.0, *)
-extension View {
-    func removeSidebarToggle() -> some View {
-        toolbar(removing: .sidebarToggle)
-            .toolbar {
-                Color.clear
-            }
-    }
-}
-
-/// SwiftUI's NavigationSplitView uses private NSSplitViewItem subclasses
-/// that override `canCollapse`, bypassing swizzling on the parent class.
-/// This finds the actual item instances and patches `canCollapse` on the
-/// subclass directly via method_setImplementation.
-struct SidebarCollapseDisabler: NSViewRepresentable {
-    func makeNSView(context: Context) -> NSView {
-        DispatchQueue.main.async {
-            for window in NSApp.windows where window.identifier?.rawValue == "SettingsWindow" {
-                guard let splitView = findSplitView(in: window.contentView) else { continue }
-                guard let delegate = splitView.delegate else { continue }
-                let delegateObject = delegate as AnyObject
-                guard let items = delegateObject.value(forKey: "splitViewItems") as? [AnyObject],
-                      let firstItem = items.first else { continue }
-
-                let cls: AnyClass = object_getClass(firstItem)!
-                let selector = NSSelectorFromString("canCollapse")
-                guard let method = class_getInstanceMethod(cls, selector) else { continue }
-
-                let block: @convention(block) (AnyObject) -> Bool = { _ in false }
-                method_setImplementation(method, imp_implementationWithBlock(block as Any))
-            }
-        }
-        return NSView()
-    }
-
-    func updateNSView(_ nsView: NSView, context: Context) {}
-
-    private func findSplitView(in view: NSView?) -> NSSplitView? {
-        guard let view = view else { return nil }
-        if let splitView = view as? NSSplitView { return splitView }
-        for subview in view.subviews {
-            if let found = findSplitView(in: subview) { return found }
-        }
-        return nil
-    }
-}
-
 class AppDelegate: NSObject, NSApplicationDelegate {
     static var shared: AppDelegate!
     var spaceManager: SpaceManager!
