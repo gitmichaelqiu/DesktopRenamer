@@ -43,16 +43,49 @@ extension View {
 /// and disables collapse on all its split view items. This is needed because
 /// SwiftUI's NavigationSplitView uses internal NSSplitViewItem subclasses
 /// that may bypass method swizzling of `canCollapse`.
+// MARK: - Split View Delegate Proxy
+
+/// Proxies NSSplitViewDelegate, returning false for
+/// splitViewCanCollapseSubview:subview: while forwarding all other
+/// delegate messages to the original delegate (SwiftUI's internal one).
+fileprivate class SplitViewDelegateProxy: NSObject, NSSplitViewDelegate {
+    weak var originalDelegate: NSSplitViewDelegate?
+
+    init(original: NSSplitViewDelegate?) {
+        self.originalDelegate = original
+        super.init()
+    }
+
+    override func responds(to aSelector: Selector!) -> Bool {
+        if aSelector == NSSelectorFromString("splitViewCanCollapseSubview:subview:") {
+            return true
+        }
+        return originalDelegate?.responds(to: aSelector) ?? false
+    }
+
+    override func forwardingTarget(for aSelector: Selector!) -> Any? {
+        originalDelegate
+    }
+
+    func splitViewCanCollapseSubview(_ splitView: NSSplitView, subview: NSView) -> Bool {
+        return false
+    }
+}
+
 struct SidebarCollapseDisabler: NSViewRepresentable {
+    final class Coordinator {
+        fileprivate var delegateProxy: SplitViewDelegateProxy?
+    }
+
+    func makeCoordinator() -> Coordinator { Coordinator() }
+
     func makeNSView(context: Context) -> NSView {
         DispatchQueue.main.async {
             for window in NSApp.windows where window.identifier?.rawValue == "SettingsWindow" {
                 guard let splitView = findSplitView(in: window.contentView) else { continue }
-                if let controller = splitView.delegate as? NSSplitViewController {
-                    for item in controller.splitViewItems {
-                        item.canCollapse = false
-                    }
-                }
+                let proxy = SplitViewDelegateProxy(original: splitView.delegate as? NSSplitViewDelegate)
+                context.coordinator.delegateProxy = proxy
+                splitView.delegate = proxy
             }
         }
         return NSView()
