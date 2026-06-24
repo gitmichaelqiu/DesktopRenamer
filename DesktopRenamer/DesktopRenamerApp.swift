@@ -263,6 +263,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 @main
 struct DesktopRenamerApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
+    @AppStorage("ShowDemoVideos") private var showDemoVideos = true
 
     init() {
         NSSplitViewItem.swizzle()
@@ -275,6 +276,13 @@ struct DesktopRenamerApp: App {
         .commands {
             CommandGroup(replacing: .appInfo) { }
             CommandGroup(replacing: .appSettings) { }
+
+            CommandGroup(after: .sidebar) {
+                Divider()
+                Toggle(isOn: $showDemoVideos) {
+                    Text("Show Demo Videos")
+                }
+            }
         }
     }
 }
