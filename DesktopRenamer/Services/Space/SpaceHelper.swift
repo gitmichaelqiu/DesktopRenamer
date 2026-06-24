@@ -287,6 +287,12 @@ class SpaceHelper {
                        let targetIndex = displaySpaces.firstIndex(where: { $0.id == spaceID }) {
                         let steps = targetIndex - currentIndex
                         if steps != 0 {
+                            if shouldSwitchToSpaceUsingSLS() {
+                                if switchSpaceUsingSLSOperation(displayUUID: displayID, spaceID: Int(spaceID) ?? 0) {
+                                    restoreFocusAfterSLSSwitch(spaceID: spaceID)
+                                    return
+                                }
+                            }
                             performSpaceSwitchGesture(steps: steps, targetDisplayID: displayID, forceInstant: forceInstant)
                             return
                         }
@@ -412,6 +418,153 @@ class SpaceHelper {
     
     // MARK: - Instant Space Switch Helpers
     
+    // MARK: - SLS Space Switching for macOS 27+
+    
+    static func shouldSwitchToSpaceUsingSLS() -> Bool {
+        let debugOverride = UserDefaults.standard.integer(forKey: "com.michaelqiu.desktoprenamer.debug.spaceSwitchMethod")
+        if debugOverride == 1 {
+            return false // Force legacy swipe
+        }
+        if debugOverride == 2 {
+            return true  // Force SLS Operation
+        }
+        // Default: Automatic version check
+        let os = ProcessInfo.processInfo.operatingSystemVersion
+        return os.majorVersion >= 27
+    }
+    
+    // Method signature casting to pass a primitive UInt64 to the Objective-C initializer
+    private typealias SLSInitMethodType = @convention(c) (NSObject, Selector, NSString, UInt64) -> Unmanaged<NSObject>?
+
+    static func switchSpaceUsingSLSOperation(displayUUID: String, spaceID: Int) -> Bool {
+        guard let opCls = NSClassFromString("SLSBridgedManagedDisplaySetCurrentSpaceOperation") as? NSObject.Type else {
+            DiagnosticEventLog.shared.record(subsystem: "SpaceHelper", level: "error", "SLSBridgedManagedDisplaySetCurrentSpaceOperation class not found")
+            return false
+        }
+        
+        let allocSel = NSSelectorFromString("alloc")
+        guard opCls.responds(to: allocSel),
+              let allocatedOp = opCls.perform(allocSel)?.takeUnretainedValue() as? NSObject else {
+            DiagnosticEventLog.shared.record(subsystem: "SpaceHelper", level: "error", "Failed to allocate SLSBridgedManagedDisplaySetCurrentSpaceOperation")
+            return false
+        }
+        
+        let initSel = NSSelectorFromString("initWithDisplayIdentifier:spaceID:")
+        guard let method = class_getInstanceMethod(opCls, initSel) else {
+            DiagnosticEventLog.shared.record(subsystem: "SpaceHelper", level: "error", "initWithDisplayIdentifier:spaceID: selector not found on SLSBridgedManagedDisplaySetCurrentSpaceOperation")
+            return false
+        }
+        
+        let imp = method_getImplementation(method)
+        let initFunc = unsafeBitCast(imp, to: SLSInitMethodType.self)
+        let displayStr = displayUUID as NSString
+        
+        guard let initializedOp = initFunc(allocatedOp, initSel, displayStr, UInt64(spaceID))?.takeUnretainedValue() else {
+            DiagnosticEventLog.shared.record(subsystem: "SpaceHelper", level: "error", "Failed to initialize SLSBridgedManagedDisplaySetCurrentSpaceOperation via C-function casting")
+            return false
+        }
+        
+        // Execute operation using SLSWindowManagementFallbackBridge
+        if let bridgeCls = NSClassFromString("SLSWindowManagementFallbackBridge") as? NSObject.Type,
+           bridgeCls.responds(to: allocSel),
+           let allocatedBridge = bridgeCls.perform(allocSel)?.takeUnretainedValue() as? NSObject {
+            
+            let initBridgeSel = NSSelectorFromString("init")
+            if allocatedBridge.responds(to: initBridgeSel),
+               let initializedBridge = allocatedBridge.perform(initBridgeSel)?.takeUnretainedValue() as? NSObject {
+                
+                let performSel = NSSelectorFromString("performAsynchronousBridgedWindowManagementOperation:")
+                if initializedBridge.responds(to: performSel) {
+                    DiagnosticEventLog.shared.record(subsystem: "SpaceHelper", level: "info", "Executing SLS operation via SLSWindowManagementFallbackBridge: \(displayUUID), \(spaceID)")
+                    initializedBridge.perform(performSel, with: initializedOp)
+                    return true
+                }
+            }
+        }
+        
+        // Fallback for compatibility
+        if let operation = initializedOp as? Operation {
+            DiagnosticEventLog.shared.record(subsystem: "SpaceHelper", level: "info", "Executing SLS operation via OperationQueue: \(displayUUID), \(spaceID)")
+            OperationQueue.main.addOperation(operation)
+            return true
+        } else {
+            let startSel = NSSelectorFromString("start")
+            if initializedOp.responds(to: startSel) {
+                DiagnosticEventLog.shared.record(subsystem: "SpaceHelper", level: "info", "Starting SLS operation via start selector: \(displayUUID), \(spaceID)")
+                initializedOp.perform(startSel)
+                return true
+            }
+        }
+        
+        DiagnosticEventLog.shared.record(subsystem: "SpaceHelper", level: "error", "SLSBridgedManagedDisplaySetCurrentSpaceOperation could not be executed")
+        return false
+    }
+    
+    private static func getTopPID(forSpace spaceID: String) -> Int32? {
+        guard let targetSpaceInt = Int(spaceID) else { return nil }
+        let conn = _CGSDefaultConnection()
+        
+        let options = CGWindowListOption(arrayLiteral: .excludeDesktopElements)
+        guard let windowList = CGWindowListCopyWindowInfo(options, kCGNullWindowID) as? [[String: Any]] else {
+            return nil
+        }
+        
+        let ourPID = ProcessInfo.processInfo.processIdentifier
+        
+        for window in windowList {
+            guard let layer = window[kCGWindowLayer as String] as? Int, layer == 0,
+                  let wID = window[kCGWindowNumber as String] as? Int,
+                  let pid = window[kCGWindowOwnerPID as String] as? Int,
+                  pid != ourPID,
+                  let bounds = window[kCGWindowBounds as String] as? [String: Any],
+                  let w = bounds["Width"] as? CGFloat, let h = bounds["Height"] as? CGFloat,
+                  w > 100, h > 100
+            else { continue }
+            
+            // Check spaces for this window
+            let wIDArray = [wID as NSNumber] as CFArray
+            if let result = CGSCopySpacesForWindows(conn, 7, wIDArray),
+               let spaceIDs = result as? [NSNumber] {
+                if spaceIDs.contains(where: { $0.intValue == targetSpaceInt }) {
+                    return Int32(pid)
+                }
+            }
+        }
+        return nil
+    }
+
+    private static func restoreFocusAfterSLSSwitch(spaceID: String) {
+        // Post-switch settlement: Activate target space owner app if fullscreen
+        if let pid = getOwnerPID(for: spaceID),
+           let app = NSRunningApplication(processIdentifier: pid) {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
+                app.activate(options: .activateIgnoringOtherApps)
+            }
+            return
+        }
+        
+        // Otherwise, find the active window on that space and activate its application to refresh the menu bar
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) {
+            if let pid = getTopPID(forSpace: spaceID),
+               let app = NSRunningApplication(processIdentifier: pid) {
+                print("SpaceHelper: Activating top window app \(app.localizedName ?? "") (PID: \(pid)) on Space \(spaceID)")
+                
+                // Force menu bar refresh by toggle-activating ourselves first
+                NSApp.activate(ignoringOtherApps: true)
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
+                    app.activate(options: .activateIgnoringOtherApps)
+                }
+                return
+            }
+            
+            // Fallback: Activate Finder to reset the menu bar
+            print("SpaceHelper: No top window found on Space \(spaceID). Activating Finder.")
+            if let finder = NSRunningApplication.runningApplications(withBundleIdentifier: "com.apple.finder").first {
+                finder.activate(options: .activateIgnoringOtherApps)
+            }
+        }
+    }
+
     private static func postDockSwipe(phase: Int, directionRight: Bool, velocity: Double) -> Bool {
         // Use Float.leastNonzeroMagnitude to precisely match FLT_TRUE_MIN used in ISS.c
         // Double.leastNonzeroMagnitude is too small (e-324) and gets truncated to 0.0 by the OS when positive.
