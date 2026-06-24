@@ -964,8 +964,8 @@ class SpaceLabelWindow: NSWindow {
                 if !self.isVisible {
                     if !inCoolingPeriod {
                         print("SpaceLabelWindow[\(self.spaceId)]: orderFrontRegardless() for ACTIVE space.")
-                        self.bindToTargetSpace() // Bind first to prevent appearing on current space!
                         self.orderFrontRegardless()
+                        self.bindToTargetSpace()
                         self.hasOrderedInOnce = true
                     } else {
                         print("SpaceLabelWindow[\(self.spaceId)]: Suppressing orderFrontRegardless (Active) during switch cooling period (\(String(format: "%.2f", timeSinceSwitch))s). Scheduling retry.")
@@ -976,8 +976,8 @@ class SpaceLabelWindow: NSWindow {
                 // For preview windows (on background spaces), we ONLY order front once.
                 if !inCoolingPeriod {
                     print("SpaceLabelWindow[\(self.spaceId)]: Initial orderFrontRegardless() for background preview.")
-                    self.bindToTargetSpace() // Bind first to prevent appearing on current space!
                     self.orderFrontRegardless()
+                    self.bindToTargetSpace()
                     self.hasOrderedInOnce = true
                 } else {
                     print("SpaceLabelWindow[\(self.spaceId)]: Suppressing orderFrontRegardless (Preview) during switch cooling period (\(String(format: "%.2f", timeSinceSwitch))s). Scheduling retry.")
@@ -989,8 +989,8 @@ class SpaceLabelWindow: NSWindow {
                 // Preview labels only order front once, so re-order it now to recover.
                 if !inCoolingPeriod {
                     print("SpaceLabelWindow[\(self.spaceId)]: orderFrontRegardless() for background preview (re-order after external orderOut).")
-                    self.bindToTargetSpace() // Bind first to prevent appearing on current space!
                     self.orderFrontRegardless()
+                    self.bindToTargetSpace()
                 } else {
                     scheduleVisibilityRetry(delay: coolingPeriod - timeSinceSwitch + 0.1)
                 }
