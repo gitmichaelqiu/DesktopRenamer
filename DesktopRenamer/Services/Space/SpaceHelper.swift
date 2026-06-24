@@ -417,14 +417,7 @@ class SpaceHelper {
     // MARK: - SLS Space Switching for macOS 27+
     
     static func shouldSwitchToSpaceUsingSLS() -> Bool {
-        let debugOverride = UserDefaults.standard.integer(forKey: "com.michaelqiu.desktoprenamer.debug.spaceSwitchMethod")
-        if debugOverride == 1 {
-            return false // Force legacy swipe
-        }
-        if debugOverride == 2 {
-            return true  // Force SLS Operation
-        }
-        // Default: Automatic version check
+        // Automatic version check: SLS Operation for macOS 27+, legacy swipe for older.
         let os = ProcessInfo.processInfo.operatingSystemVersion
         return os.majorVersion >= 27
     }
