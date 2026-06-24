@@ -59,7 +59,7 @@ struct SettingsView: View {
 
     var body: some View {
         ZStack {
-            NavigationSplitView {
+            NavigationSplitView(columnVisibility: .constant(.all)) {
                 sidebar
             } detail: {
                 detailView
