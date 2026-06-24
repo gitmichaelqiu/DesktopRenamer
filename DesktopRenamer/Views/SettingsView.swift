@@ -64,6 +64,9 @@ struct SettingsView: View {
             } detail: {
                 detailView
             }
+            .background {
+                SidebarCollapseDisabler()
+            }
             
             // Pre-render settings views off-screen in the active root hierarchy to index them
             ZStack {

@@ -39,6 +39,37 @@ extension View {
     }
 }
 
+/// Traverses the SettingsWindow's view hierarchy to find the NSSplitView
+/// and disables collapse on all its split view items. This is needed because
+/// SwiftUI's NavigationSplitView uses internal NSSplitViewItem subclasses
+/// that may bypass method swizzling of `canCollapse`.
+struct SidebarCollapseDisabler: NSViewRepresentable {
+    func makeNSView(context: Context) -> NSView {
+        DispatchQueue.main.async {
+            for window in NSApp.windows where window.identifier?.rawValue == "SettingsWindow" {
+                guard let splitView = findSplitView(in: window.contentView) else { continue }
+                if let controller = splitView.delegate as? NSSplitViewController {
+                    for item in controller.splitViewItems {
+                        item.canCollapse = false
+                    }
+                }
+            }
+        }
+        return NSView()
+    }
+
+    func updateNSView(_ nsView: NSView, context: Context) {}
+
+    private func findSplitView(in view: NSView?) -> NSSplitView? {
+        guard let view = view else { return nil }
+        if let splitView = view as? NSSplitView { return splitView }
+        for subview in view.subviews {
+            if let found = findSplitView(in: subview) { return found }
+        }
+        return nil
+    }
+}
+
 class AppDelegate: NSObject, NSApplicationDelegate {
     static var shared: AppDelegate!
     var spaceManager: SpaceManager!
