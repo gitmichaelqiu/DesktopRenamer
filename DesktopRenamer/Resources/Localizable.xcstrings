@@ -480,12 +480,12 @@
         }
       }
     },
-    "Clean Restoration Queues" : {
+    "Clean Restoration Queues (%d)" : {
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "清除恢复队列"
+            "value" : "清除恢复队列 (%d)"
           }
         }
       }

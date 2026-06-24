@@ -349,7 +349,7 @@ class StatusBarController: NSObject {
         menu.addItem(restoreItem)
 
         let cleanItem = NSMenuItem(
-            title: NSLocalizedString("Clean Restoration Queues", comment: ""),
+            title: String(format: NSLocalizedString("Clean Restoration Queues (%d)", comment: ""), movedCount),
             action: #selector(cleanQueues),
             keyEquivalent: ""
         )
@@ -357,6 +357,7 @@ class StatusBarController: NSObject {
         cleanItem.image = NSImage(systemSymbolName: "trash", accessibilityDescription: nil)
         cleanItem.isAlternate = true
         cleanItem.keyEquivalentModifierMask = .option
+        cleanItem.isEnabled = movedCount > 0
         menu.addItem(cleanItem)
 
         menu.addItem(NSMenuItem.separator())
@@ -557,12 +558,18 @@ extension StatusBarController: NSMenuItemValidation {
                current.isFullscreen {
                 return false
             }
-            
+
             guard let spaceID = menuItem.representedObject as? String else { return true }
             if let space = spaceManager.spaceNameDict.first(where: { $0.id == spaceID }) {
                 return !space.isFullscreen
             }
         }
+
+        if menuItem.action == #selector(restoreAllMovedWindows) ||
+           menuItem.action == #selector(cleanQueues) {
+            return spaceManager.movedWindowsOriginalSpaces.count > 0
+        }
+
         return true
     }
 }
