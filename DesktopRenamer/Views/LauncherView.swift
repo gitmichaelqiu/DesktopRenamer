@@ -154,6 +154,8 @@ struct LauncherView: View {
                                     viewModel.executeBottomBarSpaceAction(isOption: false, isCommand: true)
                                 } else if viewModel.activeCommand?.type == .batchMoveWindows {
                                     viewModel.executeBatchMove()
+                                } else if viewModel.activeCommand?.type == .switchToDesktop || viewModel.activeCommand?.type == .moveWindow {
+                                    viewModel.executeRowAction()
                                 }
                             },
                             onOptionEnter: {
@@ -330,7 +332,7 @@ struct ListAreaView: View {
                                     ForEach(0..<spaces.count, id: \.self) { i in
                                         let space = spaces[i]
                                         let isSelected = !viewModel.isBottomBarFocused && viewModel.selectedRowIndex == i
-                                        SpaceRowView(space: space, isSelected: isSelected, shortcutText: viewModel.showCommandNumbers && viewModel.commandKTargetWindow == nil && i < 9 ? "⌘\(i + 1)" : nil)
+                                        SpaceRowView(space: space, isSelected: isSelected, isCurrent: AppDelegate.shared.spaceManager?.currentSpaceUUID == space.id, shortcutText: viewModel.showCommandNumbers && viewModel.commandKTargetWindow == nil && i < 9 ? "⌘\(i + 1)" : nil)
                                             .contentShape(Rectangle())
                                             .onTapGesture {
                                                 viewModel.isKeyboardSelection = true
@@ -368,7 +370,7 @@ struct ListAreaView: View {
                                         ForEach(0..<spaces.count, id: \.self) { i in
                                             let space = spaces[i]
                                             let isSelected = !viewModel.isBottomBarFocused && viewModel.selectedRowIndex == i
-                                            SpaceRowView(space: space, isSelected: isSelected, shortcutText: viewModel.showCommandNumbers && viewModel.commandKTargetWindow == nil && i < 9 ? "⌘\(i + 1)" : nil)
+                                            SpaceRowView(space: space, isSelected: isSelected, isCurrent: AppDelegate.shared.spaceManager?.currentSpaceUUID == space.id, shortcutText: viewModel.showCommandNumbers && viewModel.commandKTargetWindow == nil && i < 9 ? "⌘\(i + 1)" : nil)
                                                 .contentShape(Rectangle())
                                                 .onTapGesture {
                                                     viewModel.isKeyboardSelection = true
@@ -521,7 +523,7 @@ struct KeycapView: View {
         let isSelectedWhiteStyle = isSelected && (colorScheme == .dark || isGreenRow)
         
         Text(text)
-            .font(.system(size: 10, weight: .semibold))
+            .font(.system(size: 11, weight: .semibold))
             .foregroundColor(isSelected ? (isSelectedWhiteStyle ? .white : colors.textPrimary) : colors.textSecondary)
             .padding(.horizontal, horizontalPadding)
             .padding(.vertical, verticalPadding)
@@ -601,15 +603,9 @@ struct CommandRowView: View {
     var body: some View {
         HStack(spacing: 12) {
             Image(systemName: command.iconName)
-                .font(.system(size: 12, weight: .medium))
+                .font(.system(size: 17, weight: .medium))
                 .foregroundColor(colors.textPrimary)
-                .frame(width: 28, height: 28)
-                .background(colors.badgeBg)
-                .cornerRadius(6)
-                .overlay(
-                    RoundedRectangle(cornerRadius: 6)
-                        .stroke(colors.badgeBorder, lineWidth: 1)
-                )
+                .frame(width: 32, height: 32)
             
             VStack(alignment: .leading, spacing: 2) {
                 Text(command.title)
@@ -679,6 +675,7 @@ struct CommandRowView: View {
 struct SpaceRowView: View {
     let space: SpaceGroup
     let isSelected: Bool
+    let isCurrent: Bool
     var shortcutText: String? = nil
     @Environment(\.colorScheme) var colorScheme
     @State private var isHovered = false
@@ -694,26 +691,12 @@ struct SpaceRowView: View {
                 Image(nsImage: appIcon)
                     .resizable()
                     .aspectRatio(contentMode: .fit)
-                    .frame(width: 20, height: 20)
-                    .padding(4)
-                    .frame(width: 28, height: 28)
-                    .background(colors.badgeBg)
-                    .cornerRadius(6)
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 6)
-                            .stroke(colors.badgeBorder, lineWidth: 1)
-                    )
+                    .frame(width: 32, height: 32)
             } else {
                 Image(systemName: "desktopcomputer")
-                    .font(.system(size: 12, weight: .medium))
+                    .font(.system(size: 17, weight: .medium))
                     .foregroundColor(colors.textPrimary)
-                    .frame(width: 28, height: 28)
-                    .background(colors.badgeBg)
-                    .cornerRadius(6)
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 6)
-                            .stroke(colors.badgeBorder, lineWidth: 1)
-                    )
+                    .frame(width: 32, height: 32)
             }
             
             VStack(alignment: .leading, spacing: 2) {
@@ -737,7 +720,11 @@ struct SpaceRowView: View {
             }
             
             Spacer()
-            
+
+            if isCurrent {
+                WindowStateBadge(label: String(localized: "Current"), color: .blue)
+            }
+
             if let shortcut = shortcutText {
                 KeycapView(text: LocalizedStringKey(shortcut), isSelected: isSelected)
             } else {
@@ -765,6 +752,22 @@ struct SpaceRowView: View {
     }
 }
 
+struct WindowStateBadge: View {
+    let label: String
+    let color: Color
+
+    var body: some View {
+        Text(label)
+            .font(.footnote)
+            .fontWeight(.semibold)
+            .foregroundColor(color)
+            .padding(.horizontal, 10)
+            .padding(.vertical, 4)
+            .background(color.opacity(0.15))
+            .cornerRadius(4)
+    }
+}
+
 struct WindowRowView: View {
     let window: WindowEntry
     let isSelected: Bool
@@ -782,16 +785,8 @@ struct WindowRowView: View {
             Image(nsImage: appIcon)
                 .resizable()
                 .aspectRatio(contentMode: .fit)
-                .frame(width: 20, height: 20)
-                .padding(4)
-                .frame(width: 28, height: 28)
-                .background(colors.badgeBg)
-                .cornerRadius(6)
-                .overlay(
-                    RoundedRectangle(cornerRadius: 6)
-                        .stroke(colors.badgeBorder, lineWidth: 1)
-                )
-            
+                .frame(width: 32, height: 32)
+
             VStack(alignment: .leading, spacing: 2) {
                 Text(window.title.isEmpty ? String(localized: "(No Title)") : window.title)
                     .font(.body)
@@ -799,7 +794,7 @@ struct WindowRowView: View {
                     .foregroundColor(colors.textPrimary)
                     .lineLimit(1)
 
-                Text(verbatim: String(format: String(localized: "%@ · %@"), window.ownerName, window.space.name))
+                Text(window.ownerName)
                     .font(.subheadline)
                     .foregroundColor(isSelected ? colors.textSecondary : colors.textTertiary)
                     .lineLimit(1)
@@ -807,10 +802,21 @@ struct WindowRowView: View {
 
             Spacer()
 
-            if let shortcut = shortcutText {
-                KeycapView(text: LocalizedStringKey(shortcut), isSelected: isSelected)
-            } else {
-                KeycapView(text: "Focus ↵", isSelected: isSelected)
+            HStack(spacing: 4) {
+                if window.isHidden {
+                    WindowStateBadge(label: String(localized: "Hidden"), color: .purple)
+                } else if window.isMinimized {
+                    WindowStateBadge(label: String(localized: "Minimized"), color: .orange)
+                }
+                if window.space.isFullscreen {
+                    WindowStateBadge(label: String(localized: "Full Screen"), color: .blue)
+                }
+
+                if let shortcut = shortcutText {
+                    KeycapView(text: LocalizedStringKey(shortcut), isSelected: isSelected)
+                } else {
+                    KeycapView(text: "Focus ↵", isSelected: isSelected)
+                }
             }
         }
         .padding(.horizontal, 8)
@@ -895,16 +901,8 @@ struct WindowBatchRowView: View {
             Image(nsImage: appIcon)
                 .resizable()
                 .aspectRatio(contentMode: .fit)
-                .frame(width: 20, height: 20)
-                .padding(4)
-                .frame(width: 28, height: 28)
-                .background(colors.badgeBg)
-                .cornerRadius(6)
-                .overlay(
-                    RoundedRectangle(cornerRadius: 6)
-                        .stroke(colors.badgeBorder, lineWidth: 1)
-                )
-            
+                .frame(width: 32, height: 32)
+
             VStack(alignment: .leading, spacing: 2) {
                 Text(window.title.isEmpty ? String(localized: "(No Title)") : window.title)
                     .font(.body)
@@ -912,29 +910,7 @@ struct WindowBatchRowView: View {
                     .foregroundColor(colors.textPrimary)
                     .lineLimit(1)
 
-                let stateLabel: String = {
-                    var isMin = false
-                    var isHid = false
-                    if let app = NSRunningApplication(processIdentifier: window.pid) {
-                        isHid = app.isHidden
-                    }
-                    if let axWindow = SpaceHelper.getAXWindow(id: window.id, pid: window.pid) {
-                        var minimizedRef: CFTypeRef?
-                        if AXUIElementCopyAttributeValue(axWindow, kAXMinimizedAttribute as CFString, &minimizedRef) == .success,
-                           let isMinimized = minimizedRef as? Bool {
-                            isMin = isMinimized
-                        }
-                    }
-                    if isMin {
-                        return NSLocalizedString("Minimized", comment: "")
-                    } else if isHid {
-                        return NSLocalizedString("Hidden", comment: "")
-                    } else {
-                        return NSLocalizedString("Active", comment: "")
-                    }
-                }()
-
-                Text(verbatim: String(format: "%@ · %@ · %@", window.ownerName, window.space.name, stateLabel))
+                Text(window.ownerName)
                     .font(.subheadline)
                     .foregroundColor(isSelected ? colors.textSecondary : colors.textTertiary)
                     .lineLimit(1)
@@ -942,34 +918,34 @@ struct WindowBatchRowView: View {
 
             Spacer()
 
-            if let shortcut = shortcutText {
-                KeycapView(text: LocalizedStringKey(shortcut), isSelected: isSelected)
-            } else if isStaged {
-                Text(stagedActionText)
-                    .font(.subheadline)
-                    .fontWeight(.semibold)
-                    .foregroundColor(colors.greenText)
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 3)
-                    .background(colors.greenText.opacity(0.12))
-                    .cornerRadius(6)
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 6)
-                            .stroke(colors.greenText.opacity(0.35), lineWidth: 1)
-                    )
-            } else {
-                Text(window.space.name)
-                    .font(.subheadline)
-                    .fontWeight(.medium)
-                    .foregroundColor(colors.textSecondary)
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 3)
-                    .background(colors.badgeBg)
-                    .cornerRadius(6)
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 6)
-                            .stroke(colors.badgeBorder, lineWidth: 1)
-                    )
+            HStack(spacing: 4) {
+                if !isStaged {
+                    if window.isHidden {
+                        WindowStateBadge(label: String(localized: "Hidden"), color: .purple)
+                    } else if window.isMinimized {
+                        WindowStateBadge(label: String(localized: "Minimized"), color: .orange)
+                    }
+                    if window.space.isFullscreen {
+                        WindowStateBadge(label: String(localized: "Full Screen"), color: .blue)
+                    }
+                }
+
+                if let shortcut = shortcutText {
+                    KeycapView(text: LocalizedStringKey(shortcut), isSelected: isSelected)
+                } else if isStaged {
+                    Text(stagedActionText)
+                        .font(.subheadline)
+                        .fontWeight(.semibold)
+                        .foregroundColor(colors.greenText)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 3)
+                        .background(colors.greenText.opacity(0.12))
+                        .cornerRadius(6)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 6)
+                                .stroke(colors.greenText.opacity(0.35), lineWidth: 1)
+                        )
+                }
             }
         }
         .padding(.horizontal, 8)
@@ -1839,31 +1815,15 @@ struct CommandKOverlayView: View {
                     Spacer()
                     
                     // State Badges
-                    let (minimized, hidden) = viewModel.isWindowMinimizedOrAppHidden(window)
-                    if minimized {
-                        Text(verbatim: String(localized: "Minimized"))
-                            .font(.system(.caption2, design: .default))
-                            .fontWeight(.bold)
-                            .foregroundColor(.orange)
-                            .padding(.horizontal, 6)
-                            .padding(.vertical, 2.5)
-                            .background(Color.orange.opacity(0.15), in: RoundedRectangle(cornerRadius: 4))
-                    } else if hidden {
-                        Text(verbatim: String(localized: "Hidden"))
-                            .font(.system(.caption2, design: .default))
-                            .fontWeight(.bold)
-                            .foregroundColor(.blue)
-                            .padding(.horizontal, 6)
-                            .padding(.vertical, 2.5)
-                            .background(Color.blue.opacity(0.15), in: RoundedRectangle(cornerRadius: 4))
-                    } else {
-                        Text(verbatim: String(localized: "Active"))
-                            .font(.system(.caption2, design: .default))
-                            .fontWeight(.bold)
-                            .foregroundColor(colors.greenText)
-                            .padding(.horizontal, 6)
-                            .padding(.vertical, 2.5)
-                            .background(colors.greenText.opacity(0.15), in: RoundedRectangle(cornerRadius: 4))
+                    HStack(spacing: 4) {
+                        if window.isHidden {
+                            WindowStateBadge(label: String(localized: "Hidden"), color: .purple)
+                        } else if window.isMinimized {
+                            WindowStateBadge(label: String(localized: "Minimized"), color: .orange)
+                        }
+                        if window.space.isFullscreen {
+                            WindowStateBadge(label: String(localized: "Full Screen"), color: .blue)
+                        }
                     }
                 }
                 .padding(.horizontal, 16)
@@ -2104,7 +2064,7 @@ extension LauncherView {
                     if let chars = event.charactersIgnoringModifiers?.lowercased(), chars.count == 1 {
                         let char = chars.first!
                         
-                        if char == "m" {
+                        if char == "m" && !hasShift {
                             // cmd + m: Move to Desktop... (show space selector)
                             viewModel.batchMoveLastSelectedIndex = viewModel.selectedRowIndex
                             viewModel.stagingWindow = window
@@ -2117,8 +2077,8 @@ extension LauncherView {
                                 // cmd + shift + w: Close Window
                                 viewModel.executeActionImmediately(window: window, actionType: .close)
                                 return true
-                            case "n":
-                                // cmd + shift + n: Minimize Window
+                            case "m":
+                                // cmd + shift + m: Minimize Window
                                 viewModel.executeActionImmediately(window: window, actionType: .minimize)
                                 return true
                             case "r":
@@ -2147,6 +2107,23 @@ extension LauncherView {
                 }
             }
         }
+
+        // Cmd+R: Rename selected space in .switchToDesktop mode
+        if viewModel.activeCommand?.type == .switchToDesktop,
+           hasCommand && !hasShift && !hasOption && !hasControl,
+           let chars = event.charactersIgnoringModifiers?.lowercased(),
+           chars == "r" {
+            let spaces = viewModel.filteredSpaces
+            let index = viewModel.selectedRowIndex
+            if index >= 0 && index < spaces.count {
+                let space = spaces[index]
+                if !space.isFullscreen {
+                    viewModel.showRenameDialog(for: space)
+                }
+            }
+            return true
+        }
+
         return false
     }
 }

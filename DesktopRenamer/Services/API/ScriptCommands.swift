@@ -26,6 +26,7 @@ extension NSScriptCommand {
 
 class ToggleMenubarCommand: NSScriptCommand {
     override func performDefaultImplementation() -> Any? {
+        DiagnosticEventLog.shared.record(subsystem: "AppleScript", level: "info", "Command performed: ToggleMenubarCommand")
         guard isAPIEnabled() else { return false }
         return runOnMain {
             StatusBarController.toggleStatusBar()
@@ -36,6 +37,7 @@ class ToggleMenubarCommand: NSScriptCommand {
 
 class ToggleLauncherCommand: NSScriptCommand {
     override func performDefaultImplementation() -> Any? {
+        DiagnosticEventLog.shared.record(subsystem: "AppleScript", level: "info", "Command performed: ToggleLauncherCommand")
         guard isAPIEnabled() else { return false }
         return runOnMain {
             LauncherWindowController.shared.toggle()
@@ -47,6 +49,7 @@ class ToggleLauncherCommand: NSScriptCommand {
 
 class ToggleActiveLabelCommand: NSScriptCommand {
     override func performDefaultImplementation() -> Any? {
+        DiagnosticEventLog.shared.record(subsystem: "AppleScript", level: "info", "Command performed: ToggleActiveLabelCommand")
         guard isAPIEnabled() else { return false }
         return runOnMain {
             if let manager = AppDelegate.shared.statusBarController?.labelManager {
@@ -60,6 +63,7 @@ class ToggleActiveLabelCommand: NSScriptCommand {
 
 class TogglePreviewLabelCommand: NSScriptCommand {
     override func performDefaultImplementation() -> Any? {
+        DiagnosticEventLog.shared.record(subsystem: "AppleScript", level: "info", "Command performed: TogglePreviewLabelCommand")
         guard isAPIEnabled() else { return false }
         return runOnMain {
             if let manager = AppDelegate.shared.statusBarController?.labelManager {
@@ -73,6 +77,7 @@ class TogglePreviewLabelCommand: NSScriptCommand {
 
 class ToggleDesktopVisibilityCommand: NSScriptCommand {
     override func performDefaultImplementation() -> Any? {
+        DiagnosticEventLog.shared.record(subsystem: "AppleScript", level: "info", "Command performed: ToggleDesktopVisibilityCommand")
         guard isAPIEnabled() else { return false }
         return runOnMain {
             if let manager = AppDelegate.shared.statusBarController?.labelManager {
@@ -91,6 +96,7 @@ class RenameCurrentSpaceCommand: NSScriptCommand {
     override func performDefaultImplementation() -> Any? {
         guard isAPIEnabled() else { return nil }
         guard let newName = self.directParameter as? String else { return nil }
+        DiagnosticEventLog.shared.record(subsystem: "AppleScript", level: "info", "Command performed: RenameCurrentSpaceCommand (newName: \(newName))")
         
         // No return value needed, so standard async is fine.
         DispatchQueue.main.async {
@@ -104,6 +110,7 @@ class RenameCurrentSpaceCommand: NSScriptCommand {
 
 class GetCurrentSpaceNameCommand: NSScriptCommand {
     override func performDefaultImplementation() -> Any? {
+        DiagnosticEventLog.shared.record(subsystem: "AppleScript", level: "info", "Command performed: GetCurrentSpaceNameCommand")
         guard isAPIEnabled() else { return "API Disabled" }
         return runOnMain {
             if let manager = AppDelegate.shared.spaceManager {
@@ -116,6 +123,7 @@ class GetCurrentSpaceNameCommand: NSScriptCommand {
 
 class GetAllSpacesCommand: NSScriptCommand {
     override func performDefaultImplementation() -> Any? {
+        DiagnosticEventLog.shared.record(subsystem: "AppleScript", level: "info", "Command performed: GetAllSpacesCommand")
         guard isAPIEnabled() else { return "API Disabled" }
         return runOnMain {
             guard let manager = AppDelegate.shared.spaceManager else { return "" }
@@ -127,14 +135,13 @@ class GetAllSpacesCommand: NSScriptCommand {
                 return $0.num < $1.num
             }
             
-            // Format: "UUID~Name~DisplayID~Num~IsFullscreen"
+            // Format: "UUID~Name~DisplayID~Num~IsFullscreen~AppPath"
             let lines = sortedSpaces.map { space in
                 let name = manager.getSpaceName(space.id)
-                // Retrieve the display label for the space's displayID
                 let displayName = getDisplayName(for: space.displayID)
-                
+
                 // Return string split by ~ to prevent escaping issues.
-                return "\(space.id)~\(name)~\(displayName)~\(space.num)~\(space.isFullscreen ? "1" : "0")"
+                return "\(space.id)~\(name)~\(displayName)~\(space.num)~\(space.isFullscreen ? "1" : "0")~\(space.appPath ?? "")"
             }
             return lines.joined(separator: "\n")
         }
@@ -158,6 +165,7 @@ class SwitchToSpaceCommand: NSScriptCommand {
     override func performDefaultImplementation() -> Any? {
         guard isAPIEnabled() else { return nil }
         guard let spaceID = self.directParameter as? String else { return nil }
+        DiagnosticEventLog.shared.record(subsystem: "AppleScript", level: "info", "Command performed: SwitchToSpaceCommand (spaceID: \(spaceID))")
         
         DispatchQueue.main.async {
             if let manager = AppDelegate.shared.spaceManager {
@@ -177,6 +185,7 @@ class RenameSpaceCommand: NSScriptCommand {
         guard let spaceID = self.directParameter as? String,
               let arguments = self.evaluatedArguments,
               let newName = arguments["newName"] as? String else { return nil }
+        DiagnosticEventLog.shared.record(subsystem: "AppleScript", level: "info", "Command performed: RenameSpaceCommand (spaceID: \(spaceID), newName: \(newName))")
         
         DispatchQueue.main.async {
             if let manager = AppDelegate.shared.spaceManager {
@@ -189,6 +198,7 @@ class RenameSpaceCommand: NSScriptCommand {
 
 class MoveWindowNextCommand: NSScriptCommand {
     override func performDefaultImplementation() -> Any? {
+        DiagnosticEventLog.shared.record(subsystem: "AppleScript", level: "info", "Command performed: MoveWindowNextCommand")
         guard isAPIEnabled() else { return nil }
         DispatchQueue.main.async {
             if let manager = AppDelegate.shared.spaceManager {
@@ -201,6 +211,7 @@ class MoveWindowNextCommand: NSScriptCommand {
 
 class MoveWindowPreviousCommand: NSScriptCommand {
     override func performDefaultImplementation() -> Any? {
+        DiagnosticEventLog.shared.record(subsystem: "AppleScript", level: "info", "Command performed: MoveWindowPreviousCommand")
         guard isAPIEnabled() else { return nil }
         DispatchQueue.main.async {
             if let manager = AppDelegate.shared.spaceManager {
@@ -215,6 +226,7 @@ class MoveWindowToSpaceCommand: NSScriptCommand {
     override func performDefaultImplementation() -> Any? {
         guard isAPIEnabled() else { return nil }
         guard let spaceID = self.directParameter as? String else { return nil }
+        DiagnosticEventLog.shared.record(subsystem: "AppleScript", level: "info", "Command performed: MoveWindowToSpaceCommand (spaceID: \(spaceID))")
         
         DispatchQueue.main.async {
             if let manager = AppDelegate.shared.spaceManager {
@@ -227,6 +239,7 @@ class MoveWindowToSpaceCommand: NSScriptCommand {
 
 class ReloadSpaceLabelsCommand: NSScriptCommand {
     override func performDefaultImplementation() -> Any? {
+        DiagnosticEventLog.shared.record(subsystem: "AppleScript", level: "info", "Command performed: ReloadSpaceLabelsCommand")
         guard isAPIEnabled() else { return false }
         return runOnMain {
             if let manager = AppDelegate.shared.statusBarController?.labelManager {
@@ -240,6 +253,7 @@ class ReloadSpaceLabelsCommand: NSScriptCommand {
 
 class GetWindowsCommand: NSScriptCommand {
     override func performDefaultImplementation() -> Any? {
+        DiagnosticEventLog.shared.record(subsystem: "AppleScript", level: "info", "Command performed: GetWindowsCommand")
         guard isAPIEnabled() else { return "API Disabled" }
         
         // Fetch necessary space data on the main thread.
@@ -269,6 +283,7 @@ class FocusWindowCommand: NSScriptCommand {
               let pidStr = arguments["ownerPID"] as? String,
               let pid = Int32(pidStr)
         else { return nil }
+        DiagnosticEventLog.shared.record(subsystem: "AppleScript", level: "info", "Command performed: FocusWindowCommand (windowID: \(windowIDStr), pid: \(pidStr))")
 
         DispatchQueue.main.async {
             SpaceHelper.focusWindow(id: windowID, pid: pid)
@@ -288,6 +303,7 @@ class MoveSpecificWindowToSpaceCommand: NSScriptCommand {
               let targetSpaceStr = arguments["targetSpace"] as? String,
               let targetSpaceID = Int(targetSpaceStr)
         else { return nil }
+        DiagnosticEventLog.shared.record(subsystem: "AppleScript", level: "info", "Command performed: MoveSpecificWindowToSpaceCommand (windowID: \(windowIDStr), fromSpace: \(fromSpaceStr), targetSpace: \(targetSpaceStr))")
 
         DispatchQueue.main.async {
             SpaceHelper.moveWindowToSpace(windowID: windowID, fromSpaceID: fromSpaceID, targetSpaceID: targetSpaceID)
@@ -298,6 +314,7 @@ class MoveSpecificWindowToSpaceCommand: NSScriptCommand {
 
 class GetCurrentSpaceIDCommand: NSScriptCommand {
     override func performDefaultImplementation() -> Any? {
+        DiagnosticEventLog.shared.record(subsystem: "AppleScript", level: "info", "Command performed: GetCurrentSpaceIDCommand")
         guard isAPIEnabled() else { return "API Disabled" }
         return runOnMain {
             let ids = SpaceHelper.getCurrentSpaceIDs()
@@ -316,6 +333,7 @@ class ExecuteWindowActionCommand: NSScriptCommand {
               let pid = Int32(pidStr),
               let actionName = arguments["actionName"] as? String
         else { return nil }
+        DiagnosticEventLog.shared.record(subsystem: "AppleScript", level: "info", "Command performed: ExecuteWindowActionCommand (windowID: \(windowIDStr), pid: \(pidStr), actionName: \(actionName))")
         
         // Fire-and-forget: the command returns nil, so there is no need to block
         // the calling thread. All other AppleScript commands use the same pattern.

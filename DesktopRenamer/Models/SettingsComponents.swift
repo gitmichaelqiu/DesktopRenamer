@@ -278,6 +278,7 @@ struct SettingsRow<Content: View>: View {
     let warningText: LocalizedStringKey?
     let demoVideoName: String?
     
+    @AppStorage("ShowDemoVideos") private var showDemoVideos = true
     @Environment(\.settingsTab) var currentTab
     @EnvironmentObject var navigationState: SettingsNavigationState
 
@@ -315,8 +316,9 @@ struct SettingsRow<Content: View>: View {
                 content
                     .frame(alignment: .trailing)
             }
-            
-            if let videoName = demoVideoName,
+
+            if showDemoVideos,
+               let videoName = demoVideoName,
                let videoURL = Bundle.main.url(forResource: videoName, withExtension: "mp4") {
                 LoopVideoPlayerView(videoURL: videoURL)
                     .frame(height: 180)
@@ -456,7 +458,8 @@ struct SliderSettingsRow<V>: View where V: BinaryFloatingPoint, V.Stride: Binary
     let warningText: LocalizedStringKey?
     let demoVideoName: String?
     let valueString: (V) -> String
-    
+
+    @AppStorage("ShowDemoVideos") private var showDemoVideos = true
     @Environment(\.settingsTab) var currentTab
     @EnvironmentObject var navigationState: SettingsNavigationState
 
@@ -518,8 +521,9 @@ struct SliderSettingsRow<V>: View where V: BinaryFloatingPoint, V.Stride: Binary
                     .foregroundColor(.secondary)
                     .frame(minWidth: 50, alignment: .trailing)
             }
-            
-            if let videoName = demoVideoName,
+
+            if showDemoVideos,
+               let videoName = demoVideoName,
                let videoURL = Bundle.main.url(forResource: videoName, withExtension: "mp4") {
                 LoopVideoPlayerView(videoURL: videoURL)
                     .frame(height: 180)

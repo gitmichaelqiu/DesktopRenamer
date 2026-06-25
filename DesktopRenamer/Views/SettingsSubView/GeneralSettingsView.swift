@@ -78,6 +78,7 @@ struct GeneralSettingsView: View {
     @State private var isResetting: Bool = false
     @State private var isAPIEnabled: Bool = SpaceManager.isAPIEnabled
     @State private var isStatusBarHidden: Bool = StatusBarController.isStatusBarHidden
+    @State private var showDiagnosticSheet: Bool = false
 
 
     var body: some View {
@@ -170,6 +171,17 @@ struct GeneralSettingsView: View {
 
                     Divider()
 
+                    SettingsRow(
+                        "Diagnostic Report",
+                        helperText: "Start collection, reproduce the bug, then stop and save the full diagnostic report."
+                    ) {
+                        Button("Open") {
+                            showDiagnosticSheet = true
+                        }
+                    }
+
+                    Divider()
+
                     SettingsRow("Review Splash", helperText: "View the welcome screen again.") {
                         Button("Review") {
                             AppDelegate.shared.showSplashScreen(on: NSApp.suitableSheetWindow)
@@ -191,6 +203,9 @@ struct GeneralSettingsView: View {
             .environment(\.settingsTab, .general)
         }
         .onAppear { launchAtLogin = getLaunchAtLoginState() }
+        .sheet(isPresented: $showDiagnosticSheet) {
+            DiagnosticSheetView()
+        }
     }
 
     private func getLaunchAtLoginState() -> Bool {
@@ -246,6 +261,251 @@ struct GeneralSettingsView: View {
                     successAlert.alertStyle = .informational
                     successAlert.addButton(withTitle: NSLocalizedString("Button.OK", comment: ""))
                     successAlert.beginSheetModal(for: window) { _ in }
+                }
+            }
+        }
+    }
+
+
+    /// Diagnostic collection sheet — start/stop recording and save the report.
+    struct DiagnosticSheetView: View {
+        @Environment(\.dismiss) var dismiss
+        @State private var phase: Phase = .idle
+        @State private var refreshCounter = 0
+        @State private var timer: Timer? = nil
+        @State private var savedURL: URL? = nil
+
+        enum Phase {
+            case idle       // Show "Start" button
+            case recording  // Show "Stop" button + hint
+            case done       // Show event count + "Save Report"
+            case saved      // Show thank-you + link to GitHub Issues
+        }
+
+        var body: some View {
+            VStack(spacing: 16) {
+                // Header
+                HStack {
+                    Text("Diagnostic Report")
+                        .font(.title2).fontWeight(.bold)
+                    Spacer()
+                }
+
+                // Phase-specific content
+                switch phase {
+                case .idle:
+                    VStack(spacing: 8) {
+                        Spacer()
+                        Image(systemName: "antenna.radiowaves.left.and.right")
+                            .font(.system(size: 32))
+                            .foregroundColor(.secondary)
+                        Text("Click Start to begin recording system events.")
+                            .font(.body)
+                            .foregroundColor(.secondary)
+                        Text("Then reproduce the bug you encountered.")
+                            .font(.body)
+                            .foregroundColor(.secondary)
+                        Spacer()
+                    }
+                    .padding(.vertical, 20)
+
+                case .recording:
+                    VStack(spacing: 8) {
+                        Image(systemName: "record.circle")
+                            .font(.system(size: 32))
+                            .foregroundColor(.red)
+                        Text("Recording system events...")
+                            .font(.headline)
+                            .foregroundColor(.red)
+                        Text("Reproduce the bug, then click Stop.")
+                            .font(.body)
+                            .foregroundColor(.secondary)
+                        .padding(.leading, 8)
+                    }
+                    .padding(.vertical, 10)
+
+                case .done:
+                    VStack(spacing: 8) {
+                        let count = DiagnosticEventLog.shared.sessionEvents.count
+                        Image(systemName: "checkmark.circle")
+                            .font(.system(size: 32))
+                            .foregroundColor(.green)
+                        Text("Recording complete!")
+                            .font(.headline)
+                        Text("\(count) events captured.")
+                            .font(.body)
+                            .foregroundColor(.secondary)
+                        Text("Click Save Report to generate the full diagnostic log.")
+                            .font(.body)
+                            .foregroundColor(.secondary)
+                    }
+                    .padding(.vertical, 10)
+
+                case .saved:
+                    VStack(spacing: 12) {
+                        Spacer()
+                        Image(systemName: "checkmark.circle.fill")
+                            .font(.system(size: 48))
+                            .foregroundColor(.green)
+                        Text("Thank you!")
+                            .font(.title).fontWeight(.bold)
+
+                        Text("Your diagnostic report has been saved.")
+                            .font(.body)
+                            .foregroundColor(.secondary)
+
+                        if let url = savedURL {
+                            Text(url.path)
+                                .font(.system(.caption, design: .monospaced))
+                                .foregroundColor(.secondary)
+                                .textSelection(.enabled)
+                                .lineLimit(2)
+                                .truncationMode(.middle)
+                        }
+
+                        Text("Open a GitHub issue and attach the saved file to report the problem.")
+                            .font(.subheadline)
+                            .foregroundColor(.secondary)
+                            .multilineTextAlignment(.center)
+                            .fixedSize(horizontal: false, vertical: true)
+                        Spacer()
+                    }
+                    .padding(.vertical, 10)
+                    .frame(maxWidth: .infinity)
+                }
+
+                // Live log preview
+                if phase != .idle && phase != .saved {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Event Log (\(DiagnosticEventLog.shared.sessionEvents.count) recorded, ring buffer: \(DiagnosticEventLog.shared.formattedRing().components(separatedBy: "\n").count) lines)")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+
+                    let ringLogLines = DiagnosticEventLog.shared.formattedRing().components(separatedBy: "\n")
+                    ScrollView {
+                        ScrollViewReader { proxy in
+                            VStack(alignment: .leading, spacing: 2) {
+                                ForEach(Array(ringLogLines.enumerated()), id: \.offset) { i, line in
+                                    Text(line)
+                                        .font(.system(.footnote, design: .monospaced))
+                                        .foregroundColor(Color(NSColor.textColor))
+                                        .id(i)
+                                }
+                            }
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .onChange(of: refreshCounter) { _ in
+                                if !ringLogLines.isEmpty {
+                                    proxy.scrollTo(ringLogLines.count - 1, anchor: .bottom)
+                                }
+                            }
+                        }
+                    }
+                    .frame(height: 200)
+                    .background(Color(NSColor.textBackgroundColor))
+                    .cornerRadius(8)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 6)
+                            .stroke(Color.gray.opacity(0.2), lineWidth: 1)
+                    )
+                }
+                }
+                if phase == .recording || phase == .done {
+                    Spacer()
+                }
+
+                HStack {
+                    if phase == .saved {
+                        Button("Close") { cleanup(); dismiss() }
+                    } else {
+                        Button("Cancel") { cleanup(); dismiss() }
+                    }
+
+                    Spacer()
+
+                    switch phase {
+                    case .idle:
+                        Button("Start Recording") {
+                            DiagnosticEventLog.shared.startCollection()
+                            phase = .recording
+                            startLiveRefresh()
+                        }
+                        .buttonStyle(.borderedProminent)
+
+                    case .recording:
+                        Button("Stop Recording") {
+                            DiagnosticEventLog.shared.stopCollection()
+                            stopLiveRefresh()
+                            refreshCounter += 1
+                            phase = .done
+                        }
+                        .foregroundStyle(Color.red)
+                        .buttonStyle(.borderedProminent)
+                        .tint(Color.red)
+
+                    case .done:
+                        Button("Save Report") {
+                            saveReport()
+                        }
+                        .buttonStyle(.borderedProminent)
+
+                    case .saved:
+                        Button("Report on GitHub") {
+                            NSWorkspace.shared.open(URL(string: "https://github.com/gitmichaelqiu/DesktopRenamer/issues")!)
+                        }
+                        .buttonStyle(.borderedProminent)
+                    }
+                }
+            }
+            .padding()
+            .frame(minWidth: 620, minHeight: 480)
+            .onDisappear { cleanup() }
+        }
+
+        private func startLiveRefresh() {
+            stopLiveRefresh()
+            timer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { _ in
+                refreshCounter += 1
+            }
+        }
+
+        private func stopLiveRefresh() {
+            timer?.invalidate()
+            timer = nil
+        }
+
+        private func cleanup() {
+            stopLiveRefresh()
+            if DiagnosticEventLog.shared.isCollecting {
+                DiagnosticEventLog.shared.stopCollection()
+            }
+        }
+
+        private func saveReport() {
+            let report = DiagnosticReportBuilder.generate()
+            guard let data = report.data(using: .utf8) else { return }
+            let panel = NSSavePanel()
+            panel.canCreateDirectories = true
+            panel.showsTagField = false
+            let fmt = DateFormatter()
+            fmt.dateFormat = "yyyyMMdd_HHmmss"
+            panel.nameFieldStringValue = "DesktopRenamer_Diagnostic_\(fmt.string(from: Date())).log"
+            panel.allowedContentTypes = [.log, .plainText]
+            guard let window = NSApp.suitableSheetWindow else { return }
+            panel.beginSheetModal(for: window) { result in
+                if result == .OK, let url = panel.url {
+                    do {
+                        try data.write(to: url)
+                        self.savedURL = url
+                        self.phase = .saved
+                    } catch {
+                        let alert = NSAlert()
+                        alert.messageText = String(localized: "Failed to Save Report")
+                        alert.informativeText = error.localizedDescription
+                        alert.runModal()
+                    }
+                } else {
+                    self.cleanup()
+                    self.dismiss()
                 }
             }
         }

@@ -41,6 +41,7 @@ class SpaceHelper {
     // Session state for active dragging operations.
     private static var originalMousePoint: CGPoint? = nil
     private static var restorationTask: DispatchWorkItem? = nil
+    private static var pendingFocusTask: DispatchWorkItem? = nil
     private static var pendingMoveCount = 0
     private static var isInstantDrag = false
     private static var targetSpaceID: String? = nil
@@ -48,7 +49,28 @@ class SpaceHelper {
     private static var draggedWindowPID: Int32? = nil
     private static var draggedWindowBundleID: String? = nil
     private static var draggedWindowAppName: String? = nil
+    private static var draggedWindowOriginalFrame: CGRect? = nil
     static var isDragging: Bool { originalMousePoint != nil }
+
+    /// Full drag state summary for diagnostic reports.
+    static var dragStateInfo: String {
+        let wid = draggedWindowID.map { "\($0)" } ?? "nil"
+        let pid = draggedWindowPID.map { "\($0)" } ?? "nil"
+        let bundle = draggedWindowBundleID ?? "nil"
+        let app = draggedWindowAppName ?? "nil"
+        let target = targetSpaceID ?? "nil"
+        let mouse = originalMousePoint.map { "(\($0.x), \($0.y))" } ?? "nil"
+        return """
+          draggedWindowID: \(wid)
+          draggedWindowPID: \(pid)
+          draggedWindowBundleID: \(bundle)
+          draggedWindowAppName: \(app)
+          targetSpaceID: \(target)
+          isInstantDrag: \(isInstantDrag)
+          pendingMoveCount: \(pendingMoveCount)
+          originalMousePoint: \(mouse)
+        """
+    }
 
     // Velocity calibration — adjusts multiplier per display so measured switch
     // time converges to the user-configured target duration (default 0.35s).
@@ -92,6 +114,29 @@ class SpaceHelper {
     private static let phaseSamplesNeeded = 3
     private static let phase1Velocity: Double = 52.0
     private static let phase2Velocity: Double = 104.0
+
+    /// Calibration state summary for diagnostic reports: per-display avg values.
+    static var displayCalibrationsInfo: String {
+        guard !displayCalibrations.isEmpty else { return "  (none)\n" }
+        var s = ""
+        for (displayID, cal) in displayCalibrations {
+            s += "  \(displayID): avg52=\(String(format: "%.4f", cal.avg52)) avg104=\(String(format: "%.4f", cal.avg104))\n"
+        }
+        return s
+    }
+
+    /// Calibration phase sample counts for diagnostic reports.
+    static var phaseSampleCountsInfo: String {
+        let allIDs = Set(phase1Samples.keys).union(phase2Samples.keys)
+        guard !allIDs.isEmpty else { return "  (no samples)\n" }
+        var s = ""
+        for did in allIDs.sorted() {
+            let p1 = phase1Samples[did]?.count ?? 0
+            let p2 = phase2Samples[did]?.count ?? 0
+            s += "  \(did): phase1=\(p1) phase2=\(p2)\n"
+        }
+        return s
+    }
 
     /// Returns a stable velocity multiplier based on empirical curve.
     static func multiplierForDisplay(_ displayID: String) -> Double {
@@ -183,9 +228,10 @@ class SpaceHelper {
 
     // Core space switching implementation.
     static func switchToSpace(_ spaceID: String, forceInstant: Bool = false) {
+        DiagnosticEventLog.shared.record(subsystem: "SpaceHelper", level: "info", "switchToSpace(\(spaceID), forceInstant=\(forceInstant))")
         lastProgrammaticSwitchTime = Date().timeIntervalSince1970
         lastProgrammaticTargetSpaceID = spaceID
-        
+
         if !forceInstant {
             guard !isSwitching else { return }
             isSwitching = true
@@ -355,9 +401,8 @@ class SpaceHelper {
             }
         }
 
-        // Force window activation. orderFrontRegardless is critical —
-        // without it the OS doesn't recognise the space switch intent
-        // and the move silently fails.
+        // Force window activation.
+        DiagnosticEventLog.shared.record(subsystem: "SpaceHelper", level: "info", "switchByActivatingOwnWindow space=\(spaceID)")
         window.orderFrontRegardless()
         window.canBecomeKeyOverride = true
         window.makeKey()
@@ -369,6 +414,220 @@ class SpaceHelper {
     
     // MARK: - Instant Space Switch Helpers
     
+    // MARK: - SLS Space Switching for macOS 27+
+    
+    static func shouldSwitchToSpaceUsingSLS() -> Bool {
+        // Automatic version check: SLS Operation for macOS 27+, legacy swipe for older.
+        let os = ProcessInfo.processInfo.operatingSystemVersion
+        return os.majorVersion >= 27
+    }
+    
+    // Method signature casting to pass a primitive UInt64 to the Objective-C initializer
+    private typealias SLSInitMethodType = @convention(c) (NSObject, Selector, NSString, UInt64) -> Unmanaged<NSObject>?
+
+    static func switchSpaceUsingSLSOperation(displayUUID: String, spaceID: Int) -> Bool {
+        guard let opCls = NSClassFromString("SLSBridgedManagedDisplaySetCurrentSpaceOperation") as? NSObject.Type else {
+            DiagnosticEventLog.shared.record(subsystem: "SpaceHelper", level: "error", "SLSBridgedManagedDisplaySetCurrentSpaceOperation class not found")
+            return false
+        }
+        
+        let allocSel = NSSelectorFromString("alloc")
+        guard opCls.responds(to: allocSel),
+              let allocatedOp = opCls.perform(allocSel)?.takeUnretainedValue() as? NSObject else {
+            DiagnosticEventLog.shared.record(subsystem: "SpaceHelper", level: "error", "Failed to allocate SLSBridgedManagedDisplaySetCurrentSpaceOperation")
+            return false
+        }
+        
+        let initSel = NSSelectorFromString("initWithDisplayIdentifier:spaceID:")
+        guard let method = class_getInstanceMethod(opCls, initSel) else {
+            DiagnosticEventLog.shared.record(subsystem: "SpaceHelper", level: "error", "initWithDisplayIdentifier:spaceID: selector not found on SLSBridgedManagedDisplaySetCurrentSpaceOperation")
+            return false
+        }
+        
+        let imp = method_getImplementation(method)
+        let initFunc = unsafeBitCast(imp, to: SLSInitMethodType.self)
+        let displayStr = displayUUID as NSString
+        
+        guard let initializedOp = initFunc(allocatedOp, initSel, displayStr, UInt64(spaceID))?.takeUnretainedValue() else {
+            DiagnosticEventLog.shared.record(subsystem: "SpaceHelper", level: "error", "Failed to initialize SLSBridgedManagedDisplaySetCurrentSpaceOperation via C-function casting")
+            return false
+        }
+        
+        // Execute operation using SLSWindowManagementFallbackBridge
+        if let bridgeCls = NSClassFromString("SLSWindowManagementFallbackBridge") as? NSObject.Type,
+           bridgeCls.responds(to: allocSel),
+           let allocatedBridge = bridgeCls.perform(allocSel)?.takeUnretainedValue() as? NSObject {
+            
+            let initBridgeSel = NSSelectorFromString("init")
+            if allocatedBridge.responds(to: initBridgeSel),
+               let initializedBridge = allocatedBridge.perform(initBridgeSel)?.takeUnretainedValue() as? NSObject {
+                
+                let performSel = NSSelectorFromString("performAsynchronousBridgedWindowManagementOperation:")
+                if initializedBridge.responds(to: performSel) {
+                    DiagnosticEventLog.shared.record(subsystem: "SpaceHelper", level: "info", "Executing SLS operation via SLSWindowManagementFallbackBridge: \(displayUUID), \(spaceID)")
+                    initializedBridge.perform(performSel, with: initializedOp)
+                    return true
+                }
+            }
+        }
+        
+        // Fallback for compatibility
+        if let operation = initializedOp as? Operation {
+            DiagnosticEventLog.shared.record(subsystem: "SpaceHelper", level: "info", "Executing SLS operation via OperationQueue: \(displayUUID), \(spaceID)")
+            OperationQueue.main.addOperation(operation)
+            return true
+        } else {
+            let startSel = NSSelectorFromString("start")
+            if initializedOp.responds(to: startSel) {
+                DiagnosticEventLog.shared.record(subsystem: "SpaceHelper", level: "info", "Starting SLS operation via start selector: \(displayUUID), \(spaceID)")
+                initializedOp.perform(startSel)
+                return true
+            }
+        }
+        
+        DiagnosticEventLog.shared.record(subsystem: "SpaceHelper", level: "error", "SLSBridgedManagedDisplaySetCurrentSpaceOperation could not be executed")
+        return false
+    }
+    
+    private static func hasAXWindows(pid: Int32) -> Bool {
+        let appRef = AXUIElementCreateApplication(pid)
+        var windowsValue: AnyObject?
+        let result = AXUIElementCopyAttributeValue(appRef, kAXWindowsAttribute as CFString, &windowsValue)
+        guard result == .success, let windows = windowsValue as? [AXUIElement] else {
+            return false
+        }
+        return !windows.isEmpty
+    }
+
+    private static func getTopWindowInfo(forSpace spaceID: String) -> (pid: Int32, windowID: Int)? {
+        guard let targetSpaceInt = Int(spaceID) else { return nil }
+        let conn = _CGSDefaultConnection()
+        
+        let options = CGWindowListOption(arrayLiteral: .excludeDesktopElements)
+        guard let windowList = CGWindowListCopyWindowInfo(options, kCGNullWindowID) as? [[String: Any]] else {
+            print("SpaceHelper: Failed to copy window list")
+            return nil
+        }
+        
+        let ourPID = ProcessInfo.processInfo.processIdentifier
+        
+        for window in windowList {
+            guard let layer = window[kCGWindowLayer as String] as? Int, layer == 0,
+                  let wID = window[kCGWindowNumber as String] as? Int,
+                  let pid = window[kCGWindowOwnerPID as String] as? Int,
+                  pid != ourPID,
+                  let app = NSRunningApplication(processIdentifier: Int32(pid)),
+                  app.activationPolicy == .regular,
+                  hasAXWindows(pid: Int32(pid)),
+                  (window[kCGWindowAlpha as String] as? Double ?? 1.0) > 0.1,
+                  let bounds = window[kCGWindowBounds as String] as? [String: Any],
+                  let w = bounds["Width"] as? CGFloat, let h = bounds["Height"] as? CGFloat,
+                  w > 100, h > 100
+            else { continue }
+            
+            // Check spaces for this window
+            let wIDArray = [wID as NSNumber] as CFArray
+            if let result = CGSCopySpacesForWindows(conn, 7, wIDArray),
+               let spaceIDs = result as? [NSNumber] {
+                let spaceInts = spaceIDs.map { $0.intValue }
+                if spaceInts.contains(targetSpaceInt), spaceInts.count == 1 {
+                    let appName = window[kCGWindowOwnerName as String] as? String ?? "Unknown"
+                    print("SpaceHelper: Found top window on Space \(spaceID): \(appName) (PID: \(pid), WindowID: \(wID), Spaces: \(spaceInts))")
+                    DiagnosticEventLog.shared.record(subsystem: "SpaceHelper", "Found top window on Space \(spaceID): \(appName) (PID: \(pid), WindowID: \(wID), Spaces: \(spaceInts))")
+                    return (Int32(pid), wID)
+                }
+            }
+        }
+        print("SpaceHelper: No top window found on Space \(spaceID)")
+        return nil
+    }
+
+    private static func focusWindowViaAccessibility(pid: Int32, windowID: Int) -> Bool {
+        let appRef = AXUIElementCreateApplication(pid)
+        var windowsValue: AnyObject?
+        let result = AXUIElementCopyAttributeValue(appRef, kAXWindowsAttribute as CFString, &windowsValue)
+        
+        print("SpaceHelper: focusWindowViaAccessibility pid \(pid), windowID \(windowID). Copy windows result: \(result.rawValue)")
+        DiagnosticEventLog.shared.record(subsystem: "SpaceHelper", "focusWindowViaAccessibility pid \(pid), windowID \(windowID). result=\(result.rawValue)")
+        
+        guard result == .success, let windows = windowsValue as? [AXUIElement] else {
+            print("SpaceHelper: Failed to copy windows for PID \(pid)")
+            return false
+        }
+        
+        print("SpaceHelper: App PID \(pid) has \(windows.count) windows in accessibility")
+        for windowRef in windows {
+            var wID: CGWindowID = 0
+            if _AXUIElementGetWindow(windowRef, &wID) == 0, Int(wID) == windowID {
+                AXUIElementPerformAction(windowRef, kAXRaiseAction as CFString)
+                AXUIElementSetAttributeValue(windowRef, kAXMainAttribute as CFString, kCFBooleanTrue)
+                AXUIElementSetAttributeValue(windowRef, kAXFocusedAttribute as CFString, kCFBooleanTrue)
+                print("SpaceHelper: Successfully focused window \(windowID) via AX API")
+                DiagnosticEventLog.shared.record(subsystem: "SpaceHelper", "Successfully focused window \(windowID) via AX API")
+                return true
+            }
+        }
+        
+        // Fallback: Focus first window
+        if let firstWindow = windows.first {
+            AXUIElementPerformAction(firstWindow, kAXRaiseAction as CFString)
+            AXUIElementSetAttributeValue(firstWindow, kAXMainAttribute as CFString, kCFBooleanTrue)
+            AXUIElementSetAttributeValue(firstWindow, kAXFocusedAttribute as CFString, kCFBooleanTrue)
+            print("SpaceHelper: Focused first window of PID \(pid) via AX API fallback")
+            DiagnosticEventLog.shared.record(subsystem: "SpaceHelper", "Focused first window of PID \(pid) via AX API fallback")
+            return true
+        }
+        
+        print("SpaceHelper: No windows found to focus for PID \(pid)")
+        return false
+    }
+
+    static func restoreFocusAfterSLSSwitch(spaceID: String, immediate: Bool = false) {
+        print("SpaceHelper: restoreFocusAfterSLSSwitch for Space \(spaceID), immediate: \(immediate)")
+        DiagnosticEventLog.shared.record(subsystem: "SpaceHelper", "restoreFocusAfterSLSSwitch for Space \(spaceID), immediate: \(immediate)")
+        
+        pendingFocusTask?.cancel()
+        
+        // Use 350ms for immediate switches so it runs after transition slide animations settle.
+        // This is key to preventing glitched, mangled, or stacked menu bar items.
+        let delay = immediate ? 0.35 : 0.45
+        
+        let task = DispatchWorkItem {
+            // Post-switch settlement: Activate target space owner app if fullscreen
+            if let pid = getOwnerPID(for: spaceID),
+               let app = NSRunningApplication(processIdentifier: pid) {
+                print("SpaceHelper: Activating fullscreen owner app (PID: \(pid)) on Space \(spaceID)")
+                app.activate(options: .activateIgnoringOtherApps)
+                return
+            }
+            
+            guard let topWinInfo = getTopWindowInfo(forSpace: spaceID) else {
+                // Fallback: Activate Finder to reset the menu bar
+                print("SpaceHelper: No top window found on Space \(spaceID). Activating Finder.")
+                if let finder = NSRunningApplication.runningApplications(withBundleIdentifier: "com.apple.finder").first {
+                    finder.activate(options: .activateIgnoringOtherApps)
+                }
+                return
+            }
+            
+            let pid = topWinInfo.pid
+            let windowID = topWinInfo.windowID
+            
+            if let app = NSRunningApplication(processIdentifier: pid) {
+                print("SpaceHelper: Activating top window app \(app.localizedName ?? "") (PID: \(pid), Window: \(windowID)) on Space \(spaceID)")
+                
+                // 1. Activate application
+                app.activate(options: .activateIgnoringOtherApps)
+                
+                // 2. Focus the specific window via Accessibility API
+                _ = focusWindowViaAccessibility(pid: pid, windowID: windowID)
+            }
+        }
+        
+        pendingFocusTask = task
+        DispatchQueue.main.asyncAfter(deadline: .now() + delay, execute: task)
+    }
+
     private static func postDockSwipe(phase: Int, directionRight: Bool, velocity: Double) -> Bool {
         // Use Float.leastNonzeroMagnitude to precisely match FLT_TRUE_MIN used in ISS.c
         // Double.leastNonzeroMagnitude is too small (e-324) and gets truncated to 0.0 by the OS when positive.
@@ -383,17 +642,31 @@ class SpaceHelper {
         ev.setIntegerValueField(CGEventField(rawValue: 123)!, value: 1) // horizontal motion
         ev.setDoubleValueField(CGEventField(rawValue: 129)!, value: vel)
         ev.setDoubleValueField(CGEventField(rawValue: 130)!, value: vel)
+        ev.setIntegerValueField(CGEventField(rawValue: 115)!, value: directionRight ? 8 : 4) // swipe mask: right=8, left=4
+        
+        var eventToPost = ev
+        let os = ProcessInfo.processInfo.operatingSystemVersion
+        if os.majorVersion >= 27 {
+            if let augmented = GestureAugmentor.augmentEvent(ev)?.takeRetainedValue() {
+                eventToPost = augmented
+            }
+        }
         
         // Use cgSessionEventTap to match ISS.c and prevent HID acceleration/mishandling
-        ev.post(tap: .cgSessionEventTap)
+        eventToPost.post(tap: .cgSessionEventTap)
         return true
     }
     
     static func performSpaceSwitchGesture(steps: Int, targetDisplayID: String, forceInstant: Bool = false) {
+        DiagnosticEventLog.shared.record(subsystem: "SpaceHelper", level: "info", "gesture steps=\(steps) display=\(targetDisplayID)")
         if steps == 0 { return }
 
-        let directionRight = steps > 0
-        let absSteps = abs(steps)
+        // macOS 27 interprets swipe directions opposite of the expected behavior,
+        // so we invert the step direction to compensate.
+        let os = ProcessInfo.processInfo.operatingSystemVersion
+        let adjustedSteps = os.majorVersion >= 27 ? -steps : steps
+        let directionRight = adjustedSteps > 0
+        let absSteps = abs(adjustedSteps)
 
         let target = targetDuration
         let velocity: Double
@@ -452,6 +725,7 @@ class SpaceHelper {
     // MARK: - Window Moving Logic
     
     static func dragActiveWindow(to spaceID: String, forceInstant: Bool = false) {
+        DiagnosticEventLog.shared.record(subsystem: "SpaceHelper", level: "info", "dragActiveWindow → \(spaceID)")
         targetSpaceID = spaceID
         // Cancel any pending restoration from a previous "chained" move
         restorationTask?.cancel()
@@ -484,6 +758,7 @@ class SpaceHelper {
                 draggedWindowBundleID = runningApp.bundleIdentifier
                 draggedWindowAppName = runningApp.localizedName
             }
+            draggedWindowOriginalFrame = activeWindowInfo.frame
             
             let frame = activeWindowInfo.frame
             let grabX: CGFloat
@@ -544,6 +819,18 @@ class SpaceHelper {
                     dragBackEvent.post(tap: .cgSessionEventTap)
                 }
                 usleep(30000) // 30ms settle
+
+                // If the window drifted from its original position after the drag-back,
+                // warp the cursor to maintain the correct grab offset so the window
+                // isn't "dragged behind" during the space switch.
+                if let actual = getWindowInfo(id: activeWindowInfo.id) {
+                    let dx = actual.frame.origin.x - frame.origin.x
+                    let dy = actual.frame.origin.y - frame.origin.y
+                    if abs(dx) >= 1 || abs(dy) >= 1 {
+                        let correctedGrabPoint = CGPoint(x: grabPoint.x + dx, y: grabPoint.y + dy)
+                        CGWarpMouseCursorPosition(correctedGrabPoint)
+                    }
+                }
             } else {
                 // Standard windows with native titlebars automatically bind to the cursor on mouseDown.
                 // We bypass drag simulation entirely to prevent unnecessary window shifting.
@@ -565,6 +852,7 @@ class SpaceHelper {
     
     /// Fast-forwards the restoration process because we detected a successful space change.
     static func signalSpaceSwitchComplete(arrivedAtSpaceID: String) {
+        DiagnosticEventLog.shared.record(subsystem: "SpaceHelper", level: "info", "signalSpaceSwitchComplete(\(arrivedAtSpaceID))")
         guard originalMousePoint != nil else { return }
         
         let arrivedUUID = arrivedAtSpaceID.uppercased()
@@ -614,6 +902,25 @@ class SpaceHelper {
                 upEvent.flags = []
                 upEvent.post(tap: .cgSessionEventTap)
             }
+
+            // Restore window to its original position if it shifted during drag-before-switch.
+            if let frame = draggedWindowOriginalFrame, let wid = draggedWindowID, let pid = draggedWindowPID {
+                let appElement = AXUIElementCreateApplication(pid)
+                var windowsRef: CFTypeRef?
+                if AXUIElementCopyAttributeValue(appElement, kAXWindowsAttribute as CFString, &windowsRef) == .success,
+                   let axWindows = windowsRef as? [AXUIElement] {
+                    for axWindow in axWindows {
+                        var cgWID: CGWindowID = 0
+                        if _AXUIElementGetWindow(axWindow, &cgWID) == 0, cgWID == CGWindowID(wid) {
+                            var point = frame.origin
+                            if let positionRef = AXValueCreate(.cgPoint, &point) {
+                                AXUIElementSetAttributeValue(axWindow, kAXPositionAttribute as CFString, positionRef)
+                            }
+                            break
+                        }
+                    }
+                }
+            }
             
             // Verify window move success after a small delay
             let winID = draggedWindowID
@@ -641,6 +948,7 @@ class SpaceHelper {
             draggedWindowPID = nil
             draggedWindowBundleID = nil
             draggedWindowAppName = nil
+            draggedWindowOriginalFrame = nil
         }
         
         restorationTask = task
@@ -660,6 +968,7 @@ class SpaceHelper {
         }
         
         if !isStillVisible {
+            DiagnosticEventLog.shared.record(subsystem: "SpaceHelper", level: "error", "Window move FAILED for \(appName) (ID: \(windowID))")
             print("SpaceHelper: Window move failed for \(appName) (ID: \(windowID), BundleID: \(bundleID))")
             
             // Trigger failure HUD notification
@@ -812,6 +1121,16 @@ class SpaceHelper {
             return String(firstSpace.intValue)
         }
         return nil
+    }
+
+    /// Returns the set of space IDs a window is currently assigned to by the CGS window server.
+    static func getWindowCurrentSpaces(windowID: Int) -> Set<String> {
+        let conn = _CGSDefaultConnection()
+        let widArray = [windowID as NSNumber] as CFArray
+        guard let result = CGSCopySpacesForWindows(conn, 7, widArray) as? [NSNumber] else {
+            return []
+        }
+        return Set(result.map { String($0.intValue) })
     }
 
     static func getActiveWindowFrame() -> CGRect? {
@@ -1180,7 +1499,7 @@ class SpaceHelper {
               w >= minSize, h >= minSize
         else { return false }
         // Reject invisible windows when the key is present.
-        if let alpha = window[kCGWindowAlpha as String] as? Double, alpha <= 0 { return false }
+        if let alpha = window[kCGWindowAlpha as String] as? Double, alpha < 0 { return false }
         // Reject windows with sharing state "none" (hidden helper windows like WeChat background).
         if let sharing = window[kCGWindowSharingState as String] as? Int, sharing == 0 { return false }
         return true
@@ -1206,28 +1525,36 @@ class SpaceHelper {
         // This excludes background agents like Ollama, menu bar-only apps, etc.
         var pidToAppPath: [Int32: String] = [:]
         var axWindowIDs = Set<Int>()
+        var minimizedAXWindowIDs = Set<Int>()
         for app in NSWorkspace.shared.runningApplications {
             if app.activationPolicy == .regular, let path = app.bundleURL?.path {
                 pidToAppPath[app.processIdentifier] = path
-                
+
                 // Get all valid window IDs directly from the app's Accessibility hierarchy.
                 // This definitively eliminates closed/ghost windows that CGWindowList retains.
                 let appElement = AXUIElementCreateApplication(app.processIdentifier)
-                
+
                 let extractWID = { (element: AXUIElement) in
                     var cgWID: CGWindowID = 0
                     if _AXUIElementGetWindow(element, &cgWID) == 0 {
-                        axWindowIDs.insert(Int(cgWID))
+                        let wid = Int(cgWID)
+                        axWindowIDs.insert(wid)
+                        // Check per-window AXMinimized attribute (boolean)
+                        var minimizedRef: CFTypeRef?
+                        if AXUIElementCopyAttributeValue(element, kAXMinimizedAttribute as CFString, &minimizedRef) == .success,
+                           let isMin = minimizedRef as? Bool, isMin {
+                            minimizedAXWindowIDs.insert(wid)
+                        }
                     }
                 }
-                
-                // 1. Check standard AXWindows attribute
+
+                // 1. Check standard AXWindows attribute (open windows)
                 var windowsRef: CFTypeRef?
                 if AXUIElementCopyAttributeValue(appElement, kAXWindowsAttribute as CFString, &windowsRef) == .success,
                    let axWindows = windowsRef as? [AXUIElement] {
                     axWindows.forEach(extractWID)
                 }
-                
+
                 // 2. Check AXChildren for non-standard apps (e.g., Preview)
                 if app.bundleIdentifier == "com.apple.Preview" {
                     var childrenRef: CFTypeRef?
@@ -1377,7 +1704,9 @@ class SpaceHelper {
 
                 let ownerName = window[kCGWindowOwnerName as String] as? String ?? ""
                 let title = window[kCGWindowName as String] as? String ?? ""
-                output += "  \(wid)|\(pid)|\(ownerName)|\(appPath)|\(title)\n"
+                let isMinimized = minimizedAXWindowIDs.contains(wid) ? "1" : "0"
+                let isHidden = (NSRunningApplication(processIdentifier: Int32(pid))?.isHidden ?? false) ? "1" : "0"
+                output += "  \(wid)|\(pid)|\(ownerName)|\(appPath)|\(title)|\(isMinimized)|\(isHidden)\n"
             }
         }
         return output
@@ -1551,6 +1880,35 @@ class SpaceHelper {
         return ids
     }
 
+    /// Returns a formatted description of the raw display spaces managed by macOS.
+    static func getRawCGSDisplaySpacesDescription() -> String {
+        let conn = _CGSDefaultConnection()
+        guard let displays = CGSCopyManagedDisplaySpaces(conn) as? [NSDictionary] else {
+            return "  CGSCopyManagedDisplaySpaces: nil or unavailable\n"
+        }
+        var s = ""
+        for (idx, display) in displays.enumerated() {
+            let displayID = display["Display Identifier"] as? String ?? "Unknown"
+            s += "  Display [\(idx)] ID=\(displayID):\n"
+            if let currentSpace = display["Current Space"] as? [String: Any],
+               let currentID = currentSpace["ManagedSpaceID"] as? Int {
+                s += "    Current Space ManagedSpaceID: \(currentID)\n"
+            }
+            if let spaces = display["Spaces"] as? [[String: Any]] {
+                s += "    Spaces:\n"
+                for space in spaces {
+                    if let spaceID = space["ManagedSpaceID"] as? Int {
+                        let isFS = space["TileLayoutManager"] != nil
+                        let spaceType = space["Space Type"] as? Int ?? -1
+                        let pid = space["pid"] as? Int32 ?? space["owner pid"] as? Int32 ?? 0
+                        s += "      - ManagedSpaceID: \(spaceID) (Type: \(spaceType), isFullscreen: \(isFS ? 1 : 0), PID: \(pid))\n"
+                    }
+                }
+            }
+        }
+        return s
+    }
+
     private static func getDisplayName(for uuidString: String, screenMap: [String: String]) -> String {
         // Reviewer recommendation: Use case-insensitive comparison for robustness.
         if let name = screenMap[uuidString.uppercased()] {
@@ -1560,6 +1918,7 @@ class SpaceHelper {
     }
 
     static func detectSpaceChange() {
+        DiagnosticEventLog.shared.record(subsystem: "SpaceHelper", level: "info", "detectSpaceChange")
         // Record switch completion time for self-calibrating velocity.
         endGestureTiming()
 

@@ -155,8 +155,15 @@ class StatusBarController: NSObject {
                 self?.rebuildMenu()
             }
             .store(in: &cancellables)
+
+        labelManager.$showOnDesktop
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] _ in
+                self?.rebuildMenu()
+            }
+            .store(in: &cancellables)
     }
-    
+
     private func createLockedSpaceImage(baseName: String, font: NSFont) -> NSImage {
         let attributes: [NSAttributedString.Key: Any] = [
             .font: font,
@@ -227,6 +234,17 @@ class StatusBarController: NSObject {
         }
     }
     
+    private func lockedMenuTitle(_ base: String) -> NSAttributedString {
+        let font = NSFont.menuFont(ofSize: 0)
+        let attrStr = NSMutableAttributedString(string: base, attributes: [.font: font])
+        let attach = NSTextAttachment()
+        attach.image = NSImage(systemSymbolName: "lock.fill", accessibilityDescription: nil)
+        let h = font.capHeight * 0.85
+        attach.bounds = CGRect(x: 0, y: -font.descender * 0.5, width: h, height: h)
+        attrStr.append(NSAttributedString(attachment: attach))
+        return attrStr
+    }
+
     private func rebuildMenu() {
         let menu = NSMenu()
         
@@ -245,21 +263,26 @@ class StatusBarController: NSObject {
 
             for space in currentDisplaySpaces {
                 let name = spaceManager.getSpaceName(space.id)
-                let item = NSMenuItem(title: name, action: #selector(selectSpace(_:)), keyEquivalent: "")
+                let locked = spaceManager.lockedSpaceIDs.contains(space.id)
+                let label = locked ? lockedMenuTitle(name) : NSAttributedString(string: name, attributes: [.font: NSFont.menuFont(ofSize: 0)])
+                let moveLabel = locked ? lockedMenuTitle("\u{2192} \(name)") : NSAttributedString(string: "\u{2192} \(name)", attributes: [.font: NSFont.menuFont(ofSize: 0)])
+
+                let item = NSMenuItem(title: "", action: #selector(selectSpace(_:)), keyEquivalent: "")
+                item.attributedTitle = label
                 item.target = self
                 item.representedObject = space.id
-                
+
                 if space.id == spaceManager.currentSpaceUUID {
                     item.state = .on
                 } else {
                     item.state = .off
                 }
-                
+
                 menu.addItem(item)
-                
+
                 // Alternate item for window movement.
-                let moveName = "→ " + name
-                let altItem = NSMenuItem(title: moveName, action: #selector(moveWindowToSpace(_:)), keyEquivalent: "")
+                let altItem = NSMenuItem(title: "", action: #selector(moveWindowToSpace(_:)), keyEquivalent: "")
+                altItem.attributedTitle = moveLabel
                 altItem.target = self
                 altItem.representedObject = space.id
                 altItem.isAlternate = true
@@ -269,15 +292,17 @@ class StatusBarController: NSObject {
             }
             menu.addItem(NSMenuItem.separator())
         }
-        
+
+        let isCurrentFullscreen = spaceManager.spaceNameDict.first(where: { $0.id == spaceManager.currentSpaceUUID })?.isFullscreen ?? false
+
         let rename = NSMenuItem(
             title: NSLocalizedString("Menu.RenameCurrentSpace", comment: ""),
             action: nil,
             keyEquivalent: "r"
         )
         rename.image = NSImage(systemSymbolName: "pencil.line", accessibilityDescription: nil)
-        
-        if spaceManager.getSpaceNum(spaceManager.currentSpaceUUID) == 0 {
+
+        if spaceManager.getSpaceNum(spaceManager.currentSpaceUUID) == 0 || isCurrentFullscreen {
             rename.isEnabled = false
         } else {
             rename.isEnabled = true
@@ -287,17 +312,31 @@ class StatusBarController: NSObject {
         self.renameItem = rename
         menu.addItem(rename)
         
+        let allLocked = spaceManager.spaceNameDict.allSatisfy { $0.isFullscreen || spaceManager.lockedSpaceIDs.contains($0.id) }
         let isLocked = spaceManager.lockedSpaceIDs.contains(spaceManager.currentSpaceUUID)
+
         let lockItem = NSMenuItem(
-            title: NSLocalizedString("Lock Current Space", comment: ""),
-            action: #selector(toggleLockCurrentSpace),
+            title: isLocked ? NSLocalizedString("Unlock Current Space", comment: "") : NSLocalizedString("Lock Current Space", comment: ""),
+            action: isCurrentFullscreen ? nil : #selector(toggleLockCurrentSpace),
             keyEquivalent: "l"
         )
         lockItem.target = self
         lockItem.state = isLocked ? .on : .off
         lockItem.image = NSImage(systemSymbolName: isLocked ? "lock" : "lock.open", accessibilityDescription: nil)
+        lockItem.isEnabled = !isCurrentFullscreen
         menu.addItem(lockItem)
-        
+
+        let lockAllItem = NSMenuItem(
+            title: allLocked ? NSLocalizedString("Unlock All", comment: "") : NSLocalizedString("Lock All", comment: ""),
+            action: #selector(toggleLockAllSpaces),
+            keyEquivalent: "l"
+        )
+        lockAllItem.target = self
+        lockAllItem.image = NSImage(systemSymbolName: allLocked ? "lock.open" : "lock", accessibilityDescription: nil)
+        lockAllItem.isAlternate = true
+        lockAllItem.keyEquivalentModifierMask = [.command, .option]
+        menu.addItem(lockAllItem)
+
         let movedCount = spaceManager.movedWindowsOriginalSpaces.count
         let restoreItem = NSMenuItem(
             title: String(format: NSLocalizedString("Restore Windows Moved by Lock (%d)", comment: ""), movedCount),
@@ -308,6 +347,18 @@ class StatusBarController: NSObject {
         restoreItem.image = NSImage(systemSymbolName: "arrow.uturn.backward", accessibilityDescription: nil)
         restoreItem.isEnabled = movedCount > 0
         menu.addItem(restoreItem)
+
+        let cleanItem = NSMenuItem(
+            title: String(format: NSLocalizedString("Clean Restoration Queues (%d)", comment: ""), movedCount),
+            action: #selector(cleanQueues),
+            keyEquivalent: ""
+        )
+        cleanItem.target = self
+        cleanItem.image = NSImage(systemSymbolName: "trash", accessibilityDescription: nil)
+        cleanItem.isAlternate = true
+        cleanItem.keyEquivalentModifierMask = .option
+        cleanItem.isEnabled = movedCount > 0
+        menu.addItem(cleanItem)
 
         menu.addItem(NSMenuItem.separator())
     
@@ -324,6 +375,18 @@ class StatusBarController: NSObject {
         showActiveLabels.image = NSImage(systemSymbolName: "rectangle.inset.filled.and.cursorarrow", accessibilityDescription: nil)
         self.showActiveLabelsMenuItem = showActiveLabels
         menu.addItem(showActiveLabels)
+
+        if labelManager.showActiveLabels {
+            let showOnDesktop = NSMenuItem(
+                title: NSLocalizedString("Show on Desktop", comment: ""),
+                action: #selector(toggleShowOnDesktop),
+                keyEquivalent: "d"
+            )
+            showOnDesktop.target = self
+            showOnDesktop.state = labelManager.showOnDesktop ? .on : .off
+            showOnDesktop.image = NSImage(systemSymbolName: "desktopcomputer", accessibilityDescription: nil)
+            menu.addItem(showOnDesktop)
+        }
 
         let reloadLabels = NSMenuItem(title: NSLocalizedString("Reload Space Labels", comment: "Reload Space Label Windows to fix glitches"), action: #selector(reloadLabelsFromMenu), keyEquivalent: "")
         reloadLabels.target = self
@@ -348,7 +411,7 @@ class StatusBarController: NSObject {
         quitItem.image = NSImage(systemSymbolName: "xmark.rectangle", accessibilityDescription: nil)
         quitItem.target = self
         menu.addItem(quitItem)
-        
+
         StatusBarController.statusItem.menu = menu
     }
     
@@ -378,11 +441,21 @@ class StatusBarController: NSObject {
         spaceManager.toggleLockSpace(spaceManager.currentSpaceUUID)
         rebuildMenu()
     }
-    
+
+    @objc private func toggleLockAllSpaces() {
+        spaceManager.toggleLockAllSpaces()
+        rebuildMenu()
+    }
+
     @objc private func restoreAllMovedWindows() {
         spaceManager.restoreAllMovedWindows()
     }
-    
+
+    @objc private func cleanQueues() {
+        spaceManager.cleanMovedWindows()
+        rebuildMenu()
+    }
+
     @objc func renameCurrentSpace() {
         if spaceManager.getSpaceNum(spaceManager.currentSpaceUUID) == 0 { return }
         guard let button = StatusBarController.statusItem.button else { return }
@@ -402,6 +475,11 @@ class StatusBarController: NSObject {
 
     @objc private func togglePreviewLabelsFromMenu() {
         labelManager.togglePreviewLabels()
+        rebuildMenu()
+    }
+
+    @objc private func toggleShowOnDesktop() {
+        labelManager.toggleShowOnDesktop()
         rebuildMenu()
     }
 
@@ -433,7 +511,9 @@ class StatusBarController: NSObject {
         window.titleVisibility = .hidden
         window.titlebarAppearsTransparent = true
         window.titlebarSeparatorStyle = .none
-        window.toolbar = nil
+        // Don't nil the toolbar — NavigationSplitView on macOS 14+ creates its
+        // own internal toolbar, and SwiftUI's toolbar(removing: .sidebarToggle)
+        // modifier needs it to exist in order to suppress the toggle.
         window.center()
         window.minSize = NSSize(width: defaultSettingsWindowWidth, height: defaultSettingsWindowHeight)
         window.collectionBehavior = [.participatesInCycle]
@@ -480,12 +560,18 @@ extension StatusBarController: NSMenuItemValidation {
                current.isFullscreen {
                 return false
             }
-            
+
             guard let spaceID = menuItem.representedObject as? String else { return true }
             if let space = spaceManager.spaceNameDict.first(where: { $0.id == spaceID }) {
                 return !space.isFullscreen
             }
         }
+
+        if menuItem.action == #selector(restoreAllMovedWindows) ||
+           menuItem.action == #selector(cleanQueues) {
+            return spaceManager.movedWindowsOriginalSpaces.count > 0
+        }
+
         return true
     }
 }

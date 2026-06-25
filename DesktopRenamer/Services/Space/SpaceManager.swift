@@ -153,6 +153,22 @@ class SpaceManager: ObservableObject {
         UserDefaults.standard.set(Array(lockedSpaceIDs), forKey: SpaceManager.lockedSpaceIDsKey)
         objectWillChange.send()
     }
+
+    func toggleLockAllSpaces() {
+        let allNonFullscreen = spaceNameDict.filter { !$0.isFullscreen }.map { $0.id }
+        let allLocked = allNonFullscreen.allSatisfy { lockedSpaceIDs.contains($0) }
+        if allLocked {
+            for id in allNonFullscreen { lockedSpaceIDs.remove(id) }
+        } else {
+            for id in allNonFullscreen { lockedSpaceIDs.insert(id) }
+        }
+        UserDefaults.standard.set(Array(lockedSpaceIDs), forKey: SpaceManager.lockedSpaceIDsKey)
+        objectWillChange.send()
+    }
+
+    func cleanMovedWindows() {
+        movedWindowsOriginalSpaces.removeAll()
+    }
     
     deinit {
         // Timer invalidation is not thread-safe; deinit can run on any thread.
@@ -203,6 +219,7 @@ class SpaceManager: ObservableObject {
     }
     
     private func handleSpaceChange(_ rawUUID: String, isDesktop: Bool, ncCount: Int, displayID: String, source: String) {
+        DiagnosticEventLog.shared.record(subsystem: "SpaceManager", level: "info", "handleSpaceChange(display=\(displayID), source=\(source))")
         if SpaceHelper.isDragging {
             SpaceHelper.signalSpaceSwitchComplete(arrivedAtSpaceID: rawUUID)
         }
@@ -320,6 +337,19 @@ class SpaceManager: ObservableObject {
                 }
             }
             
+            // STABILITY GUARD: Reject partial space lists to prevent corrupting
+            // saved state. Transient CGS failures can return fewer spaces,
+            // which would erase user data if saved.
+            let isPartialList = !self.spaceNameDict.isEmpty && newSpaceList.count < self.spaceNameDict.count
+            if isPartialList && newSpaceList.count <= 1 {
+                print("SpaceManager: Rejecting partial space list (\(newSpaceList.count) vs cached \(self.spaceNameDict.count)). Skipping update.")
+                DiagnosticEventLog.shared.record(subsystem: "SpaceManager", level: "warning", "Rejected partial space list: new=\(newSpaceList.count), cached=\(self.spaceNameDict.count), source=\(source)")
+                if !cgsState.currentUUID.isEmpty {
+                    self.currentSpaceUUID = cgsState.currentUUID
+                }
+                return
+            }
+
             if self.spaceNameDict != newSpaceList {
                 self.spaceNameDict = newSpaceList
                 
@@ -388,7 +418,20 @@ class SpaceManager: ObservableObject {
                 }
                 
                 self.currentSpaceUUID = targetUUID
+                self.pruneStaleMovedWindows()
                 shouldUpdateWidget = true
+
+                // If it was a programmatic space switch on macOS 27+, restore focus
+                // now that the space change is complete. On older macOS the native gesture
+                // path handles focus correctly on its own.
+                let now = Date().timeIntervalSince1970
+                let isProgrammatic = SpaceHelper.shouldSwitchToSpaceUsingSLS() &&
+                                     (now - SpaceHelper.lastProgrammaticSwitchTime < 2.0) &&
+                                     (targetUUID == SpaceHelper.lastProgrammaticTargetSpaceID)
+                if isProgrammatic {
+                    print("SpaceManager: Programmatic space switch confirmed. Restoring focus on Space \(targetUUID).")
+                    SpaceHelper.restoreFocusAfterSLSSwitch(spaceID: targetUUID, immediate: true)
+                }
             }
             
             if self.currentDisplayID != cgsState.displayID {
@@ -1015,7 +1058,59 @@ class SpaceManager: ObservableObject {
          return currentIndex == displaySpaces.count - 1
     }
     
+    // MARK: - Diagnostic Report Accessors
+
+    /// Returns a human-readable description of the last wake time, including
+    /// remaining cooling time if we are still in the post-wake stabilization window.
+    var lastWakeTimeAgo: String {
+        let elapsed = Date().timeIntervalSince(lastWakeTime)
+        if elapsed < wakeCoolingDuration {
+            let remaining = wakeCoolingDuration - elapsed
+            return "cooling (\(String(format: "%.1f", remaining))s remaining, started \(String(format: "%.1f", elapsed))s ago)"
+        }
+        return "\(String(format: "%.1f", elapsed))s ago"
+    }
+
+    /// Space change retry count / max for diagnostic reports.
+    var spaceChangeRetryInfo: String {
+        "\(spaceChangeRetryCount)/\(maxSpaceChangeRetries)"
+    }
+
+    /// Fullscreen exit retry set contents for diagnostic reports.
+    var fullscreenExitRetryingInfo: String {
+        fullscreenExitRetrying.isEmpty ? "(empty)" : fullscreenExitRetrying.sorted().joined(separator: ", ")
+    }
+
+    /// Connected display UUIDs for diagnostic reports.
+    var connectedDisplayUUIDsInfo: String {
+        connectedDisplayUUIDs.isEmpty ? "(none)" : connectedDisplayUUIDs.sorted().joined(separator: ", ")
+    }
+
+    /// Last manual switch target space UUID for diagnostic reports.
+    var lastManualSwitchTargetUUIDInfo: String {
+        lastManualSwitchTargetUUID ?? "nil"
+    }
+
+    private func pruneStaleMovedWindows() {
+        guard !SpaceHelper.isDragging else { return }
+        var staleKeys: [Int] = []
+        for (windowID, entry) in movedWindowsOriginalSpaces {
+            guard let actualCgsSpaceID = SpaceHelper.getWindowSpaceID(id: windowID) else {
+                staleKeys.append(windowID)
+                continue
+            }
+            if actualCgsSpaceID != entry.currentSpaceUUID {
+                print("SpaceManager: Pruning window \(windowID) from restore queue — expected \(entry.currentSpaceUUID), actual \(actualCgsSpaceID)")
+                staleKeys.append(windowID)
+            }
+        }
+        for key in staleKeys {
+            movedWindowsOriginalSpaces.removeValue(forKey: key)
+        }
+    }
+
     func restoreAllMovedWindows() {
+        pruneStaleMovedWindows()
         let list = movedWindowsOriginalSpaces.map { (windowID: $0.key, originalSpaceUUID: $0.value.originalSpaceUUID, currentSpaceUUID: $0.value.currentSpaceUUID, pid: $0.value.pid) }
         guard !list.isEmpty else { return }
         

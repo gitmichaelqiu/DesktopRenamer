@@ -29,55 +29,45 @@ extension NSSplitViewItem {
     }
 }
 
-@available(macOS 14.0, *)
-extension View {
-    func removeSidebarToggle() -> some View {
-        toolbar(removing: .sidebarToggle)
-            .toolbar {
-                Color.clear
-            }
-    }
-}
-
 class AppDelegate: NSObject, NSApplicationDelegate {
     static var shared: AppDelegate!
     var spaceManager: SpaceManager!
     var statusBarController: StatusBarController?
     var hotkeyManager: HotkeyManager!
     var gestureManager: GestureManager!
-    
+
     private var cancellables = Set<AnyCancellable>()
     var splashWindowController: NSWindowController?
-    
+
     func applicationDidFinishLaunching(_ notification: Notification) {
         AppDelegate.shared = self
-        
+
         NSApp.setActivationPolicy(.accessory)
-        
+
         let hasInitialized = UserDefaults.standard.bool(forKey: "HasInitializedDefaults")
         if !hasInitialized {
             try? SMAppService.mainApp.register()
             UserDefaults.standard.set(true, forKey: "HasInitializedDefaults")
         }
-        
+
         // Check for first launch to present onboarding splash screen.
         let hasSeenSplash = UserDefaults.standard.bool(forKey: "hasSeenSplashScreen")
         if !hasSeenSplash {
             showSplashScreen()
         }
-        
+
         self.hotkeyManager = HotkeyManager()
-        
+
         DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
             self.spaceManager = SpaceManager()
             self.gestureManager = GestureManager(spaceManager: self.spaceManager)
-            
+
             self.statusBarController = StatusBarController(
                 spaceManager: self.spaceManager,
                 hotkeyManager: self.hotkeyManager,
                 gestureManager: self.gestureManager
             )
-            
+
             self.setupHotkeyBindings()
         }
 
@@ -85,33 +75,33 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             _ = UpdateManager.shared
         }
     }
-    
+
     private func setupHotkeyBindings() {
         hotkeyManager.switchLeftTriggered
             .receive(on: DispatchQueue.main)
             .sink { [weak self] in self?.spaceManager.switchToPreviousSpace() }
             .store(in: &cancellables)
-            
+
         hotkeyManager.switchRightTriggered
             .receive(on: DispatchQueue.main)
             .sink { [weak self] in self?.spaceManager.switchToNextSpace() }
             .store(in: &cancellables)
-            
+
         hotkeyManager.moveWindowNextTriggered
             .receive(on: DispatchQueue.main)
             .sink { [weak self] in self?.spaceManager.moveActiveWindowToNextSpace() }
             .store(in: &cancellables)
-            
+
         hotkeyManager.moveWindowPreviousTriggered
             .receive(on: DispatchQueue.main)
             .sink { [weak self] in self?.spaceManager.moveActiveWindowToPreviousSpace() }
             .store(in: &cancellables)
-            
+
         hotkeyManager.moveWindowNumberTriggered
             .receive(on: DispatchQueue.main)
             .sink { [weak self] number in self?.spaceManager.moveActiveWindowToSpace(number: number) }
             .store(in: &cancellables)
-            
+
         hotkeyManager.switchSpaceNumberTriggered
             .receive(on: DispatchQueue.main)
             .sink { [weak self] number in self?.spaceManager.switchToSpace(number: number) }
@@ -158,7 +148,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             }
             .store(in: &cancellables)
     }
-    
+
     func showSplashScreen(on parentWindow: NSWindow? = nil) {
         if let existing = splashWindowController {
             if let window = existing.window, window.isVisible {
@@ -167,11 +157,11 @@ class AppDelegate: NSObject, NSApplicationDelegate {
                 return
             }
         }
-        
+
         let splashView = SplashView { [weak self] in
             Task { @MainActor in
                 UserDefaults.standard.set(true, forKey: "hasSeenSplashScreen")
-                
+
                 if let gestureManager = self?.gestureManager {
                     gestureManager.isEnabled = UserDefaults.standard.bool(forKey: "GestureManager.Enabled")
                 }
@@ -179,19 +169,19 @@ class AppDelegate: NSObject, NSApplicationDelegate {
                     labelManager.showPreviewLabels = UserDefaults.standard.object(forKey: "kShowPreviewLabels") == nil ? true : UserDefaults.standard.bool(forKey: "kShowPreviewLabels")
                     labelManager.showActiveLabels = UserDefaults.standard.object(forKey: "kShowActiveLabels") == nil ? true : UserDefaults.standard.bool(forKey: "kShowActiveLabels")
                 }
-                
+
                 if let parent = parentWindow, let sheet = self?.splashWindowController?.window {
                     parent.endSheet(sheet)
                 } else {
                     self?.splashWindowController?.close()
                     self?.splashWindowController = nil
                 }
-                
+
                 // Automatically switch to About page of settings.
                 self?.statusBarController?.openSettingsWindow(tab: .about)
             }
         }
-        
+
         let hostingController = NSHostingController(rootView: splashView)
         let window = NSWindow(
             contentRect: NSRect(x: 0, y: 0, width: 550, height: 450),
@@ -199,15 +189,15 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             backing: .buffered,
             defer: false
         )
-        
+
         window.titlebarAppearsTransparent = true
         window.titleVisibility = .hidden
         window.isMovableByWindowBackground = true
         window.contentViewController = hostingController
-        
+
         let windowController = NSWindowController(window: window)
         self.splashWindowController = windowController
-        
+
         if let parent = parentWindow {
             parent.beginSheet(window) { _ in
                 self.splashWindowController = nil
@@ -218,20 +208,55 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             NSApp.activate(ignoringOtherApps: true)
         }
     }
-    
+
     func applicationWillTerminate(_ notification: Notification) {
         spaceManager?.prepareForTermination()
     }
-    
+
+    func showDiagnosticReportWindow() {
+        // Ensure the settings window is open so we can present the sheet on it.
+        statusBarController?.openSettingsWindow(tab: .general)
+
+        // Find the settings window by its identifier.
+        guard let window = NSApp.windows.first(where: { $0.identifier?.rawValue == "SettingsWindow" }) else {
+            return
+        }
+
+        // Don't stack another sheet if one is already presented.
+        guard window.attachedSheet == nil else {
+            window.makeKeyAndOrderFront(nil)
+            NSApp.activate(ignoringOtherApps: true)
+            return
+        }
+
+        let hostingController = NSHostingController(rootView: GeneralSettingsView.DiagnosticSheetView())
+        let sheetWindow = NSWindow(
+            contentRect: NSRect(x: 0, y: 0, width: 480, height: 400),
+            styleMask: [.titled, .closable, .fullSizeContentView],
+            backing: .buffered,
+            defer: false
+        )
+        sheetWindow.title = "Diagnostic Report"
+        sheetWindow.titlebarAppearsTransparent = true
+        sheetWindow.isMovableByWindowBackground = true
+        sheetWindow.contentViewController = hostingController
+        sheetWindow.isReleasedWhenClosed = false
+
+        window.beginSheet(sheetWindow) { _ in
+            sheetWindow.orderOut(nil)
+        }
+        NSApp.activate(ignoringOtherApps: true)
+    }
+
     func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
         statusBarController?.openSettingsWindow()
         return true
     }
-    
+
     func application(_ application: NSApplication, open urls: [URL]) {
         for url in urls { handleURL(url) }
     }
-    
+
     private func handleURL(_ url: URL) {
         guard url.scheme == "desktoprenamer",
               let components = URLComponents(url: url, resolvingAgainstBaseURL: true)
@@ -258,7 +283,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             }
             return
         }
-        
+
         // Fallback to number-based switching if UUID is missing or unavailable (Legacy support).
         if let numString = queryItems.first(where: { $0.name == "num" })?.value,
            let spaceNum = Int(numString) {
@@ -273,11 +298,12 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 @main
 struct DesktopRenamerApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
-    
+    @AppStorage("ShowDemoVideos") private var showDemoVideos = true
+
     init() {
         NSSplitViewItem.swizzle()
     }
-    
+
     var body: some Scene {
         Settings {
             EmptyView()
@@ -285,6 +311,25 @@ struct DesktopRenamerApp: App {
         .commands {
             CommandGroup(replacing: .appInfo) { }
             CommandGroup(replacing: .appSettings) { }
+
+            CommandGroup(after: .sidebar) {
+                Divider()
+                Toggle(isOn: $showDemoVideos) {
+                    Text("Show Demo Videos")
+                }
+            }
+
+            CommandGroup(after: .help) {
+                Divider()
+                Button("Diagnostic Report") {
+                    AppDelegate.shared.showDiagnosticReportWindow()
+                }
+                Button("GitHub Issues") {
+                    if let url = URL(string: "https://github.com/gitmichaelqiu/DesktopRenamer/issues") {
+                        NSWorkspace.shared.open(url)
+                    }
+                }
+            }
         }
     }
 }

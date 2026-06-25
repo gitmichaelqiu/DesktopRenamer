@@ -14,12 +14,16 @@ class SpaceAPI {
     // Use weak to avoid retain cycle (SpaceManager owns API, API shouldn't strongly own SpaceManager)
     private weak var spaceManager: SpaceManager?
     private var cancellables = Set<AnyCancellable>()
+
+    /// Whether the DNC listener is active (Combine pipeline has subscriptions).
+    var hasActiveListeners: Bool { !cancellables.isEmpty }
     
     init(spaceManager: SpaceManager) {
         self.spaceManager = spaceManager
     }
     
     func setupListener() {
+        DiagnosticEventLog.shared.record(subsystem: "SpaceAPI", level: "info", "setupListener")
         guard let spaceManager = spaceManager else { return }
         removeListener()
         
@@ -49,6 +53,7 @@ class SpaceAPI {
     }
     
     func removeListener() {
+        DiagnosticEventLog.shared.record(subsystem: "SpaceAPI", level: "info", "removeListener")
         DistributedNotificationCenter.default().removeObserver(self)
         cancellables.removeAll()
         print("SpaceAPI: Listener Stopped")
@@ -58,6 +63,7 @@ class SpaceAPI {
     
     func toggleAPIState() {
         SpaceManager.isAPIEnabled.toggle()
+        DiagnosticEventLog.shared.record(subsystem: "SpaceAPI", level: "info", "toggleAPIState -> \(SpaceManager.isAPIEnabled)")
         
         if SpaceManager.isAPIEnabled {
             setupListener()
@@ -81,6 +87,7 @@ class SpaceAPI {
         guard let sm = spaceManager, SpaceManager.isAPIEnabled else { return }
         
         let spaceUUID = sm.currentSpaceUUID
+        DiagnosticEventLog.shared.record(subsystem: "SpaceAPI", level: "info", "broadcastCurrentSpace: spaceUUID=\(spaceUUID)")
         let userInfo: [String: Any] = [
             "spaceUUID": (spaceUUID == "FULLSCREEN") ? "FULLSCREEN" : spaceUUID,
             "spaceName": sm.getSpaceName(spaceUUID),
@@ -102,12 +109,19 @@ class SpaceAPI {
                 "spaceNumber": NSNumber(value: space.num)
             ]
         }
+        DiagnosticEventLog.shared.record(subsystem: "SpaceAPI", level: "info", "broadcastSpaceList: count=\(list.count)")
         
         DistributedNotificationCenter.default().postNotificationName(
             SpaceAPI.returnSpaceList, object: nil, userInfo: ["spaces": list], deliverImmediately: true
         )
     }
     
-    @objc private func handleActiveSpaceRequest() { broadcastCurrentSpace() }
-    @objc private func handleSpaceListRequest() { broadcastSpaceList() }
+    @objc private func handleActiveSpaceRequest() {
+        DiagnosticEventLog.shared.record(subsystem: "SpaceAPI", level: "info", "handleActiveSpaceRequest")
+        broadcastCurrentSpace()
+    }
+    @objc private func handleSpaceListRequest() {
+        DiagnosticEventLog.shared.record(subsystem: "SpaceAPI", level: "info", "handleSpaceListRequest")
+        broadcastSpaceList()
+    }
 }

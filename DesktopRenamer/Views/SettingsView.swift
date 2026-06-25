@@ -59,12 +59,12 @@ struct SettingsView: View {
 
     var body: some View {
         ZStack {
-            NavigationSplitView {
+            NavigationSplitView(columnVisibility: .constant(.all)) {
                 sidebar
             } detail: {
                 detailView
             }
-            
+
             // Pre-render settings views off-screen in the active root hierarchy to index them
             ZStack {
                 GeneralSettingsView(spaceManager: spaceManager, labelManager: labelManager)
@@ -90,7 +90,6 @@ struct SettingsView: View {
         }
         .environmentObject(navigationState)
         .navigationTitle("")
-        .modifier(ToolbarHider())
         .edgesIgnoringSafeArea(.top)
         .frame(
             width: CGFloat(defaultSettingsWindowWidth), height: CGFloat(defaultSettingsWindowHeight)
@@ -104,16 +103,6 @@ struct SettingsView: View {
                 } else if selectedTab == nil {
                     selectedTab = tabs.first
                 }
-            }
-        }
-    }
-
-    private struct ToolbarHider: ViewModifier {
-        func body(content: Content) -> some View {
-            if #available(macOS 14.0, *) {
-                content.toolbar(.hidden, for: .windowToolbar)
-            } else {
-                content
             }
         }
     }
@@ -241,26 +230,13 @@ struct SettingsView: View {
 
     @ViewBuilder
     private var sidebar: some View {
-        if #available(macOS 14.0, *) {
-            List(selection: $selectedTab) {
-                sidebarContent(titleSize: 21, spacing: 2)
-            }
-            .scrollDisabled(true)
-            .removeSidebarToggle()
-            .navigationSplitViewColumnWidth(
-                min: sidebarWidth, ideal: sidebarWidth, max: sidebarWidth
-            )
-            .edgesIgnoringSafeArea(.top)
-        } else {
-            List(selection: $selectedTab) {
-                sidebarContent(titleSize: 18, spacing: 0)
-            }
-            .scrollDisabled(true)
-            .navigationSplitViewColumnWidth(
-                min: sidebarWidth, ideal: sidebarWidth, max: sidebarWidth
-            )
-            .edgesIgnoringSafeArea(.top)
+        List(selection: $selectedTab) {
+            sidebarContent(titleSize: 21, spacing: 2)
         }
+        .listStyle(.sidebar)
+        .scrollDisabled(true)
+        .edgesIgnoringSafeArea(.top)
+        .navigationSplitViewColumnWidth(min: sidebarWidth, ideal: sidebarWidth)
     }
 
     @ViewBuilder
@@ -320,6 +296,7 @@ struct SettingsView: View {
         }
         .frame(height: sidebarRowHeight)
     }
+
 }
 
 class SettingsHostingController: NSHostingController<AnyView> {

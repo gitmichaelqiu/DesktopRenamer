@@ -12,6 +12,7 @@ struct SwitchSettingsView: View {
     @State private var showingAddExceptionSheet = false
     @State private var editingException: AppGrabException? = nil
     
+    
     var body: some View {
         SettingsContainer(.sswitch) {
             VStack(alignment: .leading, spacing: 20) {
@@ -376,7 +377,8 @@ struct SwitchSettingsView: View {
                     }
                 }
                 .animation(.easeInOut(duration: 0.2), value: spaceManager.appGrabExceptions)
-            }
+                
+}
             .frame(maxWidth: .infinity, alignment: .topLeading)
             .animation(.easeInOut(duration: 0.2), value: gestureManager.isEnabled)
             .environment(\.settingsTab, .sswitch)

@@ -187,13 +187,10 @@ class SpaceLabelManager: ObservableObject {
                 if self.hideWhenSwitching {
                     let isRecent = Date().timeIntervalSince1970 - SpaceHelper.lastProgrammaticSwitchTime < 1.0
                     if isRecent {
-                        // Programmatic switch: labels were already hidden by
-                        // handleSpaceSwitchRequested before the animation started.
-                        // Skip immediate restore — the settling delay handles it.
+                        DiagnosticEventLog.shared.record(subsystem: "Labels", level: "info", "programmatic switch — hiding labels")
                         self.hideAllPreviewLabels()
                     } else {
-                        // Native OS switch (app activation, Cmd+Tab): no
-                        // SpaceSwitchRequested was posted, show labels normally.
+                        DiagnosticEventLog.shared.record(subsystem: "Labels", level: "info", "native switch — restoring immediately")
                         self.updateAllWindowModes(forDisplay: self.spaceManager?.currentDisplayID)
                     }
                 } else {
@@ -204,6 +201,7 @@ class SpaceLabelManager: ObservableObject {
                     // Restore ALL displays — hideAllPreviewLabels hid everything,
                     // and when hideWhenSwitching is on the current display was not
                     // restored either. This unfiltered call is the sole restore point.
+                    DiagnosticEventLog.shared.record(subsystem: "Labels", level: "info", "delayed restore firing")
                     self?.updateAllWindowModes()
                 }
                 self.delayedRestoreWorkItem = workItem
@@ -362,6 +360,7 @@ class SpaceLabelManager: ObservableObject {
     }
 
     private func hideAllPreviewLabels() {
+        DiagnosticEventLog.shared.record(subsystem: "Labels", level: "info", "hideAllPreviewLabels (windows=\(createdWindows.count))")
         for window in createdWindows.values {
             window.hideImmediately()
         }
@@ -450,6 +449,30 @@ class SpaceLabelManager: ObservableObject {
             ensureWindow(for: space.id, name: space.customName, displayID: space.displayID)
         }
         updateAllWindowModes()
+
+        // SAFETY: 2 seconds after seeding, verify no labels are stranded on the
+        // wrong space. Preview labels that failed CGS binding would otherwise
+        // cluster on the current desktop.
+        DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) { [weak self] in
+            self?.verifyLabelBinding()
+        }
+    }
+
+    /// Verifies that preview label windows are assigned to their correct space.
+    /// If a preview label is detected on the current space (binding failure),
+    /// it is hidden to prevent visual clustering.
+    private func verifyLabelBinding() {
+        guard let currentSpaceID = spaceManager?.currentSpaceUUID else { return }
+        for (spaceId, window) in createdWindows {
+            guard !window.isActiveMode, window.windowNumber > 0 else { continue }
+            let currentSpaces = SpaceHelper.getWindowCurrentSpaces(windowID: window.windowNumber)
+            if currentSpaces.isEmpty { continue }
+            if currentSpaces.contains(currentSpaceID) && spaceId != currentSpaceID {
+                print("SpaceLabelManager: Safety — preview label \(spaceId) found on current space. Hiding.")
+                DiagnosticEventLog.shared.record(subsystem: "SpaceLabelManager", level: "warning", "Safety: preview label \(spaceId) on wrong space (current=\(currentSpaceID)). Hiding.")
+                window.hideImmediately()
+            }
+        }
     }
 
     func toggleActiveLabels() {
@@ -458,5 +481,9 @@ class SpaceLabelManager: ObservableObject {
 
     func togglePreviewLabels() {
         showPreviewLabels.toggle()
+    }
+
+    func toggleShowOnDesktop() {
+        showOnDesktop.toggle()
     }
 }

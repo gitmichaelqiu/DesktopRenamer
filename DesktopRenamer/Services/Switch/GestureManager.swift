@@ -496,19 +496,27 @@ class GestureManager: ObservableObject {
     }
 
     private func triggerSwitch(direction: SwitchDirection) {
+        DiagnosticEventLog.shared.record(subsystem: "GestureManager", level: "info", "triggerSwitch(\(direction))")
         lastSwitchTime = Date().timeIntervalSince1970
         guard let sm = spaceManager, self.isEnabled else { return }
 
         DispatchQueue.main.async { [weak self] in
             guard let self = self else { return }
-            
+
             let isHoldingOption = NSEvent.modifierFlags.contains(.option)
             if self.moveWindowOnOption && isHoldingOption {
-                switch direction {
-                case .next:
-                    sm.moveActiveWindowToNextSpace()
-                case .previous:
-                    sm.moveActiveWindowToPreviousSpace()
+                // If the current space is a fullscreen app, just exit fullscreen.
+                if sm.spaceNameDict.first(where: { $0.id == sm.currentSpaceUUID })?.isFullscreen == true {
+                    Task { @MainActor in
+                        await Self.exitFullscreen()
+                    }
+                } else {
+                    switch direction {
+                    case .next:
+                        sm.moveActiveWindowToNextSpace()
+                    case .previous:
+                        sm.moveActiveWindowToPreviousSpace()
+                    }
                 }
             } else {
                 let targetDisplayID = (self.switchOverride == .cursor) ? SpaceHelper.getCursorDisplayID() : nil
@@ -519,6 +527,23 @@ class GestureManager: ObservableObject {
                     sm.switchToPreviousSpace(onDisplayID: targetDisplayID)
                 }
             }
+        }
+    }
+
+    @MainActor
+    private static func exitFullscreen() async {
+        guard let activeInfo = SpaceHelper.getActiveWindowInfo() else { return }
+
+        var axWindow = SpaceHelper.getAXWindow(id: activeInfo.id, pid: activeInfo.pid)
+        if axWindow == nil {
+            if let app = NSRunningApplication(processIdentifier: activeInfo.pid) {
+                app.activate(options: .activateIgnoringOtherApps)
+                try? await Task.sleep(nanoseconds: 400_000_000)
+                axWindow = SpaceHelper.getAXWindow(id: activeInfo.id, pid: activeInfo.pid)
+            }
+        }
+        if let targetAXWindow = axWindow {
+            AXUIElementSetAttributeValue(targetAXWindow, "AXFullScreen" as CFString, false as CFTypeRef)
         }
     }
 }

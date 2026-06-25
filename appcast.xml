@@ -3,6 +3,22 @@
     <channel>
         <title>DesktopRenamer</title>
         <item>
+            <title>1.13.1</title>
+            <pubDate>Wed, 24 Jun 2026 20:37:47 -0400</pubDate>
+            <sparkle:version>35</sparkle:version>
+            <sparkle:shortVersionString>1.13.1</sparkle:shortVersionString>
+            <sparkle:minimumSystemVersion>13.0</sparkle:minimumSystemVersion>
+            <enclosure url="https://github.com/gitmichaelqiu/DesktopRenamer/releases/download/v1.13.1/DesktopRenamer.1.13.1.dmg" length="46888413" type="application/octet-stream" sparkle:edSignature="WZwNin+/XwU8ihhPm+vQSL79ViQfQqGYDiO0IGz2qJ5S6bPkGV74/9omHck3+DDe4srzlHuqevZrcJAQMsruAw=="/>
+            <sparkle:deltas>
+                <enclosure url="https://raw.githubusercontent.com/gitmichaelqiu/DesktopRenamer/main/DesktopRenamer/Resources/Sparkle/DesktopRenamer35-34.delta" sparkle:deltaFrom="34" length="2800338" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="977824" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,uk" sparkle:edSignature="BBAbJX2OPif3kavAtohyywEC2zBzUKUucxyBam0ykftyh5S0VTyrwXVALUsHwreOsLwtJJIfJpJIcVfAyAUqCw=="/>
+                <enclosure url="https://raw.githubusercontent.com/gitmichaelqiu/DesktopRenamer/main/DesktopRenamer/Resources/Sparkle/DesktopRenamer35-33.delta" sparkle:deltaFrom="33" length="2907250" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="977824" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,uk" sparkle:edSignature="ZACIAcwUsI/LuF9FyQuktDcc4KKVKFjzISjCQ8RqX+suvnVmbjoAz+M69KMlAwf1yARrx6dNEPZxCdci8URXAw=="/>
+                <enclosure url="https://raw.githubusercontent.com/gitmichaelqiu/DesktopRenamer/main/DesktopRenamer/Resources/Sparkle/DesktopRenamer35-32.delta" sparkle:deltaFrom="32" length="2919534" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="977824" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,uk" sparkle:edSignature="O8bKDJZxLZ6zBuZ4vELU3ncIRqYz8/EFkli1r4mkQ1A/2YKDBVSBdrWcnT3F96AWOAHm+Cgy0cJMz2MSyURUBw=="/>
+                <enclosure url="https://raw.githubusercontent.com/gitmichaelqiu/DesktopRenamer/main/DesktopRenamer/Resources/Sparkle/DesktopRenamer35-31.delta" sparkle:deltaFrom="31" length="9584898" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="977824" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,uk" sparkle:edSignature="7L7h2k3+zXCLsgL2J6KUaNVOkD5Y0FwK1BNJY14I23nhq4Wj2CPRvrOQQW9G4DhjZlCJyJ0gbeklBuacZwfSBg=="/>
+                <enclosure url="https://raw.githubusercontent.com/gitmichaelqiu/DesktopRenamer/main/DesktopRenamer/Resources/Sparkle/DesktopRenamer35-30.delta" sparkle:deltaFrom="30" length="9585774" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="977824" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,uk" sparkle:edSignature="sVzG617SCvbggM1aZPynQjNHr3md4afRimlX7ckxnsIPVIEWc/ASoMWU55j5J6P2x5ceWwEz+0d//qaJFUzrAw=="/>
+            </sparkle:deltas>
+            <sparkle:releaseNotesLink>https://github.com/gitmichaelqiu/DesktopRenamer/releases/tag/v1.13.1</sparkle:releaseNotesLink>
+        </item>
+        <item>
             <title>1.13.0</title>
             <pubDate>Sun, 07 Jun 2026 20:21:35 +0800</pubDate>
             <sparkle:version>34</sparkle:version>
