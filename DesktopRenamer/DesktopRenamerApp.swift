@@ -213,6 +213,34 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         spaceManager?.prepareForTermination()
     }
 
+    func showDiagnosticReportWindow() {
+        if let existing = diagnosticWindowController?.window, existing.isVisible {
+            existing.makeKeyAndOrderFront(nil)
+            NSApp.activate(ignoringOtherApps: true)
+            return
+        }
+
+        let hostingController = NSHostingController(rootView: GeneralSettingsView.DiagnosticSheetView())
+        let window = NSWindow(
+            contentRect: NSRect(x: 0, y: 0, width: 480, height: 400),
+            styleMask: [.titled, .closable, .fullSizeContentView],
+            backing: .buffered,
+            defer: false
+        )
+        window.title = "Diagnostic Report"
+        window.titlebarAppearsTransparent = true
+        window.isMovableByWindowBackground = true
+        window.contentViewController = hostingController
+        window.center()
+
+        let windowController = NSWindowController(window: window)
+        self.diagnosticWindowController = windowController
+        windowController.showWindow(nil)
+        NSApp.activate(ignoringOtherApps: true)
+    }
+
+    private var diagnosticWindowController: NSWindowController?
+
     func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
         statusBarController?.openSettingsWindow()
         return true
@@ -281,6 +309,13 @@ struct DesktopRenamerApp: App {
                 Divider()
                 Toggle(isOn: $showDemoVideos) {
                     Text("Show Demo Videos")
+                }
+            }
+
+            CommandGroup(after: .help) {
+                Divider()
+                Button("Diagnostic Report") {
+                    AppDelegate.shared.showDiagnosticReportWindow()
                 }
             }
         }
