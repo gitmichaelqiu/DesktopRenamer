@@ -719,9 +719,7 @@ struct ListWindowsSection: Identifiable {
                         manager.moveActiveWindowToSpace(id: space.id)
                     }
                     try? await Task.sleep(nanoseconds: 500_000_000)
-                }
-            default:
-                break
+                }            
             }
             
             // Return to original space
