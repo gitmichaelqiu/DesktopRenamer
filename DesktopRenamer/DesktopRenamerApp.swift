@@ -214,32 +214,39 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     func showDiagnosticReportWindow() {
-        if let existing = diagnosticWindowController?.window, existing.isVisible {
-            existing.makeKeyAndOrderFront(nil)
+        // Ensure the settings window is open so we can present the sheet on it.
+        statusBarController?.openSettingsWindow(tab: .general)
+
+        // Find the settings window by its identifier.
+        guard let window = NSApp.windows.first(where: { $0.identifier?.rawValue == "SettingsWindow" }) else {
+            return
+        }
+
+        // Don't stack another sheet if one is already presented.
+        guard window.attachedSheet == nil else {
+            window.makeKeyAndOrderFront(nil)
             NSApp.activate(ignoringOtherApps: true)
             return
         }
 
         let hostingController = NSHostingController(rootView: GeneralSettingsView.DiagnosticSheetView())
-        let window = NSWindow(
+        let sheetWindow = NSWindow(
             contentRect: NSRect(x: 0, y: 0, width: 480, height: 400),
             styleMask: [.titled, .closable, .fullSizeContentView],
             backing: .buffered,
             defer: false
         )
-        window.title = "Diagnostic Report"
-        window.titlebarAppearsTransparent = true
-        window.isMovableByWindowBackground = true
-        window.contentViewController = hostingController
-        window.center()
+        sheetWindow.title = "Diagnostic Report"
+        sheetWindow.titlebarAppearsTransparent = true
+        sheetWindow.isMovableByWindowBackground = true
+        sheetWindow.contentViewController = hostingController
+        sheetWindow.isReleasedWhenClosed = false
 
-        let windowController = NSWindowController(window: window)
-        self.diagnosticWindowController = windowController
-        windowController.showWindow(nil)
+        window.beginSheet(sheetWindow) { _ in
+            sheetWindow.orderOut(nil)
+        }
         NSApp.activate(ignoringOtherApps: true)
     }
-
-    private var diagnosticWindowController: NSWindowController?
 
     func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
         statusBarController?.openSettingsWindow()
@@ -314,6 +321,11 @@ struct DesktopRenamerApp: App {
 
             CommandGroup(after: .help) {
                 Divider()
+                Button("GitHub Issues") {
+                    if let url = URL(string: "https://github.com/gitmichaelqiu/DesktopRenamer/issues") {
+                        NSWorkspace.shared.open(url)
+                    }
+                }
                 Button("Diagnostic Report") {
                     AppDelegate.shared.showDiagnosticReportWindow()
                 }
