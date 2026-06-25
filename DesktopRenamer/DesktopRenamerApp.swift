@@ -321,13 +321,13 @@ struct DesktopRenamerApp: App {
 
             CommandGroup(after: .help) {
                 Divider()
+                Button("Diagnostic Report") {
+                    AppDelegate.shared.showDiagnosticReportWindow()
+                }
                 Button("GitHub Issues") {
                     if let url = URL(string: "https://github.com/gitmichaelqiu/DesktopRenamer/issues") {
                         NSWorkspace.shared.open(url)
                     }
-                }
-                Button("Diagnostic Report") {
-                    AppDelegate.shared.showDiagnosticReportWindow()
                 }
             }
         }
