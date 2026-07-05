@@ -47,6 +47,9 @@ class SpaceManager: ObservableObject {
     // Stabilization state for system wake events
     private var lastWakeTime: Date = .distantPast
     private let wakeCoolingDuration: TimeInterval = 15.0
+    var isInWakeCoolingPeriod: Bool {
+        Date().timeIntervalSince(lastWakeTime) < wakeCoolingDuration
+    }
 
     // Retry state for space change detection (Cmd+Tab switches can fire notifications
     // before CGS state stabilizes, causing stale labels)
@@ -341,9 +344,9 @@ class SpaceManager: ObservableObject {
             // saved state. Transient CGS failures can return fewer spaces,
             // which would erase user data if saved.
             let isPartialList = !self.spaceNameDict.isEmpty && newSpaceList.count < self.spaceNameDict.count
-            if isPartialList && newSpaceList.count <= 1 {
+            if isPartialList && (self.isInWakeCoolingPeriod || newSpaceList.count <= 1) {
                 print("SpaceManager: Rejecting partial space list (\(newSpaceList.count) vs cached \(self.spaceNameDict.count)). Skipping update.")
-                DiagnosticEventLog.shared.record(subsystem: "SpaceManager", level: "warning", "Rejected partial space list: new=\(newSpaceList.count), cached=\(self.spaceNameDict.count), source=\(source)")
+                DiagnosticEventLog.shared.record(subsystem: "SpaceManager", level: "warning", "Rejected partial space list: new=\(newSpaceList.count), cached=\(self.spaceNameDict.count), source=\(source), wakeCooling=\(self.isInWakeCoolingPeriod)")
                 if !cgsState.currentUUID.isEmpty {
                     self.currentSpaceUUID = cgsState.currentUUID
                 }
@@ -599,6 +602,7 @@ class SpaceManager: ObservableObject {
     /// external display) without a space switch having occurred, triggers a full
     /// detection refresh to pick them up.
     private func checkForNewSpaces() {
+        guard !isInWakeCoolingPeriod else { return }
         guard let cgsState = SpaceHelper.getSystemState() else { return }
         let cgsIDs = Set(cgsState.spaces.map { $0.id })
         let currentIDs = Set(spaceNameDict.map { $0.id })
