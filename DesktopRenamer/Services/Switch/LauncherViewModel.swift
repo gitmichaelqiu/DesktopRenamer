@@ -456,6 +456,39 @@ struct ListWindowsSection: Identifiable {
         
         return (minimized: isMin, hidden: isHid)
     }
+
+    private func restoreWindowForMove(_ window: WindowEntry) async {
+        if let app = NSRunningApplication(processIdentifier: window.pid) {
+            app.unhide()
+        }
+        if let axWindow = SpaceHelper.getAXWindow(id: window.id, pid: window.pid) {
+            AXUIElementSetAttributeValue(axWindow, kAXMinimizedAttribute as CFString, false as CFTypeRef)
+        }
+        try? await Task.sleep(nanoseconds: 300_000_000)
+    }
+
+    private func reapplyOriginalVisibilityIfNeeded(_ window: WindowEntry) async {
+        guard window.isMinimized || window.isHidden else { return }
+
+        if window.isMinimized {
+            var axWindow = SpaceHelper.getAXWindow(id: window.id, pid: window.pid)
+            if axWindow == nil {
+                if let app = NSRunningApplication(processIdentifier: window.pid) {
+                    app.activate(options: .activateIgnoringOtherApps)
+                    try? await Task.sleep(nanoseconds: 400_000_000)
+                    axWindow = SpaceHelper.getAXWindow(id: window.id, pid: window.pid)
+                }
+            }
+            if let targetAXWindow = axWindow {
+                AXUIElementSetAttributeValue(targetAXWindow, kAXMinimizedAttribute as CFString, true as CFTypeRef)
+            }
+        }
+
+        if window.isHidden,
+           let app = NSRunningApplication(processIdentifier: window.pid) {
+            app.hide()
+        }
+    }
     
     func getAvailableCommandKActions(for window: WindowEntry) -> [BatchStagedActionType] {
         let (minimized, hidden) = isWindowMinimizedOrAppHidden(window)
@@ -651,21 +684,7 @@ struct ListWindowsSection: Identifiable {
                     AXUIElementSetAttributeValue(targetAXWindow, kAXMinimizedAttribute as CFString, false as CFTypeRef)
                 }
             case .restoreTo(let space):
-                if let app = NSRunningApplication(processIdentifier: window.pid) {
-                    app.unhide()
-                }
-                var axWindow = SpaceHelper.getAXWindow(id: window.id, pid: window.pid)
-                if axWindow == nil {
-                    if let app = NSRunningApplication(processIdentifier: window.pid) {
-                        app.activate(options: .activateIgnoringOtherApps)
-                        try? await Task.sleep(nanoseconds: 400_000_000)
-                        axWindow = SpaceHelper.getAXWindow(id: window.id, pid: window.pid)
-                    }
-                }
-                if let targetAXWindow = axWindow {
-                    AXUIElementSetAttributeValue(targetAXWindow, kAXMinimizedAttribute as CFString, false as CFTypeRef)
-                }
-                try? await Task.sleep(nanoseconds: 300_000_000) // 0.3s restore settle
+                await restoreWindowForMove(window)
                 
                 if window.space.id != space.id {
                     // Focus the window
@@ -693,6 +712,7 @@ struct ListWindowsSection: Identifiable {
                     }
                     try? await Task.sleep(nanoseconds: 500_000_000)
                 }
+                await reapplyOriginalVisibilityIfNeeded(window)
             case .move(let space):
                 if window.space.id != space.id {
                     // Focus the window
@@ -1241,13 +1261,7 @@ struct ListWindowsSection: Identifiable {
                             targetSpaceID = space.id
                             // Contextual Restore: unhide app and/or unminimize window first
                             DiagnosticEventLog.shared.record(subsystem: "Launcher", level: "info", "executeBatchMove: Restore context for window id=\(action.window.id) pid=\(action.window.pid)")
-                            if let app = NSRunningApplication(processIdentifier: action.window.pid) {
-                                app.unhide()
-                            }
-                            if let axWindow = SpaceHelper.getAXWindow(id: action.window.id, pid: action.window.pid) {
-                                AXUIElementSetAttributeValue(axWindow, kAXMinimizedAttribute as CFString, false as CFTypeRef)
-                            }
-                            try? await Task.sleep(nanoseconds: 300_000_000) // 0.3s restore settle
+                            await restoreWindowForMove(action.window)
                         default:
                             continue
                         }
@@ -1282,6 +1296,9 @@ struct ListWindowsSection: Identifiable {
                             manager.moveActiveWindowToSpace(id: targetSpaceID)
                         }
                         try? await Task.sleep(nanoseconds: 500_000_000) // 0.5s movement settle
+                        if case .restoreTo = action.actionType {
+                            await reapplyOriginalVisibilityIfNeeded(action.window)
+                        }
                         
                         // Switch back to source space
                         if index < sourceActions.count - 1 {
