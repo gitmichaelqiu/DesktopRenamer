@@ -127,4 +127,10 @@ See [Acknowledgements.pdf](https://github.com/gitmichaelqiu/DesktopRenamer/blob/
 
 You can simply click on the **Star** to support this project for free. Thank you for your support!
 
-[![Star History Chart](https://api.star-history.com/svg?repos=gitmichaelqiu/DesktopRenamer&type=date&legend=top-left)](https://www.star-history.com/#gitmichaelqiu/DesktopRenamer&type=date&legend=top-left)
+<a href="https://www.star-history.com/?type=date&legend=top-left&repos=gitmichaelqiu%2FDesktopRenamer">
+ <picture>
+   <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/chart?repos=gitmichaelqiu/DesktopRenamer&type=date&theme=dark&legend=top-left&sealed_token=SlB6XMb-xB5ZOuVg9ffHN1FHBtXnXz1t6JNcX-1URygva-p2fIbnMbgA-HxOkgEk9xgjwidgyfFYFHyOv1G3KJ6Gswr_zuFvlomB2RMgNWLgKJiGxVw4mw" />
+   <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/chart?repos=gitmichaelqiu/DesktopRenamer&type=date&legend=top-left&sealed_token=SlB6XMb-xB5ZOuVg9ffHN1FHBtXnXz1t6JNcX-1URygva-p2fIbnMbgA-HxOkgEk9xgjwidgyfFYFHyOv1G3KJ6Gswr_zuFvlomB2RMgNWLgKJiGxVw4mw" />
+   <img alt="Star History Chart" src="https://api.star-history.com/chart?repos=gitmichaelqiu/DesktopRenamer&type=date&legend=top-left&sealed_token=SlB6XMb-xB5ZOuVg9ffHN1FHBtXnXz1t6JNcX-1URygva-p2fIbnMbgA-HxOkgEk9xgjwidgyfFYFHyOv1G3KJ6Gswr_zuFvlomB2RMgNWLgKJiGxVw4mw" />
+ </picture>
+</a>
