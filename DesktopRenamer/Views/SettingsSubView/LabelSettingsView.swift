@@ -28,17 +28,18 @@ struct LabelSettingsView: View {
                     if labelManager.showPreviewLabels {
                         Divider()
 
-                        SettingsRow(
-                            "Disable Liquid Glass effects",
-                            helperText: "Use the classic blur background for preview labels. This only affects macOS 26 or later."
-                        ) {
-                            Toggle("", isOn: $labelManager.disablePreviewLiquidGlass)
-                                .toggleStyle(.switch)
-                                .labelsHidden()
-                                .disabled(!isLiquidGlassAvailable)
-                        }
+                        if isLiquidGlassAvailable {
+                            SettingsRow(
+                                "Disable Liquid Glass effects",
+                                helperText: "Use the classic blur background for preview labels."
+                            ) {
+                                Toggle("", isOn: $labelManager.disablePreviewLiquidGlass)
+                                    .toggleStyle(.switch)
+                                    .labelsHidden()
+                            }
 
-                        Divider()
+                            Divider()
+                        }
 
                         SettingsRow(
                             "Hide when switching spaces",
@@ -90,17 +91,18 @@ struct LabelSettingsView: View {
                     if labelManager.showActiveLabels {
                         Divider()
 
-                        SettingsRow(
-                            "Disable Liquid Glass effects",
-                            helperText: "Use the classic blur background for active space labels. This only affects macOS 26 or later."
-                        ) {
-                            Toggle("", isOn: $labelManager.disableActiveLiquidGlass)
-                                .toggleStyle(.switch)
-                                .labelsHidden()
-                                .disabled(!isLiquidGlassAvailable)
-                        }
+                        if isLiquidGlassAvailable {
+                            SettingsRow(
+                                "Disable Liquid Glass effects",
+                                helperText: "Use the classic blur background for active space labels."
+                            ) {
+                                Toggle("", isOn: $labelManager.disableActiveLiquidGlass)
+                                    .toggleStyle(.switch)
+                                    .labelsHidden()
+                            }
 
-                        Divider()
+                            Divider()
+                        }
 
                         SettingsRow(
                             "Keep visible on space",
