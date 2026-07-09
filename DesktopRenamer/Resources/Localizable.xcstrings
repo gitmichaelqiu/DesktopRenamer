@@ -694,6 +694,16 @@
         }
       }
     },
+    "Disable Liquid Glass effects" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "禁用 Liquid Glass"
+          }
+        }
+      }
+    },
     "Disabled" : {
       "localizations" : {
         "zh-Hans" : {
@@ -3269,6 +3279,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "使用 ← → ↑ ↓ 调整位置, Esc 退出"
+          }
+        }
+      }
+    },
+    "Use the Gaussian blur background for better contrast." : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "使用高斯模糊以增加对比度。"
           }
         }
       }
