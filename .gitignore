@@ -4,5 +4,6 @@ tmp/
 *.xcworkspace
 *.xcuserdata
 CLAUDE.md
+AGENTS.md
 .claude/
 Raycast_DesktopRenamer/

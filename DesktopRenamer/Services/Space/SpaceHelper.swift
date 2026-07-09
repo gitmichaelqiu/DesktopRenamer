@@ -37,6 +37,7 @@ class SpaceHelper {
     private static var isSwitching = false
     static var lastProgrammaticSwitchTime: TimeInterval = 0
     static var lastProgrammaticTargetSpaceID: String? = nil
+    static var lastProgrammaticSwitchUsedSLS = false
     
     // Session state for active dragging operations.
     private static var originalMousePoint: CGPoint? = nil
@@ -231,6 +232,7 @@ class SpaceHelper {
         DiagnosticEventLog.shared.record(subsystem: "SpaceHelper", level: "info", "switchToSpace(\(spaceID), forceInstant=\(forceInstant))")
         lastProgrammaticSwitchTime = Date().timeIntervalSince1970
         lastProgrammaticTargetSpaceID = spaceID
+        lastProgrammaticSwitchUsedSLS = false
 
         if !forceInstant {
             guard !isSwitching else { return }
@@ -466,6 +468,7 @@ class SpaceHelper {
                 if initializedBridge.responds(to: performSel) {
                     DiagnosticEventLog.shared.record(subsystem: "SpaceHelper", level: "info", "Executing SLS operation via SLSWindowManagementFallbackBridge: \(displayUUID), \(spaceID)")
                     initializedBridge.perform(performSel, with: initializedOp)
+                    lastProgrammaticSwitchUsedSLS = true
                     return true
                 }
             }
@@ -475,12 +478,14 @@ class SpaceHelper {
         if let operation = initializedOp as? Operation {
             DiagnosticEventLog.shared.record(subsystem: "SpaceHelper", level: "info", "Executing SLS operation via OperationQueue: \(displayUUID), \(spaceID)")
             OperationQueue.main.addOperation(operation)
+            lastProgrammaticSwitchUsedSLS = true
             return true
         } else {
             let startSel = NSSelectorFromString("start")
             if initializedOp.responds(to: startSel) {
                 DiagnosticEventLog.shared.record(subsystem: "SpaceHelper", level: "info", "Starting SLS operation via start selector: \(displayUUID), \(spaceID)")
                 initializedOp.perform(startSel)
+                lastProgrammaticSwitchUsedSLS = true
                 return true
             }
         }
@@ -926,9 +931,10 @@ class SpaceHelper {
             let winID = draggedWindowID
             let bundleID = draggedWindowBundleID
             let appName = draggedWindowAppName
+            let expectedSpaceID = targetSpaceID
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
                 if let winID = winID, let bundleID = bundleID, let appName = appName {
-                    verifyMoveSuccess(windowID: winID, bundleID: bundleID, appName: appName)
+                    verifyMoveSuccess(windowID: winID, expectedSpaceID: expectedSpaceID, bundleID: bundleID, appName: appName)
                 }
             }
             
@@ -955,7 +961,7 @@ class SpaceHelper {
         DispatchQueue.main.asyncAfter(deadline: .now() + delay, execute: task)
     }
     
-    private static func verifyMoveSuccess(windowID: Int, bundleID: String, appName: String) {
+    private static func verifyMoveSuccess(windowID: Int, expectedSpaceID: String?, bundleID: String, appName: String) {
         // Query visible windows on the screen
         let options = CGWindowListOption(arrayLiteral: .optionOnScreenOnly, .excludeDesktopElements)
         let windowList = CGWindowListCopyWindowInfo(options, kCGNullWindowID) as? [[String: Any]] ?? []
@@ -968,6 +974,12 @@ class SpaceHelper {
         }
         
         if !isStillVisible {
+            if let expectedSpaceID = expectedSpaceID,
+               getWindowCurrentSpaces(windowID: windowID).contains(expectedSpaceID) {
+                print("SpaceHelper: Window move succeeded for \(appName) (ID: \(windowID)); window is assigned to Space \(expectedSpaceID)")
+                return
+            }
+
             DiagnosticEventLog.shared.record(subsystem: "SpaceHelper", level: "error", "Window move FAILED for \(appName) (ID: \(windowID))")
             print("SpaceHelper: Window move failed for \(appName) (ID: \(windowID), BundleID: \(bundleID))")
             

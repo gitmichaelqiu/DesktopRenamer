@@ -106,6 +106,9 @@
         <command name="move specific window" code="DskRMvSW" description="Move a specific window to a target space">
             <cocoa class="DesktopRenamer.MoveSpecificWindowToSpaceCommand"/>
             <direct-parameter description="The window ID (CGWindowID)" type="text"/>
+            <parameter name="pid" code="WPid" description="The owner process ID" type="text" optional="yes">
+                <cocoa key="ownerPID"/>
+            </parameter>
             <parameter name="from space" code="FmSp" description="The source space ID (ManagedSpaceID)" type="text" optional="no">
                 <cocoa key="fromSpace"/>
             </parameter>

@@ -4,6 +4,13 @@ struct LabelSettingsView: View {
     @ObservedObject var labelManager: SpaceLabelManager
     @EnvironmentObject var hotkeyManager: HotkeyManager
 
+    private var isLiquidGlassAvailable: Bool {
+        if #available(macOS 26.0, *) {
+            return true
+        }
+        return false
+    }
+
     var body: some View {
         SettingsContainer(.labels) {
             VStack(alignment: .leading, spacing: 20) {
@@ -32,6 +39,19 @@ struct LabelSettingsView: View {
                         }
 
                         Divider()
+
+                        if isLiquidGlassAvailable {
+                            SettingsRow(
+                                "Disable Liquid Glass effects",
+                                helperText: "Use the Gaussian blur background for better contrast."
+                            ) {
+                                Toggle("", isOn: $labelManager.disablePreviewLiquidGlass)
+                                    .toggleStyle(.switch)
+                                    .labelsHidden()
+                            }
+
+                            Divider()
+                        }
 
                         SliderSettingsRow(
                             "Font size",
@@ -81,7 +101,20 @@ struct LabelSettingsView: View {
                                 .labelsHidden()
                         }
 
-                        Divider()
+                        Divider();
+
+                        if isLiquidGlassAvailable {
+                            SettingsRow(
+                                "Disable Liquid Glass effects",
+                                helperText: "Use the Gaussian blur background for better contrast."
+                            ) {
+                                Toggle("", isOn: $labelManager.disableActiveLiquidGlass)
+                                    .toggleStyle(.switch)
+                                    .labelsHidden()
+                            }
+
+                            Divider()
+                        }
 
                         SliderSettingsRow(
                             "Font size",
@@ -129,6 +162,8 @@ struct LabelSettingsView: View {
             }
             .animation(.easeInOut(duration: 0.2), value: labelManager.showActiveLabels)
             .animation(.easeInOut(duration: 0.2), value: labelManager.showPreviewLabels)
+            .animation(.easeInOut(duration: 0.2), value: labelManager.disableActiveLiquidGlass)
+            .animation(.easeInOut(duration: 0.2), value: labelManager.disablePreviewLiquidGlass)
             .environment(\.settingsTab, .labels)
         }
     }

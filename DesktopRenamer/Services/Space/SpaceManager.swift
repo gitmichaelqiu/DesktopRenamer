@@ -47,6 +47,9 @@ class SpaceManager: ObservableObject {
     // Stabilization state for system wake events
     private var lastWakeTime: Date = .distantPast
     private let wakeCoolingDuration: TimeInterval = 15.0
+    var isInWakeCoolingPeriod: Bool {
+        Date().timeIntervalSince(lastWakeTime) < wakeCoolingDuration
+    }
 
     // Retry state for space change detection (Cmd+Tab switches can fire notifications
     // before CGS state stabilizes, causing stale labels)
@@ -296,17 +299,17 @@ class SpaceManager: ObservableObject {
                         if let fallbackName = indexCache[indexKey], !fallbackName.isEmpty {
                             if !claimedNames.contains(fallbackName) {
                                 finalSpace.customName = fallbackName
-                                nameCache[sysSpace.id] = fallbackName
                             }
                         } else if let fallbackName = indexCache[legacyIndexKey], !fallbackName.isEmpty {
                             if !claimedNames.contains(fallbackName) {
                                 finalSpace.customName = fallbackName
-                                nameCache[sysSpace.id] = fallbackName
                             }
                         } else if let existing = spaceNameDict.first(where: { $0.id == sysSpace.id }), !existing.customName.isEmpty {
                             finalSpace.customName = existing.customName
                             nameCache[sysSpace.id] = existing.customName
-                            indexCache[indexKey] = existing.customName
+                            if indexCache[indexKey]?.isEmpty ?? true {
+                                indexCache[indexKey] = existing.customName
+                            }
                         }
                     }
                 }
@@ -341,9 +344,9 @@ class SpaceManager: ObservableObject {
             // saved state. Transient CGS failures can return fewer spaces,
             // which would erase user data if saved.
             let isPartialList = !self.spaceNameDict.isEmpty && newSpaceList.count < self.spaceNameDict.count
-            if isPartialList && newSpaceList.count <= 1 {
+            if isPartialList && (self.isInWakeCoolingPeriod || newSpaceList.count <= 1) {
                 print("SpaceManager: Rejecting partial space list (\(newSpaceList.count) vs cached \(self.spaceNameDict.count)). Skipping update.")
-                DiagnosticEventLog.shared.record(subsystem: "SpaceManager", level: "warning", "Rejected partial space list: new=\(newSpaceList.count), cached=\(self.spaceNameDict.count), source=\(source)")
+                DiagnosticEventLog.shared.record(subsystem: "SpaceManager", level: "warning", "Rejected partial space list: new=\(newSpaceList.count), cached=\(self.spaceNameDict.count), source=\(source), wakeCooling=\(self.isInWakeCoolingPeriod)")
                 if !cgsState.currentUUID.isEmpty {
                     self.currentSpaceUUID = cgsState.currentUUID
                 }
@@ -353,9 +356,9 @@ class SpaceManager: ObservableObject {
             if self.spaceNameDict != newSpaceList {
                 self.spaceNameDict = newSpaceList
                 
-                // Update index cache with currently detected spaces.
-                // We do NOT aggressively clear the entire cache here to preserve names for displays
-                // that might be temporarily undetected or in a transient state.
+                // Refresh missing index entries only. CGS can briefly report a
+                // reordered space list after reboot, so automatic detection must
+                // not replace explicit desktop-position names.
                 var cacheCounters: [String: Int] = [:]
                 for space in self.spaceNameDict where !space.isFullscreen {
                     let count = cacheCounters[space.displayID, default: 0] + 1
@@ -363,7 +366,9 @@ class SpaceManager: ObservableObject {
 
                     if !space.customName.isEmpty {
                         let key = "\(space.displayID)|Desktop|\(count)"
-                        self.indexCache[key] = space.customName
+                        if self.indexCache[key]?.isEmpty ?? true {
+                            self.indexCache[key] = space.customName
+                        }
                     }
                 }
                 
@@ -421,11 +426,12 @@ class SpaceManager: ObservableObject {
                 self.pruneStaleMovedWindows()
                 shouldUpdateWidget = true
 
-                // If it was a programmatic space switch on macOS 27+, restore focus
-                // now that the space change is complete. On older macOS the native gesture
-                // path handles focus correctly on its own.
+                // If it was an SLS programmatic space switch, restore focus now
+                // that the space change is complete. Native dock-swipe events
+                // preserve focus on their own; raising a guessed top window here
+                // can reorder the target space unexpectedly.
                 let now = Date().timeIntervalSince1970
-                let isProgrammatic = SpaceHelper.shouldSwitchToSpaceUsingSLS() &&
+                let isProgrammatic = SpaceHelper.lastProgrammaticSwitchUsedSLS &&
                                      (now - SpaceHelper.lastProgrammaticSwitchTime < 2.0) &&
                                      (targetUUID == SpaceHelper.lastProgrammaticTargetSpaceID)
                 if isProgrammatic {
@@ -599,6 +605,7 @@ class SpaceManager: ObservableObject {
     /// external display) without a space switch having occurred, triggers a full
     /// detection refresh to pick them up.
     private func checkForNewSpaces() {
+        guard !isInWakeCoolingPeriod else { return }
         guard let cgsState = SpaceHelper.getSystemState() else { return }
         let cgsIDs = Set(cgsState.spaces.map { $0.id })
         let currentIDs = Set(spaceNameDict.map { $0.id })

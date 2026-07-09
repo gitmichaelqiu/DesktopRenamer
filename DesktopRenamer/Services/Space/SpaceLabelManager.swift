@@ -12,6 +12,8 @@ class SpaceLabelManager: ObservableObject {
 
     private let kShowPreviewLabels = "kShowPreviewLabels"
     private let kShowActiveLabels = "kShowActiveLabels"
+    private let kDisablePreviewLiquidGlass = "kDisablePreviewLiquidGlass"
+    private let kDisableActiveLiquidGlass = "kDisableActiveLiquidGlass"
     private let kShowOnDesktop = "kShowOnDesktop"
     private let kHideWhenSwitching = "kHideWhenSwitching"
     
@@ -29,6 +31,18 @@ class SpaceLabelManager: ObservableObject {
     }
     @Published var hideWhenSwitching: Bool { didSet { saveSettings() } }
     @Published var showActiveLabels: Bool {
+        didSet {
+            saveSettings()
+            updateWindows()
+        }
+    }
+    @Published var disablePreviewLiquidGlass: Bool {
+        didSet {
+            saveSettings()
+            updateWindows()
+        }
+    }
+    @Published var disableActiveLiquidGlass: Bool {
         didSet {
             saveSettings()
             updateWindows()
@@ -99,6 +113,8 @@ class SpaceLabelManager: ObservableObject {
         self.showActiveLabels =
             UserDefaults.standard.object(forKey: kShowActiveLabels) == nil
             ? true : UserDefaults.standard.bool(forKey: kShowActiveLabels)
+        self.disablePreviewLiquidGlass = UserDefaults.standard.bool(forKey: kDisablePreviewLiquidGlass)
+        self.disableActiveLiquidGlass = UserDefaults.standard.bool(forKey: kDisableActiveLiquidGlass)
         self.showOnDesktop = UserDefaults.standard.bool(forKey: kShowOnDesktop)
 
         // Load Global State
@@ -160,6 +176,8 @@ class SpaceLabelManager: ObservableObject {
         UserDefaults.standard.set(showPreviewLabels, forKey: kShowPreviewLabels)
         UserDefaults.standard.set(hideWhenSwitching, forKey: kHideWhenSwitching)
         UserDefaults.standard.set(showActiveLabels, forKey: kShowActiveLabels)
+        UserDefaults.standard.set(disablePreviewLiquidGlass, forKey: kDisablePreviewLiquidGlass)
+        UserDefaults.standard.set(disableActiveLiquidGlass, forKey: kDisableActiveLiquidGlass)
         UserDefaults.standard.set(showOnDesktop, forKey: kShowOnDesktop)
     }
 

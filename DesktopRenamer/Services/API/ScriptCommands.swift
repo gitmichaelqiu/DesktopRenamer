@@ -299,14 +299,25 @@ class MoveSpecificWindowToSpaceCommand: NSScriptCommand {
               let windowID = Int(windowIDStr),
               let arguments = self.evaluatedArguments,
               let fromSpaceStr = arguments["fromSpace"] as? String,
-              let fromSpaceID = Int(fromSpaceStr),
-              let targetSpaceStr = arguments["targetSpace"] as? String,
-              let targetSpaceID = Int(targetSpaceStr)
+              let targetSpaceStr = arguments["targetSpace"] as? String
         else { return nil }
         DiagnosticEventLog.shared.record(subsystem: "AppleScript", level: "info", "Command performed: MoveSpecificWindowToSpaceCommand (windowID: \(windowIDStr), fromSpace: \(fromSpaceStr), targetSpace: \(targetSpaceStr))")
 
-        DispatchQueue.main.async {
-            SpaceHelper.moveWindowToSpace(windowID: windowID, fromSpaceID: fromSpaceID, targetSpaceID: targetSpaceID)
+        if let pidStr = arguments["ownerPID"] as? String,
+           let pid = Int32(pidStr) {
+            Task { @MainActor in
+                await WindowActionCoordinator.moveWindow(
+                    windowID: windowID,
+                    pid: pid,
+                    fromSpaceID: fromSpaceStr,
+                    targetSpaceID: targetSpaceStr
+                )
+            }
+        } else if let fromSpaceID = Int(fromSpaceStr),
+                  let targetSpaceID = Int(targetSpaceStr) {
+            DispatchQueue.main.async {
+                SpaceHelper.moveWindowToSpace(windowID: windowID, fromSpaceID: fromSpaceID, targetSpaceID: targetSpaceID)
+            }
         }
         return nil
     }

@@ -456,7 +456,7 @@ struct ListWindowsSection: Identifiable {
         
         return (minimized: isMin, hidden: isHid)
     }
-    
+
     func getAvailableCommandKActions(for window: WindowEntry) -> [BatchStagedActionType] {
         let (minimized, hidden) = isWindowMinimizedOrAppHidden(window)
         let isFS = window.space.isFullscreen
@@ -651,48 +651,12 @@ struct ListWindowsSection: Identifiable {
                     AXUIElementSetAttributeValue(targetAXWindow, kAXMinimizedAttribute as CFString, false as CFTypeRef)
                 }
             case .restoreTo(let space):
-                if let app = NSRunningApplication(processIdentifier: window.pid) {
-                    app.unhide()
-                }
-                var axWindow = SpaceHelper.getAXWindow(id: window.id, pid: window.pid)
-                if axWindow == nil {
-                    if let app = NSRunningApplication(processIdentifier: window.pid) {
-                        app.activate(options: .activateIgnoringOtherApps)
-                        try? await Task.sleep(nanoseconds: 400_000_000)
-                        axWindow = SpaceHelper.getAXWindow(id: window.id, pid: window.pid)
-                    }
-                }
-                if let targetAXWindow = axWindow {
-                    AXUIElementSetAttributeValue(targetAXWindow, kAXMinimizedAttribute as CFString, false as CFTypeRef)
-                }
-                try? await Task.sleep(nanoseconds: 300_000_000) // 0.3s restore settle
-                
-                if window.space.id != space.id {
-                    // Focus the window
-                    SpaceHelper.focusWindow(id: window.id, pid: window.pid)
-                    try? await Task.sleep(nanoseconds: 250_000_000)
-                    
-                    // Un-fullscreen first if the window is currently in a fullscreen space
-                    if window.space.isFullscreen {
-                        var axFSWindow = SpaceHelper.getAXWindow(id: window.id, pid: window.pid)
-                        if axFSWindow == nil {
-                            if let app = NSRunningApplication(processIdentifier: window.pid) {
-                                app.activate(options: .activateIgnoringOtherApps)
-                                try? await Task.sleep(nanoseconds: 400_000_000)
-                                axFSWindow = SpaceHelper.getAXWindow(id: window.id, pid: window.pid)
-                            }
-                        }
-                        if let targetAXFSWindow = axFSWindow {
-                            AXUIElementSetAttributeValue(targetAXFSWindow, "AXFullScreen" as CFString, false as CFTypeRef)
-                            try? await Task.sleep(nanoseconds: 1_200_000_000)
-                        }
-                    }
-                    
-                    if let manager = AppDelegate.shared.spaceManager {
-                        manager.moveActiveWindowToSpace(id: space.id)
-                    }
-                    try? await Task.sleep(nanoseconds: 500_000_000)
-                }
+                await WindowActionCoordinator.moveWindow(
+                    windowID: window.id,
+                    pid: window.pid,
+                    fromSpaceID: window.space.id,
+                    targetSpaceID: space.id
+                )
             case .move(let space):
                 if window.space.id != space.id {
                     // Focus the window
@@ -1239,21 +1203,29 @@ struct ListWindowsSection: Identifiable {
                             targetSpaceID = space.id
                         case .restoreTo(let space):
                             targetSpaceID = space.id
-                            // Contextual Restore: unhide app and/or unminimize window first
-                            DiagnosticEventLog.shared.record(subsystem: "Launcher", level: "info", "executeBatchMove: Restore context for window id=\(action.window.id) pid=\(action.window.pid)")
-                            if let app = NSRunningApplication(processIdentifier: action.window.pid) {
-                                app.unhide()
-                            }
-                            if let axWindow = SpaceHelper.getAXWindow(id: action.window.id, pid: action.window.pid) {
-                                AXUIElementSetAttributeValue(axWindow, kAXMinimizedAttribute as CFString, false as CFTypeRef)
-                            }
-                            try? await Task.sleep(nanoseconds: 300_000_000) // 0.3s restore settle
                         default:
                             continue
                         }
                         
                         DiagnosticEventLog.shared.record(subsystem: "Launcher", level: "info", "executeBatchMove: Move window id=\(action.window.id) from space=\(action.window.space.id) to space=\(targetSpaceID)")
                         if action.window.space.id == targetSpaceID {
+                            continue
+                        }
+
+                        if case .restoreTo = action.actionType {
+                            await WindowActionCoordinator.moveWindow(
+                                windowID: action.window.id,
+                                pid: action.window.pid,
+                                fromSpaceID: action.window.space.id,
+                                targetSpaceID: targetSpaceID
+                            )
+                            if index < sourceActions.count - 1 {
+                                if let manager = AppDelegate.shared.spaceManager,
+                                   let spaceObj = manager.spaceNameDict.first(where: { $0.id == sourceId }) {
+                                    manager.switchToSpace(spaceObj, forceInstant: true)
+                                }
+                                try? await Task.sleep(nanoseconds: 600_000_000) // 0.6s switch settle
+                            }
                             continue
                         }
                         
