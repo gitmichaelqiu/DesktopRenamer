@@ -299,17 +299,17 @@ class SpaceManager: ObservableObject {
                         if let fallbackName = indexCache[indexKey], !fallbackName.isEmpty {
                             if !claimedNames.contains(fallbackName) {
                                 finalSpace.customName = fallbackName
-                                nameCache[sysSpace.id] = fallbackName
                             }
                         } else if let fallbackName = indexCache[legacyIndexKey], !fallbackName.isEmpty {
                             if !claimedNames.contains(fallbackName) {
                                 finalSpace.customName = fallbackName
-                                nameCache[sysSpace.id] = fallbackName
                             }
                         } else if let existing = spaceNameDict.first(where: { $0.id == sysSpace.id }), !existing.customName.isEmpty {
                             finalSpace.customName = existing.customName
                             nameCache[sysSpace.id] = existing.customName
-                            indexCache[indexKey] = existing.customName
+                            if indexCache[indexKey]?.isEmpty ?? true {
+                                indexCache[indexKey] = existing.customName
+                            }
                         }
                     }
                 }
@@ -356,9 +356,9 @@ class SpaceManager: ObservableObject {
             if self.spaceNameDict != newSpaceList {
                 self.spaceNameDict = newSpaceList
                 
-                // Update index cache with currently detected spaces.
-                // We do NOT aggressively clear the entire cache here to preserve names for displays
-                // that might be temporarily undetected or in a transient state.
+                // Refresh missing index entries only. CGS can briefly report a
+                // reordered space list after reboot, so automatic detection must
+                // not replace explicit desktop-position names.
                 var cacheCounters: [String: Int] = [:]
                 for space in self.spaceNameDict where !space.isFullscreen {
                     let count = cacheCounters[space.displayID, default: 0] + 1
@@ -366,7 +366,9 @@ class SpaceManager: ObservableObject {
 
                     if !space.customName.isEmpty {
                         let key = "\(space.displayID)|Desktop|\(count)"
-                        self.indexCache[key] = space.customName
+                        if self.indexCache[key]?.isEmpty ?? true {
+                            self.indexCache[key] = space.customName
+                        }
                     }
                 }
                 
