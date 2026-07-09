@@ -31,7 +31,7 @@ struct LabelSettingsView: View {
                         if isLiquidGlassAvailable {
                             SettingsRow(
                                 "Disable Liquid Glass effects",
-                                helperText: "Use the classic blur background for preview labels."
+                                helperText: "Use the Gaussian blur background for better contrast."
                             ) {
                                 Toggle("", isOn: $labelManager.disablePreviewLiquidGlass)
                                     .toggleStyle(.switch)
@@ -94,7 +94,7 @@ struct LabelSettingsView: View {
                         if isLiquidGlassAvailable {
                             SettingsRow(
                                 "Disable Liquid Glass effects",
-                                helperText: "Use the classic blur background for active space labels."
+                                helperText: "Use the Gaussian blur background for better contrast."
                             ) {
                                 Toggle("", isOn: $labelManager.disableActiveLiquidGlass)
                                     .toggleStyle(.switch)
