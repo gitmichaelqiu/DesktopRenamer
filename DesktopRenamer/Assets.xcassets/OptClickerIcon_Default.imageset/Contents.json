@@ -1,17 +1,17 @@
 {
   "images" : [
     {
-      "filename" : "OptClickerIcon_Default.png",
+      "filename" : "OptClickerIcon-macOS-Default-1024@1x.png",
       "idiom" : "universal",
       "scale" : "1x"
     },
     {
-      "filename" : "OptClickerIcon_Default 1.png",
+      "filename" : "OptClickerIcon-macOS-Default-1024@1x 1.png",
       "idiom" : "universal",
       "scale" : "2x"
     },
     {
-      "filename" : "OptClickerIcon_Default 2.png",
+      "filename" : "OptClickerIcon-macOS-Default-1024@1x 2.png",
       "idiom" : "universal",
       "scale" : "3x"
     }
