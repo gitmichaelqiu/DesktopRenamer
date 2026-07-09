@@ -37,6 +37,7 @@ class SpaceHelper {
     private static var isSwitching = false
     static var lastProgrammaticSwitchTime: TimeInterval = 0
     static var lastProgrammaticTargetSpaceID: String? = nil
+    static var lastProgrammaticSwitchUsedSLS = false
     
     // Session state for active dragging operations.
     private static var originalMousePoint: CGPoint? = nil
@@ -231,6 +232,7 @@ class SpaceHelper {
         DiagnosticEventLog.shared.record(subsystem: "SpaceHelper", level: "info", "switchToSpace(\(spaceID), forceInstant=\(forceInstant))")
         lastProgrammaticSwitchTime = Date().timeIntervalSince1970
         lastProgrammaticTargetSpaceID = spaceID
+        lastProgrammaticSwitchUsedSLS = false
 
         if !forceInstant {
             guard !isSwitching else { return }
@@ -466,6 +468,7 @@ class SpaceHelper {
                 if initializedBridge.responds(to: performSel) {
                     DiagnosticEventLog.shared.record(subsystem: "SpaceHelper", level: "info", "Executing SLS operation via SLSWindowManagementFallbackBridge: \(displayUUID), \(spaceID)")
                     initializedBridge.perform(performSel, with: initializedOp)
+                    lastProgrammaticSwitchUsedSLS = true
                     return true
                 }
             }
@@ -475,12 +478,14 @@ class SpaceHelper {
         if let operation = initializedOp as? Operation {
             DiagnosticEventLog.shared.record(subsystem: "SpaceHelper", level: "info", "Executing SLS operation via OperationQueue: \(displayUUID), \(spaceID)")
             OperationQueue.main.addOperation(operation)
+            lastProgrammaticSwitchUsedSLS = true
             return true
         } else {
             let startSel = NSSelectorFromString("start")
             if initializedOp.responds(to: startSel) {
                 DiagnosticEventLog.shared.record(subsystem: "SpaceHelper", level: "info", "Starting SLS operation via start selector: \(displayUUID), \(spaceID)")
                 initializedOp.perform(startSel)
+                lastProgrammaticSwitchUsedSLS = true
                 return true
             }
         }
