@@ -424,11 +424,12 @@ class SpaceManager: ObservableObject {
                 self.pruneStaleMovedWindows()
                 shouldUpdateWidget = true
 
-                // If it was a programmatic space switch on macOS 27+, restore focus
-                // now that the space change is complete. On older macOS the native gesture
-                // path handles focus correctly on its own.
+                // If it was an SLS programmatic space switch, restore focus now
+                // that the space change is complete. Native dock-swipe events
+                // preserve focus on their own; raising a guessed top window here
+                // can reorder the target space unexpectedly.
                 let now = Date().timeIntervalSince1970
-                let isProgrammatic = SpaceHelper.shouldSwitchToSpaceUsingSLS() &&
+                let isProgrammatic = SpaceHelper.lastProgrammaticSwitchUsedSLS &&
                                      (now - SpaceHelper.lastProgrammaticSwitchTime < 2.0) &&
                                      (targetUUID == SpaceHelper.lastProgrammaticTargetSpaceID)
                 if isProgrammatic {
