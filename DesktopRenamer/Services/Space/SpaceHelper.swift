@@ -931,9 +931,10 @@ class SpaceHelper {
             let winID = draggedWindowID
             let bundleID = draggedWindowBundleID
             let appName = draggedWindowAppName
+            let expectedSpaceID = targetSpaceID
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
                 if let winID = winID, let bundleID = bundleID, let appName = appName {
-                    verifyMoveSuccess(windowID: winID, bundleID: bundleID, appName: appName)
+                    verifyMoveSuccess(windowID: winID, expectedSpaceID: expectedSpaceID, bundleID: bundleID, appName: appName)
                 }
             }
             
@@ -960,7 +961,7 @@ class SpaceHelper {
         DispatchQueue.main.asyncAfter(deadline: .now() + delay, execute: task)
     }
     
-    private static func verifyMoveSuccess(windowID: Int, bundleID: String, appName: String) {
+    private static func verifyMoveSuccess(windowID: Int, expectedSpaceID: String?, bundleID: String, appName: String) {
         // Query visible windows on the screen
         let options = CGWindowListOption(arrayLiteral: .optionOnScreenOnly, .excludeDesktopElements)
         let windowList = CGWindowListCopyWindowInfo(options, kCGNullWindowID) as? [[String: Any]] ?? []
@@ -973,6 +974,12 @@ class SpaceHelper {
         }
         
         if !isStillVisible {
+            if let expectedSpaceID = expectedSpaceID,
+               getWindowCurrentSpaces(windowID: windowID).contains(expectedSpaceID) {
+                print("SpaceHelper: Window move succeeded for \(appName) (ID: \(windowID)); window is assigned to Space \(expectedSpaceID)")
+                return
+            }
+
             DiagnosticEventLog.shared.record(subsystem: "SpaceHelper", level: "error", "Window move FAILED for \(appName) (ID: \(windowID))")
             print("SpaceHelper: Window move failed for \(appName) (ID: \(windowID), BundleID: \(bundleID))")
             
