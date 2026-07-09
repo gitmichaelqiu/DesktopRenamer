@@ -68,6 +68,8 @@ class SpaceLabelWindow: NSWindow {
     private var cancellables = Set<AnyCancellable>()
     private let spaceManager: SpaceManager
     private weak var labelManager: SpaceLabelManager?
+    private var isUsingGlassEffect: Bool?
+    private var contentContainerConstraints: [NSLayoutConstraint] = []
 
     // State
     var isActiveMode: Bool = true
@@ -160,37 +162,7 @@ class SpaceLabelWindow: NSWindow {
             return
         }
 
-        // Configure visual/glass effect views.
-        let rootContentView: NSView
-
-        if #available(macOS 26.0, *) {
-            let glassView = NSGlassEffectView(frame: .zero)
-            glassView.contentView = self.contentContainer
-            rootContentView = glassView
-        } else {
-            let effectView = NSVisualEffectView(frame: .zero)
-            effectView.material = .hudWindow
-            effectView.blendingMode = .behindWindow
-            effectView.state = .active
-            effectView.appearance = NSAppearance(named: .darkAqua)
-            effectView.addSubview(self.contentContainer)
-
-            self.contentContainer.translatesAutoresizingMaskIntoConstraints = false
-            NSLayoutConstraint.activate([
-                self.contentContainer.leadingAnchor.constraint(equalTo: effectView.leadingAnchor),
-                self.contentContainer.trailingAnchor.constraint(equalTo: effectView.trailingAnchor),
-                self.contentContainer.topAnchor.constraint(equalTo: effectView.topAnchor),
-                self.contentContainer.bottomAnchor.constraint(equalTo: effectView.bottomAnchor),
-            ])
-
-            rootContentView = effectView
-        }
-
-        rootContentView.wantsLayer = true
-        rootContentView.layer?.cornerRadius = 20
-        rootContentView.layer?.masksToBounds = true
-
-        self.contentView = rootContentView
+        configureEffectView(force: true)
 
         self.backgroundColor = .clear
         self.isOpaque = false
@@ -388,6 +360,7 @@ class SpaceLabelWindow: NSWindow {
 
     // Public interface for window management.
     func refreshAppearance() {
+        configureEffectView()
         updateInteractivity()
         updateLayout(isCurrentSpace: self.isActiveMode)
         updateVisibility(animated: true)
@@ -415,6 +388,7 @@ class SpaceLabelWindow: NSWindow {
         
         self.isActiveMode = isCurrentSpace
         self.isInvisibleAnchorMode = !willBeVisible
+        configureEffectView()
 
         if isCurrentSpace {
             syncFromGlobalState()
@@ -431,6 +405,64 @@ class SpaceLabelWindow: NSWindow {
         self.updateLayout(isCurrentSpace: isCurrentSpace, updateFrame: shouldAnimate)
         updateVisibility(animated: shouldAnimate)
         updateInteractivity()
+    }
+
+    private func shouldUseGlassEffect() -> Bool {
+        guard #available(macOS 26.0, *) else { return false }
+        if isActiveMode {
+            return labelManager?.disableActiveLiquidGlass != true
+        }
+        return labelManager?.disablePreviewLiquidGlass != true
+    }
+
+    private func configureEffectView(force: Bool = false) {
+        let shouldUseGlass = shouldUseGlassEffect()
+        guard force || isUsingGlassEffect != shouldUseGlass else { return }
+
+        let alpha = self.contentView?.alphaValue ?? 1
+        NSLayoutConstraint.deactivate(contentContainerConstraints)
+        contentContainerConstraints.removeAll()
+        contentContainer.removeFromSuperview()
+
+        let rootContentView: NSView
+        if shouldUseGlass {
+            if #available(macOS 26.0, *) {
+                let glassView = NSGlassEffectView(frame: .zero)
+                glassView.contentView = self.contentContainer
+                rootContentView = glassView
+            } else {
+                rootContentView = makeVisualEffectView()
+            }
+        } else {
+            rootContentView = makeVisualEffectView()
+        }
+
+        rootContentView.wantsLayer = true
+        rootContentView.layer?.cornerRadius = 20
+        rootContentView.layer?.masksToBounds = true
+        rootContentView.alphaValue = alpha
+
+        self.contentView = rootContentView
+        isUsingGlassEffect = shouldUseGlass
+    }
+
+    private func makeVisualEffectView() -> NSVisualEffectView {
+        let effectView = NSVisualEffectView(frame: .zero)
+        effectView.material = .hudWindow
+        effectView.blendingMode = .behindWindow
+        effectView.state = .active
+        effectView.appearance = NSAppearance(named: .darkAqua)
+        effectView.addSubview(self.contentContainer)
+
+        self.contentContainer.translatesAutoresizingMaskIntoConstraints = false
+        contentContainerConstraints = [
+            self.contentContainer.leadingAnchor.constraint(equalTo: effectView.leadingAnchor),
+            self.contentContainer.trailingAnchor.constraint(equalTo: effectView.trailingAnchor),
+            self.contentContainer.topAnchor.constraint(equalTo: effectView.topAnchor),
+            self.contentContainer.bottomAnchor.constraint(equalTo: effectView.bottomAnchor),
+        ]
+        NSLayoutConstraint.activate(contentContainerConstraints)
+        return effectView
     }
 
     func updateName(_ name: String) {

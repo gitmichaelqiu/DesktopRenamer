@@ -4,6 +4,13 @@ struct LabelSettingsView: View {
     @ObservedObject var labelManager: SpaceLabelManager
     @EnvironmentObject var hotkeyManager: HotkeyManager
 
+    private var isLiquidGlassAvailable: Bool {
+        if #available(macOS 26.0, *) {
+            return true
+        }
+        return false
+    }
+
     var body: some View {
         SettingsContainer(.labels) {
             VStack(alignment: .leading, spacing: 20) {
@@ -19,6 +26,18 @@ struct LabelSettingsView: View {
                     }
 
                     if labelManager.showPreviewLabels {
+                        Divider()
+
+                        SettingsRow(
+                            "Disable Liquid Glass effects",
+                            helperText: "Use the classic blur background for preview labels. This only affects macOS 26 or later."
+                        ) {
+                            Toggle("", isOn: $labelManager.disablePreviewLiquidGlass)
+                                .toggleStyle(.switch)
+                                .labelsHidden()
+                                .disabled(!isLiquidGlassAvailable)
+                        }
+
                         Divider()
 
                         SettingsRow(
@@ -69,6 +88,18 @@ struct LabelSettingsView: View {
                     }
 
                     if labelManager.showActiveLabels {
+                        Divider()
+
+                        SettingsRow(
+                            "Disable Liquid Glass effects",
+                            helperText: "Use the classic blur background for active space labels. This only affects macOS 26 or later."
+                        ) {
+                            Toggle("", isOn: $labelManager.disableActiveLiquidGlass)
+                                .toggleStyle(.switch)
+                                .labelsHidden()
+                                .disabled(!isLiquidGlassAvailable)
+                        }
+
                         Divider()
 
                         SettingsRow(
@@ -129,6 +160,8 @@ struct LabelSettingsView: View {
             }
             .animation(.easeInOut(duration: 0.2), value: labelManager.showActiveLabels)
             .animation(.easeInOut(duration: 0.2), value: labelManager.showPreviewLabels)
+            .animation(.easeInOut(duration: 0.2), value: labelManager.disableActiveLiquidGlass)
+            .animation(.easeInOut(duration: 0.2), value: labelManager.disablePreviewLiquidGlass)
             .environment(\.settingsTab, .labels)
         }
     }

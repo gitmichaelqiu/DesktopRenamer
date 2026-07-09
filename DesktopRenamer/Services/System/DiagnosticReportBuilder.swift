@@ -243,6 +243,8 @@ struct DiagnosticReportBuilder {
         var s = "─── Label System ───\n"
         s += "showActiveLabels: \(lm.showActiveLabels)\n"
         s += "showPreviewLabels: \(lm.showPreviewLabels)\n"
+        s += "disableActiveLiquidGlass: \(lm.disableActiveLiquidGlass)\n"
+        s += "disablePreviewLiquidGlass: \(lm.disablePreviewLiquidGlass)\n"
         s += "showOnDesktop: \(lm.showOnDesktop)\n"
         s += "hideWhenSwitching: \(lm.hideWhenSwitching)\n"
         s += "globalIsDocked: \(lm.globalIsDocked)\n"
