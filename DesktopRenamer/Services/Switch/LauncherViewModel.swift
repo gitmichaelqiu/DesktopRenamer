@@ -196,6 +196,11 @@ struct ListWindowsSection: Identifiable {
             isBottomBarFocused = false
         }
     }
+    @Published var spacePickerQuery: String = "" {
+        didSet {
+            selectedSpaceIndex = 0
+        }
+    }
     @Published var selectedRowIndex: Int = 0
     @Published var activeCommand: LauncherCommand? = nil {
         willSet {
@@ -228,6 +233,7 @@ struct ListWindowsSection: Identifiable {
     @Published var stagingWindow: WindowEntry? = nil {
         didSet {
             searchQuery = ""
+            spacePickerQuery = ""
             selectedRowIndex = 0
             isKeyboardSelection = true
             isBottomBarFocused = false
@@ -332,10 +338,11 @@ struct ListWindowsSection: Identifiable {
             spaces = spaces.filter { !$0.isFullscreen }
         }
 
-        if searchQuery.isEmpty {
+        let query = stagingWindow != nil ? spacePickerQuery : searchQuery
+        if query.isEmpty {
             return spaces
         } else {
-            let query = searchQuery.lowercased()
+            let query = query.lowercased()
             return spaces.filter {
                 matchesQuery(query, target: $0.name, pinyin: $0.pinyinName) ||
                 matchesQuery(query, target: $0.displayName, pinyin: $0.pinyinDisplayName) ||
@@ -1471,6 +1478,7 @@ struct ListWindowsSection: Identifiable {
     
     func closeLauncher() {
         searchQuery = ""
+        spacePickerQuery = ""
         selectedRowIndex = 0
         activeCommand = nil
         stagingWindow = nil

@@ -232,7 +232,7 @@ struct LauncherView: View {
                             onKeyEquivalent: { event in
                                 return self.handleTextFieldKeyEquivalent(event)
                             },
-                            placeholder: viewModel.activeCommand == nil ? NSLocalizedString("Search commands...", comment: "") : (viewModel.stagingWindow != nil ? NSLocalizedString("Search target space...", comment: "") : NSLocalizedString("Search items...", comment: ""))
+                            placeholder: searchPlaceholder
                         )
                         .frame(height: 42)
                     }
@@ -305,13 +305,32 @@ struct LauncherView: View {
             if isSpacePickerPresented {
                 SpacePickerOverlay(viewModel: viewModel, spaceManager: spaceManager)
                     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomTrailing)
+                    .transition(.move(edge: .bottom).combined(with: .opacity))
             }
         }
+        .animation(.spring(response: 0.32, dampingFraction: 0.86), value: isSpacePickerPresented)
         .frame(width: 760, height: 500)
         .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
         .launcherBackground(cornerRadius: 24, borderColor: colors.border)
         .shadow(color: Color.black.opacity(colorScheme == .dark ? 0.45 : 0.20), radius: 24, x: 0, y: 12)
         .padding(40)
+    }
+
+    private var searchPlaceholder: String {
+        guard let commandType = viewModel.activeCommand?.type else {
+            return NSLocalizedString("Search commands...", comment: "")
+        }
+
+        switch commandType {
+        case .listWindows:
+            return NSLocalizedString("Search windows...", comment: "")
+        case .switchToDesktop, .moveWindow:
+            return NSLocalizedString("Search spaces...", comment: "")
+        default:
+            return viewModel.stagingWindow == nil
+                ? NSLocalizedString("Search items...", comment: "")
+                : NSLocalizedString("Search windows...", comment: "")
+        }
     }
 }
 
@@ -1287,6 +1306,7 @@ struct SpacePickerOverlay: View {
     @ObservedObject var viewModel: LauncherViewModel
     @ObservedObject var spaceManager: SpaceManager
     @Environment(\.colorScheme) var colorScheme
+    @FocusState private var isSearchFocused: Bool
 
     var colors: ThemeColors {
         ThemeColors(isDark: colorScheme == .dark)
@@ -1301,7 +1321,9 @@ struct SpacePickerOverlay: View {
                 }
 
             VStack(alignment: .leading, spacing: 0) {
-                Text(verbatim: String(localized: "Switch Space"))
+                Text(verbatim: viewModel.stagingWindow == nil
+                     ? String(localized: "Switch Space")
+                     : String(localized: "Stage Move to Desktop..."))
                     .font(.subheadline.weight(.semibold))
                     .foregroundColor(colors.textSecondary)
                     .padding(.horizontal, 16)
@@ -1353,11 +1375,32 @@ struct SpacePickerOverlay: View {
                     .padding(.bottom, 10)
                 }
                 .frame(maxHeight: 220)
+
+                Divider()
+
+                TextField(String(localized: "Search..."), text: $viewModel.spacePickerQuery)
+                    .font(.body)
+                    .textFieldStyle(.plain)
+                    .focused($isSearchFocused)
+                    .onSubmit {
+                        viewModel.selectedRowIndex = viewModel.selectedSpaceIndex
+                        viewModel.executeRowAction()
+                    }
+                    .onExitCommand {
+                        viewModel.handleEscapeKey()
+                    }
+                    .padding(.horizontal, 16)
+                    .frame(height: 44)
             }
             .frame(width: 290)
             .spacePickerSurface(colors: colors)
             .padding(.trailing, 16)
             .padding(.bottom, 58)
+        }
+        .onAppear {
+            DispatchQueue.main.async {
+                isSearchFocused = true
+            }
         }
     }
 }
