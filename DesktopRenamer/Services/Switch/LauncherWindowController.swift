@@ -23,6 +23,7 @@ class LauncherWindowController: NSWindowController, NSWindowDelegate {
     private var flagsChangedMonitor: Any?
     private var presentationFrame: NSRect?
     private var isAnimatingPresentation = false
+    private var hasInstalledContent = false
     
     init() {
         let panel = LauncherNSPanel(
@@ -47,16 +48,9 @@ class LauncherWindowController: NSWindowController, NSWindowDelegate {
         super.init(window: panel)
         panel.delegate = self
         
-        // Setup SwiftUI View
         self.viewModel.onClose = { [weak self] in
             self?.hide()
         }
-        
-        let launcherView = LauncherView(viewModel: self.viewModel)
-        let hostingView = NSHostingView(rootView: launcherView)
-        hostingView.frame = NSRect(x: 0, y: 0, width: 760, height: 500)
-        
-        panel.contentView = hostingView
         
         flagsChangedMonitor = NSEvent.addLocalMonitorForEvents(matching: .flagsChanged) { [weak self] event in
             guard let self = self else { return event }
@@ -103,6 +97,7 @@ class LauncherWindowController: NSWindowController, NSWindowDelegate {
     
     func show() {
         guard let panel = window as? LauncherNSPanel else { return }
+        guard installContentIfNeeded() else { return }
 
         if panel.isVisible {
             panel.makeKeyAndOrderFront(nil)
@@ -185,6 +180,22 @@ class LauncherWindowController: NSWindowController, NSWindowDelegate {
         } else {
             show()
         }
+    }
+
+    private func installContentIfNeeded() -> Bool {
+        guard !hasInstalledContent,
+              let appDelegate = AppDelegate.shared,
+              let spaceManager = appDelegate.spaceManager,
+              let panel = window as? LauncherNSPanel else {
+            return hasInstalledContent
+        }
+
+        let launcherView = LauncherView(viewModel: viewModel, spaceManager: spaceManager)
+        let hostingView = NSHostingView(rootView: launcherView)
+        hostingView.frame = NSRect(x: 0, y: 0, width: 760, height: 500)
+        panel.contentView = hostingView
+        hasInstalledContent = true
+        return true
     }
     
     private func centerOnActiveScreen() {

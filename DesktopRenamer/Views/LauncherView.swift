@@ -57,7 +57,7 @@ struct ThemeColors {
 
 struct LauncherView: View {
     @ObservedObject var viewModel: LauncherViewModel
-    @ObservedObject var spaceManager = AppDelegate.shared.spaceManager!
+    @ObservedObject var spaceManager: SpaceManager
     @Environment(\.colorScheme) var colorScheme
     
     var colors: ThemeColors {
