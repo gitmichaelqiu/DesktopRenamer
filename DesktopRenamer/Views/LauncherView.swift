@@ -112,7 +112,9 @@ struct LauncherView: View {
                             isDark: colors.isDark,
                             isTypingDisabled: viewModel.commandKTargetWindow != nil,
                             onUpArrow: {
-                                if viewModel.commandKTargetWindow != nil {
+                                if viewModel.isRootActionsPresented {
+                                    viewModel.selectPreviousRootAction()
+                                } else if viewModel.commandKTargetWindow != nil {
                                     viewModel.selectPreviousCommandKAction()
                                 } else if viewModel.stagingWindow != nil {
                                     viewModel.selectedSpaceIndex = max(0, viewModel.selectedSpaceIndex - 1)
@@ -124,7 +126,9 @@ struct LauncherView: View {
                                 }
                             },
                             onDownArrow: {
-                                if viewModel.commandKTargetWindow != nil {
+                                if viewModel.isRootActionsPresented {
+                                    viewModel.selectNextRootAction()
+                                } else if viewModel.commandKTargetWindow != nil {
                                     viewModel.selectNextCommandKAction()
                                 } else if viewModel.stagingWindow != nil {
                                     let count = viewModel.filteredSpaces.count
@@ -164,7 +168,9 @@ struct LauncherView: View {
                                 return false
                             },
                             onEnter: {
-                                if viewModel.commandKTargetWindow != nil {
+                                if viewModel.isRootActionsPresented {
+                                    viewModel.executeRootAction()
+                                } else if viewModel.commandKTargetWindow != nil {
                                     viewModel.executeCommandKAction()
                                 } else if viewModel.stagingWindow != nil {
                                     viewModel.selectedRowIndex = viewModel.selectedSpaceIndex
@@ -176,7 +182,9 @@ struct LauncherView: View {
                                 }
                             },
                             onCommandEnter: {
-                                if viewModel.commandKTargetWindow != nil {
+                                if viewModel.isRootActionsPresented {
+                                    viewModel.executeRootAction()
+                                } else if viewModel.commandKTargetWindow != nil {
                                     viewModel.executeCommandKAction()
                                 } else if viewModel.stagingWindow != nil {
                                     viewModel.selectedRowIndex = viewModel.selectedSpaceIndex
@@ -196,7 +204,13 @@ struct LauncherView: View {
                                 }
                             },
                             onCommandNumber: { num in
-                                if viewModel.commandKTargetWindow != nil {
+                                if viewModel.isRootActionsPresented {
+                                    let index = num - 1
+                                    if index >= 0 && index < 2 {
+                                        viewModel.selectedRootActionIndex = index
+                                        viewModel.executeRootAction()
+                                    }
+                                } else if viewModel.commandKTargetWindow != nil {
                                     let actions = viewModel.commandKActions
                                     let index = num - 1
                                     if index >= 0 && index < actions.count {
@@ -229,6 +243,8 @@ struct LauncherView: View {
                             onCommandK: {
                                 if viewModel.commandKTargetWindow != nil {
                                     viewModel.commandKTargetWindow = nil
+                                } else if viewModel.isRootActionsPresented {
+                                    viewModel.isRootActionsPresented = false
                                 } else if viewModel.activeCommand == nil {
                                     viewModel.showRootActionsPanel()
                                 } else if (viewModel.activeCommand?.type == .batchMoveWindows || viewModel.activeCommand?.type == .listWindows) && viewModel.stagingWindow == nil {
@@ -1359,13 +1375,14 @@ struct RootActionsOverlay: View {
                     .padding(.top, 12)
                     .padding(.bottom, 6)
 
-                rootActionRow(title: "Open Command", shortcut: "↵") {
-                    viewModel.isRootActionsPresented = false
-                    viewModel.executeRowAction()
+                rootActionRow(title: "Open Command", shortcut: "↵", index: 0) {
+                    viewModel.selectedRootActionIndex = 0
+                    viewModel.executeRootAction()
                 }
 
-                rootActionRow(title: "Reset Ranking", shortcut: "↻") {
-                    viewModel.resetSelectedCommandRanking()
+                rootActionRow(title: "Reset Ranking", shortcut: "↻", index: 1) {
+                    viewModel.selectedRootActionIndex = 1
+                    viewModel.executeRootAction()
                 }
                 .padding(.bottom, 8)
             }
@@ -1376,7 +1393,7 @@ struct RootActionsOverlay: View {
         }
     }
 
-    private func rootActionRow(title: String, shortcut: String, action: @escaping () -> Void) -> some View {
+    private func rootActionRow(title: String, shortcut: String, index: Int, action: @escaping () -> Void) -> some View {
         Button(action: action) {
             HStack(spacing: 8) {
                 Text(LocalizedStringKey(title))
@@ -1387,9 +1404,17 @@ struct RootActionsOverlay: View {
             .foregroundColor(colors.textPrimary)
             .padding(.horizontal, 10)
             .frame(height: 34)
-            .background(Color.clear)
+            .background(
+                RoundedRectangle(cornerRadius: 8, style: .continuous)
+                    .fill(viewModel.selectedRootActionIndex == index ? Color.primary.opacity(0.16) : Color.clear)
+            )
         }
         .buttonStyle(.plain)
+        .onHover { hovering in
+            if hovering {
+                viewModel.selectedRootActionIndex = index
+            }
+        }
     }
 }
 

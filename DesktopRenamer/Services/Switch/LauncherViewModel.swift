@@ -229,6 +229,7 @@ struct ListWindowsSection: Identifiable {
     @Published var selectedSpaceIndex: Int = 0
     @Published var isRootSpacePickerPresented: Bool = false
     @Published var isRootActionsPresented: Bool = false
+    @Published var selectedRootActionIndex: Int = 0
     
     // For batch window moves
     @Published var stagedMoves: [Int: BatchStagedAction] = [:]
@@ -1463,7 +1464,28 @@ struct ListWindowsSection: Identifiable {
 
     func showRootActionsPanel() {
         guard activeCommand == nil, filteredCommands.indices.contains(selectedRowIndex) else { return }
+        selectedRootActionIndex = 0
         isRootActionsPresented = true
+    }
+
+    func selectPreviousRootAction() {
+        selectedRootActionIndex = max(0, selectedRootActionIndex - 1)
+    }
+
+    func selectNextRootAction() {
+        selectedRootActionIndex = min(1, selectedRootActionIndex + 1)
+    }
+
+    func executeRootAction() {
+        switch selectedRootActionIndex {
+        case 0:
+            isRootActionsPresented = false
+            executeRowAction()
+        case 1:
+            resetSelectedCommandRanking()
+        default:
+            break
+        }
     }
 
     func resetSelectedCommandRanking() {
