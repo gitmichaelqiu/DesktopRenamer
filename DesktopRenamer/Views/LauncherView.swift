@@ -63,6 +63,10 @@ struct LauncherView: View {
     var colors: ThemeColors {
         ThemeColors(isDark: colorScheme == .dark)
     }
+
+    private var isSpacePickerPresented: Bool {
+        viewModel.isBottomBarFocused || viewModel.stagingWindow != nil
+    }
     
     var body: some View {
         ZStack {
@@ -106,6 +110,8 @@ struct LauncherView: View {
                             onUpArrow: {
                                 if viewModel.commandKTargetWindow != nil {
                                     viewModel.selectPreviousCommandKAction()
+                                } else if viewModel.stagingWindow != nil {
+                                    viewModel.selectedSpaceIndex = max(0, viewModel.selectedSpaceIndex - 1)
                                 } else {
                                     viewModel.isKeyboardSelection = true
                                     if viewModel.selectedRowIndex > 0 {
@@ -116,6 +122,11 @@ struct LauncherView: View {
                             onDownArrow: {
                                 if viewModel.commandKTargetWindow != nil {
                                     viewModel.selectNextCommandKAction()
+                                } else if viewModel.stagingWindow != nil {
+                                    let count = spaceManager.currentDisplaySpaces.count
+                                    if viewModel.selectedSpaceIndex < count - 1 {
+                                        viewModel.selectedSpaceIndex += 1
+                                    }
                                 } else {
                                     viewModel.isKeyboardSelection = true
                                     if viewModel.selectedRowIndex < viewModel.visibleRowsCount - 1 {
@@ -151,6 +162,9 @@ struct LauncherView: View {
                             onEnter: {
                                 if viewModel.commandKTargetWindow != nil {
                                     viewModel.executeCommandKAction()
+                                } else if viewModel.stagingWindow != nil {
+                                    viewModel.selectedRowIndex = viewModel.selectedSpaceIndex
+                                    viewModel.executeRowAction()
                                 } else if viewModel.isBottomBarFocused {
                                     viewModel.executeBottomBarSpaceAction(isOption: false, isCommand: false)
                                 } else {
@@ -160,6 +174,9 @@ struct LauncherView: View {
                             onCommandEnter: {
                                 if viewModel.commandKTargetWindow != nil {
                                     viewModel.executeCommandKAction()
+                                } else if viewModel.stagingWindow != nil {
+                                    viewModel.selectedRowIndex = viewModel.selectedSpaceIndex
+                                    viewModel.executeRowAction()
                                 } else if viewModel.isBottomBarFocused {
                                     viewModel.executeBottomBarSpaceAction(isOption: false, isCommand: true)
                                 } else if viewModel.activeCommand?.type == .batchMoveWindows {
@@ -181,6 +198,14 @@ struct LauncherView: View {
                                     if index >= 0 && index < actions.count {
                                         viewModel.commandKSelectedIndex = index
                                         viewModel.executeCommandKAction()
+                                    }
+                                } else if viewModel.stagingWindow != nil {
+                                    let index = num - 1
+                                    let count = spaceManager.currentDisplaySpaces.count
+                                    if index >= 0 && index < count {
+                                        viewModel.selectedSpaceIndex = index
+                                        viewModel.selectedRowIndex = index
+                                        viewModel.executeRowAction()
                                     }
                                 } else {
                                     viewModel.executeNthRowAction(num - 1)
@@ -270,17 +295,15 @@ struct LauncherView: View {
                     CommandBottomBar(viewModel: viewModel)
                 }
             }
-            .blur(radius: viewModel.commandKTargetWindow != nil ? 10 : 0)
-            .animation(.easeInOut(duration: 0.12), value: viewModel.commandKTargetWindow != nil)
+            .blur(radius: viewModel.commandKTargetWindow != nil || isSpacePickerPresented ? 10 : 0)
+            .animation(.easeInOut(duration: 0.12), value: viewModel.commandKTargetWindow != nil || isSpacePickerPresented)
             
             if let targetWindow = viewModel.commandKTargetWindow {
                 CommandKOverlayView(viewModel: viewModel, window: targetWindow)
             }
 
-            if viewModel.isBottomBarFocused || viewModel.stagingWindow != nil {
+            if isSpacePickerPresented {
                 SpacePickerOverlay(viewModel: viewModel, spaceManager: spaceManager)
-                    .padding(.trailing, 16)
-                    .padding(.bottom, 58)
                     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomTrailing)
             }
         }
@@ -1241,68 +1264,72 @@ struct SpacePickerOverlay: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            Text(verbatim: String(localized: "Switch Space"))
-                .font(.subheadline.weight(.semibold))
-                .foregroundColor(colors.textSecondary)
-                .padding(.horizontal, 16)
-                .padding(.top, 14)
-                .padding(.bottom, 8)
-
-            ScrollView {
-                VStack(spacing: 4) {
-                    let spaces = spaceManager.currentDisplaySpaces
-                    ForEach(0..<spaces.count, id: \.self) { index in
-                        let space = spaces[index]
-                        Button(action: {
-                            viewModel.selectedSpaceIndex = index
-                            if viewModel.stagingWindow != nil {
-                                viewModel.selectedRowIndex = index
-                                viewModel.executeRowAction()
-                            } else if NSEvent.modifierFlags.contains(.option) {
-                                viewModel.executeBottomBarSpaceAction(isOption: true, isCommand: false)
-                            } else {
-                                viewModel.executeBottomBarSpaceAction(isOption: false, isCommand: false)
-                            }
-                        }) {
-                            HStack(spacing: 10) {
-                                Image(systemName: "rectangle.inset.filled")
-                                    .font(.body.weight(.medium))
-                                    .frame(width: 20)
-                                Text(spaceManager.getSpaceName(space.id))
-                                    .font(.body.weight(.medium))
-                                    .lineLimit(1)
-                                Spacer()
-                                if space.id == spaceManager.currentSpaceUUID {
-                                    Text(verbatim: String(localized: "Current"))
-                                        .font(.caption.weight(.semibold))
-                                        .foregroundColor(colors.textTertiary)
-                                }
-                            }
-                            .foregroundColor(colors.textPrimary)
-                            .padding(.horizontal, 12)
-                            .frame(height: 38)
-                            .background(
-                                RoundedRectangle(cornerRadius: 9, style: .continuous)
-                                    .fill(index == viewModel.selectedSpaceIndex ? Color.primary.opacity(0.16) : Color.clear)
-                            )
-                        }
-                        .buttonStyle(.plain)
-                    }
+        ZStack(alignment: .bottomTrailing) {
+            Color.clear
+                .contentShape(Rectangle())
+                .onTapGesture {
+                    viewModel.handleEscapeKey()
                 }
-                .padding(.horizontal, 8)
-                .padding(.bottom, 10)
+
+            VStack(alignment: .leading, spacing: 0) {
+                Text(verbatim: String(localized: "Switch Space"))
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundColor(colors.textSecondary)
+                    .padding(.horizontal, 16)
+                    .padding(.top, 14)
+                    .padding(.bottom, 8)
+
+                ScrollView {
+                    VStack(spacing: 4) {
+                        let spaces = spaceManager.currentDisplaySpaces
+                        ForEach(0..<spaces.count, id: \.self) { index in
+                            let space = spaces[index]
+                            Button(action: {
+                                viewModel.selectedSpaceIndex = index
+                                if viewModel.stagingWindow != nil {
+                                    viewModel.selectedRowIndex = index
+                                    viewModel.executeRowAction()
+                                } else if NSEvent.modifierFlags.contains(.option) {
+                                    viewModel.executeBottomBarSpaceAction(isOption: true, isCommand: false)
+                                } else {
+                                    viewModel.executeBottomBarSpaceAction(isOption: false, isCommand: false)
+                                }
+                            }) {
+                                HStack(spacing: 10) {
+                                    Image(systemName: "rectangle.inset.filled")
+                                        .font(.body.weight(.medium))
+                                        .frame(width: 20)
+                                    Text(spaceManager.getSpaceName(space.id))
+                                        .font(.body.weight(.medium))
+                                        .lineLimit(1)
+                                    Spacer()
+                                    if space.id == spaceManager.currentSpaceUUID {
+                                        Text(verbatim: String(localized: "Current"))
+                                            .font(.caption.weight(.semibold))
+                                            .foregroundColor(colors.textTertiary)
+                                    }
+                                }
+                                .foregroundColor(colors.textPrimary)
+                                .padding(.horizontal, 12)
+                                .frame(height: 38)
+                                .background(
+                                    RoundedRectangle(cornerRadius: 9, style: .continuous)
+                                        .fill(index == viewModel.selectedSpaceIndex ? Color.primary.opacity(0.16) : Color.clear)
+                                )
+                            }
+                            .buttonStyle(.plain)
+                        }
+                    }
+                    .padding(.horizontal, 8)
+                    .padding(.bottom, 10)
+                }
+                .frame(maxHeight: 220)
             }
-            .frame(maxHeight: 220)
+            .frame(width: 290)
+            .spacePickerSurface(colors: colors)
+            .padding(.trailing, 16)
+            .padding(.bottom, 58)
         }
-        .frame(width: 290)
-        .background(.ultraThinMaterial)
-        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-        .overlay(
-            RoundedRectangle(cornerRadius: 16, style: .continuous)
-                .stroke(colors.border.opacity(0.8), lineWidth: 1)
-        )
-        .shadow(color: .black.opacity(0.28), radius: 18, y: 8)
     }
 }
 
@@ -1948,6 +1975,28 @@ extension View {
                     RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
                         .stroke(borderColor, lineWidth: 1)
                 )
+        }
+    }
+
+    @ViewBuilder
+    func spacePickerSurface(colors: ThemeColors) -> some View {
+        if #available(macOS 26.0, *) {
+            self
+                .glassEffect(.regular, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 16, style: .continuous)
+                        .stroke(colors.border.opacity(0.8), lineWidth: 1)
+                )
+                .shadow(color: .black.opacity(0.28), radius: 18, y: 8)
+        } else {
+            self
+                .background(.ultraThinMaterial)
+                .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 16, style: .continuous)
+                        .stroke(colors.border.opacity(0.8), lineWidth: 1)
+                )
+                .shadow(color: .black.opacity(0.28), radius: 18, y: 8)
         }
     }
 }
