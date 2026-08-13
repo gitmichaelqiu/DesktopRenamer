@@ -47,6 +47,9 @@ class SpaceManager: ObservableObject {
     // Stabilization state for system wake events
     private var lastWakeTime: Date = .distantPast
     private let wakeCoolingDuration: TimeInterval = 15.0
+    private let wakeRecoveryDelay: TimeInterval = 3.0
+    private var isSystemSleeping = false
+    private var wakeRecoveryWorkItem: DispatchWorkItem?
     var isInWakeCoolingPeriod: Bool {
         Date().timeIntervalSince(lastWakeTime) < wakeCoolingDuration
     }
@@ -141,6 +144,7 @@ class SpaceManager: ObservableObject {
         
         NotificationCenter.default.addObserver(self, selector: #selector(screenParametersDidChange), name: NSApplication.didChangeScreenParametersNotification, object: nil)
         
+        NSWorkspace.shared.notificationCenter.addObserver(self, selector: #selector(systemWillSleep), name: NSWorkspace.willSleepNotification, object: nil)
         NSWorkspace.shared.notificationCenter.addObserver(self, selector: #selector(systemDidWake), name: NSWorkspace.didWakeNotification, object: nil)
         
         refreshConnectedDisplays()
@@ -174,6 +178,15 @@ class SpaceManager: ObservableObject {
     }
     
     deinit {
+        wakeRecoveryWorkItem?.cancel()
+        spaceChangeRetryWorkItem?.cancel()
+        if Thread.isMainThread {
+            SpaceHelper.stopMonitoring()
+        } else {
+            DispatchQueue.main.async {
+                SpaceHelper.stopMonitoring()
+            }
+        }
         // Timer invalidation is not thread-safe; deinit can run on any thread.
         if let timer = spaceLayoutCheckTimer {
             DispatchQueue.main.async {
@@ -184,22 +197,69 @@ class SpaceManager: ObservableObject {
     }
     
     @objc private func systemDidWake() {
-        self.lastWakeTime = Date()
-        print("SpaceManager: System wake detected. Entering \(wakeCoolingDuration)s cooling period...")
-        
-        // Schedule a deep refresh once the cooling period ends to capture final stable arrangement
-        DispatchQueue.main.asyncAfter(deadline: .now() + wakeCoolingDuration + 1.0) { [weak self] in
-            print("SpaceManager: Cooling period ended. Performing final post-wake refresh.")
-            self?.refreshSpaceState()
-            
-            // Final safety seeding to catch any labels that failed during the transient phase
-            DispatchQueue.main.async {
+        DispatchQueue.main.async { [weak self] in
+            guard let self = self else { return }
+            // A wake notification can arrive even when the sleep notification
+            // was delivered while the main queue was busy. Ensure monitoring is
+            // suspended before scheduling any post-wake CGS work.
+            if !self.isSystemSleeping {
+                self.prepareForSystemSleep()
+            }
+            self.recoverFromSystemWake()
+        }
+    }
+
+    @objc private func systemWillSleep() {
+        DispatchQueue.main.async { [weak self] in
+            self?.prepareForSystemSleep()
+        }
+    }
+
+    private func prepareForSystemSleep() {
+        guard !isSystemSleeping else { return }
+
+        isSystemSleeping = true
+        wakeRecoveryWorkItem?.cancel()
+        wakeRecoveryWorkItem = nil
+        cancelSpaceChangeRetry()
+        stopPeriodicSpaceLayoutCheck()
+        SpaceHelper.stopMonitoring()
+        DiagnosticEventLog.shared.record(subsystem: "SpaceManager", level: "info", "System sleep detected; suspended space monitoring")
+    }
+
+    private func recoverFromSystemWake() {
+        lastWakeTime = Date()
+        isSystemSleeping = true
+        wakeRecoveryWorkItem?.cancel()
+
+        let workItem = DispatchWorkItem { [weak self] in
+            guard let self = self, self.isSystemSleeping else { return }
+
+            self.isSystemSleeping = false
+            print("SpaceManager: Wake stabilization complete. Restarting space monitoring.")
+            SpaceHelper.startMonitoring { [weak self] rawUUID, isDesktop, ncCnt, displayID in
+                self?.handleSpaceChange(rawUUID, isDesktop: isDesktop, ncCount: ncCnt, displayID: displayID, source: "Monitor")
+            }
+            self.refreshConnectedDisplays()
+            self.startPeriodicSpaceLayoutCheck()
+            self.refreshSpaceState()
+
+            DiagnosticEventLog.shared.record(subsystem: "SpaceManager", level: "info", "Wake recovery completed; space monitoring resumed")
+
+            // Final safety seeding to catch labels that failed while displays were rebuilding.
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
                 AppDelegate.shared.statusBarController?.labelManager.seedAllLabels()
             }
         }
+
+        wakeRecoveryWorkItem = workItem
+        print("SpaceManager: System wake detected. Suspending CGS reads for \(wakeRecoveryDelay)s.")
+        DiagnosticEventLog.shared.record(subsystem: "SpaceManager", level: "info", "System wake detected; delaying recovery")
+        DispatchQueue.main.asyncAfter(deadline: .now() + wakeRecoveryDelay, execute: workItem)
     }
     
     @objc private func screenParametersDidChange() {
+        guard !isSystemSleeping else { return }
         print("SpaceManager: Screen parameters changed. Refreshing spaces and labels...")
         refreshConnectedDisplays()
         refreshSpaceState()
@@ -216,6 +276,7 @@ class SpaceManager: ObservableObject {
     }
     
     func refreshSpaceState() {
+        guard !isSystemSleeping else { return }
         SpaceHelper.getRawSpaceUUID { [weak self] rawUUID, isDesktop, ncCnt, displayID in
             self?.handleSpaceChange(rawUUID, isDesktop: isDesktop, ncCount: ncCnt, displayID: displayID, source: "Refresh")
         }
@@ -231,6 +292,8 @@ class SpaceManager: ObservableObject {
             DispatchQueue.main.async { [weak self] in self?.handleSpaceChange(rawUUID, isDesktop: isDesktop, ncCount: ncCount, displayID: displayID, source: source) }
             return
         }
+
+        guard !isSystemSleeping else { return }
 
         print("SpaceManager: handleSpaceChange(rawUUID: \(rawUUID), displayID: \(displayID), source: \(source))")
 
@@ -467,6 +530,7 @@ class SpaceManager: ObservableObject {
     }
 
     private func scheduleSpaceChangeRetry() {
+        guard !isSystemSleeping else { return }
         guard spaceChangeRetryCount < maxSpaceChangeRetries else { return }
         spaceChangeRetryWorkItem?.cancel()
 
@@ -487,6 +551,7 @@ class SpaceManager: ObservableObject {
     }
 
     private func performRetryDetection() {
+        guard !isSystemSleeping else { return }
         guard let cgsState = SpaceHelper.getSystemState() else {
             scheduleSpaceChangeRetry()
             return
@@ -582,7 +647,10 @@ class SpaceManager: ObservableObject {
     }
     
     func prepareForTermination() {
+        wakeRecoveryWorkItem?.cancel()
+        spaceChangeRetryWorkItem?.cancel()
         stopPeriodicSpaceLayoutCheck()
+        SpaceHelper.stopMonitoring()
         DistributedNotificationCenter.default().postNotificationName(SpaceAPI.apiToggleNotification, object: nil, userInfo: ["isEnabled": false], deliverImmediately: true)
     }
 
@@ -605,6 +673,7 @@ class SpaceManager: ObservableObject {
     /// external display) without a space switch having occurred, triggers a full
     /// detection refresh to pick them up.
     private func checkForNewSpaces() {
+        guard !isSystemSleeping else { return }
         guard !isInWakeCoolingPeriod else { return }
         guard let cgsState = SpaceHelper.getSystemState() else { return }
         let cgsIDs = Set(cgsState.spaces.map { $0.id })

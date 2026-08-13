@@ -1248,6 +1248,9 @@ class SpaceHelper {
     }
 
     static func startMonitoring(onChange: @escaping (String, Bool, Int, String) -> Void) {
+        // Make startup idempotent. The monitor is intentionally restarted after
+        // system wake, and duplicate observers can otherwise multiply CGS reads.
+        stopMonitoring()
         onSpaceChange = onChange
 
         spaceChangeObserver = NSWorkspace.shared.notificationCenter.addObserver(
@@ -1285,6 +1288,7 @@ class SpaceHelper {
             NSEvent.removeMonitor(monitor)
             localEventMonitor = nil
         }
+        onSpaceChange = nil
     }
 
     private static func getActiveDisplay() -> NSScreen? {
