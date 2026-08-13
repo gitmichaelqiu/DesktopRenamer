@@ -115,6 +115,7 @@ class LauncherWindowController: NSWindowController, NSWindowDelegate {
         viewModel.selectedRowIndex = 0
         viewModel.activeCommand = nil
         viewModel.stagingWindow = nil
+        viewModel.isRootSpacePickerPresented = false
         
         // Make key and focus
         NSApp.activate(ignoringOtherApps: true)

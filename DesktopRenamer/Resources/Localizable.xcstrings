@@ -210,6 +210,16 @@
         }
       }
     },
+    "Open Command" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "打开命令"
+          }
+        }
+      }
+    },
     "Active Space Label" : {
       "localizations" : {
         "zh-Hans" : {

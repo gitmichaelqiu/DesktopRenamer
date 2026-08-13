@@ -65,7 +65,7 @@ struct LauncherView: View {
     }
 
     private var isSpacePickerPresented: Bool {
-        viewModel.stagingWindow != nil
+        viewModel.stagingWindow != nil || viewModel.isRootSpacePickerPresented
     }
     
     var body: some View {
@@ -288,7 +288,7 @@ struct LauncherView: View {
                 
                 // Bottom bar
                 if viewModel.activeCommand == nil {
-                    SpacesBottomBar(viewModel: viewModel, spaceManager: spaceManager)
+                    RootLauncherBottomBar(viewModel: viewModel, spaceManager: spaceManager)
                 } else if viewModel.activeCommand?.type == .batchMoveWindows {
                     BatchMoveBottomBar(viewModel: viewModel)
                 } else {
@@ -312,7 +312,7 @@ struct LauncherView: View {
         .animation(.spring(response: 0.32, dampingFraction: 0.86), value: isSpacePickerPresented)
         .frame(width: 760, height: 500)
         .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
-        .launcherBackground(cornerRadius: 24, borderColor: colors.border)
+        .opaqueLauncherBackground(cornerRadius: 24, isDark: colors.isDark, borderColor: colors.border)
         .shadow(color: Color.black.opacity(colorScheme == .dark ? 0.45 : 0.20), radius: 24, x: 0, y: 12)
         .padding(40)
     }
@@ -1143,6 +1143,83 @@ struct BatchMoveBottomBar: View {
     }
 }
 
+struct RootLauncherBottomBar: View {
+    @ObservedObject var viewModel: LauncherViewModel
+    @ObservedObject var spaceManager: SpaceManager
+    @Environment(\.colorScheme) var colorScheme
+
+    var colors: ThemeColors {
+        ThemeColors(isDark: colorScheme == .dark)
+    }
+
+    var body: some View {
+        HStack(spacing: 0) {
+            Button {
+                viewModel.currentSpaces = spaceManager.currentDisplaySpaces.map { space in
+                    SpaceGroup(
+                        id: space.id,
+                        name: spaceManager.getSpaceName(space.id),
+                        displayName: space.displayID,
+                        num: space.num,
+                        isFullscreen: space.isFullscreen,
+                        appPath: space.appPath
+                    )
+                }
+                if let currentIndex = spaceManager.currentDisplaySpaces.firstIndex(where: { $0.id == spaceManager.currentSpaceUUID }) {
+                    viewModel.selectedSpaceIndex = currentIndex
+                }
+                viewModel.spacePickerQuery = ""
+                viewModel.isRootSpacePickerPresented = true
+            } label: {
+                Image(systemName: "line.3.horizontal")
+                    .font(.system(size: 16, weight: .medium))
+                    .foregroundColor(colors.textSecondary)
+                    .frame(width: 36, height: 36)
+                    .background(Color.primary.opacity(0.10), in: Circle())
+                    .overlay(Circle().stroke(Color.primary.opacity(0.16), lineWidth: 1))
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel(String(localized: "Switch Space"))
+            .help(String(localized: "Switch Space"))
+
+            Spacer()
+
+            HStack(spacing: 16) {
+                Button {
+                    viewModel.executeRowAction()
+                } label: {
+                    HStack(spacing: 8) {
+                        Text(verbatim: String(localized: "Open Command"))
+                        KeycapView(text: "↵", isSelected: false, verticalPadding: 4, horizontalPadding: 7)
+                    }
+                }
+                .buttonStyle(.plain)
+
+                Button {
+                    viewModel.showCommandKPanel()
+                } label: {
+                    HStack(spacing: 8) {
+                        Text(verbatim: String(localized: "Actions"))
+                        KeycapView(text: "⌘K", isSelected: false, verticalPadding: 4, horizontalPadding: 7)
+                    }
+                }
+                .buttonStyle(.plain)
+                .disabled(true)
+                .opacity(0.58)
+            }
+            .font(.system(size: 14, weight: .semibold))
+            .foregroundColor(colors.textPrimary)
+            .padding(.horizontal, 16)
+            .frame(height: 40)
+            .background(Color.primary.opacity(0.12), in: Capsule())
+            .overlay(Capsule().stroke(Color.primary.opacity(0.28), lineWidth: 1))
+        }
+        .padding(.horizontal, 16)
+        .frame(height: 58)
+        .background(colors.bottomBarBg)
+    }
+}
+
 struct SpacesBottomBar: View {
     @ObservedObject var viewModel: LauncherViewModel
     @ObservedObject var spaceManager: SpaceManager
@@ -1326,10 +1403,8 @@ struct SpacePickerOverlay: View {
                                     if viewModel.stagingWindow != nil {
                                         viewModel.selectedRowIndex = index
                                         viewModel.executeRowAction()
-                                    } else if NSEvent.modifierFlags.contains(.option) {
-                                        viewModel.executeBottomBarSpaceAction(isOption: true, isCommand: false)
                                     } else {
-                                        viewModel.executeBottomBarSpaceAction(isOption: false, isCommand: false)
+                                        viewModel.executeSelectedSpacePickerAction()
                                     }
                                 }) {
                                     HStack(spacing: 10) {
@@ -1378,21 +1453,20 @@ struct SpacePickerOverlay: View {
                         }
                     },
                     onEnter: {
-                        viewModel.selectedRowIndex = viewModel.selectedSpaceIndex
-                        viewModel.executeRowAction()
+                        viewModel.executeSelectedSpacePickerAction()
                     },
                     onCommandNumber: { number in
                         let index = number - 1
                         guard index >= 0 && index < viewModel.filteredSpaces.count else { return }
                         viewModel.selectedSpaceIndex = index
-                        viewModel.selectedRowIndex = index
-                        viewModel.executeRowAction()
+                        viewModel.executeSelectedSpacePickerAction()
                     },
                     onEscape: {
                         viewModel.handleEscapeKey()
                     },
                     onKeyEquivalent: { _ in false },
-                    placeholder: String(localized: "Search...")
+                    placeholder: String(localized: "Search..."),
+                    focusNotificationName: NSNotification.Name("FocusSpacePickerTextField")
                 )
                     .frame(height: 44)
             }
@@ -1402,7 +1476,9 @@ struct SpacePickerOverlay: View {
             .padding(.bottom, 58)
         }
         .onAppear {
-            NotificationCenter.default.post(name: NSNotification.Name("FocusLauncherTextField"), object: nil)
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
+                NotificationCenter.default.post(name: NSNotification.Name("FocusSpacePickerTextField"), object: nil)
+            }
         }
     }
 }
@@ -1564,6 +1640,7 @@ struct CommandBottomBar: View {
 }
 
 class FocusTextField: NSTextField {
+    var focusNotificationName = NSNotification.Name("FocusLauncherTextField")
     var onCommandEnter: (() -> Void)?
     var onOptionEnter: (() -> Void)?
     var onCommandNumber: ((Int) -> Void)?
@@ -1620,7 +1697,7 @@ class FocusTextField: NSTextField {
         super.viewDidMoveToWindow()
         if window != nil {
             NotificationCenter.default.addObserver(self, selector: #selector(windowDidBecomeKey), name: NSWindow.didBecomeKeyNotification, object: window)
-            NotificationCenter.default.addObserver(self, selector: #selector(forceFocus), name: NSNotification.Name("FocusLauncherTextField"), object: nil)
+            NotificationCenter.default.addObserver(self, selector: #selector(forceFocus), name: focusNotificationName, object: nil)
             if window?.isKeyWindow == true {
                 DispatchQueue.main.async { [weak self] in
                     self?.forceFocus()
@@ -1628,7 +1705,7 @@ class FocusTextField: NSTextField {
             }
         } else {
             NotificationCenter.default.removeObserver(self, name: NSWindow.didBecomeKeyNotification, object: nil)
-            NotificationCenter.default.removeObserver(self, name: NSNotification.Name("FocusLauncherTextField"), object: nil)
+            NotificationCenter.default.removeObserver(self, name: focusNotificationName, object: nil)
         }
     }
     
@@ -1695,6 +1772,7 @@ struct SearchTextField: NSViewRepresentable {
     var onCommandK: (() -> Void)? = nil
     var onKeyEquivalent: ((NSEvent) -> Bool)? = nil
     var placeholder: String = "Type a command..."
+    var focusNotificationName = NSNotification.Name("FocusLauncherTextField")
     
     class Coordinator: NSObject, NSTextFieldDelegate, NSTextViewDelegate {
         var parent: SearchTextField
@@ -1768,6 +1846,7 @@ struct SearchTextField: NSViewRepresentable {
     
     func makeNSView(context: Context) -> NSTextField {
         let textField = FocusTextField()
+        textField.focusNotificationName = focusNotificationName
         textField.delegate = context.coordinator
         
         let formatter = BlockTypingFormatter(isTypingDisabled: { [weak coordinator = context.coordinator] in
@@ -1817,6 +1896,7 @@ struct SearchTextField: NSViewRepresentable {
         context.coordinator.parent = self
         
         if let focusField = nsView as? FocusTextField {
+            focusField.focusNotificationName = focusNotificationName
             focusField.isTypingDisabled = isTypingDisabled
             focusField.onKeyEquivalent = onKeyEquivalent
         }
@@ -2038,6 +2118,19 @@ struct VisualEffectView: NSViewRepresentable {
 }
 
 extension View {
+    func opaqueLauncherBackground(cornerRadius: CGFloat, isDark: Bool, borderColor: Color) -> some View {
+        background(
+            isDark
+                ? Color(red: 0.115, green: 0.12, blue: 0.135)
+                : Color(nsColor: .windowBackgroundColor)
+        )
+        .clipShape(RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+                .stroke(borderColor.opacity(isDark ? 0.5 : 0.8), lineWidth: 1)
+        )
+    }
+
     @ViewBuilder
     func launcherBackground(cornerRadius: CGFloat, borderColor: Color) -> some View {
         if #available(macOS 26.0, *) {

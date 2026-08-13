@@ -227,6 +227,7 @@ struct ListWindowsSection: Identifiable {
     @Published var showCommandNumbers: Bool = false
     @Published var isBottomBarFocused: Bool = false
     @Published var selectedSpaceIndex: Int = 0
+    @Published var isRootSpacePickerPresented: Bool = false
     
     // For batch window moves
     @Published var stagedMoves: [Int: BatchStagedAction] = [:]
@@ -338,7 +339,7 @@ struct ListWindowsSection: Identifiable {
             spaces = spaces.filter { !$0.isFullscreen }
         }
 
-        let query = stagingWindow != nil ? spacePickerQuery : searchQuery
+        let query = stagingWindow != nil || isRootSpacePickerPresented ? spacePickerQuery : searchQuery
         if query.isEmpty {
             return spaces
         } else {
@@ -1431,7 +1432,7 @@ struct ListWindowsSection: Identifiable {
     func handleEscapeKey() {
         if isBottomBarFocused {
             isBottomBarFocused = false
-        } else if stagingWindow != nil && !spacePickerQuery.isEmpty {
+        } else if (stagingWindow != nil || isRootSpacePickerPresented) && !spacePickerQuery.isEmpty {
             spacePickerQuery = ""
         } else if !searchQuery.isEmpty {
             searchQuery = ""
@@ -1440,6 +1441,8 @@ struct ListWindowsSection: Identifiable {
             isStagingForRestoreTo = false
             isExecutingRestoreToImmediately = false
             selectedRowIndex = batchMoveLastSelectedIndex
+        } else if isRootSpacePickerPresented {
+            isRootSpacePickerPresented = false
         } else if activeCommand != nil {
             activeCommand = nil
         } else {
@@ -1477,6 +1480,17 @@ struct ListWindowsSection: Identifiable {
             executeSwitchToSpaceID(space.id)
         }
     }
+
+    func executeSelectedSpacePickerAction() {
+        if stagingWindow != nil {
+            executeRowAction()
+            return
+        }
+
+        let spaces = filteredSpaces
+        guard selectedSpaceIndex >= 0 && selectedSpaceIndex < spaces.count else { return }
+        executeSwitchToSpaceID(spaces[selectedSpaceIndex].id)
+    }
     
     func closeLauncher() {
         searchQuery = ""
@@ -1484,6 +1498,7 @@ struct ListWindowsSection: Identifiable {
         selectedRowIndex = 0
         activeCommand = nil
         stagingWindow = nil
+        isRootSpacePickerPresented = false
         isBottomBarFocused = false
         onClose?()
     }
