@@ -1302,6 +1302,7 @@ struct RootLauncherBottomBar: View {
                 if let currentIndex = spaceManager.currentDisplaySpaces.firstIndex(where: { $0.id == spaceManager.currentSpaceUUID }) {
                     viewModel.selectedSpaceIndex = currentIndex
                 }
+                viewModel.isRootActionsPresented = false
                 viewModel.spacePickerQuery = ""
                 viewModel.isRootSpacePickerPresented = true
             } label: {

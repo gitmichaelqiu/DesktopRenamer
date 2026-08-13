@@ -1464,6 +1464,7 @@ struct ListWindowsSection: Identifiable {
 
     func showRootActionsPanel() {
         guard activeCommand == nil, filteredCommands.indices.contains(selectedRowIndex) else { return }
+        isRootSpacePickerPresented = false
         selectedRootActionIndex = 0
         isRootActionsPresented = true
     }
