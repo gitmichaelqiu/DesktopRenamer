@@ -200,6 +200,8 @@ struct LauncherView: View {
                                     viewModel.executeBatchMove()
                                 } else if viewModel.activeCommand?.type == .switchToDesktop || viewModel.activeCommand?.type == .moveWindow {
                                     viewModel.executeRowAction()
+                                } else if viewModel.activeCommand == nil {
+                                    viewModel.showRootActionsPanel()
                                 }
                             },
                             onOptionEnter: {
@@ -1495,7 +1497,7 @@ struct RootActionsOverlay: View {
             : String(localized: "Add to Favorites")
         let actions = [
             (index: 0, title: String(localized: "Open Command"), icon: "rectangle.and.pencil.and.ellipsis", shortcut: "↵"),
-            (index: 1, title: favoriteTitle, icon: "star", shortcut: "⌘F"),
+            (index: 1, title: favoriteTitle, icon: "star", shortcut: "⌘⇧F"),
             (index: 2, title: String(localized: "Reset Ranking"), icon: "arrow.counterclockwise", shortcut: "↻")
         ]
         let indices = Set(viewModel.filteredRootActionIndices)
@@ -2652,6 +2654,15 @@ extension LauncherView {
 
         if event.keyCode == 53 && hasCommand && !hasShift && !hasOption && !hasControl {
             viewModel.popToRoot()
+            return true
+        }
+
+        if viewModel.activeCommand == nil,
+           viewModel.commandKTargetWindow == nil,
+           !viewModel.isRootActionsPresented,
+           hasCommand && hasShift && !hasOption && !hasControl,
+           event.charactersIgnoringModifiers?.lowercased() == "f" {
+            viewModel.toggleFavoriteSelectedCommand()
             return true
         }
         
