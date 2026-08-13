@@ -81,7 +81,7 @@ private struct LauncherActionBarModifier: ViewModifier {
 }
 
 private extension View {
-    func launcherActionBar(colors: ThemeColors, height: CGFloat = 46, horizontalPadding: CGFloat = 18) -> some View {
+    func launcherActionBar(colors: ThemeColors, height: CGFloat = LauncherLayout.actionBarHeight, horizontalPadding: CGFloat = 18) -> some View {
         modifier(LauncherActionBarModifier(colors: colors, height: height, horizontalPadding: horizontalPadding))
     }
 }
@@ -1844,7 +1844,7 @@ struct SpacesBottomBar: View {
             .padding(.leading, 12)
         }
         .padding(.horizontal, 18)
-        .frame(height: 46)
+        .frame(height: LauncherLayout.actionBarHeight)
         .background(colors.bottomBarBg)
         .animation(.spring(response: 0.35, dampingFraction: 0.85), value: viewModel.isBottomBarFocused)
     }
