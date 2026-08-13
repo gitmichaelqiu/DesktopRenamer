@@ -1581,7 +1581,7 @@ struct RootActionsOverlay: View {
                 )
                 .frame(height: 44)
             }
-            .frame(width: 380)
+            .frame(width: 350)
             .spacePickerSurface(colors: colors)
             .padding(.trailing, 16)
             .padding(.bottom, 8)
@@ -2413,7 +2413,7 @@ struct CommandKOverlayView: View {
                 )
                 .frame(height: 44)
             }
-            .frame(width: 380)
+            .frame(width: 350)
             .spacePickerSurface(colors: colors)
             .padding(.trailing, 16)
             .padding(.bottom, 8)
