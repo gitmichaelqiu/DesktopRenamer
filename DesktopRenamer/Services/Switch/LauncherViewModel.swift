@@ -221,6 +221,9 @@ struct RootCommandSection: Identifiable {
             selectedRowIndex = 0
             isKeyboardSelection = true
             isBottomBarFocused = false
+            isRootActionsPresented = false
+            isRootSpacePickerPresented = false
+            commandKTargetWindow = nil
             if activeCommand != nil {
                 loadData()
             }
@@ -628,6 +631,9 @@ struct RootCommandSection: Identifiable {
     }
     
     func showCommandKPanel() {
+        isRootActionsPresented = false
+        isRootSpacePickerPresented = false
+
         if activeCommand?.type == .listWindows {
             let windows = filteredWindows
             let index = selectedRowIndex
@@ -1594,6 +1600,7 @@ struct RootCommandSection: Identifiable {
 
     func showRootActionsPanel() {
         guard activeCommand == nil, filteredCommands.indices.contains(selectedRowIndex) else { return }
+        commandKTargetWindow = nil
         isRootSpacePickerPresented = false
         selectedRootActionIndex = 0
         rootActionQuery = ""

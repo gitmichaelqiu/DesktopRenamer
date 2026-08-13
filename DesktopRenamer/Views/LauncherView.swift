@@ -366,15 +366,11 @@ struct LauncherView: View {
             
             if let targetWindow = viewModel.commandKTargetWindow {
                 CommandKOverlayView(viewModel: viewModel, window: targetWindow)
-            }
-
-            if viewModel.isRootActionsPresented {
+            } else if viewModel.isRootActionsPresented {
                 RootActionsOverlay(viewModel: viewModel)
                     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomTrailing)
                     .transition(.scale(scale: 0.92, anchor: .bottomTrailing).combined(with: .opacity))
-            }
-
-            if isSpacePickerPresented {
+            } else if isSpacePickerPresented {
                 SpacePickerOverlay(viewModel: viewModel, spaceManager: spaceManager)
                     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomTrailing)
                     .transition(.scale(scale: 0.92, anchor: .bottomTrailing).combined(with: .opacity))
@@ -1429,6 +1425,7 @@ struct RootLauncherBottomBar: View {
     var body: some View {
         HStack(spacing: 0) {
             Button {
+                viewModel.commandKTargetWindow = nil
                 viewModel.currentSpaces = spaceManager.currentDisplaySpaces.map { space in
                     SpaceGroup(
                         id: space.id,
