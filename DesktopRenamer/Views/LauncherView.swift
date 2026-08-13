@@ -101,7 +101,7 @@ struct LauncherView: View {
                             onKeyEquivalent: { _ in false },
                             placeholder: NSLocalizedString("New Space Name...", comment: "")
                         )
-                        .frame(height: 42)
+                        .frame(height: 46)
                     } else {
                         SearchTextField(
                             text: $viewModel.searchQuery,
@@ -234,7 +234,7 @@ struct LauncherView: View {
                             },
                             placeholder: searchPlaceholder
                         )
-                        .frame(height: 42)
+                        .frame(height: 46)
                     }
                     
                     if viewModel.isLoadingData {
@@ -246,7 +246,9 @@ struct LauncherView: View {
                 .frame(height: 72)
                 .padding(.horizontal, 22)
                 
-                Divider()
+                if viewModel.activeCommand != nil {
+                    Divider()
+                }
                 
                 // Content area
                 if viewModel.activeCommand?.type == .renameCurrentSpace {
@@ -315,10 +317,10 @@ struct LauncherView: View {
             if isSpacePickerPresented {
                 SpacePickerOverlay(viewModel: viewModel, spaceManager: spaceManager)
                     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomTrailing)
-                    .transition(.move(edge: .bottom).combined(with: .opacity))
+                    .transition(.scale(scale: 0.92, anchor: .bottomTrailing).combined(with: .opacity))
             }
         }
-        .animation(.spring(response: 0.32, dampingFraction: 0.86), value: isSpacePickerPresented)
+        .animation(.spring(response: 0.28, dampingFraction: 0.84), value: isSpacePickerPresented)
         .frame(width: 760, height: 500)
         .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
         .opaqueLauncherBackground(cornerRadius: 24, isDark: colors.isDark, borderColor: colors.border)
@@ -1534,7 +1536,7 @@ struct SpacePickerOverlay: View {
                 )
                     .frame(height: 44)
             }
-            .frame(width: 350)
+            .frame(width: viewModel.stagingWindow == nil ? 290 : 350)
             .spacePickerSurface(colors: colors)
             .padding(.trailing, 16)
             .padding(.bottom, 58)
@@ -1928,7 +1930,7 @@ struct SearchTextField: NSViewRepresentable {
         textField.drawsBackground = false
         textField.focusRingType = .none
         textField.textColor = .labelColor
-        textField.font = NSFont.systemFont(ofSize: 20, weight: .regular)
+        textField.font = NSFont.systemFont(ofSize: 22, weight: .regular)
         
         context.coordinator.lastPlaceholder = placeholder
         context.coordinator.lastIsDark = isDark
@@ -1937,7 +1939,7 @@ struct SearchTextField: NSViewRepresentable {
             string: placeholder,
             attributes: [
                 .foregroundColor: NSColor.placeholderTextColor,
-                .font: NSFont.systemFont(ofSize: 20, weight: .regular)
+                .font: NSFont.systemFont(ofSize: 22, weight: .regular)
             ]
         )
         textField.placeholderAttributedString = placeholderAttr
@@ -1969,7 +1971,7 @@ struct SearchTextField: NSViewRepresentable {
                 string: placeholder,
                 attributes: [
                     .foregroundColor: NSColor.placeholderTextColor,
-                    .font: NSFont.systemFont(ofSize: 20, weight: .regular)
+                    .font: NSFont.systemFont(ofSize: 22, weight: .regular)
                 ]
             )
             nsView.placeholderAttributedString = placeholderAttr
