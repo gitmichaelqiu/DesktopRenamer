@@ -351,10 +351,13 @@ struct LauncherView: View {
                 ZStack(alignment: .bottom) {
                     if viewModel.activeCommand == nil {
                         RootLauncherBottomBar(viewModel: viewModel, spaceManager: spaceManager)
+                            .transition(commandPageTransition)
                     } else if viewModel.activeCommand?.type == .batchMoveWindows {
                         BatchMoveBottomBar(viewModel: viewModel)
+                            .transition(commandPageTransition)
                     } else {
                         CommandBottomBar(viewModel: viewModel)
+                            .transition(commandPageTransition)
                     }
                 }
                 .frame(maxWidth: .infinity)
