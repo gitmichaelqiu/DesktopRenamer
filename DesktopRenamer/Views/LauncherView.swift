@@ -1530,6 +1530,15 @@ struct RootActionsOverlay: View {
         return actions.filter { indices.contains($0.index) }
     }
 
+    private var groupedActionRows: [(title: String, rows: [(index: Int, title: String, icon: String, shortcut: String)])] {
+        let rows = actionRows
+        return [
+            (String(localized: "Primary Action"), rows.filter { $0.index == 0 }),
+            (String(localized: "Favorites"), rows.filter { (1...3).contains($0.index) }),
+            (String(localized: "Manage"), rows.filter { $0.index == 4 })
+        ].filter { !$0.rows.isEmpty }
+    }
+
     var body: some View {
         ZStack(alignment: .bottomTrailing) {
             Button {
@@ -1555,6 +1564,19 @@ struct RootActionsOverlay: View {
                             .foregroundColor(colors.textTertiary)
                             .frame(maxWidth: .infinity)
                             .padding(.vertical, 16)
+                    } else if viewModel.rootActionQuery.isEmpty {
+                        ForEach(groupedActionRows, id: \.title) { section in
+                            Text(verbatim: section.title)
+                                .font(.caption.weight(.semibold))
+                                .foregroundColor(colors.textTertiary)
+                                .padding(.horizontal, 12)
+                                .padding(.top, section.title == String(localized: "Primary Action") ? 0 : 8)
+                                .padding(.bottom, 2)
+
+                            ForEach(section.rows, id: \.index) { row in
+                                rootActionRow(row: row, selectionNamespace: actionSelectionNamespace)
+                            }
+                        }
                     } else {
                         ForEach(actionRows, id: \.index) { row in
                             rootActionRow(row: row, selectionNamespace: actionSelectionNamespace)
