@@ -328,7 +328,6 @@ struct LauncherView: View {
         .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
         .opaqueLauncherBackground(cornerRadius: 24, isDark: colors.isDark, borderColor: colors.border)
         .shadow(color: Color.black.opacity(colorScheme == .dark ? 0.45 : 0.20), radius: 24, x: 0, y: 12)
-        .padding(40)
     }
 
     private var searchPlaceholder: String {
