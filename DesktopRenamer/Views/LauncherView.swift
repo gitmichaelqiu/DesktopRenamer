@@ -590,6 +590,33 @@ struct EmptyResultsView: View {
     }
 }
 
+private struct LauncherRowSurface: ViewModifier {
+    let isSelected: Bool
+    let isHovered: Bool
+    let colors: ThemeColors
+
+    func body(content: Content) -> some View {
+        content
+            .padding(.horizontal, 12)
+            .padding(.vertical, 8)
+            .background {
+                RoundedRectangle(cornerRadius: 10, style: .continuous)
+                    .fill(isSelected ? Color.primary.opacity(0.16) : (isHovered ? colors.rowHover : .clear))
+            }
+            .overlay {
+                RoundedRectangle(cornerRadius: 10, style: .continuous)
+                    .stroke(isSelected ? Color.primary.opacity(0.10) : .clear, lineWidth: 1)
+            }
+            .animation(.easeOut(duration: 0.12), value: isSelected)
+    }
+}
+
+private extension View {
+    func launcherRowSurface(isSelected: Bool, isHovered: Bool, colors: ThemeColors) -> some View {
+        modifier(LauncherRowSurface(isSelected: isSelected, isHovered: isHovered, colors: colors))
+    }
+}
+
 struct CommandRowView: View {
     let command: LauncherCommand
     let isSelected: Bool
@@ -630,13 +657,12 @@ struct CommandRowView: View {
             
             VStack(alignment: .leading, spacing: 2) {
                 Text(command.title)
-                    .font(.body)
-                    .fontWeight(.semibold)
+                    .font(.system(size: 15, weight: .semibold))
                     .foregroundColor(colors.textPrimary)
                     .lineLimit(1)
                 
                 Text(command.subtitle)
-                    .font(.subheadline)
+                    .font(.system(size: 13))
                     .foregroundColor(isSelected ? colors.textSecondary : colors.textTertiary)
                     .lineLimit(1)
             }
@@ -667,25 +693,10 @@ struct CommandRowView: View {
                 KeycapView(text: "Action", isSelected: isSelected)
             }
         }
-        .padding(.horizontal, 8)
-        .padding(.vertical, 8)
-        .background(
-            ZStack {
-                if isSelected {
-                    RoundedRectangle(cornerRadius: 8, style: .continuous)
-                        .fill(isSelected ? Color.primary.opacity(0.16) : Color.clear)
-                    RoundedRectangle(cornerRadius: 8, style: .continuous)
-                        .stroke(isSelected ? Color.primary.opacity(0.10) : Color.clear, lineWidth: 1)
-                } else if isHovered {
-                    RoundedRectangle(cornerRadius: 8, style: .continuous)
-                        .fill(colors.rowHover)
-                }
-            }
-        )
+        .launcherRowSurface(isSelected: isSelected, isHovered: isHovered, colors: colors)
         .onHover { hovering in
             isHovered = hovering
         }
-        .animation(.easeOut(duration: 0.12), value: isSelected)
     }
     
     // Helper to safely wrap dynamic String to LocalizedStringKey
@@ -726,19 +737,18 @@ struct SpaceRowView: View {
             
             VStack(alignment: .leading, spacing: 2) {
                 Text(space.name)
-                    .font(.body)
-                    .fontWeight(.semibold)
+                    .font(.system(size: 15, weight: .semibold))
                     .foregroundColor(colors.textPrimary)
                     .lineLimit(1)
                 
                 if space.isFullscreen {
                     Text(verbatim: String(format: String(localized: "%@ · Fullscreen"), space.displayName))
-                        .font(.subheadline)
+                        .font(.system(size: 13))
                         .foregroundColor(isSelected ? colors.textSecondary : colors.textTertiary)
                         .lineLimit(1)
                 } else {
                     Text(verbatim: String(format: String(localized: "%@ · Space %lld"), space.displayName, space.num))
-                        .font(.subheadline)
+                        .font(.system(size: 13))
                         .foregroundColor(isSelected ? colors.textSecondary : colors.textTertiary)
                         .lineLimit(1)
                 }
@@ -756,25 +766,10 @@ struct SpaceRowView: View {
                 KeycapView(text: "Switch ↵", isSelected: isSelected)
             }
         }
-        .padding(.horizontal, 8)
-        .padding(.vertical, 8)
-        .background(
-            ZStack {
-                if isSelected {
-                    RoundedRectangle(cornerRadius: 8, style: .continuous)
-                        .fill(isSelected ? Color.primary.opacity(0.16) : Color.clear)
-                    RoundedRectangle(cornerRadius: 8, style: .continuous)
-                        .stroke(isSelected ? Color.primary.opacity(0.10) : Color.clear, lineWidth: 1)
-                } else if isHovered {
-                    RoundedRectangle(cornerRadius: 8, style: .continuous)
-                        .fill(colors.rowHover)
-                }
-            }
-        )
+        .launcherRowSurface(isSelected: isSelected, isHovered: isHovered, colors: colors)
         .onHover { hovering in
             isHovered = hovering
         }
-        .animation(.easeOut(duration: 0.12), value: isSelected)
     }
 }
 
@@ -816,13 +811,12 @@ struct WindowRowView: View {
 
             VStack(alignment: .leading, spacing: 2) {
                 Text(window.title.isEmpty ? String(localized: "(No Title)") : window.title)
-                    .font(.body)
-                    .fontWeight(.semibold)
+                    .font(.system(size: 15, weight: .semibold))
                     .foregroundColor(colors.textPrimary)
                     .lineLimit(1)
 
                 Text(window.ownerName)
-                    .font(.subheadline)
+                    .font(.system(size: 13))
                     .foregroundColor(isSelected ? colors.textSecondary : colors.textTertiary)
                     .lineLimit(1)
             }
@@ -846,25 +840,10 @@ struct WindowRowView: View {
                 }
             }
         }
-        .padding(.horizontal, 8)
-        .padding(.vertical, 8)
-        .background(
-            ZStack {
-                if isSelected {
-                    RoundedRectangle(cornerRadius: 8, style: .continuous)
-                        .fill(isSelected ? Color.primary.opacity(0.16) : Color.clear)
-                    RoundedRectangle(cornerRadius: 8, style: .continuous)
-                        .stroke(isSelected ? Color.primary.opacity(0.10) : Color.clear, lineWidth: 1)
-                } else if isHovered {
-                    RoundedRectangle(cornerRadius: 8, style: .continuous)
-                        .fill(colors.rowHover)
-                }
-            }
-        )
+        .launcherRowSurface(isSelected: isSelected, isHovered: isHovered, colors: colors)
         .onHover { hovering in
             isHovered = hovering
         }
-        .animation(.easeOut(duration: 0.12), value: isSelected)
     }
 }
 
