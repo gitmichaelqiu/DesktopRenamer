@@ -354,8 +354,7 @@ struct ListAreaView: View {
                     ScrollViewReader { proxy in
                         ScrollView {
                             VStack(alignment: .leading, spacing: 4) {
-                                ForEach(0..<commands.count, id: \.self) { i in
-                                    let cmd = commands[i]
+                                ForEach(Array(commands.enumerated()), id: \.element.id) { i, cmd in
                                     let isSelected = !viewModel.isBottomBarFocused && viewModel.selectedRowIndex == i
                                     CommandRowView(command: cmd, isSelected: isSelected, shortcutText: viewModel.showCommandNumbers && viewModel.commandKTargetWindow == nil && i < 9 ? "⌘\(i + 1)" : nil)
                                         .contentShape(Rectangle())
@@ -389,8 +388,7 @@ struct ListAreaView: View {
                             ScrollViewReader { proxy in
                                 ScrollView {
                                     VStack(spacing: 4) {
-                                        ForEach(0..<spaces.count, id: \.self) { i in
-                                            let space = spaces[i]
+                                        ForEach(Array(spaces.enumerated()), id: \.element.id) { i, space in
                                             let isSelected = !viewModel.isBottomBarFocused && viewModel.selectedRowIndex == i
                                             SpaceRowView(space: space, isSelected: isSelected, isCurrent: AppDelegate.shared.spaceManager?.currentSpaceUUID == space.id, shortcutText: viewModel.showCommandNumbers && viewModel.commandKTargetWindow == nil && i < 9 ? "⌘\(i + 1)" : nil)
                                                 .contentShape(Rectangle())
@@ -1181,8 +1179,7 @@ struct SpacesBottomBar: View {
                 ScrollView(.horizontal, showsIndicators: false) {
                     HStack(spacing: 8) {
                         let spaces = spaceManager.currentDisplaySpaces
-                        ForEach(0..<spaces.count, id: \.self) { index in
-                            let space = spaces[index]
+                        ForEach(Array(spaces.enumerated()), id: \.element.id) { index, space in
                             let isCurrent = space.id == spaceManager.currentSpaceUUID
                             let isSelected = viewModel.isBottomBarFocused && index == viewModel.selectedSpaceIndex
 
@@ -1343,8 +1340,7 @@ struct SpacePickerOverlay: View {
                                 .frame(maxWidth: .infinity)
                                 .padding(.vertical, 24)
                         } else {
-                            ForEach(0..<spaces.count, id: \.self) { index in
-                                let space = spaces[index]
+                            ForEach(Array(spaces.enumerated()), id: \.element.id) { index, space in
                                 let isSelected = index == viewModel.selectedSpaceIndex
                                 Button(action: {
                                     viewModel.selectedSpaceIndex = index
