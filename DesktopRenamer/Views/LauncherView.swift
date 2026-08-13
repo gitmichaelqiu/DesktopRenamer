@@ -420,6 +420,7 @@ private struct LauncherMarkView: View {
 struct ListAreaView: View {
     @ObservedObject var viewModel: LauncherViewModel
     @Environment(\.colorScheme) var colorScheme
+    @Namespace private var selectionNamespace
     
     var colors: ThemeColors {
         ThemeColors(isDark: colorScheme == .dark)
@@ -443,7 +444,7 @@ struct ListAreaView: View {
                                             viewModel.selectedRowIndex = i
                                             viewModel.executeRowAction()
                                     } label: {
-                                        CommandRowView(command: cmd, isSelected: isSelected, isRoot: true, isCompact: true, shortcutText: viewModel.showCommandNumbers && viewModel.commandKTargetWindow == nil && i < 9 ? "⌘\(i + 1)" : nil)
+                                        CommandRowView(command: cmd, isSelected: isSelected, isRoot: true, isCompact: true, selectionNamespace: selectionNamespace, shortcutText: viewModel.showCommandNumbers && viewModel.commandKTargetWindow == nil && i < 9 ? "⌘\(i + 1)" : nil)
                                     }
                                     .buttonStyle(.plain)
                                     .onHover { hovering in
@@ -487,7 +488,7 @@ struct ListAreaView: View {
                                                     viewModel.selectedRowIndex = i
                                                     viewModel.executeRowAction()
                                             } label: {
-                                                SpaceRowView(space: space, isSelected: isSelected, isCurrent: AppDelegate.shared.spaceManager?.currentSpaceUUID == space.id, shortcutText: i < 9 ? shortcut : nil)
+                                                SpaceRowView(space: space, isSelected: isSelected, isCurrent: AppDelegate.shared.spaceManager?.currentSpaceUUID == space.id, selectionNamespace: selectionNamespace, shortcutText: i < 9 ? shortcut : nil)
                                             }
                                             .buttonStyle(.plain)
                                             .onHover { hovering in
@@ -540,6 +541,7 @@ struct ListAreaView: View {
                                                     WindowRowView(
                                                         window: item.window,
                                                         isSelected: isSelected,
+                                                        selectionNamespace: selectionNamespace,
                                                         shortcutText: viewModel.showCommandNumbers && viewModel.commandKTargetWindow == nil && item.index < 9 ? "⌘\(item.index + 1)" : nil
                                                     )
                                                 }
@@ -597,7 +599,7 @@ struct ListAreaView: View {
                                                             viewModel.selectedRowIndex = item.index
                                                             viewModel.executeRowAction()
                                                     } label: {
-                                                        WindowBatchRowView(window: move.window, isSelected: isSelected, isStaged: true, stagedActionText: move.actionType.description, shortcutText: viewModel.showCommandNumbers && viewModel.commandKTargetWindow == nil && item.index < 9 ? "⌘\(item.index + 1)" : nil)
+                                                        WindowBatchRowView(window: move.window, isSelected: isSelected, isStaged: true, stagedActionText: move.actionType.description, selectionNamespace: selectionNamespace, shortcutText: viewModel.showCommandNumbers && viewModel.commandKTargetWindow == nil && item.index < 9 ? "⌘\(item.index + 1)" : nil)
                                                     }
                                                     .buttonStyle(.plain)
                                                     .onHover { hovering in
@@ -614,7 +616,7 @@ struct ListAreaView: View {
                                                             viewModel.selectedRowIndex = item.index
                                                             viewModel.executeRowAction()
                                                     } label: {
-                                                        WindowBatchRowView(window: window, isSelected: isSelected, isStaged: false, stagedActionText: "", shortcutText: viewModel.showCommandNumbers && viewModel.commandKTargetWindow == nil && item.index < 9 ? "⌘\(item.index + 1)" : nil)
+                                                        WindowBatchRowView(window: window, isSelected: isSelected, isStaged: false, stagedActionText: "", selectionNamespace: selectionNamespace, shortcutText: viewModel.showCommandNumbers && viewModel.commandKTargetWindow == nil && item.index < 9 ? "⌘\(item.index + 1)" : nil)
                                                     }
                                                     .buttonStyle(.plain)
                                                     .onHover { hovering in
@@ -738,14 +740,21 @@ private struct LauncherRowSurface: ViewModifier {
     let isHovered: Bool
     let colors: ThemeColors
     let verticalPadding: CGFloat
+    let selectionNamespace: Namespace.ID?
 
     func body(content: Content) -> some View {
         content
             .padding(.horizontal, 8)
             .padding(.vertical, verticalPadding)
             .background {
-                RoundedRectangle(cornerRadius: 10, style: .continuous)
-                    .fill(isSelected ? Color.primary.opacity(0.16) : (isHovered ? colors.rowHover : .clear))
+                if isSelected {
+                    RoundedRectangle(cornerRadius: 10, style: .continuous)
+                        .fill(Color.primary.opacity(0.16))
+                        .modifier(SelectionSurfaceModifier(namespace: selectionNamespace))
+                } else {
+                    RoundedRectangle(cornerRadius: 10, style: .continuous)
+                        .fill(isHovered ? colors.rowHover : .clear)
+                }
             }
             .overlay {
                 RoundedRectangle(cornerRadius: 10, style: .continuous)
@@ -756,9 +765,21 @@ private struct LauncherRowSurface: ViewModifier {
     }
 }
 
+private struct SelectionSurfaceModifier: ViewModifier {
+    let namespace: Namespace.ID?
+
+    func body(content: Content) -> some View {
+        if let namespace {
+            content.matchedGeometryEffect(id: "launcher-selected-row", in: namespace)
+        } else {
+            content
+        }
+    }
+}
+
 private extension View {
-    func launcherRowSurface(isSelected: Bool, isHovered: Bool, colors: ThemeColors, verticalPadding: CGFloat = 8) -> some View {
-        modifier(LauncherRowSurface(isSelected: isSelected, isHovered: isHovered, colors: colors, verticalPadding: verticalPadding))
+    func launcherRowSurface(isSelected: Bool, isHovered: Bool, colors: ThemeColors, verticalPadding: CGFloat = 8, selectionNamespace: Namespace.ID? = nil) -> some View {
+        modifier(LauncherRowSurface(isSelected: isSelected, isHovered: isHovered, colors: colors, verticalPadding: verticalPadding, selectionNamespace: selectionNamespace))
     }
 }
 
@@ -767,6 +788,7 @@ struct CommandRowView: View {
     let isSelected: Bool
     var isRoot: Bool = false
     var isCompact: Bool = false
+    var selectionNamespace: Namespace.ID? = nil
     var shortcutText: String? = nil
     @Environment(\.colorScheme) var colorScheme
     @State private var isHovered = false
@@ -801,7 +823,7 @@ struct CommandRowView: View {
                 detailRow
             }
         }
-        .launcherRowSurface(isSelected: isSelected, isHovered: isHovered, colors: colors, verticalPadding: isCompact ? 6 : 8)
+        .launcherRowSurface(isSelected: isSelected, isHovered: isHovered, colors: colors, verticalPadding: isCompact ? 6 : 8, selectionNamespace: selectionNamespace)
         .onHover { hovering in
             isHovered = hovering
         }
@@ -918,6 +940,7 @@ struct SpaceRowView: View {
     let space: SpaceGroup
     let isSelected: Bool
     let isCurrent: Bool
+    var selectionNamespace: Namespace.ID? = nil
     var shortcutText: String? = nil
     @Environment(\.colorScheme) var colorScheme
     @State private var isHovered = false
@@ -973,7 +996,7 @@ struct SpaceRowView: View {
                 KeycapView(text: LocalizedStringKey(shortcut), isSelected: isSelected)
             }
         }
-        .launcherRowSurface(isSelected: isSelected, isHovered: isHovered, colors: colors)
+        .launcherRowSurface(isSelected: isSelected, isHovered: isHovered, colors: colors, selectionNamespace: selectionNamespace)
         .onHover { hovering in
             isHovered = hovering
         }
@@ -999,6 +1022,7 @@ struct WindowStateBadge: View {
 struct WindowRowView: View {
     let window: WindowEntry
     let isSelected: Bool
+    var selectionNamespace: Namespace.ID? = nil
     var shortcutText: String? = nil
     @Environment(\.colorScheme) var colorScheme
     @State private var isHovered = false
@@ -1047,7 +1071,7 @@ struct WindowRowView: View {
                 }
             }
         }
-        .launcherRowSurface(isSelected: isSelected, isHovered: isHovered, colors: colors)
+        .launcherRowSurface(isSelected: isSelected, isHovered: isHovered, colors: colors, selectionNamespace: selectionNamespace)
         .onHover { hovering in
             isHovered = hovering
         }
@@ -1101,6 +1125,7 @@ struct WindowBatchRowView: View {
     let isSelected: Bool
     let isStaged: Bool
     let stagedActionText: String
+    var selectionNamespace: Namespace.ID? = nil
     var shortcutText: String? = nil
     @Environment(\.colorScheme) var colorScheme
     @State private var isHovered = false
@@ -1170,6 +1195,7 @@ struct WindowBatchRowView: View {
                 if isSelected {
                     RoundedRectangle(cornerRadius: 8, style: .continuous)
                         .fill(isSelected ? Color.primary.opacity(0.16) : Color.clear)
+                        .modifier(SelectionSurfaceModifier(namespace: selectionNamespace))
                     RoundedRectangle(cornerRadius: 8, style: .continuous)
                         .stroke(isSelected ? Color.primary.opacity(0.10) : Color.clear, lineWidth: 1)
                 } else if isHovered {
