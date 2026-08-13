@@ -65,7 +65,7 @@ struct LauncherView: View {
     }
 
     private var isSpacePickerPresented: Bool {
-        viewModel.isBottomBarFocused || viewModel.stagingWindow != nil
+        viewModel.stagingWindow != nil
     }
     
     var body: some View {
@@ -295,8 +295,8 @@ struct LauncherView: View {
                     CommandBottomBar(viewModel: viewModel)
                 }
             }
-            .blur(radius: viewModel.commandKTargetWindow != nil || isSpacePickerPresented ? 10 : 0)
-            .animation(.easeInOut(duration: 0.12), value: viewModel.commandKTargetWindow != nil || isSpacePickerPresented)
+            .blur(radius: viewModel.commandKTargetWindow != nil ? 10 : 0)
+            .animation(.easeInOut(duration: 0.12), value: viewModel.commandKTargetWindow != nil)
             
             if let targetWindow = viewModel.commandKTargetWindow {
                 CommandKOverlayView(viewModel: viewModel, window: targetWindow)
@@ -1192,7 +1192,7 @@ struct SpacesBottomBar: View {
     }
     
     var body: some View {
-        HStack(spacing: 8) {
+        HStack(spacing: 0) {
             Button(action: focusSpacePicker) {
                 HStack(spacing: 6) {
                     Image(systemName: "square.grid.2x2")
@@ -1206,21 +1206,127 @@ struct SpacesBottomBar: View {
                 ))
             }
             .buttonStyle(.plain)
+            .layoutPriority(1)
 
-            Spacer()
+            ScrollViewReader { scrollProxy in
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 8) {
+                        let spaces = spaceManager.currentDisplaySpaces
+                        ForEach(0..<spaces.count, id: \.self) { index in
+                            let space = spaces[index]
+                            let isCurrent = space.id == spaceManager.currentSpaceUUID
+                            let isSelected = viewModel.isBottomBarFocused && index == viewModel.selectedSpaceIndex
 
-            if viewModel.isBottomBarFocused {
-                bottomBarAction(title: "Switch Space", shortcut: "↵") {
-                    viewModel.executeBottomBarSpaceAction(isOption: false, isCommand: false)
+                            Button(action: {
+                                if NSEvent.modifierFlags.contains(.option) {
+                                    let handled = viewModel.movePreviouslyActiveWindow(toSpaceID: space.id)
+                                    if !handled {
+                                        viewModel.closeLauncher()
+                                    }
+                                } else {
+                                    viewModel.executeSwitchToSpaceID(space.id)
+                                }
+                            }) {
+                                Text(spaceManager.getSpaceName(space.id))
+                                    .modifier(BottomBarCapsule(isSelected: isSelected, isActive: isCurrent, colorScheme: colorScheme))
+                            }
+                            .buttonStyle(.plain)
+                            .focusable(false)
+                            .help(String(localized: "Click to switch, Option+Click to move active window."))
+                            .id(space.id)
+                        }
+                    }
+                    .padding(.leading, 32)
+                    .padding(.trailing, 32)
                 }
-                bottomBarAction(title: "Move Window", shortcut: "⌥↵") {
-                    viewModel.executeBottomBarSpaceAction(isOption: true, isCommand: false)
+                .mask(
+                    HStack(spacing: 0) {
+                        LinearGradient(
+                            gradient: Gradient(colors: [.clear, .black]),
+                            startPoint: .leading,
+                            endPoint: .trailing
+                        )
+                        .frame(width: 32)
+
+                        Rectangle()
+                            .fill(Color.black)
+
+                        LinearGradient(
+                            gradient: Gradient(colors: [.black, .clear]),
+                            startPoint: .leading,
+                            endPoint: .trailing
+                        )
+                        .frame(width: 32)
+                    }
+                )
+                .onAppear {
+                    scrollProxy.scrollTo(spaceManager.currentSpaceUUID, anchor: UnitPoint(x: 0.31, y: 0.5))
                 }
-            } else {
-                bottomBarAction(title: "Action", shortcut: "↵") {
-                    viewModel.executeRowAction()
+                .onChange(of: spaceManager.currentSpaceUUID) { currentSpaceID in
+                    withAnimation(.easeInOut(duration: 0.15)) {
+                        scrollProxy.scrollTo(currentSpaceID, anchor: UnitPoint(x: 0.31, y: 0.5))
+                    }
+                }
+                .onChange(of: viewModel.selectedSpaceIndex) { selectedIndex in
+                    if viewModel.isBottomBarFocused {
+                        let spaces = spaceManager.currentDisplaySpaces
+                        if selectedIndex >= 0 && selectedIndex < spaces.count {
+                            withAnimation(.easeInOut(duration: 0.15)) {
+                                scrollProxy.scrollTo(spaces[selectedIndex].id, anchor: UnitPoint(x: 0.31, y: 0.5))
+                            }
+                        }
+                    }
+                }
+                .onChange(of: viewModel.isBottomBarFocused) { isFocused in
+                    if isFocused {
+                        let spaces = spaceManager.currentDisplaySpaces
+                        if viewModel.selectedSpaceIndex >= 0 && viewModel.selectedSpaceIndex < spaces.count {
+                            withAnimation(.easeInOut(duration: 0.15)) {
+                                scrollProxy.scrollTo(spaces[viewModel.selectedSpaceIndex].id, anchor: UnitPoint(x: 0.31, y: 0.5))
+                            }
+                        }
+                    } else {
+                        withAnimation(.easeInOut(duration: 0.15)) {
+                            scrollProxy.scrollTo(spaceManager.currentSpaceUUID, anchor: UnitPoint(x: 0.31, y: 0.5))
+                        }
+                    }
                 }
             }
+
+            HStack(spacing: 12) {
+                Rectangle()
+                    .fill(colors.border)
+                    .frame(width: 1, height: 16)
+
+                HStack(spacing: 8) {
+                    if !viewModel.isBottomBarFocused {
+                        Button(action: focusSpacePicker) {
+                            HStack(spacing: 4) {
+                                Text(LocalizedStringKey("Switch Space"))
+                                Text("⇥")
+                                    .font(.system(.subheadline))
+                                    .fontWeight(.bold)
+                            }
+                            .modifier(BottomBarCapsule(isSelected: false, isActive: false, colorScheme: colorScheme))
+                        }
+                        .buttonStyle(.plain)
+                    } else {
+                        bottomBarAction(title: "Switch Space", shortcut: "↵") {
+                            viewModel.executeBottomBarSpaceAction(isOption: false, isCommand: false)
+                        }
+                        bottomBarAction(title: "Move Window", shortcut: "⌥↵") {
+                            viewModel.executeBottomBarSpaceAction(isOption: true, isCommand: false)
+                        }
+                    }
+
+                    if !viewModel.isBottomBarFocused {
+                        bottomBarAction(title: "Action", shortcut: "↵") {
+                            viewModel.executeRowAction()
+                        }
+                    }
+                }
+            }
+            .padding(.leading, 12)
         }
         .padding(.horizontal, 18)
         .frame(height: 46)
