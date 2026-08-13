@@ -328,8 +328,6 @@ struct LauncherView: View {
                 .id(viewModel.activeCommand?.id ?? "root-bottom-bar")
                 .transition(commandPageTransition)
             }
-            .blur(radius: viewModel.commandKTargetWindow != nil ? 10 : 0)
-            .animation(.easeInOut(duration: 0.12), value: viewModel.commandKTargetWindow != nil)
             .animation(.easeInOut(duration: 0.18), value: viewModel.activeCommand?.id)
             
             if let targetWindow = viewModel.commandKTargetWindow {
