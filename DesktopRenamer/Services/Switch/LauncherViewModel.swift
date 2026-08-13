@@ -249,10 +249,16 @@ struct ListWindowsSection: Identifiable {
         didSet {
             if commandKTargetWindow != nil {
                 commandKSelectedIndex = 0
+                commandKQuery = ""
             }
         }
     }
     @Published var commandKSelectedIndex: Int = 0
+    @Published var commandKQuery: String = "" {
+        didSet {
+            commandKSelectedIndex = 0
+        }
+    }
     @Published var isStagingForRestoreTo: Bool = false
     @Published var isExecutingRestoreToImmediately: Bool = false
     
@@ -499,6 +505,12 @@ struct ListWindowsSection: Identifiable {
         guard let window = commandKTargetWindow else { return [] }
         return getAvailableCommandKActions(for: window)
     }
+
+    var filteredCommandKActions: [BatchStagedActionType] {
+        guard !commandKQuery.isEmpty else { return commandKActions }
+        let query = commandKQuery.lowercased()
+        return commandKActions.filter { $0.description.lowercased().contains(query) }
+    }
     
     func showCommandKPanel() {
         if activeCommand?.type == .listWindows {
@@ -524,14 +536,14 @@ struct ListWindowsSection: Identifiable {
     }
     
     func selectPreviousCommandKAction() {
-        let count = commandKActions.count
+        let count = filteredCommandKActions.count
         if count > 0 {
             commandKSelectedIndex = (commandKSelectedIndex - 1 + count) % count
         }
     }
     
     func selectNextCommandKAction() {
-        let count = commandKActions.count
+        let count = filteredCommandKActions.count
         if count > 0 {
             commandKSelectedIndex = (commandKSelectedIndex + 1) % count
         }
@@ -539,7 +551,7 @@ struct ListWindowsSection: Identifiable {
     
     func executeCommandKAction() {
         guard let window = commandKTargetWindow else { return }
-        let available = commandKActions
+        let available = filteredCommandKActions
         guard commandKSelectedIndex >= 0 && commandKSelectedIndex < available.count else { return }
         let action = available[commandKSelectedIndex]
         

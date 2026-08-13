@@ -211,7 +211,7 @@ struct LauncherView: View {
                                         viewModel.executeRootAction()
                                     }
                                 } else if viewModel.commandKTargetWindow != nil {
-                                    let actions = viewModel.commandKActions
+                                    let actions = viewModel.filteredCommandKActions
                                     let index = num - 1
                                     if index >= 0 && index < actions.count {
                                         viewModel.commandKSelectedIndex = index
@@ -2196,86 +2196,96 @@ struct CommandKOverlayView: View {
     }
     
     var body: some View {
-        ZStack {
-            // Subtle separation overlay (dimming in dark theme, neutral in light theme)
-            (colorScheme == .dark ? Color.black.opacity(0.25) : Color.black.opacity(0.03))
-                .edgesIgnoringSafeArea(.all)
+        ZStack(alignment: .bottomTrailing) {
+            Color.clear
+                .contentShape(Rectangle())
                 .onTapGesture {
                     viewModel.commandKTargetWindow = nil
                 }
-            
-            // Centered panel card
+
             VStack(spacing: 0) {
-                // Header details
-                HStack(spacing: 12) {
-                    let appIcon = NSWorkspace.shared.icon(forFile: window.appPath)
-                    Image(nsImage: appIcon)
-                        .resizable()
-                        .aspectRatio(contentMode: .fit)
-                        .frame(width: 32, height: 32)
-                        .padding(4)
-                        .background(colors.badgeBg)
-                        .cornerRadius(8)
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 8)
-                                .stroke(colors.badgeBorder, lineWidth: 1)
-                        )
-                    
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text(window.title.isEmpty ? String(localized: "(No Title)") : window.title)
-                            .font(.body)
-                            .fontWeight(.bold)
-                            .foregroundColor(colors.textPrimary)
-                            .lineLimit(1)
-                        
-                        Text(window.ownerName)
-                            .font(.subheadline)
-                            .foregroundColor(colors.textSecondary)
-                            .lineLimit(1)
-                    }
-                    
-                    Spacer()
-                    
-                    // State Badges
-                    HStack(spacing: 4) {
-                        if window.isHidden {
-                            WindowStateBadge(label: String(localized: "Hidden"), color: .purple)
-                        } else if window.isMinimized {
-                            WindowStateBadge(label: String(localized: "Minimized"), color: .orange)
-                        }
-                        if window.space.isFullscreen {
-                            WindowStateBadge(label: String(localized: "Full Screen"), color: .blue)
+                Text(window.ownerName)
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundColor(colors.textSecondary)
+                    .lineLimit(1)
+                    .padding(.horizontal, 16)
+                    .padding(.top, 14)
+                    .padding(.bottom, 8)
+
+                ScrollView {
+                    let actions = viewModel.filteredCommandKActions.map(CommandKActionItem.init)
+                    VStack(spacing: 2) {
+                        if actions.isEmpty {
+                            Text(verbatim: String(localized: "No actions found"))
+                                .font(.subheadline)
+                                .foregroundColor(colors.textTertiary)
+                                .frame(maxWidth: .infinity)
+                                .padding(.vertical, 16)
+                        } else {
+                            ForEach(Array(actions.enumerated()), id: \.element.id) { idx, item in
+                                CommandKActionRowView(
+                                    action: item.action,
+                                    isSelected: viewModel.commandKSelectedIndex == idx,
+                                    showCommandNumbers: viewModel.showCommandNumbers,
+                                    idx: idx,
+                                    colors: colors,
+                                    viewModel: viewModel
+                                )
+                            }
                         }
                     }
+                    .padding(.horizontal, 8)
+                    .padding(.bottom, 8)
                 }
-                .padding(.horizontal, 16)
-                .padding(.vertical, 16)
-                
+                .frame(maxHeight: 230)
+
                 Divider()
-                
-                // Actions List
-                let actions = viewModel.commandKActions
-                VStack(spacing: 2) {
-                    ForEach(0..<actions.count, id: \.self) { idx in
-                        let action = actions[idx]
-                        let isSelected = viewModel.commandKSelectedIndex == idx
-                        
-                        CommandKActionRowView(
-                            action: action,
-                            isSelected: isSelected,
-                            showCommandNumbers: viewModel.showCommandNumbers,
-                            idx: idx,
-                            colors: colors,
-                            viewModel: viewModel
-                        )
-                    }
-                }
-                .padding(8)
+
+                SearchTextField(
+                    text: $viewModel.commandKQuery,
+                    isDark: colors.isDark,
+                    onUpArrow: {
+                        viewModel.selectPreviousCommandKAction()
+                    },
+                    onDownArrow: {
+                        viewModel.selectNextCommandKAction()
+                    },
+                    onEnter: {
+                        viewModel.executeCommandKAction()
+                    },
+                    onCommandNumber: { number in
+                        let index = number - 1
+                        guard index >= 0 && index < viewModel.filteredCommandKActions.count else { return }
+                        viewModel.commandKSelectedIndex = index
+                        viewModel.executeCommandKAction()
+                    },
+                    onEscape: {
+                        viewModel.commandKTargetWindow = nil
+                    },
+                    onKeyEquivalent: { _ in false },
+                    placeholder: String(localized: "Search for action..."),
+                    focusNotificationName: NSNotification.Name("FocusCommandKTextField")
+                )
+                .frame(height: 44)
             }
             .frame(width: 380)
-            .launcherBackground(cornerRadius: 12, borderColor: colors.border)
-            .shadow(color: Color.black.opacity(colorScheme == .dark ? 0.4 : 0.2), radius: 15, x: 0, y: 8)
+            .spacePickerSurface(colors: colors)
+            .padding(.trailing, 16)
+            .padding(.bottom, 8)
         }
+        .onAppear {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
+                NotificationCenter.default.post(name: NSNotification.Name("FocusCommandKTextField"), object: nil)
+            }
+        }
+    }
+}
+
+private struct CommandKActionItem: Identifiable {
+    let action: BatchStagedActionType
+
+    var id: String {
+        action.description
     }
 }
 
@@ -2290,44 +2300,45 @@ struct CommandKActionRowView: View {
     @State private var isHovered = false
     
     var body: some View {
-        HStack(spacing: 10) {
-            Image(systemName: getIconName(for: action))
-                .font(.body.weight(.medium))
-                .frame(width: 16)
-                .foregroundColor(isSelected ? colors.textPrimary : colors.textSecondary)
-            
-            Text(getActionLabel(for: action))
-                .font(.body)
-                .fontWeight(isSelected ? .semibold : .regular)
-                .foregroundColor(colors.textPrimary)
-            
-            Spacer()
-            
-            KeycapView(text: "⌘\(idx + 1)", isSelected: isSelected)
-                .opacity(showCommandNumbers ? 1 : 0)
-        }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 8)
-        .background(
-            ZStack {
-                if isSelected {
-                    RoundedRectangle(cornerRadius: 6, style: .continuous)
-                        .fill(Color.primary.opacity(0.08))
-                    RoundedRectangle(cornerRadius: 6, style: .continuous)
-                        .stroke(Color.primary.opacity(0.15), lineWidth: 1)
-                } else if isHovered {
-                    RoundedRectangle(cornerRadius: 6, style: .continuous)
-                        .fill(Color.primary.opacity(0.05))
-                }
-            }
-        )
-        .contentShape(Rectangle())
-        .onHover { hovering in
-            isHovered = hovering
-        }
-        .onTapGesture {
+        Button {
             viewModel.commandKSelectedIndex = idx
             viewModel.executeCommandKAction()
+        } label: {
+            HStack(spacing: 10) {
+                Image(systemName: getIconName(for: action))
+                    .font(.body.weight(.medium))
+                    .frame(width: 16)
+                    .foregroundColor(isSelected ? colors.textPrimary : colors.textSecondary)
+
+                Text(getActionLabel(for: action))
+                    .font(.body)
+                    .fontWeight(isSelected ? .semibold : .regular)
+                    .foregroundColor(colors.textPrimary)
+
+                Spacer()
+
+                KeycapView(text: "⌘\(idx + 1)", isSelected: isSelected)
+                    .opacity(showCommandNumbers ? 1 : 0)
+            }
+            .padding(.horizontal, 12)
+            .padding(.vertical, 8)
+            .background(
+                ZStack {
+                    if isSelected {
+                        RoundedRectangle(cornerRadius: 6, style: .continuous)
+                            .fill(Color.primary.opacity(0.08))
+                        RoundedRectangle(cornerRadius: 6, style: .continuous)
+                            .stroke(Color.primary.opacity(0.15), lineWidth: 1)
+                    } else if isHovered {
+                        RoundedRectangle(cornerRadius: 6, style: .continuous)
+                            .fill(Color.primary.opacity(0.05))
+                    }
+                }
+            )
+        }
+        .buttonStyle(.plain)
+        .onHover { hovering in
+            isHovered = hovering
         }
     }
     
