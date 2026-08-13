@@ -359,36 +359,66 @@ struct RootCommandSection: Identifiable {
         return true
     }
 
-    private func sortCommands(_ commands: [LauncherCommand]) -> [LauncherCommand] {
+    private func commandMatchScore(_ command: LauncherCommand, query: String) -> Int {
+        let normalizedQuery = query.lowercased().replacingOccurrences(of: " ", with: "")
+        guard !normalizedQuery.isEmpty else { return 0 }
+
+        let title = command.title.lowercased()
+        let subtitle = command.subtitle.lowercased()
+        let pinyinTitle = command.pinyinTitle.lowercased()
+        let pinyinSubtitle = command.pinyinSubtitle.lowercased()
+
+        func score(_ target: String, exact: Int, prefix: Int, contains: Int, fuzzy: Int) -> Int {
+            let normalizedTarget = target.replacingOccurrences(of: " ", with: "")
+            if normalizedTarget == normalizedQuery {
+                return exact
+            }
+            if normalizedTarget.hasPrefix(normalizedQuery) {
+                return prefix
+            }
+            if normalizedTarget.contains(normalizedQuery) {
+                return contains
+            }
+            return isFuzzyMatch(normalizedQuery, in: normalizedTarget) ? fuzzy : 0
+        }
+
+        return max(
+            score(title, exact: 1_000, prefix: 800, contains: 650, fuzzy: 400),
+            score(pinyinTitle, exact: 900, prefix: 700, contains: 550, fuzzy: 350),
+            score(subtitle, exact: 500, prefix: 400, contains: 300, fuzzy: 200),
+            score(pinyinSubtitle, exact: 450, prefix: 350, contains: 250, fuzzy: 150)
+        )
+    }
+
+    private func sortCommands(_ commands: [LauncherCommand], query: String = "") -> [LauncherCommand] {
         let order = manualCommandOrder
         let favorites = favoriteCommandIDs
-        if automaticallyRankCommands {
-            return commands.sorted {
-                let favoriteA = favorites.contains($0.id)
-                let favoriteB = favorites.contains($1.id)
-                if favoriteA != favoriteB {
-                    return favoriteA && !favoriteB
+        return commands.sorted {
+            if !query.isEmpty {
+                let scoreA = commandMatchScore($0, query: query)
+                let scoreB = commandMatchScore($1, query: query)
+                if scoreA != scoreB {
+                    return scoreA > scoreB
                 }
+            }
+
+            let favoriteA = favorites.contains($0.id)
+            let favoriteB = favorites.contains($1.id)
+            if favoriteA != favoriteB {
+                return favoriteA && !favoriteB
+            }
+
+            if automaticallyRankCommands {
                 let freqA = getCommandFrequency($0.id)
                 let freqB = getCommandFrequency($1.id)
                 if freqA != freqB {
                     return freqA > freqB
                 }
-                let idxA = order.firstIndex(of: $0.id) ?? Int.max
-                let idxB = order.firstIndex(of: $1.id) ?? Int.max
-                return idxA < idxB
             }
-        } else {
-            return commands.sorted {
-                let favoriteA = favorites.contains($0.id)
-                let favoriteB = favorites.contains($1.id)
-                if favoriteA != favoriteB {
-                    return favoriteA && !favoriteB
-                }
-                let idxA = order.firstIndex(of: $0.id) ?? Int.max
-                let idxB = order.firstIndex(of: $1.id) ?? Int.max
-                return idxA < idxB
-            }
+
+            let idxA = order.firstIndex(of: $0.id) ?? Int.max
+            let idxB = order.firstIndex(of: $1.id) ?? Int.max
+            return idxA < idxB
         }
     }
 
@@ -408,7 +438,7 @@ struct RootCommandSection: Identifiable {
             matchesQuery(query, target: $0.title, pinyin: $0.pinyinTitle) ||
             matchesQuery(query, target: $0.subtitle, pinyin: $0.pinyinSubtitle)
         }
-        return sortCommands(filtered)
+        return sortCommands(filtered, query: query)
     }
 
     var rootCommandSections: [RootCommandSection] {

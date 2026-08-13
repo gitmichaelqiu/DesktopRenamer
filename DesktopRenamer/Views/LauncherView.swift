@@ -221,7 +221,7 @@ struct LauncherView: View {
                                 } else if viewModel.activeCommand?.type == .switchToDesktop || viewModel.activeCommand?.type == .moveWindow {
                                     viewModel.executeRowAction()
                                 } else if viewModel.activeCommand == nil {
-                                    viewModel.showRootActionsPanel()
+                                    viewModel.executeRowAction()
                                 }
                             },
                             onOptionEnter: {
@@ -358,8 +358,6 @@ struct LauncherView: View {
                     }
                 }
                 .frame(maxWidth: .infinity)
-                .id(viewModel.activeCommand?.id ?? "root-bottom-bar")
-                .transition(commandPageTransition)
             }
             .animation(.easeInOut(duration: 0.18), value: viewModel.activeCommand?.id)
             
@@ -1578,7 +1576,7 @@ struct RootActionsOverlay: View {
                         }
                     },
                     onKeyEquivalent: { _ in false },
-                    placeholder: String(localized: "Search for action..."),
+                    placeholder: String(localized: "Search for actions..."),
                     focusNotificationName: NSNotification.Name("FocusRootActionTextField")
                 )
                 .frame(height: 44)
@@ -2410,7 +2408,7 @@ struct CommandKOverlayView: View {
                         }
                     },
                     onKeyEquivalent: { _ in false },
-                    placeholder: String(localized: "Search for action..."),
+                    placeholder: String(localized: "Search for actions..."),
                     focusNotificationName: NSNotification.Name("FocusCommandKTextField")
                 )
                 .frame(height: 44)

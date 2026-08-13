@@ -570,6 +570,16 @@
         }
       }
     },
+    "Search for actions..." : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "搜索操作..."
+          }
+        }
+      }
+    },
     "No actions found" : {
       "localizations" : {
         "zh-Hans" : {
