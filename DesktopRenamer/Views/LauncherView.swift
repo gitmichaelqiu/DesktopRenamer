@@ -330,7 +330,7 @@ struct LauncherView: View {
 
     private var searchPlaceholder: String {
         guard let commandType = viewModel.activeCommand?.type else {
-            return NSLocalizedString("Search commands...", comment: "")
+            return NSLocalizedString("Search for apps and commands...", comment: "")
         }
 
         switch commandType {
