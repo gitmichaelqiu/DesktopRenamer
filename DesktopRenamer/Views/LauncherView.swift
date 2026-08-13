@@ -3,6 +3,12 @@ import AppKit
 
 enum LauncherLayout {
     static let windowSize = CGSize(width: 750, height: 475)
+    static let actionBarHeight: CGFloat = 46
+    static let popupBottomSpacing: CGFloat = 10
+
+    static var popupBottomInset: CGFloat {
+        actionBarHeight + popupBottomSpacing
+    }
 }
 
 struct ThemeColors {
@@ -1670,7 +1676,7 @@ struct RootActionsOverlay: View {
             .spacePickerSurface(colors: colors)
             .transition(.scale(scale: 0.92, anchor: .bottomTrailing).combined(with: .opacity))
             .padding(.trailing, 16)
-            .padding(.bottom, 8)
+            .padding(.bottom, LauncherLayout.popupBottomInset)
         }
         .onAppear {
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
@@ -1994,7 +2000,7 @@ struct SpacePickerOverlay: View {
             .spacePickerSurface(colors: colors)
             .transition(.scale(scale: 0.92, anchor: .bottomTrailing).combined(with: .opacity))
             .padding(.trailing, 16)
-            .padding(.bottom, 8)
+            .padding(.bottom, LauncherLayout.popupBottomInset)
         }
         .onAppear {
             guard viewModel.stagingWindow != nil else { return }
@@ -2517,7 +2523,7 @@ struct CommandKOverlayView: View {
             .spacePickerSurface(colors: colors)
             .transition(.scale(scale: 0.92, anchor: .bottomTrailing).combined(with: .opacity))
             .padding(.trailing, 16)
-            .padding(.bottom, 8)
+            .padding(.bottom, LauncherLayout.popupBottomInset)
         }
         .onAppear {
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
