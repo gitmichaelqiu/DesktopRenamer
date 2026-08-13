@@ -443,8 +443,8 @@ struct ListAreaView: View {
                                 .onChange(of: viewModel.selectedRowIndex) { index in
                                     if viewModel.isKeyboardSelection {
                                         withAnimation(.easeInOut(duration: 0.12)) {
-                                    guard spaces.indices.contains(index) else { return }
-                                    proxy.scrollTo(spaces[index].id, anchor: .center)
+                                            guard spaces.indices.contains(index) else { return }
+                                            proxy.scrollTo(spaces[index].id, anchor: .center)
                                         }
                                     }
                                 }
