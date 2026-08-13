@@ -1496,11 +1496,17 @@ struct SpacePickerOverlay: View {
                                     )
                                 }
                                 .buttonStyle(.plain)
+                                .onHover { hovering in
+                                    if hovering {
+                                        viewModel.selectedSpaceIndex = index
+                                    }
+                                }
                             }
                         }
                     }
                     .padding(.horizontal, 8)
                     .padding(.bottom, 10)
+                    .animation(.easeInOut(duration: 0.14), value: viewModel.filteredSpaces.map { $0.id })
                 }
                 .frame(maxHeight: 220)
 
