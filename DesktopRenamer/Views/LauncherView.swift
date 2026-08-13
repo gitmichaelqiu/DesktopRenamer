@@ -286,7 +286,9 @@ struct LauncherView: View {
                         .transition(commandPageTransition)
                 }
                 
-                Divider()
+                if viewModel.activeCommand != nil {
+                    Divider()
+                }
                 
                 // Bottom bar
                 ZStack(alignment: .bottom) {
@@ -1236,7 +1238,6 @@ struct RootLauncherBottomBar: View {
         }
         .padding(.horizontal, 16)
         .frame(height: 58)
-        .background(colors.bottomBarBg)
     }
 }
 
