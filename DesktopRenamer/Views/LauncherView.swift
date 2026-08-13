@@ -391,16 +391,18 @@ struct ListAreaView: View {
                                                 viewModel.selectPointerRow(i)
                                             }
                                         }
-                                        .id(i)
+                                        .id(cmd.id)
                                 }
                             }
                             .padding(.horizontal, 14)
                             .padding(.vertical, 6)
+                            .animation(.easeInOut(duration: 0.14), value: commands.map(\.id))
                         }
                         .onChange(of: viewModel.selectedRowIndex) { index in
                             if viewModel.isKeyboardSelection {
                                 withAnimation(.easeInOut(duration: 0.12)) {
-                                    proxy.scrollTo(index, anchor: .center)
+                                    guard commands.indices.contains(index) else { return }
+                                    proxy.scrollTo(commands[index].id, anchor: .center)
                                 }
                             }
                         }
@@ -431,21 +433,24 @@ struct ListAreaView: View {
                                                         viewModel.selectPointerRow(i)
                                                     }
                                                 }
-                                                .id(i)
+                                                .id(space.id)
                                         }
                                     }
                                     .padding(.horizontal, 10)
                                     .padding(.vertical, 8)
+                                    .animation(.easeInOut(duration: 0.14), value: spaces.map(\.id))
                                 }
                                 .onChange(of: viewModel.selectedRowIndex) { index in
                                     if viewModel.isKeyboardSelection {
                                         withAnimation(.easeInOut(duration: 0.12)) {
-                                            proxy.scrollTo(index, anchor: .center)
+                                    guard spaces.indices.contains(index) else { return }
+                                    proxy.scrollTo(spaces[index].id, anchor: .center)
                                         }
                                     }
                                 }
                                 .onAppear {
-                                    proxy.scrollTo(viewModel.selectedRowIndex, anchor: .center)
+                                    guard spaces.indices.contains(viewModel.selectedRowIndex) else { return }
+                                    proxy.scrollTo(spaces[viewModel.selectedRowIndex].id, anchor: .center)
                                 }
                             }
                         }
@@ -480,22 +485,27 @@ struct ListAreaView: View {
                                                         viewModel.selectPointerRow(item.index)
                                                     }
                                                 }
-                                                .id(item.index)
+                                                .id(item.id)
                                             }
                                         }
                                     }
                                     .padding(.horizontal, 10)
                                     .padding(.vertical, 8)
+                                    .animation(.easeInOut(duration: 0.14), value: sections.flatMap { $0.items }.map { $0.id })
                                 }
                                 .onChange(of: viewModel.selectedRowIndex) { index in
                                     if viewModel.isKeyboardSelection {
                                         withAnimation(.easeInOut(duration: 0.12)) {
-                                            proxy.scrollTo(index, anchor: .center)
+                                            if let item = sections.flatMap({ $0.items }).first(where: { $0.index == index }) {
+                                                proxy.scrollTo(item.id, anchor: .center)
+                                            }
                                         }
                                     }
                                 }
                                 .onAppear {
-                                    proxy.scrollTo(viewModel.selectedRowIndex, anchor: .center)
+                                    if let item = sections.flatMap({ $0.items }).first(where: { $0.index == viewModel.selectedRowIndex }) {
+                                        proxy.scrollTo(item.id, anchor: .center)
+                                    }
                                 }
                             }
                         }
@@ -529,7 +539,7 @@ struct ListAreaView: View {
                                                                 viewModel.selectPointerRow(item.index)
                                                             }
                                                         }
-                                                        .id(item.index)
+                                                        .id(item.id)
                                                         
                                                 case .unstaged(let window, _):
                                                     WindowBatchRowView(window: window, isSelected: isSelected, isStaged: false, stagedActionText: "", shortcutText: viewModel.showCommandNumbers && viewModel.commandKTargetWindow == nil && item.index < 9 ? "⌘\(item.index + 1)" : nil)
@@ -544,24 +554,29 @@ struct ListAreaView: View {
                                                                 viewModel.selectPointerRow(item.index)
                                                             }
                                                         }
-                                                        .id(item.index)
+                                                        .id(item.id)
                                                 }
                                             }
                                         }
                                     }
                                     .padding(.horizontal, 10)
                                     .padding(.vertical, 8)
+                                    .animation(.easeInOut(duration: 0.14), value: sections.flatMap { $0.items }.map { $0.id })
                                 }
                                 .onChange(of: viewModel.selectedRowIndex) { index in
                                     if viewModel.isKeyboardSelection {
                                         withAnimation(.easeInOut(duration: 0.12)) {
-                                            proxy.scrollTo(index, anchor: .center)
+                                            if let item = sections.flatMap({ $0.items }).first(where: { $0.index == index }) {
+                                                proxy.scrollTo(item.id, anchor: .center)
+                                            }
                                         }
                                     }
                                 }
                                 .onAppear {
                                     DispatchQueue.main.async {
-                                        proxy.scrollTo(viewModel.selectedRowIndex, anchor: .center)
+                                        if let item = sections.flatMap({ $0.items }).first(where: { $0.index == viewModel.selectedRowIndex }) {
+                                            proxy.scrollTo(item.id, anchor: .center)
+                                        }
                                     }
                                 }
                             }
