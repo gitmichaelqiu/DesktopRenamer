@@ -1,6 +1,10 @@
 import SwiftUI
 import AppKit
 
+enum LauncherLayout {
+    static let windowSize = CGSize(width: 750, height: 475)
+}
+
 struct ThemeColors {
     let isDark: Bool
     
@@ -62,7 +66,7 @@ private struct LauncherActionBarModifier: ViewModifier {
     func body(content: Content) -> some View {
         content
             .padding(.horizontal, 18)
-            .padding(.vertical, 8)
+            .padding(.vertical, 5)
             .frame(maxWidth: .infinity)
             .frame(height: height)
             .background(colors.bottomBarBg)
@@ -70,7 +74,7 @@ private struct LauncherActionBarModifier: ViewModifier {
 }
 
 private extension View {
-    func launcherActionBar(colors: ThemeColors, height: CGFloat = 50) -> some View {
+    func launcherActionBar(colors: ThemeColors, height: CGFloat = 46) -> some View {
         modifier(LauncherActionBarModifier(colors: colors, height: height))
     }
 }
@@ -383,7 +387,7 @@ struct LauncherView: View {
         .onChange(of: spaceManager.currentSpaceUUID) { _ in
             viewModel.selectCurrentTargetSpace()
         }
-        .frame(width: 760, height: 500)
+        .frame(width: LauncherLayout.windowSize.width, height: LauncherLayout.windowSize.height)
         .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
         .opaqueLauncherBackground(cornerRadius: 24, isDark: colors.isDark, borderColor: colors.border)
         .shadow(color: Color.black.opacity(colorScheme == .dark ? 0.45 : 0.20), radius: 24, x: 0, y: 12)

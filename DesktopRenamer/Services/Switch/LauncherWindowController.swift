@@ -27,7 +27,7 @@ class LauncherWindowController: NSWindowController, NSWindowDelegate {
     
     init() {
         let panel = LauncherNSPanel(
-            contentRect: NSRect(x: 0, y: 0, width: 760, height: 500),
+            contentRect: NSRect(origin: .zero, size: LauncherLayout.windowSize),
             styleMask: [.borderless],
             backing: .buffered,
             defer: false
@@ -192,7 +192,7 @@ class LauncherWindowController: NSWindowController, NSWindowDelegate {
 
         let launcherView = LauncherView(viewModel: viewModel, spaceManager: spaceManager)
         let hostingView = NSHostingView(rootView: launcherView)
-        hostingView.frame = NSRect(x: 0, y: 0, width: 760, height: 500)
+        hostingView.frame = NSRect(origin: .zero, size: LauncherLayout.windowSize)
         panel.contentView = hostingView
         hasInstalledContent = true
         return true
