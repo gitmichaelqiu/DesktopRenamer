@@ -1454,6 +1454,7 @@ struct RootLauncherBottomBar: View {
 struct RootActionsOverlay: View {
     @ObservedObject var viewModel: LauncherViewModel
     @Environment(\.colorScheme) var colorScheme
+    @Namespace private var actionSelectionNamespace
 
     var colors: ThemeColors {
         ThemeColors(isDark: colorScheme == .dark)
@@ -1502,7 +1503,7 @@ struct RootActionsOverlay: View {
                             .padding(.vertical, 16)
                     } else {
                         ForEach(actionRows, id: \.index) { row in
-                            rootActionRow(row: row)
+                            rootActionRow(row: row, selectionNamespace: actionSelectionNamespace)
                         }
                     }
                 }
@@ -1544,7 +1545,7 @@ struct RootActionsOverlay: View {
         }
     }
 
-    private func rootActionRow(row: (index: Int, title: String, icon: String, shortcut: String)) -> some View {
+    private func rootActionRow(row: (index: Int, title: String, icon: String, shortcut: String), selectionNamespace: Namespace.ID) -> some View {
         Button {
             viewModel.selectedRootActionIndex = row.index
             viewModel.executeRootAction()
@@ -1563,10 +1564,16 @@ struct RootActionsOverlay: View {
             .foregroundColor(colors.textPrimary)
             .padding(.horizontal, 12)
             .frame(height: 38)
-            .background(
-                RoundedRectangle(cornerRadius: 8, style: .continuous)
-                    .fill(viewModel.selectedRootActionIndex == row.index ? Color.primary.opacity(0.16) : Color.clear)
-            )
+            .background {
+                if viewModel.selectedRootActionIndex == row.index {
+                    RoundedRectangle(cornerRadius: 8, style: .continuous)
+                        .fill(Color.primary.opacity(0.16))
+                        .modifier(SelectionSurfaceModifier(namespace: selectionNamespace))
+                } else {
+                    RoundedRectangle(cornerRadius: 8, style: .continuous)
+                        .fill(Color.clear)
+                }
+            }
         }
         .buttonStyle(.plain)
         .onHover { hovering in
@@ -1720,6 +1727,7 @@ struct SpacePickerOverlay: View {
     @ObservedObject var viewModel: LauncherViewModel
     @ObservedObject var spaceManager: SpaceManager
     @Environment(\.colorScheme) var colorScheme
+    @Namespace private var selectionNamespace
 
     var colors: ThemeColors {
         ThemeColors(isDark: colorScheme == .dark)
@@ -1782,10 +1790,16 @@ struct SpacePickerOverlay: View {
                                     .foregroundColor(colors.textPrimary)
                                     .padding(.horizontal, 12)
                                     .frame(height: 38)
-                                    .background(
-                                        RoundedRectangle(cornerRadius: 9, style: .continuous)
-                                            .fill(isSelected ? Color.primary.opacity(0.16) : Color.clear)
-                                    )
+                                    .background {
+                                        if isSelected {
+                                            RoundedRectangle(cornerRadius: 9, style: .continuous)
+                                                .fill(Color.primary.opacity(0.16))
+                                                .modifier(SelectionSurfaceModifier(namespace: selectionNamespace))
+                                        } else {
+                                            RoundedRectangle(cornerRadius: 9, style: .continuous)
+                                                .fill(Color.clear)
+                                        }
+                                    }
                                 }
                                 .buttonStyle(.plain)
                                 .onHover { hovering in
@@ -2252,6 +2266,7 @@ struct CommandKOverlayView: View {
     @ObservedObject var viewModel: LauncherViewModel
     let window: WindowEntry
     @Environment(\.colorScheme) var colorScheme
+    @Namespace private var actionSelectionNamespace
     
     var colors: ThemeColors {
         ThemeColors(isDark: colorScheme == .dark)
@@ -2292,7 +2307,8 @@ struct CommandKOverlayView: View {
                                     showCommandNumbers: viewModel.showCommandNumbers,
                                     idx: idx,
                                     colors: colors,
-                                    viewModel: viewModel
+                                    viewModel: viewModel,
+                                    selectionNamespace: actionSelectionNamespace
                                 )
                             }
                         }
@@ -2359,6 +2375,7 @@ struct CommandKActionRowView: View {
     let idx: Int
     let colors: ThemeColors
     @ObservedObject var viewModel: LauncherViewModel
+    let selectionNamespace: Namespace.ID?
     
     @State private var isHovered = false
     
@@ -2390,6 +2407,7 @@ struct CommandKActionRowView: View {
                     if isSelected {
                         RoundedRectangle(cornerRadius: 6, style: .continuous)
                             .fill(Color.primary.opacity(0.08))
+                            .modifier(SelectionSurfaceModifier(namespace: selectionNamespace))
                         RoundedRectangle(cornerRadius: 6, style: .continuous)
                             .stroke(Color.primary.opacity(0.15), lineWidth: 1)
                     } else if isHovered {
