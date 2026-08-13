@@ -957,7 +957,7 @@ struct WindowRowView: View {
 
             Spacer()
 
-            HStack(spacing: 4) {
+            HStack(spacing: 8) {
                 if window.isHidden {
                     WindowStateBadge(label: String(localized: "Hidden"), color: .purple)
                 } else if window.isMinimized {
@@ -1341,7 +1341,7 @@ struct RootLauncherBottomBar: View {
             }
             .font(.system(size: 14, weight: .semibold))
             .foregroundColor(colors.textPrimary)
-            .padding(.horizontal, 4)
+            .padding(.horizontal, 12)
             .frame(height: 36)
             .background(Color.primary.opacity(0.12), in: Capsule())
             .overlay(Capsule().stroke(Color.primary.opacity(0.28), lineWidth: 1))
