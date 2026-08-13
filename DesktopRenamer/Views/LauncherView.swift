@@ -1370,9 +1370,6 @@ struct SpacePickerOverlay: View {
                                                 .font(.caption.weight(.semibold))
                                                 .foregroundColor(colors.textTertiary)
                                         }
-                                        if index < 9 {
-                                            KeycapView(text: LocalizedStringKey("⌘\(index + 1)"), isSelected: isSelected)
-                                        }
                                     }
                                     .foregroundColor(colors.textPrimary)
                                     .padding(.horizontal, 12)
