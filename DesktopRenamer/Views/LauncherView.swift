@@ -62,10 +62,11 @@ struct ThemeColors {
 private struct LauncherActionBarModifier: ViewModifier {
     let colors: ThemeColors
     let height: CGFloat
+    let horizontalPadding: CGFloat
 
     func body(content: Content) -> some View {
         content
-            .padding(.horizontal, 18)
+            .padding(.horizontal, horizontalPadding)
             .padding(.vertical, 5)
             .frame(maxWidth: .infinity)
             .frame(height: height)
@@ -74,8 +75,8 @@ private struct LauncherActionBarModifier: ViewModifier {
 }
 
 private extension View {
-    func launcherActionBar(colors: ThemeColors, height: CGFloat = 46) -> some View {
-        modifier(LauncherActionBarModifier(colors: colors, height: height))
+    func launcherActionBar(colors: ThemeColors, height: CGFloat = 46, horizontalPadding: CGFloat = 18) -> some View {
+        modifier(LauncherActionBarModifier(colors: colors, height: height, horizontalPadding: horizontalPadding))
     }
 }
 
@@ -1492,7 +1493,7 @@ struct RootLauncherBottomBar: View {
             .background(Color.primary.opacity(0.12), in: Capsule())
             .overlay(Capsule().stroke(Color.primary.opacity(0.28), lineWidth: 1))
         }
-        .launcherActionBar(colors: colors)
+        .launcherActionBar(colors: colors, horizontalPadding: 8)
     }
 }
 
