@@ -467,7 +467,7 @@ struct ListAreaView: View {
                 } else {
                     ScrollViewReader { proxy in
                         ScrollView {
-                            VStack(alignment: .leading, spacing: 2) {
+                            VStack(alignment: .leading, spacing: 4) {
                                 ForEach(sections) { section in
                                     if let title = section.title {
                                         Text(verbatim: title)
@@ -499,7 +499,7 @@ struct ListAreaView: View {
                                 }
                             }
                             .padding(.horizontal, 8)
-                            .padding(.vertical, 6)
+                            .padding(.vertical, 8)
                             .animation(.easeInOut(duration: 0.14), value: commands.map(\.id))
                         }
                         .onChange(of: viewModel.selectedRowIndex) { index in
@@ -1508,6 +1508,13 @@ struct RootActionsOverlay: View {
         return viewModel.filteredCommands[viewModel.selectedRowIndex].title
     }
 
+    private var selectedCommand: LauncherCommand? {
+        guard viewModel.filteredCommands.indices.contains(viewModel.selectedRowIndex) else {
+            return nil
+        }
+        return viewModel.filteredCommands[viewModel.selectedRowIndex]
+    }
+
     private var actionRows: [(index: Int, title: String, icon: String, shortcut: String)] {
         let isSelectedFavorite = viewModel.filteredCommands.indices.contains(viewModel.selectedRowIndex) && viewModel.isFavorite(viewModel.filteredCommands[viewModel.selectedRowIndex])
         let favoriteTitle = isSelectedFavorite
@@ -1549,13 +1556,30 @@ struct RootActionsOverlay: View {
             .buttonStyle(.plain)
 
             VStack(alignment: .leading, spacing: 0) {
-                Text(verbatim: selectedCommandTitle)
-                    .font(.subheadline.weight(.semibold))
-                    .foregroundColor(colors.textSecondary)
-                    .padding(.horizontal, 14)
-                    .lineLimit(1)
-                    .padding(.top, 14)
-                    .padding(.bottom, 8)
+                HStack(spacing: 10) {
+                    Image(systemName: selectedCommand?.iconName ?? "sparkles")
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundColor(colors.textPrimary)
+                        .frame(width: 26, height: 26)
+                        .background(colors.badgeBg, in: RoundedRectangle(cornerRadius: 7, style: .continuous))
+
+                    VStack(alignment: .leading, spacing: 1) {
+                        Text(verbatim: selectedCommandTitle)
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundColor(colors.textPrimary)
+                            .lineLimit(1)
+
+                        Text(verbatim: selectedCommand?.subtitle ?? String(localized: "Command"))
+                            .font(.caption)
+                            .foregroundColor(colors.textTertiary)
+                            .lineLimit(1)
+                    }
+
+                    Spacer(minLength: 0)
+                }
+                .padding(.horizontal, 14)
+                .padding(.top, 12)
+                .padding(.bottom, 10)
 
                 VStack(spacing: 2) {
                     if actionRows.isEmpty {
