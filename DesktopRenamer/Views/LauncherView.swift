@@ -526,8 +526,7 @@ struct ListAreaView: View {
                             ScrollViewReader { proxy in
                                 ScrollView {
                                     VStack(alignment: .leading, spacing: 4) {
-                                        ForEach(0..<sections.count, id: \.self) { sIdx in
-                                            let section = sections[sIdx]
+                                        ForEach(Array(sections.enumerated()), id: \.element.id) { sIdx, section in
                                             ListSectionHeader(title: section.title, subtitle: section.subtitle, isFirst: sIdx == 0)
                                             
                                             ForEach(section.items) { item in
@@ -584,8 +583,7 @@ struct ListAreaView: View {
                             ScrollViewReader { proxy in
                                 ScrollView {
                                     VStack(alignment: .leading, spacing: 4) {
-                                        ForEach(0..<sections.count, id: \.self) { sIdx in
-                                            let section = sections[sIdx]
+                                        ForEach(Array(sections.enumerated()), id: \.element.id) { sIdx, section in
                                             ListSectionHeader(title: section.title, subtitle: section.subtitle, isFirst: sIdx == 0)
                                             
                                             ForEach(section.items) { item in

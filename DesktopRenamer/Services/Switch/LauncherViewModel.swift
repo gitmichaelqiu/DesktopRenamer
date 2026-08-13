@@ -138,7 +138,7 @@ enum BatchMoveItem: Identifiable, Equatable {
 }
 
 struct BatchMoveSection: Identifiable {
-    var id: String { title }
+    let id: String
     let title: String
     let subtitle: String
     let items: [BatchMoveItem]
@@ -156,7 +156,7 @@ struct ListWindowsItem: Identifiable, Equatable {
 }
 
 struct ListWindowsSection: Identifiable {
-    var id: String { title }
+    let id: String
     let title: String
     let subtitle: String
     let items: [ListWindowsItem]
@@ -437,6 +437,7 @@ struct ListWindowsSection: Identifiable {
         }
         if !stagedItems.isEmpty {
             sections.append(BatchMoveSection(
+                id: "staged",
                 title: String(localized: "Staged Moves (Pending)"),
                 subtitle: String(format: String(localized: "%lld items"), stagedItems.count),
                 items: stagedItems
@@ -458,6 +459,7 @@ struct ListWindowsSection: Identifiable {
             }
             if !spaceItems.isEmpty {
                 sections.append(BatchMoveSection(
+                    id: space.id,
                     title: space.name,
                     subtitle: String(format: String(localized: "%lld windows"), spaceItems.count),
                     items: spaceItems
@@ -775,6 +777,7 @@ struct ListWindowsSection: Identifiable {
             }
             
             sections.append(ListWindowsSection(
+                id: "windows_(space.id)",
                 title: space.name,
                 subtitle: String(format: space.isFullscreen ? String(localized: "Fullscreen") : String(localized: "%lld windows"), items.count),
                 items: items
