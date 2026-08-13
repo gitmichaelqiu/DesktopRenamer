@@ -102,6 +102,11 @@ struct LauncherView: View {
                             onEscape: {
                                 viewModel.handleEscapeKey()
                             },
+                            onBackspace: {
+                                if viewModel.renameInputText.isEmpty {
+                                    viewModel.handleEscapeKey()
+                                }
+                            },
                             onKeyEquivalent: { _ in false },
                             placeholder: NSLocalizedString("New Space Name...", comment: "")
                         )
@@ -238,6 +243,11 @@ struct LauncherView: View {
                                 if viewModel.commandKTargetWindow != nil {
                                     viewModel.commandKTargetWindow = nil
                                 } else {
+                                    viewModel.handleEscapeKey()
+                                }
+                            },
+                            onBackspace: {
+                                if viewModel.searchQuery.isEmpty {
                                     viewModel.handleEscapeKey()
                                 }
                             },
@@ -1527,6 +1537,11 @@ struct RootActionsOverlay: View {
                     onEscape: {
                         viewModel.handleEscapeKey()
                     },
+                    onBackspace: {
+                        if viewModel.rootActionQuery.isEmpty {
+                            viewModel.handleEscapeKey()
+                        }
+                    },
                     onKeyEquivalent: { _ in false },
                     placeholder: String(localized: "Search for action..."),
                     focusNotificationName: NSNotification.Name("FocusRootActionTextField")
@@ -1844,6 +1859,11 @@ struct SpacePickerOverlay: View {
                         onEscape: {
                             viewModel.handleEscapeKey()
                         },
+                        onBackspace: {
+                            if viewModel.spacePickerQuery.isEmpty {
+                                viewModel.handleEscapeKey()
+                            }
+                        },
                         onKeyEquivalent: { _ in false },
                         placeholder: String(localized: "Search..."),
                         focusNotificationName: NSNotification.Name("FocusSpacePickerTextField")
@@ -1984,6 +2004,7 @@ class FocusTextField: NSTextField {
     var onOptionEnter: (() -> Void)?
     var onCommandNumber: ((Int) -> Void)?
     var onCommandK: (() -> Void)?
+    var onBackspace: (() -> Void)?
     var onKeyEquivalent: ((NSEvent) -> Bool)?
     var isTypingDisabled: Bool = false
 
@@ -2108,6 +2129,7 @@ struct SearchTextField: NSViewRepresentable {
     var onCommandNumber: ((Int) -> Void)? = nil
     var onTab: (() -> Void)? = nil
     var onEscape: () -> Void
+    var onBackspace: (() -> Void)? = nil
     var onCommandK: (() -> Void)? = nil
     var onKeyEquivalent: ((NSEvent) -> Bool)? = nil
     var placeholder: String = "Type a command..."
@@ -2174,6 +2196,11 @@ struct SearchTextField: NSViewRepresentable {
             } else if commandSelector == #selector(NSResponder.cancelOperation(_:)) {
                 parent.onEscape()
                 return true
+            } else if commandSelector == #selector(NSResponder.deleteBackward(_:)) {
+                if parent.text.isEmpty, let onBackspace = parent.onBackspace {
+                    onBackspace()
+                    return true
+                }
             }
             return false
         }
@@ -2205,6 +2232,9 @@ struct SearchTextField: NSViewRepresentable {
         }
         textField.onCommandK = { [weak coordinator = context.coordinator] in
             coordinator?.parent.onCommandK?()
+        }
+        textField.onBackspace = { [weak coordinator = context.coordinator] in
+            coordinator?.parent.onBackspace?()
         }
         textField.onKeyEquivalent = onKeyEquivalent
         textField.isTypingDisabled = isTypingDisabled
@@ -2340,6 +2370,11 @@ struct CommandKOverlayView: View {
                     },
                     onEscape: {
                         viewModel.commandKTargetWindow = nil
+                    },
+                    onBackspace: {
+                        if viewModel.commandKQuery.isEmpty {
+                            viewModel.commandKTargetWindow = nil
+                        }
                     },
                     onKeyEquivalent: { _ in false },
                     placeholder: String(localized: "Search for action..."),
