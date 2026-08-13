@@ -686,6 +686,7 @@ struct CommandRowView: View {
         .onHover { hovering in
             isHovered = hovering
         }
+        .animation(.easeOut(duration: 0.12), value: isSelected)
     }
     
     // Helper to safely wrap dynamic String to LocalizedStringKey
@@ -774,6 +775,7 @@ struct SpaceRowView: View {
         .onHover { hovering in
             isHovered = hovering
         }
+        .animation(.easeOut(duration: 0.12), value: isSelected)
     }
 }
 
@@ -863,6 +865,7 @@ struct WindowRowView: View {
         .onHover { hovering in
             isHovered = hovering
         }
+        .animation(.easeOut(duration: 0.12), value: isSelected)
     }
 }
 

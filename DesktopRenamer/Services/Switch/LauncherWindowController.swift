@@ -24,7 +24,7 @@ class LauncherWindowController: NSWindowController, NSWindowDelegate {
     
     init() {
         let panel = LauncherNSPanel(
-            contentRect: NSRect(x: 0, y: 0, width: 840, height: 570),
+            contentRect: NSRect(x: 0, y: 0, width: 840, height: 580),
             styleMask: [.borderless],
             backing: .buffered,
             defer: false
@@ -52,7 +52,7 @@ class LauncherWindowController: NSWindowController, NSWindowDelegate {
         
         let launcherView = LauncherView(viewModel: self.viewModel)
         let hostingView = NSHostingView(rootView: launcherView)
-        hostingView.frame = NSRect(x: 0, y: 0, width: 840, height: 570)
+        hostingView.frame = NSRect(x: 0, y: 0, width: 840, height: 580)
         
         panel.contentView = hostingView
         
