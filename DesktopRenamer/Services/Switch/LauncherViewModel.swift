@@ -230,6 +230,11 @@ struct ListWindowsSection: Identifiable {
     @Published var isRootSpacePickerPresented: Bool = false
     @Published var isRootActionsPresented: Bool = false
     @Published var selectedRootActionIndex: Int = 0
+    @Published var rootActionQuery: String = "" {
+        didSet {
+            selectedRootActionIndex = 0
+        }
+    }
     
     // For batch window moves
     @Published var stagedMoves: [Int: BatchStagedAction] = [:]
@@ -1478,15 +1483,29 @@ struct ListWindowsSection: Identifiable {
         guard activeCommand == nil, filteredCommands.indices.contains(selectedRowIndex) else { return }
         isRootSpacePickerPresented = false
         selectedRootActionIndex = 0
+        rootActionQuery = ""
         isRootActionsPresented = true
     }
 
+    var filteredRootActionIndices: [Int] {
+        let titles = [String(localized: "Open Command"), String(localized: "Reset Ranking")]
+        guard !rootActionQuery.isEmpty else { return Array(titles.indices) }
+        let query = rootActionQuery.lowercased()
+        return titles.indices.filter { titles[$0].lowercased().contains(query) }
+    }
+
     func selectPreviousRootAction() {
-        selectedRootActionIndex = max(0, selectedRootActionIndex - 1)
+        let indices = filteredRootActionIndices
+        guard !indices.isEmpty else { return }
+        let currentPosition = indices.firstIndex(of: selectedRootActionIndex) ?? 0
+        selectedRootActionIndex = indices[max(0, currentPosition - 1)]
     }
 
     func selectNextRootAction() {
-        selectedRootActionIndex = min(1, selectedRootActionIndex + 1)
+        let indices = filteredRootActionIndices
+        guard !indices.isEmpty else { return }
+        let currentPosition = indices.firstIndex(of: selectedRootActionIndex) ?? 0
+        selectedRootActionIndex = indices[min(indices.count - 1, currentPosition + 1)]
     }
 
     func executeRootAction() {
@@ -1513,7 +1532,11 @@ struct ListWindowsSection: Identifiable {
 
     func handleEscapeKey() {
         if isRootActionsPresented {
-            isRootActionsPresented = false
+            if !rootActionQuery.isEmpty {
+                rootActionQuery = ""
+            } else {
+                isRootActionsPresented = false
+            }
         } else if isBottomBarFocused {
             isBottomBarFocused = false
         } else if (stagingWindow != nil || isRootSpacePickerPresented) && !spacePickerQuery.isEmpty {
@@ -1584,6 +1607,7 @@ struct ListWindowsSection: Identifiable {
         stagingWindow = nil
         isRootSpacePickerPresented = false
         isRootActionsPresented = false
+        rootActionQuery = ""
         isBottomBarFocused = false
         onClose?()
     }

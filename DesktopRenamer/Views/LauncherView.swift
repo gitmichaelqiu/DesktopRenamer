@@ -1457,6 +1457,23 @@ struct RootActionsOverlay: View {
         ThemeColors(isDark: colorScheme == .dark)
     }
 
+    private var selectedCommandTitle: String {
+        guard viewModel.filteredCommands.indices.contains(viewModel.selectedRowIndex) else {
+            return String(localized: "Actions")
+        }
+        return viewModel.filteredCommands[viewModel.selectedRowIndex].title
+    }
+
+    private var actionRows: [(index: Int, title: String, icon: String, shortcut: String)] {
+        let actions = [
+            (index: 0, title: String(localized: "Open Command"), icon: "rectangle.and.pencil.and.ellipsis", shortcut: "↵"),
+            (index: 1, title: String(localized: "Reset Ranking"), icon: "arrow.counterclockwise", shortcut: "↻")
+        ]
+        let query = viewModel.rootActionQuery.lowercased()
+        guard !query.isEmpty else { return actions }
+        return actions.filter { $0.title.lowercased().contains(query) }
+    }
+
     var body: some View {
         ZStack(alignment: .bottomTrailing) {
             Color.clear
@@ -1465,52 +1482,94 @@ struct RootActionsOverlay: View {
                     viewModel.isRootActionsPresented = false
                 }
 
-            VStack(alignment: .leading, spacing: 4) {
-                Text(verbatim: String(localized: "Actions"))
+            VStack(alignment: .leading, spacing: 0) {
+                Text(verbatim: selectedCommandTitle)
                     .font(.subheadline.weight(.semibold))
                     .foregroundColor(colors.textSecondary)
                     .padding(.horizontal, 14)
-                    .padding(.top, 12)
-                    .padding(.bottom, 6)
+                    .lineLimit(1)
+                    .padding(.top, 14)
+                    .padding(.bottom, 8)
 
-                rootActionRow(title: "Open Command", shortcut: "↵", index: 0) {
-                    viewModel.selectedRootActionIndex = 0
-                    viewModel.executeRootAction()
+                VStack(spacing: 2) {
+                    if actionRows.isEmpty {
+                        Text(verbatim: String(localized: "No actions found"))
+                            .font(.subheadline)
+                            .foregroundColor(colors.textTertiary)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 16)
+                    } else {
+                        ForEach(actionRows, id: \.index) { row in
+                            rootActionRow(row: row)
+                        }
+                    }
                 }
-
-                rootActionRow(title: "Reset Ranking", shortcut: "↻", index: 1) {
-                    viewModel.selectedRootActionIndex = 1
-                    viewModel.executeRootAction()
-                }
+                .padding(.horizontal, 8)
                 .padding(.bottom, 8)
+
+                Divider()
+
+                SearchTextField(
+                    text: $viewModel.rootActionQuery,
+                    isDark: colors.isDark,
+                    onUpArrow: {
+                        viewModel.selectPreviousRootAction()
+                    },
+                    onDownArrow: {
+                        viewModel.selectNextRootAction()
+                    },
+                    onEnter: {
+                        viewModel.executeRootAction()
+                    },
+                    onEscape: {
+                        viewModel.handleEscapeKey()
+                    },
+                    onKeyEquivalent: { _ in false },
+                    placeholder: String(localized: "Search for action..."),
+                    focusNotificationName: NSNotification.Name("FocusRootActionTextField")
+                )
+                .frame(height: 44)
             }
-            .frame(width: 230)
+            .frame(width: 380)
             .spacePickerSurface(colors: colors)
-            .padding(.trailing, 8)
+            .padding(.trailing, 16)
             .padding(.bottom, 8)
+        }
+        .onAppear {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
+                NotificationCenter.default.post(name: NSNotification.Name("FocusRootActionTextField"), object: nil)
+            }
         }
     }
 
-    private func rootActionRow(title: String, shortcut: String, index: Int, action: @escaping () -> Void) -> some View {
-        Button(action: action) {
+    private func rootActionRow(row: (index: Int, title: String, icon: String, shortcut: String)) -> some View {
+        Button {
+            viewModel.selectedRootActionIndex = row.index
+            viewModel.executeRootAction()
+        } label: {
             HStack(spacing: 8) {
-                Text(LocalizedStringKey(title))
+                Image(systemName: row.icon)
                     .font(.body.weight(.medium))
+                    .frame(width: 18)
+                    .foregroundColor(colors.textSecondary)
+
+                Text(verbatim: row.title)
+                    .font(.body.weight(viewModel.selectedRootActionIndex == row.index ? .semibold : .regular))
                 Spacer()
-                KeycapView(text: LocalizedStringKey(shortcut), isSelected: false, verticalPadding: 3, horizontalPadding: 5)
+                KeycapView(text: LocalizedStringKey(row.shortcut), isSelected: viewModel.selectedRootActionIndex == row.index, verticalPadding: 3, horizontalPadding: 5)
             }
             .foregroundColor(colors.textPrimary)
-            .padding(.horizontal, 10)
-            .frame(height: 34)
+            .padding(.horizontal, 12)
+            .frame(height: 38)
             .background(
                 RoundedRectangle(cornerRadius: 8, style: .continuous)
-                    .fill(viewModel.selectedRootActionIndex == index ? Color.primary.opacity(0.16) : Color.clear)
+                    .fill(viewModel.selectedRootActionIndex == row.index ? Color.primary.opacity(0.16) : Color.clear)
             )
         }
         .buttonStyle(.plain)
         .onHover { hovering in
             if hovering {
-                viewModel.selectedRootActionIndex = index
+                viewModel.selectedRootActionIndex = row.index
             }
         }
     }
