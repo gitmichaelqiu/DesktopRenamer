@@ -78,10 +78,14 @@ struct LauncherView: View {
                             viewModel.handleEscapeKey()
                         }
                     }) {
-                        Image(systemName: viewModel.activeCommand == nil && viewModel.stagingWindow == nil ? "sparkles" : "chevron.left")
-                            .foregroundColor(colors.textSecondary)
-                            .font(.system(size: 20, weight: .medium))
-                            .frame(width: 28, height: 28)
+                        if viewModel.activeCommand == nil && viewModel.stagingWindow == nil {
+                            LauncherMarkView(color: colors.textSecondary)
+                        } else {
+                            Image(systemName: "chevron.left")
+                                .foregroundColor(colors.textSecondary)
+                                .font(.system(size: 20, weight: .medium))
+                                .frame(width: 28, height: 28)
+                        }
                     }
                     .buttonStyle(.plain)
                     .opacity(viewModel.activeCommand == nil && viewModel.stagingWindow == nil ? 0.72 : 1)
@@ -359,6 +363,32 @@ struct LauncherView: View {
             insertion: .move(edge: .trailing).combined(with: .opacity),
             removal: .move(edge: .leading).combined(with: .opacity)
         )
+    }
+}
+
+private struct LauncherMarkView: View {
+    let color: Color
+
+    var body: some View {
+        Canvas { context, size in
+            let center = CGPoint(x: size.width / 2, y: size.height / 2)
+            let half = min(size.width, size.height) * 0.32
+            var diamond = Path()
+            diamond.move(to: CGPoint(x: center.x, y: center.y - half))
+            diamond.addLine(to: CGPoint(x: center.x + half, y: center.y))
+            diamond.addLine(to: CGPoint(x: center.x, y: center.y + half))
+            diamond.addLine(to: CGPoint(x: center.x - half, y: center.y))
+            diamond.closeSubpath()
+            context.stroke(diamond, with: .color(color), style: StrokeStyle(lineWidth: 2.2, lineJoin: .miter))
+
+            var stripes = Path()
+            for offset in stride(from: -half * 0.55, through: half * 0.55, by: half * 0.36) {
+                stripes.move(to: CGPoint(x: center.x - half * 0.62, y: center.y + offset + half * 0.62))
+                stripes.addLine(to: CGPoint(x: center.x + half * 0.62, y: center.y + offset - half * 0.62))
+            }
+            context.stroke(stripes, with: .color(color), style: StrokeStyle(lineWidth: 2.2, lineCap: .square))
+        }
+        .frame(width: 28, height: 28)
     }
 }
 
