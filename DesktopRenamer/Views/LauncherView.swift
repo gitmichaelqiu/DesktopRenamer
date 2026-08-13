@@ -1811,67 +1811,27 @@ struct CommandBottomBar: View {
             if let type = viewModel.activeCommand?.type {
                 switch type {
                 case .switchToDesktop:
-                    HStack(spacing: 4) {
-                        Text(verbatim: String(localized: "Switch"))
-                        Text("↵")
-                            .font(.system(.subheadline))
-                            .fontWeight(.bold)
-                    }
-                    .modifier(BottomBarCapsule(isSelected: false, isActive: false, colorScheme: colorScheme))
-                    .contentShape(Rectangle())
-                    .onTapGesture {
+                    actionButton(title: "Switch", shortcut: "↵") {
                         viewModel.executeRowAction()
                     }
 
                 case .moveWindow:
-                    HStack(spacing: 4) {
-                        Text(verbatim: String(localized: "Move"))
-                        Text("↵")
-                            .font(.system(.subheadline))
-                            .fontWeight(.bold)
-                    }
-                    .modifier(BottomBarCapsule(isSelected: false, isActive: false, colorScheme: colorScheme))
-                    .contentShape(Rectangle())
-                    .onTapGesture {
+                    actionButton(title: "Move", shortcut: "↵") {
                         viewModel.executeRowAction()
                     }
 
                 case .listWindows:
                     if viewModel.stagingWindow != nil {
-                        HStack(spacing: 4) {
-                            Text(verbatim: String(localized: "Move"))
-                            Text("↵")
-                                .font(.system(.subheadline))
-                                .fontWeight(.bold)
-                        }
-                        .modifier(BottomBarCapsule(isSelected: false, isActive: false, colorScheme: colorScheme))
-                        .contentShape(Rectangle())
-                        .onTapGesture {
+                        actionButton(title: "Move", shortcut: "↵") {
                             viewModel.executeRowAction()
                         }
                     } else {
                         HStack(spacing: 8) {
-                            HStack(spacing: 4) {
-                                Text(verbatim: String(localized: "Focus"))
-                                Text("↵")
-                                    .font(.system(.subheadline))
-                                    .fontWeight(.bold)
-                            }
-                            .modifier(BottomBarCapsule(isSelected: false, isActive: false, colorScheme: colorScheme))
-                            .contentShape(Rectangle())
-                            .onTapGesture {
+                            actionButton(title: "Focus", shortcut: "↵") {
                                 viewModel.executeRowAction()
                             }
                             
-                            HStack(spacing: 4) {
-                                Text(verbatim: String(localized: "Move"))
-                                Text("⌘M")
-                                    .font(.system(.subheadline))
-                                    .fontWeight(.bold)
-                            }
-                            .modifier(BottomBarCapsule(isSelected: false, isActive: false, colorScheme: colorScheme))
-                            .contentShape(Rectangle())
-                            .onTapGesture {
+                            actionButton(title: "Move", shortcut: "⌘M") {
                                 if let window = viewModel.selectedWindowForListWindows {
                                     viewModel.batchMoveLastSelectedIndex = viewModel.selectedRowIndex
                                     viewModel.stagingWindow = window
@@ -1880,30 +1840,14 @@ struct CommandBottomBar: View {
                                 }
                             }
                             
-                            HStack(spacing: 4) {
-                                Text(verbatim: String(localized: "Actions"))
-                                Text("⌘K")
-                                    .font(.system(.subheadline))
-                                    .fontWeight(.bold)
-                            }
-                            .modifier(BottomBarCapsule(isSelected: false, isActive: false, colorScheme: colorScheme))
-                            .contentShape(Rectangle())
-                            .onTapGesture {
+                            actionButton(title: "Actions", shortcut: "⌘K") {
                                 viewModel.showCommandKPanel()
                             }
                         }
                     }
 
                 case .renameCurrentSpace:
-                    HStack(spacing: 4) {
-                        Text(verbatim: String(localized: "Rename Space"))
-                        Text("↵")
-                            .font(.system(.subheadline))
-                            .fontWeight(.bold)
-                    }
-                    .modifier(BottomBarCapsule(isSelected: false, isActive: false, colorScheme: colorScheme))
-                    .contentShape(Rectangle())
-                    .onTapGesture {
+                    actionButton(title: "Rename Space", shortcut: "↵") {
                         viewModel.executeRowAction()
                     }
                     
@@ -1915,6 +1859,19 @@ struct CommandBottomBar: View {
         .padding(.horizontal, 18)
         .padding(.vertical, 10)
         .background(colors.bottomBarBg)
+    }
+
+    private func actionButton(title: String, shortcut: String, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            HStack(spacing: 4) {
+                Text(verbatim: String(localized: String.LocalizationValue(title)))
+                Text(shortcut)
+                    .font(.system(.subheadline))
+                    .fontWeight(.bold)
+            }
+            .modifier(BottomBarCapsule(isSelected: false, isActive: false, colorScheme: colorScheme))
+        }
+        .buttonStyle(.plain)
     }
 }
 
