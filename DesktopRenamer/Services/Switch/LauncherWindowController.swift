@@ -21,6 +21,8 @@ class LauncherWindowController: NSWindowController, NSWindowDelegate {
     private var isCommandKeyPressed = false
     private var cmdLongPressWorkItem: DispatchWorkItem?
     private var flagsChangedMonitor: Any?
+    private var presentationFrame: NSRect?
+    private var isAnimatingPresentation = false
     
     init() {
         let panel = LauncherNSPanel(
@@ -101,6 +103,11 @@ class LauncherWindowController: NSWindowController, NSWindowDelegate {
     
     func show() {
         guard let panel = window as? LauncherNSPanel else { return }
+
+        if panel.isVisible {
+            panel.makeKeyAndOrderFront(nil)
+            return
+        }
         
         shouldRestoreFocus = true
         
@@ -109,6 +116,9 @@ class LauncherWindowController: NSWindowController, NSWindowDelegate {
         
         // Center on screen with cursor
         centerOnActiveScreen()
+        let finalFrame = panel.frame
+        let initialFrame = finalFrame.insetBy(dx: finalFrame.width * 0.018, dy: finalFrame.height * 0.018)
+        presentationFrame = finalFrame
         
         // Reset state
         viewModel.searchQuery = ""
@@ -119,7 +129,19 @@ class LauncherWindowController: NSWindowController, NSWindowDelegate {
         
         // Make key and focus
         NSApp.activate(ignoringOtherApps: true)
+        isAnimatingPresentation = true
+        panel.alphaValue = 0
+        panel.setFrame(initialFrame, display: false)
         panel.makeKeyAndOrderFront(nil)
+
+        NSAnimationContext.runAnimationGroup { context in
+            context.duration = 0.18
+            context.timingFunction = CAMediaTimingFunction(name: .easeOut)
+            panel.animator().alphaValue = 1
+            panel.animator().setFrame(finalFrame, display: true)
+        } completionHandler: { [weak self] in
+            self?.isAnimatingPresentation = false
+        }
         
         // Post a notification to force focus
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
@@ -128,7 +150,23 @@ class LauncherWindowController: NSWindowController, NSWindowDelegate {
     }
     
     func hide() {
-        window?.orderOut(nil)
+        guard let panel = window as? LauncherNSPanel, panel.isVisible, !isAnimatingPresentation else { return }
+
+        let finalFrame = presentationFrame ?? panel.frame
+        let dismissalFrame = panel.frame.insetBy(dx: panel.frame.width * 0.014, dy: panel.frame.height * 0.014)
+        isAnimatingPresentation = true
+        NSAnimationContext.runAnimationGroup { context in
+            context.duration = 0.12
+            context.timingFunction = CAMediaTimingFunction(name: .easeIn)
+            panel.animator().alphaValue = 0
+            panel.animator().setFrame(dismissalFrame, display: true)
+        } completionHandler: { [weak self] in
+            guard let self = self else { return }
+            panel.orderOut(nil)
+            panel.alphaValue = 1
+            panel.setFrame(finalFrame, display: false)
+            self.isAnimatingPresentation = false
+        }
         isCommandKeyPressed = false
         cmdLongPressWorkItem?.cancel()
         cmdLongPressWorkItem = nil

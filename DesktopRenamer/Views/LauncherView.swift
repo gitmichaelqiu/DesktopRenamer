@@ -438,20 +438,21 @@ struct ListAreaView: View {
                             VStack(alignment: .leading, spacing: 2) {
                                 ForEach(Array(commands.enumerated()), id: \.element.id) { i, cmd in
                                     let isSelected = !viewModel.isBottomBarFocused && viewModel.selectedRowIndex == i
-                                    CommandRowView(command: cmd, isSelected: isSelected, isRoot: true, isCompact: true, shortcutText: viewModel.showCommandNumbers && viewModel.commandKTargetWindow == nil && i < 9 ? "⌘\(i + 1)" : nil)
-                                        .contentShape(Rectangle())
-                                        .onTapGesture {
+                                    Button {
                                             viewModel.isKeyboardSelection = true
                                             viewModel.selectedRowIndex = i
                                             viewModel.executeRowAction()
+                                    } label: {
+                                        CommandRowView(command: cmd, isSelected: isSelected, isRoot: true, isCompact: true, shortcutText: viewModel.showCommandNumbers && viewModel.commandKTargetWindow == nil && i < 9 ? "⌘\(i + 1)" : nil)
+                                    }
+                                    .buttonStyle(.plain)
+                                    .onHover { hovering in
+                                        if hovering {
+                                            viewModel.selectPointerRow(i)
                                         }
-                                        .onHover { hovering in
-                                            if hovering {
-                                                viewModel.selectPointerRow(i)
-                                            }
-                                        }
-                                        .id(cmd.id)
-                                        .transition(.opacity.combined(with: .scale(scale: 0.98)))
+                                    }
+                                    .id(cmd.id)
+                                    .transition(.opacity.combined(with: .scale(scale: 0.98)))
                                 }
                             }
                             .padding(.horizontal, 8)
@@ -481,20 +482,21 @@ struct ListAreaView: View {
                                         ForEach(Array(spaces.enumerated()), id: \.element.id) { i, space in
                                             let isSelected = !viewModel.isBottomBarFocused && viewModel.selectedRowIndex == i
                                             let shortcut = viewModel.activeCommand?.type == .moveWindow ? "⌥⌘\(i + 1)" : "⌘\(i + 1)"
-                                            SpaceRowView(space: space, isSelected: isSelected, isCurrent: AppDelegate.shared.spaceManager?.currentSpaceUUID == space.id, shortcutText: i < 9 ? shortcut : nil)
-                                                .contentShape(Rectangle())
-                                                .onTapGesture {
+                                            Button {
                                                     viewModel.isKeyboardSelection = true
                                                     viewModel.selectedRowIndex = i
                                                     viewModel.executeRowAction()
+                                            } label: {
+                                                SpaceRowView(space: space, isSelected: isSelected, isCurrent: AppDelegate.shared.spaceManager?.currentSpaceUUID == space.id, shortcutText: i < 9 ? shortcut : nil)
+                                            }
+                                            .buttonStyle(.plain)
+                                            .onHover { hovering in
+                                                if hovering {
+                                                    viewModel.selectPointerRow(i)
                                                 }
-                                                .onHover { hovering in
-                                                    if hovering {
-                                                        viewModel.selectPointerRow(i)
-                                                    }
-                                                }
-                                                .id(space.id)
-                                                .transition(.opacity.combined(with: .scale(scale: 0.98)))
+                                            }
+                                            .id(space.id)
+                                            .transition(.opacity.combined(with: .scale(scale: 0.98)))
                                         }
                                     }
                                     .padding(.horizontal, 10)
@@ -530,17 +532,18 @@ struct ListAreaView: View {
                                             
                                             ForEach(section.items) { item in
                                                 let isSelected = !viewModel.isBottomBarFocused && viewModel.selectedRowIndex == item.index
-                                                WindowRowView(
-                                                    window: item.window,
-                                                    isSelected: isSelected,
-                                                    shortcutText: viewModel.showCommandNumbers && viewModel.commandKTargetWindow == nil && item.index < 9 ? "⌘\(item.index + 1)" : nil
-                                                )
-                                                .contentShape(Rectangle())
-                                                .onTapGesture {
+                                                Button {
                                                     viewModel.isKeyboardSelection = true
                                                     viewModel.selectedRowIndex = item.index
                                                     viewModel.executeRowAction()
+                                                } label: {
+                                                    WindowRowView(
+                                                        window: item.window,
+                                                        isSelected: isSelected,
+                                                        shortcutText: viewModel.showCommandNumbers && viewModel.commandKTargetWindow == nil && item.index < 9 ? "⌘\(item.index + 1)" : nil
+                                                    )
                                                 }
+                                                .buttonStyle(.plain)
                                                 .onHover { hovering in
                                                     if hovering {
                                                         viewModel.selectPointerRow(item.index)
@@ -589,36 +592,38 @@ struct ListAreaView: View {
                                                 
                                                 switch item {
                                                 case .staged(let move, _):
-                                                    WindowBatchRowView(window: move.window, isSelected: isSelected, isStaged: true, stagedActionText: move.actionType.description, shortcutText: viewModel.showCommandNumbers && viewModel.commandKTargetWindow == nil && item.index < 9 ? "⌘\(item.index + 1)" : nil)
-                                                        .contentShape(Rectangle())
-                                                        .onTapGesture {
+                                                    Button {
                                                             viewModel.isKeyboardSelection = true
                                                             viewModel.selectedRowIndex = item.index
                                                             viewModel.executeRowAction()
+                                                    } label: {
+                                                        WindowBatchRowView(window: move.window, isSelected: isSelected, isStaged: true, stagedActionText: move.actionType.description, shortcutText: viewModel.showCommandNumbers && viewModel.commandKTargetWindow == nil && item.index < 9 ? "⌘\(item.index + 1)" : nil)
+                                                    }
+                                                    .buttonStyle(.plain)
+                                                    .onHover { hovering in
+                                                        if hovering {
+                                                            viewModel.selectPointerRow(item.index)
                                                         }
-                                                        .onHover { hovering in
-                                                            if hovering {
-                                                                viewModel.selectPointerRow(item.index)
-                                                            }
-                                                        }
-                                                        .id(item.id)
-                                                        .transition(.opacity.combined(with: .scale(scale: 0.98)))
+                                                    }
+                                                    .id(item.id)
+                                                    .transition(.opacity.combined(with: .scale(scale: 0.98)))
                                                         
                                                 case .unstaged(let window, _):
-                                                    WindowBatchRowView(window: window, isSelected: isSelected, isStaged: false, stagedActionText: "", shortcutText: viewModel.showCommandNumbers && viewModel.commandKTargetWindow == nil && item.index < 9 ? "⌘\(item.index + 1)" : nil)
-                                                        .contentShape(Rectangle())
-                                                        .onTapGesture {
+                                                    Button {
                                                             viewModel.isKeyboardSelection = true
                                                             viewModel.selectedRowIndex = item.index
                                                             viewModel.executeRowAction()
+                                                    } label: {
+                                                        WindowBatchRowView(window: window, isSelected: isSelected, isStaged: false, stagedActionText: "", shortcutText: viewModel.showCommandNumbers && viewModel.commandKTargetWindow == nil && item.index < 9 ? "⌘\(item.index + 1)" : nil)
+                                                    }
+                                                    .buttonStyle(.plain)
+                                                    .onHover { hovering in
+                                                        if hovering {
+                                                            viewModel.selectPointerRow(item.index)
                                                         }
-                                                        .onHover { hovering in
-                                                            if hovering {
-                                                                viewModel.selectPointerRow(item.index)
-                                                            }
-                                                        }
-                                                        .id(item.id)
-                                                        .transition(.opacity.combined(with: .scale(scale: 0.98)))
+                                                    }
+                                                    .id(item.id)
+                                                    .transition(.opacity.combined(with: .scale(scale: 0.98)))
                                                 }
                                             }
                                         }
@@ -1458,7 +1463,7 @@ struct RootActionsOverlay: View {
             .frame(width: 230)
             .spacePickerSurface(colors: colors)
             .padding(.trailing, 8)
-            .padding(.bottom, 54)
+            .padding(.bottom, 8)
         }
     }
 
@@ -1747,7 +1752,7 @@ struct SpacePickerOverlay: View {
             .frame(width: viewModel.stagingWindow == nil ? 290 : 350)
             .spacePickerSurface(colors: colors)
             .padding(.trailing, 16)
-            .padding(.bottom, 58)
+            .padding(.bottom, 8)
         }
         .onAppear {
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {

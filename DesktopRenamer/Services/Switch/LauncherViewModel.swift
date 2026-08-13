@@ -327,16 +327,16 @@ struct ListWindowsSection: Identifiable {
     }
     
     var filteredCommands: [LauncherCommand] {
-        if searchQuery.isEmpty {
+        guard !searchQuery.isEmpty else {
             return sortCommands(rootCommands)
-        } else {
-            let query = searchQuery.lowercased()
-            let filtered = allCommands.filter {
-                matchesQuery(query, target: $0.title, pinyin: $0.pinyinTitle) ||
-                matchesQuery(query, target: $0.subtitle, pinyin: $0.pinyinSubtitle)
-            }
-            return sortCommands(filtered)
         }
+
+        let query = searchQuery.lowercased()
+        let filtered = rootCommands.filter {
+            matchesQuery(query, target: $0.title, pinyin: $0.pinyinTitle) ||
+            matchesQuery(query, target: $0.subtitle, pinyin: $0.pinyinSubtitle)
+        }
+        return sortCommands(filtered)
     }
     
     var filteredSpaces: [SpaceGroup] {
