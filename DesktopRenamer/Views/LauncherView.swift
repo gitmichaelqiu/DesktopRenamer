@@ -1154,21 +1154,6 @@ struct SpacesBottomBar: View {
     
     var body: some View {
         HStack(spacing: 0) {
-            Button(action: focusSpacePicker) {
-                HStack(spacing: 6) {
-                    Image(systemName: "square.grid.2x2")
-                        .font(.subheadline.weight(.semibold))
-                    Text(verbatim: String(localized: "Switch Space"))
-                }
-                .modifier(BottomBarCapsule(
-                    isSelected: viewModel.isBottomBarFocused,
-                    isActive: !viewModel.isBottomBarFocused,
-                    colorScheme: colorScheme
-                ))
-            }
-            .buttonStyle(.plain)
-            .layoutPriority(1)
-
             ScrollViewReader { scrollProxy in
                 ScrollView(.horizontal, showsIndicators: false) {
                     HStack(spacing: 8) {
@@ -1260,18 +1245,7 @@ struct SpacesBottomBar: View {
                     .frame(width: 1, height: 16)
 
                 HStack(spacing: 8) {
-                    if !viewModel.isBottomBarFocused {
-                        Button(action: focusSpacePicker) {
-                            HStack(spacing: 4) {
-                                Text(LocalizedStringKey("Switch Space"))
-                                Text("⇥")
-                                    .font(.system(.subheadline))
-                                    .fontWeight(.bold)
-                            }
-                            .modifier(BottomBarCapsule(isSelected: false, isActive: false, colorScheme: colorScheme))
-                        }
-                        .buttonStyle(.plain)
-                    } else {
+                    if viewModel.isBottomBarFocused {
                         bottomBarAction(title: "Switch Space", shortcut: "↵") {
                             viewModel.executeBottomBarSpaceAction(isOption: false, isCommand: false)
                         }
@@ -1293,18 +1267,6 @@ struct SpacesBottomBar: View {
         .frame(height: 46)
         .background(colors.bottomBarBg)
         .animation(.spring(response: 0.35, dampingFraction: 0.85), value: viewModel.isBottomBarFocused)
-    }
-
-    private func focusSpacePicker() {
-        viewModel.isBottomBarFocused = true
-        viewModel.isKeyboardSelection = true
-
-        let spaces = spaceManager.currentDisplaySpaces
-        if let index = spaces.firstIndex(where: { $0.id == spaceManager.currentSpaceUUID }) {
-            viewModel.selectedSpaceIndex = index
-        } else {
-            viewModel.selectedSpaceIndex = 0
-        }
     }
 
     private func bottomBarAction(title: String, shortcut: String, action: @escaping () -> Void) -> some View {
