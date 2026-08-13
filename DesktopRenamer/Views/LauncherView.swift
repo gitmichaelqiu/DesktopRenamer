@@ -1335,43 +1335,55 @@ struct SpacePickerOverlay: View {
 
                 ScrollView {
                     VStack(spacing: 4) {
-                        let spaces = spaceManager.currentDisplaySpaces
-                        ForEach(0..<spaces.count, id: \.self) { index in
-                            let space = spaces[index]
-                            Button(action: {
-                                viewModel.selectedSpaceIndex = index
-                                if viewModel.stagingWindow != nil {
-                                    viewModel.selectedRowIndex = index
-                                    viewModel.executeRowAction()
-                                } else if NSEvent.modifierFlags.contains(.option) {
-                                    viewModel.executeBottomBarSpaceAction(isOption: true, isCommand: false)
-                                } else {
-                                    viewModel.executeBottomBarSpaceAction(isOption: false, isCommand: false)
-                                }
-                            }) {
-                                HStack(spacing: 10) {
-                                    Image(systemName: "rectangle.inset.filled")
-                                        .font(.body.weight(.medium))
-                                        .frame(width: 20)
-                                    Text(spaceManager.getSpaceName(space.id))
-                                        .font(.body.weight(.medium))
-                                        .lineLimit(1)
-                                    Spacer()
-                                    if space.id == spaceManager.currentSpaceUUID {
-                                        Text(verbatim: String(localized: "Current"))
-                                            .font(.caption.weight(.semibold))
-                                            .foregroundColor(colors.textTertiary)
+                        let spaces = viewModel.filteredSpaces
+                        if spaces.isEmpty {
+                            Text(verbatim: String(localized: "No spaces found"))
+                                .font(.subheadline)
+                                .foregroundColor(colors.textTertiary)
+                                .frame(maxWidth: .infinity)
+                                .padding(.vertical, 24)
+                        } else {
+                            ForEach(0..<spaces.count, id: \.self) { index in
+                                let space = spaces[index]
+                                let isSelected = index == viewModel.selectedSpaceIndex
+                                Button(action: {
+                                    viewModel.selectedSpaceIndex = index
+                                    if viewModel.stagingWindow != nil {
+                                        viewModel.selectedRowIndex = index
+                                        viewModel.executeRowAction()
+                                    } else if NSEvent.modifierFlags.contains(.option) {
+                                        viewModel.executeBottomBarSpaceAction(isOption: true, isCommand: false)
+                                    } else {
+                                        viewModel.executeBottomBarSpaceAction(isOption: false, isCommand: false)
                                     }
+                                }) {
+                                    HStack(spacing: 10) {
+                                        Image(systemName: "desktopcomputer")
+                                            .font(.body.weight(.medium))
+                                            .frame(width: 20)
+                                        Text(spaceManager.getSpaceName(space.id))
+                                            .font(.body.weight(.medium))
+                                            .lineLimit(1)
+                                        Spacer()
+                                        if space.id == spaceManager.currentSpaceUUID {
+                                            Text(verbatim: String(localized: "Current"))
+                                                .font(.caption.weight(.semibold))
+                                                .foregroundColor(colors.textTertiary)
+                                        }
+                                        if index < 9 {
+                                            KeycapView(text: LocalizedStringKey("⌘\(index + 1)"), isSelected: isSelected)
+                                        }
+                                    }
+                                    .foregroundColor(colors.textPrimary)
+                                    .padding(.horizontal, 12)
+                                    .frame(height: 38)
+                                    .background(
+                                        RoundedRectangle(cornerRadius: 9, style: .continuous)
+                                            .fill(isSelected ? Color.primary.opacity(0.16) : Color.clear)
+                                    )
                                 }
-                                .foregroundColor(colors.textPrimary)
-                                .padding(.horizontal, 12)
-                                .frame(height: 38)
-                                .background(
-                                    RoundedRectangle(cornerRadius: 9, style: .continuous)
-                                        .fill(index == viewModel.selectedSpaceIndex ? Color.primary.opacity(0.16) : Color.clear)
-                                )
+                                .buttonStyle(.plain)
                             }
-                            .buttonStyle(.plain)
                         }
                     }
                     .padding(.horizontal, 8)
@@ -1395,7 +1407,7 @@ struct SpacePickerOverlay: View {
                     .padding(.horizontal, 16)
                     .frame(height: 44)
             }
-            .frame(width: 290)
+            .frame(width: 350)
             .spacePickerSurface(colors: colors)
             .padding(.trailing, 16)
             .padding(.bottom, 58)
