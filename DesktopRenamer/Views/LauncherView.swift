@@ -85,7 +85,12 @@ struct LauncherView: View {
     }
 
     private var isSpacePickerPresented: Bool {
-        viewModel.stagingWindow != nil || viewModel.isRootSpacePickerPresented
+        switch viewModel.launcherOverlay {
+        case .rootSpacePicker, .stagingSpacePicker:
+            return true
+        default:
+            return false
+        }
     }
     
     var body: some View {
@@ -374,9 +379,7 @@ struct LauncherView: View {
                     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomTrailing)
             }
         }
-        .animation(.spring(response: 0.28, dampingFraction: 0.84), value: viewModel.commandKTargetWindow != nil)
-        .animation(.spring(response: 0.28, dampingFraction: 0.84), value: isSpacePickerPresented)
-        .animation(.spring(response: 0.28, dampingFraction: 0.84), value: viewModel.isRootActionsPresented)
+        .animation(.spring(response: 0.28, dampingFraction: 0.84), value: viewModel.launcherOverlay)
         .onChange(of: spaceManager.currentSpaceUUID) { _ in
             viewModel.selectCurrentTargetSpace()
         }

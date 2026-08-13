@@ -169,6 +169,13 @@ struct RootCommandSection: Identifiable {
     let startIndex: Int
 }
 
+enum LauncherOverlay: Equatable {
+    case rootActions
+    case rootSpacePicker
+    case stagingSpacePicker
+    case commandK(WindowEntry)
+}
+
 @MainActor class LauncherViewModel: ObservableObject {
     @AppStorage("com.michaelqiu.desktoprenamer.automaticallyRankCommands") var automaticallyRankCommands: Bool = true
     @AppStorage("com.michaelqiu.desktoprenamer.launcherManualCommandOrder") var launcherManualCommandOrder: String = ""
@@ -238,8 +245,35 @@ struct RootCommandSection: Identifiable {
     @Published var showCommandNumbers: Bool = false
     @Published var isBottomBarFocused: Bool = false
     @Published var selectedSpaceIndex: Int = 0
-    @Published var isRootSpacePickerPresented: Bool = false
-    @Published var isRootActionsPresented: Bool = false
+    @Published private(set) var launcherOverlay: LauncherOverlay? = nil
+
+    var isRootSpacePickerPresented: Bool {
+        get {
+            if case .rootSpacePicker = launcherOverlay { return true }
+            return false
+        }
+        set {
+            if newValue {
+                launcherOverlay = .rootSpacePicker
+            } else if case .rootSpacePicker = launcherOverlay {
+                launcherOverlay = nil
+            }
+        }
+    }
+
+    var isRootActionsPresented: Bool {
+        get {
+            if case .rootActions = launcherOverlay { return true }
+            return false
+        }
+        set {
+            if newValue {
+                launcherOverlay = .rootActions
+            } else if case .rootActions = launcherOverlay {
+                launcherOverlay = nil
+            }
+        }
+    }
     @Published var selectedRootActionIndex: Int = 0
     @Published var rootActionQuery: String = "" {
         didSet {
@@ -256,18 +290,29 @@ struct RootCommandSection: Identifiable {
             selectedRowIndex = 0
             isKeyboardSelection = true
             isBottomBarFocused = false
+            if stagingWindow != nil {
+                launcherOverlay = .stagingSpacePicker
+            } else if case .stagingSpacePicker = launcherOverlay {
+                launcherOverlay = nil
+            }
         }
     }
     @Published var isExecutingBatchMove: Bool = false
     
     // Command K Panel Overlay State
-    @Published var commandKTargetWindow: WindowEntry? = nil {
-        didSet {
-            if commandKTargetWindow != nil {
+    var commandKTargetWindow: WindowEntry? {
+        get {
+            if case .commandK(let window) = launcherOverlay { return window }
+            return nil
+        }
+        set {
+            if let window = newValue {
                 commandKSelectedIndex = 0
                 commandKQuery = ""
-            } else {
+                launcherOverlay = .commandK(window)
+            } else if case .commandK = launcherOverlay {
                 commandKActionList = []
+                launcherOverlay = nil
             }
         }
     }
