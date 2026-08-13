@@ -2092,6 +2092,16 @@
         }
       }
     },
+    "Reset Ranking" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "重置排名"
+          }
+        }
+      }
+    },
     "Reset to default" : {
       "localizations" : {
         "zh-Hans" : {
