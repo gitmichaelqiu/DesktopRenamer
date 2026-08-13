@@ -243,7 +243,7 @@ struct RootCommandSection: Identifiable {
     @Published var selectedRootActionIndex: Int = 0
     @Published var rootActionQuery: String = "" {
         didSet {
-            selectedRootActionIndex = 0
+            selectedRootActionIndex = filteredRootActionIndices.first ?? 0
         }
     }
     
@@ -1674,6 +1674,8 @@ struct RootCommandSection: Identifiable {
     }
 
     func executeRootAction() {
+        guard filteredRootActionIndices.contains(selectedRootActionIndex) else { return }
+
         switch selectedRootActionIndex {
         case 0:
             isRootActionsPresented = false
