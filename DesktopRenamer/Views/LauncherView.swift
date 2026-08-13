@@ -438,7 +438,7 @@ struct ListAreaView: View {
                             VStack(alignment: .leading, spacing: 2) {
                                 ForEach(Array(commands.enumerated()), id: \.element.id) { i, cmd in
                                     let isSelected = !viewModel.isBottomBarFocused && viewModel.selectedRowIndex == i
-                                    CommandRowView(command: cmd, isSelected: isSelected, isCompact: true, shortcutText: viewModel.showCommandNumbers && viewModel.commandKTargetWindow == nil && i < 9 ? "⌘\(i + 1)" : nil)
+                                    CommandRowView(command: cmd, isSelected: isSelected, isRoot: true, isCompact: true, shortcutText: viewModel.showCommandNumbers && viewModel.commandKTargetWindow == nil && i < 9 ? "⌘\(i + 1)" : nil)
                                         .contentShape(Rectangle())
                                         .onTapGesture {
                                             viewModel.isKeyboardSelection = true
@@ -760,6 +760,7 @@ private extension View {
 struct CommandRowView: View {
     let command: LauncherCommand
     let isSelected: Bool
+    var isRoot: Bool = false
     var isCompact: Bool = false
     var shortcutText: String? = nil
     @Environment(\.colorScheme) var colorScheme
@@ -788,13 +789,55 @@ struct CommandRowView: View {
     }
     
     var body: some View {
+        Group {
+            if isRoot {
+                rootRow
+            } else {
+                detailRow
+            }
+        }
+        .launcherRowSurface(isSelected: isSelected, isHovered: isHovered, colors: colors, verticalPadding: isCompact ? 6 : 8)
+        .onHover { hovering in
+            isHovered = hovering
+        }
+    }
+
+    private var rootRow: some View {
         HStack(spacing: 8) {
-            Image(systemName: command.iconName)
-                .font(.system(size: 17, weight: .medium))
+            commandIcon
+
+            Text(command.title)
+                .font(.system(size: 16, weight: .semibold))
                 .foregroundColor(colors.textPrimary)
-                .frame(width: 28, height: 28)
-                .background(colors.badgeBg)
-                .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+                .lineLimit(1)
+                .layoutPriority(2)
+
+            Text(command.subtitle)
+                .font(.system(size: 14))
+                .foregroundColor(colors.textSecondary)
+                .lineLimit(1)
+                .truncationMode(.tail)
+                .layoutPriority(1)
+
+            Spacer(minLength: 4)
+
+            if let shortcut = shortcutText {
+                KeycapView(text: LocalStringKey_compat(shortcut), isSelected: isSelected)
+            }
+
+            if let statusText = toggleStatus {
+                statusBadge(statusText)
+            } else {
+                Text(verbatim: String(localized: "Command"))
+                    .font(.system(size: 14, weight: .medium))
+                    .foregroundColor(isSelected ? colors.textPrimary : colors.textSecondary)
+            }
+        }
+    }
+
+    private var detailRow: some View {
+        HStack(spacing: 8) {
+            commandIcon
             
             VStack(alignment: .leading, spacing: 2) {
                 Text(command.title)
@@ -834,10 +877,30 @@ struct CommandRowView: View {
                 KeycapView(text: "Action", isSelected: isSelected)
             }
         }
-        .launcherRowSurface(isSelected: isSelected, isHovered: isHovered, colors: colors, verticalPadding: isCompact ? 6 : 8)
-        .onHover { hovering in
-            isHovered = hovering
-        }
+    }
+
+    private var commandIcon: some View {
+        Image(systemName: command.iconName)
+            .font(.system(size: 17, weight: .medium))
+            .foregroundColor(colors.textPrimary)
+            .frame(width: 28, height: 28)
+            .background(colors.badgeBg)
+            .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+    }
+
+    private func statusBadge(_ statusText: String) -> some View {
+        Text(LocalizedStringKey(statusText))
+            .font(.subheadline)
+            .fontWeight(.semibold)
+            .foregroundColor(statusText == "Enabled" ? colors.greenText : colors.textSecondary)
+            .padding(.horizontal, 8)
+            .padding(.vertical, 3)
+            .background(statusText == "Enabled" ? colors.greenText.opacity(0.12) : colors.badgeBg)
+            .cornerRadius(6)
+            .overlay(
+                RoundedRectangle(cornerRadius: 6)
+                    .stroke(statusText == "Enabled" ? colors.greenText.opacity(0.35) : colors.badgeBorder, lineWidth: 1)
+            )
     }
     
     // Helper to safely wrap dynamic String to LocalizedStringKey
