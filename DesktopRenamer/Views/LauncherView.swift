@@ -726,12 +726,12 @@ struct CommandRowView: View {
             
             VStack(alignment: .leading, spacing: 2) {
                 Text(command.title)
-                    .font(.system(size: 15, weight: .semibold))
+                    .font(.system(size: 16, weight: .semibold))
                     .foregroundColor(colors.textPrimary)
                     .lineLimit(1)
                 
                 Text(command.subtitle)
-                    .font(.system(size: 13))
+                    .font(.system(size: 14))
                     .foregroundColor(isSelected ? colors.textSecondary : colors.textTertiary)
                     .lineLimit(1)
             }
