@@ -5,7 +5,9 @@ struct ThemeColors {
     let isDark: Bool
     
     var backgroundOverlay: Color {
-        Color.clear
+        isDark
+            ? Color(red: 0.12, green: 0.13, blue: 0.15).opacity(0.72)
+            : Color.white.opacity(0.72)
     }
     
     var textPrimary: Color {
@@ -29,11 +31,11 @@ struct ThemeColors {
     }
     
     var rowHover: Color {
-        Color.primary.opacity(0.08)
+        isDark ? Color.white.opacity(0.06) : Color.black.opacity(0.045)
     }
     
     var badgeBg: Color {
-        Color.primary.opacity(0.06)
+        isDark ? Color.white.opacity(0.10) : Color.black.opacity(0.06)
     }
     
     var badgeBorder: Color {
@@ -45,7 +47,7 @@ struct ThemeColors {
     }
     
     var bottomBarBg: Color {
-        Color.primary.opacity(0.01)
+        isDark ? Color.black.opacity(0.16) : Color.white.opacity(0.26)
     }
     
     var greenText: Color {
@@ -66,11 +68,11 @@ struct LauncherView: View {
         ZStack {
             VStack(spacing: 0) {
                 // Header (Typing Bar)
-                HStack(spacing: 12) {
-                    Image(systemName: "magnifyingglass")
-                        .foregroundColor(.secondary)
-                        .font(.system(size: 16, weight: .medium))
-                        .frame(width: 28, height: 28)
+                HStack(spacing: 14) {
+                    Image(systemName: "sparkles")
+                        .foregroundColor(colors.textSecondary)
+                        .font(.system(size: 22, weight: .medium))
+                        .frame(width: 30, height: 30)
                     
                     if viewModel.activeCommand?.type == .renameCurrentSpace {
                         SearchTextField(
@@ -87,7 +89,7 @@ struct LauncherView: View {
                             onKeyEquivalent: { _ in false },
                             placeholder: NSLocalizedString("New Space Name...", comment: "")
                         )
-                        .frame(height: 36)
+                        .frame(height: 42)
                     } else {
                         SearchTextField(
                             text: $viewModel.searchQuery,
@@ -199,7 +201,7 @@ struct LauncherView: View {
                             },
                             placeholder: viewModel.activeCommand == nil ? NSLocalizedString("Search commands...", comment: "") : (viewModel.stagingWindow != nil ? NSLocalizedString("Search target space...", comment: "") : NSLocalizedString("Search items...", comment: ""))
                         )
-                        .frame(height: 36)
+                        .frame(height: 42)
                     }
                     
                     if viewModel.isLoadingData {
@@ -208,8 +210,8 @@ struct LauncherView: View {
                             .frame(width: 20, height: 20)
                     }
                 }
-                .frame(height: 52)
-                .padding(.horizontal, 18)
+                .frame(height: 72)
+                .padding(.horizontal, 22)
                 
                 Divider()
                 
@@ -267,11 +269,11 @@ struct LauncherView: View {
                 CommandKOverlayView(viewModel: viewModel, window: targetWindow)
             }
         }
-        .frame(width: 720, height: 450)
-        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-        .launcherBackground(cornerRadius: 16, borderColor: colors.border)
+        .frame(width: 760, height: 500)
+        .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
+        .launcherBackground(cornerRadius: 24, borderColor: colors.border)
         .shadow(color: Color.black.opacity(colorScheme == .dark ? 0.45 : 0.20), radius: 24, x: 0, y: 12)
-        .padding(60)
+        .padding(40)
     }
 }
 
@@ -293,7 +295,8 @@ struct ListAreaView: View {
                 } else {
                     ScrollViewReader { proxy in
                         ScrollView {
-                            VStack(spacing: 4) {
+                            VStack(alignment: .leading, spacing: 4) {
+                                LauncherSectionHeader(title: String(localized: "Commands"))
                                 ForEach(0..<commands.count, id: \.self) { i in
                                     let cmd = commands[i]
                                     let isSelected = !viewModel.isBottomBarFocused && viewModel.selectedRowIndex == i
@@ -307,8 +310,8 @@ struct ListAreaView: View {
                                         .id(i)
                                 }
                             }
-                            .padding(.horizontal, 10)
-                            .padding(.vertical, 8)
+                            .padding(.horizontal, 14)
+                            .padding(.vertical, 10)
                         }
                         .onChange(of: viewModel.selectedRowIndex) { index in
                             if viewModel.isKeyboardSelection {
@@ -545,6 +548,20 @@ struct KeycapView: View {
     }
 }
 
+struct LauncherSectionHeader: View {
+    let title: String
+    @Environment(\.colorScheme) private var colorScheme
+
+    var body: some View {
+        Text(title)
+            .font(.system(size: 13, weight: .semibold))
+            .foregroundColor(colorScheme == .dark ? .white.opacity(0.58) : .black.opacity(0.55))
+            .padding(.horizontal, 10)
+            .padding(.top, 4)
+            .padding(.bottom, 6)
+    }
+}
+
 struct EmptyResultsView: View {
     @Environment(\.colorScheme) var colorScheme
     
@@ -606,6 +623,8 @@ struct CommandRowView: View {
                 .font(.system(size: 17, weight: .medium))
                 .foregroundColor(colors.textPrimary)
                 .frame(width: 32, height: 32)
+                .background(colors.badgeBg)
+                .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
             
             VStack(alignment: .leading, spacing: 2) {
                 Text(command.title)
@@ -652,12 +671,12 @@ struct CommandRowView: View {
             ZStack {
                 if isSelected {
                     RoundedRectangle(cornerRadius: 8, style: .continuous)
-                        .fill(Color.primary.opacity(0.08))
+                        .fill(isSelected ? Color.primary.opacity(0.16) : Color.clear)
                     RoundedRectangle(cornerRadius: 8, style: .continuous)
-                        .stroke(Color.primary.opacity(0.15), lineWidth: 1)
+                        .stroke(isSelected ? Color.primary.opacity(0.10) : Color.clear, lineWidth: 1)
                 } else if isHovered {
                     RoundedRectangle(cornerRadius: 8, style: .continuous)
-                        .fill(Color.primary.opacity(0.05))
+                        .fill(colors.rowHover)
                 }
             }
         )
@@ -692,11 +711,14 @@ struct SpaceRowView: View {
                     .resizable()
                     .aspectRatio(contentMode: .fit)
                     .frame(width: 32, height: 32)
+                    .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
             } else {
                 Image(systemName: "desktopcomputer")
                     .font(.system(size: 17, weight: .medium))
                     .foregroundColor(colors.textPrimary)
                     .frame(width: 32, height: 32)
+                    .background(colors.badgeBg)
+                    .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
             }
             
             VStack(alignment: .leading, spacing: 2) {
@@ -737,12 +759,12 @@ struct SpaceRowView: View {
             ZStack {
                 if isSelected {
                     RoundedRectangle(cornerRadius: 8, style: .continuous)
-                        .fill(Color.primary.opacity(0.08))
+                        .fill(isSelected ? Color.primary.opacity(0.16) : Color.clear)
                     RoundedRectangle(cornerRadius: 8, style: .continuous)
-                        .stroke(Color.primary.opacity(0.15), lineWidth: 1)
+                        .stroke(isSelected ? Color.primary.opacity(0.10) : Color.clear, lineWidth: 1)
                 } else if isHovered {
                     RoundedRectangle(cornerRadius: 8, style: .continuous)
-                        .fill(Color.primary.opacity(0.05))
+                        .fill(colors.rowHover)
                 }
             }
         )
@@ -786,6 +808,7 @@ struct WindowRowView: View {
                 .resizable()
                 .aspectRatio(contentMode: .fit)
                 .frame(width: 32, height: 32)
+                .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
 
             VStack(alignment: .leading, spacing: 2) {
                 Text(window.title.isEmpty ? String(localized: "(No Title)") : window.title)
@@ -825,12 +848,12 @@ struct WindowRowView: View {
             ZStack {
                 if isSelected {
                     RoundedRectangle(cornerRadius: 8, style: .continuous)
-                        .fill(Color.primary.opacity(0.08))
+                        .fill(isSelected ? Color.primary.opacity(0.16) : Color.clear)
                     RoundedRectangle(cornerRadius: 8, style: .continuous)
-                        .stroke(Color.primary.opacity(0.15), lineWidth: 1)
+                        .stroke(isSelected ? Color.primary.opacity(0.10) : Color.clear, lineWidth: 1)
                 } else if isHovered {
                     RoundedRectangle(cornerRadius: 8, style: .continuous)
-                        .fill(Color.primary.opacity(0.05))
+                        .fill(colors.rowHover)
                 }
             }
         )
@@ -902,6 +925,7 @@ struct WindowBatchRowView: View {
                 .resizable()
                 .aspectRatio(contentMode: .fit)
                 .frame(width: 32, height: 32)
+                .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
 
             VStack(alignment: .leading, spacing: 2) {
                 Text(window.title.isEmpty ? String(localized: "(No Title)") : window.title)
@@ -954,12 +978,12 @@ struct WindowBatchRowView: View {
             ZStack {
                 if isSelected {
                     RoundedRectangle(cornerRadius: 8, style: .continuous)
-                        .fill(Color.primary.opacity(0.08))
+                        .fill(isSelected ? Color.primary.opacity(0.16) : Color.clear)
                     RoundedRectangle(cornerRadius: 8, style: .continuous)
-                        .stroke(Color.primary.opacity(0.15), lineWidth: 1)
+                        .stroke(isSelected ? Color.primary.opacity(0.10) : Color.clear, lineWidth: 1)
                 } else if isHovered {
                     RoundedRectangle(cornerRadius: 8, style: .continuous)
-                        .fill(Color.primary.opacity(0.05))
+                        .fill(colors.rowHover)
                 }
             }
         )
@@ -2127,4 +2151,3 @@ extension LauncherView {
         return false
     }
 }
-
