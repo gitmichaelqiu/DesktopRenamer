@@ -205,9 +205,10 @@ struct LauncherView: View {
                             },
                             onCommandNumber: { num in
                                 if viewModel.isRootActionsPresented {
+                                    let indices = viewModel.filteredRootActionIndices
                                     let index = num - 1
-                                    if index >= 0 && index < 2 {
-                                        viewModel.selectedRootActionIndex = index
+                                    if index >= 0 && index < indices.count {
+                                        viewModel.selectedRootActionIndex = indices[index]
                                         viewModel.executeRootAction()
                                     }
                                 } else if viewModel.commandKTargetWindow != nil {
@@ -1283,17 +1284,18 @@ struct BatchMoveBottomBar: View {
             HStack(spacing: 8) {
                 if viewModel.stagingWindow != nil {
                     // Staging target space selection
-                    HStack(spacing: 4) {
-                        Text(verbatim: String(localized: "Stage"))
-                        Text("↵")
-                            .font(.system(.caption2))
-                            .fontWeight(.bold)
-                    }
-                    .modifier(BottomBarCapsule(isSelected: false, isActive: false, colorScheme: colorScheme))
-                    .contentShape(Rectangle())
-                    .onTapGesture {
+                    Button {
                         viewModel.executeRowAction()
+                    } label: {
+                        HStack(spacing: 4) {
+                            Text(verbatim: String(localized: "Stage"))
+                            Text("↵")
+                                .font(.system(.caption2))
+                                .fontWeight(.bold)
+                        }
+                        .modifier(BottomBarCapsule(isSelected: false, isActive: false, colorScheme: colorScheme))
                     }
+                    .buttonStyle(.plain)
                 } else {
                     // Selecting an item in batch move
                     let items = viewModel.batchMoveSelectableItems
@@ -1307,8 +1309,10 @@ struct BatchMoveBottomBar: View {
                                 if case .move = action.actionType { return true }
                                 return false
                             }()
-                            
-                            HStack(spacing: 8) {
+
+                            Button {
+                                viewModel.executeRowAction()
+                            } label: {
                                 HStack(spacing: 4) {
                                     Text(verbatim: String(localized: isMove ? "Unstage Move" : "Unstage Action"))
                                     Text("↵")
@@ -1316,14 +1320,13 @@ struct BatchMoveBottomBar: View {
                                         .fontWeight(.bold)
                                 }
                                 .modifier(BottomBarCapsule(isSelected: false, isActive: false, colorScheme: colorScheme))
-                                .contentShape(Rectangle())
-                                .onTapGesture {
-                                    viewModel.executeRowAction()
-                                }
                             }
-                            
+                            .buttonStyle(.plain)
+
                         case .unstaged:
-                            HStack(spacing: 8) {
+                            Button {
+                                viewModel.executeRowAction()
+                            } label: {
                                 HStack(spacing: 4) {
                                     Text(verbatim: String(localized: "Move to..."))
                                     Text("↵")
@@ -1331,11 +1334,12 @@ struct BatchMoveBottomBar: View {
                                         .fontWeight(.bold)
                                 }
                                 .modifier(BottomBarCapsule(isSelected: false, isActive: false, colorScheme: colorScheme))
-                                .contentShape(Rectangle())
-                                .onTapGesture {
-                                    viewModel.executeRowAction()
-                                }
-                                
+                            }
+                            .buttonStyle(.plain)
+
+                            Button {
+                                viewModel.showCommandKPanel()
+                            } label: {
                                 HStack(spacing: 4) {
                                     Text(verbatim: String(localized: "Actions"))
                                     Text("⌘K")
@@ -1343,27 +1347,25 @@ struct BatchMoveBottomBar: View {
                                         .fontWeight(.bold)
                                 }
                                 .modifier(BottomBarCapsule(isSelected: false, isActive: false, colorScheme: colorScheme))
-                                .contentShape(Rectangle())
-                                .onTapGesture {
-                                    viewModel.showCommandKPanel()
-                                }
                             }
+                            .buttonStyle(.plain)
                         }
                     }
                     
                     // If there are staged moves, show run batch action
                     if !viewModel.stagedMoves.isEmpty {
-                        HStack(spacing: 4) {
-                            Text(verbatim: String(localized: "Run Batch Actions"))
-                            Text("⌘↵")
-                                .font(.system(.subheadline))
-                                .fontWeight(.bold)
-                        }
-                        .modifier(BottomBarCapsule(isSelected: true, isActive: false, isGreen: true, colorScheme: colorScheme))
-                        .contentShape(Rectangle())
-                        .onTapGesture {
+                        Button {
                             viewModel.executeBatchMove()
+                        } label: {
+                            HStack(spacing: 4) {
+                                Text(verbatim: String(localized: "Run Batch Actions"))
+                                Text("⌘↵")
+                                    .font(.system(.subheadline))
+                                    .fontWeight(.bold)
+                            }
+                            .modifier(BottomBarCapsule(isSelected: true, isActive: false, isGreen: true, colorScheme: colorScheme))
                         }
+                        .buttonStyle(.plain)
                     }
                 }
             }
@@ -1469,18 +1471,18 @@ struct RootActionsOverlay: View {
             (index: 0, title: String(localized: "Open Command"), icon: "rectangle.and.pencil.and.ellipsis", shortcut: "↵"),
             (index: 1, title: String(localized: "Reset Ranking"), icon: "arrow.counterclockwise", shortcut: "↻")
         ]
-        let query = viewModel.rootActionQuery.lowercased()
-        guard !query.isEmpty else { return actions }
-        return actions.filter { $0.title.lowercased().contains(query) }
+        let indices = Set(viewModel.filteredRootActionIndices)
+        return actions.filter { indices.contains($0.index) }
     }
 
     var body: some View {
         ZStack(alignment: .bottomTrailing) {
-            Color.clear
-                .contentShape(Rectangle())
-                .onTapGesture {
-                    viewModel.isRootActionsPresented = false
-                }
+            Button {
+                viewModel.isRootActionsPresented = false
+            } label: {
+                Color.clear
+            }
+            .buttonStyle(.plain)
 
             VStack(alignment: .leading, spacing: 0) {
                 Text(verbatim: selectedCommandTitle)
@@ -1725,11 +1727,12 @@ struct SpacePickerOverlay: View {
 
     var body: some View {
         ZStack(alignment: .bottomTrailing) {
-            Color.clear
-                .contentShape(Rectangle())
-                .onTapGesture {
-                    viewModel.handleEscapeKey()
-                }
+            Button {
+                viewModel.handleEscapeKey()
+            } label: {
+                Color.clear
+            }
+            .buttonStyle(.plain)
 
             VStack(alignment: .leading, spacing: 0) {
                 Text(verbatim: viewModel.stagingWindow == nil
@@ -2256,11 +2259,12 @@ struct CommandKOverlayView: View {
     
     var body: some View {
         ZStack(alignment: .bottomTrailing) {
-            Color.clear
-                .contentShape(Rectangle())
-                .onTapGesture {
-                    viewModel.commandKTargetWindow = nil
-                }
+            Button {
+                viewModel.commandKTargetWindow = nil
+            } label: {
+                Color.clear
+            }
+            .buttonStyle(.plain)
 
             VStack(spacing: 0) {
                 Text(window.ownerName)

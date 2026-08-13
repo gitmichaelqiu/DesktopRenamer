@@ -255,6 +255,8 @@ struct ListWindowsSection: Identifiable {
             if commandKTargetWindow != nil {
                 commandKSelectedIndex = 0
                 commandKQuery = ""
+            } else {
+                commandKActionList = []
             }
         }
     }
@@ -264,6 +266,7 @@ struct ListWindowsSection: Identifiable {
             commandKSelectedIndex = 0
         }
     }
+    @Published private(set) var commandKActionList: [BatchStagedActionType] = []
     @Published var isStagingForRestoreTo: Bool = false
     @Published var isExecutingRestoreToImmediately: Bool = false
     
@@ -506,15 +509,12 @@ struct ListWindowsSection: Identifiable {
         return actions
     }
     
-    var commandKActions: [BatchStagedActionType] {
-        guard let window = commandKTargetWindow else { return [] }
-        return getAvailableCommandKActions(for: window)
-    }
-
     var filteredCommandKActions: [BatchStagedActionType] {
-        guard !commandKQuery.isEmpty else { return commandKActions }
+        guard !commandKQuery.isEmpty else { return commandKActionList }
         let query = commandKQuery.lowercased()
-        return commandKActions.filter { $0.description.lowercased().contains(query) }
+        return commandKActionList.filter {
+            matchesQuery(query, target: $0.description, pinyin: "")
+        }
     }
     
     func showCommandKPanel() {
@@ -523,6 +523,7 @@ struct ListWindowsSection: Identifiable {
             let index = selectedRowIndex
             guard index >= 0 && index < windows.count else { return }
             commandKTargetWindow = windows[index]
+            commandKActionList = getAvailableCommandKActions(for: windows[index])
             commandKSelectedIndex = 0
         } else {
             let items = batchMoveSelectableItems
@@ -535,6 +536,7 @@ struct ListWindowsSection: Identifiable {
                 return
             case .unstaged(let window, _):
                 commandKTargetWindow = window
+                commandKActionList = getAvailableCommandKActions(for: window)
                 commandKSelectedIndex = 0
             }
         }
@@ -1491,21 +1493,23 @@ struct ListWindowsSection: Identifiable {
         let titles = [String(localized: "Open Command"), String(localized: "Reset Ranking")]
         guard !rootActionQuery.isEmpty else { return Array(titles.indices) }
         let query = rootActionQuery.lowercased()
-        return titles.indices.filter { titles[$0].lowercased().contains(query) }
+        return titles.indices.filter {
+            matchesQuery(query, target: titles[$0], pinyin: "")
+        }
     }
 
     func selectPreviousRootAction() {
         let indices = filteredRootActionIndices
         guard !indices.isEmpty else { return }
         let currentPosition = indices.firstIndex(of: selectedRootActionIndex) ?? 0
-        selectedRootActionIndex = indices[max(0, currentPosition - 1)]
+        selectedRootActionIndex = indices[(currentPosition - 1 + indices.count) % indices.count]
     }
 
     func selectNextRootAction() {
         let indices = filteredRootActionIndices
         guard !indices.isEmpty else { return }
         let currentPosition = indices.firstIndex(of: selectedRootActionIndex) ?? 0
-        selectedRootActionIndex = indices[min(indices.count - 1, currentPosition + 1)]
+        selectedRootActionIndex = indices[(currentPosition + 1) % indices.count]
     }
 
     func executeRootAction() {
