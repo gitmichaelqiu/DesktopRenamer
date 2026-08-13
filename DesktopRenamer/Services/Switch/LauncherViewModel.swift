@@ -307,9 +307,24 @@ struct ListWindowsSection: Identifiable {
     /// e.g. typing "qiehuan" or "qie huan" matches "切换桌面" (pinyin: qie huan zhuo mian).
     private func matchesQuery(_ query: String, target: String, pinyin: String) -> Bool {
         let lowerQuery = query.lowercased()
-        if target.lowercased().contains(lowerQuery) { return true }
         let squashedQuery = lowerQuery.replacingOccurrences(of: " ", with: "")
-        return pinyin.contains(squashedQuery)
+        guard !squashedQuery.isEmpty else { return true }
+
+        return isFuzzyMatch(squashedQuery, in: target.lowercased()) ||
+            isFuzzyMatch(squashedQuery, in: pinyin.lowercased())
+    }
+
+    private func isFuzzyMatch(_ query: String, in target: String) -> Bool {
+        if target.contains(query) { return true }
+
+        var targetCharacters = Array(target)
+        for queryCharacter in query {
+            guard let matchIndex = targetCharacters.firstIndex(of: queryCharacter) else {
+                return false
+            }
+            targetCharacters.removeFirst(matchIndex + 1)
+        }
+        return true
     }
 
     private func sortCommands(_ commands: [LauncherCommand]) -> [LauncherCommand] {
