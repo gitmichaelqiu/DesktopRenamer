@@ -282,18 +282,25 @@ struct LauncherView: View {
                 } else {
                     ListAreaView(viewModel: viewModel)
                         .frame(maxHeight: .infinity)
+                        .id(viewModel.activeCommand?.id ?? "root")
+                        .transition(commandPageTransition)
                 }
                 
                 Divider()
                 
                 // Bottom bar
-                if viewModel.activeCommand == nil {
-                    RootLauncherBottomBar(viewModel: viewModel, spaceManager: spaceManager)
-                } else if viewModel.activeCommand?.type == .batchMoveWindows {
-                    BatchMoveBottomBar(viewModel: viewModel)
-                } else {
-                    CommandBottomBar(viewModel: viewModel)
+                ZStack(alignment: .bottom) {
+                    if viewModel.activeCommand == nil {
+                        RootLauncherBottomBar(viewModel: viewModel, spaceManager: spaceManager)
+                    } else if viewModel.activeCommand?.type == .batchMoveWindows {
+                        BatchMoveBottomBar(viewModel: viewModel)
+                    } else {
+                        CommandBottomBar(viewModel: viewModel)
+                    }
                 }
+                .frame(maxWidth: .infinity)
+                .id(viewModel.activeCommand?.id ?? "root-bottom-bar")
+                .transition(commandPageTransition)
             }
             .blur(radius: viewModel.commandKTargetWindow != nil ? 10 : 0)
             .animation(.easeInOut(duration: 0.12), value: viewModel.commandKTargetWindow != nil)
@@ -326,12 +333,26 @@ struct LauncherView: View {
         case .listWindows:
             return NSLocalizedString("Search windows...", comment: "")
         case .switchToDesktop, .moveWindow:
-            return NSLocalizedString("Search spaces...", comment: "")
+            return NSLocalizedString("Search target space...", comment: "")
         default:
             return viewModel.stagingWindow == nil
                 ? NSLocalizedString("Search items...", comment: "")
                 : NSLocalizedString("Search windows...", comment: "")
         }
+    }
+
+    private var commandPageTransition: AnyTransition {
+        if viewModel.activeCommand == nil {
+            return .asymmetric(
+                insertion: .move(edge: .leading).combined(with: .opacity),
+                removal: .move(edge: .trailing).combined(with: .opacity)
+            )
+        }
+
+        return .asymmetric(
+            insertion: .move(edge: .trailing).combined(with: .opacity),
+            removal: .move(edge: .leading).combined(with: .opacity)
+        )
     }
 }
 
@@ -390,7 +411,8 @@ struct ListAreaView: View {
                                     VStack(spacing: 4) {
                                         ForEach(Array(spaces.enumerated()), id: \.element.id) { i, space in
                                             let isSelected = !viewModel.isBottomBarFocused && viewModel.selectedRowIndex == i
-                                            SpaceRowView(space: space, isSelected: isSelected, isCurrent: AppDelegate.shared.spaceManager?.currentSpaceUUID == space.id, shortcutText: viewModel.showCommandNumbers && viewModel.commandKTargetWindow == nil && i < 9 ? "⌘\(i + 1)" : nil)
+                                            let shortcut = viewModel.activeCommand?.type == .moveWindow ? "⌥⌘\(i + 1)" : "⌘\(i + 1)"
+                                            SpaceRowView(space: space, isSelected: isSelected, isCurrent: AppDelegate.shared.spaceManager?.currentSpaceUUID == space.id, shortcutText: i < 9 ? shortcut : nil)
                                                 .contentShape(Rectangle())
                                                 .onTapGesture {
                                                     viewModel.isKeyboardSelection = true
@@ -762,8 +784,6 @@ struct SpaceRowView: View {
 
             if let shortcut = shortcutText {
                 KeycapView(text: LocalizedStringKey(shortcut), isSelected: isSelected)
-            } else {
-                KeycapView(text: "Switch ↵", isSelected: isSelected)
             }
         }
         .launcherRowSurface(isSelected: isSelected, isHovered: isHovered, colors: colors)
@@ -2121,7 +2141,7 @@ extension View {
     func opaqueLauncherBackground(cornerRadius: CGFloat, isDark: Bool, borderColor: Color) -> some View {
         background(
             isDark
-                ? Color(red: 0.115, green: 0.12, blue: 0.135)
+                ? Color(red: 0.22, green: 0.225, blue: 0.24)
                 : Color(nsColor: .windowBackgroundColor)
         )
         .clipShape(RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))

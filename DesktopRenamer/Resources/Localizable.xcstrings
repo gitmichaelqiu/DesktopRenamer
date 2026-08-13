@@ -220,6 +220,16 @@
         }
       }
     },
+    "Search target space..." : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "搜索目标桌面..."
+          }
+        }
+      }
+    },
     "Active Space Label" : {
       "localizations" : {
         "zh-Hans" : {
