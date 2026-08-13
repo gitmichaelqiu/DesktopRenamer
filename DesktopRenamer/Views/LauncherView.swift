@@ -88,15 +88,6 @@ struct LauncherView: View {
         ThemeColors(isDark: colorScheme == .dark)
     }
 
-    private var isSpacePickerPresented: Bool {
-        switch viewModel.launcherOverlay {
-        case .rootSpacePicker, .stagingSpacePicker:
-            return true
-        default:
-            return false
-        }
-    }
-    
     var body: some View {
         ZStack {
             VStack(spacing: 0) {
@@ -373,14 +364,17 @@ struct LauncherView: View {
             }
             .animation(.easeInOut(duration: 0.18), value: viewModel.activeCommand?.id)
             
-            if let targetWindow = viewModel.commandKTargetWindow {
+            switch viewModel.launcherOverlay {
+            case .commandK(let targetWindow):
                 CommandKOverlayView(viewModel: viewModel, window: targetWindow)
-            } else if viewModel.isRootActionsPresented {
+            case .rootActions:
                 RootActionsOverlay(viewModel: viewModel)
                     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomTrailing)
-            } else if isSpacePickerPresented {
+            case .rootSpacePicker, .stagingSpacePicker:
                 SpacePickerOverlay(viewModel: viewModel, spaceManager: spaceManager)
                     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomTrailing)
+            case nil:
+                EmptyView()
             }
         }
         .animation(.spring(response: 0.28, dampingFraction: 0.84), value: viewModel.launcherOverlay)
