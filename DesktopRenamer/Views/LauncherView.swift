@@ -360,45 +360,7 @@ struct ListAreaView: View {
                     }
                 }
             } else {
-                if viewModel.stagingWindow != nil && viewModel.activeCommand?.type != .listWindows {
-                    // Staging target space selection
-                    let spaces = viewModel.filteredSpaces
-                    if spaces.isEmpty {
-                        EmptyResultsView()
-                    } else {
-                        ScrollViewReader { proxy in
-                            ScrollView {
-                                VStack(spacing: 4) {
-                                    ForEach(0..<spaces.count, id: \.self) { i in
-                                        let space = spaces[i]
-                                        let isSelected = !viewModel.isBottomBarFocused && viewModel.selectedRowIndex == i
-                                        SpaceRowView(space: space, isSelected: isSelected, isCurrent: AppDelegate.shared.spaceManager?.currentSpaceUUID == space.id, shortcutText: viewModel.showCommandNumbers && viewModel.commandKTargetWindow == nil && i < 9 ? "⌘\(i + 1)" : nil)
-                                            .contentShape(Rectangle())
-                                            .onTapGesture {
-                                                viewModel.isKeyboardSelection = true
-                                                viewModel.selectedRowIndex = i
-                                                viewModel.executeRowAction()
-                                            }
-                                            .id(i)
-                                    }
-                                }
-                                .padding(.horizontal, 10)
-                                .padding(.vertical, 8)
-                            }
-                            .onChange(of: viewModel.selectedRowIndex) { index in
-                                if viewModel.isKeyboardSelection {
-                                    withAnimation(.easeInOut(duration: 0.12)) {
-                                        proxy.scrollTo(index, anchor: .center)
-                                    }
-                                }
-                            }
-                            .onAppear {
-                                proxy.scrollTo(viewModel.selectedRowIndex, anchor: .center)
-                            }
-                        }
-                    }
-                } else {
-                    switch viewModel.activeCommand?.type {
+                switch viewModel.activeCommand?.type {
                     case .switchToDesktop, .moveWindow:
                         let spaces = viewModel.filteredSpaces
                         if spaces.isEmpty {
@@ -538,9 +500,8 @@ struct ListAreaView: View {
                             }
                         }
                         
-                    default:
-                        EmptyResultsView()
-                    }
+                default:
+                    EmptyResultsView()
                 }
             }
         }
