@@ -366,15 +366,12 @@ struct LauncherView: View {
             
             if let targetWindow = viewModel.commandKTargetWindow {
                 CommandKOverlayView(viewModel: viewModel, window: targetWindow)
-                    .transition(.scale(scale: 0.92, anchor: .bottomTrailing).combined(with: .opacity))
             } else if viewModel.isRootActionsPresented {
                 RootActionsOverlay(viewModel: viewModel)
                     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomTrailing)
-                    .transition(.scale(scale: 0.92, anchor: .bottomTrailing).combined(with: .opacity))
             } else if isSpacePickerPresented {
                 SpacePickerOverlay(viewModel: viewModel, spaceManager: spaceManager)
                     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomTrailing)
-                    .transition(.scale(scale: 0.92, anchor: .bottomTrailing).combined(with: .opacity))
             }
         }
         .animation(.spring(response: 0.28, dampingFraction: 0.84), value: viewModel.commandKTargetWindow != nil)
@@ -1522,7 +1519,7 @@ struct RootActionsOverlay: View {
             : String(localized: "Add to Favorites")
         var actions = [
             (index: 0, title: String(localized: "Open Command"), icon: "rectangle.and.pencil.and.ellipsis", shortcut: "↵"),
-            (index: 1, title: favoriteTitle, icon: "star", shortcut: "⌘⇧F"),
+            (index: 1, title: favoriteTitle, icon: "star", shortcut: "⌘F"),
         ]
         if isSelectedFavorite {
             actions.append(contentsOf: [
@@ -1638,7 +1635,24 @@ struct RootActionsOverlay: View {
                             viewModel.handleEscapeKey()
                         }
                     },
-                    onKeyEquivalent: { _ in false },
+                    onCommandK: {
+                        viewModel.isRootActionsPresented = false
+                    },
+                    onKeyEquivalent: { event in
+                        let modifiers = event.modifierFlags.intersection(.deviceIndependentFlagsMask)
+                        guard event.type == .keyDown,
+                              modifiers.contains(.command),
+                              !modifiers.contains(.shift),
+                              !modifiers.contains(.option),
+                              !modifiers.contains(.control),
+                              event.charactersIgnoringModifiers?.lowercased() == "f",
+                              viewModel.filteredRootActionIndices.contains(1) else {
+                            return false
+                        }
+                        viewModel.selectedRootActionIndex = 1
+                        viewModel.executeRootAction()
+                        return true
+                    },
                     placeholder: String(localized: "Search for actions..."),
                     focusNotificationName: NSNotification.Name("FocusRootActionTextField")
                 )
@@ -1646,6 +1660,7 @@ struct RootActionsOverlay: View {
             }
             .frame(width: 350)
             .spacePickerSurface(colors: colors)
+            .transition(.scale(scale: 0.92, anchor: .bottomTrailing).combined(with: .opacity))
             .padding(.trailing, 16)
             .padding(.bottom, 8)
         }
@@ -1969,6 +1984,7 @@ struct SpacePickerOverlay: View {
             }
             .frame(width: viewModel.stagingWindow == nil ? 290 : 350)
             .spacePickerSurface(colors: colors)
+            .transition(.scale(scale: 0.92, anchor: .bottomTrailing).combined(with: .opacity))
             .padding(.trailing, 16)
             .padding(.bottom, 8)
         }
@@ -2480,6 +2496,9 @@ struct CommandKOverlayView: View {
                             viewModel.commandKTargetWindow = nil
                         }
                     },
+                    onCommandK: {
+                        viewModel.commandKTargetWindow = nil
+                    },
                     onKeyEquivalent: { _ in false },
                     placeholder: String(localized: "Search for actions..."),
                     focusNotificationName: NSNotification.Name("FocusCommandKTextField")
@@ -2488,6 +2507,7 @@ struct CommandKOverlayView: View {
             }
             .frame(width: 350)
             .spacePickerSurface(colors: colors)
+            .transition(.scale(scale: 0.92, anchor: .bottomTrailing).combined(with: .opacity))
             .padding(.trailing, 16)
             .padding(.bottom, 8)
         }
@@ -2776,7 +2796,7 @@ extension LauncherView {
         if viewModel.activeCommand == nil,
            viewModel.commandKTargetWindow == nil,
            !viewModel.isRootActionsPresented,
-           hasCommand && hasShift && !hasOption && !hasControl,
+           hasCommand && !hasShift && !hasOption && !hasControl,
            event.charactersIgnoringModifiers?.lowercased() == "f" {
             viewModel.toggleFavoriteSelectedCommand()
             return true
