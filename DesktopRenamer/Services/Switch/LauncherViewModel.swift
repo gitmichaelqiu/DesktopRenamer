@@ -228,6 +228,7 @@ struct ListWindowsSection: Identifiable {
     @Published var isBottomBarFocused: Bool = false
     @Published var selectedSpaceIndex: Int = 0
     @Published var isRootSpacePickerPresented: Bool = false
+    @Published var isRootActionsPresented: Bool = false
     
     // For batch window moves
     @Published var stagedMoves: [Int: BatchStagedAction] = [:]
@@ -1460,8 +1461,25 @@ struct ListWindowsSection: Identifiable {
         selectedRowIndex = currentIndex
     }
 
+    func showRootActionsPanel() {
+        guard activeCommand == nil, filteredCommands.indices.contains(selectedRowIndex) else { return }
+        isRootActionsPresented = true
+    }
+
+    func resetSelectedCommandRanking() {
+        guard activeCommand == nil, filteredCommands.indices.contains(selectedRowIndex) else { return }
+        let commandID = filteredCommands[selectedRowIndex].id
+        var frequencies = UserDefaults.standard.dictionary(forKey: "LauncherCommandFrequency") as? [String: Int] ?? [:]
+        frequencies.removeValue(forKey: commandID)
+        UserDefaults.standard.set(frequencies, forKey: "LauncherCommandFrequency")
+        isRootActionsPresented = false
+        objectWillChange.send()
+    }
+
     func handleEscapeKey() {
-        if isBottomBarFocused {
+        if isRootActionsPresented {
+            isRootActionsPresented = false
+        } else if isBottomBarFocused {
             isBottomBarFocused = false
         } else if (stagingWindow != nil || isRootSpacePickerPresented) && !spacePickerQuery.isEmpty {
             spacePickerQuery = ""
@@ -1530,6 +1548,7 @@ struct ListWindowsSection: Identifiable {
         activeCommand = nil
         stagingWindow = nil
         isRootSpacePickerPresented = false
+        isRootActionsPresented = false
         isBottomBarFocused = false
         onClose?()
     }

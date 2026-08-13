@@ -229,6 +229,8 @@ struct LauncherView: View {
                             onCommandK: {
                                 if viewModel.commandKTargetWindow != nil {
                                     viewModel.commandKTargetWindow = nil
+                                } else if viewModel.activeCommand == nil {
+                                    viewModel.showRootActionsPanel()
                                 } else if (viewModel.activeCommand?.type == .batchMoveWindows || viewModel.activeCommand?.type == .listWindows) && viewModel.stagingWindow == nil {
                                     viewModel.showCommandKPanel()
                                 }
@@ -318,6 +320,12 @@ struct LauncherView: View {
                 CommandKOverlayView(viewModel: viewModel, window: targetWindow)
             }
 
+            if viewModel.isRootActionsPresented {
+                RootActionsOverlay(viewModel: viewModel)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomTrailing)
+                    .transition(.scale(scale: 0.92, anchor: .bottomTrailing).combined(with: .opacity))
+            }
+
             if isSpacePickerPresented {
                 SpacePickerOverlay(viewModel: viewModel, spaceManager: spaceManager)
                     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomTrailing)
@@ -325,6 +333,7 @@ struct LauncherView: View {
             }
         }
         .animation(.spring(response: 0.28, dampingFraction: 0.84), value: isSpacePickerPresented)
+        .animation(.spring(response: 0.28, dampingFraction: 0.84), value: viewModel.isRootActionsPresented)
         .onChange(of: spaceManager.currentSpaceUUID) { _ in
             viewModel.selectCurrentTargetSpace()
         }
@@ -1305,7 +1314,7 @@ struct RootLauncherBottomBar: View {
                 .buttonStyle(.plain)
 
                 Button {
-                    viewModel.showCommandKPanel()
+                    viewModel.showRootActionsPanel()
                 } label: {
                     HStack(spacing: 8) {
                         Text(verbatim: String(localized: "Actions"))
@@ -1313,8 +1322,6 @@ struct RootLauncherBottomBar: View {
                     }
                 }
                 .buttonStyle(.plain)
-                .disabled(true)
-                .opacity(0.58)
             }
             .font(.system(size: 14, weight: .semibold))
             .foregroundColor(colors.textPrimary)
@@ -1325,6 +1332,64 @@ struct RootLauncherBottomBar: View {
         }
         .padding(.horizontal, 8)
         .frame(height: 58)
+    }
+}
+
+struct RootActionsOverlay: View {
+    @ObservedObject var viewModel: LauncherViewModel
+    @Environment(\.colorScheme) var colorScheme
+
+    var colors: ThemeColors {
+        ThemeColors(isDark: colorScheme == .dark)
+    }
+
+    var body: some View {
+        ZStack(alignment: .bottomTrailing) {
+            Color.clear
+                .contentShape(Rectangle())
+                .onTapGesture {
+                    viewModel.isRootActionsPresented = false
+                }
+
+            VStack(alignment: .leading, spacing: 4) {
+                Text(verbatim: String(localized: "Actions"))
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundColor(colors.textSecondary)
+                    .padding(.horizontal, 14)
+                    .padding(.top, 12)
+                    .padding(.bottom, 6)
+
+                rootActionRow(title: "Open Command", shortcut: "↵") {
+                    viewModel.isRootActionsPresented = false
+                    viewModel.executeRowAction()
+                }
+
+                rootActionRow(title: "Reset Ranking", shortcut: "↻") {
+                    viewModel.resetSelectedCommandRanking()
+                }
+                .padding(.bottom, 8)
+            }
+            .frame(width: 230)
+            .spacePickerSurface(colors: colors)
+            .padding(.trailing, 8)
+            .padding(.bottom, 54)
+        }
+    }
+
+    private func rootActionRow(title: String, shortcut: String, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            HStack(spacing: 8) {
+                Text(LocalizedStringKey(title))
+                    .font(.body.weight(.medium))
+                Spacer()
+                KeycapView(text: LocalizedStringKey(shortcut), isSelected: false, verticalPadding: 3, horizontalPadding: 5)
+            }
+            .foregroundColor(colors.textPrimary)
+            .padding(.horizontal, 10)
+            .frame(height: 34)
+            .background(Color.clear)
+        }
+        .buttonStyle(.plain)
     }
 }
 
