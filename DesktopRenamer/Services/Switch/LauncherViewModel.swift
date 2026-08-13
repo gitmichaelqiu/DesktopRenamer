@@ -828,6 +828,7 @@ struct ListWindowsSection: Identifiable {
             DispatchQueue.main.async {
                 self.currentWindows = parsed.windows
                 self.isLoadingData = false
+                self.selectCurrentTargetSpace()
             }
         }
     }
