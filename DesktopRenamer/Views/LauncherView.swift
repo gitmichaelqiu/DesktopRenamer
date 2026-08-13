@@ -1811,7 +1811,17 @@ struct CommandBottomBar: View {
             if let type = viewModel.activeCommand?.type {
                 switch type {
                 case .switchToDesktop:
-                    EmptyView()
+                    HStack(spacing: 4) {
+                        Text(verbatim: String(localized: "Switch"))
+                        Text("↵")
+                            .font(.system(.subheadline))
+                            .fontWeight(.bold)
+                    }
+                    .modifier(BottomBarCapsule(isSelected: false, isActive: false, colorScheme: colorScheme))
+                    .contentShape(Rectangle())
+                    .onTapGesture {
+                        viewModel.executeRowAction()
+                    }
 
                 case .moveWindow:
                     HStack(spacing: 4) {
