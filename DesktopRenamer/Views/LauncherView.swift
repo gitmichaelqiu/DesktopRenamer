@@ -55,6 +55,26 @@ struct ThemeColors {
     }
 }
 
+private struct LauncherActionBarModifier: ViewModifier {
+    let colors: ThemeColors
+    let height: CGFloat
+
+    func body(content: Content) -> some View {
+        content
+            .padding(.horizontal, 18)
+            .padding(.vertical, 8)
+            .frame(maxWidth: .infinity)
+            .frame(height: height)
+            .background(colors.bottomBarBg)
+    }
+}
+
+private extension View {
+    func launcherActionBar(colors: ThemeColors, height: CGFloat = 50) -> some View {
+        modifier(LauncherActionBarModifier(colors: colors, height: height))
+    }
+}
+
 struct LauncherView: View {
     @ObservedObject var viewModel: LauncherViewModel
     @ObservedObject var spaceManager: SpaceManager
@@ -1392,9 +1412,7 @@ struct BatchMoveBottomBar: View {
                 }
             }
         }
-        .padding(.horizontal, 18)
-        .padding(.vertical, 10)
-        .background(colors.bottomBarBg)
+        .launcherActionBar(colors: colors)
     }
 }
 
@@ -1470,8 +1488,7 @@ struct RootLauncherBottomBar: View {
             .background(Color.primary.opacity(0.12), in: Capsule())
             .overlay(Capsule().stroke(Color.primary.opacity(0.28), lineWidth: 1))
         }
-        .padding(.horizontal, 8)
-        .frame(height: 58)
+        .launcherActionBar(colors: colors)
     }
 }
 
@@ -1997,9 +2014,7 @@ struct CommandBottomBar: View {
                 }
             }
         }
-        .padding(.horizontal, 18)
-        .padding(.vertical, 10)
-        .background(colors.bottomBarBg)
+        .launcherActionBar(colors: colors)
     }
 
     private func actionButton(title: String, shortcut: String, action: @escaping () -> Void) -> some View {
