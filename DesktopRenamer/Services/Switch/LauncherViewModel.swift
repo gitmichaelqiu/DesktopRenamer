@@ -162,9 +162,17 @@ struct ListWindowsSection: Identifiable {
     let items: [ListWindowsItem]
 }
 
+struct RootCommandSection: Identifiable {
+    let id: String
+    let title: String?
+    let commands: [LauncherCommand]
+    let startIndex: Int
+}
+
 @MainActor class LauncherViewModel: ObservableObject {
     @AppStorage("com.michaelqiu.desktoprenamer.automaticallyRankCommands") var automaticallyRankCommands: Bool = true
     @AppStorage("com.michaelqiu.desktoprenamer.launcherManualCommandOrder") var launcherManualCommandOrder: String = ""
+    @AppStorage("com.michaelqiu.desktoprenamer.launcherFavoriteCommandIDs") var launcherFavoriteCommandIDs: String = ""
 
     var manualCommandOrder: [String] {
         if launcherManualCommandOrder.isEmpty {
@@ -303,6 +311,30 @@ struct ListWindowsSection: Identifiable {
         objectWillChange.send()
     }
 
+    var favoriteCommandIDs: Set<String> {
+        Set(launcherFavoriteCommandIDs.split(separator: ",").map(String.init))
+    }
+
+    func isFavorite(_ command: LauncherCommand) -> Bool {
+        favoriteCommandIDs.contains(command.id)
+    }
+
+    func toggleFavoriteSelectedCommand() {
+        guard activeCommand == nil, filteredCommands.indices.contains(selectedRowIndex) else { return }
+        let commandID = filteredCommands[selectedRowIndex].id
+        var favorites = favoriteCommandIDs
+        if favorites.contains(commandID) {
+            favorites.remove(commandID)
+        } else {
+            favorites.insert(commandID)
+        }
+        launcherFavoriteCommandIDs = allCommands.map(\.id).filter { favorites.contains($0) }.joined(separator: ",")
+        if let newIndex = filteredCommands.firstIndex(where: { $0.id == commandID }) {
+            selectedRowIndex = newIndex
+        }
+        objectWillChange.send()
+    }
+
     /// Checks whether `query` matches `target` and its cached `pinyin`, supporting pinyin input for CJK-localized strings.
     /// e.g. typing "qiehuan" or "qie huan" matches "切换桌面" (pinyin: qie huan zhuo mian).
     private func matchesQuery(_ query: String, target: String, pinyin: String) -> Bool {
@@ -329,8 +361,14 @@ struct ListWindowsSection: Identifiable {
 
     private func sortCommands(_ commands: [LauncherCommand]) -> [LauncherCommand] {
         let order = manualCommandOrder
+        let favorites = favoriteCommandIDs
         if automaticallyRankCommands {
             return commands.sorted {
+                let favoriteA = favorites.contains($0.id)
+                let favoriteB = favorites.contains($1.id)
+                if favoriteA != favoriteB {
+                    return favoriteA && !favoriteB
+                }
                 let freqA = getCommandFrequency($0.id)
                 let freqB = getCommandFrequency($1.id)
                 if freqA != freqB {
@@ -342,6 +380,11 @@ struct ListWindowsSection: Identifiable {
             }
         } else {
             return commands.sorted {
+                let favoriteA = favorites.contains($0.id)
+                let favoriteB = favorites.contains($1.id)
+                if favoriteA != favoriteB {
+                    return favoriteA && !favoriteB
+                }
                 let idxA = order.firstIndex(of: $0.id) ?? Int.max
                 let idxB = order.firstIndex(of: $1.id) ?? Int.max
                 return idxA < idxB
@@ -366,6 +409,26 @@ struct ListWindowsSection: Identifiable {
             matchesQuery(query, target: $0.subtitle, pinyin: $0.pinyinSubtitle)
         }
         return sortCommands(filtered)
+    }
+
+    var rootCommandSections: [RootCommandSection] {
+        let commands = filteredCommands
+        guard searchQuery.isEmpty else {
+            return [RootCommandSection(id: "root-results", title: nil, commands: commands, startIndex: 0)]
+        }
+
+        let favorites = commands.filter(isFavorite)
+        let suggestions = commands.filter { !isFavorite($0) }
+        var sections: [RootCommandSection] = []
+        var startIndex = 0
+        if !favorites.isEmpty {
+            sections.append(RootCommandSection(id: "favorites", title: String(localized: "Favorites"), commands: favorites, startIndex: startIndex))
+            startIndex += favorites.count
+        }
+        if !suggestions.isEmpty {
+            sections.append(RootCommandSection(id: "suggestions", title: favorites.isEmpty ? nil : String(localized: "Suggestions"), commands: suggestions, startIndex: startIndex))
+        }
+        return sections
     }
     
     var filteredSpaces: [SpaceGroup] {
@@ -1508,7 +1571,10 @@ struct ListWindowsSection: Identifiable {
     }
 
     var filteredRootActionIndices: [Int] {
-        let titles = [String(localized: "Open Command"), String(localized: "Reset Ranking")]
+        let favoriteTitle = activeCommand == nil && filteredCommands.indices.contains(selectedRowIndex) && isFavorite(filteredCommands[selectedRowIndex])
+            ? String(localized: "Remove from Favorites")
+            : String(localized: "Add to Favorites")
+        let titles = [String(localized: "Open Command"), favoriteTitle, String(localized: "Reset Ranking")]
         guard !rootActionQuery.isEmpty else { return Array(titles.indices) }
         let query = rootActionQuery.lowercased()
         return titles.indices.filter {
@@ -1536,6 +1602,9 @@ struct ListWindowsSection: Identifiable {
             isRootActionsPresented = false
             executeRowAction()
         case 1:
+            toggleFavoriteSelectedCommand()
+            isRootActionsPresented = false
+        case 2:
             resetSelectedCommandRanking()
         default:
             break

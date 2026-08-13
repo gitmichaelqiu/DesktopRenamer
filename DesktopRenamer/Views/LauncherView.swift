@@ -439,30 +439,42 @@ struct ListAreaView: View {
         VStack(spacing: 0) {
             if viewModel.activeCommand == nil {
                 // Main command list
-                let commands = viewModel.filteredCommands
+                let sections = viewModel.rootCommandSections
+                let commands = sections.flatMap(\.commands)
                 if commands.isEmpty {
                     EmptyResultsView()
                 } else {
                     ScrollViewReader { proxy in
                         ScrollView {
                             VStack(alignment: .leading, spacing: 2) {
-                                ForEach(Array(commands.enumerated()), id: \.element.id) { i, cmd in
-                                    let isSelected = !viewModel.isBottomBarFocused && viewModel.selectedRowIndex == i
-                                    Button {
+                                ForEach(sections) { section in
+                                    if let title = section.title {
+                                        Text(verbatim: title)
+                                            .font(.system(size: 15, weight: .semibold))
+                                            .foregroundColor(colors.textSecondary)
+                                            .padding(.horizontal, 8)
+                                            .padding(.top, section.startIndex == 0 ? 4 : 10)
+                                            .padding(.bottom, 2)
+                                    }
+                                    ForEach(Array(section.commands.enumerated()), id: \.element.id) { localIndex, cmd in
+                                        let index = section.startIndex + localIndex
+                                        let isSelected = !viewModel.isBottomBarFocused && viewModel.selectedRowIndex == index
+                                        Button {
                                             viewModel.isKeyboardSelection = true
-                                            viewModel.selectedRowIndex = i
+                                            viewModel.selectedRowIndex = index
                                             viewModel.executeRowAction()
-                                    } label: {
-                                        CommandRowView(command: cmd, isSelected: isSelected, isRoot: true, isCompact: true, selectionNamespace: selectionNamespace, shortcutText: viewModel.showCommandNumbers && viewModel.commandKTargetWindow == nil && i < 9 ? "⌘\(i + 1)" : nil)
-                                    }
-                                    .buttonStyle(.plain)
-                                    .onHover { hovering in
-                                        if hovering {
-                                            viewModel.selectPointerRow(i)
+                                        } label: {
+                                            CommandRowView(command: cmd, isSelected: isSelected, isRoot: true, isCompact: true, selectionNamespace: selectionNamespace, shortcutText: viewModel.showCommandNumbers && viewModel.commandKTargetWindow == nil && index < 9 ? "⌘\(index + 1)" : nil)
                                         }
+                                        .buttonStyle(.plain)
+                                        .onHover { hovering in
+                                            if hovering {
+                                                viewModel.selectPointerRow(index)
+                                            }
+                                        }
+                                        .id(cmd.id)
+                                        .transition(.opacity.combined(with: .scale(scale: 0.98)))
                                     }
-                                    .id(cmd.id)
-                                    .transition(.opacity.combined(with: .scale(scale: 0.98)))
                                 }
                             }
                             .padding(.horizontal, 8)
@@ -1478,9 +1490,13 @@ struct RootActionsOverlay: View {
     }
 
     private var actionRows: [(index: Int, title: String, icon: String, shortcut: String)] {
+        let favoriteTitle = viewModel.filteredCommands.indices.contains(viewModel.selectedRowIndex) && viewModel.isFavorite(viewModel.filteredCommands[viewModel.selectedRowIndex])
+            ? String(localized: "Remove from Favorites")
+            : String(localized: "Add to Favorites")
         let actions = [
             (index: 0, title: String(localized: "Open Command"), icon: "rectangle.and.pencil.and.ellipsis", shortcut: "↵"),
-            (index: 1, title: String(localized: "Reset Ranking"), icon: "arrow.counterclockwise", shortcut: "↻")
+            (index: 1, title: favoriteTitle, icon: "star", shortcut: "⌘F"),
+            (index: 2, title: String(localized: "Reset Ranking"), icon: "arrow.counterclockwise", shortcut: "↻")
         ]
         let indices = Set(viewModel.filteredRootActionIndices)
         return actions.filter { indices.contains($0.index) }

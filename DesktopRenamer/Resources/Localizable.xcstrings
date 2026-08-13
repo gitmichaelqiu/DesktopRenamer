@@ -210,6 +210,26 @@
         }
       }
     },
+    "Add to Favorites" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "添加到收藏夹"
+          }
+        }
+      }
+    },
+    "Favorites" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "收藏夹"
+          }
+        }
+      }
+    },
     "Open Command" : {
       "localizations" : {
         "zh-Hans" : {
@@ -226,6 +246,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "搜索目标桌面..."
+          }
+        }
+      }
+    },
+    "Suggestions" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "建议"
           }
         }
       }
@@ -2138,6 +2168,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "重置排名"
+          }
+        }
+      }
+    },
+    "Remove from Favorites" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "从收藏夹移除"
           }
         }
       }
