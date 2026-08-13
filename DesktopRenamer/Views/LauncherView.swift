@@ -1519,6 +1519,7 @@ struct SpacePickerOverlay: View {
                     .padding(.horizontal, 8)
                     .padding(.bottom, 10)
                     .animation(.easeInOut(duration: 0.14), value: viewModel.filteredSpaces.map { $0.id })
+                    .animation(.easeOut(duration: 0.12), value: viewModel.selectedSpaceIndex)
                 }
                 .frame(maxHeight: 220)
 
