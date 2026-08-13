@@ -1426,6 +1426,7 @@ struct RootLauncherBottomBar: View {
                         Text(verbatim: String(localized: "Open Command"))
                         KeycapView(text: "↵", isSelected: false, verticalPadding: 4, horizontalPadding: 4)
                     }
+                    .foregroundColor(colors.textPrimary)
                 }
                 .buttonStyle(.plain)
 
@@ -1436,6 +1437,7 @@ struct RootLauncherBottomBar: View {
                         Text(verbatim: String(localized: "Actions"))
                         KeycapView(text: "⌘K", isSelected: false, verticalPadding: 4, horizontalPadding: 4)
                     }
+                    .foregroundColor(viewModel.isRootActionsPresented ? colors.textPrimary : colors.textSecondary)
                 }
                 .buttonStyle(.plain)
             }
