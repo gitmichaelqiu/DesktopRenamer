@@ -1651,7 +1651,7 @@ struct CommandBottomBar: View {
 
                 case .moveWindow:
                     HStack(spacing: 4) {
-                        Text(verbatim: String(localized: "Move Window"))
+                        Text(verbatim: String(localized: "Move"))
                         Text("↵")
                             .font(.system(.subheadline))
                             .fontWeight(.bold)
