@@ -1507,14 +1507,23 @@ struct RootActionsOverlay: View {
     }
 
     private var actionRows: [(index: Int, title: String, icon: String, shortcut: String)] {
-        let favoriteTitle = viewModel.filteredCommands.indices.contains(viewModel.selectedRowIndex) && viewModel.isFavorite(viewModel.filteredCommands[viewModel.selectedRowIndex])
+        let isSelectedFavorite = viewModel.filteredCommands.indices.contains(viewModel.selectedRowIndex) && viewModel.isFavorite(viewModel.filteredCommands[viewModel.selectedRowIndex])
+        let favoriteTitle = isSelectedFavorite
             ? String(localized: "Remove from Favorites")
             : String(localized: "Add to Favorites")
-        let actions = [
+        var actions = [
             (index: 0, title: String(localized: "Open Command"), icon: "rectangle.and.pencil.and.ellipsis", shortcut: "↵"),
             (index: 1, title: favoriteTitle, icon: "star", shortcut: "⌘⇧F"),
-            (index: 2, title: String(localized: "Reset Ranking"), icon: "arrow.counterclockwise", shortcut: "↻")
         ]
+        if isSelectedFavorite {
+            actions.append(contentsOf: [
+                (index: 2, title: String(localized: "Move Favorite Up"), icon: "arrow.up", shortcut: "⌘↑"),
+                (index: 3, title: String(localized: "Move Favorite Down"), icon: "arrow.down", shortcut: "⌘↓")
+            ])
+        }
+        actions.append(
+            (index: 4, title: String(localized: "Reset Ranking"), icon: "arrow.counterclockwise", shortcut: "↻")
+        )
         let indices = Set(viewModel.filteredRootActionIndices)
         return actions.filter { indices.contains($0.index) }
     }

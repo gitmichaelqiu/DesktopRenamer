@@ -315,7 +315,14 @@ struct RootCommandSection: Identifiable {
     }
 
     var favoriteCommandIDs: Set<String> {
-        Set(launcherFavoriteCommandIDs.split(separator: ",").map(String.init))
+        Set(favoriteCommandOrder)
+    }
+
+    var favoriteCommandOrder: [String] {
+        launcherFavoriteCommandIDs
+            .split(separator: ",")
+            .map(String.init)
+            .filter { id in allCommands.contains { $0.id == id } }
     }
 
     func isFavorite(_ command: LauncherCommand) -> Bool {
@@ -325,13 +332,29 @@ struct RootCommandSection: Identifiable {
     func toggleFavoriteSelectedCommand() {
         guard activeCommand == nil, filteredCommands.indices.contains(selectedRowIndex) else { return }
         let commandID = filteredCommands[selectedRowIndex].id
-        var favorites = favoriteCommandIDs
-        if favorites.contains(commandID) {
-            favorites.remove(commandID)
+        var favorites = favoriteCommandOrder
+        if let favoriteIndex = favorites.firstIndex(of: commandID) {
+            favorites.remove(at: favoriteIndex)
         } else {
-            favorites.insert(commandID)
+            favorites.append(commandID)
         }
-        launcherFavoriteCommandIDs = allCommands.map(\.id).filter { favorites.contains($0) }.joined(separator: ",")
+        launcherFavoriteCommandIDs = favorites.joined(separator: ",")
+        if let newIndex = filteredCommands.firstIndex(where: { $0.id == commandID }) {
+            selectedRowIndex = newIndex
+        }
+        objectWillChange.send()
+    }
+
+    func moveFavoriteSelectedCommand(direction: Int) {
+        guard activeCommand == nil, filteredCommands.indices.contains(selectedRowIndex) else { return }
+        let commandID = filteredCommands[selectedRowIndex].id
+        var favorites = favoriteCommandOrder
+        guard let currentIndex = favorites.firstIndex(of: commandID) else { return }
+        let targetIndex = currentIndex + direction
+        guard targetIndex >= 0, targetIndex < favorites.count else { return }
+
+        favorites.swapAt(currentIndex, targetIndex)
+        launcherFavoriteCommandIDs = favorites.joined(separator: ",")
         if let newIndex = filteredCommands.firstIndex(where: { $0.id == commandID }) {
             selectedRowIndex = newIndex
         }
@@ -396,6 +419,7 @@ struct RootCommandSection: Identifiable {
     private func sortCommands(_ commands: [LauncherCommand], query: String = "") -> [LauncherCommand] {
         let order = manualCommandOrder
         let favorites = favoriteCommandIDs
+        let favoriteOrder = favoriteCommandOrder
         return commands.sorted {
             if !query.isEmpty {
                 let scoreA = commandMatchScore($0, query: query)
@@ -409,6 +433,14 @@ struct RootCommandSection: Identifiable {
             let favoriteB = favorites.contains($1.id)
             if favoriteA != favoriteB {
                 return favoriteA && !favoriteB
+            }
+
+            if favoriteA, favoriteB {
+                let favoriteIndexA = favoriteOrder.firstIndex(of: $0.id) ?? Int.max
+                let favoriteIndexB = favoriteOrder.firstIndex(of: $1.id) ?? Int.max
+                if favoriteIndexA != favoriteIndexB {
+                    return favoriteIndexA < favoriteIndexB
+                }
             }
 
             if automaticallyRankCommands {
@@ -1608,10 +1640,18 @@ struct RootCommandSection: Identifiable {
     }
 
     var filteredRootActionIndices: [Int] {
-        let favoriteTitle = activeCommand == nil && filteredCommands.indices.contains(selectedRowIndex) && isFavorite(filteredCommands[selectedRowIndex])
+        let isSelectedFavorite = activeCommand == nil && filteredCommands.indices.contains(selectedRowIndex) && isFavorite(filteredCommands[selectedRowIndex])
+        let favoriteTitle = isSelectedFavorite
             ? String(localized: "Remove from Favorites")
             : String(localized: "Add to Favorites")
-        let titles = [String(localized: "Open Command"), favoriteTitle, String(localized: "Reset Ranking")]
+        var titles = [String(localized: "Open Command"), favoriteTitle]
+        if isSelectedFavorite {
+            titles.append(contentsOf: [
+                String(localized: "Move Favorite Up"),
+                String(localized: "Move Favorite Down")
+            ])
+        }
+        titles.append(String(localized: "Reset Ranking"))
         guard !rootActionQuery.isEmpty else { return Array(titles.indices) }
         let query = rootActionQuery.lowercased()
         return titles.indices.filter {
@@ -1642,6 +1682,12 @@ struct RootCommandSection: Identifiable {
             toggleFavoriteSelectedCommand()
             isRootActionsPresented = false
         case 2:
+            moveFavoriteSelectedCommand(direction: -1)
+            isRootActionsPresented = false
+        case 3:
+            moveFavoriteSelectedCommand(direction: 1)
+            isRootActionsPresented = false
+        case 4:
             resetSelectedCommandRanking()
         default:
             break

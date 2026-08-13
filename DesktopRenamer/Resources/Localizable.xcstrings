@@ -986,6 +986,26 @@
         }
       }
     },
+    "Move Favorite Up" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "上移收藏"
+          }
+        }
+      }
+    },
+    "Move Favorite Down" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "下移收藏"
+          }
+        }
+      }
+    },
     "Focus" : {
       "localizations" : {
         "zh-Hans" : {
