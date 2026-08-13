@@ -451,6 +451,7 @@ struct ListAreaView: View {
                                             }
                                         }
                                         .id(cmd.id)
+                                        .transition(.opacity.combined(with: .scale(scale: 0.98)))
                                 }
                             }
                             .padding(.horizontal, 8)
@@ -493,6 +494,7 @@ struct ListAreaView: View {
                                                     }
                                                 }
                                                 .id(space.id)
+                                                .transition(.opacity.combined(with: .scale(scale: 0.98)))
                                         }
                                     }
                                     .padding(.horizontal, 10)
@@ -545,6 +547,7 @@ struct ListAreaView: View {
                                                     }
                                                 }
                                                 .id(item.id)
+                                                .transition(.opacity.combined(with: .scale(scale: 0.98)))
                                             }
                                         }
                                     }
@@ -599,6 +602,7 @@ struct ListAreaView: View {
                                                             }
                                                         }
                                                         .id(item.id)
+                                                        .transition(.opacity.combined(with: .scale(scale: 0.98)))
                                                         
                                                 case .unstaged(let window, _):
                                                     WindowBatchRowView(window: window, isSelected: isSelected, isStaged: false, stagedActionText: "", shortcutText: viewModel.showCommandNumbers && viewModel.commandKTargetWindow == nil && item.index < 9 ? "⌘\(item.index + 1)" : nil)
@@ -614,6 +618,7 @@ struct ListAreaView: View {
                                                             }
                                                         }
                                                         .id(item.id)
+                                                        .transition(.opacity.combined(with: .scale(scale: 0.98)))
                                                 }
                                             }
                                         }
@@ -741,7 +746,7 @@ private struct LauncherRowSurface: ViewModifier {
                 RoundedRectangle(cornerRadius: 10, style: .continuous)
                     .stroke(isSelected ? Color.primary.opacity(0.10) : .clear, lineWidth: 1)
             }
-            .animation(.easeOut(duration: 0.12), value: isSelected)
+            .animation(.spring(response: 0.20, dampingFraction: 0.86), value: isSelected)
             .animation(.easeOut(duration: 0.12), value: isHovered)
     }
 }
