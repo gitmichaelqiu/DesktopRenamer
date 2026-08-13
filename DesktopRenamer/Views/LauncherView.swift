@@ -2633,6 +2633,11 @@ extension LauncherView {
         let hasShift = modifiers.contains(.shift)
         let hasOption = modifiers.contains(.option)
         let hasControl = modifiers.contains(.control)
+
+        if event.keyCode == 53 && hasCommand && !hasShift && !hasOption && !hasControl {
+            viewModel.popToRoot()
+            return true
+        }
         
         // Direct window shortcuts for .listWindows (cmd + m, cmd + shift + m/w/n/r/f/h/q)
         if viewModel.activeCommand?.type == .listWindows,

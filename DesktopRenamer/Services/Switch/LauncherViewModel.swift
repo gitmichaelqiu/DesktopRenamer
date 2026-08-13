@@ -1578,6 +1578,21 @@ struct ListWindowsSection: Identifiable {
             closeLauncher()
         }
     }
+
+    func popToRoot() {
+        commandKTargetWindow = nil
+        isRootActionsPresented = false
+        isRootSpacePickerPresented = false
+        stagingWindow = nil
+        isStagingForRestoreTo = false
+        isExecutingRestoreToImmediately = false
+        activeCommand = nil
+        searchQuery = ""
+        spacePickerQuery = ""
+        rootActionQuery = ""
+        selectedRowIndex = 0
+        isBottomBarFocused = false
+    }
     
     func handleTabKey() {
         guard activeCommand == nil else { return }
