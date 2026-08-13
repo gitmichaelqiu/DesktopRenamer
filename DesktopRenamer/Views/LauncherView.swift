@@ -2538,6 +2538,46 @@ struct VisualEffectView: NSViewRepresentable {
     }
 }
 
+private struct LauncherGlassSurface: NSViewRepresentable {
+    let cornerRadius: CGFloat
+
+    func makeNSView(context: Context) -> NSView {
+        makeSurfaceView()
+    }
+
+    func updateNSView(_ nsView: NSView, context: Context) {
+        nsView.wantsLayer = true
+        nsView.layer?.cornerRadius = cornerRadius
+        nsView.layer?.masksToBounds = true
+
+        if #available(macOS 26.0, *), let glassView = nsView as? NSGlassEffectView {
+            glassView.contentView = nil
+        } else if let effectView = nsView as? NSVisualEffectView {
+            effectView.material = .hudWindow
+            effectView.blendingMode = .behindWindow
+            effectView.state = .active
+        }
+    }
+
+    private func makeSurfaceView() -> NSView {
+        let surface: NSView
+        if #available(macOS 26.0, *) {
+            surface = NSGlassEffectView(frame: .zero)
+        } else {
+            let effectView = NSVisualEffectView(frame: .zero)
+            effectView.material = .hudWindow
+            effectView.blendingMode = .behindWindow
+            effectView.state = .active
+            surface = effectView
+        }
+
+        surface.wantsLayer = true
+        surface.layer?.cornerRadius = cornerRadius
+        surface.layer?.masksToBounds = true
+        return surface
+    }
+}
+
 extension View {
     func opaqueLauncherBackground(cornerRadius: CGFloat, isDark: Bool, borderColor: Color) -> some View {
         background(
@@ -2568,24 +2608,14 @@ extension View {
 
     @ViewBuilder
     func spacePickerSurface(colors: ThemeColors) -> some View {
-        if #available(macOS 26.0, *) {
-            self
-                .glassEffect(.regular, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
-                .overlay(
-                    RoundedRectangle(cornerRadius: 16, style: .continuous)
-                        .stroke(colors.border.opacity(0.8), lineWidth: 1)
-                )
-                .shadow(color: .black.opacity(0.28), radius: 18, y: 8)
-        } else {
-            self
-                .background(.ultraThinMaterial)
-                .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-                .overlay(
-                    RoundedRectangle(cornerRadius: 16, style: .continuous)
-                        .stroke(colors.border.opacity(0.8), lineWidth: 1)
-                )
-                .shadow(color: .black.opacity(0.28), radius: 18, y: 8)
-        }
+        self
+            .background(LauncherGlassSurface(cornerRadius: 16))
+            .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                    .stroke(colors.border.opacity(0.8), lineWidth: 1)
+            )
+            .shadow(color: .black.opacity(0.28), radius: 18, y: 8)
     }
 }
 
