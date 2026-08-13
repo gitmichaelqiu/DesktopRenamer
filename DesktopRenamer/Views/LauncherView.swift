@@ -84,7 +84,7 @@ struct LauncherView: View {
                             .frame(width: 30, height: 30)
                     }
                     .buttonStyle(.plain)
-                    .disabled(viewModel.activeCommand == nil && viewModel.stagingWindow == nil)
+                    .opacity(viewModel.activeCommand == nil && viewModel.stagingWindow == nil ? 0.72 : 1)
                     
                     if viewModel.activeCommand?.type == .renameCurrentSpace {
                         SearchTextField(
@@ -297,6 +297,7 @@ struct LauncherView: View {
             }
             .blur(radius: viewModel.commandKTargetWindow != nil ? 10 : 0)
             .animation(.easeInOut(duration: 0.12), value: viewModel.commandKTargetWindow != nil)
+            .animation(.easeInOut(duration: 0.18), value: viewModel.activeCommand?.id)
             
             if let targetWindow = viewModel.commandKTargetWindow {
                 CommandKOverlayView(viewModel: viewModel, window: targetWindow)
@@ -1309,7 +1310,6 @@ struct SpacePickerOverlay: View {
     @ObservedObject var viewModel: LauncherViewModel
     @ObservedObject var spaceManager: SpaceManager
     @Environment(\.colorScheme) var colorScheme
-    @FocusState private var isSearchFocused: Bool
 
     var colors: ThemeColors {
         ThemeColors(isDark: colorScheme == .dark)
@@ -1393,18 +1393,35 @@ struct SpacePickerOverlay: View {
 
                 Divider()
 
-                TextField(String(localized: "Search..."), text: $viewModel.spacePickerQuery)
-                    .font(.body)
-                    .textFieldStyle(.plain)
-                    .focused($isSearchFocused)
-                    .onSubmit {
+                SearchTextField(
+                    text: $viewModel.spacePickerQuery,
+                    isDark: colors.isDark,
+                    onUpArrow: {
+                        viewModel.selectedSpaceIndex = max(0, viewModel.selectedSpaceIndex - 1)
+                    },
+                    onDownArrow: {
+                        let count = viewModel.filteredSpaces.count
+                        if viewModel.selectedSpaceIndex < count - 1 {
+                            viewModel.selectedSpaceIndex += 1
+                        }
+                    },
+                    onEnter: {
                         viewModel.selectedRowIndex = viewModel.selectedSpaceIndex
                         viewModel.executeRowAction()
-                    }
-                    .onExitCommand {
+                    },
+                    onCommandNumber: { number in
+                        let index = number - 1
+                        guard index >= 0 && index < viewModel.filteredSpaces.count else { return }
+                        viewModel.selectedSpaceIndex = index
+                        viewModel.selectedRowIndex = index
+                        viewModel.executeRowAction()
+                    },
+                    onEscape: {
                         viewModel.handleEscapeKey()
-                    }
-                    .padding(.horizontal, 16)
+                    },
+                    onKeyEquivalent: { _ in false },
+                    placeholder: String(localized: "Search...")
+                )
                     .frame(height: 44)
             }
             .frame(width: 350)
@@ -1413,9 +1430,7 @@ struct SpacePickerOverlay: View {
             .padding(.bottom, 58)
         }
         .onAppear {
-            DispatchQueue.main.async {
-                isSearchFocused = true
-            }
+            NotificationCenter.default.post(name: NSNotification.Name("FocusLauncherTextField"), object: nil)
         }
     }
 }
