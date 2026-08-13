@@ -72,7 +72,7 @@ struct LauncherView: View {
         ZStack {
             VStack(spacing: 0) {
                 // Header (Typing Bar)
-                HStack(spacing: 14) {
+                HStack(spacing: 6) {
                     Button(action: {
                         if viewModel.activeCommand != nil || viewModel.stagingWindow != nil {
                             viewModel.handleEscapeKey()
@@ -80,8 +80,8 @@ struct LauncherView: View {
                     }) {
                         Image(systemName: viewModel.activeCommand == nil && viewModel.stagingWindow == nil ? "sparkles" : "chevron.left")
                             .foregroundColor(colors.textSecondary)
-                            .font(.system(size: 22, weight: .medium))
-                            .frame(width: 30, height: 30)
+                            .font(.system(size: 20, weight: .medium))
+                            .frame(width: 28, height: 28)
                     }
                     .buttonStyle(.plain)
                     .opacity(viewModel.activeCommand == nil && viewModel.stagingWindow == nil ? 0.72 : 1)
@@ -244,7 +244,7 @@ struct LauncherView: View {
                     }
                 }
                 .frame(height: 72)
-                .padding(.horizontal, 22)
+                .padding(.horizontal, 16)
                 
                 if viewModel.activeCommand != nil {
                     Divider()
@@ -398,7 +398,7 @@ struct ListAreaView: View {
                                         .id(cmd.id)
                                 }
                             }
-                            .padding(.horizontal, 14)
+                            .padding(.horizontal, 8)
                             .padding(.vertical, 6)
                             .animation(.easeInOut(duration: 0.14), value: commands.map(\.id))
                         }
@@ -676,7 +676,7 @@ private struct LauncherRowSurface: ViewModifier {
 
     func body(content: Content) -> some View {
         content
-            .padding(.horizontal, 12)
+            .padding(.horizontal, 8)
             .padding(.vertical, verticalPadding)
             .background {
                 RoundedRectangle(cornerRadius: 10, style: .continuous)
@@ -728,11 +728,11 @@ struct CommandRowView: View {
     }
     
     var body: some View {
-        HStack(spacing: 12) {
+        HStack(spacing: 8) {
             Image(systemName: command.iconName)
                 .font(.system(size: 17, weight: .medium))
                 .foregroundColor(colors.textPrimary)
-                .frame(width: 32, height: 32)
+                .frame(width: 28, height: 28)
                 .background(colors.badgeBg)
                 .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
             
@@ -799,19 +799,19 @@ struct SpaceRowView: View {
     }
     
     var body: some View {
-        HStack(spacing: 12) {
+        HStack(spacing: 8) {
             if space.isFullscreen, let appPath = space.appPath {
                 let appIcon = NSWorkspace.shared.icon(forFile: appPath)
                 Image(nsImage: appIcon)
                     .resizable()
                     .aspectRatio(contentMode: .fit)
-                    .frame(width: 32, height: 32)
+                    .frame(width: 28, height: 28)
                     .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
             } else {
                 Image(systemName: "desktopcomputer")
                     .font(.system(size: 17, weight: .medium))
                     .foregroundColor(colors.textPrimary)
-                    .frame(width: 32, height: 32)
+                    .frame(width: 28, height: 28)
                     .background(colors.badgeBg)
                     .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
             }
@@ -880,12 +880,12 @@ struct WindowRowView: View {
     }
     
     var body: some View {
-        HStack(spacing: 12) {
+        HStack(spacing: 8) {
             let appIcon = NSWorkspace.shared.icon(forFile: window.appPath)
             Image(nsImage: appIcon)
                 .resizable()
                 .aspectRatio(contentMode: .fit)
-                .frame(width: 32, height: 32)
+                .frame(width: 28, height: 28)
                 .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
 
             VStack(alignment: .leading, spacing: 2) {
@@ -937,7 +937,7 @@ struct ConfirmBatchRowView: View {
     }
     
     var body: some View {
-        HStack(spacing: 12) {
+        HStack(spacing: 8) {
             Image(systemName: "checkmark.circle.fill")
                 .font(.body.weight(.semibold))
                 .foregroundColor(isSelected ? colors.greenText : .white)
@@ -982,12 +982,12 @@ struct WindowBatchRowView: View {
     }
     
     var body: some View {
-        HStack(spacing: 12) {
+        HStack(spacing: 8) {
             let appIcon = NSWorkspace.shared.icon(forFile: window.appPath)
             Image(nsImage: appIcon)
                 .resizable()
                 .aspectRatio(contentMode: .fit)
-                .frame(width: 32, height: 32)
+                .frame(width: 28, height: 28)
                 .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
 
             VStack(alignment: .leading, spacing: 2) {
@@ -1263,13 +1263,13 @@ struct RootLauncherBottomBar: View {
 
             Spacer()
 
-            HStack(spacing: 16) {
+            HStack(spacing: 4) {
                 Button {
                     viewModel.executeRowAction()
                 } label: {
                     HStack(spacing: 8) {
                         Text(verbatim: String(localized: "Open Command"))
-                        KeycapView(text: "↵", isSelected: false, verticalPadding: 4, horizontalPadding: 7)
+                        KeycapView(text: "↵", isSelected: false, verticalPadding: 4, horizontalPadding: 4)
                     }
                 }
                 .buttonStyle(.plain)
@@ -1279,7 +1279,7 @@ struct RootLauncherBottomBar: View {
                 } label: {
                     HStack(spacing: 8) {
                         Text(verbatim: String(localized: "Actions"))
-                        KeycapView(text: "⌘K", isSelected: false, verticalPadding: 4, horizontalPadding: 7)
+                        KeycapView(text: "⌘K", isSelected: false, verticalPadding: 4, horizontalPadding: 4)
                     }
                 }
                 .buttonStyle(.plain)
@@ -1288,12 +1288,12 @@ struct RootLauncherBottomBar: View {
             }
             .font(.system(size: 14, weight: .semibold))
             .foregroundColor(colors.textPrimary)
-            .padding(.horizontal, 16)
-            .frame(height: 40)
+            .padding(.horizontal, 4)
+            .frame(height: 36)
             .background(Color.primary.opacity(0.12), in: Capsule())
             .overlay(Capsule().stroke(Color.primary.opacity(0.28), lineWidth: 1))
         }
-        .padding(.horizontal, 16)
+        .padding(.horizontal, 8)
         .frame(height: 58)
     }
 }
