@@ -1434,7 +1434,13 @@ struct ListWindowsSection: Identifiable {
         selectedRowIndex = index
         executeRowAction()
     }
-    
+
+    func selectPointerRow(_ index: Int) {
+        guard !isBottomBarFocused, index >= 0, index < visibleRowsCount else { return }
+        isKeyboardSelection = false
+        selectedRowIndex = index
+    }
+
     func handleEscapeKey() {
         if isBottomBarFocused {
             isBottomBarFocused = false

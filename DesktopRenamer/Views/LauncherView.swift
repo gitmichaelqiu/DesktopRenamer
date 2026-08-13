@@ -386,6 +386,11 @@ struct ListAreaView: View {
                                             viewModel.selectedRowIndex = i
                                             viewModel.executeRowAction()
                                         }
+                                        .onHover { hovering in
+                                            if hovering {
+                                                viewModel.selectPointerRow(i)
+                                            }
+                                        }
                                         .id(i)
                                 }
                             }
@@ -420,6 +425,11 @@ struct ListAreaView: View {
                                                     viewModel.isKeyboardSelection = true
                                                     viewModel.selectedRowIndex = i
                                                     viewModel.executeRowAction()
+                                                }
+                                                .onHover { hovering in
+                                                    if hovering {
+                                                        viewModel.selectPointerRow(i)
+                                                    }
                                                 }
                                                 .id(i)
                                         }
@@ -465,6 +475,11 @@ struct ListAreaView: View {
                                                     viewModel.selectedRowIndex = item.index
                                                     viewModel.executeRowAction()
                                                 }
+                                                .onHover { hovering in
+                                                    if hovering {
+                                                        viewModel.selectPointerRow(item.index)
+                                                    }
+                                                }
                                                 .id(item.index)
                                             }
                                         }
@@ -509,6 +524,11 @@ struct ListAreaView: View {
                                                             viewModel.selectedRowIndex = item.index
                                                             viewModel.executeRowAction()
                                                         }
+                                                        .onHover { hovering in
+                                                            if hovering {
+                                                                viewModel.selectPointerRow(item.index)
+                                                            }
+                                                        }
                                                         .id(item.index)
                                                         
                                                 case .unstaged(let window, _):
@@ -518,6 +538,11 @@ struct ListAreaView: View {
                                                             viewModel.isKeyboardSelection = true
                                                             viewModel.selectedRowIndex = item.index
                                                             viewModel.executeRowAction()
+                                                        }
+                                                        .onHover { hovering in
+                                                            if hovering {
+                                                                viewModel.selectPointerRow(item.index)
+                                                            }
                                                         }
                                                         .id(item.index)
                                                 }
@@ -633,6 +658,7 @@ private struct LauncherRowSurface: ViewModifier {
                     .stroke(isSelected ? Color.primary.opacity(0.10) : .clear, lineWidth: 1)
             }
             .animation(.easeOut(duration: 0.12), value: isSelected)
+            .animation(.easeOut(duration: 0.12), value: isHovered)
     }
 }
 
