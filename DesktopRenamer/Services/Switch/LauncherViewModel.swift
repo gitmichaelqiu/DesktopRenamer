@@ -1431,6 +1431,10 @@ struct ListWindowsSection: Identifiable {
     func handleEscapeKey() {
         if isBottomBarFocused {
             isBottomBarFocused = false
+        } else if stagingWindow != nil && !spacePickerQuery.isEmpty {
+            spacePickerQuery = ""
+        } else if !searchQuery.isEmpty {
+            searchQuery = ""
         } else if stagingWindow != nil {
             stagingWindow = nil
             isStagingForRestoreTo = false
@@ -1438,8 +1442,6 @@ struct ListWindowsSection: Identifiable {
             selectedRowIndex = batchMoveLastSelectedIndex
         } else if activeCommand != nil {
             activeCommand = nil
-        } else if !searchQuery.isEmpty {
-            searchQuery = ""
         } else {
             closeLauncher()
         }

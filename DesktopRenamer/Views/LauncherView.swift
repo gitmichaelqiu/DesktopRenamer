@@ -123,7 +123,7 @@ struct LauncherView: View {
                                 if viewModel.commandKTargetWindow != nil {
                                     viewModel.selectNextCommandKAction()
                                 } else if viewModel.stagingWindow != nil {
-                                    let count = spaceManager.currentDisplaySpaces.count
+                                    let count = viewModel.filteredSpaces.count
                                     if viewModel.selectedSpaceIndex < count - 1 {
                                         viewModel.selectedSpaceIndex += 1
                                     }
@@ -201,7 +201,7 @@ struct LauncherView: View {
                                     }
                                 } else if viewModel.stagingWindow != nil {
                                     let index = num - 1
-                                    let count = spaceManager.currentDisplaySpaces.count
+                                    let count = viewModel.filteredSpaces.count
                                     if index >= 0 && index < count {
                                         viewModel.selectedSpaceIndex = index
                                         viewModel.selectedRowIndex = index
@@ -2105,7 +2105,7 @@ struct BottomBarCapsule: ViewModifier {
             .font(.subheadline)
             .fontWeight(isSelected || isActive ? .semibold : .medium)
             .padding(.horizontal, 12)
-            .frame(height: 26)
+            .frame(height: 30)
             .background(
                 ZStack {
                     if isGreen {
