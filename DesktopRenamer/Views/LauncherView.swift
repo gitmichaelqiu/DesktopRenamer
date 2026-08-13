@@ -376,10 +376,10 @@ struct ListAreaView: View {
                 } else {
                     ScrollViewReader { proxy in
                         ScrollView {
-                            VStack(alignment: .leading, spacing: 4) {
+                            VStack(alignment: .leading, spacing: 2) {
                                 ForEach(Array(commands.enumerated()), id: \.element.id) { i, cmd in
                                     let isSelected = !viewModel.isBottomBarFocused && viewModel.selectedRowIndex == i
-                                    CommandRowView(command: cmd, isSelected: isSelected, shortcutText: viewModel.showCommandNumbers && viewModel.commandKTargetWindow == nil && i < 9 ? "⌘\(i + 1)" : nil)
+                                    CommandRowView(command: cmd, isSelected: isSelected, isCompact: true, shortcutText: viewModel.showCommandNumbers && viewModel.commandKTargetWindow == nil && i < 9 ? "⌘\(i + 1)" : nil)
                                         .contentShape(Rectangle())
                                         .onTapGesture {
                                             viewModel.isKeyboardSelection = true
@@ -390,7 +390,7 @@ struct ListAreaView: View {
                                 }
                             }
                             .padding(.horizontal, 14)
-                            .padding(.vertical, 10)
+                            .padding(.vertical, 6)
                         }
                         .onChange(of: viewModel.selectedRowIndex) { index in
                             if viewModel.isKeyboardSelection {
@@ -618,11 +618,12 @@ private struct LauncherRowSurface: ViewModifier {
     let isSelected: Bool
     let isHovered: Bool
     let colors: ThemeColors
+    let verticalPadding: CGFloat
 
     func body(content: Content) -> some View {
         content
             .padding(.horizontal, 12)
-            .padding(.vertical, 8)
+            .padding(.vertical, verticalPadding)
             .background {
                 RoundedRectangle(cornerRadius: 10, style: .continuous)
                     .fill(isSelected ? Color.primary.opacity(0.16) : (isHovered ? colors.rowHover : .clear))
@@ -636,14 +637,15 @@ private struct LauncherRowSurface: ViewModifier {
 }
 
 private extension View {
-    func launcherRowSurface(isSelected: Bool, isHovered: Bool, colors: ThemeColors) -> some View {
-        modifier(LauncherRowSurface(isSelected: isSelected, isHovered: isHovered, colors: colors))
+    func launcherRowSurface(isSelected: Bool, isHovered: Bool, colors: ThemeColors, verticalPadding: CGFloat = 8) -> some View {
+        modifier(LauncherRowSurface(isSelected: isSelected, isHovered: isHovered, colors: colors, verticalPadding: verticalPadding))
     }
 }
 
 struct CommandRowView: View {
     let command: LauncherCommand
     let isSelected: Bool
+    var isCompact: Bool = false
     var shortcutText: String? = nil
     @Environment(\.colorScheme) var colorScheme
     @State private var isHovered = false
@@ -717,7 +719,7 @@ struct CommandRowView: View {
                 KeycapView(text: "Action", isSelected: isSelected)
             }
         }
-        .launcherRowSurface(isSelected: isSelected, isHovered: isHovered, colors: colors)
+        .launcherRowSurface(isSelected: isSelected, isHovered: isHovered, colors: colors, verticalPadding: isCompact ? 6 : 8)
         .onHover { hovering in
             isHovered = hovering
         }

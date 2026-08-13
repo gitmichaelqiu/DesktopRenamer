@@ -122,7 +122,7 @@ enum BatchMoveItem: Identifiable, Equatable {
             return "unstaged_\(window.id)"
         }
     }
-    
+
     var index: Int {
         switch self {
         case .staged(_, let index):
@@ -318,9 +318,15 @@ struct ListWindowsSection: Identifiable {
         }
     }
 
+    private var rootCommands: [LauncherCommand] {
+        allCommands.filter {
+            $0.type != .switchToDesktop && $0.type != .batchMoveWindows
+        }
+    }
+    
     var filteredCommands: [LauncherCommand] {
         if searchQuery.isEmpty {
-            return sortCommands(allCommands)
+            return sortCommands(rootCommands)
         } else {
             let query = searchQuery.lowercased()
             let filtered = allCommands.filter {
