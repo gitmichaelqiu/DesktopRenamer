@@ -946,9 +946,9 @@ struct CommandRowView: View {
 
     private var commandIcon: some View {
         Image(systemName: command.iconName)
-            .font(.system(size: 17, weight: .medium))
+            .font(.system(size: 16, weight: .medium))
             .foregroundColor(colors.textPrimary)
-            .frame(width: 28, height: 28)
+            .frame(width: 24, height: 24)
             .background(colors.badgeBg)
             .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
     }
@@ -994,13 +994,13 @@ struct SpaceRowView: View {
                 Image(nsImage: appIcon)
                     .resizable()
                     .aspectRatio(contentMode: .fit)
-                    .frame(width: 28, height: 28)
+                    .frame(width: 24, height: 24)
                     .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
             } else {
                 Image(systemName: "desktopcomputer")
-                    .font(.system(size: 17, weight: .medium))
+                    .font(.system(size: 16, weight: .medium))
                     .foregroundColor(colors.textPrimary)
-                    .frame(width: 28, height: 28)
+                    .frame(width: 24, height: 24)
                     .background(colors.badgeBg)
                     .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
             }
@@ -1075,7 +1075,7 @@ struct WindowRowView: View {
             Image(nsImage: appIcon)
                 .resizable()
                 .aspectRatio(contentMode: .fit)
-                .frame(width: 28, height: 28)
+                .frame(width: 24, height: 24)
                 .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
 
             VStack(alignment: .leading, spacing: 2) {
@@ -1178,7 +1178,7 @@ struct WindowBatchRowView: View {
             Image(nsImage: appIcon)
                 .resizable()
                 .aspectRatio(contentMode: .fit)
-                .frame(width: 28, height: 28)
+                .frame(width: 24, height: 24)
                 .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
 
             VStack(alignment: .leading, spacing: 2) {
@@ -1261,11 +1261,11 @@ struct ListSectionHeader: View {
     var body: some View {
         HStack(spacing: 8) {
             Text(title)
-                .font(.system(size: 11, weight: .semibold))
+                .font(.system(size: 15, weight: .semibold))
                 .foregroundColor(colors.textSecondary)
             
             Text(subtitle)
-                .font(.system(size: 11))
+                .font(.system(size: 15))
                 .foregroundColor(colors.textSecondary)
             
             Spacer()
