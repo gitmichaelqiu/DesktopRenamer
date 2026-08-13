@@ -1573,6 +1573,12 @@ struct RootActionsOverlay: View {
                     onDownArrow: {
                         viewModel.selectNextRootAction()
                     },
+                    onCommandUpArrow: {
+                        viewModel.moveFavoriteSelectedCommand(direction: -1)
+                    },
+                    onCommandDownArrow: {
+                        viewModel.moveFavoriteSelectedCommand(direction: 1)
+                    },
                     onEnter: {
                         viewModel.executeRootAction()
                     },
@@ -2161,6 +2167,8 @@ struct SearchTextField: NSViewRepresentable {
     var isTypingDisabled: Bool = false
     var onUpArrow: () -> Void
     var onDownArrow: () -> Void
+    var onCommandUpArrow: (() -> Void)? = nil
+    var onCommandDownArrow: (() -> Void)? = nil
     var onLeftArrow: (() -> Bool)? = nil
     var onRightArrow: (() -> Bool)? = nil
     var onEnter: () -> Void
@@ -2206,9 +2214,17 @@ struct SearchTextField: NSViewRepresentable {
         
         func control(_ control: NSControl, textView: NSTextView, doCommandBy commandSelector: Selector) -> Bool {
             if commandSelector == #selector(NSResponder.moveUp(_:)) {
+                if NSEvent.modifierFlags.contains(.command), let onCommandUpArrow = parent.onCommandUpArrow {
+                    onCommandUpArrow()
+                    return true
+                }
                 parent.onUpArrow()
                 return true
             } else if commandSelector == #selector(NSResponder.moveDown(_:)) {
+                if NSEvent.modifierFlags.contains(.command), let onCommandDownArrow = parent.onCommandDownArrow {
+                    onCommandDownArrow()
+                    return true
+                }
                 parent.onDownArrow()
                 return true
             } else if commandSelector == #selector(NSResponder.moveLeft(_:)) {
