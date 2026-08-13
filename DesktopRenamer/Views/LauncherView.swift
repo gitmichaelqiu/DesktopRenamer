@@ -277,7 +277,7 @@ struct LauncherView: View {
                 CommandKOverlayView(viewModel: viewModel, window: targetWindow)
             }
 
-            if viewModel.activeCommand == nil && viewModel.isBottomBarFocused {
+            if viewModel.isBottomBarFocused || viewModel.stagingWindow != nil {
                 SpacePickerOverlay(viewModel: viewModel, spaceManager: spaceManager)
                     .padding(.trailing, 16)
                     .padding(.bottom, 58)
@@ -337,7 +337,7 @@ struct ListAreaView: View {
                     }
                 }
             } else {
-                if viewModel.stagingWindow != nil {
+                if viewModel.stagingWindow != nil && viewModel.activeCommand?.type != .listWindows {
                     // Staging target space selection
                     let spaces = viewModel.filteredSpaces
                     if spaces.isEmpty {
@@ -1256,7 +1256,10 @@ struct SpacePickerOverlay: View {
                         let space = spaces[index]
                         Button(action: {
                             viewModel.selectedSpaceIndex = index
-                            if NSEvent.modifierFlags.contains(.option) {
+                            if viewModel.stagingWindow != nil {
+                                viewModel.selectedRowIndex = index
+                                viewModel.executeRowAction()
+                            } else if NSEvent.modifierFlags.contains(.option) {
                                 viewModel.executeBottomBarSpaceAction(isOption: true, isCommand: false)
                             } else {
                                 viewModel.executeBottomBarSpaceAction(isOption: false, isCommand: false)
