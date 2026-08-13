@@ -321,6 +321,9 @@ struct LauncherView: View {
             }
         }
         .animation(.spring(response: 0.28, dampingFraction: 0.84), value: isSpacePickerPresented)
+        .onChange(of: spaceManager.currentSpaceUUID) { _ in
+            viewModel.selectCurrentTargetSpace()
+        }
         .frame(width: 760, height: 500)
         .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
         .opaqueLauncherBackground(cornerRadius: 24, isDark: colors.isDark, borderColor: colors.border)
@@ -588,6 +591,16 @@ struct ListAreaView: View {
                     EmptyResultsView()
                 }
             }
+        }
+        .onAppear {
+            guard viewModel.activeCommand?.type == .switchToDesktop || viewModel.activeCommand?.type == .moveWindow else { return }
+            // SpaceManager can finish reconciling the current UUID after the target list appears.
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                viewModel.selectCurrentTargetSpace()
+            }
+        }
+        .onChange(of: viewModel.currentSpaces) { _ in
+            viewModel.selectCurrentTargetSpace()
         }
     }
 }

@@ -804,6 +804,12 @@ struct ListWindowsSection: Identifiable {
                 appPath: space.appPath
             )
         }
+
+        if stagingWindow == nil,
+           activeCommand?.type == .switchToDesktop || activeCommand?.type == .moveWindow,
+           let currentIndex = filteredSpaces.firstIndex(where: { $0.id == manager.currentSpaceUUID }) {
+            selectedRowIndex = currentIndex
+        }
         
         // If we are renaming space, pre-fill text
         if activeCommand?.type == .renameCurrentSpace {
@@ -1439,6 +1445,18 @@ struct ListWindowsSection: Identifiable {
         guard !isBottomBarFocused, index >= 0, index < visibleRowsCount else { return }
         isKeyboardSelection = false
         selectedRowIndex = index
+    }
+
+    func selectCurrentTargetSpace() {
+        guard stagingWindow == nil,
+              activeCommand?.type == .switchToDesktop || activeCommand?.type == .moveWindow,
+              let manager = AppDelegate.shared.spaceManager,
+              let currentIndex = filteredSpaces.firstIndex(where: { $0.id == manager.currentSpaceUUID }) else {
+            return
+        }
+
+        isKeyboardSelection = true
+        selectedRowIndex = currentIndex
     }
 
     func handleEscapeKey() {
