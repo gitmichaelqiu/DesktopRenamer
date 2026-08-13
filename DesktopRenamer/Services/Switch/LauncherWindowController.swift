@@ -212,9 +212,8 @@ class LauncherWindowController: NSWindowController, NSWindowDelegate {
         let windowFrame = panel.frame
         
         let x = screenFrame.origin.x + (screenFrame.width - windowFrame.width) / 2
-        // Spotlight placement: 65% up the screen height
-        let y = screenFrame.origin.y + (screenFrame.height - windowFrame.height) * 0.65
-        
+        let y = screenFrame.origin.y + (screenFrame.height - windowFrame.height) / 2
+
         panel.setFrameOrigin(NSPoint(x: x, y: y))
     }
     
