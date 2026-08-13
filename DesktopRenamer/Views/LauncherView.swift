@@ -1717,37 +1717,39 @@ struct SpacePickerOverlay: View {
                 }
                 .frame(maxHeight: 220)
 
-                Divider()
+                if viewModel.stagingWindow != nil {
+                    Divider()
 
-                SearchTextField(
-                    text: $viewModel.spacePickerQuery,
-                    isDark: colors.isDark,
-                    onUpArrow: {
-                        viewModel.selectedSpaceIndex = max(0, viewModel.selectedSpaceIndex - 1)
-                    },
-                    onDownArrow: {
-                        let count = viewModel.filteredSpaces.count
-                        if viewModel.selectedSpaceIndex < count - 1 {
-                            viewModel.selectedSpaceIndex += 1
-                        }
-                    },
-                    onEnter: {
-                        viewModel.executeSelectedSpacePickerAction()
-                    },
-                    onCommandNumber: { number in
-                        let index = number - 1
-                        guard index >= 0 && index < viewModel.filteredSpaces.count else { return }
-                        viewModel.selectedSpaceIndex = index
-                        viewModel.executeSelectedSpacePickerAction()
-                    },
-                    onEscape: {
-                        viewModel.handleEscapeKey()
-                    },
-                    onKeyEquivalent: { _ in false },
-                    placeholder: String(localized: "Search..."),
-                    focusNotificationName: NSNotification.Name("FocusSpacePickerTextField")
-                )
-                    .frame(height: 44)
+                    SearchTextField(
+                        text: $viewModel.spacePickerQuery,
+                        isDark: colors.isDark,
+                        onUpArrow: {
+                            viewModel.selectedSpaceIndex = max(0, viewModel.selectedSpaceIndex - 1)
+                        },
+                        onDownArrow: {
+                            let count = viewModel.filteredSpaces.count
+                            if viewModel.selectedSpaceIndex < count - 1 {
+                                viewModel.selectedSpaceIndex += 1
+                            }
+                        },
+                        onEnter: {
+                            viewModel.executeSelectedSpacePickerAction()
+                        },
+                        onCommandNumber: { number in
+                            let index = number - 1
+                            guard index >= 0 && index < viewModel.filteredSpaces.count else { return }
+                            viewModel.selectedSpaceIndex = index
+                            viewModel.executeSelectedSpacePickerAction()
+                        },
+                        onEscape: {
+                            viewModel.handleEscapeKey()
+                        },
+                        onKeyEquivalent: { _ in false },
+                        placeholder: String(localized: "Search..."),
+                        focusNotificationName: NSNotification.Name("FocusSpacePickerTextField")
+                    )
+                        .frame(height: 44)
+                }
             }
             .frame(width: viewModel.stagingWindow == nil ? 290 : 350)
             .spacePickerSurface(colors: colors)
@@ -1755,6 +1757,7 @@ struct SpacePickerOverlay: View {
             .padding(.bottom, 8)
         }
         .onAppear {
+            guard viewModel.stagingWindow != nil else { return }
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
                 NotificationCenter.default.post(name: NSNotification.Name("FocusSpacePickerTextField"), object: nil)
             }
