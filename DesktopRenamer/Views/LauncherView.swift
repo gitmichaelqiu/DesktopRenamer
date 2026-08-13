@@ -69,10 +69,18 @@ struct LauncherView: View {
             VStack(spacing: 0) {
                 // Header (Typing Bar)
                 HStack(spacing: 14) {
-                    Image(systemName: "sparkles")
-                        .foregroundColor(colors.textSecondary)
-                        .font(.system(size: 22, weight: .medium))
-                        .frame(width: 30, height: 30)
+                    Button(action: {
+                        if viewModel.activeCommand != nil || viewModel.stagingWindow != nil {
+                            viewModel.handleEscapeKey()
+                        }
+                    }) {
+                        Image(systemName: viewModel.activeCommand == nil && viewModel.stagingWindow == nil ? "sparkles" : "chevron.left")
+                            .foregroundColor(colors.textSecondary)
+                            .font(.system(size: 22, weight: .medium))
+                            .frame(width: 30, height: 30)
+                    }
+                    .buttonStyle(.plain)
+                    .disabled(viewModel.activeCommand == nil && viewModel.stagingWindow == nil)
                     
                     if viewModel.activeCommand?.type == .renameCurrentSpace {
                         SearchTextField(
@@ -1170,13 +1178,32 @@ struct SpacesBottomBar: View {
     
     var body: some View {
         HStack(spacing: 0) {
-            // Static "Spaces:" label on the left (unscrollable)
-            Text(verbatim: String(localized: "Spaces:"))
-                .font(.subheadline)
-                .fontWeight(.semibold)
-                .foregroundColor(colors.textTertiary)
-                .padding(.trailing, 8)
-                .layoutPriority(1)
+            // Keep the space switcher visible as a compact command capsule.
+            Button(action: {
+                viewModel.isBottomBarFocused = true
+                viewModel.isKeyboardSelection = true
+
+                let spaces = spaceManager.currentDisplaySpaces
+                if let currentSpaceID = AppDelegate.shared.spaceManager?.currentSpaceUUID,
+                   let index = spaces.firstIndex(where: { $0.id == currentSpaceID }) {
+                    viewModel.selectedSpaceIndex = index
+                } else {
+                    viewModel.selectedSpaceIndex = 0
+                }
+            }) {
+                HStack(spacing: 6) {
+                    Image(systemName: "square.grid.2x2")
+                        .font(.subheadline.weight(.semibold))
+                    Text(verbatim: String(localized: "Switch Space"))
+                }
+                .modifier(BottomBarCapsule(
+                    isSelected: viewModel.isBottomBarFocused,
+                    isActive: !viewModel.isBottomBarFocused,
+                    colorScheme: colorScheme
+                ))
+            }
+            .buttonStyle(PlainButtonStyle())
+            .layoutPriority(1)
             
             // Scrollable spaces list
             ScrollViewReader { scrollProxy in
@@ -1740,7 +1767,7 @@ struct SearchTextField: NSViewRepresentable {
         textField.drawsBackground = false
         textField.focusRingType = .none
         textField.textColor = .labelColor
-        textField.font = NSFont.systemFont(ofSize: 16, weight: .regular)
+        textField.font = NSFont.systemFont(ofSize: 20, weight: .regular)
         
         context.coordinator.lastPlaceholder = placeholder
         context.coordinator.lastIsDark = isDark
@@ -1749,7 +1776,7 @@ struct SearchTextField: NSViewRepresentable {
             string: placeholder,
             attributes: [
                 .foregroundColor: NSColor.placeholderTextColor,
-                .font: NSFont.systemFont(ofSize: 16, weight: .regular)
+                .font: NSFont.systemFont(ofSize: 20, weight: .regular)
             ]
         )
         textField.placeholderAttributedString = placeholderAttr
@@ -1780,7 +1807,7 @@ struct SearchTextField: NSViewRepresentable {
                 string: placeholder,
                 attributes: [
                     .foregroundColor: NSColor.placeholderTextColor,
-                    .font: NSFont.systemFont(ofSize: 16, weight: .regular)
+                    .font: NSFont.systemFont(ofSize: 20, weight: .regular)
                 ]
             )
             nsView.placeholderAttributedString = placeholderAttr
