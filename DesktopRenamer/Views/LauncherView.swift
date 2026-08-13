@@ -381,6 +381,12 @@ struct LauncherView: View {
         .onChange(of: spaceManager.currentSpaceUUID) { _ in
             viewModel.selectCurrentTargetSpace()
         }
+        .onChange(of: viewModel.launcherOverlay) { overlay in
+            guard overlay == nil else { return }
+            DispatchQueue.main.async {
+                NotificationCenter.default.post(name: NSNotification.Name("FocusLauncherTextField"), object: nil)
+            }
+        }
         .frame(width: LauncherLayout.windowSize.width, height: LauncherLayout.windowSize.height)
         .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
         .opaqueLauncherBackground(cornerRadius: 24, isDark: colors.isDark, borderColor: colors.border)
