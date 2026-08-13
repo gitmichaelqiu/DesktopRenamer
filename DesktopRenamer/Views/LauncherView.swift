@@ -366,6 +366,7 @@ struct LauncherView: View {
             
             if let targetWindow = viewModel.commandKTargetWindow {
                 CommandKOverlayView(viewModel: viewModel, window: targetWindow)
+                    .transition(.scale(scale: 0.92, anchor: .bottomTrailing).combined(with: .opacity))
             } else if viewModel.isRootActionsPresented {
                 RootActionsOverlay(viewModel: viewModel)
                     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomTrailing)
@@ -376,6 +377,7 @@ struct LauncherView: View {
                     .transition(.scale(scale: 0.92, anchor: .bottomTrailing).combined(with: .opacity))
             }
         }
+        .animation(.spring(response: 0.28, dampingFraction: 0.84), value: viewModel.commandKTargetWindow != nil)
         .animation(.spring(response: 0.28, dampingFraction: 0.84), value: isSpacePickerPresented)
         .animation(.spring(response: 0.28, dampingFraction: 0.84), value: viewModel.isRootActionsPresented)
         .onChange(of: spaceManager.currentSpaceUUID) { _ in
