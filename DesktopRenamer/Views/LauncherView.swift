@@ -2638,7 +2638,7 @@ private struct LauncherGlassSurface: NSViewRepresentable {
             glassView.contentView = nil
         } else if let effectView = nsView as? NSVisualEffectView {
             effectView.material = .hudWindow
-            effectView.blendingMode = .behindWindow
+            effectView.blendingMode = .withinWindow
             effectView.state = .active
         }
     }
@@ -2650,7 +2650,7 @@ private struct LauncherGlassSurface: NSViewRepresentable {
         } else {
             let effectView = NSVisualEffectView(frame: .zero)
             effectView.material = .hudWindow
-            effectView.blendingMode = .behindWindow
+            effectView.blendingMode = .withinWindow
             effectView.state = .active
             surface = effectView
         }
