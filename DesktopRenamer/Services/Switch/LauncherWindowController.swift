@@ -35,7 +35,7 @@ class LauncherWindowController: NSWindowController, NSWindowDelegate {
         panel.isReleasedWhenClosed = false
         panel.backgroundColor = .clear
         panel.isOpaque = false
-        panel.hasShadow = false
+        panel.hasShadow = true
         panel.level = .statusBar
         // Allow the launcher to appear above apps using a native fullscreen
         // Space without making it join every Space.
