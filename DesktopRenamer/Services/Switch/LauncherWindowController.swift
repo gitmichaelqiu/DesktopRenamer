@@ -116,6 +116,7 @@ class LauncherWindowController: NSWindowController, NSWindowDelegate {
         NSApp.activate(ignoringOtherApps: true)
         panel.alphaValue = 1
         panel.makeKeyAndOrderFront(nil)
+        panel.invalidateShadow()
         
         // Post a notification to force focus
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
