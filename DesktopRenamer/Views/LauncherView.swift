@@ -185,6 +185,12 @@ struct LauncherView: View {
                                     }
                                 }
                             },
+                            onCommandUpArrow: {
+                                viewModel.selectPreviousSection()
+                            },
+                            onCommandDownArrow: {
+                                viewModel.selectNextSection()
+                            },
                             onLeftArrow: {
                                 if viewModel.commandKTargetWindow != nil {
                                     return true

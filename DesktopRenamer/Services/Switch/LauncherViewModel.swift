@@ -1663,6 +1663,51 @@ enum LauncherOverlay: Equatable {
         selectedRowIndex = index
     }
 
+    func selectPreviousSection() {
+        selectSection(offset: -1)
+    }
+
+    func selectNextSection() {
+        selectSection(offset: 1)
+    }
+
+    private func selectSection(offset: Int) {
+        guard !isBottomBarFocused else { return }
+        let ranges = currentSectionRanges
+        guard ranges.count > 1,
+              let currentIndex = ranges.firstIndex(where: { $0.contains(selectedRowIndex) }) else {
+            return
+        }
+
+        let targetIndex = min(max(currentIndex + offset, 0), ranges.count - 1)
+        guard targetIndex != currentIndex else { return }
+        isKeyboardSelection = true
+        selectedRowIndex = ranges[targetIndex].lowerBound
+    }
+
+    private var currentSectionRanges: [Range<Int>] {
+        if activeCommand == nil {
+            return rootCommandSections.map { section in
+                section.startIndex..<(section.startIndex + section.commands.count)
+            }
+        }
+
+        switch activeCommand?.type {
+        case .listWindows:
+            return listWindowsSections.compactMap { section in
+                guard let first = section.items.first, let last = section.items.last else { return nil }
+                return first.index..<(last.index + 1)
+            }
+        case .batchMoveWindows:
+            return batchMoveSections.compactMap { section in
+                guard let first = section.items.first, let last = section.items.last else { return nil }
+                return first.index..<(last.index + 1)
+            }
+        default:
+            return []
+        }
+    }
+
     func selectCurrentTargetSpace() {
         guard stagingWindow == nil,
               activeCommand?.type == .switchToDesktop || activeCommand?.type == .moveWindow,
