@@ -1629,12 +1629,6 @@ struct RootActionsOverlay: View {
                     onDownArrow: {
                         viewModel.selectNextRootAction()
                     },
-                    onCommandUpArrow: {
-                        viewModel.moveFavoriteSelectedCommand(direction: -1)
-                    },
-                    onCommandDownArrow: {
-                        viewModel.moveFavoriteSelectedCommand(direction: 1)
-                    },
                     onEnter: {
                         viewModel.executeRootAction()
                     },
