@@ -449,7 +449,7 @@ private struct LauncherMarkView: View {
     var body: some View {
         Canvas { context, size in
             let center = CGPoint(x: size.width / 2, y: size.height / 2)
-            let half = min(size.width, size.height) * 0.32
+            let half = min(size.width, size.height) * 0.38
             var diamond = Path()
             diamond.move(to: CGPoint(x: center.x, y: center.y - half))
             diamond.addLine(to: CGPoint(x: center.x + half, y: center.y))
@@ -951,9 +951,9 @@ struct CommandRowView: View {
 
     private var commandIcon: some View {
         Image(systemName: command.iconName)
-            .font(.system(size: 16, weight: .medium))
+            .font(.system(size: 17, weight: .medium))
             .foregroundColor(colors.textPrimary)
-            .frame(width: 24, height: 24)
+            .frame(width: 26, height: 26)
             .background(colors.badgeBg)
             .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
     }
