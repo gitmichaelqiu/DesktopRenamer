@@ -1809,7 +1809,7 @@ struct SpacePickerOverlay: View {
 
     private var spaceListHeight: CGFloat {
         let itemCount = max(viewModel.filteredSpaces.count, 1)
-        return min(CGFloat(itemCount) * 42 + 18, 228)
+        return min(CGFloat(itemCount) * 32 + 16, 176)
     }
 
     var body: some View {
@@ -1832,7 +1832,7 @@ struct SpacePickerOverlay: View {
                     .padding(.bottom, 6)
 
                 ScrollView {
-                    VStack(spacing: 4) {
+                    VStack(spacing: 2) {
                         let spaces = viewModel.filteredSpaces
                         if spaces.isEmpty {
                             Text(verbatim: String(localized: "No spaces found"))
@@ -1868,7 +1868,7 @@ struct SpacePickerOverlay: View {
                                     }
                                     .foregroundColor(colors.textPrimary)
                                     .padding(.horizontal, 12)
-                                    .frame(height: 38)
+                                    .frame(height: 30)
                                     .background {
                                         if isSelected {
                                             RoundedRectangle(cornerRadius: 9, style: .continuous)
@@ -1930,7 +1930,7 @@ struct SpacePickerOverlay: View {
                         placeholder: String(localized: "Search..."),
                         focusNotificationName: NSNotification.Name("FocusSpacePickerTextField")
                     )
-                        .frame(height: 44)
+                        .frame(height: 42)
                         .padding(.horizontal, 12)
                 }
             }
