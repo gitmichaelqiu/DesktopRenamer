@@ -359,6 +359,9 @@ struct LauncherView: View {
                     if viewModel.activeCommand == nil {
                         RootLauncherBottomBar(viewModel: viewModel, spaceManager: spaceManager)
                             .transition(commandPageTransition)
+                    } else if viewModel.activeCommand?.type == .switchToDesktop {
+                        SpacesBottomBar(viewModel: viewModel, spaceManager: spaceManager)
+                            .transition(commandPageTransition)
                     } else if viewModel.activeCommand?.type == .batchMoveWindows {
                         BatchMoveBottomBar(viewModel: viewModel)
                             .transition(commandPageTransition)
