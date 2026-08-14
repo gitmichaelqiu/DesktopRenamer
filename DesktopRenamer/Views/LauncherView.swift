@@ -148,6 +148,8 @@ struct LauncherView: View {
                                     viewModel.selectPreviousRootAction()
                                 } else if viewModel.commandKTargetWindow != nil {
                                     viewModel.selectPreviousCommandKAction()
+                                } else if viewModel.isRootSpacePickerPresented {
+                                    viewModel.selectedSpaceIndex = max(0, viewModel.selectedSpaceIndex - 1)
                                 } else if viewModel.isBottomBarFocused {
                                     return
                                 } else if viewModel.stagingWindow != nil {
@@ -164,6 +166,11 @@ struct LauncherView: View {
                                     viewModel.selectNextRootAction()
                                 } else if viewModel.commandKTargetWindow != nil {
                                     viewModel.selectNextCommandKAction()
+                                } else if viewModel.isRootSpacePickerPresented {
+                                    let count = viewModel.filteredSpaces.count
+                                    if viewModel.selectedSpaceIndex < count - 1 {
+                                        viewModel.selectedSpaceIndex += 1
+                                    }
                                 } else if viewModel.isBottomBarFocused {
                                     return
                                 } else if viewModel.stagingWindow != nil {
@@ -208,6 +215,8 @@ struct LauncherView: View {
                                     viewModel.executeRootAction()
                                 } else if viewModel.commandKTargetWindow != nil {
                                     viewModel.executeCommandKAction()
+                                } else if viewModel.isRootSpacePickerPresented {
+                                    viewModel.executeSelectedSpacePickerAction()
                                 } else if viewModel.stagingWindow != nil {
                                     viewModel.selectedRowIndex = viewModel.selectedSpaceIndex
                                     viewModel.executeRowAction()
@@ -222,6 +231,8 @@ struct LauncherView: View {
                                     viewModel.executeRootAction()
                                 } else if viewModel.commandKTargetWindow != nil {
                                     viewModel.executeCommandKAction()
+                                } else if viewModel.isRootSpacePickerPresented {
+                                    viewModel.executeSelectedSpacePickerAction()
                                 } else if viewModel.stagingWindow != nil {
                                     viewModel.selectedRowIndex = viewModel.selectedSpaceIndex
                                     viewModel.executeRowAction()
@@ -255,6 +266,13 @@ struct LauncherView: View {
                                     if index >= 0 && index < actions.count {
                                         viewModel.commandKSelectedIndex = index
                                         viewModel.executeCommandKAction()
+                                    }
+                                } else if viewModel.isRootSpacePickerPresented {
+                                    let index = num - 1
+                                    let count = viewModel.filteredSpaces.count
+                                    if index >= 0 && index < count {
+                                        viewModel.selectedSpaceIndex = index
+                                        viewModel.executeSelectedSpacePickerAction()
                                     }
                                 } else if viewModel.stagingWindow != nil {
                                     let index = num - 1
@@ -1649,6 +1667,7 @@ struct RootActionsOverlay: View {
             .padding(.bottom, LauncherLayout.popupBottomInset)
         }
         .onAppear {
+            guard viewModel.stagingWindow != nil else { return }
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
                 NotificationCenter.default.post(name: NSNotification.Name("FocusRootActionTextField"), object: nil)
             }
