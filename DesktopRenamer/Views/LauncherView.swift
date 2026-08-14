@@ -1961,7 +1961,6 @@ struct SpacePickerOverlay: View {
             .padding(.bottom, LauncherLayout.popupBottomInset)
         }
         .onAppear {
-            guard viewModel.stagingWindow != nil else { return }
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
                 NotificationCenter.default.post(name: NSNotification.Name("FocusSpacePickerTextField"), object: nil)
             }
