@@ -1864,15 +1864,6 @@ struct SpacePickerOverlay: View {
             .buttonStyle(.plain)
 
             VStack(alignment: .leading, spacing: 0) {
-                Text(verbatim: viewModel.stagingWindow == nil
-                     ? String(localized: "Switch Space")
-                     : String(localized: "Stage Move to Desktop..."))
-                    .font(.subheadline.weight(.semibold))
-                    .foregroundColor(colors.textSecondary)
-                    .padding(.horizontal, 16)
-                    .padding(.top, 14)
-                    .padding(.bottom, 8)
-
                 ScrollView {
                     VStack(spacing: 4) {
                         let spaces = viewModel.filteredSpaces
@@ -1932,6 +1923,7 @@ struct SpacePickerOverlay: View {
                         }
                     }
                     .padding(.horizontal, 8)
+                    .padding(.top, 8)
                     .padding(.bottom, 10)
                 }
                 .frame(maxHeight: 220)
