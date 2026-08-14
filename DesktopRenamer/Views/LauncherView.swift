@@ -386,7 +386,7 @@ struct LauncherView: View {
                 // Bottom bar
                 ZStack(alignment: .bottom) {
                     if viewModel.activeCommand == nil {
-                        RootLauncherBottomBar(viewModel: viewModel, spaceManager: spaceManager)
+                        SpacesBottomBar(viewModel: viewModel, spaceManager: spaceManager)
                     } else if viewModel.activeCommand?.type == .batchMoveWindows {
                         BatchMoveBottomBar(viewModel: viewModel)
                     } else {
@@ -511,11 +511,6 @@ struct ListAreaView: View {
                                             CommandRowView(command: cmd, isSelected: isSelected, isRoot: true, isCompact: true, selectionNamespace: selectionNamespace, shortcutText: viewModel.showCommandNumbers && viewModel.commandKTargetWindow == nil && index < 9 ? "⌘\(index + 1)" : nil)
                                         }
                                         .buttonStyle(.plain)
-                                        .onHover { hovering in
-                                            if hovering {
-                                                viewModel.selectPointerRow(index)
-                                            }
-                                        }
                                         .id(cmd.id)
                                     }
                                 }
@@ -552,11 +547,6 @@ struct ListAreaView: View {
                                                 SpaceRowView(space: space, isSelected: isSelected, isCurrent: AppDelegate.shared.spaceManager?.currentSpaceUUID == space.id, selectionNamespace: selectionNamespace, shortcutText: i < 9 ? shortcut : nil)
                                             }
                                             .buttonStyle(.plain)
-                                            .onHover { hovering in
-                                                if hovering {
-                                                    viewModel.selectPointerRow(i)
-                                                }
-                                            }
                                             .id(space.id)
                                         }
                                     }
@@ -602,11 +592,6 @@ struct ListAreaView: View {
                                                     )
                                                 }
                                                 .buttonStyle(.plain)
-                                                .onHover { hovering in
-                                                    if hovering {
-                                                        viewModel.selectPointerRow(item.index)
-                                                    }
-                                                }
                                                 .id(item.id)
                                             }
                                         }
@@ -653,11 +638,6 @@ struct ListAreaView: View {
                                                         WindowBatchRowView(window: move.window, isSelected: isSelected, isStaged: true, stagedActionText: move.actionType.description, selectionNamespace: selectionNamespace, shortcutText: viewModel.showCommandNumbers && viewModel.commandKTargetWindow == nil && item.index < 9 ? "⌘\(item.index + 1)" : nil)
                                                     }
                                                     .buttonStyle(.plain)
-                                                    .onHover { hovering in
-                                                        if hovering {
-                                                            viewModel.selectPointerRow(item.index)
-                                                        }
-                                                    }
                                                     .id(item.id)
                                                         
                                                 case .unstaged(let window, _):
@@ -669,11 +649,6 @@ struct ListAreaView: View {
                                                         WindowBatchRowView(window: window, isSelected: isSelected, isStaged: false, stagedActionText: "", selectionNamespace: selectionNamespace, shortcutText: viewModel.showCommandNumbers && viewModel.commandKTargetWindow == nil && item.index < 9 ? "⌘\(item.index + 1)" : nil)
                                                     }
                                                     .buttonStyle(.plain)
-                                                    .onHover { hovering in
-                                                        if hovering {
-                                                            viewModel.selectPointerRow(item.index)
-                                                        }
-                                                    }
                                                     .id(item.id)
                                                 }
                                             }
