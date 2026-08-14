@@ -421,7 +421,6 @@ struct LauncherView: View {
             }
         }
         .frame(width: LauncherLayout.windowSize.width, height: LauncherLayout.windowSize.height)
-        .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
         .opaqueLauncherBackground(cornerRadius: 24, isDark: colors.isDark, borderColor: colors.border)
         .shadow(color: Color.black.opacity(colorScheme == .dark ? 0.45 : 0.20), radius: 24, x: 0, y: 12)
     }
@@ -1459,10 +1458,7 @@ struct RootLauncherBottomBar: View {
             }
             .font(.system(size: 14, weight: .semibold))
             .foregroundColor(colors.textPrimary)
-            .padding(.horizontal, 12)
-            .frame(height: 36)
-            .background(Color.primary.opacity(0.12), in: Capsule())
-            .overlay(Capsule().stroke(Color.primary.opacity(0.28), lineWidth: 1))
+            .modifier(BottomBarCapsule(isSelected: false, isActive: viewModel.isRootActionsPresented, colorScheme: colorScheme))
         }
         .padding(.horizontal, 8)
         .frame(height: LauncherLayout.actionBarHeight)
@@ -1554,23 +1550,10 @@ struct RootActionsOverlay: View {
     }
 
     private var actionRows: [(index: Int, title: String, icon: String, shortcut: String)] {
-        let isSelectedFavorite = viewModel.filteredCommands.indices.contains(viewModel.selectedRowIndex) && viewModel.isFavorite(viewModel.filteredCommands[viewModel.selectedRowIndex])
-        let favoriteTitle = isSelectedFavorite
-            ? String(localized: "Remove from Favorites")
-            : String(localized: "Add to Favorites")
-        var actions = [
+        let actions = [
             (index: 0, title: String(localized: "Open Command"), icon: "rectangle.and.pencil.and.ellipsis", shortcut: "↵"),
-            (index: 1, title: favoriteTitle, icon: "star", shortcut: "⌘F"),
+            (index: 1, title: String(localized: "Reset Ranking"), icon: "arrow.counterclockwise", shortcut: "↻")
         ]
-        if isSelectedFavorite {
-            actions.append(contentsOf: [
-                (index: 2, title: String(localized: "Move Favorite Up"), icon: "arrow.up", shortcut: "⌘↑"),
-                (index: 3, title: String(localized: "Move Favorite Down"), icon: "arrow.down", shortcut: "⌘↓")
-            ])
-        }
-        actions.append(
-            (index: 4, title: String(localized: "Reset Ranking"), icon: "arrow.counterclockwise", shortcut: "↻")
-        )
         let indices = Set(viewModel.filteredRootActionIndices)
         return actions.filter { indices.contains($0.index) }
     }
@@ -1579,8 +1562,7 @@ struct RootActionsOverlay: View {
         let rows = actionRows
         return [
             (String(localized: "Primary Action"), rows.filter { $0.index == 0 }),
-            (String(localized: "Favorites"), rows.filter { (1...3).contains($0.index) }),
-            (String(localized: "Manage"), rows.filter { $0.index == 4 })
+            (String(localized: "Manage"), rows.filter { $0.index == 1 })
         ].filter { !$0.rows.isEmpty }
     }
 
@@ -1673,20 +1655,8 @@ struct RootActionsOverlay: View {
                     onCommandK: {
                         viewModel.isRootActionsPresented = false
                     },
-                    onKeyEquivalent: { event in
-                        let modifiers = event.modifierFlags.intersection(.deviceIndependentFlagsMask)
-                        guard event.type == .keyDown,
-                              modifiers.contains(.command),
-                              !modifiers.contains(.shift),
-                              !modifiers.contains(.option),
-                              !modifiers.contains(.control),
-                              event.charactersIgnoringModifiers?.lowercased() == "f",
-                              viewModel.filteredRootActionIndices.contains(1) else {
-                            return false
-                        }
-                        viewModel.selectedRootActionIndex = 1
-                        viewModel.executeRootAction()
-                        return true
+                    onKeyEquivalent: { _ in
+                        return false
                     },
                     placeholder: String(localized: "Search for actions..."),
                     focusNotificationName: NSNotification.Name("FocusRootActionTextField")
@@ -2814,15 +2784,6 @@ extension LauncherView {
             return true
         }
 
-        if viewModel.activeCommand == nil,
-           viewModel.commandKTargetWindow == nil,
-           !viewModel.isRootActionsPresented,
-           hasCommand && !hasShift && !hasOption && !hasControl,
-           event.charactersIgnoringModifiers?.lowercased() == "f" {
-            viewModel.toggleFavoriteSelectedCommand()
-            return true
-        }
-        
         // Direct window shortcuts for .listWindows (cmd + m, cmd + shift + m/w/n/r/f/h/q)
         if viewModel.activeCommand?.type == .listWindows,
            viewModel.commandKTargetWindow == nil,
