@@ -1807,6 +1807,11 @@ struct SpacePickerOverlay: View {
         ThemeColors(isDark: colorScheme == .dark)
     }
 
+    private var spaceListHeight: CGFloat {
+        let itemCount = max(viewModel.filteredSpaces.count, 1)
+        return min(CGFloat(itemCount) * 42 + 18, 228)
+    }
+
     var body: some View {
         ZStack(alignment: .bottomTrailing) {
             Button {
@@ -1888,6 +1893,7 @@ struct SpacePickerOverlay: View {
                     .padding(.top, 8)
                     .padding(.bottom, 10)
                 }
+                .frame(height: spaceListHeight)
                 if viewModel.stagingWindow != nil {
                     Divider()
 
