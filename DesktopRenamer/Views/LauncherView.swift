@@ -1431,37 +1431,8 @@ struct RootLauncherBottomBar: View {
 
     var body: some View {
         HStack(spacing: 0) {
-            Button {
-                viewModel.commandKTargetWindow = nil
-                viewModel.currentSpaces = spaceManager.currentDisplaySpaces.map { space in
-                    SpaceGroup(
-                        id: space.id,
-                        name: spaceManager.getSpaceName(space.id),
-                        displayName: space.displayID,
-                        num: space.num,
-                        isFullscreen: space.isFullscreen,
-                        appPath: space.appPath
-                    )
-                }
-                if let currentIndex = spaceManager.currentDisplaySpaces.firstIndex(where: { $0.id == spaceManager.currentSpaceUUID }) {
-                    viewModel.selectedSpaceIndex = currentIndex
-                }
-                viewModel.isRootActionsPresented = false
-                viewModel.spacePickerQuery = ""
-                viewModel.isRootSpacePickerPresented = true
-            } label: {
-                Image(systemName: "line.3.horizontal")
-                    .font(.system(size: 16, weight: .medium))
-                    .foregroundColor(colors.textSecondary)
-                    .frame(width: 36, height: 36)
-                    .background(Color.primary.opacity(0.10), in: Circle())
-                    .overlay(Circle().stroke(Color.primary.opacity(0.16), lineWidth: 1))
-            }
-            .buttonStyle(.plain)
-            .accessibilityLabel(String(localized: "Switch Space"))
-            .help(String(localized: "Switch Space"))
-
-            Spacer()
+            RootSpaceBar(viewModel: viewModel, spaceManager: spaceManager)
+                .frame(maxWidth: .infinity, alignment: .leading)
 
             HStack(spacing: 4) {
                 Button {
@@ -1494,9 +1465,68 @@ struct RootLauncherBottomBar: View {
             .overlay(Capsule().stroke(Color.primary.opacity(0.28), lineWidth: 1))
         }
         .padding(.horizontal, 8)
-        .padding(.vertical, 5)
-        .frame(maxWidth: .infinity)
         .frame(height: LauncherLayout.actionBarHeight)
+        .background(colors.bottomBarBg)
+    }
+}
+
+private struct RootSpaceBar: View {
+    @ObservedObject var viewModel: LauncherViewModel
+    @ObservedObject var spaceManager: SpaceManager
+    @Environment(\.colorScheme) var colorScheme
+
+    var body: some View {
+        ScrollViewReader { scrollProxy in
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 8) {
+                    let spaces = spaceManager.currentDisplaySpaces
+                    ForEach(Array(spaces.enumerated()), id: \.element.id) { index, space in
+                        let isCurrent = space.id == spaceManager.currentSpaceUUID
+                        let isSelected = viewModel.isBottomBarFocused && index == viewModel.selectedSpaceIndex
+
+                        Button {
+                            if NSEvent.modifierFlags.contains(.option) {
+                                let handled = viewModel.movePreviouslyActiveWindow(toSpaceID: space.id)
+                                if !handled {
+                                    viewModel.closeLauncher()
+                                }
+                            } else {
+                                viewModel.executeSwitchToSpaceID(space.id)
+                            }
+                        } label: {
+                            Text(spaceManager.getSpaceName(space.id))
+                                .modifier(BottomBarCapsule(isSelected: isSelected, isActive: isCurrent, colorScheme: colorScheme))
+                        }
+                        .buttonStyle(.plain)
+                        .focusable(false)
+                        .help(String(localized: "Click to switch, Option+Click to move active window."))
+                        .id(space.id)
+                    }
+                }
+                .padding(.horizontal, 8)
+            }
+            .onAppear {
+                scrollProxy.scrollTo(spaceManager.currentSpaceUUID, anchor: UnitPoint(x: 0.31, y: 0.5))
+            }
+            .onChange(of: spaceManager.currentSpaceUUID) { currentSpaceID in
+                scrollProxy.scrollTo(currentSpaceID, anchor: UnitPoint(x: 0.31, y: 0.5))
+            }
+            .onChange(of: viewModel.selectedSpaceIndex) { selectedIndex in
+                guard viewModel.isBottomBarFocused else { return }
+                let spaces = spaceManager.currentDisplaySpaces
+                guard selectedIndex >= 0, selectedIndex < spaces.count else { return }
+                scrollProxy.scrollTo(spaces[selectedIndex].id, anchor: UnitPoint(x: 0.31, y: 0.5))
+            }
+            .onChange(of: viewModel.isBottomBarFocused) { isFocused in
+                if isFocused {
+                    let spaces = spaceManager.currentDisplaySpaces
+                    guard viewModel.selectedSpaceIndex >= 0, viewModel.selectedSpaceIndex < spaces.count else { return }
+                    scrollProxy.scrollTo(spaces[viewModel.selectedSpaceIndex].id, anchor: UnitPoint(x: 0.31, y: 0.5))
+                } else {
+                    scrollProxy.scrollTo(spaceManager.currentSpaceUUID, anchor: UnitPoint(x: 0.31, y: 0.5))
+                }
+            }
+        }
     }
 }
 
