@@ -431,6 +431,8 @@ struct LauncherView: View {
         switch commandType {
         case .listWindows:
             return NSLocalizedString("Search windows...", comment: "")
+        case .batchMoveWindows:
+            return NSLocalizedString("Search windows...", comment: "")
         case .switchToDesktop, .moveWindow:
             return NSLocalizedString("Search target space...", comment: "")
         default:
@@ -577,7 +579,7 @@ struct ListAreaView: View {
                     case .listWindows:
                         let sections = viewModel.listWindowsSections
                         if sections.isEmpty {
-                            EmptyResultsView()
+                            EmptyView()
                         } else {
                             ScrollViewReader { proxy in
                                 ScrollView {
@@ -630,7 +632,7 @@ struct ListAreaView: View {
                     case .batchMoveWindows:
                         let sections = viewModel.batchMoveSections
                         if sections.isEmpty {
-                            EmptyResultsView()
+                            EmptyView()
                         } else {
                             ScrollViewReader { proxy in
                                 ScrollView {
