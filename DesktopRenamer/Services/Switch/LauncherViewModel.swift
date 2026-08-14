@@ -1794,7 +1794,7 @@ enum LauncherOverlay: Equatable {
     }
     
     func handleTabKey() {
-        guard activeCommand == nil else { return }
+        guard activeCommand == nil || activeCommand?.type == .switchToDesktop else { return }
         isBottomBarFocused.toggle()
         if isBottomBarFocused {
             if let manager = AppDelegate.shared.spaceManager {
