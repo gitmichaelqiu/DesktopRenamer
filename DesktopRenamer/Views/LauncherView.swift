@@ -148,6 +148,8 @@ struct LauncherView: View {
                                     viewModel.selectPreviousRootAction()
                                 } else if viewModel.commandKTargetWindow != nil {
                                     viewModel.selectPreviousCommandKAction()
+                                } else if viewModel.isBottomBarFocused {
+                                    return
                                 } else if viewModel.stagingWindow != nil {
                                     viewModel.selectedSpaceIndex = max(0, viewModel.selectedSpaceIndex - 1)
                                 } else {
@@ -162,6 +164,8 @@ struct LauncherView: View {
                                     viewModel.selectNextRootAction()
                                 } else if viewModel.commandKTargetWindow != nil {
                                     viewModel.selectNextCommandKAction()
+                                } else if viewModel.isBottomBarFocused {
+                                    return
                                 } else if viewModel.stagingWindow != nil {
                                     let count = viewModel.filteredSpaces.count
                                     if viewModel.selectedSpaceIndex < count - 1 {
@@ -347,7 +351,6 @@ struct LauncherView: View {
                     ListAreaView(viewModel: viewModel)
                         .frame(maxHeight: .infinity)
                         .id(viewModel.activeCommand?.id ?? "root")
-                        .transition(commandPageTransition)
                 }
                 
                 if viewModel.activeCommand != nil {
@@ -358,21 +361,16 @@ struct LauncherView: View {
                 ZStack(alignment: .bottom) {
                     if viewModel.activeCommand == nil {
                         RootLauncherBottomBar(viewModel: viewModel, spaceManager: spaceManager)
-                            .transition(commandPageTransition)
                     } else if viewModel.activeCommand?.type == .switchToDesktop {
                         SpacesBottomBar(viewModel: viewModel, spaceManager: spaceManager)
-                            .transition(commandPageTransition)
                     } else if viewModel.activeCommand?.type == .batchMoveWindows {
                         BatchMoveBottomBar(viewModel: viewModel)
-                            .transition(commandPageTransition)
                     } else {
                         CommandBottomBar(viewModel: viewModel)
-                            .transition(commandPageTransition)
                     }
                 }
                 .frame(maxWidth: .infinity)
             }
-            .animation(.easeInOut(duration: 0.18), value: viewModel.activeCommand?.id)
             
             switch viewModel.launcherOverlay {
             case .commandK(let targetWindow):
@@ -387,7 +385,6 @@ struct LauncherView: View {
                 EmptyView()
             }
         }
-        .animation(.spring(response: 0.28, dampingFraction: 0.84), value: viewModel.launcherOverlay)
         .onChange(of: spaceManager.currentSpaceUUID) { _ in
             viewModel.selectCurrentTargetSpace()
         }
@@ -420,19 +417,6 @@ struct LauncherView: View {
         }
     }
 
-    private var commandPageTransition: AnyTransition {
-        if viewModel.activeCommand == nil {
-            return .asymmetric(
-                insertion: .move(edge: .leading).combined(with: .opacity),
-                removal: .move(edge: .trailing).combined(with: .opacity)
-            )
-        }
-
-        return .asymmetric(
-            insertion: .move(edge: .trailing).combined(with: .opacity),
-            removal: .move(edge: .leading).combined(with: .opacity)
-        )
-    }
 }
 
 private struct LauncherMarkView: View {
@@ -508,20 +492,16 @@ struct ListAreaView: View {
                                             }
                                         }
                                         .id(cmd.id)
-                                        .transition(.opacity.combined(with: .scale(scale: 0.98)))
                                     }
                                 }
                             }
                             .padding(.horizontal, 8)
                             .padding(.vertical, 8)
-                            .animation(.easeInOut(duration: 0.14), value: commands.map(\.id))
                         }
                         .onChange(of: viewModel.selectedRowIndex) { index in
                             if viewModel.isKeyboardSelection {
-                                withAnimation(.easeInOut(duration: 0.12)) {
-                                    guard commands.indices.contains(index) else { return }
-                                    proxy.scrollTo(commands[index].id, anchor: .center)
-                                }
+                                guard commands.indices.contains(index) else { return }
+                                proxy.scrollTo(commands[index].id, anchor: .center)
                             }
                         }
                     }
@@ -553,19 +533,15 @@ struct ListAreaView: View {
                                                 }
                                             }
                                             .id(space.id)
-                                            .transition(.opacity.combined(with: .scale(scale: 0.98)))
                                         }
                                     }
                                     .padding(.horizontal, 10)
                                     .padding(.vertical, 8)
-                                    .animation(.easeInOut(duration: 0.14), value: spaces.map(\.id))
                                 }
                                 .onChange(of: viewModel.selectedRowIndex) { index in
                                     if viewModel.isKeyboardSelection {
-                                        withAnimation(.easeInOut(duration: 0.12)) {
-                                            guard spaces.indices.contains(index) else { return }
-                                            proxy.scrollTo(spaces[index].id, anchor: .center)
-                                        }
+                                        guard spaces.indices.contains(index) else { return }
+                                        proxy.scrollTo(spaces[index].id, anchor: .center)
                                     }
                                 }
                                 .onAppear {
@@ -607,20 +583,16 @@ struct ListAreaView: View {
                                                     }
                                                 }
                                                 .id(item.id)
-                                                .transition(.opacity.combined(with: .scale(scale: 0.98)))
                                             }
                                         }
                                     }
                                     .padding(.horizontal, 10)
                                     .padding(.vertical, 8)
-                                    .animation(.easeInOut(duration: 0.14), value: sections.flatMap { $0.items }.map { $0.id })
                                 }
                                 .onChange(of: viewModel.selectedRowIndex) { index in
                                     if viewModel.isKeyboardSelection {
-                                        withAnimation(.easeInOut(duration: 0.12)) {
-                                            if let item = sections.flatMap({ $0.items }).first(where: { $0.index == index }) {
-                                                proxy.scrollTo(item.id, anchor: .center)
-                                            }
+                                        if let item = sections.flatMap({ $0.items }).first(where: { $0.index == index }) {
+                                            proxy.scrollTo(item.id, anchor: .center)
                                         }
                                     }
                                 }
@@ -662,7 +634,6 @@ struct ListAreaView: View {
                                                         }
                                                     }
                                                     .id(item.id)
-                                                    .transition(.opacity.combined(with: .scale(scale: 0.98)))
                                                         
                                                 case .unstaged(let window, _):
                                                     Button {
@@ -679,21 +650,17 @@ struct ListAreaView: View {
                                                         }
                                                     }
                                                     .id(item.id)
-                                                    .transition(.opacity.combined(with: .scale(scale: 0.98)))
                                                 }
                                             }
                                         }
                                     }
                                     .padding(.horizontal, 10)
                                     .padding(.vertical, 8)
-                                    .animation(.easeInOut(duration: 0.14), value: sections.flatMap { $0.items }.map { $0.id })
                                 }
                                 .onChange(of: viewModel.selectedRowIndex) { index in
                                     if viewModel.isKeyboardSelection {
-                                        withAnimation(.easeInOut(duration: 0.12)) {
-                                            if let item = sections.flatMap({ $0.items }).first(where: { $0.index == index }) {
-                                                proxy.scrollTo(item.id, anchor: .center)
-                                            }
+                                        if let item = sections.flatMap({ $0.items }).first(where: { $0.index == index }) {
+                                            proxy.scrollTo(item.id, anchor: .center)
                                         }
                                     }
                                 }
@@ -814,8 +781,6 @@ private struct LauncherRowSurface: ViewModifier {
                 RoundedRectangle(cornerRadius: 10, style: .continuous)
                     .stroke(isSelected ? Color.primary.opacity(0.10) : .clear, lineWidth: 1)
             }
-            .animation(.spring(response: 0.20, dampingFraction: 0.86), value: isSelected)
-            .animation(.easeOut(duration: 0.12), value: isHovered)
     }
 }
 
@@ -1502,7 +1467,10 @@ struct RootLauncherBottomBar: View {
             .background(Color.primary.opacity(0.12), in: Capsule())
             .overlay(Capsule().stroke(Color.primary.opacity(0.28), lineWidth: 1))
         }
-        .launcherActionBar(colors: colors, horizontalPadding: 8)
+        .padding(.horizontal, 8)
+        .padding(.vertical, 5)
+        .frame(maxWidth: .infinity)
+        .frame(height: LauncherLayout.actionBarHeight)
     }
 }
 
@@ -1677,7 +1645,6 @@ struct RootActionsOverlay: View {
             }
             .frame(width: 350)
             .spacePickerSurface(colors: colors)
-            .transition(.scale(scale: 0.92, anchor: .bottomTrailing).combined(with: .opacity))
             .padding(.trailing, 16)
             .padding(.bottom, LauncherLayout.popupBottomInset)
         }
@@ -1792,17 +1759,13 @@ struct SpacesBottomBar: View {
                     scrollProxy.scrollTo(spaceManager.currentSpaceUUID, anchor: UnitPoint(x: 0.31, y: 0.5))
                 }
                 .onChange(of: spaceManager.currentSpaceUUID) { currentSpaceID in
-                    withAnimation(.easeInOut(duration: 0.15)) {
-                        scrollProxy.scrollTo(currentSpaceID, anchor: UnitPoint(x: 0.31, y: 0.5))
-                    }
+                    scrollProxy.scrollTo(currentSpaceID, anchor: UnitPoint(x: 0.31, y: 0.5))
                 }
                 .onChange(of: viewModel.selectedSpaceIndex) { selectedIndex in
                     if viewModel.isBottomBarFocused {
                         let spaces = spaceManager.currentDisplaySpaces
                         if selectedIndex >= 0 && selectedIndex < spaces.count {
-                            withAnimation(.easeInOut(duration: 0.15)) {
-                                scrollProxy.scrollTo(spaces[selectedIndex].id, anchor: UnitPoint(x: 0.31, y: 0.5))
-                            }
+                            scrollProxy.scrollTo(spaces[selectedIndex].id, anchor: UnitPoint(x: 0.31, y: 0.5))
                         }
                     }
                 }
@@ -1810,14 +1773,10 @@ struct SpacesBottomBar: View {
                     if isFocused {
                         let spaces = spaceManager.currentDisplaySpaces
                         if viewModel.selectedSpaceIndex >= 0 && viewModel.selectedSpaceIndex < spaces.count {
-                            withAnimation(.easeInOut(duration: 0.15)) {
-                                scrollProxy.scrollTo(spaces[viewModel.selectedSpaceIndex].id, anchor: UnitPoint(x: 0.31, y: 0.5))
-                            }
+                            scrollProxy.scrollTo(spaces[viewModel.selectedSpaceIndex].id, anchor: UnitPoint(x: 0.31, y: 0.5))
                         }
                     } else {
-                        withAnimation(.easeInOut(duration: 0.15)) {
-                            scrollProxy.scrollTo(spaceManager.currentSpaceUUID, anchor: UnitPoint(x: 0.31, y: 0.5))
-                        }
+                        scrollProxy.scrollTo(spaceManager.currentSpaceUUID, anchor: UnitPoint(x: 0.31, y: 0.5))
                     }
                 }
             }
@@ -1849,7 +1808,6 @@ struct SpacesBottomBar: View {
         .padding(.horizontal, 18)
         .frame(height: LauncherLayout.actionBarHeight)
         .background(colors.bottomBarBg)
-        .animation(.spring(response: 0.35, dampingFraction: 0.85), value: viewModel.isBottomBarFocused)
     }
 
     private func bottomBarAction(title: String, shortcut: String, action: @escaping () -> Void) -> some View {
@@ -1955,8 +1913,6 @@ struct SpacePickerOverlay: View {
                     }
                     .padding(.horizontal, 8)
                     .padding(.bottom, 10)
-                    .animation(.easeInOut(duration: 0.14), value: viewModel.filteredSpaces.map { $0.id })
-                    .animation(.easeOut(duration: 0.12), value: viewModel.selectedSpaceIndex)
                 }
                 .frame(maxHeight: 220)
 
@@ -2001,7 +1957,6 @@ struct SpacePickerOverlay: View {
             }
             .frame(width: viewModel.stagingWindow == nil ? 290 : 350)
             .spacePickerSurface(colors: colors)
-            .transition(.scale(scale: 0.92, anchor: .bottomTrailing).combined(with: .opacity))
             .padding(.trailing, 16)
             .padding(.bottom, LauncherLayout.popupBottomInset)
         }
@@ -2524,7 +2479,6 @@ struct CommandKOverlayView: View {
             }
             .frame(width: 350)
             .spacePickerSurface(colors: colors)
-            .transition(.scale(scale: 0.92, anchor: .bottomTrailing).combined(with: .opacity))
             .padding(.trailing, 16)
             .padding(.bottom, LauncherLayout.popupBottomInset)
         }
