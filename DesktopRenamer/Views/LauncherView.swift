@@ -1305,22 +1305,6 @@ struct BatchMoveBottomBar: View {
                 }
                 .modifier(BottomBarCapsule(isSelected: false, isActive: true, colorScheme: colorScheme))
                 
-                if let staging = viewModel.stagingWindow {
-                    Image(systemName: "chevron.right")
-                        .font(.system(size: 9, weight: .semibold))
-                        .foregroundColor(colors.textQuaternary)
-                    
-                    HStack(spacing: 4) {
-                        Image(systemName: "square.and.arrow.down")
-                            .font(.subheadline.weight(.semibold))
-                            .foregroundColor(colors.greenText)
-                        Text(String(format: NSLocalizedString("Stage: %@", comment: ""), staging.ownerName))
-                            .font(.subheadline)
-                            .fontWeight(.semibold)
-                            .foregroundColor(colors.textPrimary)
-                    }
-                    .modifier(BottomBarCapsule(isSelected: false, isActive: false, colorScheme: colorScheme))
-                }
             }
             
             Spacer()
@@ -1864,6 +1848,13 @@ struct SpacePickerOverlay: View {
             .buttonStyle(.plain)
 
             VStack(alignment: .leading, spacing: 0) {
+                Text(verbatim: String(localized: "Stage Move to Desktop..."))
+                    .font(.caption.weight(.semibold))
+                    .foregroundColor(colors.textSecondary)
+                    .padding(.horizontal, 14)
+                    .padding(.top, 10)
+                    .padding(.bottom, 6)
+
                 ScrollView {
                     VStack(spacing: 4) {
                         let spaces = viewModel.filteredSpaces
@@ -1926,8 +1917,6 @@ struct SpacePickerOverlay: View {
                     .padding(.top, 8)
                     .padding(.bottom, 10)
                 }
-                .frame(maxHeight: 220)
-
                 if viewModel.stagingWindow != nil {
                     Divider()
 
@@ -1965,9 +1954,10 @@ struct SpacePickerOverlay: View {
                         focusNotificationName: NSNotification.Name("FocusSpacePickerTextField")
                     )
                         .frame(height: 44)
+                        .padding(.horizontal, 12)
                 }
             }
-            .frame(width: viewModel.stagingWindow == nil ? 290 : 350)
+            .frame(width: viewModel.stagingWindow == nil ? 290 : 326)
             .spacePickerSurface(colors: colors)
             .padding(.trailing, 16)
             .padding(.bottom, LauncherLayout.popupBottomInset)
