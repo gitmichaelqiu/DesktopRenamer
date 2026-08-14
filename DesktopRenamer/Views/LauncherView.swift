@@ -1817,7 +1817,9 @@ struct SpacePickerOverlay: View {
             .buttonStyle(.plain)
 
             VStack(alignment: .leading, spacing: 0) {
-                Text(verbatim: String(localized: "Stage Move to Desktop..."))
+                Text(verbatim: viewModel.stagingWindow == nil
+                     ? String(localized: "Switch Space")
+                     : String(localized: "Stage Move to Desktop..."))
                     .font(.caption.weight(.semibold))
                     .foregroundColor(colors.textSecondary)
                     .padding(.horizontal, 14)
