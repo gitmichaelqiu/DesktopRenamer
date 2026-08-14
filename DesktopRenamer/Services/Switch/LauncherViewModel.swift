@@ -179,7 +179,6 @@ enum LauncherOverlay: Equatable {
 @MainActor class LauncherViewModel: ObservableObject {
     @AppStorage("com.michaelqiu.desktoprenamer.automaticallyRankCommands") var automaticallyRankCommands: Bool = true
     @AppStorage("com.michaelqiu.desktoprenamer.launcherManualCommandOrder") var launcherManualCommandOrder: String = ""
-    @AppStorage("com.michaelqiu.desktoprenamer.launcherFavoriteCommandIDs") var launcherFavoriteCommandIDs: String = ""
 
     var manualCommandOrder: [String] {
         if launcherManualCommandOrder.isEmpty {
@@ -359,53 +358,6 @@ enum LauncherOverlay: Equatable {
         objectWillChange.send()
     }
 
-    var favoriteCommandIDs: Set<String> {
-        Set(favoriteCommandOrder)
-    }
-
-    var favoriteCommandOrder: [String] {
-        launcherFavoriteCommandIDs
-            .split(separator: ",")
-            .map(String.init)
-            .filter { id in allCommands.contains { $0.id == id } }
-    }
-
-    func isFavorite(_ command: LauncherCommand) -> Bool {
-        favoriteCommandIDs.contains(command.id)
-    }
-
-    func toggleFavoriteSelectedCommand() {
-        guard activeCommand == nil, filteredCommands.indices.contains(selectedRowIndex) else { return }
-        let commandID = filteredCommands[selectedRowIndex].id
-        var favorites = favoriteCommandOrder
-        if let favoriteIndex = favorites.firstIndex(of: commandID) {
-            favorites.remove(at: favoriteIndex)
-        } else {
-            favorites.append(commandID)
-        }
-        launcherFavoriteCommandIDs = favorites.joined(separator: ",")
-        if let newIndex = filteredCommands.firstIndex(where: { $0.id == commandID }) {
-            selectedRowIndex = newIndex
-        }
-        objectWillChange.send()
-    }
-
-    func moveFavoriteSelectedCommand(direction: Int) {
-        guard activeCommand == nil, filteredCommands.indices.contains(selectedRowIndex) else { return }
-        let commandID = filteredCommands[selectedRowIndex].id
-        var favorites = favoriteCommandOrder
-        guard let currentIndex = favorites.firstIndex(of: commandID) else { return }
-        let targetIndex = currentIndex + direction
-        guard targetIndex >= 0, targetIndex < favorites.count else { return }
-
-        favorites.swapAt(currentIndex, targetIndex)
-        launcherFavoriteCommandIDs = favorites.joined(separator: ",")
-        if let newIndex = filteredCommands.firstIndex(where: { $0.id == commandID }) {
-            selectedRowIndex = newIndex
-        }
-        objectWillChange.send()
-    }
-
     /// Checks whether `query` matches `target` and its cached `pinyin`, supporting pinyin input for CJK-localized strings.
     /// e.g. typing "qiehuan" or "qie huan" matches "切换桌面" (pinyin: qie huan zhuo mian).
     private func matchesQuery(_ query: String, target: String, pinyin: String) -> Bool {
@@ -463,28 +415,12 @@ enum LauncherOverlay: Equatable {
 
     private func sortCommands(_ commands: [LauncherCommand], query: String = "") -> [LauncherCommand] {
         let order = manualCommandOrder
-        let favorites = favoriteCommandIDs
-        let favoriteOrder = favoriteCommandOrder
         return commands.sorted {
             if !query.isEmpty {
                 let scoreA = commandMatchScore($0, query: query)
                 let scoreB = commandMatchScore($1, query: query)
                 if scoreA != scoreB {
                     return scoreA > scoreB
-                }
-            }
-
-            let favoriteA = favorites.contains($0.id)
-            let favoriteB = favorites.contains($1.id)
-            if favoriteA != favoriteB {
-                return favoriteA && !favoriteB
-            }
-
-            if favoriteA, favoriteB {
-                let favoriteIndexA = favoriteOrder.firstIndex(of: $0.id) ?? Int.max
-                let favoriteIndexB = favoriteOrder.firstIndex(of: $1.id) ?? Int.max
-                if favoriteIndexA != favoriteIndexB {
-                    return favoriteIndexA < favoriteIndexB
                 }
             }
 
@@ -521,22 +457,7 @@ enum LauncherOverlay: Equatable {
 
     var rootCommandSections: [RootCommandSection] {
         let commands = filteredCommands
-        guard searchQuery.isEmpty else {
-            return [RootCommandSection(id: "root-results", title: nil, commands: commands, startIndex: 0)]
-        }
-
-        let favorites = commands.filter(isFavorite)
-        let suggestions = commands.filter { !isFavorite($0) }
-        var sections: [RootCommandSection] = []
-        var startIndex = 0
-        if !favorites.isEmpty {
-            sections.append(RootCommandSection(id: "favorites", title: String(localized: "Favorites"), commands: favorites, startIndex: startIndex))
-            startIndex += favorites.count
-        }
-        if !suggestions.isEmpty {
-            sections.append(RootCommandSection(id: "suggestions", title: favorites.isEmpty ? nil : String(localized: "Suggestions"), commands: suggestions, startIndex: startIndex))
-        }
-        return sections
+        return [RootCommandSection(id: "root-results", title: nil, commands: commands, startIndex: 0)]
     }
     
     var filteredSpaces: [SpaceGroup] {
@@ -1728,18 +1649,7 @@ enum LauncherOverlay: Equatable {
     }
 
     var filteredRootActionIndices: [Int] {
-        let isSelectedFavorite = activeCommand == nil && filteredCommands.indices.contains(selectedRowIndex) && isFavorite(filteredCommands[selectedRowIndex])
-        let favoriteTitle = isSelectedFavorite
-            ? String(localized: "Remove from Favorites")
-            : String(localized: "Add to Favorites")
-        var titles = [String(localized: "Open Command"), favoriteTitle]
-        if isSelectedFavorite {
-            titles.append(contentsOf: [
-                String(localized: "Move Favorite Up"),
-                String(localized: "Move Favorite Down")
-            ])
-        }
-        titles.append(String(localized: "Reset Ranking"))
+        let titles = [String(localized: "Open Command"), String(localized: "Reset Ranking")]
         guard !rootActionQuery.isEmpty else { return Array(titles.indices) }
         let query = rootActionQuery.lowercased()
         return titles.indices.filter {
@@ -1769,15 +1679,6 @@ enum LauncherOverlay: Equatable {
             isRootActionsPresented = false
             executeRowAction()
         case 1:
-            toggleFavoriteSelectedCommand()
-            isRootActionsPresented = false
-        case 2:
-            moveFavoriteSelectedCommand(direction: -1)
-            isRootActionsPresented = false
-        case 3:
-            moveFavoriteSelectedCommand(direction: 1)
-            isRootActionsPresented = false
-        case 4:
             resetSelectedCommandRanking()
         default:
             break
