@@ -293,7 +293,7 @@ struct LauncherView: View {
                                 }
                             },
                             onTab: {
-                                if viewModel.commandKTargetWindow != nil { return }
+                                if viewModel.commandKTargetWindow != nil || viewModel.isRootSpacePickerPresented { return }
                                 viewModel.handleTabKey()
                             },
                             onEscape: {
@@ -313,6 +313,8 @@ struct LauncherView: View {
                                     viewModel.commandKTargetWindow = nil
                                 } else if viewModel.isRootActionsPresented {
                                     viewModel.isRootActionsPresented = false
+                                } else if viewModel.isRootSpacePickerPresented {
+                                    return
                                 } else if viewModel.activeCommand == nil {
                                     viewModel.showRootActionsPanel()
                                 } else if (viewModel.activeCommand?.type == .batchMoveWindows || viewModel.activeCommand?.type == .listWindows) && viewModel.stagingWindow == nil {
