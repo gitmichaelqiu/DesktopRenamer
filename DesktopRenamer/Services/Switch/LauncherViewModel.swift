@@ -503,9 +503,7 @@ enum LauncherOverlay: Equatable {
     }
 
     private var rootCommands: [LauncherCommand] {
-        allCommands.filter {
-            $0.type != .switchToDesktop && $0.type != .batchMoveWindows
-        }
+        allCommands
     }
     
     var filteredCommands: [LauncherCommand] {
