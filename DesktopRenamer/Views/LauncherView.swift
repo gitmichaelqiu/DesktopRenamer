@@ -387,8 +387,6 @@ struct LauncherView: View {
                 ZStack(alignment: .bottom) {
                     if viewModel.activeCommand == nil {
                         RootLauncherBottomBar(viewModel: viewModel, spaceManager: spaceManager)
-                    } else if viewModel.activeCommand?.type == .switchToDesktop {
-                        SpacesBottomBar(viewModel: viewModel, spaceManager: spaceManager)
                     } else if viewModel.activeCommand?.type == .batchMoveWindows {
                         BatchMoveBottomBar(viewModel: viewModel)
                     } else {
@@ -1297,7 +1295,7 @@ struct BatchMoveBottomBar: View {
                 HStack(spacing: 6) {
                     Image(systemName: viewModel.activeCommand?.iconName ?? "macwindow.badge.plus")
                         .font(.subheadline.weight(.semibold))
-                        .foregroundColor(Color.accentColor)
+                        .foregroundColor(colors.textSecondary)
                     Text(viewModel.activeCommand?.title ?? String(localized: "Batch Move Windows"))
                         .font(.subheadline)
                         .fontWeight(.semibold)
@@ -1964,7 +1962,7 @@ struct CommandBottomBar: View {
                     HStack(spacing: 6) {
                         Image(systemName: active.iconName)
                             .font(.subheadline.weight(.semibold))
-                            .foregroundColor(Color.accentColor)
+                            .foregroundColor(colors.textSecondary)
                         Text(active.title)
                             .font(.subheadline)
                             .fontWeight(.semibold)
