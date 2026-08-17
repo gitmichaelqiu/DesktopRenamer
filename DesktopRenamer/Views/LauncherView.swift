@@ -4,10 +4,10 @@ import AppKit
 enum LauncherLayout {
     static let windowSize = CGSize(width: 760, height: 500)
     static let actionBarHeight: CGFloat = 46
-    static let popupBottomSpacing: CGFloat = 10
+    static let popupBottomSpacing: CGFloat = 8
 
     static var popupBottomInset: CGFloat {
-        actionBarHeight + popupBottomSpacing
+        popupBottomSpacing
     }
 }
 
@@ -1458,13 +1458,6 @@ struct RootActionsOverlay: View {
         return viewModel.filteredCommands[viewModel.selectedRowIndex].title
     }
 
-    private var selectedCommand: LauncherCommand? {
-        guard viewModel.filteredCommands.indices.contains(viewModel.selectedRowIndex) else {
-            return nil
-        }
-        return viewModel.filteredCommands[viewModel.selectedRowIndex]
-    }
-
     private var actionRows: [(index: Int, title: String, icon: String, shortcut: String)] {
         let actions = [
             (index: 0, title: String(localized: "Open Command"), icon: "rectangle.and.pencil.and.ellipsis", shortcut: "↵"),
@@ -1472,14 +1465,6 @@ struct RootActionsOverlay: View {
         ]
         let indices = Set(viewModel.filteredRootActionIndices)
         return actions.filter { indices.contains($0.index) }
-    }
-
-    private var groupedActionRows: [(title: String, rows: [(index: Int, title: String, icon: String, shortcut: String)])] {
-        let rows = actionRows
-        return [
-            (String(localized: "Primary Action"), rows.filter { $0.index == 0 }),
-            (String(localized: "Manage"), rows.filter { $0.index == 1 })
-        ].filter { !$0.rows.isEmpty }
     }
 
     var body: some View {
@@ -1494,12 +1479,12 @@ struct RootActionsOverlay: View {
             LauncherMenuPanel(
                 colors: colors,
                 width: 350,
-                contentHeight: 112
+                contentHeight: 84
             ) {
                 LauncherMenuHeader(
                     title: selectedCommandTitle,
-                    subtitle: selectedCommand?.subtitle ?? String(localized: "Command"),
-                    iconName: selectedCommand?.iconName ?? "sparkles",
+                    subtitle: nil,
+                    iconName: nil,
                     colors: colors
                 )
             } content: {
@@ -1510,19 +1495,6 @@ struct RootActionsOverlay: View {
                             .foregroundColor(colors.textTertiary)
                             .frame(maxWidth: .infinity)
                             .padding(.vertical, 16)
-                    } else if viewModel.rootActionQuery.isEmpty {
-                        ForEach(groupedActionRows, id: \.title) { section in
-                            Text(verbatim: section.title)
-                                .font(.caption.weight(.semibold))
-                                .foregroundColor(colors.textTertiary)
-                                .padding(.horizontal, 12)
-                                .padding(.top, section.title == String(localized: "Primary Action") ? 0 : 8)
-                                .padding(.bottom, 2)
-
-                            ForEach(section.rows, id: \.index) { row in
-                                rootActionRow(row: row, selectionNamespace: actionSelectionNamespace)
-                            }
-                        }
                     } else {
                         ForEach(actionRows, id: \.index) { row in
                             rootActionRow(row: row, selectionNamespace: actionSelectionNamespace)
