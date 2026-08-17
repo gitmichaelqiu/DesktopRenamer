@@ -694,6 +694,7 @@ struct ListAreaView: View {
 struct KeycapView: View {
     let text: LocalizedStringKey
     let isSelected: Bool
+    var isKeyboardKey: Bool = false
     var isGreenRow: Bool = false
     var verticalPadding: CGFloat = 3
     var horizontalPadding: CGFloat = 6
@@ -711,12 +712,18 @@ struct KeycapView: View {
             .foregroundColor(isSelected ? (isSelectedWhiteStyle ? .white : colors.textPrimary) : colors.textSecondary)
             .padding(.horizontal, horizontalPadding)
             .padding(.vertical, verticalPadding)
+            .frame(minWidth: isKeyboardKey ? 24 : nil, minHeight: isKeyboardKey ? 24 : nil)
             .background(
                 isSelected
                     ? (isSelectedWhiteStyle ? Color.white.opacity(0.20) : Color.primary.opacity(0.12))
                     : colors.badgeBg
             )
             .clipShape(RoundedRectangle(cornerRadius: 5, style: .continuous))
+            .shadow(
+                color: isKeyboardKey ? Color.black.opacity(colorScheme == .dark ? 0.24 : 0.12) : .clear,
+                radius: 0,
+                y: 1
+            )
     }
 }
 
@@ -858,7 +865,7 @@ struct CommandRowView: View {
             Spacer(minLength: 4)
 
             if let shortcut = shortcutText {
-                KeycapView(text: LocalStringKey_compat(shortcut), isSelected: isSelected)
+                KeycapView(text: LocalStringKey_compat(shortcut), isSelected: isSelected, isKeyboardKey: true)
             }
 
             if let statusText = toggleStatus {
@@ -890,7 +897,7 @@ struct CommandRowView: View {
             Spacer()
             
             if let shortcut = shortcutText {
-                KeycapView(text: LocalStringKey_compat(shortcut), isSelected: isSelected)
+                KeycapView(text: LocalStringKey_compat(shortcut), isSelected: isSelected, isKeyboardKey: true)
             } else if let statusText = toggleStatus {
                 LauncherStatusLabel(
                     label: statusText,
@@ -988,7 +995,7 @@ struct SpaceRowView: View {
             }
 
             if let shortcut = shortcutText {
-                KeycapView(text: LocalizedStringKey(shortcut), isSelected: isSelected)
+                KeycapView(text: LocalizedStringKey(shortcut), isSelected: isSelected, isKeyboardKey: true)
             }
         }
         .launcherRowSurface(isSelected: isSelected, isHovered: isHovered, colors: colors, selectionNamespace: selectionNamespace)
@@ -1072,7 +1079,7 @@ struct WindowRowView: View {
                 }
 
                 if let shortcut = shortcutText {
-                    KeycapView(text: LocalizedStringKey(shortcut), isSelected: isSelected)
+                    KeycapView(text: LocalizedStringKey(shortcut), isSelected: isSelected, isKeyboardKey: true)
                 } else {
                     KeycapView(text: "Focus ↵", isSelected: isSelected)
                 }
@@ -1178,7 +1185,7 @@ struct WindowBatchRowView: View {
                 }
 
                 if let shortcut = shortcutText {
-                    KeycapView(text: LocalizedStringKey(shortcut), isSelected: isSelected)
+                    KeycapView(text: LocalizedStringKey(shortcut), isSelected: isSelected, isKeyboardKey: true)
                 } else if isStaged {
                     LauncherStatusLabel(
                         label: stagedActionText,
@@ -1408,7 +1415,7 @@ struct RootLauncherBottomBar: View {
                 } label: {
                     HStack(spacing: 8) {
                         Text(verbatim: String(localized: "Open Command"))
-                        KeycapView(text: "↵", isSelected: false, verticalPadding: 4, horizontalPadding: 4)
+                        KeycapView(text: "↵", isSelected: false, isKeyboardKey: true, verticalPadding: 4, horizontalPadding: 4)
                     }
                     .foregroundColor(colors.textPrimary)
                 }
@@ -1419,7 +1426,7 @@ struct RootLauncherBottomBar: View {
                 } label: {
                     HStack(spacing: 8) {
                         Text(verbatim: String(localized: "Actions"))
-                        KeycapView(text: "⌘K", isSelected: false, verticalPadding: 4, horizontalPadding: 4)
+                        KeycapView(text: "⌘K", isSelected: false, isKeyboardKey: true, verticalPadding: 4, horizontalPadding: 4)
                     }
                     .foregroundColor(viewModel.isRootActionsPresented ? colors.textPrimary : colors.textSecondary)
                 }
@@ -1554,7 +1561,7 @@ struct RootActionsOverlay: View {
                     Text(verbatim: row.title)
                         .fontWeight(viewModel.selectedRootActionIndex == row.index ? .semibold : .medium)
                     Spacer()
-                    KeycapView(text: LocalizedStringKey(row.shortcut), isSelected: viewModel.selectedRootActionIndex == row.index, verticalPadding: 3, horizontalPadding: 5)
+                    KeycapView(text: LocalizedStringKey(row.shortcut), isSelected: viewModel.selectedRootActionIndex == row.index, isKeyboardKey: true, verticalPadding: 3, horizontalPadding: 5)
                 }
             }
         }
@@ -2514,7 +2521,7 @@ struct CommandKActionRowView: View {
 
                     Spacer()
 
-                    KeycapView(text: "⌘\(idx + 1)", isSelected: isSelected)
+                    KeycapView(text: "⌘\(idx + 1)", isSelected: isSelected, isKeyboardKey: true)
                         .opacity(showCommandNumbers ? 1 : 0)
                 }
             }
