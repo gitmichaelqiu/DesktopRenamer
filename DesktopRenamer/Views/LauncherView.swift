@@ -1505,6 +1505,7 @@ struct RootActionsOverlay: View {
                 SearchTextField(
                     text: $viewModel.rootActionQuery,
                     isDark: colors.isDark,
+                    fontSize: 16,
                     onUpArrow: {
                         viewModel.selectPreviousRootAction()
                     },
@@ -1532,7 +1533,7 @@ struct RootActionsOverlay: View {
                     focusNotificationName: NSNotification.Name("FocusRootActionTextField")
                 )
             }
-            .padding(.trailing, 16)
+            .padding(.trailing, LauncherLayout.popupBottomInset)
             .padding(.bottom, LauncherLayout.popupBottomInset)
         }
         .onAppear {
@@ -1900,6 +1901,7 @@ struct SpacePickerOverlay: View {
                 SearchTextField(
                     text: $viewModel.spacePickerQuery,
                     isDark: colors.isDark,
+                    fontSize: 16,
                     onUpArrow: {
                         viewModel.selectedSpaceIndex = max(0, viewModel.selectedSpaceIndex - 1)
                     },
@@ -1931,7 +1933,7 @@ struct SpacePickerOverlay: View {
                     focusNotificationName: NSNotification.Name("FocusSpacePickerTextField")
                 )
             }
-            .padding(.trailing, 16)
+            .padding(.trailing, LauncherLayout.popupBottomInset)
             .padding(.bottom, LauncherLayout.popupBottomInset)
         }
         .onAppear {
@@ -2174,6 +2176,7 @@ class BlockTypingFormatter: Formatter {
 struct SearchTextField: NSViewRepresentable {
     @Binding var text: String
     var isDark: Bool
+    var fontSize: CGFloat = 22
     var isTypingDisabled: Bool = false
     var onUpArrow: () -> Void
     var onDownArrow: () -> Void
@@ -2309,7 +2312,7 @@ struct SearchTextField: NSViewRepresentable {
         textField.drawsBackground = false
         textField.focusRingType = .none
         textField.textColor = .labelColor
-        textField.font = NSFont.systemFont(ofSize: 22, weight: .regular)
+        textField.font = NSFont.systemFont(ofSize: fontSize, weight: .regular)
         
         context.coordinator.lastPlaceholder = placeholder
         context.coordinator.lastIsDark = isDark
@@ -2318,7 +2321,7 @@ struct SearchTextField: NSViewRepresentable {
             string: placeholder,
             attributes: [
                 .foregroundColor: NSColor.placeholderTextColor,
-                .font: NSFont.systemFont(ofSize: 22, weight: .regular)
+                .font: NSFont.systemFont(ofSize: fontSize, weight: .regular)
             ]
         )
         textField.placeholderAttributedString = placeholderAttr
@@ -2340,6 +2343,7 @@ struct SearchTextField: NSViewRepresentable {
             nsView.stringValue = text
         }
         nsView.textColor = .labelColor
+        nsView.font = NSFont.systemFont(ofSize: fontSize, weight: .regular)
         
         // Cache placeholder creation to avoid recreating it on every render cycle
         if context.coordinator.lastPlaceholder != placeholder || context.coordinator.lastIsDark != isDark {
@@ -2350,7 +2354,7 @@ struct SearchTextField: NSViewRepresentable {
                 string: placeholder,
                 attributes: [
                     .foregroundColor: NSColor.placeholderTextColor,
-                    .font: NSFont.systemFont(ofSize: 22, weight: .regular)
+                    .font: NSFont.systemFont(ofSize: fontSize, weight: .regular)
                 ]
             )
             nsView.placeholderAttributedString = placeholderAttr
@@ -2367,6 +2371,11 @@ struct CommandKOverlayView: View {
     var colors: ThemeColors {
         ThemeColors(isDark: colorScheme == .dark)
     }
+
+    private var actionListHeight: CGFloat {
+        let actionCount = max(viewModel.filteredCommandKActions.count, 1)
+        return min(CGFloat(actionCount) * 38 + 8, 230)
+    }
     
     var body: some View {
         ZStack(alignment: .bottomTrailing) {
@@ -2380,7 +2389,7 @@ struct CommandKOverlayView: View {
             LauncherMenuPanel(
                 colors: colors,
                 width: 350,
-                contentHeight: 230
+                contentHeight: actionListHeight
             ) {
                 LauncherMenuHeader(
                     title: window.ownerName,
@@ -2415,6 +2424,7 @@ struct CommandKOverlayView: View {
                 SearchTextField(
                     text: $viewModel.commandKQuery,
                     isDark: colors.isDark,
+                    fontSize: 16,
                     onUpArrow: {
                         viewModel.selectPreviousCommandKAction()
                     },
@@ -2446,7 +2456,7 @@ struct CommandKOverlayView: View {
                     focusNotificationName: NSNotification.Name("FocusCommandKTextField")
                 )
             }
-            .padding(.trailing, 16)
+            .padding(.trailing, LauncherLayout.popupBottomInset)
             .padding(.bottom, LauncherLayout.popupBottomInset)
         }
         .onAppear {
