@@ -1557,37 +1557,24 @@ struct RootActionsOverlay: View {
             viewModel.selectedRootActionIndex = row.index
             viewModel.executeRootAction()
         } label: {
-            HStack(spacing: 8) {
-                Image(systemName: row.icon)
-                    .font(.body.weight(.medium))
-                    .frame(width: 18)
-                    .foregroundColor(colors.textSecondary)
+            LauncherMenuRow(
+                isSelected: viewModel.selectedRootActionIndex == row.index,
+                colors: colors,
+                selectionNamespace: selectionNamespace
+            ) {
+                HStack(spacing: 10) {
+                    Image(systemName: row.icon)
+                        .font(.system(size: 14, weight: .medium))
+                        .frame(width: 20)
 
-                Text(verbatim: row.title)
-                    .font(.body.weight(viewModel.selectedRootActionIndex == row.index ? .semibold : .regular))
-                Spacer()
-                KeycapView(text: LocalizedStringKey(row.shortcut), isSelected: viewModel.selectedRootActionIndex == row.index, verticalPadding: 3, horizontalPadding: 5)
-            }
-            .foregroundColor(colors.textPrimary)
-            .padding(.horizontal, LauncherMenuMetrics.rowHorizontalPadding)
-            .frame(height: LauncherMenuMetrics.rowHeight)
-            .background {
-                if viewModel.selectedRootActionIndex == row.index {
-                    RoundedRectangle(cornerRadius: 8, style: .continuous)
-                        .fill(Color.primary.opacity(0.16))
-                        .modifier(SelectionSurfaceModifier(namespace: selectionNamespace))
-                } else {
-                    RoundedRectangle(cornerRadius: 8, style: .continuous)
-                        .fill(Color.clear)
+                    Text(verbatim: row.title)
+                        .fontWeight(viewModel.selectedRootActionIndex == row.index ? .semibold : .medium)
+                    Spacer()
+                    KeycapView(text: LocalizedStringKey(row.shortcut), isSelected: viewModel.selectedRootActionIndex == row.index, verticalPadding: 3, horizontalPadding: 5)
                 }
             }
         }
         .buttonStyle(.plain)
-        .onHover { hovering in
-            if hovering {
-                viewModel.selectedRootActionIndex = row.index
-            }
-        }
     }
 }
 
@@ -1756,6 +1743,45 @@ private struct LauncherMenuHeader: View {
     }
 }
 
+private struct LauncherMenuRow<Content: View>: View {
+    let isSelected: Bool
+    let colors: ThemeColors
+    let selectionNamespace: Namespace.ID?
+    let content: Content
+    @State private var isHovered = false
+
+    init(
+        isSelected: Bool,
+        colors: ThemeColors,
+        selectionNamespace: Namespace.ID?,
+        @ViewBuilder content: () -> Content
+    ) {
+        self.isSelected = isSelected
+        self.colors = colors
+        self.selectionNamespace = selectionNamespace
+        self.content = content()
+    }
+
+    var body: some View {
+        content
+            .font(.system(size: 15, weight: .medium))
+            .foregroundColor(colors.textPrimary)
+            .padding(.horizontal, LauncherMenuMetrics.rowHorizontalPadding)
+            .frame(maxWidth: .infinity)
+            .frame(height: LauncherMenuMetrics.rowHeight)
+            .background {
+                RoundedRectangle(cornerRadius: 9, style: .continuous)
+                    .fill(isSelected ? Color.primary.opacity(0.16) : (isHovered ? colors.rowHover : .clear))
+                    .modifier(isSelected ? SelectionSurfaceModifier(namespace: selectionNamespace) : SelectionSurfaceModifier(namespace: nil))
+            }
+            .overlay {
+                RoundedRectangle(cornerRadius: 9, style: .continuous)
+                    .stroke(isSelected ? Color.primary.opacity(0.10) : .clear, lineWidth: 1)
+            }
+            .onHover { isHovered = $0 }
+    }
+}
+
 private struct LauncherMenuPanel<Header: View, Content: View, Footer: View>: View {
     let colors: ThemeColors
     let width: CGFloat
@@ -1868,40 +1894,27 @@ struct SpacePickerOverlay: View {
                                     viewModel.executeSelectedSpacePickerAction()
                                 }
                             }) {
-                                HStack(spacing: 10) {
-                                    Image(systemName: "desktopcomputer")
-                                        .font(.system(size: 14, weight: .medium))
-                                        .frame(width: 20)
-                                    Text(spaceManager.getSpaceName(space.id))
-                                        .font(.system(size: 14, weight: .medium))
-                                        .lineLimit(1)
-                                    Spacer()
-                                    if space.id == spaceManager.currentSpaceUUID {
-                                        Text(verbatim: String(localized: "Current"))
-                                            .font(.system(size: 12, weight: .semibold))
-                                            .foregroundColor(colors.textTertiary)
-                                    }
-                                }
-                                .foregroundColor(colors.textPrimary)
-                                .padding(.horizontal, LauncherMenuMetrics.rowHorizontalPadding)
-                                .frame(height: LauncherMenuMetrics.rowHeight)
-                                .background {
-                                    if isSelected {
-                                        RoundedRectangle(cornerRadius: 9, style: .continuous)
-                                            .fill(Color.primary.opacity(0.16))
-                                            .modifier(SelectionSurfaceModifier(namespace: selectionNamespace))
-                                    } else {
-                                        RoundedRectangle(cornerRadius: 9, style: .continuous)
-                                            .fill(Color.clear)
+                                LauncherMenuRow(
+                                    isSelected: isSelected,
+                                    colors: colors,
+                                    selectionNamespace: selectionNamespace
+                                ) {
+                                    HStack(spacing: 10) {
+                                        Image(systemName: "desktopcomputer")
+                                            .font(.system(size: 14, weight: .medium))
+                                            .frame(width: 20)
+                                        Text(spaceManager.getSpaceName(space.id))
+                                            .lineLimit(1)
+                                        Spacer()
+                                        if space.id == spaceManager.currentSpaceUUID {
+                                            Text(verbatim: String(localized: "Current"))
+                                                .font(.system(size: 12, weight: .semibold))
+                                                .foregroundColor(colors.textTertiary)
+                                        }
                                     }
                                 }
                             }
                             .buttonStyle(.plain)
-                            .onHover { hovering in
-                                if hovering {
-                                    viewModel.selectedSpaceIndex = index
-                                }
-                            }
                         }
                     }
                 }
@@ -2493,50 +2506,32 @@ struct CommandKActionRowView: View {
     @ObservedObject var viewModel: LauncherViewModel
     let selectionNamespace: Namespace.ID?
     
-    @State private var isHovered = false
-    
     var body: some View {
         Button {
             viewModel.commandKSelectedIndex = idx
             viewModel.executeCommandKAction()
         } label: {
-            HStack(spacing: 10) {
-                Image(systemName: getIconName(for: action))
-                    .font(.body.weight(.medium))
-                    .frame(width: 16)
-                    .foregroundColor(isSelected ? colors.textPrimary : colors.textSecondary)
+            LauncherMenuRow(
+                isSelected: isSelected,
+                colors: colors,
+                selectionNamespace: selectionNamespace
+            ) {
+                HStack(spacing: 10) {
+                    Image(systemName: getIconName(for: action))
+                        .font(.system(size: 14, weight: .medium))
+                        .frame(width: 20)
 
-                Text(getActionLabel(for: action))
-                    .font(.body)
-                    .fontWeight(isSelected ? .semibold : .regular)
-                    .foregroundColor(colors.textPrimary)
+                    Text(getActionLabel(for: action))
+                        .fontWeight(isSelected ? .semibold : .medium)
 
-                Spacer()
+                    Spacer()
 
-                KeycapView(text: "⌘\(idx + 1)", isSelected: isSelected)
-                    .opacity(showCommandNumbers ? 1 : 0)
-            }
-            .padding(.horizontal, LauncherMenuMetrics.rowHorizontalPadding)
-            .frame(height: LauncherMenuMetrics.rowHeight)
-            .background(
-                ZStack {
-                    if isSelected {
-                        RoundedRectangle(cornerRadius: 6, style: .continuous)
-                            .fill(Color.primary.opacity(0.08))
-                            .modifier(SelectionSurfaceModifier(namespace: selectionNamespace))
-                        RoundedRectangle(cornerRadius: 6, style: .continuous)
-                            .stroke(Color.primary.opacity(0.15), lineWidth: 1)
-                    } else if isHovered {
-                        RoundedRectangle(cornerRadius: 6, style: .continuous)
-                            .fill(Color.primary.opacity(0.05))
-                    }
+                    KeycapView(text: "⌘\(idx + 1)", isSelected: isSelected)
+                        .opacity(showCommandNumbers ? 1 : 0)
                 }
-            )
+            }
         }
         .buttonStyle(.plain)
-        .onHover { hovering in
-            isHovered = hovering
-        }
     }
     
     private func getIconName(for action: BatchStagedActionType) -> String {
