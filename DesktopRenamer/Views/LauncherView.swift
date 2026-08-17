@@ -899,18 +899,12 @@ struct CommandRowView: View {
             if let shortcut = shortcutText {
                 KeycapView(text: LocalStringKey_compat(shortcut), isSelected: isSelected)
             } else if let statusText = toggleStatus {
-                Text(LocalizedStringKey(statusText))
-                    .font(.subheadline)
-                    .fontWeight(.semibold)
-                    .foregroundColor(statusText == "Enabled" ? colors.greenText : colors.textSecondary)
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 3)
-                    .background(statusText == "Enabled" ? colors.greenText.opacity(0.12) : colors.badgeBg)
-                    .cornerRadius(6)
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 6)
-                            .stroke(statusText == "Enabled" ? colors.greenText.opacity(0.35) : colors.badgeBorder, lineWidth: 1)
-                    )
+                LauncherStatusLabel(
+                    label: statusText,
+                    color: statusText == "Enabled" ? colors.greenText : colors.textSecondary,
+                    background: statusText == "Enabled" ? colors.greenText.opacity(0.12) : colors.badgeBg,
+                    border: statusText == "Enabled" ? colors.greenText.opacity(0.35) : colors.badgeBorder
+                )
             } else if command.hasSubpage {
                 Image(systemName: "chevron.right")
                     .font(.caption.weight(.semibold))
@@ -932,18 +926,12 @@ struct CommandRowView: View {
     }
 
     private func statusBadge(_ statusText: String) -> some View {
-        Text(LocalizedStringKey(statusText))
-            .font(.subheadline)
-            .fontWeight(.semibold)
-            .foregroundColor(statusText == "Enabled" ? colors.greenText : colors.textSecondary)
-            .padding(.horizontal, 8)
-            .padding(.vertical, 3)
-            .background(statusText == "Enabled" ? colors.greenText.opacity(0.12) : colors.badgeBg)
-            .cornerRadius(6)
-            .overlay(
-                RoundedRectangle(cornerRadius: 6)
-                    .stroke(statusText == "Enabled" ? colors.greenText.opacity(0.35) : colors.badgeBorder, lineWidth: 1)
-            )
+        LauncherStatusLabel(
+            label: statusText,
+            color: statusText == "Enabled" ? colors.greenText : colors.textSecondary,
+            background: statusText == "Enabled" ? colors.greenText.opacity(0.12) : colors.badgeBg,
+            border: statusText == "Enabled" ? colors.greenText.opacity(0.35) : colors.badgeBorder
+        )
     }
     
     // Helper to safely wrap dynamic String to LocalizedStringKey
@@ -1024,14 +1012,32 @@ struct WindowStateBadge: View {
     let color: Color
 
     var body: some View {
-        Text(label)
-            .font(.footnote)
-            .fontWeight(.semibold)
+        LauncherStatusLabel(
+            label: label,
+            color: color,
+            background: color.opacity(0.15),
+            border: color.opacity(0.35)
+        )
+    }
+}
+
+private struct LauncherStatusLabel: View {
+    let label: String
+    let color: Color
+    let background: Color
+    let border: Color
+
+    var body: some View {
+        Text(verbatim: label)
+            .font(.system(size: 13, weight: .semibold))
             .foregroundColor(color)
-            .padding(.horizontal, 10)
-            .padding(.vertical, 4)
-            .background(color.opacity(0.15))
-            .cornerRadius(4)
+            .padding(.horizontal, 8)
+            .padding(.vertical, 3)
+            .background(background, in: RoundedRectangle(cornerRadius: 6, style: .continuous))
+            .overlay {
+                RoundedRectangle(cornerRadius: 6, style: .continuous)
+                    .stroke(border, lineWidth: 1)
+            }
     }
 }
 
@@ -1189,18 +1195,12 @@ struct WindowBatchRowView: View {
                 if let shortcut = shortcutText {
                     KeycapView(text: LocalizedStringKey(shortcut), isSelected: isSelected)
                 } else if isStaged {
-                    Text(stagedActionText)
-                        .font(.subheadline)
-                        .fontWeight(.semibold)
-                        .foregroundColor(colors.greenText)
-                        .padding(.horizontal, 8)
-                        .padding(.vertical, 3)
-                        .background(colors.greenText.opacity(0.12))
-                        .cornerRadius(6)
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 6)
-                                .stroke(colors.greenText.opacity(0.35), lineWidth: 1)
-                        )
+                    LauncherStatusLabel(
+                        label: stagedActionText,
+                        color: colors.greenText,
+                        background: colors.greenText.opacity(0.12),
+                        border: colors.greenText.opacity(0.35)
+                    )
                 }
             }
         }
@@ -1664,6 +1664,10 @@ struct SpacesBottomBar: View {
                     }
                 }
             }
+
+            .frame(maxWidth: .infinity, alignment: .leading)
+
+            Spacer(minLength: 12)
 
             HStack(spacing: 12) {
                 Rectangle()
