@@ -11,6 +11,15 @@ enum LauncherLayout {
     }
 }
 
+private enum LauncherMenuMetrics {
+    static let panelWidth: CGFloat = 350
+    static let rowHeight: CGFloat = 38
+    static let rowSpacing: CGFloat = 2
+    static let rowHorizontalPadding: CGFloat = 12
+    static let capsuleHorizontalPadding: CGFloat = 12
+    static let capsuleHeight: CGFloat = 30
+}
+
 struct ThemeColors {
     let isDark: Bool
     
@@ -1478,8 +1487,8 @@ struct RootActionsOverlay: View {
 
             LauncherMenuPanel(
                 colors: colors,
-                width: 350,
-                contentHeight: 84
+                width: LauncherMenuMetrics.panelWidth,
+                contentHeight: LauncherMenuMetrics.rowHeight * 2 + LauncherMenuMetrics.rowSpacing * 2
             ) {
                 LauncherMenuHeader(
                     title: selectedCommandTitle,
@@ -1488,7 +1497,7 @@ struct RootActionsOverlay: View {
                     colors: colors
                 )
             } content: {
-                VStack(spacing: 2) {
+                VStack(spacing: LauncherMenuMetrics.rowSpacing) {
                     if actionRows.isEmpty {
                         Text(verbatim: String(localized: "No actions found"))
                             .font(.system(size: 13))
@@ -1560,8 +1569,8 @@ struct RootActionsOverlay: View {
                 KeycapView(text: LocalizedStringKey(row.shortcut), isSelected: viewModel.selectedRootActionIndex == row.index, verticalPadding: 3, horizontalPadding: 5)
             }
             .foregroundColor(colors.textPrimary)
-            .padding(.horizontal, 12)
-            .frame(height: 38)
+            .padding(.horizontal, LauncherMenuMetrics.rowHorizontalPadding)
+            .frame(height: LauncherMenuMetrics.rowHeight)
             .background {
                 if viewModel.selectedRootActionIndex == row.index {
                     RoundedRectangle(cornerRadius: 8, style: .continuous)
@@ -1812,7 +1821,7 @@ struct SpacePickerOverlay: View {
 
     private var spaceListHeight: CGFloat {
         let itemCount = max(viewModel.filteredSpaces.count, 1)
-        return min(CGFloat(itemCount) * 32 + 16, 176)
+        return min(CGFloat(itemCount) * (LauncherMenuMetrics.rowHeight + LauncherMenuMetrics.rowSpacing) + 8, 176)
     }
 
     var body: some View {
@@ -1826,7 +1835,7 @@ struct SpacePickerOverlay: View {
 
             LauncherMenuPanel(
                 colors: colors,
-                width: viewModel.stagingWindow == nil ? 290 : 326,
+                width: LauncherMenuMetrics.panelWidth,
                 contentHeight: spaceListHeight,
                 showsFooter: viewModel.stagingWindow != nil
             ) {
@@ -1839,7 +1848,7 @@ struct SpacePickerOverlay: View {
                     colors: colors
                 )
             } content: {
-                VStack(spacing: 2) {
+                VStack(spacing: LauncherMenuMetrics.rowSpacing) {
                     let spaces = viewModel.filteredSpaces
                     if spaces.isEmpty {
                         Text(verbatim: String(localized: "No spaces found"))
@@ -1874,8 +1883,8 @@ struct SpacePickerOverlay: View {
                                     }
                                 }
                                 .foregroundColor(colors.textPrimary)
-                                .padding(.horizontal, 12)
-                                .frame(height: 30)
+                                .padding(.horizontal, LauncherMenuMetrics.rowHorizontalPadding)
+                                .frame(height: LauncherMenuMetrics.rowHeight)
                                 .background {
                                     if isSelected {
                                         RoundedRectangle(cornerRadius: 9, style: .continuous)
@@ -2374,7 +2383,7 @@ struct CommandKOverlayView: View {
 
     private var actionListHeight: CGFloat {
         let actionCount = max(viewModel.filteredCommandKActions.count, 1)
-        return min(CGFloat(actionCount) * 38 + 8, 230)
+        return min(CGFloat(actionCount) * (LauncherMenuMetrics.rowHeight + LauncherMenuMetrics.rowSpacing) + 8, 230)
     }
     
     var body: some View {
@@ -2388,7 +2397,7 @@ struct CommandKOverlayView: View {
 
             LauncherMenuPanel(
                 colors: colors,
-                width: 350,
+                width: LauncherMenuMetrics.panelWidth,
                 contentHeight: actionListHeight
             ) {
                 LauncherMenuHeader(
@@ -2399,7 +2408,7 @@ struct CommandKOverlayView: View {
                 )
             } content: {
                 let actions = viewModel.filteredCommandKActions.map(CommandKActionItem.init)
-                VStack(spacing: 2) {
+            VStack(spacing: LauncherMenuMetrics.rowSpacing) {
                     if actions.isEmpty {
                         Text(verbatim: String(localized: "No actions found"))
                             .font(.system(size: 13))
@@ -2507,8 +2516,8 @@ struct CommandKActionRowView: View {
                 KeycapView(text: "⌘\(idx + 1)", isSelected: isSelected)
                     .opacity(showCommandNumbers ? 1 : 0)
             }
-            .padding(.horizontal, 12)
-            .padding(.vertical, 8)
+            .padding(.horizontal, LauncherMenuMetrics.rowHorizontalPadding)
+            .frame(height: LauncherMenuMetrics.rowHeight)
             .background(
                 ZStack {
                     if isSelected {
@@ -2676,8 +2685,8 @@ struct BottomBarCapsule: ViewModifier {
         content
             .font(.subheadline)
             .fontWeight(isSelected || isActive ? .semibold : .medium)
-            .padding(.horizontal, 12)
-            .frame(height: 30)
+            .padding(.horizontal, LauncherMenuMetrics.capsuleHorizontalPadding)
+            .frame(height: LauncherMenuMetrics.capsuleHeight)
             .background(
                 ZStack {
                     if isGreen {
