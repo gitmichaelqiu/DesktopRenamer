@@ -1491,36 +1491,22 @@ struct RootActionsOverlay: View {
             }
             .buttonStyle(.plain)
 
-            VStack(alignment: .leading, spacing: 0) {
-                HStack(spacing: 10) {
-                    Image(systemName: selectedCommand?.iconName ?? "sparkles")
-                        .font(.system(size: 14, weight: .semibold))
-                        .foregroundColor(colors.textPrimary)
-                        .frame(width: 26, height: 26)
-                        .background(colors.badgeBg, in: RoundedRectangle(cornerRadius: 7, style: .continuous))
-
-                    VStack(alignment: .leading, spacing: 1) {
-                        Text(verbatim: selectedCommandTitle)
-                            .font(.subheadline.weight(.semibold))
-                            .foregroundColor(colors.textPrimary)
-                            .lineLimit(1)
-
-                        Text(verbatim: selectedCommand?.subtitle ?? String(localized: "Command"))
-                            .font(.caption)
-                            .foregroundColor(colors.textTertiary)
-                            .lineLimit(1)
-                    }
-
-                    Spacer(minLength: 0)
-                }
-                .padding(.horizontal, 14)
-                .padding(.top, 12)
-                .padding(.bottom, 10)
-
+            LauncherMenuPanel(
+                colors: colors,
+                width: 350,
+                contentHeight: 112
+            ) {
+                LauncherMenuHeader(
+                    title: selectedCommandTitle,
+                    subtitle: selectedCommand?.subtitle ?? String(localized: "Command"),
+                    iconName: selectedCommand?.iconName ?? "sparkles",
+                    colors: colors
+                )
+            } content: {
                 VStack(spacing: 2) {
                     if actionRows.isEmpty {
                         Text(verbatim: String(localized: "No actions found"))
-                            .font(.subheadline)
+                            .font(.system(size: 13))
                             .foregroundColor(colors.textTertiary)
                             .frame(maxWidth: .infinity)
                             .padding(.vertical, 16)
@@ -1543,11 +1529,7 @@ struct RootActionsOverlay: View {
                         }
                     }
                 }
-                .padding(.horizontal, 8)
-                .padding(.bottom, 8)
-
-                Divider()
-
+            } footer: {
                 SearchTextField(
                     text: $viewModel.rootActionQuery,
                     isDark: colors.isDark,
@@ -1577,10 +1559,7 @@ struct RootActionsOverlay: View {
                     placeholder: String(localized: "Search for actions..."),
                     focusNotificationName: NSNotification.Name("FocusRootActionTextField")
                 )
-                .frame(height: 44)
             }
-            .frame(width: 350)
-            .spacePickerSurface(colors: colors)
             .padding(.trailing, 16)
             .padding(.bottom, LauncherLayout.popupBottomInset)
         }
@@ -1760,6 +1739,94 @@ struct SpacesBottomBar: View {
     }
 }
 
+private struct LauncherMenuHeader: View {
+    let title: String
+    let subtitle: String?
+    let iconName: String?
+    let colors: ThemeColors
+
+    var body: some View {
+        HStack(spacing: 10) {
+            if let iconName {
+                Image(systemName: iconName)
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundColor(colors.textPrimary)
+                    .frame(width: 26, height: 26)
+                    .background(colors.badgeBg, in: RoundedRectangle(cornerRadius: 7, style: .continuous))
+            }
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text(verbatim: title)
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundColor(colors.textPrimary)
+                    .lineLimit(1)
+
+                if let subtitle {
+                    Text(verbatim: subtitle)
+                        .font(.system(size: 12, weight: .regular))
+                        .foregroundColor(colors.textTertiary)
+                        .lineLimit(1)
+                }
+            }
+
+            Spacer(minLength: 0)
+        }
+    }
+}
+
+private struct LauncherMenuPanel<Header: View, Content: View, Footer: View>: View {
+    let colors: ThemeColors
+    let width: CGFloat
+    let contentHeight: CGFloat
+    let showsFooter: Bool
+    let header: Header
+    let content: Content
+    let footer: Footer
+
+    init(
+        colors: ThemeColors,
+        width: CGFloat,
+        contentHeight: CGFloat,
+        showsFooter: Bool = true,
+        @ViewBuilder header: () -> Header,
+        @ViewBuilder content: () -> Content,
+        @ViewBuilder footer: () -> Footer
+    ) {
+        self.colors = colors
+        self.width = width
+        self.contentHeight = contentHeight
+        self.showsFooter = showsFooter
+        self.header = header()
+        self.content = content()
+        self.footer = footer()
+    }
+
+    var body: some View {
+        VStack(spacing: 0) {
+            header
+                .padding(.horizontal, 16)
+                .padding(.vertical, 12)
+
+            ScrollView {
+                content
+                    .padding(.horizontal, 8)
+                    .padding(.bottom, 8)
+            }
+            .frame(height: contentHeight)
+
+            if showsFooter {
+                Divider()
+
+                footer
+                    .padding(.horizontal, 12)
+                    .frame(height: 44)
+            }
+        }
+        .frame(width: width)
+        .launcherMenuSurface(colors: colors)
+    }
+}
+
 struct SpacePickerOverlay: View {
     @ObservedObject var viewModel: LauncherViewModel
     @ObservedObject var spaceManager: SpaceManager
@@ -1784,121 +1851,114 @@ struct SpacePickerOverlay: View {
             }
             .buttonStyle(.plain)
 
-            VStack(alignment: .leading, spacing: 0) {
-                Text(verbatim: viewModel.stagingWindow == nil
-                     ? String(localized: "Switch Space")
-                     : String(localized: "Stage Move to Desktop..."))
-                    .font(.caption.weight(.semibold))
-                    .foregroundColor(colors.textSecondary)
-                    .padding(.horizontal, 14)
-                    .padding(.top, 10)
-                    .padding(.bottom, 6)
-
-                ScrollView {
-                    VStack(spacing: 2) {
-                        let spaces = viewModel.filteredSpaces
-                        if spaces.isEmpty {
-                            Text(verbatim: String(localized: "No spaces found"))
-                                .font(.subheadline)
-                                .foregroundColor(colors.textTertiary)
-                                .frame(maxWidth: .infinity)
-                                .padding(.vertical, 24)
-                        } else {
-                            ForEach(Array(spaces.enumerated()), id: \.element.id) { index, space in
-                                let isSelected = index == viewModel.selectedSpaceIndex
-                                Button(action: {
-                                    viewModel.selectedSpaceIndex = index
-                                    if viewModel.stagingWindow != nil {
-                                        viewModel.selectedRowIndex = index
-                                        viewModel.executeRowAction()
-                                    } else {
-                                        viewModel.executeSelectedSpacePickerAction()
-                                    }
-                                }) {
-                                    HStack(spacing: 10) {
-                                        Image(systemName: "desktopcomputer")
-                                            .font(.body.weight(.medium))
-                                            .frame(width: 20)
-                                        Text(spaceManager.getSpaceName(space.id))
-                                            .font(.body.weight(.medium))
-                                            .lineLimit(1)
-                                        Spacer()
-                                        if space.id == spaceManager.currentSpaceUUID {
-                                            Text(verbatim: String(localized: "Current"))
-                                                .font(.caption.weight(.semibold))
-                                                .foregroundColor(colors.textTertiary)
-                                        }
-                                    }
-                                    .foregroundColor(colors.textPrimary)
-                                    .padding(.horizontal, 12)
-                                    .frame(height: 30)
-                                    .background {
-                                        if isSelected {
-                                            RoundedRectangle(cornerRadius: 9, style: .continuous)
-                                                .fill(Color.primary.opacity(0.16))
-                                                .modifier(SelectionSurfaceModifier(namespace: selectionNamespace))
-                                        } else {
-                                            RoundedRectangle(cornerRadius: 9, style: .continuous)
-                                                .fill(Color.clear)
-                                        }
+            LauncherMenuPanel(
+                colors: colors,
+                width: viewModel.stagingWindow == nil ? 290 : 326,
+                contentHeight: spaceListHeight,
+                showsFooter: viewModel.stagingWindow != nil
+            ) {
+                LauncherMenuHeader(
+                    title: viewModel.stagingWindow == nil
+                        ? String(localized: "Switch Space")
+                        : String(localized: "Stage Move to Desktop..."),
+                    subtitle: nil,
+                    iconName: nil,
+                    colors: colors
+                )
+            } content: {
+                VStack(spacing: 2) {
+                    let spaces = viewModel.filteredSpaces
+                    if spaces.isEmpty {
+                        Text(verbatim: String(localized: "No spaces found"))
+                            .font(.system(size: 13))
+                            .foregroundColor(colors.textTertiary)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 24)
+                    } else {
+                        ForEach(Array(spaces.enumerated()), id: \.element.id) { index, space in
+                            let isSelected = index == viewModel.selectedSpaceIndex
+                            Button(action: {
+                                viewModel.selectedSpaceIndex = index
+                                if viewModel.stagingWindow != nil {
+                                    viewModel.selectedRowIndex = index
+                                    viewModel.executeRowAction()
+                                } else {
+                                    viewModel.executeSelectedSpacePickerAction()
+                                }
+                            }) {
+                                HStack(spacing: 10) {
+                                    Image(systemName: "desktopcomputer")
+                                        .font(.system(size: 14, weight: .medium))
+                                        .frame(width: 20)
+                                    Text(spaceManager.getSpaceName(space.id))
+                                        .font(.system(size: 14, weight: .medium))
+                                        .lineLimit(1)
+                                    Spacer()
+                                    if space.id == spaceManager.currentSpaceUUID {
+                                        Text(verbatim: String(localized: "Current"))
+                                            .font(.system(size: 12, weight: .semibold))
+                                            .foregroundColor(colors.textTertiary)
                                     }
                                 }
-                                .buttonStyle(.plain)
-                                .onHover { hovering in
-                                    if hovering {
-                                        viewModel.selectedSpaceIndex = index
+                                .foregroundColor(colors.textPrimary)
+                                .padding(.horizontal, 12)
+                                .frame(height: 30)
+                                .background {
+                                    if isSelected {
+                                        RoundedRectangle(cornerRadius: 9, style: .continuous)
+                                            .fill(Color.primary.opacity(0.16))
+                                            .modifier(SelectionSurfaceModifier(namespace: selectionNamespace))
+                                    } else {
+                                        RoundedRectangle(cornerRadius: 9, style: .continuous)
+                                            .fill(Color.clear)
                                     }
+                                }
+                            }
+                            .buttonStyle(.plain)
+                            .onHover { hovering in
+                                if hovering {
+                                    viewModel.selectedSpaceIndex = index
                                 }
                             }
                         }
                     }
-                    .padding(.horizontal, 8)
-                    .padding(.top, 8)
-                    .padding(.bottom, 10)
                 }
-                .frame(height: spaceListHeight)
-                if viewModel.stagingWindow != nil {
-                    Divider()
-
-                    SearchTextField(
-                        text: $viewModel.spacePickerQuery,
-                        isDark: colors.isDark,
-                        onUpArrow: {
-                            viewModel.selectedSpaceIndex = max(0, viewModel.selectedSpaceIndex - 1)
-                        },
-                        onDownArrow: {
-                            let count = viewModel.filteredSpaces.count
-                            if viewModel.selectedSpaceIndex < count - 1 {
-                                viewModel.selectedSpaceIndex += 1
-                            }
-                        },
-                        onEnter: {
-                            viewModel.executeSelectedSpacePickerAction()
-                        },
-                        onCommandNumber: { number in
-                            let index = number - 1
-                            guard index >= 0 && index < viewModel.filteredSpaces.count else { return }
-                            viewModel.selectedSpaceIndex = index
-                            viewModel.executeSelectedSpacePickerAction()
-                        },
-                        onEscape: {
+                .padding(.top, 8)
+            } footer: {
+                SearchTextField(
+                    text: $viewModel.spacePickerQuery,
+                    isDark: colors.isDark,
+                    onUpArrow: {
+                        viewModel.selectedSpaceIndex = max(0, viewModel.selectedSpaceIndex - 1)
+                    },
+                    onDownArrow: {
+                        let count = viewModel.filteredSpaces.count
+                        if viewModel.selectedSpaceIndex < count - 1 {
+                            viewModel.selectedSpaceIndex += 1
+                        }
+                    },
+                    onEnter: {
+                        viewModel.executeSelectedSpacePickerAction()
+                    },
+                    onCommandNumber: { number in
+                        let index = number - 1
+                        guard index >= 0 && index < viewModel.filteredSpaces.count else { return }
+                        viewModel.selectedSpaceIndex = index
+                        viewModel.executeSelectedSpacePickerAction()
+                    },
+                    onEscape: {
+                        viewModel.handleEscapeKey()
+                    },
+                    onBackspace: {
+                        if viewModel.spacePickerQuery.isEmpty {
                             viewModel.handleEscapeKey()
-                        },
-                        onBackspace: {
-                            if viewModel.spacePickerQuery.isEmpty {
-                                viewModel.handleEscapeKey()
-                            }
-                        },
-                        onKeyEquivalent: { _ in false },
-                        placeholder: String(localized: "Search..."),
-                        focusNotificationName: NSNotification.Name("FocusSpacePickerTextField")
-                    )
-                        .frame(height: 42)
-                        .padding(.horizontal, 12)
-                }
+                        }
+                    },
+                    onKeyEquivalent: { _ in false },
+                    placeholder: String(localized: "Search..."),
+                    focusNotificationName: NSNotification.Name("FocusSpacePickerTextField")
+                )
             }
-            .frame(width: viewModel.stagingWindow == nil ? 290 : 326)
-            .spacePickerSurface(colors: colors)
             .padding(.trailing, 16)
             .padding(.bottom, LauncherLayout.popupBottomInset)
         }
@@ -2345,45 +2405,41 @@ struct CommandKOverlayView: View {
             }
             .buttonStyle(.plain)
 
-            VStack(spacing: 0) {
-                Text(window.ownerName)
-                    .font(.subheadline.weight(.semibold))
-                    .foregroundColor(colors.textSecondary)
-                    .lineLimit(1)
-                    .padding(.horizontal, 16)
-                    .padding(.top, 14)
-                    .padding(.bottom, 8)
-
-                ScrollView {
-                    let actions = viewModel.filteredCommandKActions.map(CommandKActionItem.init)
-                    VStack(spacing: 2) {
-                        if actions.isEmpty {
-                            Text(verbatim: String(localized: "No actions found"))
-                                .font(.subheadline)
-                                .foregroundColor(colors.textTertiary)
-                                .frame(maxWidth: .infinity)
-                                .padding(.vertical, 16)
-                        } else {
-                            ForEach(Array(actions.enumerated()), id: \.element.id) { idx, item in
-                                CommandKActionRowView(
-                                    action: item.action,
-                                    isSelected: viewModel.commandKSelectedIndex == idx,
-                                    showCommandNumbers: viewModel.showCommandNumbers,
-                                    idx: idx,
-                                    colors: colors,
-                                    viewModel: viewModel,
-                                    selectionNamespace: actionSelectionNamespace
-                                )
-                            }
+            LauncherMenuPanel(
+                colors: colors,
+                width: 350,
+                contentHeight: 230
+            ) {
+                LauncherMenuHeader(
+                    title: window.ownerName,
+                    subtitle: nil,
+                    iconName: nil,
+                    colors: colors
+                )
+            } content: {
+                let actions = viewModel.filteredCommandKActions.map(CommandKActionItem.init)
+                VStack(spacing: 2) {
+                    if actions.isEmpty {
+                        Text(verbatim: String(localized: "No actions found"))
+                            .font(.system(size: 13))
+                            .foregroundColor(colors.textTertiary)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 16)
+                    } else {
+                        ForEach(Array(actions.enumerated()), id: \.element.id) { idx, item in
+                            CommandKActionRowView(
+                                action: item.action,
+                                isSelected: viewModel.commandKSelectedIndex == idx,
+                                showCommandNumbers: viewModel.showCommandNumbers,
+                                idx: idx,
+                                colors: colors,
+                                viewModel: viewModel,
+                                selectionNamespace: actionSelectionNamespace
+                            )
                         }
                     }
-                    .padding(.horizontal, 8)
-                    .padding(.bottom, 8)
                 }
-                .frame(maxHeight: 230)
-
-                Divider()
-
+            } footer: {
                 SearchTextField(
                     text: $viewModel.commandKQuery,
                     isDark: colors.isDark,
@@ -2417,10 +2473,7 @@ struct CommandKOverlayView: View {
                     placeholder: String(localized: "Search for actions..."),
                     focusNotificationName: NSNotification.Name("FocusCommandKTextField")
                 )
-                .frame(height: 44)
             }
-            .frame(width: 350)
-            .spacePickerSurface(colors: colors)
             .padding(.trailing, 16)
             .padding(.bottom, LauncherLayout.popupBottomInset)
         }
@@ -2613,7 +2666,7 @@ extension View {
     }
 
     @ViewBuilder
-    func spacePickerSurface(colors: ThemeColors) -> some View {
+    func launcherMenuSurface(colors: ThemeColors) -> some View {
         self
             .background(LauncherGlassSurface(cornerRadius: 16))
             .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
