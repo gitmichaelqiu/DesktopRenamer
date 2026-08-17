@@ -519,7 +519,7 @@ struct ListAreaView: View {
                             .padding(.vertical, 8)
                         }
                         .onChange(of: viewModel.selectedRowIndex) { index in
-                            if viewModel.isKeyboardSelection {
+                            if viewModel.launcherOverlay == nil && viewModel.isKeyboardSelection {
                                 guard commands.indices.contains(index) else { return }
                                 proxy.scrollTo(commands[index].id, anchor: .center)
                             }
@@ -554,7 +554,7 @@ struct ListAreaView: View {
                                     .padding(.vertical, 8)
                                 }
                                 .onChange(of: viewModel.selectedRowIndex) { index in
-                                    if viewModel.isKeyboardSelection {
+                                    if viewModel.launcherOverlay == nil && viewModel.isKeyboardSelection {
                                         guard spaces.indices.contains(index) else { return }
                                         proxy.scrollTo(spaces[index].id, anchor: .center)
                                     }
@@ -600,15 +600,10 @@ struct ListAreaView: View {
                                     .padding(.vertical, 8)
                                 }
                                 .onChange(of: viewModel.selectedRowIndex) { index in
-                                    if viewModel.isKeyboardSelection {
+                                    if viewModel.launcherOverlay == nil && viewModel.isKeyboardSelection {
                                         if let item = sections.flatMap({ $0.items }).first(where: { $0.index == index }) {
                                             proxy.scrollTo(item.id, anchor: .center)
                                         }
-                                    }
-                                }
-                                .onAppear {
-                                    if let item = sections.flatMap({ $0.items }).first(where: { $0.index == viewModel.selectedRowIndex }) {
-                                        proxy.scrollTo(item.id, anchor: .center)
                                     }
                                 }
                             }
@@ -658,15 +653,8 @@ struct ListAreaView: View {
                                     .padding(.vertical, 8)
                                 }
                                 .onChange(of: viewModel.selectedRowIndex) { index in
-                                    if viewModel.isKeyboardSelection {
+                                    if viewModel.launcherOverlay == nil && viewModel.isKeyboardSelection {
                                         if let item = sections.flatMap({ $0.items }).first(where: { $0.index == index }) {
-                                            proxy.scrollTo(item.id, anchor: .center)
-                                        }
-                                    }
-                                }
-                                .onAppear {
-                                    DispatchQueue.main.async {
-                                        if let item = sections.flatMap({ $0.items }).first(where: { $0.index == viewModel.selectedRowIndex }) {
                                             proxy.scrollTo(item.id, anchor: .center)
                                         }
                                     }
