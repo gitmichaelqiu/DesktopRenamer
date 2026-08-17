@@ -18,6 +18,8 @@ private enum LauncherMenuMetrics {
     static let rowHorizontalPadding: CGFloat = 12
     static let capsuleHorizontalPadding: CGFloat = 12
     static let capsuleHeight: CGFloat = 30
+    static let labelHorizontalPadding: CGFloat = 8
+    static let labelVerticalPadding: CGFloat = 3
 }
 
 struct ThemeColors {
@@ -714,16 +716,7 @@ struct KeycapView: View {
                     ? (isSelectedWhiteStyle ? Color.white.opacity(0.20) : Color.primary.opacity(0.12))
                     : colors.badgeBg
             )
-            .cornerRadius(5)
-            .overlay(
-                RoundedRectangle(cornerRadius: 5)
-                    .stroke(
-                        isSelected
-                            ? (isSelectedWhiteStyle ? Color.white.opacity(0.30) : Color.primary.opacity(0.18))
-                            : colors.badgeBorder,
-                        lineWidth: 1
-                    )
-            )
+            .clipShape(RoundedRectangle(cornerRadius: 5, style: .continuous))
     }
 }
 
@@ -902,8 +895,7 @@ struct CommandRowView: View {
                 LauncherStatusLabel(
                     label: statusText,
                     color: statusText == "Enabled" ? colors.greenText : colors.textSecondary,
-                    background: statusText == "Enabled" ? colors.greenText.opacity(0.12) : colors.badgeBg,
-                    border: statusText == "Enabled" ? colors.greenText.opacity(0.35) : colors.badgeBorder
+                    background: statusText == "Enabled" ? colors.greenText.opacity(0.12) : colors.badgeBg
                 )
             } else if command.hasSubpage {
                 Image(systemName: "chevron.right")
@@ -929,8 +921,7 @@ struct CommandRowView: View {
         LauncherStatusLabel(
             label: statusText,
             color: statusText == "Enabled" ? colors.greenText : colors.textSecondary,
-            background: statusText == "Enabled" ? colors.greenText.opacity(0.12) : colors.badgeBg,
-            border: statusText == "Enabled" ? colors.greenText.opacity(0.35) : colors.badgeBorder
+            background: statusText == "Enabled" ? colors.greenText.opacity(0.12) : colors.badgeBg
         )
     }
     
@@ -1015,8 +1006,7 @@ struct WindowStateBadge: View {
         LauncherStatusLabel(
             label: label,
             color: color,
-            background: color.opacity(0.15),
-            border: color.opacity(0.35)
+            background: color.opacity(0.15)
         )
     }
 }
@@ -1025,19 +1015,14 @@ private struct LauncherStatusLabel: View {
     let label: String
     let color: Color
     let background: Color
-    let border: Color
 
     var body: some View {
         Text(verbatim: label)
             .font(.system(size: 13, weight: .semibold))
             .foregroundColor(color)
-            .padding(.horizontal, 8)
-            .padding(.vertical, 3)
+            .padding(.horizontal, LauncherMenuMetrics.labelHorizontalPadding)
+            .padding(.vertical, LauncherMenuMetrics.labelVerticalPadding)
             .background(background, in: RoundedRectangle(cornerRadius: 6, style: .continuous))
-            .overlay {
-                RoundedRectangle(cornerRadius: 6, style: .continuous)
-                    .stroke(border, lineWidth: 1)
-            }
     }
 }
 
@@ -1198,8 +1183,7 @@ struct WindowBatchRowView: View {
                     LauncherStatusLabel(
                         label: stagedActionText,
                         color: colors.greenText,
-                        background: colors.greenText.opacity(0.12),
-                        border: colors.greenText.opacity(0.35)
+                        background: colors.greenText.opacity(0.12)
                     )
                 }
             }
