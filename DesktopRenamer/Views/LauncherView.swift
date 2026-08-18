@@ -750,6 +750,7 @@ private struct FloatingHotkeyHint: View {
                 Color.primary.opacity(colorScheme == .dark ? 0.12 : 0.10),
                 in: Capsule()
             )
+            .transition(.opacity)
             .shadow(
                 color: Color.black.opacity(colorScheme == .dark ? 0.28 : 0.18),
                 radius: 8,
@@ -763,8 +764,23 @@ private struct HotkeyAccessoryModifier: ViewModifier {
 
     func body(content: Content) -> some View {
         content
-            .blur(radius: isActive ? 1.25 : 0)
+            .blur(radius: isActive ? 0.8 : 0)
             .opacity(isActive ? 0.58 : 1)
+            .mask {
+                if isActive {
+                    LinearGradient(
+                        stops: [
+                            .init(color: .black, location: 0),
+                            .init(color: .black, location: 0.70),
+                            .init(color: .clear, location: 1)
+                        ],
+                        startPoint: .leading,
+                        endPoint: .trailing
+                    )
+                } else {
+                    Color.black
+                }
+            }
     }
 }
 
@@ -880,6 +896,7 @@ struct CommandRowView: View {
         .onHover { hovering in
             isHovered = hovering
         }
+        .animation(.easeOut(duration: 0.15), value: shortcutText)
     }
 
     private var rootRow: some View {
@@ -1044,6 +1061,7 @@ struct SpaceRowView: View {
         .onHover { hovering in
             isHovered = hovering
         }
+        .animation(.easeOut(duration: 0.15), value: shortcutText)
     }
 }
 
@@ -1137,6 +1155,7 @@ struct WindowRowView: View {
         .onHover { hovering in
             isHovered = hovering
         }
+        .animation(.easeOut(duration: 0.15), value: shortcutText)
     }
 }
 
