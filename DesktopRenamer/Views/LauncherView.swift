@@ -2707,7 +2707,7 @@ extension View {
         .clipShape(RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
         .overlay(
             RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
-                .stroke(borderColor.opacity(isDark ? 0.5 : 0.8), lineWidth: 1)
+                .stroke(borderColor.opacity(0.25), lineWidth: 1)
         )
     }
 
@@ -2732,9 +2732,9 @@ extension View {
             .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
             .overlay(
                 RoundedRectangle(cornerRadius: 16, style: .continuous)
-                    .stroke(colors.border.opacity(0.8), lineWidth: 1)
+                    .stroke(colors.border.opacity(0.25), lineWidth: 1)
             )
-            .shadow(color: .black.opacity(0.28), radius: 18, y: 8)
+            .shadow(color: .black.opacity(0.32), radius: 24, y: 20)
     }
 }
 
