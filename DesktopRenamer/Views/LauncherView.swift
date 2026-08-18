@@ -2700,9 +2700,9 @@ private struct LauncherGlassSurface: NSViewRepresentable {
 extension View {
     func opaqueLauncherBackground(cornerRadius: CGFloat, isDark: Bool, borderColor: Color) -> some View {
         background(
-            isDark
+                isDark
                 ? Color(red: 0.22, green: 0.225, blue: 0.24)
-                : Color(red: 228 / 255, green: 232 / 255, blue: 233 / 255)
+                : Color(red: 228 / 255, green: 233 / 255, blue: 233 / 255)
         )
         .clipShape(RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
         .overlay(
