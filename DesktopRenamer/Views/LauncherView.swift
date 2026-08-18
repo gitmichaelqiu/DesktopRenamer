@@ -739,6 +739,17 @@ struct KeycapView: View {
     }
 }
 
+private struct FloatingHotkeyHint: View {
+    let text: LocalizedStringKey
+    let isSelected: Bool
+
+    var body: some View {
+        KeycapView(text: text, isSelected: isSelected, isKeyboardKey: true)
+            .shadow(color: Color.black.opacity(0.18), radius: 8, y: 4)
+            .shadow(color: Color.black.opacity(0.14), radius: 2, y: 1)
+    }
+}
+
 struct EmptyResultsView: View {
     @Environment(\.colorScheme) var colorScheme
     
@@ -886,7 +897,7 @@ struct CommandRowView: View {
         }
         .overlay(alignment: .topTrailing) {
             if let shortcut = shortcutText {
-                KeycapView(text: LocalStringKey_compat(shortcut), isSelected: isSelected, isKeyboardKey: true)
+                FloatingHotkeyHint(text: LocalStringKey_compat(shortcut), isSelected: isSelected)
                     .padding(.trailing, 4)
                     .offset(y: -4)
                     .zIndex(1)
@@ -1010,14 +1021,8 @@ struct SpaceRowView: View {
                 WindowStateBadge(label: String(localized: "Current"), color: .blue)
             }
 
-                EmptyView()
-        }
-        .overlay(alignment: .topTrailing) {
             if let shortcut = shortcutText {
                 KeycapView(text: LocalizedStringKey(shortcut), isSelected: isSelected, isKeyboardKey: true)
-                    .padding(.trailing, 4)
-                    .offset(y: -4)
-                    .zIndex(1)
             }
         }
         .launcherRowSurface(isSelected: isSelected, isHovered: isHovered, colors: colors, selectionNamespace: selectionNamespace)
@@ -1107,7 +1112,7 @@ struct WindowRowView: View {
         }
         .overlay(alignment: .topTrailing) {
             if let shortcut = shortcutText {
-                KeycapView(text: LocalizedStringKey(shortcut), isSelected: isSelected, isKeyboardKey: true)
+                FloatingHotkeyHint(text: LocalizedStringKey(shortcut), isSelected: isSelected)
                     .padding(.trailing, 4)
                     .offset(y: -4)
                     .zIndex(1)
@@ -1223,7 +1228,7 @@ struct WindowBatchRowView: View {
         }
         .overlay(alignment: .topTrailing) {
             if let shortcut = shortcutText {
-                KeycapView(text: LocalizedStringKey(shortcut), isSelected: isSelected, isKeyboardKey: true)
+                FloatingHotkeyHint(text: LocalizedStringKey(shortcut), isSelected: isSelected)
                     .padding(.trailing, 4)
                     .offset(y: -4)
                     .zIndex(1)
