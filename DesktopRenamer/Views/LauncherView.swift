@@ -13,8 +13,8 @@ enum LauncherLayout {
 
 private enum LauncherMenuMetrics {
     static let panelWidth: CGFloat = 350
-    static let rowHeight: CGFloat = 38
-    static let rowSpacing: CGFloat = 2
+    static let rowHeight: CGFloat = 46
+    static let rowSpacing: CGFloat = 0
     static let rowHorizontalPadding: CGFloat = 12
     static let capsuleHorizontalPadding: CGFloat = 12
     static let capsuleHeight: CGFloat = 30
