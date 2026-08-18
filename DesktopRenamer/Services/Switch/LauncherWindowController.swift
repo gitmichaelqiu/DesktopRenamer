@@ -21,6 +21,7 @@ class LauncherWindowController: NSWindowController, NSWindowDelegate {
     private var isCommandKeyPressed = false
     private var cmdLongPressWorkItem: DispatchWorkItem?
     private var flagsChangedMonitor: Any?
+    private var globalFlagsChangedMonitor: Any?
     private var hasInstalledContent = false
     
     init() {
@@ -51,31 +52,11 @@ class LauncherWindowController: NSWindowController, NSWindowDelegate {
         }
         
         flagsChangedMonitor = NSEvent.addLocalMonitorForEvents(matching: .flagsChanged) { [weak self] event in
-            guard let self = self else { return event }
-            let hasCommand = event.modifierFlags.contains(.command)
-            
-            if hasCommand {
-                if !self.isCommandKeyPressed {
-                    self.isCommandKeyPressed = true
-                    self.cmdLongPressWorkItem?.cancel()
-                    let workItem = DispatchWorkItem { [weak self] in
-                        guard let self = self else { return }
-                        if self.isCommandKeyPressed {
-                        self.viewModel.showCommandNumbers = true
-                        }
-                    }
-                    self.cmdLongPressWorkItem = workItem
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.35, execute: workItem)
-                }
-            } else {
-                if self.isCommandKeyPressed {
-                    self.isCommandKeyPressed = false
-                    self.cmdLongPressWorkItem?.cancel()
-                    self.cmdLongPressWorkItem = nil
-                    self.viewModel.showCommandNumbers = false
-                }
-            }
+            self?.handleCommandFlagsChanged(event)
             return event
+        }
+        globalFlagsChangedMonitor = NSEvent.addGlobalMonitorForEvents(matching: .flagsChanged) { [weak self] event in
+            self?.handleCommandFlagsChanged(event)
         }
     }
     
@@ -86,6 +67,37 @@ class LauncherWindowController: NSWindowController, NSWindowDelegate {
     deinit {
         if let monitor = flagsChangedMonitor {
             NSEvent.removeMonitor(monitor)
+        }
+        if let monitor = globalFlagsChangedMonitor {
+            NSEvent.removeMonitor(monitor)
+        }
+    }
+
+    private func handleCommandFlagsChanged(_ event: NSEvent) {
+        guard window?.isVisible == true else { return }
+
+        let hasCommand = event.modifierFlags.contains(.command)
+        DispatchQueue.main.async { [weak self] in
+            guard let self = self else { return }
+
+            if hasCommand {
+                guard !self.isCommandKeyPressed else { return }
+                self.isCommandKeyPressed = true
+                self.cmdLongPressWorkItem?.cancel()
+
+                let workItem = DispatchWorkItem { [weak self] in
+                    guard let self = self, self.isCommandKeyPressed else { return }
+                    self.viewModel.showCommandNumbers = true
+                }
+                self.cmdLongPressWorkItem = workItem
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.35, execute: workItem)
+            } else {
+                guard self.isCommandKeyPressed else { return }
+                self.isCommandKeyPressed = false
+                self.cmdLongPressWorkItem?.cancel()
+                self.cmdLongPressWorkItem = nil
+                self.viewModel.showCommandNumbers = false
+            }
         }
     }
     
