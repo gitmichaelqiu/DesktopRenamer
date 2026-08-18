@@ -17,6 +17,7 @@ private enum LauncherMenuMetrics {
     static let rowHeight: CGFloat = 46
     static let rowSpacing: CGFloat = 0
     static let rowHorizontalPadding: CGFloat = 12
+    static let menuAccessoryColumnWidth: CGFloat = 72
     static let accessoryColumnWidth: CGFloat = 110
     static let capsuleHorizontalPadding: CGFloat = 12
     static let capsuleHeight: CGFloat = 36
@@ -1604,8 +1605,16 @@ struct RootActionsOverlay: View {
 
                     Text(verbatim: row.title)
                         .fontWeight(viewModel.selectedRootActionIndex == row.index ? .semibold : .medium)
-                    Spacer()
-                    KeycapView(text: LocalizedStringKey(row.shortcut), isSelected: viewModel.selectedRootActionIndex == row.index, isKeyboardKey: true, verticalPadding: 3, horizontalPadding: 5)
+                    Spacer(minLength: 0)
+                    LauncherMenuAccessory {
+                        KeycapView(
+                            text: LocalizedStringKey(row.shortcut),
+                            isSelected: viewModel.selectedRootActionIndex == row.index,
+                            isKeyboardKey: true,
+                            verticalPadding: 3,
+                            horizontalPadding: 5
+                        )
+                    }
                 }
             }
         }
@@ -1816,6 +1825,15 @@ private struct LauncherMenuHeader: View {
     }
 }
 
+private struct LauncherMenuAccessory<Content: View>: View {
+    @ViewBuilder let content: () -> Content
+
+    var body: some View {
+        content()
+            .frame(width: LauncherMenuMetrics.menuAccessoryColumnWidth, alignment: .trailing)
+    }
+}
+
 private struct LauncherMenuRow<Content: View>: View {
     let isSelected: Bool
     let colors: ThemeColors
@@ -1974,11 +1992,13 @@ struct SpacePickerOverlay: View {
                                             .frame(width: 20)
                                         Text(spaceManager.getSpaceName(space.id))
                                             .lineLimit(1)
-                                        Spacer()
-                                        if space.id == spaceManager.currentSpaceUUID {
-                                            Text(verbatim: String(localized: "Current"))
-                                                .font(.system(size: 12, weight: .semibold))
-                                                .foregroundColor(colors.textTertiary)
+                                        Spacer(minLength: 0)
+                                        LauncherMenuAccessory {
+                                            if space.id == spaceManager.currentSpaceUUID {
+                                                Text(verbatim: String(localized: "Current"))
+                                                    .font(.system(size: 12, weight: .semibold))
+                                                    .foregroundColor(colors.textTertiary)
+                                            }
                                         }
                                     }
                                 }
@@ -2598,10 +2618,12 @@ struct CommandKActionRowView: View {
                     }
                     .modifier(HotkeyAccessoryModifier(isActive: showCommandNumbers))
 
-                    FloatingHotkeyHint(text: LocalStringKey_compat("⌘\(idx + 1)"))
-                        .opacity(showCommandNumbers ? 1 : 0)
-                        .offset(x: showCommandNumbers ? 0 : 23)
-                        .animation(.easeOut(duration: 0.15), value: showCommandNumbers)
+                    LauncherMenuAccessory {
+                        FloatingHotkeyHint(text: LocalStringKey_compat("⌘\(idx + 1)"))
+                            .opacity(showCommandNumbers ? 1 : 0)
+                            .offset(x: showCommandNumbers ? 0 : 23)
+                            .animation(.easeOut(duration: 0.15), value: showCommandNumbers)
+                    }
                 }
             }
         }
