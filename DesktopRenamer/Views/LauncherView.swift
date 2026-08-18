@@ -3,7 +3,7 @@ import AppKit
 
 enum LauncherLayout {
     static let windowSize = CGSize(width: 760, height: 500)
-    static let actionBarHeight: CGFloat = 42
+    static let actionBarHeight: CGFloat = 44
     static let popupBottomSpacing: CGFloat = 8
 
     static var popupBottomInset: CGFloat {
@@ -81,7 +81,8 @@ private struct LauncherActionBarModifier: ViewModifier {
     func body(content: Content) -> some View {
         content
             .padding(.horizontal, horizontalPadding)
-            .padding(.vertical, 3)
+            .padding(.top, 0)
+            .padding(.bottom, 8)
             .frame(maxWidth: .infinity)
             .frame(height: height)
     }
@@ -1485,8 +1486,7 @@ struct RootLauncherBottomBar: View {
                 }
             )
         }
-        .padding(.horizontal, 8)
-        .frame(height: LauncherLayout.actionBarHeight)
+        .launcherActionBar(colors: colors)
     }
 }
 
@@ -1738,8 +1738,7 @@ struct SpacesBottomBar: View {
             }
             .padding(.leading, 12)
         }
-        .padding(.horizontal, 8)
-        .frame(height: LauncherLayout.actionBarHeight)
+        .launcherActionBar(colors: colors)
     }
 
     private func bottomBarAction(title: String, shortcut: String, action: @escaping () -> Void) -> some View {
