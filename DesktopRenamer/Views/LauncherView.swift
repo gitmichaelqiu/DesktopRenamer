@@ -2680,7 +2680,7 @@ extension View {
         background(
             isDark
                 ? Color(red: 0.22, green: 0.225, blue: 0.24)
-                : Color(nsColor: .windowBackgroundColor)
+                : Color(red: 228 / 255, green: 232 / 255, blue: 233 / 255)
         )
         .clipShape(RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
         .overlay(
