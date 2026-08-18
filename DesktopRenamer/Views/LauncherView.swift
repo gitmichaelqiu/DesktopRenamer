@@ -85,7 +85,7 @@ private struct LauncherActionBarModifier: ViewModifier {
     func body(content: Content) -> some View {
         content
             .padding(.horizontal, horizontalPadding)
-            .padding(.vertical, 5)
+            .padding(.vertical, 3)
             .frame(maxWidth: .infinity)
             .frame(height: height)
             .background(colors.bottomBarBg)
