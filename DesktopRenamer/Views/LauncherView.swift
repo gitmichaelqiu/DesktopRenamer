@@ -908,11 +908,10 @@ struct CommandRowView: View {
                     .modifier(HotkeyAccessoryModifier(isActive: shortcutText != nil))
             }
         }
-        .overlay(alignment: .topTrailing) {
+        .overlay(alignment: .trailing) {
             if let shortcut = shortcutText {
                 FloatingHotkeyHint(text: LocalStringKey_compat(shortcut))
                     .padding(.trailing, 4)
-                    .offset(y: -4)
                     .zIndex(1)
             }
         }
@@ -1124,11 +1123,10 @@ struct WindowRowView: View {
             }
             .modifier(HotkeyAccessoryModifier(isActive: shortcutText != nil))
         }
-        .overlay(alignment: .topTrailing) {
+        .overlay(alignment: .trailing) {
             if let shortcut = shortcutText {
                 FloatingHotkeyHint(text: LocalizedStringKey(shortcut))
                     .padding(.trailing, 4)
-                    .offset(y: -4)
                     .zIndex(1)
             }
         }
@@ -1241,11 +1239,10 @@ struct WindowBatchRowView: View {
             }
             .modifier(HotkeyAccessoryModifier(isActive: shortcutText != nil))
         }
-        .overlay(alignment: .topTrailing) {
+        .overlay(alignment: .trailing) {
             if let shortcut = shortcutText {
                 FloatingHotkeyHint(text: LocalizedStringKey(shortcut))
                     .padding(.trailing, 4)
-                    .offset(y: -4)
                     .zIndex(1)
             }
         }
