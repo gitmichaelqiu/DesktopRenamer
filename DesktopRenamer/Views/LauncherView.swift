@@ -1466,32 +1466,15 @@ struct RootLauncherBottomBar: View {
 
             Spacer()
 
-            HStack(spacing: 4) {
-                Button {
+            LauncherCommandActionCapsule(
+                isActive: viewModel.isRootActionsPresented,
+                openAction: {
                     viewModel.executeRowAction()
-                } label: {
-                    HStack(spacing: 8) {
-                        Text(verbatim: String(localized: "Open Command"))
-                        KeycapView(text: "↵", isSelected: false, isKeyboardKey: true, verticalPadding: 4, horizontalPadding: 4)
-                    }
-                    .foregroundColor(colors.textPrimary)
-                }
-                .buttonStyle(.plain)
-
-                Button {
+                },
+                actionsAction: {
                     viewModel.showRootActionsPanel()
-                } label: {
-                    HStack(spacing: 8) {
-                        Text(verbatim: String(localized: "Actions"))
-                        KeycapView(text: "⌘K", isSelected: false, isKeyboardKey: true, verticalPadding: 4, horizontalPadding: 4)
-                    }
-                    .foregroundColor(viewModel.isRootActionsPresented ? colors.textPrimary : colors.textSecondary)
                 }
-                .buttonStyle(.plain)
-            }
-            .font(.system(size: 14, weight: .semibold))
-            .foregroundColor(colors.textPrimary)
-            .modifier(BottomBarCapsule(isSelected: false, isActive: viewModel.isRootActionsPresented, colorScheme: colorScheme))
+            )
         }
         .padding(.horizontal, 8)
         .frame(height: LauncherLayout.actionBarHeight)
