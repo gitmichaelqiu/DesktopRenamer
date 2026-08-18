@@ -1756,7 +1756,7 @@ private struct LauncherCommandActionCapsule: View {
     @Environment(\.colorScheme) private var colorScheme
 
     var body: some View {
-        HStack(spacing: 12) {
+        HStack(spacing: 16) {
             Button(action: openAction) {
                 HStack(spacing: 8) {
                     Text(verbatim: String(localized: "Open Command"))
@@ -1764,9 +1764,6 @@ private struct LauncherCommandActionCapsule: View {
                 }
             }
             .buttonStyle(.plain)
-
-            Divider()
-                .frame(height: 16)
 
             Button(action: actionsAction) {
                 HStack(spacing: 8) {
