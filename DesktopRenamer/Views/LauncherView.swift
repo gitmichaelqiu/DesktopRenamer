@@ -3,7 +3,7 @@ import AppKit
 
 enum LauncherLayout {
     static let windowSize = CGSize(width: 760, height: 500)
-    static let actionBarHeight: CGFloat = 52
+    static let actionBarHeight: CGFloat = 44
     static let actionBarContentHeight: CGFloat = 36
     static let popupBottomSpacing: CGFloat = 8
 
