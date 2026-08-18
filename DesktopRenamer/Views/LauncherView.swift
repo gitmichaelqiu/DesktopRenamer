@@ -3,7 +3,8 @@ import AppKit
 
 enum LauncherLayout {
     static let windowSize = CGSize(width: 760, height: 500)
-    static let actionBarHeight: CGFloat = 44
+    static let actionBarHeight: CGFloat = 52
+    static let actionBarContentHeight: CGFloat = 36
     static let popupBottomSpacing: CGFloat = 8
 
     static var popupBottomInset: CGFloat {
@@ -81,10 +82,10 @@ private struct LauncherActionBarModifier: ViewModifier {
     func body(content: Content) -> some View {
         content
             .padding(.horizontal, horizontalPadding)
-            .padding(.top, 0)
+            .frame(height: LauncherLayout.actionBarContentHeight)
+            .frame(maxWidth: .infinity, alignment: .center)
             .padding(.bottom, 8)
-            .frame(maxWidth: .infinity)
-            .frame(height: height)
+            .frame(height: height, alignment: .bottom)
     }
 }
 
