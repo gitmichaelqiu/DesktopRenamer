@@ -731,11 +731,6 @@ struct KeycapView: View {
                 }
             }
             .clipShape(RoundedRectangle(cornerRadius: 5, style: .continuous))
-            .shadow(
-                color: isKeyboardKey ? Color.black.opacity(colorScheme == .dark ? 0.24 : 0.12) : .clear,
-                radius: 0,
-                y: 1
-            )
     }
 }
 
@@ -745,8 +740,8 @@ private struct FloatingHotkeyHint: View {
 
     var body: some View {
         KeycapView(text: text, isSelected: isSelected, isKeyboardKey: true)
-            .shadow(color: Color.black.opacity(0.18), radius: 8, y: 4)
-            .shadow(color: Color.black.opacity(0.14), radius: 2, y: 1)
+            .shadow(color: Color.black.opacity(0.07), radius: 6, y: 3)
+            .shadow(color: Color.black.opacity(0.06), radius: 1, y: 1)
     }
 }
 
