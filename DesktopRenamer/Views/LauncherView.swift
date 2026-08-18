@@ -740,18 +740,13 @@ private struct FloatingHotkeyHint: View {
             .font(.system(size: 12, weight: .medium))
             .foregroundColor(.secondary)
             .padding(.horizontal, 6)
-            .frame(minWidth: 20)
-            .frame(height: 18)
+            .frame(width: 23)
+            .frame(height: 16)
             .background(
                 Color.primary.opacity(colorScheme == .dark ? 0.12 : 0.10),
                 in: Capsule()
             )
             .transition(.opacity)
-            .shadow(
-                color: Color.black.opacity(colorScheme == .dark ? 0.28 : 0.18),
-                radius: 8,
-                y: 3
-            )
     }
 }
 
@@ -767,7 +762,7 @@ private struct LauncherRowAccessory<Content: View>: View {
 
             if let shortcutText {
                 FloatingHotkeyHint(text: LocalStringKey_compat(shortcutText))
-                    .frame(width: 24)
+                    .frame(width: 23)
             }
         }
         .frame(width: LauncherMenuMetrics.accessoryColumnWidth, alignment: .trailing)
