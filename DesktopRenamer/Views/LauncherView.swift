@@ -502,7 +502,7 @@ struct ListAreaView: View {
                 } else {
                     ScrollViewReader { proxy in
                         ScrollView {
-                            VStack(alignment: .leading, spacing: 4) {
+                            VStack(alignment: .leading, spacing: 0) {
                                 ForEach(sections) { section in
                                     if let title = section.title {
                                         Text(verbatim: title)
@@ -876,7 +876,7 @@ struct CommandRowView: View {
                 detailRow
             }
         }
-        .launcherRowSurface(isSelected: isSelected, isHovered: isHovered, colors: colors, verticalPadding: isCompact ? 6 : 8, selectionNamespace: selectionNamespace)
+        .launcherRowSurface(isSelected: isSelected, isHovered: isHovered, colors: colors, verticalPadding: isCompact ? 10 : 8, selectionNamespace: selectionNamespace)
         .onHover { hovering in
             isHovered = hovering
         }
