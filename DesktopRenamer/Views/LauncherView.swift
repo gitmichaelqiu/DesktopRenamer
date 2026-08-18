@@ -2585,17 +2585,22 @@ struct CommandKActionRowView: View {
                 selectionNamespace: selectionNamespace
             ) {
                 HStack(spacing: 10) {
-                    Image(systemName: getIconName(for: action))
-                        .font(.system(size: 14, weight: .medium))
-                        .frame(width: 20)
+                    HStack(spacing: 10) {
+                        Image(systemName: getIconName(for: action))
+                            .font(.system(size: 14, weight: .medium))
+                            .frame(width: 20)
 
-                    Text(getActionLabel(for: action))
-                        .fontWeight(isSelected ? .semibold : .medium)
+                        Text(getActionLabel(for: action))
+                            .fontWeight(isSelected ? .semibold : .medium)
 
-                    Spacer()
+                        Spacer(minLength: 0)
+                    }
+                    .modifier(HotkeyAccessoryModifier(isActive: showCommandNumbers))
 
-                    KeycapView(text: "⌘\(idx + 1)", isSelected: isSelected, isKeyboardKey: true)
+                    FloatingHotkeyHint(text: LocalStringKey_compat("⌘\(idx + 1)"))
                         .opacity(showCommandNumbers ? 1 : 0)
+                        .offset(x: showCommandNumbers ? 0 : 23)
+                        .animation(.easeOut(duration: 0.15), value: showCommandNumbers)
                 }
             }
         }
