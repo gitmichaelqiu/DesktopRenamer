@@ -90,7 +90,7 @@ class LauncherWindowController: NSWindowController, NSWindowDelegate {
                     self.viewModel.showCommandNumbers = true
                 }
                 self.cmdLongPressWorkItem = workItem
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.35, execute: workItem)
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.40, execute: workItem)
             } else {
                 guard self.isCommandKeyPressed else { return }
                 self.isCommandKeyPressed = false
