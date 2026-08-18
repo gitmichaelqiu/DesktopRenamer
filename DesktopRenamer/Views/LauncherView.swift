@@ -754,6 +754,25 @@ private struct FloatingHotkeyHint: View {
     }
 }
 
+private struct LauncherRowAccessory<Content: View>: View {
+    let shortcutText: String?
+    @ViewBuilder let content: () -> Content
+
+    var body: some View {
+        HStack(spacing: 8) {
+            content()
+                .frame(maxWidth: .infinity, alignment: .trailing)
+                .modifier(HotkeyAccessoryModifier(isActive: shortcutText != nil))
+
+            if let shortcutText {
+                FloatingHotkeyHint(text: LocalStringKey_compat(shortcutText))
+                    .frame(width: 24)
+            }
+        }
+        .frame(width: LauncherMenuMetrics.accessoryColumnWidth, alignment: .trailing)
+    }
+}
+
 private struct HotkeyAccessoryModifier: ViewModifier {
     let isActive: Bool
 
@@ -913,22 +932,15 @@ struct CommandRowView: View {
 
             Spacer(minLength: 4)
 
-            HStack(spacing: 8) {
+            LauncherRowAccessory(shortcutText: shortcutText) {
                 if let statusText = toggleStatus {
                     statusBadge(statusText)
-                        .modifier(HotkeyAccessoryModifier(isActive: shortcutText != nil))
                 } else {
                     Text(verbatim: String(localized: "Command"))
                         .font(.system(size: 14, weight: .medium))
                         .foregroundColor(isSelected ? colors.textPrimary : colors.textSecondary)
-                        .modifier(HotkeyAccessoryModifier(isActive: shortcutText != nil))
-                }
-
-                if let shortcut = shortcutText {
-                    FloatingHotkeyHint(text: LocalStringKey_compat(shortcut))
                 }
             }
-            .frame(minWidth: LauncherMenuMetrics.accessoryColumnWidth, alignment: .trailing)
         }
     }
 
@@ -1123,7 +1135,7 @@ struct WindowRowView: View {
 
             Spacer()
 
-            HStack(spacing: 8) {
+            LauncherRowAccessory(shortcutText: shortcutText) {
                 HStack(spacing: 8) {
                     if window.isHidden {
                         WindowStateBadge(label: String(localized: "Hidden"), color: .purple)
@@ -1138,13 +1150,7 @@ struct WindowRowView: View {
                         KeycapView(text: "Focus ↵", isSelected: isSelected)
                     }
                 }
-                .modifier(HotkeyAccessoryModifier(isActive: shortcutText != nil))
-
-                if let shortcut = shortcutText {
-                    FloatingHotkeyHint(text: LocalizedStringKey(shortcut))
-                }
             }
-            .frame(minWidth: LauncherMenuMetrics.accessoryColumnWidth, alignment: .trailing)
         }
         .launcherRowSurface(isSelected: isSelected, isHovered: isHovered, colors: colors, selectionNamespace: selectionNamespace)
         .onHover { hovering in
@@ -1234,7 +1240,7 @@ struct WindowBatchRowView: View {
 
             Spacer()
 
-            HStack(spacing: 8) {
+            LauncherRowAccessory(shortcutText: shortcutText) {
                 HStack(spacing: 4) {
                     if !isStaged {
                         if window.isHidden {
@@ -1255,13 +1261,7 @@ struct WindowBatchRowView: View {
                         )
                     }
                 }
-                .modifier(HotkeyAccessoryModifier(isActive: shortcutText != nil))
-
-                if let shortcut = shortcutText {
-                    FloatingHotkeyHint(text: LocalizedStringKey(shortcut))
-                }
             }
-            .frame(minWidth: LauncherMenuMetrics.accessoryColumnWidth, alignment: .trailing)
         }
         .padding(.horizontal, 8)
         .padding(.vertical, 8)
