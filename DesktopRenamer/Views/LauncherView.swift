@@ -149,7 +149,7 @@ struct LauncherView: View {
                             onKeyEquivalent: { _ in false },
                             placeholder: NSLocalizedString("New Space Name...", comment: "")
                         )
-                        .frame(height: 46)
+                        .frame(height: 32)
                     } else {
                         SearchTextField(
                             text: $viewModel.searchQuery,
@@ -338,7 +338,7 @@ struct LauncherView: View {
                             },
                             placeholder: searchPlaceholder
                         )
-                        .frame(height: 46)
+                        .frame(height: 32)
                     }
                     
                     if viewModel.isLoadingData {
@@ -347,7 +347,7 @@ struct LauncherView: View {
                             .frame(width: 20, height: 20)
                     }
                 }
-                .frame(height: 72)
+                .frame(height: 64)
                 .padding(.horizontal, 16)
                 
                 if viewModel.activeCommand != nil {
