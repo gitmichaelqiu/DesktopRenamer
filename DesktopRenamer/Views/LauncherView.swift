@@ -745,6 +745,16 @@ private struct FloatingHotkeyHint: View {
     }
 }
 
+private struct HotkeyAccessoryModifier: ViewModifier {
+    let isActive: Bool
+
+    func body(content: Content) -> some View {
+        content
+            .blur(radius: isActive ? 2 : 0)
+            .opacity(isActive ? 0.62 : 1)
+    }
+}
+
 struct EmptyResultsView: View {
     @Environment(\.colorScheme) var colorScheme
     
@@ -884,10 +894,12 @@ struct CommandRowView: View {
 
             if let statusText = toggleStatus {
                 statusBadge(statusText)
+                    .modifier(HotkeyAccessoryModifier(isActive: shortcutText != nil))
             } else {
                 Text(verbatim: String(localized: "Command"))
                     .font(.system(size: 14, weight: .medium))
                     .foregroundColor(isSelected ? colors.textPrimary : colors.textSecondary)
+                    .modifier(HotkeyAccessoryModifier(isActive: shortcutText != nil))
             }
         }
         .overlay(alignment: .topTrailing) {
@@ -1104,6 +1116,7 @@ struct WindowRowView: View {
                     KeycapView(text: "Focus ↵", isSelected: isSelected)
                 }
             }
+            .modifier(HotkeyAccessoryModifier(isActive: shortcutText != nil))
         }
         .overlay(alignment: .topTrailing) {
             if let shortcut = shortcutText {
@@ -1220,6 +1233,7 @@ struct WindowBatchRowView: View {
                     )
                 }
             }
+            .modifier(HotkeyAccessoryModifier(isActive: shortcutText != nil))
         }
         .overlay(alignment: .topTrailing) {
             if let shortcut = shortcutText {
