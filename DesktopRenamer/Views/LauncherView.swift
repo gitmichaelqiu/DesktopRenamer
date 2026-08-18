@@ -736,12 +736,19 @@ struct KeycapView: View {
 
 private struct FloatingHotkeyHint: View {
     let text: LocalizedStringKey
-    let isSelected: Bool
+    @Environment(\.colorScheme) private var colorScheme
 
     var body: some View {
-        KeycapView(text: text, isSelected: isSelected, isKeyboardKey: true)
-            .shadow(color: Color.black.opacity(0.07), radius: 6, y: 3)
-            .shadow(color: Color.black.opacity(0.06), radius: 1, y: 1)
+        Text(text)
+            .font(.system(size: 13, weight: .medium))
+            .foregroundColor(.secondary)
+            .padding(.horizontal, 8)
+            .frame(minWidth: 24)
+            .frame(height: 24)
+            .background(
+                Color.primary.opacity(colorScheme == .dark ? 0.12 : 0.10),
+                in: Capsule()
+            )
     }
 }
 
@@ -903,7 +910,7 @@ struct CommandRowView: View {
         }
         .overlay(alignment: .topTrailing) {
             if let shortcut = shortcutText {
-                FloatingHotkeyHint(text: LocalStringKey_compat(shortcut), isSelected: isSelected)
+                FloatingHotkeyHint(text: LocalStringKey_compat(shortcut))
                     .padding(.trailing, 4)
                     .offset(y: -4)
                     .zIndex(1)
@@ -1119,7 +1126,7 @@ struct WindowRowView: View {
         }
         .overlay(alignment: .topTrailing) {
             if let shortcut = shortcutText {
-                FloatingHotkeyHint(text: LocalizedStringKey(shortcut), isSelected: isSelected)
+                FloatingHotkeyHint(text: LocalizedStringKey(shortcut))
                     .padding(.trailing, 4)
                     .offset(y: -4)
                     .zIndex(1)
@@ -1236,7 +1243,7 @@ struct WindowBatchRowView: View {
         }
         .overlay(alignment: .topTrailing) {
             if let shortcut = shortcutText {
-                FloatingHotkeyHint(text: LocalizedStringKey(shortcut), isSelected: isSelected)
+                FloatingHotkeyHint(text: LocalizedStringKey(shortcut))
                     .padding(.trailing, 4)
                     .offset(y: -4)
                     .zIndex(1)
