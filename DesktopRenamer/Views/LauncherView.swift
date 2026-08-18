@@ -749,6 +749,11 @@ private struct FloatingHotkeyHint: View {
                 Color.primary.opacity(colorScheme == .dark ? 0.12 : 0.10),
                 in: Capsule()
             )
+            .shadow(
+                color: Color.black.opacity(colorScheme == .dark ? 0.28 : 0.18),
+                radius: 10,
+                y: 4
+            )
     }
 }
 
@@ -757,7 +762,8 @@ private struct HotkeyAccessoryModifier: ViewModifier {
 
     func body(content: Content) -> some View {
         content
-            .opacity(isActive ? 0.76 : 1)
+            .blur(radius: isActive ? 1.25 : 0)
+            .opacity(isActive ? 0.58 : 1)
     }
 }
 
