@@ -1113,24 +1113,26 @@ struct WindowRowView: View {
             Spacer()
 
             HStack(spacing: 8) {
-                if window.isHidden {
-                    WindowStateBadge(label: String(localized: "Hidden"), color: .purple)
-                } else if window.isMinimized {
-                    WindowStateBadge(label: String(localized: "Minimized"), color: .orange)
-                }
-                if window.space.isFullscreen {
-                    WindowStateBadge(label: String(localized: "Full Screen"), color: .blue)
-                }
+                HStack(spacing: 8) {
+                    if window.isHidden {
+                        WindowStateBadge(label: String(localized: "Hidden"), color: .purple)
+                    } else if window.isMinimized {
+                        WindowStateBadge(label: String(localized: "Minimized"), color: .orange)
+                    }
+                    if window.space.isFullscreen {
+                        WindowStateBadge(label: String(localized: "Full Screen"), color: .blue)
+                    }
 
-                if shortcutText == nil {
-                    KeycapView(text: "Focus ↵", isSelected: isSelected)
+                    if shortcutText == nil {
+                        KeycapView(text: "Focus ↵", isSelected: isSelected)
+                    }
                 }
+                .modifier(HotkeyAccessoryModifier(isActive: shortcutText != nil))
 
                 if let shortcut = shortcutText {
                     FloatingHotkeyHint(text: LocalizedStringKey(shortcut))
                 }
             }
-            .modifier(HotkeyAccessoryModifier(isActive: shortcutText != nil))
         }
         .launcherRowSurface(isSelected: isSelected, isHovered: isHovered, colors: colors, selectionNamespace: selectionNamespace)
         .onHover { hovering in
@@ -1219,33 +1221,32 @@ struct WindowBatchRowView: View {
 
             Spacer()
 
-            HStack(spacing: 4) {
-                if !isStaged {
-                    if window.isHidden {
-                        WindowStateBadge(label: String(localized: "Hidden"), color: .purple)
-                    } else if window.isMinimized {
-                        WindowStateBadge(label: String(localized: "Minimized"), color: .orange)
+            HStack(spacing: 8) {
+                HStack(spacing: 4) {
+                    if !isStaged {
+                        if window.isHidden {
+                            WindowStateBadge(label: String(localized: "Hidden"), color: .purple)
+                        } else if window.isMinimized {
+                            WindowStateBadge(label: String(localized: "Minimized"), color: .orange)
+                        }
+                        if window.space.isFullscreen {
+                            WindowStateBadge(label: String(localized: "Full Screen"), color: .blue)
+                        }
                     }
-                    if window.space.isFullscreen {
-                        WindowStateBadge(label: String(localized: "Full Screen"), color: .blue)
-                    }
-                }
 
-                if shortcutText == nil && isStaged {
-                    LauncherStatusLabel(
-                        label: stagedActionText,
-                        color: colors.greenText,
-                        background: colors.greenText.opacity(0.12)
-                    )
+                    if shortcutText == nil && isStaged {
+                        LauncherStatusLabel(
+                            label: stagedActionText,
+                            color: colors.greenText,
+                            background: colors.greenText.opacity(0.12)
+                        )
+                    }
                 }
-            }
-            .modifier(HotkeyAccessoryModifier(isActive: shortcutText != nil))
-        }
-        .overlay(alignment: .trailing) {
-            if let shortcut = shortcutText {
-                FloatingHotkeyHint(text: LocalizedStringKey(shortcut))
-                    .padding(.trailing, 4)
-                    .zIndex(1)
+                .modifier(HotkeyAccessoryModifier(isActive: shortcutText != nil))
+
+                if let shortcut = shortcutText {
+                    FloatingHotkeyHint(text: LocalizedStringKey(shortcut))
+                }
             }
         }
         .padding(.horizontal, 8)
