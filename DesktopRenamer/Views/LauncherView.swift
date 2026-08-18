@@ -1733,9 +1733,15 @@ struct SpacesBottomBar: View {
                     }
 
                     if !viewModel.isBottomBarFocused {
-                        bottomBarAction(title: "Action", shortcut: "↵") {
-                            viewModel.executeRowAction()
-                        }
+                        LauncherCommandActionCapsule(
+                            isActive: viewModel.isRootActionsPresented,
+                            openAction: {
+                                viewModel.executeRowAction()
+                            },
+                            actionsAction: {
+                                viewModel.showRootActionsPanel()
+                            }
+                        )
                     }
                 }
             }
@@ -1757,6 +1763,39 @@ struct SpacesBottomBar: View {
             .modifier(BottomBarCapsule(isSelected: false, isActive: false, colorScheme: colorScheme))
         }
         .buttonStyle(.plain)
+    }
+}
+
+private struct LauncherCommandActionCapsule: View {
+    let isActive: Bool
+    let openAction: () -> Void
+    let actionsAction: () -> Void
+    @Environment(\.colorScheme) private var colorScheme
+
+    var body: some View {
+        HStack(spacing: 12) {
+            Button(action: openAction) {
+                HStack(spacing: 8) {
+                    Text(verbatim: String(localized: "Open Command"))
+                    KeycapView(text: "↵", isSelected: false, isKeyboardKey: true, verticalPadding: 4, horizontalPadding: 4)
+                }
+            }
+            .buttonStyle(.plain)
+
+            Divider()
+                .frame(height: 16)
+
+            Button(action: actionsAction) {
+                HStack(spacing: 8) {
+                    Text(verbatim: String(localized: "Actions"))
+                    KeycapView(text: "⌘K", isSelected: false, isKeyboardKey: true, verticalPadding: 4, horizontalPadding: 4)
+                }
+            }
+            .buttonStyle(.plain)
+        }
+        .font(.system(size: 14, weight: .semibold))
+        .foregroundColor(colorScheme == .dark ? .primary : .secondary)
+        .modifier(BottomBarCapsule(isSelected: false, isActive: isActive, colorScheme: colorScheme))
     }
 }
 
