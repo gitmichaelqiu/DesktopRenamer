@@ -1292,7 +1292,7 @@ struct ListSectionHeader: View {
     }
     
     var body: some View {
-        HStack(spacing: 8) {
+        HStack(spacing: 12) {
             Text(title)
                 .font(.system(size: 15, weight: .semibold))
                 .foregroundColor(colors.textSecondary)
