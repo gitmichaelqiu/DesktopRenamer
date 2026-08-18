@@ -713,11 +713,23 @@ struct KeycapView: View {
             .padding(.horizontal, horizontalPadding)
             .padding(.vertical, verticalPadding)
             .frame(minWidth: isKeyboardKey ? 24 : nil, minHeight: isKeyboardKey ? 24 : nil)
-            .background(
-                isSelected
-                    ? (isSelectedWhiteStyle ? Color.white.opacity(0.20) : Color.primary.opacity(0.12))
-                    : colors.badgeBg
-            )
+            .background {
+                if isKeyboardKey {
+                    RoundedRectangle(cornerRadius: 5, style: .continuous)
+                        .fill(.ultraThinMaterial)
+                        .overlay {
+                            RoundedRectangle(cornerRadius: 5, style: .continuous)
+                                .fill(
+                                    isSelected
+                                        ? (isSelectedWhiteStyle ? Color.white.opacity(0.20) : Color.primary.opacity(0.12))
+                                        : colors.badgeBg.opacity(0.5)
+                                )
+                        }
+                } else {
+                    RoundedRectangle(cornerRadius: 5, style: .continuous)
+                        .fill(isSelected ? Color.primary.opacity(0.12) : colors.badgeBg)
+                }
+            }
             .clipShape(RoundedRectangle(cornerRadius: 5, style: .continuous))
             .shadow(
                 color: isKeyboardKey ? Color.black.opacity(colorScheme == .dark ? 0.24 : 0.12) : .clear,
@@ -864,16 +876,20 @@ struct CommandRowView: View {
 
             Spacer(minLength: 4)
 
-            if let shortcut = shortcutText {
-                KeycapView(text: LocalStringKey_compat(shortcut), isSelected: isSelected, isKeyboardKey: true)
-            }
-
             if let statusText = toggleStatus {
                 statusBadge(statusText)
             } else {
                 Text(verbatim: String(localized: "Command"))
                     .font(.system(size: 14, weight: .medium))
                     .foregroundColor(isSelected ? colors.textPrimary : colors.textSecondary)
+            }
+        }
+        .overlay(alignment: .topTrailing) {
+            if let shortcut = shortcutText {
+                KeycapView(text: LocalStringKey_compat(shortcut), isSelected: isSelected, isKeyboardKey: true)
+                    .padding(.trailing, 4)
+                    .offset(y: -4)
+                    .zIndex(1)
             }
         }
     }
@@ -994,8 +1010,14 @@ struct SpaceRowView: View {
                 WindowStateBadge(label: String(localized: "Current"), color: .blue)
             }
 
+                EmptyView()
+        }
+        .overlay(alignment: .topTrailing) {
             if let shortcut = shortcutText {
                 KeycapView(text: LocalizedStringKey(shortcut), isSelected: isSelected, isKeyboardKey: true)
+                    .padding(.trailing, 4)
+                    .offset(y: -4)
+                    .zIndex(1)
             }
         }
         .launcherRowSurface(isSelected: isSelected, isHovered: isHovered, colors: colors, selectionNamespace: selectionNamespace)
@@ -1078,11 +1100,17 @@ struct WindowRowView: View {
                     WindowStateBadge(label: String(localized: "Full Screen"), color: .blue)
                 }
 
-                if let shortcut = shortcutText {
-                    KeycapView(text: LocalizedStringKey(shortcut), isSelected: isSelected, isKeyboardKey: true)
-                } else {
+                if shortcutText == nil {
                     KeycapView(text: "Focus ↵", isSelected: isSelected)
                 }
+            }
+        }
+        .overlay(alignment: .topTrailing) {
+            if let shortcut = shortcutText {
+                KeycapView(text: LocalizedStringKey(shortcut), isSelected: isSelected, isKeyboardKey: true)
+                    .padding(.trailing, 4)
+                    .offset(y: -4)
+                    .zIndex(1)
             }
         }
         .launcherRowSurface(isSelected: isSelected, isHovered: isHovered, colors: colors, selectionNamespace: selectionNamespace)
@@ -1184,15 +1212,21 @@ struct WindowBatchRowView: View {
                     }
                 }
 
-                if let shortcut = shortcutText {
-                    KeycapView(text: LocalizedStringKey(shortcut), isSelected: isSelected, isKeyboardKey: true)
-                } else if isStaged {
+                if shortcutText == nil && isStaged {
                     LauncherStatusLabel(
                         label: stagedActionText,
                         color: colors.greenText,
                         background: colors.greenText.opacity(0.12)
                     )
                 }
+            }
+        }
+        .overlay(alignment: .topTrailing) {
+            if let shortcut = shortcutText {
+                KeycapView(text: LocalizedStringKey(shortcut), isSelected: isSelected, isKeyboardKey: true)
+                    .padding(.trailing, 4)
+                    .offset(y: -4)
+                    .zIndex(1)
             }
         }
         .padding(.horizontal, 8)
