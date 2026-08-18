@@ -750,8 +750,7 @@ private struct HotkeyAccessoryModifier: ViewModifier {
 
     func body(content: Content) -> some View {
         content
-            .blur(radius: isActive ? 2 : 0)
-            .opacity(isActive ? 0.62 : 1)
+            .opacity(isActive ? 0.76 : 1)
     }
 }
 
