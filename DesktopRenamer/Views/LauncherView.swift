@@ -428,8 +428,8 @@ struct LauncherView: View {
             }
         }
         .frame(width: LauncherLayout.windowSize.width, height: LauncherLayout.windowSize.height)
-        .opaqueLauncherBackground(cornerRadius: 24, isDark: colors.isDark, borderColor: colors.border)
-        .shadow(color: Color.black.opacity(colorScheme == .dark ? 0.45 : 0.20), radius: 24, x: 0, y: 12)
+        .opaqueLauncherBackground(cornerRadius: 26, isDark: colors.isDark, borderColor: colors.border)
+        .shadow(color: Color.black.opacity(colorScheme == .dark ? 0.32 : 0.20), radius: 24, x: 0, y: 20)
     }
 
     private var searchPlaceholder: String {
