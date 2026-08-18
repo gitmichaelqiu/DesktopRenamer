@@ -2,7 +2,7 @@ import SwiftUI
 import AppKit
 
 enum LauncherLayout {
-    static let windowSize = CGSize(width: 760, height: 500)
+    static let windowSize = CGSize(width: 750, height: 475)
     static let actionBarHeight: CGFloat = 44
     static let actionBarContentHeight: CGFloat = 36
     static let popupBottomSpacing: CGFloat = 8
