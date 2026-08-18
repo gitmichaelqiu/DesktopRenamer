@@ -808,16 +808,12 @@ private struct LauncherRowSurface: ViewModifier {
             .background {
                 if isSelected {
                     RoundedRectangle(cornerRadius: 10, style: .continuous)
-                        .fill(Color.primary.opacity(0.16))
+                        .fill(Color.primary.opacity(0.10))
                         .modifier(SelectionSurfaceModifier(namespace: selectionNamespace))
                 } else {
                     RoundedRectangle(cornerRadius: 10, style: .continuous)
                         .fill(isHovered ? colors.rowHover : .clear)
                 }
-            }
-            .overlay {
-                RoundedRectangle(cornerRadius: 10, style: .continuous)
-                    .stroke(isSelected ? Color.primary.opacity(0.10) : .clear, lineWidth: 1)
             }
     }
 }
@@ -1259,10 +1255,8 @@ struct WindowBatchRowView: View {
             ZStack {
                 if isSelected {
                     RoundedRectangle(cornerRadius: 8, style: .continuous)
-                        .fill(isSelected ? Color.primary.opacity(0.16) : Color.clear)
+                        .fill(isSelected ? Color.primary.opacity(0.10) : Color.clear)
                         .modifier(SelectionSurfaceModifier(namespace: selectionNamespace))
-                    RoundedRectangle(cornerRadius: 8, style: .continuous)
-                        .stroke(isSelected ? Color.primary.opacity(0.10) : Color.clear, lineWidth: 1)
                 } else if isHovered {
                     RoundedRectangle(cornerRadius: 8, style: .continuous)
                         .fill(colors.rowHover)
@@ -1843,12 +1837,8 @@ private struct LauncherMenuRow<Content: View>: View {
             .frame(height: LauncherMenuMetrics.rowHeight)
             .background {
                 RoundedRectangle(cornerRadius: 9, style: .continuous)
-                    .fill(isSelected ? Color.primary.opacity(0.16) : (isHovered ? colors.rowHover : .clear))
+                    .fill(isSelected ? Color.primary.opacity(0.10) : (isHovered ? colors.rowHover : .clear))
                     .modifier(isSelected ? SelectionSurfaceModifier(namespace: selectionNamespace) : SelectionSurfaceModifier(namespace: nil))
-            }
-            .overlay {
-                RoundedRectangle(cornerRadius: 9, style: .continuous)
-                    .stroke(isSelected ? Color.primary.opacity(0.10) : .clear, lineWidth: 1)
             }
             .onHover { isHovered = $0 }
     }
