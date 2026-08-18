@@ -16,6 +16,7 @@ private enum LauncherMenuMetrics {
     static let rowHeight: CGFloat = 46
     static let rowSpacing: CGFloat = 0
     static let rowHorizontalPadding: CGFloat = 12
+    static let accessoryColumnWidth: CGFloat = 110
     static let capsuleHorizontalPadding: CGFloat = 12
     static let capsuleHeight: CGFloat = 30
     static let labelHorizontalPadding: CGFloat = 8
@@ -919,6 +920,7 @@ struct CommandRowView: View {
                     FloatingHotkeyHint(text: LocalStringKey_compat(shortcut))
                 }
             }
+            .frame(minWidth: LauncherMenuMetrics.accessoryColumnWidth, alignment: .trailing)
         }
     }
 
@@ -1133,6 +1135,7 @@ struct WindowRowView: View {
                     FloatingHotkeyHint(text: LocalizedStringKey(shortcut))
                 }
             }
+            .frame(minWidth: LauncherMenuMetrics.accessoryColumnWidth, alignment: .trailing)
         }
         .launcherRowSurface(isSelected: isSelected, isHovered: isHovered, colors: colors, selectionNamespace: selectionNamespace)
         .onHover { hovering in
@@ -1248,6 +1251,7 @@ struct WindowBatchRowView: View {
                     FloatingHotkeyHint(text: LocalizedStringKey(shortcut))
                 }
             }
+            .frame(minWidth: LauncherMenuMetrics.accessoryColumnWidth, alignment: .trailing)
         }
         .padding(.horizontal, 8)
         .padding(.vertical, 8)
