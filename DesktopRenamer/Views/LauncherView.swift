@@ -3,7 +3,7 @@ import AppKit
 
 enum LauncherLayout {
     static let windowSize = CGSize(width: 760, height: 500)
-    static let actionBarHeight: CGFloat = 46
+    static let actionBarHeight: CGFloat = 42
     static let popupBottomSpacing: CGFloat = 8
 
     static var popupBottomInset: CGFloat {
@@ -18,7 +18,7 @@ private enum LauncherMenuMetrics {
     static let rowHorizontalPadding: CGFloat = 12
     static let accessoryColumnWidth: CGFloat = 110
     static let capsuleHorizontalPadding: CGFloat = 12
-    static let capsuleHeight: CGFloat = 30
+    static let capsuleHeight: CGFloat = 36
     static let labelHorizontalPadding: CGFloat = 8
     static let labelVerticalPadding: CGFloat = 3
 }
@@ -93,7 +93,7 @@ private struct LauncherActionBarModifier: ViewModifier {
 }
 
 private extension View {
-    func launcherActionBar(colors: ThemeColors, height: CGFloat = LauncherLayout.actionBarHeight, horizontalPadding: CGFloat = 18) -> some View {
+    func launcherActionBar(colors: ThemeColors, height: CGFloat = LauncherLayout.actionBarHeight, horizontalPadding: CGFloat = 8) -> some View {
         modifier(LauncherActionBarModifier(colors: colors, height: height, horizontalPadding: horizontalPadding))
     }
 }
@@ -1648,8 +1648,8 @@ struct SpacesBottomBar: View {
                             .id(space.id)
                         }
                     }
-                    .padding(.leading, 32)
-                    .padding(.trailing, 32)
+                    .padding(.leading, 8)
+                    .padding(.trailing, 8)
                 }
                 .mask(
                     HStack(spacing: 0) {
@@ -1731,7 +1731,7 @@ struct SpacesBottomBar: View {
             }
             .padding(.leading, 12)
         }
-        .padding(.horizontal, 18)
+        .padding(.horizontal, 8)
         .frame(height: LauncherLayout.actionBarHeight)
         .background(colors.bottomBarBg)
     }
