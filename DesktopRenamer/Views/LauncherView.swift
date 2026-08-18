@@ -740,19 +740,19 @@ private struct FloatingHotkeyHint: View {
 
     var body: some View {
         Text(text)
-            .font(.system(size: 13, weight: .medium))
+            .font(.system(size: 12, weight: .medium))
             .foregroundColor(.secondary)
-            .padding(.horizontal, 8)
-            .frame(minWidth: 24)
-            .frame(height: 24)
+            .padding(.horizontal, 6)
+            .frame(minWidth: 20)
+            .frame(height: 18)
             .background(
                 Color.primary.opacity(colorScheme == .dark ? 0.12 : 0.10),
                 in: Capsule()
             )
             .shadow(
                 color: Color.black.opacity(colorScheme == .dark ? 0.28 : 0.18),
-                radius: 10,
-                y: 4
+                radius: 8,
+                y: 3
             )
     }
 }
