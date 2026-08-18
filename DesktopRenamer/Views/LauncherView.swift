@@ -1909,7 +1909,7 @@ struct SpacePickerOverlay: View {
 
     private var spaceListHeight: CGFloat {
         let itemCount = max(viewModel.filteredSpaces.count, 1)
-        return min(CGFloat(itemCount) * (LauncherMenuMetrics.rowHeight + LauncherMenuMetrics.rowSpacing) + 8, 176)
+        return min(CGFloat(itemCount) * (LauncherMenuMetrics.rowHeight + LauncherMenuMetrics.rowSpacing) + 8, 200)
     }
 
     var body: some View {
@@ -2458,7 +2458,7 @@ struct CommandKOverlayView: View {
 
     private var actionListHeight: CGFloat {
         let actionCount = max(viewModel.filteredCommandKActions.count, 1)
-        return min(CGFloat(actionCount) * (LauncherMenuMetrics.rowHeight + LauncherMenuMetrics.rowSpacing) + 8, 230)
+        return min(CGFloat(actionCount) * (LauncherMenuMetrics.rowHeight + LauncherMenuMetrics.rowSpacing) + 8, 240)
     }
     
     var body: some View {
