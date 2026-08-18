@@ -68,10 +68,6 @@ struct ThemeColors {
         Color(nsColor: .separatorColor)
     }
     
-    var bottomBarBg: Color {
-        isDark ? Color.black.opacity(0.16) : Color.white.opacity(0.26)
-    }
-    
     var greenText: Color {
         Color.green
     }
@@ -88,7 +84,6 @@ private struct LauncherActionBarModifier: ViewModifier {
             .padding(.vertical, 3)
             .frame(maxWidth: .infinity)
             .frame(height: height)
-            .background(colors.bottomBarBg)
     }
 }
 
@@ -1492,7 +1487,6 @@ struct RootLauncherBottomBar: View {
         }
         .padding(.horizontal, 8)
         .frame(height: LauncherLayout.actionBarHeight)
-        .background(colors.bottomBarBg)
     }
 }
 
@@ -1746,7 +1740,6 @@ struct SpacesBottomBar: View {
         }
         .padding(.horizontal, 8)
         .frame(height: LauncherLayout.actionBarHeight)
-        .background(colors.bottomBarBg)
     }
 
     private func bottomBarAction(title: String, shortcut: String, action: @escaping () -> Void) -> some View {
