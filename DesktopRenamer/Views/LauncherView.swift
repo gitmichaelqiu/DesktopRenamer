@@ -904,21 +904,20 @@ struct CommandRowView: View {
 
             Spacer(minLength: 4)
 
-            if let statusText = toggleStatus {
-                statusBadge(statusText)
-                    .modifier(HotkeyAccessoryModifier(isActive: shortcutText != nil))
-            } else {
-                Text(verbatim: String(localized: "Command"))
-                    .font(.system(size: 14, weight: .medium))
-                    .foregroundColor(isSelected ? colors.textPrimary : colors.textSecondary)
-                    .modifier(HotkeyAccessoryModifier(isActive: shortcutText != nil))
-            }
-        }
-        .overlay(alignment: .trailing) {
-            if let shortcut = shortcutText {
-                FloatingHotkeyHint(text: LocalStringKey_compat(shortcut))
-                    .padding(.trailing, 4)
-                    .zIndex(1)
+            HStack(spacing: 8) {
+                if let statusText = toggleStatus {
+                    statusBadge(statusText)
+                        .modifier(HotkeyAccessoryModifier(isActive: shortcutText != nil))
+                } else {
+                    Text(verbatim: String(localized: "Command"))
+                        .font(.system(size: 14, weight: .medium))
+                        .foregroundColor(isSelected ? colors.textPrimary : colors.textSecondary)
+                        .modifier(HotkeyAccessoryModifier(isActive: shortcutText != nil))
+                }
+
+                if let shortcut = shortcutText {
+                    FloatingHotkeyHint(text: LocalStringKey_compat(shortcut))
+                }
             }
         }
     }
@@ -1126,15 +1125,12 @@ struct WindowRowView: View {
                 if shortcutText == nil {
                     KeycapView(text: "Focus ↵", isSelected: isSelected)
                 }
+
+                if let shortcut = shortcutText {
+                    FloatingHotkeyHint(text: LocalizedStringKey(shortcut))
+                }
             }
             .modifier(HotkeyAccessoryModifier(isActive: shortcutText != nil))
-        }
-        .overlay(alignment: .trailing) {
-            if let shortcut = shortcutText {
-                FloatingHotkeyHint(text: LocalizedStringKey(shortcut))
-                    .padding(.trailing, 4)
-                    .zIndex(1)
-            }
         }
         .launcherRowSurface(isSelected: isSelected, isHovered: isHovered, colors: colors, selectionNamespace: selectionNamespace)
         .onHover { hovering in
