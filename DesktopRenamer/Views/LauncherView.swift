@@ -525,7 +525,7 @@ struct ListAreaView: View {
                                     }
                                 }
                             }
-                            .padding(.horizontal, 8)
+                            .padding(.horizontal, 4)
                             .padding(.vertical, 8)
                         }
                         .onChange(of: viewModel.selectedRowIndex) { index in
@@ -560,7 +560,7 @@ struct ListAreaView: View {
                                             .id(space.id)
                                         }
                                     }
-                                    .padding(.horizontal, 10)
+                                    .padding(.horizontal, 4)
                                     .padding(.vertical, 8)
                                 }
                                 .onChange(of: viewModel.selectedRowIndex) { index in
@@ -606,7 +606,7 @@ struct ListAreaView: View {
                                             }
                                         }
                                     }
-                                    .padding(.horizontal, 10)
+                                    .padding(.horizontal, 4)
                                     .padding(.vertical, 8)
                                 }
                                 .onChange(of: viewModel.selectedRowIndex) { index in
@@ -659,7 +659,7 @@ struct ListAreaView: View {
                                             }
                                         }
                                     }
-                                    .padding(.horizontal, 10)
+                                    .padding(.horizontal, 4)
                                     .padding(.vertical, 8)
                                 }
                                 .onChange(of: viewModel.selectedRowIndex) { index in
