@@ -777,11 +777,13 @@ private final class LauncherScrollCoordinator: ObservableObject {
     private var viewport: CGRect = .zero
     private var pendingRequest: Request?
     private var requestGeneration = 0
+    private var geometryRevision = 0
 
     func update(_ geometry: LauncherListGeometrySnapshot) {
         rowFrames = geometry.frames
         currentLayoutVersion = geometry.layoutVersion
         viewport = geometry.viewport
+        geometryRevision &+= 1
         resolvePendingRequest()
     }
 
@@ -789,6 +791,7 @@ private final class LauncherScrollCoordinator: ObservableObject {
         rowFrames = [:]
         currentLayoutVersion = nil
         requestGeneration &+= 1
+        geometryRevision &+= 1
     }
 
     func reset() {
@@ -831,11 +834,24 @@ private final class LauncherScrollCoordinator: ObservableObject {
             action = nil
         }
 
-        pendingRequest = nil
-        guard let action else { return }
+        guard let action else {
+            pendingRequest = nil
+            return
+        }
         let generation = requestGeneration
+        let revision = geometryRevision
         DispatchQueue.main.async { [weak self] in
             guard let self, self.requestGeneration == generation else { return }
+            guard self.geometryRevision == revision else {
+                self.resolvePendingRequest()
+                return
+            }
+            guard let pendingRequest = self.pendingRequest,
+                  pendingRequest.index == request.index,
+                  pendingRequest.layoutVersion == request.layoutVersion else {
+                return
+            }
+            self.pendingRequest = nil
             action()
         }
     }
@@ -853,10 +869,12 @@ private final class LauncherHorizontalScrollCoordinator: ObservableObject {
     private var viewport: CGRect = .zero
     private var pendingRequest: Request?
     private var requestGeneration = 0
+    private var geometryRevision = 0
 
     func update(_ geometry: LauncherSpaceBarGeometrySnapshot) {
         itemFrames = geometry.frames
         viewport = geometry.viewport
+        geometryRevision &+= 1
         resolvePendingRequest()
     }
 
@@ -865,6 +883,7 @@ private final class LauncherHorizontalScrollCoordinator: ObservableObject {
         viewport = .zero
         pendingRequest = nil
         requestGeneration &+= 1
+        geometryRevision &+= 1
     }
 
     func request(
@@ -899,11 +918,23 @@ private final class LauncherHorizontalScrollCoordinator: ObservableObject {
             action = nil
         }
 
-        pendingRequest = nil
-        guard let action else { return }
+        guard let action else {
+            pendingRequest = nil
+            return
+        }
         let generation = requestGeneration
+        let revision = geometryRevision
         DispatchQueue.main.async { [weak self] in
             guard let self, self.requestGeneration == generation else { return }
+            guard self.geometryRevision == revision else {
+                self.resolvePendingRequest()
+                return
+            }
+            guard let pendingRequest = self.pendingRequest,
+                  pendingRequest.id == request.id else {
+                return
+            }
+            self.pendingRequest = nil
             action()
         }
     }
