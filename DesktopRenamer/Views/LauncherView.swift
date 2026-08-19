@@ -498,7 +498,7 @@ struct ListAreaView: View {
     @Environment(\.colorScheme) var colorScheme
     @Namespace private var selectionNamespace
     @State private var rowFrames: [Int: CGRect] = [:]
-    @State private var listViewportHeight: CGFloat = 0
+    @State private var listViewportFrame: CGRect = .zero
     
     var colors: ThemeColors {
         ThemeColors(isDark: colorScheme == .dark)
@@ -545,12 +545,11 @@ struct ListAreaView: View {
                             .padding(.horizontal, 0)
                             .padding(.vertical, 8)
                         }
-                        .coordinateSpace(name: "launcher-list")
                         .background {
                             GeometryReader { geometry in
                                 Color.clear.preference(
-                                    key: LauncherViewportHeightPreferenceKey.self,
-                                    value: geometry.size.height
+                                    key: LauncherViewportFramePreferenceKey.self,
+                                    value: geometry.frame(in: .named("launcher-list"))
                                 )
                             }
                         }
@@ -593,12 +592,11 @@ struct ListAreaView: View {
                                     .padding(.horizontal, 0)
                                     .padding(.vertical, 8)
                                 }
-                                .coordinateSpace(name: "launcher-list")
                                 .background {
                                     GeometryReader { geometry in
                                         Color.clear.preference(
-                                            key: LauncherViewportHeightPreferenceKey.self,
-                                            value: geometry.size.height
+                                            key: LauncherViewportFramePreferenceKey.self,
+                                            value: geometry.frame(in: .named("launcher-list"))
                                         )
                                     }
                                 }
@@ -649,12 +647,11 @@ struct ListAreaView: View {
                                     .padding(.horizontal, 0)
                                     .padding(.vertical, 8)
                                 }
-                                .coordinateSpace(name: "launcher-list")
                                 .background {
                                     GeometryReader { geometry in
                                         Color.clear.preference(
-                                            key: LauncherViewportHeightPreferenceKey.self,
-                                            value: geometry.size.height
+                                            key: LauncherViewportFramePreferenceKey.self,
+                                            value: geometry.frame(in: .named("launcher-list"))
                                         )
                                     }
                                 }
@@ -717,12 +714,11 @@ struct ListAreaView: View {
                                     .padding(.horizontal, 0)
                                     .padding(.vertical, 8)
                                 }
-                                .coordinateSpace(name: "launcher-list")
                                 .background {
                                     GeometryReader { geometry in
                                         Color.clear.preference(
-                                            key: LauncherViewportHeightPreferenceKey.self,
-                                            value: geometry.size.height
+                                            key: LauncherViewportFramePreferenceKey.self,
+                                            value: geometry.frame(in: .named("launcher-list"))
                                         )
                                     }
                                 }
@@ -745,6 +741,7 @@ struct ListAreaView: View {
                 }
             }
         }
+        .coordinateSpace(name: "launcher-list")
         .onAppear {
             guard viewModel.activeCommand?.type == .switchToDesktop || viewModel.activeCommand?.type == .moveWindow else { return }
             // SpaceManager can finish reconciling the current UUID after the target list appears.
@@ -758,8 +755,8 @@ struct ListAreaView: View {
         .onPreferenceChange(LauncherRowFramePreferenceKey.self) { frames in
             rowFrames = frames
         }
-        .onPreferenceChange(LauncherViewportHeightPreferenceKey.self) { height in
-            listViewportHeight = height
+        .onPreferenceChange(LauncherViewportFramePreferenceKey.self) { frame in
+            listViewportFrame = frame
         }
         .onChange(of: viewModel.searchQuery) { _ in
             rowFrames = [:]
@@ -779,10 +776,10 @@ struct ListAreaView: View {
             // geometry preferences. Yield once more so the decision uses the
             // current row frame rather than the previous scroll position.
             DispatchQueue.main.async {
-                guard let frame = rowFrames[index], listViewportHeight > 0 else { return }
-                if frame.minY < 0 {
+                guard let frame = rowFrames[index], !listViewportFrame.isEmpty else { return }
+                if frame.minY < listViewportFrame.minY {
                     proxy.scrollTo(id, anchor: .top)
-                } else if frame.maxY > listViewportHeight {
+                } else if frame.maxY > listViewportFrame.maxY {
                     proxy.scrollTo(id, anchor: .bottom)
                 }
             }
@@ -798,10 +795,10 @@ private struct LauncherRowFramePreferenceKey: PreferenceKey {
     }
 }
 
-private struct LauncherViewportHeightPreferenceKey: PreferenceKey {
-    static let defaultValue: CGFloat = 0
+private struct LauncherViewportFramePreferenceKey: PreferenceKey {
+    static let defaultValue: CGRect = .zero
 
-    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
+    static func reduce(value: inout CGRect, nextValue: () -> CGRect) {
         value = nextValue()
     }
 }
