@@ -529,7 +529,7 @@ struct ListAreaView: View {
                                             viewModel.selectedRowIndex = index
                                             viewModel.executeRowAction()
                                         } label: {
-                                            CommandRowView(command: cmd, isSelected: isSelected, isRoot: true, isCompact: true, selectionNamespace: selectionNamespace, shortcutText: viewModel.showCommandNumbers && viewModel.commandKTargetWindow == nil && index < 9 ? "⌘\(index + 1)" : nil)
+                                            CommandRowView(command: cmd, isSelected: isSelected, isRoot: true, selectionNamespace: selectionNamespace, shortcutText: viewModel.showCommandNumbers && viewModel.commandKTargetWindow == nil && index < 9 ? "⌘\(index + 1)" : nil)
                                         }
                                         .buttonStyle(.plain)
                                         .id(cmd.id)
@@ -877,9 +877,36 @@ private struct SelectionSurfaceModifier: ViewModifier {
     }
 }
 
-private extension View {
-    func launcherRowSurface(isSelected: Bool, isHovered: Bool, colors: ThemeColors, verticalPadding: CGFloat = 8, selectionNamespace: Namespace.ID? = nil) -> some View {
-        modifier(LauncherRowSurface(isSelected: isSelected, isHovered: isHovered, colors: colors, verticalPadding: verticalPadding, selectionNamespace: selectionNamespace))
+private struct LauncherSelectableRow<Content: View>: View {
+    let isSelected: Bool
+    let colors: ThemeColors
+    let selectionNamespace: Namespace.ID?
+    private let content: Content
+    @State private var isHovered = false
+
+    init(
+        isSelected: Bool,
+        colors: ThemeColors,
+        selectionNamespace: Namespace.ID? = nil,
+        @ViewBuilder content: () -> Content
+    ) {
+        self.isSelected = isSelected
+        self.colors = colors
+        self.selectionNamespace = selectionNamespace
+        self.content = content()
+    }
+
+    var body: some View {
+        content
+            .modifier(LauncherRowSurface(
+                isSelected: isSelected,
+                isHovered: isHovered,
+                colors: colors,
+                verticalPadding: 8,
+                selectionNamespace: selectionNamespace
+            ))
+            .contentShape(Rectangle())
+            .onHover { isHovered = $0 }
     }
 }
 
@@ -887,11 +914,9 @@ struct CommandRowView: View {
     let command: LauncherCommand
     let isSelected: Bool
     var isRoot: Bool = false
-    var isCompact: Bool = false
     var selectionNamespace: Namespace.ID? = nil
     var shortcutText: String? = nil
     @Environment(\.colorScheme) var colorScheme
-    @State private var isHovered = false
     
     // Observers for settings changes to trigger auto-redraw of status labels
     @AppStorage("kShowActiveLabels") private var showActiveLabels = true
@@ -916,18 +941,13 @@ struct CommandRowView: View {
     }
     
     var body: some View {
-        Group {
+        LauncherSelectableRow(isSelected: isSelected, colors: colors, selectionNamespace: selectionNamespace) {
             if isRoot {
                 rootRow
             } else {
                 detailRow
             }
         }
-        .launcherRowSurface(isSelected: isSelected, isHovered: isHovered, colors: colors, verticalPadding: isCompact ? 10 : 8, selectionNamespace: selectionNamespace)
-        .onHover { hovering in
-            isHovered = hovering
-        }
-        .animation(.easeOut(duration: 0.15), value: shortcutText)
     }
 
     private var rootRow: some View {
@@ -1028,14 +1048,14 @@ struct SpaceRowView: View {
     var selectionNamespace: Namespace.ID? = nil
     var shortcutText: String? = nil
     @Environment(\.colorScheme) var colorScheme
-    @State private var isHovered = false
     
     var colors: ThemeColors {
         ThemeColors(isDark: colorScheme == .dark)
     }
     
     var body: some View {
-        HStack(spacing: 8) {
+        LauncherSelectableRow(isSelected: isSelected, colors: colors, selectionNamespace: selectionNamespace) {
+            HStack(spacing: 8) {
             if space.isFullscreen, let appPath = space.appPath {
                 let appIcon = NSWorkspace.shared.icon(forFile: appPath)
                 Image(nsImage: appIcon)
@@ -1080,12 +1100,8 @@ struct SpaceRowView: View {
             if let shortcut = shortcutText {
                 KeycapView(text: LocalizedStringKey(shortcut), isSelected: isSelected, isKeyboardKey: true)
             }
+            }
         }
-        .launcherRowSurface(isSelected: isSelected, isHovered: isHovered, colors: colors, selectionNamespace: selectionNamespace)
-        .onHover { hovering in
-            isHovered = hovering
-        }
-        .animation(.easeOut(duration: 0.15), value: shortcutText)
     }
 }
 
@@ -1123,14 +1139,14 @@ struct WindowRowView: View {
     var selectionNamespace: Namespace.ID? = nil
     var shortcutText: String? = nil
     @Environment(\.colorScheme) var colorScheme
-    @State private var isHovered = false
     
     var colors: ThemeColors {
         ThemeColors(isDark: colorScheme == .dark)
     }
     
     var body: some View {
-        HStack(spacing: 8) {
+        LauncherSelectableRow(isSelected: isSelected, colors: colors, selectionNamespace: selectionNamespace) {
+            HStack(spacing: 8) {
             let appIcon = NSWorkspace.shared.icon(forFile: window.appPath)
             Image(nsImage: appIcon)
                 .resizable()
@@ -1168,12 +1184,8 @@ struct WindowRowView: View {
                     }
                 }
             }
+            }
         }
-        .launcherRowSurface(isSelected: isSelected, isHovered: isHovered, colors: colors, selectionNamespace: selectionNamespace)
-        .onHover { hovering in
-            isHovered = hovering
-        }
-        .animation(.easeOut(duration: 0.15), value: shortcutText)
     }
 }
 
@@ -1227,14 +1239,14 @@ struct WindowBatchRowView: View {
     var selectionNamespace: Namespace.ID? = nil
     var shortcutText: String? = nil
     @Environment(\.colorScheme) var colorScheme
-    @State private var isHovered = false
     
     var colors: ThemeColors {
         ThemeColors(isDark: colorScheme == .dark)
     }
     
     var body: some View {
-        HStack(spacing: 8) {
+        LauncherSelectableRow(isSelected: isSelected, colors: colors, selectionNamespace: selectionNamespace) {
+            HStack(spacing: 8) {
             let appIcon = NSWorkspace.shared.icon(forFile: window.appPath)
             Image(nsImage: appIcon)
                 .resizable()
@@ -1279,24 +1291,7 @@ struct WindowBatchRowView: View {
                     }
                 }
             }
-        }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 8)
-        .frame(minHeight: LauncherMenuMetrics.rowHeight)
-        .background(
-            ZStack {
-                if isSelected {
-                    RoundedRectangle(cornerRadius: 8, style: .continuous)
-                        .fill(isSelected ? Color.primary.opacity(0.10) : Color.clear)
-                        .modifier(SelectionSurfaceModifier(namespace: selectionNamespace))
-                } else if isHovered {
-                    RoundedRectangle(cornerRadius: 8, style: .continuous)
-                        .fill(colors.rowHover)
-                }
             }
-        )
-        .onHover { hovering in
-            isHovered = hovering
         }
     }
 }
