@@ -18,7 +18,9 @@ private enum LauncherMenuMetrics {
     static let rowSpacing: CGFloat = 0
     static let rowHorizontalPadding: CGFloat = 12
     static let menuAccessoryColumnWidth: CGFloat = 72
-    static let accessoryColumnWidth: CGFloat = 110
+    // Raycast keeps the accessory text in its own 140pt slot and reserves a
+    // separate 24pt slot for the delayed number badge.
+    static let accessoryColumnWidth: CGFloat = 140
     static let capsuleHorizontalPadding: CGFloat = 12
     static let capsuleHeight: CGFloat = 36
     static let labelHorizontalPadding: CGFloat = 8
