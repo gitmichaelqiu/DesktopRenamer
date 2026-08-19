@@ -1735,11 +1735,9 @@ struct BatchMoveBottomBar: View {
             HStack(spacing: 6) {
                 HStack(spacing: 6) {
                     Image(systemName: viewModel.activeCommand?.iconName ?? "macwindow.badge.plus")
-                        .font(.subheadline.weight(.semibold))
+                        .font(.system(size: 14, weight: .semibold))
                         .foregroundColor(colors.textSecondary)
                     Text(viewModel.activeCommand?.title ?? String(localized: "Batch Move Windows"))
-                        .font(.subheadline)
-                        .fontWeight(.semibold)
                         .foregroundColor(colors.textPrimary)
                 }
                 .modifier(BottomBarCapsule(isSelected: false, isActive: true, colorScheme: colorScheme))
@@ -2457,11 +2455,9 @@ struct CommandBottomBar: View {
                 HStack(spacing: 6) {
                     HStack(spacing: 6) {
                         Image(systemName: active.iconName)
-                            .font(.subheadline.weight(.semibold))
+                            .font(.system(size: 14, weight: .semibold))
                             .foregroundColor(colors.textSecondary)
                         Text(active.title)
-                            .font(.subheadline)
-                            .fontWeight(.semibold)
                             .foregroundColor(colors.textPrimary)
                     }
                     .modifier(BottomBarCapsule(isSelected: false, isActive: true, colorScheme: colorScheme))
@@ -2473,11 +2469,9 @@ struct CommandBottomBar: View {
                         
                         HStack(spacing: 4) {
                             Image(systemName: "square.and.arrow.down")
-                                .font(.subheadline.weight(.semibold))
+                                .font(.system(size: 14, weight: .semibold))
                                 .foregroundColor(colors.greenText)
                             Text(String(format: NSLocalizedString("Move: %@", comment: ""), staging.ownerName))
-                                .font(.subheadline)
-                                .fontWeight(.semibold)
                                 .foregroundColor(colors.textPrimary)
                         }
                         .modifier(BottomBarCapsule(isSelected: false, isActive: false, colorScheme: colorScheme))
@@ -3165,8 +3159,10 @@ struct BottomBarCapsule: ViewModifier {
     
     func body(content: Content) -> some View {
         content
-            .font(.system(size: 14, weight: .medium))
-            .fontWeight(isSelected || isActive ? .semibold : .medium)
+            .font(.system(
+                size: 14,
+                weight: isSelected || isActive ? .semibold : .medium
+            ))
             .padding(.horizontal, LauncherMenuMetrics.capsuleHorizontalPadding)
             .frame(height: LauncherMenuMetrics.capsuleHeight)
             .background(
