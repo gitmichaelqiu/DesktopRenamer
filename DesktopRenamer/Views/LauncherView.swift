@@ -808,9 +808,9 @@ private final class LauncherScrollCoordinator: ObservableObject {
         }
 
         let action: (() -> Void)?
-        if frame.midY < viewport.minY {
+        if frame.minY < viewport.minY {
             action = request.scrollToTop
-        } else if frame.midY > viewport.maxY {
+        } else if frame.maxY > viewport.maxY {
             action = request.scrollToBottom
         } else {
             action = nil
