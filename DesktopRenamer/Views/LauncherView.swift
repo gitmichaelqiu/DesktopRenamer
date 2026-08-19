@@ -541,6 +541,7 @@ struct ListAreaView: View {
                             .padding(.vertical, 8)
                         }
                         .launcherViewportFrame()
+                        .coordinateSpace(name: "launcher-list")
                         .onChange(of: viewModel.listLayoutVersion) { _ in
                             if viewModel.consumeScrollRequest() {
                                 let index = viewModel.selectedRowIndex
@@ -593,6 +594,7 @@ struct ListAreaView: View {
                                     .padding(.vertical, 8)
                                 }
                                 .launcherViewportFrame()
+                                .coordinateSpace(name: "launcher-list")
                                 .onChange(of: viewModel.listLayoutVersion) { _ in
                                     if viewModel.consumeScrollRequest() {
                                         let index = viewModel.selectedRowIndex
@@ -652,6 +654,7 @@ struct ListAreaView: View {
                                     .padding(.vertical, 8)
                                 }
                                 .launcherViewportFrame()
+                                .coordinateSpace(name: "launcher-list")
                                 .onChange(of: viewModel.listLayoutVersion) { _ in
                                     if viewModel.consumeScrollRequest() {
                                         let index = viewModel.selectedRowIndex
@@ -725,6 +728,7 @@ struct ListAreaView: View {
                                     .padding(.vertical, 8)
                                 }
                                 .launcherViewportFrame()
+                                .coordinateSpace(name: "launcher-list")
                                 .onChange(of: viewModel.listLayoutVersion) { _ in
                                     if viewModel.consumeScrollRequest() {
                                         let index = viewModel.selectedRowIndex
@@ -757,7 +761,6 @@ struct ListAreaView: View {
                 }
             }
         }
-        .coordinateSpace(name: "launcher-list")
         .onAppear {
             let isTargetSpaceList = viewModel.activeCommand?.type == .switchToDesktop || viewModel.activeCommand?.type == .moveWindow
             guard isTargetSpaceList else { return }
@@ -1049,7 +1052,7 @@ private extension View {
                 Color.clear.preference(
                     key: LauncherListGeometryPreferenceKey.self,
                     value: LauncherListGeometrySnapshot(
-                        viewport: geometry.frame(in: .named("launcher-list"))
+                        viewport: CGRect(origin: .zero, size: geometry.size)
                     )
                 )
             }
