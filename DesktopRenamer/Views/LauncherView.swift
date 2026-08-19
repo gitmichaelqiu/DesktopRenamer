@@ -554,7 +554,7 @@ struct ListAreaView: View {
                             }
                         }
                         .onChange(of: viewModel.selectedRowIndex) { index in
-                            if shouldScrollSelection {
+                            if shouldScrollSelection() {
                                 guard commands.indices.contains(index) else { return }
                                 scrollSelectionIfNeeded(
                                     index: index,
@@ -601,7 +601,7 @@ struct ListAreaView: View {
                                     }
                                 }
                                 .onChange(of: viewModel.selectedRowIndex) { index in
-                                    if shouldScrollSelection {
+                                    if shouldScrollSelection() {
                                         guard spaces.indices.contains(index) else { return }
                                         scrollSelectionIfNeeded(
                                             index: index,
@@ -656,7 +656,7 @@ struct ListAreaView: View {
                                     }
                                 }
                                 .onChange(of: viewModel.selectedRowIndex) { index in
-                                    if shouldScrollSelection {
+                                    if shouldScrollSelection() {
                                         if let item = sections.flatMap({ $0.items }).first(where: { $0.index == index }) {
                                             scrollSelectionIfNeeded(
                                                 index: index,
@@ -723,7 +723,7 @@ struct ListAreaView: View {
                                     }
                                 }
                                 .onChange(of: viewModel.selectedRowIndex) { index in
-                                    if shouldScrollSelection {
+                                    if shouldScrollSelection() {
                                         if let item = sections.flatMap({ $0.items }).first(where: { $0.index == index }) {
                                             scrollSelectionIfNeeded(
                                                 index: index,
@@ -771,7 +771,7 @@ struct ListAreaView: View {
         }
     }
 
-    private var shouldScrollSelection: Bool {
+    private func shouldScrollSelection() -> Bool {
         guard viewModel.launcherOverlay == nil, viewModel.isKeyboardSelection else { return false }
         guard suppressInitialSelectionScroll else { return true }
         suppressInitialSelectionScroll = false
