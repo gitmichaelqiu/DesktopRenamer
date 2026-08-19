@@ -542,6 +542,7 @@ struct ListAreaView: View {
                         }
                         .coordinateSpace(name: "launcher-list")
                         .launcherViewportFrame()
+                        .focusable(false)
                         .onChange(of: viewModel.listLayoutVersion) { _ in
                             if viewModel.consumeScrollRequest() {
                                 let index = viewModel.selectedRowIndex
@@ -595,6 +596,7 @@ struct ListAreaView: View {
                                 }
                                 .coordinateSpace(name: "launcher-list")
                                 .launcherViewportFrame()
+                                .focusable(false)
                                 .onChange(of: viewModel.listLayoutVersion) { _ in
                                     if viewModel.consumeScrollRequest() {
                                         let index = viewModel.selectedRowIndex
@@ -655,6 +657,7 @@ struct ListAreaView: View {
                                 }
                                 .coordinateSpace(name: "launcher-list")
                                 .launcherViewportFrame()
+                                .focusable(false)
                                 .onChange(of: viewModel.listLayoutVersion) { _ in
                                     if viewModel.consumeScrollRequest() {
                                         let index = viewModel.selectedRowIndex
@@ -729,6 +732,7 @@ struct ListAreaView: View {
                                 }
                                 .coordinateSpace(name: "launcher-list")
                                 .launcherViewportFrame()
+                                .focusable(false)
                                 .onChange(of: viewModel.listLayoutVersion) { _ in
                                     if viewModel.consumeScrollRequest() {
                                         let index = viewModel.selectedRowIndex
