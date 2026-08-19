@@ -29,6 +29,8 @@ private enum LauncherMenuMetrics {
     static let labelHorizontalPadding: CGFloat = 8
     static let labelVerticalPadding: CGFloat = 3
     static let rowSurfaceInset: CGFloat = 12
+    static let rowTitleFontSize: CGFloat = 16
+    static let rowSubtitleFontSize: CGFloat = 14
 }
 
 struct ThemeColors {
@@ -1123,18 +1125,18 @@ struct SpaceRowView: View {
             
             VStack(alignment: .leading, spacing: 2) {
                 Text(space.name)
-                    .font(.system(size: 15, weight: .semibold))
+                    .font(.system(size: LauncherMenuMetrics.rowTitleFontSize, weight: .semibold))
                     .foregroundColor(colors.textPrimary)
                     .lineLimit(1)
                 
                 if space.isFullscreen {
                     Text(verbatim: String(format: String(localized: "%@ · Fullscreen"), space.displayName))
-                        .font(.system(size: 13))
+                        .font(.system(size: LauncherMenuMetrics.rowSubtitleFontSize))
                         .foregroundColor(isSelected ? colors.textSecondary : colors.textTertiary)
                         .lineLimit(1)
                 } else {
                     Text(verbatim: String(format: String(localized: "%@ · Space %lld"), space.displayName, space.num))
-                        .font(.system(size: 13))
+                        .font(.system(size: LauncherMenuMetrics.rowSubtitleFontSize))
                         .foregroundColor(isSelected ? colors.textSecondary : colors.textTertiary)
                         .lineLimit(1)
                 }
@@ -1203,12 +1205,12 @@ struct WindowRowView: View {
 
             VStack(alignment: .leading, spacing: 2) {
                 Text(window.title.isEmpty ? String(localized: "(No Title)") : window.title)
-                    .font(.system(size: 15, weight: .semibold))
+                    .font(.system(size: LauncherMenuMetrics.rowTitleFontSize, weight: .semibold))
                     .foregroundColor(colors.textPrimary)
                     .lineLimit(1)
 
                 Text(window.ownerName)
-                    .font(.system(size: 13))
+                    .font(.system(size: LauncherMenuMetrics.rowSubtitleFontSize))
                     .foregroundColor(isSelected ? colors.textSecondary : colors.textTertiary)
                     .lineLimit(1)
             }
@@ -1303,13 +1305,12 @@ struct WindowBatchRowView: View {
 
             VStack(alignment: .leading, spacing: 2) {
                 Text(window.title.isEmpty ? String(localized: "(No Title)") : window.title)
-                    .font(.body)
-                    .fontWeight(.semibold)
+                    .font(.system(size: LauncherMenuMetrics.rowTitleFontSize, weight: .semibold))
                     .foregroundColor(colors.textPrimary)
                     .lineLimit(1)
 
                 Text(window.ownerName)
-                    .font(.subheadline)
+                    .font(.system(size: LauncherMenuMetrics.rowSubtitleFontSize))
                     .foregroundColor(isSelected ? colors.textSecondary : colors.textTertiary)
                     .lineLimit(1)
             }
