@@ -769,6 +769,7 @@ private final class LauncherScrollCoordinator: ObservableObject {
     private var currentLayoutVersion: Int?
     private var viewport: CGRect = .zero
     private var pendingRequest: Request?
+    private var requestGeneration = 0
 
     func updateRows(_ frames: [Int: CGRect], version: Int) {
         rowFrames = frames
@@ -784,6 +785,7 @@ private final class LauncherScrollCoordinator: ObservableObject {
     func clearRows() {
         rowFrames = [:]
         currentLayoutVersion = nil
+        requestGeneration &+= 1
     }
 
     func reset() {
@@ -792,6 +794,7 @@ private final class LauncherScrollCoordinator: ObservableObject {
     }
 
     func request(index: Int, layoutVersion: Int, scrollToTop: @escaping () -> Void, scrollToBottom: @escaping () -> Void) {
+        requestGeneration &+= 1
         pendingRequest = Request(
             index: index,
             layoutVersion: layoutVersion,
@@ -822,7 +825,11 @@ private final class LauncherScrollCoordinator: ObservableObject {
 
         pendingRequest = nil
         guard let action else { return }
-        DispatchQueue.main.async(execute: action)
+        let generation = requestGeneration
+        DispatchQueue.main.async { [weak self] in
+            guard let self, self.requestGeneration == generation else { return }
+            action()
+        }
     }
 }
 
@@ -837,6 +844,7 @@ private final class LauncherHorizontalScrollCoordinator: ObservableObject {
     private var itemFrames: [String: CGRect] = [:]
     private var viewport: CGRect = .zero
     private var pendingRequest: Request?
+    private var requestGeneration = 0
 
     func updateFrames(_ frames: [String: CGRect]) {
         itemFrames = frames
@@ -852,6 +860,7 @@ private final class LauncherHorizontalScrollCoordinator: ObservableObject {
         itemFrames = [:]
         viewport = .zero
         pendingRequest = nil
+        requestGeneration &+= 1
     }
 
     func request(
@@ -859,6 +868,7 @@ private final class LauncherHorizontalScrollCoordinator: ObservableObject {
         scrollToLeading: @escaping () -> Void,
         scrollToTrailing: @escaping () -> Void
     ) {
+        requestGeneration &+= 1
         pendingRequest = Request(
             id: id,
             scrollToLeading: scrollToLeading,
@@ -887,7 +897,11 @@ private final class LauncherHorizontalScrollCoordinator: ObservableObject {
 
         pendingRequest = nil
         guard let action else { return }
-        DispatchQueue.main.async(execute: action)
+        let generation = requestGeneration
+        DispatchQueue.main.async { [weak self] in
+            guard let self, self.requestGeneration == generation else { return }
+            action()
+        }
     }
 }
 
