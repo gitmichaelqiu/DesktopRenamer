@@ -722,11 +722,8 @@ struct ListAreaView: View {
         .onChange(of: viewModel.currentSpaces) { _ in
             viewModel.selectCurrentTargetSpace()
         }
-        .onPreferenceChange(LauncherRowFramePreferenceKey.self) { frames in
-            scrollCoordinator.updateRows(frames.frames, version: frames.layoutVersion)
-        }
-        .onPreferenceChange(LauncherViewportFramePreferenceKey.self) { frame in
-            scrollCoordinator.updateViewport(frame)
+        .onPreferenceChange(LauncherListGeometryPreferenceKey.self) { geometry in
+            scrollCoordinator.update(geometry)
         }
         .onChange(of: viewModel.searchQuery) { _ in
             scrollCoordinator.clearRows()
@@ -771,14 +768,10 @@ private final class LauncherScrollCoordinator: ObservableObject {
     private var pendingRequest: Request?
     private var requestGeneration = 0
 
-    func updateRows(_ frames: [Int: CGRect], version: Int) {
-        rowFrames = frames
-        currentLayoutVersion = version
-        resolvePendingRequest()
-    }
-
-    func updateViewport(_ frame: CGRect) {
-        viewport = frame
+    func update(_ geometry: LauncherListGeometrySnapshot) {
+        rowFrames = geometry.frames
+        currentLayoutVersion = geometry.layoutVersion
+        viewport = geometry.viewport
         resolvePendingRequest()
     }
 
@@ -905,27 +898,23 @@ private final class LauncherHorizontalScrollCoordinator: ObservableObject {
     }
 }
 
-private struct LauncherRowFramePreferenceKey: PreferenceKey {
-    static let defaultValue = LauncherRowFrameSnapshot()
+private struct LauncherListGeometryPreferenceKey: PreferenceKey {
+    static let defaultValue = LauncherListGeometrySnapshot()
 
-    static func reduce(value: inout LauncherRowFrameSnapshot, nextValue: () -> LauncherRowFrameSnapshot) {
+    static func reduce(value: inout LauncherListGeometrySnapshot, nextValue: () -> LauncherListGeometrySnapshot) {
         let next = nextValue()
         value.frames.merge(next.frames, uniquingKeysWith: { _, latest in latest })
         value.layoutVersion = max(value.layoutVersion, next.layoutVersion)
+        if !next.viewport.isEmpty {
+            value.viewport = next.viewport
+        }
     }
 }
 
-private struct LauncherRowFrameSnapshot: Equatable {
+private struct LauncherListGeometrySnapshot: Equatable {
     var frames: [Int: CGRect] = [:]
     var layoutVersion: Int = 0
-}
-
-private struct LauncherViewportFramePreferenceKey: PreferenceKey {
-    static let defaultValue: CGRect = .zero
-
-    static func reduce(value: inout CGRect, nextValue: () -> CGRect) {
-        value = nextValue()
-    }
+    var viewport: CGRect = .zero
 }
 
 private struct LauncherSpaceBarFramePreferenceKey: PreferenceKey {
@@ -949,8 +938,10 @@ private extension View {
         background {
             GeometryReader { geometry in
                 Color.clear.preference(
-                    key: LauncherViewportFramePreferenceKey.self,
-                    value: geometry.frame(in: .named("launcher-list"))
+                    key: LauncherListGeometryPreferenceKey.self,
+                    value: LauncherListGeometrySnapshot(
+                        viewport: geometry.frame(in: .named("launcher-list"))
+                    )
                 )
             }
         }
@@ -960,8 +951,8 @@ private extension View {
         background {
             GeometryReader { geometry in
                 Color.clear.preference(
-                    key: LauncherRowFramePreferenceKey.self,
-                    value: LauncherRowFrameSnapshot(
+                    key: LauncherListGeometryPreferenceKey.self,
+                    value: LauncherListGeometrySnapshot(
                         frames: [index: geometry.frame(in: .named("launcher-list"))],
                         layoutVersion: layoutVersion
                     )
