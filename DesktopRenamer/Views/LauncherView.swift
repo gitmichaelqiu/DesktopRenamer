@@ -826,6 +826,71 @@ private final class LauncherScrollCoordinator: ObservableObject {
     }
 }
 
+@MainActor
+private final class LauncherHorizontalScrollCoordinator: ObservableObject {
+    private struct Request {
+        let id: String
+        let scrollToLeading: () -> Void
+        let scrollToTrailing: () -> Void
+    }
+
+    private var itemFrames: [String: CGRect] = [:]
+    private var viewport: CGRect = .zero
+    private var pendingRequest: Request?
+
+    func updateFrames(_ frames: [String: CGRect]) {
+        itemFrames = frames
+        resolvePendingRequest()
+    }
+
+    func updateViewport(_ frame: CGRect) {
+        viewport = frame
+        resolvePendingRequest()
+    }
+
+    func reset() {
+        itemFrames = [:]
+        viewport = .zero
+        pendingRequest = nil
+    }
+
+    func request(
+        id: String,
+        scrollToLeading: @escaping () -> Void,
+        scrollToTrailing: @escaping () -> Void
+    ) {
+        pendingRequest = Request(
+            id: id,
+            scrollToLeading: scrollToLeading,
+            scrollToTrailing: scrollToTrailing
+        )
+        DispatchQueue.main.async { [weak self] in
+            self?.resolvePendingRequest()
+        }
+    }
+
+    private func resolvePendingRequest() {
+        guard let request = pendingRequest,
+              let frame = itemFrames[request.id],
+              !viewport.isEmpty else {
+            return
+        }
+
+        let action: (() -> Void)?
+        if frame.minX < viewport.minX {
+            action = request.scrollToLeading
+        } else if frame.maxX > viewport.maxX {
+            action = request.scrollToTrailing
+        } else {
+            action = nil
+        }
+
+        pendingRequest = nil
+        guard let action else { return }
+        DispatchQueue.main.async(execute: action)
+    }
+}
+
 private struct LauncherRowFramePreferenceKey: PreferenceKey {
     static let defaultValue = LauncherRowFrameSnapshot()
 
@@ -842,6 +907,22 @@ private struct LauncherRowFrameSnapshot: Equatable {
 }
 
 private struct LauncherViewportFramePreferenceKey: PreferenceKey {
+    static let defaultValue: CGRect = .zero
+
+    static func reduce(value: inout CGRect, nextValue: () -> CGRect) {
+        value = nextValue()
+    }
+}
+
+private struct LauncherSpaceBarFramePreferenceKey: PreferenceKey {
+    static let defaultValue: [String: CGRect] = [:]
+
+    static func reduce(value: inout [String: CGRect], nextValue: () -> [String: CGRect]) {
+        value.merge(nextValue(), uniquingKeysWith: { _, latest in latest })
+    }
+}
+
+private struct LauncherSpaceBarViewportPreferenceKey: PreferenceKey {
     static let defaultValue: CGRect = .zero
 
     static func reduce(value: inout CGRect, nextValue: () -> CGRect) {
@@ -870,6 +951,28 @@ private extension View {
                         frames: [index: geometry.frame(in: .named("launcher-list"))],
                         layoutVersion: layoutVersion
                     )
+                )
+            }
+        }
+    }
+
+    func launcherSpaceBarItemVisibility(id: String) -> some View {
+        background {
+            GeometryReader { geometry in
+                Color.clear.preference(
+                    key: LauncherSpaceBarFramePreferenceKey.self,
+                    value: [id: geometry.frame(in: .named("launcher-space-bar"))]
+                )
+            }
+        }
+    }
+
+    func launcherSpaceBarViewport() -> some View {
+        background {
+            GeometryReader { geometry in
+                Color.clear.preference(
+                    key: LauncherSpaceBarViewportPreferenceKey.self,
+                    value: geometry.frame(in: .named("launcher-space-bar"))
                 )
             }
         }
@@ -1767,6 +1870,7 @@ struct SpacesBottomBar: View {
     @ObservedObject var viewModel: LauncherViewModel
     @ObservedObject var spaceManager: SpaceManager
     @Environment(\.colorScheme) var colorScheme
+    @StateObject private var scrollCoordinator = LauncherHorizontalScrollCoordinator()
     
     var colors: ThemeColors {
         ThemeColors(isDark: colorScheme == .dark)
@@ -1798,6 +1902,7 @@ struct SpacesBottomBar: View {
                             .buttonStyle(.plain)
                             .focusable(false)
                             .help(String(localized: "Click to switch, Option+Click to move active window."))
+                            .launcherSpaceBarItemVisibility(id: space.id)
                             .id(space.id)
                         }
                     }
@@ -1824,17 +1929,22 @@ struct SpacesBottomBar: View {
                         .frame(width: 32)
                     }
                 )
+                .coordinateSpace(name: "launcher-space-bar")
+                .launcherSpaceBarViewport()
                 .onAppear {
-                    scrollProxy.scrollTo(spaceManager.currentSpaceUUID, anchor: UnitPoint(x: 0.31, y: 0.5))
+                    requestSpaceBarScroll(
+                        to: spaceManager.currentSpaceUUID,
+                        proxy: scrollProxy
+                    )
                 }
                 .onChange(of: spaceManager.currentSpaceUUID) { currentSpaceID in
-                    scrollProxy.scrollTo(currentSpaceID, anchor: UnitPoint(x: 0.31, y: 0.5))
+                    requestSpaceBarScroll(to: currentSpaceID, proxy: scrollProxy)
                 }
                 .onChange(of: viewModel.selectedSpaceIndex) { selectedIndex in
                     if viewModel.isBottomBarFocused {
                         let spaces = spaceManager.currentDisplaySpaces
                         if selectedIndex >= 0 && selectedIndex < spaces.count {
-                            scrollProxy.scrollTo(spaces[selectedIndex].id, anchor: UnitPoint(x: 0.31, y: 0.5))
+                            requestSpaceBarScroll(to: spaces[selectedIndex].id, proxy: scrollProxy)
                         }
                     }
                 }
@@ -1842,11 +1952,20 @@ struct SpacesBottomBar: View {
                     if isFocused {
                         let spaces = spaceManager.currentDisplaySpaces
                         if viewModel.selectedSpaceIndex >= 0 && viewModel.selectedSpaceIndex < spaces.count {
-                            scrollProxy.scrollTo(spaces[viewModel.selectedSpaceIndex].id, anchor: UnitPoint(x: 0.31, y: 0.5))
+                            requestSpaceBarScroll(to: spaces[viewModel.selectedSpaceIndex].id, proxy: scrollProxy)
                         }
                     } else {
-                        scrollProxy.scrollTo(spaceManager.currentSpaceUUID, anchor: UnitPoint(x: 0.31, y: 0.5))
+                        requestSpaceBarScroll(to: spaceManager.currentSpaceUUID, proxy: scrollProxy)
                     }
+                }
+                .onChange(of: spaceManager.currentDisplaySpaces.map(\.id)) { _ in
+                    scrollCoordinator.reset()
+                }
+                .onPreferenceChange(LauncherSpaceBarFramePreferenceKey.self) { frames in
+                    scrollCoordinator.updateFrames(frames)
+                }
+                .onPreferenceChange(LauncherSpaceBarViewportPreferenceKey.self) { frame in
+                    scrollCoordinator.updateViewport(frame)
                 }
             }
 
@@ -1885,6 +2004,18 @@ struct SpacesBottomBar: View {
             .padding(.leading, 12)
         }
         .launcherActionBar(colors: colors)
+    }
+
+    private func requestSpaceBarScroll(to id: String, proxy: ScrollViewProxy) {
+        scrollCoordinator.request(
+            id: id,
+            scrollToLeading: {
+                proxy.scrollTo(id, anchor: .leading)
+            },
+            scrollToTrailing: {
+                proxy.scrollTo(id, anchor: .trailing)
+            }
+        )
     }
 
     private func bottomBarAction(title: String, shortcut: String, isGrouped: Bool = false, action: @escaping () -> Void) -> some View {
