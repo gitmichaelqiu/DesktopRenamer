@@ -781,7 +781,7 @@ private struct LauncherRowAccessory<Content: View>: View {
                 .modifier(HotkeyAccessoryModifier(isActive: shortcutText != nil))
 
             if let shortcutText {
-                FloatingHotkeyHint(text: LocalStringKey_compat(shortcutText))
+                FloatingHotkeyHint(text: LocalizedStringKey(shortcutText))
                     .frame(width: LauncherMenuMetrics.hotkeyColumnWidth, alignment: .trailing)
             }
         }
@@ -2637,7 +2637,7 @@ struct CommandKActionRowView: View {
                     .modifier(HotkeyAccessoryModifier(isActive: showCommandNumbers))
 
                     LauncherMenuAccessory {
-                        FloatingHotkeyHint(text: LocalStringKey_compat("⌘\(idx + 1)"))
+                        FloatingHotkeyHint(text: LocalizedStringKey("⌘\(idx + 1)"))
                             .opacity(showCommandNumbers ? 1 : 0)
                             .offset(x: showCommandNumbers ? 0 : 23)
                             .animation(.easeOut(duration: 0.15), value: showCommandNumbers)
