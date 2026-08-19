@@ -559,13 +559,12 @@ struct ListAreaView: View {
                                     VStack(spacing: 4) {
                                         ForEach(Array(spaces.enumerated()), id: \.element.id) { i, space in
                                             let isSelected = !viewModel.isBottomBarFocused && viewModel.selectedRowIndex == i
-                                            let shortcut = viewModel.activeCommand?.type == .moveWindow ? "⌥⌘\(i + 1)" : "⌘\(i + 1)"
                                             Button {
                                                     viewModel.isKeyboardSelection = true
                                                     viewModel.selectedRowIndex = i
                                                     viewModel.executeRowAction()
                                             } label: {
-                                                SpaceRowView(space: space, isSelected: isSelected, isCurrent: AppDelegate.shared.spaceManager?.currentSpaceUUID == space.id, selectionNamespace: selectionNamespace, shortcutText: i < 9 ? shortcut : nil)
+                                                SpaceRowView(space: space, isSelected: isSelected, isCurrent: AppDelegate.shared.spaceManager?.currentSpaceUUID == space.id, selectionNamespace: selectionNamespace, shortcutText: i < 9 ? "⌘\(i + 1)" : nil)
                                             }
                                             .buttonStyle(.plain)
                                             .id(space.id)
@@ -1774,7 +1773,6 @@ private struct LauncherCommandActionCapsule: View {
             }
             .buttonStyle(.plain)
         }
-        .font(.system(size: 14, weight: .semibold))
         .foregroundColor(colorScheme == .dark ? .primary : .secondary)
         .modifier(BottomBarCapsule(isSelected: false, isActive: isActive, colorScheme: colorScheme))
     }
@@ -2773,7 +2771,7 @@ struct BottomBarCapsule: ViewModifier {
     
     func body(content: Content) -> some View {
         content
-            .font(.subheadline)
+            .font(.system(size: 14, weight: .medium))
             .fontWeight(isSelected || isActive ? .semibold : .medium)
             .padding(.horizontal, LauncherMenuMetrics.capsuleHorizontalPadding)
             .frame(height: LauncherMenuMetrics.capsuleHeight)
