@@ -497,7 +497,8 @@ struct ListAreaView: View {
     @ObservedObject var viewModel: LauncherViewModel
     @Environment(\.colorScheme) var colorScheme
     @Namespace private var selectionNamespace
-    @State private var scrollWindowStart = 0
+    @State private var rowFrames: [Int: CGRect] = [:]
+    @State private var listViewportHeight: CGFloat = 0
     
     var colors: ThemeColors {
         ThemeColors(isDark: colorScheme == .dark)
@@ -536,6 +537,7 @@ struct ListAreaView: View {
                                             CommandRowView(command: cmd, isSelected: isSelected, isRoot: true, selectionNamespace: selectionNamespace, shortcutText: viewModel.showCommandNumbers && viewModel.commandKTargetWindow == nil && index < 9 ? "⌘\(index + 1)" : nil)
                                         }
                                         .buttonStyle(.plain)
+                                        .launcherRowVisibility(index: index)
                                         .id(cmd.id)
                                     }
                                 }
@@ -543,14 +545,21 @@ struct ListAreaView: View {
                             .padding(.horizontal, 0)
                             .padding(.vertical, 8)
                         }
+                        .coordinateSpace(name: "launcher-list")
+                        .background {
+                            GeometryReader { geometry in
+                                Color.clear.preference(
+                                    key: LauncherViewportHeightPreferenceKey.self,
+                                    value: geometry.size.height
+                                )
+                            }
+                        }
                         .onChange(of: viewModel.selectedRowIndex) { index in
                             if viewModel.launcherOverlay == nil && viewModel.isKeyboardSelection {
                                 guard commands.indices.contains(index) else { return }
                                 scrollSelectionIfNeeded(
                                     index: index,
-                                    totalCount: commands.count,
                                     id: commands[index].id,
-                                    visibleRows: 7,
                                     proxy: proxy
                                 )
                             }
@@ -577,20 +586,28 @@ struct ListAreaView: View {
                                                 SpaceRowView(space: space, isSelected: isSelected, isCurrent: AppDelegate.shared.spaceManager?.currentSpaceUUID == space.id, selectionNamespace: selectionNamespace, shortcutText: i < 9 ? "⌘\(i + 1)" : nil)
                                             }
                                             .buttonStyle(.plain)
+                                            .launcherRowVisibility(index: i)
                                             .id(space.id)
                                         }
                                     }
                                     .padding(.horizontal, 0)
                                     .padding(.vertical, 8)
                                 }
+                                .coordinateSpace(name: "launcher-list")
+                                .background {
+                                    GeometryReader { geometry in
+                                        Color.clear.preference(
+                                            key: LauncherViewportHeightPreferenceKey.self,
+                                            value: geometry.size.height
+                                        )
+                                    }
+                                }
                                 .onChange(of: viewModel.selectedRowIndex) { index in
                                     if viewModel.launcherOverlay == nil && viewModel.isKeyboardSelection {
                                         guard spaces.indices.contains(index) else { return }
                                         scrollSelectionIfNeeded(
                                             index: index,
-                                            totalCount: spaces.count,
                                             id: spaces[index].id,
-                                            visibleRows: 6,
                                             proxy: proxy
                                         )
                                     }
@@ -624,6 +641,7 @@ struct ListAreaView: View {
                                                     )
                                                 }
                                                 .buttonStyle(.plain)
+                                                .launcherRowVisibility(index: item.index)
                                                 .id(item.id)
                                             }
                                         }
@@ -631,14 +649,21 @@ struct ListAreaView: View {
                                     .padding(.horizontal, 0)
                                     .padding(.vertical, 8)
                                 }
+                                .coordinateSpace(name: "launcher-list")
+                                .background {
+                                    GeometryReader { geometry in
+                                        Color.clear.preference(
+                                            key: LauncherViewportHeightPreferenceKey.self,
+                                            value: geometry.size.height
+                                        )
+                                    }
+                                }
                                 .onChange(of: viewModel.selectedRowIndex) { index in
                                     if viewModel.launcherOverlay == nil && viewModel.isKeyboardSelection {
                                         if let item = sections.flatMap({ $0.items }).first(where: { $0.index == index }) {
                                             scrollSelectionIfNeeded(
                                                 index: index,
-                                                totalCount: sections.flatMap { $0.items }.count,
                                                 id: item.id,
-                                                visibleRows: 6,
                                                 proxy: proxy
                                             )
                                         }
@@ -671,6 +696,7 @@ struct ListAreaView: View {
                                                         WindowBatchRowView(window: move.window, isSelected: isSelected, isStaged: true, stagedActionText: move.actionType.description, selectionNamespace: selectionNamespace, shortcutText: viewModel.showCommandNumbers && viewModel.commandKTargetWindow == nil && item.index < 9 ? "⌘\(item.index + 1)" : nil)
                                                     }
                                                     .buttonStyle(.plain)
+                                                    .launcherRowVisibility(index: item.index)
                                                     .id(item.id)
                                                         
                                                 case .unstaged(let window, _):
@@ -682,6 +708,7 @@ struct ListAreaView: View {
                                                         WindowBatchRowView(window: window, isSelected: isSelected, isStaged: false, stagedActionText: "", selectionNamespace: selectionNamespace, shortcutText: viewModel.showCommandNumbers && viewModel.commandKTargetWindow == nil && item.index < 9 ? "⌘\(item.index + 1)" : nil)
                                                     }
                                                     .buttonStyle(.plain)
+                                                    .launcherRowVisibility(index: item.index)
                                                     .id(item.id)
                                                 }
                                             }
@@ -690,14 +717,21 @@ struct ListAreaView: View {
                                     .padding(.horizontal, 0)
                                     .padding(.vertical, 8)
                                 }
+                                .coordinateSpace(name: "launcher-list")
+                                .background {
+                                    GeometryReader { geometry in
+                                        Color.clear.preference(
+                                            key: LauncherViewportHeightPreferenceKey.self,
+                                            value: geometry.size.height
+                                        )
+                                    }
+                                }
                                 .onChange(of: viewModel.selectedRowIndex) { index in
                                     if viewModel.launcherOverlay == nil && viewModel.isKeyboardSelection {
                                         if let item = sections.flatMap({ $0.items }).first(where: { $0.index == index }) {
                                             scrollSelectionIfNeeded(
                                                 index: index,
-                                                totalCount: sections.flatMap { $0.items }.count,
                                                 id: item.id,
-                                                visibleRows: 5,
                                                 proxy: proxy
                                             )
                                         }
@@ -721,33 +755,61 @@ struct ListAreaView: View {
         .onChange(of: viewModel.currentSpaces) { _ in
             viewModel.selectCurrentTargetSpace()
         }
+        .onPreferenceChange(LauncherRowFramePreferenceKey.self) { frames in
+            rowFrames = frames
+        }
+        .onPreferenceChange(LauncherViewportHeightPreferenceKey.self) { height in
+            listViewportHeight = height
+        }
         .onChange(of: viewModel.searchQuery) { _ in
-            scrollWindowStart = 0
+            rowFrames = [:]
         }
         .onChange(of: viewModel.activeCommand?.type) { _ in
-            scrollWindowStart = 0
+            rowFrames = [:]
         }
     }
 
     private func scrollSelectionIfNeeded<ID: Hashable>(
         index: Int,
-        totalCount: Int,
         id: ID,
-        visibleRows: Int,
         proxy: ScrollViewProxy
     ) {
-        guard totalCount > visibleRows else {
-            scrollWindowStart = 0
-            return
+        DispatchQueue.main.async {
+            guard let frame = rowFrames[index], listViewportHeight > 0 else { return }
+            if frame.minY < 0 {
+                proxy.scrollTo(id, anchor: .top)
+            } else if frame.maxY > listViewportHeight {
+                proxy.scrollTo(id, anchor: .bottom)
+            }
         }
+    }
+}
 
-        let lastVisibleIndex = scrollWindowStart + visibleRows - 1
-        if index > lastVisibleIndex {
-            scrollWindowStart = min(index - visibleRows + 1, totalCount - visibleRows)
-            proxy.scrollTo(id, anchor: .bottom)
-        } else if index < scrollWindowStart {
-            scrollWindowStart = index
-            proxy.scrollTo(id, anchor: .top)
+private struct LauncherRowFramePreferenceKey: PreferenceKey {
+    static let defaultValue: [Int: CGRect] = [:]
+
+    static func reduce(value: inout [Int: CGRect], nextValue: () -> [Int: CGRect]) {
+        value.merge(nextValue(), uniquingKeysWith: { _, latest in latest })
+    }
+}
+
+private struct LauncherViewportHeightPreferenceKey: PreferenceKey {
+    static let defaultValue: CGFloat = 0
+
+    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
+        value = nextValue()
+    }
+}
+
+private extension View {
+    func launcherRowVisibility(index: Int) -> some View {
+        background {
+            GeometryReader { geometry in
+                Color.clear.preference(
+                    key: LauncherRowFramePreferenceKey.self,
+                    value: [index: geometry.frame(in: .named("launcher-list"))]
+                )
+            }
         }
     }
 }
