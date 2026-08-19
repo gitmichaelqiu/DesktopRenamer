@@ -778,7 +778,6 @@ private struct LauncherRowAccessory<Content: View>: View {
         HStack(spacing: LauncherMenuMetrics.accessoryColumnSpacing) {
             content()
                 .frame(maxWidth: .infinity, alignment: .trailing)
-                .modifier(HotkeyAccessoryModifier(isActive: shortcutText != nil))
 
             if let shortcutText {
                 FloatingHotkeyHint(text: LocalizedStringKey(shortcutText))
@@ -1711,8 +1710,8 @@ struct SpacesBottomBar: View {
                     .fill(colors.border)
                     .frame(width: 1, height: 16)
 
-                LauncherBottomBarActionGroup(colorScheme: colorScheme) {
-                    if viewModel.isBottomBarFocused {
+                if viewModel.isBottomBarFocused {
+                    LauncherBottomBarActionGroup(colorScheme: colorScheme) {
                         bottomBarAction(title: "Switch Space", shortcut: "↵", isGrouped: true) {
                             viewModel.executeBottomBarSpaceAction(isOption: false, isCommand: false)
                         }
@@ -1720,18 +1719,18 @@ struct SpacesBottomBar: View {
                             viewModel.executeBottomBarSpaceAction(isOption: true, isCommand: false)
                         }
                     }
+                }
 
-                    if !viewModel.isBottomBarFocused {
-                        LauncherCommandActionCapsule(
-                            isActive: viewModel.isRootActionsPresented,
-                            openAction: {
-                                viewModel.executeRowAction()
-                            },
-                            actionsAction: {
-                                viewModel.showRootActionsPanel()
-                            }
-                        )
-                    }
+                if !viewModel.isBottomBarFocused {
+                    LauncherCommandActionCapsule(
+                        isActive: viewModel.isRootActionsPresented,
+                        openAction: {
+                            viewModel.executeRowAction()
+                        },
+                        actionsAction: {
+                            viewModel.showRootActionsPanel()
+                        }
+                    )
                 }
             }
             .padding(.leading, 12)
