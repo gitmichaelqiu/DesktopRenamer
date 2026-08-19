@@ -1193,7 +1193,6 @@ private struct LauncherRowSurface: ViewModifier {
         ZStack {
             RoundedRectangle(cornerRadius: 10, style: .continuous)
                 .fill(surfaceColor)
-                .padding(.horizontal, LauncherMenuMetrics.rowSurfaceInset)
 
             content
                 .padding(.horizontal, 12)
@@ -1205,6 +1204,7 @@ private struct LauncherRowSurface: ViewModifier {
                 )
         }
         .frame(maxWidth: .infinity, minHeight: LauncherMenuMetrics.rowHeight)
+        .padding(.horizontal, LauncherMenuMetrics.rowSurfaceInset)
     }
 
     private var surfaceColor: Color {
