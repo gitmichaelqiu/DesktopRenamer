@@ -960,7 +960,6 @@ private struct LauncherRowSurface: ViewModifier {
     let isHovered: Bool
     let colors: ThemeColors
     let verticalPadding: CGFloat
-    let selectionNamespace: Namespace.ID?
 
     func body(content: Content) -> some View {
         content
@@ -973,7 +972,6 @@ private struct LauncherRowSurface: ViewModifier {
                         .fill(Color.primary.opacity(0.10))
                         .frame(maxWidth: .infinity)
                         .padding(.horizontal, LauncherMenuMetrics.rowSurfaceInset)
-                        .modifier(SelectionSurfaceModifier(namespace: selectionNamespace))
                 } else {
                     RoundedRectangle(cornerRadius: 10, style: .continuous)
                         .fill(isHovered ? colors.rowHover : .clear)
@@ -981,18 +979,6 @@ private struct LauncherRowSurface: ViewModifier {
                         .padding(.horizontal, LauncherMenuMetrics.rowSurfaceInset)
                 }
             }
-    }
-}
-
-private struct SelectionSurfaceModifier: ViewModifier {
-    let namespace: Namespace.ID?
-
-    func body(content: Content) -> some View {
-        if let namespace {
-            content.matchedGeometryEffect(id: "launcher-selected-row", in: namespace)
-        } else {
-            content
-        }
     }
 }
 
@@ -1021,8 +1007,7 @@ private struct LauncherSelectableRow<Content: View>: View {
                 isSelected: isSelected,
                 isHovered: isHovered,
                 colors: colors,
-                verticalPadding: 8,
-                selectionNamespace: selectionNamespace
+                verticalPadding: 8
             ))
             .contentShape(Rectangle())
             .onHover { isHovered = $0 }
@@ -1966,7 +1951,6 @@ private struct LauncherMenuRow<Content: View>: View {
             .background {
                 RoundedRectangle(cornerRadius: 9, style: .continuous)
                     .fill(isSelected ? Color.primary.opacity(0.10) : (isHovered ? colors.rowHover : .clear))
-                    .modifier(isSelected ? SelectionSurfaceModifier(namespace: selectionNamespace) : SelectionSurfaceModifier(namespace: nil))
             }
             .onHover { isHovered = $0 }
     }
