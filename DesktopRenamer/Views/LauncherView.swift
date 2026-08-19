@@ -517,7 +517,7 @@ struct ListAreaView: View {
                                         Text(verbatim: title)
                                             .font(.system(size: 15, weight: .semibold))
                                             .foregroundColor(colors.textSecondary)
-                                            .padding(.horizontal, 16)
+                                            .padding(.horizontal, 12)
                                             .padding(.top, section.startIndex == 0 ? 4 : 10)
                                             .padding(.bottom, 2)
                                     }
@@ -849,8 +849,9 @@ private struct LauncherRowSurface: ViewModifier {
 
     func body(content: Content) -> some View {
         content
-            .padding(.horizontal, 16)
+            .padding(.horizontal, 12)
             .padding(.vertical, verticalPadding)
+            .frame(minHeight: LauncherMenuMetrics.rowHeight)
             .background {
                 if isSelected {
                     RoundedRectangle(cornerRadius: 10, style: .continuous)
@@ -877,7 +878,7 @@ private struct SelectionSurfaceModifier: ViewModifier {
 }
 
 private extension View {
-    func launcherRowSurface(isSelected: Bool, isHovered: Bool, colors: ThemeColors, verticalPadding: CGFloat = 10, selectionNamespace: Namespace.ID? = nil) -> some View {
+    func launcherRowSurface(isSelected: Bool, isHovered: Bool, colors: ThemeColors, verticalPadding: CGFloat = 8, selectionNamespace: Namespace.ID? = nil) -> some View {
         modifier(LauncherRowSurface(isSelected: isSelected, isHovered: isHovered, colors: colors, verticalPadding: verticalPadding, selectionNamespace: selectionNamespace))
     }
 }
@@ -1279,8 +1280,9 @@ struct WindowBatchRowView: View {
                 }
             }
         }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 10)
+        .padding(.horizontal, 12)
+        .padding(.vertical, 8)
+        .frame(minHeight: LauncherMenuMetrics.rowHeight)
         .background(
             ZStack {
                 if isSelected {
@@ -1321,7 +1323,7 @@ struct ListSectionHeader: View {
             
             Spacer()
         }
-        .padding(.horizontal, 16)
+        .padding(.horizontal, 12)
         .padding(.top, isFirst ? 0 : 10)
         .padding(.bottom, 4)
     }
