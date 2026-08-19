@@ -1935,6 +1935,7 @@ struct RootActionsOverlay: View {
             }
         }
         .buttonStyle(.plain)
+        .focusable(false)
     }
 }
 
@@ -2336,6 +2337,7 @@ struct SpacePickerOverlay: View {
                                 }
                             }
                             .buttonStyle(.plain)
+                            .focusable(false)
                         }
                     }
                 }
@@ -2960,6 +2962,7 @@ struct CommandKActionRowView: View {
             }
         }
         .buttonStyle(.plain)
+        .focusable(false)
     }
     
     private func getIconName(for action: BatchStagedActionType) -> String {
