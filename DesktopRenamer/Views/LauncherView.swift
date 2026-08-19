@@ -517,7 +517,7 @@ struct ListAreaView: View {
                                         Text(verbatim: title)
                                             .font(.system(size: 15, weight: .semibold))
                                             .foregroundColor(colors.textSecondary)
-                                            .padding(.horizontal, 8)
+                                            .padding(.horizontal, 16)
                                             .padding(.top, section.startIndex == 0 ? 4 : 10)
                                             .padding(.bottom, 2)
                                     }
@@ -536,7 +536,7 @@ struct ListAreaView: View {
                                     }
                                 }
                             }
-                            .padding(.horizontal, 4)
+                            .padding(.horizontal, 0)
                             .padding(.vertical, 8)
                         }
                         .onChange(of: viewModel.selectedRowIndex) { index in
@@ -571,7 +571,7 @@ struct ListAreaView: View {
                                             .id(space.id)
                                         }
                                     }
-                                    .padding(.horizontal, 4)
+                                    .padding(.horizontal, 0)
                                     .padding(.vertical, 8)
                                 }
                                 .onChange(of: viewModel.selectedRowIndex) { index in
@@ -617,7 +617,7 @@ struct ListAreaView: View {
                                             }
                                         }
                                     }
-                                    .padding(.horizontal, 4)
+                                    .padding(.horizontal, 0)
                                     .padding(.vertical, 8)
                                 }
                                 .onChange(of: viewModel.selectedRowIndex) { index in
@@ -670,7 +670,7 @@ struct ListAreaView: View {
                                             }
                                         }
                                     }
-                                    .padding(.horizontal, 4)
+                                    .padding(.horizontal, 0)
                                     .padding(.vertical, 8)
                                 }
                                 .onChange(of: viewModel.selectedRowIndex) { index in
@@ -849,7 +849,7 @@ private struct LauncherRowSurface: ViewModifier {
 
     func body(content: Content) -> some View {
         content
-            .padding(.horizontal, 8)
+            .padding(.horizontal, 16)
             .padding(.vertical, verticalPadding)
             .background {
                 if isSelected {
@@ -1279,7 +1279,7 @@ struct WindowBatchRowView: View {
                 }
             }
         }
-        .padding(.horizontal, 8)
+        .padding(.horizontal, 16)
         .padding(.vertical, 8)
         .background(
             ZStack {
@@ -1321,7 +1321,7 @@ struct ListSectionHeader: View {
             
             Spacer()
         }
-        .padding(.horizontal, 8)
+        .padding(.horizontal, 16)
         .padding(.top, isFirst ? 0 : 10)
         .padding(.bottom, 4)
     }
