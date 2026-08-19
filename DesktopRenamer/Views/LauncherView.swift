@@ -495,6 +495,7 @@ struct ListAreaView: View {
     @ObservedObject var viewModel: LauncherViewModel
     @Environment(\.colorScheme) var colorScheme
     @Namespace private var selectionNamespace
+    @State private var scrollWindowStart = 0
     
     var colors: ThemeColors {
         ThemeColors(isDark: colorScheme == .dark)
@@ -543,7 +544,13 @@ struct ListAreaView: View {
                         .onChange(of: viewModel.selectedRowIndex) { index in
                             if viewModel.launcherOverlay == nil && viewModel.isKeyboardSelection {
                                 guard commands.indices.contains(index) else { return }
-                                proxy.scrollTo(commands[index].id, anchor: .center)
+                                scrollSelectionIfNeeded(
+                                    index: index,
+                                    totalCount: commands.count,
+                                    id: commands[index].id,
+                                    visibleRows: 7,
+                                    proxy: proxy
+                                )
                             }
                         }
                     }
@@ -577,12 +584,14 @@ struct ListAreaView: View {
                                 .onChange(of: viewModel.selectedRowIndex) { index in
                                     if viewModel.launcherOverlay == nil && viewModel.isKeyboardSelection {
                                         guard spaces.indices.contains(index) else { return }
-                                        proxy.scrollTo(spaces[index].id, anchor: .center)
+                                        scrollSelectionIfNeeded(
+                                            index: index,
+                                            totalCount: spaces.count,
+                                            id: spaces[index].id,
+                                            visibleRows: 6,
+                                            proxy: proxy
+                                        )
                                     }
-                                }
-                                .onAppear {
-                                    guard spaces.indices.contains(viewModel.selectedRowIndex) else { return }
-                                    proxy.scrollTo(spaces[viewModel.selectedRowIndex].id, anchor: .center)
                                 }
                             }
                         }
@@ -623,7 +632,13 @@ struct ListAreaView: View {
                                 .onChange(of: viewModel.selectedRowIndex) { index in
                                     if viewModel.launcherOverlay == nil && viewModel.isKeyboardSelection {
                                         if let item = sections.flatMap({ $0.items }).first(where: { $0.index == index }) {
-                                            proxy.scrollTo(item.id, anchor: .center)
+                                            scrollSelectionIfNeeded(
+                                                index: index,
+                                                totalCount: sections.flatMap { $0.items }.count,
+                                                id: item.id,
+                                                visibleRows: 6,
+                                                proxy: proxy
+                                            )
                                         }
                                     }
                                 }
@@ -676,7 +691,13 @@ struct ListAreaView: View {
                                 .onChange(of: viewModel.selectedRowIndex) { index in
                                     if viewModel.launcherOverlay == nil && viewModel.isKeyboardSelection {
                                         if let item = sections.flatMap({ $0.items }).first(where: { $0.index == index }) {
-                                            proxy.scrollTo(item.id, anchor: .center)
+                                            scrollSelectionIfNeeded(
+                                                index: index,
+                                                totalCount: sections.flatMap { $0.items }.count,
+                                                id: item.id,
+                                                visibleRows: 5,
+                                                proxy: proxy
+                                            )
                                         }
                                     }
                                 }
@@ -697,6 +718,34 @@ struct ListAreaView: View {
         }
         .onChange(of: viewModel.currentSpaces) { _ in
             viewModel.selectCurrentTargetSpace()
+        }
+        .onChange(of: viewModel.searchQuery) { _ in
+            scrollWindowStart = 0
+        }
+        .onChange(of: viewModel.activeCommand?.type) { _ in
+            scrollWindowStart = 0
+        }
+    }
+
+    private func scrollSelectionIfNeeded<ID: Hashable>(
+        index: Int,
+        totalCount: Int,
+        id: ID,
+        visibleRows: Int,
+        proxy: ScrollViewProxy
+    ) {
+        guard totalCount > visibleRows else {
+            scrollWindowStart = 0
+            return
+        }
+
+        let lastVisibleIndex = scrollWindowStart + visibleRows - 1
+        if index > lastVisibleIndex {
+            scrollWindowStart = min(index - visibleRows + 1, totalCount - visibleRows)
+            proxy.scrollTo(id, anchor: .bottom)
+        } else if index < scrollWindowStart {
+            scrollWindowStart = index
+            proxy.scrollTo(id, anchor: .top)
         }
     }
 }
