@@ -1955,7 +1955,9 @@ private struct LauncherMenuPanel<Header: View, Content: View, Footer: View>: Vie
 
             ScrollView {
                 content
-                    .padding(.horizontal, 8)
+                    // Selectable rows own their horizontal surface inset so
+                    // root lists and popup menus share the same edge spacing.
+                    .padding(.horizontal, 0)
                     .padding(.bottom, 8)
             }
             .frame(height: contentHeight)
