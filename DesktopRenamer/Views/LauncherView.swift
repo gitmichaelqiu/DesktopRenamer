@@ -493,8 +493,7 @@ private struct LauncherMarkView: View {
 struct ListAreaView: View {
     @ObservedObject var viewModel: LauncherViewModel
     @Environment(\.colorScheme) var colorScheme
-    @State private var rowFrames: [Int: CGRect] = [:]
-    @State private var listViewportFrame: CGRect = .zero
+    @StateObject private var scrollCoordinator = LauncherScrollCoordinator()
     
     var colors: ThemeColors {
         ThemeColors(isDark: colorScheme == .dark)
@@ -544,7 +543,7 @@ struct ListAreaView: View {
                         .onChange(of: viewModel.selectedRowIndex) { index in
                             if viewModel.consumeScrollRequest() {
                                 guard commands.indices.contains(index) else { return }
-                                scrollSelectionIfNeeded(
+                                requestScrollSelection(
                                     index: index,
                                     id: commands[index].id,
                                     proxy: proxy
@@ -583,7 +582,7 @@ struct ListAreaView: View {
                                 .onChange(of: viewModel.selectedRowIndex) { index in
                                     if viewModel.consumeScrollRequest() {
                                         guard spaces.indices.contains(index) else { return }
-                                        scrollSelectionIfNeeded(
+                                        requestScrollSelection(
                                             index: index,
                                             id: spaces[index].id,
                                             proxy: proxy
@@ -629,7 +628,7 @@ struct ListAreaView: View {
                                 .onChange(of: viewModel.selectedRowIndex) { index in
                                     if viewModel.consumeScrollRequest() {
                                         if let item = sections.flatMap({ $0.items }).first(where: { $0.index == index }) {
-                                            scrollSelectionIfNeeded(
+                                            requestScrollSelection(
                                                 index: index,
                                                 id: item.id,
                                                 proxy: proxy
@@ -687,7 +686,7 @@ struct ListAreaView: View {
                                 .onChange(of: viewModel.selectedRowIndex) { index in
                                     if viewModel.consumeScrollRequest() {
                                         if let item = sections.flatMap({ $0.items }).first(where: { $0.index == index }) {
-                                            scrollSelectionIfNeeded(
+                                            requestScrollSelection(
                                                 index: index,
                                                 id: item.id,
                                                 proxy: proxy
@@ -716,40 +715,94 @@ struct ListAreaView: View {
             viewModel.selectCurrentTargetSpace()
         }
         .onPreferenceChange(LauncherRowFramePreferenceKey.self) { frames in
-            rowFrames = frames
+            scrollCoordinator.updateRows(frames)
         }
         .onPreferenceChange(LauncherViewportFramePreferenceKey.self) { frame in
-            listViewportFrame = frame
+            scrollCoordinator.updateViewport(frame)
         }
         .onChange(of: viewModel.searchQuery) { _ in
-            rowFrames = [:]
+            scrollCoordinator.clearRows()
         }
         .onChange(of: viewModel.activeCommand?.type) { _ in
-            rowFrames = [:]
+            scrollCoordinator.clearRows()
         }
     }
 
-    private func scrollSelectionIfNeeded<ID: Hashable>(
+    private func requestScrollSelection<ID: Hashable>(
         index: Int,
         id: ID,
         proxy: ScrollViewProxy
     ) {
-        DispatchQueue.main.async {
-            // Selection changes arrive before SwiftUI publishes the updated
-            // geometry preferences. Yield once more so the decision uses the
-            // current row frame rather than the previous scroll position.
-            DispatchQueue.main.async {
-                guard let frame = rowFrames[index], !listViewportFrame.isEmpty else { return }
-                // Keep the selected row stable while its center remains visible.
-                // Comparing the full edge made partially clipped middle rows
-                // trigger a scroll too early.
-                if frame.midY < listViewportFrame.minY {
-                    proxy.scrollTo(id, anchor: .top)
-                } else if frame.midY > listViewportFrame.maxY {
-                    proxy.scrollTo(id, anchor: .bottom)
-                }
+        scrollCoordinator.request(
+            index: index,
+            scrollToTop: {
+                proxy.scrollTo(id, anchor: .top)
+            },
+            scrollToBottom: {
+                proxy.scrollTo(id, anchor: .bottom)
             }
+        )
+    }
+
+}
+
+@MainActor
+private final class LauncherScrollCoordinator: ObservableObject {
+    private struct Request {
+        let index: Int
+        let scrollToTop: () -> Void
+        let scrollToBottom: () -> Void
+    }
+
+    private var rowFrames: [Int: CGRect] = [:]
+    private var viewport: CGRect = .zero
+    private var pendingRequest: Request?
+
+    func updateRows(_ frames: [Int: CGRect]) {
+        rowFrames = frames
+        resolvePendingRequest()
+    }
+
+    func updateViewport(_ frame: CGRect) {
+        viewport = frame
+        resolvePendingRequest()
+    }
+
+    func clearRows() {
+        rowFrames = [:]
+        pendingRequest = nil
+    }
+
+    func request(index: Int, scrollToTop: @escaping () -> Void, scrollToBottom: @escaping () -> Void) {
+        pendingRequest = Request(
+            index: index,
+            scrollToTop: scrollToTop,
+            scrollToBottom: scrollToBottom
+        )
+        DispatchQueue.main.async { [weak self] in
+            self?.resolvePendingRequest()
         }
+    }
+
+    private func resolvePendingRequest() {
+        guard let request = pendingRequest,
+              let frame = rowFrames[request.index],
+              !viewport.isEmpty else {
+            return
+        }
+
+        let action: (() -> Void)?
+        if frame.midY < viewport.minY {
+            action = request.scrollToTop
+        } else if frame.midY > viewport.maxY {
+            action = request.scrollToBottom
+        } else {
+            action = nil
+        }
+
+        pendingRequest = nil
+        guard let action else { return }
+        DispatchQueue.main.async(execute: action)
     }
 }
 
