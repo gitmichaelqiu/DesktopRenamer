@@ -2771,6 +2771,10 @@ struct BottomBarCapsule: ViewModifier {
     var greenBgColor: Color {
         colorScheme == .dark ? Color(red: 0.16, green: 0.48, blue: 0.26) : Color(red: 0.12, green: 0.44, blue: 0.22)
     }
+
+    private var controlSurface: Color {
+        colorScheme == .dark ? .primary : .white
+    }
     
     func body(content: Content) -> some View {
         content
@@ -2786,15 +2790,15 @@ struct BottomBarCapsule: ViewModifier {
                         } else if isActive {
                             greenBgColor.opacity(isHovered ? 0.25 : 0.15)
                         } else {
-                            Color.primary.opacity(isHovered ? 0.12 : 0.06)
+                            controlSurface.opacity(isHovered ? 0.12 : 0.06)
                         }
                     } else {
                         if isSelected {
-                            isActive ? Color.primary.opacity(0.24) : Color.primary.opacity(0.16)
+                            isActive ? controlSurface.opacity(0.24) : controlSurface.opacity(0.16)
                         } else if isActive {
-                            Color.primary.opacity(isHovered ? 0.22 : 0.14)
+                            controlSurface.opacity(isHovered ? 0.22 : 0.14)
                         } else {
-                            Color.primary.opacity(isHovered ? 0.12 : 0.06)
+                            controlSurface.opacity(isHovered ? 0.12 : 0.06)
                         }
                     }
                 }
