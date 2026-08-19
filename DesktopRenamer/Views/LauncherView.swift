@@ -22,7 +22,7 @@ private enum LauncherMenuMetrics {
     // separate 24pt slot for the delayed number badge.
     static let accessoryColumnWidth: CGFloat = 140
     static let hotkeyColumnWidth: CGFloat = 36
-    static let accessoryColumnSpacing: CGFloat = 8
+    static let accessoryColumnSpacing: CGFloat = 12
     static let rowAccessoryWidth: CGFloat = accessoryColumnWidth + accessoryColumnSpacing + hotkeyColumnWidth
     static let capsuleHorizontalPadding: CGFloat = 12
     static let capsuleHeight: CGFloat = 36
