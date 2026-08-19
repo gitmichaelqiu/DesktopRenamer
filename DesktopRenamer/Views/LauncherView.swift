@@ -28,6 +28,7 @@ private enum LauncherMenuMetrics {
     static let capsuleHeight: CGFloat = 36
     static let labelHorizontalPadding: CGFloat = 8
     static let labelVerticalPadding: CGFloat = 3
+    static let rowSurfaceInset: CGFloat = 12
 }
 
 struct ThemeColors {
@@ -855,10 +856,12 @@ private struct LauncherRowSurface: ViewModifier {
                 if isSelected {
                     RoundedRectangle(cornerRadius: 10, style: .continuous)
                         .fill(Color.primary.opacity(0.10))
+                        .padding(.horizontal, LauncherMenuMetrics.rowSurfaceInset)
                         .modifier(SelectionSurfaceModifier(namespace: selectionNamespace))
                 } else {
                     RoundedRectangle(cornerRadius: 10, style: .continuous)
                         .fill(isHovered ? colors.rowHover : .clear)
+                        .padding(.horizontal, LauncherMenuMetrics.rowSurfaceInset)
                 }
             }
     }
