@@ -819,6 +819,8 @@ struct ListAreaView: View {
 
 @MainActor
 private final class LauncherScrollCoordinator: ObservableObject {
+    private static let viewportEdgeTolerance: CGFloat = 1
+
     private struct Request {
         let index: Int
         let layoutVersion: Int
@@ -888,10 +890,13 @@ private final class LauncherScrollCoordinator: ObservableObject {
 
         let action: (() -> Void)?
         // Keep a partially visible row anchored in place. The list should move
-        // only after keyboard selection leaves the viewport completely.
-        if frame.maxY < viewport.minY {
+        // only after keyboard selection leaves the viewport completely. The
+        // tolerance avoids treating a row that is flush with an edge as
+        // outside during an intermediate AppKit/SwiftUI geometry pass.
+        let tolerance = Self.viewportEdgeTolerance
+        if frame.maxY <= viewport.minY - tolerance {
             action = request.scrollToTop
-        } else if frame.minY > viewport.maxY {
+        } else if frame.minY >= viewport.maxY + tolerance {
             action = request.scrollToBottom
         } else {
             action = nil
