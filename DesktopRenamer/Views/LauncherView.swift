@@ -839,9 +839,9 @@ private final class LauncherScrollCoordinator: ObservableObject {
         let action: (() -> Void)?
         // Keep a partially visible row anchored in place. The list should move
         // only after keyboard selection leaves the viewport completely.
-        if frame.maxY <= viewport.minY {
+        if frame.maxY < viewport.minY {
             action = request.scrollToTop
-        } else if frame.minY >= viewport.maxY {
+        } else if frame.minY > viewport.maxY {
             action = request.scrollToBottom
         } else {
             action = nil
@@ -927,9 +927,9 @@ private final class LauncherHorizontalScrollCoordinator: ObservableObject {
         }
 
         let action: (() -> Void)?
-        if frame.maxX <= viewport.minX {
+        if frame.maxX < viewport.minX {
             action = request.scrollToLeading
-        } else if frame.minX >= viewport.maxX {
+        } else if frame.minX > viewport.maxX {
             action = request.scrollToTrailing
         } else {
             action = nil
