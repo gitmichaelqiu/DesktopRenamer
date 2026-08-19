@@ -540,8 +540,8 @@ struct ListAreaView: View {
                             .padding(.horizontal, LauncherMenuMetrics.rowSurfaceInset)
                             .padding(.vertical, 8)
                         }
-                        .launcherViewportFrame()
                         .coordinateSpace(name: "launcher-list")
+                        .launcherViewportFrame()
                         .onChange(of: viewModel.listLayoutVersion) { _ in
                             if viewModel.consumeScrollRequest() {
                                 let index = viewModel.selectedRowIndex
@@ -593,8 +593,8 @@ struct ListAreaView: View {
                                     .padding(.horizontal, LauncherMenuMetrics.rowSurfaceInset)
                                     .padding(.vertical, 8)
                                 }
-                                .launcherViewportFrame()
                                 .coordinateSpace(name: "launcher-list")
+                                .launcherViewportFrame()
                                 .onChange(of: viewModel.listLayoutVersion) { _ in
                                     if viewModel.consumeScrollRequest() {
                                         let index = viewModel.selectedRowIndex
@@ -653,8 +653,8 @@ struct ListAreaView: View {
                                     .padding(.horizontal, LauncherMenuMetrics.rowSurfaceInset)
                                     .padding(.vertical, 8)
                                 }
-                                .launcherViewportFrame()
                                 .coordinateSpace(name: "launcher-list")
+                                .launcherViewportFrame()
                                 .onChange(of: viewModel.listLayoutVersion) { _ in
                                     if viewModel.consumeScrollRequest() {
                                         let index = viewModel.selectedRowIndex
@@ -727,8 +727,8 @@ struct ListAreaView: View {
                                     .padding(.horizontal, LauncherMenuMetrics.rowSurfaceInset)
                                     .padding(.vertical, 8)
                                 }
-                                .launcherViewportFrame()
                                 .coordinateSpace(name: "launcher-list")
+                                .launcherViewportFrame()
                                 .onChange(of: viewModel.listLayoutVersion) { _ in
                                     if viewModel.consumeScrollRequest() {
                                         let index = viewModel.selectedRowIndex
