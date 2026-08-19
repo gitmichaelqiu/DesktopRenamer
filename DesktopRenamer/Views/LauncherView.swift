@@ -545,14 +545,6 @@ struct ListAreaView: View {
                             .padding(.horizontal, 0)
                             .padding(.vertical, 8)
                         }
-                        .background {
-                            GeometryReader { geometry in
-                                Color.clear.preference(
-                                    key: LauncherViewportFramePreferenceKey.self,
-                                    value: geometry.frame(in: .named("launcher-list"))
-                                )
-                            }
-                        }
                         .onChange(of: viewModel.selectedRowIndex) { index in
                             if shouldScrollSelection() {
                                 guard commands.indices.contains(index) else { return }
@@ -591,14 +583,6 @@ struct ListAreaView: View {
                                     }
                                     .padding(.horizontal, 0)
                                     .padding(.vertical, 8)
-                                }
-                                .background {
-                                    GeometryReader { geometry in
-                                        Color.clear.preference(
-                                            key: LauncherViewportFramePreferenceKey.self,
-                                            value: geometry.frame(in: .named("launcher-list"))
-                                        )
-                                    }
                                 }
                                 .onChange(of: viewModel.selectedRowIndex) { index in
                                     if shouldScrollSelection() {
@@ -646,14 +630,6 @@ struct ListAreaView: View {
                                     }
                                     .padding(.horizontal, 0)
                                     .padding(.vertical, 8)
-                                }
-                                .background {
-                                    GeometryReader { geometry in
-                                        Color.clear.preference(
-                                            key: LauncherViewportFramePreferenceKey.self,
-                                            value: geometry.frame(in: .named("launcher-list"))
-                                        )
-                                    }
                                 }
                                 .onChange(of: viewModel.selectedRowIndex) { index in
                                     if shouldScrollSelection() {
@@ -714,14 +690,6 @@ struct ListAreaView: View {
                                     .padding(.horizontal, 0)
                                     .padding(.vertical, 8)
                                 }
-                                .background {
-                                    GeometryReader { geometry in
-                                        Color.clear.preference(
-                                            key: LauncherViewportFramePreferenceKey.self,
-                                            value: geometry.frame(in: .named("launcher-list"))
-                                        )
-                                    }
-                                }
                                 .onChange(of: viewModel.selectedRowIndex) { index in
                                     if shouldScrollSelection() {
                                         if let item = sections.flatMap({ $0.items }).first(where: { $0.index == index }) {
@@ -742,6 +710,14 @@ struct ListAreaView: View {
             }
         }
         .coordinateSpace(name: "launcher-list")
+        .background {
+            GeometryReader { geometry in
+                Color.clear.preference(
+                    key: LauncherViewportFramePreferenceKey.self,
+                    value: geometry.frame(in: .named("launcher-list"))
+                )
+            }
+        }
         .onAppear {
             let isTargetSpaceList = viewModel.activeCommand?.type == .switchToDesktop || viewModel.activeCommand?.type == .moveWindow
             suppressInitialSelectionScroll = isTargetSpaceList
