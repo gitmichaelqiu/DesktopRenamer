@@ -877,7 +877,7 @@ private struct SelectionSurfaceModifier: ViewModifier {
 }
 
 private extension View {
-    func launcherRowSurface(isSelected: Bool, isHovered: Bool, colors: ThemeColors, verticalPadding: CGFloat = 8, selectionNamespace: Namespace.ID? = nil) -> some View {
+    func launcherRowSurface(isSelected: Bool, isHovered: Bool, colors: ThemeColors, verticalPadding: CGFloat = 10, selectionNamespace: Namespace.ID? = nil) -> some View {
         modifier(LauncherRowSurface(isSelected: isSelected, isHovered: isHovered, colors: colors, verticalPadding: verticalPadding, selectionNamespace: selectionNamespace))
     }
 }
@@ -1280,7 +1280,7 @@ struct WindowBatchRowView: View {
             }
         }
         .padding(.horizontal, 16)
-        .padding(.vertical, 8)
+        .padding(.vertical, 10)
         .background(
             ZStack {
                 if isSelected {
