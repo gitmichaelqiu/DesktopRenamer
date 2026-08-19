@@ -205,6 +205,8 @@ enum LauncherOverlay: Equatable {
 
     @Published var searchQuery: String = "" {
         didSet {
+            let shouldRevealFirstResult = selectedRowIndex != 0
+            shouldScrollSelectedRow = shouldRevealFirstResult
             selectedRowIndex = 0
             isKeyboardSelection = true
             isBottomBarFocused = false
@@ -225,6 +227,7 @@ enum LauncherOverlay: Equatable {
         didSet {
             searchQuery = ""
             selectedRowIndex = 0
+            shouldScrollSelectedRow = false
             isKeyboardSelection = true
             isBottomBarFocused = false
             isRootActionsPresented = false
@@ -240,6 +243,7 @@ enum LauncherOverlay: Equatable {
     @Published var currentWindows: [WindowEntry] = []
     @Published var isLoadingData: Bool = false
     @Published var isKeyboardSelection: Bool = false
+    private var shouldScrollSelectedRow = false
     
     @Published var showCommandNumbers: Bool = false
     @Published var isBottomBarFocused: Bool = false
@@ -287,6 +291,7 @@ enum LauncherOverlay: Equatable {
             searchQuery = ""
             spacePickerQuery = ""
             selectedRowIndex = 0
+            shouldScrollSelectedRow = false
             isKeyboardSelection = true
             isBottomBarFocused = false
             if stagingWindow != nil {
@@ -1571,14 +1576,28 @@ enum LauncherOverlay: Equatable {
     
     func executeNthRowAction(_ index: Int) {
         guard index >= 0 && index < visibleRowsCount else { return }
-        isKeyboardSelection = true
-        selectedRowIndex = index
+        selectKeyboardRow(index)
         executeRowAction()
+    }
+
+    func selectKeyboardRow(_ index: Int) {
+        guard index >= 0, index < visibleRowsCount else { return }
+        isKeyboardSelection = true
+        guard selectedRowIndex != index else { return }
+        shouldScrollSelectedRow = true
+        selectedRowIndex = index
+    }
+
+    func consumeScrollRequest() -> Bool {
+        guard shouldScrollSelectedRow else { return false }
+        shouldScrollSelectedRow = false
+        return true
     }
 
     func selectPointerRow(_ index: Int) {
         guard !isBottomBarFocused, index >= 0, index < visibleRowsCount else { return }
         isKeyboardSelection = false
+        shouldScrollSelectedRow = false
         selectedRowIndex = index
     }
 
@@ -1600,8 +1619,7 @@ enum LauncherOverlay: Equatable {
 
         let targetIndex = min(max(currentIndex + offset, 0), ranges.count - 1)
         guard targetIndex != currentIndex else { return }
-        isKeyboardSelection = true
-        selectedRowIndex = ranges[targetIndex].lowerBound
+        selectKeyboardRow(ranges[targetIndex].lowerBound)
     }
 
     private var currentSectionRanges: [Range<Int>] {
@@ -1635,6 +1653,7 @@ enum LauncherOverlay: Equatable {
             return
         }
 
+        shouldScrollSelectedRow = false
         isKeyboardSelection = true
         selectedRowIndex = currentIndex
     }

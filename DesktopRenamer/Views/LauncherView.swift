@@ -172,9 +172,8 @@ struct LauncherView: View {
                                 } else if viewModel.stagingWindow != nil {
                                     viewModel.selectedSpaceIndex = max(0, viewModel.selectedSpaceIndex - 1)
                                 } else {
-                                    viewModel.isKeyboardSelection = true
                                     if viewModel.selectedRowIndex > 0 {
-                                        viewModel.selectedRowIndex -= 1
+                                        viewModel.selectKeyboardRow(viewModel.selectedRowIndex - 1)
                                     }
                                 }
                             },
@@ -196,9 +195,8 @@ struct LauncherView: View {
                                         viewModel.selectedSpaceIndex += 1
                                     }
                                 } else {
-                                    viewModel.isKeyboardSelection = true
                                     if viewModel.selectedRowIndex < viewModel.visibleRowsCount - 1 {
-                                        viewModel.selectedRowIndex += 1
+                                        viewModel.selectKeyboardRow(viewModel.selectedRowIndex + 1)
                                     }
                                 }
                             },
@@ -498,7 +496,6 @@ struct ListAreaView: View {
     @Namespace private var selectionNamespace
     @State private var rowFrames: [Int: CGRect] = [:]
     @State private var listViewportFrame: CGRect = .zero
-    @State private var suppressInitialSelectionScroll = true
     
     var colors: ThemeColors {
         ThemeColors(isDark: colorScheme == .dark)
@@ -530,8 +527,7 @@ struct ListAreaView: View {
                                         let index = section.startIndex + localIndex
                                         let isSelected = !viewModel.isBottomBarFocused && viewModel.selectedRowIndex == index
                                         Button {
-                                            viewModel.isKeyboardSelection = true
-                                            viewModel.selectedRowIndex = index
+                                            viewModel.selectPointerRow(index)
                                             viewModel.executeRowAction()
                                         } label: {
                                             CommandRowView(command: cmd, isSelected: isSelected, isRoot: true, selectionNamespace: selectionNamespace, shortcutText: viewModel.showCommandNumbers && viewModel.commandKTargetWindow == nil && index < 9 ? "⌘\(index + 1)" : nil)
@@ -546,7 +542,7 @@ struct ListAreaView: View {
                             .padding(.vertical, 8)
                         }
                         .onChange(of: viewModel.selectedRowIndex) { index in
-                            if shouldScrollSelection() {
+                            if viewModel.consumeScrollRequest() {
                                 guard commands.indices.contains(index) else { return }
                                 scrollSelectionIfNeeded(
                                     index: index,
@@ -570,8 +566,7 @@ struct ListAreaView: View {
                                         ForEach(Array(spaces.enumerated()), id: \.element.id) { i, space in
                                             let isSelected = !viewModel.isBottomBarFocused && viewModel.selectedRowIndex == i
                                             Button {
-                                                    viewModel.isKeyboardSelection = true
-                                                    viewModel.selectedRowIndex = i
+                                                    viewModel.selectPointerRow(i)
                                                     viewModel.executeRowAction()
                                             } label: {
                                                 SpaceRowView(space: space, isSelected: isSelected, isCurrent: AppDelegate.shared.spaceManager?.currentSpaceUUID == space.id, selectionNamespace: selectionNamespace, shortcutText: i < 9 ? "⌘\(i + 1)" : nil)
@@ -585,7 +580,7 @@ struct ListAreaView: View {
                                     .padding(.vertical, 8)
                                 }
                                 .onChange(of: viewModel.selectedRowIndex) { index in
-                                    if shouldScrollSelection() {
+                                    if viewModel.consumeScrollRequest() {
                                         guard spaces.indices.contains(index) else { return }
                                         scrollSelectionIfNeeded(
                                             index: index,
@@ -611,8 +606,7 @@ struct ListAreaView: View {
                                             ForEach(section.items) { item in
                                                 let isSelected = !viewModel.isBottomBarFocused && viewModel.selectedRowIndex == item.index
                                                 Button {
-                                                    viewModel.isKeyboardSelection = true
-                                                    viewModel.selectedRowIndex = item.index
+                                                    viewModel.selectPointerRow(item.index)
                                                     viewModel.executeRowAction()
                                                 } label: {
                                                     WindowRowView(
@@ -632,7 +626,7 @@ struct ListAreaView: View {
                                     .padding(.vertical, 8)
                                 }
                                 .onChange(of: viewModel.selectedRowIndex) { index in
-                                    if shouldScrollSelection() {
+                                    if viewModel.consumeScrollRequest() {
                                         if let item = sections.flatMap({ $0.items }).first(where: { $0.index == index }) {
                                             scrollSelectionIfNeeded(
                                                 index: index,
@@ -662,8 +656,7 @@ struct ListAreaView: View {
                                                 switch item {
                                                 case .staged(let move, _):
                                                     Button {
-                                                            viewModel.isKeyboardSelection = true
-                                                            viewModel.selectedRowIndex = item.index
+                                                            viewModel.selectPointerRow(item.index)
                                                             viewModel.executeRowAction()
                                                     } label: {
                                                         WindowBatchRowView(window: move.window, isSelected: isSelected, isStaged: true, stagedActionText: move.actionType.description, selectionNamespace: selectionNamespace, shortcutText: viewModel.showCommandNumbers && viewModel.commandKTargetWindow == nil && item.index < 9 ? "⌘\(item.index + 1)" : nil)
@@ -674,8 +667,7 @@ struct ListAreaView: View {
                                                         
                                                 case .unstaged(let window, _):
                                                     Button {
-                                                            viewModel.isKeyboardSelection = true
-                                                            viewModel.selectedRowIndex = item.index
+                                                            viewModel.selectPointerRow(item.index)
                                                             viewModel.executeRowAction()
                                                     } label: {
                                                         WindowBatchRowView(window: window, isSelected: isSelected, isStaged: false, stagedActionText: "", selectionNamespace: selectionNamespace, shortcutText: viewModel.showCommandNumbers && viewModel.commandKTargetWindow == nil && item.index < 9 ? "⌘\(item.index + 1)" : nil)
@@ -691,7 +683,7 @@ struct ListAreaView: View {
                                     .padding(.vertical, 8)
                                 }
                                 .onChange(of: viewModel.selectedRowIndex) { index in
-                                    if shouldScrollSelection() {
+                                    if viewModel.consumeScrollRequest() {
                                         if let item = sections.flatMap({ $0.items }).first(where: { $0.index == index }) {
                                             scrollSelectionIfNeeded(
                                                 index: index,
@@ -720,14 +712,10 @@ struct ListAreaView: View {
         }
         .onAppear {
             let isTargetSpaceList = viewModel.activeCommand?.type == .switchToDesktop || viewModel.activeCommand?.type == .moveWindow
-            suppressInitialSelectionScroll = isTargetSpaceList
             guard isTargetSpaceList else { return }
             // SpaceManager can finish reconciling the current UUID after the target list appears.
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
                 viewModel.selectCurrentTargetSpace()
-                DispatchQueue.main.async {
-                    suppressInitialSelectionScroll = false
-                }
             }
         }
         .onChange(of: viewModel.currentSpaces) { _ in
@@ -745,13 +733,6 @@ struct ListAreaView: View {
         .onChange(of: viewModel.activeCommand?.type) { _ in
             rowFrames = [:]
         }
-    }
-
-    private func shouldScrollSelection() -> Bool {
-        guard viewModel.launcherOverlay == nil, viewModel.isKeyboardSelection else { return false }
-        guard suppressInitialSelectionScroll else { return true }
-        suppressInitialSelectionScroll = false
-        return false
     }
 
     private func scrollSelectionIfNeeded<ID: Hashable>(
