@@ -785,6 +785,12 @@ private final class LauncherScrollCoordinator: ObservableObject {
     private var geometryRevision = 0
 
     func update(_ geometry: LauncherListGeometrySnapshot) {
+        guard rowFrames != geometry.frames ||
+              currentLayoutVersion != geometry.layoutVersion ||
+              viewport != geometry.viewport else {
+            resolvePendingRequest()
+            return
+        }
         rowFrames = geometry.frames
         currentLayoutVersion = geometry.layoutVersion
         viewport = geometry.viewport
@@ -879,6 +885,10 @@ private final class LauncherHorizontalScrollCoordinator: ObservableObject {
     private var geometryRevision = 0
 
     func update(_ geometry: LauncherSpaceBarGeometrySnapshot) {
+        guard itemFrames != geometry.frames || viewport != geometry.viewport else {
+            resolvePendingRequest()
+            return
+        }
         itemFrames = geometry.frames
         viewport = geometry.viewport
         geometryRevision &+= 1
