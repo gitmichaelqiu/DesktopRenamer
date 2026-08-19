@@ -803,10 +803,10 @@ struct ListAreaView: View {
             index: index,
             layoutVersion: layoutVersion,
             scrollToTop: {
-                proxy.scrollTo(id)
+                proxy.scrollTo(id, anchor: .top)
             },
             scrollToBottom: {
-                proxy.scrollTo(id)
+                proxy.scrollTo(id, anchor: .bottom)
             }
         )
     }
@@ -2134,10 +2134,10 @@ struct SpacesBottomBar: View {
         scrollCoordinator.request(
             id: id,
             scrollToLeading: {
-                proxy.scrollTo(id)
+                proxy.scrollTo(id, anchor: .leading)
             },
             scrollToTrailing: {
-                proxy.scrollTo(id)
+                proxy.scrollTo(id, anchor: .trailing)
             }
         )
     }
