@@ -493,7 +493,6 @@ private struct LauncherMarkView: View {
 struct ListAreaView: View {
     @ObservedObject var viewModel: LauncherViewModel
     @Environment(\.colorScheme) var colorScheme
-    @Namespace private var selectionNamespace
     @State private var rowFrames: [Int: CGRect] = [:]
     @State private var listViewportFrame: CGRect = .zero
     
@@ -530,7 +529,7 @@ struct ListAreaView: View {
                                             viewModel.selectPointerRow(index)
                                             viewModel.executeRowAction()
                                         } label: {
-                                            CommandRowView(command: cmd, isSelected: isSelected, isRoot: true, selectionNamespace: selectionNamespace, shortcutText: viewModel.showCommandNumbers && viewModel.commandKTargetWindow == nil && index < 9 ? "⌘\(index + 1)" : nil)
+                                            CommandRowView(command: cmd, isSelected: isSelected, isRoot: true, shortcutText: viewModel.showCommandNumbers && viewModel.commandKTargetWindow == nil && index < 9 ? "⌘\(index + 1)" : nil)
                                         }
                                         .buttonStyle(.plain)
                                         .launcherRowVisibility(index: index)
@@ -569,7 +568,7 @@ struct ListAreaView: View {
                                                     viewModel.selectPointerRow(i)
                                                     viewModel.executeRowAction()
                                             } label: {
-                                                SpaceRowView(space: space, isSelected: isSelected, isCurrent: AppDelegate.shared.spaceManager?.currentSpaceUUID == space.id, selectionNamespace: selectionNamespace, shortcutText: i < 9 ? "⌘\(i + 1)" : nil)
+                                                SpaceRowView(space: space, isSelected: isSelected, isCurrent: AppDelegate.shared.spaceManager?.currentSpaceUUID == space.id, shortcutText: i < 9 ? "⌘\(i + 1)" : nil)
                                             }
                                             .buttonStyle(.plain)
                                             .launcherRowVisibility(index: i)
@@ -612,7 +611,6 @@ struct ListAreaView: View {
                                                     WindowRowView(
                                                         window: item.window,
                                                         isSelected: isSelected,
-                                                        selectionNamespace: selectionNamespace,
                                                         shortcutText: viewModel.showCommandNumbers && viewModel.commandKTargetWindow == nil && item.index < 9 ? "⌘\(item.index + 1)" : nil
                                                     )
                                                 }
@@ -659,7 +657,7 @@ struct ListAreaView: View {
                                                             viewModel.selectPointerRow(item.index)
                                                             viewModel.executeRowAction()
                                                     } label: {
-                                                        WindowBatchRowView(window: move.window, isSelected: isSelected, isStaged: true, stagedActionText: move.actionType.description, selectionNamespace: selectionNamespace, shortcutText: viewModel.showCommandNumbers && viewModel.commandKTargetWindow == nil && item.index < 9 ? "⌘\(item.index + 1)" : nil)
+                                                        WindowBatchRowView(window: move.window, isSelected: isSelected, isStaged: true, stagedActionText: move.actionType.description, shortcutText: viewModel.showCommandNumbers && viewModel.commandKTargetWindow == nil && item.index < 9 ? "⌘\(item.index + 1)" : nil)
                                                     }
                                                     .buttonStyle(.plain)
                                                     .launcherRowVisibility(index: item.index)
@@ -670,7 +668,7 @@ struct ListAreaView: View {
                                                             viewModel.selectPointerRow(item.index)
                                                             viewModel.executeRowAction()
                                                     } label: {
-                                                        WindowBatchRowView(window: window, isSelected: isSelected, isStaged: false, stagedActionText: "", selectionNamespace: selectionNamespace, shortcutText: viewModel.showCommandNumbers && viewModel.commandKTargetWindow == nil && item.index < 9 ? "⌘\(item.index + 1)" : nil)
+                                                        WindowBatchRowView(window: window, isSelected: isSelected, isStaged: false, stagedActionText: "", shortcutText: viewModel.showCommandNumbers && viewModel.commandKTargetWindow == nil && item.index < 9 ? "⌘\(item.index + 1)" : nil)
                                                     }
                                                     .buttonStyle(.plain)
                                                     .launcherRowVisibility(index: item.index)
@@ -957,19 +955,16 @@ private struct LauncherRowSurface: ViewModifier {
 private struct LauncherSelectableRow<Content: View>: View {
     let isSelected: Bool
     let colors: ThemeColors
-    let selectionNamespace: Namespace.ID?
     private let content: Content
     @State private var isHovered = false
 
     init(
         isSelected: Bool,
         colors: ThemeColors,
-        selectionNamespace: Namespace.ID? = nil,
         @ViewBuilder content: () -> Content
     ) {
         self.isSelected = isSelected
         self.colors = colors
-        self.selectionNamespace = selectionNamespace
         self.content = content()
     }
 
@@ -978,7 +973,7 @@ private struct LauncherSelectableRow<Content: View>: View {
             .modifier(LauncherRowSurface(
                 isSelected: isSelected,
                 isHovered: isHovered,
-                colors: colors,
+                colors: colors
                 verticalPadding: 8
             ))
             .contentShape(Rectangle())
@@ -990,7 +985,6 @@ struct CommandRowView: View {
     let command: LauncherCommand
     let isSelected: Bool
     var isRoot: Bool = false
-    var selectionNamespace: Namespace.ID? = nil
     var shortcutText: String? = nil
     @Environment(\.colorScheme) var colorScheme
     
@@ -1017,7 +1011,7 @@ struct CommandRowView: View {
     }
     
     var body: some View {
-        LauncherSelectableRow(isSelected: isSelected, colors: colors, selectionNamespace: selectionNamespace) {
+        LauncherSelectableRow(isSelected: isSelected, colors: colors) {
             if isRoot {
                 rootRow
             } else {
@@ -1119,7 +1113,6 @@ struct SpaceRowView: View {
     let space: SpaceGroup
     let isSelected: Bool
     let isCurrent: Bool
-    var selectionNamespace: Namespace.ID? = nil
     var shortcutText: String? = nil
     @Environment(\.colorScheme) var colorScheme
     
@@ -1128,7 +1121,7 @@ struct SpaceRowView: View {
     }
     
     var body: some View {
-        LauncherSelectableRow(isSelected: isSelected, colors: colors, selectionNamespace: selectionNamespace) {
+        LauncherSelectableRow(isSelected: isSelected, colors: colors) {
             HStack(spacing: 8) {
             if space.isFullscreen, let appPath = space.appPath {
                 let appIcon = NSWorkspace.shared.icon(forFile: appPath)
@@ -1208,7 +1201,6 @@ private struct LauncherStatusLabel: View {
 struct WindowRowView: View {
     let window: WindowEntry
     let isSelected: Bool
-    var selectionNamespace: Namespace.ID? = nil
     var shortcutText: String? = nil
     @Environment(\.colorScheme) var colorScheme
     
@@ -1217,7 +1209,7 @@ struct WindowRowView: View {
     }
     
     var body: some View {
-        LauncherSelectableRow(isSelected: isSelected, colors: colors, selectionNamespace: selectionNamespace) {
+        LauncherSelectableRow(isSelected: isSelected, colors: colors) {
             HStack(spacing: 8) {
             let appIcon = NSWorkspace.shared.icon(forFile: window.appPath)
             Image(nsImage: appIcon)
@@ -1308,7 +1300,6 @@ struct WindowBatchRowView: View {
     let isSelected: Bool
     let isStaged: Bool
     let stagedActionText: String
-    var selectionNamespace: Namespace.ID? = nil
     var shortcutText: String? = nil
     @Environment(\.colorScheme) var colorScheme
     
@@ -1317,7 +1308,7 @@ struct WindowBatchRowView: View {
     }
     
     var body: some View {
-        LauncherSelectableRow(isSelected: isSelected, colors: colors, selectionNamespace: selectionNamespace) {
+        LauncherSelectableRow(isSelected: isSelected, colors: colors) {
             HStack(spacing: 8) {
             let appIcon = NSWorkspace.shared.icon(forFile: window.appPath)
             Image(nsImage: appIcon)
@@ -1554,7 +1545,6 @@ struct RootLauncherBottomBar: View {
 struct RootActionsOverlay: View {
     @ObservedObject var viewModel: LauncherViewModel
     @Environment(\.colorScheme) var colorScheme
-    @Namespace private var actionSelectionNamespace
 
     var colors: ThemeColors {
         ThemeColors(isDark: colorScheme == .dark)
@@ -1606,7 +1596,7 @@ struct RootActionsOverlay: View {
                             .padding(.vertical, 16)
                     } else {
                         ForEach(actionRows, id: \.index) { row in
-                            rootActionRow(row: row, selectionNamespace: actionSelectionNamespace)
+                            rootActionRow(row: row)
                         }
                     }
                 }
@@ -1652,7 +1642,7 @@ struct RootActionsOverlay: View {
         }
     }
 
-    private func rootActionRow(row: (index: Int, title: String, icon: String, shortcut: String), selectionNamespace: Namespace.ID) -> some View {
+    private func rootActionRow(row: (index: Int, title: String, icon: String, shortcut: String)) -> some View {
         Button {
             viewModel.selectedRootActionIndex = row.index
             viewModel.executeRootAction()
@@ -1660,7 +1650,6 @@ struct RootActionsOverlay: View {
             LauncherMenuRow(
                 isSelected: viewModel.selectedRootActionIndex == row.index,
                 colors: colors,
-                selectionNamespace: selectionNamespace
             ) {
                 HStack(spacing: 10) {
                     Image(systemName: row.icon)
@@ -1897,19 +1886,16 @@ private struct LauncherMenuAccessory<Content: View>: View {
 private struct LauncherMenuRow<Content: View>: View {
     let isSelected: Bool
     let colors: ThemeColors
-    let selectionNamespace: Namespace.ID?
     let content: Content
     @State private var isHovered = false
 
     init(
         isSelected: Bool,
         colors: ThemeColors,
-        selectionNamespace: Namespace.ID?,
         @ViewBuilder content: () -> Content
     ) {
         self.isSelected = isSelected
         self.colors = colors
-        self.selectionNamespace = selectionNamespace
         self.content = content()
     }
 
@@ -1984,7 +1970,6 @@ struct SpacePickerOverlay: View {
     @ObservedObject var viewModel: LauncherViewModel
     @ObservedObject var spaceManager: SpaceManager
     @Environment(\.colorScheme) var colorScheme
-    @Namespace private var selectionNamespace
 
     var colors: ThemeColors {
         ThemeColors(isDark: colorScheme == .dark)
@@ -2041,8 +2026,7 @@ struct SpacePickerOverlay: View {
                             }) {
                                 LauncherMenuRow(
                                     isSelected: isSelected,
-                                    colors: colors,
-                                    selectionNamespace: selectionNamespace
+                                    colors: colors
                                 ) {
                                     HStack(spacing: 10) {
                                         Image(systemName: "desktopcomputer")
@@ -2540,7 +2524,6 @@ struct CommandKOverlayView: View {
     @ObservedObject var viewModel: LauncherViewModel
     let window: WindowEntry
     @Environment(\.colorScheme) var colorScheme
-    @Namespace private var actionSelectionNamespace
     
     var colors: ThemeColors {
         ThemeColors(isDark: colorScheme == .dark)
@@ -2561,7 +2544,7 @@ struct CommandKOverlayView: View {
             .buttonStyle(.plain)
 
             LauncherMenuPanel(
-                colors: colors,
+                colors: colors
                 width: LauncherMenuMetrics.panelWidth,
                 contentHeight: actionListHeight
             ) {
@@ -2589,7 +2572,6 @@ struct CommandKOverlayView: View {
                                 idx: idx,
                                 colors: colors,
                                 viewModel: viewModel,
-                                selectionNamespace: actionSelectionNamespace
                             )
                         }
                     }
@@ -2656,7 +2638,6 @@ struct CommandKActionRowView: View {
     let idx: Int
     let colors: ThemeColors
     @ObservedObject var viewModel: LauncherViewModel
-    let selectionNamespace: Namespace.ID?
     
     var body: some View {
         Button {
@@ -2666,7 +2647,6 @@ struct CommandKActionRowView: View {
             LauncherMenuRow(
                 isSelected: isSelected,
                 colors: colors,
-                selectionNamespace: selectionNamespace
             ) {
                 HStack(spacing: 10) {
                     HStack(spacing: 10) {
