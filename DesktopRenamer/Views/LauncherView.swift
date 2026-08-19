@@ -947,12 +947,10 @@ private struct LauncherRowSurface: ViewModifier {
                 if isSelected {
                     RoundedRectangle(cornerRadius: 10, style: .continuous)
                         .fill(Color.primary.opacity(0.10))
-                        .frame(maxWidth: .infinity)
                         .padding(.horizontal, LauncherMenuMetrics.rowSurfaceInset)
                 } else {
                     RoundedRectangle(cornerRadius: 10, style: .continuous)
                         .fill(isHovered ? colors.rowHover : .clear)
-                        .frame(maxWidth: .infinity)
                         .padding(.horizontal, LauncherMenuMetrics.rowSurfaceInset)
                 }
             }
