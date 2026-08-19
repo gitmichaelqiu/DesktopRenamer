@@ -749,8 +749,10 @@ private struct FloatingHotkeyHint: View {
         Text(text)
             .font(.system(size: 12, weight: .medium))
             .foregroundColor(.secondary)
+            .lineLimit(1)
+            .fixedSize()
             .padding(.horizontal, 6)
-            .frame(width: 23)
+            .frame(minWidth: 23)
             .frame(height: 16)
             .background(
                 Color.primary.opacity(colorScheme == .dark ? 0.12 : 0.10),
