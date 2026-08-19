@@ -854,13 +854,9 @@ private final class LauncherHorizontalScrollCoordinator: ObservableObject {
     private var pendingRequest: Request?
     private var requestGeneration = 0
 
-    func updateFrames(_ frames: [String: CGRect]) {
-        itemFrames = frames
-        resolvePendingRequest()
-    }
-
-    func updateViewport(_ frame: CGRect) {
-        viewport = frame
+    func update(_ geometry: LauncherSpaceBarGeometrySnapshot) {
+        itemFrames = geometry.frames
+        viewport = geometry.viewport
         resolvePendingRequest()
     }
 
@@ -932,20 +928,21 @@ private struct LauncherListGeometrySnapshot: Equatable {
     var viewport: CGRect = .zero
 }
 
-private struct LauncherSpaceBarFramePreferenceKey: PreferenceKey {
-    static let defaultValue: [String: CGRect] = [:]
+private struct LauncherSpaceBarGeometryPreferenceKey: PreferenceKey {
+    static let defaultValue = LauncherSpaceBarGeometrySnapshot()
 
-    static func reduce(value: inout [String: CGRect], nextValue: () -> [String: CGRect]) {
-        value.merge(nextValue(), uniquingKeysWith: { _, latest in latest })
+    static func reduce(value: inout LauncherSpaceBarGeometrySnapshot, nextValue: () -> LauncherSpaceBarGeometrySnapshot) {
+        let next = nextValue()
+        value.frames.merge(next.frames, uniquingKeysWith: { _, latest in latest })
+        if !next.viewport.isEmpty {
+            value.viewport = next.viewport
+        }
     }
 }
 
-private struct LauncherSpaceBarViewportPreferenceKey: PreferenceKey {
-    static let defaultValue: CGRect = .zero
-
-    static func reduce(value: inout CGRect, nextValue: () -> CGRect) {
-        value = nextValue()
-    }
+private struct LauncherSpaceBarGeometrySnapshot: Equatable {
+    var frames: [String: CGRect] = [:]
+    var viewport: CGRect = .zero
 }
 
 private extension View {
@@ -980,8 +977,10 @@ private extension View {
         background {
             GeometryReader { geometry in
                 Color.clear.preference(
-                    key: LauncherSpaceBarFramePreferenceKey.self,
-                    value: [id: geometry.frame(in: .named("launcher-space-bar"))]
+                    key: LauncherSpaceBarGeometryPreferenceKey.self,
+                    value: LauncherSpaceBarGeometrySnapshot(
+                        frames: [id: geometry.frame(in: .named("launcher-space-bar"))]
+                    )
                 )
             }
         }
@@ -991,8 +990,10 @@ private extension View {
         background {
             GeometryReader { geometry in
                 Color.clear.preference(
-                    key: LauncherSpaceBarViewportPreferenceKey.self,
-                    value: geometry.frame(in: .named("launcher-space-bar"))
+                    key: LauncherSpaceBarGeometryPreferenceKey.self,
+                    value: LauncherSpaceBarGeometrySnapshot(
+                        viewport: geometry.frame(in: .named("launcher-space-bar"))
+                    )
                 )
             }
         }
@@ -1981,11 +1982,8 @@ struct SpacesBottomBar: View {
                 .onChange(of: spaceManager.currentDisplaySpaces.map(\.id)) { _ in
                     scrollCoordinator.reset()
                 }
-                .onPreferenceChange(LauncherSpaceBarFramePreferenceKey.self) { frames in
-                    scrollCoordinator.updateFrames(frames)
-                }
-                .onPreferenceChange(LauncherSpaceBarViewportPreferenceKey.self) { frame in
-                    scrollCoordinator.updateViewport(frame)
+                .onPreferenceChange(LauncherSpaceBarGeometryPreferenceKey.self) { geometry in
+                    scrollCoordinator.update(geometry)
                 }
             }
 
