@@ -229,6 +229,9 @@ enum LauncherOverlay: Equatable {
         }
         didSet {
             searchQuery = ""
+            if oldValue?.type != activeCommand?.type {
+                listLayoutVersion &+= 1
+            }
             selectedRowIndex = 0
             shouldScrollSelectedRow = false
             isKeyboardSelection = true
