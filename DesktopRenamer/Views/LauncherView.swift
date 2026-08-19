@@ -514,12 +514,13 @@ struct ListAreaView: View {
                             VStack(alignment: .leading, spacing: 0) {
                                 ForEach(sections) { section in
                                     if let title = section.title {
-                                        Text(verbatim: title)
-                                            .font(.system(size: 15, weight: .semibold))
-                                            .foregroundColor(colors.textSecondary)
-                                            .padding(.horizontal, 12)
-                                            .padding(.top, section.startIndex == 0 ? 4 : 10)
-                                            .padding(.bottom, 2)
+                                        LauncherSectionHeader(
+                                            title: title,
+                                            subtitle: nil,
+                                            topPadding: section.startIndex == 0 ? 4 : 10,
+                                            bottomPadding: 2,
+                                            colors: colors
+                                        )
                                     }
                                     ForEach(Array(section.commands.enumerated()), id: \.element.id) { localIndex, cmd in
                                         let index = section.startIndex + localIndex
@@ -1307,20 +1308,40 @@ struct ListSectionHeader: View {
     }
     
     var body: some View {
+        LauncherSectionHeader(
+            title: title,
+            subtitle: subtitle,
+            topPadding: isFirst ? 0 : 10,
+            bottomPadding: 4,
+            colors: colors
+        )
+    }
+}
+
+private struct LauncherSectionHeader: View {
+    let title: String
+    let subtitle: String?
+    let topPadding: CGFloat
+    let bottomPadding: CGFloat
+    let colors: ThemeColors
+
+    var body: some View {
         HStack(spacing: 12) {
-            Text(title)
+            Text(verbatim: title)
                 .font(.system(size: 15, weight: .semibold))
                 .foregroundColor(colors.textSecondary)
-            
-            Text(subtitle)
-                .font(.system(size: 15))
-                .foregroundColor(colors.textSecondary)
-            
-            Spacer()
+
+            if let subtitle {
+                Text(verbatim: subtitle)
+                    .font(.system(size: 15))
+                    .foregroundColor(colors.textSecondary)
+            }
+
+            Spacer(minLength: 0)
         }
         .padding(.horizontal, 12)
-        .padding(.top, isFirst ? 0 : 10)
-        .padding(.bottom, 4)
+        .padding(.top, topPadding)
+        .padding(.bottom, bottomPadding)
     }
 }
 
