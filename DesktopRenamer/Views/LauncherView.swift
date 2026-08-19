@@ -21,6 +21,9 @@ private enum LauncherMenuMetrics {
     // Raycast keeps the accessory text in its own 140pt slot and reserves a
     // separate 24pt slot for the delayed number badge.
     static let accessoryColumnWidth: CGFloat = 140
+    static let hotkeyColumnWidth: CGFloat = 36
+    static let accessoryColumnSpacing: CGFloat = 8
+    static let rowAccessoryWidth: CGFloat = accessoryColumnWidth + accessoryColumnSpacing + hotkeyColumnWidth
     static let capsuleHorizontalPadding: CGFloat = 12
     static let capsuleHeight: CGFloat = 36
     static let labelHorizontalPadding: CGFloat = 8
@@ -772,17 +775,17 @@ private struct LauncherRowAccessory<Content: View>: View {
     @ViewBuilder let content: () -> Content
 
     var body: some View {
-        HStack(spacing: 8) {
+        HStack(spacing: LauncherMenuMetrics.accessoryColumnSpacing) {
             content()
                 .frame(maxWidth: .infinity, alignment: .trailing)
                 .modifier(HotkeyAccessoryModifier(isActive: shortcutText != nil))
 
             if let shortcutText {
                 FloatingHotkeyHint(text: LocalStringKey_compat(shortcutText))
-                    .frame(width: 23)
+                    .frame(width: LauncherMenuMetrics.hotkeyColumnWidth, alignment: .trailing)
             }
         }
-        .frame(width: LauncherMenuMetrics.accessoryColumnWidth, alignment: .trailing)
+        .frame(width: LauncherMenuMetrics.rowAccessoryWidth, alignment: .trailing)
     }
 }
 
