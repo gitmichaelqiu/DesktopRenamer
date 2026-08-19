@@ -537,7 +537,7 @@ struct ListAreaView: View {
                                     }
                                 }
                             }
-                            .padding(.horizontal, 0)
+                            .padding(.horizontal, LauncherMenuMetrics.rowSurfaceInset)
                             .padding(.vertical, 8)
                         }
                         .launcherViewportFrame()
@@ -589,7 +589,7 @@ struct ListAreaView: View {
                                             .id(space.id)
                                         }
                                     }
-                                    .padding(.horizontal, 0)
+                                    .padding(.horizontal, LauncherMenuMetrics.rowSurfaceInset)
                                     .padding(.vertical, 8)
                                 }
                                 .launcherViewportFrame()
@@ -648,7 +648,7 @@ struct ListAreaView: View {
                                             }
                                         }
                                     }
-                                    .padding(.horizontal, 0)
+                                    .padding(.horizontal, LauncherMenuMetrics.rowSurfaceInset)
                                     .padding(.vertical, 8)
                                 }
                                 .launcherViewportFrame()
@@ -721,7 +721,7 @@ struct ListAreaView: View {
                                             }
                                         }
                                     }
-                                    .padding(.horizontal, 0)
+                                    .padding(.horizontal, LauncherMenuMetrics.rowSurfaceInset)
                                     .padding(.vertical, 8)
                                 }
                                 .launcherViewportFrame()
@@ -1257,7 +1257,7 @@ private struct LauncherRowSurface: ViewModifier {
                 )
         }
         .frame(maxWidth: .infinity, minHeight: LauncherMenuMetrics.rowHeight)
-        .padding(.horizontal, LauncherMenuMetrics.rowSurfaceInset)
+        .padding(.horizontal, 0)
     }
 
     private var surfaceColor: Color {
@@ -2288,9 +2288,8 @@ private struct LauncherMenuPanel<Header: View, Content: View, Footer: View>: Vie
 
             ScrollView {
                 content
-                    // Selectable rows own their horizontal surface inset so
-                    // root lists and popup menus share the same edge spacing.
-                    .padding(.horizontal, 0)
+                    // Keep popup rows aligned with the root list surface.
+                    .padding(.horizontal, LauncherMenuMetrics.rowSurfaceInset)
                     .padding(.bottom, 8)
             }
             .frame(height: contentHeight)
