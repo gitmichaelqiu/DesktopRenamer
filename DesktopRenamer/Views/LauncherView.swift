@@ -531,6 +531,7 @@ struct ListAreaView: View {
                                             CommandRowView(command: cmd, isSelected: isSelected, isRoot: true, shortcutText: viewModel.showCommandNumbers && viewModel.commandKTargetWindow == nil && index < 9 ? "⌘\(index + 1)" : nil)
                                         }
                                         .buttonStyle(.plain)
+                                        .focusable(false)
                                         .launcherRowVisibility(index: index, layoutVersion: viewModel.listLayoutVersion)
                                         .id(cmd.id)
                                     }
@@ -573,6 +574,7 @@ struct ListAreaView: View {
                                                 SpaceRowView(space: space, isSelected: isSelected, isCurrent: AppDelegate.shared.spaceManager?.currentSpaceUUID == space.id, shortcutText: i < 9 ? "⌘\(i + 1)" : nil)
                                             }
                                             .buttonStyle(.plain)
+                                            .focusable(false)
                                             .launcherRowVisibility(index: i, layoutVersion: viewModel.listLayoutVersion)
                                             .id(space.id)
                                         }
@@ -620,6 +622,7 @@ struct ListAreaView: View {
                                                     )
                                                 }
                                                 .buttonStyle(.plain)
+                                                .focusable(false)
                                                 .launcherRowVisibility(index: item.index, layoutVersion: viewModel.listLayoutVersion)
                                                 .id(item.id)
                                             }
@@ -668,6 +671,7 @@ struct ListAreaView: View {
                                                         WindowBatchRowView(window: move.window, isSelected: isSelected, isStaged: true, stagedActionText: move.actionType.description, shortcutText: viewModel.showCommandNumbers && viewModel.commandKTargetWindow == nil && item.index < 9 ? "⌘\(item.index + 1)" : nil)
                                                     }
                                                     .buttonStyle(.plain)
+                                                    .focusable(false)
                                                     .launcherRowVisibility(index: item.index, layoutVersion: viewModel.listLayoutVersion)
                                                     .id(item.id)
                                                         
@@ -679,6 +683,7 @@ struct ListAreaView: View {
                                                         WindowBatchRowView(window: window, isSelected: isSelected, isStaged: false, stagedActionText: "", shortcutText: viewModel.showCommandNumbers && viewModel.commandKTargetWindow == nil && item.index < 9 ? "⌘\(item.index + 1)" : nil)
                                                     }
                                                     .buttonStyle(.plain)
+                                                    .focusable(false)
                                                     .launcherRowVisibility(index: item.index, layoutVersion: viewModel.listLayoutVersion)
                                                     .id(item.id)
                                                 }
