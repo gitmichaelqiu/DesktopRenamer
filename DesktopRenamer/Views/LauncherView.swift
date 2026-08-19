@@ -2566,11 +2566,36 @@ class FocusTextField: NSTextField {
     var onCommandNumber: ((Int) -> Void)?
     var onCommandK: (() -> Void)?
     var onBackspace: (() -> Void)?
+    var onUpArrow: (() -> Void)?
+    var onDownArrow: (() -> Void)?
     var onKeyEquivalent: ((NSEvent) -> Bool)?
     var isTypingDisabled: Bool = false
 
     override var acceptsFirstResponder: Bool {
         return true
+    }
+
+    override func keyDown(with event: NSEvent) {
+        let modifiers = event.modifierFlags.intersection(.deviceIndependentFlagsMask)
+        let hasNavigationModifier = modifiers.contains(.command) ||
+            modifiers.contains(.option) ||
+            modifiers.contains(.control) ||
+            modifiers.contains(.function)
+
+        if !hasNavigationModifier {
+            switch event.keyCode {
+            case 126:
+                onUpArrow?()
+                return
+            case 125:
+                onDownArrow?()
+                return
+            default:
+                break
+            }
+        }
+
+        super.keyDown(with: event)
     }
 
     override func performKeyEquivalent(with event: NSEvent) -> Bool {
@@ -2805,6 +2830,12 @@ struct SearchTextField: NSViewRepresentable {
         textField.onCommandK = { [weak coordinator = context.coordinator] in
             coordinator?.parent.onCommandK?()
         }
+        textField.onUpArrow = { [weak coordinator = context.coordinator] in
+            coordinator?.parent.onUpArrow()
+        }
+        textField.onDownArrow = { [weak coordinator = context.coordinator] in
+            coordinator?.parent.onDownArrow()
+        }
         textField.onBackspace = { [weak coordinator = context.coordinator] in
             coordinator?.parent.onBackspace?()
         }
@@ -2840,6 +2871,12 @@ struct SearchTextField: NSViewRepresentable {
             focusField.focusNotificationName = focusNotificationName
             focusField.isTypingDisabled = isTypingDisabled
             focusField.onKeyEquivalent = onKeyEquivalent
+            focusField.onUpArrow = { [weak coordinator = context.coordinator] in
+                coordinator?.parent.onUpArrow()
+            }
+            focusField.onDownArrow = { [weak coordinator = context.coordinator] in
+                coordinator?.parent.onDownArrow()
+            }
         }
         
         if nsView.stringValue != text {
