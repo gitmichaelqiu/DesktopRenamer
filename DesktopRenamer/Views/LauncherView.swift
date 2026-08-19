@@ -540,6 +540,7 @@ struct ListAreaView: View {
                             .padding(.horizontal, 0)
                             .padding(.vertical, 8)
                         }
+                        .launcherViewportFrame()
                         .onChange(of: viewModel.selectedRowIndex) { index in
                             if viewModel.consumeScrollRequest() {
                                 guard commands.indices.contains(index) else { return }
@@ -578,6 +579,7 @@ struct ListAreaView: View {
                                     .padding(.horizontal, 0)
                                     .padding(.vertical, 8)
                                 }
+                                .launcherViewportFrame()
                                 .onChange(of: viewModel.selectedRowIndex) { index in
                                     if viewModel.consumeScrollRequest() {
                                         guard spaces.indices.contains(index) else { return }
@@ -623,6 +625,7 @@ struct ListAreaView: View {
                                     .padding(.horizontal, 0)
                                     .padding(.vertical, 8)
                                 }
+                                .launcherViewportFrame()
                                 .onChange(of: viewModel.selectedRowIndex) { index in
                                     if viewModel.consumeScrollRequest() {
                                         if let item = sections.flatMap({ $0.items }).first(where: { $0.index == index }) {
@@ -680,6 +683,7 @@ struct ListAreaView: View {
                                     .padding(.horizontal, 0)
                                     .padding(.vertical, 8)
                                 }
+                                .launcherViewportFrame()
                                 .onChange(of: viewModel.selectedRowIndex) { index in
                                     if viewModel.consumeScrollRequest() {
                                         if let item = sections.flatMap({ $0.items }).first(where: { $0.index == index }) {
@@ -700,14 +704,6 @@ struct ListAreaView: View {
             }
         }
         .coordinateSpace(name: "launcher-list")
-        .background {
-            GeometryReader { geometry in
-                Color.clear.preference(
-                    key: LauncherViewportFramePreferenceKey.self,
-                    value: geometry.frame(in: .named("launcher-list"))
-                )
-            }
-        }
         .onAppear {
             let isTargetSpaceList = viewModel.activeCommand?.type == .switchToDesktop || viewModel.activeCommand?.type == .moveWindow
             guard isTargetSpaceList else { return }
@@ -774,6 +770,17 @@ private struct LauncherViewportFramePreferenceKey: PreferenceKey {
 }
 
 private extension View {
+    func launcherViewportFrame() -> some View {
+        background {
+            GeometryReader { geometry in
+                Color.clear.preference(
+                    key: LauncherViewportFramePreferenceKey.self,
+                    value: geometry.frame(in: .named("launcher-list"))
+                )
+            }
+        }
+    }
+
     func launcherRowVisibility(index: Int) -> some View {
         background {
             GeometryReader { geometry in
@@ -973,7 +980,7 @@ private struct LauncherSelectableRow<Content: View>: View {
             .modifier(LauncherRowSurface(
                 isSelected: isSelected,
                 isHovered: isHovered,
-                colors: colors
+                colors: colors,
                 verticalPadding: 8
             ))
             .contentShape(Rectangle())
@@ -2544,7 +2551,7 @@ struct CommandKOverlayView: View {
             .buttonStyle(.plain)
 
             LauncherMenuPanel(
-                colors: colors
+                colors: colors,
                 width: LauncherMenuMetrics.panelWidth,
                 contentHeight: actionListHeight
             ) {
