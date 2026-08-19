@@ -498,6 +498,7 @@ struct ListAreaView: View {
     @Namespace private var selectionNamespace
     @State private var rowFrames: [Int: CGRect] = [:]
     @State private var listViewportFrame: CGRect = .zero
+    @State private var suppressInitialSelectionScroll = true
     
     var colors: ThemeColors {
         ThemeColors(isDark: colorScheme == .dark)
@@ -553,7 +554,7 @@ struct ListAreaView: View {
                             }
                         }
                         .onChange(of: viewModel.selectedRowIndex) { index in
-                            if viewModel.launcherOverlay == nil && viewModel.isKeyboardSelection {
+                            if shouldScrollSelection {
                                 guard commands.indices.contains(index) else { return }
                                 scrollSelectionIfNeeded(
                                     index: index,
@@ -600,7 +601,7 @@ struct ListAreaView: View {
                                     }
                                 }
                                 .onChange(of: viewModel.selectedRowIndex) { index in
-                                    if viewModel.launcherOverlay == nil && viewModel.isKeyboardSelection {
+                                    if shouldScrollSelection {
                                         guard spaces.indices.contains(index) else { return }
                                         scrollSelectionIfNeeded(
                                             index: index,
@@ -655,7 +656,7 @@ struct ListAreaView: View {
                                     }
                                 }
                                 .onChange(of: viewModel.selectedRowIndex) { index in
-                                    if viewModel.launcherOverlay == nil && viewModel.isKeyboardSelection {
+                                    if shouldScrollSelection {
                                         if let item = sections.flatMap({ $0.items }).first(where: { $0.index == index }) {
                                             scrollSelectionIfNeeded(
                                                 index: index,
@@ -722,7 +723,7 @@ struct ListAreaView: View {
                                     }
                                 }
                                 .onChange(of: viewModel.selectedRowIndex) { index in
-                                    if viewModel.launcherOverlay == nil && viewModel.isKeyboardSelection {
+                                    if shouldScrollSelection {
                                         if let item = sections.flatMap({ $0.items }).first(where: { $0.index == index }) {
                                             scrollSelectionIfNeeded(
                                                 index: index,
@@ -742,10 +743,15 @@ struct ListAreaView: View {
         }
         .coordinateSpace(name: "launcher-list")
         .onAppear {
-            guard viewModel.activeCommand?.type == .switchToDesktop || viewModel.activeCommand?.type == .moveWindow else { return }
+            let isTargetSpaceList = viewModel.activeCommand?.type == .switchToDesktop || viewModel.activeCommand?.type == .moveWindow
+            suppressInitialSelectionScroll = isTargetSpaceList
+            guard isTargetSpaceList else { return }
             // SpaceManager can finish reconciling the current UUID after the target list appears.
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
                 viewModel.selectCurrentTargetSpace()
+                DispatchQueue.main.async {
+                    suppressInitialSelectionScroll = false
+                }
             }
         }
         .onChange(of: viewModel.currentSpaces) { _ in
@@ -763,6 +769,13 @@ struct ListAreaView: View {
         .onChange(of: viewModel.activeCommand?.type) { _ in
             rowFrames = [:]
         }
+    }
+
+    private var shouldScrollSelection: Bool {
+        guard viewModel.launcherOverlay == nil, viewModel.isKeyboardSelection else { return false }
+        guard suppressInitialSelectionScroll else { return true }
+        suppressInitialSelectionScroll = false
+        return false
     }
 
     private func scrollSelectionIfNeeded<ID: Hashable>(
