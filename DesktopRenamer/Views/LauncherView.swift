@@ -806,11 +806,8 @@ struct ListAreaView: View {
         scrollCoordinator.request(
             index: index,
             layoutVersion: layoutVersion,
-            scrollToTop: {
-                proxy.scrollTo(id, anchor: .top)
-            },
-            scrollToBottom: {
-                proxy.scrollTo(id, anchor: .bottom)
+            scrollToSelection: {
+                proxy.scrollTo(id)
             }
         )
     }
@@ -824,8 +821,7 @@ private final class LauncherScrollCoordinator: ObservableObject {
     private struct Request {
         let index: Int
         let layoutVersion: Int
-        let scrollToTop: () -> Void
-        let scrollToBottom: () -> Void
+        let scrollToSelection: () -> Void
     }
 
     private var rowFrames: [Int: CGRect] = [:]
@@ -867,13 +863,12 @@ private final class LauncherScrollCoordinator: ObservableObject {
         requestGeneration &+= 1
     }
 
-    func request(index: Int, layoutVersion: Int, scrollToTop: @escaping () -> Void, scrollToBottom: @escaping () -> Void) {
+    func request(index: Int, layoutVersion: Int, scrollToSelection: @escaping () -> Void) {
         requestGeneration &+= 1
         pendingRequest = Request(
             index: index,
             layoutVersion: layoutVersion,
-            scrollToTop: scrollToTop,
-            scrollToBottom: scrollToBottom
+            scrollToSelection: scrollToSelection
         )
         DispatchQueue.main.async { [weak self] in
             self?.resolvePendingRequest()
@@ -888,21 +883,21 @@ private final class LauncherScrollCoordinator: ObservableObject {
             return
         }
 
-        let action: (() -> Void)?
+        let shouldScroll: Bool
         // Keep a partially visible row anchored in place. The list should move
         // only after keyboard selection leaves the viewport completely. The
         // tolerance avoids treating a row that is flush with an edge as
         // outside during an intermediate AppKit/SwiftUI geometry pass.
         let tolerance = Self.viewportEdgeTolerance
         if frame.maxY <= viewport.minY - tolerance {
-            action = request.scrollToTop
+            shouldScroll = true
         } else if frame.minY >= viewport.maxY + tolerance {
-            action = request.scrollToBottom
+            shouldScroll = true
         } else {
-            action = nil
+            shouldScroll = false
         }
 
-        guard let action else {
+        guard shouldScroll else {
             pendingRequest = nil
             return
         }
@@ -920,7 +915,7 @@ private final class LauncherScrollCoordinator: ObservableObject {
                 return
             }
             self.pendingRequest = nil
-            action()
+            request.scrollToSelection()
         }
     }
 }
