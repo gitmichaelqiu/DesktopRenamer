@@ -778,6 +778,7 @@ private struct LauncherRowAccessory<Content: View>: View {
         HStack(spacing: LauncherMenuMetrics.accessoryColumnSpacing) {
             content()
                 .frame(maxWidth: .infinity, alignment: .trailing)
+                .modifier(HotkeyAccessoryModifier(isActive: shortcutText != nil))
 
             if let shortcutText {
                 FloatingHotkeyHint(text: LocalizedStringKey(shortcutText))
@@ -1760,7 +1761,7 @@ private struct LauncherCommandActionCapsule: View {
             Button(action: openAction) {
                 HStack(spacing: 8) {
                     Text(verbatim: String(localized: "Open Command"))
-                    KeycapView(text: "↵", isSelected: false, isKeyboardKey: true, verticalPadding: 4, horizontalPadding: 4)
+                    LauncherFooterKeycap(text: "↵")
                 }
             }
             .buttonStyle(.plain)
@@ -1768,7 +1769,7 @@ private struct LauncherCommandActionCapsule: View {
             Button(action: actionsAction) {
                 HStack(spacing: 8) {
                     Text(verbatim: String(localized: "Actions"))
-                    KeycapView(text: "⌘K", isSelected: false, isKeyboardKey: true, verticalPadding: 4, horizontalPadding: 4)
+                    LauncherFooterKeycap(text: "⌘K")
                 }
             }
             .buttonStyle(.plain)
@@ -2849,10 +2850,22 @@ private struct LauncherBottomBarActionButton: View {
     private var actionLabel: some View {
         HStack(spacing: 4) {
             Text(verbatim: title)
-            Text(verbatim: shortcut)
-                .font(.system(.subheadline))
-                .fontWeight(.bold)
+            LauncherFooterKeycap(text: shortcut)
         }
+    }
+}
+
+private struct LauncherFooterKeycap: View {
+    let text: String
+    @Environment(\.colorScheme) private var colorScheme
+
+    var body: some View {
+        Text(verbatim: text)
+            .font(.system(size: 12, weight: .semibold))
+            .foregroundColor(colorScheme == .dark ? .primary : .secondary)
+            .frame(minWidth: 24, minHeight: 24)
+            .padding(.horizontal, 4)
+            .background(Color.primary.opacity(colorScheme == .dark ? 0.12 : 0.10), in: RoundedRectangle(cornerRadius: 7, style: .continuous))
     }
 }
 
