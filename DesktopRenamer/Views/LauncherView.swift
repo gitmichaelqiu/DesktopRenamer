@@ -531,7 +531,7 @@ struct ListAreaView: View {
                                             CommandRowView(command: cmd, isSelected: isSelected, isRoot: true, shortcutText: viewModel.showCommandNumbers && viewModel.commandKTargetWindow == nil && index < 9 ? "⌘\(index + 1)" : nil)
                                         }
                                         .buttonStyle(.plain)
-                                        .launcherRowVisibility(index: index)
+                                        .launcherRowVisibility(index: index, layoutVersion: viewModel.selectedRowIndex)
                                         .id(cmd.id)
                                     }
                                 }
@@ -571,7 +571,7 @@ struct ListAreaView: View {
                                                 SpaceRowView(space: space, isSelected: isSelected, isCurrent: AppDelegate.shared.spaceManager?.currentSpaceUUID == space.id, shortcutText: i < 9 ? "⌘\(i + 1)" : nil)
                                             }
                                             .buttonStyle(.plain)
-                                            .launcherRowVisibility(index: i)
+                                            .launcherRowVisibility(index: i, layoutVersion: viewModel.selectedRowIndex)
                                             .id(space.id)
                                         }
                                     }
@@ -616,7 +616,7 @@ struct ListAreaView: View {
                                                     )
                                                 }
                                                 .buttonStyle(.plain)
-                                                .launcherRowVisibility(index: item.index)
+                                                .launcherRowVisibility(index: item.index, layoutVersion: viewModel.selectedRowIndex)
                                                 .id(item.id)
                                             }
                                         }
@@ -662,7 +662,7 @@ struct ListAreaView: View {
                                                         WindowBatchRowView(window: move.window, isSelected: isSelected, isStaged: true, stagedActionText: move.actionType.description, shortcutText: viewModel.showCommandNumbers && viewModel.commandKTargetWindow == nil && item.index < 9 ? "⌘\(item.index + 1)" : nil)
                                                     }
                                                     .buttonStyle(.plain)
-                                                    .launcherRowVisibility(index: item.index)
+                                                    .launcherRowVisibility(index: item.index, layoutVersion: viewModel.selectedRowIndex)
                                                     .id(item.id)
                                                         
                                                 case .unstaged(let window, _):
@@ -673,7 +673,7 @@ struct ListAreaView: View {
                                                         WindowBatchRowView(window: window, isSelected: isSelected, isStaged: false, stagedActionText: "", shortcutText: viewModel.showCommandNumbers && viewModel.commandKTargetWindow == nil && item.index < 9 ? "⌘\(item.index + 1)" : nil)
                                                     }
                                                     .buttonStyle(.plain)
-                                                    .launcherRowVisibility(index: item.index)
+                                                    .launcherRowVisibility(index: item.index, layoutVersion: viewModel.selectedRowIndex)
                                                     .id(item.id)
                                                 }
                                             }
@@ -715,7 +715,7 @@ struct ListAreaView: View {
             viewModel.selectCurrentTargetSpace()
         }
         .onPreferenceChange(LauncherRowFramePreferenceKey.self) { frames in
-            scrollCoordinator.updateRows(frames)
+            scrollCoordinator.updateRows(frames.frames, version: frames.layoutVersion)
         }
         .onPreferenceChange(LauncherViewportFramePreferenceKey.self) { frame in
             scrollCoordinator.updateViewport(frame)
@@ -750,16 +750,19 @@ struct ListAreaView: View {
 private final class LauncherScrollCoordinator: ObservableObject {
     private struct Request {
         let index: Int
+        let layoutVersion: Int
         let scrollToTop: () -> Void
         let scrollToBottom: () -> Void
     }
 
     private var rowFrames: [Int: CGRect] = [:]
+    private var currentLayoutVersion: Int?
     private var viewport: CGRect = .zero
     private var pendingRequest: Request?
 
-    func updateRows(_ frames: [Int: CGRect]) {
+    func updateRows(_ frames: [Int: CGRect], version: Int) {
         rowFrames = frames
+        currentLayoutVersion = version
         resolvePendingRequest()
     }
 
@@ -770,12 +773,14 @@ private final class LauncherScrollCoordinator: ObservableObject {
 
     func clearRows() {
         rowFrames = [:]
+        currentLayoutVersion = nil
         pendingRequest = nil
     }
 
     func request(index: Int, scrollToTop: @escaping () -> Void, scrollToBottom: @escaping () -> Void) {
         pendingRequest = Request(
             index: index,
+            layoutVersion: index,
             scrollToTop: scrollToTop,
             scrollToBottom: scrollToBottom
         )
@@ -786,6 +791,7 @@ private final class LauncherScrollCoordinator: ObservableObject {
 
     private func resolvePendingRequest() {
         guard let request = pendingRequest,
+              currentLayoutVersion == request.layoutVersion,
               let frame = rowFrames[request.index],
               !viewport.isEmpty else {
             return
@@ -807,11 +813,18 @@ private final class LauncherScrollCoordinator: ObservableObject {
 }
 
 private struct LauncherRowFramePreferenceKey: PreferenceKey {
-    static let defaultValue: [Int: CGRect] = [:]
+    static let defaultValue = LauncherRowFrameSnapshot()
 
-    static func reduce(value: inout [Int: CGRect], nextValue: () -> [Int: CGRect]) {
-        value.merge(nextValue(), uniquingKeysWith: { _, latest in latest })
+    static func reduce(value: inout LauncherRowFrameSnapshot, nextValue: () -> LauncherRowFrameSnapshot) {
+        let next = nextValue()
+        value.frames.merge(next.frames, uniquingKeysWith: { _, latest in latest })
+        value.layoutVersion = max(value.layoutVersion, next.layoutVersion)
     }
+}
+
+private struct LauncherRowFrameSnapshot: Equatable {
+    var frames: [Int: CGRect] = [:]
+    var layoutVersion: Int = 0
 }
 
 private struct LauncherViewportFramePreferenceKey: PreferenceKey {
@@ -834,12 +847,15 @@ private extension View {
         }
     }
 
-    func launcherRowVisibility(index: Int) -> some View {
+    func launcherRowVisibility(index: Int, layoutVersion: Int) -> some View {
         background {
             GeometryReader { geometry in
                 Color.clear.preference(
                     key: LauncherRowFramePreferenceKey.self,
-                    value: [index: geometry.frame(in: .named("launcher-list"))]
+                    value: LauncherRowFrameSnapshot(
+                        frames: [index: geometry.frame(in: .named("launcher-list"))],
+                        layoutVersion: layoutVersion
+                    )
                 )
             }
         }
