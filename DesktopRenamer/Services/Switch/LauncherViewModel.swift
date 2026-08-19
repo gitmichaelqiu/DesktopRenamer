@@ -1596,6 +1596,18 @@ enum LauncherOverlay: Equatable {
         return true
     }
 
+    func resetForPresentation() {
+        searchQuery = ""
+        selectedRowIndex = 0
+        activeCommand = nil
+        stagingWindow = nil
+        isRootSpacePickerPresented = false
+        shouldScrollSelectedRow = true
+        isKeyboardSelection = true
+        isBottomBarFocused = false
+        listLayoutVersion &+= 1
+    }
+
     func selectPointerRow(_ index: Int) {
         guard !isBottomBarFocused, index >= 0, index < visibleRowsCount else { return }
         isKeyboardSelection = false

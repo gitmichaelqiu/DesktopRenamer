@@ -117,12 +117,8 @@ class LauncherWindowController: NSWindowController, NSWindowDelegate {
         
         // Center on screen with cursor
         centerOnActiveScreen()
-        // Reset state
-        viewModel.searchQuery = ""
-        viewModel.selectedRowIndex = 0
-        viewModel.activeCommand = nil
-        viewModel.stagingWindow = nil
-        viewModel.isRootSpacePickerPresented = false
+        // Reset state and restore the root list to its initial scroll position.
+        viewModel.resetForPresentation()
         
         // Make key and focus
         NSApp.activate(ignoringOtherApps: true)
