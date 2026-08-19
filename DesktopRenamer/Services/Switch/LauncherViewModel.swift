@@ -205,8 +205,8 @@ enum LauncherOverlay: Equatable {
 
     @Published var searchQuery: String = "" {
         didSet {
-            let shouldRevealFirstResult = selectedRowIndex != 0
-            shouldScrollSelectedRow = shouldRevealFirstResult
+            shouldScrollSelectedRow = true
+            listLayoutVersion &+= 1
             selectedRowIndex = 0
             isKeyboardSelection = true
             isBottomBarFocused = false
@@ -218,6 +218,7 @@ enum LauncherOverlay: Equatable {
         }
     }
     @Published var selectedRowIndex: Int = 0
+    @Published private(set) var listLayoutVersion: Int = 0
     @Published var activeCommand: LauncherCommand? = nil {
         willSet {
             if activeCommand?.type == .batchMoveWindows && newValue?.type != .batchMoveWindows {
@@ -1585,6 +1586,7 @@ enum LauncherOverlay: Equatable {
         isKeyboardSelection = true
         guard selectedRowIndex != index else { return }
         shouldScrollSelectedRow = true
+        listLayoutVersion &+= 1
         selectedRowIndex = index
     }
 

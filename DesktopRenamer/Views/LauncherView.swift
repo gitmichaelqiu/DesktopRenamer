@@ -531,7 +531,7 @@ struct ListAreaView: View {
                                             CommandRowView(command: cmd, isSelected: isSelected, isRoot: true, shortcutText: viewModel.showCommandNumbers && viewModel.commandKTargetWindow == nil && index < 9 ? "⌘\(index + 1)" : nil)
                                         }
                                         .buttonStyle(.plain)
-                                        .launcherRowVisibility(index: index, layoutVersion: viewModel.selectedRowIndex)
+                                        .launcherRowVisibility(index: index, layoutVersion: viewModel.listLayoutVersion)
                                         .id(cmd.id)
                                     }
                                 }
@@ -540,11 +540,13 @@ struct ListAreaView: View {
                             .padding(.vertical, 8)
                         }
                         .launcherViewportFrame()
-                        .onChange(of: viewModel.selectedRowIndex) { index in
+                        .onChange(of: viewModel.listLayoutVersion) { _ in
                             if viewModel.consumeScrollRequest() {
+                                let index = viewModel.selectedRowIndex
                                 guard commands.indices.contains(index) else { return }
                                 requestScrollSelection(
                                     index: index,
+                                    layoutVersion: viewModel.listLayoutVersion,
                                     id: commands[index].id,
                                     proxy: proxy
                                 )
@@ -571,7 +573,7 @@ struct ListAreaView: View {
                                                 SpaceRowView(space: space, isSelected: isSelected, isCurrent: AppDelegate.shared.spaceManager?.currentSpaceUUID == space.id, shortcutText: i < 9 ? "⌘\(i + 1)" : nil)
                                             }
                                             .buttonStyle(.plain)
-                                            .launcherRowVisibility(index: i, layoutVersion: viewModel.selectedRowIndex)
+                                            .launcherRowVisibility(index: i, layoutVersion: viewModel.listLayoutVersion)
                                             .id(space.id)
                                         }
                                     }
@@ -579,11 +581,13 @@ struct ListAreaView: View {
                                     .padding(.vertical, 8)
                                 }
                                 .launcherViewportFrame()
-                                .onChange(of: viewModel.selectedRowIndex) { index in
+                                .onChange(of: viewModel.listLayoutVersion) { _ in
                                     if viewModel.consumeScrollRequest() {
+                                        let index = viewModel.selectedRowIndex
                                         guard spaces.indices.contains(index) else { return }
                                         requestScrollSelection(
                                             index: index,
+                                            layoutVersion: viewModel.listLayoutVersion,
                                             id: spaces[index].id,
                                             proxy: proxy
                                         )
@@ -616,7 +620,7 @@ struct ListAreaView: View {
                                                     )
                                                 }
                                                 .buttonStyle(.plain)
-                                                .launcherRowVisibility(index: item.index, layoutVersion: viewModel.selectedRowIndex)
+                                                .launcherRowVisibility(index: item.index, layoutVersion: viewModel.listLayoutVersion)
                                                 .id(item.id)
                                             }
                                         }
@@ -625,11 +629,13 @@ struct ListAreaView: View {
                                     .padding(.vertical, 8)
                                 }
                                 .launcherViewportFrame()
-                                .onChange(of: viewModel.selectedRowIndex) { index in
+                                .onChange(of: viewModel.listLayoutVersion) { _ in
                                     if viewModel.consumeScrollRequest() {
+                                        let index = viewModel.selectedRowIndex
                                         if let item = sections.flatMap({ $0.items }).first(where: { $0.index == index }) {
                                             requestScrollSelection(
                                                 index: index,
+                                                layoutVersion: viewModel.listLayoutVersion,
                                                 id: item.id,
                                                 proxy: proxy
                                             )
@@ -662,7 +668,7 @@ struct ListAreaView: View {
                                                         WindowBatchRowView(window: move.window, isSelected: isSelected, isStaged: true, stagedActionText: move.actionType.description, shortcutText: viewModel.showCommandNumbers && viewModel.commandKTargetWindow == nil && item.index < 9 ? "⌘\(item.index + 1)" : nil)
                                                     }
                                                     .buttonStyle(.plain)
-                                                    .launcherRowVisibility(index: item.index, layoutVersion: viewModel.selectedRowIndex)
+                                                    .launcherRowVisibility(index: item.index, layoutVersion: viewModel.listLayoutVersion)
                                                     .id(item.id)
                                                         
                                                 case .unstaged(let window, _):
@@ -673,7 +679,7 @@ struct ListAreaView: View {
                                                         WindowBatchRowView(window: window, isSelected: isSelected, isStaged: false, stagedActionText: "", shortcutText: viewModel.showCommandNumbers && viewModel.commandKTargetWindow == nil && item.index < 9 ? "⌘\(item.index + 1)" : nil)
                                                     }
                                                     .buttonStyle(.plain)
-                                                    .launcherRowVisibility(index: item.index, layoutVersion: viewModel.selectedRowIndex)
+                                                    .launcherRowVisibility(index: item.index, layoutVersion: viewModel.listLayoutVersion)
                                                     .id(item.id)
                                                 }
                                             }
@@ -683,11 +689,13 @@ struct ListAreaView: View {
                                     .padding(.vertical, 8)
                                 }
                                 .launcherViewportFrame()
-                                .onChange(of: viewModel.selectedRowIndex) { index in
+                                .onChange(of: viewModel.listLayoutVersion) { _ in
                                     if viewModel.consumeScrollRequest() {
+                                        let index = viewModel.selectedRowIndex
                                         if let item = sections.flatMap({ $0.items }).first(where: { $0.index == index }) {
                                             requestScrollSelection(
                                                 index: index,
+                                                layoutVersion: viewModel.listLayoutVersion,
                                                 id: item.id,
                                                 proxy: proxy
                                             )
@@ -724,17 +732,19 @@ struct ListAreaView: View {
             scrollCoordinator.clearRows()
         }
         .onChange(of: viewModel.activeCommand?.type) { _ in
-            scrollCoordinator.clearRows()
+            scrollCoordinator.reset()
         }
     }
 
     private func requestScrollSelection<ID: Hashable>(
         index: Int,
+        layoutVersion: Int,
         id: ID,
         proxy: ScrollViewProxy
     ) {
         scrollCoordinator.request(
             index: index,
+            layoutVersion: layoutVersion,
             scrollToTop: {
                 proxy.scrollTo(id, anchor: .top)
             },
@@ -774,13 +784,17 @@ private final class LauncherScrollCoordinator: ObservableObject {
     func clearRows() {
         rowFrames = [:]
         currentLayoutVersion = nil
+    }
+
+    func reset() {
+        clearRows()
         pendingRequest = nil
     }
 
-    func request(index: Int, scrollToTop: @escaping () -> Void, scrollToBottom: @escaping () -> Void) {
+    func request(index: Int, layoutVersion: Int, scrollToTop: @escaping () -> Void, scrollToBottom: @escaping () -> Void) {
         pendingRequest = Request(
             index: index,
-            layoutVersion: index,
+            layoutVersion: layoutVersion,
             scrollToTop: scrollToTop,
             scrollToBottom: scrollToBottom
         )
