@@ -456,6 +456,7 @@ struct LauncherView: View {
 
 private struct LauncherMarkView: View {
     let color: Color
+    @Environment(\.colorScheme) private var colorScheme
 
     var body: some View {
         Canvas { context, size in
@@ -477,6 +478,11 @@ private struct LauncherMarkView: View {
             context.stroke(stripes, with: .color(color), style: StrokeStyle(lineWidth: 2.2, lineCap: .square))
         }
         .frame(width: 28, height: 28)
+        .shadow(
+            color: Color.black.opacity(colorScheme == .dark ? 0.30 : 0.18),
+            radius: 4,
+            y: 2
+        )
     }
 }
 
