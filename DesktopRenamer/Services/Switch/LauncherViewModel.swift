@@ -205,6 +205,7 @@ enum LauncherOverlay: Equatable {
 
     @Published var searchQuery: String = "" {
         didSet {
+            guard oldValue != searchQuery else { return }
             shouldScrollSelectedRow = true
             selectedRowIndex = 0
             isKeyboardSelection = true
