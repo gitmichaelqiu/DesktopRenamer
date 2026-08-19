@@ -775,11 +775,16 @@ struct ListAreaView: View {
         proxy: ScrollViewProxy
     ) {
         DispatchQueue.main.async {
-            guard let frame = rowFrames[index], listViewportHeight > 0 else { return }
-            if frame.minY < 0 {
-                proxy.scrollTo(id, anchor: .top)
-            } else if frame.maxY > listViewportHeight {
-                proxy.scrollTo(id, anchor: .bottom)
+            // Selection changes arrive before SwiftUI publishes the updated
+            // geometry preferences. Yield once more so the decision uses the
+            // current row frame rather than the previous scroll position.
+            DispatchQueue.main.async {
+                guard let frame = rowFrames[index], listViewportHeight > 0 else { return }
+                if frame.minY < 0 {
+                    proxy.scrollTo(id, anchor: .top)
+                } else if frame.maxY > listViewportHeight {
+                    proxy.scrollTo(id, anchor: .bottom)
+                }
             }
         }
     }
