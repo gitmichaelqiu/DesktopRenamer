@@ -777,9 +777,12 @@ struct ListAreaView: View {
             // current row frame rather than the previous scroll position.
             DispatchQueue.main.async {
                 guard let frame = rowFrames[index], !listViewportFrame.isEmpty else { return }
-                if frame.minY < listViewportFrame.minY {
+                // Keep the selected row stable while its center remains visible.
+                // Comparing the full edge made partially clipped middle rows
+                // trigger a scroll too early.
+                if frame.midY < listViewportFrame.minY {
                     proxy.scrollTo(id, anchor: .top)
-                } else if frame.maxY > listViewportFrame.maxY {
+                } else if frame.midY > listViewportFrame.maxY {
                     proxy.scrollTo(id, anchor: .bottom)
                 }
             }
@@ -2714,7 +2717,6 @@ struct CommandKActionRowView: View {
                         FloatingHotkeyHint(text: LocalizedStringKey("⌘\(idx + 1)"))
                             .opacity(showCommandNumbers ? 1 : 0)
                             .offset(x: showCommandNumbers ? 0 : 23)
-                            .animation(.easeOut(duration: 0.15), value: showCommandNumbers)
                     }
                 }
             }
