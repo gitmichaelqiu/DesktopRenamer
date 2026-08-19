@@ -1049,22 +1049,24 @@ struct CommandRowView: View {
             }
             
             Spacer()
-            
-            if let shortcut = shortcutText {
-                KeycapView(text: LocalStringKey_compat(shortcut), isSelected: isSelected, isKeyboardKey: true)
-            } else if let statusText = toggleStatus {
-                LauncherStatusLabel(
-                    label: statusText,
-                    color: statusText == "Enabled" ? colors.greenText : colors.textSecondary,
-                    background: statusText == "Enabled" ? colors.greenText.opacity(0.12) : colors.badgeBg
-                )
-            } else if command.hasSubpage {
-                Image(systemName: "chevron.right")
-                    .font(.caption.weight(.semibold))
-                    .foregroundColor(isSelected ? colors.textSecondary : colors.textTertiary)
-                    .padding(.trailing, 4)
-            } else {
-                KeycapView(text: "Action", isSelected: isSelected)
+
+            LauncherRowAccessory(shortcutText: shortcutText) {
+                if shortcutText == nil {
+                    if let statusText = toggleStatus {
+                        LauncherStatusLabel(
+                            label: statusText,
+                            color: statusText == "Enabled" ? colors.greenText : colors.textSecondary,
+                            background: statusText == "Enabled" ? colors.greenText.opacity(0.12) : colors.badgeBg
+                        )
+                    } else if command.hasSubpage {
+                        Image(systemName: "chevron.right")
+                            .font(.caption.weight(.semibold))
+                            .foregroundColor(isSelected ? colors.textSecondary : colors.textTertiary)
+                            .padding(.trailing, 4)
+                    } else {
+                        KeycapView(text: "Action", isSelected: isSelected)
+                    }
+                }
             }
         }
     }
@@ -1086,10 +1088,6 @@ struct CommandRowView: View {
         )
     }
     
-    // Helper to safely wrap dynamic String to LocalizedStringKey
-    private func LocalStringKey_compat(_ str: String) -> LocalizedStringKey {
-        return LocalizedStringKey(str)
-    }
 }
 
 struct SpaceRowView: View {
@@ -1144,14 +1142,12 @@ struct SpaceRowView: View {
             
             Spacer()
 
-            if isCurrent {
-                WindowStateBadge(label: String(localized: "Current"), color: .blue)
+            LauncherRowAccessory(shortcutText: shortcutText) {
+                if isCurrent {
+                    WindowStateBadge(label: String(localized: "Current"), color: .blue)
+                }
             }
-
-            if let shortcut = shortcutText {
-                KeycapView(text: LocalizedStringKey(shortcut), isSelected: isSelected, isKeyboardKey: true)
-            }
-            }
+        }
         }
     }
 }
