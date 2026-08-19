@@ -756,6 +756,11 @@ private struct FloatingHotkeyHint: View {
                 Color.primary.opacity(colorScheme == .dark ? 0.12 : 0.10),
                 in: Capsule()
             )
+            .shadow(
+                color: Color.black.opacity(colorScheme == .dark ? 0.24 : 0.16),
+                radius: 8,
+                y: 3
+            )
             .transition(.opacity)
     }
 }
