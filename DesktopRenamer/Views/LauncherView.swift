@@ -728,6 +728,16 @@ struct ListAreaView: View {
         .onChange(of: viewModel.searchQuery) { _ in
             scrollCoordinator.clearRows()
         }
+        .onChange(of: viewModel.isKeyboardSelection) { isKeyboardSelection in
+            if !isKeyboardSelection {
+                scrollCoordinator.cancelPending()
+            }
+        }
+        .onChange(of: viewModel.isBottomBarFocused) { isFocused in
+            if isFocused {
+                scrollCoordinator.cancelPending()
+            }
+        }
         .onChange(of: viewModel.activeCommand?.type) { _ in
             scrollCoordinator.reset()
         }
@@ -784,6 +794,11 @@ private final class LauncherScrollCoordinator: ObservableObject {
     func reset() {
         clearRows()
         pendingRequest = nil
+    }
+
+    func cancelPending() {
+        pendingRequest = nil
+        requestGeneration &+= 1
     }
 
     func request(index: Int, layoutVersion: Int, scrollToTop: @escaping () -> Void, scrollToBottom: @escaping () -> Void) {
