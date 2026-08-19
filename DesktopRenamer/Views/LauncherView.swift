@@ -1146,21 +1146,28 @@ private struct LauncherRowSurface: ViewModifier {
     let verticalPadding: CGFloat
 
     func body(content: Content) -> some View {
-        content
-            .padding(.horizontal, 12)
-            .padding(.vertical, verticalPadding)
-            .frame(minHeight: LauncherMenuMetrics.rowHeight)
-            .background {
-                if isSelected {
-                    RoundedRectangle(cornerRadius: 10, style: .continuous)
-                        .fill(Color.primary.opacity(0.10))
-                        .padding(.horizontal, LauncherMenuMetrics.rowSurfaceInset)
-                } else {
-                    RoundedRectangle(cornerRadius: 10, style: .continuous)
-                        .fill(isHovered ? colors.rowHover : .clear)
-                        .padding(.horizontal, LauncherMenuMetrics.rowSurfaceInset)
-                }
-            }
+        ZStack {
+            RoundedRectangle(cornerRadius: 10, style: .continuous)
+                .fill(surfaceColor)
+                .padding(.horizontal, LauncherMenuMetrics.rowSurfaceInset)
+
+            content
+                .padding(.horizontal, 12)
+                .padding(.vertical, verticalPadding)
+                .frame(
+                    maxWidth: .infinity,
+                    minHeight: LauncherMenuMetrics.rowHeight,
+                    alignment: .leading
+                )
+        }
+        .frame(maxWidth: .infinity, minHeight: LauncherMenuMetrics.rowHeight)
+    }
+
+    private var surfaceColor: Color {
+        if isSelected {
+            return Color.primary.opacity(0.10)
+        }
+        return isHovered ? colors.rowHover : .clear
     }
 }
 
