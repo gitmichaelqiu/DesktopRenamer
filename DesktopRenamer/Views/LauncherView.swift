@@ -553,6 +553,16 @@ struct ListAreaView: View {
                                 )
                             }
                         }
+                        .onChange(of: viewModel.selectionScrollRequestVersion) { _ in
+                            let index = viewModel.selectedRowIndex
+                            guard commands.indices.contains(index) else { return }
+                            requestScrollSelection(
+                                index: index,
+                                layoutVersion: viewModel.listLayoutVersion,
+                                id: commands[index].id,
+                                proxy: proxy
+                            )
+                        }
                     }
                 }
             } else {
@@ -594,6 +604,16 @@ struct ListAreaView: View {
                                             proxy: proxy
                                         )
                                     }
+                                }
+                                .onChange(of: viewModel.selectionScrollRequestVersion) { _ in
+                                    let index = viewModel.selectedRowIndex
+                                    guard spaces.indices.contains(index) else { return }
+                                    requestScrollSelection(
+                                        index: index,
+                                        layoutVersion: viewModel.listLayoutVersion,
+                                        id: spaces[index].id,
+                                        proxy: proxy
+                                    )
                                 }
                             }
                         }
@@ -643,6 +663,17 @@ struct ListAreaView: View {
                                                 proxy: proxy
                                             )
                                         }
+                                    }
+                                }
+                                .onChange(of: viewModel.selectionScrollRequestVersion) { _ in
+                                    let index = viewModel.selectedRowIndex
+                                    if let item = sections.flatMap({ $0.items }).first(where: { $0.index == index }) {
+                                        requestScrollSelection(
+                                            index: index,
+                                            layoutVersion: viewModel.listLayoutVersion,
+                                            id: item.id,
+                                            proxy: proxy
+                                        )
                                     }
                                 }
                             }
@@ -705,6 +736,17 @@ struct ListAreaView: View {
                                                 proxy: proxy
                                             )
                                         }
+                                    }
+                                }
+                                .onChange(of: viewModel.selectionScrollRequestVersion) { _ in
+                                    let index = viewModel.selectedRowIndex
+                                    if let item = sections.flatMap({ $0.items }).first(where: { $0.index == index }) {
+                                        requestScrollSelection(
+                                            index: index,
+                                            layoutVersion: viewModel.listLayoutVersion,
+                                            id: item.id,
+                                            proxy: proxy
+                                        )
                                     }
                                 }
                             }

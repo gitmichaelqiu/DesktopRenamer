@@ -219,6 +219,7 @@ enum LauncherOverlay: Equatable {
     }
     @Published var selectedRowIndex: Int = 0
     @Published private(set) var listLayoutVersion: Int = 0
+    @Published private(set) var selectionScrollRequestVersion: Int = 0
     @Published var activeCommand: LauncherCommand? = nil {
         willSet {
             if activeCommand?.type == .batchMoveWindows && newValue?.type != .batchMoveWindows {
@@ -1585,9 +1586,8 @@ enum LauncherOverlay: Equatable {
         guard index >= 0, index < visibleRowsCount else { return }
         isKeyboardSelection = true
         guard selectedRowIndex != index else { return }
-        shouldScrollSelectedRow = true
         selectedRowIndex = index
-        listLayoutVersion &+= 1
+        selectionScrollRequestVersion &+= 1
     }
 
     func consumeScrollRequest() -> Bool {
