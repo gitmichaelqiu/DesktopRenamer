@@ -1355,18 +1355,7 @@ struct BatchMoveBottomBar: View {
             HStack(spacing: 8) {
                 if viewModel.stagingWindow != nil {
                     // Staging target space selection
-                    Button {
-                        viewModel.executeRowAction()
-                    } label: {
-                        HStack(spacing: 4) {
-                            Text(verbatim: String(localized: "Stage"))
-                            Text("↵")
-                                .font(.system(.caption2))
-                                .fontWeight(.bold)
-                        }
-                        .modifier(BottomBarCapsule(isSelected: false, isActive: false, colorScheme: colorScheme))
-                    }
-                    .buttonStyle(.plain)
+                    LauncherBottomBarActionButton(title: String(localized: "Stage"), shortcut: "↵", colorScheme: colorScheme, action: viewModel.executeRowAction)
                 } else {
                     // Selecting an item in batch move
                     let items = viewModel.batchMoveSelectableItems
@@ -1381,62 +1370,29 @@ struct BatchMoveBottomBar: View {
                                 return false
                             }()
 
-                            Button {
-                                viewModel.executeRowAction()
-                            } label: {
-                                HStack(spacing: 4) {
-                                    Text(verbatim: String(localized: isMove ? "Unstage Move" : "Unstage Action"))
-                                    Text("↵")
-                                        .font(.system(.subheadline))
-                                        .fontWeight(.bold)
-                                }
-                                .modifier(BottomBarCapsule(isSelected: false, isActive: false, colorScheme: colorScheme))
-                            }
-                            .buttonStyle(.plain)
+                            LauncherBottomBarActionButton(
+                                title: String(localized: isMove ? "Unstage Move" : "Unstage Action"),
+                                shortcut: "↵",
+                                colorScheme: colorScheme,
+                                action: viewModel.executeRowAction
+                            )
 
                         case .unstaged:
-                            Button {
-                                viewModel.executeRowAction()
-                            } label: {
-                                HStack(spacing: 4) {
-                                    Text(verbatim: String(localized: "Move to..."))
-                                    Text("↵")
-                                        .font(.system(.subheadline))
-                                        .fontWeight(.bold)
-                                }
-                                .modifier(BottomBarCapsule(isSelected: false, isActive: false, colorScheme: colorScheme))
-                            }
-                            .buttonStyle(.plain)
-
-                            Button {
-                                viewModel.showCommandKPanel()
-                            } label: {
-                                HStack(spacing: 4) {
-                                    Text(verbatim: String(localized: "Actions"))
-                                    Text("⌘K")
-                                        .font(.system(.subheadline))
-                                        .fontWeight(.bold)
-                                }
-                                .modifier(BottomBarCapsule(isSelected: false, isActive: false, colorScheme: colorScheme))
-                            }
-                            .buttonStyle(.plain)
+                            LauncherBottomBarActionButton(title: String(localized: "Move to..."), shortcut: "↵", colorScheme: colorScheme, action: viewModel.executeRowAction)
+                            LauncherBottomBarActionButton(title: String(localized: "Actions"), shortcut: "⌘K", colorScheme: colorScheme, action: viewModel.showCommandKPanel)
                         }
                     }
                     
                     // If there are staged moves, show run batch action
                     if !viewModel.stagedMoves.isEmpty {
-                        Button {
-                            viewModel.executeBatchMove()
-                        } label: {
-                            HStack(spacing: 4) {
-                                Text(verbatim: String(localized: "Run Batch Actions"))
-                                Text("⌘↵")
-                                    .font(.system(.subheadline))
-                                    .fontWeight(.bold)
-                            }
-                            .modifier(BottomBarCapsule(isSelected: true, isActive: false, isGreen: true, colorScheme: colorScheme))
-                        }
-                        .buttonStyle(.plain)
+                        LauncherBottomBarActionButton(
+                            title: String(localized: "Run Batch Actions"),
+                            shortcut: "⌘↵",
+                            isSelected: true,
+                            isGreen: true,
+                            colorScheme: colorScheme,
+                            action: viewModel.executeBatchMove
+                        )
                     }
                 }
             }
@@ -1762,16 +1718,12 @@ struct SpacesBottomBar: View {
     }
 
     private func bottomBarAction(title: String, shortcut: String, action: @escaping () -> Void) -> some View {
-        Button(action: action) {
-            HStack(spacing: 4) {
-                Text(LocalizedStringKey(title))
-                Text(shortcut)
-                    .font(.system(.subheadline))
-                    .fontWeight(.bold)
-            }
-            .modifier(BottomBarCapsule(isSelected: false, isActive: false, colorScheme: colorScheme))
-        }
-        .buttonStyle(.plain)
+        LauncherBottomBarActionButton(
+            title: String(localized: String.LocalizationValue(title)),
+            shortcut: shortcut,
+            colorScheme: colorScheme,
+            action: action
+        )
     }
 }
 
@@ -2169,16 +2121,12 @@ struct CommandBottomBar: View {
     }
 
     private func actionButton(title: String, shortcut: String, action: @escaping () -> Void) -> some View {
-        Button(action: action) {
-            HStack(spacing: 4) {
-                Text(verbatim: String(localized: String.LocalizationValue(title)))
-                Text(shortcut)
-                    .font(.system(.subheadline))
-                    .fontWeight(.bold)
-            }
-            .modifier(BottomBarCapsule(isSelected: false, isActive: false, colorScheme: colorScheme))
-        }
-        .buttonStyle(.plain)
+        LauncherBottomBarActionButton(
+            title: String(localized: String.LocalizationValue(title)),
+            shortcut: shortcut,
+            colorScheme: colorScheme,
+            action: action
+        )
     }
 }
 
@@ -2835,6 +2783,34 @@ struct BottomBarCapsule: ViewModifier {
             .onHover { hovering in
                 isHovered = hovering
             }
+    }
+}
+
+private struct LauncherBottomBarActionButton: View {
+    let title: String
+    let shortcut: String
+    var isSelected = false
+    var isActive = false
+    var isGreen = false
+    let colorScheme: ColorScheme
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: 4) {
+                Text(verbatim: title)
+                Text(verbatim: shortcut)
+                    .font(.system(.subheadline))
+                    .fontWeight(.bold)
+            }
+            .modifier(BottomBarCapsule(
+                isSelected: isSelected,
+                isActive: isActive,
+                isGreen: isGreen,
+                colorScheme: colorScheme
+            ))
+        }
+        .buttonStyle(.plain)
     }
 }
 
