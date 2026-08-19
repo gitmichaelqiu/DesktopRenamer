@@ -843,6 +843,7 @@ private final class LauncherScrollCoordinator: ObservableObject {
     func clearRows() {
         rowFrames = [:]
         currentLayoutVersion = nil
+        pendingRequest = nil
         requestGeneration &+= 1
         geometryRevision &+= 1
     }
