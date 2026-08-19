@@ -245,8 +245,18 @@ enum LauncherOverlay: Equatable {
         }
     }
     
-    @Published var currentSpaces: [SpaceGroup] = []
-    @Published var currentWindows: [WindowEntry] = []
+    @Published var currentSpaces: [SpaceGroup] = [] {
+        didSet {
+            guard oldValue != currentSpaces else { return }
+            listLayoutVersion &+= 1
+        }
+    }
+    @Published var currentWindows: [WindowEntry] = [] {
+        didSet {
+            guard oldValue != currentWindows else { return }
+            listLayoutVersion &+= 1
+        }
+    }
     @Published var isLoadingData: Bool = false
     @Published var isKeyboardSelection: Bool = false
     private var shouldScrollSelectedRow = false
@@ -291,7 +301,12 @@ enum LauncherOverlay: Equatable {
     }
     
     // For batch window moves
-    @Published var stagedMoves: [Int: BatchStagedAction] = [:]
+    @Published var stagedMoves: [Int: BatchStagedAction] = [:] {
+        didSet {
+            guard oldValue != stagedMoves else { return }
+            listLayoutVersion &+= 1
+        }
+    }
     @Published var stagingWindow: WindowEntry? = nil {
         didSet {
             searchQuery = ""
