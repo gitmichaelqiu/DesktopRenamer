@@ -206,10 +206,10 @@ enum LauncherOverlay: Equatable {
     @Published var searchQuery: String = "" {
         didSet {
             shouldScrollSelectedRow = true
-            listLayoutVersion &+= 1
             selectedRowIndex = 0
             isKeyboardSelection = true
             isBottomBarFocused = false
+            listLayoutVersion &+= 1
         }
     }
     @Published var spacePickerQuery: String = "" {
@@ -1586,8 +1586,8 @@ enum LauncherOverlay: Equatable {
         isKeyboardSelection = true
         guard selectedRowIndex != index else { return }
         shouldScrollSelectedRow = true
-        listLayoutVersion &+= 1
         selectedRowIndex = index
+        listLayoutVersion &+= 1
     }
 
     func consumeScrollRequest() -> Bool {
