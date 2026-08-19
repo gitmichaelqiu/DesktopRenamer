@@ -16,7 +16,6 @@ private enum LauncherMenuMetrics {
     static let panelWidth: CGFloat = 350
     static let rowHeight: CGFloat = 46
     static let rowSpacing: CGFloat = 0
-    static let rowHorizontalPadding: CGFloat = 12
     static let menuAccessoryColumnWidth: CGFloat = 72
     // Raycast keeps the accessory text in its own 140pt slot and reserves a
     // separate 24pt slot for the delayed number badge.
@@ -1948,13 +1947,12 @@ private struct LauncherMenuRow<Content: View>: View {
         content
             .font(.system(size: 15, weight: .medium))
             .foregroundColor(colors.textPrimary)
-            .padding(.horizontal, LauncherMenuMetrics.rowHorizontalPadding)
-            .frame(maxWidth: .infinity)
-            .frame(height: LauncherMenuMetrics.rowHeight)
-            .background {
-                RoundedRectangle(cornerRadius: 9, style: .continuous)
-                    .fill(isSelected ? Color.primary.opacity(0.10) : (isHovered ? colors.rowHover : .clear))
-            }
+            .modifier(LauncherRowSurface(
+                isSelected: isSelected,
+                isHovered: isHovered,
+                colors: colors,
+                verticalPadding: 0
+            ))
             .onHover { isHovered = $0 }
     }
 }
