@@ -775,6 +775,9 @@ private struct LauncherListScrollView<Content: View>: View {
                             requestScrollToTop(proxy: proxy)
                         }
                     }
+                    .onChange(of: selectedRowIndex) { _ in
+                        scrollCoordinator.cancelPending()
+                    }
                     .onChange(of: selectionRevealRequestVersion) { _ in
                         guard isKeyboardSelection, !isBottomBarFocused else { return }
                         DispatchQueue.main.async {
