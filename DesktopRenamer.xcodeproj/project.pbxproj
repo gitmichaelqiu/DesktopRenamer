@@ -419,7 +419,7 @@
 				INFOPLIST_FILE = DesktopRenamer/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = DesktopRenamer;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.utilities";
-				INFOPLIST_KEY_LSUIElement = NO;
+				INFOPLIST_KEY_LSUIElement = YES;
 				INFOPLIST_KEY_NSAppleEventsUsageDescription = "DesktopRenamer needs permission to use AppleScript to switch spaces via Mission Control.";
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -470,7 +470,7 @@
 				INFOPLIST_FILE = DesktopRenamer/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = DesktopRenamer;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.utilities";
-				INFOPLIST_KEY_LSUIElement = NO;
+				INFOPLIST_KEY_LSUIElement = YES;
 				INFOPLIST_KEY_NSAppleEventsUsageDescription = "DesktopRenamer needs permission to use AppleScript to switch spaces via Mission Control.";
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
 				LD_RUNPATH_SEARCH_PATHS = (
