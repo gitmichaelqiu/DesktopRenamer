@@ -1021,10 +1021,10 @@ private struct LauncherListGeometryPreferenceKey: PreferenceKey {
     static func reduce(value: inout LauncherListGeometrySnapshot, nextValue: () -> LauncherListGeometrySnapshot) {
         let next = nextValue()
         if !next.frames.isEmpty {
-            if next.layoutVersion > value.layoutVersion {
+            if value.frames.isEmpty || next.layoutVersion != value.layoutVersion {
                 value.frames = next.frames
                 value.layoutVersion = next.layoutVersion
-            } else if next.layoutVersion == value.layoutVersion {
+            } else {
                 value.frames.merge(next.frames, uniquingKeysWith: { _, latest in latest })
             }
         }
