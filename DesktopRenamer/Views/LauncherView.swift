@@ -1710,7 +1710,7 @@ struct BatchMoveBottomBar: View {
             LauncherBottomBarActionGroup(colorScheme: colorScheme) {
                 if viewModel.stagingWindow != nil {
                     // Staging target space selection
-                    LauncherBottomBarActionButton(title: String(localized: "Stage"), shortcut: "↵", isGrouped: true, colorScheme: colorScheme, action: viewModel.executeRowAction)
+                    LauncherBottomBarGroupedButton(title: String(localized: "Stage"), shortcut: "↵", action: viewModel.executeRowAction)
                 } else {
                     // Selecting an item in batch move
                     let items = viewModel.batchMoveSelectableItems
@@ -1725,29 +1725,23 @@ struct BatchMoveBottomBar: View {
                                 return false
                             }()
 
-                            LauncherBottomBarActionButton(
+                            LauncherBottomBarGroupedButton(
                                 title: String(localized: isMove ? "Unstage Move" : "Unstage Action"),
                                 shortcut: "↵",
-                                isGrouped: true,
-                                colorScheme: colorScheme,
                                 action: viewModel.executeRowAction
                             )
 
                         case .unstaged:
-                            LauncherBottomBarActionButton(title: String(localized: "Move to..."), shortcut: "↵", isGrouped: true, colorScheme: colorScheme, action: viewModel.executeRowAction)
-                            LauncherBottomBarActionButton(title: String(localized: "Actions"), shortcut: "⌘K", isGrouped: true, colorScheme: colorScheme, action: viewModel.showCommandKPanel)
+                            LauncherBottomBarGroupedButton(title: String(localized: "Move to..."), shortcut: "↵", action: viewModel.executeRowAction)
+                            LauncherBottomBarGroupedButton(title: String(localized: "Actions"), shortcut: "⌘K", action: viewModel.showCommandKPanel)
                         }
                     }
                     
                     // If there are staged moves, show run batch action
                     if !viewModel.stagedMoves.isEmpty {
-                        LauncherBottomBarActionButton(
+                        LauncherBottomBarGroupedButton(
                             title: String(localized: "Run Batch Actions"),
                             shortcut: "⌘↵",
-                            isSelected: true,
-                            isGreen: true,
-                            isGrouped: true,
-                            colorScheme: colorScheme,
                             action: viewModel.executeBatchMove
                         )
                     }
@@ -2002,10 +1996,10 @@ struct SpacesBottomBar: View {
 
                 if viewModel.isBottomBarFocused {
                     LauncherBottomBarActionGroup(colorScheme: colorScheme) {
-                        bottomBarAction(title: "Switch Space", shortcut: "↵", isGrouped: true) {
+                        bottomBarAction(title: "Switch Space", shortcut: "↵") {
                             viewModel.executeBottomBarSpaceAction(isOption: false, isCommand: false)
                         }
-                        bottomBarAction(title: "Move Window", shortcut: "⌥↵", isGrouped: true) {
+                        bottomBarAction(title: "Move Window", shortcut: "⌥↵") {
                             viewModel.executeBottomBarSpaceAction(isOption: true, isCommand: false)
                         }
                     }
@@ -2039,12 +2033,10 @@ struct SpacesBottomBar: View {
         )
     }
 
-    private func bottomBarAction(title: String, shortcut: String, isGrouped: Bool = false, action: @escaping () -> Void) -> some View {
-        LauncherBottomBarActionButton(
+    private func bottomBarAction(title: String, shortcut: String, action: @escaping () -> Void) -> some View {
+        LauncherBottomBarGroupedButton(
             title: String(localized: String.LocalizationValue(title)),
             shortcut: shortcut,
-            isGrouped: isGrouped,
-            colorScheme: colorScheme,
             action: action
         )
     }
@@ -2061,19 +2053,15 @@ private struct LauncherCommandActionCapsule: View {
             colorScheme: colorScheme,
             isActive: isActive
         ) {
-            LauncherBottomBarActionButton(
+            LauncherBottomBarGroupedButton(
                 title: String(localized: "Open Command"),
                 shortcut: "↵",
-                isGrouped: true,
-                colorScheme: colorScheme,
                 action: openAction
             )
 
-            LauncherBottomBarActionButton(
+            LauncherBottomBarGroupedButton(
                 title: String(localized: "Actions"),
                 shortcut: "⌘K",
-                isGrouped: true,
-                colorScheme: colorScheme,
                 action: actionsAction
             )
         }
@@ -2424,11 +2412,9 @@ struct CommandBottomBar: View {
     }
 
     private func actionButton(title: String, shortcut: String, action: @escaping () -> Void) -> some View {
-        LauncherBottomBarActionButton(
+        LauncherBottomBarGroupedButton(
             title: String(localized: String.LocalizationValue(title)),
             shortcut: shortcut,
-            isGrouped: true,
-            colorScheme: colorScheme,
             action: action
         )
     }
@@ -3165,31 +3151,14 @@ struct BottomBarCapsule: ViewModifier {
     }
 }
 
-private struct LauncherBottomBarActionButton: View {
+private struct LauncherBottomBarGroupedButton: View {
     let title: String
     let shortcut: String
-    var isSelected = false
-    var isActive = false
-    var isGreen = false
-    var isGrouped = false
-    let colorScheme: ColorScheme
     let action: () -> Void
 
     var body: some View {
         Button(action: action) {
-            Group {
-                if isGrouped {
-                    actionLabel
-                } else {
-                    actionLabel
-                        .modifier(BottomBarCapsule(
-                            isSelected: isSelected,
-                            isActive: isActive,
-                            isGreen: isGreen,
-                            colorScheme: colorScheme
-                        ))
-                }
-            }
+            actionLabel
         }
         .buttonStyle(.plain)
     }
