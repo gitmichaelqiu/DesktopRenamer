@@ -2166,25 +2166,26 @@ private struct LauncherCommandActionCapsule: View {
     @Environment(\.colorScheme) private var colorScheme
 
     var body: some View {
-        HStack(spacing: 16) {
-            Button(action: openAction) {
-                HStack(spacing: 8) {
-                    Text(verbatim: String(localized: "Open Command"))
-                    LauncherFooterKeycap(text: "↵")
-                }
-            }
-            .buttonStyle(.plain)
+        LauncherBottomBarActionGroup(
+            colorScheme: colorScheme,
+            isActive: isActive
+        ) {
+            LauncherBottomBarActionButton(
+                title: String(localized: "Open Command"),
+                shortcut: "↵",
+                isGrouped: true,
+                colorScheme: colorScheme,
+                action: openAction
+            )
 
-            Button(action: actionsAction) {
-                HStack(spacing: 8) {
-                    Text(verbatim: String(localized: "Actions"))
-                    LauncherFooterKeycap(text: "⌘K")
-                }
-            }
-            .buttonStyle(.plain)
+            LauncherBottomBarActionButton(
+                title: String(localized: "Actions"),
+                shortcut: "⌘K",
+                isGrouped: true,
+                colorScheme: colorScheme,
+                action: actionsAction
+            )
         }
-        .foregroundColor(colorScheme == .dark ? .primary : .secondary)
-        .modifier(BottomBarCapsule(isSelected: false, isActive: isActive, colorScheme: colorScheme))
     }
 }
 
@@ -3305,10 +3306,12 @@ private struct LauncherFooterKeycap: View {
 
 private struct LauncherBottomBarActionGroup<Content: View>: View {
     let colorScheme: ColorScheme
+    var isActive = false
     private let content: Content
 
-    init(colorScheme: ColorScheme, @ViewBuilder content: () -> Content) {
+    init(colorScheme: ColorScheme, isActive: Bool = false, @ViewBuilder content: () -> Content) {
         self.colorScheme = colorScheme
+        self.isActive = isActive
         self.content = content()
     }
 
@@ -3316,7 +3319,7 @@ private struct LauncherBottomBarActionGroup<Content: View>: View {
         HStack(spacing: 16) {
             content
         }
-        .modifier(BottomBarCapsule(isSelected: false, isActive: false, colorScheme: colorScheme))
+        .modifier(BottomBarCapsule(isSelected: false, isActive: isActive, colorScheme: colorScheme))
     }
 }
 
