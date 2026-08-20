@@ -1581,48 +1581,6 @@ struct WindowRowView: View {
     }
 }
 
-struct ConfirmBatchRowView: View {
-    let count: Int
-    let isSelected: Bool
-    @Environment(\.colorScheme) var colorScheme
-    @State private var isHovered = false
-    
-    var colors: ThemeColors {
-        ThemeColors(isDark: colorScheme == .dark)
-    }
-    
-    var body: some View {
-        HStack(spacing: 8) {
-            Image(systemName: "checkmark.circle.fill")
-                .font(.body.weight(.semibold))
-                .foregroundColor(isSelected ? colors.greenText : .white)
-                .frame(width: 28, height: 28)
-                .background(isSelected ? .white : colors.greenText.opacity(0.8))
-                .cornerRadius(6)
-            
-            Text(verbatim: String(format: String(localized: "Confirm & Execute Batch Move (%lld windows)"), count))
-                .font(.body)
-                .fontWeight(.semibold)
-                .foregroundColor(isSelected ? .white : colors.greenText)
-            
-            Spacer()
-            
-            KeycapView(text: "Run ↵", isSelected: isSelected, isGreenRow: true)
-        }
-        .padding(.horizontal, 8)
-        .padding(.vertical, 8)
-        .background(isSelected ? colors.greenText : (isHovered ? colors.greenText.opacity(0.5) : colors.greenText.opacity(0.06)))
-        .cornerRadius(8)
-        .overlay(
-            RoundedRectangle(cornerRadius: 8)
-                .stroke(colors.greenText.opacity(isSelected ? 0.3 : 0.1), lineWidth: 1)
-        )
-        .onHover { hovering in
-            isHovered = hovering
-        }
-    }
-}
-
 struct WindowBatchRowView: View {
     let window: WindowEntry
     let isSelected: Bool
