@@ -642,33 +642,24 @@ struct ListAreaView: View {
                                             
                                             ForEach(section.items) { item in
                                                 let isSelected = !viewModel.isBottomBarFocused && viewModel.selectedRowIndex == item.index
-                                                
-                                                switch item {
-                                                case .staged(let move, _):
-                                                    LauncherListRow(
-                                                        index: item.index,
-                                                        id: AnyHashable(item.id),
-                                                        layoutVersion: viewModel.listLayoutVersion,
-                                                        action: {
-                                                            viewModel.selectPointerRow(item.index)
-                                                            viewModel.executeRowAction()
-                                                        }
-                                                    ) {
-                                                        WindowBatchRowView(window: move.window, isSelected: isSelected, isStaged: true, stagedActionText: move.actionType.description, shortcutText: viewModel.showCommandNumbers && viewModel.commandKTargetWindow == nil && item.index < 9 ? "⌘\(item.index + 1)" : nil)
+                                                let shortcutText = viewModel.showCommandNumbers && viewModel.commandKTargetWindow == nil && item.index < 9 ? "⌘\(item.index + 1)" : nil
+
+                                                LauncherListRow(
+                                                    index: item.index,
+                                                    id: AnyHashable(item.id),
+                                                    layoutVersion: viewModel.listLayoutVersion,
+                                                    action: {
+                                                        viewModel.selectPointerRow(item.index)
+                                                        viewModel.executeRowAction()
                                                     }
-                                                        
-                                                case .unstaged(let window, _):
-                                                    LauncherListRow(
-                                                        index: item.index,
-                                                        id: AnyHashable(item.id),
-                                                        layoutVersion: viewModel.listLayoutVersion,
-                                                        action: {
-                                                            viewModel.selectPointerRow(item.index)
-                                                            viewModel.executeRowAction()
-                                                        }
-                                                    ) {
-                                                        WindowBatchRowView(window: window, isSelected: isSelected, isStaged: false, stagedActionText: "", shortcutText: viewModel.showCommandNumbers && viewModel.commandKTargetWindow == nil && item.index < 9 ? "⌘\(item.index + 1)" : nil)
-                                                    }
+                                                ) {
+                                                    WindowBatchRowView(
+                                                        window: item.window,
+                                                        isSelected: isSelected,
+                                                        isStaged: item.isStaged,
+                                                        stagedActionText: item.stagedActionText,
+                                                        shortcutText: shortcutText
+                                                    )
                                                 }
                                             }
                                         }
