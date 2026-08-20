@@ -762,46 +762,53 @@ private struct LauncherListScrollView<Content: View>: View {
     }
 
     var body: some View {
-        ZStack {
-            ScrollViewReader { proxy in
-                ScrollView {
-                    content
-                        .padding(.horizontal, LauncherMenuMetrics.rowSurfaceInset)
-                        .padding(.vertical, LauncherMenuMetrics.listVerticalInset)
-                }
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-                .coordinateSpace(name: LauncherLayout.verticalScrollCoordinateSpace)
-                .launcherViewportFrame()
-                .focusable(false)
-                .onChange(of: scrollToTopRequestVersion) { _ in
-                    DispatchQueue.main.async {
-                        requestScroll(to: 0, proxy: proxy)
+        GeometryReader { geometry in
+            ZStack {
+                ScrollViewReader { proxy in
+                    ScrollView {
+                        content
+                            .padding(.horizontal, LauncherMenuMetrics.rowSurfaceInset)
+                            .padding(.vertical, LauncherMenuMetrics.listVerticalInset)
                     }
-                }
-                .onChange(of: selectedRowIndex) { _ in
-                    guard isKeyboardSelection, !isBottomBarFocused else { return }
-                    DispatchQueue.main.async {
-                        requestScroll(to: selectedRowIndex, proxy: proxy)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .focusable(false)
+                    .onChange(of: scrollToTopRequestVersion) { _ in
+                        DispatchQueue.main.async {
+                            requestScroll(to: 0, proxy: proxy)
+                        }
                     }
-                }
-                .onChange(of: isKeyboardSelection) { isKeyboardSelection in
-                    if !isKeyboardSelection {
-                        scrollCoordinator.cancelPending()
+                    .onChange(of: selectedRowIndex) { _ in
+                        guard isKeyboardSelection, !isBottomBarFocused else { return }
+                        DispatchQueue.main.async {
+                            requestScroll(to: selectedRowIndex, proxy: proxy)
+                        }
                     }
-                }
-                .onChange(of: isBottomBarFocused) { isFocused in
-                    if isFocused {
-                        scrollCoordinator.cancelPending()
+                    .onChange(of: isKeyboardSelection) { isKeyboardSelection in
+                        if !isKeyboardSelection {
+                            scrollCoordinator.cancelPending()
+                        }
                     }
-                }
-                .onChange(of: layoutVersion) { _ in
-                    scrollCoordinator.invalidateGeometry()
+                    .onChange(of: isBottomBarFocused) { isFocused in
+                        if isFocused {
+                            scrollCoordinator.cancelPending()
+                        }
+                    }
+                    .onChange(of: layoutVersion) { _ in
+                        scrollCoordinator.invalidateGeometry()
+                    }
                 }
             }
-        }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .onPreferenceChange(LauncherListGeometryPreferenceKey.self) { geometry in
-            scrollCoordinator.update(geometry)
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .coordinateSpace(name: LauncherLayout.verticalScrollCoordinateSpace)
+            .preference(
+                key: LauncherListGeometryPreferenceKey.self,
+                value: LauncherListGeometrySnapshot(
+                    viewport: CGRect(origin: .zero, size: geometry.size)
+                )
+            )
+            .onPreferenceChange(LauncherListGeometryPreferenceKey.self) { geometry in
+                scrollCoordinator.update(geometry)
+            }
         }
     }
 
@@ -1063,19 +1070,6 @@ private struct LauncherSpaceBarGeometrySnapshot: Equatable {
 }
 
 private extension View {
-    func launcherViewportFrame() -> some View {
-        background {
-            GeometryReader { geometry in
-                Color.clear.preference(
-                    key: LauncherListGeometryPreferenceKey.self,
-                    value: LauncherListGeometrySnapshot(
-                        viewport: geometry.frame(in: .named(LauncherLayout.verticalScrollCoordinateSpace))
-                    )
-                )
-            }
-        }
-    }
-
     func launcherRowVisibility(index: Int, layoutVersion: Int) -> some View {
         background {
             GeometryReader { geometry in
