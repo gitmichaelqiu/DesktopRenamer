@@ -530,16 +530,17 @@ struct ListAreaView: View {
                                     ForEach(Array(section.commands.enumerated()), id: \.element.id) { localIndex, cmd in
                                         let index = section.startIndex + localIndex
                                         let isSelected = !viewModel.isBottomBarFocused && viewModel.selectedRowIndex == index
-                                        Button {
-                                            viewModel.selectPointerRow(index)
-                                            viewModel.executeRowAction()
-                                        } label: {
+                                        LauncherListRow(
+                                            index: index,
+                                            id: AnyHashable(cmd.id),
+                                            layoutVersion: viewModel.listLayoutVersion,
+                                            action: {
+                                                viewModel.selectPointerRow(index)
+                                                viewModel.executeRowAction()
+                                            }
+                                        ) {
                                             CommandRowView(command: cmd, isSelected: isSelected, isRoot: true, shortcutText: viewModel.showCommandNumbers && viewModel.commandKTargetWindow == nil && index < 9 ? "⌘\(index + 1)" : nil)
                                         }
-                                        .buttonStyle(.plain)
-                                        .focusable(false)
-                                        .launcherRowVisibility(index: index, layoutVersion: viewModel.listLayoutVersion)
-                                        .id(cmd.id)
                                     }
                                 }
                             }
@@ -566,16 +567,17 @@ struct ListAreaView: View {
                                     VStack(spacing: 0) {
                                         ForEach(Array(spaces.enumerated()), id: \.element.id) { i, space in
                                             let isSelected = !viewModel.isBottomBarFocused && viewModel.selectedRowIndex == i
-                                            Button {
+                                            LauncherListRow(
+                                                index: i,
+                                                id: AnyHashable(space.id),
+                                                layoutVersion: viewModel.listLayoutVersion,
+                                                action: {
                                                     viewModel.selectPointerRow(i)
                                                     viewModel.executeRowAction()
-                                            } label: {
+                                                }
+                                            ) {
                                                 SpaceRowView(space: space, isSelected: isSelected, isCurrent: AppDelegate.shared.spaceManager?.currentSpaceUUID == space.id, shortcutText: i < 9 ? "⌘\(i + 1)" : nil)
                                             }
-                                            .buttonStyle(.plain)
-                                            .focusable(false)
-                                            .launcherRowVisibility(index: i, layoutVersion: viewModel.listLayoutVersion)
-                                            .id(space.id)
                                         }
                                     }
                                     .padding(.horizontal, LauncherMenuMetrics.rowSurfaceInset)
@@ -603,20 +605,21 @@ struct ListAreaView: View {
                                             
                                             ForEach(section.items) { item in
                                                 let isSelected = !viewModel.isBottomBarFocused && viewModel.selectedRowIndex == item.index
-                                                Button {
-                                                    viewModel.selectPointerRow(item.index)
-                                                    viewModel.executeRowAction()
-                                                } label: {
+                                                LauncherListRow(
+                                                    index: item.index,
+                                                    id: AnyHashable(item.id),
+                                                    layoutVersion: viewModel.listLayoutVersion,
+                                                    action: {
+                                                        viewModel.selectPointerRow(item.index)
+                                                        viewModel.executeRowAction()
+                                                    }
+                                                ) {
                                                     WindowRowView(
                                                         window: item.window,
                                                         isSelected: isSelected,
                                                         shortcutText: viewModel.showCommandNumbers && viewModel.commandKTargetWindow == nil && item.index < 9 ? "⌘\(item.index + 1)" : nil
                                                     )
                                                 }
-                                                .buttonStyle(.plain)
-                                                .focusable(false)
-                                                .launcherRowVisibility(index: item.index, layoutVersion: viewModel.listLayoutVersion)
-                                                .id(item.id)
                                             }
                                         }
                                     }
@@ -648,28 +651,30 @@ struct ListAreaView: View {
                                                 
                                                 switch item {
                                                 case .staged(let move, _):
-                                                    Button {
+                                                    LauncherListRow(
+                                                        index: item.index,
+                                                        id: AnyHashable(item.id),
+                                                        layoutVersion: viewModel.listLayoutVersion,
+                                                        action: {
                                                             viewModel.selectPointerRow(item.index)
                                                             viewModel.executeRowAction()
-                                                    } label: {
+                                                        }
+                                                    ) {
                                                         WindowBatchRowView(window: move.window, isSelected: isSelected, isStaged: true, stagedActionText: move.actionType.description, shortcutText: viewModel.showCommandNumbers && viewModel.commandKTargetWindow == nil && item.index < 9 ? "⌘\(item.index + 1)" : nil)
                                                     }
-                                                    .buttonStyle(.plain)
-                                                    .focusable(false)
-                                                    .launcherRowVisibility(index: item.index, layoutVersion: viewModel.listLayoutVersion)
-                                                    .id(item.id)
                                                         
                                                 case .unstaged(let window, _):
-                                                    Button {
+                                                    LauncherListRow(
+                                                        index: item.index,
+                                                        id: AnyHashable(item.id),
+                                                        layoutVersion: viewModel.listLayoutVersion,
+                                                        action: {
                                                             viewModel.selectPointerRow(item.index)
                                                             viewModel.executeRowAction()
-                                                    } label: {
+                                                        }
+                                                    ) {
                                                         WindowBatchRowView(window: window, isSelected: isSelected, isStaged: false, stagedActionText: "", shortcutText: viewModel.showCommandNumbers && viewModel.commandKTargetWindow == nil && item.index < 9 ? "⌘\(item.index + 1)" : nil)
                                                     }
-                                                    .buttonStyle(.plain)
-                                                    .focusable(false)
-                                                    .launcherRowVisibility(index: item.index, layoutVersion: viewModel.listLayoutVersion)
-                                                    .id(item.id)
                                                 }
                                             }
                                         }
@@ -702,6 +707,38 @@ struct ListAreaView: View {
 private struct LauncherScrollTarget: Equatable {
     let index: Int
     let id: AnyHashable
+}
+
+private struct LauncherListRow<Content: View>: View {
+    let index: Int
+    let id: AnyHashable
+    let layoutVersion: Int
+    let action: () -> Void
+    private let content: Content
+
+    init(
+        index: Int,
+        id: AnyHashable,
+        layoutVersion: Int,
+        action: @escaping () -> Void,
+        @ViewBuilder content: () -> Content
+    ) {
+        self.index = index
+        self.id = id
+        self.layoutVersion = layoutVersion
+        self.action = action
+        self.content = content()
+    }
+
+    var body: some View {
+        Button(action: action) {
+            content
+        }
+        .buttonStyle(.plain)
+        .focusable(false)
+        .launcherRowVisibility(index: index, layoutVersion: layoutVersion)
+        .id(id)
+    }
 }
 
 private struct LauncherListScrollView<Content: View>: View {
