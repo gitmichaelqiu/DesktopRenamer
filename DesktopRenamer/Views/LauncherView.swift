@@ -813,7 +813,9 @@ private struct LauncherListScrollView<Content: View>: View {
                 // Let ScrollViewReader use the smallest movement that reveals
                 // the row; forcing top/bottom anchors makes nearby selections
                 // jump farther than the launcher should.
-                proxy.scrollTo(target.id)
+                withTransaction(Transaction(animation: nil)) {
+                    proxy.scrollTo(target.id)
+                }
             }
         )
     }
