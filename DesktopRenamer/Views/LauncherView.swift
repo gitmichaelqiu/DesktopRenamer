@@ -1174,7 +1174,6 @@ private struct FloatingHotkeyHint: View {
                 radius: 8,
                 y: 3
             )
-            .transition(.opacity)
     }
 }
 
