@@ -769,6 +769,9 @@ private struct LauncherListScrollView<Content: View>: View {
                         .padding(.horizontal, LauncherMenuMetrics.rowSurfaceInset)
                         .padding(.vertical, LauncherMenuMetrics.listVerticalInset)
                 }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .coordinateSpace(name: LauncherLayout.verticalScrollCoordinateSpace)
+                .launcherViewportFrame()
                 .focusable(false)
                 .onChange(of: scrollToTopRequestVersion) { _ in
                     DispatchQueue.main.async {
@@ -797,8 +800,6 @@ private struct LauncherListScrollView<Content: View>: View {
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .coordinateSpace(name: LauncherLayout.verticalScrollCoordinateSpace)
-        .launcherViewportFrame()
         .onPreferenceChange(LauncherListGeometryPreferenceKey.self) { geometry in
             scrollCoordinator.update(geometry)
         }
