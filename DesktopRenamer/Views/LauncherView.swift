@@ -825,8 +825,11 @@ private enum LauncherScrollPolicy {
     static func shouldScroll(row: CGRect, viewport: CGRect) -> Bool {
         guard !viewport.isEmpty else { return false }
         let tolerance = viewportEdgeTolerance
-        return row.maxY <= viewport.minY - tolerance ||
-            row.minY >= viewport.maxY + tolerance
+        // Keep the current offset while the selected row is still meaningfully
+        // visible. Scrolling on the first clipped pixel makes middle rows
+        // move the list before the user reaches the end of the visible list.
+        return row.midY <= viewport.minY - tolerance ||
+            row.midY >= viewport.maxY + tolerance
     }
 }
 
