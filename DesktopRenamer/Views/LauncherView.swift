@@ -809,12 +809,11 @@ private struct LauncherListScrollView<Content: View>: View {
         scrollCoordinator.request(
             index: target.index,
             layoutVersion: layoutVersion,
-            scrollToSelection: {
-                // Let ScrollViewReader use the smallest movement that reveals
-                // the row; forcing top/bottom anchors makes nearby selections
-                // jump farther than the launcher should.
+            scrollToSelection: { anchor in
+                // Reveal only the edge that clipped the selected row. The
+                // coordinator has already rejected fully visible rows.
                 withTransaction(Transaction(animation: nil)) {
-                    proxy.scrollTo(target.id)
+                    proxy.scrollTo(target.id, anchor: anchor)
                 }
             }
         )
@@ -824,14 +823,19 @@ private struct LauncherListScrollView<Content: View>: View {
 private enum LauncherScrollPolicy {
     static let viewportEdgeTolerance: CGFloat = 1
 
-    static func shouldScroll(row: CGRect, viewport: CGRect) -> Bool {
-        guard !viewport.isEmpty else { return false }
+    static func revealAnchor(for row: CGRect, in viewport: CGRect) -> UnitPoint? {
+        guard !viewport.isEmpty else { return nil }
         let tolerance = viewportEdgeTolerance
         // Keep the current offset while the selected row remains fully visible.
         // Using the row edges avoids moving the list merely because its center
         // crossed a viewport edge while the row itself is still on screen.
-        return row.minY < viewport.minY - tolerance ||
-            row.maxY > viewport.maxY + tolerance
+        if row.minY < viewport.minY - tolerance {
+            return .top
+        }
+        if row.maxY > viewport.maxY + tolerance {
+            return .bottom
+        }
+        return nil
     }
 }
 
@@ -840,7 +844,7 @@ private final class LauncherScrollCoordinator: ObservableObject {
     private struct Request {
         let index: Int
         let layoutVersion: Int
-        let scrollToSelection: () -> Void
+        let scrollToSelection: (UnitPoint) -> Void
     }
 
     private var rowFrames: [Int: CGRect] = [:]
@@ -891,7 +895,7 @@ private final class LauncherScrollCoordinator: ObservableObject {
         requestGeneration &+= 1
     }
 
-    func request(index: Int, layoutVersion: Int, scrollToSelection: @escaping () -> Void) {
+    func request(index: Int, layoutVersion: Int, scrollToSelection: @escaping (UnitPoint) -> Void) {
         requestGeneration &+= 1
         pendingRequest = Request(
             index: index,
@@ -911,9 +915,7 @@ private final class LauncherScrollCoordinator: ObservableObject {
             return
         }
 
-        let shouldScroll = LauncherScrollPolicy.shouldScroll(row: frame, viewport: viewport)
-
-        guard shouldScroll else {
+        guard let anchor = LauncherScrollPolicy.revealAnchor(for: frame, in: viewport) else {
             pendingRequest = nil
             return
         }
@@ -931,7 +933,7 @@ private final class LauncherScrollCoordinator: ObservableObject {
                 return
             }
             self.pendingRequest = nil
-            request.scrollToSelection()
+            request.scrollToSelection(anchor)
         }
     }
 }
