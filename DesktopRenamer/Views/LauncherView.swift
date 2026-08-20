@@ -957,6 +957,7 @@ private final class LauncherHorizontalScrollCoordinator: ObservableObject {
     private var pendingRequest: Request?
     private var requestGeneration = 0
     private var geometryRevision = 0
+    private let viewportEdgeTolerance: CGFloat = 1
 
     func update(_ geometry: LauncherSpaceBarGeometrySnapshot) {
         guard itemFrames != geometry.frames || viewport != geometry.viewport else {
@@ -996,9 +997,9 @@ private final class LauncherHorizontalScrollCoordinator: ObservableObject {
         }
 
         let shouldScroll: Bool
-        if frame.maxX < viewport.minX {
+        if frame.maxX <= viewport.minX - viewportEdgeTolerance {
             shouldScroll = true
-        } else if frame.minX > viewport.maxX {
+        } else if frame.minX >= viewport.maxX + viewportEdgeTolerance {
             shouldScroll = true
         } else {
             shouldScroll = false
