@@ -765,7 +765,7 @@ private struct LauncherListScrollView<Content: View>: View {
                     .focusable(false)
                     .onChange(of: scrollToTopRequestVersion) { _ in
                         DispatchQueue.main.async {
-                            requestScroll(to: 0, proxy: proxy)
+                            requestScrollToTop(proxy: proxy)
                         }
                     }
                     .onChange(of: selectedRowIndex) { _ in
@@ -816,6 +816,14 @@ private struct LauncherListScrollView<Content: View>: View {
                 }
             }
         )
+    }
+
+    private func requestScrollToTop(proxy: ScrollViewProxy) {
+        guard let target = targets.min(by: { $0.index < $1.index }) else { return }
+        scrollCoordinator.cancelPending()
+        withTransaction(Transaction(animation: nil)) {
+            proxy.scrollTo(target.id, anchor: .top)
+        }
     }
 }
 
