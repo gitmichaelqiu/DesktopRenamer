@@ -493,7 +493,6 @@ private struct LauncherMarkView: View {
 struct ListAreaView: View {
     @ObservedObject var viewModel: LauncherViewModel
     @Environment(\.colorScheme) var colorScheme
-    @StateObject private var scrollCoordinator = LauncherScrollCoordinator()
     
     var colors: ThemeColors {
         ThemeColors(isDark: colorScheme == .dark)
@@ -508,8 +507,15 @@ struct ListAreaView: View {
                 if commands.isEmpty {
                     EmptyResultsView()
                 } else {
-                    ScrollViewReader { proxy in
-                        ScrollView {
+                    LauncherListScrollView(
+                        targets: commands.enumerated().map { LauncherScrollTarget(index: $0.offset, id: AnyHashable($0.element.id)) },
+                        layoutVersion: viewModel.listLayoutVersion,
+                        selectionScrollRequestVersion: viewModel.selectionScrollRequestVersion,
+                        scrollToTopRequestVersion: viewModel.scrollToTopRequestVersion,
+                        selectedRowIndex: viewModel.selectedRowIndex,
+                        isKeyboardSelection: viewModel.isKeyboardSelection,
+                        isBottomBarFocused: viewModel.isBottomBarFocused
+                    ) {
                             VStack(alignment: .leading, spacing: 0) {
                                 ForEach(sections) { section in
                                     if let title = section.title {
@@ -539,30 +545,6 @@ struct ListAreaView: View {
                             }
                             .padding(.horizontal, LauncherMenuMetrics.rowSurfaceInset)
                             .padding(.vertical, 8)
-                        }
-                        .launcherViewportFrame()
-                        .focusable(false)
-                        .onChange(of: viewModel.listLayoutVersion) { _ in
-                            if let index = viewModel.consumeScrollRequest() {
-                                guard commands.indices.contains(index) else { return }
-                                requestScrollSelection(
-                                    index: index,
-                                    layoutVersion: viewModel.listLayoutVersion,
-                                    id: commands[index].id,
-                                    proxy: proxy
-                                )
-                            }
-                        }
-                        .onChange(of: viewModel.selectionScrollRequestVersion) { _ in
-                            let index = viewModel.selectedRowIndex
-                            guard commands.indices.contains(index) else { return }
-                            requestScrollSelection(
-                                index: index,
-                                layoutVersion: viewModel.listLayoutVersion,
-                                id: commands[index].id,
-                                proxy: proxy
-                            )
-                        }
                     }
                 }
             } else {
@@ -572,9 +554,16 @@ struct ListAreaView: View {
                         if spaces.isEmpty {
                             EmptyResultsView()
                         } else {
-                            ScrollViewReader { proxy in
-                                ScrollView {
-                                    VStack(spacing: 4) {
+                            LauncherListScrollView(
+                                targets: spaces.enumerated().map { LauncherScrollTarget(index: $0.offset, id: AnyHashable($0.element.id)) },
+                                layoutVersion: viewModel.listLayoutVersion,
+                                selectionScrollRequestVersion: viewModel.selectionScrollRequestVersion,
+                                scrollToTopRequestVersion: viewModel.scrollToTopRequestVersion,
+                                selectedRowIndex: viewModel.selectedRowIndex,
+                                isKeyboardSelection: viewModel.isKeyboardSelection,
+                                isBottomBarFocused: viewModel.isBottomBarFocused
+                            ) {
+                                    VStack(spacing: 0) {
                                         ForEach(Array(spaces.enumerated()), id: \.element.id) { i, space in
                                             let isSelected = !viewModel.isBottomBarFocused && viewModel.selectedRowIndex == i
                                             Button {
@@ -591,30 +580,6 @@ struct ListAreaView: View {
                                     }
                                     .padding(.horizontal, LauncherMenuMetrics.rowSurfaceInset)
                                     .padding(.vertical, 8)
-                                }
-                                .launcherViewportFrame()
-                                .focusable(false)
-                                .onChange(of: viewModel.listLayoutVersion) { _ in
-                                    if let index = viewModel.consumeScrollRequest() {
-                                        guard spaces.indices.contains(index) else { return }
-                                        requestScrollSelection(
-                                            index: index,
-                                            layoutVersion: viewModel.listLayoutVersion,
-                                            id: spaces[index].id,
-                                            proxy: proxy
-                                        )
-                                    }
-                                }
-                                .onChange(of: viewModel.selectionScrollRequestVersion) { _ in
-                                    let index = viewModel.selectedRowIndex
-                                    guard spaces.indices.contains(index) else { return }
-                                    requestScrollSelection(
-                                        index: index,
-                                        layoutVersion: viewModel.listLayoutVersion,
-                                        id: spaces[index].id,
-                                        proxy: proxy
-                                    )
-                                }
                             }
                         }
                         
@@ -623,9 +588,16 @@ struct ListAreaView: View {
                         if sections.isEmpty {
                             EmptyView()
                         } else {
-                            ScrollViewReader { proxy in
-                                ScrollView {
-                                    VStack(alignment: .leading, spacing: 4) {
+                            LauncherListScrollView(
+                                targets: sections.flatMap({ $0.items }).map { LauncherScrollTarget(index: $0.index, id: AnyHashable($0.id)) },
+                                layoutVersion: viewModel.listLayoutVersion,
+                                selectionScrollRequestVersion: viewModel.selectionScrollRequestVersion,
+                                scrollToTopRequestVersion: viewModel.scrollToTopRequestVersion,
+                                selectedRowIndex: viewModel.selectedRowIndex,
+                                isKeyboardSelection: viewModel.isKeyboardSelection,
+                                isBottomBarFocused: viewModel.isBottomBarFocused
+                            ) {
+                                    VStack(alignment: .leading, spacing: 0) {
                                         ForEach(Array(sections.enumerated()), id: \.element.id) { sIdx, section in
                                             ListSectionHeader(title: section.title, subtitle: section.subtitle, isFirst: sIdx == 0)
                                             
@@ -650,32 +622,6 @@ struct ListAreaView: View {
                                     }
                                     .padding(.horizontal, LauncherMenuMetrics.rowSurfaceInset)
                                     .padding(.vertical, 8)
-                                }
-                                .launcherViewportFrame()
-                                .focusable(false)
-                                .onChange(of: viewModel.listLayoutVersion) { _ in
-                                    if let index = viewModel.consumeScrollRequest() {
-                                        if let item = sections.flatMap({ $0.items }).first(where: { $0.index == index }) {
-                                            requestScrollSelection(
-                                                index: index,
-                                                layoutVersion: viewModel.listLayoutVersion,
-                                                id: item.id,
-                                                proxy: proxy
-                                            )
-                                        }
-                                    }
-                                }
-                                .onChange(of: viewModel.selectionScrollRequestVersion) { _ in
-                                    let index = viewModel.selectedRowIndex
-                                    if let item = sections.flatMap({ $0.items }).first(where: { $0.index == index }) {
-                                        requestScrollSelection(
-                                            index: index,
-                                            layoutVersion: viewModel.listLayoutVersion,
-                                            id: item.id,
-                                            proxy: proxy
-                                        )
-                                    }
-                                }
                             }
                         }
                         
@@ -684,9 +630,16 @@ struct ListAreaView: View {
                         if sections.isEmpty {
                             EmptyView()
                         } else {
-                            ScrollViewReader { proxy in
-                                ScrollView {
-                                    VStack(alignment: .leading, spacing: 4) {
+                            LauncherListScrollView(
+                                targets: sections.flatMap({ $0.items }).map { LauncherScrollTarget(index: $0.index, id: AnyHashable($0.id)) },
+                                layoutVersion: viewModel.listLayoutVersion,
+                                selectionScrollRequestVersion: viewModel.selectionScrollRequestVersion,
+                                scrollToTopRequestVersion: viewModel.scrollToTopRequestVersion,
+                                selectedRowIndex: viewModel.selectedRowIndex,
+                                isKeyboardSelection: viewModel.isKeyboardSelection,
+                                isBottomBarFocused: viewModel.isBottomBarFocused
+                            ) {
+                                    VStack(alignment: .leading, spacing: 0) {
                                         ForEach(Array(sections.enumerated()), id: \.element.id) { sIdx, section in
                                             ListSectionHeader(title: section.title, subtitle: section.subtitle, isFirst: sIdx == 0)
                                             
@@ -723,32 +676,6 @@ struct ListAreaView: View {
                                     }
                                     .padding(.horizontal, LauncherMenuMetrics.rowSurfaceInset)
                                     .padding(.vertical, 8)
-                                }
-                                .launcherViewportFrame()
-                                .focusable(false)
-                                .onChange(of: viewModel.listLayoutVersion) { _ in
-                                    if let index = viewModel.consumeScrollRequest() {
-                                        if let item = sections.flatMap({ $0.items }).first(where: { $0.index == index }) {
-                                            requestScrollSelection(
-                                                index: index,
-                                                layoutVersion: viewModel.listLayoutVersion,
-                                                id: item.id,
-                                                proxy: proxy
-                                            )
-                                        }
-                                    }
-                                }
-                                .onChange(of: viewModel.selectionScrollRequestVersion) { _ in
-                                    let index = viewModel.selectedRowIndex
-                                    if let item = sections.flatMap({ $0.items }).first(where: { $0.index == index }) {
-                                        requestScrollSelection(
-                                            index: index,
-                                            layoutVersion: viewModel.listLayoutVersion,
-                                            id: item.id,
-                                            proxy: proxy
-                                        )
-                                    }
-                                }
                             }
                         }
                         
@@ -768,48 +695,107 @@ struct ListAreaView: View {
         .onChange(of: viewModel.currentSpaces) { _ in
             viewModel.selectCurrentTargetSpace()
         }
-        .onPreferenceChange(LauncherListGeometryPreferenceKey.self) { geometry in
-            scrollCoordinator.update(geometry)
-        }
-        .onChange(of: viewModel.searchQuery) { _ in
-            scrollCoordinator.clearRows()
-        }
-        .onChange(of: viewModel.isKeyboardSelection) { isKeyboardSelection in
-            if !isKeyboardSelection {
-                scrollCoordinator.cancelPending()
-            }
-        }
-        .onChange(of: viewModel.isBottomBarFocused) { isFocused in
-            if isFocused {
-                scrollCoordinator.cancelPending()
-            }
-        }
-        .onChange(of: viewModel.activeCommand?.type) { _ in
-            scrollCoordinator.reset()
-        }
-    }
-
-    private func requestScrollSelection<ID: Hashable>(
-        index: Int,
-        layoutVersion: Int,
-        id: ID,
-        proxy: ScrollViewProxy
-    ) {
-        scrollCoordinator.request(
-            index: index,
-            layoutVersion: layoutVersion,
-            scrollToSelection: {
-                proxy.scrollTo(id)
-            }
-        )
     }
 
 }
 
+private struct LauncherScrollTarget: Equatable {
+    let index: Int
+    let id: AnyHashable
+}
+
+private struct LauncherListScrollView<Content: View>: View {
+    let targets: [LauncherScrollTarget]
+    let layoutVersion: Int
+    let selectionScrollRequestVersion: Int
+    let scrollToTopRequestVersion: Int
+    let selectedRowIndex: Int
+    let isKeyboardSelection: Bool
+    let isBottomBarFocused: Bool
+    private let content: Content
+    @StateObject private var scrollCoordinator = LauncherScrollCoordinator()
+
+    init(
+        targets: [LauncherScrollTarget],
+        layoutVersion: Int,
+        selectionScrollRequestVersion: Int,
+        scrollToTopRequestVersion: Int,
+        selectedRowIndex: Int,
+        isKeyboardSelection: Bool,
+        isBottomBarFocused: Bool,
+        @ViewBuilder content: () -> Content
+    ) {
+        self.targets = targets
+        self.layoutVersion = layoutVersion
+        self.selectionScrollRequestVersion = selectionScrollRequestVersion
+        self.scrollToTopRequestVersion = scrollToTopRequestVersion
+        self.selectedRowIndex = selectedRowIndex
+        self.isKeyboardSelection = isKeyboardSelection
+        self.isBottomBarFocused = isBottomBarFocused
+        self.content = content()
+    }
+
+    var body: some View {
+        ScrollViewReader { proxy in
+            ScrollView {
+                content
+            }
+            .launcherViewportFrame()
+            .focusable(false)
+            .onChange(of: scrollToTopRequestVersion) { _ in
+                DispatchQueue.main.async {
+                    requestScroll(to: 0, proxy: proxy)
+                }
+            }
+            .onChange(of: selectionScrollRequestVersion) { _ in
+                DispatchQueue.main.async {
+                    requestScroll(to: selectedRowIndex, proxy: proxy)
+                }
+            }
+            .onPreferenceChange(LauncherListGeometryPreferenceKey.self) { geometry in
+                scrollCoordinator.update(geometry)
+            }
+            .onChange(of: isKeyboardSelection) { isKeyboardSelection in
+                if !isKeyboardSelection {
+                    scrollCoordinator.cancelPending()
+                }
+            }
+            .onChange(of: isBottomBarFocused) { isFocused in
+                if isFocused {
+                    scrollCoordinator.cancelPending()
+                }
+            }
+            .onChange(of: layoutVersion) { _ in
+                scrollCoordinator.invalidateGeometry()
+            }
+        }
+    }
+
+    private func requestScroll(to index: Int, proxy: ScrollViewProxy) {
+        guard let target = targets.first(where: { $0.index == index }) else { return }
+        scrollCoordinator.request(
+            index: target.index,
+            layoutVersion: layoutVersion,
+            scrollToSelection: {
+                proxy.scrollTo(target.id)
+            }
+        )
+    }
+}
+
+private enum LauncherScrollPolicy {
+    static let viewportEdgeTolerance: CGFloat = 1
+
+    static func shouldScroll(row: CGRect, viewport: CGRect) -> Bool {
+        guard !viewport.isEmpty else { return false }
+        let tolerance = viewportEdgeTolerance
+        return row.maxY <= viewport.minY - tolerance ||
+            row.minY >= viewport.maxY + tolerance
+    }
+}
+
 @MainActor
 private final class LauncherScrollCoordinator: ObservableObject {
-    private static let viewportEdgeTolerance: CGFloat = 1
-
     private struct Request {
         let index: Int
         let layoutVersion: Int
@@ -845,6 +831,15 @@ private final class LauncherScrollCoordinator: ObservableObject {
         geometryRevision &+= 1
     }
 
+    func invalidateGeometry() {
+        rowFrames = [:]
+        currentLayoutVersion = nil
+        viewport = .zero
+        pendingRequest = nil
+        requestGeneration &+= 1
+        geometryRevision &+= 1
+    }
+
     func reset() {
         clearRows()
         pendingRequest = nil
@@ -875,19 +870,7 @@ private final class LauncherScrollCoordinator: ObservableObject {
             return
         }
 
-        let shouldScroll: Bool
-        // Keep a partially visible row anchored in place. The list should move
-        // only after keyboard selection leaves the viewport completely. The
-        // tolerance avoids treating a row that is flush with an edge as
-        // outside during an intermediate AppKit/SwiftUI geometry pass.
-        let tolerance = Self.viewportEdgeTolerance
-        if frame.maxY <= viewport.minY - tolerance {
-            shouldScroll = true
-        } else if frame.minY >= viewport.maxY + tolerance {
-            shouldScroll = true
-        } else {
-            shouldScroll = false
-        }
+        let shouldScroll = LauncherScrollPolicy.shouldScroll(row: frame, viewport: viewport)
 
         guard shouldScroll else {
             pendingRequest = nil
