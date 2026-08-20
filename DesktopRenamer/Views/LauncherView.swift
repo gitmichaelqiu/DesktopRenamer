@@ -779,6 +779,9 @@ private struct LauncherListScrollView<Content: View>: View {
                     }
                 }
                 .focusable(false)
+                .transaction { transaction in
+                    transaction.animation = nil
+                }
                 .onChange(of: scrollToTopRequestVersion) { _ in
                     DispatchQueue.main.async {
                         requestScrollToTop(proxy: proxy)
