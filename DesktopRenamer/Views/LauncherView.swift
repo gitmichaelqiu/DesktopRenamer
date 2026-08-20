@@ -31,6 +31,7 @@ private enum LauncherMenuMetrics {
     static let rowSurfaceInset: CGFloat = 12
     static let listVerticalInset: CGFloat = 8
     static let contentVerticalPadding: CGFloat = 4
+    static let sectionHeaderFontSize: CGFloat = 15
     static let rowTitleFontSize: CGFloat = 16
     static let rowSubtitleFontSize: CGFloat = 14
 }
@@ -1353,13 +1354,13 @@ struct CommandRowView: View {
             commandIcon
 
             Text(command.title)
-                .font(.system(size: 16, weight: .semibold))
+                .font(.system(size: LauncherMenuMetrics.rowTitleFontSize, weight: .semibold))
                 .foregroundColor(colors.textPrimary)
                 .lineLimit(1)
                 .layoutPriority(2)
 
             Text(command.subtitle)
-                .font(.system(size: 14))
+                .font(.system(size: LauncherMenuMetrics.rowSubtitleFontSize))
                 .foregroundColor(colors.textSecondary)
                 .lineLimit(1)
                 .truncationMode(.tail)
@@ -1385,12 +1386,12 @@ struct CommandRowView: View {
             
             VStack(alignment: .leading, spacing: 2) {
                 Text(command.title)
-                    .font(.system(size: 16, weight: .semibold))
+                    .font(.system(size: LauncherMenuMetrics.rowTitleFontSize, weight: .semibold))
                     .foregroundColor(colors.textPrimary)
                     .lineLimit(1)
                 
                 Text(command.subtitle)
-                    .font(.system(size: 14))
+                    .font(.system(size: LauncherMenuMetrics.rowSubtitleFontSize))
                     .foregroundColor(isSelected ? colors.textSecondary : colors.textTertiary)
                     .lineLimit(1)
             }
@@ -1717,12 +1718,12 @@ private struct LauncherSectionHeader: View {
     var body: some View {
         HStack(spacing: 12) {
             Text(verbatim: title)
-                .font(.system(size: 15, weight: .semibold))
+                .font(.system(size: LauncherMenuMetrics.sectionHeaderFontSize, weight: .semibold))
                 .foregroundColor(colors.textSecondary)
 
             if let subtitle {
                 Text(verbatim: subtitle)
-                    .font(.system(size: 15))
+                    .font(.system(size: LauncherMenuMetrics.sectionHeaderFontSize))
                     .foregroundColor(colors.textSecondary)
             }
 
