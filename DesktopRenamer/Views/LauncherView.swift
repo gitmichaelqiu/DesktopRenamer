@@ -765,7 +765,7 @@ private struct LauncherListScrollView<Content: View>: View {
         GeometryReader { geometry in
             ZStack {
                 ScrollViewReader { proxy in
-                    ScrollView {
+                    ScrollView(showsIndicators: false) {
                         content
                             .padding(.horizontal, LauncherMenuMetrics.rowSurfaceInset)
                             .padding(.vertical, LauncherMenuMetrics.listVerticalInset)
