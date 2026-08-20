@@ -815,8 +815,8 @@ private struct LauncherListScrollView<Content: View>: View {
         scrollCoordinator.request(
             index: target.index,
             layoutVersion: layoutVersion,
-            scrollToSelection: {
-                proxy.scrollTo(target.id)
+            scrollToSelection: { anchor in
+                proxy.scrollTo(target.id, anchor: anchor)
             }
         )
     }
@@ -838,7 +838,7 @@ private final class LauncherScrollCoordinator: ObservableObject {
     private struct Request {
         let index: Int
         let layoutVersion: Int
-        let scrollToSelection: () -> Void
+        let scrollToSelection: (UnitPoint) -> Void
     }
 
     private var rowFrames: [Int: CGRect] = [:]
@@ -889,7 +889,7 @@ private final class LauncherScrollCoordinator: ObservableObject {
         requestGeneration &+= 1
     }
 
-    func request(index: Int, layoutVersion: Int, scrollToSelection: @escaping () -> Void) {
+    func request(index: Int, layoutVersion: Int, scrollToSelection: @escaping (UnitPoint) -> Void) {
         requestGeneration &+= 1
         pendingRequest = Request(
             index: index,
@@ -929,7 +929,8 @@ private final class LauncherScrollCoordinator: ObservableObject {
                 return
             }
             self.pendingRequest = nil
-            request.scrollToSelection()
+            let anchor: UnitPoint = frame.maxY <= self.viewport.minY ? .top : .bottom
+            request.scrollToSelection(anchor)
         }
     }
 }
