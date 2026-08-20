@@ -117,9 +117,9 @@ enum BatchMoveItem: Identifiable, Equatable {
     var id: String {
         switch self {
         case .staged(let action, _):
-            return "staged_\(action.window.id)"
+            return "batch_window_\(action.window.id)"
         case .unstaged(let window, _):
-            return "unstaged_\(window.id)"
+            return "batch_window_\(window.id)"
         }
     }
 
