@@ -543,8 +543,7 @@ struct ListAreaView: View {
                         .launcherViewportFrame()
                         .focusable(false)
                         .onChange(of: viewModel.listLayoutVersion) { _ in
-                            if viewModel.consumeScrollRequest() {
-                                let index = viewModel.selectedRowIndex
+                            if let index = viewModel.consumeScrollRequest() {
                                 guard commands.indices.contains(index) else { return }
                                 requestScrollSelection(
                                     index: index,
@@ -596,8 +595,7 @@ struct ListAreaView: View {
                                 .launcherViewportFrame()
                                 .focusable(false)
                                 .onChange(of: viewModel.listLayoutVersion) { _ in
-                                    if viewModel.consumeScrollRequest() {
-                                        let index = viewModel.selectedRowIndex
+                                    if let index = viewModel.consumeScrollRequest() {
                                         guard spaces.indices.contains(index) else { return }
                                         requestScrollSelection(
                                             index: index,
@@ -656,8 +654,7 @@ struct ListAreaView: View {
                                 .launcherViewportFrame()
                                 .focusable(false)
                                 .onChange(of: viewModel.listLayoutVersion) { _ in
-                                    if viewModel.consumeScrollRequest() {
-                                        let index = viewModel.selectedRowIndex
+                                    if let index = viewModel.consumeScrollRequest() {
                                         if let item = sections.flatMap({ $0.items }).first(where: { $0.index == index }) {
                                             requestScrollSelection(
                                                 index: index,
@@ -730,8 +727,7 @@ struct ListAreaView: View {
                                 .launcherViewportFrame()
                                 .focusable(false)
                                 .onChange(of: viewModel.listLayoutVersion) { _ in
-                                    if viewModel.consumeScrollRequest() {
-                                        let index = viewModel.selectedRowIndex
+                                    if let index = viewModel.consumeScrollRequest() {
                                         if let item = sections.flatMap({ $0.items }).first(where: { $0.index == index }) {
                                             requestScrollSelection(
                                                 index: index,

@@ -206,7 +206,7 @@ enum LauncherOverlay: Equatable {
     @Published var searchQuery: String = "" {
         didSet {
             guard oldValue != searchQuery else { return }
-            shouldScrollSelectedRow = true
+            pendingInitialScrollIndex = 0
             selectedRowIndex = 0
             isKeyboardSelection = true
             isBottomBarFocused = false
@@ -233,7 +233,7 @@ enum LauncherOverlay: Equatable {
                 listLayoutVersion &+= 1
             }
             selectedRowIndex = 0
-            shouldScrollSelectedRow = false
+            pendingInitialScrollIndex = nil
             isKeyboardSelection = true
             isBottomBarFocused = false
             isRootActionsPresented = false
@@ -259,7 +259,7 @@ enum LauncherOverlay: Equatable {
     }
     @Published var isLoadingData: Bool = false
     @Published var isKeyboardSelection: Bool = false
-    private var shouldScrollSelectedRow = false
+    private var pendingInitialScrollIndex: Int?
     
     @Published var showCommandNumbers: Bool = false
     @Published var isBottomBarFocused: Bool = false
@@ -312,7 +312,7 @@ enum LauncherOverlay: Equatable {
             searchQuery = ""
             spacePickerQuery = ""
             selectedRowIndex = 0
-            shouldScrollSelectedRow = false
+            pendingInitialScrollIndex = nil
             isKeyboardSelection = true
             isBottomBarFocused = false
             if stagingWindow != nil {
@@ -1604,15 +1604,15 @@ enum LauncherOverlay: Equatable {
     func selectKeyboardRow(_ index: Int) {
         guard index >= 0, index < visibleRowsCount else { return }
         isKeyboardSelection = true
+        pendingInitialScrollIndex = nil
         guard selectedRowIndex != index else { return }
         selectedRowIndex = index
         selectionScrollRequestVersion &+= 1
     }
 
-    func consumeScrollRequest() -> Bool {
-        guard shouldScrollSelectedRow else { return false }
-        shouldScrollSelectedRow = false
-        return true
+    func consumeScrollRequest() -> Int? {
+        defer { pendingInitialScrollIndex = nil }
+        return pendingInitialScrollIndex
     }
 
     func resetForPresentation() {
@@ -1621,7 +1621,7 @@ enum LauncherOverlay: Equatable {
         activeCommand = nil
         stagingWindow = nil
         isRootSpacePickerPresented = false
-        shouldScrollSelectedRow = true
+        pendingInitialScrollIndex = 0
         isKeyboardSelection = true
         isBottomBarFocused = false
         listLayoutVersion &+= 1
@@ -1630,7 +1630,7 @@ enum LauncherOverlay: Equatable {
     func selectPointerRow(_ index: Int) {
         guard !isBottomBarFocused, index >= 0, index < visibleRowsCount else { return }
         isKeyboardSelection = false
-        shouldScrollSelectedRow = false
+        pendingInitialScrollIndex = nil
         selectedRowIndex = index
     }
 
@@ -1686,7 +1686,7 @@ enum LauncherOverlay: Equatable {
             return
         }
 
-        shouldScrollSelectedRow = false
+        pendingInitialScrollIndex = nil
         isKeyboardSelection = true
         selectedRowIndex = currentIndex
     }
