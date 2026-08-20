@@ -540,7 +540,6 @@ struct ListAreaView: View {
                             .padding(.horizontal, LauncherMenuMetrics.rowSurfaceInset)
                             .padding(.vertical, 8)
                         }
-                        .coordinateSpace(name: "launcher-list")
                         .launcherViewportFrame()
                         .focusable(false)
                         .onChange(of: viewModel.listLayoutVersion) { _ in
@@ -594,7 +593,6 @@ struct ListAreaView: View {
                                     .padding(.horizontal, LauncherMenuMetrics.rowSurfaceInset)
                                     .padding(.vertical, 8)
                                 }
-                                .coordinateSpace(name: "launcher-list")
                                 .launcherViewportFrame()
                                 .focusable(false)
                                 .onChange(of: viewModel.listLayoutVersion) { _ in
@@ -655,7 +653,6 @@ struct ListAreaView: View {
                                     .padding(.horizontal, LauncherMenuMetrics.rowSurfaceInset)
                                     .padding(.vertical, 8)
                                 }
-                                .coordinateSpace(name: "launcher-list")
                                 .launcherViewportFrame()
                                 .focusable(false)
                                 .onChange(of: viewModel.listLayoutVersion) { _ in
@@ -730,7 +727,6 @@ struct ListAreaView: View {
                                     .padding(.horizontal, LauncherMenuMetrics.rowSurfaceInset)
                                     .padding(.vertical, 8)
                                 }
-                                .coordinateSpace(name: "launcher-list")
                                 .launcherViewportFrame()
                                 .focusable(false)
                                 .onChange(of: viewModel.listLayoutVersion) { _ in
@@ -1050,7 +1046,7 @@ private extension View {
                 Color.clear.preference(
                     key: LauncherListGeometryPreferenceKey.self,
                     value: LauncherListGeometrySnapshot(
-                        viewport: CGRect(origin: .zero, size: geometry.size)
+                        viewport: geometry.frame(in: .global)
                     )
                 )
             }
@@ -1063,7 +1059,7 @@ private extension View {
                 Color.clear.preference(
                     key: LauncherListGeometryPreferenceKey.self,
                     value: LauncherListGeometrySnapshot(
-                        frames: [index: geometry.frame(in: .named("launcher-list"))],
+                        frames: [index: geometry.frame(in: .global)],
                         layoutVersion: layoutVersion
                     )
                 )
@@ -1077,7 +1073,7 @@ private extension View {
                 Color.clear.preference(
                     key: LauncherSpaceBarGeometryPreferenceKey.self,
                     value: LauncherSpaceBarGeometrySnapshot(
-                        frames: [id: geometry.frame(in: .named("launcher-space-bar"))]
+                        frames: [id: geometry.frame(in: .global)]
                     )
                 )
             }
@@ -1089,9 +1085,7 @@ private extension View {
             GeometryReader { geometry in
                 Color.clear.preference(
                     key: LauncherSpaceBarGeometryPreferenceKey.self,
-                    value: LauncherSpaceBarGeometrySnapshot(
-                        viewport: geometry.frame(in: .named("launcher-space-bar"))
-                    )
+                    value: LauncherSpaceBarGeometrySnapshot(viewport: geometry.frame(in: .global))
                 )
             }
         }
@@ -2054,7 +2048,6 @@ struct SpacesBottomBar: View {
                         .frame(width: 32)
                     }
                 )
-                .coordinateSpace(name: "launcher-space-bar")
                 .launcherSpaceBarViewport()
                 .onAppear {
                     requestSpaceBarScroll(
