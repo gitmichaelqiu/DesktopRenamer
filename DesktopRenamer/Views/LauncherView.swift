@@ -29,6 +29,7 @@ private enum LauncherMenuMetrics {
     static let labelHorizontalPadding: CGFloat = 8
     static let labelVerticalPadding: CGFloat = 3
     static let rowSurfaceInset: CGFloat = 12
+    static let listVerticalInset: CGFloat = 8
     static let contentVerticalPadding: CGFloat = 4
     static let rowTitleFontSize: CGFloat = 16
     static let rowSubtitleFontSize: CGFloat = 14
@@ -546,8 +547,6 @@ struct ListAreaView: View {
                                     }
                                 }
                             }
-                            .padding(.horizontal, LauncherMenuMetrics.rowSurfaceInset)
-                            .padding(.vertical, 8)
                     }
                 }
             } else {
@@ -582,8 +581,6 @@ struct ListAreaView: View {
                                             }
                                         }
                                     }
-                                    .padding(.horizontal, LauncherMenuMetrics.rowSurfaceInset)
-                                    .padding(.vertical, 8)
                             }
                         }
                         
@@ -625,8 +622,6 @@ struct ListAreaView: View {
                                             }
                                         }
                                     }
-                                    .padding(.horizontal, LauncherMenuMetrics.rowSurfaceInset)
-                                    .padding(.vertical, 8)
                             }
                         }
                         
@@ -681,8 +676,6 @@ struct ListAreaView: View {
                                             }
                                         }
                                     }
-                                    .padding(.horizontal, LauncherMenuMetrics.rowSurfaceInset)
-                                    .padding(.vertical, 8)
                             }
                         }
                         
@@ -778,6 +771,8 @@ private struct LauncherListScrollView<Content: View>: View {
         ScrollViewReader { proxy in
             ScrollView {
                 content
+                    .padding(.horizontal, LauncherMenuMetrics.rowSurfaceInset)
+                    .padding(.vertical, LauncherMenuMetrics.listVerticalInset)
             }
             .coordinateSpace(name: LauncherLayout.verticalScrollCoordinateSpace)
             .launcherViewportFrame()
