@@ -796,6 +796,7 @@ private struct LauncherListScrollView<Content: View>: View {
                 }
             }
         }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
         .coordinateSpace(name: LauncherLayout.verticalScrollCoordinateSpace)
         .launcherViewportFrame()
         .onPreferenceChange(LauncherListGeometryPreferenceKey.self) { geometry in
