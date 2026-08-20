@@ -1768,63 +1768,6 @@ struct BatchMoveBottomBar: View {
     }
 }
 
-struct RootLauncherBottomBar: View {
-    @ObservedObject var viewModel: LauncherViewModel
-    @ObservedObject var spaceManager: SpaceManager
-    @Environment(\.colorScheme) var colorScheme
-
-    var colors: ThemeColors {
-        ThemeColors(isDark: colorScheme == .dark)
-    }
-
-    var body: some View {
-        HStack(spacing: 0) {
-            Button {
-                viewModel.commandKTargetWindow = nil
-                viewModel.currentSpaces = spaceManager.currentDisplaySpaces.map { space in
-                    SpaceGroup(
-                        id: space.id,
-                        name: spaceManager.getSpaceName(space.id),
-                        displayName: space.displayID,
-                        num: space.num,
-                        isFullscreen: space.isFullscreen,
-                        appPath: space.appPath
-                    )
-                }
-                if let currentIndex = spaceManager.currentDisplaySpaces.firstIndex(where: { $0.id == spaceManager.currentSpaceUUID }) {
-                    viewModel.selectedSpaceIndex = currentIndex
-                }
-                viewModel.isRootActionsPresented = false
-                viewModel.spacePickerQuery = ""
-                viewModel.isRootSpacePickerPresented = true
-            } label: {
-                Image(systemName: "line.3.horizontal")
-                    .font(.system(size: 16, weight: .medium))
-                    .foregroundColor(colors.textSecondary)
-                    .frame(width: 36, height: 36)
-                    .background(Color.primary.opacity(0.10), in: Circle())
-                    .overlay(Circle().stroke(Color.primary.opacity(0.16), lineWidth: 1))
-            }
-            .buttonStyle(.plain)
-            .accessibilityLabel(String(localized: "Switch Space"))
-            .help(String(localized: "Switch Space"))
-
-            Spacer()
-
-            LauncherCommandActionCapsule(
-                isActive: viewModel.isRootActionsPresented,
-                openAction: {
-                    viewModel.executeRowAction()
-                },
-                actionsAction: {
-                    viewModel.showRootActionsPanel()
-                }
-            )
-        }
-        .launcherActionBar(colors: colors)
-    }
-}
-
 struct RootActionsOverlay: View {
     @ObservedObject var viewModel: LauncherViewModel
     @Environment(\.colorScheme) var colorScheme
