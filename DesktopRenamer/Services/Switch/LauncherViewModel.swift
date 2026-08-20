@@ -220,7 +220,6 @@ enum LauncherOverlay: Equatable {
     }
     @Published var selectedRowIndex: Int = 0
     @Published private(set) var listLayoutVersion: Int = 0
-    @Published private(set) var selectionScrollRequestVersion: Int = 0
     @Published private(set) var scrollToTopRequestVersion: Int = 0
     @Published var activeCommand: LauncherCommand? = nil {
         willSet {
@@ -1604,7 +1603,6 @@ enum LauncherOverlay: Equatable {
         isKeyboardSelection = true
         guard selectedRowIndex != index else { return }
         selectedRowIndex = index
-        selectionScrollRequestVersion &+= 1
     }
 
     func resetForPresentation() {

@@ -514,7 +514,6 @@ struct ListAreaView: View {
                     LauncherListScrollView(
                         targets: commands.enumerated().map { LauncherScrollTarget(index: $0.offset, id: AnyHashable($0.element.id)) },
                         layoutVersion: viewModel.listLayoutVersion,
-                        selectionScrollRequestVersion: viewModel.selectionScrollRequestVersion,
                         scrollToTopRequestVersion: viewModel.scrollToTopRequestVersion,
                         selectedRowIndex: viewModel.selectedRowIndex,
                         isKeyboardSelection: viewModel.isKeyboardSelection,
@@ -560,7 +559,6 @@ struct ListAreaView: View {
                             LauncherListScrollView(
                                 targets: spaces.enumerated().map { LauncherScrollTarget(index: $0.offset, id: AnyHashable($0.element.id)) },
                                 layoutVersion: viewModel.listLayoutVersion,
-                                selectionScrollRequestVersion: viewModel.selectionScrollRequestVersion,
                                 scrollToTopRequestVersion: viewModel.scrollToTopRequestVersion,
                                 selectedRowIndex: viewModel.selectedRowIndex,
                                 isKeyboardSelection: viewModel.isKeyboardSelection,
@@ -593,7 +591,6 @@ struct ListAreaView: View {
                             LauncherListScrollView(
                                 targets: sections.flatMap({ $0.items }).map { LauncherScrollTarget(index: $0.index, id: AnyHashable($0.id)) },
                                 layoutVersion: viewModel.listLayoutVersion,
-                                selectionScrollRequestVersion: viewModel.selectionScrollRequestVersion,
                                 scrollToTopRequestVersion: viewModel.scrollToTopRequestVersion,
                                 selectedRowIndex: viewModel.selectedRowIndex,
                                 isKeyboardSelection: viewModel.isKeyboardSelection,
@@ -634,7 +631,6 @@ struct ListAreaView: View {
                             LauncherListScrollView(
                                 targets: sections.flatMap({ $0.items }).map { LauncherScrollTarget(index: $0.index, id: AnyHashable($0.id)) },
                                 layoutVersion: viewModel.listLayoutVersion,
-                                selectionScrollRequestVersion: viewModel.selectionScrollRequestVersion,
                                 scrollToTopRequestVersion: viewModel.scrollToTopRequestVersion,
                                 selectedRowIndex: viewModel.selectedRowIndex,
                                 isKeyboardSelection: viewModel.isKeyboardSelection,
@@ -740,7 +736,6 @@ private struct LauncherListRow<Content: View>: View {
 private struct LauncherListScrollView<Content: View>: View {
     let targets: [LauncherScrollTarget]
     let layoutVersion: Int
-    let selectionScrollRequestVersion: Int
     let scrollToTopRequestVersion: Int
     let selectedRowIndex: Int
     let isKeyboardSelection: Bool
@@ -751,7 +746,6 @@ private struct LauncherListScrollView<Content: View>: View {
     init(
         targets: [LauncherScrollTarget],
         layoutVersion: Int,
-        selectionScrollRequestVersion: Int,
         scrollToTopRequestVersion: Int,
         selectedRowIndex: Int,
         isKeyboardSelection: Bool,
@@ -760,7 +754,6 @@ private struct LauncherListScrollView<Content: View>: View {
     ) {
         self.targets = targets
         self.layoutVersion = layoutVersion
-        self.selectionScrollRequestVersion = selectionScrollRequestVersion
         self.scrollToTopRequestVersion = scrollToTopRequestVersion
         self.selectedRowIndex = selectedRowIndex
         self.isKeyboardSelection = isKeyboardSelection
@@ -783,7 +776,8 @@ private struct LauncherListScrollView<Content: View>: View {
                     requestScroll(to: 0, proxy: proxy)
                 }
             }
-            .onChange(of: selectionScrollRequestVersion) { _ in
+            .onChange(of: selectedRowIndex) { _ in
+                guard isKeyboardSelection, !isBottomBarFocused else { return }
                 DispatchQueue.main.async {
                     requestScroll(to: selectedRowIndex, proxy: proxy)
                 }
