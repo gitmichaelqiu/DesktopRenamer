@@ -913,7 +913,7 @@ enum LauncherOverlay: Equatable {
             }
             
             sections.append(ListWindowsSection(
-                id: "windows_(space.id)",
+                id: "windows_\(space.id)",
                 title: space.name,
                 subtitle: String(format: space.isFullscreen ? String(localized: "Fullscreen") : String(localized: "%lld windows"), items.count),
                 items: items
