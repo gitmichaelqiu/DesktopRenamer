@@ -1530,53 +1530,17 @@ struct WindowRowView: View {
     let isSelected: Bool
     var shortcutText: String? = nil
     @Environment(\.colorScheme) var colorScheme
-    
-    var colors: ThemeColors {
-        ThemeColors(isDark: colorScheme == .dark)
-    }
-    
+
     var body: some View {
-        LauncherSelectableRow(isSelected: isSelected, colors: colors) {
-            HStack(spacing: 8) {
-            let appIcon = NSWorkspace.shared.icon(forFile: window.appPath)
-            Image(nsImage: appIcon)
-                .resizable()
-                .aspectRatio(contentMode: .fit)
-                .frame(width: 24, height: 24)
-                .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
-
-            VStack(alignment: .leading, spacing: 2) {
-                Text(window.title.isEmpty ? String(localized: "(No Title)") : window.title)
-                    .font(.system(size: LauncherMenuMetrics.rowTitleFontSize, weight: .semibold))
-                    .foregroundColor(colors.textPrimary)
-                    .lineLimit(1)
-
-                Text(window.ownerName)
-                    .font(.system(size: LauncherMenuMetrics.rowSubtitleFontSize))
-                    .foregroundColor(isSelected ? colors.textSecondary : colors.textTertiary)
-                    .lineLimit(1)
-            }
-
-            Spacer()
-
-            LauncherRowAccessory(shortcutText: shortcutText) {
-                HStack(spacing: 8) {
-                    if window.isHidden {
-                        WindowStateBadge(label: String(localized: "Hidden"), color: .purple)
-                    } else if window.isMinimized {
-                        WindowStateBadge(label: String(localized: "Minimized"), color: .orange)
-                    }
-                    if window.space.isFullscreen {
-                        WindowStateBadge(label: String(localized: "Full Screen"), color: .blue)
-                    }
-
-                    if shortcutText == nil {
-                        KeycapView(text: "Focus ↵", isSelected: isSelected)
-                    }
-                }
-            }
-            }
-        }
+        LauncherWindowRowContent(
+            window: window,
+            isSelected: isSelected,
+            isStaged: false,
+            stagedActionText: nil,
+            shortcutText: shortcutText,
+            showsFocusAction: true,
+            colors: ThemeColors(isDark: colorScheme == .dark)
+        )
     }
 }
 
@@ -1587,57 +1551,78 @@ struct WindowBatchRowView: View {
     let stagedActionText: String
     var shortcutText: String? = nil
     @Environment(\.colorScheme) var colorScheme
-    
-    var colors: ThemeColors {
-        ThemeColors(isDark: colorScheme == .dark)
+
+    var body: some View {
+        LauncherWindowRowContent(
+            window: window,
+            isSelected: isSelected,
+            isStaged: isStaged,
+            stagedActionText: stagedActionText.isEmpty ? nil : stagedActionText,
+            shortcutText: shortcutText,
+            showsFocusAction: false,
+            colors: ThemeColors(isDark: colorScheme == .dark)
+        )
     }
-    
+}
+
+private struct LauncherWindowRowContent: View {
+    let window: WindowEntry
+    let isSelected: Bool
+    let isStaged: Bool
+    let stagedActionText: String?
+    let shortcutText: String?
+    let showsFocusAction: Bool
+    let colors: ThemeColors
+
     var body: some View {
         LauncherSelectableRow(isSelected: isSelected, colors: colors) {
             HStack(spacing: 8) {
-            let appIcon = NSWorkspace.shared.icon(forFile: window.appPath)
-            Image(nsImage: appIcon)
-                .resizable()
-                .aspectRatio(contentMode: .fit)
-                .frame(width: 24, height: 24)
-                .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+                Image(nsImage: NSWorkspace.shared.icon(forFile: window.appPath))
+                    .resizable()
+                    .aspectRatio(contentMode: .fit)
+                    .frame(width: 24, height: 24)
+                    .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
 
-            VStack(alignment: .leading, spacing: 2) {
-                Text(window.title.isEmpty ? String(localized: "(No Title)") : window.title)
-                    .font(.system(size: LauncherMenuMetrics.rowTitleFontSize, weight: .semibold))
-                    .foregroundColor(colors.textPrimary)
-                    .lineLimit(1)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(window.title.isEmpty ? String(localized: "(No Title)") : window.title)
+                        .font(.system(size: LauncherMenuMetrics.rowTitleFontSize, weight: .semibold))
+                        .foregroundColor(colors.textPrimary)
+                        .lineLimit(1)
 
-                Text(window.ownerName)
-                    .font(.system(size: LauncherMenuMetrics.rowSubtitleFontSize))
-                    .foregroundColor(isSelected ? colors.textSecondary : colors.textTertiary)
-                    .lineLimit(1)
-            }
+                    Text(window.ownerName)
+                        .font(.system(size: LauncherMenuMetrics.rowSubtitleFontSize))
+                        .foregroundColor(isSelected ? colors.textSecondary : colors.textTertiary)
+                        .lineLimit(1)
+                }
 
-            Spacer()
+                Spacer()
 
-            LauncherRowAccessory(shortcutText: shortcutText) {
-                HStack(spacing: 4) {
-                    if !isStaged {
-                        if window.isHidden {
-                            WindowStateBadge(label: String(localized: "Hidden"), color: .purple)
-                        } else if window.isMinimized {
-                            WindowStateBadge(label: String(localized: "Minimized"), color: .orange)
+                LauncherRowAccessory(shortcutText: shortcutText) {
+                    HStack(spacing: isStaged ? 4 : 8) {
+                        if !isStaged {
+                            if window.isHidden {
+                                WindowStateBadge(label: String(localized: "Hidden"), color: .purple)
+                            } else if window.isMinimized {
+                                WindowStateBadge(label: String(localized: "Minimized"), color: .orange)
+                            }
+                            if window.space.isFullscreen {
+                                WindowStateBadge(label: String(localized: "Full Screen"), color: .blue)
+                            }
                         }
-                        if window.space.isFullscreen {
-                            WindowStateBadge(label: String(localized: "Full Screen"), color: .blue)
-                        }
-                    }
 
-                    if shortcutText == nil && isStaged {
-                        LauncherStatusLabel(
-                            label: stagedActionText,
-                            color: colors.greenText,
-                            background: colors.greenText.opacity(0.12)
-                        )
+                        if shortcutText == nil {
+                            if let stagedActionText {
+                                LauncherStatusLabel(
+                                    label: stagedActionText,
+                                    color: colors.greenText,
+                                    background: colors.greenText.opacity(0.12)
+                                )
+                            } else if showsFocusAction {
+                                KeycapView(text: "Focus ↵", isSelected: isSelected)
+                            }
+                        }
                     }
                 }
-            }
             }
         }
     }
