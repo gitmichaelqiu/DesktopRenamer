@@ -789,8 +789,12 @@ private struct LauncherListScrollView<Content: View>: View {
                 }
                 .onChange(of: selectionRevealRequestVersion) { _ in
                     guard isKeyboardSelection, !isBottomBarFocused else { return }
+                    let requestedIndex = selectedRowIndex
                     DispatchQueue.main.async {
-                        requestScroll(to: selectedRowIndex, proxy: proxy)
+                        guard isKeyboardSelection,
+                              !isBottomBarFocused,
+                              selectedRowIndex == requestedIndex else { return }
+                        requestScroll(to: requestedIndex, proxy: proxy)
                     }
                 }
                 .onChange(of: isKeyboardSelection) { isKeyboardSelection in
