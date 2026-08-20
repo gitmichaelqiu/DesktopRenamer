@@ -762,42 +762,44 @@ private struct LauncherListScrollView<Content: View>: View {
     }
 
     var body: some View {
-        ScrollViewReader { proxy in
-            ScrollView {
-                content
-                    .padding(.horizontal, LauncherMenuMetrics.rowSurfaceInset)
-                    .padding(.vertical, LauncherMenuMetrics.listVerticalInset)
-            }
-            .coordinateSpace(name: LauncherLayout.verticalScrollCoordinateSpace)
-            .launcherViewportFrame()
-            .focusable(false)
-            .onChange(of: scrollToTopRequestVersion) { _ in
-                DispatchQueue.main.async {
-                    requestScroll(to: 0, proxy: proxy)
+        ZStack {
+            ScrollViewReader { proxy in
+                ScrollView {
+                    content
+                        .padding(.horizontal, LauncherMenuMetrics.rowSurfaceInset)
+                        .padding(.vertical, LauncherMenuMetrics.listVerticalInset)
+                }
+                .focusable(false)
+                .onChange(of: scrollToTopRequestVersion) { _ in
+                    DispatchQueue.main.async {
+                        requestScroll(to: 0, proxy: proxy)
+                    }
+                }
+                .onChange(of: selectedRowIndex) { _ in
+                    guard isKeyboardSelection, !isBottomBarFocused else { return }
+                    DispatchQueue.main.async {
+                        requestScroll(to: selectedRowIndex, proxy: proxy)
+                    }
+                }
+                .onChange(of: isKeyboardSelection) { isKeyboardSelection in
+                    if !isKeyboardSelection {
+                        scrollCoordinator.cancelPending()
+                    }
+                }
+                .onChange(of: isBottomBarFocused) { isFocused in
+                    if isFocused {
+                        scrollCoordinator.cancelPending()
+                    }
+                }
+                .onChange(of: layoutVersion) { _ in
+                    scrollCoordinator.invalidateGeometry()
                 }
             }
-            .onChange(of: selectedRowIndex) { _ in
-                guard isKeyboardSelection, !isBottomBarFocused else { return }
-                DispatchQueue.main.async {
-                    requestScroll(to: selectedRowIndex, proxy: proxy)
-                }
-            }
-            .onPreferenceChange(LauncherListGeometryPreferenceKey.self) { geometry in
-                scrollCoordinator.update(geometry)
-            }
-            .onChange(of: isKeyboardSelection) { isKeyboardSelection in
-                if !isKeyboardSelection {
-                    scrollCoordinator.cancelPending()
-                }
-            }
-            .onChange(of: isBottomBarFocused) { isFocused in
-                if isFocused {
-                    scrollCoordinator.cancelPending()
-                }
-            }
-            .onChange(of: layoutVersion) { _ in
-                scrollCoordinator.invalidateGeometry()
-            }
+        }
+        .coordinateSpace(name: LauncherLayout.verticalScrollCoordinateSpace)
+        .launcherViewportFrame()
+        .onPreferenceChange(LauncherListGeometryPreferenceKey.self) { geometry in
+            scrollCoordinator.update(geometry)
         }
     }
 
