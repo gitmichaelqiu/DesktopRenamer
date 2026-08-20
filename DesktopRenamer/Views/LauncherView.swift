@@ -1701,18 +1701,13 @@ struct BatchMoveBottomBar: View {
     
     var body: some View {
         HStack(spacing: 8) {
-            // Left side: Active command hierarchy matching Raycast look
-            HStack(spacing: 6) {
-                HStack(spacing: 6) {
-                    Image(systemName: viewModel.activeCommand?.iconName ?? "macwindow.badge.plus")
-                        .font(.system(size: 14, weight: .semibold))
-                        .foregroundColor(colors.textSecondary)
-                    Text(viewModel.activeCommand?.title ?? String(localized: "Batch Move Windows"))
-                        .foregroundColor(colors.textPrimary)
-                }
-                .modifier(BottomBarCapsule(isSelected: false, isActive: true, colorScheme: colorScheme))
-                
-            }
+            LauncherActiveCommandBreadcrumb(
+                title: viewModel.activeCommand?.title ?? String(localized: "Batch Move Windows"),
+                iconName: viewModel.activeCommand?.iconName ?? "macwindow.badge.plus",
+                stagingWindow: viewModel.stagingWindow,
+                colors: colors,
+                colorScheme: colorScheme
+            )
             
             Spacer()
             
@@ -2361,33 +2356,14 @@ struct CommandBottomBar: View {
     
     var body: some View {
         HStack(spacing: 8) {
-            // Left side: Active command pill matching Raycast look
             if let active = viewModel.activeCommand {
-                HStack(spacing: 6) {
-                    HStack(spacing: 6) {
-                        Image(systemName: active.iconName)
-                            .font(.system(size: 14, weight: .semibold))
-                            .foregroundColor(colors.textSecondary)
-                        Text(active.title)
-                            .foregroundColor(colors.textPrimary)
-                    }
-                    .modifier(BottomBarCapsule(isSelected: false, isActive: true, colorScheme: colorScheme))
-                    
-                    if let staging = viewModel.stagingWindow {
-                        Image(systemName: "chevron.right")
-                            .font(.system(size: 9, weight: .semibold))
-                            .foregroundColor(colors.textQuaternary)
-                        
-                        HStack(spacing: 4) {
-                            Image(systemName: "square.and.arrow.down")
-                                .font(.system(size: 14, weight: .semibold))
-                                .foregroundColor(colors.greenText)
-                            Text(String(format: NSLocalizedString("Move: %@", comment: ""), staging.ownerName))
-                                .foregroundColor(colors.textPrimary)
-                        }
-                        .modifier(BottomBarCapsule(isSelected: false, isActive: false, colorScheme: colorScheme))
-                    }
-                }
+                LauncherActiveCommandBreadcrumb(
+                    title: active.title,
+                    iconName: active.iconName,
+                    stagingWindow: viewModel.stagingWindow,
+                    colors: colors,
+                    colorScheme: colorScheme
+                )
             }
             
             Spacer()
@@ -2460,6 +2436,42 @@ struct CommandBottomBar: View {
             colorScheme: colorScheme,
             action: action
         )
+    }
+}
+
+private struct LauncherActiveCommandBreadcrumb: View {
+    let title: String
+    let iconName: String
+    let stagingWindow: WindowEntry?
+    let colors: ThemeColors
+    let colorScheme: ColorScheme
+
+    var body: some View {
+        HStack(spacing: 6) {
+            HStack(spacing: 6) {
+                Image(systemName: iconName)
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundColor(colors.textSecondary)
+                Text(verbatim: title)
+                    .foregroundColor(colors.textPrimary)
+            }
+            .modifier(BottomBarCapsule(isSelected: false, isActive: true, colorScheme: colorScheme))
+
+            if let stagingWindow {
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 9, weight: .semibold))
+                    .foregroundColor(colors.textQuaternary)
+
+                HStack(spacing: 4) {
+                    Image(systemName: "square.and.arrow.down")
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundColor(colors.greenText)
+                    Text(String(format: NSLocalizedString("Move: %@", comment: ""), stagingWindow.ownerName))
+                        .foregroundColor(colors.textPrimary)
+                }
+                .modifier(BottomBarCapsule(isSelected: false, isActive: false, colorScheme: colorScheme))
+            }
+        }
     }
 }
 
