@@ -29,6 +29,7 @@ private enum LauncherMenuMetrics {
     static let labelHorizontalPadding: CGFloat = 8
     static let labelVerticalPadding: CGFloat = 3
     static let rowSurfaceInset: CGFloat = 12
+    static let contentVerticalPadding: CGFloat = 4
     static let rowTitleFontSize: CGFloat = 16
     static let rowSubtitleFontSize: CGFloat = 14
 }
@@ -2208,13 +2209,13 @@ private struct LauncherMenuHeader: View {
 
             VStack(alignment: .leading, spacing: 2) {
                 Text(verbatim: title)
-                    .font(.system(size: 13, weight: .semibold))
+                    .font(.system(size: LauncherMenuMetrics.rowTitleFontSize, weight: .semibold))
                     .foregroundColor(colors.textPrimary)
                     .lineLimit(1)
 
                 if let subtitle {
                     Text(verbatim: subtitle)
-                        .font(.system(size: 12, weight: .regular))
+                        .font(.system(size: LauncherMenuMetrics.rowSubtitleFontSize, weight: .regular))
                         .foregroundColor(colors.textTertiary)
                         .lineLimit(1)
                 }
@@ -2298,7 +2299,7 @@ private struct LauncherMenuPanel<Header: View, Content: View, Footer: View>: Vie
                 content
                     // Keep popup rows aligned with the root list surface.
                     .padding(.horizontal, LauncherMenuMetrics.rowSurfaceInset)
-                    .padding(.bottom, 8)
+                    .padding(.vertical, LauncherMenuMetrics.contentVerticalPadding)
             }
             .frame(height: contentHeight)
 
@@ -2326,7 +2327,11 @@ struct SpacePickerOverlay: View {
 
     private var spaceListHeight: CGFloat {
         let itemCount = max(viewModel.filteredSpaces.count, 1)
-        return min(CGFloat(itemCount) * (LauncherMenuMetrics.rowHeight + LauncherMenuMetrics.rowSpacing) + 8, 200)
+        return min(
+            CGFloat(itemCount) * (LauncherMenuMetrics.rowHeight + LauncherMenuMetrics.rowSpacing)
+                + LauncherMenuMetrics.contentVerticalPadding * 2,
+            200
+        )
     }
 
     var body: some View {
@@ -2399,7 +2404,6 @@ struct SpacePickerOverlay: View {
                         }
                     }
                 }
-                .padding(.top, 8)
             } footer: {
                 SearchTextField(
                     text: $viewModel.spacePickerQuery,
@@ -2914,7 +2918,11 @@ struct CommandKOverlayView: View {
 
     private var actionListHeight: CGFloat {
         let actionCount = max(viewModel.filteredCommandKActions.count, 1)
-        return min(CGFloat(actionCount) * (LauncherMenuMetrics.rowHeight + LauncherMenuMetrics.rowSpacing) + 8, 240)
+        return min(
+            CGFloat(actionCount) * (LauncherMenuMetrics.rowHeight + LauncherMenuMetrics.rowSpacing)
+                + LauncherMenuMetrics.contentVerticalPadding * 2,
+            240
+        )
     }
     
     var body: some View {
