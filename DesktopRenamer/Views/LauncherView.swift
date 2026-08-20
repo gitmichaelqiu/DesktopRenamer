@@ -6,7 +6,6 @@ enum LauncherLayout {
     static let actionBarHeight: CGFloat = 44
     static let actionBarContentHeight: CGFloat = 36
     static let popupBottomSpacing: CGFloat = 8
-    static let verticalScrollCoordinateSpace = "launcher-vertical-list"
 
     static var popupBottomInset: CGFloat {
         popupBottomSpacing
@@ -773,7 +772,7 @@ private struct LauncherListScrollView<Content: View>: View {
                         Color.clear.preference(
                             key: LauncherListGeometryPreferenceKey.self,
                             value: LauncherListGeometrySnapshot(
-                                viewport: geometry.frame(in: .named(LauncherLayout.verticalScrollCoordinateSpace))
+                                viewport: geometry.frame(in: .global)
                             )
                         )
                     }
@@ -816,7 +815,6 @@ private struct LauncherListScrollView<Content: View>: View {
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .coordinateSpace(name: LauncherLayout.verticalScrollCoordinateSpace)
         .onPreferenceChange(LauncherListGeometryPreferenceKey.self) { geometry in
             scrollCoordinator.update(geometry)
         }
@@ -1095,7 +1093,7 @@ private extension View {
                 Color.clear.preference(
                     key: LauncherListGeometryPreferenceKey.self,
                     value: LauncherListGeometrySnapshot(
-                        frames: [index: geometry.frame(in: .named(LauncherLayout.verticalScrollCoordinateSpace))],
+                        frames: [index: geometry.frame(in: .global)],
                         layoutVersion: layoutVersion
                     )
                 )
