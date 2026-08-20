@@ -2142,7 +2142,9 @@ struct SpacesBottomBar: View {
         scrollCoordinator.request(
             id: id,
             scrollToSelection: {
-                proxy.scrollTo(id)
+                withTransaction(Transaction(animation: nil)) {
+                    proxy.scrollTo(id)
+                }
             }
         )
     }
