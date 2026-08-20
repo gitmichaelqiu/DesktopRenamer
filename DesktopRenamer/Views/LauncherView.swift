@@ -760,56 +760,58 @@ private struct LauncherListScrollView<Content: View>: View {
     }
 
     var body: some View {
-        GeometryReader { geometry in
-            ZStack {
-                ScrollViewReader { proxy in
-                    ScrollView(showsIndicators: false) {
-                        content
-                            .padding(.horizontal, LauncherMenuMetrics.rowSurfaceInset)
-                            .padding(.vertical, LauncherMenuMetrics.listVerticalInset)
-                    }
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-                    .focusable(false)
-                    .onChange(of: scrollToTopRequestVersion) { _ in
-                        DispatchQueue.main.async {
-                            requestScrollToTop(proxy: proxy)
-                        }
-                    }
-                    .onChange(of: selectedRowIndex) { _ in
-                        scrollCoordinator.cancelPending()
-                    }
-                    .onChange(of: selectionRevealRequestVersion) { _ in
-                        guard isKeyboardSelection, !isBottomBarFocused else { return }
-                        DispatchQueue.main.async {
-                            requestScroll(to: selectedRowIndex, proxy: proxy)
-                        }
-                    }
-                    .onChange(of: isKeyboardSelection) { isKeyboardSelection in
-                        if !isKeyboardSelection {
-                            scrollCoordinator.cancelPending()
-                        }
-                    }
-                    .onChange(of: isBottomBarFocused) { isFocused in
-                        if isFocused {
-                            scrollCoordinator.cancelPending()
-                        }
-                    }
-                    .onChange(of: layoutVersion) { _ in
-                        scrollCoordinator.invalidateGeometry()
+        ZStack {
+            ScrollViewReader { proxy in
+                ScrollView(showsIndicators: false) {
+                    content
+                        .padding(.horizontal, LauncherMenuMetrics.rowSurfaceInset)
+                        .padding(.vertical, LauncherMenuMetrics.listVerticalInset)
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .background {
+                    GeometryReader { geometry in
+                        Color.clear.preference(
+                            key: LauncherListGeometryPreferenceKey.self,
+                            value: LauncherListGeometrySnapshot(
+                                viewport: geometry.frame(in: .named(LauncherLayout.verticalScrollCoordinateSpace))
+                            )
+                        )
                     }
                 }
+                .focusable(false)
+                .onChange(of: scrollToTopRequestVersion) { _ in
+                    DispatchQueue.main.async {
+                        requestScrollToTop(proxy: proxy)
+                    }
+                }
+                .onChange(of: selectedRowIndex) { _ in
+                    scrollCoordinator.cancelPending()
+                }
+                .onChange(of: selectionRevealRequestVersion) { _ in
+                    guard isKeyboardSelection, !isBottomBarFocused else { return }
+                    DispatchQueue.main.async {
+                        requestScroll(to: selectedRowIndex, proxy: proxy)
+                    }
+                }
+                .onChange(of: isKeyboardSelection) { isKeyboardSelection in
+                    if !isKeyboardSelection {
+                        scrollCoordinator.cancelPending()
+                    }
+                }
+                .onChange(of: isBottomBarFocused) { isFocused in
+                    if isFocused {
+                        scrollCoordinator.cancelPending()
+                    }
+                }
+                .onChange(of: layoutVersion) { _ in
+                    scrollCoordinator.invalidateGeometry()
+                }
             }
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .coordinateSpace(name: LauncherLayout.verticalScrollCoordinateSpace)
-            .preference(
-                key: LauncherListGeometryPreferenceKey.self,
-                value: LauncherListGeometrySnapshot(
-                    viewport: CGRect(origin: .zero, size: geometry.size)
-                )
-            )
-            .onPreferenceChange(LauncherListGeometryPreferenceKey.self) { geometry in
-                scrollCoordinator.update(geometry)
-            }
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .coordinateSpace(name: LauncherLayout.verticalScrollCoordinateSpace)
+        .onPreferenceChange(LauncherListGeometryPreferenceKey.self) { geometry in
+            scrollCoordinator.update(geometry)
         }
     }
 
