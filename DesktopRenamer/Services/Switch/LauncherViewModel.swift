@@ -154,7 +154,14 @@ enum BatchMoveItem: Identifiable, Equatable {
     }
     
     static func == (lhs: BatchMoveItem, rhs: BatchMoveItem) -> Bool {
-        return lhs.id == rhs.id
+        switch (lhs, rhs) {
+        case (.staged(let lhsAction, let lhsIndex), .staged(let rhsAction, let rhsIndex)):
+            return lhsAction == rhsAction && lhsIndex == rhsIndex
+        case (.unstaged(let lhsWindow, let lhsIndex), .unstaged(let rhsWindow, let rhsIndex)):
+            return lhsWindow == rhsWindow && lhsIndex == rhsIndex
+        case (.staged, .unstaged), (.unstaged, .staged):
+            return false
+        }
     }
 }
 
