@@ -924,8 +924,7 @@ private final class LauncherScrollCoordinator: ObservableObject {
 private final class LauncherHorizontalScrollCoordinator: ObservableObject {
     private struct Request {
         let id: String
-        let scrollToLeading: () -> Void
-        let scrollToTrailing: () -> Void
+        let scrollToSelection: () -> Void
     }
 
     private var itemFrames: [String: CGRect] = [:]
@@ -953,16 +952,11 @@ private final class LauncherHorizontalScrollCoordinator: ObservableObject {
         geometryRevision &+= 1
     }
 
-    func request(
-        id: String,
-        scrollToLeading: @escaping () -> Void,
-        scrollToTrailing: @escaping () -> Void
-    ) {
+    func request(id: String, scrollToSelection: @escaping () -> Void) {
         requestGeneration &+= 1
         pendingRequest = Request(
             id: id,
-            scrollToLeading: scrollToLeading,
-            scrollToTrailing: scrollToTrailing
+            scrollToSelection: scrollToSelection
         )
         DispatchQueue.main.async { [weak self] in
             self?.resolvePendingRequest()
@@ -976,16 +970,16 @@ private final class LauncherHorizontalScrollCoordinator: ObservableObject {
             return
         }
 
-        let action: (() -> Void)?
+        let shouldScroll: Bool
         if frame.maxX < viewport.minX {
-            action = request.scrollToLeading
+            shouldScroll = true
         } else if frame.minX > viewport.maxX {
-            action = request.scrollToTrailing
+            shouldScroll = true
         } else {
-            action = nil
+            shouldScroll = false
         }
 
-        guard let action else {
+        guard shouldScroll else {
             pendingRequest = nil
             return
         }
@@ -1002,7 +996,7 @@ private final class LauncherHorizontalScrollCoordinator: ObservableObject {
                 return
             }
             self.pendingRequest = nil
-            action()
+            request.scrollToSelection()
         }
     }
 }
@@ -2137,11 +2131,8 @@ struct SpacesBottomBar: View {
     private func requestSpaceBarScroll(to id: String, proxy: ScrollViewProxy) {
         scrollCoordinator.request(
             id: id,
-            scrollToLeading: {
-                proxy.scrollTo(id, anchor: .leading)
-            },
-            scrollToTrailing: {
-                proxy.scrollTo(id, anchor: .trailing)
+            scrollToSelection: {
+                proxy.scrollTo(id)
             }
         )
     }
