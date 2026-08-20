@@ -834,13 +834,13 @@ private enum LauncherScrollPolicy {
     static func revealAnchor(for row: CGRect, in viewport: CGRect) -> UnitPoint? {
         guard !viewport.isEmpty else { return nil }
         let tolerance = viewportEdgeTolerance
-        // Keep the current offset while the selected row remains fully visible.
-        // Using the row edges avoids moving the list merely because its center
-        // crossed a viewport edge while the row itself is still on screen.
-        if row.minY < viewport.minY - tolerance {
+        // Keep the current offset while any part of the selected row remains
+        // visible. This prevents a middle selection from moving the list just
+        // because its edge crossed the viewport by a few pixels.
+        if row.maxY <= viewport.minY - tolerance {
             return .top
         }
-        if row.maxY > viewport.maxY + tolerance {
+        if row.minY >= viewport.maxY + tolerance {
             return .bottom
         }
         return nil
