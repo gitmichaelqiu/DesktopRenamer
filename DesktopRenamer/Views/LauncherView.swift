@@ -2238,7 +2238,6 @@ private struct LauncherMenuRow<Content: View>: View {
     let isSelected: Bool
     let colors: ThemeColors
     let content: Content
-    @State private var isHovered = false
 
     init(
         isSelected: Bool,
@@ -2251,16 +2250,14 @@ private struct LauncherMenuRow<Content: View>: View {
     }
 
     var body: some View {
-        content
-            .font(.system(size: 15, weight: .medium))
-            .foregroundColor(colors.textPrimary)
-            .modifier(LauncherRowSurface(
-                isSelected: isSelected,
-                isHovered: isHovered,
-                colors: colors,
-                verticalPadding: 0
-            ))
-            .onHover { isHovered = $0 }
+        LauncherSelectableRow(isSelected: isSelected, colors: colors) {
+            content
+                .font(.system(
+                    size: LauncherMenuMetrics.rowTitleFontSize,
+                    weight: .medium
+                ))
+                .foregroundColor(colors.textPrimary)
+        }
     }
 }
 
