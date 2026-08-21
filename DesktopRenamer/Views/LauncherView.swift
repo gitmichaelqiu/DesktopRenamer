@@ -134,7 +134,7 @@ struct LauncherView: View {
                                     return true
                                 }
                                 if viewModel.isBottomBarFocused {
-                                    let count = spaceManager.currentDisplaySpaces.count
+                                    let count = viewModel.filteredDisplaySpaces.count
                                     if viewModel.selectedSpaceIndex < count - 1 {
                                         viewModel.selectedSpaceIndex += 1
                                     }
@@ -1154,19 +1154,59 @@ struct SpacesBottomBar: View {
     
     var body: some View {
         HStack(spacing: 0) {
-            // Static "Spaces:" label on the left (unscrollable)
-            Text(verbatim: String(localized: "Spaces:"))
-                .font(.subheadline)
-                .fontWeight(.semibold)
-                .foregroundColor(colors.textTertiary)
+            if viewModel.isBottomBarFocused {
+                SearchTextField(
+                    text: $viewModel.spaceBarQuery,
+                    isDark: colors.isDark,
+                    onUpArrow: {},
+                    onDownArrow: {},
+                    onLeftArrow: {
+                        if viewModel.selectedSpaceIndex > 0 {
+                            viewModel.selectedSpaceIndex -= 1
+                        }
+                        return true
+                    },
+                    onRightArrow: {
+                        let count = viewModel.filteredDisplaySpaces.count
+                        if viewModel.selectedSpaceIndex < count - 1 {
+                            viewModel.selectedSpaceIndex += 1
+                        }
+                        return true
+                    },
+                    onEnter: {
+                        viewModel.executeBottomBarSpaceAction(isOption: false, isCommand: false)
+                    },
+                    onCommandEnter: {
+                        viewModel.executeBottomBarSpaceAction(isOption: false, isCommand: true)
+                    },
+                    onOptionEnter: {
+                        viewModel.executeBottomBarSpaceAction(isOption: true, isCommand: false)
+                    },
+                    onTab: {
+                        viewModel.handleTabKey()
+                    },
+                    onEscape: {
+                        viewModel.handleEscapeKey()
+                    },
+                    onKeyEquivalent: { _ in false },
+                    placeholder: String(localized: "Spaces:")
+                )
+                .frame(width: 110, height: 28)
                 .padding(.trailing, 8)
-                .layoutPriority(1)
+            } else {
+                Text(verbatim: String(localized: "Spaces:"))
+                    .font(.subheadline)
+                    .fontWeight(.semibold)
+                    .foregroundColor(colors.textTertiary)
+                    .padding(.trailing, 8)
+                    .layoutPriority(1)
+            }
             
             // Scrollable spaces list
             ScrollViewReader { scrollProxy in
                 ScrollView(.horizontal, showsIndicators: false) {
                     HStack(spacing: 8) {
-                        let spaces = spaceManager.currentDisplaySpaces
+                        let spaces = viewModel.filteredDisplaySpaces
                         ForEach(0..<spaces.count, id: \.self) { i in
                             let space = spaces[i]
                             let isCurrent = space.id == spaceManager.currentSpaceUUID
@@ -1229,7 +1269,7 @@ struct SpacesBottomBar: View {
                 }
                 .onChange(of: viewModel.selectedSpaceIndex) { selectedIndex in
                     if viewModel.isBottomBarFocused {
-                        let spaces = spaceManager.currentDisplaySpaces
+                        let spaces = viewModel.filteredDisplaySpaces
                         if selectedIndex >= 0 && selectedIndex < spaces.count {
                             let spaceID = spaces[selectedIndex].id
                             withAnimation(.easeInOut(duration: 0.15)) {
@@ -1239,7 +1279,7 @@ struct SpacesBottomBar: View {
                     }
                 }
                 .onChange(of: viewModel.isBottomBarFocused) { isFocused in
-                    let spaces = spaceManager.currentDisplaySpaces
+                    let spaces = viewModel.filteredDisplaySpaces
                     if isFocused {
                         if viewModel.selectedSpaceIndex >= 0 && viewModel.selectedSpaceIndex < spaces.count {
                             let spaceID = spaces[viewModel.selectedSpaceIndex].id
@@ -1266,16 +1306,7 @@ struct SpacesBottomBar: View {
                 HStack(spacing: 8) {
                     if !viewModel.isBottomBarFocused {
                         Button(action: {
-                            viewModel.isBottomBarFocused = true
-                            viewModel.isKeyboardSelection = true
-                            
-                            let spaces = spaceManager.currentDisplaySpaces
-                            if let currentSpaceID = AppDelegate.shared.spaceManager?.currentSpaceUUID,
-                               let index = spaces.firstIndex(where: { $0.id == currentSpaceID }) {
-                                viewModel.selectedSpaceIndex = index
-                            } else {
-                                viewModel.selectedSpaceIndex = 0
-                            }
+                            viewModel.focusSpaceBar()
                         }) {
                             HStack(spacing: 4) {
                                 Text(LocalizedStringKey("Switch Space"))

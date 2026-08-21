@@ -36,6 +36,12 @@ import SwiftUI
             isBottomBarFocused = false
         }
     }
+    @Published var spaceBarQuery: String = "" {
+        didSet {
+            selectedSpaceIndex = 0
+            isKeyboardSelection = true
+        }
+    }
     @Published var selectedRowIndex: Int = 0
     @Published var activeCommand: LauncherCommand? = nil {
         willSet {
@@ -93,6 +99,15 @@ import SwiftUI
     // For space renaming
     @Published var renameInputText: String = ""
     var batchMoveLastSelectedIndex: Int = 0
+
+    var filteredDisplaySpaces: [DesktopSpace] {
+        guard let manager = AppDelegate.shared.spaceManager else { return [] }
+        guard !spaceBarQuery.isEmpty else { return manager.currentDisplaySpaces }
+
+        return manager.currentDisplaySpaces.filter { space in
+            manager.getSpaceName(space.id).localizedCaseInsensitiveContains(spaceBarQuery)
+        }
+    }
     
     var onClose: (() -> Void)?
     
@@ -1264,6 +1279,7 @@ import SwiftUI
     func handleEscapeKey() {
         if isBottomBarFocused {
             isBottomBarFocused = false
+            spaceBarQuery = ""
         } else if stagingWindow != nil {
             stagingWindow = nil
             isStagingForRestoreTo = false
@@ -1282,12 +1298,14 @@ import SwiftUI
         guard activeCommand == nil else { return }
         if isBottomBarFocused {
             isBottomBarFocused = false
+            spaceBarQuery = ""
         } else {
             focusSpaceBar()
         }
     }
 
     func focusSpaceBar(movingBy offset: Int = 0) {
+        spaceBarQuery = ""
         isBottomBarFocused = true
         isKeyboardSelection = true
 
@@ -1304,7 +1322,7 @@ import SwiftUI
     
     func executeBottomBarSpaceAction(isOption: Bool, isCommand: Bool) {
         guard let manager = AppDelegate.shared.spaceManager else { return }
-        let spaces = manager.currentDisplaySpaces
+        let spaces = filteredDisplaySpaces
         guard selectedSpaceIndex >= 0 && selectedSpaceIndex < spaces.count else { return }
         let space = spaces[selectedSpaceIndex]
         
@@ -1320,6 +1338,7 @@ import SwiftUI
     
     func closeLauncher() {
         searchQuery = ""
+        spaceBarQuery = ""
         selectedRowIndex = 0
         activeCommand = nil
         stagingWindow = nil
