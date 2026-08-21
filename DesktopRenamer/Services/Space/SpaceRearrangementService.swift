@@ -19,14 +19,49 @@ final class SpaceRearrangementService {
         completion: @escaping (Result) -> Void
     ) {
         guard sourceID != targetID,
-              let sourceIndex = orderedSpaceIDs.firstIndex(of: sourceID),
               let targetIndex = orderedSpaceIDs.firstIndex(of: targetID) else {
             finish(.failure(String(localized: "Choose two different spaces.")), completion: completion)
             return
         }
 
+        performMove(
+            sourceID: sourceID,
+            targetIndex: targetIndex,
+            orderedSpaceIDs: orderedSpaceIDs,
+            displayID: displayID,
+            completion: completion
+        )
+    }
+
+    func rearrangeToEnd(
+        sourceID: String,
+        orderedSpaceIDs: [String],
+        displayID: String? = nil,
+        completion: @escaping (Result) -> Void
+    ) {
+        performMove(
+            sourceID: sourceID,
+            targetIndex: orderedSpaceIDs.count,
+            orderedSpaceIDs: orderedSpaceIDs,
+            displayID: displayID,
+            completion: completion
+        )
+    }
+
+    private func performMove(
+        sourceID: String,
+        targetIndex: Int,
+        orderedSpaceIDs: [String],
+        displayID: String?,
+        completion: @escaping (Result) -> Void
+    ) {
+        guard let sourceIndex = orderedSpaceIDs.firstIndex(of: sourceID) else {
+            finish(.failure(String(localized: "Choose a valid space.")), completion: completion)
+            return
+        }
+
         guard sourceIndex != targetIndex - 1 else {
-            finish(.failure(String(localized: "Those spaces are already in that order.")), completion: completion)
+            finish(.success, completion: completion)
             return
         }
 
@@ -50,8 +85,6 @@ final class SpaceRearrangementService {
                 }
 
                 self?.verify(
-                    sourceID: sourceID,
-                    before: targetID,
                     expectedOrder: expectedOrder,
                     displayID: displayID,
                     attempt: 0,
@@ -107,8 +140,6 @@ final class SpaceRearrangementService {
     }
 
     private func verify(
-        sourceID: String,
-        before targetID: String,
         expectedOrder: [String],
         displayID: String?,
         attempt: Int,
@@ -116,8 +147,6 @@ final class SpaceRearrangementService {
     ) {
         guard let state = SpaceHelper.getSystemState(onDisplayID: displayID) else {
             retryVerification(
-                sourceID: sourceID,
-                targetID: targetID,
                 expectedOrder: expectedOrder,
                 displayID: displayID,
                 attempt: attempt,
@@ -133,8 +162,6 @@ final class SpaceRearrangementService {
         }
 
         retryVerification(
-            sourceID: sourceID,
-            targetID: targetID,
             expectedOrder: expectedOrder,
             displayID: displayID,
             attempt: attempt,
@@ -143,8 +170,6 @@ final class SpaceRearrangementService {
     }
 
     private func retryVerification(
-        sourceID: String,
-        targetID: String,
         expectedOrder: [String],
         displayID: String?,
         attempt: Int,
@@ -157,8 +182,6 @@ final class SpaceRearrangementService {
 
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) { [weak self] in
             self?.verify(
-                sourceID: sourceID,
-                before: targetID,
                 expectedOrder: expectedOrder,
                 displayID: displayID,
                 attempt: attempt + 1,

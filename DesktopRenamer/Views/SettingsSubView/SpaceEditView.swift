@@ -1,10 +1,9 @@
 import SwiftUI
-import UniformTypeIdentifiers
 
 struct SpaceEditView: View {
     @ObservedObject var spaceManager: SpaceManager
     @EnvironmentObject var navigationState: SettingsNavigationState
-    @State private var rearrangementError: String?
+    @State private var targetedSpaceID: String?
     
     var body: some View {
         VStack(spacing: 0) {
@@ -27,15 +26,6 @@ struct SpaceEditView: View {
                     }
                     .padding()
                     .padding(.bottom, 40)
-
-                    if let rearrangementError {
-                        Text(rearrangementError)
-                            .font(.caption)
-                            .foregroundStyle(.red)
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                            .padding(.horizontal)
-                            .padding(.bottom, 8)
-                    }
                 }
             }
         }
@@ -136,34 +126,7 @@ struct SpaceEditView: View {
                     .foregroundColor(.secondary)
                     .padding(10)
             } else {
-                ForEach(displaySpaces) { space in
-                    VStack(spacing: 0) {
-                        HStack(spacing: 10) {
-                            Image(systemName: "line.3.horizontal")
-                                .font(.caption)
-                                .foregroundStyle(.tertiary)
-                                .accessibilityHidden(true)
-                            spaceNumberView(for: space).frame(width: 30, alignment: .leading)
-                            spaceNameEditor(for: space).frame(maxWidth: .infinity)
-                            actionButtons(for: space).frame(width: 20, alignment: .trailing)
-                        }
-                        .padding(.horizontal, 12)
-                        .padding(.vertical, 6)
-                        
-                        if space.id != displaySpaces.last?.id {
-                            Divider().padding(.leading, 12)
-                        }
-                    }
-                    .contentShape(Rectangle())
-                    .transition(.opacity.combined(with: .move(edge: .top)))
-                    .onDrag { NSItemProvider(object: space.id as NSString) }
-                    .onDrop(of: [UTType.text], delegate: SpaceRearrangementDropDelegate(
-                        target: space,
-                        spaces: displaySpaces,
-                        spaceManager: spaceManager,
-                        errorMessage: $rearrangementError
-                    ))
-                }
+                spaceRows(displaySpaces)
             }
         }
         .background(
@@ -240,36 +203,101 @@ struct SpaceEditView: View {
         spaceManager.renameSpace(space.id, to: newName)
     }
 
-}
-
-private struct SpaceRearrangementDropDelegate: DropDelegate {
-    let target: DesktopSpace
-    let spaces: [DesktopSpace]
-    let spaceManager: SpaceManager
-    @Binding var errorMessage: String?
-
-    func performDrop(info: DropInfo) -> Bool {
-        guard let provider = info.itemProviders(for: [UTType.text]).first else { return false }
-        errorMessage = nil
-        provider.loadObject(ofClass: NSString.self) { item, _ in
-            guard let sourceObject = item as? NSString else { return }
-            let sourceID = sourceObject as String
-            SpaceRearrangementService.shared.rearrange(
-                sourceID: sourceID,
-                before: target.id,
-                orderedSpaceIDs: spaces.map(\.id),
-                displayID: target.displayID
-            ) { result in
-                DispatchQueue.main.async {
-                    switch result {
-                    case .success:
-                        spaceManager.refreshSpaceState()
-                    case .failure(let error):
-                        errorMessage = error
+    @ViewBuilder
+    private func spaceRows(_ spaces: [DesktopSpace]) -> some View {
+        if #available(macOS 27.0, *) {
+            ForEach(spaces) { space in
+                spaceRow(for: space, in: spaces)
+            }
+            .reorderContainer(for: DesktopSpace.self) { difference in
+                applyNativeReorder(difference, in: spaces)
+            }
+        } else {
+            ForEach(spaces) { space in
+                spaceRow(for: space, in: spaces)
+                    .draggable(space.id) {
+                        dragPreview(for: space)
                     }
-                }
+                    .dropDestination(for: String.self) { sourceIDs, _ in
+                        guard let sourceID = sourceIDs.first else { return false }
+                        return rearrange(sourceID, before: space, in: spaces)
+                    } isTargeted: { isTargeted in
+                        if isTargeted {
+                            targetedSpaceID = space.id
+                        } else if targetedSpaceID == space.id {
+                            targetedSpaceID = nil
+                        }
+                    }
+            }
+        }
+    }
+
+    private func spaceRow(for space: DesktopSpace, in spaces: [DesktopSpace]) -> some View {
+        VStack(spacing: 0) {
+            HStack(spacing: 10) {
+                spaceNumberView(for: space).frame(width: 30, alignment: .leading)
+                spaceNameEditor(for: space).frame(maxWidth: .infinity)
+                actionButtons(for: space).frame(width: 20, alignment: .trailing)
+            }
+            .padding(.horizontal, 12)
+            .padding(.vertical, 6)
+
+            if space.id != spaces.last?.id {
+                Divider().padding(.leading, 12)
+            }
+        }
+        .contentShape(Rectangle())
+        .background(
+            targetedSpaceID == space.id
+                ? Color.accentColor.opacity(0.12)
+                : Color.clear
+        )
+        .transition(.opacity.combined(with: .move(edge: .top)))
+    }
+
+    private func dragPreview(for space: DesktopSpace) -> some View {
+        Text(defaultName(for: space))
+            .font(.body)
+            .padding(.horizontal, 16)
+            .padding(.vertical, 10)
+            .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+    }
+
+    private func rearrange(_ sourceID: String, before target: DesktopSpace, in spaces: [DesktopSpace]) -> Bool {
+        SpaceRearrangementService.shared.rearrange(
+            sourceID: sourceID,
+            before: target.id,
+            orderedSpaceIDs: spaces.map(\.id),
+            displayID: target.displayID
+        ) { result in
+            if case .success = result {
+                spaceManager.refreshSpaceState()
             }
         }
         return true
+    }
+
+    @available(macOS 27.0, *)
+    private func applyNativeReorder(
+        _ difference: ReorderDifference<String, ReorderableSingleCollectionIdentifier>,
+        in spaces: [DesktopSpace]
+    ) {
+        guard let sourceID = difference.sources.first else { return }
+
+        switch difference.destination.position {
+        case .before(let targetID):
+            guard let target = spaces.first(where: { $0.id == targetID }) else { return }
+            _ = rearrange(sourceID, before: target, in: spaces)
+        case .end:
+            SpaceRearrangementService.shared.rearrangeToEnd(
+                sourceID: sourceID,
+                orderedSpaceIDs: spaces.map(\.id),
+                displayID: spaces.first?.displayID
+            ) { result in
+                if case .success = result {
+                    spaceManager.refreshSpaceState()
+                }
+            }
+        }
     }
 }
