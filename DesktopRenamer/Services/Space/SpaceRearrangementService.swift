@@ -193,11 +193,12 @@ final class SpaceRearrangementService: ObservableObject {
     private func missionControlSpaceFrames(in dock: AXUIElement, displayID: String?) -> [CGRect] {
         guard let missionControl = findElement(withIdentifier: "mc", in: dock),
               let display = matchingDisplay(in: missionControl, displayID: displayID),
-              let spaces = findElement(withIdentifier: "mc.spaces", in: display) else {
+              let spaces = findElement(withIdentifier: "mc.spaces", in: display),
+              let spacesList = findElement(withIdentifier: "mc.spaces.list", in: spaces) else {
             return spaceThumbnailFrames(in: dock)
         }
 
-        return children(of: spaces)
+        return children(of: spacesList)
             .compactMap { frame(of: $0) }
             .filter { $0.width >= 50 && $0.height >= 30 }
             .sorted { $0.minX < $1.minX }
