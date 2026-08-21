@@ -70,6 +70,7 @@ enum DesktopRearrangementDirection {
     @Published var isLoadingData: Bool = false
     @Published var isKeyboardSelection: Bool = false
     @Published private(set) var isRearrangingSpace: Bool = false
+    private var rearrangementRecoveryWorkItem: DispatchWorkItem?
     
     @Published var showCommandNumbers: Bool = false
     @Published var isBottomBarFocused: Bool = false
@@ -844,6 +845,8 @@ enum DesktopRearrangementDirection {
         let orderedIDs = orderedSpaces.map(\.id)
         let completion: (SpaceRearrangementService.Result) -> Void = { [weak self] result in
             guard let self = self else { return }
+            self.rearrangementRecoveryWorkItem?.cancel()
+            self.rearrangementRecoveryWorkItem = nil
             self.isRearrangingSpace = false
             guard case .success = result else { return }
 
@@ -857,10 +860,11 @@ enum DesktopRearrangementDirection {
         }
 
         isRearrangingSpace = true
+        scheduleRearrangementRecovery(for: manager)
         switch direction {
         case .up:
             guard sourceIndex > 0 else {
-                isRearrangingSpace = false
+                finishRearrangementRecovery()
                 return
             }
             SpaceRearrangementService.shared.rearrange(
@@ -872,7 +876,7 @@ enum DesktopRearrangementDirection {
             )
         case .down:
             guard sourceIndex < orderedIDs.count - 1 else {
-                isRearrangingSpace = false
+                finishRearrangementRecovery()
                 return
             }
             if sourceIndex + 2 < orderedIDs.count {
@@ -892,6 +896,28 @@ enum DesktopRearrangementDirection {
                 )
             }
         }
+    }
+
+    private func scheduleRearrangementRecovery(for manager: SpaceManager) {
+        rearrangementRecoveryWorkItem?.cancel()
+        let workItem = DispatchWorkItem { [weak self, weak manager] in
+            guard let self = self, self.isRearrangingSpace else { return }
+            DiagnosticEventLog.shared.record(
+                subsystem: "Launcher",
+                level: "warning",
+                "Rearrangement verification timed out; unlocking launcher"
+            )
+            self.isRearrangingSpace = false
+            manager?.refreshSpaceState()
+        }
+        rearrangementRecoveryWorkItem = workItem
+        DispatchQueue.main.asyncAfter(deadline: .now() + 5, execute: workItem)
+    }
+
+    private func finishRearrangementRecovery() {
+        rearrangementRecoveryWorkItem?.cancel()
+        rearrangementRecoveryWorkItem = nil
+        isRearrangingSpace = false
     }
 
     private func expectedOrder(
