@@ -90,13 +90,23 @@ final class SpaceRearrangementService: ObservableObject {
     }
 
     private func openMissionControl() -> Bool {
-        guard let dock = runningDockElement(), findElement(withIdentifier: "mc", in: dock) == nil else { return true }
+        guard let dock = runningDockElement() else { return false }
+        guard !missionControlIsReady(in: dock) else { return true }
         return postMissionControlNotification()
     }
 
     private func closeMissionControl() {
-        guard let dock = runningDockElement(), findElement(withIdentifier: "mc", in: dock) != nil else { return }
+        guard let dock = runningDockElement(), missionControlIsReady(in: dock) else { return }
         postMissionControlNotification()
+    }
+
+    private func missionControlIsReady(in dock: AXUIElement) -> Bool {
+        guard let missionControl = directMissionControl(in: dock) else { return false }
+        return findElement(withIdentifier: "mc.spaces.list", in: missionControl) != nil
+    }
+
+    private func directMissionControl(in dock: AXUIElement) -> AXUIElement? {
+        children(of: dock).first { identifier(of: $0) == "mc" }
     }
 
     @discardableResult
@@ -104,11 +114,11 @@ final class SpaceRearrangementService: ObservableObject {
         // The Dock creates its Mission Control AX hierarchy after CoreDock receives
         // this notification. Keyboard shortcuts and distributed notifications are
         // user-configurable or ignored by newer macOS releases.
-        typealias SendNotification = @convention(c) (CFString, Int32) -> Int32
+        typealias SendNotification = @convention(c) (CFString, UnsafeRawPointer?) -> Void
         let defaultHandle = UnsafeMutableRawPointer(bitPattern: -2)
         if let symbol = dlsym(defaultHandle, "CoreDockSendNotification") {
             let send = unsafeBitCast(symbol, to: SendNotification.self)
-            _ = send("com.apple.expose.awake" as CFString, 0)
+            send("com.apple.expose.awake" as CFString, nil)
             return true
         }
 
@@ -121,7 +131,7 @@ final class SpaceRearrangementService: ObservableObject {
         guard let handle = Self.coreDockHandle,
               let symbol = dlsym(handle, "CoreDockSendNotification") else { return false }
         let send = unsafeBitCast(symbol, to: SendNotification.self)
-        _ = send("com.apple.expose.awake" as CFString, 0)
+        send("com.apple.expose.awake" as CFString, nil)
         return true
     }
 
@@ -188,7 +198,7 @@ final class SpaceRearrangementService: ObservableObject {
     }
 
     private func missionControlSpaceFrames(in dock: AXUIElement, displayID: String?) -> [CGRect] {
-        guard let missionControl = findElement(withIdentifier: "mc", in: dock),
+        guard let missionControl = directMissionControl(in: dock),
               let display = matchingDisplay(in: missionControl, displayID: displayID),
               let spaces = findElement(withIdentifier: "mc.spaces", in: display),
               let spacesList = findElement(withIdentifier: "mc.spaces.list", in: spaces) else {
