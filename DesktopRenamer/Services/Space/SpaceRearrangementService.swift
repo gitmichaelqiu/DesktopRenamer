@@ -16,7 +16,6 @@ final class SpaceRearrangementService: ObservableObject {
     }
 
     private let dockBundleIdentifier = "com.apple.dock"
-    private let missionControlKeyCode: CGKeyCode = 126
 
     private init() {}
 
@@ -82,19 +81,24 @@ final class SpaceRearrangementService: ObservableObject {
     }
 
     private func openMissionControl() {
-        postKeyEvent(keyCode: missionControlKeyCode, keyDown: true)
-        postKeyEvent(keyCode: missionControlKeyCode, keyDown: false)
+        guard let dock = runningDockElement(), findElement(withIdentifier: "mc", in: dock) == nil else { return }
+        postMissionControlNotification()
     }
 
     private func closeMissionControl() {
-        postKeyEvent(keyCode: 53, keyDown: true, flags: [])
-        postKeyEvent(keyCode: 53, keyDown: false, flags: [])
+        guard let dock = runningDockElement(), findElement(withIdentifier: "mc", in: dock) != nil else { return }
+        postMissionControlNotification()
     }
 
-    private func postKeyEvent(keyCode: CGKeyCode, keyDown: Bool, flags: CGEventFlags = .maskControl) {
-        guard let event = CGEvent(keyboardEventSource: CGEventSource(stateID: .hidSystemState), virtualKey: keyCode, keyDown: keyDown) else { return }
-        event.flags = flags
-        event.post(tap: .cgSessionEventTap)
+    private func postMissionControlNotification() {
+        // The Dock creates its Mission Control AX hierarchy after this notification.
+        // Keyboard shortcuts are user-configurable and are not reliable here.
+        DistributedNotificationCenter.default().postNotificationName(
+            Notification.Name("com.apple.expose.awake"),
+            object: nil,
+            userInfo: nil,
+            deliverImmediately: true
+        )
     }
 
     private func dragSpace(sourceIndex: Int, targetIndex: Int, spaceCount: Int, displayID: String?) -> Result {
