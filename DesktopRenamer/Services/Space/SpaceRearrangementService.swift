@@ -63,7 +63,7 @@ final class SpaceRearrangementService: ObservableObject {
         let originalMouseLocation = NSEvent.mouseLocation
         DispatchQueue.global(qos: .userInitiated).asyncAfter(deadline: .now() + 0.6) { [weak self] in
             guard let self else { return }
-            let result = self.dragSpace(
+            let result = self.dragSpaceWithRetry(
                 sourceIndex: sourceIndex,
                 targetIndex: targetIndex,
                 spaceCount: orderedSpaceIDs.count,
@@ -145,6 +145,28 @@ final class SpaceRearrangementService: ObservableObject {
             return .failure(String(localized: "Could not drag the selected space."))
         }
         return .success
+    }
+
+    private func dragSpaceWithRetry(sourceIndex: Int, targetIndex: Int, spaceCount: Int, displayID: String?) -> Result {
+        var lastResult: Result = .failure(String(localized: "Could not identify all spaces in Mission Control (found 0 of \(spaceCount))."))
+        for _ in 0..<20 {
+            let result = dragSpace(
+                sourceIndex: sourceIndex,
+                targetIndex: targetIndex,
+                spaceCount: spaceCount,
+                displayID: displayID
+            )
+            switch result {
+            case .success:
+                return result
+            case .failure(let message) where message.contains("Could not identify all spaces"):
+                lastResult = result
+                Thread.sleep(forTimeInterval: 0.1)
+            case .failure:
+                return result
+            }
+        }
+        return lastResult
     }
 
     private func runningDockElement() -> AXUIElement? {
