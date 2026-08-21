@@ -3131,6 +3131,9 @@ struct BottomBarCapsule: ViewModifier {
     let isActive: Bool
     var isGreen: Bool = false
     let colorScheme: ColorScheme
+    var horizontalPadding: CGFloat = LauncherMenuMetrics.capsuleHorizontalPadding
+    var restingSurfaceOpacity: Double = 0.06
+    var showsBorder: Bool = true
     
     @State private var isHovered: Bool = false
     
@@ -3148,7 +3151,7 @@ struct BottomBarCapsule: ViewModifier {
                 size: 14,
                 weight: isSelected || isActive ? .semibold : .medium
             ))
-            .padding(.horizontal, LauncherMenuMetrics.capsuleHorizontalPadding)
+            .padding(.horizontal, horizontalPadding)
             .frame(height: LauncherMenuMetrics.capsuleHeight)
             .background(
                 ZStack {
@@ -3158,7 +3161,7 @@ struct BottomBarCapsule: ViewModifier {
                         } else if isActive {
                             greenBgColor.opacity(isHovered ? 0.25 : 0.15)
                         } else {
-                            controlSurface.opacity(isHovered ? 0.12 : 0.06)
+                            controlSurface.opacity(isHovered ? 0.12 : restingSurfaceOpacity)
                         }
                     } else {
                         if isSelected {
@@ -3166,7 +3169,7 @@ struct BottomBarCapsule: ViewModifier {
                         } else if isActive {
                             controlSurface.opacity(isHovered ? 0.22 : 0.14)
                         } else {
-                            controlSurface.opacity(isHovered ? 0.12 : 0.06)
+                            controlSurface.opacity(isHovered ? 0.12 : restingSurfaceOpacity)
                         }
                     }
                 }
@@ -3176,14 +3179,16 @@ struct BottomBarCapsule: ViewModifier {
                         : (isActive ? .primary : (isSelected || isHovered ? .primary : .secondary))
             )
             .clipShape(Capsule())
-            .overlay(
-                Capsule()
-                    .strokeBorder(
-                        isGreen ? (isSelected ? Color.primary.opacity(0.15) : (isActive ? greenBgColor.opacity(isHovered ? 0.4 : 0.2) : Color.primary.opacity(isHovered ? 0.25 : 0.08)))
-                                : (isSelected ? (isActive ? Color.primary.opacity(0.48) : Color.primary.opacity(0.40)) : (isActive ? Color.primary.opacity(isHovered ? 0.35 : 0.22) : Color.primary.opacity(isHovered ? 0.25 : 0.08))),
-                        lineWidth: (isSelected && !isGreen) ? 1.5 : 1
-                    )
-            )
+            .overlay {
+                if showsBorder {
+                    Capsule()
+                        .strokeBorder(
+                            isGreen ? (isSelected ? Color.primary.opacity(0.15) : (isActive ? greenBgColor.opacity(isHovered ? 0.4 : 0.2) : Color.primary.opacity(isHovered ? 0.25 : 0.08)))
+                                    : (isSelected ? (isActive ? Color.primary.opacity(0.48) : Color.primary.opacity(0.40)) : (isActive ? Color.primary.opacity(isHovered ? 0.35 : 0.22) : Color.primary.opacity(isHovered ? 0.25 : 0.08))),
+                            lineWidth: (isSelected && !isGreen) ? 1.5 : 1
+                        )
+                }
+            }
             .shadow(color: isSelected ? (isGreen ? greenBgColor.opacity(0.25) : Color.primary.opacity(0.1)) : Color.clear, radius: 3, x: 0, y: 1)
             .onHover { hovering in
                 isHovered = hovering
@@ -3196,33 +3201,26 @@ private struct LauncherBottomBarGroupedButton: View {
     let shortcut: String
     let action: () -> Void
     @Environment(\.colorScheme) private var colorScheme
-    @State private var isHovered = false
 
     var body: some View {
         Button(action: action) {
-            actionLabel
+            HStack(spacing: 4) {
+                Text(verbatim: title)
+                LauncherFooterShortcut(text: shortcut)
+            }
         }
         .buttonStyle(.plain)
-        .foregroundColor(title == String(localized: "Actions") ? .secondary : .primary)
-        .onHover { isHovered = $0 }
-    }
-
-    private var actionLabel: some View {
-        HStack(spacing: 4) {
-            Text(verbatim: title)
-            LauncherFooterShortcut(text: shortcut)
-        }
-        .padding(.horizontal, LauncherMenuMetrics.footerButtonHorizontalPadding)
-        .frame(height: LauncherMenuMetrics.capsuleHeight)
-        .background(
-            isHovered
-                ? (colorScheme == .dark
-                    ? Color.white.opacity(0.12)
-                    : Color.black.opacity(0.08))
-                : .clear,
-            in: Capsule()
+        .modifier(
+            BottomBarCapsule(
+                isSelected: false,
+                isActive: false,
+                colorScheme: colorScheme,
+                horizontalPadding: LauncherMenuMetrics.footerButtonHorizontalPadding,
+                restingSurfaceOpacity: 0,
+                showsBorder: false
+            )
         )
-        .contentShape(Rectangle())
+        .contentShape(Capsule())
     }
 }
 
