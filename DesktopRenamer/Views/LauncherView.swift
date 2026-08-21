@@ -1220,13 +1220,14 @@ private struct FloatingHotkeyHint: View {
 
 private struct LauncherRowAccessory<Content: View>: View {
     let shortcutText: String?
+    let isSelected: Bool
     @ViewBuilder let content: () -> Content
 
     var body: some View {
         HStack(spacing: LauncherMenuMetrics.accessoryColumnSpacing) {
             content()
                 .frame(maxWidth: .infinity, alignment: .trailing)
-                .modifier(HotkeyAccessoryModifier(isActive: shortcutText != nil))
+                .modifier(HotkeyAccessoryModifier(isActive: shortcutText != nil && !isSelected))
 
             if let shortcutText {
                 FloatingHotkeyHint(
@@ -1407,7 +1408,7 @@ struct CommandRowView: View {
 
             Spacer(minLength: 4)
 
-            LauncherRowAccessory(shortcutText: shortcutText) {
+            LauncherRowAccessory(shortcutText: shortcutText, isSelected: isSelected) {
                 if let statusText = toggleStatus {
                     statusBadge(statusText)
                 } else {
@@ -1437,7 +1438,7 @@ struct CommandRowView: View {
             
             Spacer()
 
-            LauncherRowAccessory(shortcutText: shortcutText) {
+            LauncherRowAccessory(shortcutText: shortcutText, isSelected: isSelected) {
                 if shortcutText == nil {
                     if let statusText = toggleStatus {
                         LauncherStatusLabel(
@@ -1527,7 +1528,7 @@ struct SpaceRowView: View {
             
             Spacer()
 
-            LauncherRowAccessory(shortcutText: shortcutText) {
+            LauncherRowAccessory(shortcutText: shortcutText, isSelected: isSelected) {
                 if isCurrent {
                     WindowStateBadge(label: String(localized: "Current"), color: .blue)
                 }
@@ -1635,7 +1636,7 @@ private struct LauncherWindowRowContent: View {
 
                 Spacer()
 
-                LauncherRowAccessory(shortcutText: shortcutText) {
+                LauncherRowAccessory(shortcutText: shortcutText, isSelected: isSelected) {
                     HStack(spacing: isStaged ? 4 : 8) {
                         if !isStaged {
                             if window.isHidden {
@@ -2975,7 +2976,7 @@ struct CommandKActionRowView: View {
 
                         Spacer(minLength: 0)
                     }
-                    .modifier(HotkeyAccessoryModifier(isActive: showCommandNumbers))
+                    .modifier(HotkeyAccessoryModifier(isActive: showCommandNumbers && !isSelected))
 
                     LauncherMenuAccessory {
                         FloatingHotkeyHint(text: LocalizedStringKey("⌘\(idx + 1)"))
