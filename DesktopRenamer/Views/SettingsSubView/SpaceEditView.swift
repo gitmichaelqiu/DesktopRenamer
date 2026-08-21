@@ -207,11 +207,12 @@ struct SpaceEditView: View {
     @ViewBuilder
     private func spaceRows(_ spaces: [DesktopSpace]) -> some View {
         if #available(macOS 27.0, *) {
-            ForEach(spaces) { space in
-                spaceRow(for: space, in: spaces)
-                    .draggable(containerItemID: space.id)
+            VStack(spacing: 0) {
+                ForEach(spaces) { space in
+                    spaceRow(for: space, in: spaces)
+                }
+                .reorderable()
             }
-            .reorderable()
             .reorderContainer(for: DesktopSpace.self) { difference in
                 applyNativeReorder(difference, in: spaces)
             }
