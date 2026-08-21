@@ -514,30 +514,12 @@ import SwiftUI
                 )
             case .move(let space):
                 if window.space.id != space.id {
-                    // Focus the window
-                    SpaceHelper.focusWindow(id: window.id, pid: window.pid)
-                    try? await Task.sleep(nanoseconds: 250_000_000)
-                    
-                    // Un-fullscreen first if the window is currently in a fullscreen space
-                    if window.space.isFullscreen {
-                        var axFSWindow = SpaceHelper.getAXWindow(id: window.id, pid: window.pid)
-                        if axFSWindow == nil {
-                            if let app = NSRunningApplication(processIdentifier: window.pid) {
-                                app.activate(options: .activateIgnoringOtherApps)
-                                try? await Task.sleep(nanoseconds: 400_000_000)
-                                axFSWindow = SpaceHelper.getAXWindow(id: window.id, pid: window.pid)
-                            }
-                        }
-                        if let targetAXFSWindow = axFSWindow {
-                            AXUIElementSetAttributeValue(targetAXFSWindow, "AXFullScreen" as CFString, false as CFTypeRef)
-                            try? await Task.sleep(nanoseconds: 1_200_000_000)
-                        }
-                    }
-                    
-                    if let manager = AppDelegate.shared.spaceManager {
-                        manager.moveActiveWindowToSpace(id: space.id)
-                    }
-                    try? await Task.sleep(nanoseconds: 500_000_000)
+                    _ = await WindowActionCoordinator.moveWindow(
+                        windowID: window.id,
+                        pid: window.pid,
+                        fromSpaceID: window.space.id,
+                        targetSpaceID: space.id
+                    )
                 }            
             }
             
@@ -941,37 +923,32 @@ import SwiftUI
             return false
         }
         
-        let fromSpaceID = Int(fromSpaceIDStr) ?? 0
-        let targetSpaceID = Int(spaceID) ?? 0
-        
         guard let manager = AppDelegate.shared.spaceManager,
               let targetSpace = manager.spaceNameDict.first(where: { $0.id == spaceID }) else {
             DiagnosticEventLog.shared.record(subsystem: "Launcher", level: "warning", "movePreviouslyActiveWindow: targetSpace object not found for ID \(spaceID)")
             return false
         }
-        
-        if targetSpace.displayID != displayID {
-            // Cross-monitor move
-            DiagnosticEventLog.shared.record(subsystem: "Launcher", level: "info", "movePreviouslyActiveWindow: Cross-monitor move window \(prevWindow.id) from space \(fromSpaceID) to space \(targetSpaceID)")
-            print("Launcher: Cross-monitor move window \(prevWindow.id) from space \(fromSpaceID) to space \(targetSpaceID)")
-            SpaceHelper.moveWindowToSpace(windowID: prevWindow.id, fromSpaceID: fromSpaceID, targetSpaceID: targetSpaceID)
-            manager.switchToSpace(targetSpace, forceInstant: true)
+
+        guard !targetSpace.isFullscreen else {
+            DiagnosticEventLog.shared.record(subsystem: "Launcher", level: "info", "movePreviouslyActiveWindow: target space is fullscreen; no move performed")
             return false
-        } else {
-            // Same-monitor move: MUST use dragActiveWindow!
-            DiagnosticEventLog.shared.record(subsystem: "Launcher", level: "info", "movePreviouslyActiveWindow: Same-monitor move window \(prevWindow.id) from space \(fromSpaceID) to space \(targetSpaceID) using dragActiveWindow")
-            print("Launcher: Same-monitor move window \(prevWindow.id) from space \(fromSpaceID) to space \(targetSpaceID) using dragActiveWindow")
-            
-            // 1. Hide the launcher so focus goes back to the window
-            LauncherWindowController.shared.shouldRestoreFocus = true
-            closeLauncher()
-            
-            // 2. Perform the drag switch
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
-                SpaceHelper.dragActiveWindow(to: spaceID, forceInstant: true)
-            }
-            return true
         }
+
+        DiagnosticEventLog.shared.record(subsystem: "Launcher", level: "info", "movePreviouslyActiveWindow: moving window \(prevWindow.id) from space \(fromSpaceIDStr) to space \(spaceID)")
+
+        LauncherWindowController.shared.shouldRestoreFocus = true
+        closeLauncher()
+
+        Task { @MainActor in
+            try? await Task.sleep(nanoseconds: 200_000_000)
+            _ = await WindowActionCoordinator.moveWindow(
+                windowID: prevWindow.id,
+                pid: prevWindow.pid,
+                fromSpaceID: fromSpaceIDStr,
+                targetSpaceID: spaceID
+            )
+        }
+        return true
     }
     
     func executeFocusWindow(_ window: WindowEntry) {

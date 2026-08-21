@@ -66,7 +66,8 @@ enum WindowActionCoordinator {
         guard fromSpaceID != targetSpaceID else { return true }
         guard let manager = AppDelegate.shared.spaceManager,
               let sourceSpace = manager.spaceNameDict.first(where: { $0.id == fromSpaceID }),
-              manager.spaceNameDict.contains(where: { $0.id == targetSpaceID }) else {
+              let targetSpace = manager.spaceNameDict.first(where: { $0.id == targetSpaceID }),
+              !targetSpace.isFullscreen else {
             return false
         }
 
