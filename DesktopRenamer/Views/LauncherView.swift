@@ -2009,11 +2009,9 @@ struct VisualEffectView: NSViewRepresentable {
     private func update(_ view: NSVisualEffectView) {
         let isDark = colorScheme == .dark
         view.appearance = NSAppearance(named: isDark ? .darkAqua : .aqua)
-        view.material = isDark ? material : .contentBackground
+        view.material = material
         view.blendingMode = blendingMode
         view.state = state
-        view.wantsLayer = true
-        view.layer?.backgroundColor = (isDark ? NSColor.clear : NSColor.white).cgColor
     }
 }
 
