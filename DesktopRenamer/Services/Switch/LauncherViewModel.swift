@@ -2,6 +2,11 @@ import Foundation
 import AppKit
 import SwiftUI
 
+enum DesktopRearrangementDirection {
+    case up
+    case down
+}
+
 @MainActor class LauncherViewModel: ObservableObject {
     @AppStorage("com.michaelqiu.desktoprenamer.automaticallyRankCommands") var automaticallyRankCommands: Bool = true
     @AppStorage("com.michaelqiu.desktoprenamer.launcherManualCommandOrder") var launcherManualCommandOrder: String = ""
@@ -814,6 +819,109 @@ import SwiftUI
             default:
                 break
             }
+        }
+    }
+
+    func rearrangeSelectedDesktop(direction: DesktopRearrangementDirection) {
+        guard activeCommand?.type == .switchToDesktop,
+              stagingWindow == nil,
+              !isRearrangingSpace else { return }
+
+        let spaces = filteredSpaces
+        guard selectedRowIndex >= 0,
+              selectedRowIndex < spaces.count,
+              let manager = AppDelegate.shared.spaceManager,
+              let sourceSpace = manager.spaceNameDict.first(where: { $0.id == spaces[selectedRowIndex].id }),
+              !sourceSpace.isFullscreen else { return }
+
+        let orderedSpaces = manager.spaceNameDict
+            .filter { $0.displayID == sourceSpace.displayID && !$0.isFullscreen }
+            .sorted { $0.num < $1.num }
+        guard let sourceIndex = orderedSpaces.firstIndex(where: { $0.id == sourceSpace.id }) else { return }
+
+        let sourceID = sourceSpace.id
+        let orderedIDs = orderedSpaces.map(\.id)
+        let completion: (SpaceRearrangementService.Result) -> Void = { [weak self] result in
+            guard let self = self else { return }
+            self.isRearrangingSpace = false
+            guard case .success = result else { return }
+
+            self.applyLocalSpaceOrder(orderedIDs: self.expectedOrder(
+                from: orderedIDs,
+                sourceIndex: sourceIndex,
+                direction: direction
+            ), displayID: sourceSpace.displayID)
+            self.selectedRowIndex = self.filteredSpaces.firstIndex { $0.id == sourceID } ?? self.selectedRowIndex
+            manager.refreshSpaceState()
+        }
+
+        isRearrangingSpace = true
+        switch direction {
+        case .up:
+            guard sourceIndex > 0 else {
+                isRearrangingSpace = false
+                return
+            }
+            SpaceRearrangementService.shared.rearrange(
+                sourceID: sourceID,
+                before: orderedIDs[sourceIndex - 1],
+                orderedSpaceIDs: orderedIDs,
+                displayID: sourceSpace.displayID,
+                completion: completion
+            )
+        case .down:
+            guard sourceIndex < orderedIDs.count - 1 else {
+                isRearrangingSpace = false
+                return
+            }
+            if sourceIndex + 2 < orderedIDs.count {
+                SpaceRearrangementService.shared.rearrange(
+                    sourceID: sourceID,
+                    before: orderedIDs[sourceIndex + 2],
+                    orderedSpaceIDs: orderedIDs,
+                    displayID: sourceSpace.displayID,
+                    completion: completion
+                )
+            } else {
+                SpaceRearrangementService.shared.rearrangeToEnd(
+                    sourceID: sourceID,
+                    orderedSpaceIDs: orderedIDs,
+                    displayID: sourceSpace.displayID,
+                    completion: completion
+                )
+            }
+        }
+    }
+
+    private var isRearrangingSpace = false
+
+    private func expectedOrder(
+        from orderedIDs: [String],
+        sourceIndex: Int,
+        direction: DesktopRearrangementDirection
+    ) -> [String] {
+        var result = orderedIDs
+        let sourceID = result.remove(at: sourceIndex)
+        let destinationIndex: Int
+        switch direction {
+        case .up:
+            destinationIndex = sourceIndex - 1
+        case .down:
+            destinationIndex = min(sourceIndex + 1, result.count)
+        }
+        result.insert(sourceID, at: destinationIndex)
+        return result
+    }
+
+    private func applyLocalSpaceOrder(orderedIDs: [String], displayID: String) {
+        let spaceByID = Dictionary(uniqueKeysWithValues: currentSpaces.map { ($0.id, $0) })
+        let displayIndices = currentSpaces.indices
+            .filter { currentSpaces[$0].displayName == getDisplayName(for: displayID) && !currentSpaces[$0].isFullscreen }
+            .sorted { currentSpaces[$0].num < currentSpaces[$1].num }
+
+        for (index, spaceID) in orderedIDs.enumerated() {
+            guard index < displayIndices.count, let space = spaceByID[spaceID] else { continue }
+            currentSpaces[displayIndices[index]] = space
         }
     }
     

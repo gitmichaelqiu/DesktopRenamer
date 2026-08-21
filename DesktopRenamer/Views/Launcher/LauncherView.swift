@@ -626,6 +626,21 @@ extension LauncherView {
         let hasShift = modifiers.contains(.shift)
         let hasOption = modifiers.contains(.option)
         let hasControl = modifiers.contains(.control)
+
+        if viewModel.activeCommand?.type == .switchToDesktop,
+           viewModel.commandKTargetWindow == nil,
+           !hasOption && !hasControl && hasCommand && hasShift {
+            switch event.keyCode {
+            case 126:
+                viewModel.rearrangeSelectedDesktop(direction: .up)
+                return true
+            case 125:
+                viewModel.rearrangeSelectedDesktop(direction: .down)
+                return true
+            default:
+                break
+            }
+        }
         
         // Direct window shortcuts for .listWindows (cmd + m, cmd + shift + m/w/n/r/f/h/q)
         if viewModel.activeCommand?.type == .listWindows,
