@@ -4,7 +4,7 @@ import UniformTypeIdentifiers
 struct SpaceEditView: View {
     @ObservedObject var spaceManager: SpaceManager
     @EnvironmentObject var navigationState: SettingsNavigationState
-    @State private var rearrangementMessage: String?
+    @State private var rearrangementError: String?
     
     var body: some View {
         VStack(spacing: 0) {
@@ -28,10 +28,10 @@ struct SpaceEditView: View {
                     .padding()
                     .padding(.bottom, 40)
 
-                    if let rearrangementMessage {
-                        Text(rearrangementMessage)
+                    if let rearrangementError {
+                        Text(rearrangementError)
                             .font(.caption)
-                            .foregroundStyle(.secondary)
+                            .foregroundStyle(.red)
                             .frame(maxWidth: .infinity, alignment: .leading)
                             .padding(.horizontal)
                             .padding(.bottom, 8)
@@ -161,7 +161,7 @@ struct SpaceEditView: View {
                         target: space,
                         spaces: displaySpaces,
                         spaceManager: spaceManager,
-                        message: $rearrangementMessage
+                        errorMessage: $rearrangementError
                     ))
                 }
             }
@@ -246,11 +246,11 @@ private struct SpaceRearrangementDropDelegate: DropDelegate {
     let target: DesktopSpace
     let spaces: [DesktopSpace]
     let spaceManager: SpaceManager
-    @Binding var message: String?
+    @Binding var errorMessage: String?
 
     func performDrop(info: DropInfo) -> Bool {
         guard let provider = info.itemProviders(for: [UTType.text]).first else { return false }
-        message = nil
+        errorMessage = nil
         provider.loadObject(ofClass: NSString.self) { item, _ in
             guard let sourceObject = item as? NSString else { return }
             let sourceID = sourceObject as String
@@ -263,10 +263,9 @@ private struct SpaceRearrangementDropDelegate: DropDelegate {
                 DispatchQueue.main.async {
                     switch result {
                     case .success:
-                        message = String(localized: "Space order updated.")
                         spaceManager.refreshSpaceState()
                     case .failure(let error):
-                        message = error
+                        errorMessage = error
                     }
                 }
             }
