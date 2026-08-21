@@ -129,8 +129,7 @@ struct LauncherView: View {
     }
 
     var body: some View {
-        ZStack {
-            VStack(spacing: 0) {
+        VStack(spacing: 0) {
                 // Header (Typing Bar)
                 HStack(spacing: 6) {
                     Button(action: {
@@ -427,15 +426,15 @@ struct LauncherView: View {
                 .frame(maxWidth: .infinity)
             }
             
+        }
+        .overlay(alignment: .bottomTrailing) {
             switch viewModel.launcherOverlay {
             case .commandK(let targetWindow):
                 CommandKOverlayView(viewModel: viewModel, window: targetWindow)
             case .rootActions:
                 RootActionsOverlay(viewModel: viewModel)
-                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomTrailing)
             case .rootSpacePicker, .stagingSpacePicker:
                 SpacePickerOverlay(viewModel: viewModel, spaceManager: spaceManager)
-                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomTrailing)
             case nil:
                 EmptyView()
             }
