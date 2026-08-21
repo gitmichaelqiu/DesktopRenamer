@@ -1157,45 +1157,54 @@ struct SpacesBottomBar: View {
     var body: some View {
         HStack(spacing: 0) {
             if viewModel.isBottomBarFocused {
-                SearchTextField(
-                    text: $viewModel.spaceBarQuery,
-                    isDark: colors.isDark,
-                    onUpArrow: {},
-                    onDownArrow: {},
-                    onLeftArrow: {
-                        if viewModel.selectedSpaceIndex > 0 {
-                            viewModel.selectedSpaceIndex -= 1
-                        }
-                        return true
-                    },
-                    onRightArrow: {
-                        let count = viewModel.filteredDisplaySpaces.count
-                        if viewModel.selectedSpaceIndex < count - 1 {
-                            viewModel.selectedSpaceIndex += 1
-                        }
-                        return true
-                    },
-                    onEnter: {
-                        viewModel.executeBottomBarSpaceAction(isOption: false, isCommand: false)
-                    },
-                    onCommandEnter: {
-                        viewModel.executeBottomBarSpaceAction(isOption: false, isCommand: true)
-                    },
-                    onOptionEnter: {
-                        viewModel.executeBottomBarSpaceAction(isOption: true, isCommand: false)
-                    },
-                    onTab: {
-                        viewModel.handleTabKey()
-                    },
-                    onEscape: {
-                        viewModel.handleEscapeKey()
-                    },
-                    onKeyEquivalent: { _ in false },
-                    placeholder: String(localized: "Spaces:"),
-                    textFieldFont: NSFont.systemFont(ofSize: 13, weight: .semibold),
-                    textFieldColor: NSColor.secondaryLabelColor.withAlphaComponent(0.65),
-                    placeholderColor: NSColor.secondaryLabelColor.withAlphaComponent(0.65)
-                )
+                ZStack(alignment: .leading) {
+                    Text(verbatim: String(localized: "Spaces:"))
+                        .font(.subheadline)
+                        .fontWeight(.semibold)
+                        .foregroundColor(colors.textTertiary)
+                        .opacity(viewModel.spaceBarQuery.isEmpty ? 1 : 0)
+
+                    SearchTextField(
+                        text: $viewModel.spaceBarQuery,
+                        isDark: colors.isDark,
+                        onUpArrow: {},
+                        onDownArrow: {},
+                        onLeftArrow: {
+                            if viewModel.selectedSpaceIndex > 0 {
+                                viewModel.selectedSpaceIndex -= 1
+                            }
+                            return true
+                        },
+                        onRightArrow: {
+                            let count = viewModel.filteredDisplaySpaces.count
+                            if viewModel.selectedSpaceIndex < count - 1 {
+                                viewModel.selectedSpaceIndex += 1
+                            }
+                            return true
+                        },
+                        onEnter: {
+                            viewModel.executeBottomBarSpaceAction(isOption: false, isCommand: false)
+                        },
+                        onCommandEnter: {
+                            viewModel.executeBottomBarSpaceAction(isOption: false, isCommand: true)
+                        },
+                        onOptionEnter: {
+                            viewModel.executeBottomBarSpaceAction(isOption: true, isCommand: false)
+                        },
+                        onTab: {
+                            viewModel.handleTabKey()
+                        },
+                        onEscape: {
+                            viewModel.handleEscapeKey()
+                        },
+                        onKeyEquivalent: { _ in false },
+                        placeholder: String(localized: "Spaces:"),
+                        textFieldFont: NSFont.systemFont(ofSize: 13, weight: .semibold),
+                        textFieldColor: NSColor.secondaryLabelColor.withAlphaComponent(0.65),
+                        placeholderColor: NSColor.clear
+                    )
+                    .opacity(viewModel.spaceBarQuery.isEmpty ? 0.001 : 1)
+                }
                 .frame(width: labelWidth, height: 28, alignment: .leading)
                 .padding(.trailing, 8)
             } else {
