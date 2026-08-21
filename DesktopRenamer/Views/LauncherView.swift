@@ -2,7 +2,7 @@ import SwiftUI
 import AppKit
 
 enum LauncherLayout {
-    static let windowSize = CGSize(width: 750, height: 475)
+    static let windowSize = CGSize(width: 720, height: 450)
 }
 
 struct ThemeColors {
