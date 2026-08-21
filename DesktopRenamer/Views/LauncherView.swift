@@ -21,6 +21,8 @@ private enum LauncherMenuMetrics {
     // separate 24pt slot for the delayed number badge.
     static let accessoryColumnWidth: CGFloat = 140
     static let hotkeyColumnWidth: CGFloat = 36
+    static let hotkeyBadgeHeight: CGFloat = 20
+    static let hotkeyBadgeCornerRadius: CGFloat = 6
     static let accessoryColumnSpacing: CGFloat = 12
     static let rowAccessoryWidth: CGFloat = accessoryColumnWidth + accessoryColumnSpacing + hotkeyColumnWidth
     static let capsuleHorizontalPadding: CGFloat = 12
@@ -1206,10 +1208,13 @@ private struct FloatingHotkeyHint: View {
             .fixedSize()
             .padding(.horizontal, 6)
             .frame(minWidth: 23)
-            .frame(height: 16)
+            .frame(height: LauncherMenuMetrics.hotkeyBadgeHeight)
             .background(
                 badgeBackground,
-                in: Capsule()
+                in: RoundedRectangle(
+                    cornerRadius: LauncherMenuMetrics.hotkeyBadgeCornerRadius,
+                    style: .continuous
+                )
             )
             .shadow(
                 color: Color.black.opacity(colorScheme == .dark ? 0.24 : 0.16),
