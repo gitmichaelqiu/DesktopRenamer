@@ -117,12 +117,12 @@ enum BatchMoveItem: Identifiable, Equatable {
     var id: String {
         switch self {
         case .staged(let action, _):
-            return "batch_window_\(action.window.id)"
+            return "staged_\(action.window.id)"
         case .unstaged(let window, _):
-            return "batch_window_\(window.id)"
+            return "unstaged_\(window.id)"
         }
     }
-
+    
     var index: Int {
         switch self {
         case .staged(_, let index):
@@ -131,42 +131,14 @@ enum BatchMoveItem: Identifiable, Equatable {
             return index
         }
     }
-
-    var window: WindowEntry {
-        switch self {
-        case .staged(let action, _):
-            return action.window
-        case .unstaged(let window, _):
-            return window
-        }
-    }
-
-    var isStaged: Bool {
-        if case .staged = self {
-            return true
-        }
-        return false
-    }
-
-    var stagedActionText: String {
-        guard case .staged(let action, _) = self else { return "" }
-        return action.actionType.description
-    }
     
     static func == (lhs: BatchMoveItem, rhs: BatchMoveItem) -> Bool {
-        switch (lhs, rhs) {
-        case (.staged(let lhsAction, let lhsIndex), .staged(let rhsAction, let rhsIndex)):
-            return lhsAction == rhsAction && lhsIndex == rhsIndex
-        case (.unstaged(let lhsWindow, let lhsIndex), .unstaged(let rhsWindow, let rhsIndex)):
-            return lhsWindow == rhsWindow && lhsIndex == rhsIndex
-        case (.staged, .unstaged), (.unstaged, .staged):
-            return false
-        }
+        return lhs.id == rhs.id
     }
 }
 
 struct BatchMoveSection: Identifiable {
-    let id: String
+    var id: String { title }
     let title: String
     let subtitle: String
     let items: [BatchMoveItem]
@@ -184,24 +156,10 @@ struct ListWindowsItem: Identifiable, Equatable {
 }
 
 struct ListWindowsSection: Identifiable {
-    let id: String
+    var id: String { title }
     let title: String
     let subtitle: String
     let items: [ListWindowsItem]
-}
-
-struct RootCommandSection: Identifiable {
-    let id: String
-    let title: String?
-    let commands: [LauncherCommand]
-    let startIndex: Int
-}
-
-enum LauncherOverlay: Equatable {
-    case rootActions
-    case rootSpacePicker
-    case stagingSpacePicker
-    case commandK(WindowEntry)
 }
 
 @MainActor class LauncherViewModel: ObservableObject {
@@ -233,23 +191,12 @@ enum LauncherOverlay: Equatable {
 
     @Published var searchQuery: String = "" {
         didSet {
-            guard oldValue != searchQuery else { return }
             selectedRowIndex = 0
             isKeyboardSelection = true
             isBottomBarFocused = false
-            scrollToTopRequestVersion &+= 1
-            listLayoutVersion &+= 1
-        }
-    }
-    @Published var spacePickerQuery: String = "" {
-        didSet {
-            selectedSpaceIndex = 0
         }
     }
     @Published var selectedRowIndex: Int = 0
-    @Published private(set) var selectionRevealRequestVersion: Int = 0
-    @Published private(set) var listLayoutVersion: Int = 0
-    @Published private(set) var scrollToTopRequestVersion: Int = 0
     @Published var activeCommand: LauncherCommand? = nil {
         willSet {
             if activeCommand?.type == .batchMoveWindows && newValue?.type != .batchMoveWindows {
@@ -258,122 +205,45 @@ enum LauncherOverlay: Equatable {
         }
         didSet {
             searchQuery = ""
-            if oldValue?.type != activeCommand?.type {
-                listLayoutVersion &+= 1
-            }
             selectedRowIndex = 0
             isKeyboardSelection = true
             isBottomBarFocused = false
-            isRootActionsPresented = false
-            isRootSpacePickerPresented = false
-            commandKTargetWindow = nil
             if activeCommand != nil {
                 loadData()
             }
         }
     }
     
-    @Published var currentSpaces: [SpaceGroup] = [] {
-        didSet {
-            guard oldValue != currentSpaces else { return }
-            listLayoutVersion &+= 1
-        }
-    }
-    @Published var currentWindows: [WindowEntry] = [] {
-        didSet {
-            guard oldValue != currentWindows else { return }
-            listLayoutVersion &+= 1
-        }
-    }
+    @Published var currentSpaces: [SpaceGroup] = []
+    @Published var currentWindows: [WindowEntry] = []
     @Published var isLoadingData: Bool = false
     @Published var isKeyboardSelection: Bool = false
     
     @Published var showCommandNumbers: Bool = false
     @Published var isBottomBarFocused: Bool = false
     @Published var selectedSpaceIndex: Int = 0
-    @Published private(set) var launcherOverlay: LauncherOverlay? = nil
-
-    var isRootSpacePickerPresented: Bool {
-        get {
-            if case .rootSpacePicker = launcherOverlay { return true }
-            return false
-        }
-        set {
-            if newValue {
-                launcherOverlay = .rootSpacePicker
-            } else if case .rootSpacePicker = launcherOverlay {
-                launcherOverlay = nil
-            }
-        }
-    }
-
-    var isRootActionsPresented: Bool {
-        get {
-            if case .rootActions = launcherOverlay { return true }
-            return false
-        }
-        set {
-            if newValue {
-                launcherOverlay = .rootActions
-            } else if case .rootActions = launcherOverlay {
-                launcherOverlay = nil
-            }
-        }
-    }
-    @Published var selectedRootActionIndex: Int = 0
-    @Published var rootActionQuery: String = "" {
-        didSet {
-            selectedRootActionIndex = filteredRootActionIndices.first ?? 0
-        }
-    }
     
     // For batch window moves
-    @Published var stagedMoves: [Int: BatchStagedAction] = [:] {
-        didSet {
-            guard oldValue != stagedMoves else { return }
-            listLayoutVersion &+= 1
-        }
-    }
+    @Published var stagedMoves: [Int: BatchStagedAction] = [:]
     @Published var stagingWindow: WindowEntry? = nil {
         didSet {
             searchQuery = ""
-            spacePickerQuery = ""
             selectedRowIndex = 0
             isKeyboardSelection = true
             isBottomBarFocused = false
-            if stagingWindow != nil {
-                launcherOverlay = .stagingSpacePicker
-            } else if case .stagingSpacePicker = launcherOverlay {
-                launcherOverlay = nil
-            }
         }
     }
     @Published var isExecutingBatchMove: Bool = false
     
     // Command K Panel Overlay State
-    var commandKTargetWindow: WindowEntry? {
-        get {
-            if case .commandK(let window) = launcherOverlay { return window }
-            return nil
-        }
-        set {
-            if let window = newValue {
+    @Published var commandKTargetWindow: WindowEntry? = nil {
+        didSet {
+            if commandKTargetWindow != nil {
                 commandKSelectedIndex = 0
-                commandKQuery = ""
-                launcherOverlay = .commandK(window)
-            } else if case .commandK = launcherOverlay {
-                commandKActionList = []
-                launcherOverlay = nil
             }
         }
     }
     @Published var commandKSelectedIndex: Int = 0
-    @Published var commandKQuery: String = "" {
-        didSet {
-            commandKSelectedIndex = 0
-        }
-    }
-    @Published private(set) var commandKActionList: [BatchStagedActionType] = []
     @Published var isStagingForRestoreTo: Bool = false
     @Published var isExecutingRestoreToImmediately: Bool = false
     
@@ -414,102 +284,44 @@ enum LauncherOverlay: Equatable {
     /// e.g. typing "qiehuan" or "qie huan" matches "切换桌面" (pinyin: qie huan zhuo mian).
     private func matchesQuery(_ query: String, target: String, pinyin: String) -> Bool {
         let lowerQuery = query.lowercased()
+        if target.lowercased().contains(lowerQuery) { return true }
         let squashedQuery = lowerQuery.replacingOccurrences(of: " ", with: "")
-        guard !squashedQuery.isEmpty else { return true }
-
-        return isFuzzyMatch(squashedQuery, in: target.lowercased()) ||
-            isFuzzyMatch(squashedQuery, in: pinyin.lowercased())
+        return pinyin.contains(squashedQuery)
     }
 
-    private func isFuzzyMatch(_ query: String, in target: String) -> Bool {
-        if target.contains(query) { return true }
-
-        var targetCharacters = Array(target)
-        for queryCharacter in query {
-            guard let matchIndex = targetCharacters.firstIndex(of: queryCharacter) else {
-                return false
-            }
-            targetCharacters.removeFirst(matchIndex + 1)
-        }
-        return true
-    }
-
-    private func commandMatchScore(_ command: LauncherCommand, query: String) -> Int {
-        let normalizedQuery = query.lowercased().replacingOccurrences(of: " ", with: "")
-        guard !normalizedQuery.isEmpty else { return 0 }
-
-        let title = command.title.lowercased()
-        let subtitle = command.subtitle.lowercased()
-        let pinyinTitle = command.pinyinTitle.lowercased()
-        let pinyinSubtitle = command.pinyinSubtitle.lowercased()
-
-        func score(_ target: String, exact: Int, prefix: Int, contains: Int, fuzzy: Int) -> Int {
-            let normalizedTarget = target.replacingOccurrences(of: " ", with: "")
-            if normalizedTarget == normalizedQuery {
-                return exact
-            }
-            if normalizedTarget.hasPrefix(normalizedQuery) {
-                return prefix
-            }
-            if normalizedTarget.contains(normalizedQuery) {
-                return contains
-            }
-            return isFuzzyMatch(normalizedQuery, in: normalizedTarget) ? fuzzy : 0
-        }
-
-        return max(
-            score(title, exact: 1_000, prefix: 800, contains: 650, fuzzy: 400),
-            score(pinyinTitle, exact: 900, prefix: 700, contains: 550, fuzzy: 350),
-            score(subtitle, exact: 500, prefix: 400, contains: 300, fuzzy: 200),
-            score(pinyinSubtitle, exact: 450, prefix: 350, contains: 250, fuzzy: 150)
-        )
-    }
-
-    private func sortCommands(_ commands: [LauncherCommand], query: String = "") -> [LauncherCommand] {
+    private func sortCommands(_ commands: [LauncherCommand]) -> [LauncherCommand] {
         let order = manualCommandOrder
-        return commands.sorted {
-            if !query.isEmpty {
-                let scoreA = commandMatchScore($0, query: query)
-                let scoreB = commandMatchScore($1, query: query)
-                if scoreA != scoreB {
-                    return scoreA > scoreB
-                }
-            }
-
-            if automaticallyRankCommands {
+        if automaticallyRankCommands {
+            return commands.sorted {
                 let freqA = getCommandFrequency($0.id)
                 let freqB = getCommandFrequency($1.id)
                 if freqA != freqB {
                     return freqA > freqB
                 }
+                let idxA = order.firstIndex(of: $0.id) ?? Int.max
+                let idxB = order.firstIndex(of: $1.id) ?? Int.max
+                return idxA < idxB
             }
-
-            let idxA = order.firstIndex(of: $0.id) ?? Int.max
-            let idxB = order.firstIndex(of: $1.id) ?? Int.max
-            return idxA < idxB
+        } else {
+            return commands.sorted {
+                let idxA = order.firstIndex(of: $0.id) ?? Int.max
+                let idxB = order.firstIndex(of: $1.id) ?? Int.max
+                return idxA < idxB
+            }
         }
     }
 
-    private var rootCommands: [LauncherCommand] {
-        allCommands
-    }
-    
     var filteredCommands: [LauncherCommand] {
-        guard !searchQuery.isEmpty else {
-            return sortCommands(rootCommands)
+        if searchQuery.isEmpty {
+            return sortCommands(allCommands)
+        } else {
+            let query = searchQuery.lowercased()
+            let filtered = allCommands.filter {
+                matchesQuery(query, target: $0.title, pinyin: $0.pinyinTitle) ||
+                matchesQuery(query, target: $0.subtitle, pinyin: $0.pinyinSubtitle)
+            }
+            return sortCommands(filtered)
         }
-
-        let query = searchQuery.lowercased()
-        let filtered = rootCommands.filter {
-            matchesQuery(query, target: $0.title, pinyin: $0.pinyinTitle) ||
-            matchesQuery(query, target: $0.subtitle, pinyin: $0.pinyinSubtitle)
-        }
-        return sortCommands(filtered, query: query)
-    }
-
-    var rootCommandSections: [RootCommandSection] {
-        let commands = filteredCommands
-        return [RootCommandSection(id: "root-results", title: nil, commands: commands, startIndex: 0)]
     }
     
     var filteredSpaces: [SpaceGroup] {
@@ -520,11 +332,10 @@ enum LauncherOverlay: Equatable {
             spaces = spaces.filter { !$0.isFullscreen }
         }
 
-        let query = stagingWindow != nil || isRootSpacePickerPresented ? spacePickerQuery : searchQuery
-        if query.isEmpty {
+        if searchQuery.isEmpty {
             return spaces
         } else {
-            let query = query.lowercased()
+            let query = searchQuery.lowercased()
             return spaces.filter {
                 matchesQuery(query, target: $0.name, pinyin: $0.pinyinName) ||
                 matchesQuery(query, target: $0.displayName, pinyin: $0.pinyinDisplayName) ||
@@ -596,7 +407,6 @@ enum LauncherOverlay: Equatable {
         }
         if !stagedItems.isEmpty {
             sections.append(BatchMoveSection(
-                id: "staged",
                 title: String(localized: "Staged Moves (Pending)"),
                 subtitle: String(format: String(localized: "%lld items"), stagedItems.count),
                 items: stagedItems
@@ -618,7 +428,6 @@ enum LauncherOverlay: Equatable {
             }
             if !spaceItems.isEmpty {
                 sections.append(BatchMoveSection(
-                    id: space.id,
                     title: space.name,
                     subtitle: String(format: String(localized: "%lld windows"), spaceItems.count),
                     items: spaceItems
@@ -670,24 +479,17 @@ enum LauncherOverlay: Equatable {
         return actions
     }
     
-    var filteredCommandKActions: [BatchStagedActionType] {
-        guard !commandKQuery.isEmpty else { return commandKActionList }
-        let query = commandKQuery.lowercased()
-        return commandKActionList.filter {
-            matchesQuery(query, target: $0.description, pinyin: "")
-        }
+    var commandKActions: [BatchStagedActionType] {
+        guard let window = commandKTargetWindow else { return [] }
+        return getAvailableCommandKActions(for: window)
     }
     
     func showCommandKPanel() {
-        isRootActionsPresented = false
-        isRootSpacePickerPresented = false
-
         if activeCommand?.type == .listWindows {
             let windows = filteredWindows
             let index = selectedRowIndex
             guard index >= 0 && index < windows.count else { return }
             commandKTargetWindow = windows[index]
-            commandKActionList = getAvailableCommandKActions(for: windows[index])
             commandKSelectedIndex = 0
         } else {
             let items = batchMoveSelectableItems
@@ -700,21 +502,20 @@ enum LauncherOverlay: Equatable {
                 return
             case .unstaged(let window, _):
                 commandKTargetWindow = window
-                commandKActionList = getAvailableCommandKActions(for: window)
                 commandKSelectedIndex = 0
             }
         }
     }
     
     func selectPreviousCommandKAction() {
-        let count = filteredCommandKActions.count
+        let count = commandKActions.count
         if count > 0 {
             commandKSelectedIndex = (commandKSelectedIndex - 1 + count) % count
         }
     }
     
     func selectNextCommandKAction() {
-        let count = filteredCommandKActions.count
+        let count = commandKActions.count
         if count > 0 {
             commandKSelectedIndex = (commandKSelectedIndex + 1) % count
         }
@@ -722,7 +523,7 @@ enum LauncherOverlay: Equatable {
     
     func executeCommandKAction() {
         guard let window = commandKTargetWindow else { return }
-        let available = filteredCommandKActions
+        let available = commandKActions
         guard commandKSelectedIndex >= 0 && commandKSelectedIndex < available.count else { return }
         let action = available[commandKSelectedIndex]
         
@@ -939,7 +740,6 @@ enum LauncherOverlay: Equatable {
             }
             
             sections.append(ListWindowsSection(
-                id: "windows_\(space.id)",
                 title: space.name,
                 subtitle: String(format: space.isFullscreen ? String(localized: "Fullscreen") : String(localized: "%lld windows"), items.count),
                 items: items
@@ -990,12 +790,6 @@ enum LauncherOverlay: Equatable {
                 appPath: space.appPath
             )
         }
-
-        if stagingWindow == nil,
-           activeCommand?.type == .switchToDesktop || activeCommand?.type == .moveWindow,
-           let currentIndex = filteredSpaces.firstIndex(where: { $0.id == manager.currentSpaceUUID }) {
-            selectedRowIndex = currentIndex
-        }
         
         // If we are renaming space, pre-fill text
         if activeCommand?.type == .renameCurrentSpace {
@@ -1014,7 +808,6 @@ enum LauncherOverlay: Equatable {
             DispatchQueue.main.async {
                 self.currentWindows = parsed.windows
                 self.isLoadingData = false
-                self.selectCurrentTargetSpace()
             }
         }
     }
@@ -1623,192 +1416,30 @@ enum LauncherOverlay: Equatable {
     
     func executeNthRowAction(_ index: Int) {
         guard index >= 0 && index < visibleRowsCount else { return }
-        selectKeyboardRow(index)
+        isKeyboardSelection = true
+        selectedRowIndex = index
         executeRowAction()
     }
-
-    func selectKeyboardRow(_ index: Int) {
-        guard index >= 0, index < visibleRowsCount else { return }
-        isKeyboardSelection = true
-        guard selectedRowIndex != index else { return }
-        selectedRowIndex = index
-        selectionRevealRequestVersion &+= 1
-    }
-
-    func resetForPresentation() {
-        searchQuery = ""
-        selectedRowIndex = 0
-        activeCommand = nil
-        stagingWindow = nil
-        isRootSpacePickerPresented = false
-        isKeyboardSelection = true
-        isBottomBarFocused = false
-        scrollToTopRequestVersion &+= 1
-        listLayoutVersion &+= 1
-    }
-
-    func selectPointerRow(_ index: Int) {
-        guard !isBottomBarFocused, index >= 0, index < visibleRowsCount else { return }
-        isKeyboardSelection = false
-        selectedRowIndex = index
-    }
-
-    func selectPreviousSection() {
-        selectSection(offset: -1)
-    }
-
-    func selectNextSection() {
-        selectSection(offset: 1)
-    }
-
-    private func selectSection(offset: Int) {
-        guard !isBottomBarFocused else { return }
-        let ranges = currentSectionRanges
-        guard ranges.count > 1,
-              let currentIndex = ranges.firstIndex(where: { $0.contains(selectedRowIndex) }) else {
-            return
-        }
-
-        let targetIndex = min(max(currentIndex + offset, 0), ranges.count - 1)
-        guard targetIndex != currentIndex else { return }
-        selectKeyboardRow(ranges[targetIndex].lowerBound)
-    }
-
-    private var currentSectionRanges: [Range<Int>] {
-        if activeCommand == nil {
-            return rootCommandSections.map { section in
-                section.startIndex..<(section.startIndex + section.commands.count)
-            }
-        }
-
-        switch activeCommand?.type {
-        case .listWindows:
-            return listWindowsSections.compactMap { section in
-                guard let first = section.items.first, let last = section.items.last else { return nil }
-                return first.index..<(last.index + 1)
-            }
-        case .batchMoveWindows:
-            return batchMoveSections.compactMap { section in
-                guard let first = section.items.first, let last = section.items.last else { return nil }
-                return first.index..<(last.index + 1)
-            }
-        default:
-            return []
-        }
-    }
-
-    func selectCurrentTargetSpace() {
-        guard stagingWindow == nil,
-              activeCommand?.type == .switchToDesktop || activeCommand?.type == .moveWindow,
-              let manager = AppDelegate.shared.spaceManager,
-              let currentIndex = filteredSpaces.firstIndex(where: { $0.id == manager.currentSpaceUUID }) else {
-            return
-        }
-
-        isKeyboardSelection = true
-        selectedRowIndex = currentIndex
-    }
-
-    func showRootActionsPanel() {
-        guard activeCommand == nil, filteredCommands.indices.contains(selectedRowIndex) else { return }
-        commandKTargetWindow = nil
-        isRootSpacePickerPresented = false
-        selectedRootActionIndex = 0
-        rootActionQuery = ""
-        isRootActionsPresented = true
-    }
-
-    var filteredRootActionIndices: [Int] {
-        let titles = [String(localized: "Open Command"), String(localized: "Reset Ranking")]
-        guard !rootActionQuery.isEmpty else { return Array(titles.indices) }
-        let query = rootActionQuery.lowercased()
-        return titles.indices.filter {
-            matchesQuery(query, target: titles[$0], pinyin: "")
-        }
-    }
-
-    func selectPreviousRootAction() {
-        let indices = filteredRootActionIndices
-        guard !indices.isEmpty else { return }
-        let currentPosition = indices.firstIndex(of: selectedRootActionIndex) ?? 0
-        selectedRootActionIndex = indices[(currentPosition - 1 + indices.count) % indices.count]
-    }
-
-    func selectNextRootAction() {
-        let indices = filteredRootActionIndices
-        guard !indices.isEmpty else { return }
-        let currentPosition = indices.firstIndex(of: selectedRootActionIndex) ?? 0
-        selectedRootActionIndex = indices[(currentPosition + 1) % indices.count]
-    }
-
-    func executeRootAction() {
-        guard filteredRootActionIndices.contains(selectedRootActionIndex) else { return }
-
-        switch selectedRootActionIndex {
-        case 0:
-            isRootActionsPresented = false
-            executeRowAction()
-        case 1:
-            resetSelectedCommandRanking()
-        default:
-            break
-        }
-    }
-
-    func resetSelectedCommandRanking() {
-        guard activeCommand == nil, filteredCommands.indices.contains(selectedRowIndex) else { return }
-        let commandID = filteredCommands[selectedRowIndex].id
-        var frequencies = UserDefaults.standard.dictionary(forKey: "LauncherCommandFrequency") as? [String: Int] ?? [:]
-        frequencies.removeValue(forKey: commandID)
-        UserDefaults.standard.set(frequencies, forKey: "LauncherCommandFrequency")
-        isRootActionsPresented = false
-        objectWillChange.send()
-    }
-
+    
     func handleEscapeKey() {
-        if isRootActionsPresented {
-            if !rootActionQuery.isEmpty {
-                rootActionQuery = ""
-            } else {
-                isRootActionsPresented = false
-            }
-        } else if isBottomBarFocused {
+        if isBottomBarFocused {
             isBottomBarFocused = false
-        } else if (stagingWindow != nil || isRootSpacePickerPresented) && !spacePickerQuery.isEmpty {
-            spacePickerQuery = ""
-        } else if !searchQuery.isEmpty {
-            searchQuery = ""
         } else if stagingWindow != nil {
             stagingWindow = nil
             isStagingForRestoreTo = false
             isExecutingRestoreToImmediately = false
             selectedRowIndex = batchMoveLastSelectedIndex
-        } else if isRootSpacePickerPresented {
-            isRootSpacePickerPresented = false
         } else if activeCommand != nil {
             activeCommand = nil
+        } else if !searchQuery.isEmpty {
+            searchQuery = ""
         } else {
             closeLauncher()
         }
     }
-
-    func popToRoot() {
-        commandKTargetWindow = nil
-        isRootActionsPresented = false
-        isRootSpacePickerPresented = false
-        stagingWindow = nil
-        isStagingForRestoreTo = false
-        isExecutingRestoreToImmediately = false
-        activeCommand = nil
-        searchQuery = ""
-        spacePickerQuery = ""
-        rootActionQuery = ""
-        selectedRowIndex = 0
-        isBottomBarFocused = false
-    }
     
     func handleTabKey() {
-        guard activeCommand == nil || activeCommand?.type == .switchToDesktop else { return }
+        guard activeCommand == nil else { return }
         isBottomBarFocused.toggle()
         if isBottomBarFocused {
             if let manager = AppDelegate.shared.spaceManager {
@@ -1837,27 +1468,12 @@ enum LauncherOverlay: Equatable {
             executeSwitchToSpaceID(space.id)
         }
     }
-
-    func executeSelectedSpacePickerAction() {
-        if stagingWindow != nil {
-            executeRowAction()
-            return
-        }
-
-        let spaces = filteredSpaces
-        guard selectedSpaceIndex >= 0 && selectedSpaceIndex < spaces.count else { return }
-        executeSwitchToSpaceID(spaces[selectedSpaceIndex].id)
-    }
     
     func closeLauncher() {
         searchQuery = ""
-        spacePickerQuery = ""
         selectedRowIndex = 0
         activeCommand = nil
         stagingWindow = nil
-        isRootSpacePickerPresented = false
-        isRootActionsPresented = false
-        rootActionQuery = ""
         isBottomBarFocused = false
         onClose?()
     }

@@ -1,10 +1,6 @@
 import SwiftUI
 import AppKit
 
-enum LauncherLayout {
-    static let windowSize = CGSize(width: 720, height: 450)
-}
-
 struct ThemeColors {
     let isDark: Bool
     
@@ -170,7 +166,7 @@ struct LauncherView: View {
                             },
                             onCommandNumber: { num in
                                 if viewModel.commandKTargetWindow != nil {
-                                    let actions = viewModel.filteredCommandKActions
+                                    let actions = viewModel.commandKActions
                                     let index = num - 1
                                     if index >= 0 && index < actions.count {
                                         viewModel.commandKSelectedIndex = index
@@ -1836,7 +1832,7 @@ struct CommandKOverlayView: View {
                 Divider()
                 
                 // Actions List
-                let actions = viewModel.filteredCommandKActions
+                let actions = viewModel.commandKActions
                 VStack(spacing: 2) {
                     ForEach(0..<actions.count, id: \.self) { idx in
                         let action = actions[idx]
