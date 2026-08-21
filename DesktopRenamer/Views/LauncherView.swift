@@ -2012,6 +2012,8 @@ struct VisualEffectView: NSViewRepresentable {
         view.material = isDark ? material : .contentBackground
         view.blendingMode = blendingMode
         view.state = state
+        view.wantsLayer = true
+        view.layer?.backgroundColor = (isDark ? NSColor.clear : NSColor.white).cgColor
     }
 }
 
