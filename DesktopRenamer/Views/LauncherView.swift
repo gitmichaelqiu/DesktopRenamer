@@ -33,6 +33,7 @@ private enum LauncherMenuMetrics {
     static let footerKeycapSize: CGFloat = 24
     static let rowSurfaceInset: CGFloat = 8
     static let rowContentHorizontalPadding: CGFloat = 8
+    static let rowCornerRadius: CGFloat = 8
     static let listVerticalInset: CGFloat = 8
     static let contentVerticalPadding: CGFloat = 4
     static let sectionHeaderFontSize: CGFloat = 15
@@ -1299,7 +1300,7 @@ private struct LauncherRowSurface: ViewModifier {
 
     func body(content: Content) -> some View {
         ZStack {
-            RoundedRectangle(cornerRadius: 10, style: .continuous)
+            RoundedRectangle(cornerRadius: LauncherMenuMetrics.rowCornerRadius, style: .continuous)
                 .fill(surfaceColor)
 
             content
