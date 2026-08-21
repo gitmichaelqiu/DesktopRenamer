@@ -275,6 +275,7 @@ struct LauncherView: View {
         .launcherBackground(cornerRadius: 16, borderColor: colors.border)
         .shadow(color: Color.black.opacity(colorScheme == .dark ? 0.45 : 0.20), radius: 24, x: 0, y: 12)
         .padding(60)
+        .disabled(viewModel.isRearrangingSpace)
     }
 }
 
@@ -620,6 +621,7 @@ struct WidthPreferenceKey: PreferenceKey {
 extension LauncherView {
     private func handleTextFieldKeyEquivalent(_ event: NSEvent) -> Bool {
         guard event.type == .keyDown else { return false }
+        guard !viewModel.isRearrangingSpace else { return true }
         
         let modifiers = event.modifierFlags.intersection(.deviceIndependentFlagsMask)
         let hasCommand = modifiers.contains(.command)

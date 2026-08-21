@@ -69,6 +69,7 @@ enum DesktopRearrangementDirection {
     @Published var currentWindows: [WindowEntry] = []
     @Published var isLoadingData: Bool = false
     @Published var isKeyboardSelection: Bool = false
+    @Published private(set) var isRearrangingSpace: Bool = false
     
     @Published var showCommandNumbers: Bool = false
     @Published var isBottomBarFocused: Bool = false
@@ -892,8 +893,6 @@ enum DesktopRearrangementDirection {
             }
         }
     }
-
-    private var isRearrangingSpace = false
 
     private func expectedOrder(
         from orderedIDs: [String],
