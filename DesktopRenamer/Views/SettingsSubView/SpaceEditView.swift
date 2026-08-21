@@ -276,7 +276,6 @@ struct SpaceEditView: View {
     }
 
     private func debugRearrange(_ source: DesktopSpace, before target: DesktopSpace, in spaces: [DesktopSpace]) {
-        rearrangementService.setDebugStatus("Running UI automation…")
         SpaceRearrangementService.shared.rearrange(
             sourceID: source.id,
             before: target.id,
@@ -310,7 +309,8 @@ private struct SpaceRearrangementDropDelegate: DropDelegate {
             SpaceRearrangementService.shared.rearrange(
                 sourceID: sourceID,
                 before: target.id,
-                orderedSpaceIDs: spaces.map(\.id)
+                orderedSpaceIDs: spaces.map(\.id),
+                displayID: target.displayID
             ) { result in
                 DispatchQueue.main.async {
                     switch result {

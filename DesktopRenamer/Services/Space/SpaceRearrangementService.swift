@@ -1,11 +1,7 @@
 import AppKit
 import Combine
 
-/// Reorders spaces through a native Dock scripting-addition backend.
-///
-/// macOS does not expose a public API for changing the order of spaces. The
-/// optional yabai backend is therefore used when its scripting addition is
-/// installed; Accessibility-only mouse automation cannot perform this change.
+/// Reorders spaces through macOS's private SkyLight operation.
 final class SpaceRearrangementService: ObservableObject {
     static let shared = SpaceRearrangementService()
 
@@ -15,11 +11,6 @@ final class SpaceRearrangementService: ObservableObject {
         case success
         case failure(String)
     }
-
-    private let backendCandidates = [
-        "/opt/homebrew/bin/yabai",
-        "/usr/local/bin/yabai"
-    ]
 
     private init() {}
 
@@ -47,15 +38,21 @@ final class SpaceRearrangementService: ObservableObject {
             return
         }
 
-        guard let backendURL else {
-            finish(.failure(String(localized: "Space rearrangement requires yabai with its Dock scripting addition. Accessibility permission alone cannot reorder spaces.")), completion: completion)
+        guard sourceIndex != targetIndex - 1 else {
+            finish(.failure(String(localized: "Those spaces are already in that order.")), completion: completion)
             return
         }
+
+        var expectedOrder = orderedSpaceIDs
+        expectedOrder.remove(at: sourceIndex)
+        let insertionIndex = sourceIndex < targetIndex ? targetIndex - 1 : targetIndex
+        expectedOrder.insert(sourceID, at: insertionIndex)
 
         setDebugStatus("Rearranging spaces…")
         DispatchQueue.global(qos: .userInitiated).async { [weak self] in
             let result = self?.runMove(
-                executableURL: backendURL,
+                sourceID: sourceID,
+                displayID: displayID,
                 sourceIndex: sourceIndex,
                 targetIndex: targetIndex
             ) ?? .failure(String(localized: "Space rearrangement was cancelled."))
@@ -69,6 +66,7 @@ final class SpaceRearrangementService: ObservableObject {
                 self?.verify(
                     sourceID: sourceID,
                     before: targetID,
+                    expectedOrder: expectedOrder,
                     displayID: displayID,
                     attempt: 0,
                     completion: completion
@@ -77,70 +75,97 @@ final class SpaceRearrangementService: ObservableObject {
         }
     }
 
-    private var backendURL: URL? {
-        backendCandidates
-            .map(URL.init(fileURLWithPath:))
-            .first { FileManager.default.isExecutableFile(atPath: $0.path) }
-    }
-
-    private func runMove(executableURL: URL, sourceIndex: Int, targetIndex: Int) -> Result {
-        let process = Process()
-        let output = Pipe()
-        process.executableURL = executableURL
-        process.arguments = [
-            "-m", "space", String(sourceIndex + 1), "--move", String(targetIndex + 1)
-        ]
-        process.standardOutput = output
-        process.standardError = output
-
-        do {
-            try process.run()
-            process.waitUntilExit()
-        } catch {
-            return .failure(String(localized: "Could not start the space rearrangement backend: \(error.localizedDescription)"))
+    private func runMove(sourceID: String, displayID: String?, sourceIndex: Int, targetIndex: Int) -> Result {
+        guard let sourceSpaceID = UInt64(sourceID),
+              let displayID,
+              let operationClass = NSClassFromString("SLSBridgedMoveManagedSpaceToDisplayIndexOperation") as? NSObject.Type else {
+            return .failure(String(localized: "This macOS version does not expose the native space rearrangement operation."))
         }
 
-        guard process.terminationStatus == 0 else {
-            let message = String(data: output.fileHandleForReading.readDataToEndOfFile(), encoding: .utf8)?
-                .trimmingCharacters(in: .whitespacesAndNewlines)
-            return .failure(message?.isEmpty == false ? message! : String(localized: "The Dock rejected the space move. Check that yabai's scripting addition is loaded and that both spaces are on the same display."))
+        let destinationIndex = sourceIndex < targetIndex ? targetIndex - 1 : targetIndex
+        let allocationSelector = NSSelectorFromString("alloc")
+        guard let operation = operationClass.perform(allocationSelector)?.takeUnretainedValue() as? NSObject else {
+            return .failure(String(localized: "Could not create the native space rearrangement operation."))
         }
 
+        let initializerSelector = NSSelectorFromString("initWithSpaceID:displayIdentifier:index:")
+        guard let method = class_getInstanceMethod(operationClass, initializerSelector) else {
+            return .failure(String(localized: "The native space rearrangement operation is unavailable on this macOS version."))
+        }
+
+        typealias Initializer = @convention(c) (NSObject, Selector, UInt64, NSString, UInt32) -> Unmanaged<NSObject>?
+        let initializer = unsafeBitCast(method_getImplementation(method), to: Initializer.self)
+        guard let initializedOperation = initializer(
+            operation,
+            initializerSelector,
+            sourceSpaceID,
+            displayID as NSString,
+            UInt32(destinationIndex)
+        )?.takeUnretainedValue() else {
+            return .failure(String(localized: "Could not initialize the native space rearrangement operation."))
+        }
+
+        guard let bridgeClass = NSClassFromString("SLSWindowManagementFallbackBridge") as? NSObject.Type,
+              let bridge = bridgeClass.perform(allocationSelector)?.takeUnretainedValue() as? NSObject,
+              let initializedBridge = bridge.perform(NSSelectorFromString("init"))?.takeUnretainedValue() as? NSObject else {
+            return .failure(String(localized: "The native space rearrangement bridge is unavailable."))
+        }
+
+        let performSelector = NSSelectorFromString("performAsynchronousBridgedWindowManagementOperation:")
+        guard initializedBridge.responds(to: performSelector) else {
+            return .failure(String(localized: "The native space rearrangement bridge is unavailable."))
+        }
+
+        initializedBridge.perform(performSelector, with: initializedOperation)
         return .success
     }
 
     private func verify(
         sourceID: String,
         before targetID: String,
+        expectedOrder: [String],
         displayID: String?,
         attempt: Int,
         completion: @escaping (Result) -> Void
     ) {
         guard let state = SpaceHelper.getSystemState(onDisplayID: displayID) else {
-            retryVerification(sourceID: sourceID, targetID: targetID, displayID: displayID, attempt: attempt, completion: completion)
+            retryVerification(
+                sourceID: sourceID,
+                targetID: targetID,
+                expectedOrder: expectedOrder,
+                displayID: displayID,
+                attempt: attempt,
+                completion: completion
+            )
             return
         }
 
         let regularSpaces = state.spaces.filter { !$0.isFullscreen }
-        if let sourceIndex = regularSpaces.firstIndex(where: { $0.id == sourceID }),
-           let targetIndex = regularSpaces.firstIndex(where: { $0.id == targetID }),
-           sourceIndex < targetIndex {
+        if regularSpaces.map(\.id) == expectedOrder {
             finish(.success, completion: completion)
             return
         }
 
-        retryVerification(sourceID: sourceID, targetID: targetID, displayID: displayID, attempt: attempt, completion: completion)
+        retryVerification(
+            sourceID: sourceID,
+            targetID: targetID,
+            expectedOrder: expectedOrder,
+            displayID: displayID,
+            attempt: attempt,
+            completion: completion
+        )
     }
 
     private func retryVerification(
         sourceID: String,
         targetID: String,
+        expectedOrder: [String],
         displayID: String?,
         attempt: Int,
         completion: @escaping (Result) -> Void
     ) {
         guard attempt < 8 else {
-            finish(.failure(String(localized: "The backend completed without changing the reported space order.")), completion: completion)
+            finish(.failure(String(localized: "The backend completed without producing the requested space order.")), completion: completion)
             return
         }
 
@@ -148,6 +173,7 @@ final class SpaceRearrangementService: ObservableObject {
             self?.verify(
                 sourceID: sourceID,
                 before: targetID,
+                expectedOrder: expectedOrder,
                 displayID: displayID,
                 attempt: attempt + 1,
                 completion: completion
