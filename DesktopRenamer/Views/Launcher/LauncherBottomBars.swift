@@ -421,16 +421,34 @@ struct CommandBottomBar: View {
             if let type = viewModel.activeCommand?.type {
                 switch type {
                 case .switchToDesktop:
-                    HStack(spacing: 4) {
-                        Text(verbatim: String(localized: "Switch Space"))
-                        Text("↵")
-                            .font(.system(.subheadline))
-                            .fontWeight(.bold)
-                    }
-                    .modifier(BottomBarCapsule(isSelected: false, isActive: false, colorScheme: colorScheme))
-                    .contentShape(Rectangle())
-                    .onTapGesture {
-                        viewModel.executeRowAction()
+                    HStack(spacing: 8) {
+                        HStack(spacing: 4) {
+                            Text(verbatim: String(localized: "Move Space Up"))
+                            Text("⌘⇧↑")
+                                .font(.system(.subheadline))
+                                .fontWeight(.bold)
+                        }
+                        .modifier(BottomBarCapsule(isSelected: false, isActive: false, colorScheme: colorScheme))
+
+                        HStack(spacing: 4) {
+                            Text(verbatim: String(localized: "Move Space Down"))
+                            Text("⌘⇧↓")
+                                .font(.system(.subheadline))
+                                .fontWeight(.bold)
+                        }
+                        .modifier(BottomBarCapsule(isSelected: false, isActive: false, colorScheme: colorScheme))
+
+                        HStack(spacing: 4) {
+                            Text(verbatim: String(localized: "Switch Space"))
+                            Text("↵")
+                                .font(.system(.subheadline))
+                                .fontWeight(.bold)
+                        }
+                        .modifier(BottomBarCapsule(isSelected: false, isActive: false, colorScheme: colorScheme))
+                        .contentShape(Rectangle())
+                        .onTapGesture {
+                            viewModel.executeRowAction()
+                        }
                     }
 
                 case .moveWindow:
@@ -527,5 +545,3 @@ struct CommandBottomBar: View {
         .background(colors.bottomBarBg)
     }
 }
-
-
