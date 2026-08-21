@@ -537,6 +537,7 @@ struct ListAreaView: View {
                                             index: index,
                                             id: AnyHashable(cmd.id),
                                             layoutVersion: viewModel.listLayoutVersion,
+                                            isSelected: isSelected,
                                             action: {
                                                 viewModel.selectPointerRow(index)
                                                 viewModel.executeRowAction()
@@ -572,6 +573,7 @@ struct ListAreaView: View {
                                                 index: i,
                                                 id: AnyHashable(space.id),
                                                 layoutVersion: viewModel.listLayoutVersion,
+                                                isSelected: isSelected,
                                                 action: {
                                                     viewModel.selectPointerRow(i)
                                                     viewModel.executeRowAction()
@@ -608,6 +610,7 @@ struct ListAreaView: View {
                                                     index: item.index,
                                                     id: AnyHashable(item.id),
                                                     layoutVersion: viewModel.listLayoutVersion,
+                                                    isSelected: isSelected,
                                                     action: {
                                                         viewModel.selectPointerRow(item.index)
                                                         viewModel.executeRowAction()
@@ -651,6 +654,7 @@ struct ListAreaView: View {
                                                     index: item.index,
                                                     id: AnyHashable(item.id),
                                                     layoutVersion: viewModel.listLayoutVersion,
+                                                    isSelected: isSelected,
                                                     action: {
                                                         viewModel.selectPointerRow(item.index)
                                                         viewModel.executeRowAction()
@@ -699,26 +703,35 @@ private struct LauncherListRow<Content: View>: View {
     let index: Int
     let id: AnyHashable
     let layoutVersion: Int
+    let isSelected: Bool
     let action: () -> Void
     private let content: Content
+    @Environment(\.colorScheme) private var colorScheme
 
     init(
         index: Int,
         id: AnyHashable,
         layoutVersion: Int,
+        isSelected: Bool,
         action: @escaping () -> Void,
         @ViewBuilder content: () -> Content
     ) {
         self.index = index
         self.id = id
         self.layoutVersion = layoutVersion
+        self.isSelected = isSelected
         self.action = action
         self.content = content()
     }
 
     var body: some View {
         Button(action: action) {
-            content
+            LauncherSelectableRow(
+                isSelected: isSelected,
+                colors: ThemeColors(isDark: colorScheme == .dark)
+            ) {
+                content
+            }
         }
         .buttonStyle(.plain)
         .focusable(false)
@@ -1363,12 +1376,10 @@ struct CommandRowView: View {
     }
     
     var body: some View {
-        LauncherSelectableRow(isSelected: isSelected, colors: colors) {
-            if isRoot {
-                rootRow
-            } else {
-                detailRow
-            }
+        if isRoot {
+            rootRow
+        } else {
+            detailRow
         }
     }
 
@@ -1473,8 +1484,7 @@ struct SpaceRowView: View {
     }
     
     var body: some View {
-        LauncherSelectableRow(isSelected: isSelected, colors: colors) {
-            HStack(spacing: 8) {
+        HStack(spacing: 8) {
             if space.isFullscreen, let appPath = space.appPath {
                 let appIcon = NSWorkspace.shared.icon(forFile: appPath)
                 Image(nsImage: appIcon)
@@ -1517,7 +1527,6 @@ struct SpaceRowView: View {
                     WindowStateBadge(label: String(localized: "Current"), color: .blue)
                 }
             }
-        }
         }
     }
 }
@@ -1600,8 +1609,7 @@ private struct LauncherWindowRowContent: View {
     let colors: ThemeColors
 
     var body: some View {
-        LauncherSelectableRow(isSelected: isSelected, colors: colors) {
-            HStack(spacing: 8) {
+        HStack(spacing: 8) {
                 Image(nsImage: NSWorkspace.shared.icon(forFile: window.appPath))
                     .resizable()
                     .aspectRatio(contentMode: .fit)
@@ -1649,7 +1657,6 @@ private struct LauncherWindowRowContent: View {
                     }
                 }
             }
-        }
     }
 }
 
