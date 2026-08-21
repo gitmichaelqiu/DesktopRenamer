@@ -313,6 +313,7 @@ struct SettingsRow<Content: View>: View {
     
     @AppStorage("ShowDemoVideos") private var showDemoVideos = true
     @Environment(\.settingsTab) var currentTab
+    @Environment(\.isSettingsPreRendering) private var isPreRendering
     @EnvironmentObject var navigationState: SettingsNavigationState
 
     init(
@@ -371,7 +372,9 @@ struct SettingsRow<Content: View>: View {
             navigationState.register(title: title.key, tab: currentTab)
         }
         .onDisappear {
-            navigationState.unregister(title: title.key, tab: currentTab)
+            if !isPreRendering {
+                navigationState.unregister(title: title.key, tab: currentTab)
+            }
         }
     }
 }
@@ -494,6 +497,7 @@ struct SliderSettingsRow<V>: View where V: BinaryFloatingPoint, V.Stride: Binary
 
     @AppStorage("ShowDemoVideos") private var showDemoVideos = true
     @Environment(\.settingsTab) var currentTab
+    @Environment(\.isSettingsPreRendering) private var isPreRendering
     @EnvironmentObject var navigationState: SettingsNavigationState
     @State private var resetTask: Task<Void, Never>?
 
@@ -596,7 +600,9 @@ struct SliderSettingsRow<V>: View where V: BinaryFloatingPoint, V.Stride: Binary
             navigationState.register(title: title.key, tab: currentTab)
         }
         .onDisappear {
-            navigationState.unregister(title: title.key, tab: currentTab)
+            if !isPreRendering {
+                navigationState.unregister(title: title.key, tab: currentTab)
+            }
         }
     }
 
