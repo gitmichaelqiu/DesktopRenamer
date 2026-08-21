@@ -1,11 +1,14 @@
 import ApplicationServices
 import AppKit
+import Combine
 import CoreGraphics
 
 /// Reorders Mission Control spaces through the Dock's Accessibility hierarchy.
 /// macOS does not expose a public API for changing the order of spaces.
-final class SpaceRearrangementService {
+final class SpaceRearrangementService: ObservableObject {
     static let shared = SpaceRearrangementService()
+
+    @Published private(set) var debugStatus = "Idle"
 
     enum Result {
         case success
@@ -17,6 +20,16 @@ final class SpaceRearrangementService {
 
     private init() {}
 
+    func setDebugStatus(_ status: String) {
+        if Thread.isMainThread {
+            debugStatus = status
+        } else {
+            DispatchQueue.main.async { [weak self] in
+                self?.debugStatus = status
+            }
+        }
+    }
+
     func rearrange(
         sourceID: String,
         before targetID: String,
@@ -26,14 +39,19 @@ final class SpaceRearrangementService {
         guard sourceID != targetID,
               let sourceIndex = orderedSpaceIDs.firstIndex(of: sourceID),
               let targetIndex = orderedSpaceIDs.firstIndex(of: targetID) else {
-            completion(.failure(String(localized: "Choose two different spaces.")))
+            let result = Result.failure(String(localized: "Choose two different spaces."))
+            setDebugStatus(status(for: result))
+            completion(result)
             return
         }
         guard AXIsProcessTrusted() else {
-            completion(.failure(String(localized: "Accessibility permission is required to rearrange spaces.")))
+            let result = Result.failure(String(localized: "Accessibility permission is required to rearrange spaces."))
+            setDebugStatus(status(for: result))
+            completion(result)
             return
         }
 
+        setDebugStatus("Running UI automation…")
         let originalMouseLocation = NSEvent.mouseLocation
         openMissionControl()
         DispatchQueue.global(qos: .userInitiated).asyncAfter(deadline: .now() + 0.6) { [weak self] in
@@ -46,8 +64,18 @@ final class SpaceRearrangementService {
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) {
                 self.closeMissionControl()
                 self.restoreMouse(to: originalMouseLocation)
+                self.setDebugStatus(self.status(for: result))
                 completion(result)
             }
+        }
+    }
+
+    private func status(for result: Result) -> String {
+        switch result {
+        case .success:
+            return "Debug rearrangement completed."
+        case .failure(let error):
+            return "Debug rearrangement failed: \(error)"
         }
     }
 

@@ -6,6 +6,7 @@ struct SpaceEditView: View {
     @ObservedObject var spaceManager: SpaceManager
     @EnvironmentObject var navigationState: SettingsNavigationState
     @State private var rearrangementMessage: String?
+    @ObservedObject private var rearrangementService = SpaceRearrangementService.shared
     
     var body: some View {
         VStack(spacing: 0) {
@@ -29,12 +30,10 @@ struct SpaceEditView: View {
                     .padding()
                     .padding(.bottom, 40)
 #if DEBUG
-                    if let rearrangementMessage {
-                        Text(rearrangementMessage)
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                            .padding(.horizontal)
-                    }
+                    Text(rearrangementService.debugStatus)
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                        .padding(.horizontal)
                     debugRearrangementControls
 #endif
                 }
@@ -277,7 +276,7 @@ struct SpaceEditView: View {
     }
 
     private func debugRearrange(_ source: DesktopSpace, before target: DesktopSpace, in spaces: [DesktopSpace]) {
-        rearrangementMessage = "Running UI automation…"
+        rearrangementService.setDebugStatus("Running UI automation…")
         SpaceRearrangementService.shared.rearrange(
             sourceID: source.id,
             before: target.id,
@@ -286,10 +285,9 @@ struct SpaceEditView: View {
             DispatchQueue.main.async {
                 switch result {
                 case .success:
-                    rearrangementMessage = "Debug rearrangement completed."
                     spaceManager.refreshSpaceState()
                 case .failure(let error):
-                    rearrangementMessage = "Debug rearrangement failed: \(error)"
+                    rearrangementService.setDebugStatus("Debug rearrangement failed: \(error)")
                 }
             }
         }
