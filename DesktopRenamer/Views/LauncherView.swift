@@ -1802,6 +1802,12 @@ struct RootActionsOverlay: View {
         return actions.filter { indices.contains($0.index) }
     }
 
+    private var actionListHeight: CGFloat {
+        let actionCount = max(actionRows.count, 1)
+        return CGFloat(actionCount) * (LauncherMenuMetrics.rowHeight + LauncherMenuMetrics.rowSpacing)
+            + LauncherMenuMetrics.contentVerticalPadding * 2
+    }
+
     var body: some View {
         ZStack(alignment: .bottomTrailing) {
             Button {
@@ -1814,7 +1820,7 @@ struct RootActionsOverlay: View {
             LauncherMenuPanel(
                 colors: colors,
                 width: LauncherMenuMetrics.panelWidth,
-                contentHeight: LauncherMenuMetrics.rowHeight * 2 + LauncherMenuMetrics.rowSpacing * 2
+                contentHeight: actionListHeight
             ) {
                 LauncherMenuHeader(
                     title: selectedCommandTitle,
