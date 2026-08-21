@@ -2,6 +2,7 @@ import ApplicationServices
 import AppKit
 import Combine
 import CoreGraphics
+import Darwin
 
 /// Reorders Mission Control spaces through the Dock's Accessibility hierarchy.
 /// macOS does not expose a public API for changing the order of spaces.
@@ -16,6 +17,7 @@ final class SpaceRearrangementService: ObservableObject {
     }
 
     private let dockBundleIdentifier = "com.apple.dock"
+    private static var coreDockHandle: UnsafeMutableRawPointer?
 
     private init() {}
 
@@ -52,8 +54,13 @@ final class SpaceRearrangementService: ObservableObject {
         }
 
         setDebugStatus("Running UI automation…")
+        guard openMissionControl() else {
+            let result = Result.failure(String(localized: "CoreDock Mission Control control is unavailable on this macOS installation."))
+            setDebugStatus(status(for: result))
+            completion(result)
+            return
+        }
         let originalMouseLocation = NSEvent.mouseLocation
-        openMissionControl()
         DispatchQueue.global(qos: .userInitiated).asyncAfter(deadline: .now() + 0.6) { [weak self] in
             guard let self else { return }
             let result = self.dragSpace(
@@ -80,9 +87,9 @@ final class SpaceRearrangementService: ObservableObject {
         }
     }
 
-    private func openMissionControl() {
-        guard let dock = runningDockElement(), findElement(withIdentifier: "mc", in: dock) == nil else { return }
-        postMissionControlNotification()
+    private func openMissionControl() -> Bool {
+        guard let dock = runningDockElement(), findElement(withIdentifier: "mc", in: dock) == nil else { return true }
+        return postMissionControlNotification()
     }
 
     private func closeMissionControl() {
@@ -90,15 +97,30 @@ final class SpaceRearrangementService: ObservableObject {
         postMissionControlNotification()
     }
 
-    private func postMissionControlNotification() {
-        // The Dock creates its Mission Control AX hierarchy after this notification.
-        // Keyboard shortcuts are user-configurable and are not reliable here.
-        DistributedNotificationCenter.default().postNotificationName(
-            Notification.Name("com.apple.expose.awake"),
-            object: nil,
-            userInfo: nil,
-            deliverImmediately: true
-        )
+    @discardableResult
+    private func postMissionControlNotification() -> Bool {
+        // The Dock creates its Mission Control AX hierarchy after CoreDock receives
+        // this notification. Keyboard shortcuts and distributed notifications are
+        // user-configurable or ignored by newer macOS releases.
+        typealias SendNotification = @convention(c) (CFString, Int32) -> Int32
+        let defaultHandle = UnsafeMutableRawPointer(bitPattern: -2)
+        if let symbol = dlsym(defaultHandle, "CoreDockSendNotification") {
+            let send = unsafeBitCast(symbol, to: SendNotification.self)
+            _ = send("com.apple.expose.awake" as CFString, 0)
+            return true
+        }
+
+        if Self.coreDockHandle == nil {
+            Self.coreDockHandle = dlopen(
+                "/System/Library/PrivateFrameworks/CoreDock.framework/CoreDock",
+                RTLD_LAZY
+            )
+        }
+        guard let handle = Self.coreDockHandle,
+              let symbol = dlsym(handle, "CoreDockSendNotification") else { return false }
+        let send = unsafeBitCast(symbol, to: SendNotification.self)
+        _ = send("com.apple.expose.awake" as CFString, 0)
+        return true
     }
 
     private func dragSpace(sourceIndex: Int, targetIndex: Int, spaceCount: Int, displayID: String?) -> Result {
