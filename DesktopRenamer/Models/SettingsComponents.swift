@@ -556,7 +556,9 @@ struct SliderSettingsRow<V>: View where V: BinaryFloatingPoint, V.Stride: Binary
                             guard !Task.isCancelled else { return }
                             let linearProgress = Double(step) / Double(steps)
                             let progress = 1 - (1 - linearProgress) * (1 - linearProgress) * (1 - linearProgress)
-                            value = V(start + (end - start) * progress)
+                            withSettingsAnimation {
+                                value = V(start + (end - start) * progress)
+                            }
                         }
                         resetTask = nil
                     }
