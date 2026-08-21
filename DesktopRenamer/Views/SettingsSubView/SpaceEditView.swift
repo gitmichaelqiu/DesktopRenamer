@@ -280,7 +280,8 @@ struct SpaceEditView: View {
         SpaceRearrangementService.shared.rearrange(
             sourceID: source.id,
             before: target.id,
-            orderedSpaceIDs: spaces.map(\.id)
+            orderedSpaceIDs: spaces.map(\.id),
+            displayID: source.displayID
         ) { result in
             DispatchQueue.main.async {
                 switch result {

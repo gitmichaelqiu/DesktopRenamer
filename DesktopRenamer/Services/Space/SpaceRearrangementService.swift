@@ -34,6 +34,7 @@ final class SpaceRearrangementService: ObservableObject {
         sourceID: String,
         before targetID: String,
         orderedSpaceIDs: [String],
+        displayID: String? = nil,
         completion: @escaping (Result) -> Void
     ) {
         guard sourceID != targetID,
@@ -59,7 +60,8 @@ final class SpaceRearrangementService: ObservableObject {
             let result = self.dragSpace(
                 sourceIndex: sourceIndex,
                 targetIndex: targetIndex,
-                spaceCount: orderedSpaceIDs.count
+                spaceCount: orderedSpaceIDs.count,
+                displayID: displayID
             )
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) {
                 self.closeMissionControl()
@@ -95,9 +97,9 @@ final class SpaceRearrangementService: ObservableObject {
         event.post(tap: .cgSessionEventTap)
     }
 
-    private func dragSpace(sourceIndex: Int, targetIndex: Int, spaceCount: Int) -> Result {
+    private func dragSpace(sourceIndex: Int, targetIndex: Int, spaceCount: Int, displayID: String?) -> Result {
         guard let dock = runningDockElement() else { return .failure(String(localized: "Mission Control is not available.")) }
-        let frames = spaceThumbnailFrames(in: dock)
+        let frames = missionControlSpaceFrames(in: dock, displayID: displayID)
         guard frames.count >= spaceCount else {
             return .failure(String(localized: "Could not identify all spaces in Mission Control (found \(frames.count) of \(spaceCount))."))
         }
@@ -133,6 +135,53 @@ final class SpaceRearrangementService: ObservableObject {
             if $0.value.count != $1.value.count { return $0.value.count < $1.value.count }
             return $0.key > $1.key
         }?.value.sorted { $0.minX < $1.minX } ?? []
+    }
+
+    private func missionControlSpaceFrames(in dock: AXUIElement, displayID: String?) -> [CGRect] {
+        guard let missionControl = findElement(withIdentifier: "mc", in: dock),
+              let display = matchingDisplay(in: missionControl, displayID: displayID),
+              let spaces = findElement(withIdentifier: "mc.spaces", in: display) else {
+            return spaceThumbnailFrames(in: dock)
+        }
+
+        return children(of: spaces)
+            .compactMap { frame(of: $0) }
+            .filter { $0.width >= 50 && $0.height >= 30 }
+            .sorted { $0.minX < $1.minX }
+    }
+
+    private func matchingDisplay(in missionControl: AXUIElement, displayID: String?) -> AXUIElement? {
+        let displays = children(of: missionControl).filter { identifier(of: $0) == "mc.display" }
+        guard let displayID else { return displays.first }
+        return displays.first { attributeString("AXDisplayID", of: $0) == displayID } ?? displays.first
+    }
+
+    private func findElement(withIdentifier identifier: String, in root: AXUIElement, depth: Int = 0) -> AXUIElement? {
+        guard depth < 10 else { return nil }
+        if self.identifier(of: root) == identifier { return root }
+        for child in children(of: root) {
+            if let match = findElement(withIdentifier: identifier, in: child, depth: depth + 1) {
+                return match
+            }
+        }
+        return nil
+    }
+
+    private func children(of element: AXUIElement) -> [AXUIElement] {
+        var value: CFTypeRef?
+        guard AXUIElementCopyAttributeValue(element, kAXChildrenAttribute as CFString, &value) == .success,
+              let children = value as? [AXUIElement] else { return [] }
+        return children
+    }
+
+    private func identifier(of element: AXUIElement) -> String? {
+        attributeString(kAXIdentifierAttribute as String, of: element)
+    }
+
+    private func attributeString(_ attribute: String, of element: AXUIElement) -> String? {
+        var value: CFTypeRef?
+        guard AXUIElementCopyAttributeValue(element, attribute as CFString, &value) == .success else { return nil }
+        return value as? String
     }
 
     private func collectFrames(from element: AXUIElement, depth: Int, into frames: inout [CGRect]) {
