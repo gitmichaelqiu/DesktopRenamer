@@ -3180,16 +3180,16 @@ private struct LauncherBottomBarGroupedButton: View {
         .buttonStyle(.plain)
         .foregroundColor(title == String(localized: "Actions") ? .secondary : .primary)
         .padding(.horizontal, 4)
-        .padding(.vertical, 4)
+        .frame(height: LauncherMenuMetrics.capsuleHeight)
         .background(
             isHovered
                 ? (colorScheme == .dark
                     ? Color.white.opacity(0.12)
                     : Color.black.opacity(0.08))
                 : .clear,
-            in: RoundedRectangle(cornerRadius: 10, style: .continuous)
+            in: Capsule()
         )
-        .contentShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+        .contentShape(Capsule())
         .onHover { isHovered = $0 }
     }
 
