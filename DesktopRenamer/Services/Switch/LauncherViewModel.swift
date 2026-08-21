@@ -182,9 +182,7 @@ import SwiftUI
     var filteredSpaces: [SpaceGroup] {
         var spaces = currentSpaces
         if let staging = stagingWindow {
-            spaces = spaces.filter { $0.id != staging.space.id && !$0.isFullscreen }
-        } else if activeCommand?.type == .moveWindow {
-            spaces = spaces.filter { !$0.isFullscreen }
+            spaces = spaces.filter { $0.id != staging.space.id }
         }
 
         if searchQuery.isEmpty {
