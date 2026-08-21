@@ -118,9 +118,7 @@ struct LauncherView: View {
                                     return true
                                 }
                                 if viewModel.isBottomBarFocused {
-                                    if viewModel.selectedSpaceIndex > 0 {
-                                        viewModel.selectedSpaceIndex -= 1
-                                    }
+                                    viewModel.moveSpaceSelection(by: -1)
                                     return true
                                 }
                                 if viewModel.searchQuery.isEmpty {
@@ -134,10 +132,7 @@ struct LauncherView: View {
                                     return true
                                 }
                                 if viewModel.isBottomBarFocused {
-                                    let count = viewModel.filteredDisplaySpaces.count
-                                    if viewModel.selectedSpaceIndex < count - 1 {
-                                        viewModel.selectedSpaceIndex += 1
-                                    }
+                                    viewModel.moveSpaceSelection(by: 1)
                                     return true
                                 }
                                 if viewModel.searchQuery.isEmpty {
@@ -1170,16 +1165,11 @@ struct SpacesBottomBar: View {
                         onUpArrow: {},
                         onDownArrow: {},
                         onLeftArrow: {
-                            if viewModel.selectedSpaceIndex > 0 {
-                                viewModel.selectedSpaceIndex -= 1
-                            }
+                            viewModel.moveSpaceSelection(by: -1)
                             return true
                         },
                         onRightArrow: {
-                            let count = viewModel.filteredDisplaySpaces.count
-                            if viewModel.selectedSpaceIndex < count - 1 {
-                                viewModel.selectedSpaceIndex += 1
-                            }
+                            viewModel.moveSpaceSelection(by: 1)
                             return true
                         },
                         onEnter: {

@@ -1278,8 +1278,7 @@ import SwiftUI
     
     func handleEscapeKey() {
         if isBottomBarFocused {
-            isBottomBarFocused = false
-            spaceBarQuery = ""
+            leaveSpaceBarFocus()
         } else if stagingWindow != nil {
             stagingWindow = nil
             isStagingForRestoreTo = false
@@ -1295,12 +1294,23 @@ import SwiftUI
     }
     
     func handleTabKey() {
-        guard activeCommand == nil else { return }
         if isBottomBarFocused {
-            isBottomBarFocused = false
-            spaceBarQuery = ""
-        } else {
+            leaveSpaceBarFocus()
+        } else if activeCommand == nil {
             focusSpaceBar()
+        }
+    }
+
+    private func leaveSpaceBarFocus() {
+        isBottomBarFocused = false
+        spaceBarQuery = ""
+
+        DispatchQueue.main.async {
+            guard !self.isBottomBarFocused else { return }
+            NotificationCenter.default.post(
+                name: NSNotification.Name("FocusLauncherTextField"),
+                object: nil
+            )
         }
     }
 
@@ -1318,6 +1328,16 @@ import SwiftUI
 
         let currentIndex = spaces.firstIndex(where: { $0.id == manager.currentSpaceUUID }) ?? 0
         selectedSpaceIndex = min(max(currentIndex + offset, 0), spaces.count - 1)
+    }
+
+    func moveSpaceSelection(by offset: Int) {
+        let spaces = filteredDisplaySpaces
+        guard !spaces.isEmpty else {
+            selectedSpaceIndex = 0
+            return
+        }
+
+        selectedSpaceIndex = min(max(selectedSpaceIndex + offset, 0), spaces.count - 1)
     }
     
     func executeBottomBarSpaceAction(isOption: Bool, isCommand: Bool) {
