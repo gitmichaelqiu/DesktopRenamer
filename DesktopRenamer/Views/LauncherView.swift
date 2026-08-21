@@ -33,6 +33,10 @@ private enum LauncherMenuMetrics {
     static let footerGroupSpacing: CGFloat = 4
     static let footerHorizontalInset: CGFloat = 16
     static let footerBottomInset: CGFloat = 8
+    static let menuHeaderHorizontalPadding: CGFloat = 16
+    static let menuHeaderVerticalPadding: CGFloat = 12
+    static let menuFooterHorizontalPadding: CGFloat = 12
+    static let menuFooterHeight: CGFloat = 44
     static let footerButtonHorizontalPadding: CGFloat = 4
     static let footerKeycapSpacing: CGFloat = 3
     static let footerKeycapSize: CGFloat = 24
@@ -2215,8 +2219,8 @@ private struct LauncherMenuPanel<Header: View, Content: View, Footer: View>: Vie
     var body: some View {
         VStack(spacing: 0) {
             header
-                .padding(.horizontal, 16)
-                .padding(.vertical, 12)
+                .padding(.horizontal, LauncherMenuMetrics.menuHeaderHorizontalPadding)
+                .padding(.vertical, LauncherMenuMetrics.menuHeaderVerticalPadding)
 
             ScrollView {
                 content
@@ -2230,8 +2234,8 @@ private struct LauncherMenuPanel<Header: View, Content: View, Footer: View>: Vie
                 Divider()
 
                 footer
-                    .padding(.horizontal, 12)
-                    .frame(height: 44)
+                    .padding(.horizontal, LauncherMenuMetrics.menuFooterHorizontalPadding)
+                    .frame(height: LauncherMenuMetrics.menuFooterHeight)
             }
         }
         .frame(width: width)
