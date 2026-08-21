@@ -112,6 +112,11 @@ private extension View {
     func launcherActionBar(colors: ThemeColors, height: CGFloat = LauncherLayout.actionBarHeight, horizontalPadding: CGFloat = 8) -> some View {
         modifier(LauncherActionBarModifier(colors: colors, height: height, horizontalPadding: horizontalPadding))
     }
+
+    func launcherPopupPlacement() -> some View {
+        padding(.trailing, LauncherLayout.popupBottomInset)
+            .padding(.bottom, LauncherLayout.popupBottomInset)
+    }
 }
 
 struct LauncherView: View {
@@ -1882,8 +1887,7 @@ struct RootActionsOverlay: View {
                     focusNotificationName: NSNotification.Name("FocusRootActionTextField")
                 )
             }
-            .padding(.trailing, LauncherLayout.popupBottomInset)
-            .padding(.bottom, LauncherLayout.popupBottomInset)
+            .launcherPopupPlacement()
         }
         .onAppear {
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
@@ -2357,8 +2361,7 @@ struct SpacePickerOverlay: View {
                     focusNotificationName: NSNotification.Name("FocusSpacePickerTextField")
                 )
             }
-            .padding(.trailing, LauncherLayout.popupBottomInset)
-            .padding(.bottom, LauncherLayout.popupBottomInset)
+            .launcherPopupPlacement()
         }
         .onAppear {
             guard viewModel.stagingWindow != nil else { return }
@@ -2935,8 +2938,7 @@ struct CommandKOverlayView: View {
                     focusNotificationName: NSNotification.Name("FocusCommandKTextField")
                 )
             }
-            .padding(.trailing, LauncherLayout.popupBottomInset)
-            .padding(.bottom, LauncherLayout.popupBottomInset)
+            .launcherPopupPlacement()
         }
         .onAppear {
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
