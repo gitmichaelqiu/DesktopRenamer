@@ -209,6 +209,7 @@ struct SpaceEditView: View {
             ForEach(spaces) { space in
                 spaceRow(for: space, in: spaces)
             }
+            .reorderable()
             .reorderContainer(for: DesktopSpace.self) { difference in
                 applyNativeReorder(difference, in: spaces)
             }
