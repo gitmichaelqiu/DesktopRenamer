@@ -17,6 +17,8 @@ final class SpaceRearrangementService: ObservableObject {
     }
 
     private let dockBundleIdentifier = "com.apple.dock"
+    private let missionControlBundleIdentifier = "com.apple.exposelauncher"
+    private let missionControlApplicationPath = "/System/Applications/Mission Control.app"
     private static var coreDockHandle: UnsafeMutableRawPointer?
 
     private init() {}
@@ -61,7 +63,7 @@ final class SpaceRearrangementService: ObservableObject {
             return
         }
         let originalMouseLocation = NSEvent.mouseLocation
-        DispatchQueue.global(qos: .userInitiated).asyncAfter(deadline: .now() + 0.6) { [weak self] in
+        DispatchQueue.global(qos: .userInitiated).asyncAfter(deadline: .now() + 1.5) { [weak self] in
             guard let self else { return }
             let result = DispatchQueue.main.sync {
                 self.dragSpaceWithRetry(
@@ -92,7 +94,15 @@ final class SpaceRearrangementService: ObservableObject {
     private func openMissionControl() -> Bool {
         guard let dock = runningDockElement() else { return false }
         guard !missionControlIsReady(in: dock) else { return true }
-        return postMissionControlNotification()
+        let task = Process()
+        task.executableURL = URL(fileURLWithPath: "/usr/bin/open")
+        task.arguments = [missionControlApplicationPath]
+        do {
+            try task.run()
+            return true
+        } catch {
+            return false
+        }
     }
 
     private func closeMissionControl() {
@@ -101,12 +111,26 @@ final class SpaceRearrangementService: ObservableObject {
     }
 
     private func missionControlIsReady(in dock: AXUIElement) -> Bool {
-        guard let missionControl = directMissionControl(in: dock) else { return false }
+        guard let missionControl = missionControlElement(in: dock) else { return false }
         return findElement(withIdentifier: "mc.spaces.list", in: missionControl) != nil
     }
 
     private func directMissionControl(in dock: AXUIElement) -> AXUIElement? {
-        children(of: dock).first { identifier(of: $0) == "mc" }
+        elements(withIdentifier: "mc", in: dock)
+            .first { findElement(withIdentifier: "mc.spaces.list", in: $0) != nil }
+    }
+
+    private func missionControlElement(in dock: AXUIElement) -> AXUIElement? {
+        if let missionControl = directMissionControl(in: dock) {
+            if findElement(withIdentifier: "mc.spaces.list", in: missionControl) != nil {
+                return missionControl
+            }
+        }
+        guard let application = NSRunningApplication.runningApplications(
+            withBundleIdentifier: missionControlBundleIdentifier
+        ).first else { return nil }
+        let applicationElement = AXUIElementCreateApplication(application.processIdentifier)
+        return findElement(withIdentifier: "mc", in: applicationElement) ?? applicationElement
     }
 
     @discardableResult
@@ -137,7 +161,7 @@ final class SpaceRearrangementService: ObservableObject {
 
     private func dragSpace(sourceIndex: Int, targetIndex: Int, spaceCount: Int, displayID: String?) -> Result {
         guard let dock = runningDockElement() else { return .failure(String(localized: "Mission Control is not available.")) }
-        let frames = missionControlSpaceFrames(in: dock, displayID: displayID)
+        let frames = missionControlSpaceFrames(in: dock, displayID: displayID, spaceCount: spaceCount)
         guard frames.count >= spaceCount else {
             return .failure(String(localized: "Could not identify all spaces in Mission Control (found \(frames.count) of \(spaceCount))."))
         }
@@ -197,24 +221,39 @@ final class SpaceRearrangementService: ObservableObject {
         return row.isEmpty ? dockWindowFrames() : row
     }
 
-    private func missionControlSpaceFrames(in dock: AXUIElement, displayID: String?) -> [CGRect] {
-        guard let missionControl = directMissionControl(in: dock),
+    private func missionControlSpaceFrames(in dock: AXUIElement, displayID: String?, spaceCount: Int) -> [CGRect] {
+        guard let missionControl = missionControlElement(in: dock),
               let display = matchingDisplay(in: missionControl, displayID: displayID),
               let spaces = findElement(withIdentifier: "mc.spaces", in: display),
               let spacesList = findElement(withIdentifier: "mc.spaces.list", in: spaces) else {
-            return spaceThumbnailFrames(in: dock)
+            let frames = spaceThumbnailFrames(in: dock)
+            return frames.count >= spaceCount ? frames : spaceStripFrames(count: spaceCount)
         }
 
-        return children(of: spacesList)
+        let frames = children(of: spacesList)
             .compactMap { frame(of: $0) }
             .filter { $0.width >= 50 && $0.height >= 30 }
             .sorted { $0.minX < $1.minX }
+        return frames.count >= spaceCount ? frames : spaceStripFrames(count: spaceCount)
+    }
+
+    private func spaceStripFrames(count: Int) -> [CGRect] {
+        let bounds = CGDisplayBounds(CGMainDisplayID())
+        let spacing = min(200, max(140, bounds.width / CGFloat(count + 12)))
+        let center = bounds.midX
+        let topStripY = bounds.minY + 105
+        return (0..<count).map { index in
+            let x = center + (CGFloat(index) - CGFloat(count - 1) / 2) * spacing
+            return CGRect(x: x - 60, y: topStripY - 24, width: 120, height: 48)
+        }
     }
 
     private func matchingDisplay(in missionControl: AXUIElement, displayID: String?) -> AXUIElement? {
         let displays = children(of: missionControl).filter { identifier(of: $0) == "mc.display" }
-        guard let displayID else { return displays.first }
-        return displays.first { attributeString("AXDisplayID", of: $0) == displayID } ?? displays.first
+        let display = displays.first ?? findElement(withIdentifier: "mc.display", in: missionControl)
+        guard let display else { return nil }
+        guard let displayID else { return display }
+        return displays.first { attributeString("AXDisplayID", of: $0) == displayID } ?? display
     }
 
     private func findElement(withIdentifier identifier: String, in root: AXUIElement, depth: Int = 0) -> AXUIElement? {
@@ -228,11 +267,38 @@ final class SpaceRearrangementService: ObservableObject {
         return nil
     }
 
+    private func elements(withIdentifier identifier: String, in root: AXUIElement, depth: Int = 0) -> [AXUIElement] {
+        guard depth < 10 else { return [] }
+        var matches: [AXUIElement] = []
+        if self.identifier(of: root) == identifier {
+            matches.append(root)
+        }
+        for child in children(of: root) {
+            matches.append(contentsOf: elements(withIdentifier: identifier, in: child, depth: depth + 1))
+        }
+        return matches
+    }
+
     private func children(of element: AXUIElement) -> [AXUIElement] {
-        var value: CFTypeRef?
-        guard AXUIElementCopyAttributeValue(element, kAXChildrenAttribute as CFString, &value) == .success,
-              let children = value as? [AXUIElement] else { return [] }
-        return children
+        for attribute in [kAXChildrenAttribute, kAXContentsAttribute] {
+            var value: CFTypeRef?
+            guard AXUIElementCopyAttributeValue(element, attribute as CFString, &value) == .success else { continue }
+            let children = axElements(from: value)
+            if !children.isEmpty { return children }
+        }
+        return []
+    }
+
+    private func axElements(from value: CFTypeRef?) -> [AXUIElement] {
+        guard let value else { return [] }
+        if let children = value as? [AXUIElement] { return children }
+        guard CFGetTypeID(value) == CFArrayGetTypeID() else { return [] }
+
+        let array = value as! CFArray
+        return (0..<CFArrayGetCount(array)).compactMap { index in
+            guard let rawElement = CFArrayGetValueAtIndex(array, index) else { return nil }
+            return unsafeBitCast(rawElement, to: AXUIElement.self)
+        }
     }
 
     private func identifier(of element: AXUIElement) -> String? {
@@ -274,19 +340,28 @@ final class SpaceRearrangementService: ObservableObject {
         }
 
         var childrenValue: CFTypeRef?
-        if AXUIElementCopyAttributeValue(element, kAXChildrenAttribute as CFString, &childrenValue) == .success,
-           let children = childrenValue as? [AXUIElement] {
-            for child in children { collectFrames(from: child, depth: depth + 1, into: &frames) }
+        if AXUIElementCopyAttributeValue(element, kAXChildrenAttribute as CFString, &childrenValue) == .success {
+            for child in axElements(from: childrenValue) {
+                collectFrames(from: child, depth: depth + 1, into: &frames)
+            }
         }
 
         var windowsValue: CFTypeRef?
-        if AXUIElementCopyAttributeValue(element, kAXWindowsAttribute as CFString, &windowsValue) == .success,
-           let windows = windowsValue as? [AXUIElement] {
-            for window in windows { collectFrames(from: window, depth: depth + 1, into: &frames) }
+        if AXUIElementCopyAttributeValue(element, kAXWindowsAttribute as CFString, &windowsValue) == .success {
+            for window in axElements(from: windowsValue) {
+                collectFrames(from: window, depth: depth + 1, into: &frames)
+            }
         }
     }
 
     private func frame(of element: AXUIElement) -> CGRect? {
+        if let frameValue = attributeValue("AXFrame", of: element),
+           CFGetTypeID(frameValue) == AXValueGetTypeID() {
+            var frame = CGRect.zero
+            let axFrame = frameValue as! AXValue
+            if AXValueGetValue(axFrame, .cgRect, &frame) { return frame }
+        }
+
         var positionValue: CFTypeRef?
         var sizeValue: CFTypeRef?
         guard AXUIElementCopyAttributeValue(element, kAXPositionAttribute as CFString, &positionValue) == .success,
@@ -302,6 +377,12 @@ final class SpaceRearrangementService: ObservableObject {
               AXValueGetValue(position, .cgPoint, &point),
               AXValueGetValue(axSize, .cgSize, &size) else { return nil }
         return CGRect(origin: point, size: size)
+    }
+
+    private func attributeValue(_ attribute: String, of element: AXUIElement) -> CFTypeRef? {
+        var value: CFTypeRef?
+        guard AXUIElementCopyAttributeValue(element, attribute as CFString, &value) == .success else { return nil }
+        return value
     }
 
     private func isVisible(_ element: AXUIElement) -> Bool {
