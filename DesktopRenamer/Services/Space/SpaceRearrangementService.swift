@@ -135,14 +135,11 @@ final class SpaceRearrangementService: ObservableObject {
         let sourceFrame = frames[sourceIndex]
         let targetFrame = frames[targetIndex]
         let sourcePoint = CGPoint(x: sourceFrame.midX, y: sourceFrame.midY)
-        let targetPoint = CGPoint(x: targetFrame.minX + 4, y: targetFrame.midY)
+        let targetPoint = CGPoint(x: targetFrame.minX - 12, y: targetFrame.midY)
         guard postMouseEvent(.mouseMoved, at: sourcePoint),
               postMouseEvent(.leftMouseDown, at: sourcePoint),
               pauseBeforeNextMouseEvent(),
-              postMouseEvent(.leftMouseDragged, at: sourcePoint),
-              pauseBeforeNextMouseEvent(),
-              postMouseEvent(.leftMouseDragged, at: targetPoint),
-              pauseBeforeNextMouseEvent(),
+              postInterpolatedDrag(from: sourcePoint, to: targetPoint),
               postMouseEvent(.leftMouseUp, at: targetPoint) else {
             return .failure(String(localized: "Could not drag the selected space."))
         }
@@ -322,6 +319,19 @@ final class SpaceRearrangementService: ObservableObject {
 
     private func pauseBeforeNextMouseEvent() -> Bool {
         Thread.sleep(forTimeInterval: 0.08)
+        return true
+    }
+
+    private func postInterpolatedDrag(from source: CGPoint, to target: CGPoint) -> Bool {
+        let steps = 12
+        for step in 1...steps {
+            let progress = CGFloat(step) / CGFloat(steps)
+            let point = CGPoint(
+                x: source.x + (target.x - source.x) * progress,
+                y: source.y + (target.y - source.y) * progress
+            )
+            guard postMouseEvent(.leftMouseDragged, at: point), pauseBeforeNextMouseEvent() else { return false }
+        }
         return true
     }
 
