@@ -1181,6 +1181,12 @@ private struct FloatingHotkeyHint: View {
     }
 
     var body: some View {
+        let badgeOpacity: Double = isRowHovered
+            ? (colorScheme == .dark ? 0.24 : 0.18)
+            : isSelected
+                ? (colorScheme == .dark ? 0.22 : 0.14)
+                : (colorScheme == .dark ? 0.12 : 0.10)
+
         Text(text)
             .font(.system(size: 12, weight: .medium))
             .foregroundColor(.secondary)
@@ -1190,11 +1196,7 @@ private struct FloatingHotkeyHint: View {
             .frame(minWidth: 23)
             .frame(height: 16)
             .background(
-                Color.primary.opacity(isSelected
-                    ? (colorScheme == .dark ? 0.22 : 0.14)
-                    : isRowHovered
-                        ? (colorScheme == .dark ? 0.20 : 0.16)
-                        : (colorScheme == .dark ? 0.12 : 0.10)),
+                Color.primary.opacity(badgeOpacity),
                 in: Capsule()
             )
             .shadow(
