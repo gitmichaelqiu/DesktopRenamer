@@ -1,8 +1,10 @@
 import SwiftUI
+import UniformTypeIdentifiers
 
 struct SpaceEditView: View {
     @ObservedObject var spaceManager: SpaceManager
     @EnvironmentObject var navigationState: SettingsNavigationState
+    @State private var rearrangementMessage: String?
     
     var body: some View {
         VStack(spacing: 0) {
@@ -25,6 +27,13 @@ struct SpaceEditView: View {
                     }
                     .padding()
                     .padding(.bottom, 40)
+                }
+                if let rearrangementMessage {
+                    Text(rearrangementMessage)
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                        .padding(.horizontal)
+                        .padding(.bottom, 8)
                 }
             }
         }
@@ -140,6 +149,13 @@ struct SpaceEditView: View {
                         }
                     }
                     .transition(.opacity.combined(with: .move(edge: .top)))
+                    .onDrag { NSItemProvider(object: space.id as NSString) }
+                    .onDrop(of: [UTType.text], delegate: SpaceRearrangementDropDelegate(
+                        target: space,
+                        spaces: displaySpaces,
+                        spaceManager: spaceManager,
+                        message: $rearrangementMessage
+                    ))
                 }
             }
         }
@@ -217,4 +233,35 @@ struct SpaceEditView: View {
         spaceManager.renameSpace(space.id, to: newName)
     }
     
+}
+
+private struct SpaceRearrangementDropDelegate: DropDelegate {
+    let target: DesktopSpace
+    let spaces: [DesktopSpace]
+    let spaceManager: SpaceManager
+    @Binding var message: String?
+
+    func performDrop(info: DropInfo) -> Bool {
+        guard let provider = info.itemProviders(for: [UTType.text]).first else { return false }
+        provider.loadObject(ofClass: NSString.self) { item, _ in
+            guard let sourceObject = item as? NSString else { return }
+            let sourceID = sourceObject as String
+            SpaceRearrangementService.shared.rearrange(
+                sourceID: sourceID,
+                before: target.id,
+                orderedSpaceIDs: spaces.map(\.id)
+            ) { result in
+                DispatchQueue.main.async {
+                    switch result {
+                    case .success:
+                        message = String(localized: "Space order updated.")
+                        spaceManager.refreshSpaceState()
+                    case .failure(let error):
+                        message = error
+                    }
+                }
+            }
+        }
+        return true
+    }
 }
