@@ -1171,24 +1171,9 @@ struct KeycapView: View {
 
 private struct FloatingHotkeyHint: View {
     let text: LocalizedStringKey
-    let isSelected: Bool
     @Environment(\.colorScheme) private var colorScheme
-    @Environment(\.launcherRowIsHovered) private var isRowHovered
-
-    init(text: LocalizedStringKey, isSelected: Bool = false) {
-        self.text = text
-        self.isSelected = isSelected
-    }
 
     var body: some View {
-        let badgeBackground: Color = isRowHovered
-            ? Color(nsColor: .controlColor)
-            : Color.primary.opacity(
-                isSelected
-                    ? (colorScheme == .dark ? 0.22 : 0.14)
-                    : (colorScheme == .dark ? 0.12 : 0.10)
-            )
-
         Text(text)
             .font(.system(size: 12, weight: .medium))
             .foregroundColor(.secondary)
@@ -1198,7 +1183,7 @@ private struct FloatingHotkeyHint: View {
             .frame(minWidth: 23)
             .frame(height: 16)
             .background(
-                badgeBackground,
+                Color(nsColor: .controlColor),
                 in: Capsule()
             )
             .shadow(
@@ -1211,18 +1196,7 @@ private struct FloatingHotkeyHint: View {
 
 private struct LauncherRowAccessory<Content: View>: View {
     let shortcutText: String?
-    let isSelected: Bool
     @ViewBuilder let content: () -> Content
-
-    init(
-        shortcutText: String?,
-        isSelected: Bool = false,
-        @ViewBuilder content: @escaping () -> Content
-    ) {
-        self.shortcutText = shortcutText
-        self.isSelected = isSelected
-        self.content = content
-    }
 
     var body: some View {
         HStack(spacing: LauncherMenuMetrics.accessoryColumnSpacing) {
@@ -1232,8 +1206,7 @@ private struct LauncherRowAccessory<Content: View>: View {
 
             if let shortcutText {
                 FloatingHotkeyHint(
-                    text: LocalizedStringKey(shortcutText),
-                    isSelected: isSelected
+                    text: LocalizedStringKey(shortcutText)
                 )
                     .frame(width: LauncherMenuMetrics.hotkeyColumnWidth, alignment: .trailing)
             }
@@ -1343,7 +1316,6 @@ private struct LauncherSelectableRow<Content: View>: View {
 
     var body: some View {
         content
-            .environment(\.launcherRowIsHovered, isHovered)
             .modifier(LauncherRowSurface(
                 isSelected: isSelected,
                 isHovered: isHovered,
@@ -1352,17 +1324,6 @@ private struct LauncherSelectableRow<Content: View>: View {
             ))
             .contentShape(Rectangle())
         .onHover { isHovered = $0 }
-    }
-}
-
-private struct LauncherRowHoveredKey: EnvironmentKey {
-    static let defaultValue = false
-}
-
-private extension EnvironmentValues {
-    var launcherRowIsHovered: Bool {
-        get { self[LauncherRowHoveredKey.self] }
-        set { self[LauncherRowHoveredKey.self] = newValue }
     }
 }
 
@@ -1424,7 +1385,7 @@ struct CommandRowView: View {
 
             Spacer(minLength: 4)
 
-            LauncherRowAccessory(shortcutText: shortcutText, isSelected: isSelected) {
+            LauncherRowAccessory(shortcutText: shortcutText) {
                 if let statusText = toggleStatus {
                     statusBadge(statusText)
                 } else {
@@ -1454,7 +1415,7 @@ struct CommandRowView: View {
             
             Spacer()
 
-            LauncherRowAccessory(shortcutText: shortcutText, isSelected: isSelected) {
+            LauncherRowAccessory(shortcutText: shortcutText) {
                 if shortcutText == nil {
                     if let statusText = toggleStatus {
                         LauncherStatusLabel(
@@ -1545,7 +1506,7 @@ struct SpaceRowView: View {
             
             Spacer()
 
-            LauncherRowAccessory(shortcutText: shortcutText, isSelected: isSelected) {
+            LauncherRowAccessory(shortcutText: shortcutText) {
                 if isCurrent {
                     WindowStateBadge(label: String(localized: "Current"), color: .blue)
                 }
@@ -1655,7 +1616,7 @@ private struct LauncherWindowRowContent: View {
 
                 Spacer()
 
-                LauncherRowAccessory(shortcutText: shortcutText, isSelected: isSelected) {
+                LauncherRowAccessory(shortcutText: shortcutText) {
                     HStack(spacing: isStaged ? 4 : 8) {
                         if !isStaged {
                             if window.isHidden {
