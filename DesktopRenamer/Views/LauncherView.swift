@@ -31,6 +31,8 @@ private enum LauncherMenuMetrics {
     static let labelHorizontalPadding: CGFloat = 8
     static let labelVerticalPadding: CGFloat = 3
     static let footerGroupSpacing: CGFloat = 4
+    static let footerHorizontalInset: CGFloat = 16
+    static let footerBottomInset: CGFloat = 8
     static let footerButtonHorizontalPadding: CGFloat = 4
     static let footerKeycapSpacing: CGFloat = 3
     static let footerKeycapSize: CGFloat = 24
@@ -104,13 +106,17 @@ private struct LauncherActionBarModifier: ViewModifier {
             .padding(.horizontal, horizontalPadding)
             .frame(height: LauncherLayout.actionBarContentHeight)
             .frame(maxWidth: .infinity, alignment: .center)
-            .padding(.vertical, 4)
+            .padding(.bottom, LauncherMenuMetrics.footerBottomInset)
             .frame(height: height, alignment: .bottom)
     }
 }
 
 private extension View {
-    func launcherActionBar(colors: ThemeColors, height: CGFloat = LauncherLayout.actionBarHeight, horizontalPadding: CGFloat = 8) -> some View {
+    func launcherActionBar(
+        colors: ThemeColors,
+        height: CGFloat = LauncherLayout.actionBarHeight,
+        horizontalPadding: CGFloat = LauncherMenuMetrics.footerHorizontalInset
+    ) -> some View {
         modifier(LauncherActionBarModifier(colors: colors, height: height, horizontalPadding: horizontalPadding))
     }
 
@@ -1968,8 +1974,6 @@ struct SpacesBottomBar: View {
                             .id(space.id)
                         }
                     }
-                    .padding(.leading, 8)
-                    .padding(.trailing, 8)
                 }
                 .mask(
                     HStack(spacing: 0) {
