@@ -2,6 +2,35 @@ import SwiftUI
 import AVKit
 import AVFoundation
 
+private struct AnimatedSettingsValue: View {
+    let text: String
+    @State private var displayedText: String
+
+    init(text: String) {
+        self.text = text
+        _displayedText = State(initialValue: text)
+    }
+
+    var body: some View {
+        Text(displayedText)
+            .monospacedDigit()
+            .contentTransition(.numericText())
+            .onChange(of: text) { _, newText in
+                withSettingsAnimation {
+                    displayedText = newText
+                }
+            }
+    }
+}
+
+private func withSettingsAnimation(_ action: @escaping () -> Void) {
+    if #available(macOS 14.0, *) {
+        withAnimation(.snappy(duration: 0.18), action)
+    } else {
+        withAnimation(.easeOut(duration: 0.18), action)
+    }
+}
+
 class LoopVideoPlayerNSView: NSView {
     private var looper: AVPlayerLooper?
     private var player: AVQueuePlayer?
@@ -255,7 +284,7 @@ struct SettingsContainer<Content: View>: View {
                     .padding(16)
             }
             .environment(\.settingsTab, tab)
-            .onChange(of: navigationState.scrollToItemID) { id in
+            .onChange(of: navigationState.scrollToItemID) { _, id in
                 if let id = id {
                     DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
                         withAnimation {
@@ -462,6 +491,7 @@ struct SliderSettingsRow<V>: View where V: BinaryFloatingPoint, V.Stride: Binary
     @AppStorage("ShowDemoVideos") private var showDemoVideos = true
     @Environment(\.settingsTab) var currentTab
     @EnvironmentObject var navigationState: SettingsNavigationState
+    @State private var resetTask: Task<Void, Never>?
 
     init(
         _ title: LocalizedStringResource,
@@ -501,8 +531,26 @@ struct SliderSettingsRow<V>: View where V: BinaryFloatingPoint, V.Stride: Binary
                 Spacer()
 
                 Button("↺") {
-                    withAnimation {
-                        value = defaultValue
+                    resetTask?.cancel()
+                    let start = Double(value)
+                    let end = Double(defaultValue)
+                    resetTask = Task { @MainActor in
+                        let steps = 40
+                        let startTime = DispatchTime.now().uptimeNanoseconds
+                        let duration: UInt64 = 150_000_000
+                        for step in 1...steps {
+                            guard !Task.isCancelled else { return }
+                            let targetTime = startTime + duration * UInt64(step) / UInt64(steps)
+                            let currentTime = DispatchTime.now().uptimeNanoseconds
+                            if targetTime > currentTime {
+                                try? await Task.sleep(nanoseconds: targetTime - currentTime)
+                            }
+                            guard !Task.isCancelled else { return }
+                            let linearProgress = Double(step) / Double(steps)
+                            let progress = 1 - (1 - linearProgress) * (1 - linearProgress) * (1 - linearProgress)
+                            value = V(start + (end - start) * progress)
+                        }
+                        resetTask = nil
                     }
                 }
                 .help("Reset to default")
@@ -510,14 +558,15 @@ struct SliderSettingsRow<V>: View where V: BinaryFloatingPoint, V.Stride: Binary
             }
 
             HStack {
-                if let step = step {
-                    Slider(value: $value, in: range, step: V.Stride(step))
-                } else {
-                    Slider(value: $value, in: range)
+                Group {
+                    if let step = step {
+                        Slider(value: animatedValueBinding, in: range, step: V.Stride(step))
+                    } else {
+                        Slider(value: animatedValueBinding, in: range)
+                    }
                 }
 
-                Text(valueString(value))
-                    .monospacedDigit()
+                AnimatedSettingsValue(text: valueString(value))
                     .foregroundColor(.secondary)
                     .frame(minWidth: 50, alignment: .trailing)
             }
@@ -545,5 +594,16 @@ struct SliderSettingsRow<V>: View where V: BinaryFloatingPoint, V.Stride: Binary
         .onDisappear {
             navigationState.unregister(title: title.key, tab: currentTab)
         }
+    }
+
+    private var animatedValueBinding: Binding<V> {
+        Binding(
+            get: { value },
+            set: { newValue in
+                withSettingsAnimation {
+                    value = newValue
+                }
+            }
+        )
     }
 }
