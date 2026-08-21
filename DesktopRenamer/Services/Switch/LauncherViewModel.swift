@@ -1280,17 +1280,26 @@ import SwiftUI
     
     func handleTabKey() {
         guard activeCommand == nil else { return }
-        isBottomBarFocused.toggle()
         if isBottomBarFocused {
-            if let manager = AppDelegate.shared.spaceManager {
-                let spaces = manager.currentDisplaySpaces
-                if let currentIndex = spaces.firstIndex(where: { $0.id == manager.currentSpaceUUID }) {
-                    selectedSpaceIndex = currentIndex
-                } else {
-                    selectedSpaceIndex = 0
-                }
-            }
+            isBottomBarFocused = false
+        } else {
+            focusSpaceBar()
         }
+    }
+
+    func focusSpaceBar(movingBy offset: Int = 0) {
+        isBottomBarFocused = true
+        isKeyboardSelection = true
+
+        guard let manager = AppDelegate.shared.spaceManager else { return }
+        let spaces = manager.currentDisplaySpaces
+        guard !spaces.isEmpty else {
+            selectedSpaceIndex = 0
+            return
+        }
+
+        let currentIndex = spaces.firstIndex(where: { $0.id == manager.currentSpaceUUID }) ?? 0
+        selectedSpaceIndex = min(max(currentIndex + offset, 0), spaces.count - 1)
     }
     
     func executeBottomBarSpaceAction(isOption: Bool, isCommand: Bool) {

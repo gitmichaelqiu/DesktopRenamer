@@ -123,6 +123,10 @@ struct LauncherView: View {
                                     }
                                     return true
                                 }
+                                if viewModel.searchQuery.isEmpty {
+                                    viewModel.focusSpaceBar(movingBy: -1)
+                                    return true
+                                }
                                 return false
                             },
                             onRightArrow: {
@@ -134,6 +138,10 @@ struct LauncherView: View {
                                     if viewModel.selectedSpaceIndex < count - 1 {
                                         viewModel.selectedSpaceIndex += 1
                                     }
+                                    return true
+                                }
+                                if viewModel.searchQuery.isEmpty {
+                                    viewModel.focusSpaceBar(movingBy: 1)
                                     return true
                                 }
                                 return false
