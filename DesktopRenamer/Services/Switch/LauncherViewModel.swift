@@ -110,6 +110,8 @@ import SwiftUI
     }
     
     var onClose: (() -> Void)?
+
+    private var terminatingApplicationPIDs = Set<Int32>()
     
     let allCommands: [LauncherCommand] = [
         LauncherCommand(type: .switchToDesktop, title: NSLocalizedString("Switch Desktop", comment: ""), subtitle: NSLocalizedString("Select a desktop to switch to", comment: ""), iconName: "desktopcomputer", hasSubpage: true),
@@ -392,6 +394,10 @@ import SwiftUI
     func executeActionImmediately(window: WindowEntry, actionType: BatchStagedActionType) {
         let originalSpaceUUID = AppDelegate.shared.spaceManager?.currentSpaceUUID
         DiagnosticEventLog.shared.record(subsystem: "Launcher", level: "info", "executeActionImmediately: window=\(window.title) (id=\(window.id)), actionType=\(actionType.description), originalSpaceUUID=\(originalSpaceUUID ?? "nil")")
+
+        if actionType == .quit {
+            removeApplicationWindowsFromList(pid: window.pid)
+        }
         
         Task {
             let windowSpaceID = window.space.id
@@ -641,10 +647,20 @@ import SwiftUI
             let parsed = Self.parseWindowData(raw)
             
             DispatchQueue.main.async {
-                self.currentWindows = parsed.windows
+                let terminatingPIDs = self.terminatingApplicationPIDs
+                self.currentWindows = parsed.windows.filter { !terminatingPIDs.contains($0.pid) }
+                self.terminatingApplicationPIDs = terminatingPIDs.filter {
+                    NSRunningApplication(processIdentifier: $0) != nil
+                }
                 self.isLoadingData = false
             }
         }
+    }
+
+    private func removeApplicationWindowsFromList(pid: Int32) {
+        terminatingApplicationPIDs.insert(pid)
+        currentWindows.removeAll { $0.pid == pid }
+        selectedRowIndex = min(selectedRowIndex, max(filteredWindows.count - 1, 0))
     }
     
     func getDisplayName(for uuidString: String) -> String {
@@ -1104,6 +1120,10 @@ import SwiftUI
                 let requiresAX = (action.actionType == .close || action.actionType == .minimize || action.actionType == .enterFullScreen || action.actionType == .exitFullScreen || action.actionType == .restore || (action.actionType == .hide && isFullscreenWindow))
                 
                 DiagnosticEventLog.shared.record(subsystem: "Launcher", level: "info", "executeBatchMove: Static action: type=\(action.actionType.description), window id=\(action.window.id), app=\(action.window.ownerName), requiresAX=\(requiresAX)")
+
+                if action.actionType == .quit {
+                    self.removeApplicationWindowsFromList(pid: action.window.pid)
+                }
                 
                 // If the target window is on a different space, switch to its space first so AX APIs can access it.
                 if requiresAX,
