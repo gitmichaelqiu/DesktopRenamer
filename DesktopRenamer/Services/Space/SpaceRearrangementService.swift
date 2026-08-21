@@ -173,7 +173,9 @@ final class SpaceRearrangementService: ObservableObject {
 
     private func runningDockElement() -> AXUIElement? {
         guard let dock = NSRunningApplication.runningApplications(withBundleIdentifier: dockBundleIdentifier).first else { return nil }
-        return AXUIElementCreateApplication(dock.processIdentifier)
+        let element = AXUIElementCreateApplication(dock.processIdentifier)
+        AXUIElementSetMessagingTimeout(element, 2.0)
+        return element
     }
 
     private func spaceThumbnailFrames(in root: AXUIElement) -> [CGRect] {
@@ -181,10 +183,11 @@ final class SpaceRearrangementService: ObservableObject {
         collectFrames(from: root, depth: 0, into: &frames)
         let candidates = uniqueFrames(frames).filter { $0.width >= 50 && $0.height >= 30 }
         let rows = Dictionary(grouping: candidates) { Int($0.midY / 40) }
-        return rows.max {
+        let row = rows.max {
             if $0.value.count != $1.value.count { return $0.value.count < $1.value.count }
             return $0.key > $1.key
         }?.value.sorted { $0.minX < $1.minX } ?? []
+        return row.isEmpty ? dockWindowFrames() : row
     }
 
     private func missionControlSpaceFrames(in dock: AXUIElement, displayID: String?) -> [CGRect] {
@@ -232,6 +235,28 @@ final class SpaceRearrangementService: ObservableObject {
         var value: CFTypeRef?
         guard AXUIElementCopyAttributeValue(element, attribute as CFString, &value) == .success else { return nil }
         return value as? String
+    }
+
+    private func dockWindowFrames() -> [CGRect] {
+        guard let dock = NSRunningApplication.runningApplications(withBundleIdentifier: dockBundleIdentifier).first else { return [] }
+        let windows = CGWindowListCopyWindowInfo(.optionOnScreenOnly, kCGNullWindowID) as? [[String: Any]] ?? []
+        let candidates = windows.compactMap { window -> CGRect? in
+            guard let ownerPID = window[kCGWindowOwnerPID as String] as? Int,
+                  ownerPID == Int(dock.processIdentifier),
+                  let bounds = window[kCGWindowBounds as String] as? [String: Any],
+                  let x = bounds["X"] as? CGFloat,
+                  let y = bounds["Y"] as? CGFloat,
+                  let width = bounds["Width"] as? CGFloat,
+                  let height = bounds["Height"] as? CGFloat else { return nil }
+            let frame = CGRect(x: x, y: y, width: width, height: height)
+            return isPotentialThumbnail(frame) ? frame : nil
+        }
+        let unique = uniqueFrames(candidates)
+        let rows = Dictionary(grouping: unique) { Int($0.midY / 40) }
+        return rows.max {
+            if $0.value.count != $1.value.count { return $0.value.count < $1.value.count }
+            return $0.key > $1.key
+        }?.value.sorted { $0.minX < $1.minX } ?? []
     }
 
     private func collectFrames(from element: AXUIElement, depth: Int, into frames: inout [CGRect]) {
