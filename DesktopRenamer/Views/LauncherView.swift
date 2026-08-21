@@ -2007,8 +2007,9 @@ struct VisualEffectView: NSViewRepresentable {
     }
 
     private func update(_ view: NSVisualEffectView) {
-        view.appearance = NSAppearance(named: colorScheme == .dark ? .darkAqua : .aqua)
-        view.material = material
+        let isDark = colorScheme == .dark
+        view.appearance = NSAppearance(named: isDark ? .darkAqua : .aqua)
+        view.material = isDark ? material : .contentBackground
         view.blendingMode = blendingMode
         view.state = state
     }
