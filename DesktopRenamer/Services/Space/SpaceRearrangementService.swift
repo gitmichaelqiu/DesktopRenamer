@@ -63,12 +63,14 @@ final class SpaceRearrangementService: ObservableObject {
         let originalMouseLocation = NSEvent.mouseLocation
         DispatchQueue.global(qos: .userInitiated).asyncAfter(deadline: .now() + 0.6) { [weak self] in
             guard let self else { return }
-            let result = self.dragSpaceWithRetry(
-                sourceIndex: sourceIndex,
-                targetIndex: targetIndex,
-                spaceCount: orderedSpaceIDs.count,
-                displayID: displayID
-            )
+            let result = DispatchQueue.main.sync {
+                self.dragSpaceWithRetry(
+                    sourceIndex: sourceIndex,
+                    targetIndex: targetIndex,
+                    spaceCount: orderedSpaceIDs.count,
+                    displayID: displayID
+                )
+            }
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) {
                 self.closeMissionControl()
                 self.restoreMouse(to: originalMouseLocation)
