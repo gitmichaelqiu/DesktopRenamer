@@ -3178,7 +3178,7 @@ private struct LauncherBottomBarGroupedButton: View {
             actionLabel
         }
         .buttonStyle(.plain)
-        .padding(.horizontal, 8)
+        .padding(.horizontal, 4)
         .frame(height: LauncherMenuMetrics.capsuleHeight)
         .background(
             isHovered
@@ -3226,7 +3226,7 @@ private struct LauncherBottomBarActionGroup<Content: View>: View {
     }
 
     var body: some View {
-        HStack(spacing: 16) {
+        HStack(spacing: 8) {
             content
         }
         .modifier(BottomBarCapsule(isSelected: false, isActive: isActive, colorScheme: colorScheme))
