@@ -1173,6 +1173,12 @@ private struct FloatingHotkeyHint: View {
     let text: LocalizedStringKey
     @Environment(\.colorScheme) private var colorScheme
 
+    private var badgeBackground: Color {
+        colorScheme == .dark
+            ? Color(red: 0.28, green: 0.29, blue: 0.31)
+            : Color(red: 0.80, green: 0.81, blue: 0.82)
+    }
+
     var body: some View {
         Text(text)
             .font(.system(size: 12, weight: .medium))
@@ -1183,7 +1189,7 @@ private struct FloatingHotkeyHint: View {
             .frame(minWidth: 23)
             .frame(height: 16)
             .background(
-                Color(nsColor: .controlColor),
+                badgeBackground,
                 in: Capsule()
             )
             .shadow(
