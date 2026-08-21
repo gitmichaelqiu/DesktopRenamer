@@ -313,6 +313,7 @@ final class SpaceRearrangementService: ObservableObject {
 
     private func postMouseEvent(_ type: CGEventType, at point: CGPoint) -> Bool {
         guard let event = CGEvent(mouseEventSource: CGEventSource(stateID: .hidSystemState), mouseType: type, mouseCursorPosition: point, mouseButton: .left) else { return false }
+        event.flags = []
         event.post(tap: .cgSessionEventTap)
         return true
     }
@@ -330,7 +331,19 @@ final class SpaceRearrangementService: ObservableObject {
                 x: source.x + (target.x - source.x) * progress,
                 y: source.y + (target.y - source.y) * progress
             )
-            guard postMouseEvent(.leftMouseDragged, at: point), pauseBeforeNextMouseEvent() else { return false }
+            guard let event = CGEvent(
+                mouseEventSource: CGEventSource(stateID: .hidSystemState),
+                mouseType: .leftMouseDragged,
+                mouseCursorPosition: point,
+                mouseButton: .left
+            ) else { return false }
+            event.flags = []
+            let deltaX = Int64((target.x - source.x) / CGFloat(steps))
+            let deltaY = Int64((target.y - source.y) / CGFloat(steps))
+            event.setIntegerValueField(.mouseEventDeltaX, value: deltaX)
+            event.setIntegerValueField(.mouseEventDeltaY, value: deltaY)
+            event.post(tap: .cgSessionEventTap)
+            guard pauseBeforeNextMouseEvent() else { return false }
         }
         return true
     }
