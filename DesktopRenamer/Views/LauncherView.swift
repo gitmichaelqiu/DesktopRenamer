@@ -3179,24 +3179,36 @@ private struct LauncherBottomBarGroupedButton: View {
         }
         .buttonStyle(.plain)
         .foregroundColor(title == String(localized: "Actions") ? .secondary : .primary)
-        .padding(.horizontal, 4)
-        .frame(height: LauncherMenuMetrics.capsuleHeight)
-        .background(
-            isHovered
-                ? (colorScheme == .dark
-                    ? Color.white.opacity(0.12)
-                    : Color.black.opacity(0.08))
-                : .clear,
-            in: Capsule()
-        )
-        .contentShape(Capsule())
         .onHover { isHovered = $0 }
     }
 
     private var actionLabel: some View {
         HStack(spacing: 4) {
             Text(verbatim: title)
-            LauncherFooterKeycap(text: shortcut)
+                .padding(.horizontal, 8)
+                .frame(height: LauncherMenuMetrics.capsuleHeight)
+                .background(
+                    isHovered
+                        ? (colorScheme == .dark
+                            ? Color.white.opacity(0.12)
+                            : Color.black.opacity(0.08))
+                        : .clear,
+                    in: Capsule()
+                )
+            LauncherFooterShortcut(text: shortcut)
+        }
+        .contentShape(Rectangle())
+    }
+}
+
+private struct LauncherFooterShortcut: View {
+    let text: String
+
+    var body: some View {
+        HStack(spacing: 3) {
+            ForEach(Array(text), id: \.self) { character in
+                LauncherFooterKeycap(text: String(character))
+            }
         }
     }
 }
