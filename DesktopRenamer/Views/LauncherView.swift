@@ -3183,8 +3183,8 @@ private struct LauncherBottomBarGroupedButton: View {
         .background(
             isHovered
                 ? (colorScheme == .dark
-                    ? Color(red: 0.28, green: 0.29, blue: 0.31)
-                    : Color(red: 0.80, green: 0.81, blue: 0.82))
+                    ? Color.white.opacity(0.12)
+                    : Color.black.opacity(0.08))
                 : .clear,
             in: Capsule()
         )
