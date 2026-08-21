@@ -31,7 +31,8 @@ private enum LauncherMenuMetrics {
     static let footerButtonHorizontalPadding: CGFloat = 4
     static let footerKeycapSpacing: CGFloat = 3
     static let footerKeycapSize: CGFloat = 24
-    static let rowSurfaceInset: CGFloat = 12
+    static let rowSurfaceInset: CGFloat = 8
+    static let rowContentHorizontalPadding: CGFloat = 8
     static let listVerticalInset: CGFloat = 8
     static let contentVerticalPadding: CGFloat = 4
     static let sectionHeaderFontSize: CGFloat = 15
@@ -1301,7 +1302,7 @@ private struct LauncherRowSurface: ViewModifier {
                 .fill(surfaceColor)
 
             content
-                .padding(.horizontal, 12)
+                .padding(.horizontal, LauncherMenuMetrics.rowContentHorizontalPadding)
                 .padding(.vertical, verticalPadding)
                 .frame(
                     maxWidth: .infinity,
@@ -1706,7 +1707,7 @@ private struct LauncherSectionHeader: View {
 
             Spacer(minLength: 0)
         }
-        .padding(.horizontal, 12)
+        .padding(.horizontal, LauncherMenuMetrics.rowContentHorizontalPadding)
         .padding(.top, topPadding)
         .padding(.bottom, bottomPadding)
     }
