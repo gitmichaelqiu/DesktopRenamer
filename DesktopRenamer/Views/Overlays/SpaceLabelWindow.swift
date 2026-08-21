@@ -448,10 +448,13 @@ class SpaceLabelWindow: NSWindow {
 
     private func makeVisualEffectView() -> NSVisualEffectView {
         let effectView = NSVisualEffectView(frame: .zero)
-        effectView.material = .hudWindow
+        let isDark = NSApp.effectiveAppearance.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua
+        effectView.material = isDark ? .hudWindow : .contentBackground
         effectView.blendingMode = .behindWindow
         effectView.state = .active
-        effectView.appearance = NSAppearance(named: .darkAqua)
+        effectView.appearance = NSAppearance(named: isDark ? .darkAqua : .aqua)
+        effectView.wantsLayer = true
+        effectView.layer?.backgroundColor = (isDark ? NSColor.clear : NSColor.white).cgColor
         effectView.addSubview(self.contentContainer)
 
         self.contentContainer.translatesAutoresizingMaskIntoConstraints = false
