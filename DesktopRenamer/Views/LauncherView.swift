@@ -3,61 +3,13 @@ import AppKit
 
 enum LauncherLayout {
     static let windowSize = CGSize(width: 750, height: 475)
-    static let actionBarHeight: CGFloat = 44
-    static let actionBarContentHeight: CGFloat = 36
-    static let popupBottomSpacing: CGFloat = 8
-
-    static var popupBottomInset: CGFloat {
-        popupBottomSpacing
-    }
-}
-
-private enum LauncherMenuMetrics {
-    static let panelWidth: CGFloat = 350
-    static let rowHeight: CGFloat = 46
-    static let rowSpacing: CGFloat = 0
-    static let menuAccessoryColumnWidth: CGFloat = 72
-    static let popupRowContentSpacing: CGFloat = 4
-    static let popupAccessorySpacing: CGFloat = 10
-    // Raycast keeps the accessory text in its own 140pt slot and reserves a
-    // separate 24pt slot for the delayed number badge.
-    static let accessoryColumnWidth: CGFloat = 140
-    static let hotkeyColumnWidth: CGFloat = 36
-    static let hotkeyBadgeHeight: CGFloat = 20
-    static let hotkeyBadgeCornerRadius: CGFloat = 6
-    static let accessoryColumnSpacing: CGFloat = 12
-    static let rowAccessoryWidth: CGFloat = accessoryColumnWidth + accessoryColumnSpacing + hotkeyColumnWidth
-    static let capsuleHorizontalPadding: CGFloat = 12
-    static let capsuleHeight: CGFloat = 36
-    static let labelHorizontalPadding: CGFloat = 8
-    static let labelVerticalPadding: CGFloat = 3
-    static let footerGroupSpacing: CGFloat = 4
-    static let footerHorizontalInset: CGFloat = 16
-    static let footerBottomInset: CGFloat = 8
-    static let menuHeaderHorizontalPadding: CGFloat = 16
-    static let menuHeaderVerticalPadding: CGFloat = 12
-    static let menuFooterHorizontalPadding: CGFloat = 12
-    static let menuFooterHeight: CGFloat = 44
-    static let footerButtonHorizontalPadding: CGFloat = 4
-    static let footerKeycapSpacing: CGFloat = 3
-    static let footerKeycapSize: CGFloat = 24
-    static let rowSurfaceInset: CGFloat = 8
-    static let rowContentHorizontalPadding: CGFloat = 8
-    static let rowCornerRadius: CGFloat = 8
-    static let listVerticalInset: CGFloat = 8
-    static let contentVerticalPadding: CGFloat = 4
-    static let sectionHeaderFontSize: CGFloat = 15
-    static let rowTitleFontSize: CGFloat = 16
-    static let rowSubtitleFontSize: CGFloat = 14
 }
 
 struct ThemeColors {
     let isDark: Bool
     
     var backgroundOverlay: Color {
-        isDark
-            ? Color(red: 0.12, green: 0.13, blue: 0.15).opacity(0.72)
-            : Color.white.opacity(0.72)
+        Color.clear
     }
     
     var textPrimary: Color {
@@ -81,11 +33,11 @@ struct ThemeColors {
     }
     
     var rowHover: Color {
-        isDark ? Color.white.opacity(0.06) : Color.black.opacity(0.045)
+        Color.primary.opacity(0.08)
     }
     
     var badgeBg: Color {
-        isDark ? Color.white.opacity(0.10) : Color.black.opacity(0.06)
+        Color.primary.opacity(0.06)
     }
     
     var badgeBorder: Color {
@@ -96,70 +48,33 @@ struct ThemeColors {
         Color(nsColor: .separatorColor)
     }
     
+    var bottomBarBg: Color {
+        Color.primary.opacity(0.01)
+    }
+    
     var greenText: Color {
         Color.green
     }
 }
 
-private struct LauncherActionBarModifier: ViewModifier {
-    let colors: ThemeColors
-    let height: CGFloat
-    let horizontalPadding: CGFloat
-
-    func body(content: Content) -> some View {
-        content
-            .padding(.horizontal, horizontalPadding)
-            .frame(height: LauncherLayout.actionBarContentHeight)
-            .frame(maxWidth: .infinity, alignment: .center)
-            .padding(.bottom, LauncherMenuMetrics.footerBottomInset)
-            .frame(height: height, alignment: .bottom)
-    }
-}
-
-private extension View {
-    func launcherActionBar(
-        colors: ThemeColors,
-        height: CGFloat = LauncherLayout.actionBarHeight,
-        horizontalPadding: CGFloat = LauncherMenuMetrics.footerHorizontalInset
-    ) -> some View {
-        modifier(LauncherActionBarModifier(colors: colors, height: height, horizontalPadding: horizontalPadding))
-    }
-
-    func launcherPopupPlacement() -> some View {
-        padding(.trailing, LauncherLayout.popupBottomInset)
-            .padding(.bottom, LauncherLayout.popupBottomInset)
-    }
-}
-
 struct LauncherView: View {
     @ObservedObject var viewModel: LauncherViewModel
-    @ObservedObject var spaceManager: SpaceManager
+    @ObservedObject var spaceManager = AppDelegate.shared.spaceManager!
     @Environment(\.colorScheme) var colorScheme
     
     var colors: ThemeColors {
         ThemeColors(isDark: colorScheme == .dark)
     }
-
+    
     var body: some View {
-        VStack(spacing: 0) {
+        ZStack {
+            VStack(spacing: 0) {
                 // Header (Typing Bar)
-                HStack(spacing: 6) {
-                    Button(action: {
-                        if viewModel.activeCommand != nil || viewModel.stagingWindow != nil {
-                            viewModel.handleEscapeKey()
-                        }
-                    }) {
-                        if viewModel.activeCommand == nil && viewModel.stagingWindow == nil {
-                            LauncherMarkView(color: colors.textSecondary)
-                        } else {
-                            Image(systemName: "chevron.left")
-                                .foregroundColor(colors.textSecondary)
-                                .font(.system(size: 20, weight: .medium))
-                                .frame(width: 28, height: 28)
-                        }
-                    }
-                    .buttonStyle(.plain)
-                    .opacity(viewModel.activeCommand == nil && viewModel.stagingWindow == nil ? 0.72 : 1)
+                HStack(spacing: 12) {
+                    Image(systemName: "magnifyingglass")
+                        .foregroundColor(.secondary)
+                        .font(.system(size: 16, weight: .medium))
+                        .frame(width: 28, height: 28)
                     
                     if viewModel.activeCommand?.type == .renameCurrentSpace {
                         SearchTextField(
@@ -173,65 +88,34 @@ struct LauncherView: View {
                             onEscape: {
                                 viewModel.handleEscapeKey()
                             },
-                            onBackspace: {
-                                if viewModel.renameInputText.isEmpty {
-                                    viewModel.handleEscapeKey()
-                                }
-                            },
                             onKeyEquivalent: { _ in false },
                             placeholder: NSLocalizedString("New Space Name...", comment: "")
                         )
-                        .frame(height: 32)
+                        .frame(height: 36)
                     } else {
                         SearchTextField(
                             text: $viewModel.searchQuery,
                             isDark: colors.isDark,
                             isTypingDisabled: viewModel.commandKTargetWindow != nil,
                             onUpArrow: {
-                                if viewModel.isRootActionsPresented {
-                                    viewModel.selectPreviousRootAction()
-                                } else if viewModel.commandKTargetWindow != nil {
+                                if viewModel.commandKTargetWindow != nil {
                                     viewModel.selectPreviousCommandKAction()
-                                } else if viewModel.isRootSpacePickerPresented {
-                                    viewModel.selectedSpaceIndex = max(0, viewModel.selectedSpaceIndex - 1)
-                                } else if viewModel.isBottomBarFocused {
-                                    return
-                                } else if viewModel.stagingWindow != nil {
-                                    viewModel.selectedSpaceIndex = max(0, viewModel.selectedSpaceIndex - 1)
                                 } else {
+                                    viewModel.isKeyboardSelection = true
                                     if viewModel.selectedRowIndex > 0 {
-                                        viewModel.selectKeyboardRow(viewModel.selectedRowIndex - 1)
+                                        viewModel.selectedRowIndex -= 1
                                     }
                                 }
                             },
                             onDownArrow: {
-                                if viewModel.isRootActionsPresented {
-                                    viewModel.selectNextRootAction()
-                                } else if viewModel.commandKTargetWindow != nil {
+                                if viewModel.commandKTargetWindow != nil {
                                     viewModel.selectNextCommandKAction()
-                                } else if viewModel.isRootSpacePickerPresented {
-                                    let count = viewModel.filteredSpaces.count
-                                    if viewModel.selectedSpaceIndex < count - 1 {
-                                        viewModel.selectedSpaceIndex += 1
-                                    }
-                                } else if viewModel.isBottomBarFocused {
-                                    return
-                                } else if viewModel.stagingWindow != nil {
-                                    let count = viewModel.filteredSpaces.count
-                                    if viewModel.selectedSpaceIndex < count - 1 {
-                                        viewModel.selectedSpaceIndex += 1
-                                    }
                                 } else {
+                                    viewModel.isKeyboardSelection = true
                                     if viewModel.selectedRowIndex < viewModel.visibleRowsCount - 1 {
-                                        viewModel.selectKeyboardRow(viewModel.selectedRowIndex + 1)
+                                        viewModel.selectedRowIndex += 1
                                     }
                                 }
-                            },
-                            onCommandUpArrow: {
-                                viewModel.selectPreviousSection()
-                            },
-                            onCommandDownArrow: {
-                                viewModel.selectNextSection()
                             },
                             onLeftArrow: {
                                 if viewModel.commandKTargetWindow != nil {
@@ -259,15 +143,8 @@ struct LauncherView: View {
                                 return false
                             },
                             onEnter: {
-                                if viewModel.isRootActionsPresented {
-                                    viewModel.executeRootAction()
-                                } else if viewModel.commandKTargetWindow != nil {
+                                if viewModel.commandKTargetWindow != nil {
                                     viewModel.executeCommandKAction()
-                                } else if viewModel.isRootSpacePickerPresented {
-                                    viewModel.executeSelectedSpacePickerAction()
-                                } else if viewModel.stagingWindow != nil {
-                                    viewModel.selectedRowIndex = viewModel.selectedSpaceIndex
-                                    viewModel.executeRowAction()
                                 } else if viewModel.isBottomBarFocused {
                                     viewModel.executeBottomBarSpaceAction(isOption: false, isCommand: false)
                                 } else {
@@ -275,22 +152,13 @@ struct LauncherView: View {
                                 }
                             },
                             onCommandEnter: {
-                                if viewModel.isRootActionsPresented {
-                                    viewModel.executeRootAction()
-                                } else if viewModel.commandKTargetWindow != nil {
+                                if viewModel.commandKTargetWindow != nil {
                                     viewModel.executeCommandKAction()
-                                } else if viewModel.isRootSpacePickerPresented {
-                                    viewModel.executeSelectedSpacePickerAction()
-                                } else if viewModel.stagingWindow != nil {
-                                    viewModel.selectedRowIndex = viewModel.selectedSpaceIndex
-                                    viewModel.executeRowAction()
                                 } else if viewModel.isBottomBarFocused {
                                     viewModel.executeBottomBarSpaceAction(isOption: false, isCommand: true)
                                 } else if viewModel.activeCommand?.type == .batchMoveWindows {
                                     viewModel.executeBatchMove()
                                 } else if viewModel.activeCommand?.type == .switchToDesktop || viewModel.activeCommand?.type == .moveWindow {
-                                    viewModel.executeRowAction()
-                                } else if viewModel.activeCommand == nil {
                                     viewModel.executeRowAction()
                                 }
                             },
@@ -301,41 +169,19 @@ struct LauncherView: View {
                                 }
                             },
                             onCommandNumber: { num in
-                                if viewModel.isRootActionsPresented {
-                                    let indices = viewModel.filteredRootActionIndices
-                                    let index = num - 1
-                                    if index >= 0 && index < indices.count {
-                                        viewModel.selectedRootActionIndex = indices[index]
-                                        viewModel.executeRootAction()
-                                    }
-                                } else if viewModel.commandKTargetWindow != nil {
+                                if viewModel.commandKTargetWindow != nil {
                                     let actions = viewModel.filteredCommandKActions
                                     let index = num - 1
                                     if index >= 0 && index < actions.count {
                                         viewModel.commandKSelectedIndex = index
                                         viewModel.executeCommandKAction()
                                     }
-                                } else if viewModel.isRootSpacePickerPresented {
-                                    let index = num - 1
-                                    let count = viewModel.filteredSpaces.count
-                                    if index >= 0 && index < count {
-                                        viewModel.selectedSpaceIndex = index
-                                        viewModel.executeSelectedSpacePickerAction()
-                                    }
-                                } else if viewModel.stagingWindow != nil {
-                                    let index = num - 1
-                                    let count = viewModel.filteredSpaces.count
-                                    if index >= 0 && index < count {
-                                        viewModel.selectedSpaceIndex = index
-                                        viewModel.selectedRowIndex = index
-                                        viewModel.executeRowAction()
-                                    }
                                 } else {
                                     viewModel.executeNthRowAction(num - 1)
                                 }
                             },
                             onTab: {
-                                if viewModel.commandKTargetWindow != nil || viewModel.isRootSpacePickerPresented { return }
+                                if viewModel.commandKTargetWindow != nil { return }
                                 viewModel.handleTabKey()
                             },
                             onEscape: {
@@ -345,20 +191,9 @@ struct LauncherView: View {
                                     viewModel.handleEscapeKey()
                                 }
                             },
-                            onBackspace: {
-                                if viewModel.searchQuery.isEmpty {
-                                    viewModel.handleEscapeKey()
-                                }
-                            },
                             onCommandK: {
                                 if viewModel.commandKTargetWindow != nil {
                                     viewModel.commandKTargetWindow = nil
-                                } else if viewModel.isRootActionsPresented {
-                                    viewModel.isRootActionsPresented = false
-                                } else if viewModel.isRootSpacePickerPresented {
-                                    return
-                                } else if viewModel.activeCommand == nil {
-                                    viewModel.showRootActionsPanel()
                                 } else if (viewModel.activeCommand?.type == .batchMoveWindows || viewModel.activeCommand?.type == .listWindows) && viewModel.stagingWindow == nil {
                                     viewModel.showCommandKPanel()
                                 }
@@ -366,9 +201,9 @@ struct LauncherView: View {
                             onKeyEquivalent: { event in
                                 return self.handleTextFieldKeyEquivalent(event)
                             },
-                            placeholder: searchPlaceholder
+                            placeholder: viewModel.activeCommand == nil ? NSLocalizedString("Search commands...", comment: "") : (viewModel.stagingWindow != nil ? NSLocalizedString("Search target space...", comment: "") : NSLocalizedString("Search items...", comment: ""))
                         )
-                        .frame(height: 32)
+                        .frame(height: 36)
                     }
                     
                     if viewModel.isLoadingData {
@@ -377,12 +212,10 @@ struct LauncherView: View {
                             .frame(width: 20, height: 20)
                     }
                 }
-                .frame(height: 64)
-                .padding(.horizontal, 16)
+                .frame(height: 52)
+                .padding(.horizontal, 18)
                 
-                if viewModel.activeCommand != nil {
-                    Divider()
-                }
+                Divider()
                 
                 // Content area
                 if viewModel.activeCommand?.type == .renameCurrentSpace {
@@ -418,100 +251,31 @@ struct LauncherView: View {
                 } else {
                     ListAreaView(viewModel: viewModel)
                         .frame(maxHeight: .infinity)
-                        .id(viewModel.activeCommand?.id ?? "root")
                 }
                 
-                if viewModel.activeCommand != nil {
-                    Divider()
-                }
+                Divider()
                 
                 // Bottom bar
-                ZStack(alignment: .bottom) {
-                    if viewModel.activeCommand == nil {
-                        SpacesBottomBar(viewModel: viewModel, spaceManager: spaceManager)
-                    } else if viewModel.activeCommand?.type == .batchMoveWindows {
-                        BatchMoveBottomBar(viewModel: viewModel)
-                    } else {
-                        CommandBottomBar(viewModel: viewModel)
-                    }
+                if viewModel.activeCommand == nil {
+                    SpacesBottomBar(viewModel: viewModel, spaceManager: spaceManager)
+                } else if viewModel.activeCommand?.type == .batchMoveWindows {
+                    BatchMoveBottomBar(viewModel: viewModel)
+                } else {
+                    CommandBottomBar(viewModel: viewModel)
                 }
-                .frame(maxWidth: .infinity)
             }
-        .overlay(alignment: .bottomTrailing) {
-            switch viewModel.launcherOverlay {
-            case .commandK(let targetWindow):
+            .blur(radius: viewModel.commandKTargetWindow != nil ? 10 : 0)
+            .animation(.easeInOut(duration: 0.12), value: viewModel.commandKTargetWindow != nil)
+            
+            if let targetWindow = viewModel.commandKTargetWindow {
                 CommandKOverlayView(viewModel: viewModel, window: targetWindow)
-            case .rootActions:
-                RootActionsOverlay(viewModel: viewModel)
-            case .rootSpacePicker, .stagingSpacePicker:
-                SpacePickerOverlay(viewModel: viewModel, spaceManager: spaceManager)
-            case nil:
-                EmptyView()
             }
         }
-        .onChange(of: spaceManager.currentSpaceUUID) { _ in
-            viewModel.selectCurrentTargetSpace()
-        }
-        .onChange(of: viewModel.launcherOverlay) { overlay in
-            guard overlay == nil else { return }
-            DispatchQueue.main.async {
-                NotificationCenter.default.post(name: NSNotification.Name("FocusLauncherTextField"), object: nil)
-            }
-        }
-        .frame(width: LauncherLayout.windowSize.width, height: LauncherLayout.windowSize.height)
-        .opaqueLauncherBackground(cornerRadius: 26, isDark: colors.isDark, borderColor: colors.border)
-    }
-
-    private var searchPlaceholder: String {
-        guard let commandType = viewModel.activeCommand?.type else {
-            return NSLocalizedString("Search for apps and commands...", comment: "")
-        }
-
-        switch commandType {
-        case .listWindows:
-            return NSLocalizedString("Search windows...", comment: "")
-        case .batchMoveWindows:
-            return NSLocalizedString("Search windows...", comment: "")
-        case .switchToDesktop, .moveWindow:
-            return NSLocalizedString("Search target space...", comment: "")
-        default:
-            return viewModel.stagingWindow == nil
-                ? NSLocalizedString("Search items...", comment: "")
-                : NSLocalizedString("Search windows...", comment: "")
-        }
-    }
-
-}
-
-private struct LauncherMarkView: View {
-    let color: Color
-    @Environment(\.colorScheme) private var colorScheme
-
-    var body: some View {
-        Canvas { context, size in
-            let center = CGPoint(x: size.width / 2, y: size.height / 2)
-            let half = min(size.width, size.height) * 0.38
-            var diamond = Path()
-            diamond.move(to: CGPoint(x: center.x, y: center.y - half))
-            diamond.addLine(to: CGPoint(x: center.x + half, y: center.y))
-            diamond.addLine(to: CGPoint(x: center.x, y: center.y + half))
-            diamond.addLine(to: CGPoint(x: center.x - half, y: center.y))
-            diamond.closeSubpath()
-            context.stroke(diamond, with: .color(color), style: StrokeStyle(lineWidth: 2.2, lineJoin: .miter))
-
-            var stripes = Path()
-            for offset in stride(from: -half * 0.55, through: half * 0.55, by: half * 0.36) {
-                stripes.move(to: CGPoint(x: center.x - half * 0.62, y: center.y + offset + half * 0.62))
-                stripes.addLine(to: CGPoint(x: center.x + half * 0.62, y: center.y + offset - half * 0.62))
-            }
-            context.stroke(stripes, with: .color(color), style: StrokeStyle(lineWidth: 2.2, lineCap: .square))
-        }
-        .frame(width: 28, height: 28)
-        .shadow(
-            color: Color.black.opacity(colorScheme == .dark ? 0.30 : 0.18),
-            radius: 4,
-            y: 2
-        )
+        .frame(width: 720, height: 450)
+        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .launcherBackground(cornerRadius: 16, borderColor: colors.border)
+        .shadow(color: Color.black.opacity(colorScheme == .dark ? 0.45 : 0.20), radius: 24, x: 0, y: 12)
+        .padding(60)
     }
 }
 
@@ -527,634 +291,221 @@ struct ListAreaView: View {
         VStack(spacing: 0) {
             if viewModel.activeCommand == nil {
                 // Main command list
-                let sections = viewModel.rootCommandSections
-                let commands = sections.flatMap(\.commands)
+                let commands = viewModel.filteredCommands
                 if commands.isEmpty {
                     EmptyResultsView()
                 } else {
-                    LauncherListScrollView(
-                        targets: commands.enumerated().map { LauncherScrollTarget(index: $0.offset, id: AnyHashable($0.element.id)) },
-                        layoutVersion: viewModel.listLayoutVersion,
-                        scrollToTopRequestVersion: viewModel.scrollToTopRequestVersion,
-                        selectionRevealRequestVersion: viewModel.selectionRevealRequestVersion,
-                        selectedRowIndex: viewModel.selectedRowIndex,
-                        isKeyboardSelection: viewModel.isKeyboardSelection,
-                        isBottomBarFocused: viewModel.isBottomBarFocused
-                    ) {
-                            VStack(alignment: .leading, spacing: 0) {
-                                ForEach(sections) { section in
-                                    if let title = section.title {
-                                        LauncherSectionHeader(
-                                            title: title,
-                                            subtitle: nil,
-                                            topPadding: section.startIndex == 0 ? 4 : 10,
-                                            bottomPadding: 2,
-                                            colors: colors
-                                        )
-                                    }
-                                    ForEach(Array(section.commands.enumerated()), id: \.element.id) { localIndex, cmd in
-                                        let index = section.startIndex + localIndex
-                                        let isSelected = !viewModel.isBottomBarFocused && viewModel.selectedRowIndex == index
-                                        LauncherListRow(
-                                            index: index,
-                                            id: AnyHashable(cmd.id),
-                                            layoutVersion: viewModel.listLayoutVersion,
-                                            isSelected: isSelected,
-                                            action: {
-                                                viewModel.selectPointerRow(index)
-                                                viewModel.executeRowAction()
-                                            }
-                                        ) {
-                                            CommandRowView(command: cmd, isSelected: isSelected, isRoot: true, shortcutText: viewModel.showCommandNumbers && viewModel.commandKTargetWindow == nil && index < 9 ? "⌘\(index + 1)" : nil)
+                    ScrollViewReader { proxy in
+                        ScrollView {
+                            VStack(spacing: 4) {
+                                ForEach(0..<commands.count, id: \.self) { i in
+                                    let cmd = commands[i]
+                                    let isSelected = !viewModel.isBottomBarFocused && viewModel.selectedRowIndex == i
+                                    CommandRowView(command: cmd, isSelected: isSelected, shortcutText: viewModel.showCommandNumbers && viewModel.commandKTargetWindow == nil && i < 9 ? "⌘\(i + 1)" : nil)
+                                        .contentShape(Rectangle())
+                                        .onTapGesture {
+                                            viewModel.isKeyboardSelection = true
+                                            viewModel.selectedRowIndex = i
+                                            viewModel.executeRowAction()
                                         }
-                                    }
+                                        .id(i)
                                 }
                             }
+                            .padding(.horizontal, 10)
+                            .padding(.vertical, 8)
+                        }
+                        .onChange(of: viewModel.selectedRowIndex) { index in
+                            if viewModel.isKeyboardSelection {
+                                withAnimation(.easeInOut(duration: 0.12)) {
+                                    proxy.scrollTo(index, anchor: .center)
+                                }
+                            }
+                        }
                     }
                 }
             } else {
-                switch viewModel.activeCommand?.type {
+                if viewModel.stagingWindow != nil {
+                    // Staging target space selection
+                    let spaces = viewModel.filteredSpaces
+                    if spaces.isEmpty {
+                        EmptyResultsView()
+                    } else {
+                        ScrollViewReader { proxy in
+                            ScrollView {
+                                VStack(spacing: 4) {
+                                    ForEach(0..<spaces.count, id: \.self) { i in
+                                        let space = spaces[i]
+                                        let isSelected = !viewModel.isBottomBarFocused && viewModel.selectedRowIndex == i
+                                        SpaceRowView(space: space, isSelected: isSelected, isCurrent: AppDelegate.shared.spaceManager?.currentSpaceUUID == space.id, shortcutText: viewModel.showCommandNumbers && viewModel.commandKTargetWindow == nil && i < 9 ? "⌘\(i + 1)" : nil)
+                                            .contentShape(Rectangle())
+                                            .onTapGesture {
+                                                viewModel.isKeyboardSelection = true
+                                                viewModel.selectedRowIndex = i
+                                                viewModel.executeRowAction()
+                                            }
+                                            .id(i)
+                                    }
+                                }
+                                .padding(.horizontal, 10)
+                                .padding(.vertical, 8)
+                            }
+                            .onChange(of: viewModel.selectedRowIndex) { index in
+                                if viewModel.isKeyboardSelection {
+                                    withAnimation(.easeInOut(duration: 0.12)) {
+                                        proxy.scrollTo(index, anchor: .center)
+                                    }
+                                }
+                            }
+                            .onAppear {
+                                proxy.scrollTo(viewModel.selectedRowIndex, anchor: .center)
+                            }
+                        }
+                    }
+                } else {
+                    switch viewModel.activeCommand?.type {
                     case .switchToDesktop, .moveWindow:
                         let spaces = viewModel.filteredSpaces
                         if spaces.isEmpty {
                             EmptyResultsView()
                         } else {
-                            LauncherListScrollView(
-                                targets: spaces.enumerated().map { LauncherScrollTarget(index: $0.offset, id: AnyHashable($0.element.id)) },
-                                layoutVersion: viewModel.listLayoutVersion,
-                                scrollToTopRequestVersion: viewModel.scrollToTopRequestVersion,
-                                selectionRevealRequestVersion: viewModel.selectionRevealRequestVersion,
-                                selectedRowIndex: viewModel.selectedRowIndex,
-                                isKeyboardSelection: viewModel.isKeyboardSelection,
-                                isBottomBarFocused: viewModel.isBottomBarFocused
-                            ) {
-                                    VStack(spacing: 0) {
-                                        ForEach(Array(spaces.enumerated()), id: \.element.id) { i, space in
+                            ScrollViewReader { proxy in
+                                ScrollView {
+                                    VStack(spacing: 4) {
+                                        ForEach(0..<spaces.count, id: \.self) { i in
+                                            let space = spaces[i]
                                             let isSelected = !viewModel.isBottomBarFocused && viewModel.selectedRowIndex == i
-                                            LauncherListRow(
-                                                index: i,
-                                                id: AnyHashable(space.id),
-                                                layoutVersion: viewModel.listLayoutVersion,
-                                                isSelected: isSelected,
-                                                action: {
-                                                    viewModel.selectPointerRow(i)
+                                            SpaceRowView(space: space, isSelected: isSelected, isCurrent: AppDelegate.shared.spaceManager?.currentSpaceUUID == space.id, shortcutText: viewModel.showCommandNumbers && viewModel.commandKTargetWindow == nil && i < 9 ? "⌘\(i + 1)" : nil)
+                                                .contentShape(Rectangle())
+                                                .onTapGesture {
+                                                    viewModel.isKeyboardSelection = true
+                                                    viewModel.selectedRowIndex = i
                                                     viewModel.executeRowAction()
                                                 }
-                                            ) {
-                                                SpaceRowView(space: space, isSelected: isSelected, isCurrent: AppDelegate.shared.spaceManager?.currentSpaceUUID == space.id, shortcutText: i < 9 ? "⌘\(i + 1)" : nil)
-                                            }
+                                                .id(i)
                                         }
                                     }
+                                    .padding(.horizontal, 10)
+                                    .padding(.vertical, 8)
+                                }
+                                .onChange(of: viewModel.selectedRowIndex) { index in
+                                    if viewModel.isKeyboardSelection {
+                                        withAnimation(.easeInOut(duration: 0.12)) {
+                                            proxy.scrollTo(index, anchor: .center)
+                                        }
+                                    }
+                                }
+                                .onAppear {
+                                    proxy.scrollTo(viewModel.selectedRowIndex, anchor: .center)
+                                }
                             }
                         }
                         
                     case .listWindows:
                         let sections = viewModel.listWindowsSections
                         if sections.isEmpty {
-                            EmptyView()
+                            EmptyResultsView()
                         } else {
-                            LauncherListScrollView(
-                                targets: sections.flatMap({ $0.items }).map { LauncherScrollTarget(index: $0.index, id: AnyHashable($0.id)) },
-                                layoutVersion: viewModel.listLayoutVersion,
-                                scrollToTopRequestVersion: viewModel.scrollToTopRequestVersion,
-                                selectionRevealRequestVersion: viewModel.selectionRevealRequestVersion,
-                                selectedRowIndex: viewModel.selectedRowIndex,
-                                isKeyboardSelection: viewModel.isKeyboardSelection,
-                                isBottomBarFocused: viewModel.isBottomBarFocused
-                            ) {
-                                    VStack(alignment: .leading, spacing: 0) {
-                                        ForEach(Array(sections.enumerated()), id: \.element.id) { sIdx, section in
+                            ScrollViewReader { proxy in
+                                ScrollView {
+                                    VStack(alignment: .leading, spacing: 4) {
+                                        ForEach(0..<sections.count, id: \.self) { sIdx in
+                                            let section = sections[sIdx]
                                             ListSectionHeader(title: section.title, subtitle: section.subtitle, isFirst: sIdx == 0)
                                             
                                             ForEach(section.items) { item in
                                                 let isSelected = !viewModel.isBottomBarFocused && viewModel.selectedRowIndex == item.index
-                                                LauncherListRow(
-                                                    index: item.index,
-                                                    id: AnyHashable(item.id),
-                                                    layoutVersion: viewModel.listLayoutVersion,
+                                                WindowRowView(
+                                                    window: item.window,
                                                     isSelected: isSelected,
-                                                    action: {
-                                                        viewModel.selectPointerRow(item.index)
-                                                        viewModel.executeRowAction()
-                                                    }
-                                                ) {
-                                                    WindowRowView(
-                                                        window: item.window,
-                                                        isSelected: isSelected,
-                                                        shortcutText: viewModel.showCommandNumbers && viewModel.commandKTargetWindow == nil && item.index < 9 ? "⌘\(item.index + 1)" : nil
-                                                    )
+                                                    shortcutText: viewModel.showCommandNumbers && viewModel.commandKTargetWindow == nil && item.index < 9 ? "⌘\(item.index + 1)" : nil
+                                                )
+                                                .contentShape(Rectangle())
+                                                .onTapGesture {
+                                                    viewModel.isKeyboardSelection = true
+                                                    viewModel.selectedRowIndex = item.index
+                                                    viewModel.executeRowAction()
                                                 }
+                                                .id(item.index)
                                             }
                                         }
                                     }
+                                    .padding(.horizontal, 10)
+                                    .padding(.vertical, 8)
+                                }
+                                .onChange(of: viewModel.selectedRowIndex) { index in
+                                    if viewModel.isKeyboardSelection {
+                                        withAnimation(.easeInOut(duration: 0.12)) {
+                                            proxy.scrollTo(index, anchor: .center)
+                                        }
+                                    }
+                                }
+                                .onAppear {
+                                    proxy.scrollTo(viewModel.selectedRowIndex, anchor: .center)
+                                }
                             }
                         }
                         
                     case .batchMoveWindows:
                         let sections = viewModel.batchMoveSections
                         if sections.isEmpty {
-                            EmptyView()
+                            EmptyResultsView()
                         } else {
-                            LauncherListScrollView(
-                                targets: sections.flatMap({ $0.items }).map { LauncherScrollTarget(index: $0.index, id: AnyHashable($0.id)) },
-                                layoutVersion: viewModel.listLayoutVersion,
-                                scrollToTopRequestVersion: viewModel.scrollToTopRequestVersion,
-                                selectionRevealRequestVersion: viewModel.selectionRevealRequestVersion,
-                                selectedRowIndex: viewModel.selectedRowIndex,
-                                isKeyboardSelection: viewModel.isKeyboardSelection,
-                                isBottomBarFocused: viewModel.isBottomBarFocused
-                            ) {
-                                    VStack(alignment: .leading, spacing: 0) {
-                                        ForEach(Array(sections.enumerated()), id: \.element.id) { sIdx, section in
+                            ScrollViewReader { proxy in
+                                ScrollView {
+                                    VStack(alignment: .leading, spacing: 4) {
+                                        ForEach(0..<sections.count, id: \.self) { sIdx in
+                                            let section = sections[sIdx]
                                             ListSectionHeader(title: section.title, subtitle: section.subtitle, isFirst: sIdx == 0)
                                             
                                             ForEach(section.items) { item in
                                                 let isSelected = !viewModel.isBottomBarFocused && viewModel.selectedRowIndex == item.index
-                                                let shortcutText = viewModel.showCommandNumbers && viewModel.commandKTargetWindow == nil && item.index < 9 ? "⌘\(item.index + 1)" : nil
-
-                                                LauncherListRow(
-                                                    index: item.index,
-                                                    id: AnyHashable(item.id),
-                                                    layoutVersion: viewModel.listLayoutVersion,
-                                                    isSelected: isSelected,
-                                                    action: {
-                                                        viewModel.selectPointerRow(item.index)
-                                                        viewModel.executeRowAction()
-                                                    }
-                                                ) {
-                                                    WindowBatchRowView(
-                                                        window: item.window,
-                                                        isSelected: isSelected,
-                                                        isStaged: item.isStaged,
-                                                        stagedActionText: item.stagedActionText,
-                                                        shortcutText: shortcutText
-                                                    )
+                                                
+                                                switch item {
+                                                case .staged(let move, _):
+                                                    WindowBatchRowView(window: move.window, isSelected: isSelected, isStaged: true, stagedActionText: move.actionType.description, shortcutText: viewModel.showCommandNumbers && viewModel.commandKTargetWindow == nil && item.index < 9 ? "⌘\(item.index + 1)" : nil)
+                                                        .contentShape(Rectangle())
+                                                        .onTapGesture {
+                                                            viewModel.isKeyboardSelection = true
+                                                            viewModel.selectedRowIndex = item.index
+                                                            viewModel.executeRowAction()
+                                                        }
+                                                        .id(item.index)
+                                                        
+                                                case .unstaged(let window, _):
+                                                    WindowBatchRowView(window: window, isSelected: isSelected, isStaged: false, stagedActionText: "", shortcutText: viewModel.showCommandNumbers && viewModel.commandKTargetWindow == nil && item.index < 9 ? "⌘\(item.index + 1)" : nil)
+                                                        .contentShape(Rectangle())
+                                                        .onTapGesture {
+                                                            viewModel.isKeyboardSelection = true
+                                                            viewModel.selectedRowIndex = item.index
+                                                            viewModel.executeRowAction()
+                                                        }
+                                                        .id(item.index)
                                                 }
                                             }
                                         }
                                     }
+                                    .padding(.horizontal, 10)
+                                    .padding(.vertical, 8)
+                                }
+                                .onChange(of: viewModel.selectedRowIndex) { index in
+                                    if viewModel.isKeyboardSelection {
+                                        withAnimation(.easeInOut(duration: 0.12)) {
+                                            proxy.scrollTo(index, anchor: .center)
+                                        }
+                                    }
+                                }
+                                .onAppear {
+                                    DispatchQueue.main.async {
+                                        proxy.scrollTo(viewModel.selectedRowIndex, anchor: .center)
+                                    }
+                                }
                             }
                         }
                         
-                default:
-                    EmptyResultsView()
-                }
-            }
-        }
-        .onAppear {
-            let isTargetSpaceList = viewModel.activeCommand?.type == .switchToDesktop || viewModel.activeCommand?.type == .moveWindow
-            guard isTargetSpaceList else { return }
-            // SpaceManager can finish reconciling the current UUID after the target list appears.
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-                viewModel.selectCurrentTargetSpace()
-            }
-        }
-        .onChange(of: viewModel.currentSpaces) { _ in
-            viewModel.selectCurrentTargetSpace()
-        }
-    }
-
-}
-
-private struct LauncherScrollTarget: Equatable {
-    let index: Int
-    let id: AnyHashable
-}
-
-private struct LauncherListRow<Content: View>: View {
-    let index: Int
-    let id: AnyHashable
-    let layoutVersion: Int
-    let isSelected: Bool
-    let action: () -> Void
-    private let content: Content
-    @Environment(\.colorScheme) private var colorScheme
-
-    init(
-        index: Int,
-        id: AnyHashable,
-        layoutVersion: Int,
-        isSelected: Bool,
-        action: @escaping () -> Void,
-        @ViewBuilder content: () -> Content
-    ) {
-        self.index = index
-        self.id = id
-        self.layoutVersion = layoutVersion
-        self.isSelected = isSelected
-        self.action = action
-        self.content = content()
-    }
-
-    var body: some View {
-        Button(action: action) {
-            LauncherSelectableRow(
-                isSelected: isSelected,
-                colors: ThemeColors(isDark: colorScheme == .dark)
-            ) {
-                content
-            }
-        }
-        .buttonStyle(.plain)
-        .focusable(false)
-        .launcherRowVisibility(index: index, layoutVersion: layoutVersion)
-        .id(id)
-    }
-}
-
-private struct LauncherListScrollView<Content: View>: View {
-    let targets: [LauncherScrollTarget]
-    let layoutVersion: Int
-    let scrollToTopRequestVersion: Int
-    let selectionRevealRequestVersion: Int
-    let selectedRowIndex: Int
-    let isKeyboardSelection: Bool
-    let isBottomBarFocused: Bool
-    private let content: Content
-    @StateObject private var scrollCoordinator = LauncherScrollCoordinator()
-
-    init(
-        targets: [LauncherScrollTarget],
-        layoutVersion: Int,
-        scrollToTopRequestVersion: Int,
-        selectionRevealRequestVersion: Int,
-        selectedRowIndex: Int,
-        isKeyboardSelection: Bool,
-        isBottomBarFocused: Bool,
-        @ViewBuilder content: () -> Content
-    ) {
-        self.targets = targets
-        self.layoutVersion = layoutVersion
-        self.scrollToTopRequestVersion = scrollToTopRequestVersion
-        self.selectionRevealRequestVersion = selectionRevealRequestVersion
-        self.selectedRowIndex = selectedRowIndex
-        self.isKeyboardSelection = isKeyboardSelection
-        self.isBottomBarFocused = isBottomBarFocused
-        self.content = content()
-    }
-
-    var body: some View {
-        ZStack {
-            ScrollViewReader { proxy in
-                ScrollView(showsIndicators: false) {
-                    content
-                        .padding(.vertical, LauncherMenuMetrics.listVerticalInset)
-                }
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-                .background {
-                    GeometryReader { geometry in
-                        Color.clear.preference(
-                            key: LauncherListGeometryPreferenceKey.self,
-                            value: LauncherListGeometrySnapshot(
-                                viewport: geometry.frame(in: .global)
-                            )
-                        )
+                    default:
+                        EmptyResultsView()
                     }
                 }
-                .focusable(false)
-                .transaction { transaction in
-                    transaction.animation = nil
-                }
-                .onChange(of: scrollToTopRequestVersion) { _ in
-                    DispatchQueue.main.async {
-                        requestScrollToTop(proxy: proxy)
-                    }
-                }
-                .onChange(of: selectedRowIndex) { _ in
-                    scrollCoordinator.cancelPending()
-                }
-                .onChange(of: selectionRevealRequestVersion) { _ in
-                    guard isKeyboardSelection, !isBottomBarFocused else { return }
-                    let requestedIndex = selectedRowIndex
-                    DispatchQueue.main.async {
-                        guard isKeyboardSelection,
-                              !isBottomBarFocused,
-                              selectedRowIndex == requestedIndex else { return }
-                        requestScroll(to: requestedIndex, proxy: proxy)
-                    }
-                }
-                .onChange(of: isKeyboardSelection) { isKeyboardSelection in
-                    if !isKeyboardSelection {
-                        scrollCoordinator.cancelPending()
-                    }
-                }
-                .onChange(of: isBottomBarFocused) { isFocused in
-                    if isFocused {
-                        scrollCoordinator.cancelPending()
-                    }
-                }
-                .onChange(of: layoutVersion) { _ in
-                    scrollCoordinator.invalidateGeometry()
-                }
-            }
-        }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .onPreferenceChange(LauncherListGeometryPreferenceKey.self) { geometry in
-            scrollCoordinator.update(geometry)
-        }
-    }
-
-    private func requestScroll(to index: Int, proxy: ScrollViewProxy) {
-        guard let target = targets.first(where: { $0.index == index }) else { return }
-        scrollCoordinator.request(
-            index: target.index,
-            layoutVersion: layoutVersion,
-            scrollToSelection: { anchor in
-                // Reveal only the edge that clipped the selected row. The
-                // coordinator has already rejected fully visible rows.
-                withTransaction(Transaction(animation: nil)) {
-                    proxy.scrollTo(target.id, anchor: anchor)
-                }
-            }
-        )
-    }
-
-    private func requestScrollToTop(proxy: ScrollViewProxy) {
-        guard let target = targets.min(by: { $0.index < $1.index }) else { return }
-        scrollCoordinator.cancelPending()
-        withTransaction(Transaction(animation: nil)) {
-            proxy.scrollTo(target.id, anchor: .top)
-        }
-    }
-}
-
-private enum LauncherScrollPolicy {
-    static let viewportEdgeTolerance: CGFloat = 1
-
-    static func revealAnchor(for row: CGRect, in viewport: CGRect) -> UnitPoint? {
-        guard !viewport.isEmpty else { return nil }
-        let tolerance = viewportEdgeTolerance
-        // Keep the current offset while any part of the selected row remains
-        // visible. This prevents a middle selection from moving the list just
-        // because its edge crossed the viewport by a few pixels.
-        if row.maxY <= viewport.minY - tolerance {
-            return .top
-        }
-        if row.minY >= viewport.maxY + tolerance {
-            return .bottom
-        }
-        return nil
-    }
-}
-
-@MainActor
-private final class LauncherScrollCoordinator: ObservableObject {
-    private struct Request {
-        let index: Int
-        let layoutVersion: Int
-        let scrollToSelection: (UnitPoint) -> Void
-    }
-
-    private var rowFrames: [Int: CGRect] = [:]
-    private var currentLayoutVersion: Int?
-    private var viewport: CGRect = .zero
-    private var pendingRequest: Request?
-    private var requestGeneration = 0
-    private var geometryRevision = 0
-
-    func update(_ geometry: LauncherListGeometrySnapshot) {
-        guard rowFrames != geometry.frames ||
-              currentLayoutVersion != geometry.layoutVersion ||
-              viewport != geometry.viewport else {
-            resolvePendingRequest()
-            return
-        }
-        rowFrames = geometry.frames
-        currentLayoutVersion = geometry.layoutVersion
-        viewport = geometry.viewport
-        geometryRevision &+= 1
-        resolvePendingRequest()
-    }
-
-    func clearRows() {
-        rowFrames = [:]
-        currentLayoutVersion = nil
-        pendingRequest = nil
-        requestGeneration &+= 1
-        geometryRevision &+= 1
-    }
-
-    func invalidateGeometry() {
-        rowFrames = [:]
-        currentLayoutVersion = nil
-        viewport = .zero
-        pendingRequest = nil
-        requestGeneration &+= 1
-        geometryRevision &+= 1
-    }
-
-    func reset() {
-        clearRows()
-        pendingRequest = nil
-    }
-
-    func cancelPending() {
-        pendingRequest = nil
-        requestGeneration &+= 1
-    }
-
-    func request(index: Int, layoutVersion: Int, scrollToSelection: @escaping (UnitPoint) -> Void) {
-        requestGeneration &+= 1
-        pendingRequest = Request(
-            index: index,
-            layoutVersion: layoutVersion,
-            scrollToSelection: scrollToSelection
-        )
-        DispatchQueue.main.async { [weak self] in
-            self?.resolvePendingRequest()
-        }
-    }
-
-    private func resolvePendingRequest() {
-        guard let request = pendingRequest,
-              currentLayoutVersion == request.layoutVersion,
-              let frame = rowFrames[request.index],
-              !viewport.isEmpty else {
-            return
-        }
-
-        guard let anchor = LauncherScrollPolicy.revealAnchor(for: frame, in: viewport) else {
-            pendingRequest = nil
-            return
-        }
-        let generation = requestGeneration
-        let revision = geometryRevision
-        DispatchQueue.main.async { [weak self] in
-            guard let self, self.requestGeneration == generation else { return }
-            guard self.geometryRevision == revision else {
-                self.resolvePendingRequest()
-                return
-            }
-            guard let pendingRequest = self.pendingRequest,
-                  pendingRequest.index == request.index,
-                  pendingRequest.layoutVersion == request.layoutVersion else {
-                return
-            }
-            self.pendingRequest = nil
-            request.scrollToSelection(anchor)
-        }
-    }
-}
-
-@MainActor
-private final class LauncherHorizontalScrollCoordinator: ObservableObject {
-    private struct Request {
-        let id: String
-        let scrollToSelection: () -> Void
-    }
-
-    private var itemFrames: [String: CGRect] = [:]
-    private var viewport: CGRect = .zero
-    private var pendingRequest: Request?
-    private var requestGeneration = 0
-    private var geometryRevision = 0
-    private let viewportEdgeTolerance: CGFloat = 1
-
-    func update(_ geometry: LauncherSpaceBarGeometrySnapshot) {
-        guard itemFrames != geometry.frames || viewport != geometry.viewport else {
-            resolvePendingRequest()
-            return
-        }
-        itemFrames = geometry.frames
-        viewport = geometry.viewport
-        geometryRevision &+= 1
-        resolvePendingRequest()
-    }
-
-    func reset() {
-        itemFrames = [:]
-        viewport = .zero
-        pendingRequest = nil
-        requestGeneration &+= 1
-        geometryRevision &+= 1
-    }
-
-    func request(id: String, scrollToSelection: @escaping () -> Void) {
-        requestGeneration &+= 1
-        pendingRequest = Request(
-            id: id,
-            scrollToSelection: scrollToSelection
-        )
-        DispatchQueue.main.async { [weak self] in
-            self?.resolvePendingRequest()
-        }
-    }
-
-    private func resolvePendingRequest() {
-        guard let request = pendingRequest,
-              let frame = itemFrames[request.id],
-              !viewport.isEmpty else {
-            return
-        }
-
-        let shouldScroll: Bool
-        if frame.maxX <= viewport.minX - viewportEdgeTolerance {
-            shouldScroll = true
-        } else if frame.minX >= viewport.maxX + viewportEdgeTolerance {
-            shouldScroll = true
-        } else {
-            shouldScroll = false
-        }
-
-        guard shouldScroll else {
-            pendingRequest = nil
-            return
-        }
-        let generation = requestGeneration
-        let revision = geometryRevision
-        DispatchQueue.main.async { [weak self] in
-            guard let self, self.requestGeneration == generation else { return }
-            guard self.geometryRevision == revision else {
-                self.resolvePendingRequest()
-                return
-            }
-            guard let pendingRequest = self.pendingRequest,
-                  pendingRequest.id == request.id else {
-                return
-            }
-            self.pendingRequest = nil
-            request.scrollToSelection()
-        }
-    }
-}
-
-private struct LauncherListGeometryPreferenceKey: PreferenceKey {
-    static let defaultValue = LauncherListGeometrySnapshot()
-
-    static func reduce(value: inout LauncherListGeometrySnapshot, nextValue: () -> LauncherListGeometrySnapshot) {
-        let next = nextValue()
-        if !next.frames.isEmpty {
-            if value.frames.isEmpty || next.layoutVersion != value.layoutVersion {
-                value.frames = next.frames
-                value.layoutVersion = next.layoutVersion
-            } else {
-                value.frames.merge(next.frames, uniquingKeysWith: { _, latest in latest })
-            }
-        }
-        if !next.viewport.isEmpty {
-            value.viewport = next.viewport
-        }
-    }
-}
-
-private struct LauncherListGeometrySnapshot: Equatable {
-    var frames: [Int: CGRect] = [:]
-    var layoutVersion: Int = 0
-    var viewport: CGRect = .zero
-}
-
-private struct LauncherSpaceBarGeometryPreferenceKey: PreferenceKey {
-    static let defaultValue = LauncherSpaceBarGeometrySnapshot()
-
-    static func reduce(value: inout LauncherSpaceBarGeometrySnapshot, nextValue: () -> LauncherSpaceBarGeometrySnapshot) {
-        let next = nextValue()
-        value.frames.merge(next.frames, uniquingKeysWith: { _, latest in latest })
-        if !next.viewport.isEmpty {
-            value.viewport = next.viewport
-        }
-    }
-}
-
-private struct LauncherSpaceBarGeometrySnapshot: Equatable {
-    var frames: [String: CGRect] = [:]
-    var viewport: CGRect = .zero
-}
-
-private extension View {
-    func launcherRowVisibility(index: Int, layoutVersion: Int) -> some View {
-        background {
-            GeometryReader { geometry in
-                Color.clear.preference(
-                    key: LauncherListGeometryPreferenceKey.self,
-                    value: LauncherListGeometrySnapshot(
-                        frames: [index: geometry.frame(in: .global)],
-                        layoutVersion: layoutVersion
-                    )
-                )
-            }
-        }
-    }
-
-    func launcherSpaceBarItemVisibility(id: String) -> some View {
-        background {
-            GeometryReader { geometry in
-                Color.clear.preference(
-                    key: LauncherSpaceBarGeometryPreferenceKey.self,
-                    value: LauncherSpaceBarGeometrySnapshot(
-                        frames: [id: geometry.frame(in: .global)]
-                    )
-                )
-            }
-        }
-    }
-
-    func launcherSpaceBarViewport() -> some View {
-        background {
-            GeometryReader { geometry in
-                Color.clear.preference(
-                    key: LauncherSpaceBarGeometryPreferenceKey.self,
-                    value: LauncherSpaceBarGeometrySnapshot(viewport: geometry.frame(in: .global))
-                )
             }
         }
     }
@@ -1163,7 +514,6 @@ private extension View {
 struct KeycapView: View {
     let text: LocalizedStringKey
     let isSelected: Bool
-    var isKeyboardKey: Bool = false
     var isGreenRow: Bool = false
     var verticalPadding: CGFloat = 3
     var horizontalPadding: CGFloat = 6
@@ -1181,106 +531,21 @@ struct KeycapView: View {
             .foregroundColor(isSelected ? (isSelectedWhiteStyle ? .white : colors.textPrimary) : colors.textSecondary)
             .padding(.horizontal, horizontalPadding)
             .padding(.vertical, verticalPadding)
-            .frame(minWidth: isKeyboardKey ? 24 : nil, minHeight: isKeyboardKey ? 24 : nil)
-            .background {
-                if isKeyboardKey {
-                    RoundedRectangle(cornerRadius: 5, style: .continuous)
-                        .fill(.ultraThinMaterial)
-                        .overlay {
-                            RoundedRectangle(cornerRadius: 5, style: .continuous)
-                                .fill(
-                                    isSelected
-                                        ? (isSelectedWhiteStyle ? Color.white.opacity(0.20) : Color.primary.opacity(0.12))
-                                        : colors.badgeBg.opacity(0.5)
-                                )
-                        }
-                } else {
-                    RoundedRectangle(cornerRadius: 5, style: .continuous)
-                        .fill(isSelected ? Color.primary.opacity(0.12) : colors.badgeBg)
-                }
-            }
-            .clipShape(RoundedRectangle(cornerRadius: 5, style: .continuous))
-    }
-}
-
-private struct FloatingHotkeyHint: View {
-    let text: LocalizedStringKey
-    @Environment(\.colorScheme) private var colorScheme
-
-    private var badgeBackground: Color {
-        colorScheme == .dark
-            ? Color(red: 0.28, green: 0.29, blue: 0.31)
-            : Color(red: 0.80, green: 0.81, blue: 0.82)
-    }
-
-    var body: some View {
-        Text(text)
-            .font(.system(size: 12, weight: .medium))
-            .foregroundColor(.secondary)
-            .lineLimit(1)
-            .fixedSize()
-            .padding(.horizontal, 6)
-            .frame(minWidth: 23)
-            .frame(height: LauncherMenuMetrics.hotkeyBadgeHeight)
             .background(
-                badgeBackground,
-                in: RoundedRectangle(
-                    cornerRadius: LauncherMenuMetrics.hotkeyBadgeCornerRadius,
-                    style: .continuous
-                )
+                isSelected
+                    ? (isSelectedWhiteStyle ? Color.white.opacity(0.20) : Color.primary.opacity(0.12))
+                    : colors.badgeBg
             )
-            .shadow(
-                color: Color.black.opacity(colorScheme == .dark ? 0.24 : 0.16),
-                radius: 8,
-                y: 3
-            )
-    }
-}
-
-private struct LauncherRowAccessory<Content: View>: View {
-    let shortcutText: String?
-    let isSelected: Bool
-    @ViewBuilder let content: () -> Content
-
-    var body: some View {
-        HStack(spacing: LauncherMenuMetrics.accessoryColumnSpacing) {
-            content()
-                .frame(maxWidth: .infinity, alignment: .trailing)
-                .modifier(HotkeyAccessoryModifier(isActive: shortcutText != nil && !isSelected))
-
-            if let shortcutText {
-                FloatingHotkeyHint(
-                    text: LocalizedStringKey(shortcutText)
-                )
-                    .frame(width: LauncherMenuMetrics.hotkeyColumnWidth, alignment: .trailing)
-            }
-        }
-        .frame(width: LauncherMenuMetrics.rowAccessoryWidth, alignment: .trailing)
-    }
-}
-
-private struct HotkeyAccessoryModifier: ViewModifier {
-    let isActive: Bool
-
-    func body(content: Content) -> some View {
-        content
-            .blur(radius: isActive ? 0.8 : 0)
-            .opacity(isActive ? 0.58 : 1)
-            .mask {
-                if isActive {
-                    LinearGradient(
-                        stops: [
-                            .init(color: .black, location: 0),
-                            .init(color: .black, location: 0.70),
-                            .init(color: .clear, location: 1)
-                        ],
-                        startPoint: .leading,
-                        endPoint: .trailing
+            .cornerRadius(5)
+            .overlay(
+                RoundedRectangle(cornerRadius: 5)
+                    .stroke(
+                        isSelected
+                            ? (isSelectedWhiteStyle ? Color.white.opacity(0.30) : Color.primary.opacity(0.18))
+                            : colors.badgeBorder,
+                        lineWidth: 1
                     )
-                } else {
-                    Color.black
-                }
-            }
+            )
     }
 }
 
@@ -1310,73 +575,12 @@ struct EmptyResultsView: View {
     }
 }
 
-private struct LauncherRowSurface: ViewModifier {
-    let isSelected: Bool
-    let isHovered: Bool
-    let colors: ThemeColors
-    let verticalPadding: CGFloat
-
-    func body(content: Content) -> some View {
-        ZStack {
-            RoundedRectangle(cornerRadius: LauncherMenuMetrics.rowCornerRadius, style: .continuous)
-                .fill(surfaceColor)
-
-            content
-                .padding(.horizontal, LauncherMenuMetrics.rowContentHorizontalPadding)
-                .padding(.vertical, verticalPadding)
-                .frame(
-                    maxWidth: .infinity,
-                    minHeight: LauncherMenuMetrics.rowHeight,
-                    alignment: .leading
-                )
-        }
-        .frame(maxWidth: .infinity, minHeight: LauncherMenuMetrics.rowHeight)
-        .padding(.horizontal, LauncherMenuMetrics.rowSurfaceInset)
-    }
-
-    private var surfaceColor: Color {
-        if isSelected {
-            return Color.primary.opacity(0.10)
-        }
-        return isHovered ? colors.rowHover : .clear
-    }
-}
-
-private struct LauncherSelectableRow<Content: View>: View {
-    let isSelected: Bool
-    let colors: ThemeColors
-    private let content: Content
-    @State private var isHovered = false
-
-    init(
-        isSelected: Bool,
-        colors: ThemeColors,
-        @ViewBuilder content: () -> Content
-    ) {
-        self.isSelected = isSelected
-        self.colors = colors
-        self.content = content()
-    }
-
-    var body: some View {
-        content
-            .modifier(LauncherRowSurface(
-                isSelected: isSelected,
-                isHovered: isHovered,
-                colors: colors,
-                verticalPadding: 8
-            ))
-            .contentShape(Rectangle())
-        .onHover { isHovered = $0 }
-    }
-}
-
 struct CommandRowView: View {
     let command: LauncherCommand
     let isSelected: Bool
-    var isRoot: Bool = false
     var shortcutText: String? = nil
     @Environment(\.colorScheme) var colorScheme
+    @State private var isHovered = false
     
     // Observers for settings changes to trigger auto-redraw of status labels
     @AppStorage("kShowActiveLabels") private var showActiveLabels = true
@@ -1401,100 +605,75 @@ struct CommandRowView: View {
     }
     
     var body: some View {
-        if isRoot {
-            rootRow
-        } else {
-            detailRow
-        }
-    }
-
-    private var rootRow: some View {
-        HStack(spacing: 8) {
-            commandIcon
-
-            Text(command.title)
-                .font(.system(size: LauncherMenuMetrics.rowTitleFontSize, weight: .semibold))
+        HStack(spacing: 12) {
+            Image(systemName: command.iconName)
+                .font(.system(size: 17, weight: .medium))
                 .foregroundColor(colors.textPrimary)
-                .lineLimit(1)
-                .layoutPriority(2)
-
-            Text(command.subtitle)
-                .font(.system(size: LauncherMenuMetrics.rowSubtitleFontSize))
-                .foregroundColor(colors.textSecondary)
-                .lineLimit(1)
-                .truncationMode(.tail)
-                .layoutPriority(1)
-
-            Spacer(minLength: 4)
-
-            LauncherRowAccessory(shortcutText: shortcutText, isSelected: isSelected) {
-                if let statusText = toggleStatus {
-                    statusBadge(statusText)
-                } else {
-                    Text(verbatim: String(localized: "Command"))
-                        .font(.system(size: 14, weight: .medium))
-                        .foregroundColor(isSelected ? colors.textPrimary : colors.textSecondary)
-                }
-            }
-        }
-    }
-
-    private var detailRow: some View {
-        HStack(spacing: 8) {
-            commandIcon
+                .frame(width: 32, height: 32)
             
             VStack(alignment: .leading, spacing: 2) {
                 Text(command.title)
-                    .font(.system(size: LauncherMenuMetrics.rowTitleFontSize, weight: .semibold))
+                    .font(.body)
+                    .fontWeight(.semibold)
                     .foregroundColor(colors.textPrimary)
                     .lineLimit(1)
                 
                 Text(command.subtitle)
-                    .font(.system(size: LauncherMenuMetrics.rowSubtitleFontSize))
+                    .font(.subheadline)
                     .foregroundColor(isSelected ? colors.textSecondary : colors.textTertiary)
                     .lineLimit(1)
             }
             
             Spacer()
-
-            LauncherRowAccessory(shortcutText: shortcutText, isSelected: isSelected) {
-                if shortcutText == nil {
-                    if let statusText = toggleStatus {
-                        LauncherStatusLabel(
-                            label: statusText,
-                            color: statusText == "Enabled" ? colors.greenText : colors.textSecondary,
-                            background: statusText == "Enabled" ? colors.greenText.opacity(0.12) : colors.badgeBg
-                        )
-                    } else if command.hasSubpage {
-                        Image(systemName: "chevron.right")
-                            .font(.caption.weight(.semibold))
-                            .foregroundColor(isSelected ? colors.textSecondary : colors.textTertiary)
-                            .padding(.trailing, 4)
-                    } else {
-                        KeycapView(text: "Action", isSelected: isSelected)
-                    }
-                }
+            
+            if let shortcut = shortcutText {
+                KeycapView(text: LocalStringKey_compat(shortcut), isSelected: isSelected)
+            } else if let statusText = toggleStatus {
+                Text(LocalizedStringKey(statusText))
+                    .font(.subheadline)
+                    .fontWeight(.semibold)
+                    .foregroundColor(statusText == "Enabled" ? colors.greenText : colors.textSecondary)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 3)
+                    .background(statusText == "Enabled" ? colors.greenText.opacity(0.12) : colors.badgeBg)
+                    .cornerRadius(6)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 6)
+                            .stroke(statusText == "Enabled" ? colors.greenText.opacity(0.35) : colors.badgeBorder, lineWidth: 1)
+                    )
+            } else if command.hasSubpage {
+                Image(systemName: "chevron.right")
+                    .font(.caption.weight(.semibold))
+                    .foregroundColor(isSelected ? colors.textSecondary : colors.textTertiary)
+                    .padding(.trailing, 4)
+            } else {
+                KeycapView(text: "Action", isSelected: isSelected)
             }
         }
-    }
-
-    private var commandIcon: some View {
-        Image(systemName: command.iconName)
-            .font(.system(size: 17, weight: .medium))
-            .foregroundColor(colors.textPrimary)
-            .frame(width: 26, height: 26)
-            .background(colors.badgeBg)
-            .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
-    }
-
-    private func statusBadge(_ statusText: String) -> some View {
-        LauncherStatusLabel(
-            label: statusText,
-            color: statusText == "Enabled" ? colors.greenText : colors.textSecondary,
-            background: statusText == "Enabled" ? colors.greenText.opacity(0.12) : colors.badgeBg
+        .padding(.horizontal, 8)
+        .padding(.vertical, 8)
+        .background(
+            ZStack {
+                if isSelected {
+                    RoundedRectangle(cornerRadius: 8, style: .continuous)
+                        .fill(Color.primary.opacity(0.08))
+                    RoundedRectangle(cornerRadius: 8, style: .continuous)
+                        .stroke(Color.primary.opacity(0.15), lineWidth: 1)
+                } else if isHovered {
+                    RoundedRectangle(cornerRadius: 8, style: .continuous)
+                        .fill(Color.primary.opacity(0.05))
+                }
+            }
         )
+        .onHover { hovering in
+            isHovered = hovering
+        }
     }
     
+    // Helper to safely wrap dynamic String to LocalizedStringKey
+    private func LocalStringKey_compat(_ str: String) -> LocalizedStringKey {
+        return LocalizedStringKey(str)
+    }
 }
 
 struct SpaceRowView: View {
@@ -1503,43 +682,42 @@ struct SpaceRowView: View {
     let isCurrent: Bool
     var shortcutText: String? = nil
     @Environment(\.colorScheme) var colorScheme
+    @State private var isHovered = false
     
     var colors: ThemeColors {
         ThemeColors(isDark: colorScheme == .dark)
     }
     
     var body: some View {
-        HStack(spacing: 8) {
+        HStack(spacing: 12) {
             if space.isFullscreen, let appPath = space.appPath {
                 let appIcon = NSWorkspace.shared.icon(forFile: appPath)
                 Image(nsImage: appIcon)
                     .resizable()
                     .aspectRatio(contentMode: .fit)
-                    .frame(width: 24, height: 24)
-                    .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+                    .frame(width: 32, height: 32)
             } else {
                 Image(systemName: "desktopcomputer")
-                    .font(.system(size: 16, weight: .medium))
+                    .font(.system(size: 17, weight: .medium))
                     .foregroundColor(colors.textPrimary)
-                    .frame(width: 24, height: 24)
-                    .background(colors.badgeBg)
-                    .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+                    .frame(width: 32, height: 32)
             }
             
             VStack(alignment: .leading, spacing: 2) {
                 Text(space.name)
-                    .font(.system(size: LauncherMenuMetrics.rowTitleFontSize, weight: .semibold))
+                    .font(.body)
+                    .fontWeight(.semibold)
                     .foregroundColor(colors.textPrimary)
                     .lineLimit(1)
                 
                 if space.isFullscreen {
                     Text(verbatim: String(format: String(localized: "%@ · Fullscreen"), space.displayName))
-                        .font(.system(size: LauncherMenuMetrics.rowSubtitleFontSize))
+                        .font(.subheadline)
                         .foregroundColor(isSelected ? colors.textSecondary : colors.textTertiary)
                         .lineLimit(1)
                 } else {
                     Text(verbatim: String(format: String(localized: "%@ · Space %lld"), space.displayName, space.num))
-                        .font(.system(size: LauncherMenuMetrics.rowSubtitleFontSize))
+                        .font(.subheadline)
                         .foregroundColor(isSelected ? colors.textSecondary : colors.textTertiary)
                         .lineLimit(1)
                 }
@@ -1547,11 +725,33 @@ struct SpaceRowView: View {
             
             Spacer()
 
-            LauncherRowAccessory(shortcutText: shortcutText, isSelected: isSelected) {
-                if isCurrent {
-                    WindowStateBadge(label: String(localized: "Current"), color: .blue)
+            if isCurrent {
+                WindowStateBadge(label: String(localized: "Current"), color: .blue)
+            }
+
+            if let shortcut = shortcutText {
+                KeycapView(text: LocalizedStringKey(shortcut), isSelected: isSelected)
+            } else {
+                KeycapView(text: "Switch ↵", isSelected: isSelected)
+            }
+        }
+        .padding(.horizontal, 8)
+        .padding(.vertical, 8)
+        .background(
+            ZStack {
+                if isSelected {
+                    RoundedRectangle(cornerRadius: 8, style: .continuous)
+                        .fill(Color.primary.opacity(0.08))
+                    RoundedRectangle(cornerRadius: 8, style: .continuous)
+                        .stroke(Color.primary.opacity(0.15), lineWidth: 1)
+                } else if isHovered {
+                    RoundedRectangle(cornerRadius: 8, style: .continuous)
+                        .fill(Color.primary.opacity(0.05))
                 }
             }
+        )
+        .onHover { hovering in
+            isHovered = hovering
         }
     }
 }
@@ -1561,26 +761,14 @@ struct WindowStateBadge: View {
     let color: Color
 
     var body: some View {
-        LauncherStatusLabel(
-            label: label,
-            color: color,
-            background: color.opacity(0.15)
-        )
-    }
-}
-
-private struct LauncherStatusLabel: View {
-    let label: String
-    let color: Color
-    let background: Color
-
-    var body: some View {
-        Text(verbatim: label)
-            .font(.system(size: 13, weight: .semibold))
+        Text(label)
+            .font(.footnote)
+            .fontWeight(.semibold)
             .foregroundColor(color)
-            .padding(.horizontal, LauncherMenuMetrics.labelHorizontalPadding)
-            .padding(.vertical, LauncherMenuMetrics.labelVerticalPadding)
-            .background(background, in: RoundedRectangle(cornerRadius: 6, style: .continuous))
+            .padding(.horizontal, 10)
+            .padding(.vertical, 4)
+            .background(color.opacity(0.15))
+            .cornerRadius(4)
     }
 }
 
@@ -1589,17 +777,112 @@ struct WindowRowView: View {
     let isSelected: Bool
     var shortcutText: String? = nil
     @Environment(\.colorScheme) var colorScheme
-
+    @State private var isHovered = false
+    
+    var colors: ThemeColors {
+        ThemeColors(isDark: colorScheme == .dark)
+    }
+    
     var body: some View {
-        LauncherWindowRowContent(
-            window: window,
-            isSelected: isSelected,
-            isStaged: false,
-            stagedActionText: nil,
-            shortcutText: shortcutText,
-            showsFocusAction: true,
-            colors: ThemeColors(isDark: colorScheme == .dark)
+        HStack(spacing: 12) {
+            let appIcon = NSWorkspace.shared.icon(forFile: window.appPath)
+            Image(nsImage: appIcon)
+                .resizable()
+                .aspectRatio(contentMode: .fit)
+                .frame(width: 32, height: 32)
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text(window.title.isEmpty ? String(localized: "(No Title)") : window.title)
+                    .font(.body)
+                    .fontWeight(.semibold)
+                    .foregroundColor(colors.textPrimary)
+                    .lineLimit(1)
+
+                Text(window.ownerName)
+                    .font(.subheadline)
+                    .foregroundColor(isSelected ? colors.textSecondary : colors.textTertiary)
+                    .lineLimit(1)
+            }
+
+            Spacer()
+
+            HStack(spacing: 4) {
+                if window.isHidden {
+                    WindowStateBadge(label: String(localized: "Hidden"), color: .purple)
+                } else if window.isMinimized {
+                    WindowStateBadge(label: String(localized: "Minimized"), color: .orange)
+                }
+                if window.space.isFullscreen {
+                    WindowStateBadge(label: String(localized: "Full Screen"), color: .blue)
+                }
+
+                if let shortcut = shortcutText {
+                    KeycapView(text: LocalizedStringKey(shortcut), isSelected: isSelected)
+                } else {
+                    KeycapView(text: "Focus ↵", isSelected: isSelected)
+                }
+            }
+        }
+        .padding(.horizontal, 8)
+        .padding(.vertical, 8)
+        .background(
+            ZStack {
+                if isSelected {
+                    RoundedRectangle(cornerRadius: 8, style: .continuous)
+                        .fill(Color.primary.opacity(0.08))
+                    RoundedRectangle(cornerRadius: 8, style: .continuous)
+                        .stroke(Color.primary.opacity(0.15), lineWidth: 1)
+                } else if isHovered {
+                    RoundedRectangle(cornerRadius: 8, style: .continuous)
+                        .fill(Color.primary.opacity(0.05))
+                }
+            }
         )
+        .onHover { hovering in
+            isHovered = hovering
+        }
+    }
+}
+
+struct ConfirmBatchRowView: View {
+    let count: Int
+    let isSelected: Bool
+    @Environment(\.colorScheme) var colorScheme
+    @State private var isHovered = false
+    
+    var colors: ThemeColors {
+        ThemeColors(isDark: colorScheme == .dark)
+    }
+    
+    var body: some View {
+        HStack(spacing: 12) {
+            Image(systemName: "checkmark.circle.fill")
+                .font(.body.weight(.semibold))
+                .foregroundColor(isSelected ? colors.greenText : .white)
+                .frame(width: 28, height: 28)
+                .background(isSelected ? .white : colors.greenText.opacity(0.8))
+                .cornerRadius(6)
+            
+            Text(verbatim: String(format: String(localized: "Confirm & Execute Batch Move (%lld windows)"), count))
+                .font(.body)
+                .fontWeight(.semibold)
+                .foregroundColor(isSelected ? .white : colors.greenText)
+            
+            Spacer()
+            
+            KeycapView(text: "Run ↵", isSelected: isSelected, isGreenRow: true)
+        }
+        .padding(.horizontal, 8)
+        .padding(.vertical, 8)
+        .background(isSelected ? colors.greenText : (isHovered ? colors.greenText.opacity(0.5) : colors.greenText.opacity(0.06)))
+        .cornerRadius(8)
+        .overlay(
+            RoundedRectangle(cornerRadius: 8)
+                .stroke(colors.greenText.opacity(isSelected ? 0.3 : 0.1), lineWidth: 1)
+        )
+        .onHover { hovering in
+            isHovered = hovering
+        }
     }
 }
 
@@ -1610,78 +893,83 @@ struct WindowBatchRowView: View {
     let stagedActionText: String
     var shortcutText: String? = nil
     @Environment(\.colorScheme) var colorScheme
-
-    var body: some View {
-        LauncherWindowRowContent(
-            window: window,
-            isSelected: isSelected,
-            isStaged: isStaged,
-            stagedActionText: stagedActionText.isEmpty ? nil : stagedActionText,
-            shortcutText: shortcutText,
-            showsFocusAction: false,
-            colors: ThemeColors(isDark: colorScheme == .dark)
-        )
+    @State private var isHovered = false
+    
+    var colors: ThemeColors {
+        ThemeColors(isDark: colorScheme == .dark)
     }
-}
-
-private struct LauncherWindowRowContent: View {
-    let window: WindowEntry
-    let isSelected: Bool
-    let isStaged: Bool
-    let stagedActionText: String?
-    let shortcutText: String?
-    let showsFocusAction: Bool
-    let colors: ThemeColors
-
+    
     var body: some View {
-        HStack(spacing: 8) {
-                Image(nsImage: NSWorkspace.shared.icon(forFile: window.appPath))
-                    .resizable()
-                    .aspectRatio(contentMode: .fit)
-                    .frame(width: 24, height: 24)
-                    .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+        HStack(spacing: 12) {
+            let appIcon = NSWorkspace.shared.icon(forFile: window.appPath)
+            Image(nsImage: appIcon)
+                .resizable()
+                .aspectRatio(contentMode: .fit)
+                .frame(width: 32, height: 32)
 
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(window.title.isEmpty ? String(localized: "(No Title)") : window.title)
-                        .font(.system(size: LauncherMenuMetrics.rowTitleFontSize, weight: .semibold))
-                        .foregroundColor(colors.textPrimary)
-                        .lineLimit(1)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(window.title.isEmpty ? String(localized: "(No Title)") : window.title)
+                    .font(.body)
+                    .fontWeight(.semibold)
+                    .foregroundColor(colors.textPrimary)
+                    .lineLimit(1)
 
-                    Text(window.ownerName)
-                        .font(.system(size: LauncherMenuMetrics.rowSubtitleFontSize))
-                        .foregroundColor(isSelected ? colors.textSecondary : colors.textTertiary)
-                        .lineLimit(1)
-                }
+                Text(window.ownerName)
+                    .font(.subheadline)
+                    .foregroundColor(isSelected ? colors.textSecondary : colors.textTertiary)
+                    .lineLimit(1)
+            }
 
-                Spacer()
+            Spacer()
 
-                LauncherRowAccessory(shortcutText: shortcutText, isSelected: isSelected) {
-                    HStack(spacing: isStaged ? 4 : 8) {
-                        if !isStaged {
-                            if window.isHidden {
-                                WindowStateBadge(label: String(localized: "Hidden"), color: .purple)
-                            } else if window.isMinimized {
-                                WindowStateBadge(label: String(localized: "Minimized"), color: .orange)
-                            }
-                            if window.space.isFullscreen {
-                                WindowStateBadge(label: String(localized: "Full Screen"), color: .blue)
-                            }
-                        }
-
-                        if shortcutText == nil {
-                            if let stagedActionText {
-                                LauncherStatusLabel(
-                                    label: stagedActionText,
-                                    color: colors.greenText,
-                                    background: colors.greenText.opacity(0.12)
-                                )
-                            } else if showsFocusAction {
-                                KeycapView(text: "Focus ↵", isSelected: isSelected)
-                            }
-                        }
+            HStack(spacing: 4) {
+                if !isStaged {
+                    if window.isHidden {
+                        WindowStateBadge(label: String(localized: "Hidden"), color: .purple)
+                    } else if window.isMinimized {
+                        WindowStateBadge(label: String(localized: "Minimized"), color: .orange)
+                    }
+                    if window.space.isFullscreen {
+                        WindowStateBadge(label: String(localized: "Full Screen"), color: .blue)
                     }
                 }
+
+                if let shortcut = shortcutText {
+                    KeycapView(text: LocalizedStringKey(shortcut), isSelected: isSelected)
+                } else if isStaged {
+                    Text(stagedActionText)
+                        .font(.subheadline)
+                        .fontWeight(.semibold)
+                        .foregroundColor(colors.greenText)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 3)
+                        .background(colors.greenText.opacity(0.12))
+                        .cornerRadius(6)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 6)
+                                .stroke(colors.greenText.opacity(0.35), lineWidth: 1)
+                        )
+                }
             }
+        }
+        .padding(.horizontal, 8)
+        .padding(.vertical, 8)
+        .background(
+            ZStack {
+                if isSelected {
+                    RoundedRectangle(cornerRadius: 8, style: .continuous)
+                        .fill(Color.primary.opacity(0.08))
+                    RoundedRectangle(cornerRadius: 8, style: .continuous)
+                        .stroke(Color.primary.opacity(0.15), lineWidth: 1)
+                } else if isHovered {
+                    RoundedRectangle(cornerRadius: 8, style: .continuous)
+                        .fill(Color.primary.opacity(0.05))
+                }
+            }
+        )
+        .onHover { hovering in
+            isHovered = hovering
+        }
     }
 }
 
@@ -1696,40 +984,20 @@ struct ListSectionHeader: View {
     }
     
     var body: some View {
-        LauncherSectionHeader(
-            title: title,
-            subtitle: subtitle,
-            topPadding: isFirst ? 0 : 10,
-            bottomPadding: 4,
-            colors: colors
-        )
-    }
-}
-
-private struct LauncherSectionHeader: View {
-    let title: String
-    let subtitle: String?
-    let topPadding: CGFloat
-    let bottomPadding: CGFloat
-    let colors: ThemeColors
-
-    var body: some View {
-        HStack(spacing: 12) {
-            Text(verbatim: title)
-                .font(.system(size: LauncherMenuMetrics.sectionHeaderFontSize, weight: .semibold))
+        HStack(spacing: 8) {
+            Text(title)
+                .font(.system(size: 11, weight: .semibold))
                 .foregroundColor(colors.textSecondary)
-
-            if let subtitle {
-                Text(verbatim: subtitle)
-                    .font(.system(size: LauncherMenuMetrics.sectionHeaderFontSize))
-                    .foregroundColor(colors.textSecondary)
-            }
-
-            Spacer(minLength: 0)
+            
+            Text(subtitle)
+                .font(.system(size: 11))
+                .foregroundColor(colors.textSecondary)
+            
+            Spacer()
         }
-        .padding(.horizontal, LauncherMenuMetrics.rowSurfaceInset + LauncherMenuMetrics.rowContentHorizontalPadding)
-        .padding(.top, topPadding)
-        .padding(.bottom, bottomPadding)
+        .padding(.horizontal, 8)
+        .padding(.top, isFirst ? 0 : 10)
+        .padding(.bottom, 4)
     }
 }
 
@@ -1743,21 +1011,54 @@ struct BatchMoveBottomBar: View {
     
     var body: some View {
         HStack(spacing: 8) {
-            LauncherActiveCommandBreadcrumb(
-                title: viewModel.activeCommand?.title ?? String(localized: "Batch Move Windows"),
-                iconName: viewModel.activeCommand?.iconName ?? "macwindow.badge.plus",
-                stagingWindow: viewModel.stagingWindow,
-                colors: colors,
-                colorScheme: colorScheme
-            )
+            // Left side: Active command hierarchy matching Raycast look
+            HStack(spacing: 6) {
+                HStack(spacing: 6) {
+                    Image(systemName: viewModel.activeCommand?.iconName ?? "macwindow.badge.plus")
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundColor(Color.accentColor)
+                    Text(viewModel.activeCommand?.title ?? String(localized: "Batch Move Windows"))
+                        .font(.subheadline)
+                        .fontWeight(.semibold)
+                        .foregroundColor(colors.textPrimary)
+                }
+                .modifier(BottomBarCapsule(isSelected: false, isActive: true, colorScheme: colorScheme))
+                
+                if let staging = viewModel.stagingWindow {
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 9, weight: .semibold))
+                        .foregroundColor(colors.textQuaternary)
+                    
+                    HStack(spacing: 4) {
+                        Image(systemName: "square.and.arrow.down")
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundColor(colors.greenText)
+                        Text(String(format: NSLocalizedString("Stage: %@", comment: ""), staging.ownerName))
+                            .font(.subheadline)
+                            .fontWeight(.semibold)
+                            .foregroundColor(colors.textPrimary)
+                    }
+                    .modifier(BottomBarCapsule(isSelected: false, isActive: false, colorScheme: colorScheme))
+                }
+            }
             
             Spacer()
             
             // Right side: Context-sensitive actions
-            LauncherBottomBarActionGroup(colorScheme: colorScheme) {
+            HStack(spacing: 8) {
                 if viewModel.stagingWindow != nil {
                     // Staging target space selection
-                    LauncherBottomBarGroupedButton(title: String(localized: "Stage"), shortcut: "↵", action: viewModel.executeRowAction)
+                    HStack(spacing: 4) {
+                        Text(verbatim: String(localized: "Stage"))
+                        Text("↵")
+                            .font(.system(.caption2))
+                            .fontWeight(.bold)
+                    }
+                    .modifier(BottomBarCapsule(isSelected: false, isActive: false, colorScheme: colorScheme))
+                    .contentShape(Rectangle())
+                    .onTapGesture {
+                        viewModel.executeRowAction()
+                    }
                 } else {
                     // Selecting an item in batch move
                     let items = viewModel.batchMoveSelectableItems
@@ -1771,170 +1072,70 @@ struct BatchMoveBottomBar: View {
                                 if case .move = action.actionType { return true }
                                 return false
                             }()
-
-                            LauncherBottomBarGroupedButton(
-                                title: String(localized: isMove ? "Unstage Move" : "Unstage Action"),
-                                shortcut: "↵",
-                                action: viewModel.executeRowAction
-                            )
-
+                            
+                            HStack(spacing: 8) {
+                                HStack(spacing: 4) {
+                                    Text(verbatim: String(localized: isMove ? "Unstage Move" : "Unstage Action"))
+                                    Text("↵")
+                                        .font(.system(.subheadline))
+                                        .fontWeight(.bold)
+                                }
+                                .modifier(BottomBarCapsule(isSelected: false, isActive: false, colorScheme: colorScheme))
+                                .contentShape(Rectangle())
+                                .onTapGesture {
+                                    viewModel.executeRowAction()
+                                }
+                            }
+                            
                         case .unstaged:
-                            LauncherBottomBarGroupedButton(title: String(localized: "Move to..."), shortcut: "↵", action: viewModel.executeRowAction)
-                            LauncherBottomBarGroupedButton(title: String(localized: "Actions"), shortcut: "⌘K", action: viewModel.showCommandKPanel)
+                            HStack(spacing: 8) {
+                                HStack(spacing: 4) {
+                                    Text(verbatim: String(localized: "Move to..."))
+                                    Text("↵")
+                                        .font(.system(.subheadline))
+                                        .fontWeight(.bold)
+                                }
+                                .modifier(BottomBarCapsule(isSelected: false, isActive: false, colorScheme: colorScheme))
+                                .contentShape(Rectangle())
+                                .onTapGesture {
+                                    viewModel.executeRowAction()
+                                }
+                                
+                                HStack(spacing: 4) {
+                                    Text(verbatim: String(localized: "Actions"))
+                                    Text("⌘K")
+                                        .font(.system(.subheadline))
+                                        .fontWeight(.bold)
+                                }
+                                .modifier(BottomBarCapsule(isSelected: false, isActive: false, colorScheme: colorScheme))
+                                .contentShape(Rectangle())
+                                .onTapGesture {
+                                    viewModel.showCommandKPanel()
+                                }
+                            }
                         }
                     }
                     
                     // If there are staged moves, show run batch action
                     if !viewModel.stagedMoves.isEmpty {
-                        LauncherBottomBarGroupedButton(
-                            title: String(localized: "Run Batch Actions"),
-                            shortcut: "⌘↵",
-                            action: viewModel.executeBatchMove
-                        )
-                    }
-                }
-            }
-        }
-        .launcherActionBar(colors: colors)
-    }
-}
-
-struct RootActionsOverlay: View {
-    @ObservedObject var viewModel: LauncherViewModel
-    @Environment(\.colorScheme) var colorScheme
-
-    var colors: ThemeColors {
-        ThemeColors(isDark: colorScheme == .dark)
-    }
-
-    private var selectedCommandTitle: String {
-        guard viewModel.filteredCommands.indices.contains(viewModel.selectedRowIndex) else {
-            return String(localized: "Actions")
-        }
-        return viewModel.filteredCommands[viewModel.selectedRowIndex].title
-    }
-
-    private var actionRows: [(index: Int, title: String, icon: String, shortcut: String)] {
-        let actions = [
-            (index: 0, title: String(localized: "Open Command"), icon: "rectangle.and.pencil.and.ellipsis", shortcut: "↵"),
-            (index: 1, title: String(localized: "Reset Ranking"), icon: "arrow.counterclockwise", shortcut: "↻")
-        ]
-        let indices = Set(viewModel.filteredRootActionIndices)
-        return actions.filter { indices.contains($0.index) }
-    }
-
-    private var actionListHeight: CGFloat {
-        let actionCount = max(actionRows.count, 1)
-        return CGFloat(actionCount) * (LauncherMenuMetrics.rowHeight + LauncherMenuMetrics.rowSpacing)
-            + LauncherMenuMetrics.contentVerticalPadding * 2
-    }
-
-    var body: some View {
-        ZStack(alignment: .bottomTrailing) {
-            Button {
-                viewModel.isRootActionsPresented = false
-            } label: {
-                Color.clear
-            }
-            .buttonStyle(.plain)
-
-            LauncherMenuPanel(
-                colors: colors,
-                width: LauncherMenuMetrics.panelWidth,
-                contentHeight: actionListHeight
-            ) {
-                LauncherMenuHeader(
-                    title: selectedCommandTitle,
-                    subtitle: nil,
-                    iconName: nil,
-                    colors: colors
-                )
-            } content: {
-                VStack(spacing: LauncherMenuMetrics.rowSpacing) {
-                    if actionRows.isEmpty {
-                        Text(verbatim: String(localized: "No actions found"))
-                            .font(.system(size: 13))
-                            .foregroundColor(colors.textTertiary)
-                            .frame(maxWidth: .infinity)
-                            .padding(.vertical, 16)
-                    } else {
-                        ForEach(actionRows, id: \.index) { row in
-                            rootActionRow(row: row)
+                        HStack(spacing: 4) {
+                            Text(verbatim: String(localized: "Run Batch Actions"))
+                            Text("⌘↵")
+                                .font(.system(.subheadline))
+                                .fontWeight(.bold)
+                        }
+                        .modifier(BottomBarCapsule(isSelected: true, isActive: false, isGreen: true, colorScheme: colorScheme))
+                        .contentShape(Rectangle())
+                        .onTapGesture {
+                            viewModel.executeBatchMove()
                         }
                     }
                 }
-            } footer: {
-                SearchTextField(
-                    text: $viewModel.rootActionQuery,
-                    isDark: colors.isDark,
-                    fontSize: 16,
-                    onUpArrow: {
-                        viewModel.selectPreviousRootAction()
-                    },
-                    onDownArrow: {
-                        viewModel.selectNextRootAction()
-                    },
-                    onEnter: {
-                        viewModel.executeRootAction()
-                    },
-                    onEscape: {
-                        viewModel.handleEscapeKey()
-                    },
-                    onBackspace: {
-                        if viewModel.rootActionQuery.isEmpty {
-                            viewModel.handleEscapeKey()
-                        }
-                    },
-                    onCommandK: {
-                        viewModel.isRootActionsPresented = false
-                    },
-                    onKeyEquivalent: { _ in
-                        return false
-                    },
-                    placeholder: String(localized: "Search for actions..."),
-                    focusNotificationName: NSNotification.Name("FocusRootActionTextField")
-                )
-            }
-            .launcherPopupPlacement()
-        }
-        .onAppear {
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
-                NotificationCenter.default.post(name: NSNotification.Name("FocusRootActionTextField"), object: nil)
             }
         }
-    }
-
-    private func rootActionRow(row: (index: Int, title: String, icon: String, shortcut: String)) -> some View {
-        Button {
-            viewModel.selectedRootActionIndex = row.index
-            viewModel.executeRootAction()
-        } label: {
-            LauncherMenuRow(
-                isSelected: viewModel.selectedRootActionIndex == row.index,
-                colors: colors,
-            ) {
-                                HStack(spacing: LauncherMenuMetrics.popupRowContentSpacing) {
-                    Image(systemName: row.icon)
-                        .font(.system(size: 14, weight: .medium))
-                        .frame(width: 20)
-
-                    Text(verbatim: row.title)
-                        .fontWeight(viewModel.selectedRootActionIndex == row.index ? .semibold : .medium)
-                    Spacer(minLength: 0)
-                    LauncherMenuAccessory {
-                        KeycapView(
-                            text: LocalizedStringKey(row.shortcut),
-                            isSelected: viewModel.selectedRootActionIndex == row.index,
-                            isKeyboardKey: true,
-                            verticalPadding: 3,
-                            horizontalPadding: 5
-                        )
-                    }
-                }
-            }
-        }
-        .buttonStyle(.plain)
-        .focusable(false)
+        .padding(.horizontal, 18)
+        .padding(.vertical, 10)
+        .background(colors.bottomBarBg)
     }
 }
 
@@ -1942,7 +1143,6 @@ struct SpacesBottomBar: View {
     @ObservedObject var viewModel: LauncherViewModel
     @ObservedObject var spaceManager: SpaceManager
     @Environment(\.colorScheme) var colorScheme
-    @StateObject private var scrollCoordinator = LauncherHorizontalScrollCoordinator()
     
     var colors: ThemeColors {
         ThemeColors(isDark: colorScheme == .dark)
@@ -1950,16 +1150,28 @@ struct SpacesBottomBar: View {
     
     var body: some View {
         HStack(spacing: 0) {
+            // Static "Spaces:" label on the left (unscrollable)
+            Text(verbatim: String(localized: "Spaces:"))
+                .font(.subheadline)
+                .fontWeight(.semibold)
+                .foregroundColor(colors.textTertiary)
+                .padding(.trailing, 8)
+                .layoutPriority(1)
+            
+            // Scrollable spaces list
             ScrollViewReader { scrollProxy in
                 ScrollView(.horizontal, showsIndicators: false) {
                     HStack(spacing: 8) {
                         let spaces = spaceManager.currentDisplaySpaces
-                        ForEach(Array(spaces.enumerated()), id: \.element.id) { index, space in
+                        ForEach(0..<spaces.count, id: \.self) { i in
+                            let space = spaces[i]
                             let isCurrent = space.id == spaceManager.currentSpaceUUID
-                            let isSelected = viewModel.isBottomBarFocused && index == viewModel.selectedSpaceIndex
-
+                            let isSpaceSelected = viewModel.isBottomBarFocused && i == viewModel.selectedSpaceIndex
+                            let name = spaceManager.getSpaceName(space.id)
+                            
                             Button(action: {
-                                if NSEvent.modifierFlags.contains(.option) {
+                                let isOptionPressed = NSEvent.modifierFlags.contains(.option)
+                                if isOptionPressed {
                                     let handled = viewModel.movePreviouslyActiveWindow(toSpaceID: space.id)
                                     if !handled {
                                         viewModel.closeLauncher()
@@ -1968,29 +1180,33 @@ struct SpacesBottomBar: View {
                                     viewModel.executeSwitchToSpaceID(space.id)
                                 }
                             }) {
-                                Text(spaceManager.getSpaceName(space.id))
-                                    .modifier(BottomBarCapsule(isSelected: isSelected, isActive: isCurrent, colorScheme: colorScheme))
+                                Text(name)
+                                    .modifier(BottomBarCapsule(isSelected: isSpaceSelected, isActive: isCurrent, colorScheme: colorScheme))
                             }
-                            .buttonStyle(.plain)
+                            .buttonStyle(PlainButtonStyle())
                             .focusable(false)
                             .help(String(localized: "Click to switch, Option+Click to move active window."))
-                            .launcherSpaceBarItemVisibility(id: space.id)
                             .id(space.id)
                         }
                     }
+                    .padding(.leading, 32)
+                    .padding(.trailing, 32)
                 }
                 .mask(
                     HStack(spacing: 0) {
+                        // Left fade edge
                         LinearGradient(
                             gradient: Gradient(colors: [.clear, .black]),
                             startPoint: .leading,
                             endPoint: .trailing
                         )
                         .frame(width: 32)
-
+                        
+                        // Middle opaque region
                         Rectangle()
                             .fill(Color.black)
-
+                        
+                        // Right fade edge
                         LinearGradient(
                             gradient: Gradient(colors: [.black, .clear]),
                             startPoint: .leading,
@@ -1999,384 +1215,120 @@ struct SpacesBottomBar: View {
                         .frame(width: 32)
                     }
                 )
-                .launcherSpaceBarViewport()
                 .onAppear {
-                    requestSpaceBarScroll(
-                        to: spaceManager.currentSpaceUUID,
-                        proxy: scrollProxy
-                    )
+                    scrollProxy.scrollTo(spaceManager.currentSpaceUUID, anchor: UnitPoint(x: 0.31, y: 0.5))
                 }
                 .onChange(of: spaceManager.currentSpaceUUID) { currentSpaceID in
-                    requestSpaceBarScroll(to: currentSpaceID, proxy: scrollProxy)
+                    withAnimation(.easeInOut(duration: 0.15)) {
+                        scrollProxy.scrollTo(currentSpaceID, anchor: UnitPoint(x: 0.31, y: 0.5))
+                    }
                 }
                 .onChange(of: viewModel.selectedSpaceIndex) { selectedIndex in
                     if viewModel.isBottomBarFocused {
                         let spaces = spaceManager.currentDisplaySpaces
                         if selectedIndex >= 0 && selectedIndex < spaces.count {
-                            requestSpaceBarScroll(to: spaces[selectedIndex].id, proxy: scrollProxy)
+                            let spaceID = spaces[selectedIndex].id
+                            withAnimation(.easeInOut(duration: 0.15)) {
+                                scrollProxy.scrollTo(spaceID, anchor: UnitPoint(x: 0.31, y: 0.5))
+                            }
                         }
                     }
                 }
                 .onChange(of: viewModel.isBottomBarFocused) { isFocused in
+                    let spaces = spaceManager.currentDisplaySpaces
                     if isFocused {
-                        let spaces = spaceManager.currentDisplaySpaces
                         if viewModel.selectedSpaceIndex >= 0 && viewModel.selectedSpaceIndex < spaces.count {
-                            requestSpaceBarScroll(to: spaces[viewModel.selectedSpaceIndex].id, proxy: scrollProxy)
+                            let spaceID = spaces[viewModel.selectedSpaceIndex].id
+                            withAnimation(.easeInOut(duration: 0.15)) {
+                                scrollProxy.scrollTo(spaceID, anchor: UnitPoint(x: 0.31, y: 0.5))
+                            }
                         }
                     } else {
-                        requestSpaceBarScroll(to: spaceManager.currentSpaceUUID, proxy: scrollProxy)
+                        withAnimation(.easeInOut(duration: 0.15)) {
+                            scrollProxy.scrollTo(spaceManager.currentSpaceUUID, anchor: UnitPoint(x: 0.31, y: 0.5))
+                        }
                     }
                 }
-                .onChange(of: spaceManager.currentDisplaySpaces.map(\.id)) { _ in
-                    scrollCoordinator.reset()
-                }
-                .onPreferenceChange(LauncherSpaceBarGeometryPreferenceKey.self) { geometry in
-                    scrollCoordinator.update(geometry)
-                }
             }
-
-            .frame(maxWidth: .infinity, alignment: .leading)
-
-            Spacer(minLength: 12)
-
+            
+            // Actions Overlay (No longer overlapping, placed in-line)
             HStack(spacing: 12) {
+                // Separator divider
                 Rectangle()
                     .fill(colors.border)
                     .frame(width: 1, height: 16)
-
-                if viewModel.isBottomBarFocused {
-                    LauncherBottomBarActionGroup(colorScheme: colorScheme) {
-                        bottomBarAction(title: "Switch Space", shortcut: "↵") {
+                
+                // Right side action indicators
+                HStack(spacing: 8) {
+                    if !viewModel.isBottomBarFocused {
+                        Button(action: {
+                            viewModel.isBottomBarFocused = true
+                            viewModel.isKeyboardSelection = true
+                            
+                            let spaces = spaceManager.currentDisplaySpaces
+                            if let currentSpaceID = AppDelegate.shared.spaceManager?.currentSpaceUUID,
+                               let index = spaces.firstIndex(where: { $0.id == currentSpaceID }) {
+                                viewModel.selectedSpaceIndex = index
+                            } else {
+                                viewModel.selectedSpaceIndex = 0
+                            }
+                        }) {
+                            HStack(spacing: 4) {
+                                Text(LocalizedStringKey("Switch Space"))
+                                Text("⇥")
+                                    .font(.system(.subheadline))
+                                    .fontWeight(.bold)
+                            }
+                            .modifier(BottomBarCapsule(isSelected: false, isActive: false, colorScheme: colorScheme))
+                        }
+                        .buttonStyle(PlainButtonStyle())
+                    }
+                    
+                    if viewModel.isBottomBarFocused {
+                        HStack(spacing: 4) {
+                            Text(LocalizedStringKey("Switch Space"))
+                            Text("↵")
+                                .font(.system(.subheadline))
+                                .fontWeight(.bold)
+                        }
+                        .modifier(BottomBarCapsule(isSelected: false, isActive: false, colorScheme: colorScheme))
+                        .contentShape(Rectangle())
+                        .onTapGesture {
                             viewModel.executeBottomBarSpaceAction(isOption: false, isCommand: false)
                         }
-                        bottomBarAction(title: "Move Window", shortcut: "⌥↵") {
+                        
+                        HStack(spacing: 4) {
+                            Text(LocalizedStringKey("Move Window"))
+                            Text("⌥↵")
+                                .font(.system(.subheadline))
+                                .fontWeight(.bold)
+                        }
+                        .modifier(BottomBarCapsule(isSelected: false, isActive: false, colorScheme: colorScheme))
+                        .contentShape(Rectangle())
+                        .onTapGesture {
                             viewModel.executeBottomBarSpaceAction(isOption: true, isCommand: false)
                         }
-                    }
-                }
-
-                if !viewModel.isBottomBarFocused {
-                    LauncherCommandActionCapsule(
-                        isActive: viewModel.isRootActionsPresented,
-                        openAction: {
-                            viewModel.executeRowAction()
-                        },
-                        actionsAction: {
-                            viewModel.showRootActionsPanel()
+                    } else {
+                        HStack(spacing: 4) {
+                            Text(LocalizedStringKey("Action"))
+                            Text("↵")
+                                .font(.system(.subheadline))
+                                .fontWeight(.bold)
                         }
-                    )
+                        .modifier(BottomBarCapsule(isSelected: false, isActive: false, colorScheme: colorScheme))
+                        .contentShape(Rectangle())
+                        .onTapGesture {
+                            viewModel.executeRowAction()
+                        }
+                    }
                 }
             }
             .padding(.leading, 12)
         }
-        .launcherActionBar(colors: colors)
-    }
-
-    private func requestSpaceBarScroll(to id: String, proxy: ScrollViewProxy) {
-        scrollCoordinator.request(
-            id: id,
-            scrollToSelection: {
-                withTransaction(Transaction(animation: nil)) {
-                    proxy.scrollTo(id)
-                }
-            }
-        )
-    }
-
-    private func bottomBarAction(title: String, shortcut: String, action: @escaping () -> Void) -> some View {
-        LauncherBottomBarGroupedButton(
-            title: String(localized: String.LocalizationValue(title)),
-            shortcut: shortcut,
-            action: action
-        )
-    }
-}
-
-private struct LauncherCommandActionCapsule: View {
-    let isActive: Bool
-    let openAction: () -> Void
-    let actionsAction: () -> Void
-    @Environment(\.colorScheme) private var colorScheme
-
-    var body: some View {
-        LauncherBottomBarActionGroup(
-            colorScheme: colorScheme,
-            isActive: isActive
-        ) {
-            LauncherBottomBarGroupedButton(
-                title: String(localized: "Open Command"),
-                shortcut: "↵",
-                action: openAction
-            )
-
-            LauncherBottomBarGroupedButton(
-                title: String(localized: "Actions"),
-                shortcut: "⌘K",
-                action: actionsAction
-            )
-        }
-    }
-}
-
-private struct LauncherMenuHeader: View {
-    let title: String
-    let subtitle: String?
-    let iconName: String?
-    let colors: ThemeColors
-
-    var body: some View {
-        HStack(spacing: 10) {
-            if let iconName {
-                Image(systemName: iconName)
-                    .font(.system(size: 14, weight: .semibold))
-                    .foregroundColor(colors.textPrimary)
-                    .frame(width: 26, height: 26)
-                    .background(colors.badgeBg, in: RoundedRectangle(cornerRadius: 7, style: .continuous))
-            }
-
-            VStack(alignment: .leading, spacing: 2) {
-                Text(verbatim: title)
-                    .font(.system(size: LauncherMenuMetrics.rowTitleFontSize, weight: .semibold))
-                    .foregroundColor(colors.textPrimary)
-                    .lineLimit(1)
-
-                if let subtitle {
-                    Text(verbatim: subtitle)
-                        .font(.system(size: LauncherMenuMetrics.rowSubtitleFontSize, weight: .regular))
-                        .foregroundColor(colors.textTertiary)
-                        .lineLimit(1)
-                }
-            }
-
-            Spacer(minLength: 0)
-        }
-    }
-}
-
-private struct LauncherMenuAccessory<Content: View>: View {
-    @ViewBuilder let content: () -> Content
-
-    var body: some View {
-        content()
-            .frame(width: LauncherMenuMetrics.menuAccessoryColumnWidth, alignment: .trailing)
-    }
-}
-
-private struct LauncherMenuRow<Content: View>: View {
-    let isSelected: Bool
-    let colors: ThemeColors
-    let content: Content
-
-    init(
-        isSelected: Bool,
-        colors: ThemeColors,
-        @ViewBuilder content: () -> Content
-    ) {
-        self.isSelected = isSelected
-        self.colors = colors
-        self.content = content()
-    }
-
-    var body: some View {
-        LauncherSelectableRow(isSelected: isSelected, colors: colors) {
-            content
-                .font(.system(
-                    size: LauncherMenuMetrics.rowTitleFontSize,
-                    weight: .medium
-                ))
-                .foregroundColor(colors.textPrimary)
-        }
-    }
-}
-
-private struct LauncherMenuPanel<Header: View, Content: View, Footer: View>: View {
-    let colors: ThemeColors
-    let width: CGFloat
-    let contentHeight: CGFloat
-    let showsFooter: Bool
-    let header: Header
-    let content: Content
-    let footer: Footer
-
-    init(
-        colors: ThemeColors,
-        width: CGFloat,
-        contentHeight: CGFloat,
-        showsFooter: Bool = true,
-        @ViewBuilder header: () -> Header,
-        @ViewBuilder content: () -> Content,
-        @ViewBuilder footer: () -> Footer
-    ) {
-        self.colors = colors
-        self.width = width
-        self.contentHeight = contentHeight
-        self.showsFooter = showsFooter
-        self.header = header()
-        self.content = content()
-        self.footer = footer()
-    }
-
-    var body: some View {
-        VStack(spacing: 0) {
-            header
-                .padding(.horizontal, LauncherMenuMetrics.menuHeaderHorizontalPadding)
-                .padding(.vertical, LauncherMenuMetrics.menuHeaderVerticalPadding)
-
-            ScrollView {
-                content
-                    // Keep popup rows aligned with the root list surface.
-                    .padding(.vertical, LauncherMenuMetrics.contentVerticalPadding)
-            }
-            .frame(height: contentHeight)
-
-            if showsFooter {
-                Divider()
-
-                footer
-                    .padding(.horizontal, LauncherMenuMetrics.menuFooterHorizontalPadding)
-                    .frame(height: LauncherMenuMetrics.menuFooterHeight)
-            }
-        }
-        .frame(width: width)
-        .launcherMenuSurface(colors: colors)
-    }
-}
-
-struct SpacePickerOverlay: View {
-    @ObservedObject var viewModel: LauncherViewModel
-    @ObservedObject var spaceManager: SpaceManager
-    @Environment(\.colorScheme) var colorScheme
-
-    var colors: ThemeColors {
-        ThemeColors(isDark: colorScheme == .dark)
-    }
-
-    private var spaceListHeight: CGFloat {
-        let itemCount = max(viewModel.filteredSpaces.count, 1)
-        return min(
-            CGFloat(itemCount) * (LauncherMenuMetrics.rowHeight + LauncherMenuMetrics.rowSpacing)
-                + LauncherMenuMetrics.contentVerticalPadding * 2,
-            200
-        )
-    }
-
-    var body: some View {
-        ZStack(alignment: .bottomTrailing) {
-            Button {
-                viewModel.handleEscapeKey()
-            } label: {
-                Color.clear
-            }
-            .buttonStyle(.plain)
-
-            LauncherMenuPanel(
-                colors: colors,
-                width: LauncherMenuMetrics.panelWidth,
-                contentHeight: spaceListHeight,
-                showsFooter: viewModel.stagingWindow != nil
-            ) {
-                LauncherMenuHeader(
-                    title: viewModel.stagingWindow == nil
-                        ? String(localized: "Switch Space")
-                        : String(localized: "Stage Move to Desktop..."),
-                    subtitle: nil,
-                    iconName: nil,
-                    colors: colors
-                )
-            } content: {
-                VStack(spacing: LauncherMenuMetrics.rowSpacing) {
-                    let spaces = viewModel.filteredSpaces
-                    if spaces.isEmpty {
-                        Text(verbatim: String(localized: "No spaces found"))
-                            .font(.system(size: 13))
-                            .foregroundColor(colors.textTertiary)
-                            .frame(maxWidth: .infinity)
-                            .padding(.vertical, 24)
-                    } else {
-                        ForEach(Array(spaces.enumerated()), id: \.element.id) { index, space in
-                            let isSelected = index == viewModel.selectedSpaceIndex
-                            Button(action: {
-                                viewModel.selectedSpaceIndex = index
-                                if viewModel.stagingWindow != nil {
-                                    viewModel.selectedRowIndex = index
-                                    viewModel.executeRowAction()
-                                } else {
-                                    viewModel.executeSelectedSpacePickerAction()
-                                }
-                            }) {
-                                LauncherMenuRow(
-                                    isSelected: isSelected,
-                                    colors: colors
-                                ) {
-                                    HStack(spacing: LauncherMenuMetrics.popupAccessorySpacing) {
-                                        HStack(spacing: LauncherMenuMetrics.popupRowContentSpacing) {
-                                            Image(systemName: "desktopcomputer")
-                                                .font(.system(size: 14, weight: .medium))
-                                                .frame(width: 20)
-                                            Text(spaceManager.getSpaceName(space.id))
-                                                .lineLimit(1)
-                                            Spacer(minLength: 0)
-                                        }
-
-                                        LauncherMenuAccessory {
-                                            if space.id == spaceManager.currentSpaceUUID {
-                                                Text(verbatim: String(localized: "Current"))
-                                                    .font(.system(size: 12, weight: .semibold))
-                                                    .foregroundColor(colors.textTertiary)
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                            .buttonStyle(.plain)
-                            .focusable(false)
-                        }
-                    }
-                }
-            } footer: {
-                SearchTextField(
-                    text: $viewModel.spacePickerQuery,
-                    isDark: colors.isDark,
-                    fontSize: 16,
-                    onUpArrow: {
-                        viewModel.selectedSpaceIndex = max(0, viewModel.selectedSpaceIndex - 1)
-                    },
-                    onDownArrow: {
-                        let count = viewModel.filteredSpaces.count
-                        if viewModel.selectedSpaceIndex < count - 1 {
-                            viewModel.selectedSpaceIndex += 1
-                        }
-                    },
-                    onEnter: {
-                        viewModel.executeSelectedSpacePickerAction()
-                    },
-                    onCommandNumber: { number in
-                        let index = number - 1
-                        guard index >= 0 && index < viewModel.filteredSpaces.count else { return }
-                        viewModel.selectedSpaceIndex = index
-                        viewModel.executeSelectedSpacePickerAction()
-                    },
-                    onEscape: {
-                        viewModel.handleEscapeKey()
-                    },
-                    onBackspace: {
-                        if viewModel.spacePickerQuery.isEmpty {
-                            viewModel.handleEscapeKey()
-                        }
-                    },
-                    onKeyEquivalent: { _ in false },
-                    placeholder: String(localized: "Search..."),
-                    focusNotificationName: NSNotification.Name("FocusSpacePickerTextField")
-                )
-            }
-            .launcherPopupPlacement()
-        }
-        .onAppear {
-            guard viewModel.stagingWindow != nil else { return }
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
-                NotificationCenter.default.post(name: NSNotification.Name("FocusSpacePickerTextField"), object: nil)
-            }
-        }
+        .padding(.horizontal, 18)
+        .frame(height: 46)
+        .background(colors.bottomBarBg)
+        .animation(.spring(response: 0.35, dampingFraction: 0.85), value: viewModel.isBottomBarFocused)
     }
 }
 
@@ -2390,14 +1342,37 @@ struct CommandBottomBar: View {
     
     var body: some View {
         HStack(spacing: 8) {
+            // Left side: Active command pill matching Raycast look
             if let active = viewModel.activeCommand {
-                LauncherActiveCommandBreadcrumb(
-                    title: active.title,
-                    iconName: active.iconName,
-                    stagingWindow: viewModel.stagingWindow,
-                    colors: colors,
-                    colorScheme: colorScheme
-                )
+                HStack(spacing: 6) {
+                    HStack(spacing: 6) {
+                        Image(systemName: active.iconName)
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundColor(Color.accentColor)
+                        Text(active.title)
+                            .font(.subheadline)
+                            .fontWeight(.semibold)
+                            .foregroundColor(colors.textPrimary)
+                    }
+                    .modifier(BottomBarCapsule(isSelected: false, isActive: true, colorScheme: colorScheme))
+                    
+                    if let staging = viewModel.stagingWindow {
+                        Image(systemName: "chevron.right")
+                            .font(.system(size: 9, weight: .semibold))
+                            .foregroundColor(colors.textQuaternary)
+                        
+                        HStack(spacing: 4) {
+                            Image(systemName: "square.and.arrow.down")
+                                .font(.subheadline.weight(.semibold))
+                                .foregroundColor(colors.greenText)
+                            Text(String(format: NSLocalizedString("Move: %@", comment: ""), staging.ownerName))
+                                .font(.subheadline)
+                                .fontWeight(.semibold)
+                                .foregroundColor(colors.textPrimary)
+                        }
+                        .modifier(BottomBarCapsule(isSelected: false, isActive: false, colorScheme: colorScheme))
+                    }
+                }
             }
             
             Spacer()
@@ -2406,144 +1381,123 @@ struct CommandBottomBar: View {
             if let type = viewModel.activeCommand?.type {
                 switch type {
                 case .switchToDesktop:
-                    LauncherBottomBarActionGroup(colorScheme: colorScheme) {
-                        actionButton(title: "Switch", shortcut: "↵") {
-                            viewModel.executeRowAction()
-                        }
+                    HStack(spacing: 4) {
+                        Text(verbatim: String(localized: "Switch Space"))
+                        Text("↵")
+                            .font(.system(.subheadline))
+                            .fontWeight(.bold)
+                    }
+                    .modifier(BottomBarCapsule(isSelected: false, isActive: false, colorScheme: colorScheme))
+                    .contentShape(Rectangle())
+                    .onTapGesture {
+                        viewModel.executeRowAction()
                     }
 
                 case .moveWindow:
-                    LauncherBottomBarActionGroup(colorScheme: colorScheme) {
-                        actionButton(title: "Move", shortcut: "↵") {
-                            viewModel.executeRowAction()
-                        }
+                    HStack(spacing: 4) {
+                        Text(verbatim: String(localized: "Move Window"))
+                        Text("↵")
+                            .font(.system(.subheadline))
+                            .fontWeight(.bold)
+                    }
+                    .modifier(BottomBarCapsule(isSelected: false, isActive: false, colorScheme: colorScheme))
+                    .contentShape(Rectangle())
+                    .onTapGesture {
+                        viewModel.executeRowAction()
                     }
 
                 case .listWindows:
-                    LauncherBottomBarActionGroup(colorScheme: colorScheme) {
-                        if viewModel.stagingWindow != nil {
-                            actionButton(title: "Move", shortcut: "↵") {
+                    if viewModel.stagingWindow != nil {
+                        HStack(spacing: 4) {
+                            Text(verbatim: String(localized: "Move"))
+                            Text("↵")
+                                .font(.system(.subheadline))
+                                .fontWeight(.bold)
+                        }
+                        .modifier(BottomBarCapsule(isSelected: false, isActive: false, colorScheme: colorScheme))
+                        .contentShape(Rectangle())
+                        .onTapGesture {
+                            viewModel.executeRowAction()
+                        }
+                    } else {
+                        HStack(spacing: 8) {
+                            HStack(spacing: 4) {
+                                Text(verbatim: String(localized: "Focus"))
+                                Text("↵")
+                                    .font(.system(.subheadline))
+                                    .fontWeight(.bold)
+                            }
+                            .modifier(BottomBarCapsule(isSelected: false, isActive: false, colorScheme: colorScheme))
+                            .contentShape(Rectangle())
+                            .onTapGesture {
                                 viewModel.executeRowAction()
                             }
-                        } else {
-                            HStack(spacing: 8) {
-                                actionButton(title: "Focus", shortcut: "↵") {
-                                    viewModel.executeRowAction()
+                            
+                            HStack(spacing: 4) {
+                                Text(verbatim: String(localized: "Move"))
+                                Text("⌘M")
+                                    .font(.system(.subheadline))
+                                    .fontWeight(.bold)
+                            }
+                            .modifier(BottomBarCapsule(isSelected: false, isActive: false, colorScheme: colorScheme))
+                            .contentShape(Rectangle())
+                            .onTapGesture {
+                                if let window = viewModel.selectedWindowForListWindows {
+                                    viewModel.batchMoveLastSelectedIndex = viewModel.selectedRowIndex
+                                    viewModel.stagingWindow = window
+                                    viewModel.isExecutingRestoreToImmediately = true
+                                    viewModel.selectedRowIndex = 0
                                 }
-
-                                actionButton(title: "Move", shortcut: "⌘M") {
-                                    if let window = viewModel.selectedWindowForListWindows {
-                                        viewModel.batchMoveLastSelectedIndex = viewModel.selectedRowIndex
-                                        viewModel.stagingWindow = window
-                                        viewModel.isExecutingRestoreToImmediately = true
-                                        viewModel.selectedRowIndex = 0
-                                    }
-                                }
-
-                                actionButton(title: "Actions", shortcut: "⌘K") {
-                                    viewModel.showCommandKPanel()
-                                }
+                            }
+                            
+                            HStack(spacing: 4) {
+                                Text(verbatim: String(localized: "Actions"))
+                                Text("⌘K")
+                                    .font(.system(.subheadline))
+                                    .fontWeight(.bold)
+                            }
+                            .modifier(BottomBarCapsule(isSelected: false, isActive: false, colorScheme: colorScheme))
+                            .contentShape(Rectangle())
+                            .onTapGesture {
+                                viewModel.showCommandKPanel()
                             }
                         }
                     }
 
                 case .renameCurrentSpace:
-                    LauncherBottomBarActionGroup(colorScheme: colorScheme) {
-                        actionButton(title: "Rename Space", shortcut: "↵") {
-                            viewModel.executeRowAction()
-                        }
+                    HStack(spacing: 4) {
+                        Text(verbatim: String(localized: "Rename Space"))
+                        Text("↵")
+                            .font(.system(.subheadline))
+                            .fontWeight(.bold)
                     }
-
+                    .modifier(BottomBarCapsule(isSelected: false, isActive: false, colorScheme: colorScheme))
+                    .contentShape(Rectangle())
+                    .onTapGesture {
+                        viewModel.executeRowAction()
+                    }
+                    
                 default:
                     EmptyView()
                 }
             }
         }
-        .launcherActionBar(colors: colors)
-    }
-
-    private func actionButton(title: String, shortcut: String, action: @escaping () -> Void) -> some View {
-        LauncherBottomBarGroupedButton(
-            title: String(localized: String.LocalizationValue(title)),
-            shortcut: shortcut,
-            action: action
-        )
-    }
-}
-
-private struct LauncherActiveCommandBreadcrumb: View {
-    let title: String
-    let iconName: String
-    let stagingWindow: WindowEntry?
-    let colors: ThemeColors
-    let colorScheme: ColorScheme
-
-    var body: some View {
-        HStack(spacing: 6) {
-            HStack(spacing: 6) {
-                Image(systemName: iconName)
-                    .font(.system(size: 14, weight: .semibold))
-                    .foregroundColor(colors.textSecondary)
-                Text(verbatim: title)
-                    .foregroundColor(colors.textPrimary)
-            }
-            .modifier(BottomBarCapsule(isSelected: false, isActive: true, colorScheme: colorScheme))
-
-            if let stagingWindow {
-                Image(systemName: "chevron.right")
-                    .font(.system(size: 9, weight: .semibold))
-                    .foregroundColor(colors.textQuaternary)
-
-                HStack(spacing: 4) {
-                    Image(systemName: "square.and.arrow.down")
-                        .font(.system(size: 14, weight: .semibold))
-                        .foregroundColor(colors.greenText)
-                    Text(String(format: NSLocalizedString("Move: %@", comment: ""), stagingWindow.ownerName))
-                        .foregroundColor(colors.textPrimary)
-                }
-                .modifier(BottomBarCapsule(isSelected: false, isActive: false, colorScheme: colorScheme))
-            }
-        }
+        .padding(.horizontal, 18)
+        .padding(.vertical, 10)
+        .background(colors.bottomBarBg)
     }
 }
 
 class FocusTextField: NSTextField {
-    var focusNotificationName = NSNotification.Name("FocusLauncherTextField")
     var onCommandEnter: (() -> Void)?
     var onOptionEnter: (() -> Void)?
     var onCommandNumber: ((Int) -> Void)?
     var onCommandK: (() -> Void)?
-    var onBackspace: (() -> Void)?
-    var onUpArrow: (() -> Void)?
-    var onDownArrow: (() -> Void)?
     var onKeyEquivalent: ((NSEvent) -> Bool)?
     var isTypingDisabled: Bool = false
 
     override var acceptsFirstResponder: Bool {
         return true
-    }
-
-    override func keyDown(with event: NSEvent) {
-        let modifiers = event.modifierFlags.intersection(.deviceIndependentFlagsMask)
-        let hasNavigationModifier = modifiers.contains(.command) ||
-            modifiers.contains(.option) ||
-            modifiers.contains(.control) ||
-            modifiers.contains(.function)
-
-        if !hasNavigationModifier {
-            switch event.keyCode {
-            case 126:
-                onUpArrow?()
-                return
-            case 125:
-                onDownArrow?()
-                return
-            default:
-                break
-            }
-        }
-
-        super.keyDown(with: event)
     }
 
     override func performKeyEquivalent(with event: NSEvent) -> Bool {
@@ -2591,7 +1545,7 @@ class FocusTextField: NSTextField {
         super.viewDidMoveToWindow()
         if window != nil {
             NotificationCenter.default.addObserver(self, selector: #selector(windowDidBecomeKey), name: NSWindow.didBecomeKeyNotification, object: window)
-            NotificationCenter.default.addObserver(self, selector: #selector(forceFocus), name: focusNotificationName, object: nil)
+            NotificationCenter.default.addObserver(self, selector: #selector(forceFocus), name: NSNotification.Name("FocusLauncherTextField"), object: nil)
             if window?.isKeyWindow == true {
                 DispatchQueue.main.async { [weak self] in
                     self?.forceFocus()
@@ -2599,7 +1553,7 @@ class FocusTextField: NSTextField {
             }
         } else {
             NotificationCenter.default.removeObserver(self, name: NSWindow.didBecomeKeyNotification, object: nil)
-            NotificationCenter.default.removeObserver(self, name: focusNotificationName, object: nil)
+            NotificationCenter.default.removeObserver(self, name: NSNotification.Name("FocusLauncherTextField"), object: nil)
         }
     }
     
@@ -2652,12 +1606,9 @@ class BlockTypingFormatter: Formatter {
 struct SearchTextField: NSViewRepresentable {
     @Binding var text: String
     var isDark: Bool
-    var fontSize: CGFloat = 22
     var isTypingDisabled: Bool = false
     var onUpArrow: () -> Void
     var onDownArrow: () -> Void
-    var onCommandUpArrow: (() -> Void)? = nil
-    var onCommandDownArrow: (() -> Void)? = nil
     var onLeftArrow: (() -> Bool)? = nil
     var onRightArrow: (() -> Bool)? = nil
     var onEnter: () -> Void
@@ -2666,11 +1617,9 @@ struct SearchTextField: NSViewRepresentable {
     var onCommandNumber: ((Int) -> Void)? = nil
     var onTab: (() -> Void)? = nil
     var onEscape: () -> Void
-    var onBackspace: (() -> Void)? = nil
     var onCommandK: (() -> Void)? = nil
     var onKeyEquivalent: ((NSEvent) -> Bool)? = nil
     var placeholder: String = "Type a command..."
-    var focusNotificationName = NSNotification.Name("FocusLauncherTextField")
     
     class Coordinator: NSObject, NSTextFieldDelegate, NSTextViewDelegate {
         var parent: SearchTextField
@@ -2703,17 +1652,9 @@ struct SearchTextField: NSViewRepresentable {
         
         func control(_ control: NSControl, textView: NSTextView, doCommandBy commandSelector: Selector) -> Bool {
             if commandSelector == #selector(NSResponder.moveUp(_:)) {
-                if NSEvent.modifierFlags.contains(.command), let onCommandUpArrow = parent.onCommandUpArrow {
-                    onCommandUpArrow()
-                    return true
-                }
                 parent.onUpArrow()
                 return true
             } else if commandSelector == #selector(NSResponder.moveDown(_:)) {
-                if NSEvent.modifierFlags.contains(.command), let onCommandDownArrow = parent.onCommandDownArrow {
-                    onCommandDownArrow()
-                    return true
-                }
                 parent.onDownArrow()
                 return true
             } else if commandSelector == #selector(NSResponder.moveLeft(_:)) {
@@ -2741,11 +1682,6 @@ struct SearchTextField: NSViewRepresentable {
             } else if commandSelector == #selector(NSResponder.cancelOperation(_:)) {
                 parent.onEscape()
                 return true
-            } else if commandSelector == #selector(NSResponder.deleteBackward(_:)) {
-                if parent.text.isEmpty, let onBackspace = parent.onBackspace {
-                    onBackspace()
-                    return true
-                }
             }
             return false
         }
@@ -2757,7 +1693,6 @@ struct SearchTextField: NSViewRepresentable {
     
     func makeNSView(context: Context) -> NSTextField {
         let textField = FocusTextField()
-        textField.focusNotificationName = focusNotificationName
         textField.delegate = context.coordinator
         
         let formatter = BlockTypingFormatter(isTypingDisabled: { [weak coordinator = context.coordinator] in
@@ -2778,15 +1713,6 @@ struct SearchTextField: NSViewRepresentable {
         textField.onCommandK = { [weak coordinator = context.coordinator] in
             coordinator?.parent.onCommandK?()
         }
-        textField.onUpArrow = { [weak coordinator = context.coordinator] in
-            coordinator?.parent.onUpArrow()
-        }
-        textField.onDownArrow = { [weak coordinator = context.coordinator] in
-            coordinator?.parent.onDownArrow()
-        }
-        textField.onBackspace = { [weak coordinator = context.coordinator] in
-            coordinator?.parent.onBackspace?()
-        }
         textField.onKeyEquivalent = onKeyEquivalent
         textField.isTypingDisabled = isTypingDisabled
         
@@ -2794,7 +1720,7 @@ struct SearchTextField: NSViewRepresentable {
         textField.drawsBackground = false
         textField.focusRingType = .none
         textField.textColor = .labelColor
-        textField.font = NSFont.systemFont(ofSize: fontSize, weight: .regular)
+        textField.font = NSFont.systemFont(ofSize: 16, weight: .regular)
         
         context.coordinator.lastPlaceholder = placeholder
         context.coordinator.lastIsDark = isDark
@@ -2803,7 +1729,7 @@ struct SearchTextField: NSViewRepresentable {
             string: placeholder,
             attributes: [
                 .foregroundColor: NSColor.placeholderTextColor,
-                .font: NSFont.systemFont(ofSize: fontSize, weight: .regular)
+                .font: NSFont.systemFont(ofSize: 16, weight: .regular)
             ]
         )
         textField.placeholderAttributedString = placeholderAttr
@@ -2816,22 +1742,14 @@ struct SearchTextField: NSViewRepresentable {
         context.coordinator.parent = self
         
         if let focusField = nsView as? FocusTextField {
-            focusField.focusNotificationName = focusNotificationName
             focusField.isTypingDisabled = isTypingDisabled
             focusField.onKeyEquivalent = onKeyEquivalent
-            focusField.onUpArrow = { [weak coordinator = context.coordinator] in
-                coordinator?.parent.onUpArrow()
-            }
-            focusField.onDownArrow = { [weak coordinator = context.coordinator] in
-                coordinator?.parent.onDownArrow()
-            }
         }
         
         if nsView.stringValue != text {
             nsView.stringValue = text
         }
         nsView.textColor = .labelColor
-        nsView.font = NSFont.systemFont(ofSize: fontSize, weight: .regular)
         
         // Cache placeholder creation to avoid recreating it on every render cycle
         if context.coordinator.lastPlaceholder != placeholder || context.coordinator.lastIsDark != isDark {
@@ -2842,7 +1760,7 @@ struct SearchTextField: NSViewRepresentable {
                 string: placeholder,
                 attributes: [
                     .foregroundColor: NSColor.placeholderTextColor,
-                    .font: NSFont.systemFont(ofSize: fontSize, weight: .regular)
+                    .font: NSFont.systemFont(ofSize: 16, weight: .regular)
                 ]
             )
             nsView.placeholderAttributedString = placeholderAttr
@@ -2858,109 +1776,88 @@ struct CommandKOverlayView: View {
     var colors: ThemeColors {
         ThemeColors(isDark: colorScheme == .dark)
     }
-
-    private var actionListHeight: CGFloat {
-        let actionCount = max(viewModel.filteredCommandKActions.count, 1)
-        return min(
-            CGFloat(actionCount) * (LauncherMenuMetrics.rowHeight + LauncherMenuMetrics.rowSpacing)
-                + LauncherMenuMetrics.contentVerticalPadding * 2,
-            240
-        )
-    }
     
     var body: some View {
-        ZStack(alignment: .bottomTrailing) {
-            Button {
-                viewModel.commandKTargetWindow = nil
-            } label: {
-                Color.clear
-            }
-            .buttonStyle(.plain)
-
-            LauncherMenuPanel(
-                colors: colors,
-                width: LauncherMenuMetrics.panelWidth,
-                contentHeight: actionListHeight
-            ) {
-                LauncherMenuHeader(
-                    title: window.ownerName,
-                    subtitle: nil,
-                    iconName: nil,
-                    colors: colors
-                )
-            } content: {
-                let actions = viewModel.filteredCommandKActions.map(CommandKActionItem.init)
-            VStack(spacing: LauncherMenuMetrics.rowSpacing) {
-                    if actions.isEmpty {
-                        Text(verbatim: String(localized: "No actions found"))
-                            .font(.system(size: 13))
-                            .foregroundColor(colors.textTertiary)
-                            .frame(maxWidth: .infinity)
-                            .padding(.vertical, 16)
-                    } else {
-                        ForEach(Array(actions.enumerated()), id: \.element.id) { idx, item in
-                            CommandKActionRowView(
-                                action: item.action,
-                                isSelected: viewModel.commandKSelectedIndex == idx,
-                                showCommandNumbers: viewModel.showCommandNumbers,
-                                idx: idx,
-                                colors: colors,
-                                viewModel: viewModel,
-                            )
+        ZStack {
+            // Subtle separation overlay (dimming in dark theme, neutral in light theme)
+            (colorScheme == .dark ? Color.black.opacity(0.25) : Color.black.opacity(0.03))
+                .edgesIgnoringSafeArea(.all)
+                .onTapGesture {
+                    viewModel.commandKTargetWindow = nil
+                }
+            
+            // Centered panel card
+            VStack(spacing: 0) {
+                // Header details
+                HStack(spacing: 12) {
+                    let appIcon = NSWorkspace.shared.icon(forFile: window.appPath)
+                    Image(nsImage: appIcon)
+                        .resizable()
+                        .aspectRatio(contentMode: .fit)
+                        .frame(width: 32, height: 32)
+                        .padding(4)
+                        .background(colors.badgeBg)
+                        .cornerRadius(8)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 8)
+                                .stroke(colors.badgeBorder, lineWidth: 1)
+                        )
+                    
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(window.title.isEmpty ? String(localized: "(No Title)") : window.title)
+                            .font(.body)
+                            .fontWeight(.bold)
+                            .foregroundColor(colors.textPrimary)
+                            .lineLimit(1)
+                        
+                        Text(window.ownerName)
+                            .font(.subheadline)
+                            .foregroundColor(colors.textSecondary)
+                            .lineLimit(1)
+                    }
+                    
+                    Spacer()
+                    
+                    // State Badges
+                    HStack(spacing: 4) {
+                        if window.isHidden {
+                            WindowStateBadge(label: String(localized: "Hidden"), color: .purple)
+                        } else if window.isMinimized {
+                            WindowStateBadge(label: String(localized: "Minimized"), color: .orange)
+                        }
+                        if window.space.isFullscreen {
+                            WindowStateBadge(label: String(localized: "Full Screen"), color: .blue)
                         }
                     }
                 }
-            } footer: {
-                SearchTextField(
-                    text: $viewModel.commandKQuery,
-                    isDark: colors.isDark,
-                    fontSize: 16,
-                    onUpArrow: {
-                        viewModel.selectPreviousCommandKAction()
-                    },
-                    onDownArrow: {
-                        viewModel.selectNextCommandKAction()
-                    },
-                    onEnter: {
-                        viewModel.executeCommandKAction()
-                    },
-                    onCommandNumber: { number in
-                        let index = number - 1
-                        guard index >= 0 && index < viewModel.filteredCommandKActions.count else { return }
-                        viewModel.commandKSelectedIndex = index
-                        viewModel.executeCommandKAction()
-                    },
-                    onEscape: {
-                        viewModel.commandKTargetWindow = nil
-                    },
-                    onBackspace: {
-                        if viewModel.commandKQuery.isEmpty {
-                            viewModel.commandKTargetWindow = nil
-                        }
-                    },
-                    onCommandK: {
-                        viewModel.commandKTargetWindow = nil
-                    },
-                    onKeyEquivalent: { _ in false },
-                    placeholder: String(localized: "Search for actions..."),
-                    focusNotificationName: NSNotification.Name("FocusCommandKTextField")
-                )
+                .padding(.horizontal, 16)
+                .padding(.vertical, 16)
+                
+                Divider()
+                
+                // Actions List
+                let actions = viewModel.filteredCommandKActions
+                VStack(spacing: 2) {
+                    ForEach(0..<actions.count, id: \.self) { idx in
+                        let action = actions[idx]
+                        let isSelected = viewModel.commandKSelectedIndex == idx
+                        
+                        CommandKActionRowView(
+                            action: action,
+                            isSelected: isSelected,
+                            showCommandNumbers: viewModel.showCommandNumbers,
+                            idx: idx,
+                            colors: colors,
+                            viewModel: viewModel
+                        )
+                    }
+                }
+                .padding(8)
             }
-            .launcherPopupPlacement()
+            .frame(width: 380)
+            .launcherBackground(cornerRadius: 12, borderColor: colors.border)
+            .shadow(color: Color.black.opacity(colorScheme == .dark ? 0.4 : 0.2), radius: 15, x: 0, y: 8)
         }
-        .onAppear {
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
-                NotificationCenter.default.post(name: NSNotification.Name("FocusCommandKTextField"), object: nil)
-            }
-        }
-    }
-}
-
-private struct CommandKActionItem: Identifiable {
-    let action: BatchStagedActionType
-
-    var id: String {
-        action.description
     }
 }
 
@@ -2972,38 +1869,48 @@ struct CommandKActionRowView: View {
     let colors: ThemeColors
     @ObservedObject var viewModel: LauncherViewModel
     
+    @State private var isHovered = false
+    
     var body: some View {
-        Button {
-            viewModel.commandKSelectedIndex = idx
-            viewModel.executeCommandKAction()
-        } label: {
-            LauncherMenuRow(
-                isSelected: isSelected,
-                colors: colors,
-            ) {
-                HStack(spacing: LauncherMenuMetrics.popupAccessorySpacing) {
-                    HStack(spacing: LauncherMenuMetrics.popupRowContentSpacing) {
-                        Image(systemName: getIconName(for: action))
-                            .font(.system(size: 14, weight: .medium))
-                            .frame(width: 20)
-
-                        Text(getActionLabel(for: action))
-                            .fontWeight(isSelected ? .semibold : .medium)
-
-                        Spacer(minLength: 0)
-                    }
-                    .modifier(HotkeyAccessoryModifier(isActive: showCommandNumbers && !isSelected))
-
-                    LauncherMenuAccessory {
-                        FloatingHotkeyHint(text: LocalizedStringKey("⌘\(idx + 1)"))
-                            .opacity(showCommandNumbers ? 1 : 0)
-                            .offset(x: showCommandNumbers ? 0 : 23)
-                    }
+        HStack(spacing: 10) {
+            Image(systemName: getIconName(for: action))
+                .font(.body.weight(.medium))
+                .frame(width: 16)
+                .foregroundColor(isSelected ? colors.textPrimary : colors.textSecondary)
+            
+            Text(getActionLabel(for: action))
+                .font(.body)
+                .fontWeight(isSelected ? .semibold : .regular)
+                .foregroundColor(colors.textPrimary)
+            
+            Spacer()
+            
+            KeycapView(text: "⌘\(idx + 1)", isSelected: isSelected)
+                .opacity(showCommandNumbers ? 1 : 0)
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 8)
+        .background(
+            ZStack {
+                if isSelected {
+                    RoundedRectangle(cornerRadius: 6, style: .continuous)
+                        .fill(Color.primary.opacity(0.08))
+                    RoundedRectangle(cornerRadius: 6, style: .continuous)
+                        .stroke(Color.primary.opacity(0.15), lineWidth: 1)
+                } else if isHovered {
+                    RoundedRectangle(cornerRadius: 6, style: .continuous)
+                        .fill(Color.primary.opacity(0.05))
                 }
             }
+        )
+        .contentShape(Rectangle())
+        .onHover { hovering in
+            isHovered = hovering
         }
-        .buttonStyle(.plain)
-        .focusable(false)
+        .onTapGesture {
+            viewModel.commandKSelectedIndex = idx
+            viewModel.executeCommandKAction()
+        }
     }
     
     private func getIconName(for action: BatchStagedActionType) -> String {
@@ -3055,60 +1962,7 @@ struct VisualEffectView: NSViewRepresentable {
     }
 }
 
-private struct LauncherGlassSurface: NSViewRepresentable {
-    let cornerRadius: CGFloat
-
-    func makeNSView(context: Context) -> NSView {
-        makeSurfaceView()
-    }
-
-    func updateNSView(_ nsView: NSView, context: Context) {
-        nsView.wantsLayer = true
-        nsView.layer?.cornerRadius = cornerRadius
-        nsView.layer?.masksToBounds = true
-
-        if #available(macOS 26.0, *), let glassView = nsView as? NSGlassEffectView {
-            glassView.contentView = nil
-        } else if let effectView = nsView as? NSVisualEffectView {
-            effectView.material = .hudWindow
-            effectView.blendingMode = .withinWindow
-            effectView.state = .active
-        }
-    }
-
-    private func makeSurfaceView() -> NSView {
-        let surface: NSView
-        if #available(macOS 26.0, *) {
-            surface = NSGlassEffectView(frame: .zero)
-        } else {
-            let effectView = NSVisualEffectView(frame: .zero)
-            effectView.material = .hudWindow
-            effectView.blendingMode = .withinWindow
-            effectView.state = .active
-            surface = effectView
-        }
-
-        surface.wantsLayer = true
-        surface.layer?.cornerRadius = cornerRadius
-        surface.layer?.masksToBounds = true
-        return surface
-    }
-}
-
 extension View {
-    func opaqueLauncherBackground(cornerRadius: CGFloat, isDark: Bool, borderColor: Color) -> some View {
-        background(
-                isDark
-                ? Color(red: 0.22, green: 0.225, blue: 0.24)
-                : Color(red: 228 / 255, green: 233 / 255, blue: 233 / 255)
-        )
-        .clipShape(RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
-        .overlay(
-            RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
-                .stroke(borderColor.opacity(0.25), lineWidth: 1)
-        )
-    }
-
     @ViewBuilder
     func launcherBackground(cornerRadius: CGFloat, borderColor: Color) -> some View {
         if #available(macOS 26.0, *) {
@@ -3122,18 +1976,6 @@ extension View {
                 )
         }
     }
-
-    @ViewBuilder
-    func launcherMenuSurface(colors: ThemeColors) -> some View {
-        self
-            .background(LauncherGlassSurface(cornerRadius: 16))
-            .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-            .overlay(
-                RoundedRectangle(cornerRadius: 16, style: .continuous)
-                    .stroke(colors.border.opacity(0.25), lineWidth: 1)
-            )
-            .shadow(color: .black.opacity(0.32), radius: 24, y: 20)
-    }
 }
 
 struct BottomBarCapsule: ViewModifier {
@@ -3141,28 +1983,19 @@ struct BottomBarCapsule: ViewModifier {
     let isActive: Bool
     var isGreen: Bool = false
     let colorScheme: ColorScheme
-    var horizontalPadding: CGFloat = LauncherMenuMetrics.capsuleHorizontalPadding
-    var restingSurfaceOpacity: Double = 0.06
-    var showsBorder: Bool = true
     
     @State private var isHovered: Bool = false
     
     var greenBgColor: Color {
         colorScheme == .dark ? Color(red: 0.16, green: 0.48, blue: 0.26) : Color(red: 0.12, green: 0.44, blue: 0.22)
     }
-
-    private var controlSurface: Color {
-        colorScheme == .dark ? .primary : .white
-    }
     
     func body(content: Content) -> some View {
         content
-            .font(.system(
-                size: 14,
-                weight: isSelected || isActive ? .semibold : .medium
-            ))
-            .padding(.horizontal, horizontalPadding)
-            .frame(height: LauncherMenuMetrics.capsuleHeight)
+            .font(.subheadline)
+            .fontWeight(isSelected || isActive ? .semibold : .medium)
+            .padding(.horizontal, 12)
+            .frame(height: 26)
             .background(
                 ZStack {
                     if isGreen {
@@ -3171,15 +2004,15 @@ struct BottomBarCapsule: ViewModifier {
                         } else if isActive {
                             greenBgColor.opacity(isHovered ? 0.25 : 0.15)
                         } else {
-                            controlSurface.opacity(isHovered ? 0.12 : restingSurfaceOpacity)
+                            Color.primary.opacity(isHovered ? 0.12 : 0.06)
                         }
                     } else {
                         if isSelected {
-                            isActive ? controlSurface.opacity(0.24) : controlSurface.opacity(0.16)
+                            isActive ? Color.primary.opacity(0.24) : Color.primary.opacity(0.16)
                         } else if isActive {
-                            controlSurface.opacity(isHovered ? 0.22 : 0.14)
+                            Color.primary.opacity(isHovered ? 0.22 : 0.14)
                         } else {
-                            controlSurface.opacity(isHovered ? 0.12 : restingSurfaceOpacity)
+                            Color.primary.opacity(isHovered ? 0.12 : 0.06)
                         }
                     }
                 }
@@ -3189,96 +2022,18 @@ struct BottomBarCapsule: ViewModifier {
                         : (isActive ? .primary : (isSelected || isHovered ? .primary : .secondary))
             )
             .clipShape(Capsule())
-            .overlay {
-                if showsBorder {
-                    Capsule()
-                        .strokeBorder(
-                            isGreen ? (isSelected ? Color.primary.opacity(0.15) : (isActive ? greenBgColor.opacity(isHovered ? 0.4 : 0.2) : Color.primary.opacity(isHovered ? 0.25 : 0.08)))
-                                    : (isSelected ? (isActive ? Color.primary.opacity(0.48) : Color.primary.opacity(0.40)) : (isActive ? Color.primary.opacity(isHovered ? 0.35 : 0.22) : Color.primary.opacity(isHovered ? 0.25 : 0.08))),
-                            lineWidth: (isSelected && !isGreen) ? 1.5 : 1
-                        )
-                }
-            }
+            .overlay(
+                Capsule()
+                    .strokeBorder(
+                        isGreen ? (isSelected ? Color.primary.opacity(0.15) : (isActive ? greenBgColor.opacity(isHovered ? 0.4 : 0.2) : Color.primary.opacity(isHovered ? 0.25 : 0.08)))
+                                : (isSelected ? (isActive ? Color.primary.opacity(0.48) : Color.primary.opacity(0.40)) : (isActive ? Color.primary.opacity(isHovered ? 0.35 : 0.22) : Color.primary.opacity(isHovered ? 0.25 : 0.08))),
+                        lineWidth: (isSelected && !isGreen) ? 1.5 : 1
+                    )
+            )
             .shadow(color: isSelected ? (isGreen ? greenBgColor.opacity(0.25) : Color.primary.opacity(0.1)) : Color.clear, radius: 3, x: 0, y: 1)
             .onHover { hovering in
                 isHovered = hovering
             }
-    }
-}
-
-private struct LauncherBottomBarGroupedButton: View {
-    let title: String
-    let shortcut: String
-    let action: () -> Void
-    @Environment(\.colorScheme) private var colorScheme
-
-    var body: some View {
-        Button(action: action) {
-            HStack(spacing: 4) {
-                Text(verbatim: title)
-                LauncherFooterShortcut(text: shortcut)
-            }
-        }
-        .buttonStyle(.plain)
-        .modifier(
-            BottomBarCapsule(
-                isSelected: false,
-                isActive: false,
-                colorScheme: colorScheme,
-                horizontalPadding: LauncherMenuMetrics.footerButtonHorizontalPadding,
-                restingSurfaceOpacity: 0,
-                showsBorder: false
-            )
-        )
-        .contentShape(Capsule())
-    }
-}
-
-private struct LauncherFooterShortcut: View {
-    let text: String
-
-    var body: some View {
-        HStack(spacing: LauncherMenuMetrics.footerKeycapSpacing) {
-            ForEach(Array(text), id: \.self) { character in
-                LauncherFooterKeycap(text: String(character))
-            }
-        }
-    }
-}
-
-private struct LauncherFooterKeycap: View {
-    let text: String
-    @Environment(\.colorScheme) private var colorScheme
-
-    var body: some View {
-        Text(verbatim: text)
-            .font(.system(size: 12, weight: .semibold))
-            .foregroundColor(colorScheme == .dark ? .primary : .secondary)
-            .frame(
-                minWidth: LauncherMenuMetrics.footerKeycapSize,
-                minHeight: LauncherMenuMetrics.footerKeycapSize
-            )
-            .padding(.horizontal, 4)
-            .background(Color.primary.opacity(colorScheme == .dark ? 0.12 : 0.10), in: RoundedRectangle(cornerRadius: 7, style: .continuous))
-    }
-}
-
-private struct LauncherBottomBarActionGroup<Content: View>: View {
-    let colorScheme: ColorScheme
-    var isActive = false
-    private let content: Content
-
-    init(colorScheme: ColorScheme, isActive: Bool = false, @ViewBuilder content: () -> Content) {
-        self.colorScheme = colorScheme
-        self.isActive = isActive
-        self.content = content()
-    }
-
-    var body: some View {
-        HStack(spacing: LauncherMenuMetrics.footerGroupSpacing) {
-            content
-        }
-        .modifier(BottomBarCapsule(isSelected: false, isActive: isActive, colorScheme: colorScheme))
     }
 }
 
@@ -3298,12 +2053,7 @@ extension LauncherView {
         let hasShift = modifiers.contains(.shift)
         let hasOption = modifiers.contains(.option)
         let hasControl = modifiers.contains(.control)
-
-        if event.keyCode == 53 && hasCommand && !hasShift && !hasOption && !hasControl {
-            viewModel.popToRoot()
-            return true
-        }
-
+        
         // Direct window shortcuts for .listWindows (cmd + m, cmd + shift + m/w/n/r/f/h/q)
         if viewModel.activeCommand?.type == .listWindows,
            viewModel.commandKTargetWindow == nil,
