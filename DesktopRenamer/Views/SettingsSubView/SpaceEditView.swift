@@ -27,6 +27,15 @@ struct SpaceEditView: View {
                     }
                     .padding()
                     .padding(.bottom, 40)
+
+                    if let rearrangementMessage {
+                        Text(rearrangementMessage)
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .padding(.horizontal)
+                            .padding(.bottom, 8)
+                    }
                 }
             }
         }
@@ -130,6 +139,10 @@ struct SpaceEditView: View {
                 ForEach(displaySpaces) { space in
                     VStack(spacing: 0) {
                         HStack(spacing: 10) {
+                            Image(systemName: "line.3.horizontal")
+                                .font(.caption)
+                                .foregroundStyle(.tertiary)
+                                .accessibilityHidden(true)
                             spaceNumberView(for: space).frame(width: 30, alignment: .leading)
                             spaceNameEditor(for: space).frame(maxWidth: .infinity)
                             actionButtons(for: space).frame(width: 20, alignment: .trailing)
@@ -141,6 +154,7 @@ struct SpaceEditView: View {
                             Divider().padding(.leading, 12)
                         }
                     }
+                    .contentShape(Rectangle())
                     .transition(.opacity.combined(with: .move(edge: .top)))
                     .onDrag { NSItemProvider(object: space.id as NSString) }
                     .onDrop(of: [UTType.text], delegate: SpaceRearrangementDropDelegate(
@@ -236,6 +250,7 @@ private struct SpaceRearrangementDropDelegate: DropDelegate {
 
     func performDrop(info: DropInfo) -> Bool {
         guard let provider = info.itemProviders(for: [UTType.text]).first else { return false }
+        message = nil
         provider.loadObject(ofClass: NSString.self) { item, _ in
             guard let sourceObject = item as? NSString else { return }
             let sourceID = sourceObject as String
