@@ -208,6 +208,7 @@ struct SpaceEditView: View {
         if #available(macOS 27.0, *) {
             ForEach(spaces) { space in
                 spaceRow(for: space, in: spaces)
+                    .draggable(containerItemID: space.id)
             }
             .reorderable()
             .reorderContainer(for: DesktopSpace.self) { difference in
