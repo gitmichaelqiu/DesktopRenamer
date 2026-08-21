@@ -1173,6 +1173,7 @@ private struct FloatingHotkeyHint: View {
     let text: LocalizedStringKey
     let isSelected: Bool
     @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.launcherRowIsHovered) private var isRowHovered
 
     init(text: LocalizedStringKey, isSelected: Bool = false) {
         self.text = text
@@ -1191,7 +1192,9 @@ private struct FloatingHotkeyHint: View {
             .background(
                 Color.primary.opacity(isSelected
                     ? (colorScheme == .dark ? 0.22 : 0.14)
-                    : (colorScheme == .dark ? 0.12 : 0.10)),
+                    : isRowHovered
+                        ? (colorScheme == .dark ? 0.20 : 0.16)
+                        : (colorScheme == .dark ? 0.12 : 0.10)),
                 in: Capsule()
             )
             .shadow(
@@ -1336,6 +1339,7 @@ private struct LauncherSelectableRow<Content: View>: View {
 
     var body: some View {
         content
+            .environment(\.launcherRowIsHovered, isHovered)
             .modifier(LauncherRowSurface(
                 isSelected: isSelected,
                 isHovered: isHovered,
@@ -1343,7 +1347,18 @@ private struct LauncherSelectableRow<Content: View>: View {
                 verticalPadding: 8
             ))
             .contentShape(Rectangle())
-            .onHover { isHovered = $0 }
+        .onHover { isHovered = $0 }
+    }
+}
+
+private struct LauncherRowHoveredKey: EnvironmentKey {
+    static let defaultValue = false
+}
+
+private extension EnvironmentValues {
+    var launcherRowIsHovered: Bool {
+        get { self[LauncherRowHoveredKey.self] }
+        set { self[LauncherRowHoveredKey.self] = newValue }
     }
 }
 
