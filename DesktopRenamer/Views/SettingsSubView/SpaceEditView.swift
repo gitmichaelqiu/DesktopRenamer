@@ -1,4 +1,3 @@
-import ApplicationServices
 import SwiftUI
 import UniformTypeIdentifiers
 
@@ -6,7 +5,6 @@ struct SpaceEditView: View {
     @ObservedObject var spaceManager: SpaceManager
     @EnvironmentObject var navigationState: SettingsNavigationState
     @State private var rearrangementMessage: String?
-    @ObservedObject private var rearrangementService = SpaceRearrangementService.shared
     
     var body: some View {
         VStack(spacing: 0) {
@@ -29,13 +27,6 @@ struct SpaceEditView: View {
                     }
                     .padding()
                     .padding(.bottom, 40)
-#if DEBUG
-                    Text(rearrangementService.debugStatus)
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                        .padding(.horizontal)
-                    debugRearrangementControls
-#endif
                 }
             }
         }
@@ -235,64 +226,6 @@ struct SpaceEditView: View {
         spaceManager.renameSpace(space.id, to: newName)
     }
 
-#if DEBUG
-    private var debugRearrangementControls: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Label("Debug: Rearrange Spaces", systemImage: "ladybug")
-                .font(.headline)
-            Text("Temporary controls. These are compiled only in Debug builds.")
-                .font(.caption)
-                .foregroundColor(.secondary)
-            Text("Accessibility: \(AXIsProcessTrusted() ? "Granted" : "Not granted")")
-                .font(.caption)
-                .foregroundColor(AXIsProcessTrusted() ? .green : .red)
-
-            ForEach(groupedDisplayIDs, id: \.self) { displayID in
-                let displaySpaces = spaces(for: displayID)
-                if displaySpaces.count > 1 {
-                    Text(resolveDisplayName(for: displayID))
-                        .font(.caption.weight(.semibold))
-                    ForEach(Array(displaySpaces.dropFirst().enumerated()), id: \.element.id) { index, space in
-                        let previousSpace = displaySpaces[index]
-                        HStack {
-                            Button("Move Space \(space.num) before Space \(previousSpace.num)") {
-                                debugRearrange(space, before: previousSpace, in: displaySpaces)
-                            }
-                            .buttonStyle(.bordered)
-                            Spacer()
-                            Button("Move Space \(previousSpace.num) before Space \(space.num)") {
-                                debugRearrange(previousSpace, before: space, in: displaySpaces)
-                            }
-                            .buttonStyle(.bordered)
-                        }
-                    }
-                }
-            }
-        }
-        .padding()
-        .background(.quaternary, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
-        .padding(.horizontal)
-        .padding(.bottom, 12)
-    }
-
-    private func debugRearrange(_ source: DesktopSpace, before target: DesktopSpace, in spaces: [DesktopSpace]) {
-        SpaceRearrangementService.shared.rearrange(
-            sourceID: source.id,
-            before: target.id,
-            orderedSpaceIDs: spaces.map(\.id),
-            displayID: source.displayID
-        ) { result in
-            DispatchQueue.main.async {
-                switch result {
-                case .success:
-                    spaceManager.refreshSpaceState()
-                case .failure(let error):
-                    rearrangementService.setDebugStatus("Debug rearrangement failed: \(error)")
-                }
-            }
-        }
-    }
-#endif
 }
 
 private struct SpaceRearrangementDropDelegate: DropDelegate {

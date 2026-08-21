@@ -1,11 +1,8 @@
 import AppKit
-import Combine
 
 /// Reorders spaces through macOS's private SkyLight operation.
-final class SpaceRearrangementService: ObservableObject {
+final class SpaceRearrangementService {
     static let shared = SpaceRearrangementService()
-
-    @Published private(set) var debugStatus = "Idle"
 
     enum Result {
         case success
@@ -13,16 +10,6 @@ final class SpaceRearrangementService: ObservableObject {
     }
 
     private init() {}
-
-    func setDebugStatus(_ status: String) {
-        if Thread.isMainThread {
-            debugStatus = status
-        } else {
-            DispatchQueue.main.async { [weak self] in
-                self?.debugStatus = status
-            }
-        }
-    }
 
     func rearrange(
         sourceID: String,
@@ -48,7 +35,6 @@ final class SpaceRearrangementService: ObservableObject {
         let insertionIndex = sourceIndex < targetIndex ? targetIndex - 1 : targetIndex
         expectedOrder.insert(sourceID, at: insertionIndex)
 
-        setDebugStatus("Rearranging spaces…")
         DispatchQueue.global(qos: .userInitiated).async { [weak self] in
             let result = self?.runMove(
                 sourceID: sourceID,
@@ -182,16 +168,6 @@ final class SpaceRearrangementService: ObservableObject {
     }
 
     private func finish(_ result: Result, completion: @escaping (Result) -> Void) {
-        setDebugStatus(status(for: result))
         completion(result)
-    }
-
-    private func status(for result: Result) -> String {
-        switch result {
-        case .success:
-            return "Debug rearrangement completed."
-        case .failure(let error):
-            return "Debug rearrangement failed: \(error)"
-        }
     }
 }
