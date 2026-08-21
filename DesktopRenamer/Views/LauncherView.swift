@@ -1191,7 +1191,8 @@ struct SpacesBottomBar: View {
                         placeholder: String(localized: "Spaces:"),
                         textFieldFont: NSFont.systemFont(ofSize: 13, weight: .semibold),
                         textFieldColor: NSColor.secondaryLabelColor.withAlphaComponent(0.65),
-                        placeholderColor: NSColor.clear
+                        placeholderColor: NSColor.clear,
+                        focusNotificationName: NSNotification.Name("FocusSpaceBarTextField")
                     )
                     .opacity(viewModel.spaceBarQuery.isEmpty ? 0.001 : 1)
                 }
@@ -1535,6 +1536,7 @@ class FocusTextField: NSTextField {
     var onCommandK: (() -> Void)?
     var onKeyEquivalent: ((NSEvent) -> Bool)?
     var isTypingDisabled: Bool = false
+    var focusNotificationName = NSNotification.Name("FocusLauncherTextField")
 
     override var acceptsFirstResponder: Bool {
         return true
@@ -1585,7 +1587,7 @@ class FocusTextField: NSTextField {
         super.viewDidMoveToWindow()
         if window != nil {
             NotificationCenter.default.addObserver(self, selector: #selector(windowDidBecomeKey), name: NSWindow.didBecomeKeyNotification, object: window)
-            NotificationCenter.default.addObserver(self, selector: #selector(forceFocus), name: NSNotification.Name("FocusLauncherTextField"), object: nil)
+            NotificationCenter.default.addObserver(self, selector: #selector(forceFocus), name: focusNotificationName, object: nil)
             if window?.isKeyWindow == true {
                 DispatchQueue.main.async { [weak self] in
                     self?.forceFocus()
@@ -1593,7 +1595,7 @@ class FocusTextField: NSTextField {
             }
         } else {
             NotificationCenter.default.removeObserver(self, name: NSWindow.didBecomeKeyNotification, object: nil)
-            NotificationCenter.default.removeObserver(self, name: NSNotification.Name("FocusLauncherTextField"), object: nil)
+            NotificationCenter.default.removeObserver(self, name: focusNotificationName, object: nil)
         }
     }
     
@@ -1663,6 +1665,7 @@ struct SearchTextField: NSViewRepresentable {
     var textFieldFont: NSFont = NSFont.systemFont(ofSize: 16, weight: .regular)
     var textFieldColor: NSColor = .labelColor
     var placeholderColor: NSColor = .placeholderTextColor
+    var focusNotificationName = NSNotification.Name("FocusLauncherTextField")
     
     class Coordinator: NSObject, NSTextFieldDelegate, NSTextViewDelegate {
         var parent: SearchTextField
@@ -1737,6 +1740,7 @@ struct SearchTextField: NSViewRepresentable {
     func makeNSView(context: Context) -> NSTextField {
         let textField = FocusTextField()
         textField.delegate = context.coordinator
+        textField.focusNotificationName = focusNotificationName
         
         let formatter = BlockTypingFormatter(isTypingDisabled: { [weak coordinator = context.coordinator] in
             coordinator?.parent.isTypingDisabled ?? false

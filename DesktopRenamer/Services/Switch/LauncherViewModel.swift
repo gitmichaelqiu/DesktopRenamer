@@ -1319,6 +1319,14 @@ import SwiftUI
         isBottomBarFocused = true
         isKeyboardSelection = true
 
+        DispatchQueue.main.async {
+            guard self.isBottomBarFocused else { return }
+            NotificationCenter.default.post(
+                name: NSNotification.Name("FocusSpaceBarTextField"),
+                object: nil
+            )
+        }
+
         guard let manager = AppDelegate.shared.spaceManager else { return }
         let spaces = manager.currentDisplaySpaces
         guard !spaces.isEmpty else {
