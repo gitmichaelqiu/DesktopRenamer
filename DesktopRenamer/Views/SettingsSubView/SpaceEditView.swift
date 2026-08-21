@@ -103,6 +103,7 @@ struct SpaceEditView: View {
     private func spacesStack(for displayID: String) -> some View {
         VStack(spacing: 0) {
             HStack(spacing: 10) {
+                Color.clear.frame(width: 16)
                 Text("#").frame(width: 30, alignment: .leading)
                 Text(NSLocalizedString("Settings.Spaces.Edit.Name", comment: ""))
                     .frame(maxWidth: .infinity, alignment: .leading)
@@ -237,6 +238,11 @@ struct SpaceEditView: View {
     private func spaceRow(for space: DesktopSpace, in spaces: [DesktopSpace]) -> some View {
         VStack(spacing: 0) {
             HStack(spacing: 10) {
+                Image(systemName: "line.3.horizontal")
+                    .font(.caption)
+                    .foregroundStyle(.tertiary)
+                    .frame(width: 16)
+                    .accessibilityLabel("Drag to rearrange")
                 spaceNumberView(for: space).frame(width: 30, alignment: .leading)
                 spaceNameEditor(for: space).frame(maxWidth: .infinity)
                 actionButtons(for: space).frame(width: 20, alignment: .trailing)
