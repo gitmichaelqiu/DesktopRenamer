@@ -23,11 +23,15 @@ private struct AnimatedSettingsValue: View {
     }
 }
 
-private func withSettingsAnimation(_ action: @escaping () -> Void) {
+private func withSettingsAnimation(_ action: () -> Void) {
     if #available(macOS 14.0, *) {
-        withAnimation(.snappy(duration: 0.18), action)
+        withAnimation(.snappy(duration: 0.18)) {
+            action()
+        }
     } else {
-        withAnimation(.easeOut(duration: 0.18), action)
+        withAnimation(.easeOut(duration: 0.18)) {
+            action()
+        }
     }
 }
 
