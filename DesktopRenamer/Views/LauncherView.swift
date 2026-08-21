@@ -27,6 +27,10 @@ private enum LauncherMenuMetrics {
     static let capsuleHeight: CGFloat = 36
     static let labelHorizontalPadding: CGFloat = 8
     static let labelVerticalPadding: CGFloat = 3
+    static let footerGroupSpacing: CGFloat = 4
+    static let footerButtonHorizontalPadding: CGFloat = 4
+    static let footerKeycapSpacing: CGFloat = 3
+    static let footerKeycapSize: CGFloat = 24
     static let rowSurfaceInset: CGFloat = 12
     static let listVerticalInset: CGFloat = 8
     static let contentVerticalPadding: CGFloat = 4
@@ -3194,7 +3198,7 @@ private struct LauncherBottomBarGroupedButton: View {
             Text(verbatim: title)
             LauncherFooterShortcut(text: shortcut)
         }
-        .padding(.horizontal, 8)
+        .padding(.horizontal, LauncherMenuMetrics.footerButtonHorizontalPadding)
         .frame(height: LauncherMenuMetrics.capsuleHeight)
         .background(
             isHovered
@@ -3212,7 +3216,7 @@ private struct LauncherFooterShortcut: View {
     let text: String
 
     var body: some View {
-        HStack(spacing: 3) {
+        HStack(spacing: LauncherMenuMetrics.footerKeycapSpacing) {
             ForEach(Array(text), id: \.self) { character in
                 LauncherFooterKeycap(text: String(character))
             }
@@ -3228,7 +3232,10 @@ private struct LauncherFooterKeycap: View {
         Text(verbatim: text)
             .font(.system(size: 12, weight: .semibold))
             .foregroundColor(colorScheme == .dark ? .primary : .secondary)
-            .frame(minWidth: 24, minHeight: 24)
+            .frame(
+                minWidth: LauncherMenuMetrics.footerKeycapSize,
+                minHeight: LauncherMenuMetrics.footerKeycapSize
+            )
             .padding(.horizontal, 4)
             .background(Color.primary.opacity(colorScheme == .dark ? 0.12 : 0.10), in: RoundedRectangle(cornerRadius: 7, style: .continuous))
     }
@@ -3246,7 +3253,7 @@ private struct LauncherBottomBarActionGroup<Content: View>: View {
     }
 
     var body: some View {
-        HStack(spacing: 8) {
+        HStack(spacing: LauncherMenuMetrics.footerGroupSpacing) {
             content
         }
         .modifier(BottomBarCapsule(isSelected: false, isActive: isActive, colorScheme: colorScheme))
