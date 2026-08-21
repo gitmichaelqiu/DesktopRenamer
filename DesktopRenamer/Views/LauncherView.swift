@@ -798,7 +798,6 @@ private struct LauncherListScrollView<Content: View>: View {
             ScrollViewReader { proxy in
                 ScrollView(showsIndicators: false) {
                     content
-                        .padding(.horizontal, LauncherMenuMetrics.rowSurfaceInset)
                         .padding(.vertical, LauncherMenuMetrics.listVerticalInset)
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -1332,7 +1331,7 @@ private struct LauncherRowSurface: ViewModifier {
                 )
         }
         .frame(maxWidth: .infinity, minHeight: LauncherMenuMetrics.rowHeight)
-        .padding(.horizontal, 0)
+        .padding(.horizontal, LauncherMenuMetrics.rowSurfaceInset)
     }
 
     private var surfaceColor: Color {
@@ -1728,7 +1727,7 @@ private struct LauncherSectionHeader: View {
 
             Spacer(minLength: 0)
         }
-        .padding(.horizontal, LauncherMenuMetrics.rowContentHorizontalPadding)
+        .padding(.horizontal, LauncherMenuMetrics.rowSurfaceInset + LauncherMenuMetrics.rowContentHorizontalPadding)
         .padding(.top, topPadding)
         .padding(.bottom, bottomPadding)
     }
@@ -2226,7 +2225,6 @@ private struct LauncherMenuPanel<Header: View, Content: View, Footer: View>: Vie
             ScrollView {
                 content
                     // Keep popup rows aligned with the root list surface.
-                    .padding(.horizontal, LauncherMenuMetrics.rowSurfaceInset)
                     .padding(.vertical, LauncherMenuMetrics.contentVerticalPadding)
             }
             .frame(height: contentHeight)
