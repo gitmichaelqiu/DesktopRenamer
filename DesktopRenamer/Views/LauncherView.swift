@@ -18,6 +18,7 @@ private enum LauncherMenuMetrics {
     static let rowSpacing: CGFloat = 0
     static let menuAccessoryColumnWidth: CGFloat = 72
     static let popupRowContentSpacing: CGFloat = 4
+    static let popupAccessorySpacing: CGFloat = 10
     // Raycast keeps the accessory text in its own 140pt slot and reserves a
     // separate 24pt slot for the delayed number badge.
     static let accessoryColumnWidth: CGFloat = 140
@@ -1913,7 +1914,7 @@ struct RootActionsOverlay: View {
                 isSelected: viewModel.selectedRootActionIndex == row.index,
                 colors: colors,
             ) {
-                HStack(spacing: 10) {
+                                HStack(spacing: LauncherMenuMetrics.popupRowContentSpacing) {
                     Image(systemName: row.icon)
                         .font(.system(size: 14, weight: .medium))
                         .frame(width: 20)
@@ -2309,13 +2310,16 @@ struct SpacePickerOverlay: View {
                                     isSelected: isSelected,
                                     colors: colors
                                 ) {
-                                    HStack(spacing: LauncherMenuMetrics.popupRowContentSpacing) {
-                                        Image(systemName: "desktopcomputer")
-                                            .font(.system(size: 14, weight: .medium))
-                                            .frame(width: 20)
-                                        Text(spaceManager.getSpaceName(space.id))
-                                            .lineLimit(1)
-                                        Spacer(minLength: 0)
+                                    HStack(spacing: LauncherMenuMetrics.popupAccessorySpacing) {
+                                        HStack(spacing: LauncherMenuMetrics.popupRowContentSpacing) {
+                                            Image(systemName: "desktopcomputer")
+                                                .font(.system(size: 14, weight: .medium))
+                                                .frame(width: 20)
+                                            Text(spaceManager.getSpaceName(space.id))
+                                                .lineLimit(1)
+                                            Spacer(minLength: 0)
+                                        }
+
                                         LauncherMenuAccessory {
                                             if space.id == spaceManager.currentSpaceUUID {
                                                 Text(verbatim: String(localized: "Current"))
@@ -2979,7 +2983,7 @@ struct CommandKActionRowView: View {
                 isSelected: isSelected,
                 colors: colors,
             ) {
-                HStack(spacing: 10) {
+                HStack(spacing: LauncherMenuMetrics.popupAccessorySpacing) {
                     HStack(spacing: LauncherMenuMetrics.popupRowContentSpacing) {
                         Image(systemName: getIconName(for: action))
                             .font(.system(size: 14, weight: .medium))
