@@ -3170,12 +3170,27 @@ private struct LauncherBottomBarGroupedButton: View {
     let title: String
     let shortcut: String
     let action: () -> Void
+    @Environment(\.colorScheme) private var colorScheme
+    @State private var isHovered = false
 
     var body: some View {
         Button(action: action) {
             actionLabel
         }
         .buttonStyle(.plain)
+        .foregroundColor(title == String(localized: "Actions") ? .secondary : .primary)
+        .padding(.horizontal, 4)
+        .padding(.vertical, 4)
+        .background(
+            isHovered
+                ? (colorScheme == .dark
+                    ? Color.white.opacity(0.12)
+                    : Color.black.opacity(0.08))
+                : .clear,
+            in: RoundedRectangle(cornerRadius: 10, style: .continuous)
+        )
+        .contentShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+        .onHover { isHovered = $0 }
     }
 
     private var actionLabel: some View {
