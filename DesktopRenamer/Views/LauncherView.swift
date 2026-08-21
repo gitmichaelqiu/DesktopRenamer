@@ -1147,6 +1147,8 @@ struct SpacesBottomBar: View {
     @ObservedObject var viewModel: LauncherViewModel
     @ObservedObject var spaceManager: SpaceManager
     @Environment(\.colorScheme) var colorScheme
+
+    private let labelWidth: CGFloat = 56
     
     var colors: ThemeColors {
         ThemeColors(isDark: colorScheme == .dark)
@@ -1189,15 +1191,19 @@ struct SpacesBottomBar: View {
                         viewModel.handleEscapeKey()
                     },
                     onKeyEquivalent: { _ in false },
-                    placeholder: String(localized: "Spaces:")
+                    placeholder: String(localized: "Spaces:"),
+                    textFieldFont: NSFont.systemFont(ofSize: 13, weight: .semibold),
+                    textFieldColor: NSColor.secondaryLabelColor.withAlphaComponent(0.65),
+                    placeholderColor: NSColor.secondaryLabelColor.withAlphaComponent(0.65)
                 )
-                .frame(width: 110, height: 28)
+                .frame(width: labelWidth, height: 28, alignment: .leading)
                 .padding(.trailing, 8)
             } else {
                 Text(verbatim: String(localized: "Spaces:"))
                     .font(.subheadline)
                     .fontWeight(.semibold)
                     .foregroundColor(colors.textTertiary)
+                    .frame(width: labelWidth, alignment: .leading)
                     .padding(.trailing, 8)
                     .layoutPriority(1)
             }
@@ -1655,6 +1661,9 @@ struct SearchTextField: NSViewRepresentable {
     var onCommandK: (() -> Void)? = nil
     var onKeyEquivalent: ((NSEvent) -> Bool)? = nil
     var placeholder: String = "Type a command..."
+    var textFieldFont: NSFont = NSFont.systemFont(ofSize: 16, weight: .regular)
+    var textFieldColor: NSColor = .labelColor
+    var placeholderColor: NSColor = .placeholderTextColor
     
     class Coordinator: NSObject, NSTextFieldDelegate, NSTextViewDelegate {
         var parent: SearchTextField
@@ -1754,8 +1763,8 @@ struct SearchTextField: NSViewRepresentable {
         textField.isBordered = false
         textField.drawsBackground = false
         textField.focusRingType = .none
-        textField.textColor = .labelColor
-        textField.font = NSFont.systemFont(ofSize: 16, weight: .regular)
+        textField.textColor = textFieldColor
+        textField.font = textFieldFont
         
         context.coordinator.lastPlaceholder = placeholder
         context.coordinator.lastIsDark = isDark
@@ -1763,8 +1772,8 @@ struct SearchTextField: NSViewRepresentable {
         let placeholderAttr = NSAttributedString(
             string: placeholder,
             attributes: [
-                .foregroundColor: NSColor.placeholderTextColor,
-                .font: NSFont.systemFont(ofSize: 16, weight: .regular)
+                .foregroundColor: placeholderColor,
+                .font: textFieldFont
             ]
         )
         textField.placeholderAttributedString = placeholderAttr
@@ -1784,7 +1793,8 @@ struct SearchTextField: NSViewRepresentable {
         if nsView.stringValue != text {
             nsView.stringValue = text
         }
-        nsView.textColor = .labelColor
+        nsView.font = textFieldFont
+        nsView.textColor = textFieldColor
         
         // Cache placeholder creation to avoid recreating it on every render cycle
         if context.coordinator.lastPlaceholder != placeholder || context.coordinator.lastIsDark != isDark {
@@ -1794,8 +1804,8 @@ struct SearchTextField: NSViewRepresentable {
             let placeholderAttr = NSAttributedString(
                 string: placeholder,
                 attributes: [
-                    .foregroundColor: NSColor.placeholderTextColor,
-                    .font: NSFont.systemFont(ofSize: 16, weight: .regular)
+                    .foregroundColor: placeholderColor,
+                    .font: textFieldFont
                 ]
             )
             nsView.placeholderAttributedString = placeholderAttr
