@@ -80,7 +80,11 @@ final class SpaceRearrangementService {
         let targetPoint = CGPoint(x: targetFrame.minX + 4, y: targetFrame.midY)
         guard postMouseEvent(.mouseMoved, at: sourcePoint),
               postMouseEvent(.leftMouseDown, at: sourcePoint),
+              pauseBeforeNextMouseEvent(),
+              postMouseEvent(.leftMouseDragged, at: sourcePoint),
+              pauseBeforeNextMouseEvent(),
               postMouseEvent(.leftMouseDragged, at: targetPoint),
+              pauseBeforeNextMouseEvent(),
               postMouseEvent(.leftMouseUp, at: targetPoint) else {
             return .failure(String(localized: "Could not drag the selected space."))
         }
@@ -155,6 +159,11 @@ final class SpaceRearrangementService {
     private func postMouseEvent(_ type: CGEventType, at point: CGPoint) -> Bool {
         guard let event = CGEvent(mouseEventSource: CGEventSource(stateID: .hidSystemState), mouseType: type, mouseCursorPosition: point, mouseButton: .left) else { return false }
         event.post(tap: .cgSessionEventTap)
+        return true
+    }
+
+    private func pauseBeforeNextMouseEvent() -> Bool {
+        Thread.sleep(forTimeInterval: 0.08)
         return true
     }
 

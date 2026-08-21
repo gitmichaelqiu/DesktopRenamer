@@ -1,3 +1,4 @@
+import ApplicationServices
 import SwiftUI
 import UniformTypeIdentifiers
 
@@ -27,17 +28,16 @@ struct SpaceEditView: View {
                     }
                     .padding()
                     .padding(.bottom, 40)
-                }
-                if let rearrangementMessage {
-                    Text(rearrangementMessage)
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                        .padding(.horizontal)
-                        .padding(.bottom, 8)
-                }
 #if DEBUG
-                debugRearrangementControls
+                    if let rearrangementMessage {
+                        Text(rearrangementMessage)
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                            .padding(.horizontal)
+                    }
+                    debugRearrangementControls
 #endif
+                }
             }
         }
         .animation(.easeInOut(duration: 0.2), value: spaceManager.spaceNameDict)
@@ -244,6 +244,9 @@ struct SpaceEditView: View {
             Text("Temporary controls. These are compiled only in Debug builds.")
                 .font(.caption)
                 .foregroundColor(.secondary)
+            Text("Accessibility: \(AXIsProcessTrusted() ? "Granted" : "Not granted")")
+                .font(.caption)
+                .foregroundColor(AXIsProcessTrusted() ? .green : .red)
 
             ForEach(groupedDisplayIDs, id: \.self) { displayID in
                 let displaySpaces = spaces(for: displayID)
