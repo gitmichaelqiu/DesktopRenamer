@@ -95,7 +95,7 @@ private struct LauncherActionBarModifier: ViewModifier {
             .padding(.horizontal, horizontalPadding)
             .frame(height: LauncherLayout.actionBarContentHeight)
             .frame(maxWidth: .infinity, alignment: .center)
-            .padding(.bottom, 8)
+            .padding(.vertical, 4)
             .frame(height: height, alignment: .bottom)
     }
 }
@@ -1171,7 +1171,13 @@ struct KeycapView: View {
 
 private struct FloatingHotkeyHint: View {
     let text: LocalizedStringKey
+    let isSelected: Bool
     @Environment(\.colorScheme) private var colorScheme
+
+    init(text: LocalizedStringKey, isSelected: Bool = false) {
+        self.text = text
+        self.isSelected = isSelected
+    }
 
     var body: some View {
         Text(text)
@@ -1183,7 +1189,9 @@ private struct FloatingHotkeyHint: View {
             .frame(minWidth: 23)
             .frame(height: 16)
             .background(
-                Color.primary.opacity(colorScheme == .dark ? 0.12 : 0.10),
+                Color.primary.opacity(isSelected
+                    ? (colorScheme == .dark ? 0.22 : 0.14)
+                    : (colorScheme == .dark ? 0.12 : 0.10)),
                 in: Capsule()
             )
             .shadow(
@@ -1196,7 +1204,18 @@ private struct FloatingHotkeyHint: View {
 
 private struct LauncherRowAccessory<Content: View>: View {
     let shortcutText: String?
+    let isSelected: Bool
     @ViewBuilder let content: () -> Content
+
+    init(
+        shortcutText: String?,
+        isSelected: Bool = false,
+        @ViewBuilder content: @escaping () -> Content
+    ) {
+        self.shortcutText = shortcutText
+        self.isSelected = isSelected
+        self.content = content
+    }
 
     var body: some View {
         HStack(spacing: LauncherMenuMetrics.accessoryColumnSpacing) {
@@ -1205,7 +1224,10 @@ private struct LauncherRowAccessory<Content: View>: View {
                 .modifier(HotkeyAccessoryModifier(isActive: shortcutText != nil))
 
             if let shortcutText {
-                FloatingHotkeyHint(text: LocalizedStringKey(shortcutText))
+                FloatingHotkeyHint(
+                    text: LocalizedStringKey(shortcutText),
+                    isSelected: isSelected
+                )
                     .frame(width: LauncherMenuMetrics.hotkeyColumnWidth, alignment: .trailing)
             }
         }
@@ -1383,7 +1405,7 @@ struct CommandRowView: View {
 
             Spacer(minLength: 4)
 
-            LauncherRowAccessory(shortcutText: shortcutText) {
+            LauncherRowAccessory(shortcutText: shortcutText, isSelected: isSelected) {
                 if let statusText = toggleStatus {
                     statusBadge(statusText)
                 } else {
@@ -1413,7 +1435,7 @@ struct CommandRowView: View {
             
             Spacer()
 
-            LauncherRowAccessory(shortcutText: shortcutText) {
+            LauncherRowAccessory(shortcutText: shortcutText, isSelected: isSelected) {
                 if shortcutText == nil {
                     if let statusText = toggleStatus {
                         LauncherStatusLabel(
@@ -1504,7 +1526,7 @@ struct SpaceRowView: View {
             
             Spacer()
 
-            LauncherRowAccessory(shortcutText: shortcutText) {
+            LauncherRowAccessory(shortcutText: shortcutText, isSelected: isSelected) {
                 if isCurrent {
                     WindowStateBadge(label: String(localized: "Current"), color: .blue)
                 }
@@ -1614,7 +1636,7 @@ private struct LauncherWindowRowContent: View {
 
                 Spacer()
 
-                LauncherRowAccessory(shortcutText: shortcutText) {
+                LauncherRowAccessory(shortcutText: shortcutText, isSelected: isSelected) {
                     HStack(spacing: isStaged ? 4 : 8) {
                         if !isStaged {
                             if window.isHidden {
