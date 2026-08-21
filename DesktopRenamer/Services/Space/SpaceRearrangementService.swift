@@ -97,10 +97,10 @@ final class SpaceRearrangementService: ObservableObject {
 
     private func dragSpace(sourceIndex: Int, targetIndex: Int, spaceCount: Int) -> Result {
         guard let dock = runningDockElement() else { return .failure(String(localized: "Mission Control is not available.")) }
-        let frames = uniqueFrames(spaceThumbnailFrames(in: dock))
-            .filter { $0.width >= 50 && $0.height >= 30 }
-            .sorted { $0.minX < $1.minX }
-        guard frames.count >= spaceCount else { return .failure(String(localized: "Could not identify all spaces in Mission Control.")) }
+        let frames = spaceThumbnailFrames(in: dock)
+        guard frames.count >= spaceCount else {
+            return .failure(String(localized: "Could not identify all spaces in Mission Control (found \(frames.count) of \(spaceCount))."))
+        }
 
         let sourceFrame = frames[sourceIndex]
         let targetFrame = frames[targetIndex]
@@ -127,19 +127,31 @@ final class SpaceRearrangementService: ObservableObject {
     private func spaceThumbnailFrames(in root: AXUIElement) -> [CGRect] {
         var frames: [CGRect] = []
         collectFrames(from: root, depth: 0, into: &frames)
-        return frames
+        let candidates = uniqueFrames(frames).filter { $0.width >= 50 && $0.height >= 30 }
+        let rows = Dictionary(grouping: candidates) { Int($0.midY / 40) }
+        return rows.max {
+            if $0.value.count != $1.value.count { return $0.value.count < $1.value.count }
+            return $0.key > $1.key
+        }?.value.sorted { $0.minX < $1.minX } ?? []
     }
 
     private func collectFrames(from element: AXUIElement, depth: Int, into frames: inout [CGRect]) {
         guard depth < 8 else { return }
-        if let frame = frame(of: element), isPotentialThumbnail(frame), isVisible(element), isThumbnailRole(element) {
+        if let frame = frame(of: element), isPotentialThumbnail(frame), isVisible(element) {
             frames.append(frame)
         }
 
         var childrenValue: CFTypeRef?
-        guard AXUIElementCopyAttributeValue(element, kAXChildrenAttribute as CFString, &childrenValue) == .success,
-              let children = childrenValue as? [AXUIElement] else { return }
-        for child in children { collectFrames(from: child, depth: depth + 1, into: &frames) }
+        if AXUIElementCopyAttributeValue(element, kAXChildrenAttribute as CFString, &childrenValue) == .success,
+           let children = childrenValue as? [AXUIElement] {
+            for child in children { collectFrames(from: child, depth: depth + 1, into: &frames) }
+        }
+
+        var windowsValue: CFTypeRef?
+        if AXUIElementCopyAttributeValue(element, kAXWindowsAttribute as CFString, &windowsValue) == .success,
+           let windows = windowsValue as? [AXUIElement] {
+            for window in windows { collectFrames(from: window, depth: depth + 1, into: &frames) }
+        }
     }
 
     private func frame(of element: AXUIElement) -> CGRect? {
@@ -164,13 +176,6 @@ final class SpaceRearrangementService: ObservableObject {
         var hiddenValue: CFTypeRef?
         guard AXUIElementCopyAttributeValue(element, kAXHiddenAttribute as CFString, &hiddenValue) == .success else { return true }
         return (hiddenValue as? Bool) != true
-    }
-
-    private func isThumbnailRole(_ element: AXUIElement) -> Bool {
-        var roleValue: CFTypeRef?
-        guard AXUIElementCopyAttributeValue(element, kAXRoleAttribute as CFString, &roleValue) == .success,
-              let role = roleValue as? String else { return false }
-        return role == "AXButton" || role == "AXGroup" || role == "AXImage"
     }
 
     private func isPotentialThumbnail(_ frame: CGRect) -> Bool {
