@@ -3185,18 +3185,18 @@ private struct LauncherBottomBarGroupedButton: View {
     private var actionLabel: some View {
         HStack(spacing: 4) {
             Text(verbatim: title)
-                .padding(.horizontal, 8)
-                .frame(height: LauncherMenuMetrics.capsuleHeight)
-                .background(
-                    isHovered
-                        ? (colorScheme == .dark
-                            ? Color.white.opacity(0.12)
-                            : Color.black.opacity(0.08))
-                        : .clear,
-                    in: Capsule()
-                )
             LauncherFooterShortcut(text: shortcut)
         }
+        .padding(.horizontal, 8)
+        .frame(height: LauncherMenuMetrics.capsuleHeight)
+        .background(
+            isHovered
+                ? (colorScheme == .dark
+                    ? Color.white.opacity(0.12)
+                    : Color.black.opacity(0.08))
+                : .clear,
+            in: Capsule()
+        )
         .contentShape(Rectangle())
     }
 }
