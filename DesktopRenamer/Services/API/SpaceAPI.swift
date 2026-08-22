@@ -107,11 +107,17 @@ final class SpaceAPI {
     private func broadcastSpaceList() {
         guard let sm = spaceManager, SpaceManager.isAPIEnabled else { return }
         
-        let list = sm.spaceNameDict.sorted(by: { $0.num < $1.num }).map { space -> [String: Any] in
+        let list = sm.spaceNameDict.sorted {
+            if $0.displayID != $1.displayID {
+                return $0.displayID.localizedStandardCompare($1.displayID) == .orderedAscending
+            }
+            return $0.num < $1.num
+        }.map { space -> [String: Any] in
             [
                 "spaceUUID": space.id,
                 "spaceName": sm.getSpaceName(space.id),
-                "spaceNumber": NSNumber(value: space.num)
+                "spaceNumber": NSNumber(value: space.num),
+                "displayID": space.displayID
             ]
         }
         DiagnosticEventLog.shared.record(subsystem: "SpaceAPI", level: "info", "broadcastSpaceList: count=\(list.count)")
