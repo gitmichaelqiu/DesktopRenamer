@@ -1477,7 +1477,7 @@ enum DesktopRearrangementDirection {
     }
     
     func executeBottomBarSpaceAction(isOption: Bool, isCommand: Bool) {
-        guard let manager = AppDelegate.shared.spaceManager else { return }
+        guard AppDelegate.shared.spaceManager != nil else { return }
         let spaces = filteredDisplaySpaces
         guard selectedSpaceIndex >= 0 && selectedSpaceIndex < spaces.count else { return }
         let space = spaces[selectedSpaceIndex]
