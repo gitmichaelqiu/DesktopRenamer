@@ -448,11 +448,12 @@ class SpaceLabelWindow: NSWindow {
 
     private func makeVisualEffectView() -> NSVisualEffectView {
         let effectView = NSVisualEffectView(frame: .zero)
-        let isDark = NSApp.effectiveAppearance.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua
         effectView.material = .hudWindow
         effectView.blendingMode = .behindWindow
         effectView.state = .active
-        effectView.appearance = NSAppearance(named: isDark ? .darkAqua : .aqua)
+        // Inherit the window's effective appearance so the fallback label updates
+        // when the system switches between Light and Dark mode.
+        effectView.appearance = nil
         effectView.addSubview(self.contentContainer)
 
         self.contentContainer.translatesAutoresizingMaskIntoConstraints = false
