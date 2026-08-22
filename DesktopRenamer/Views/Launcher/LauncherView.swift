@@ -246,8 +246,7 @@ struct ListAreaView: View {
                     ScrollViewReader { proxy in
                         ScrollView {
                             VStack(spacing: 4) {
-                                ForEach(0..<commands.count, id: \.self) { i in
-                                    let cmd = commands[i]
+                                ForEach(Array(commands.enumerated()), id: \.element.id) { i, cmd in
                                     let isSelected = !viewModel.isBottomBarFocused && viewModel.selectedRowIndex == i
                                     CommandRowView(command: cmd, isSelected: isSelected, shortcutText: viewModel.showCommandNumbers && viewModel.commandKTargetWindow == nil && i < 9 ? "⌘\(i + 1)" : nil)
                                         .contentShape(Rectangle())
@@ -256,7 +255,7 @@ struct ListAreaView: View {
                                             viewModel.selectedRowIndex = i
                                             viewModel.executeRowAction()
                                         }
-                                        .id(i)
+                                        .id(cmd.id)
                                 }
                             }
                             .padding(.horizontal, 10)
@@ -265,7 +264,8 @@ struct ListAreaView: View {
                         .onChange(of: viewModel.selectedRowIndex) { index in
                             if viewModel.isKeyboardSelection {
                                 withAnimation(.easeInOut(duration: 0.12)) {
-                                    proxy.scrollTo(index, anchor: .center)
+                                    guard commands.indices.contains(index) else { return }
+                                    proxy.scrollTo(commands[index].id, anchor: .center)
                                 }
                             }
                         }
@@ -281,8 +281,7 @@ struct ListAreaView: View {
                         ScrollViewReader { proxy in
                             ScrollView {
                                 VStack(spacing: 4) {
-                                    ForEach(0..<spaces.count, id: \.self) { i in
-                                        let space = spaces[i]
+                                    ForEach(Array(spaces.enumerated()), id: \.element.id) { i, space in
                                         let isSelected = !viewModel.isBottomBarFocused && viewModel.selectedRowIndex == i
                                         SpaceRowView(space: space, isSelected: isSelected, isCurrent: AppDelegate.shared.spaceManager?.currentSpaceUUID == space.id, shortcutText: viewModel.showCommandNumbers && viewModel.commandKTargetWindow == nil && i < 9 ? "⌘\(i + 1)" : nil)
                                             .contentShape(Rectangle())
@@ -291,7 +290,7 @@ struct ListAreaView: View {
                                                 viewModel.selectedRowIndex = i
                                                 viewModel.executeRowAction()
                                             }
-                                            .id(i)
+                                            .id(space.id)
                                     }
                                 }
                                 .padding(.horizontal, 10)
@@ -300,12 +299,15 @@ struct ListAreaView: View {
                             .onChange(of: viewModel.selectedRowIndex) { index in
                                 if viewModel.isKeyboardSelection {
                                     withAnimation(.easeInOut(duration: 0.12)) {
-                                        proxy.scrollTo(index, anchor: .center)
+                                        guard spaces.indices.contains(index) else { return }
+                                        proxy.scrollTo(spaces[index].id, anchor: .center)
                                     }
                                 }
                             }
                             .onAppear {
-                                proxy.scrollTo(viewModel.selectedRowIndex, anchor: .center)
+                                if spaces.indices.contains(viewModel.selectedRowIndex) {
+                                    proxy.scrollTo(spaces[viewModel.selectedRowIndex].id, anchor: .center)
+                                }
                             }
                         }
                     }
@@ -319,8 +321,7 @@ struct ListAreaView: View {
                             ScrollViewReader { proxy in
                                 ScrollView {
                                     VStack(spacing: 4) {
-                                        ForEach(0..<spaces.count, id: \.self) { i in
-                                            let space = spaces[i]
+                                        ForEach(Array(spaces.enumerated()), id: \.element.id) { i, space in
                                             let isSelected = !viewModel.isBottomBarFocused && viewModel.selectedRowIndex == i
                                             SpaceRowView(space: space, isSelected: isSelected, isCurrent: AppDelegate.shared.spaceManager?.currentSpaceUUID == space.id, shortcutText: viewModel.showCommandNumbers && viewModel.commandKTargetWindow == nil && i < 9 ? "⌘\(i + 1)" : nil)
                                                 .contentShape(Rectangle())
@@ -329,7 +330,7 @@ struct ListAreaView: View {
                                                     viewModel.selectedRowIndex = i
                                                     viewModel.executeRowAction()
                                                 }
-                                                .id(i)
+                                                .id(space.id)
                                         }
                                     }
                                     .padding(.horizontal, 10)
@@ -338,12 +339,15 @@ struct ListAreaView: View {
                                 .onChange(of: viewModel.selectedRowIndex) { index in
                                     if viewModel.isKeyboardSelection {
                                         withAnimation(.easeInOut(duration: 0.12)) {
-                                            proxy.scrollTo(index, anchor: .center)
+                                            guard spaces.indices.contains(index) else { return }
+                                            proxy.scrollTo(spaces[index].id, anchor: .center)
                                         }
                                     }
                                 }
                                 .onAppear {
-                                    proxy.scrollTo(viewModel.selectedRowIndex, anchor: .center)
+                                if spaces.indices.contains(viewModel.selectedRowIndex) {
+                                    proxy.scrollTo(spaces[viewModel.selectedRowIndex].id, anchor: .center)
+                                }
                                 }
                             }
                         }

@@ -214,8 +214,7 @@ struct SpacesBottomBar: View {
                 ScrollView(.horizontal, showsIndicators: false) {
                     HStack(spacing: 8) {
                         let spaces = viewModel.filteredDisplaySpaces
-                        ForEach(0..<spaces.count, id: \.self) { i in
-                            let space = spaces[i]
+                        ForEach(Array(spaces.enumerated()), id: \.element.id) { i, space in
                             let isCurrent = space.id == spaceManager.currentSpaceUUID
                             let isSpaceSelected = viewModel.isBottomBarFocused && i == viewModel.selectedSpaceIndex
                             let name = spaceManager.getSpaceName(space.id)
