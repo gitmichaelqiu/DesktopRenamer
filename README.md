@@ -97,6 +97,7 @@ DesktopRenamer provides multiple ways to interact with it:
 
 - [SpaceAPI Guide](https://github.com/gitmichaelqiu/DesktopRenamer/wiki/DesktopRenamer-API-Guide) - Acquire space IDs and names via HTTP.
 - [AppleScript Guide](https://github.com/gitmichaelqiu/DesktopRenamer/wiki/DesktopRenamer-AppleScript-Guide) - Automate space management and window positioning via AppleScript.
+- The external API contract version is available through AppleScript (`get api version`) and SpaceAPI responses, independently of the app version.
 
 You can switch on/off the API in Settings → Advanced.
 
