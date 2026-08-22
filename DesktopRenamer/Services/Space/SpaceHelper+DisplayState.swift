@@ -1,3 +1,6 @@
+import AppKit
+import CoreGraphics
+
 extension SpaceHelper {
 
     /// Returns the display UUID that a specific space belongs to.
@@ -85,7 +88,7 @@ extension SpaceHelper {
         return s
     }
 
-    private static func getDisplayName(for uuidString: String, screenMap: [String: String]) -> String {
+    static func getDisplayName(for uuidString: String, screenMap: [String: String]) -> String {
         // Reviewer recommendation: Use case-insensitive comparison for robustness.
         if let name = screenMap[uuidString.uppercased()] {
             return name

@@ -282,11 +282,11 @@ extension StatusBarController {
         rebuildMenu()
     }
 
-    @objc private func restoreAllMovedWindows() {
+    @objc func restoreAllMovedWindows() {
         spaceManager.restoreAllMovedWindows()
     }
 
-    @objc private func cleanQueues() {
+    @objc func cleanQueues() {
         spaceManager.cleanMovedWindows()
         rebuildMenu()
     }

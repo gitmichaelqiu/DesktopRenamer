@@ -7,7 +7,7 @@ extension LauncherViewModel {
 
     /// Checks whether `query` matches `target` and its cached `pinyin`, supporting pinyin input for CJK-localized strings.
     /// e.g. typing "qiehuan" or "qie huan" matches "切换桌面" (pinyin: qie huan zhuo mian).
-    private func matchesQuery(_ query: String, target: String, pinyin: String) -> Bool {
+    func matchesQuery(_ query: String, target: String, pinyin: String) -> Bool {
         let lowerQuery = query.lowercased()
         if target.lowercased().contains(lowerQuery) { return true }
         let squashedQuery = lowerQuery.replacingOccurrences(of: " ", with: "")
@@ -161,4 +161,3 @@ extension LauncherViewModel {
         return sections
     }
 }
-

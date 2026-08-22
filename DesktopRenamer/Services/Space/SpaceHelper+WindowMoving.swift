@@ -1,3 +1,7 @@
+import AppKit
+import SwiftUI
+import ApplicationServices
+
 extension SpaceHelper {
 
     // MARK: - Window Moving Logic
@@ -302,4 +306,3 @@ extension SpaceHelper {
         }
     }
 }
-

@@ -119,7 +119,7 @@ extension LauncherViewModel {
         }
     }
 
-    private func removeApplicationWindowsFromList(pid: Int32) {
+    func removeApplicationWindowsFromList(pid: Int32) {
         terminatingApplicationPIDs.insert(pid)
         currentWindows.removeAll { $0.pid == pid }
         selectedRowIndex = min(selectedRowIndex, max(filteredWindows.count - 1, 0))
@@ -199,4 +199,3 @@ extension LauncherViewModel {
         return (spaces, windows)
     }
 }
-

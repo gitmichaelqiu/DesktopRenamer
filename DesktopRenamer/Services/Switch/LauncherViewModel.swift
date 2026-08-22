@@ -69,7 +69,7 @@ enum DesktopRearrangementDirection {
     @Published var currentWindows: [WindowEntry] = []
     @Published var isLoadingData: Bool = false
     @Published var isKeyboardSelection: Bool = false
-    @Published private(set) var isRearrangingSpace: Bool = false
+    @Published var isRearrangingSpace: Bool = false
     var rearrangementRecoveryWorkItem: DispatchWorkItem?
     
     @Published var showCommandNumbers: Bool = false

@@ -86,7 +86,7 @@ class SpaceLabelManager: ObservableObject {
     @Published var globalCenterPoint: NSPoint?
 
     var createdWindows: [String: SpaceLabelWindow] = [:]
-    private weak var spaceManager: SpaceManager?
+    weak var spaceManager: SpaceManager?
     var cancellables = Set<AnyCancellable>()
     var delayedRestoreWorkItem: DispatchWorkItem?
 

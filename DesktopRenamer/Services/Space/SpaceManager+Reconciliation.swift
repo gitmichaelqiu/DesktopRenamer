@@ -5,7 +5,7 @@ import WidgetKit
 
 extension SpaceManager {
 
-    private func refreshConnectedDisplays() {
+    func refreshConnectedDisplays() {
         self.connectedDisplayUUIDs = Set(SpaceHelper.getAllDisplayUUIDs().map { $0.uppercased() })
         // print("SpaceManager: Refreshed connected displays: \(connectedDisplayUUIDs)")
     }
@@ -17,7 +17,7 @@ extension SpaceManager {
         }
     }
     
-    private func handleSpaceChange(_ rawUUID: String, isDesktop: Bool, ncCount: Int, displayID: String, source: String) {
+    func handleSpaceChange(_ rawUUID: String, isDesktop: Bool, ncCount: Int, displayID: String, source: String) {
         DiagnosticEventLog.shared.record(subsystem: "SpaceManager", level: "info", "handleSpaceChange(display=\(displayID), source=\(source))")
         if SpaceHelper.isDragging {
             SpaceHelper.signalSpaceSwitchComplete(arrivedAtSpaceID: rawUUID)
@@ -296,7 +296,7 @@ extension SpaceManager {
         DispatchQueue.main.asyncAfter(deadline: .now() + delay, execute: workItem)
     }
 
-    private func cancelSpaceChangeRetry() {
+    func cancelSpaceChangeRetry() {
         spaceChangeRetryWorkItem?.cancel()
         spaceChangeRetryWorkItem = nil
         spaceChangeRetryCount = 0
@@ -335,7 +335,7 @@ extension SpaceManager {
     }
 
     // Debounces widget updates to throttle system load.
-    private func scheduleWidgetUpdate() {
+    func scheduleWidgetUpdate() {
         widgetUpdateWorkItem?.cancel()
         
         let workItem = DispatchWorkItem { [weak self] in
@@ -406,4 +406,3 @@ extension SpaceManager {
         DistributedNotificationCenter.default().postNotificationName(SpaceAPI.apiToggleNotification, object: nil, userInfo: ["isEnabled": false], deliverImmediately: true)
     }
 }
-

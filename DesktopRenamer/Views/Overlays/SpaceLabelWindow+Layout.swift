@@ -134,7 +134,7 @@ extension SpaceLabelWindow {
 
     // Geometry utilities for layout calculations.
 
-    private func calculateCenteredOrigin(
+    func calculateCenteredOrigin(
         forSize size: NSSize, onEdge edge: NSRectEdge, centerPoint: NSPoint, screenFrame: NSRect,
         clampToScreen: Bool, isDocked: Bool = true
     ) -> NSPoint {
@@ -168,7 +168,7 @@ extension SpaceLabelWindow {
         return origin
     }
 
-    private func calculateActiveSize() -> NSSize {
+    func calculateActiveSize() -> NSSize {
         let scaleF = CGFloat(labelManager?.activeFontScale ?? 1.0)
         let scaleP = CGFloat(labelManager?.activePaddingScale ?? 1.0)
         return calculateSize(
@@ -293,7 +293,7 @@ extension SpaceLabelWindow {
         return bestCandidate
     }
 
-    private func findNearestEdgePosition(targetScreen: NSScreen, forRect rect: NSRect) -> NSPoint {
+    func findNearestEdgePosition(targetScreen: NSScreen, forRect rect: NSRect) -> NSPoint {
         let size = rect.size
         let sFrame = targetScreen.visibleFrame
         let distLeft = abs(rect.minX - sFrame.minX)

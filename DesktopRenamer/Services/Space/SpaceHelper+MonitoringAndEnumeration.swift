@@ -136,7 +136,7 @@ extension SpaceHelper {
         }
     }
 
-    private static func normalizeDisplayID(_ id: String, mainUUID: String?) -> String {
+    static func normalizeDisplayID(_ id: String, mainUUID: String?) -> String {
         let cleanId = id.trimmingCharacters(in: .whitespacesAndNewlines)
         if cleanId.isEmpty || cleanId.uppercased() == "MAIN" || cleanId.uppercased() == "UNKNOWN" {
             return mainUUID?.uppercased() ?? "MAIN"
@@ -488,6 +488,5 @@ extension SpaceHelper {
         return output
     }
 }
-
 
 

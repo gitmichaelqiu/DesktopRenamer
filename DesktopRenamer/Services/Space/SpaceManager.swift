@@ -19,13 +19,13 @@ class SpaceManager: ObservableObject {
     static let appGrabExceptionsKey = "com.michaelqiu.desktoprenamer.appGrabExceptions"
     static let autoRearrangeFullscreenSpacesKey = "com.michaelqiu.desktoprenamer.autoRearrangeFullscreenSpaces"
     
-    @Published private(set) var currentSpaceUUID: String = ""
-    @Published private(set) var currentRawSpaceUUID: String = ""
-    @Published private(set) var currentDisplayID: String = "Main"
+    @Published var currentSpaceUUID: String = ""
+    @Published var currentRawSpaceUUID: String = ""
+    @Published var currentDisplayID: String = "Main"
     @Published var autoEditBundleID: String? = nil
     
     // Tracks active space per display to ensure local switching context
-    private(set) var currentSpaceByDisplay: [String: String] = [:]
+    var currentSpaceByDisplay: [String: String] = [:]
     
     @Published var spaceNameDict: [DesktopSpace] = []
     

@@ -131,7 +131,7 @@ extension LauncherViewModel {
         }
     }
     
-    private func executeSimpleCommand(_ type: LauncherCommandType) {
+    func executeSimpleCommand(_ type: LauncherCommandType) {
         DiagnosticEventLog.shared.record(subsystem: "Launcher", level: "info", "executeSimpleCommand: \(type.rawValue)")
         switch type {
         case .reloadLabels:
@@ -204,4 +204,3 @@ extension LauncherViewModel {
         }
     }
 }
-

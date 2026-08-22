@@ -7,19 +7,19 @@ extension SpaceManager {
 
     // MARK: - Periodic Space Layout Check
 
-    private func startPeriodicSpaceLayoutCheck() {
+    func startPeriodicSpaceLayoutCheck() {
         stopPeriodicSpaceLayoutCheck()
         spaceLayoutCheckTimer = Timer.scheduledTimer(withTimeInterval: spaceLayoutCheckInterval, repeats: true) { [weak self] _ in
             self?.checkForNewSpaces()
         }
     }
 
-    private func stopPeriodicSpaceLayoutCheck() {
+    func stopPeriodicSpaceLayoutCheck() {
         spaceLayoutCheckTimer?.invalidate()
         spaceLayoutCheckTimer = nil
     }
 
-    private func scheduleFullscreenSpaceRearrangement(
+    func scheduleFullscreenSpaceRearrangement(
         fullscreenSpaceID: String,
         afterSourceSpaceID sourceSpaceID: String,
         displayID: String
@@ -82,7 +82,7 @@ extension SpaceManager {
         refreshSpaceState()
     }
     
-    private func loadSavedData() {
+    func loadSavedData() {
         if let data = UserDefaults.standard.data(forKey: SpaceManager.spacesKey),
            let spaces = try? JSONDecoder().decode([DesktopSpace].self, from: data) {
             spaceNameDict = spaces.map {
@@ -137,7 +137,7 @@ extension SpaceManager {
         saveData()
     }
     
-    private func saveData() {
+    func saveData() {
         // We only save the spaces. Naming logic for fullscreen is re-run on load/refresh.
         if let data = try? JSONEncoder().encode(spaceNameDict) {
             UserDefaults.standard.set(data, forKey: SpaceManager.spacesKey)
@@ -150,4 +150,3 @@ extension SpaceManager {
         }
     }
 }
-

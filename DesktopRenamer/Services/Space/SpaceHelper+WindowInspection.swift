@@ -124,7 +124,7 @@ extension SpaceHelper {
         return getActiveWindowInfo()?.frame
     }
 
-    private static func getOwnerPID(for spaceID: String) -> Int32? {
+    static func getOwnerPID(for spaceID: String) -> Int32? {
         let conn = _CGSDefaultConnection()
         guard let displays = CGSCopyManagedDisplaySpaces(conn) as? [NSDictionary] else {
             return nil
@@ -147,7 +147,7 @@ extension SpaceHelper {
 
     // Shortcut configuration helpers.
 
-    private static func isShortcutEnabled(for number: Int) -> Bool {
+    static func isShortcutEnabled(for number: Int) -> Bool {
         let baseID = 118
         let targetID = baseID + (number - 1)
 
@@ -202,7 +202,7 @@ extension SpaceHelper {
     }
 
     @discardableResult
-    private static func simulateDesktopShortcut(for number: Int) -> Bool {
+    static func simulateDesktopShortcut(for number: Int) -> Bool {
         let code = getKeyCode(for: number)
         if code == 255 { return false }
 
@@ -222,4 +222,3 @@ extension SpaceHelper {
         return true
     }
 }
-

@@ -2,13 +2,6 @@ import Cocoa
 import Combine
 import QuartzCore
 
-// Private APIs for space management.
-@_silgen_name("_CGSDefaultConnection") func _CGSDefaultConnection() -> Int32
-@_silgen_name("CGSCopyManagedDisplaySpaces") func CGSCopyManagedDisplaySpaces(_ cid: Int32) -> CFArray?
-@_silgen_name("CGSAddWindowsToSpaces") func CGSAddWindowsToSpaces(_ cid: Int32, _ windows: CFArray, _ spaces: CFArray)
-@_silgen_name("CGSRemoveWindowsFromSpaces") func CGSRemoveWindowsFromSpaces(_ cid: Int32, _ windows: CFArray, _ spaces: CFArray)
-@_silgen_name("CGSCopySpacesForWindows") func CGSCopySpacesForWindows(_ cid: Int32, _ mask: Int32, _ windows: CFArray) -> CFArray?
-
 // The floating label window used to display space names.
 class SpaceLabelWindow: NSWindow {
     let label: NSTextField
@@ -21,7 +14,7 @@ class SpaceLabelWindow: NSWindow {
 
     var cancellables = Set<AnyCancellable>()
     let spaceManager: SpaceManager
-    private weak var labelManager: SpaceLabelManager?
+    weak var labelManager: SpaceLabelManager?
     var isUsingGlassEffect: Bool?
     var contentContainerConstraints: [NSLayoutConstraint] = []
 

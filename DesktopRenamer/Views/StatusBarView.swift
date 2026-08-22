@@ -3,8 +3,8 @@ import Combine
 import AppKit
 
 class StatusBarController: NSObject {
-    @ObservedObject private var spaceManager: SpaceManager
-    static private var statusItem: NSStatusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
+    @ObservedObject var spaceManager: SpaceManager
+    static var statusItem: NSStatusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
     var popover: NSPopover
     var cancellables = Set<AnyCancellable>()
     var settingsWindowController: NSWindowController?

@@ -131,7 +131,7 @@ extension SpaceLabelWindow {
         }
     }
 
-    @objc private func repositionWindow() {
+    @objc func repositionWindow() {
         updateLayout(isCurrentSpace: isActiveMode)
         updateVisibility(animated: false)
     }

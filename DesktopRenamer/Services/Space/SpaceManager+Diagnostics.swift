@@ -38,7 +38,7 @@ extension SpaceManager {
         lastManualSwitchTargetUUID ?? "nil"
     }
 
-    private func pruneStaleMovedWindows() {
+    func pruneStaleMovedWindows() {
         guard !SpaceHelper.isDragging else { return }
         var staleKeys: [Int] = []
         for (windowID, entry) in movedWindowsOriginalSpaces {

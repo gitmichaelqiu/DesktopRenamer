@@ -1,3 +1,7 @@
+import ApplicationServices
+
+import AppKit
+
 extension SpaceHelper {
 
     static func getAXWindow(id windowID: Int, pid: Int32) -> AXUIElement? {
