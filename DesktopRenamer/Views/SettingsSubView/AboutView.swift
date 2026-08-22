@@ -89,7 +89,7 @@ struct AboutView: View {
                             imageName: "VTPlayerIcon\(iconSuffix)",
                             appName: "VTPlayer",
                             description: NSLocalizedString("Real-time video enhancing player.", comment: ""),
-                            url: "https://github.com/gitmichaelqiu/VTPlayer"
+                            url: "https://vtplayer.mqiu.dev"
                         )
                     }
                 }
