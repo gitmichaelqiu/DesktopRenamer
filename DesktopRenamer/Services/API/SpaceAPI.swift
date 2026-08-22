@@ -2,16 +2,17 @@ import Foundation
 import AppKit
 import Combine
 
-class SpaceAPI {
-    static let apiPrefix = "com.michaelqiu.DesktopRenamer"
+@MainActor
+final class SpaceAPI {
+    nonisolated static let apiPrefix = "com.michaelqiu.DesktopRenamer"
     
-    static let getActiveSpace = Notification.Name("\(apiPrefix).GetActiveSpace")
-    static let returnActiveSpace = Notification.Name("\(apiPrefix).ReturnActiveSpace")
-    static let getSpaceList = Notification.Name("\(apiPrefix).GetSpaceList")
-    static let returnSpaceList = Notification.Name("\(apiPrefix).ReturnSpaceList")
-    static let getAPIVersion = Notification.Name("\(apiPrefix).GetAPIVersion")
-    static let returnAPIVersion = Notification.Name("\(apiPrefix).ReturnAPIVersion")
-    static let apiToggleNotification = Notification.Name("\(apiPrefix).ReturnAPIState")
+    nonisolated static let getActiveSpace = Notification.Name("\(apiPrefix).GetActiveSpace")
+    nonisolated static let returnActiveSpace = Notification.Name("\(apiPrefix).ReturnActiveSpace")
+    nonisolated static let getSpaceList = Notification.Name("\(apiPrefix).GetSpaceList")
+    nonisolated static let returnSpaceList = Notification.Name("\(apiPrefix).ReturnSpaceList")
+    nonisolated static let getAPIVersion = Notification.Name("\(apiPrefix).GetAPIVersion")
+    nonisolated static let returnAPIVersion = Notification.Name("\(apiPrefix).ReturnAPIVersion")
+    nonisolated static let apiToggleNotification = Notification.Name("\(apiPrefix).ReturnAPIState")
     
     // Use weak to avoid retain cycle (SpaceManager owns API, API shouldn't strongly own SpaceManager)
     private weak var spaceManager: SpaceManager?
@@ -134,17 +135,26 @@ class SpaceAPI {
         )
     }
     
-    @objc private func handleActiveSpaceRequest() {
-        DiagnosticEventLog.shared.record(subsystem: "SpaceAPI", level: "info", "handleActiveSpaceRequest")
-        broadcastCurrentSpace()
+    @objc nonisolated private func handleActiveSpaceRequest() {
+        Task { @MainActor [weak self] in
+            guard let self else { return }
+            DiagnosticEventLog.shared.record(subsystem: "SpaceAPI", level: "info", "handleActiveSpaceRequest")
+            self.broadcastCurrentSpace()
+        }
     }
-    @objc private func handleSpaceListRequest() {
-        DiagnosticEventLog.shared.record(subsystem: "SpaceAPI", level: "info", "handleSpaceListRequest")
-        broadcastSpaceList()
+    @objc nonisolated private func handleSpaceListRequest() {
+        Task { @MainActor [weak self] in
+            guard let self else { return }
+            DiagnosticEventLog.shared.record(subsystem: "SpaceAPI", level: "info", "handleSpaceListRequest")
+            self.broadcastSpaceList()
+        }
     }
 
-    @objc private func handleAPIVersionRequest() {
-        DiagnosticEventLog.shared.record(subsystem: "SpaceAPI", level: "info", "handleAPIVersionRequest")
-        broadcastAPIVersion()
+    @objc nonisolated private func handleAPIVersionRequest() {
+        Task { @MainActor [weak self] in
+            guard let self else { return }
+            DiagnosticEventLog.shared.record(subsystem: "SpaceAPI", level: "info", "handleAPIVersionRequest")
+            self.broadcastAPIVersion()
+        }
     }
 }
