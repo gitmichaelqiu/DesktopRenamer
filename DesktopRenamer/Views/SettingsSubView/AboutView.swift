@@ -41,6 +41,10 @@ struct AboutView: View {
                         Text("v\(appVersion)")
                             .font(.title3)
                             .foregroundColor(.secondary)
+
+                        Text(String(format: NSLocalizedString("External API v%@", comment: ""), DesktopRenamerAPIVersion.current))
+                            .font(.subheadline)
+                            .foregroundColor(.secondary)
                         
                         Text("© \(currentYear) Michael Yicheng Qiu")
                             .font(.footnote)

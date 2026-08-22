@@ -840,6 +840,16 @@
         }
       }
     },
+    "External API v%@" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "外部 API v%@"
+          }
+        }
+      }
+    },
     "Enter Full Screen" : {
       "localizations" : {
         "zh-Hans" : {
