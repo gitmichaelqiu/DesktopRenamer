@@ -17,6 +17,7 @@ class SpaceManager: ObservableObject {
     static private let movedWindowsOriginalSpacesKey = "com.michaelqiu.desktoprenamer.movedWindowsOriginalSpaces"
     static private let returnToOriginalAfterBatchMoveKey = "com.michaelqiu.desktoprenamer.returnToOriginalAfterBatchMove"
     static private let appGrabExceptionsKey = "com.michaelqiu.desktoprenamer.appGrabExceptions"
+    static private let autoRearrangeFullscreenSpacesKey = "com.michaelqiu.desktoprenamer.autoRearrangeFullscreenSpaces"
     
     @Published private(set) var currentSpaceUUID: String = ""
     @Published private(set) var currentRawSpaceUUID: String = ""
@@ -84,6 +85,12 @@ class SpaceManager: ObservableObject {
             UserDefaults.standard.set(returnToOriginalAfterBatchMove, forKey: SpaceManager.returnToOriginalAfterBatchMoveKey)
         }
     }
+
+    @Published var autoRearrangeFullscreenSpaces: Bool {
+        didSet {
+            UserDefaults.standard.set(autoRearrangeFullscreenSpaces, forKey: SpaceManager.autoRearrangeFullscreenSpacesKey)
+        }
+    }
     
     @Published var grabOffsetX: Double {
         didSet {
@@ -114,6 +121,7 @@ class SpaceManager: ObservableObject {
     
     init() {
         self.returnToOriginalAfterBatchMove = UserDefaults.standard.object(forKey: SpaceManager.returnToOriginalAfterBatchMoveKey) == nil ? true : UserDefaults.standard.bool(forKey: SpaceManager.returnToOriginalAfterBatchMoveKey)
+        self.autoRearrangeFullscreenSpaces = UserDefaults.standard.bool(forKey: SpaceManager.autoRearrangeFullscreenSpacesKey)
 
         if let savedLocked = UserDefaults.standard.stringArray(forKey: SpaceManager.lockedSpaceIDsKey) {
             self.lockedSpaceIDs = Set(savedLocked)
@@ -301,11 +309,13 @@ class SpaceManager: ObservableObject {
         var shouldUpdateWidget = false
 
         guard let cgsState = SpaceHelper.getSystemState() else {
-                if source == "Monitor" { scheduleSpaceChangeRetry() }
-                return
-            }
+            if source == "Monitor" { scheduleSpaceChangeRetry() }
+            return
+        }
+
+        let previousUUID = self.currentSpaceUUID
             
-            let now = Date().timeIntervalSince1970
+        let now = Date().timeIntervalSince1970
             let isRecentManualSwitch = now - lastManualSwitchTime < 2.0
             
             if isRecentManualSwitch, let targetUUID = lastManualSwitchTargetUUID {
@@ -402,6 +412,11 @@ class SpaceManager: ObservableObject {
                     }
                 }
             }
+
+            let knownSpaceIDs = Set(self.spaceNameDict.map { $0.id })
+            let newlyCreatedFullscreenSpaces = newSpaceList.filter {
+                $0.isFullscreen && !knownSpaceIDs.contains($0.id)
+            }
             
             // STABILITY GUARD: Reject partial space lists to prevent corrupting
             // saved state. Transient CGS failures can return fewer spaces,
@@ -438,8 +453,18 @@ class SpaceManager: ObservableObject {
                 saveData()
                 shouldUpdateWidget = true
             }
+
+            if self.autoRearrangeFullscreenSpaces,
+               let sourceSpace = self.spaceNameDict.first(where: { $0.id == previousUUID && !$0.isFullscreen }) {
+                for fullscreenSpace in newlyCreatedFullscreenSpaces where fullscreenSpace.displayID == sourceSpace.displayID {
+                    scheduleFullscreenSpaceRearrangement(
+                        fullscreenSpaceID: fullscreenSpace.id,
+                        afterSourceSpaceID: sourceSpace.id,
+                        displayID: sourceSpace.displayID
+                    )
+                }
+            }
             
-            let previousUUID = self.currentSpaceUUID
             let targetUUID = cgsState.currentUUID
 
             if previousUUID != targetUUID {
@@ -666,6 +691,54 @@ class SpaceManager: ObservableObject {
     private func stopPeriodicSpaceLayoutCheck() {
         spaceLayoutCheckTimer?.invalidate()
         spaceLayoutCheckTimer = nil
+    }
+
+    private func scheduleFullscreenSpaceRearrangement(
+        fullscreenSpaceID: String,
+        afterSourceSpaceID sourceSpaceID: String,
+        displayID: String
+    ) {
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) { [weak self] in
+            guard let self = self,
+                  self.autoRearrangeFullscreenSpaces,
+                  let state = SpaceHelper.getSystemState(onDisplayID: displayID) else { return }
+
+            let orderedIDs = state.spaces
+                .filter { $0.displayID == displayID }
+                .map(\.id)
+            guard let sourceIndex = orderedIDs.firstIndex(of: sourceSpaceID),
+                  orderedIDs.contains(fullscreenSpaceID) else { return }
+
+            let completion: (SpaceRearrangementService.Result) -> Void = { result in
+                if case .failure(let message) = result {
+                    DiagnosticEventLog.shared.record(
+                        subsystem: "SpaceManager",
+                        level: "warning",
+                        "Automatic fullscreen space rearrangement failed: \(message)"
+                    )
+                }
+                self.refreshSpaceState()
+            }
+
+            if sourceIndex + 1 < orderedIDs.count {
+                let nextSpaceID = orderedIDs[sourceIndex + 1]
+                guard nextSpaceID != fullscreenSpaceID else { return }
+                SpaceRearrangementService.shared.rearrange(
+                    sourceID: fullscreenSpaceID,
+                    before: nextSpaceID,
+                    orderedSpaceIDs: orderedIDs,
+                    displayID: displayID,
+                    completion: completion
+                )
+            } else {
+                SpaceRearrangementService.shared.rearrangeToEnd(
+                    sourceID: fullscreenSpaceID,
+                    orderedSpaceIDs: orderedIDs,
+                    displayID: displayID,
+                    completion: completion
+                )
+            }
+        }
     }
 
     /// Lightweight check that compares the current CGS space set against

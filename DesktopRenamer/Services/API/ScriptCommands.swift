@@ -205,11 +205,12 @@ class RearrangeSpaceCommand: NSScriptCommand {
 
         DispatchQueue.main.async {
             guard let manager = AppDelegate.shared.spaceManager,
-                  let sourceSpace = manager.spaceNameDict.first(where: { $0.id == sourceID }),
-                  !sourceSpace.isFullscreen else { return }
+                  let sourceSpace = manager.spaceNameDict.first(where: { $0.id == sourceID }) else { return }
 
             let orderedSpaces = manager.spaceNameDict
-                .filter { $0.displayID == sourceSpace.displayID && !$0.isFullscreen }
+                .filter {
+                    $0.displayID == sourceSpace.displayID && (sourceSpace.isFullscreen || !$0.isFullscreen)
+                }
                 .sorted { $0.num < $1.num }
             let orderedIDs = orderedSpaces.map(\.id)
             guard let sourceIndex = orderedIDs.firstIndex(of: sourceID) else { return }
