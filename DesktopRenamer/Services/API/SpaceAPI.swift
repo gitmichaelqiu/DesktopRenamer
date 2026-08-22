@@ -13,6 +13,8 @@ final class SpaceAPI {
     nonisolated static let getAPIVersion = Notification.Name("\(apiPrefix).GetAPIVersion")
     nonisolated static let returnAPIVersion = Notification.Name("\(apiPrefix).ReturnAPIVersion")
     nonisolated static let apiToggleNotification = Notification.Name("\(apiPrefix).ReturnAPIState")
+    nonisolated static let performCommand = Notification.Name("\(apiPrefix).PerformCommand")
+    nonisolated static let commandResult = Notification.Name("\(apiPrefix).CommandResult")
     
     // Use weak to avoid retain cycle (SpaceManager owns API, API shouldn't strongly own SpaceManager)
     private weak var spaceManager: SpaceManager?
@@ -36,6 +38,7 @@ final class SpaceAPI {
         dnc.addObserver(self, selector: #selector(handleActiveSpaceRequest), name: SpaceAPI.getActiveSpace, object: nil, suspensionBehavior: .deliverImmediately)
         dnc.addObserver(self, selector: #selector(handleSpaceListRequest), name: SpaceAPI.getSpaceList, object: nil, suspensionBehavior: .deliverImmediately)
         dnc.addObserver(self, selector: #selector(handleAPIVersionRequest), name: SpaceAPI.getAPIVersion, object: nil, suspensionBehavior: .deliverImmediately)
+        dnc.addObserver(self, selector: #selector(handleCommandRequest), name: SpaceAPI.performCommand, object: nil, suspensionBehavior: .deliverImmediately)
         
         // Broadcast space state changes to observers.
         spaceManager.$currentSpaceUUID
@@ -140,6 +143,231 @@ final class SpaceAPI {
             deliverImmediately: true
         )
     }
+
+    private func postCommandResult(requestID: String, result: String? = nil, error: String? = nil) {
+        var userInfo: [String: Any] = [
+            "requestID": requestID,
+            "success": error == nil
+        ]
+        if let result { userInfo["result"] = result }
+        if let error { userInfo["error"] = error }
+        DistributedNotificationCenter.default().postNotificationName(
+            SpaceAPI.commandResult,
+            object: nil,
+            userInfo: userInfo,
+            deliverImmediately: true
+        )
+    }
+
+    private func executeCommand(_ command: String, arguments: [String: String]) async throws -> String {
+        guard let manager = spaceManager else { throw SpaceAPIError.appUnavailable }
+
+        switch command {
+        case "getAPIVersion":
+            return DesktopRenamerAPIVersion.current
+        case "getCurrentSpaceName":
+            return manager.getSpaceName(manager.currentSpaceUUID)
+        case "getCurrentSpaceID":
+            return SpaceHelper.getCurrentSpaceIDs().joined(separator: ",")
+        case "getAllSpaces":
+            return manager.spaceNameDict.sorted {
+                if $0.displayID != $1.displayID {
+                    return $0.displayID.localizedStandardCompare($1.displayID) == .orderedAscending
+                }
+                return $0.num < $1.num
+            }.map { space in
+                let name = manager.getSpaceName(space.id)
+                return "\(space.id)~\(name)~\(space.displayID)~\(space.num)~\(space.isFullscreen ? "1" : "0")~\(space.appPath ?? "")"
+            }.joined(separator: "\n")
+        case "switchToSpace":
+            guard let spaceID = arguments["spaceID"],
+                  let space = manager.spaceNameDict.first(where: { $0.id == spaceID }) else {
+                throw SpaceAPIError.invalidArgument("Invalid space ID.")
+            }
+            manager.switchToSpace(space, forceInstant: true)
+            return ""
+        case "renameCurrentSpace":
+            guard let name = arguments["name"] else { throw SpaceAPIError.invalidArgument("Missing space name.") }
+            manager.renameSpace(manager.currentSpaceUUID, to: name)
+            return ""
+        case "renameSpace":
+            guard let spaceID = arguments["spaceID"], let name = arguments["name"] else {
+                throw SpaceAPIError.invalidArgument("Missing space ID or name.")
+            }
+            manager.renameSpace(spaceID, to: name)
+            return ""
+        case "rearrangeSpace":
+            guard let spaceID = arguments["spaceID"], let direction = arguments["direction"] else {
+                throw SpaceAPIError.invalidArgument("Missing space ID or direction.")
+            }
+            return try await rearrangeSpace(spaceID: spaceID, direction: direction, manager: manager)
+        case "moveWindowNext":
+            manager.moveActiveWindowToNextSpace()
+            return ""
+        case "moveWindowPrevious":
+            manager.moveActiveWindowToPreviousSpace()
+            return ""
+        case "moveWindowToSpace":
+            guard let spaceID = arguments["spaceID"] else { throw SpaceAPIError.invalidArgument("Missing space ID.") }
+            manager.moveActiveWindowToSpace(id: spaceID)
+            return ""
+        case "reloadSpaceLabels":
+            AppDelegate.shared.statusBarController?.labelManager.reloadAllWindows()
+            return ""
+        case "getWindows":
+            let spaces = manager.spaceNameDict
+            let names = Dictionary(uniqueKeysWithValues: spaces.map { ($0.id, manager.getSpaceName($0.id)) })
+            return SpaceHelper.getWindowsForAllSpaces(spaces: spaces, spaceNames: names)
+        case "focusWindow":
+            guard let windowID = Int(arguments["windowID"] ?? ""), let pid = Int32(arguments["pid"] ?? "") else {
+                throw SpaceAPIError.invalidArgument("Missing window ID or process ID.")
+            }
+            SpaceHelper.focusWindow(id: windowID, pid: pid)
+            return ""
+        case "executeWindowAction":
+            guard let windowID = Int(arguments["windowID"] ?? ""),
+                  let pid = Int32(arguments["pid"] ?? ""),
+                  let action = arguments["action"] else {
+                throw SpaceAPIError.invalidArgument("Missing window action arguments.")
+            }
+            try await executeWindowAction(windowID: windowID, pid: pid, action: action, manager: manager)
+            return ""
+        case "moveSpecificWindow":
+            guard let windowID = Int(arguments["windowID"] ?? ""),
+                  let pid = Int32(arguments["pid"] ?? ""),
+                  let fromSpaceID = arguments["fromSpaceID"],
+                  let targetSpaceID = arguments["targetSpaceID"] else {
+                throw SpaceAPIError.invalidArgument("Missing window move arguments.")
+            }
+            let moved = await WindowActionCoordinator.moveWindow(
+                windowID: windowID,
+                pid: pid,
+                fromSpaceID: fromSpaceID,
+                targetSpaceID: targetSpaceID
+            )
+            guard moved else { throw SpaceAPIError.operationFailed("Window move failed.") }
+            return ""
+        default:
+            throw SpaceAPIError.unsupportedCommand(command)
+        }
+    }
+
+    private func executeWindowAction(windowID: Int, pid: Int32, action: String, manager: SpaceManager) async throws {
+        if let spaceID = SpaceHelper.getWindowSpaceID(id: windowID),
+           manager.currentSpaceUUID != spaceID,
+           let space = manager.spaceNameDict.first(where: { $0.id == spaceID }) {
+            manager.switchToSpace(space, forceInstant: true)
+            try await Task.sleep(nanoseconds: 600_000_000)
+        }
+
+        if action == "quit" {
+            guard let app = NSRunningApplication(processIdentifier: pid) else {
+                throw SpaceAPIError.operationFailed("Application is no longer running.")
+            }
+            app.terminate()
+            return
+        }
+        if action == "hide" {
+            NSRunningApplication(processIdentifier: pid)?.hide()
+            return
+        }
+
+        var axWindow = SpaceHelper.getAXWindow(id: windowID, pid: pid)
+        if axWindow == nil, let app = NSRunningApplication(processIdentifier: pid) {
+            app.activate(options: .activateIgnoringOtherApps)
+            try await Task.sleep(nanoseconds: 400_000_000)
+            axWindow = SpaceHelper.getAXWindow(id: windowID, pid: pid)
+        }
+        guard let axWindow else { throw SpaceAPIError.operationFailed("Window is no longer accessible.") }
+
+        switch action {
+        case "close":
+            var closeButtonRef: CFTypeRef?
+            guard AXUIElementCopyAttributeValue(axWindow, kAXCloseButtonAttribute as CFString, &closeButtonRef) == .success,
+                  let closeButton = closeButtonRef,
+                  CFGetTypeID(closeButton) == AXUIElementGetTypeID() else {
+                throw SpaceAPIError.operationFailed("Window does not expose a close action.")
+            }
+            AXUIElementPerformAction(closeButton as! AXUIElement, kAXPressAction as CFString)
+        case "minimize", "restore":
+            AXUIElementSetAttributeValue(
+                axWindow,
+                kAXMinimizedAttribute as CFString,
+                (action == "minimize") as CFTypeRef
+            )
+        case "enterFullScreen", "exitFullScreen":
+            AXUIElementSetAttributeValue(
+                axWindow,
+                "AXFullScreen" as CFString,
+                (action == "enterFullScreen") as CFTypeRef
+            )
+            try await Task.sleep(nanoseconds: 1_000_000_000)
+        default:
+            throw SpaceAPIError.invalidArgument("Unsupported window action: \(action)")
+        }
+    }
+
+    private func rearrangeSpace(spaceID: String, direction: String, manager: SpaceManager) async throws -> String {
+        guard let sourceSpace = manager.spaceNameDict.first(where: { $0.id == spaceID }) else {
+            throw SpaceAPIError.invalidArgument("Invalid space ID.")
+        }
+        let orderedSpaces = manager.spaceNameDict
+            .filter { $0.displayID == sourceSpace.displayID && (sourceSpace.isFullscreen || !$0.isFullscreen) }
+            .sorted { $0.num < $1.num }
+        guard let sourceIndex = orderedSpaces.firstIndex(where: { $0.id == sourceSpace.id }) else {
+            throw SpaceAPIError.invalidArgument("Invalid space ID.")
+        }
+
+        return try await withCheckedThrowingContinuation { continuation in
+            let completion: (SpaceRearrangementService.Result) -> Void = { result in
+                switch result {
+                case .success:
+                    manager.refreshSpaceState()
+                    continuation.resume(returning: "")
+                case .failure(let message):
+                    continuation.resume(throwing: SpaceAPIError.operationFailed(message))
+                }
+            }
+
+            switch direction.lowercased() {
+            case "up":
+                guard sourceIndex > 0 else {
+                    continuation.resume(throwing: SpaceAPIError.invalidArgument("Space is already first."))
+                    return
+                }
+                SpaceRearrangementService.shared.rearrange(
+                    sourceID: spaceID,
+                    before: orderedSpaces[sourceIndex - 1].id,
+                    orderedSpaceIDs: orderedSpaces.map(\.id),
+                    displayID: sourceSpace.displayID,
+                    completion: completion
+                )
+            case "down":
+                guard sourceIndex < orderedSpaces.count - 1 else {
+                    continuation.resume(throwing: SpaceAPIError.invalidArgument("Space is already last."))
+                    return
+                }
+                if sourceIndex + 2 < orderedSpaces.count {
+                    SpaceRearrangementService.shared.rearrange(
+                        sourceID: spaceID,
+                        before: orderedSpaces[sourceIndex + 2].id,
+                        orderedSpaceIDs: orderedSpaces.map(\.id),
+                        displayID: sourceSpace.displayID,
+                        completion: completion
+                    )
+                } else {
+                    SpaceRearrangementService.shared.rearrangeToEnd(
+                        sourceID: spaceID,
+                        orderedSpaceIDs: orderedSpaces.map(\.id),
+                        displayID: sourceSpace.displayID,
+                        completion: completion
+                    )
+                }
+            default:
+                continuation.resume(throwing: SpaceAPIError.invalidArgument("Direction must be up or down."))
+            }
+        }
+    }
     
     @objc nonisolated private func handleActiveSpaceRequest() {
         Task { @MainActor [weak self] in
@@ -161,6 +389,51 @@ final class SpaceAPI {
             guard let self else { return }
             DiagnosticEventLog.shared.record(subsystem: "SpaceAPI", level: "info", "handleAPIVersionRequest")
             self.broadcastAPIVersion()
+        }
+    }
+
+    @objc nonisolated private func handleCommandRequest(_ notification: Notification) {
+        let userInfo = notification.userInfo ?? [:]
+        let requestID = userInfo["requestID"] as? String ?? UUID().uuidString
+        let command = userInfo["command"] as? String ?? ""
+        let arguments: [String: String]
+        if let argumentsJSON = userInfo["argumentsJSON"] as? String,
+           let data = argumentsJSON.data(using: .utf8),
+           let decoded = try? JSONDecoder().decode([String: String].self, from: data) {
+            arguments = decoded
+        } else {
+            arguments = userInfo["arguments"] as? [String: String] ?? [:]
+        }
+
+        Task { @MainActor [weak self] in
+            guard let self else { return }
+            guard SpaceManager.isAPIEnabled else {
+                self.postCommandResult(requestID: requestID, error: SpaceAPIError.apiDisabled.localizedDescription)
+                return
+            }
+            do {
+                let result = try await self.executeCommand(command, arguments: arguments)
+                self.postCommandResult(requestID: requestID, result: result)
+            } catch {
+                self.postCommandResult(requestID: requestID, error: error.localizedDescription)
+            }
+        }
+    }
+}
+
+private enum SpaceAPIError: LocalizedError {
+    case apiDisabled
+    case appUnavailable
+    case invalidArgument(String)
+    case operationFailed(String)
+    case unsupportedCommand(String)
+
+    var errorDescription: String? {
+        switch self {
+        case .apiDisabled: return "SpaceAPI Disabled"
+        case .appUnavailable: return "DesktopRenamer is not ready."
+        case .invalidArgument(let message), .operationFailed(let message): return message
+        case .unsupportedCommand(let command): return "Unsupported SpaceAPI command: \(command)"
         }
     }
 }
