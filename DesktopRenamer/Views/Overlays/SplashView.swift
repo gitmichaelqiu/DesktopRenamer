@@ -413,6 +413,13 @@ struct MoreAppsPage: View {
                     description: NSLocalizedString("Control which app and dock to show in each space.", comment: ""),
                     url: "https://github.com/gitmichaelqiu/SpaceSwitcher"
                 )
+
+                OtherAppRow(
+                    imageName: "VTPlayerIcon\(iconSuffix)",
+                    appName: "VTPlayer",
+                    description: NSLocalizedString("Real-time video enhancement powered by Apple's VideoToolbox.", comment: ""),
+                    url: "https://github.com/gitmichaelqiu/VTPlayer"
+                )
             }
             .padding(.horizontal, 40)
         }
@@ -429,4 +436,3 @@ struct LockSpacePage: View {
         )
     }
 }
-
