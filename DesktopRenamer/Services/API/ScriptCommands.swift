@@ -46,6 +46,18 @@ class ToggleLauncherCommand: NSScriptCommand {
     }
 }
 
+class ToggleLabelsCommand: NSScriptCommand {
+    override func performDefaultImplementation() -> Any? {
+        DiagnosticEventLog.shared.record(subsystem: "AppleScript", level: "info", "Command performed: ToggleLabelsCommand")
+        guard isAPIEnabled() else { return false }
+        return runOnMain {
+            guard let manager = AppDelegate.shared.statusBarController?.labelManager else { return false }
+            manager.showActiveLabels.toggle()
+            manager.showPreviewLabels.toggle()
+            return manager.showActiveLabels && manager.showPreviewLabels
+        }
+    }
+}
 
 class ToggleActiveLabelCommand: NSScriptCommand {
     override func performDefaultImplementation() -> Any? {

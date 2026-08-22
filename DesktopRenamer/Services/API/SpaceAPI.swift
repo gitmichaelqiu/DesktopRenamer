@@ -214,6 +214,37 @@ final class SpaceAPI {
         case "reloadSpaceLabels":
             AppDelegate.shared.statusBarController?.labelManager.reloadAllWindows()
             return ""
+        case "toggleMenubar":
+            StatusBarController.toggleStatusBar()
+            return StatusBarController.isStatusBarHidden ? "false" : "true"
+        case "toggleLauncher":
+            LauncherWindowController.shared.toggle()
+            return LauncherWindowController.shared.window?.isVisible == true ? "true" : "false"
+        case "toggleLabels":
+            guard let labelManager = AppDelegate.shared.statusBarController?.labelManager else {
+                throw SpaceAPIError.appUnavailable
+            }
+            labelManager.showActiveLabels.toggle()
+            labelManager.showPreviewLabels.toggle()
+            return labelManager.showActiveLabels && labelManager.showPreviewLabels ? "true" : "false"
+        case "toggleActiveLabel":
+            guard let labelManager = AppDelegate.shared.statusBarController?.labelManager else {
+                throw SpaceAPIError.appUnavailable
+            }
+            labelManager.showActiveLabels.toggle()
+            return labelManager.showActiveLabels ? "true" : "false"
+        case "togglePreviewLabel":
+            guard let labelManager = AppDelegate.shared.statusBarController?.labelManager else {
+                throw SpaceAPIError.appUnavailable
+            }
+            labelManager.showPreviewLabels.toggle()
+            return labelManager.showPreviewLabels ? "true" : "false"
+        case "toggleDesktopVisibility":
+            guard let labelManager = AppDelegate.shared.statusBarController?.labelManager else {
+                throw SpaceAPIError.appUnavailable
+            }
+            labelManager.showOnDesktop.toggle()
+            return labelManager.showOnDesktop ? "true" : "false"
         case "getWindows":
             let spaces = manager.spaceNameDict
             let names = Dictionary(uniqueKeysWithValues: spaces.map { ($0.id, manager.getSpaceName($0.id)) })
@@ -234,17 +265,28 @@ final class SpaceAPI {
             return ""
         case "moveSpecificWindow":
             guard let windowID = Int(arguments["windowID"] ?? ""),
-                  let pid = Int32(arguments["pid"] ?? ""),
                   let fromSpaceID = arguments["fromSpaceID"],
                   let targetSpaceID = arguments["targetSpaceID"] else {
                 throw SpaceAPIError.invalidArgument("Missing window move arguments.")
             }
-            let moved = await WindowActionCoordinator.moveWindow(
-                windowID: windowID,
-                pid: pid,
-                fromSpaceID: fromSpaceID,
-                targetSpaceID: targetSpaceID
-            )
+            let moved: Bool
+            if let pid = Int32(arguments["pid"] ?? "") {
+                moved = await WindowActionCoordinator.moveWindow(
+                    windowID: windowID,
+                    pid: pid,
+                    fromSpaceID: fromSpaceID,
+                    targetSpaceID: targetSpaceID
+                )
+            } else if let fromSpaceID = Int(fromSpaceID), let targetSpaceID = Int(targetSpaceID) {
+                SpaceHelper.moveWindowToSpace(
+                    windowID: windowID,
+                    fromSpaceID: fromSpaceID,
+                    targetSpaceID: targetSpaceID
+                )
+                moved = true
+            } else {
+                throw SpaceAPIError.invalidArgument("A process ID or numeric space IDs are required.")
+            }
             guard moved else { throw SpaceAPIError.operationFailed("Window move failed.") }
             return ""
         default:
