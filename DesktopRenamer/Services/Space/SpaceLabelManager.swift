@@ -243,6 +243,10 @@ class SpaceLabelManager: ObservableObject {
             self, selector: #selector(handleSpaceSwitchRequested),
             name: NSNotification.Name("SpaceSwitchRequested"), object: nil)
 
+        NotificationCenter.default.addObserver(
+            self, selector: #selector(handleSpaceRearrangementCompleted),
+            name: NSNotification.Name("SpaceRearrangementCompleted"), object: nil)
+
     }
 
     @objc private func handleSpaceSwitchRequested() {
@@ -258,6 +262,16 @@ class SpaceLabelManager: ObservableObject {
             if self.hideWhenSwitching {
                 self.hideAllPreviewLabels()
             }
+        }
+    }
+
+    @objc private func handleSpaceRearrangementCompleted() {
+        guard showPreviewLabels else { return }
+
+        // Reordering does not change currentSpaceUUID, so the normal space-change
+        // observer cannot restore preview labels hidden during the operation.
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) { [weak self] in
+            self?.updateAllWindowModes()
         }
     }
 

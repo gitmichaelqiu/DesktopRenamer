@@ -200,5 +200,11 @@ final class SpaceRearrangementService {
 
     private func finish(_ result: Result, completion: @escaping (Result) -> Void) {
         completion(result)
+        if case .success = result {
+            NotificationCenter.default.post(
+                name: NSNotification.Name("SpaceRearrangementCompleted"),
+                object: nil
+            )
+        }
     }
 }
