@@ -175,8 +175,11 @@ extension LauncherViewModel {
                     if let targetAXWindow = axWindow {
                         var closeButtonRef: CFTypeRef?
                         if AXUIElementCopyAttributeValue(targetAXWindow, kAXCloseButtonAttribute as CFString, &closeButtonRef) == .success,
-                           let closeButton = closeButtonRef {
-                            AXUIElementPerformAction(closeButton as! AXUIElement, kAXPressAction as CFString)
+                           let closeButton = closeButtonRef,
+                           CFGetTypeID(closeButton) == AXUIElementGetTypeID() {
+                            // The Core Foundation type check guarantees this bridge.
+                            let closeButtonElement = closeButton as! AXUIElement
+                            AXUIElementPerformAction(closeButtonElement, kAXPressAction as CFString)
                         }
                     }
                 case .minimize:

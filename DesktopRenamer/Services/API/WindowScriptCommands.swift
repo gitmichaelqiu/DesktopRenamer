@@ -214,7 +214,9 @@ class ExecuteWindowActionCommand: NSScriptCommand {
                 if AXUIElementCopyAttributeValue(targetAXWindow, kAXCloseButtonAttribute as CFString, &closeButtonRef) == .success,
                    let closeButton = closeButtonRef,
                    CFGetTypeID(closeButton) == AXUIElementGetTypeID() {
-                    AXUIElementPerformAction(closeButton as! AXUIElement, kAXPressAction as CFString)
+                    // The Core Foundation type check guarantees this bridge.
+                    let closeButtonElement = closeButton as! AXUIElement
+                    AXUIElementPerformAction(closeButtonElement, kAXPressAction as CFString)
                 }
             }
         case "minimize":
