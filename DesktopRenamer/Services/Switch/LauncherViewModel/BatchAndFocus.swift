@@ -7,6 +7,7 @@ extension LauncherViewModel {
 
     func executeBatchMove() {
         guard !stagedMoves.isEmpty else { return }
+        batchExecutionTask?.cancel()
         isExecutingBatchMove = true
         incrementCommandFrequency(LauncherCommandType.batchMoveWindows.rawValue)
         
@@ -14,7 +15,16 @@ extension LauncherViewModel {
         let originalSpaceUUID = AppDelegate.shared.spaceManager?.currentSpaceUUID
         DiagnosticEventLog.shared.record(subsystem: "Launcher", level: "info", "executeBatchMove: Starting batch move. Actions count=\(actions.count), originalSpaceUUID=\(originalSpaceUUID ?? "nil")")
         
-        Task {
+        batchExecutionTask = Task { [weak self] in
+            guard let self else { return }
+            defer {
+                self.isExecutingBatchMove = false
+                self.stagedMoves.removeAll()
+                self.batchExecutionTask = nil
+                LauncherWindowController.shared.shouldRestoreFocus = false
+            }
+
+            do {
             // 1. Filter space-move actions
             let spaceMoveActions = actions.filter {
                 switch $0.actionType {
@@ -41,7 +51,7 @@ extension LauncherViewModel {
                        let spaceObj = manager.spaceNameDict.first(where: { $0.id == sourceId }) {
                         manager.switchToSpace(spaceObj, forceInstant: true)
                     }
-                    try? await Task.sleep(nanoseconds: 600_000_000) // 0.6s settle time
+                    try await Task.sleep(nanoseconds: 600_000_000) // 0.6s settle time
                     
                     for (index, action) in sourceActions.enumerated() {
                         let targetSpaceID: String
@@ -72,14 +82,14 @@ extension LauncherViewModel {
                                    let spaceObj = manager.spaceNameDict.first(where: { $0.id == sourceId }) {
                                     manager.switchToSpace(spaceObj, forceInstant: true)
                                 }
-                                try? await Task.sleep(nanoseconds: 600_000_000) // 0.6s switch settle
+                                try await Task.sleep(nanoseconds: 600_000_000) // 0.6s switch settle
                             }
                             continue
                         }
                         
                         // Focus the targeted window first
                         SpaceHelper.focusWindow(id: action.window.id, pid: action.window.pid)
-                        try? await Task.sleep(nanoseconds: 250_000_000) // 0.25s focus settle
+                        try await Task.sleep(nanoseconds: 250_000_000) // 0.25s focus settle
                         
                         // Un-fullscreen first if the window is currently in a fullscreen space
                         if action.window.space.isFullscreen {
@@ -88,20 +98,20 @@ extension LauncherViewModel {
                             if axWindow == nil {
                                 if let app = NSRunningApplication(processIdentifier: action.window.pid) {
                                     app.activate(options: .activateIgnoringOtherApps)
-                                    try? await Task.sleep(nanoseconds: 400_000_000)
+                                    try await Task.sleep(nanoseconds: 400_000_000)
                                     axWindow = SpaceHelper.getAXWindow(id: action.window.id, pid: action.window.pid)
                                 }
                             }
                             if let targetAXWindow = axWindow {
                                 AXUIElementSetAttributeValue(targetAXWindow, "AXFullScreen" as CFString, false as CFTypeRef)
-                                try? await Task.sleep(nanoseconds: 1_200_000_000) // Wait for exit-fullscreen animation to settle
+                                try await Task.sleep(nanoseconds: 1_200_000_000) // Wait for exit-fullscreen animation to settle
                             }
                         }
                         
                         if let manager = AppDelegate.shared.spaceManager {
                             manager.moveActiveWindowToSpace(id: targetSpaceID)
                         }
-                        try? await Task.sleep(nanoseconds: 500_000_000) // 0.5s movement settle
+                        try await Task.sleep(nanoseconds: 500_000_000) // 0.5s movement settle
                         
                         // Switch back to source space
                         if index < sourceActions.count - 1 {
@@ -109,7 +119,7 @@ extension LauncherViewModel {
                                let spaceObj = manager.spaceNameDict.first(where: { $0.id == sourceId }) {
                                 manager.switchToSpace(spaceObj, forceInstant: true)
                             }
-                            try? await Task.sleep(nanoseconds: 600_000_000) // 0.6s switch settle
+                            try await Task.sleep(nanoseconds: 600_000_000) // 0.6s switch settle
                         }
                     }
                 }
@@ -133,7 +143,7 @@ extension LauncherViewModel {
                    manager.currentSpaceUUID != windowSpaceID,
                    let spaceObj = manager.spaceNameDict.first(where: { $0.id == windowSpaceID }) {
                     manager.switchToSpace(spaceObj, forceInstant: true)
-                    try? await Task.sleep(nanoseconds: 600_000_000) // 0.6s settle time
+                    try await Task.sleep(nanoseconds: 600_000_000) // 0.6s settle time
                 }
                 
                 // Un-fullscreen first if the window is currently fullscreen and the action requires it
@@ -142,13 +152,13 @@ extension LauncherViewModel {
                     if axWindow == nil {
                         if let app = NSRunningApplication(processIdentifier: action.window.pid) {
                             app.activate(options: .activateIgnoringOtherApps)
-                            try? await Task.sleep(nanoseconds: 400_000_000)
+                            try await Task.sleep(nanoseconds: 400_000_000)
                             axWindow = SpaceHelper.getAXWindow(id: action.window.id, pid: action.window.pid)
                         }
                     }
                     if let targetAXWindow = axWindow {
                         AXUIElementSetAttributeValue(targetAXWindow, "AXFullScreen" as CFString, false as CFTypeRef)
-                        try? await Task.sleep(nanoseconds: 1_200_000_000) // Wait for exit-fullscreen animation to settle
+                        try await Task.sleep(nanoseconds: 1_200_000_000) // Wait for exit-fullscreen animation to settle
                     }
                 }
                 
@@ -158,7 +168,7 @@ extension LauncherViewModel {
                     if axWindow == nil {
                         if let app = NSRunningApplication(processIdentifier: action.window.pid) {
                             app.activate(options: .activateIgnoringOtherApps)
-                            try? await Task.sleep(nanoseconds: 400_000_000)
+                            try await Task.sleep(nanoseconds: 400_000_000)
                             axWindow = SpaceHelper.getAXWindow(id: action.window.id, pid: action.window.pid)
                         }
                     }
@@ -174,7 +184,7 @@ extension LauncherViewModel {
                     if axWindow == nil {
                         if let app = NSRunningApplication(processIdentifier: action.window.pid) {
                             app.activate(options: .activateIgnoringOtherApps)
-                            try? await Task.sleep(nanoseconds: 400_000_000)
+                            try await Task.sleep(nanoseconds: 400_000_000)
                             axWindow = SpaceHelper.getAXWindow(id: action.window.id, pid: action.window.pid)
                         }
                     }
@@ -190,26 +200,26 @@ extension LauncherViewModel {
                     if axWindow == nil {
                         if let app = NSRunningApplication(processIdentifier: action.window.pid) {
                             app.activate(options: .activateIgnoringOtherApps)
-                            try? await Task.sleep(nanoseconds: 400_000_000)
+                            try await Task.sleep(nanoseconds: 400_000_000)
                             axWindow = SpaceHelper.getAXWindow(id: action.window.id, pid: action.window.pid)
                         }
                     }
                     if let targetAXWindow = axWindow {
                         AXUIElementSetAttributeValue(targetAXWindow, "AXFullScreen" as CFString, true as CFTypeRef)
-                        try? await Task.sleep(nanoseconds: 1_000_000_000)
+                        try await Task.sleep(nanoseconds: 1_000_000_000)
                     }
                 case .exitFullScreen:
                     var axWindow = SpaceHelper.getAXWindow(id: action.window.id, pid: action.window.pid)
                     if axWindow == nil {
                         if let app = NSRunningApplication(processIdentifier: action.window.pid) {
                             app.activate(options: .activateIgnoringOtherApps)
-                            try? await Task.sleep(nanoseconds: 400_000_000)
+                            try await Task.sleep(nanoseconds: 400_000_000)
                             axWindow = SpaceHelper.getAXWindow(id: action.window.id, pid: action.window.pid)
                         }
                     }
                     if let targetAXWindow = axWindow {
                         AXUIElementSetAttributeValue(targetAXWindow, "AXFullScreen" as CFString, false as CFTypeRef)
-                        try? await Task.sleep(nanoseconds: 1_000_000_000)
+                        try await Task.sleep(nanoseconds: 1_000_000_000)
                     }
                 case .quit:
                     if let app = NSRunningApplication(processIdentifier: action.window.pid) {
@@ -223,7 +233,7 @@ extension LauncherViewModel {
                     if axWindow == nil {
                         if let app = NSRunningApplication(processIdentifier: action.window.pid) {
                             app.activate(options: .activateIgnoringOtherApps)
-                            try? await Task.sleep(nanoseconds: 400_000_000)
+                            try await Task.sleep(nanoseconds: 400_000_000)
                             axWindow = SpaceHelper.getAXWindow(id: action.window.id, pid: action.window.pid)
                         }
                     }
@@ -233,14 +243,10 @@ extension LauncherViewModel {
                 default:
                     break
                 }
-                try? await Task.sleep(nanoseconds: 150_000_000) // 150ms delay between commands
+                try await Task.sleep(nanoseconds: 150_000_000) // 150ms delay between commands
             }
             
             DiagnosticEventLog.shared.record(subsystem: "Launcher", level: "info", "executeBatchMove: Finished batch move execution.")
-            self.isExecutingBatchMove = false
-            self.stagedMoves.removeAll()
-            LauncherWindowController.shared.shouldRestoreFocus = false
-            
             if let manager = AppDelegate.shared.spaceManager {
                 if manager.returnToOriginalAfterBatchMove {
                     if let originalUUID = originalSpaceUUID,
@@ -263,7 +269,13 @@ extension LauncherViewModel {
             }
             
             self.closeLauncher()
+            } catch {
+                DiagnosticEventLog.shared.record(
+                    subsystem: "Launcher",
+                    level: "info",
+                    "executeBatchMove: Cancelled or interrupted (\(error))."
+                )
+            }
         }
     }
 }
-

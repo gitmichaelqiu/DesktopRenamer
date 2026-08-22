@@ -51,6 +51,9 @@ enum DesktopRearrangementDirection {
     @Published var activeCommand: LauncherCommand? = nil {
         willSet {
             if activeCommand?.type == .batchMoveWindows && newValue?.type != .batchMoveWindows {
+                batchExecutionTask?.cancel()
+            }
+            if activeCommand?.type == .batchMoveWindows && newValue?.type != .batchMoveWindows {
                 stagedMoves.removeAll()
             }
         }
@@ -87,6 +90,7 @@ enum DesktopRearrangementDirection {
         }
     }
     @Published var isExecutingBatchMove: Bool = false
+    var batchExecutionTask: Task<Void, Never>?
     
     // Command K Panel Overlay State
     @Published var commandKTargetWindow: WindowEntry? = nil {

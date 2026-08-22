@@ -101,6 +101,7 @@ extension LauncherViewModel {
     }
     
     func closeLauncher() {
+        batchExecutionTask?.cancel()
         searchQuery = ""
         spaceBarQuery = ""
         selectedRowIndex = 0
@@ -110,4 +111,3 @@ extension LauncherViewModel {
         onClose?()
     }
 }
-
