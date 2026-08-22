@@ -43,7 +43,7 @@
             <result type="text" description="The name of the current space"/>
         </command>
 
-        <command name="get api version" code="DskRAPv" description="Get the version of the external API contract">
+        <command name="get api version" code="DskRAPIV" description="Get the version of the external API contract">
             <cocoa class="DesktopRenamer.GetAPIVersionCommand"/>
             <result type="text" description="The semantic version of the external API contract"/>
         </command>
