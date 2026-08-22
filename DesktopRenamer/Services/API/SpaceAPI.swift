@@ -147,6 +147,7 @@ final class SpaceAPI {
     private func postCommandResult(requestID: String, result: String? = nil, error: String? = nil) {
         var userInfo: [String: Any] = [
             "requestID": requestID,
+            "apiVersion": DesktopRenamerAPIVersion.current,
             "success": error == nil
         ]
         if let result { userInfo["result"] = result }
@@ -165,6 +166,8 @@ final class SpaceAPI {
         switch command {
         case "getAPIVersion":
             return DesktopRenamerAPIVersion.current
+        case "getSpaceSnapshot":
+            return try makeSpaceSnapshot(manager)
         case "getCurrentSpaceName":
             return manager.getSpaceName(manager.currentSpaceUUID)
         case "getCurrentSpaceID":
