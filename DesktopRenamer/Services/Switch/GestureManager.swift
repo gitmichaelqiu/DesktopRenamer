@@ -3,21 +3,21 @@ import Combine
 import Foundation
 import IOKit
 
-private typealias MTDeviceRef = OpaquePointer
+typealias MTDeviceRef = OpaquePointer
 
-private struct MTPoint {
+struct MTPoint {
     var x: Float
     var y: Float
 }
 
-private struct MTVector {
+struct MTVector {
     var position: MTPoint
     var velocity: MTPoint
 }
 
 // Structure representing a single finger touch event from the multitouch sensor.
 // Note: Updated to 64-bit layout (~92-96 bytes) to resolve memory alignment and stride issues.
-private struct MTTouch {
+struct MTTouch {
     var frame: Int32
     var timestamp: Double
     var identifier: Int32
@@ -37,13 +37,13 @@ private struct MTTouch {
 }
 
 // Private Framework Loading
-private let MTSFrameworkPath =
+let MTSFrameworkPath =
     "/System/Library/PrivateFrameworks/MultitouchSupport.framework/MultitouchSupport"
 
 // Function Pointers
-private var _MTDeviceCreateList: (@convention(c) () -> Unmanaged<CFArray>)?
-private var _MTDeviceCreateFromService: (@convention(c) (io_service_t) -> MTDeviceRef)?
-private var _MTRegisterContactFrameCallback:
+var _MTDeviceCreateList: (@convention(c) () -> Unmanaged<CFArray>)?
+var _MTDeviceCreateFromService: (@convention(c) (io_service_t) -> MTDeviceRef)?
+var _MTRegisterContactFrameCallback:
     (
         @convention(c) (
             MTDeviceRef,
@@ -51,18 +51,18 @@ private var _MTRegisterContactFrameCallback:
             Int32
         ) -> Void
     )?
-private var _MTDeviceStart: (@convention(c) (MTDeviceRef, Int32) -> Void)?
-private var _MTDeviceStop: (@convention(c) (MTDeviceRef, Int32) -> Void)?
+var _MTDeviceStart: (@convention(c) (MTDeviceRef, Int32) -> Void)?
+var _MTDeviceStop: (@convention(c) (MTDeviceRef, Int32) -> Void)?
 
 // Core service responsible for intercepting and interpreting trackpad gestures.
 class GestureManager: ObservableObject {
     // Settings
-    private let kGestureEnabled = "GestureManager.Enabled"
-    private let kFingerCount = "GestureManager.FingerCount"
-    private let kSwitchOverride = "GestureManager.SwitchOverride"
-    private let kSwipeThreshold = "GestureManager.SwipeThreshold"
-    private let kMoveWindowOnOption = "GestureManager.MoveWindowOnOption"
-    private let kSwitchDuration = "GestureManager.SwitchDuration"
+    let kGestureEnabled = "GestureManager.Enabled"
+    let kFingerCount = "GestureManager.FingerCount"
+    let kSwitchOverride = "GestureManager.SwitchOverride"
+    let kSwipeThreshold = "GestureManager.SwipeThreshold"
+    let kMoveWindowOnOption = "GestureManager.MoveWindowOnOption"
+    let kSwitchDuration = "GestureManager.SwitchDuration"
 
     public enum SwitchOverrideMode: String, CaseIterable, Identifiable {
         case cursor = "Cursor"
@@ -111,31 +111,31 @@ class GestureManager: ObservableObject {
         }
     }
 
-    private weak var spaceManager: SpaceManager?
-    private var devices: [MTDeviceRef] = []
+    weak var spaceManager: SpaceManager?
+    var devices: [MTDeviceRef] = []
 
     // IOKit notification state for hardware lifecycle management.
-    private var notifyPort: IONotificationPortRef?
-    private var addedIterator: io_iterator_t = 0
+    var notifyPort: IONotificationPortRef?
+    var addedIterator: io_iterator_t = 0
 
     // Internal state for active gesture tracking.
-    fileprivate static var sharedManager: GestureManager?
+    static var sharedManager: GestureManager?
     static var lastTrackpadSwipeTime: TimeInterval = 0
 
     // Per-finger tracking is used instead of a single centroid to allow for consistency verification.
-    private var initialTouchPositions: [Int32: MTPoint] = [:]
+    var initialTouchPositions: [Int32: MTPoint] = [:]
 
-    private var lastTouchTime: TimeInterval = 0
-    private var lastSwitchTime: TimeInterval = 0
+    var lastTouchTime: TimeInterval = 0
+    var lastSwitchTime: TimeInterval = 0
 
     // Gesture direction locking to prevent oscillation during a single swipe.
-    private var lockedDirection: SwitchDirection? = nil
+    var lockedDirection: SwitchDirection? = nil
 
     // Sensitivity and timing configuration.
-    private let switchCooldown: TimeInterval = 0.15
+    let switchCooldown: TimeInterval = 0.15
     // private let minSwipeDistance: Float = 0.10 // Moved to swipeThreshold
-    private let consistencyThreshold: Float = 0.01  // 5% Minimum movement per finger (Anti-Tap)
-    private let touchTimeout: TimeInterval = 0.15
+    let consistencyThreshold: Float = 0.01  // 5% Minimum movement per finger (Anti-Tap)
+    let touchTimeout: TimeInterval = 0.15
 
     init(spaceManager: SpaceManager) {
         self.spaceManager = spaceManager
@@ -185,402 +185,4 @@ class GestureManager: ObservableObject {
         // We do not stop monitoring when `isEnabled` becomes false.
     }
 
-    // Dynamically loads the private MultitouchSupport framework.
-    private func loadPrivateFramework() {
-        guard let handle = dlopen(MTSFrameworkPath, RTLD_NOW) else {
-            print("Failed to load MultitouchSupport.framework at \(MTSFrameworkPath)")
-            return
-        }
-
-        // Resolve private C function symbols.
-        if let sym = dlsym(handle, "MTDeviceCreateList") {
-            _MTDeviceCreateList = unsafeBitCast(
-                sym, to: (@convention(c) () -> Unmanaged<CFArray>).self)
-        }
-        if let sym = dlsym(handle, "MTDeviceCreateFromService") {
-            _MTDeviceCreateFromService = unsafeBitCast(
-                sym, to: (@convention(c) (io_service_t) -> MTDeviceRef).self)
-        }
-        if let sym = dlsym(handle, "MTRegisterContactFrameCallback") {
-            _MTRegisterContactFrameCallback = unsafeBitCast(
-                sym,
-                to: (@convention(c) (
-                    MTDeviceRef,
-                    @convention(c) (MTDeviceRef, UnsafeMutableRawPointer, Int32, Double, Int32) ->
-                        Void, Int32
-                ) -> Void).self)
-        }
-        if let sym = dlsym(handle, "MTDeviceStart") {
-            _MTDeviceStart = unsafeBitCast(
-                sym, to: (@convention(c) (MTDeviceRef, Int32) -> Void).self)
-        }
-        if let sym = dlsym(handle, "MTDeviceStop") {
-            _MTDeviceStop = unsafeBitCast(
-                sym, to: (@convention(c) (MTDeviceRef, Int32) -> Void).self)
-        }
-    }
-
-    // Lifecycle management for multitouch devices.
-    private func startMonitoring() {
-        if let createList = _MTDeviceCreateList {
-            let deviceList = createList().takeRetainedValue() as? [MTDeviceRef] ?? []
-            for device in deviceList {
-                setupDevice(device)
-            }
-        }
-        setupIOKitListener()
-        print("GestureManager: Started monitoring. Current devices: \(devices.count)")
-    }
-
-    private func stopMonitoring() {
-        guard let stopDevice = _MTDeviceStop else { return }
-        for device in devices {
-            stopDevice(device, 0)
-        }
-        devices.removeAll()
-
-        if addedIterator != 0 {
-            IOObjectRelease(addedIterator)
-            addedIterator = 0
-        }
-        if let port = notifyPort {
-            IONotificationPortDestroy(port)
-            notifyPort = nil
-        }
-
-        print("GestureManager: Stopped monitoring.")
-    }
-
-    private func setupDevice(_ device: MTDeviceRef) {
-        if !devices.contains(device) {
-            devices.append(device)
-            if let registerCallback = _MTRegisterContactFrameCallback,
-                let startDevice = _MTDeviceStart
-            {
-                registerCallback(device, mtCallback, 0)
-                startDevice(device, 0)
-                print("GestureManager: Registered device \(device)")
-            }
-        }
-    }
-
-    // Registers for IOKit notifications to detect hardware arrival events.
-    private func setupIOKitListener() {
-        guard notifyPort == nil else { return }
-
-        let port = IONotificationPortCreate(kIOMainPortDefault)
-        self.notifyPort = port
-
-        guard let runLoopSource = IONotificationPortGetRunLoopSource(port)?.takeUnretainedValue()
-        else { return }
-        CFRunLoopAddSource(CFRunLoopGetCurrent(), runLoopSource, .commonModes)
-
-        let matchingDict = IOServiceMatching("AppleMultitouchDevice")
-
-        let context = Unmanaged.passUnretained(self).toOpaque()
-
-        let result = IOServiceAddMatchingNotification(
-            port,
-            kIOFirstMatchNotification,
-            matchingDict,
-            ioKitCallback,
-            context,
-            &addedIterator
-        )
-
-        if result == kIOReturnSuccess {
-            consumeIterator(addedIterator)
-        }
-    }
-
-    fileprivate func consumeIterator(_ iterator: io_iterator_t) {
-        while case let service = IOIteratorNext(iterator), service != 0 {
-            if let createFromService = _MTDeviceCreateFromService {
-                let device = createFromService(service)
-                setupDevice(device)
-            }
-            IOObjectRelease(service)
-        }
-    }
-
-    // Analyzes touch frames to determine gesture intent.
-    fileprivate func handleTouches(touches: [MTTouch], numFingers: Int) {
-        let now = Date().timeIntervalSince1970
-
-        // Timeout Check.
-        if now - lastTouchTime > touchTimeout {
-            resetTrackingState()
-        }
-        lastTouchTime = now
-
-        // Validate Finger Count.
-        // Standard macOS space switching uses 3 or 4 fingers.
-        // We will track BOTH of these counts for hiding purposes even if switchOverride fingerCount is different.
-        let isHidingEligible = (numFingers == 3 || numFingers == 4)
-
-        guard isHidingEligible else {
-            resetTrackingState()
-            return
-        }
-
-        // Validate Touches (Sanity Check).
-        for touch in touches {
-            if touch.normalizedVector.position.x < 0 || touch.normalizedVector.position.x > 1.0 {
-                resetTrackingState()
-                return
-            }
-        }
-
-        // Initialize Start Position (Per Finger).
-        if initialTouchPositions.isEmpty {
-            for touch in touches {
-                initialTouchPositions[touch.identifier] = touch.normalizedVector.position
-            }
-            return
-        }
-
-        // Validate Continuity.
-        // Ensure the fingers on the pad match the IDs we started tracking
-        let currentIDs = Set(touches.map { $0.identifier })
-        let initialIDs = Set(initialTouchPositions.keys)
-
-        if currentIDs != initialIDs {
-            resetTrackingState()
-            return
-        }
-
-        // Cooldown Check
-        if now - lastSwitchTime < switchCooldown {
-            return
-        }
-
-        // Calculate Average Deltas.
-        var totalDX: Float = 0
-        var totalDY: Float = 0
-
-        for touch in touches {
-            guard let startPos = initialTouchPositions[touch.identifier] else { continue }
-            totalDX += (touch.normalizedVector.position.x - startPos.x)
-            totalDY += (touch.normalizedVector.position.y - startPos.y)
-        }
-
-        let avgDX = totalDX / Float(numFingers)
-        let avgDY = totalDY / Float(numFingers)
-
-        // Pre-Trigger Logic: Overscroll Indicator.
-        var isOverscroll = false
-
-        // Only show overscroll indicator if we are the ones overriding the switch AND finger count matches
-        if self.isEnabled && numFingers == self.fingerCount {
-            // Only check horizontal dominance for indicator first
-            if abs(avgDX) > abs(avgDY) {
-                let direction: SwitchDirection = avgDX < 0 ? .next : .previous
-
-                // Determine target display to check boundaries
-                var targetDisplayID: String? = nil
-                if self.switchOverride == .cursor {
-                    targetDisplayID = SpaceHelper.getCursorDisplayID()
-                }
-                // If .activeWindow, we leave nil, relying on SpaceManager's default context
-
-                if direction == .previous {
-                    if spaceManager?.isFirstSpace(onDisplayID: targetDisplayID) == true {
-                        isOverscroll = true
-                        // avgDX is positive here.
-                        let progress = Double(abs(avgDX) / swipeThreshold)
-                        // Previous means going "Left". Wall is on Left. Edge is .leading.
-                        DispatchQueue.main.async {
-                            OverscrollOverlayManager.shared.update(progress: progress, edge: .leading)
-                        }
-                    }
-                } else {  // .next
-                    if spaceManager?.isLastSpace(onDisplayID: targetDisplayID) == true {
-                        isOverscroll = true
-                        // avgDX is negative here.
-                        let progress = Double(abs(avgDX) / swipeThreshold)
-                        // Next means going "Right". Wall is on Right. Edge is .trailing.
-                        DispatchQueue.main.async {
-                            OverscrollOverlayManager.shared.update(progress: progress, edge: .trailing)
-                        }
-                    }
-                }
-            }
-        }
-
-        if isOverscroll {
-            return
-        } else {
-            DispatchQueue.main.async {
-                OverscrollOverlayManager.shared.hide()
-            }
-        }
-
-        // Trigger Logic.
-        // Primary threshold check
-        if abs(avgDX) > swipeThreshold {
-
-            // Check for Horizontal Dominance (Must be more horizontal than vertical)
-            if abs(avgDX) > abs(avgDY) {
-
-                let direction: SwitchDirection = avgDX < 0 ? .next : .previous
-
-                // Consistency Check (Anti-Tap Protection).
-                // REQUIRE that EVERY finger has moved significantly in the target direction.
-                // A tap usually has one finger anchor or fingers moving in opposition.
-                var isConsistent = true
-
-                for touch in touches {
-                    guard let startPos = initialTouchPositions[touch.identifier] else { continue }
-                    let dx = touch.normalizedVector.position.x - startPos.x
-
-                    if direction == .next {
-                        // Expect negative movement (Left Swipe)
-                        // If any finger moved less than threshold (e.g. -0.01 or +0.1), fail.
-                        if dx > -consistencyThreshold {
-                            isConsistent = false
-                            break
-                        }
-                    } else {
-                        // Expect positive movement (Right Swipe)
-                        if dx < consistencyThreshold {
-                            isConsistent = false
-                            break
-                        }
-                    }
-                }
-
-                if isConsistent {
-                    // Lock Direction for this session
-                    if lockedDirection == nil {
-                        lockedDirection = direction
-                    }
-
-                    // Only act if matches locked direction
-                    if lockedDirection == direction {
-                        print("GestureManager: Triggered \(direction)")
-
-                        // Fire a nil-target SpaceSwitchRequested so SpaceLabelManager can hide all active Preview Labels
-                        SpaceHelper.lastProgrammaticSwitchTime = Date().timeIntervalSince1970
-                        NotificationCenter.default.post(
-                            name: NSNotification.Name("SpaceSwitchRequested"), object: nil)
-
-                        // Only perform the switch action if SwitchOverride is enabled AND finger count matches user preference
-                        if numFingers == self.fingerCount && self.isEnabled {
-                            triggerSwitch(direction: direction)
-                        }
-
-                        // CRITICAL: Reset anchors to current position to allow consecutive swipes
-                        initialTouchPositions.removeAll()
-                        for touch in touches {
-                            initialTouchPositions[touch.identifier] =
-                                touch.normalizedVector.position
-                        }
-                    }
-                }
-            }
-        }
-    }
-
-    private func resetTrackingState() {
-        initialTouchPositions.removeAll()
-        lockedDirection = nil
-
-        DispatchQueue.main.async {
-            OverscrollOverlayManager.shared.hide()
-        }
-    }
-
-    enum SwitchDirection {
-        case next
-        case previous
-    }
-
-    private func triggerSwitch(direction: SwitchDirection) {
-        DiagnosticEventLog.shared.record(subsystem: "GestureManager", level: "info", "triggerSwitch(\(direction))")
-        lastSwitchTime = Date().timeIntervalSince1970
-        guard let sm = spaceManager, self.isEnabled else { return }
-
-        DispatchQueue.main.async { [weak self] in
-            guard let self = self else { return }
-
-            let isHoldingOption = NSEvent.modifierFlags.contains(.option)
-            if self.moveWindowOnOption && isHoldingOption {
-                // If the current space is a fullscreen app, just exit fullscreen.
-                if sm.spaceNameDict.first(where: { $0.id == sm.currentSpaceUUID })?.isFullscreen == true {
-                    Task { @MainActor in
-                        await Self.exitFullscreen()
-                    }
-                } else {
-                    switch direction {
-                    case .next:
-                        sm.moveActiveWindowToNextSpace()
-                    case .previous:
-                        sm.moveActiveWindowToPreviousSpace()
-                    }
-                }
-            } else {
-                let targetDisplayID = (self.switchOverride == .cursor) ? SpaceHelper.getCursorDisplayID() : nil
-                switch direction {
-                case .next:
-                    sm.switchToNextSpace(onDisplayID: targetDisplayID)
-                case .previous:
-                    sm.switchToPreviousSpace(onDisplayID: targetDisplayID)
-                }
-            }
-        }
-    }
-
-    @MainActor
-    private static func exitFullscreen() async {
-        guard let activeInfo = SpaceHelper.getActiveWindowInfo() else { return }
-
-        var axWindow = SpaceHelper.getAXWindow(id: activeInfo.id, pid: activeInfo.pid)
-        if axWindow == nil {
-            if let app = NSRunningApplication(processIdentifier: activeInfo.pid) {
-                app.activate(options: .activateIgnoringOtherApps)
-                try? await Task.sleep(nanoseconds: 400_000_000)
-                axWindow = SpaceHelper.getAXWindow(id: activeInfo.id, pid: activeInfo.pid)
-            }
-        }
-        if let targetAXWindow = axWindow {
-            AXUIElementSetAttributeValue(targetAXWindow, "AXFullScreen" as CFString, false as CFTypeRef)
-        }
-    }
-}
-
-// C callbacks originating from the low-level Multitouch driver.
-
-private let ioKitCallback: @convention(c) (UnsafeMutableRawPointer?, io_iterator_t) -> Void = {
-    (refCon, iterator) in
-    guard let refCon = refCon else { return }
-    let manager = Unmanaged<GestureManager>.fromOpaque(refCon).takeUnretainedValue()
-    manager.consumeIterator(iterator)
-}
-
-private func mtCallback(
-    device: MTDeviceRef, touchPointer: UnsafeMutableRawPointer, numFingers: Int32,
-    timestamp: Double, frame: Int32
-) {
-    guard let manager = GestureManager.sharedManager else { return }
-
-    let typedPointer = touchPointer.assumingMemoryBound(to: MTTouch.self)
-    let buffer = UnsafeBufferPointer(start: typedPointer, count: Int(numFingers))
-    let touches = Array(buffer)
-
-    // Valid states: 1 (Hover/Range), 2 (Touching), 3 (Dragging), 4 (Lifting)
-    let validTouches = touches.filter { $0.state > 0 && $0.state < 7 }
-
-    if validTouches.count >= 3 {
-        GestureManager.lastTrackpadSwipeTime = Date().timeIntervalSince1970
-    }
-
-    // Calculate count from valid array, ignore raw numFingers if it mismatches active states
-    let activeCount = validTouches.count
-
-    if activeCount > 0 {
-        manager.handleTouches(touches: validTouches, numFingers: activeCount)
-    } else {
-        // Send 0 to force reset
-        manager.handleTouches(touches: [], numFingers: 0)
-    }
 }
