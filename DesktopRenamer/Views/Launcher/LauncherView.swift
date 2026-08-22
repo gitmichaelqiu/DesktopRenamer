@@ -275,6 +275,7 @@ struct LauncherView: View {
         .launcherBackground(cornerRadius: 16, borderColor: colors.border)
         .shadow(color: Color.black.opacity(colorScheme == .dark ? 0.45 : 0.20), radius: 24, x: 0, y: 12)
         .padding(60)
+        .disabled(viewModel.isRearrangingSpace)
     }
 }
 
@@ -620,12 +621,28 @@ struct WidthPreferenceKey: PreferenceKey {
 extension LauncherView {
     private func handleTextFieldKeyEquivalent(_ event: NSEvent) -> Bool {
         guard event.type == .keyDown else { return false }
+        guard !viewModel.isRearrangingSpace else { return true }
         
         let modifiers = event.modifierFlags.intersection(.deviceIndependentFlagsMask)
         let hasCommand = modifiers.contains(.command)
         let hasShift = modifiers.contains(.shift)
         let hasOption = modifiers.contains(.option)
         let hasControl = modifiers.contains(.control)
+
+        if viewModel.activeCommand?.type == .switchToDesktop,
+           viewModel.commandKTargetWindow == nil,
+           !hasOption && !hasControl && hasCommand && hasShift {
+            switch event.keyCode {
+            case 126:
+                viewModel.rearrangeSelectedDesktop(direction: .up)
+                return true
+            case 125:
+                viewModel.rearrangeSelectedDesktop(direction: .down)
+                return true
+            default:
+                break
+            }
+        }
         
         // Direct window shortcuts for .listWindows (cmd + m, cmd + shift + m/w/n/r/f/h/q)
         if viewModel.activeCommand?.type == .listWindows,

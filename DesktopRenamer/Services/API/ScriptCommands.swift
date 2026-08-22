@@ -179,6 +179,85 @@ class SwitchToSpaceCommand: NSScriptCommand {
     }
 }
 
+class RearrangeSpaceCommand: NSScriptCommand {
+    override func performDefaultImplementation() -> Any? {
+        guard isAPIEnabled() else { return nil }
+        guard let sourceID = self.directParameter as? String,
+              let direction = self.evaluatedArguments?["direction"] as? String else { return nil }
+
+        let rearrangementDirection: DesktopRearrangementDirection
+        switch direction.lowercased() {
+        case "up":
+            rearrangementDirection = .up
+        case "down":
+            rearrangementDirection = .down
+        default:
+            self.scriptErrorNumber = -2
+            self.scriptErrorString = "Direction must be up or down"
+            return nil
+        }
+
+        DiagnosticEventLog.shared.record(
+            subsystem: "AppleScript",
+            level: "info",
+            "Command performed: RearrangeSpaceCommand (sourceID: \(sourceID), direction: \(direction))"
+        )
+
+        DispatchQueue.main.async {
+            guard let manager = AppDelegate.shared.spaceManager,
+                  let sourceSpace = manager.spaceNameDict.first(where: { $0.id == sourceID }),
+                  !sourceSpace.isFullscreen else { return }
+
+            let orderedSpaces = manager.spaceNameDict
+                .filter { $0.displayID == sourceSpace.displayID && !$0.isFullscreen }
+                .sorted { $0.num < $1.num }
+            let orderedIDs = orderedSpaces.map(\.id)
+            guard let sourceIndex = orderedIDs.firstIndex(of: sourceID) else { return }
+
+            switch rearrangementDirection {
+            case .up:
+                guard sourceIndex > 0 else { return }
+                SpaceRearrangementService.shared.rearrange(
+                    sourceID: sourceID,
+                    before: orderedIDs[sourceIndex - 1],
+                    orderedSpaceIDs: orderedIDs,
+                    displayID: sourceSpace.displayID
+                ) { result in
+                    if case .failure(let message) = result {
+                        DiagnosticEventLog.shared.record(subsystem: "AppleScript", level: "warning", message)
+                    }
+                    manager.refreshSpaceState()
+                }
+            case .down:
+                guard sourceIndex < orderedIDs.count - 1 else { return }
+                let completion: (SpaceRearrangementService.Result) -> Void = { result in
+                    if case .failure(let message) = result {
+                        DiagnosticEventLog.shared.record(subsystem: "AppleScript", level: "warning", message)
+                    }
+                    manager.refreshSpaceState()
+                }
+                if sourceIndex + 2 < orderedIDs.count {
+                    SpaceRearrangementService.shared.rearrange(
+                        sourceID: sourceID,
+                        before: orderedIDs[sourceIndex + 2],
+                        orderedSpaceIDs: orderedIDs,
+                        displayID: sourceSpace.displayID,
+                        completion: completion
+                    )
+                } else {
+                    SpaceRearrangementService.shared.rearrangeToEnd(
+                        sourceID: sourceID,
+                        orderedSpaceIDs: orderedIDs,
+                        displayID: sourceSpace.displayID,
+                        completion: completion
+                    )
+                }
+            }
+        }
+        return nil
+    }
+}
+
 class RenameSpaceCommand: NSScriptCommand {
     override func performDefaultImplementation() -> Any? {
         guard isAPIEnabled() else { return nil }
