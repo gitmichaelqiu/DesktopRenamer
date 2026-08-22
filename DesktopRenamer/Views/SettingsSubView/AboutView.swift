@@ -42,7 +42,7 @@ struct AboutView: View {
                             .font(.title3)
                             .foregroundColor(.secondary)
 
-                        Text(String(format: NSLocalizedString("External API v%@", comment: ""), DesktopRenamerAPIVersion.current))
+                        Text(String(format: NSLocalizedString("SpaceAPI v%@", comment: ""), DesktopRenamerAPIVersion.current))
                             .font(.subheadline)
                             .foregroundColor(.secondary)
                         

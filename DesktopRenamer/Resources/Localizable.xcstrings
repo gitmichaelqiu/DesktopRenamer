@@ -916,12 +916,12 @@
         }
       }
     },
-    "External API v%@" : {
+    "SpaceAPI v%@" : {
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "外部 API v%@"
+            "value" : "SpaceAPI v%@"
           }
         }
       }
