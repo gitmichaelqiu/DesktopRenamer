@@ -1,4 +1,5 @@
 import AppKit
+import Foundation
 
 /// Reorders spaces through macOS's private SkyLight operation.
 final class SpaceRearrangementService {
@@ -11,6 +12,9 @@ final class SpaceRearrangementService {
 
     private init() {}
 
+    private let stateLock = NSLock()
+    private var operationInFlight = false
+
     func rearrange(
         sourceID: String,
         before targetID: String,
@@ -18,6 +22,11 @@ final class SpaceRearrangementService {
         displayID: String? = nil,
         completion: @escaping (Result) -> Void
     ) {
+        guard beginOperation() else {
+            completion(.failure(String(localized: "A space rearrangement is already in progress.")))
+            return
+        }
+
         guard sourceID != targetID,
               let targetIndex = orderedSpaceIDs.firstIndex(of: targetID) else {
             finish(.failure(String(localized: "Choose two different spaces.")), completion: completion)
@@ -39,6 +48,11 @@ final class SpaceRearrangementService {
         displayID: String? = nil,
         completion: @escaping (Result) -> Void
     ) {
+        guard beginOperation() else {
+            completion(.failure(String(localized: "A space rearrangement is already in progress.")))
+            return
+        }
+
         performMove(
             sourceID: sourceID,
             targetIndex: orderedSpaceIDs.count,
@@ -92,6 +106,14 @@ final class SpaceRearrangementService {
                 )
             }
         }
+    }
+
+    private func beginOperation() -> Bool {
+        stateLock.lock()
+        defer { stateLock.unlock() }
+        guard !operationInFlight else { return false }
+        operationInFlight = true
+        return true
     }
 
     private func runMove(sourceID: String, displayID: String?, sourceIndex: Int, targetIndex: Int) -> Result {
@@ -199,6 +221,10 @@ final class SpaceRearrangementService {
     }
 
     private func finish(_ result: Result, completion: @escaping (Result) -> Void) {
+        stateLock.lock()
+        operationInFlight = false
+        stateLock.unlock()
+
         completion(result)
         if case .success = result {
             NotificationCenter.default.post(

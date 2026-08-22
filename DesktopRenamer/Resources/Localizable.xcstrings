@@ -506,6 +506,16 @@
         }
       }
     },
+    "A space rearrangement is already in progress." : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "桌面正在重新排列。"
+          }
+        }
+      }
+    },
     "Clean Restoration Queues (%d)" : {
       "localizations" : {
         "zh-Hans" : {
