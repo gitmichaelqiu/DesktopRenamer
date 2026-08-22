@@ -66,8 +66,7 @@ enum WindowActionCoordinator {
         guard fromSpaceID != targetSpaceID else { return true }
         guard let manager = AppDelegate.shared.spaceManager,
               let sourceSpace = manager.spaceNameDict.first(where: { $0.id == fromSpaceID }),
-              let targetSpace = manager.spaceNameDict.first(where: { $0.id == targetSpaceID }),
-              !targetSpace.isFullscreen else {
+              let targetSpace = manager.spaceNameDict.first(where: { $0.id == targetSpaceID }) else {
             return false
         }
 
@@ -85,7 +84,8 @@ enum WindowActionCoordinator {
         SpaceHelper.focusWindow(id: windowID, pid: pid)
         try? await Task.sleep(nanoseconds: 250_000_000)
 
-        if sourceSpace.isFullscreen {
+        if sourceSpace.isFullscreen || targetSpace.isFullscreen {
+            if sourceSpace.isFullscreen {
             var axWindow = SpaceHelper.getAXWindow(id: windowID, pid: pid)
             if axWindow == nil {
                 if let app = NSRunningApplication(processIdentifier: pid) {
@@ -97,6 +97,7 @@ enum WindowActionCoordinator {
             if let targetAXWindow = axWindow {
                 AXUIElementSetAttributeValue(targetAXWindow, "AXFullScreen" as CFString, false as CFTypeRef)
                 try? await Task.sleep(nanoseconds: 1_200_000_000)
+            }
             }
 
             // Exiting fullscreen invalidates the cached source-space classification
