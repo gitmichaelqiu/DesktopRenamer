@@ -121,6 +121,14 @@ class GetCurrentSpaceNameCommand: NSScriptCommand {
     }
 }
 
+class GetAPIVersionCommand: NSScriptCommand {
+    override func performDefaultImplementation() -> Any? {
+        DiagnosticEventLog.shared.record(subsystem: "AppleScript", level: "info", "Command performed: GetAPIVersionCommand")
+        guard isAPIEnabled() else { return "API Disabled" }
+        return DesktopRenamerAPIVersion.current
+    }
+}
+
 class GetAllSpacesCommand: NSScriptCommand {
     override func performDefaultImplementation() -> Any? {
         DiagnosticEventLog.shared.record(subsystem: "AppleScript", level: "info", "Command performed: GetAllSpacesCommand")

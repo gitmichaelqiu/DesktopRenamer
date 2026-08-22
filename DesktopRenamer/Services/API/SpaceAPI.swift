@@ -9,6 +9,8 @@ class SpaceAPI {
     static let returnActiveSpace = Notification.Name("\(apiPrefix).ReturnActiveSpace")
     static let getSpaceList = Notification.Name("\(apiPrefix).GetSpaceList")
     static let returnSpaceList = Notification.Name("\(apiPrefix).ReturnSpaceList")
+    static let getAPIVersion = Notification.Name("\(apiPrefix).GetAPIVersion")
+    static let returnAPIVersion = Notification.Name("\(apiPrefix).ReturnAPIVersion")
     static let apiToggleNotification = Notification.Name("\(apiPrefix).ReturnAPIState")
     
     // Use weak to avoid retain cycle (SpaceManager owns API, API shouldn't strongly own SpaceManager)
@@ -32,6 +34,7 @@ class SpaceAPI {
         // Register observers for external requests.
         dnc.addObserver(self, selector: #selector(handleActiveSpaceRequest), name: SpaceAPI.getActiveSpace, object: nil, suspensionBehavior: .deliverImmediately)
         dnc.addObserver(self, selector: #selector(handleSpaceListRequest), name: SpaceAPI.getSpaceList, object: nil, suspensionBehavior: .deliverImmediately)
+        dnc.addObserver(self, selector: #selector(handleAPIVersionRequest), name: SpaceAPI.getAPIVersion, object: nil, suspensionBehavior: .deliverImmediately)
         
         // Broadcast space state changes to observers.
         spaceManager.$currentSpaceUUID
@@ -89,6 +92,7 @@ class SpaceAPI {
         let spaceUUID = sm.currentSpaceUUID
         DiagnosticEventLog.shared.record(subsystem: "SpaceAPI", level: "info", "broadcastCurrentSpace: spaceUUID=\(spaceUUID)")
         let userInfo: [String: Any] = [
+            "apiVersion": DesktopRenamerAPIVersion.current,
             "spaceUUID": (spaceUUID == "FULLSCREEN") ? "FULLSCREEN" : spaceUUID,
             "spaceName": sm.getSpaceName(spaceUUID),
             "spaceNumber": NSNumber(value: sm.getSpaceNum(spaceUUID))
@@ -112,7 +116,21 @@ class SpaceAPI {
         DiagnosticEventLog.shared.record(subsystem: "SpaceAPI", level: "info", "broadcastSpaceList: count=\(list.count)")
         
         DistributedNotificationCenter.default().postNotificationName(
-            SpaceAPI.returnSpaceList, object: nil, userInfo: ["spaces": list], deliverImmediately: true
+            SpaceAPI.returnSpaceList,
+            object: nil,
+            userInfo: ["apiVersion": DesktopRenamerAPIVersion.current, "spaces": list],
+            deliverImmediately: true
+        )
+    }
+
+    private func broadcastAPIVersion() {
+        guard SpaceManager.isAPIEnabled else { return }
+
+        DistributedNotificationCenter.default().postNotificationName(
+            SpaceAPI.returnAPIVersion,
+            object: nil,
+            userInfo: ["apiVersion": DesktopRenamerAPIVersion.current],
+            deliverImmediately: true
         )
     }
     
@@ -123,5 +141,10 @@ class SpaceAPI {
     @objc private func handleSpaceListRequest() {
         DiagnosticEventLog.shared.record(subsystem: "SpaceAPI", level: "info", "handleSpaceListRequest")
         broadcastSpaceList()
+    }
+
+    @objc private func handleAPIVersionRequest() {
+        DiagnosticEventLog.shared.record(subsystem: "SpaceAPI", level: "info", "handleAPIVersionRequest")
+        broadcastAPIVersion()
     }
 }
