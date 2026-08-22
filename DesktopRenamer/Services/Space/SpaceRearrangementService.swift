@@ -155,8 +155,16 @@ final class SpaceRearrangementService {
             return
         }
 
-        let regularSpaces = state.spaces.filter { !$0.isFullscreen }
-        if regularSpaces.map(\.id) == expectedOrder {
+        let spacesOnDisplay = state.spaces.filter { space in
+            displayID == nil || space.displayID == displayID
+        }
+        let includesFullscreenSpace = expectedOrder.contains { spaceID in
+            spacesOnDisplay.first(where: { $0.id == spaceID })?.isFullscreen == true
+        }
+        let actualOrder = includesFullscreenSpace
+            ? spacesOnDisplay.map(\.id)
+            : spacesOnDisplay.filter { !$0.isFullscreen }.map(\.id)
+        if actualOrder == expectedOrder {
             finish(.success, completion: completion)
             return
         }

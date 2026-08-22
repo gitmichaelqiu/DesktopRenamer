@@ -7,11 +7,22 @@ struct SpaceEditView: View {
     
     var body: some View {
         VStack(spacing: 0) {
-            if spaceManager.spaceNameDict.isEmpty {
-                emptyStateView
-            } else {
-                ScrollView {
-                    VStack(alignment: .leading, spacing: 20) {
+            ScrollView {
+                VStack(alignment: .leading, spacing: 20) {
+                    SettingsSection("Space Arrangement") {
+                        SettingsRow(
+                            "Keep full-screen spaces next to source desktop",
+                            helperText: "When macOS automatically rearranges Spaces is disabled, move a newly created full-screen space immediately after the desktop that opened it."
+                        ) {
+                            Toggle("", isOn: $spaceManager.autoRearrangeFullscreenSpaces)
+                                .toggleStyle(.switch)
+                                .labelsHidden()
+                        }
+                    }
+
+                    if spaceManager.spaceNameDict.isEmpty {
+                        emptyStateView
+                    } else {
                         ForEach(groupedDisplayIDs, id: \.self) { displayID in
                             VStack(alignment: .leading, spacing: 8) {
                                 Text(resolveDisplayName(for: displayID))
@@ -24,9 +35,9 @@ struct SpaceEditView: View {
                             }
                         }
                     }
-                    .padding()
-                    .padding(.bottom, 40)
                 }
+                .padding()
+                .padding(.bottom, 40)
             }
         }
         .animation(.easeInOut(duration: 0.2), value: spaceManager.spaceNameDict)
