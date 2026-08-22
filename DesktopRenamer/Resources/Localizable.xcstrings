@@ -114,28 +114,34 @@
       "shouldTranslate" : false
     },
     "↵" : {
-      "shouldTranslate" : false
+
     },
     "↺" : {
       "shouldTranslate" : false
     },
     "⇥" : {
-      "shouldTranslate" : false
+
     },
     "⌘%lld" : {
       "shouldTranslate" : false
     },
     "⌘↵" : {
-      "shouldTranslate" : false
+
+    },
+    "⌘⇧↑" : {
+
+    },
+    "⌘⇧↓" : {
+
     },
     "⌘K" : {
-      "shouldTranslate" : false
+
     },
     "⌘M" : {
-      "shouldTranslate" : false
+
     },
     "⌥↵" : {
-      "shouldTranslate" : false
+
     },
     "◉" : {
       "shouldTranslate" : false
@@ -210,56 +216,6 @@
         }
       }
     },
-    "Add to Favorites" : {
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "添加到收藏夹"
-          }
-        }
-      }
-    },
-    "Favorites" : {
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "收藏夹"
-          }
-        }
-      }
-    },
-    "Open Command" : {
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "打开命令"
-          }
-        }
-      }
-    },
-    "Search target space..." : {
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "搜索目标桌面..."
-          }
-        }
-      }
-    },
-    "Suggestions" : {
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "建议"
-          }
-        }
-      }
-    },
     "Active Space Label" : {
       "localizations" : {
         "zh-Hans" : {
@@ -326,6 +282,17 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "添加特例"
+          }
+        }
+      }
+    },
+    "Add to Favorites" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "添加到收藏夹"
           }
         }
       }
@@ -520,6 +487,16 @@
         }
       }
     },
+    "Choose a valid space." : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "请选择有效的桌面。"
+          }
+        }
+      }
+    },
     "Choose Application..." : {
       "localizations" : {
         "zh-Hans" : {
@@ -530,62 +507,22 @@
         }
       }
     },
+    "Choose two different spaces." : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "请选择两个不同的桌面。"
+          }
+        }
+      }
+    },
     "Clean Restoration Queues (%d)" : {
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "清除恢复队列 (%d)"
-          }
-        }
-      }
-    },
-    "Command" : {
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "命令"
-          }
-        }
-      }
-    },
-    "Switch" : {
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "切换"
-          }
-        }
-      }
-    },
-    "Search for action..." : {
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "搜索操作..."
-          }
-        }
-      }
-    },
-    "Search for actions..." : {
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "搜索操作..."
-          }
-        }
-      }
-    },
-    "No actions found" : {
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "未找到操作"
           }
         }
       }
@@ -640,6 +577,17 @@
         }
       }
     },
+    "Command" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "命令"
+          }
+        }
+      }
+    },
     "Confirm & Execute Batch Move (%lld windows)" : {
       "localizations" : {
         "en" : {
@@ -684,6 +632,26 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "控制触发切换的手指移动距离。"
+          }
+        }
+      }
+    },
+    "Could not create the native space rearrangement operation." : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "无法创建原生桌面重排操作。"
+          }
+        }
+      }
+    },
+    "Could not initialize the native space rearrangement operation." : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "无法初始化原生桌面重排操作。"
           }
         }
       }
@@ -830,6 +798,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "完成"
+          }
+        }
+      }
+    },
+    "Drag to rearrange" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "拖动以重新排列"
           }
         }
       }
@@ -986,22 +964,13 @@
         }
       }
     },
-    "Move Favorite Up" : {
+    "Favorites" : {
+      "extractionState" : "stale",
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "上移收藏"
-          }
-        }
-      }
-    },
-    "Move Favorite Down" : {
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "下移收藏"
+            "value" : "收藏夹"
           }
         }
       }
@@ -1012,26 +981,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "切换"
-          }
-        }
-      }
-    },
-    "Primary Action" : {
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "主要操作"
-          }
-        }
-      }
-    },
-    "Manage" : {
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "管理"
           }
         }
       }
@@ -1279,6 +1228,16 @@
         }
       }
     },
+    "Keep full-screen spaces next to source desktop" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "将全屏桌面放在源桌面旁边"
+          }
+        }
+      }
+    },
     "Keep visible on desktop" : {
       "localizations" : {
         "zh-Hans" : {
@@ -1441,6 +1400,17 @@
         }
       }
     },
+    "Manage" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "管理"
+          }
+        }
+      }
+    },
     "Manage Windows" : {
       "localizations" : {
         "zh-Hans" : {
@@ -1572,6 +1542,48 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "移动"
+          }
+        }
+      }
+    },
+    "Move Favorite Down" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "下移收藏"
+          }
+        }
+      }
+    },
+    "Move Favorite Up" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "上移收藏"
+          }
+        }
+      }
+    },
+    "Move Space Down" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "向下移动桌面"
+          }
+        }
+      }
+    },
+    "Move Space Up" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "向上移动桌面"
           }
         }
       }
@@ -1758,6 +1770,17 @@
         }
       }
     },
+    "No actions found" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "未找到操作"
+          }
+        }
+      }
+    },
     "No commands found" : {
       "localizations" : {
         "zh-Hans" : {
@@ -1850,6 +1873,17 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "打开GitHub并提交问题。"
+          }
+        }
+      }
+    },
+    "Open Command" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "打开命令"
           }
         }
       }
@@ -1954,6 +1988,17 @@
         }
       }
     },
+    "Primary Action" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "主要操作"
+          }
+        }
+      }
+    },
     "Quickly give your desktop spaces a custom name directly from the menu bar." : {
       "localizations" : {
         "zh-Hans" : {
@@ -2031,6 +2076,17 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "重新加载桌面标签"
+          }
+        }
+      }
+    },
+    "Remove from Favorites" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "从收藏夹移除"
           }
         }
       }
@@ -2213,21 +2269,12 @@
       }
     },
     "Reset Ranking" : {
+      "extractionState" : "stale",
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "重置排名"
-          }
-        }
-      }
-    },
-    "Remove from Favorites" : {
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "从收藏夹移除"
           }
         }
       }
@@ -2396,6 +2443,28 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "搜索命令..."
+          }
+        }
+      }
+    },
+    "Search for action..." : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "搜索操作..."
+          }
+        }
+      }
+    },
+    "Search for actions..." : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "搜索操作..."
           }
         }
       }
@@ -3047,12 +3116,32 @@
         }
       }
     },
+    "Space Arrangement" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "桌面排列"
+          }
+        }
+      }
+    },
     "Space Labels Reloaded" : {
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "桌面标签已重新加载"
+          }
+        }
+      }
+    },
+    "Space rearrangement was cancelled." : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "桌面重排已取消。"
           }
         }
       }
@@ -3160,6 +3249,28 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "停止记录"
+          }
+        }
+      }
+    },
+    "Suggestions" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "建议"
+          }
+        }
+      }
+    },
+    "Switch" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "切换"
           }
         }
       }
@@ -3306,6 +3417,16 @@
         }
       }
     },
+    "The backend completed without producing the requested space order." : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "后端完成了操作，但未生成请求的桌面顺序。"
+          }
+        }
+      }
+    },
     "The hidden label that slides into the corner of the active desktop." : {
       "localizations" : {
         "en" : {
@@ -3333,12 +3454,42 @@
         }
       }
     },
+    "The native space rearrangement bridge is unavailable." : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "原生桌面重排桥接不可用。"
+          }
+        }
+      }
+    },
+    "The native space rearrangement operation is unavailable on this macOS version." : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "此 macOS 版本不支持原生桌面重排操作。"
+          }
+        }
+      }
+    },
     "Then reproduce the bug you encountered." : {
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "重现遇到的问题。"
+          }
+        }
+      }
+    },
+    "This macOS version does not expose the native space rearrangement operation." : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "此 macOS 版本未提供原生桌面重排操作。"
           }
         }
       }
@@ -3510,6 +3661,16 @@
         }
       }
     },
+    "When macOS automatically rearranges Spaces is disabled, move a newly created full-screen space immediately after the desktop that opened it." : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "关闭 macOS 自动重新排列桌面后，将新建的全屏桌面紧邻创建它的桌面放置。"
+          }
+        }
+      }
+    },
     "When set to 3 fingers, you can still use 4 fingers to trigger native swipe." : {
       "localizations" : {
         "zh-Hans" : {
@@ -3536,6 +3697,12 @@
           "stringUnit" : {
             "state" : "new",
             "value" : "X: %1$lld px, Y: %2$lld px"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "X：%lld 像素，Y：%lld 像素"
           }
         }
       },
