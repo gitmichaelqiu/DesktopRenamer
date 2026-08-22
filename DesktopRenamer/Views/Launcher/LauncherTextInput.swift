@@ -136,6 +136,8 @@ struct SearchTextField: NSViewRepresentable {
     var textFieldFont: NSFont = NSFont.systemFont(ofSize: 16, weight: .regular)
     var textFieldColor: NSColor = .labelColor
     var placeholderColor: NSColor = .placeholderTextColor
+    var usesSingleLineMode: Bool = false
+    var textFieldLineBreakMode: NSLineBreakMode = .byTruncatingTail
     var focusNotificationName = NSNotification.Name("FocusLauncherTextField")
     
     class Coordinator: NSObject, NSTextFieldDelegate, NSTextViewDelegate {
@@ -239,6 +241,11 @@ struct SearchTextField: NSViewRepresentable {
         textField.focusRingType = .none
         textField.textColor = textFieldColor
         textField.font = textFieldFont
+        textField.usesSingleLineMode = usesSingleLineMode
+        textField.lineBreakMode = textFieldLineBreakMode
+        textField.maximumNumberOfLines = usesSingleLineMode ? 1 : 0
+        textField.cell?.wraps = !usesSingleLineMode
+        textField.cell?.isScrollable = usesSingleLineMode
         
         context.coordinator.lastPlaceholder = placeholder
         context.coordinator.lastIsDark = isDark
@@ -269,6 +276,11 @@ struct SearchTextField: NSViewRepresentable {
         }
         nsView.font = textFieldFont
         nsView.textColor = textFieldColor
+        nsView.usesSingleLineMode = usesSingleLineMode
+        nsView.lineBreakMode = textFieldLineBreakMode
+        nsView.maximumNumberOfLines = usesSingleLineMode ? 1 : 0
+        nsView.cell?.wraps = !usesSingleLineMode
+        nsView.cell?.isScrollable = usesSingleLineMode
         
         // Cache placeholder creation to avoid recreating it on every render cycle
         if context.coordinator.lastPlaceholder != placeholder || context.coordinator.lastIsDark != isDark {
@@ -286,5 +298,4 @@ struct SearchTextField: NSViewRepresentable {
         }
     }
 }
-
 

@@ -191,6 +191,8 @@ struct SpacesBottomBar: View {
                         textFieldFont: NSFont.systemFont(ofSize: 13, weight: .semibold),
                         textFieldColor: NSColor.secondaryLabelColor.withAlphaComponent(0.65),
                         placeholderColor: NSColor.clear,
+                        usesSingleLineMode: true,
+                        textFieldLineBreakMode: .byTruncatingHead,
                         focusNotificationName: NSNotification.Name("FocusSpaceBarTextField")
                     )
                     .opacity(viewModel.spaceBarQuery.isEmpty ? 0.001 : 1)
