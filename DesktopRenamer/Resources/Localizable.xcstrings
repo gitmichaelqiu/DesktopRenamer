@@ -604,16 +604,6 @@
         }
       }
     },
-    "Real-time video enhancement powered by Apple's VideoToolbox." : {
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "由 Apple VideoToolbox 驱动的实时视频增强。"
-          }
-        }
-      }
-    },
     "Controls how much distance the fingers have to move before switching the desktop." : {
       "localizations" : {
         "zh-Hans" : {
@@ -1946,6 +1936,26 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Raycast: 批量移动窗口"
+          }
+        }
+      }
+    },
+    "Real-time video enhancement powered by Apple's VideoToolbox." : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "由 Apple VideoToolbox 驱动的实时视频增强。"
+          }
+        }
+      }
+    },
+    "Real-time video enhancing player." : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "实时视频增强播放器。"
           }
         }
       }

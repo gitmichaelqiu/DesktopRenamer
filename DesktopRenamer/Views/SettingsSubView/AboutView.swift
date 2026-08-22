@@ -88,7 +88,7 @@ struct AboutView: View {
                         OtherAppRow(
                             imageName: "VTPlayerIcon\(iconSuffix)",
                             appName: "VTPlayer",
-                            description: NSLocalizedString("Real-time video enhancement powered by Apple's VideoToolbox.", comment: ""),
+                            description: NSLocalizedString("Real-time video enhancing player.", comment: ""),
                             url: "https://github.com/gitmichaelqiu/VTPlayer"
                         )
                     }
