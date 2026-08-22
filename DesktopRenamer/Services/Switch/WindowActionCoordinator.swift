@@ -98,9 +98,15 @@ enum WindowActionCoordinator {
                 AXUIElementSetAttributeValue(targetAXWindow, "AXFullScreen" as CFString, false as CFTypeRef)
                 try? await Task.sleep(nanoseconds: 1_200_000_000)
             }
-        }
 
-        manager.moveActiveWindowToSpace(id: targetSpaceID)
+            // Exiting fullscreen invalidates the cached source-space classification
+            // before SpaceManager receives its reconciliation callback. Move the
+            // specific window directly so the stale fullscreen guard cannot discard
+            // the request.
+            SpaceHelper.dragActiveWindow(to: targetSpaceID, forceInstant: true)
+        } else {
+            manager.moveActiveWindowToSpace(id: targetSpaceID)
+        }
         try? await Task.sleep(nanoseconds: 500_000_000)
 
         if preserveVisibility {
