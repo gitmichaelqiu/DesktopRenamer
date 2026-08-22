@@ -114,34 +114,34 @@
       "shouldTranslate" : false
     },
     "↵" : {
-
+      "shouldTranslate" : false
     },
     "↺" : {
       "shouldTranslate" : false
     },
     "⇥" : {
-
+      "shouldTranslate" : false
     },
     "⌘%lld" : {
       "shouldTranslate" : false
     },
     "⌘↵" : {
-
+      "shouldTranslate" : false
     },
     "⌘⇧↑" : {
-
+      "shouldTranslate" : false
     },
     "⌘⇧↓" : {
-
+      "shouldTranslate" : false
     },
     "⌘K" : {
-
+      "shouldTranslate" : false
     },
     "⌘M" : {
-
+      "shouldTranslate" : false
     },
     "⌥↵" : {
-
+      "shouldTranslate" : false
     },
     "◉" : {
       "shouldTranslate" : false
@@ -282,17 +282,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "添加特例"
-          }
-        }
-      }
-    },
-    "Add to Favorites" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "添加到收藏夹"
           }
         }
       }
@@ -573,17 +562,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "关闭"
-          }
-        }
-      }
-    },
-    "Command" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "命令"
           }
         }
       }
@@ -960,17 +938,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "更快的切换"
-          }
-        }
-      }
-    },
-    "Favorites" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "收藏夹"
           }
         }
       }
@@ -1400,17 +1367,6 @@
         }
       }
     },
-    "Manage" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "管理"
-          }
-        }
-      }
-    },
     "Manage Windows" : {
       "localizations" : {
         "zh-Hans" : {
@@ -1542,28 +1498,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "移动"
-          }
-        }
-      }
-    },
-    "Move Favorite Down" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "下移收藏"
-          }
-        }
-      }
-    },
-    "Move Favorite Up" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "上移收藏"
           }
         }
       }
@@ -1770,17 +1704,6 @@
         }
       }
     },
-    "No actions found" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "未找到操作"
-          }
-        }
-      }
-    },
     "No commands found" : {
       "localizations" : {
         "zh-Hans" : {
@@ -1873,17 +1796,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "打开GitHub并提交问题。"
-          }
-        }
-      }
-    },
-    "Open Command" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "打开命令"
           }
         }
       }
@@ -1988,17 +1900,6 @@
         }
       }
     },
-    "Primary Action" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "主要操作"
-          }
-        }
-      }
-    },
     "Quickly give your desktop spaces a custom name directly from the menu bar." : {
       "localizations" : {
         "zh-Hans" : {
@@ -2076,17 +1977,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "重新加载桌面标签"
-          }
-        }
-      }
-    },
-    "Remove from Favorites" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "从收藏夹移除"
           }
         }
       }
@@ -2268,17 +2158,6 @@
         }
       }
     },
-    "Reset Ranking" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "重置排名"
-          }
-        }
-      }
-    },
     "Reset to default" : {
       "localizations" : {
         "zh-Hans" : {
@@ -2443,28 +2322,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "搜索命令..."
-          }
-        }
-      }
-    },
-    "Search for action..." : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "搜索操作..."
-          }
-        }
-      }
-    },
-    "Search for actions..." : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "搜索操作..."
           }
         }
       }
@@ -3249,28 +3106,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "停止记录"
-          }
-        }
-      }
-    },
-    "Suggestions" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "建议"
-          }
-        }
-      }
-    },
-    "Switch" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "切换"
           }
         }
       }
