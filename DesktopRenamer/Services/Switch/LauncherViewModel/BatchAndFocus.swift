@@ -103,7 +103,7 @@ extension LauncherViewModel {
                                 }
                             }
                             if let targetAXWindow = axWindow {
-                                AXUIElementSetAttributeValue(targetAXWindow, "AXFullScreen" as CFString, false as CFTypeRef)
+                                _ = SpaceHelper.performWindowAction(.exitFullScreen, on: targetAXWindow)
                                 try await Task.sleep(nanoseconds: 1_200_000_000) // Wait for exit-fullscreen animation to settle
                             }
                         }
@@ -157,7 +157,7 @@ extension LauncherViewModel {
                         }
                     }
                     if let targetAXWindow = axWindow {
-                        AXUIElementSetAttributeValue(targetAXWindow, "AXFullScreen" as CFString, false as CFTypeRef)
+                        _ = SpaceHelper.performWindowAction(.exitFullScreen, on: targetAXWindow)
                         try await Task.sleep(nanoseconds: 1_200_000_000) // Wait for exit-fullscreen animation to settle
                     }
                 }
@@ -173,7 +173,7 @@ extension LauncherViewModel {
                         }
                     }
                     if let targetAXWindow = axWindow {
-                        SpaceHelper.closeWindow(targetAXWindow)
+                        _ = SpaceHelper.performWindowAction(.close, on: targetAXWindow)
                     }
                 case .minimize:
                     var axWindow = SpaceHelper.getAXWindow(id: action.window.id, pid: action.window.pid)
@@ -185,7 +185,7 @@ extension LauncherViewModel {
                         }
                     }
                     if let targetAXWindow = axWindow {
-                        AXUIElementSetAttributeValue(targetAXWindow, kAXMinimizedAttribute as CFString, true as CFTypeRef)
+                        _ = SpaceHelper.performWindowAction(.minimize, on: targetAXWindow)
                     }
                 case .hide:
                     if let app = NSRunningApplication(processIdentifier: action.window.pid) {
@@ -201,7 +201,7 @@ extension LauncherViewModel {
                         }
                     }
                     if let targetAXWindow = axWindow {
-                        AXUIElementSetAttributeValue(targetAXWindow, "AXFullScreen" as CFString, true as CFTypeRef)
+                        _ = SpaceHelper.performWindowAction(.enterFullScreen, on: targetAXWindow)
                         try await Task.sleep(nanoseconds: 1_000_000_000)
                     }
                 case .exitFullScreen:
@@ -214,7 +214,7 @@ extension LauncherViewModel {
                         }
                     }
                     if let targetAXWindow = axWindow {
-                        AXUIElementSetAttributeValue(targetAXWindow, "AXFullScreen" as CFString, false as CFTypeRef)
+                        _ = SpaceHelper.performWindowAction(.exitFullScreen, on: targetAXWindow)
                         try await Task.sleep(nanoseconds: 1_000_000_000)
                     }
                 case .quit:
@@ -234,7 +234,7 @@ extension LauncherViewModel {
                         }
                     }
                     if let targetAXWindow = axWindow {
-                        AXUIElementSetAttributeValue(targetAXWindow, kAXMinimizedAttribute as CFString, false as CFTypeRef)
+                        _ = SpaceHelper.performWindowAction(.restore, on: targetAXWindow)
                     }
                 default:
                     break

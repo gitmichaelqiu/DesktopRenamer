@@ -336,23 +336,19 @@ final class SpaceAPI {
 
         switch action {
         case "close":
-            guard SpaceHelper.closeWindow(axWindow) else {
+            guard SpaceHelper.performWindowAction(.close, on: axWindow) else {
                 throw SpaceAPIError.operationFailed("Window does not expose a close action.")
             }
         case "minimize", "restore":
-            guard AXUIElementSetAttributeValue(
-                axWindow,
-                kAXMinimizedAttribute as CFString,
-                (action == "minimize") as CFTypeRef
-            ) == .success else {
+            let accessibilityAction: SpaceHelper.WindowAccessibilityAction =
+                action == "minimize" ? .minimize : .restore
+            guard SpaceHelper.performWindowAction(accessibilityAction, on: axWindow) else {
                 throw SpaceAPIError.operationFailed("Window visibility action failed.")
             }
         case "enterFullScreen", "exitFullScreen":
-            guard AXUIElementSetAttributeValue(
-                axWindow,
-                "AXFullScreen" as CFString,
-                (action == "enterFullScreen") as CFTypeRef
-            ) == .success else {
+            let accessibilityAction: SpaceHelper.WindowAccessibilityAction =
+                action == "enterFullScreen" ? .enterFullScreen : .exitFullScreen
+            guard SpaceHelper.performWindowAction(accessibilityAction, on: axWindow) else {
                 throw SpaceAPIError.operationFailed("Window full-screen action failed.")
             }
             try await Task.sleep(nanoseconds: 1_000_000_000)
