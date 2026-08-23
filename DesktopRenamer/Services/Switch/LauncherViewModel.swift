@@ -123,7 +123,7 @@ enum DesktopRearrangementDirection {
     var onClose: (() -> Void)?
 
     var terminatingApplicationPIDs = Set<Int32>()
-    var windowLoadGeneration = 0
+    var windowLoadGeneration = LauncherLoadGeneration()
     
     let allCommands: [LauncherCommand] = [
         LauncherCommand(type: .switchToDesktop, title: NSLocalizedString("Switch Desktop", comment: ""), subtitle: NSLocalizedString("Select a desktop to switch to", comment: ""), iconName: "desktopcomputer", hasSubpage: true),
@@ -150,7 +150,7 @@ enum DesktopRearrangementDirection {
     }
 
     func invalidateWindowLoads() {
-        windowLoadGeneration &+= 1
+        _ = windowLoadGeneration.begin()
         isLoadingData = false
     }
 }

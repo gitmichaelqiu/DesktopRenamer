@@ -77,8 +77,7 @@ extension LauncherViewModel {
     
     func loadData() {
         guard let manager = AppDelegate.shared.spaceManager else { return }
-        windowLoadGeneration &+= 1
-        let loadGeneration = windowLoadGeneration
+        let loadGeneration = windowLoadGeneration.begin()
         isLoadingData = true
         
         let spaces = manager.spaceNameDict
@@ -113,7 +112,7 @@ extension LauncherViewModel {
             let parsed = Self.makeWindowData(from: snapshots)
             
             DispatchQueue.main.async {
-                guard loadGeneration == self.windowLoadGeneration else { return }
+                guard self.windowLoadGeneration.accepts(loadGeneration) else { return }
 
                 let terminatingPIDs = self.terminatingApplicationPIDs
                 self.currentWindows = parsed.windows.filter { !terminatingPIDs.contains($0.pid) }
