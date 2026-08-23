@@ -1,20 +1,5 @@
 import Foundation
-
-struct SpaceAPISnapshot: Codable {
-    let apiVersion: String
-    let currentSpaceIDs: [String]
-    let currentSpaceName: String
-    let spaces: [SpaceAPISnapshotSpace]
-}
-
-struct SpaceAPISnapshotSpace: Codable {
-    let id: String
-    let name: String
-    let displayID: String
-    let number: Int
-    let isFullscreen: Bool
-    let appPath: String?
-}
+import AppKit
 
 extension SpaceAPI {
     func makeSpaceSnapshot(_ manager: SpaceManager) throws -> String {
@@ -24,21 +9,47 @@ extension SpaceAPI {
             }
             return $0.num < $1.num
         }.map { space in
-            SpaceAPISnapshotSpace(
-                id: space.id,
-                name: manager.getSpaceName(space.id),
-                displayID: space.displayID,
-                number: space.num,
-                isFullscreen: space.isFullscreen,
-                appPath: space.appPath
+            var result: [String: Any] = [
+                "id": space.id,
+                "name": manager.getSpaceName(space.id),
+                "displayID": space.displayID,
+                "displayName": displayName(for: space.displayID),
+                "number": space.num,
+                "isFullscreen": space.isFullscreen
+            ]
+            if let appPath = space.appPath {
+                result["appPath"] = appPath
+            }
+            return result
+        }
+        let snapshot: [String: Any] = [
+            "apiVersion": DesktopRenamerAPIVersion.current,
+            "currentSpaceIDs": SpaceHelper.getCurrentSpaceIDs(),
+            "currentSpaceName": manager.getSpaceName(manager.currentSpaceUUID),
+            "spaces": spaces
+        ]
+        guard JSONSerialization.isValidJSONObject(snapshot) else {
+            throw NSError(
+                domain: "DesktopRenamer.SpaceAPI",
+                code: 1,
+                userInfo: [NSLocalizedDescriptionKey: "Could not encode space snapshot."]
             )
         }
-        let snapshot = SpaceAPISnapshot(
-            apiVersion: DesktopRenamerAPIVersion.current,
-            currentSpaceIDs: SpaceHelper.getCurrentSpaceIDs(),
-            currentSpaceName: manager.getSpaceName(manager.currentSpaceUUID),
-            spaces: spaces
-        )
-        return String(decoding: try JSONEncoder().encode(snapshot), as: UTF8.self)
+        let data = try JSONSerialization.data(withJSONObject: snapshot)
+        return String(decoding: data, as: UTF8.self)
+    }
+
+    private func displayName(for displayID: String) -> String {
+        for screen in NSScreen.screens {
+            guard let screenNumber = screen.deviceDescription[NSDeviceDescriptionKey("NSScreenNumber")] as? NSNumber,
+                  let uuid = CGDisplayCreateUUIDFromDisplayID(screenNumber.uint32Value)?.takeRetainedValue(),
+                  let uuidString = CFUUIDCreateString(nil, uuid) as String? else {
+                continue
+            }
+            if uuidString.caseInsensitiveCompare(displayID) == .orderedSame {
+                return screen.localizedName
+            }
+        }
+        return displayID == "Main" ? "Main Display" : "Display"
     }
 }
