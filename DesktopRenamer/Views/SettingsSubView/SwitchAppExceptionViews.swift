@@ -29,7 +29,7 @@ struct AddAppExceptionView: View {
             ScrollView {
                 VStack(spacing: 2) {
                     ForEach(runningApps) { app in
-                        AppListItemView(icon: getAppIcon(bundleIdentifier: app.bundleIdentifier), name: app.appName, isSelectable: true) {
+                        AppListItemView(icon: ApplicationIconCache.icon(forBundleIdentifier: app.bundleIdentifier), name: app.appName, isSelectable: true) {
                             let newException = AppGrabException(
                                 bundleIdentifier: app.bundleIdentifier,
                                 appName: app.appName,
@@ -127,7 +127,7 @@ struct EditAppExceptionView: View {
         VStack(spacing: 20) {
             // Header
             HStack(spacing: 12) {
-                Image(nsImage: getAppIcon(bundleIdentifier: exception.bundleIdentifier))
+                        Image(nsImage: ApplicationIconCache.icon(forBundleIdentifier: exception.bundleIdentifier))
                     .resizable()
                     .scaledToFit()
                     .frame(width: 40, height: 40)
@@ -385,7 +385,7 @@ struct AppExceptionRow: View {
     
     var body: some View {
         HStack(spacing: 8) {
-            Image(nsImage: getAppIcon(bundleIdentifier: exception.bundleIdentifier))
+                    Image(nsImage: ApplicationIconCache.icon(forBundleIdentifier: exception.bundleIdentifier))
                 .resizable()
                 .scaledToFit()
                 .frame(width: 20, height: 20)
@@ -473,11 +473,4 @@ struct AppListItemView: View {
             isHovered = hovering
         }
     }
-}
-
-private func getAppIcon(bundleIdentifier: String) -> NSImage {
-    if let url = NSWorkspace.shared.urlForApplication(withBundleIdentifier: bundleIdentifier) {
-        return NSWorkspace.shared.icon(forFile: url.path)
-    }
-    return NSWorkspace.shared.icon(for: .application)
 }

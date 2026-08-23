@@ -179,7 +179,7 @@ struct SpaceRowView: View {
     var body: some View {
         HStack(spacing: 12) {
             if space.isFullscreen, let appPath = space.appPath {
-                let appIcon = NSWorkspace.shared.icon(forFile: appPath)
+                let appIcon = ApplicationIconCache.icon(forFilePath: appPath)
                 Image(nsImage: appIcon)
                     .resizable()
                     .aspectRatio(contentMode: .fit)
@@ -273,7 +273,7 @@ struct WindowRowView: View {
     
     var body: some View {
         HStack(spacing: 12) {
-            let appIcon = NSWorkspace.shared.icon(forFile: window.appPath)
+            let appIcon = ApplicationIconCache.icon(forFilePath: window.appPath)
             Image(nsImage: appIcon)
                 .resizable()
                 .aspectRatio(contentMode: .fit)
@@ -389,7 +389,7 @@ struct WindowBatchRowView: View {
     
     var body: some View {
         HStack(spacing: 12) {
-            let appIcon = NSWorkspace.shared.icon(forFile: window.appPath)
+            let appIcon = ApplicationIconCache.icon(forFilePath: window.appPath)
             Image(nsImage: appIcon)
                 .resizable()
                 .aspectRatio(contentMode: .fit)
@@ -488,5 +488,4 @@ struct ListSectionHeader: View {
         .padding(.bottom, 4)
     }
 }
-
 
