@@ -314,6 +314,15 @@ extension SpaceLabelManager {
         syncWindowsWithDict()
     }
 
+    /// Removes label windows while WindowServer is rebuilding spaces or displays.
+    /// Existing windows can retain stale CGS assignments after sleep/wake, so
+    /// they must be recreated after the layout has been reconciled.
+    func resetForSystemTransition() {
+        delayedRestoreWorkItem?.cancel()
+        delayedRestoreWorkItem = nil
+        removeAllWindows()
+    }
+
     func removeAllWindows() {
         let windows = Array(createdWindows.values)
         for window in windows { window.orderOut(nil) }

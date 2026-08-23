@@ -244,6 +244,12 @@ class SpaceManager: ObservableObject {
         isSystemSleeping = true
         wakeRecoveryWorkItem?.cancel()
 
+        // WindowServer can preserve stale label-window assignments while it
+        // rebuilds Mission Control after wake. Recreate labels after recovery.
+        DispatchQueue.main.async {
+            AppDelegate.shared.statusBarController?.labelManager.resetForSystemTransition()
+        }
+
         let workItem = DispatchWorkItem { [weak self] in
             guard let self = self, self.isSystemSleeping else { return }
 
@@ -258,9 +264,15 @@ class SpaceManager: ObservableObject {
 
             DiagnosticEventLog.shared.record(subsystem: "SpaceManager", level: "info", "Wake recovery completed; space monitoring resumed")
 
-            // Final safety seeding to catch labels that failed while displays were rebuilding.
-            DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
-                AppDelegate.shared.statusBarController?.labelManager.seedAllLabels()
+            // Allow the first reconciliation to complete before creating
+            // windows. A second refresh handles displays that become available
+            // slightly later than the wake event.
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) { [weak self] in
+                guard let self = self, !self.isSystemSleeping else { return }
+                self.refreshSpaceState()
+            }
+            DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
+                AppDelegate.shared.statusBarController?.labelManager.reloadAllWindows()
             }
         }
 
@@ -273,12 +285,15 @@ class SpaceManager: ObservableObject {
     @objc private func screenParametersDidChange() {
         guard !isSystemSleeping else { return }
         print("SpaceManager: Screen parameters changed. Refreshing spaces and labels...")
+        DispatchQueue.main.async {
+            AppDelegate.shared.statusBarController?.labelManager.resetForSystemTransition()
+        }
         refreshConnectedDisplays()
         refreshSpaceState()
         
-        // When a monitor is connected/disconnected, re-seed all labels to ensure new displays are covered
+        // Recreate labels after the display and space layout has stabilized.
         DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
-            AppDelegate.shared.statusBarController?.labelManager.seedAllLabels()
+            AppDelegate.shared.statusBarController?.labelManager.reloadAllWindows()
         }
     }
 }
