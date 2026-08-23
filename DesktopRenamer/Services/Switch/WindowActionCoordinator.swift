@@ -2,6 +2,29 @@ import AppKit
 
 @MainActor
 enum WindowActionCoordinator {
+    private static func wait(_ nanoseconds: UInt64, operation: String) async -> Bool {
+        do {
+            try await Task.sleep(nanoseconds: nanoseconds)
+            return true
+        } catch {
+            DiagnosticEventLog.shared.record(
+                subsystem: "WindowActions",
+                level: "info",
+                "Cancelled while waiting to " + operation + "."
+            )
+            return false
+        }
+    }
+
+    @discardableResult
+    private static func setAXValue(
+        _ value: CFTypeRef,
+        attribute: String,
+        on window: AXUIElement
+    ) -> Bool {
+        AXUIElementSetAttributeValue(window, attribute as CFString, value) == .success
+    }
+
     struct VisibilityState {
         let isMinimized: Bool
         let isHidden: Bool
@@ -22,30 +45,38 @@ enum WindowActionCoordinator {
         return VisibilityState(isMinimized: isMinimized, isHidden: isHidden)
     }
 
-    static func restoreWindowForMove(windowID: Int, pid: Int32) async {
+    static func restoreWindowForMove(windowID: Int, pid: Int32) async -> Bool {
         if let app = NSRunningApplication(processIdentifier: pid) {
             app.unhide()
         }
         if let axWindow = SpaceHelper.getAXWindow(id: windowID, pid: pid) {
-            AXUIElementSetAttributeValue(axWindow, kAXMinimizedAttribute as CFString, false as CFTypeRef)
+            guard setAXValue(false as CFTypeRef, attribute: kAXMinimizedAttribute, on: axWindow) else {
+                return false
+            }
         }
-        try? await Task.sleep(nanoseconds: 300_000_000)
+        return await wait(300_000_000, operation: "restore the window")
     }
 
-    static func reapplyVisibility(_ state: VisibilityState, windowID: Int, pid: Int32) async {
-        guard state.isMinimized || state.isHidden else { return }
+    static func reapplyVisibility(_ state: VisibilityState, windowID: Int, pid: Int32) async -> Bool {
+        guard state.isMinimized || state.isHidden else { return true }
 
         if state.isMinimized {
             var axWindow = SpaceHelper.getAXWindow(id: windowID, pid: pid)
             if axWindow == nil {
                 if let app = NSRunningApplication(processIdentifier: pid) {
                     app.activate(options: .activateIgnoringOtherApps)
-                    try? await Task.sleep(nanoseconds: 400_000_000)
+                    guard await wait(400_000_000, operation: "find the minimized window") else {
+                        return false
+                    }
                     axWindow = SpaceHelper.getAXWindow(id: windowID, pid: pid)
                 }
             }
             if let targetAXWindow = axWindow {
-                AXUIElementSetAttributeValue(targetAXWindow, kAXMinimizedAttribute as CFString, true as CFTypeRef)
+                guard setAXValue(true as CFTypeRef, attribute: kAXMinimizedAttribute, on: targetAXWindow) else {
+                    return false
+                }
+            } else {
+                return false
             }
         }
 
@@ -53,6 +84,7 @@ enum WindowActionCoordinator {
            let app = NSRunningApplication(processIdentifier: pid) {
             app.hide()
         }
+        return true
     }
 
     @discardableResult
@@ -74,30 +106,44 @@ enum WindowActionCoordinator {
 
         if manager.currentSpaceUUID != fromSpaceID {
             manager.switchToSpace(sourceSpace, forceInstant: true)
-            try? await Task.sleep(nanoseconds: 600_000_000)
+            guard await wait(600_000_000, operation: "switch to the source space") else {
+                return false
+            }
         }
 
         if originalVisibility.isMinimized || originalVisibility.isHidden {
-            await restoreWindowForMove(windowID: windowID, pid: pid)
+            guard await restoreWindowForMove(windowID: windowID, pid: pid) else {
+                return false
+            }
         }
 
         SpaceHelper.focusWindow(id: windowID, pid: pid)
-        try? await Task.sleep(nanoseconds: 250_000_000)
+        guard await wait(250_000_000, operation: "focus the window") else {
+            return false
+        }
 
         if sourceSpace.isFullscreen || targetSpace.isFullscreen {
             if sourceSpace.isFullscreen {
-            var axWindow = SpaceHelper.getAXWindow(id: windowID, pid: pid)
-            if axWindow == nil {
-                if let app = NSRunningApplication(processIdentifier: pid) {
-                    app.activate(options: .activateIgnoringOtherApps)
-                    try? await Task.sleep(nanoseconds: 400_000_000)
-                    axWindow = SpaceHelper.getAXWindow(id: windowID, pid: pid)
+                var axWindow = SpaceHelper.getAXWindow(id: windowID, pid: pid)
+                if axWindow == nil {
+                    if let app = NSRunningApplication(processIdentifier: pid) {
+                        app.activate(options: .activateIgnoringOtherApps)
+                        guard await wait(400_000_000, operation: "find the fullscreen window") else {
+                            return false
+                        }
+                        axWindow = SpaceHelper.getAXWindow(id: windowID, pid: pid)
+                    }
                 }
-            }
-            if let targetAXWindow = axWindow {
-                AXUIElementSetAttributeValue(targetAXWindow, "AXFullScreen" as CFString, false as CFTypeRef)
-                try? await Task.sleep(nanoseconds: 1_200_000_000)
-            }
+                if let targetAXWindow = axWindow {
+                    guard setAXValue(false as CFTypeRef, attribute: "AXFullScreen", on: targetAXWindow) else {
+                        return false
+                    }
+                    guard await wait(1_200_000_000, operation: "exit fullscreen") else {
+                        return false
+                    }
+                } else {
+                    return false
+                }
             }
 
             // Exiting fullscreen invalidates the cached source-space classification
@@ -108,10 +154,14 @@ enum WindowActionCoordinator {
         } else {
             manager.moveActiveWindowToSpace(id: targetSpaceID)
         }
-        try? await Task.sleep(nanoseconds: 500_000_000)
+        guard await wait(500_000_000, operation: "move the window") else {
+            return false
+        }
 
         if preserveVisibility {
-            await reapplyVisibility(originalVisibility, windowID: windowID, pid: pid)
+            guard await reapplyVisibility(originalVisibility, windowID: windowID, pid: pid) else {
+                return false
+            }
         }
 
         return true
