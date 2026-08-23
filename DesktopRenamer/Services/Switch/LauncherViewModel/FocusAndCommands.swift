@@ -102,6 +102,7 @@ extension LauncherViewModel {
     
     func closeLauncher() {
         batchExecutionTask?.cancel()
+        invalidateWindowLoads()
         searchQuery = ""
         spaceBarQuery = ""
         selectedRowIndex = 0

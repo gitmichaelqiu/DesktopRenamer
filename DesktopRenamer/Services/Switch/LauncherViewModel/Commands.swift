@@ -107,8 +107,9 @@ extension LauncherViewModel {
         // 2. Unstaged items grouped by space
         let unstaged = filteredUnstagedWindows
         var itemIndex = staged.count
+        let windowsBySpaceID = Dictionary(grouping: unstaged, by: \.space.id)
         for space in currentSpaces {
-            let spaceWindows = unstaged.filter { $0.space.id == space.id }
+            let spaceWindows = windowsBySpaceID[space.id] ?? []
             if spaceWindows.isEmpty { continue }
             for window in spaceWindows {
                 items.append(.unstaged(window: window, index: itemIndex))
@@ -130,6 +131,7 @@ extension LauncherViewModel {
         }
         if !stagedItems.isEmpty {
             sections.append(BatchMoveSection(
+                id: "staged",
                 title: String(localized: "Staged Moves (Pending)"),
                 subtitle: String(format: String(localized: "%lld items"), stagedItems.count),
                 items: stagedItems
@@ -142,15 +144,18 @@ extension LauncherViewModel {
             return false
         }
         
-        for space in currentSpaces {
-            let spaceItems = unstagedItems.filter {
-                if case .unstaged(let window, _) = $0, window.space.id == space.id {
-                    return true
-                }
-                return false
+        let itemsBySpaceID = Dictionary(grouping: unstagedItems) { item in
+            if case .unstaged(let window, _) = item {
+                return window.space.id
             }
+            return ""
+        }
+
+        for space in currentSpaces {
+            let spaceItems = itemsBySpaceID[space.id] ?? []
             if !spaceItems.isEmpty {
                 sections.append(BatchMoveSection(
+                    id: "space_\(space.id)",
                     title: space.name,
                     subtitle: String(format: String(localized: "%lld windows"), spaceItems.count),
                     items: spaceItems

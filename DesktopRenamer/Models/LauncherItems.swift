@@ -124,7 +124,7 @@ enum BatchMoveItem: Identifiable, Equatable {
 }
 
 struct BatchMoveSection: Identifiable {
-    var id: String { title }
+    let id: String
     let title: String
     let subtitle: String
     let items: [BatchMoveItem]
@@ -142,7 +142,7 @@ struct ListWindowsItem: Identifiable, Equatable {
 }
 
 struct ListWindowsSection: Identifiable {
-    var id: String { title }
+    let id: String
     let title: String
     let subtitle: String
     let items: [ListWindowsItem]

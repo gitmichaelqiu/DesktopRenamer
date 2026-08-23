@@ -28,6 +28,7 @@ extension LauncherViewModel {
     var listWindowsSections: [ListWindowsSection] {
         var sections: [ListWindowsSection] = []
         let windows = filteredWindows
+        let windowsBySpaceID = Dictionary(grouping: windows, by: \.space.id)
         
         var windowToGlobalIndex: [Int: Int] = [:]
         for (idx, w) in windows.enumerated() {
@@ -35,7 +36,7 @@ extension LauncherViewModel {
         }
         
         for space in currentSpaces {
-            let spaceWindows = windows.filter { $0.space.id == space.id }
+            let spaceWindows = windowsBySpaceID[space.id] ?? []
             if spaceWindows.isEmpty { continue }
             
             let items = spaceWindows.map { w in
@@ -43,6 +44,7 @@ extension LauncherViewModel {
             }
             
             sections.append(ListWindowsSection(
+                id: "space_\(space.id)",
                 title: space.name,
                 subtitle: String(format: space.isFullscreen ? String(localized: "Fullscreen") : String(localized: "%lld windows"), items.count),
                 items: items
@@ -75,6 +77,8 @@ extension LauncherViewModel {
     
     func loadData() {
         guard let manager = AppDelegate.shared.spaceManager else { return }
+        windowLoadGeneration &+= 1
+        let loadGeneration = windowLoadGeneration
         isLoadingData = true
         
         let spaces = manager.spaceNameDict
@@ -109,10 +113,13 @@ extension LauncherViewModel {
             let parsed = Self.parseWindowData(raw)
             
             DispatchQueue.main.async {
+                guard loadGeneration == self.windowLoadGeneration else { return }
+
                 let terminatingPIDs = self.terminatingApplicationPIDs
                 self.currentWindows = parsed.windows.filter { !terminatingPIDs.contains($0.pid) }
-                self.terminatingApplicationPIDs = terminatingPIDs.filter {
-                    NSRunningApplication(processIdentifier: $0) != nil
+                let observedPIDs = Set(parsed.windows.map(\.pid))
+                self.terminatingApplicationPIDs = terminatingPIDs.filter { pid in
+                    NSRunningApplication(processIdentifier: pid) != nil || observedPIDs.contains(pid)
                 }
                 self.isLoadingData = false
             }
@@ -122,6 +129,7 @@ extension LauncherViewModel {
     func removeApplicationWindowsFromList(pid: Int32) {
         terminatingApplicationPIDs.insert(pid)
         currentWindows.removeAll { $0.pid == pid }
+        stagedMoves = stagedMoves.filter { $0.value.window.pid != pid }
         selectedRowIndex = min(selectedRowIndex, max(filteredWindows.count - 1, 0))
     }
     
