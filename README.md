@@ -31,7 +31,7 @@
       <img src="./DesktopRenamer/Resources/Demo/Images/DesktopRenamer_v1-5-0_API.png" width="500"/><br>
       <i>
         Open
-        <a href="https://github.com/gitmichaelqiu/DesktopRenamer/wiki/DesktopRenamer-API-Guide">
+        <a href="https://docs.desktoprenamer.mqiu.dev/">
         <b>SpaceAPI</b>
         </a>
         to other apps
@@ -95,9 +95,8 @@ To resolve this, go to System Settings → the bottom of Privacy & Security → 
 
 DesktopRenamer provides multiple ways to interact with it:
 
-- [SpaceAPI Guide](https://github.com/gitmichaelqiu/DesktopRenamer/wiki/DesktopRenamer-API-Guide) - Acquire space IDs and names via HTTP.
-- [AppleScript Guide](https://github.com/gitmichaelqiu/DesktopRenamer/wiki/DesktopRenamer-AppleScript-Guide) - Automate space management and window positioning via AppleScript.
-- The external API contract version is available through AppleScript (`get api version`) and SpaceAPI responses, independently of the app version.
+- [SpaceAPI Guide](https://docs.desktoprenamer.mqiu.dev/) official developer documentation of SpaceAPI.
+- The SpaceAPI version is available through AppleScript (`get api version`) and SpaceAPI responses, independently of the app version.
 
 You can switch on/off the API in Settings → Advanced.
 
