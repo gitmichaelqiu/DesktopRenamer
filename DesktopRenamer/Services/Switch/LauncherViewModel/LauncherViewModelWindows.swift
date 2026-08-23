@@ -145,68 +145,6 @@ extension LauncherViewModel {
         return "Display"
     }
     
-    private nonisolated static func parseWindowData(_ raw: String) -> (spaces: [SpaceGroup], windows: [WindowEntry]) {
-        var spaces: [SpaceGroup] = []
-        var windows: [WindowEntry] = []
-        var currentSpace: SpaceGroup? = nil
-        
-        let lines = raw.components(separatedBy: "\n")
-        for line in lines {
-            if line.hasPrefix(">") {
-                let parts = line.dropFirst().components(separatedBy: "~")
-                if parts.count >= 4 {
-                    let isFS = parts.count >= 5 ? (parts[4] == "1") : false
-                    let appPath = (parts.count >= 6 && !parts[5].isEmpty) ? parts[5] : nil
-                    let space = SpaceGroup(
-                        id: parts[0],
-                        name: parts[1].isEmpty ? "Space \(parts[3])" : parts[1],
-                        displayName: parts[2],
-                        num: Int(parts[3]) ?? 0,
-                        isFullscreen: isFS,
-                        appPath: appPath
-                    )
-                    currentSpace = space
-                    spaces.append(space)
-                }
-            } else if line.hasPrefix("  "), let space = currentSpace {
-                let content = line.trimmingCharacters(in: .whitespaces)
-                let parts = content.components(separatedBy: "|")
-                if parts.count >= 5 {
-                    if let wid = Int(parts[0]), let pid = Int32(parts[1]) {
-                        let ownerName = parts[2]
-                        let appPath = parts[3]
-                        // New 7-field format: wid|pid|owner|appPath|title...|isMinimized|isHidden
-                        // Legacy 5-field format: wid|pid|owner|appPath|title
-                        let title: String
-                        let isMinimized: Bool
-                        let isHidden: Bool
-                        if parts.count >= 7 {
-                            title = parts[4..<(parts.count - 2)].joined(separator: "|")
-                            isMinimized = parts[parts.count - 2] == "1"
-                            isHidden = parts[parts.count - 1] == "1"
-                        } else {
-                            title = parts[4...].joined(separator: "|")
-                            isMinimized = false
-                            isHidden = false
-                        }
-                        let entry = WindowEntry(
-                            id: wid,
-                            pid: pid,
-                            ownerName: ownerName,
-                            appPath: appPath,
-                            title: title,
-                            space: space,
-                            isMinimized: isMinimized,
-                            isHidden: isHidden
-                        )
-                        windows.append(entry)
-                    }
-                }
-            }
-        }
-        return (spaces, windows)
-    }
-
     private nonisolated static func makeWindowData(from snapshots: [SpaceWindowSnapshot]) -> (spaces: [SpaceGroup], windows: [WindowEntry]) {
         var spaces: [SpaceGroup] = []
         var windows: [WindowEntry] = []
