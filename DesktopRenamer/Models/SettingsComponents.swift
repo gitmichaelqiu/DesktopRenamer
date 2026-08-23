@@ -246,7 +246,7 @@ enum SettingsCatalog {
             + title.lowercased().components(separatedBy: CharacterSet.alphanumerics.inverted)
             + localizedTitle.lowercased().components(separatedBy: CharacterSet.alphanumerics.inverted)
 
-        SearchableSettingItem(
+        return SearchableSettingItem(
             title: title,
             localizedTitle: localizedTitle,
             tab: tab,
