@@ -15,7 +15,7 @@ enum ApplicationIconCache {
     }
 
     static func icon(forBundleIdentifier bundleIdentifier: String) -> NSImage {
-        let key = "bundle:" + bundleIdentifier as NSString
+        let key = ("bundle:" + bundleIdentifier) as NSString
         if let cached = cache.object(forKey: key) {
             return cached
         }
