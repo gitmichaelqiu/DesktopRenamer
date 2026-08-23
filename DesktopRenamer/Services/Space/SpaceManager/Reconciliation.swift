@@ -153,13 +153,21 @@ extension SpaceManager {
             let cachedSpacesByDisplay = Dictionary(grouping: self.spaceNameDict, by: \.displayID)
             let detectedSpacesByDisplay = Dictionary(grouping: newSpaceList, by: \.displayID)
             let hasMissingSpacesOnExistingDisplay = cachedSpacesByDisplay.contains { displayID, cachedSpaces in
-                guard let detectedSpaces = detectedSpacesByDisplay[displayID] else { return false }
+                guard let detectedSpaces = detectedSpacesByDisplay[displayID] else { return true }
                 return detectedSpaces.count < cachedSpaces.count
             }
-            let isPartialList = !self.spaceNameDict.isEmpty && newSpaceList.count < self.spaceNameDict.count
-            if isPartialList && hasMissingSpacesOnExistingDisplay {
-                print("SpaceManager: Rejecting partial space list (\(newSpaceList.count) vs cached \(self.spaceNameDict.count)). Skipping update.")
-                DiagnosticEventLog.shared.record(subsystem: "SpaceManager", level: "warning", "Rejected partial space list: new=\(newSpaceList.count), cached=\(self.spaceNameDict.count), source=\(source), wakeCooling=\(self.isInWakeCoolingPeriod)")
+            let hasDuplicateSpaceIDs = Set(newSpaceList.map(\.id)).count != newSpaceList.count
+            let hasDuplicatePositions = detectedSpacesByDisplay.values.contains { spaces in
+                let positions = spaces.map(\.num)
+                return Set(positions).count != positions.count
+            }
+            let isInconsistentSnapshot = hasMissingSpacesOnExistingDisplay
+                || hasDuplicateSpaceIDs
+                || hasDuplicatePositions
+
+            if !self.spaceNameDict.isEmpty && isInconsistentSnapshot {
+                print("SpaceManager: Rejecting inconsistent space list (\(newSpaceList.count) vs cached \(self.spaceNameDict.count)). Skipping update.")
+                DiagnosticEventLog.shared.record(subsystem: "SpaceManager", level: "warning", "Rejected inconsistent space snapshot: new=\(newSpaceList.count), cached=\(self.spaceNameDict.count), missingDisplay=\(hasMissingSpacesOnExistingDisplay), duplicateIDs=\(hasDuplicateSpaceIDs), duplicatePositions=\(hasDuplicatePositions), source=\(source), wakeCooling=\(self.isInWakeCoolingPeriod)")
                 if !cgsState.currentUUID.isEmpty {
                     self.currentSpaceUUID = cgsState.currentUUID
                 }
