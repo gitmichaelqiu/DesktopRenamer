@@ -190,6 +190,7 @@ class SpaceManager: ObservableObject {
     }
     
     deinit {
+        widgetUpdateWorkItem?.cancel()
         wakeRecoveryWorkItem?.cancel()
         spaceChangeRetryWorkItem?.cancel()
         if Thread.isMainThread {
@@ -206,6 +207,7 @@ class SpaceManager: ObservableObject {
             }
         }
         NotificationCenter.default.removeObserver(self)
+        NSWorkspace.shared.notificationCenter.removeObserver(self)
     }
     
     @objc private func systemDidWake() {

@@ -439,6 +439,8 @@ extension SpaceManager {
     }
     
     func prepareForTermination() {
+        widgetUpdateWorkItem?.cancel()
+        widgetUpdateWorkItem = nil
         wakeRecoveryWorkItem?.cancel()
         spaceChangeRetryWorkItem?.cancel()
         stopPeriodicSpaceLayoutCheck()
