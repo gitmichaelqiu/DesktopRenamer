@@ -46,6 +46,15 @@ struct SpaceReconciliationSupportSmoke {
         precondition(claimed == "Research")
         precondition(claimedNames == ["Coding", "Research"])
 
+        let legacyData = Data("{\"id\":\"legacy\",\"num\":1}".utf8)
+        let legacySpace = try! JSONDecoder().decode(DesktopSpace.self, from: legacyData)
+        precondition(legacySpace.customName.isEmpty)
+        precondition(legacySpace.displayID == "Main")
+
+        let structuredData = Data("{\"id\":\"1\",\"name\":\"Main\",\"displayName\":\"Built-in\",\"num\":1,\"isFullscreen\":false,\"windows\":[{\"id\":7,\"pid\":42,\"ownerName\":\"Editor\",\"appPath\":\"/Applications/Editor.app\",\"title\":\"A|B~C\",\"isMinimized\":false,\"isHidden\":false}]}".utf8)
+        let structuredSpace = try! JSONDecoder().decode(SpaceWindowSnapshot.self, from: structuredData)
+        precondition(structuredSpace.windows.first?.title == "A|B~C")
+
         print("Space reconciliation smoke tests passed")
     }
 }
