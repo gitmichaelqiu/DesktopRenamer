@@ -6,7 +6,9 @@ import WidgetKit
 extension SpaceManager {
 
     func refreshConnectedDisplays() {
-        self.connectedDisplayUUIDs = Set(SpaceHelper.getAllDisplayUUIDs().map { $0.uppercased() })
+        self.connectedDisplayUUIDs = Set(SpaceHelper.getAllDisplayUUIDs().map {
+            SpaceReconciliationSupport.normalizedDisplayID($0)
+        })
         // print("SpaceManager: Refreshed connected displays: \(connectedDisplayUUIDs)")
     }
     
@@ -96,16 +98,11 @@ extension SpaceManager {
                     if let cachedName = nameCache[sysSpace.id], !cachedName.isEmpty {
                         finalSpace.customName = cachedName
                     } else {
-                        if let fallbackName = indexCache[indexKey], !fallbackName.isEmpty {
-                            if !claimedNames.contains(fallbackName) {
-                                finalSpace.customName = fallbackName
-                                claimedNames.insert(fallbackName)
-                            }
-                        } else if let fallbackName = indexCache[legacyIndexKey], !fallbackName.isEmpty {
-                            if !claimedNames.contains(fallbackName) {
-                                finalSpace.customName = fallbackName
-                                claimedNames.insert(fallbackName)
-                            }
+                        if let fallbackName = SpaceReconciliationSupport.claimAvailableName(
+                            from: [indexCache[indexKey], indexCache[legacyIndexKey]],
+                            claimedNames: &claimedNames
+                        ) {
+                            finalSpace.customName = fallbackName
                         } else if let existing = spaceNameDict.first(where: { $0.id == sysSpace.id }), !existing.customName.isEmpty {
                             finalSpace.customName = existing.customName
                             nameCache[sysSpace.id] = existing.customName
@@ -150,24 +147,15 @@ extension SpaceManager {
             // STABILITY GUARD: Reject partial space lists to prevent corrupting
             // saved state. Transient CGS failures can return fewer spaces,
             // which would erase user data if saved.
-            let cachedSpacesByDisplay = Dictionary(grouping: self.spaceNameDict, by: \.displayID)
-            let detectedSpacesByDisplay = Dictionary(grouping: newSpaceList, by: \.displayID)
-            let hasMissingSpacesOnExistingDisplay = cachedSpacesByDisplay.contains { displayID, cachedSpaces in
-                guard let detectedSpaces = detectedSpacesByDisplay[displayID] else { return true }
-                return detectedSpaces.count < cachedSpaces.count
-            }
-            let hasDuplicateSpaceIDs = Set(newSpaceList.map(\.id)).count != newSpaceList.count
-            let hasDuplicatePositions = detectedSpacesByDisplay.values.contains { spaces in
-                let positions = spaces.map(\.num)
-                return Set(positions).count != positions.count
-            }
-            let isInconsistentSnapshot = hasMissingSpacesOnExistingDisplay
-                || hasDuplicateSpaceIDs
-                || hasDuplicatePositions
+            let validation = SpaceReconciliationSupport.validateSnapshot(
+                detectedSpaces: newSpaceList,
+                cachedSpaces: self.spaceNameDict
+            )
+            let isInconsistentSnapshot = !validation.isValid
 
             if !self.spaceNameDict.isEmpty && isInconsistentSnapshot {
                 print("SpaceManager: Rejecting inconsistent space list (\(newSpaceList.count) vs cached \(self.spaceNameDict.count)). Skipping update.")
-                DiagnosticEventLog.shared.record(subsystem: "SpaceManager", level: "warning", "Rejected inconsistent space snapshot: new=\(newSpaceList.count), cached=\(self.spaceNameDict.count), missingDisplay=\(hasMissingSpacesOnExistingDisplay), duplicateIDs=\(hasDuplicateSpaceIDs), duplicatePositions=\(hasDuplicatePositions), source=\(source), wakeCooling=\(self.isInWakeCoolingPeriod)")
+                DiagnosticEventLog.shared.record(subsystem: "SpaceManager", level: "warning", "Rejected inconsistent space snapshot: new=\(newSpaceList.count), cached=\(self.spaceNameDict.count), missingDisplay=\(validation.hasMissingSpacesOnExistingDisplay), duplicateIDs=\(validation.hasDuplicateSpaceIDs), duplicatePositions=\(validation.hasDuplicatePositions), source=\(source), wakeCooling=\(self.isInWakeCoolingPeriod)")
                 if !cgsState.currentUUID.isEmpty {
                     self.currentSpaceUUID = cgsState.currentUUID
                 }
