@@ -1,6 +1,6 @@
 import Foundation
 
-struct DesktopSpace: Identifiable, Codable, Equatable {
+struct DesktopSpace: Identifiable, Codable, Equatable, Sendable {
     var id: String
     var customName: String
     var num: Int
@@ -14,7 +14,7 @@ struct DesktopSpace: Identifiable, Codable, Equatable {
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         id = try container.decode(String.self, forKey: .id)
-        customName = try container.decode(String.self, forKey: .customName)
+        customName = try container.decodeIfPresent(String.self, forKey: .customName) ?? ""
         num = try container.decode(Int.self, forKey: .num)
         displayID = try container.decodeIfPresent(String.self, forKey: .displayID) ?? "Main"
         isFullscreen = try container.decodeIfPresent(Bool.self, forKey: .isFullscreen) ?? false

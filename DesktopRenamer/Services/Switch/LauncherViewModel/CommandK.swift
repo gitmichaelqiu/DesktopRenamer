@@ -153,12 +153,7 @@ extension LauncherViewModel {
                     }
                 }
                 if let targetAXWindow = axWindow {
-                    var closeButtonRef: CFTypeRef?
-                    if AXUIElementCopyAttributeValue(targetAXWindow, kAXCloseButtonAttribute as CFString, &closeButtonRef) == .success,
-                       let closeButton = closeButtonRef,
-                       CFGetTypeID(closeButton) == AXUIElementGetTypeID() {
-                        AXUIElementPerformAction(closeButton as! AXUIElement, kAXPressAction as CFString)
-                    }
+                    SpaceHelper.closeWindow(targetAXWindow)
                 }
             case .minimize:
                 var axWindow = SpaceHelper.getAXWindow(id: window.id, pid: window.pid)
@@ -255,4 +250,3 @@ extension LauncherViewModel {
         }
     }
 }
-

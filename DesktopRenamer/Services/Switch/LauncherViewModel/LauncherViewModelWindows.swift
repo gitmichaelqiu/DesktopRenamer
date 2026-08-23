@@ -109,8 +109,8 @@ extension LauncherViewModel {
         DispatchQueue.global(qos: .userInitiated).async { [weak self] in
             guard let self = self else { return }
             
-            let raw = SpaceHelper.getWindowsForAllSpaces(spaces: spaces, spaceNames: names)
-            let parsed = Self.parseWindowData(raw)
+            let snapshots = SpaceHelper.getWindowSnapshots(spaces: spaces, spaceNames: names)
+            let parsed = Self.makeWindowData(from: snapshots)
             
             DispatchQueue.main.async {
                 guard loadGeneration == self.windowLoadGeneration else { return }
@@ -204,6 +204,38 @@ extension LauncherViewModel {
                 }
             }
         }
+        return (spaces, windows)
+    }
+
+    private nonisolated static func makeWindowData(from snapshots: [SpaceWindowSnapshot]) -> (spaces: [SpaceGroup], windows: [WindowEntry]) {
+        var spaces: [SpaceGroup] = []
+        var windows: [WindowEntry] = []
+
+        for snapshot in snapshots {
+            let space = SpaceGroup(
+                id: snapshot.id,
+                name: snapshot.name.isEmpty ? "Space \(snapshot.num)" : snapshot.name,
+                displayName: snapshot.displayName,
+                num: snapshot.num,
+                isFullscreen: snapshot.isFullscreen,
+                appPath: snapshot.appPath
+            )
+            spaces.append(space)
+
+            windows.append(contentsOf: snapshot.windows.map { window in
+                WindowEntry(
+                    id: window.id,
+                    pid: window.pid,
+                    ownerName: window.ownerName,
+                    appPath: window.appPath,
+                    title: window.title,
+                    space: space,
+                    isMinimized: window.isMinimized,
+                    isHidden: window.isHidden
+                )
+            })
+        }
+
         return (spaces, windows)
     }
 }

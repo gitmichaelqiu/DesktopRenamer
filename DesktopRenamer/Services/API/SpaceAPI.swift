@@ -251,7 +251,16 @@ final class SpaceAPI {
         case "getWindows":
             let spaces = manager.spaceNameDict
             let names = Dictionary(uniqueKeysWithValues: spaces.map { ($0.id, manager.getSpaceName($0.id)) })
-            return SpaceHelper.getWindowsForAllSpaces(spaces: spaces, spaceNames: names)
+            return await fetchWindowsForAPI(spaces: spaces, names: names)
+        case "getWindowsSnapshot":
+            let spaces = manager.spaceNameDict
+            let names = Dictionary(uniqueKeysWithValues: spaces.map { ($0.id, manager.getSpaceName($0.id)) })
+            let snapshots = await fetchWindowSnapshots(spaces: spaces, names: names)
+            guard let data = try? JSONEncoder().encode(snapshots),
+                  let result = String(data: data, encoding: .utf8) else {
+                throw SpaceAPIError.operationFailed("Could not encode the window snapshot.")
+            }
+            return result
         case "focusWindow":
             guard let windowID = Int(arguments["windowID"] ?? ""), let pid = Int32(arguments["pid"] ?? "") else {
                 throw SpaceAPIError.invalidArgument("Missing window ID or process ID.")
@@ -327,28 +336,46 @@ final class SpaceAPI {
 
         switch action {
         case "close":
-            var closeButtonRef: CFTypeRef?
-            guard AXUIElementCopyAttributeValue(axWindow, kAXCloseButtonAttribute as CFString, &closeButtonRef) == .success,
-                  let closeButton = closeButtonRef,
-                  CFGetTypeID(closeButton) == AXUIElementGetTypeID() else {
+            guard SpaceHelper.closeWindow(axWindow) else {
                 throw SpaceAPIError.operationFailed("Window does not expose a close action.")
             }
-            AXUIElementPerformAction(closeButton as! AXUIElement, kAXPressAction as CFString)
         case "minimize", "restore":
-            AXUIElementSetAttributeValue(
+            guard AXUIElementSetAttributeValue(
                 axWindow,
                 kAXMinimizedAttribute as CFString,
                 (action == "minimize") as CFTypeRef
-            )
+            ) == .success else {
+                throw SpaceAPIError.operationFailed("Window visibility action failed.")
+            }
         case "enterFullScreen", "exitFullScreen":
-            AXUIElementSetAttributeValue(
+            guard AXUIElementSetAttributeValue(
                 axWindow,
                 "AXFullScreen" as CFString,
                 (action == "enterFullScreen") as CFTypeRef
-            )
+            ) == .success else {
+                throw SpaceAPIError.operationFailed("Window full-screen action failed.")
+            }
             try await Task.sleep(nanoseconds: 1_000_000_000)
         default:
             throw SpaceAPIError.invalidArgument("Unsupported window action: \(action)")
+        }
+    }
+
+    private func fetchWindowsForAPI(spaces: [DesktopSpace], names: [String: String]) async -> String {
+        await withCheckedContinuation { continuation in
+            DispatchQueue.global(qos: .userInitiated).async {
+                let result = SpaceHelper.getWindowsForAllSpaces(spaces: spaces, spaceNames: names)
+                continuation.resume(returning: result)
+            }
+        }
+    }
+
+    private func fetchWindowSnapshots(spaces: [DesktopSpace], names: [String: String]) async -> [SpaceWindowSnapshot] {
+        await withCheckedContinuation { continuation in
+            DispatchQueue.global(qos: .userInitiated).async {
+                let result = SpaceHelper.getWindowSnapshots(spaces: spaces, spaceNames: names)
+                continuation.resume(returning: result)
+            }
         }
     }
 

@@ -300,13 +300,13 @@ extension SpaceHelper {
               w >= minSize, h >= minSize
         else { return false }
         // Reject invisible windows when the key is present.
-        if let alpha = window[kCGWindowAlpha as String] as? Double, alpha < 0 { return false }
+        if let alpha = window[kCGWindowAlpha as String] as? Double, alpha <= 0 { return false }
         // Reject windows with sharing state "none" (hidden helper windows like WeChat background).
         if let sharing = window[kCGWindowSharingState as String] as? Int, sharing == 0 { return false }
         return true
     }
 
-    static func getWindowsForAllSpaces(spaces: [DesktopSpace], spaceNames: [String: String]) -> String {
+    static func getWindowSnapshots(spaces: [DesktopSpace], spaceNames: [String: String]) -> [SpaceWindowSnapshot] {
         let conn = _CGSDefaultConnection()
         let ourPID = ProcessInfo.processInfo.processIdentifier
 
@@ -371,7 +371,7 @@ extension SpaceHelper {
         let options = CGWindowListOption(arrayLiteral: .excludeDesktopElements)
         guard let allWindows = CGWindowListCopyWindowInfo(options, kCGNullWindowID)
                 as? [[String: Any]]
-        else { return "" }
+        else { return [] }
 
         // Collect valid windows with their IDs.
         var validWindows: [(wid: Int, dict: [String: Any])] = []
@@ -423,9 +423,8 @@ extension SpaceHelper {
         // Fallback: assign windows to current space per display if CGS API unavailable or empty.
         if windowsBySpaceID.isEmpty {
             // Build current-space-per-display map and fullscreen PID→space map.
-            guard let displays = CGSCopyManagedDisplaySpaces(conn) as? [NSDictionary] else { return "" }
-        let screenUUIDs = getAllDisplayUUIDs()
-        let mainUUID = mainDisplayUUID()
+            guard let displays = CGSCopyManagedDisplaySpaces(conn) as? [NSDictionary] else { return [] }
+            let mainUUID = mainDisplayUUID()
             var currentSpaceForDisplay: [String: String] = [:]
             var fullscreenPIDToSpace: [Int32: String] = [:]
 
@@ -490,26 +489,51 @@ extension SpaceHelper {
             return $0.num < $1.num
         }
 
-        var output = ""
+        var snapshots: [SpaceWindowSnapshot] = []
         for space in sortedSpaces {
             let name = spaceNames[space.id] ?? ""
             let displayName = getDisplayName(for: space.displayID, screenMap: screenMap)
-            output += ">\(space.id)~\(name)~\(displayName)~\(space.num)~\(space.isFullscreen ? "1" : "0")~\(space.appPath ?? "")\n"
-
-            guard let windows = windowsBySpaceID[space.id] else { continue }
-            for window in windows {
+            let windowSnapshots = (windowsBySpaceID[space.id] ?? []).compactMap { window -> WindowSnapshot? in
                 guard let wid = window[kCGWindowNumber as String] as? Int,
                       let pid = window[kCGWindowOwnerPID as String] as? Int,
                       let appPath = pidToAppPath[Int32(pid)]
-                else { continue }
+                else { return nil }
 
                 let ownerName = window[kCGWindowOwnerName as String] as? String ?? ""
                 let title = window[kCGWindowName as String] as? String ?? ""
                 let isMinimized = minimizedAXWindowIDs.contains(wid) ? "1" : "0"
                 let isHidden = (NSRunningApplication(processIdentifier: Int32(pid))?.isHidden ?? false) ? "1" : "0"
-                output += "  \(wid)|\(pid)|\(ownerName)|\(appPath)|\(title)|\(isMinimized)|\(isHidden)\n"
+                return WindowSnapshot(
+                    id: wid,
+                    pid: Int32(pid),
+                    ownerName: ownerName,
+                    appPath: appPath,
+                    title: title,
+                    isMinimized: isMinimized == "1",
+                    isHidden: isHidden == "1"
+                )
             }
+
+            snapshots.append(SpaceWindowSnapshot(
+                id: space.id,
+                name: name,
+                displayName: displayName,
+                num: space.num,
+                isFullscreen: space.isFullscreen,
+                appPath: space.appPath,
+                windows: windowSnapshots
+            ))
         }
-        return output
+        return snapshots
+    }
+
+    static func getWindowsForAllSpaces(spaces: [DesktopSpace], spaceNames: [String: String]) -> String {
+        getWindowSnapshots(spaces: spaces, spaceNames: spaceNames).map { space in
+            var output = ">\(space.id)~\(space.name)~\(space.displayName)~\(space.num)~\(space.isFullscreen ? "1" : "0")~\(space.appPath ?? "")\n"
+            for window in space.windows {
+                output += "  \(window.id)|\(window.pid)|\(window.ownerName)|\(window.appPath)|\(window.title)|\(window.isMinimized ? "1" : "0")|\(window.isHidden ? "1" : "0")\n"
+            }
+            return output
+        }.joined()
     }
 }
