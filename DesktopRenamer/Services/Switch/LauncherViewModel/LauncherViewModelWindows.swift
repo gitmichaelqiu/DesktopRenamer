@@ -138,7 +138,8 @@ extension LauncherViewModel {
             guard let id = screen.deviceDescription[NSDeviceDescriptionKey("NSScreenNumber")] as? CGDirectDisplayID else { continue }
             guard let uuid = CGDisplayCreateUUIDFromDisplayID(id)?.takeRetainedValue() else { continue }
             let uuidStr = CFUUIDCreateString(nil, uuid) as String
-            if uuidStr == uuidString {
+            if SpaceReconciliationSupport.normalizedDisplayID(uuidStr)
+                == SpaceReconciliationSupport.normalizedDisplayID(uuidString) {
                 return screen.localizedName
             }
         }
