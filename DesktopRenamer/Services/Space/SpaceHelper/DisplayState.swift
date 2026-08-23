@@ -236,8 +236,8 @@ extension SpaceHelper {
             var parentRef: CFTypeRef?
             if AXUIElementCopyAttributeValue(axElement, "AXParent" as CFString, &parentRef) == .success,
                let parentVal = parentRef,
-               CFGetTypeID(parentVal) == AXUIElementGetTypeID(),
-               let parentElement = parentVal as? AXUIElement {
+               CFGetTypeID(parentVal) == AXUIElementGetTypeID() {
+                let parentElement = unsafeBitCast(parentVal, to: AXUIElement.self)
                 var parentRoleRef: CFTypeRef?
                 if AXUIElementCopyAttributeValue(parentElement, kAXRoleAttribute as CFString, &parentRoleRef) == .success,
                    let parentRole = parentRoleRef as? String {

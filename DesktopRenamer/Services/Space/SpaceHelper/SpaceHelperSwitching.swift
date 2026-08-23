@@ -142,7 +142,7 @@ extension SpaceHelper {
             DiagnosticEventLog.shared.record(
                 subsystem: "SpaceHelper",
                 level: "info",
-                "Activating fullscreen owner as label-window fallback for space (spaceID)."
+                "Activating fullscreen owner as label-window fallback for space " + spaceID + "."
             )
             app.activate(options: .activateIgnoringOtherApps)
             return
@@ -151,7 +151,7 @@ extension SpaceHelper {
         DiagnosticEventLog.shared.record(
             subsystem: "SpaceHelper",
             level: "error",
-            "Unable to switch to space (spaceID): no shortcut, gesture, or activation target succeeded."
+            "Unable to switch to space " + spaceID + ": no shortcut, gesture, or activation target succeeded."
         )
 
     }

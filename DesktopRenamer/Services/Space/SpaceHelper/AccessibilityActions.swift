@@ -66,12 +66,12 @@ extension SpaceHelper {
             &closeButtonRef
         ) == .success,
         let closeButtonRef,
-        CFGetTypeID(closeButtonRef) == AXUIElementGetTypeID(),
-        let closeButton = closeButtonRef as? AXUIElement
+        CFGetTypeID(closeButtonRef) == AXUIElementGetTypeID()
         else {
             return false
         }
 
+        let closeButton = unsafeBitCast(closeButtonRef, to: AXUIElement.self)
         return AXUIElementPerformAction(closeButton, kAXPressAction as CFString) == .success
     }
 }
