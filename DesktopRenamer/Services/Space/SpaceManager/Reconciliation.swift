@@ -99,10 +99,12 @@ extension SpaceManager {
                         if let fallbackName = indexCache[indexKey], !fallbackName.isEmpty {
                             if !claimedNames.contains(fallbackName) {
                                 finalSpace.customName = fallbackName
+                                claimedNames.insert(fallbackName)
                             }
                         } else if let fallbackName = indexCache[legacyIndexKey], !fallbackName.isEmpty {
                             if !claimedNames.contains(fallbackName) {
                                 finalSpace.customName = fallbackName
+                                claimedNames.insert(fallbackName)
                             }
                         } else if let existing = spaceNameDict.first(where: { $0.id == sysSpace.id }), !existing.customName.isEmpty {
                             finalSpace.customName = existing.customName
@@ -148,12 +150,21 @@ extension SpaceManager {
             // STABILITY GUARD: Reject partial space lists to prevent corrupting
             // saved state. Transient CGS failures can return fewer spaces,
             // which would erase user data if saved.
+            let cachedSpacesByDisplay = Dictionary(grouping: self.spaceNameDict, by: \.displayID)
+            let detectedSpacesByDisplay = Dictionary(grouping: newSpaceList, by: \.displayID)
+            let hasMissingSpacesOnExistingDisplay = cachedSpacesByDisplay.contains { displayID, cachedSpaces in
+                guard let detectedSpaces = detectedSpacesByDisplay[displayID] else { return false }
+                return detectedSpaces.count < cachedSpaces.count
+            }
             let isPartialList = !self.spaceNameDict.isEmpty && newSpaceList.count < self.spaceNameDict.count
-            if isPartialList && (self.isInWakeCoolingPeriod || newSpaceList.count <= 1) {
+            if isPartialList && hasMissingSpacesOnExistingDisplay {
                 print("SpaceManager: Rejecting partial space list (\(newSpaceList.count) vs cached \(self.spaceNameDict.count)). Skipping update.")
                 DiagnosticEventLog.shared.record(subsystem: "SpaceManager", level: "warning", "Rejected partial space list: new=\(newSpaceList.count), cached=\(self.spaceNameDict.count), source=\(source), wakeCooling=\(self.isInWakeCoolingPeriod)")
                 if !cgsState.currentUUID.isEmpty {
                     self.currentSpaceUUID = cgsState.currentUUID
+                }
+                if source == "Monitor" {
+                    scheduleSpaceChangeRetry()
                 }
                 return
             }
@@ -258,6 +269,7 @@ extension SpaceManager {
             if self.currentDisplayID != cgsState.displayID {
                 self.currentDisplayID = cgsState.displayID
             }
+            self.currentSpaceByDisplay[cgsState.displayID] = cgsState.currentUUID
             if self.currentRawSpaceUUID != cgsState.currentUUID {
                 self.currentRawSpaceUUID = cgsState.currentUUID
             }

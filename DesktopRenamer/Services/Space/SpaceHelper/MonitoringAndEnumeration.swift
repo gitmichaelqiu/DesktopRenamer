@@ -129,11 +129,34 @@ extension SpaceHelper {
     }
 
     static func getAllDisplayUUIDs() -> [String] {
-        return NSScreen.screens.compactMap { screen -> String? in
+        let mainScreen = NSScreen.screens.first(where: { $0.frame.origin == .zero })
+            ?? NSScreen.main
+        let orderedScreens = (mainScreen.map { [$0] } ?? [])
+            + NSScreen.screens.filter { screen in
+                guard let mainScreen else { return true }
+                return screen !== mainScreen
+            }
+
+        return orderedScreens.compactMap { screen -> String? in
             guard let id = screen.deviceDescription[NSDeviceDescriptionKey("NSScreenNumber")] as? CGDirectDisplayID else { return nil }
             guard let uuid = CGDisplayCreateUUIDFromDisplayID(id)?.takeRetainedValue() else { return nil }
-            return CFUUIDCreateString(nil, uuid) as String
+            return (CFUUIDCreateString(nil, uuid) as String).uppercased()
         }
+    }
+
+    static func mainDisplayUUID() -> String? {
+        let mainScreen = NSScreen.screens.first(where: { $0.frame.origin == .zero })
+            ?? NSScreen.main
+            ?? NSScreen.screens.first
+
+        guard let mainScreen,
+              let displayID = mainScreen.deviceDescription[NSDeviceDescriptionKey("NSScreenNumber")] as? CGDirectDisplayID,
+              let uuid = CGDisplayCreateUUIDFromDisplayID(displayID)?.takeRetainedValue()
+        else {
+            return nil
+        }
+
+        return (CFUUIDCreateString(nil, uuid) as String).uppercased()
     }
 
     static func normalizeDisplayID(_ id: String, mainUUID: String?) -> String {
@@ -155,17 +178,19 @@ extension SpaceHelper {
         }
 
         let screenUUIDs = getAllDisplayUUIDs()
-        let mainScreenUUID = screenUUIDs.first
-        
+        let mainScreenUUID = mainDisplayUUID()
+
         let activeDisplay = normalizeDisplayID(activeDisplayRaw, mainUUID: mainScreenUUID)
-        var targetDisplayID = specificDisplayID ?? activeDisplay
+        var targetDisplayID = specificDisplayID.map {
+            normalizeDisplayID($0, mainUUID: mainScreenUUID)
+        } ?? activeDisplay
         var detectedSpaces: [DesktopSpace] = []
         var currentSpaceID = "FULLSCREEN"
         
         // Find if target display is actually present in CGS displays (handling normalization)
         let foundDisplay = displays.first { d in
             let dID = d["Display Identifier"] as? String ?? ""
-            return normalizeDisplayID(dID, mainUUID: mainScreenUUID) == activeDisplay
+            return normalizeDisplayID(dID, mainUUID: mainScreenUUID) == targetDisplayID
         }
         
         if foundDisplay == nil {
@@ -399,8 +424,8 @@ extension SpaceHelper {
         if windowsBySpaceID.isEmpty {
             // Build current-space-per-display map and fullscreen PID→space map.
             guard let displays = CGSCopyManagedDisplaySpaces(conn) as? [NSDictionary] else { return "" }
-            let screenUUIDs = getAllDisplayUUIDs()
-            let mainUUID = screenUUIDs.first
+        let screenUUIDs = getAllDisplayUUIDs()
+        let mainUUID = mainDisplayUUID()
             var currentSpaceForDisplay: [String: String] = [:]
             var fullscreenPIDToSpace: [Int32: String] = [:]
 
@@ -488,5 +513,3 @@ extension SpaceHelper {
         return output
     }
 }
-
-

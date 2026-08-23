@@ -10,8 +10,7 @@ extension SpaceHelper {
             return nil
         }
         
-        let screenUUIDs = getAllDisplayUUIDs()
-        let mainScreenUUID = screenUUIDs.first
+        let mainScreenUUID = mainDisplayUUID()
 
         for display in displays {
             if let rawID = display["Display Identifier"] as? String,
@@ -151,13 +150,12 @@ extension SpaceHelper {
             return nil
         }
         
-        let screenUUIDs = getAllDisplayUUIDs()
-        let mainScreenUUID = screenUUIDs.first
+        let mainScreenUUID = mainDisplayUUID()
 
         for display in displays {
             if let rawID = display["Display Identifier"] as? String {
                 let currentID = normalizeDisplayID(rawID, mainUUID: mainScreenUUID)
-                if currentID == displayID,
+                if currentID == normalizeDisplayID(displayID, mainUUID: mainScreenUUID),
                    let currentDict = display["Current Space"] as? [String: Any],
                    let managedID = currentDict["ManagedSpaceID"] as? Int
                 {
