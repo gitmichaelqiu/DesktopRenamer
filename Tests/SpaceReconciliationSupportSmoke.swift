@@ -22,6 +22,15 @@ struct SpaceReconciliationSupportSmoke {
         precondition(missingDisplay.hasMissingSpacesOnExistingDisplay)
         precondition(!missingDisplay.isValid)
 
+        let fullscreen = DesktopSpace(
+            id: "fullscreen", customName: "Editor", num: 3, displayID: "MAIN", isFullscreen: true
+        )
+        let fullscreenRemoved = SpaceReconciliationSupport.validateSnapshot(
+            detectedSpaces: [first, second],
+            cachedSpaces: [first, second, fullscreen]
+        )
+        precondition(fullscreenRemoved.isValid)
+
         let duplicateID = DesktopSpace(id: "1", customName: "Duplicate", num: 3, displayID: "MAIN")
         let duplicateIdentity = SpaceReconciliationSupport.validateSnapshot(
             detectedSpaces: [first, second, duplicateID],

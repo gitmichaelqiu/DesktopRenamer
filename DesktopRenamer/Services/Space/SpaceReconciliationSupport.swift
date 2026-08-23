@@ -23,9 +23,15 @@ enum SpaceReconciliationSupport {
         let cachedByDisplay = Dictionary(grouping: cachedSpaces, by: { normalizedDisplayID($0.displayID) })
         let detectedByDisplay = Dictionary(grouping: detectedSpaces, by: { normalizedDisplayID($0.displayID) })
 
+        // Fullscreen spaces are transient: closing a fullscreen window or
+        // leaving fullscreen legitimately removes one from the next snapshot.
+        // Regular desktops, however, must still be present before accepting a
+        // snapshot so a partial WindowServer response cannot erase state.
         let missingSpaces = cachedByDisplay.contains { displayID, cached in
             guard let detected = detectedByDisplay[displayID] else { return true }
-            return detected.count < cached.count
+            let cachedDesktops = cached.filter { !$0.isFullscreen }
+            let detectedDesktops = detected.filter { !$0.isFullscreen }
+            return detectedDesktops.count < cachedDesktops.count
         }
         let duplicateIDs = Set(detectedSpaces.map(\.id)).count != detectedSpaces.count
         let duplicatePositions = detectedByDisplay.values.contains { spaces in

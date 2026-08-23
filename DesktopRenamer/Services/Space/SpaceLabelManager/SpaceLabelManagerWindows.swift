@@ -152,6 +152,8 @@ extension SpaceLabelManager {
         let redundantIDs = createdWindows.keys.filter { !validUUIDs.contains($0) }
 
         for id in redundantIDs {
+            labelUpdateTasks[id]?.cancel()
+            labelUpdateTasks.removeValue(forKey: id)
             if let window = createdWindows[id] {
                 window.close()
             }
@@ -337,8 +339,14 @@ extension SpaceLabelManager {
     func removeAllWindows() {
         delayedRearrangementRestoreWorkItem?.cancel()
         delayedRearrangementRestoreWorkItem = nil
+        labelUpdateTasks.values.forEach { $0.cancel() }
+        labelUpdateTasks.removeAll()
         let windows = Array(createdWindows.values)
-        for window in windows { window.orderOut(nil) }
+        // Ordering out is insufficient here: AppKit can retain an NSWindow
+        // after it is removed from our dictionary, along with its CGS space
+        // assignment. Close each window so reloads cannot leave stale labels
+        // attached to fullscreen spaces that no longer exist.
+        for window in windows { window.close() }
         createdWindows.removeAll()
     }
 
