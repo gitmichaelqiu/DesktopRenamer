@@ -118,9 +118,12 @@ extension SpaceLabelManager {
 
         // Reordering does not change currentSpaceUUID, so the normal space-change
         // observer cannot restore preview labels hidden during the operation.
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) { [weak self] in
+        delayedRearrangementRestoreWorkItem?.cancel()
+        let workItem = DispatchWorkItem { [weak self] in
             self?.updateAllWindowModes()
         }
+        delayedRearrangementRestoreWorkItem = workItem
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.6, execute: workItem)
     }
 
     func syncWindowsWithDict(updateModes: Bool = true) {
@@ -255,15 +258,19 @@ extension SpaceLabelManager {
             return
         }
 
-        Task { @MainActor in
-            // FIX: Increase delay to 0.5s (500ms) to ensure macOS space transition (swipe animation)
-            // is fully complete before creating the window. This prevents the window from being
-            // created on the 'source' desktop instead of the 'destination' fullscreen app.
-            try? await Task.sleep(nanoseconds: 500_000_000)
+        labelUpdateTasks[spaceId]?.cancel()
+        labelUpdateTasks[spaceId] = Task { @MainActor [weak self] in
+            do {
+                // Wait for the transition animation to settle before creating the label.
+                try await Task.sleep(nanoseconds: 500_000_000)
+                guard !Task.isCancelled, let self else { return }
 
-            guard let state = SpaceHelper.getSystemState() else { return }
-            if state.currentUUID == spaceId {
+                guard let state = SpaceHelper.getSystemState(), state.currentUUID == spaceId else {
+                    return
+                }
                 self.ensureWindow(for: spaceId, name: name, displayID: state.displayID)
+            } catch {
+                // Cancellation is expected when a newer space update supersedes this one.
             }
         }
     }
@@ -320,10 +327,16 @@ extension SpaceLabelManager {
     func resetForSystemTransition() {
         delayedRestoreWorkItem?.cancel()
         delayedRestoreWorkItem = nil
+        delayedRearrangementRestoreWorkItem?.cancel()
+        delayedRearrangementRestoreWorkItem = nil
+        labelUpdateTasks.values.forEach { $0.cancel() }
+        labelUpdateTasks.removeAll()
         removeAllWindows()
     }
 
     func removeAllWindows() {
+        delayedRearrangementRestoreWorkItem?.cancel()
+        delayedRearrangementRestoreWorkItem = nil
         let windows = Array(createdWindows.values)
         for window in windows { window.orderOut(nil) }
         createdWindows.removeAll()

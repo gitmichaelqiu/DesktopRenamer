@@ -89,6 +89,9 @@ class SpaceLabelManager: ObservableObject {
     weak var spaceManager: SpaceManager?
     var cancellables = Set<AnyCancellable>()
     var delayedRestoreWorkItem: DispatchWorkItem?
+    var delayedRearrangementRestoreWorkItem: DispatchWorkItem?
+    var seedTask: Task<Void, Never>?
+    var labelUpdateTasks: [String: Task<Void, Never>] = [:]
 
     init(spaceManager: SpaceManager) {
         self.spaceManager = spaceManager
@@ -142,17 +145,24 @@ class SpaceLabelManager: ObservableObject {
         setupObservers()
         
         // Populate Mission Control with labels after launch.
-        Task { @MainActor in
-            try? await Task.sleep(nanoseconds: 1_500_000_000)
-            self.seedAllLabels()
+        seedTask = Task { @MainActor [weak self] in
+            do {
+                try await Task.sleep(nanoseconds: 1_500_000_000)
+                guard !Task.isCancelled else { return }
+                self?.seedAllLabels()
+            } catch {
+                // Cancellation is expected when the app terminates before seeding.
+            }
         }
     }
 
     deinit {
+        seedTask?.cancel()
+        delayedRestoreWorkItem?.cancel()
+        delayedRearrangementRestoreWorkItem?.cancel()
+        labelUpdateTasks.values.forEach { $0.cancel() }
         NotificationCenter.default.removeObserver(self)
         let windows = createdWindows.values
-        Task { @MainActor in
-            for window in windows { window.orderOut(nil) }
-        }
+        for window in windows { window.orderOut(nil) }
     }
 }

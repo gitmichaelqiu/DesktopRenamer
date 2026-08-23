@@ -185,6 +185,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     func applicationWillTerminate(_ notification: Notification) {
+        statusBarController?.labelManager.removeAllWindows()
         spaceManager?.prepareForTermination()
     }
 

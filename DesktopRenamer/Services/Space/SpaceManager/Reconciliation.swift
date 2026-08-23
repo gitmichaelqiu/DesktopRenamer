@@ -391,8 +391,11 @@ extension SpaceManager {
             )
         }
         
-        if let data = try? JSONEncoder().encode(widgetSpaces) {
+        var didChange = false
+
+        if let data = try? JSONEncoder().encode(widgetSpaces), defaults.data(forKey: "widget_spacesData") != data {
             defaults.set(data, forKey: "widget_spacesData")
+            didChange = true
         }
         
         // Some simple fields for basic widgets to use
@@ -400,14 +403,31 @@ extension SpaceManager {
             if !space.customName.isEmpty { return space.customName }
             return space.isFullscreen ? (space.appName ?? "Fullscreen") : "\(space.num)"
         }
-        defaults.set(allSpaceNames, forKey: "widget_allSpaces")
+        if defaults.array(forKey: "widget_allSpaces") as? [String] != allSpaceNames {
+            defaults.set(allSpaceNames, forKey: "widget_allSpaces")
+            didChange = true
+        }
         
-        defaults.set(name, forKey: "widget_spaceName")
-        defaults.set(num, forKey: "widget_spaceNum")
-        defaults.set(isDesktop, forKey: "widget_isDesktop")
-        defaults.set(currentSpaceUUID, forKey: "widget_currentSpaceUUID")
+        if defaults.string(forKey: "widget_spaceName") != name {
+            defaults.set(name, forKey: "widget_spaceName")
+            didChange = true
+        }
+        if defaults.object(forKey: "widget_spaceNum") as? Int != num {
+            defaults.set(num, forKey: "widget_spaceNum")
+            didChange = true
+        }
+        if defaults.object(forKey: "widget_isDesktop") as? Bool != isDesktop {
+            defaults.set(isDesktop, forKey: "widget_isDesktop")
+            didChange = true
+        }
+        if defaults.string(forKey: "widget_currentSpaceUUID") != currentSpaceUUID {
+            defaults.set(currentSpaceUUID, forKey: "widget_currentSpaceUUID")
+            didChange = true
+        }
 
-        WidgetCenter.shared.reloadAllTimelines()
+        if didChange {
+            WidgetCenter.shared.reloadAllTimelines()
+        }
     }
     
     func prepareForTermination() {
