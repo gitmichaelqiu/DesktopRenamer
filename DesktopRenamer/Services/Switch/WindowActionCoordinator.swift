@@ -2,6 +2,8 @@ import AppKit
 
 @MainActor
 enum WindowActionCoordinator {
+    private static var operationTail: Task<Bool, Never>?
+
     private static func wait(_ nanoseconds: UInt64, operation: String) async -> Bool {
         do {
             try await Task.sleep(nanoseconds: nanoseconds)
@@ -94,6 +96,34 @@ enum WindowActionCoordinator {
         fromSpaceID: String,
         targetSpaceID: String,
         preserveVisibility: Bool = true
+    ) async -> Bool {
+        let previousOperation = operationTail
+        let operation = Task { @MainActor in
+            _ = await previousOperation?.value
+            guard !Task.isCancelled else { return false }
+            return await performMoveWindow(
+                windowID: windowID,
+                pid: pid,
+                fromSpaceID: fromSpaceID,
+                targetSpaceID: targetSpaceID,
+                preserveVisibility: preserveVisibility
+            )
+        }
+        operationTail = operation
+
+        return await withTaskCancellationHandler(operation: {
+            await operation.value
+        }, onCancel: {
+            operation.cancel()
+        })
+    }
+
+    private static func performMoveWindow(
+        windowID: Int,
+        pid: Int32,
+        fromSpaceID: String,
+        targetSpaceID: String,
+        preserveVisibility: Bool
     ) async -> Bool {
         guard fromSpaceID != targetSpaceID else { return true }
         guard let manager = AppDelegate.shared.spaceManager,
