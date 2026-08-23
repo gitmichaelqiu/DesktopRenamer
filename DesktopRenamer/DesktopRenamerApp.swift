@@ -18,6 +18,8 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
         NSApp.setActivationPolicy(.accessory)
 
+        initializeApplicationServices()
+
         let hasInitialized = UserDefaults.standard.bool(forKey: "HasInitializedDefaults")
         if !hasInitialized {
             try? SMAppService.mainApp.register()
@@ -30,24 +32,23 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             showSplashScreen()
         }
 
-        self.hotkeyManager = HotkeyManager()
-
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
-            self.spaceManager = SpaceManager()
-            self.gestureManager = GestureManager(spaceManager: self.spaceManager)
-
-            self.statusBarController = StatusBarController(
-                spaceManager: self.spaceManager,
-                hotkeyManager: self.hotkeyManager,
-                gestureManager: self.gestureManager
-            )
-
-            self.setupHotkeyBindings()
-        }
-
-        DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
+        DispatchQueue.main.async {
             _ = UpdateManager.shared
         }
+    }
+
+    private func initializeApplicationServices() {
+        guard spaceManager == nil else { return }
+
+        hotkeyManager = HotkeyManager()
+        spaceManager = SpaceManager()
+        gestureManager = GestureManager(spaceManager: spaceManager)
+        statusBarController = StatusBarController(
+            spaceManager: spaceManager,
+            hotkeyManager: hotkeyManager,
+            gestureManager: gestureManager
+        )
+        setupHotkeyBindings()
     }
 
     private func setupHotkeyBindings() {
