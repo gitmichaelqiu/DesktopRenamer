@@ -159,10 +159,10 @@ extension SpaceManager {
                 let fromSpaceID = Int(SpaceHelper.getCurrentSpaceID(for: sourceDisplay) ?? "0") ?? 0
                 let targetSpaceID = Int(targetSpace.id) ?? 0
                 
+                if SpaceHelper.getCurrentSpaceID(for: targetSpace.displayID) != targetSpace.id {
+                    self.switchToSpace(targetSpace, forceInstant: true)
+                }
                 SpaceHelper.moveWindowToSpace(windowID: windowInfo.id, fromSpaceID: fromSpaceID, targetSpaceID: targetSpaceID)
-                
-                // Switch to the target space to follow the window
-                self.switchToSpace(targetSpace, forceInstant: true)
                 return
             }
         }
@@ -250,4 +250,3 @@ extension SpaceManager {
          return currentIndex == displaySpaces.count - 1
     }
 }
-

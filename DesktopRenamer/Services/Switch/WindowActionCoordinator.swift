@@ -70,11 +70,24 @@ enum WindowActionCoordinator {
             return false
         }
 
+        // Mission Control assigns a cross-display window to the destination
+        // display's active space. Activate the requested destination first,
+        // then return to the source display to perform the move.
+        if sourceSpace.displayID != targetSpace.displayID,
+           SpaceHelper.getCurrentSpaceID(for: targetSpace.displayID) != targetSpace.id {
+            manager.switchToSpace(targetSpace, forceInstant: true)
+            guard await waitForSpace(targetSpace.id, on: targetSpace.displayID) else {
+                return false
+            }
+        }
+
         let originalVisibility = visibilityState(windowID: windowID, pid: pid)
 
-        if manager.currentSpaceUUID != fromSpaceID {
+        if SpaceHelper.getCurrentSpaceID(for: sourceSpace.displayID) != fromSpaceID {
             manager.switchToSpace(sourceSpace, forceInstant: true)
-            try? await Task.sleep(nanoseconds: 600_000_000)
+            guard await waitForSpace(fromSpaceID, on: sourceSpace.displayID) else {
+                return false
+            }
         }
 
         if originalVisibility.isMinimized || originalVisibility.isHidden {
@@ -115,5 +128,15 @@ enum WindowActionCoordinator {
         }
 
         return true
+    }
+
+    private static func waitForSpace(_ spaceID: String, on displayID: String) async -> Bool {
+        for _ in 0..<8 {
+            if SpaceHelper.getCurrentSpaceID(for: displayID) == spaceID {
+                return true
+            }
+            try? await Task.sleep(nanoseconds: 100_000_000)
+        }
+        return false
     }
 }

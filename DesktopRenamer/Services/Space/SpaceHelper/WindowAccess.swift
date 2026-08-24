@@ -55,6 +55,7 @@ extension SpaceHelper {
     /// Uses CGSAddWindowsToSpaces + CGSRemoveWindowsFromSpaces (proven in SpaceLabelWindow).
     /// Now handles cross-monitor moves by repositioning the window via Accessibility API.
     static func moveWindowToSpace(windowID: Int, fromSpaceID: Int, targetSpaceID: Int) {
+        let targetSpaceIDString = String(targetSpaceID)
         let conn = _CGSDefaultConnection()
         let windowArray = [windowID as NSNumber] as CFArray
 
@@ -70,13 +71,29 @@ extension SpaceHelper {
             sourceDisplayID = getWindowDisplayID(for: info.frame)
         }
         
-        if let targetDisplay = targetDisplayID, 
-           let sourceDisplay = sourceDisplayID, 
-           targetDisplay != sourceDisplay,
-           let pid = windowPID, 
-           let frame = windowFrame {
-            print("SpaceHelper: Cross-monitor move detected (\(sourceDisplay) -> \(targetDisplay)). Repositioning window \(windowID).")
-            repositionWindowToDisplay(windowID: windowID, pid: pid, frame: frame, sourceDisplayID: sourceDisplay, targetDisplayID: targetDisplay)
+        if let targetDisplay = targetDisplayID,
+           let sourceDisplay = sourceDisplayID,
+           targetDisplay != sourceDisplay {
+            if getCurrentSpaceID(for: targetDisplay) != targetSpaceIDString {
+                switchToSpace(targetSpaceIDString, forceInstant: true)
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) {
+                    guard getCurrentSpaceID(for: targetDisplay) == targetSpaceIDString else {
+                        DiagnosticEventLog.shared.record(
+                            subsystem: "SpaceHelper",
+                            level: "error",
+                            "Could not activate destination space \(targetSpaceIDString) before moving window \(windowID)."
+                        )
+                        return
+                    }
+                    moveWindowToSpace(windowID: windowID, fromSpaceID: fromSpaceID, targetSpaceID: targetSpaceID)
+                }
+                return
+            }
+
+            if let pid = windowPID, let frame = windowFrame {
+                print("SpaceHelper: Cross-monitor move detected (\(sourceDisplay) -> \(targetDisplay)). Repositioning window \(windowID).")
+                repositionWindowToDisplay(windowID: windowID, pid: pid, frame: frame, sourceDisplayID: sourceDisplay, targetDisplayID: targetDisplay)
+            }
         }
 
         // Add to target space first for visual stability.
