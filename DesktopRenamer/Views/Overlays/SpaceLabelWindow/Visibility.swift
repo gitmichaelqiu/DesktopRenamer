@@ -75,7 +75,7 @@ extension SpaceLabelWindow {
                         // Preview labels must not activate their owning space.
                         // orderFrontRegardless() can make macOS navigate to a
                         // background Space when the display topology is changing.
-                        self.orderFront(nil)
+                        self.raiseActiveWithoutActivating()
                         self.bindToTargetSpace()
                         self.hasOrderedInOnce = true
                         self.needsActiveRaise = false
