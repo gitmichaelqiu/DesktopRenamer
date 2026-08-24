@@ -146,9 +146,11 @@ extension SpaceHelper {
             if let labelWindow = window as? SpaceLabelWindow {
                 if labelWindow.spaceId == spaceID {
                     targetWindow = labelWindow
-                } else if labelWindow.isVisible {
+                } else if labelWindow.isVisible && !labelWindow.isActiveMode {
+                    // Only hide preview windows during the handoff. The active-space
+                    // label is a persistent status indicator and must remain visible.
                     // CRITICAL MULTI-MONITOR FIX: Only hide windows on the SAME display.
-                    // Hiding windows on other displays causes them to lose focus state 
+                    // Hiding windows on other displays causes them to lose focus state
                     // and triggers "snap-back" issues when they are automatically restored.
                     if let target = targetWindow, labelWindow.displayID == target.displayID {
                         windowsToHide.append(labelWindow)
@@ -191,4 +193,3 @@ extension SpaceHelper {
         return true
     }
 }
-
