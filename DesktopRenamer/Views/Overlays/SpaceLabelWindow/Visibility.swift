@@ -38,7 +38,12 @@ extension SpaceLabelWindow {
         // Use a longer cooling period on multi-display setups where animations
         // (especially on external displays) may take longer to complete.
         let coolingPeriod: TimeInterval = 0.3
-        if !isActiveMode && !preserveVisibilityDuringSwitch
+        let isProgrammaticDestination =
+            SpaceHelper.lastProgrammaticTargetSpaceID == self.spaceId
+        // The destination label is still in preview mode until SpaceManager
+        // confirms the switch, but it must remain visible to bridge the
+        // transition after the outgoing active label leaves its space.
+        if !isActiveMode && !preserveVisibilityDuringSwitch && !isProgrammaticDestination
             && labelManager?.hideWhenSwitching == true {
             let now = Date().timeIntervalSince1970
             let timeSinceSwitch = now - SpaceHelper.lastProgrammaticSwitchTime
