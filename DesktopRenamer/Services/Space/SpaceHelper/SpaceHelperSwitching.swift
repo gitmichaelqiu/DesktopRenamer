@@ -145,7 +145,11 @@ extension SpaceHelper {
         for window in NSApp.windows {
             if let labelWindow = window as? SpaceLabelWindow {
                 if labelWindow.spaceId == spaceID {
-                    targetWindow = labelWindow
+                    // Use the preview window as the activation anchor. The
+                    // active label is managed independently by the manager.
+                    if !labelWindow.isActiveMode || targetWindow == nil {
+                        targetWindow = labelWindow
+                    }
                 } else if labelWindow.isVisible {
                     // CRITICAL MULTI-MONITOR FIX: Only hide windows on the SAME display.
                     // Hiding windows on other displays causes them to lose focus state

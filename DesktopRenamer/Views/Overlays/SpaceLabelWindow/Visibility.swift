@@ -14,6 +14,13 @@ extension SpaceLabelWindow {
             return
         }
 
+        guard !isActiveMode || isCurrentSpaceLabel else {
+            self.alphaValue = 0.0
+            self.contentView?.alphaValue = 0.0
+            self.orderOut(nil)
+            return
+        }
+
         let labelsEnabled = isActiveMode
             ? (labelManager?.showActiveLabels ?? true)
             : (labelManager?.showPreviewLabels ?? true)

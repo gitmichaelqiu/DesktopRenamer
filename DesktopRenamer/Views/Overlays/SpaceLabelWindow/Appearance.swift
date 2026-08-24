@@ -6,16 +6,45 @@ extension SpaceLabelWindow {
 
     func refreshAppearance() {
         configureEffectView()
+        if isActiveMode && !isCurrentSpaceLabel {
+            updateLayout(isCurrentSpace: true, updateFrame: false)
+            alphaValue = 0.0
+            contentView?.alphaValue = 0.0
+            orderOut(nil)
+            return
+        }
         updateInteractivity()
         updateLayout(isCurrentSpace: self.isActiveMode)
         updateVisibility(animated: true)
+    }
+
+    /// Shows or hides a dedicated active-label window without changing its
+    /// active layout into the preview layout.
+    func setActiveVisibility(_ isVisible: Bool, animated: Bool) {
+        guard isActiveMode else { return }
+
+        pendingVisibilityTask?.cancel()
+        pendingVisibilityTask = nil
+        isCurrentSpaceLabel = isVisible
+
+        guard isVisible else {
+            alphaValue = 0.0
+            contentView?.alphaValue = 0.0
+            orderOut(nil)
+            return
+        }
+
+        updateLayout(isCurrentSpace: true, updateFrame: false)
+        updateVisibility(animated: animated)
+        bindToTargetSpace()
     }
 
     func setPreviewSize(_ size: NSSize) {
         if self.previewSize != size {
             self.previewSize = size
             if !isActiveMode {
-                setMode(isCurrentSpace: false)
+                updateLayout(isCurrentSpace: false)
+                updateVisibility(animated: false)
             }
         }
     }

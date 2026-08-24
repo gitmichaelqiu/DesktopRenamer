@@ -85,7 +85,10 @@ class SpaceLabelManager: ObservableObject {
     @Published var globalDockEdge: NSRectEdge
     @Published var globalCenterPoint: NSPoint?
 
+    // Preview and active labels use independent windows so a switch never
+    // animates one window between the two layouts.
     var createdWindows: [String: SpaceLabelWindow] = [:]
+    var activeWindows: [String: SpaceLabelWindow] = [:]
     weak var spaceManager: SpaceManager?
     var cancellables = Set<AnyCancellable>()
     var delayedRestoreWorkItem: DispatchWorkItem?
@@ -154,7 +157,7 @@ class SpaceLabelManager: ObservableObject {
         NotificationCenter.default.removeObserver(self)
         delayedRestoreWorkItem?.cancel()
         reloadWorkItem?.cancel()
-        let windows = createdWindows.values
+        let windows = Array(createdWindows.values) + Array(activeWindows.values)
         Task { @MainActor in
             for window in windows {
                 window.pendingVisibilityTask?.cancel()
