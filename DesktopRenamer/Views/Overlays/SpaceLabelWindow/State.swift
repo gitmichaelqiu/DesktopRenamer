@@ -23,21 +23,6 @@ extension SpaceLabelWindow {
         }
     }
 
-    /// Raises the active label after a space transition without activating a
-    /// background space or changing the application's key window.
-    func raiseActiveWithoutActivating() {
-        guard windowNumber > 0 else { return }
-        orderFront(nil)
-        let result = CGSOrderWindow(_CGSDefaultConnection(), UInt32(windowNumber), 1, 0)
-        if result != 0 {
-            DiagnosticEventLog.shared.record(
-                subsystem: "SpaceLabelWindow",
-                level: "warning",
-                "Could not raise active label \(self.spaceId) above (result=\(result))"
-            )
-        }
-    }
-
     // Binds the window to a specific space via private APIs.
     func bindToTargetSpace() {
         let cid = _CGSDefaultConnection()

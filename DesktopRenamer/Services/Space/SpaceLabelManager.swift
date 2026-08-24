@@ -85,10 +85,7 @@ class SpaceLabelManager: ObservableObject {
     @Published var globalDockEdge: NSRectEdge
     @Published var globalCenterPoint: NSPoint?
 
-    // Preview and active labels are separate windows. A window must not morph
-    // between the two layouts while WindowServer is changing spaces.
     var createdWindows: [String: SpaceLabelWindow] = [:]
-    var activeWindows: [String: SpaceLabelWindow] = [:]
     weak var spaceManager: SpaceManager?
     var cancellables = Set<AnyCancellable>()
     var delayedRestoreWorkItem: DispatchWorkItem?
@@ -157,7 +154,7 @@ class SpaceLabelManager: ObservableObject {
         NotificationCenter.default.removeObserver(self)
         delayedRestoreWorkItem?.cancel()
         reloadWorkItem?.cancel()
-        let windows = Array(createdWindows.values) + Array(activeWindows.values)
+        let windows = createdWindows.values
         Task { @MainActor in
             for window in windows {
                 window.pendingVisibilityTask?.cancel()

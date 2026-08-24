@@ -10,14 +10,6 @@ extension SpaceLabelWindow {
     }
 
     func hideImmediately() {
-        guard !isActiveMode else {
-            DiagnosticEventLog.shared.record(
-                subsystem: "SpaceLabelWindow",
-                level: "info",
-                "Skipped hideImmediately for active label \(self.spaceId)"
-            )
-            return
-        }
         self.alphaValue = 0.0
         self.contentView?.alphaValue = 0.0
     }

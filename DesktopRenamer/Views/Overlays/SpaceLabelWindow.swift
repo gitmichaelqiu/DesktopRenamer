@@ -20,7 +20,6 @@ class SpaceLabelWindow: NSWindow {
 
     // State
     var isActiveMode: Bool = true
-    var isCurrentSpaceLabel = false
     var isDragging = false
     var lastDragPoint: NSPoint = .zero
     var pendingVisibilityTask: DispatchWorkItem?
@@ -36,7 +35,6 @@ class SpaceLabelWindow: NSWindow {
     static let handleSize = NSSize(width: 32, height: 60)
 
     var hasOrderedInOnce = false
-    var needsActiveRaise = false
 
 
     var isHiddenCornerMode: Bool {
@@ -45,15 +43,13 @@ class SpaceLabelWindow: NSWindow {
 
     init(
         spaceId: String, name: String, displayID: String, isFullscreen: Bool,
-        spaceManager: SpaceManager, labelManager: SpaceLabelManager,
-        isActiveLabel: Bool
+        spaceManager: SpaceManager, labelManager: SpaceLabelManager
     ) {
         self.spaceId = spaceId
         self.displayID = displayID
         self.isFullscreenSpace = isFullscreen
         self.spaceManager = spaceManager
         self.labelManager = labelManager
-        self.isActiveMode = isActiveLabel
 
         // Text Label
         self.label = NSTextField(labelWithString: name)

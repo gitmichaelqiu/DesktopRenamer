@@ -14,13 +14,6 @@ extension SpaceLabelWindow {
             return
         }
 
-        guard !isActiveMode || isCurrentSpaceLabel else {
-            self.alphaValue = 0.0
-            self.contentView?.alphaValue = 0.0
-            self.orderOut(nil)
-            return
-        }
-
         let labelsEnabled = isActiveMode
             ? (labelManager?.showActiveLabels ?? true)
             : (labelManager?.showPreviewLabels ?? true)
@@ -40,14 +33,13 @@ extension SpaceLabelWindow {
             isVisuallyVisible = labelManager?.showPreviewLabels ?? true
         }
         
-        // Suppress preview labels during space transitions when hideWhenSwitching
-        // is enabled. The active-space label remains visible throughout a switch.
+        // Robust Fix: Suppress all labels during space transitions when hideWhenSwitching is enabled.
+        // Previously only preview labels were suppressed, but the active label also needs to stay
+        // hidden — switchByActivatingOwnWindow may have already ordered it front and made it key.
         // Use a longer cooling period on multi-display setups where animations
         // (especially on external displays) may take longer to complete.
         let coolingPeriod: TimeInterval = 0.3
-        // Preview labels may be hidden during a switch. The active destination
-        // label is managed by its separate active window.
-        if !isActiveMode && labelManager?.hideWhenSwitching == true {
+        if labelManager?.hideWhenSwitching == true {
             let now = Date().timeIntervalSince1970
             let timeSinceSwitch = now - SpaceHelper.lastProgrammaticSwitchTime
             if timeSinceSwitch < coolingPeriod {
@@ -77,16 +69,15 @@ extension SpaceLabelWindow {
             let inCoolingPeriod = timeSinceSwitch < coolingPeriod
 
             if self.isActiveMode {
-                if self.needsActiveRaise || !self.isVisible {
+                if !self.isVisible {
                     if !inCoolingPeriod {
-                        print("SpaceLabelWindow[\(self.spaceId)]: Raising active label after transition.")
+                        print("SpaceLabelWindow[\(self.spaceId)]: orderFrontRegardless() for ACTIVE space.")
                         // Preview labels must not activate their owning space.
                         // orderFrontRegardless() can make macOS navigate to a
                         // background Space when the display topology is changing.
-                        self.raiseActiveWithoutActivating()
+                        self.orderFront(nil)
                         self.bindToTargetSpace()
                         self.hasOrderedInOnce = true
-                        self.needsActiveRaise = false
                     } else {
                         print("SpaceLabelWindow[\(self.spaceId)]: Suppressing orderFrontRegardless (Active) during switch cooling period (\(String(format: "%.2f", timeSinceSwitch))s). Scheduling retry.")
                         scheduleVisibilityRetry(delay: coolingPeriod - timeSinceSwitch + 0.1)

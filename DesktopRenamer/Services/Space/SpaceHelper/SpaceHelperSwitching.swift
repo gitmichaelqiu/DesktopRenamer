@@ -11,14 +11,6 @@ extension SpaceHelper {
         lastProgrammaticTargetSpaceID = spaceID
         lastProgrammaticSwitchUsedSLS = false
 
-        // Tell the label manager which preview is about to become active before
-        // the generic switch notification hides transition previews.
-        NotificationCenter.default.post(
-            name: NSNotification.Name("SpaceSwitchTargetRequested"),
-            object: nil,
-            userInfo: ["spaceID": spaceID]
-        )
-
         if !forceInstant {
             guard !isSwitching else { return }
             isSwitching = true
@@ -153,15 +145,8 @@ extension SpaceHelper {
         for window in NSApp.windows {
             if let labelWindow = window as? SpaceLabelWindow {
                 if labelWindow.spaceId == spaceID {
-                    // Use the dedicated preview window as the activation
-                    // anchor. The active window is independently managed and
-                    // may be hidden until the destination is confirmed.
-                    if !labelWindow.isActiveMode || targetWindow == nil {
-                        targetWindow = labelWindow
-                    }
-                } else if labelWindow.isVisible && !labelWindow.isActiveMode {
-                    // Only hide preview windows during the handoff. The active-space
-                    // label is a persistent status indicator and must remain visible.
+                    targetWindow = labelWindow
+                } else if labelWindow.isVisible {
                     // CRITICAL MULTI-MONITOR FIX: Only hide windows on the SAME display.
                     // Hiding windows on other displays causes them to lose focus state
                     // and triggers "snap-back" issues when they are automatically restored.
