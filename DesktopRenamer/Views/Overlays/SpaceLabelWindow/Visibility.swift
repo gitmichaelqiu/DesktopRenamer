@@ -14,6 +14,18 @@ extension SpaceLabelWindow {
             return
         }
 
+        let labelsEnabled = isActiveMode
+            ? (labelManager?.showActiveLabels ?? true)
+            : (labelManager?.showPreviewLabels ?? true)
+        guard labelsEnabled else {
+            pendingVisibilityTask?.cancel()
+            pendingVisibilityTask = nil
+            alphaValue = 0.0
+            contentView?.alphaValue = 0.0
+            orderOut(nil)
+            return
+        }
+
         var isVisuallyVisible = false
         if isActiveMode {
             isVisuallyVisible = labelManager?.showActiveLabels ?? true

@@ -138,8 +138,20 @@ extension SpaceHelper {
 
     static func normalizeDisplayID(_ id: String, mainUUID: String?) -> String {
         let cleanId = id.trimmingCharacters(in: .whitespacesAndNewlines)
-        if cleanId.isEmpty || cleanId.uppercased() == "MAIN" || cleanId.uppercased() == "UNKNOWN" {
+        let uppercased = cleanId.uppercased()
+        if cleanId.isEmpty || uppercased == "MAIN" || uppercased == "UNKNOWN" {
             return mainUUID?.uppercased() ?? "MAIN"
+        }
+
+        // CGS may report a display by its numeric screen identifier while
+        // NSScreen and the persisted model use the display UUID. Canonicalize
+        // that representation before assigning spaces or labels.
+        if let screenNumber = UInt32(cleanId),
+           NSScreen.screens.contains(where: {
+               ($0.deviceDescription[NSDeviceDescriptionKey("NSScreenNumber")] as? NSNumber)?.uint32Value == screenNumber
+           }),
+           let uuidRef = CGDisplayCreateUUIDFromDisplayID(screenNumber) {
+            return (CFUUIDCreateString(nil, uuidRef.takeRetainedValue()) as String).uppercased()
         }
         return cleanId.uppercased()
     }
@@ -488,5 +500,3 @@ extension SpaceHelper {
         return output
     }
 }
-
-

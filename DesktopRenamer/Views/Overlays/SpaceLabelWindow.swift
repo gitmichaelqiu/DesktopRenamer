@@ -82,7 +82,7 @@ class SpaceLabelWindow: NSWindow {
             let screenID =
                 screen.deviceDescription[NSDeviceDescriptionKey("NSScreenNumber")] as? NSNumber ?? 0
             let idString = "\(screen.localizedName) (\(screenID))"
-            if idString == displayID { return true }
+            if idString == displayID || "\(screenID)" == displayID { return true }
             let cleanName = displayID.components(separatedBy: " (").first ?? displayID
             if screen.localizedName == cleanName { return true }
 
