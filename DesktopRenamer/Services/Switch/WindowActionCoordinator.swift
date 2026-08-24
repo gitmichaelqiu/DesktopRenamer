@@ -55,6 +55,26 @@ enum WindowActionCoordinator {
         }
     }
 
+    /// Selects the window's desktop before raising it. Focusing a window while
+    /// its desktop is still in the background can make WindowServer restore the
+    /// previous desktop, especially when the window is on another display.
+    static func focusWindow(windowID: Int, pid: Int32, spaceID: String) async -> Bool {
+        guard let manager = AppDelegate.shared.spaceManager,
+              let space = manager.spaceNameDict.first(where: { $0.id == spaceID }) else {
+            return false
+        }
+
+        if SpaceHelper.getCurrentSpaceID(for: space.displayID) != space.id {
+            manager.switchToSpace(space, forceInstant: true, isManual: false)
+            guard await waitForSpace(space.id, on: space.displayID) else {
+                return false
+            }
+        }
+
+        SpaceHelper.focusWindow(id: windowID, pid: pid)
+        return true
+    }
+
     @discardableResult
     static func moveWindow(
         windowID: Int,

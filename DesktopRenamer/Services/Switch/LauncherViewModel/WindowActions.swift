@@ -96,8 +96,15 @@ extension LauncherViewModel {
         DiagnosticEventLog.shared.record(subsystem: "Launcher", level: "info", "executeFocusWindow: window=\(window.title) (id=\(window.id), pid=\(window.pid))")
         LauncherWindowController.shared.shouldRestoreFocus = false
         incrementCommandFrequency(LauncherCommandType.listWindows.rawValue)
-        SpaceHelper.focusWindow(id: window.id, pid: window.pid)
         closeLauncher()
+
+        Task { @MainActor in
+            _ = await WindowActionCoordinator.focusWindow(
+                windowID: window.id,
+                pid: window.pid,
+                spaceID: window.space.id
+            )
+        }
     }
     
     func executeRenameCurrentSpace(_ newName: String) {
