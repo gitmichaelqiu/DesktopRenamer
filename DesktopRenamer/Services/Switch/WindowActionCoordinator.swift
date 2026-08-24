@@ -97,7 +97,7 @@ enum WindowActionCoordinator {
         targetSpaceID: String,
         preserveVisibility: Bool = true
     ) async -> Bool {
-        await operationGate.acquire()
+        guard await operationGate.acquire() else { return false }
         guard !Task.isCancelled else {
             await operationGate.release()
             return false
@@ -242,25 +242,45 @@ enum WindowActionCoordinator {
 
 private actor WindowOperationGate {
     private var isOccupied = false
-    private var waiters: [CheckedContinuation<Void, Never>] = []
+    private var nextWaiterID = 0
+    private var waiters: [(id: Int, continuation: CheckedContinuation<Bool, Never>)] = []
 
-    func acquire() async {
+    func acquire() async -> Bool {
+        guard !Task.isCancelled else { return false }
+
         if !isOccupied {
             isOccupied = true
-            return
+            return true
         }
 
-        await withCheckedContinuation { continuation in
-            waiters.append(continuation)
+        let waiterID = nextWaiterID
+        nextWaiterID += 1
+
+        return await withTaskCancellationHandler {
+            await withCheckedContinuation { (continuation: CheckedContinuation<Bool, Never>) in
+                if Task.isCancelled {
+                    continuation.resume(returning: false)
+                } else {
+                    waiters.append((id: waiterID, continuation: continuation))
+                }
+            }
+        } onCancel: {
+            Task { await self.cancel(waiterID: waiterID) }
         }
     }
 
     func release() {
         if let next = waiters.first {
             waiters.removeFirst()
-            next.resume()
+            next.continuation.resume(returning: true)
         } else {
             isOccupied = false
         }
+    }
+
+    private func cancel(waiterID: Int) {
+        guard let index = waiters.firstIndex(where: { $0.id == waiterID }) else { return }
+        let waiter = waiters.remove(at: index)
+        waiter.continuation.resume(returning: false)
     }
 }
