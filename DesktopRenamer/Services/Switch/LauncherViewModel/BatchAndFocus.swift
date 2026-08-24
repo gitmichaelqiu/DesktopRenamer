@@ -13,6 +13,14 @@ extension LauncherViewModel {
         
         let actions = Array(stagedMoves.values)
         let originalSpaceUUID = AppDelegate.shared.spaceManager?.currentSpaceUUID
+        let originalSpaceByDisplay: [String: String] = Dictionary(
+            uniqueKeysWithValues: SpaceHelper.getAllDisplayUUIDs().compactMap { displayID in
+                guard let spaceID = SpaceHelper.getCurrentSpaceID(for: displayID) else {
+                    return nil
+                }
+                return (displayID, spaceID)
+            }
+        )
         DiagnosticEventLog.shared.record(subsystem: "Launcher", level: "info", "executeBatchMove: Starting batch move. Actions count=\(actions.count), originalSpaceUUID=\(originalSpaceUUID ?? "nil")")
         
         batchExecutionTask = Task { [weak self] in
@@ -245,9 +253,17 @@ extension LauncherViewModel {
             DiagnosticEventLog.shared.record(subsystem: "Launcher", level: "info", "executeBatchMove: Finished batch move execution.")
             if let manager = AppDelegate.shared.spaceManager {
                 if manager.returnToOriginalAfterBatchMove {
-                    if let originalUUID = originalSpaceUUID,
-                       let targetSpace = manager.spaceNameDict.first(where: { $0.id == originalUUID }) {
-                        manager.switchToSpace(targetSpace, forceInstant: true)
+                    for (displayID, originalSpaceID) in originalSpaceByDisplay {
+                        guard let originalSpace = manager.spaceNameDict.first(where: {
+                            $0.id == originalSpaceID && $0.displayID == displayID
+                        }) else {
+                            continue
+                        }
+
+                        if SpaceHelper.getCurrentSpaceID(for: displayID) != originalSpaceID {
+                            manager.switchToSpace(originalSpace, forceInstant: true)
+                            try await Task.sleep(nanoseconds: 600_000_000)
+                        }
                     }
                 } else if let lastMoveAction = spaceMoveActions.last {
                     let lastTargetSpaceID: String
