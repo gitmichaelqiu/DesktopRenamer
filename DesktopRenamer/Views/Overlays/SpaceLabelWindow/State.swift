@@ -8,7 +8,16 @@ extension SpaceLabelWindow {
     /// activate the application or select the label's space.
     func orderPreviewWithoutActivating() {
         guard windowNumber > 0 else { return }
-        _ = CGSOrderWindow(_CGSDefaultConnection(), UInt32(windowNumber), 0, 0)
+        // CGSOrderWindow uses 0 to order a window out. Use 1 (above) so the
+        // preview is actually shown without invoking AppKit's activating order.
+        let result = CGSOrderWindow(_CGSDefaultConnection(), UInt32(windowNumber), 1, 0)
+        if result != 0 {
+            DiagnosticEventLog.shared.record(
+                subsystem: "SpaceLabelWindow",
+                level: "warning",
+                "Could not order preview label \(self.spaceId) above (result=\(result))"
+            )
+        }
     }
 
     // Binds the window to a specific space via private APIs.
