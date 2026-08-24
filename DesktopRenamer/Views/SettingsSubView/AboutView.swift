@@ -26,7 +26,8 @@ struct AboutView: View {
             VStack(alignment: .leading, spacing: 32) {
                 // Header Section
                 HStack(spacing: 20) {
-                    if let nsImage = NSApplication.shared.applicationIconImage {
+                    if let nsImage = NSImage(named: "DesktopRenamerIcon\(iconSuffix)")
+                        ?? NSApplication.shared.applicationIconImage {
                         Image(nsImage: nsImage)
                             .resizable()
                             .aspectRatio(contentMode: .fit)
