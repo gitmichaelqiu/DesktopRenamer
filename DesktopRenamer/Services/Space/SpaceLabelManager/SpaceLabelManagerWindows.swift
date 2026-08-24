@@ -421,15 +421,20 @@ extension SpaceLabelManager {
 
         createdWindows[spaceId] = previewWindow
         activeWindows[spaceId] = activeWindow
+
+        // Assign both windows before any visibility call can order them. This
+        // prevents a background preview from briefly belonging to the launch
+        // Space and pulling the application there during startup.
+        previewWindow.bindToTargetSpace()
+        activeWindow.bindToTargetSpace()
+
         let isCurrent = (spaceId == spaceManager.currentSpaceUUID)
         activeWindow.setActiveVisibility(isCurrent, animated: false)
         self.recalculateUnifiedSize()
         previewWindow.refreshAppearance()
-        previewWindow.bindToTargetSpace()
         if isCurrent {
             previewWindow.hideImmediately()
         }
-        activeWindow.bindToTargetSpace()
     }
 
     func reloadAllWindows() {

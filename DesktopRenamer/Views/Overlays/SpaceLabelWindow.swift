@@ -155,9 +155,16 @@ class SpaceLabelWindow: NSWindow {
         setupLiveBackgroundUpdate()
 
         DispatchQueue.main.async { [weak self] in
-            self?.updateLayout(isCurrentSpace: true)
-            self?.updateVisibility(animated: false)
-            self?.updateInteractivity()
+            guard let self = self else { return }
+
+            self.updateLayout(isCurrentSpace: self.isActiveMode)
+            // Preview windows must be bound by SpaceLabelManager before they
+            // are ordered. Ordering an unbound preview during launch can put
+            // it on the launcher's current Space and make macOS switch Spaces.
+            if self.isActiveMode {
+                self.updateVisibility(animated: false)
+            }
+            self.updateInteractivity()
         }
     }
 
