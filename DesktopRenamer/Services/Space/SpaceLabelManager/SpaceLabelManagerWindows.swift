@@ -50,6 +50,11 @@ extension SpaceLabelManager {
                 self.delayedRestoreWorkItem?.cancel()
                 self.delayedRestoreWorkItem = nil
 
+                // Active labels are independent of preview-label hiding. Keep
+                // their state synchronized immediately and retry briefly while
+                // WindowServer finishes publishing the new current space.
+                self.scheduleActiveLabelSynchronization()
+
                 if self.hideWhenSwitching {
                     let isRecent = Date().timeIntervalSince1970 - SpaceHelper.lastProgrammaticSwitchTime < 1.0
                     if isRecent {
@@ -127,6 +132,7 @@ extension SpaceLabelManager {
             // it now lets WindowServer reveal it with the destination rather
             // than waiting for a later reconciliation pass.
             window.setActiveVisibility(true, animated: false)
+            self.scheduleActiveLabelSynchronization()
         }
 
         if Thread.isMainThread {
@@ -266,6 +272,31 @@ extension SpaceLabelManager {
         Task { @MainActor in
             let visibleUUIDs = SpaceHelper.getVisibleSystemSpaceIDs()
             self.applyVisibility(visibleUUIDs, forDisplay: displayID)
+        }
+    }
+
+    private func scheduleActiveLabelSynchronization() {
+        activeSyncWorkItems.forEach { $0.cancel() }
+        activeSyncWorkItems.removeAll()
+
+        // CGS can report the old space for a short period after the change
+        // notification. These bounded passes keep active labels responsive
+        // without coupling them to the preview-label settling delay. The
+        // first pass is intentionally asynchronous so a pre-shown destination
+        // label is not immediately hidden by a stale CGS snapshot.
+        for delay in [0.05, 0.12, 0.25, 0.45, 0.7] {
+            let workItem = DispatchWorkItem { [weak self] in
+                self?.updateActiveWindowModes()
+            }
+            activeSyncWorkItems.append(workItem)
+            DispatchQueue.main.asyncAfter(deadline: .now() + delay, execute: workItem)
+        }
+    }
+
+    private func updateActiveWindowModes() {
+        let visibleUUIDs = SpaceHelper.getVisibleSystemSpaceIDs()
+        for (key, window) in activeWindows {
+            window.setActiveVisibility(visibleUUIDs.contains(key), animated: false)
         }
     }
 
@@ -446,6 +477,8 @@ extension SpaceLabelManager {
     func resetForSystemTransition() {
         delayedRestoreWorkItem?.cancel()
         delayedRestoreWorkItem = nil
+        activeSyncWorkItems.forEach { $0.cancel() }
+        activeSyncWorkItems.removeAll()
         reloadWorkItem?.cancel()
         reloadWorkItem = nil
         reloadGeneration += 1

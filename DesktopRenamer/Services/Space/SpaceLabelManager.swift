@@ -92,6 +92,7 @@ class SpaceLabelManager: ObservableObject {
     weak var spaceManager: SpaceManager?
     var cancellables = Set<AnyCancellable>()
     var delayedRestoreWorkItem: DispatchWorkItem?
+    var activeSyncWorkItems: [DispatchWorkItem] = []
     var reloadWorkItem: DispatchWorkItem?
     var reloadGeneration = 0
 
