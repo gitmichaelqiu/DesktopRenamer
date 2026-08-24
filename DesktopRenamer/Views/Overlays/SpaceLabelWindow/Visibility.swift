@@ -40,13 +40,10 @@ extension SpaceLabelWindow {
             isVisuallyVisible = labelManager?.showPreviewLabels ?? true
         }
         
-        // Robust Fix: Suppress all labels during space transitions when hideWhenSwitching is enabled.
-        // Previously only preview labels were suppressed, but the active label also needs to stay
-        // hidden — switchByActivatingOwnWindow may have already ordered it front and made it key.
-        // Use a longer cooling period on multi-display setups where animations
-        // (especially on external displays) may take longer to complete.
+        // hideWhenSwitching applies only to preview windows. Active labels have
+        // dedicated windows and must remain synchronized with the active space.
         let coolingPeriod: TimeInterval = 0.3
-        if labelManager?.hideWhenSwitching == true {
+        if !isActiveMode && labelManager?.hideWhenSwitching == true {
             let now = Date().timeIntervalSince1970
             let timeSinceSwitch = now - SpaceHelper.lastProgrammaticSwitchTime
             if timeSinceSwitch < coolingPeriod {
@@ -74,21 +71,12 @@ extension SpaceLabelWindow {
             let timeSinceSwitch = now - SpaceHelper.lastProgrammaticSwitchTime
             let coolingPeriod: TimeInterval = 0.3
             let inCoolingPeriod = timeSinceSwitch < coolingPeriod
-
             if self.isActiveMode {
                 if !self.isVisible {
-                    if !inCoolingPeriod {
-                        print("SpaceLabelWindow[\(self.spaceId)]: orderFrontRegardless() for ACTIVE space.")
-                        // Preview labels must not activate their owning space.
-                        // orderFrontRegardless() can make macOS navigate to a
-                        // background Space when the display topology is changing.
-                        self.orderFront(nil)
-                        self.bindToTargetSpace()
-                        self.hasOrderedInOnce = true
-                    } else {
-                        print("SpaceLabelWindow[\(self.spaceId)]: Suppressing orderFrontRegardless (Active) during switch cooling period (\(String(format: "%.2f", timeSinceSwitch))s). Scheduling retry.")
-                        scheduleVisibilityRetry(delay: coolingPeriod - timeSinceSwitch + 0.1)
-                    }
+                    print("SpaceLabelWindow[\(self.spaceId)]: orderFrontRegardless() for ACTIVE space.")
+                    self.orderFront(nil)
+                    self.bindToTargetSpace()
+                    self.hasOrderedInOnce = true
                 }
             } else if !hasOrderedInOnce {
                 // For preview windows (on background spaces), we ONLY order front once.
