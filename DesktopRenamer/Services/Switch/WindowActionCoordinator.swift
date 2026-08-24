@@ -2,7 +2,7 @@ import AppKit
 
 @MainActor
 enum WindowActionCoordinator {
-    private static var operationTail: Task<Bool, Never>?
+    private static let operationGate = WindowOperationGate()
 
     private static func wait(_ nanoseconds: UInt64, operation: String) async -> Bool {
         do {
@@ -97,25 +97,21 @@ enum WindowActionCoordinator {
         targetSpaceID: String,
         preserveVisibility: Bool = true
     ) async -> Bool {
-        let previousOperation = operationTail
-        let operation = Task { @MainActor in
-            _ = await previousOperation?.value
-            guard !Task.isCancelled else { return false }
-            return await performMoveWindow(
-                windowID: windowID,
-                pid: pid,
-                fromSpaceID: fromSpaceID,
-                targetSpaceID: targetSpaceID,
-                preserveVisibility: preserveVisibility
-            )
+        await operationGate.acquire()
+        guard !Task.isCancelled else {
+            await operationGate.release()
+            return false
         }
-        operationTail = operation
 
-        return await withTaskCancellationHandler(operation: {
-            await operation.value
-        }, onCancel: {
-            operation.cancel()
-        })
+        let result = await performMoveWindow(
+            windowID: windowID,
+            pid: pid,
+            fromSpaceID: fromSpaceID,
+            targetSpaceID: targetSpaceID,
+            preserveVisibility: preserveVisibility
+        )
+        await operationGate.release()
+        return result
     }
 
     private static func performMoveWindow(
@@ -195,5 +191,30 @@ enum WindowActionCoordinator {
         }
 
         return true
+    }
+}
+
+private actor WindowOperationGate {
+    private var isOccupied = false
+    private var waiters: [CheckedContinuation<Void, Never>] = []
+
+    func acquire() async {
+        if !isOccupied {
+            isOccupied = true
+            return
+        }
+
+        await withCheckedContinuation { continuation in
+            waiters.append(continuation)
+        }
+    }
+
+    func release() {
+        if let next = waiters.first {
+            waiters.removeFirst()
+            next.resume()
+        } else {
+            isOccupied = false
+        }
     }
 }

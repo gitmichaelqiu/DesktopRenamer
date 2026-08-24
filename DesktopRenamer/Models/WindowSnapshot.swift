@@ -14,6 +14,7 @@ struct SpaceWindowSnapshot: Codable, Sendable {
     let id: String
     let name: String
     let displayName: String
+    let displayID: String?
     let num: Int
     let isFullscreen: Bool
     let appPath: String?

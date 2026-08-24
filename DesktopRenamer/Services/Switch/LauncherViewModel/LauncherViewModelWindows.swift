@@ -44,7 +44,7 @@ extension LauncherViewModel {
             }
             
             sections.append(ListWindowsSection(
-                id: "space_\(space.id)",
+                id: "space_\(SpaceReconciliationSupport.normalizedDisplayID(space.displayID))_\(space.id)",
                 title: space.name,
                 subtitle: String(format: space.isFullscreen ? String(localized: "Fullscreen") : String(localized: "%lld windows"), items.count),
                 items: items
@@ -91,6 +91,7 @@ extension LauncherViewModel {
                 id: space.id,
                 name: names[space.id] ?? "",
                 displayName: getDisplayName(for: space.displayID),
+                displayID: space.displayID,
                 num: space.num,
                 isFullscreen: space.isFullscreen,
                 appPath: space.appPath
@@ -118,7 +119,7 @@ extension LauncherViewModel {
                 self.currentWindows = parsed.windows.filter { !terminatingPIDs.contains($0.pid) }
                 let observedPIDs = Set(parsed.windows.map(\.pid))
                 self.terminatingApplicationPIDs = terminatingPIDs.filter { pid in
-                    NSRunningApplication(processIdentifier: pid) != nil || observedPIDs.contains(pid)
+                    NSRunningApplication(processIdentifier: pid) != nil && observedPIDs.contains(pid)
                 }
                 self.isLoadingData = false
             }
@@ -127,6 +128,7 @@ extension LauncherViewModel {
 
     func removeApplicationWindowsFromList(pid: Int32) {
         terminatingApplicationPIDs.insert(pid)
+        scheduleQuitRecovery(for: pid)
         currentWindows.removeAll { $0.pid == pid }
         stagedMoves = stagedMoves.filter { $0.value.window.pid != pid }
         selectedRowIndex = min(selectedRowIndex, max(filteredWindows.count - 1, 0))
@@ -154,6 +156,7 @@ extension LauncherViewModel {
                 id: snapshot.id,
                 name: snapshot.name.isEmpty ? "Space \(snapshot.num)" : snapshot.name,
                 displayName: snapshot.displayName,
+                displayID: snapshot.displayID ?? "",
                 num: snapshot.num,
                 isFullscreen: snapshot.isFullscreen,
                 appPath: snapshot.appPath

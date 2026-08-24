@@ -394,7 +394,7 @@ struct ListAreaView: View {
                                 }
                                 .onAppear {
                                     if let item = sections.flatMap(\.items).first(where: { $0.index == viewModel.selectedRowIndex }) {
-                                        proxy.scrollTo(item.window.id, anchor: .center)
+                                        proxy.scrollTo(item.id, anchor: .center)
                                     }
                                 }
                             }

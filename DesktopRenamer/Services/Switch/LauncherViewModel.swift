@@ -124,6 +124,8 @@ enum DesktopRearrangementDirection {
 
     var terminatingApplicationPIDs = Set<Int32>()
     var windowLoadGeneration = LauncherLoadGeneration()
+    private var terminationObserver: NSObjectProtocol?
+    private var quitRecoveryTasks: [Int32: Task<Void, Never>] = [:]
     
     let allCommands: [LauncherCommand] = [
         LauncherCommand(type: .switchToDesktop, title: NSLocalizedString("Switch Desktop", comment: ""), subtitle: NSLocalizedString("Select a desktop to switch to", comment: ""), iconName: "desktopcomputer", hasSubpage: true),
@@ -136,6 +138,25 @@ enum DesktopRearrangementDirection {
         LauncherCommand(type: .togglePreviewLabel, title: NSLocalizedString("Toggle Preview Space Label", comment: ""), subtitle: NSLocalizedString("Show or hide the preview space labels overlay", comment: ""), iconName: "appwindow.swipe.rectangle", hasSubpage: false),
         LauncherCommand(type: .toggleActiveLabelVisibility, title: NSLocalizedString("Toggle Active Space Label Visibility", comment: ""), subtitle: NSLocalizedString("Pin space label on desktop or hide on apps", comment: ""), iconName: "eye", hasSubpage: false)
     ]
+
+    init() {
+        terminationObserver = NSWorkspace.shared.notificationCenter.addObserver(
+            forName: NSWorkspace.didTerminateApplicationNotification,
+            object: nil,
+            queue: .main
+        ) { [weak self] notification in
+            guard let application = notification.userInfo?[NSWorkspace.applicationUserInfoKey]
+                    as? NSRunningApplication else { return }
+            self?.handleApplicationTermination(application.processIdentifier)
+        }
+    }
+
+    deinit {
+        if let terminationObserver {
+            NSWorkspace.shared.notificationCenter.removeObserver(terminationObserver)
+        }
+        quitRecoveryTasks.values.forEach { $0.cancel() }
+    }
     
     func getCommandFrequency(_ id: String) -> Int {
         let frequencies = UserDefaults.standard.dictionary(forKey: "LauncherCommandFrequency") as? [String: Int] ?? [:]
@@ -152,5 +173,28 @@ enum DesktopRearrangementDirection {
     func invalidateWindowLoads() {
         _ = windowLoadGeneration.begin()
         isLoadingData = false
+    }
+
+    private func handleApplicationTermination(_ pid: Int32) {
+        quitRecoveryTasks[pid]?.cancel()
+        quitRecoveryTasks.removeValue(forKey: pid)
+        guard terminatingApplicationPIDs.remove(pid) != nil else { return }
+        loadData()
+    }
+
+    func scheduleQuitRecovery(for pid: Int32) {
+        quitRecoveryTasks[pid]?.cancel()
+        quitRecoveryTasks[pid] = Task { @MainActor [weak self] in
+            do {
+                try await Task.sleep(nanoseconds: 2_000_000_000)
+            } catch {
+                return
+            }
+            guard let self, !Task.isCancelled else { return }
+            self.quitRecoveryTasks.removeValue(forKey: pid)
+            guard NSRunningApplication(processIdentifier: pid) != nil else { return }
+            self.terminatingApplicationPIDs.remove(pid)
+            self.loadData()
+        }
     }
 }
