@@ -28,10 +28,13 @@ struct AboutView: View {
                 HStack(spacing: 20) {
                     if let nsImage = NSImage(named: "DesktopRenamerIcon\(iconSuffix)")
                         ?? NSApplication.shared.applicationIconImage {
-                        Image(nsImage: nsImage)
-                            .resizable()
-                            .aspectRatio(contentMode: .fit)
-                            .frame(width: 100, height: 100)
+                        ZStack {
+                            Image(nsImage: nsImage)
+                                .resizable()
+                                .aspectRatio(contentMode: .fit)
+                                .frame(width: 88, height: 88)
+                        }
+                        .frame(width: 100, height: 100)
                             .shadow(color: .black.opacity(0.1), radius: 4, x: 0, y: 2)
                     }
 
