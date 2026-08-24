@@ -92,6 +92,10 @@ extension SpaceLabelManager {
             name: NSNotification.Name("SpaceSwitchRequested"), object: nil)
 
         NotificationCenter.default.addObserver(
+            self, selector: #selector(handleSpaceSwitchTargetRequested(_:)),
+            name: NSNotification.Name("SpaceSwitchTargetRequested"), object: nil)
+
+        NotificationCenter.default.addObserver(
             self, selector: #selector(handleSpaceRearrangementCompleted),
             name: NSNotification.Name("SpaceRearrangementCompleted"), object: nil)
 
@@ -110,6 +114,25 @@ extension SpaceLabelManager {
             if self.hideWhenSwitching {
                 self.hideAllPreviewLabels()
             }
+        }
+    }
+
+    @objc private func handleSpaceSwitchTargetRequested(_ notification: Notification) {
+        let prepareActiveLabel = { [weak self] in
+            guard let self = self,
+                  let spaceID = notification.userInfo?["spaceID"] as? String,
+                  let window = self.activeWindows[spaceID] else { return }
+
+            // This window is already bound to the destination space. Showing
+            // it now lets WindowServer reveal it with the destination rather
+            // than waiting for a later reconciliation pass.
+            window.setActiveVisibility(true, animated: false)
+        }
+
+        if Thread.isMainThread {
+            prepareActiveLabel()
+        } else {
+            DispatchQueue.main.sync(execute: prepareActiveLabel)
         }
     }
 

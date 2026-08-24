@@ -16,6 +16,14 @@ extension SpaceHelper {
             isSwitching = true
         }
 
+        // Prepare only the dedicated active label for the destination. Preview
+        // labels still follow the existing hideWhenSwitching behavior.
+        NotificationCenter.default.post(
+            name: NSNotification.Name("SpaceSwitchTargetRequested"),
+            object: nil,
+            userInfo: ["spaceID": spaceID]
+        )
+
         defer {
             if !forceInstant {
                 // Short delay to allow OS animations to settle before allowing another switch
