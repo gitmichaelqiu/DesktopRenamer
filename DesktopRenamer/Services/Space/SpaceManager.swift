@@ -60,6 +60,7 @@ class SpaceManager: ObservableObject {
     var spaceChangeRetryCount: Int = 0
     let maxSpaceChangeRetries: Int = 5
     var spaceChangeRetryWorkItem: DispatchWorkItem?
+    var screenParametersWorkItem: DispatchWorkItem?
     
     // Display Cache
     var connectedDisplayUUIDs: Set<String> = []
@@ -192,6 +193,7 @@ class SpaceManager: ObservableObject {
     deinit {
         wakeRecoveryWorkItem?.cancel()
         spaceChangeRetryWorkItem?.cancel()
+        screenParametersWorkItem?.cancel()
         if Thread.isMainThread {
             SpaceHelper.stopMonitoring()
         } else {
@@ -284,16 +286,25 @@ class SpaceManager: ObservableObject {
     
     @objc private func screenParametersDidChange() {
         guard !isSystemSleeping else { return }
-        print("SpaceManager: Screen parameters changed. Refreshing spaces and labels...")
+        print("SpaceManager: Screen parameters changed. Waiting for display topology to settle...")
+        screenParametersWorkItem?.cancel()
         DispatchQueue.main.async {
             AppDelegate.shared.statusBarController?.labelManager.resetForSystemTransition()
         }
-        refreshConnectedDisplays()
-        refreshSpaceState()
-        
-        // Recreate labels after the display and space layout has stabilized.
-        DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
-            AppDelegate.shared.statusBarController?.labelManager.reloadAllWindows()
+
+        let workItem = DispatchWorkItem { [weak self] in
+            guard let self = self, !self.isSystemSleeping else { return }
+            self.refreshConnectedDisplays()
+            self.refreshSpaceState()
+
+            // Recreate labels only after both NSScreen and Mission Control have
+            // published the new display topology.
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
+                guard !self.isSystemSleeping else { return }
+                AppDelegate.shared.statusBarController?.labelManager.reloadAllWindows()
+            }
         }
+        screenParametersWorkItem = workItem
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.8, execute: workItem)
     }
 }
