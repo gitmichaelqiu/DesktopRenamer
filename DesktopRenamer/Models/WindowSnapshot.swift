@@ -23,6 +23,7 @@ struct WindowEnumerationContext: Sendable {
     }
 
     let displays: [Display]
+    let mainDisplayID: String?
     let applications: [Int32: Application]
 }
 

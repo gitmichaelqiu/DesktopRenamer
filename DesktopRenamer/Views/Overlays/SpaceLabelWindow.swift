@@ -40,7 +40,7 @@ class SpaceLabelWindow: NSWindow {
         let targetID = displayID.trimmingCharacters(in: .whitespacesAndNewlines).uppercased()
         return NSScreen.screens.first { screen in
             if targetID.isEmpty || targetID == "MAIN" || targetID == "UNKNOWN" {
-                return screen.frame.origin == .zero
+                return screen == NSScreen.main
             }
 
             let screenNumber = screen.deviceDescription[

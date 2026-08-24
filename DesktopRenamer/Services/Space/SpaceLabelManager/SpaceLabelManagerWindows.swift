@@ -204,7 +204,7 @@ extension SpaceLabelManager {
 
         var finalSize = NSSize(width: maxWidth + paddingH, height: maxHeight + paddingV)
 
-        if let screen = NSScreen.screens.first {
+        if let screen = NSScreen.main {
             finalSize.width = min(finalSize.width, screen.frame.width * 0.95)
             finalSize.height = min(finalSize.height, screen.frame.height * 0.9)
         }

@@ -129,8 +129,7 @@ extension SpaceHelper {
     }
 
     static func getAllDisplayUUIDs() -> [String] {
-        let mainScreen = NSScreen.screens.first(where: { $0.frame.origin == .zero })
-            ?? NSScreen.main
+        let mainScreen = NSScreen.main ?? NSScreen.screens.first
         let orderedScreens = (mainScreen.map { [$0] } ?? [])
             + NSScreen.screens.filter { screen in
                 guard let mainScreen else { return true }
@@ -145,9 +144,7 @@ extension SpaceHelper {
     }
 
     static func mainDisplayUUID() -> String? {
-        let mainScreen = NSScreen.screens.first(where: { $0.frame.origin == .zero })
-            ?? NSScreen.main
-            ?? NSScreen.screens.first
+        let mainScreen = NSScreen.main ?? NSScreen.screens.first
 
         guard let mainScreen,
               let displayID = mainScreen.deviceDescription[NSDeviceDescriptionKey("NSScreenNumber")] as? CGDirectDisplayID,
@@ -319,11 +316,21 @@ extension SpaceHelper {
             )
         }
 
+        let mainDisplayID = NSScreen.main.flatMap { screen in
+            guard let id = screen.deviceDescription[NSDeviceDescriptionKey("NSScreenNumber")] as? CGDirectDisplayID,
+                  let uuidRef = CGDisplayCreateUUIDFromDisplayID(id) else { return nil }
+            return (CFUUIDCreateString(nil, uuidRef.takeRetainedValue()) as String).uppercased()
+        }
+
         let applications = NSWorkspace.shared.runningApplications.reduce(into: [Int32: WindowEnumerationContext.Application]()) { result, app in
             guard app.activationPolicy == .regular, let path = app.bundleURL?.path else { return }
             result[app.processIdentifier] = WindowEnumerationContext.Application(path: path, isHidden: app.isHidden)
         }
-        return WindowEnumerationContext(displays: displays, applications: applications)
+        return WindowEnumerationContext(
+            displays: displays,
+            mainDisplayID: mainDisplayID,
+            applications: applications
+        )
     }
 
     @MainActor
@@ -443,7 +450,7 @@ extension SpaceHelper {
         if windowsBySpaceID.isEmpty {
             // Build current-space-per-display map and fullscreen PID→space map.
             guard let displays = CGSCopyManagedDisplaySpaces(conn) as? [NSDictionary] else { return [] }
-            let mainUUID = context.displays.first(where: { $0.frame.origin == .zero })?.id
+            let mainUUID = context.mainDisplayID
             var currentSpaceForDisplay: [String: String] = [:]
             var fullscreenPIDToSpace: [Int32: String] = [:]
 

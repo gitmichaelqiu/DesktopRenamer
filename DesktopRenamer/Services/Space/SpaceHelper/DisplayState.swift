@@ -176,9 +176,7 @@ extension SpaceHelper {
 
     static func isPoint(_ point: CGPoint, inside screenFrame: CGRect) -> Bool {
         guard
-            let primaryScreen = NSScreen.screens.first(where: {
-                $0.frame.origin.x == 0 && $0.frame.origin.y == 0
-            })
+            let primaryScreen = NSScreen.main
         else {
             return screenFrame.contains(point)
         }
