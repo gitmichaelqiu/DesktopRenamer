@@ -14,6 +14,9 @@ struct SpaceReconciliationSupportSmoke {
         precondition(valid.isValid)
         precondition(SpaceReconciliationSupport.normalizedDisplayID(" main ") == "MAIN")
         precondition(SpaceReconciliationSupport.normalizedDisplayID("") == "MAIN")
+        precondition(
+            SpaceReconciliationSupport.normalizedDisplayID("main", mainDisplayID: "MAIN-UUID") == "MAIN-UUID"
+        )
 
         let missingDisplay = SpaceReconciliationSupport.validateSnapshot(
             detectedSpaces: [first, second],
@@ -21,6 +24,13 @@ struct SpaceReconciliationSupportSmoke {
         )
         precondition(missingDisplay.hasMissingSpacesOnExistingDisplay)
         precondition(!missingDisplay.isValid)
+
+        let disconnectedDisplay = SpaceReconciliationSupport.validateSnapshot(
+            detectedSpaces: [first, second],
+            cachedSpaces: [first, second, external],
+            connectedDisplayIDs: ["MAIN"]
+        )
+        precondition(disconnectedDisplay.isValid)
 
         let fullscreen = DesktopSpace(
             id: "fullscreen", customName: "Editor", num: 3, displayID: "MAIN", isFullscreen: true

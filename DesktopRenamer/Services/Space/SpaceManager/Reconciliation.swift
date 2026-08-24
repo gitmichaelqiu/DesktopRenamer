@@ -6,8 +6,9 @@ import WidgetKit
 extension SpaceManager {
 
     func refreshConnectedDisplays() {
+        let mainDisplayID = SpaceHelper.mainDisplayUUID()
         self.connectedDisplayUUIDs = Set(SpaceHelper.getAllDisplayUUIDs().map {
-            SpaceReconciliationSupport.normalizedDisplayID($0)
+            SpaceReconciliationSupport.normalizedDisplayID($0, mainDisplayID: mainDisplayID)
         })
         // print("SpaceManager: Refreshed connected displays: \(connectedDisplayUUIDs)")
     }
@@ -105,6 +106,7 @@ extension SpaceManager {
                             finalSpace.customName = fallbackName
                         } else if let existing = spaceNameDict.first(where: { $0.id == sysSpace.id }), !existing.customName.isEmpty {
                             finalSpace.customName = existing.customName
+                            claimedNames.insert(existing.customName)
                             nameCache[sysSpace.id] = existing.customName
                             if indexCache[indexKey]?.isEmpty ?? true {
                                 indexCache[indexKey] = existing.customName
@@ -149,16 +151,15 @@ extension SpaceManager {
             // which would erase user data if saved.
             let validation = SpaceReconciliationSupport.validateSnapshot(
                 detectedSpaces: newSpaceList,
-                cachedSpaces: self.spaceNameDict
+                cachedSpaces: self.spaceNameDict,
+                connectedDisplayIDs: self.connectedDisplayUUIDs,
+                mainDisplayID: SpaceHelper.mainDisplayUUID()
             )
             let isInconsistentSnapshot = !validation.isValid
 
             if !self.spaceNameDict.isEmpty && isInconsistentSnapshot {
                 print("SpaceManager: Rejecting inconsistent space list (\(newSpaceList.count) vs cached \(self.spaceNameDict.count)). Skipping update.")
                 DiagnosticEventLog.shared.record(subsystem: "SpaceManager", level: "warning", "Rejected inconsistent space snapshot: new=\(newSpaceList.count), cached=\(self.spaceNameDict.count), missingDisplay=\(validation.hasMissingSpacesOnExistingDisplay), duplicateIDs=\(validation.hasDuplicateSpaceIDs), duplicatePositions=\(validation.hasDuplicatePositions), source=\(source), wakeCooling=\(self.isInWakeCoolingPeriod)")
-                if !cgsState.currentUUID.isEmpty {
-                    self.currentSpaceUUID = cgsState.currentUUID
-                }
                 if source == "Monitor" {
                     scheduleSpaceChangeRetry()
                 }
