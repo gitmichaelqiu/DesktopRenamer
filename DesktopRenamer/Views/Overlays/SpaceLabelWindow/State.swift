@@ -4,12 +4,15 @@ import QuartzCore
 
 extension SpaceLabelWindow {
 
-    /// Orders a preview label through WindowServer without asking AppKit to
-    /// activate the application or select the label's space.
+    /// Shows a preview label without asking AppKit to activate the application
+    /// or make the label's space current.
     func orderPreviewWithoutActivating() {
         guard windowNumber > 0 else { return }
-        // CGSOrderWindow uses 0 to order a window out. Use 1 (above) so the
-        // preview is actually shown without invoking AppKit's activating order.
+        // CGSOrderWindow only changes z-order; it does not unhide an NSWindow.
+        // orderFront(nil) makes the window visible without making it key or
+        // activating the application. The WindowServer call then restores the
+        // intended ordering without using orderFrontRegardless().
+        orderFront(nil)
         let result = CGSOrderWindow(_CGSDefaultConnection(), UInt32(windowNumber), 1, 0)
         if result != 0 {
             DiagnosticEventLog.shared.record(
