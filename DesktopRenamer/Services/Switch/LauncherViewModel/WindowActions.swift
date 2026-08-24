@@ -80,11 +80,14 @@ extension LauncherViewModel {
                 targetSpaceID: spaceID
             )
 
-            guard moved,
-                  manager.returnToOriginalAfterBatchMove,
-                  let originalSpace = manager.spaceNameDict.first(where: { $0.id == originalSpaceID }) else {
+            guard moved, manager.returnToOriginalAfterBatchMove else {
                 return
             }
+
+            // Cross-display moves can finish their CGS assignment shortly
+            // after the coordinator returns. Wait for that assignment before
+            // restoring either display's original space.
+            try? await Task.sleep(nanoseconds: 800_000_000)
 
             if let originalDestinationSpaceID,
                let originalDestinationSpace = manager.spaceNameDict.first(where: { $0.id == originalDestinationSpaceID }),
@@ -92,7 +95,8 @@ extension LauncherViewModel {
                 manager.switchToSpace(originalDestinationSpace, forceInstant: true)
             }
 
-            if SpaceHelper.getCurrentSpaceID(for: originalSpace.displayID) != originalSpace.id {
+            if let originalSpace = manager.spaceNameDict.first(where: { $0.id == originalSpaceID }),
+               SpaceHelper.getCurrentSpaceID(for: originalSpace.displayID) != originalSpace.id {
                 manager.switchToSpace(originalSpace, forceInstant: true)
             }
         }
