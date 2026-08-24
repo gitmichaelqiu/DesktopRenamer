@@ -12,7 +12,6 @@ extension LauncherViewModel {
         incrementCommandFrequency(LauncherCommandType.batchMoveWindows.rawValue)
         
         let actions = Array(stagedMoves.values)
-        let originalSpaceUUID = AppDelegate.shared.spaceManager?.currentSpaceUUID
         let originalSpaceByDisplay: [String: String] = Dictionary(
             uniqueKeysWithValues: SpaceHelper.getAllDisplayUUIDs().compactMap { displayID in
                 guard let spaceID = SpaceHelper.getCurrentSpaceID(for: displayID) else {
@@ -21,7 +20,7 @@ extension LauncherViewModel {
                 return (displayID, spaceID)
             }
         )
-        DiagnosticEventLog.shared.record(subsystem: "Launcher", level: "info", "executeBatchMove: Starting batch move. Actions count=\(actions.count), originalSpaceUUID=\(originalSpaceUUID ?? "nil")")
+        DiagnosticEventLog.shared.record(subsystem: "Launcher", level: "info", "executeBatchMove: Starting batch move. Actions count=\(actions.count), originalSpaces=\(originalSpaceByDisplay)")
         
         batchExecutionTask = Task { [weak self] in
             guard let self else { return }
