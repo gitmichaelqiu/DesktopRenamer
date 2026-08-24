@@ -35,6 +35,9 @@ class SpaceLabelWindow: NSWindow {
     static let handleSize = NSSize(width: 32, height: 60)
 
     var hasOrderedInOnce = false
+    // An active label at the start of a switch remains visible while macOS
+    // transitions to the destination space, even after its mode changes to preview.
+    var preserveVisibilityDuringSwitch = false
 
 
     var isHiddenCornerMode: Bool {

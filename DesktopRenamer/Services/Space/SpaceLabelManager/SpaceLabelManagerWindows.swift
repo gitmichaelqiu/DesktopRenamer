@@ -69,6 +69,13 @@ extension SpaceLabelManager {
                     // either. This unfiltered call is the sole restore point.
                     DiagnosticEventLog.shared.record(subsystem: "Labels", level: "info", "delayed restore firing")
                     self?.updateAllWindowModes()
+                    // Allow former active labels to follow normal preview
+                    // visibility rules after the transition has settled.
+                    DispatchQueue.main.async { [weak self] in
+                        self?.createdWindows.values.forEach {
+                            $0.preserveVisibilityDuringSwitch = false
+                        }
+                    }
                 }
                 self.delayedRestoreWorkItem = workItem
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.6, execute: workItem)
@@ -107,6 +114,13 @@ extension SpaceLabelManager {
             guard let self = self else { return }
             self.delayedRestoreWorkItem?.cancel()
             self.delayedRestoreWorkItem = nil
+
+            // Snapshot active labels before SpaceManager changes their mode to
+            // preview. They must remain visible for the duration of the switch.
+            for window in self.createdWindows.values where window.isActiveMode {
+                window.preserveVisibilityDuringSwitch = true
+            }
+
             if self.hideWhenSwitching {
                 self.hideAllPreviewLabels()
             }
@@ -257,14 +271,16 @@ extension SpaceLabelManager {
     }
 
     func hidePreviewLabel(for spaceId: String) {
-        if let window = createdWindows[spaceId], !window.isActiveMode {
+        if let window = createdWindows[spaceId],
+            !window.isActiveMode && !window.preserveVisibilityDuringSwitch {
             window.hideImmediately()
         }
     }
 
     func hideAllPreviewLabels() {
         DiagnosticEventLog.shared.record(subsystem: "Labels", level: "info", "hideAllPreviewLabels (windows=\(createdWindows.count))")
-        for window in createdWindows.values where !window.isActiveMode {
+        for window in createdWindows.values
+            where !window.isActiveMode && !window.preserveVisibilityDuringSwitch {
             window.hideImmediately()
         }
     }
