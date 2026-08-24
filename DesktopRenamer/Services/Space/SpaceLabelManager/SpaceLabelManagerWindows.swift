@@ -516,6 +516,7 @@ extension SpaceLabelManager {
             ensureWindow(for: space.id, name: space.customName, displayID: space.displayID)
         }
         updateAllWindowModes()
+        restoreStartupSpaceIfNeeded()
 
         // SAFETY: 2 seconds after seeding, verify no labels are stranded on the
         // wrong space. Preview labels that failed CGS binding would otherwise
@@ -523,6 +524,33 @@ extension SpaceLabelManager {
         DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) { [weak self] in
             self?.verifyLabelBinding()
         }
+    }
+
+    private func restoreStartupSpaceIfNeeded() {
+        guard let startupDisplayID,
+              let startupSpaceID,
+              let spaceManager,
+              let liveSpaceID = SpaceHelper.getCurrentSpaceID(for: startupDisplayID),
+              liveSpaceID != startupSpaceID else {
+            return
+        }
+
+        DiagnosticEventLog.shared.record(
+            subsystem: "Labels",
+            level: "warning",
+            "Startup label seeding changed the launch space from \(startupSpaceID) to \(liveSpaceID); restoring the launch space."
+        )
+
+        // Label creation can order managed windows on a background Space.
+        // Restore the user's original Space once seeding is complete, without
+        // changing the normal behavior of later manual switches.
+        let workItem = DispatchWorkItem { [weak spaceManager] in
+            guard spaceManager != nil else { return }
+            SpaceHelper.switchToSpace(startupSpaceID, forceInstant: true)
+        }
+        startupSpaceRestoreWorkItem?.cancel()
+        startupSpaceRestoreWorkItem = workItem
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1, execute: workItem)
     }
 
     /// Verifies that preview label windows are assigned to their correct space.

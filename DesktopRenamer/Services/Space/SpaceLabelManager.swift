@@ -95,9 +95,15 @@ class SpaceLabelManager: ObservableObject {
     var activeSyncWorkItems: [DispatchWorkItem] = []
     var reloadWorkItem: DispatchWorkItem?
     var reloadGeneration = 0
+    var startupSpaceRestoreWorkItem: DispatchWorkItem?
+    let startupDisplayID: String?
+    let startupSpaceID: String?
 
     init(spaceManager: SpaceManager) {
         self.spaceManager = spaceManager
+        let startupState = SpaceHelper.getSystemState()
+        self.startupDisplayID = startupState?.displayID
+        self.startupSpaceID = startupState?.currentUUID
 
         // Load Settings
         let loadedActiveFont = UserDefaults.standard.double(forKey: kActiveFontScale)
@@ -157,6 +163,7 @@ class SpaceLabelManager: ObservableObject {
     deinit {
         NotificationCenter.default.removeObserver(self)
         delayedRestoreWorkItem?.cancel()
+        startupSpaceRestoreWorkItem?.cancel()
         reloadWorkItem?.cancel()
         let windows = Array(createdWindows.values) + Array(activeWindows.values)
         Task { @MainActor in
