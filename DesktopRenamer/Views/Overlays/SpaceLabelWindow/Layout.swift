@@ -227,7 +227,7 @@ extension SpaceLabelWindow {
     func findTargetScreen() -> NSScreen? {
         let targetID = self.displayID.uppercased()
         if targetID == "MAIN" || targetID == "UNKNOWN" || targetID.isEmpty {
-            return NSScreen.screens.first
+            return NSScreen.main ?? NSScreen.screens.first
         }
         
         return NSScreen.screens.first(where: { screen in

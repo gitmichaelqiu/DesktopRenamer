@@ -150,6 +150,7 @@ extension SpaceLabelManager {
 
         for id in redundantIDs {
             if let window = createdWindows[id] {
+                window.pendingVisibilityTask?.cancel()
                 window.close()
             }
             createdWindows.removeValue(forKey: id)
@@ -272,7 +273,8 @@ extension SpaceLabelManager {
     func ensureWindow(for spaceId: String, name: String, displayID: String, updateMode: Bool = true) {
         if let existingWindow = createdWindows[spaceId] {
             if existingWindow.displayID != displayID {
-                existingWindow.orderOut(nil)
+                existingWindow.pendingVisibilityTask?.cancel()
+                existingWindow.close()
                 createdWindows.removeValue(forKey: spaceId)
             } else {
                 // BUG FIX: Even if the window exists and is visible, we MUST update its mode
@@ -325,7 +327,11 @@ extension SpaceLabelManager {
 
     func removeAllWindows() {
         let windows = Array(createdWindows.values)
-        for window in windows { window.orderOut(nil) }
+        for window in windows {
+            window.pendingVisibilityTask?.cancel()
+            window.pendingVisibilityTask = nil
+            window.close()
+        }
         createdWindows.removeAll()
     }
 

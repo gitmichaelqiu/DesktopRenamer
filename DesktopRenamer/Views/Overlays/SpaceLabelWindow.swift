@@ -84,7 +84,14 @@ class SpaceLabelWindow: NSWindow {
             let idString = "\(screen.localizedName) (\(screenID))"
             if idString == displayID { return true }
             let cleanName = displayID.components(separatedBy: " (").first ?? displayID
-            return screen.localizedName == cleanName
+            if screen.localizedName == cleanName { return true }
+
+            guard let uuidRef = CGDisplayCreateUUIDFromDisplayID(screenID.uint32Value) else {
+                return false
+            }
+            let uuid = uuidRef.takeRetainedValue()
+            return (CFUUIDCreateString(nil, uuid) as String)
+                .caseInsensitiveCompare(displayID) == .orderedSame
         })
 
         let targetScreen = foundScreen ?? NSScreen.main ?? NSScreen.screens.first

@@ -152,7 +152,10 @@ class SpaceLabelManager: ObservableObject {
         NotificationCenter.default.removeObserver(self)
         let windows = createdWindows.values
         Task { @MainActor in
-            for window in windows { window.orderOut(nil) }
+            for window in windows {
+                window.pendingVisibilityTask?.cancel()
+                window.close()
+            }
         }
     }
 }
