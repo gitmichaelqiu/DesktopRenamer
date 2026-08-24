@@ -32,7 +32,16 @@ extension SpaceLabelManager {
     func updateWindows() {
         let windows = Array(createdWindows.values)
         for window in windows {
-            window.refreshAppearance()
+            let isEnabled = window.isActiveMode ? showActiveLabels : showPreviewLabels
+            if isEnabled {
+                window.refreshAppearance()
+            } else {
+                // A setting toggle must hide the already-ordered window too.
+                // Refreshing its appearance alone can leave the NSWindow in
+                // front while an in-flight visibility animation is active.
+                window.hideImmediately()
+                window.orderOut(nil)
+            }
         }
     }
 

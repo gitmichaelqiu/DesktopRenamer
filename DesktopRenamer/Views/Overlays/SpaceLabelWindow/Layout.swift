@@ -225,31 +225,7 @@ extension SpaceLabelWindow {
     }
 
     func findTargetScreen() -> NSScreen? {
-        let targetID = self.displayID.uppercased()
-        if targetID == "MAIN" || targetID == "UNKNOWN" || targetID.isEmpty {
-            return NSScreen.screens.first
-        }
-        
-        return NSScreen.screens.first(where: { screen in
-            let screenID =
-                screen.deviceDescription[NSDeviceDescriptionKey("NSScreenNumber")] as? NSNumber ?? 0
-
-            // 1. Name check (Default)
-            let idString = "\(screen.localizedName) (\(screenID))"
-            if idString.uppercased() == targetID { return true }
-
-            let cleanTarget = targetID.components(separatedBy: " (").first ?? targetID
-            if screen.localizedName.uppercased() == cleanTarget { return true }
-
-            // 2. UUID Check
-            let cgsID = screenID.uint32Value
-            if let uuidRef = CGDisplayCreateUUIDFromDisplayID(cgsID) {
-                let uuid = uuidRef.takeRetainedValue()
-                let uuidString = CFUUIDCreateString(nil, uuid) as String
-                if uuidString.caseInsensitiveCompare(self.displayID) == .orderedSame { return true }
-            }
-            return false
-        })
+        SpaceLabelWindow.screen(matching: displayID)
     }
 
     private func findBestOffscreenPosition(targetScreen: NSScreen, size: NSSize) -> NSPoint {

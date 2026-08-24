@@ -36,6 +36,31 @@ class SpaceLabelWindow: NSWindow {
 
     var hasOrderedInOnce = false
 
+    static func screen(matching displayID: String) -> NSScreen? {
+        let targetID = displayID.trimmingCharacters(in: .whitespacesAndNewlines).uppercased()
+        return NSScreen.screens.first { screen in
+            if targetID.isEmpty || targetID == "MAIN" || targetID == "UNKNOWN" {
+                return screen.frame.origin == .zero
+            }
+
+            let screenNumber = screen.deviceDescription[
+                NSDeviceDescriptionKey("NSScreenNumber")
+            ] as? NSNumber
+            guard let screenNumber else { return false }
+
+            let idString = "\(screen.localizedName) (\(screenNumber))".uppercased()
+            if idString == targetID || screen.localizedName.uppercased() == targetID {
+                return true
+            }
+
+            guard let uuidRef = CGDisplayCreateUUIDFromDisplayID(screenNumber.uint32Value) else {
+                return false
+            }
+            let uuid = uuidRef.takeRetainedValue()
+            let uuidString = (CFUUIDCreateString(nil, uuid) as String).uppercased()
+            return uuidString == targetID
+        }
+    }
 
     var isHiddenCornerMode: Bool {
         return isActiveMode && !(labelManager?.showOnDesktop == true)
@@ -77,15 +102,10 @@ class SpaceLabelWindow: NSWindow {
             self.handleView.bottomAnchor.constraint(equalTo: self.contentContainer.bottomAnchor),
         ])
 
-        // Screen identification logic.
-        let foundScreen = NSScreen.screens.first(where: { screen in
-            let screenID =
-                screen.deviceDescription[NSDeviceDescriptionKey("NSScreenNumber")] as? NSNumber ?? 0
-            let idString = "\(screen.localizedName) (\(screenID))"
-            if idString == displayID { return true }
-            let cleanName = displayID.components(separatedBy: " (").first ?? displayID
-            return screen.localizedName == cleanName
-        })
+        // Resolve UUIDs as well as names/numeric IDs before the first frame is
+        // assigned. Otherwise a newly connected display's label starts on the
+        // main screen and can remain there while Mission Control is settling.
+        let foundScreen = Self.screen(matching: displayID)
 
         let targetScreen = foundScreen ?? NSScreen.main ?? NSScreen.screens.first
 
