@@ -104,6 +104,10 @@ extension SpaceLabelManager {
             name: NSNotification.Name("SpaceSwitchRequested"), object: nil)
 
         NotificationCenter.default.addObserver(
+            self, selector: #selector(handleSpaceSwitchTargetRequested(_:)),
+            name: NSNotification.Name("SpaceSwitchTargetRequested"), object: nil)
+
+        NotificationCenter.default.addObserver(
             self, selector: #selector(handleSpaceRearrangementCompleted),
             name: NSNotification.Name("SpaceRearrangementCompleted"), object: nil)
 
@@ -136,6 +140,30 @@ extension SpaceLabelManager {
             preserveAndHide()
         } else {
             DispatchQueue.main.sync(execute: preserveAndHide)
+        }
+    }
+
+    @objc private func handleSpaceSwitchTargetRequested(_ notification: Notification) {
+        let prepareDestination = { [weak self] in
+            guard let self = self,
+                  let spaceID = notification.userInfo?["spaceID"] as? String,
+                  let window = self.createdWindows[spaceID] else { return }
+
+            window.isTransitionDestination = true
+            DiagnosticEventLog.shared.record(
+                subsystem: "Labels",
+                level: "info",
+                "prepared destination label for switch: \(spaceID)"
+            )
+            // The target is already bound to its destination space. Restore its
+            // content now so it is ready when WindowServer reveals that space.
+            window.updateVisibility(animated: false)
+        }
+
+        if Thread.isMainThread {
+            prepareDestination()
+        } else {
+            DispatchQueue.main.sync(execute: prepareDestination)
         }
     }
 
@@ -284,6 +312,9 @@ extension SpaceLabelManager {
             }
             
             let isVisibleOnAnyScreen = visibleUUIDs.contains(key)
+            if isVisibleOnAnyScreen {
+                window.isTransitionDestination = false
+            }
             window.setMode(isCurrentSpace: isVisibleOnAnyScreen)
         }
     }

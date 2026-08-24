@@ -11,6 +11,14 @@ extension SpaceHelper {
         lastProgrammaticTargetSpaceID = spaceID
         lastProgrammaticSwitchUsedSLS = false
 
+        // Tell the label manager which preview is about to become active before
+        // the generic switch notification hides transition previews.
+        NotificationCenter.default.post(
+            name: NSNotification.Name("SpaceSwitchTargetRequested"),
+            object: nil,
+            userInfo: ["spaceID": spaceID]
+        )
+
         if !forceInstant {
             guard !isSwitching else { return }
             isSwitching = true

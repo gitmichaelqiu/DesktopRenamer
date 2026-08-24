@@ -39,6 +39,7 @@ class SpaceLabelWindow: NSWindow {
     // An active label at the start of a switch remains visible while macOS
     // transitions to the destination space, even after its mode changes to preview.
     var preserveVisibilityDuringSwitch = false
+    var isTransitionDestination = false
 
 
     var isHiddenCornerMode: Bool {
