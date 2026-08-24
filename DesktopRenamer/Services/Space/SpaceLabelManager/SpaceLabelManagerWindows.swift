@@ -272,7 +272,11 @@ extension SpaceLabelManager {
     // Asserts that a window exists for the specified space, refreshing if already present.
     func ensureWindow(for spaceId: String, name: String, displayID: String, updateMode: Bool = true) {
         if let existingWindow = createdWindows[spaceId] {
-            if existingWindow.displayID != displayID {
+            if existingWindow.findTargetScreen() == nil {
+                existingWindow.pendingVisibilityTask?.cancel()
+                existingWindow.close()
+                createdWindows.removeValue(forKey: spaceId)
+            } else if existingWindow.displayID != displayID {
                 existingWindow.pendingVisibilityTask?.cancel()
                 existingWindow.close()
                 createdWindows.removeValue(forKey: spaceId)
@@ -303,6 +307,15 @@ extension SpaceLabelManager {
         let window = SpaceLabelWindow(
             spaceId: spaceId, name: name, displayID: displayID, isFullscreen: isFullscreen,
             spaceManager: spaceManager, labelManager: self)
+
+        // Do not allow a label for an unavailable external display to fall
+        // back onto the main display. A later topology pass will recreate it
+        // when macOS exposes the screen.
+        guard window.findTargetScreen() != nil else {
+            window.close()
+            return
+        }
+
         createdWindows[spaceId] = window
         let isCurrent = (spaceId == spaceManager.currentSpaceUUID)
         window.setMode(isCurrentSpace: isCurrent)

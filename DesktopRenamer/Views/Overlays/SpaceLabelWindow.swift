@@ -94,7 +94,11 @@ class SpaceLabelWindow: NSWindow {
                 .caseInsensitiveCompare(displayID) == .orderedSame
         })
 
-        let targetScreen = foundScreen ?? NSScreen.main ?? NSScreen.screens.first
+        let normalizedDisplayID = displayID.trimmingCharacters(in: .whitespacesAndNewlines).uppercased()
+        let isMainDisplay = normalizedDisplayID.isEmpty
+            || normalizedDisplayID == "MAIN"
+            || normalizedDisplayID == "UNKNOWN"
+        let targetScreen = foundScreen ?? (isMainDisplay ? NSScreen.main ?? NSScreen.screens.first : nil)
 
         let startRect: NSRect
         if let targetScreen = targetScreen {
