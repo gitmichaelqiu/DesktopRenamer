@@ -162,16 +162,6 @@ extension SpaceManager {
             let sourceDisplayID = SpaceHelper.getWindowDisplayID(for: windowInfo.frame)
             if let sourceDisplay = sourceDisplayID, sourceDisplay != targetSpace.displayID {
                 print("SpaceManager: Cross-monitor move requested (\(sourceDisplay) -> \(targetSpace.displayID)). Using robust method.")
-
-                let originalSpacesByDisplay: [String: String] = Dictionary(
-                    uniqueKeysWithValues: SpaceHelper.getAllDisplayUUIDs().compactMap { displayID in
-                        let spaceID = currentSpaceByDisplay[displayID]
-                            ?? SpaceHelper.getCurrentSpaceID(for: displayID)
-                        guard let spaceID else { return nil }
-                        return (displayID, spaceID)
-                    }
-                )
-                let shouldReturnToOriginalSpaces = returnToOriginalAfterBatchMove
                 
                 let fromSpaceID = Int(SpaceHelper.getCurrentSpaceID(for: sourceDisplay) ?? "0") ?? 0
                 let targetSpaceID = Int(targetSpace.id) ?? 0
@@ -181,26 +171,6 @@ extension SpaceManager {
                 // API callers that do not go through this method.
                 self.switchToSpace(targetSpace, forceInstant: true)
                 SpaceHelper.moveWindowToSpace(windowID: windowInfo.id, fromSpaceID: fromSpaceID, targetSpaceID: targetSpaceID)
-
-                if shouldReturnToOriginalSpaces {
-                    Task { @MainActor [weak self] in
-                        try? await Task.sleep(nanoseconds: 1_500_000_000)
-                        guard let self else { return }
-
-                        for (displayID, originalSpaceID) in originalSpacesByDisplay {
-                            guard let originalSpace = self.spaceNameDict.first(where: {
-                                $0.id == originalSpaceID && $0.displayID == displayID
-                            }) else {
-                                continue
-                            }
-
-                            if SpaceHelper.getCurrentSpaceID(for: displayID) != originalSpaceID {
-                                self.switchToSpace(originalSpace, forceInstant: true)
-                                try? await Task.sleep(nanoseconds: 600_000_000)
-                            }
-                        }
-                    }
-                }
                 return
             }
         }

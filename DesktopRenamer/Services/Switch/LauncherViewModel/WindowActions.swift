@@ -58,8 +58,14 @@ extension LauncherViewModel {
             return false
         }
 
-        let originalSourceSpaceID = SpaceHelper.getCurrentSpaceID(for: displayID)
-        let isCrossDisplayMove = displayID != targetSpace.displayID
+        let originalSpacesByDisplay: [String: String] = Dictionary(
+            uniqueKeysWithValues: SpaceHelper.getAllDisplayUUIDs().compactMap { originalDisplayID in
+                guard let originalSpaceID = SpaceHelper.getCurrentSpaceID(for: originalDisplayID) else {
+                    return nil
+                }
+                return (originalDisplayID, originalSpaceID)
+            }
+        )
 
         guard !targetSpace.isFullscreen else {
             DiagnosticEventLog.shared.record(subsystem: "Launcher", level: "info", "movePreviouslyActiveWindow: target space is fullscreen; no move performed")
@@ -84,20 +90,19 @@ extension LauncherViewModel {
                 return
             }
 
-            // Cross-display moves restore both displays in the lower-level
-            // SpaceManager path. Do not issue a second return here: this
-            // launcher task may hold a stale global current-space ID and could
-            // overwrite the correct source-display restoration.
-            guard !isCrossDisplayMove else { return }
-
             try? await Task.sleep(nanoseconds: 800_000_000)
 
-            if let originalSourceSpaceID,
-               let originalSourceSpace = manager.spaceNameDict.first(where: {
-                   $0.id == originalSourceSpaceID && $0.displayID == displayID
-               }),
-               SpaceHelper.getCurrentSpaceID(for: displayID) != originalSourceSpace.id {
-                manager.switchToSpace(originalSourceSpace, forceInstant: true)
+            for (originalDisplayID, originalSpaceID) in originalSpacesByDisplay {
+                guard let originalSpace = manager.spaceNameDict.first(where: {
+                    $0.id == originalSpaceID && $0.displayID == originalDisplayID
+                }) else {
+                    continue
+                }
+
+                if SpaceHelper.getCurrentSpaceID(for: originalDisplayID) != originalSpaceID {
+                    manager.switchToSpace(originalSpace, forceInstant: true)
+                    try? await Task.sleep(nanoseconds: 600_000_000)
+                }
             }
         }
         return true
