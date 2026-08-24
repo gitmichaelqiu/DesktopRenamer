@@ -113,7 +113,7 @@ extension SpaceLabelWindow {
                 if !inCoolingPeriod {
                     if isBoundToTargetSpace() || !isOnCurrentSpace() {
                         print("SpaceLabelWindow[\(self.spaceId)]: Non-activating orderFront() for background preview.")
-                        self.orderFrontRegardless()
+                        self.orderFront(nil)
                         self.bindToTargetSpace()
                     } else {
                         print("SpaceLabelWindow[\(self.spaceId)]: Re-order blocked — preview label would appear on wrong space.")
