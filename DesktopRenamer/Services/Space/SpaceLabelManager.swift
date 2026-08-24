@@ -89,6 +89,8 @@ class SpaceLabelManager: ObservableObject {
     weak var spaceManager: SpaceManager?
     var cancellables = Set<AnyCancellable>()
     var delayedRestoreWorkItem: DispatchWorkItem?
+    var reloadWorkItem: DispatchWorkItem?
+    var reloadGeneration = 0
 
     init(spaceManager: SpaceManager) {
         self.spaceManager = spaceManager
@@ -150,6 +152,8 @@ class SpaceLabelManager: ObservableObject {
 
     deinit {
         NotificationCenter.default.removeObserver(self)
+        delayedRestoreWorkItem?.cancel()
+        reloadWorkItem?.cancel()
         let windows = createdWindows.values
         Task { @MainActor in
             for window in windows {

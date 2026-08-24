@@ -312,8 +312,42 @@ extension SpaceLabelManager {
     }
 
     func reloadAllWindows() {
+        reloadWorkItem?.cancel()
+        reloadGeneration += 1
+        let generation = reloadGeneration
         removeAllWindows()
-        syncWindowsWithDict()
+
+        // Display attachment can deliver this command before WindowServer has
+        // published the new screens and managed spaces. Refresh the model and
+        // rebuild labels in several short, cancellable passes so a stale
+        // snapshot cannot become the final label state.
+        let workItem = DispatchWorkItem { [weak self] in
+            self?.performReloadPass(remainingPasses: 4, generation: generation)
+        }
+        reloadWorkItem = workItem
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.4, execute: workItem)
+    }
+
+    private func performReloadPass(remainingPasses: Int, generation: Int) {
+        guard generation == reloadGeneration else { return }
+        spaceManager?.refreshConnectedDisplays()
+        spaceManager?.refreshSpaceState()
+
+        let pass = DispatchWorkItem { [weak self] in
+            guard let self = self else { return }
+            guard generation == self.reloadGeneration else { return }
+            self.syncWindowsWithDict()
+            self.updateAllWindowModes()
+
+            guard remainingPasses > 0 else {
+                self.reloadWorkItem = nil
+                return
+            }
+
+            self.performReloadPass(remainingPasses: remainingPasses - 1, generation: generation)
+        }
+        reloadWorkItem = pass
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.55, execute: pass)
     }
 
     /// Removes label windows while WindowServer is rebuilding spaces or displays.
@@ -322,6 +356,9 @@ extension SpaceLabelManager {
     func resetForSystemTransition() {
         delayedRestoreWorkItem?.cancel()
         delayedRestoreWorkItem = nil
+        reloadWorkItem?.cancel()
+        reloadWorkItem = nil
+        reloadGeneration += 1
         removeAllWindows()
     }
 
