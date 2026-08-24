@@ -156,6 +156,28 @@ extension SpaceLabelManager {
             createdWindows.removeValue(forKey: id)
             print("SpaceLabelManager: Removed redundant window for space \(id)")
         }
+
+        purgeOrphanedLabelWindows(validUUIDs: validUUIDs)
+    }
+
+    /// The dictionary is only the manager's bookkeeping. NSWindow can retain
+    /// label instances after a rebuild has replaced that bookkeeping, so also
+    /// sweep the application's actual windows for duplicates and orphans.
+    private func purgeOrphanedLabelWindows(validUUIDs: Set<String>) {
+        let registeredWindows = Set(createdWindows.values.map(ObjectIdentifier.init))
+        let applicationLabelWindows = NSApp.windows.compactMap { $0 as? SpaceLabelWindow }
+
+        for window in applicationLabelWindows {
+            let isValid = validUUIDs.contains(window.spaceId)
+            let isRegistered = registeredWindows.contains(ObjectIdentifier(window))
+            let isCanonical = createdWindows[window.spaceId].map { $0 === window } ?? false
+
+            if !isValid || !isRegistered || !isCanonical {
+                window.pendingVisibilityTask?.cancel()
+                window.close()
+                print("SpaceLabelManager: Closed orphaned label window for space \(window.spaceId)")
+            }
+        }
     }
 
     func recalculateUnifiedSize() {
@@ -376,7 +398,13 @@ extension SpaceLabelManager {
     }
 
     func removeAllWindows() {
-        let windows = Array(createdWindows.values)
+        var windows = Array(createdWindows.values)
+        let registeredIDs = Set(windows.map(ObjectIdentifier.init))
+        for window in NSApp.windows.compactMap({ $0 as? SpaceLabelWindow })
+            where !registeredIDs.contains(ObjectIdentifier(window)) {
+            windows.append(window)
+        }
+
         for window in windows {
             window.pendingVisibilityTask?.cancel()
             window.pendingVisibilityTask = nil
