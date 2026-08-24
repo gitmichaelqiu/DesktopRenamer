@@ -1,37 +1,6 @@
 import Foundation
 import AppKit
 
-private enum AppleScriptWindowActionSupport {
-    static func wait(_ nanoseconds: UInt64, operation: String) async -> Bool {
-        do {
-            try await Task.sleep(nanoseconds: nanoseconds)
-            return true
-        } catch {
-            DiagnosticEventLog.shared.record(
-                subsystem: "AppleScript",
-                level: "info",
-                "Cancelled while waiting to " + operation + "."
-            )
-            return false
-        }
-    }
-
-    static func resolveWindow(windowID: Int, pid: Int32) async -> AXUIElement? {
-        if let window = SpaceHelper.getAXWindow(id: windowID, pid: pid) {
-            return window
-        }
-
-        guard let app = NSRunningApplication(processIdentifier: pid) else {
-            return nil
-        }
-        app.activate(options: .activateIgnoringOtherApps)
-        guard await wait(400_000_000, operation: "find the window") else {
-            return nil
-        }
-        return SpaceHelper.getAXWindow(id: windowID, pid: pid)
-    }
-}
-
 class MoveWindowNextCommand: NSScriptCommand {
     override func performDefaultImplementation() -> Any? {
         DiagnosticEventLog.shared.record(subsystem: "AppleScript", level: "info", "Command performed: MoveWindowNextCommand")
@@ -93,26 +62,20 @@ class GetWindowsCommand: NSScriptCommand {
         guard isAPIEnabled() else { return "API Disabled" }
         
         // Fetch necessary space data on the main thread.
-        let data: ([DesktopSpace], [String: String], WindowEnumerationContext)? = runOnMain {
+        let data: ([DesktopSpace], [String: String])? = runOnMain {
             guard let manager = AppDelegate.shared.spaceManager else { return nil }
             let spaces = manager.spaceNameDict
             var names: [String: String] = [:]
             for s in spaces {
                 names[s.id] = manager.getSpaceName(s.id)
             }
-            return (spaces, names, SpaceHelper.makeWindowEnumerationContext())
+            return (spaces, names)
         }
         
-        guard let (spaces, names, context) = data else { return "" }
+        guard let (spaces, names) = data else { return "" }
         
         // Perform heavy window enumeration on the background thread (NSScriptCommand defaults to background).
-        return SpaceHelper.getWindowSnapshots(spaces: spaces, spaceNames: names, context: context).map { space in
-            var output = ">\(space.id)~\(space.name)~\(space.displayName)~\(space.num)~\(space.isFullscreen ? "1" : "0")~\(space.appPath ?? "")\n"
-            for window in space.windows {
-                output += "  \(window.id)|\(window.pid)|\(window.ownerName)|\(window.appPath)|\(window.title)|\(window.isMinimized ? "1" : "0")|\(window.isHidden ? "1" : "0")\n"
-            }
-            return output
-        }.joined()
+        return SpaceHelper.getWindowsForAllSpaces(spaces: spaces, spaceNames: names)
     }
 }
 
@@ -217,46 +180,86 @@ class ExecuteWindowActionCommand: NSScriptCommand {
            manager.currentSpaceUUID != spaceID,
            let spaceObj = manager.spaceNameDict.first(where: { $0.id == spaceID }) {
             manager.switchToSpace(spaceObj, forceInstant: true)
-            guard await AppleScriptWindowActionSupport.wait(600_000_000, operation: "switch to the window space") else {
-                return
-            }
+            try? await Task.sleep(nanoseconds: 600_000_000) // 0.6s settle time
         }
         
         // Un-fullscreen first if the window is currently fullscreen and the action requires it
         if isFullscreenWindow && (actionName == "close" || actionName == "minimize" || actionName == "hide") {
-            guard let axWindow = await AppleScriptWindowActionSupport.resolveWindow(windowID: windowID, pid: pid),
-                  SpaceHelper.performWindowAction(.exitFullScreen, on: axWindow),
-                  await AppleScriptWindowActionSupport.wait(1_200_000_000, operation: "exit fullscreen") else {
-                return
+            var axWindow = SpaceHelper.getAXWindow(id: windowID, pid: pid)
+            if axWindow == nil {
+                if let app = NSRunningApplication(processIdentifier: pid) {
+                    app.activate(options: .activateIgnoringOtherApps)
+                    try? await Task.sleep(nanoseconds: 400_000_000)
+                    axWindow = SpaceHelper.getAXWindow(id: windowID, pid: pid)
+                }
+            }
+            if let targetAXWindow = axWindow {
+                AXUIElementSetAttributeValue(targetAXWindow, "AXFullScreen" as CFString, false as CFTypeRef)
+                try? await Task.sleep(nanoseconds: 1_200_000_000) // Wait for exit-fullscreen animation to settle
             }
         }
         
         switch actionName {
         case "close":
-            guard let axWindow = await AppleScriptWindowActionSupport.resolveWindow(windowID: windowID, pid: pid),
-                  SpaceHelper.performWindowAction(.close, on: axWindow) else {
-                return
+            var axWindow = SpaceHelper.getAXWindow(id: windowID, pid: pid)
+            if axWindow == nil {
+                if let app = NSRunningApplication(processIdentifier: pid) {
+                    app.activate(options: .activateIgnoringOtherApps)
+                    try? await Task.sleep(nanoseconds: 400_000_000)
+                    axWindow = SpaceHelper.getAXWindow(id: windowID, pid: pid)
+                }
+            }
+            if let targetAXWindow = axWindow {
+                var closeButtonRef: CFTypeRef?
+                if AXUIElementCopyAttributeValue(targetAXWindow, kAXCloseButtonAttribute as CFString, &closeButtonRef) == .success,
+                   let closeButton = closeButtonRef,
+                   CFGetTypeID(closeButton) == AXUIElementGetTypeID() {
+                    // The Core Foundation type check guarantees this bridge.
+                    let closeButtonElement = closeButton as! AXUIElement
+                    AXUIElementPerformAction(closeButtonElement, kAXPressAction as CFString)
+                }
             }
         case "minimize":
-            guard let axWindow = await AppleScriptWindowActionSupport.resolveWindow(windowID: windowID, pid: pid),
-                  SpaceHelper.performWindowAction(.minimize, on: axWindow) else {
-                return
+            var axWindow = SpaceHelper.getAXWindow(id: windowID, pid: pid)
+            if axWindow == nil {
+                if let app = NSRunningApplication(processIdentifier: pid) {
+                    app.activate(options: .activateIgnoringOtherApps)
+                    try? await Task.sleep(nanoseconds: 400_000_000)
+                    axWindow = SpaceHelper.getAXWindow(id: windowID, pid: pid)
+                }
+            }
+            if let targetAXWindow = axWindow {
+                AXUIElementSetAttributeValue(targetAXWindow, kAXMinimizedAttribute as CFString, true as CFTypeRef)
             }
         case "hide":
             if let app = NSRunningApplication(processIdentifier: pid) {
                 app.hide()
             }
         case "enterFullScreen":
-            guard let axWindow = await AppleScriptWindowActionSupport.resolveWindow(windowID: windowID, pid: pid),
-                  SpaceHelper.performWindowAction(.enterFullScreen, on: axWindow),
-                  await AppleScriptWindowActionSupport.wait(1_000_000_000, operation: "enter fullscreen") else {
-                return
+            var axWindow = SpaceHelper.getAXWindow(id: windowID, pid: pid)
+            if axWindow == nil {
+                if let app = NSRunningApplication(processIdentifier: pid) {
+                    app.activate(options: .activateIgnoringOtherApps)
+                    try? await Task.sleep(nanoseconds: 400_000_000)
+                    axWindow = SpaceHelper.getAXWindow(id: windowID, pid: pid)
+                }
+            }
+            if let targetAXWindow = axWindow {
+                AXUIElementSetAttributeValue(targetAXWindow, "AXFullScreen" as CFString, true as CFTypeRef)
+                try? await Task.sleep(nanoseconds: 1_000_000_000)
             }
         case "exitFullScreen":
-            guard let axWindow = await AppleScriptWindowActionSupport.resolveWindow(windowID: windowID, pid: pid),
-                  SpaceHelper.performWindowAction(.exitFullScreen, on: axWindow),
-                  await AppleScriptWindowActionSupport.wait(1_000_000_000, operation: "exit fullscreen") else {
-                return
+            var axWindow = SpaceHelper.getAXWindow(id: windowID, pid: pid)
+            if axWindow == nil {
+                if let app = NSRunningApplication(processIdentifier: pid) {
+                    app.activate(options: .activateIgnoringOtherApps)
+                    try? await Task.sleep(nanoseconds: 400_000_000)
+                    axWindow = SpaceHelper.getAXWindow(id: windowID, pid: pid)
+                }
+            }
+            if let targetAXWindow = axWindow {
+                AXUIElementSetAttributeValue(targetAXWindow, "AXFullScreen" as CFString, false as CFTypeRef)
+                try? await Task.sleep(nanoseconds: 1_000_000_000)
             }
         case "quit":
             if let app = NSRunningApplication(processIdentifier: pid) {
@@ -266,13 +269,20 @@ class ExecuteWindowActionCommand: NSScriptCommand {
             if let app = NSRunningApplication(processIdentifier: pid) {
                 app.unhide()
             }
-            guard let axWindow = await AppleScriptWindowActionSupport.resolveWindow(windowID: windowID, pid: pid),
-                  SpaceHelper.performWindowAction(.restore, on: axWindow) else {
-                return
+            var axWindow = SpaceHelper.getAXWindow(id: windowID, pid: pid)
+            if axWindow == nil {
+                if let app = NSRunningApplication(processIdentifier: pid) {
+                    app.activate(options: .activateIgnoringOtherApps)
+                    try? await Task.sleep(nanoseconds: 400_000_000)
+                    axWindow = SpaceHelper.getAXWindow(id: windowID, pid: pid)
+                }
+            }
+            if let targetAXWindow = axWindow {
+                AXUIElementSetAttributeValue(targetAXWindow, kAXMinimizedAttribute as CFString, false as CFTypeRef)
             }
         default:
             break
         }
-        _ = await AppleScriptWindowActionSupport.wait(150_000_000, operation: "settle the window action")
+        try? await Task.sleep(nanoseconds: 150_000_000) // 150ms settle delay
     }
 }

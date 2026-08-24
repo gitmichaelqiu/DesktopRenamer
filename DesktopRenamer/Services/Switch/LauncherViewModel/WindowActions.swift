@@ -58,15 +58,6 @@ extension LauncherViewModel {
             return false
         }
 
-        let originalSpacesByDisplay: [String: String] = Dictionary(
-            uniqueKeysWithValues: SpaceHelper.getAllDisplayUUIDs().compactMap { originalDisplayID in
-                guard let originalSpaceID = SpaceHelper.getCurrentSpaceID(for: originalDisplayID) else {
-                    return nil
-                }
-                return (originalDisplayID, originalSpaceID)
-            }
-        )
-
         guard !targetSpace.isFullscreen else {
             DiagnosticEventLog.shared.record(subsystem: "Launcher", level: "info", "movePreviouslyActiveWindow: target space is fullscreen; no move performed")
             return false
@@ -79,31 +70,12 @@ extension LauncherViewModel {
 
         Task { @MainActor in
             try? await Task.sleep(nanoseconds: 200_000_000)
-            let moved = await WindowActionCoordinator.moveWindow(
+            _ = await WindowActionCoordinator.moveWindow(
                 windowID: prevWindow.id,
                 pid: prevWindow.pid,
                 fromSpaceID: fromSpaceIDStr,
                 targetSpaceID: spaceID
             )
-
-            guard moved, manager.returnToOriginalAfterBatchMove else {
-                return
-            }
-
-            try? await Task.sleep(nanoseconds: 800_000_000)
-
-            for (originalDisplayID, originalSpaceID) in originalSpacesByDisplay {
-                guard let originalSpace = manager.spaceNameDict.first(where: {
-                    $0.id == originalSpaceID && $0.displayID == originalDisplayID
-                }) else {
-                    continue
-                }
-
-                if SpaceHelper.getCurrentSpaceID(for: originalDisplayID) != originalSpaceID {
-                    manager.switchToSpace(originalSpace, forceInstant: true)
-                    try? await Task.sleep(nanoseconds: 600_000_000)
-                }
-            }
         }
         return true
     }
@@ -145,3 +117,4 @@ extension LauncherViewModel {
         }
     }
 }
+

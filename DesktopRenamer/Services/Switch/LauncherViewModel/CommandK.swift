@@ -104,19 +104,8 @@ extension LauncherViewModel {
     }
     
     func executeActionImmediately(window: WindowEntry, actionType: BatchStagedActionType) {
-        let originalSpacesByDisplay: [String: String] = Dictionary(
-            uniqueKeysWithValues: SpaceHelper.getAllDisplayUUIDs().compactMap { displayID in
-                guard let spaceID = SpaceHelper.getCurrentSpaceID(for: displayID) else {
-                    return nil
-                }
-                return (displayID, spaceID)
-            }
-        )
-        DiagnosticEventLog.shared.record(
-            subsystem: "Launcher",
-            level: "info",
-            "executeActionImmediately: window=\(window.title) (id=\(window.id)), actionType=\(actionType.description), originalSpaces=\(originalSpacesByDisplay)"
-        )
+        let originalSpaceUUID = AppDelegate.shared.spaceManager?.currentSpaceUUID
+        DiagnosticEventLog.shared.record(subsystem: "Launcher", level: "info", "executeActionImmediately: window=\(window.title) (id=\(window.id)), actionType=\(actionType.description), originalSpaceUUID=\(originalSpaceUUID ?? "nil")")
 
         if actionType == .quit {
             removeApplicationWindowsFromList(pid: window.pid)
@@ -164,7 +153,12 @@ extension LauncherViewModel {
                     }
                 }
                 if let targetAXWindow = axWindow {
-                    SpaceHelper.closeWindow(targetAXWindow)
+                    var closeButtonRef: CFTypeRef?
+                    if AXUIElementCopyAttributeValue(targetAXWindow, kAXCloseButtonAttribute as CFString, &closeButtonRef) == .success,
+                       let closeButton = closeButtonRef,
+                       CFGetTypeID(closeButton) == AXUIElementGetTypeID() {
+                        AXUIElementPerformAction(closeButton as! AXUIElement, kAXPressAction as CFString)
+                    }
                 }
             case .minimize:
                 var axWindow = SpaceHelper.getAXWindow(id: window.id, pid: window.pid)
@@ -245,22 +239,13 @@ extension LauncherViewModel {
                 }            
             }
             
-            // Return every display to the exact spaces captured before the
-            // command. The global current-space ID is not reliable when the
-            // command temporarily switches another display.
-            if let manager = AppDelegate.shared.spaceManager,
+            // Return to original space
+            if let originalUUID = originalSpaceUUID,
+               let manager = AppDelegate.shared.spaceManager,
                manager.returnToOriginalAfterBatchMove {
-                for (displayID, originalSpaceID) in originalSpacesByDisplay {
-                    guard let originalSpace = manager.spaceNameDict.first(where: {
-                        $0.id == originalSpaceID && $0.displayID == displayID
-                    }) else {
-                        continue
-                    }
-
-                    if SpaceHelper.getCurrentSpaceID(for: displayID) != originalSpaceID {
-                        manager.switchToSpace(originalSpace, forceInstant: true)
-                        try? await Task.sleep(nanoseconds: 600_000_000)
-                    }
+                if manager.currentSpaceUUID != originalUUID,
+                   let targetSpace = manager.spaceNameDict.first(where: { $0.id == originalUUID }) {
+                    manager.switchToSpace(targetSpace, forceInstant: true)
                 }
             }
             
@@ -270,3 +255,4 @@ extension LauncherViewModel {
         }
     }
 }
+

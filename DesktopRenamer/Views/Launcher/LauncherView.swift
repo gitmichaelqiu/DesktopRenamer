@@ -360,24 +360,24 @@ struct ListAreaView: View {
                             ScrollViewReader { proxy in
                                 ScrollView {
                                     VStack(alignment: .leading, spacing: 4) {
-                                        ForEach(sections) { section in
-                                            ListSectionHeader(title: section.title, subtitle: section.subtitle, isFirst: section.id == sections.first?.id)
+                                        ForEach(0..<sections.count, id: \.self) { sIdx in
+                                            let section = sections[sIdx]
+                                            ListSectionHeader(title: section.title, subtitle: section.subtitle, isFirst: sIdx == 0)
                                             
                                             ForEach(section.items) { item in
                                                 let isSelected = !viewModel.isBottomBarFocused && viewModel.selectedRowIndex == item.index
-                                                Button {
+                                                WindowRowView(
+                                                    window: item.window,
+                                                    isSelected: isSelected,
+                                                    shortcutText: viewModel.showCommandNumbers && viewModel.commandKTargetWindow == nil && item.index < 9 ? "⌘\(item.index + 1)" : nil
+                                                )
+                                                .contentShape(Rectangle())
+                                                .onTapGesture {
                                                     viewModel.isKeyboardSelection = true
                                                     viewModel.selectedRowIndex = item.index
                                                     viewModel.executeRowAction()
-                                                } label: {
-                                                    WindowRowView(
-                                                        window: item.window,
-                                                        isSelected: isSelected,
-                                                        shortcutText: viewModel.showCommandNumbers && viewModel.commandKTargetWindow == nil && item.index < 9 ? "⌘\(item.index + 1)" : nil
-                                                    )
                                                 }
-                                                .buttonStyle(.plain)
-                                                .id(item.id)
+                                                .id(item.index)
                                             }
                                         }
                                     }
@@ -387,16 +387,12 @@ struct ListAreaView: View {
                                 .onChange(of: viewModel.selectedRowIndex) { index in
                                     if viewModel.isKeyboardSelection {
                                         withAnimation(.easeInOut(duration: 0.12)) {
-                                            if let item = sections.flatMap(\.items).first(where: { $0.index == index }) {
-                                                proxy.scrollTo(item.id, anchor: .center)
-                                            }
+                                            proxy.scrollTo(index, anchor: .center)
                                         }
                                     }
                                 }
                                 .onAppear {
-                                    if let item = sections.flatMap(\.items).first(where: { $0.index == viewModel.selectedRowIndex }) {
-                                        proxy.scrollTo(item.id, anchor: .center)
-                                    }
+                                    proxy.scrollTo(viewModel.selectedRowIndex, anchor: .center)
                                 }
                             }
                         }
@@ -409,34 +405,33 @@ struct ListAreaView: View {
                             ScrollViewReader { proxy in
                                 ScrollView {
                                     VStack(alignment: .leading, spacing: 4) {
-                                        ForEach(sections) { section in
-                                            ListSectionHeader(title: section.title, subtitle: section.subtitle, isFirst: section.id == sections.first?.id)
+                                        ForEach(0..<sections.count, id: \.self) { sIdx in
+                                            let section = sections[sIdx]
+                                            ListSectionHeader(title: section.title, subtitle: section.subtitle, isFirst: sIdx == 0)
                                             
                                             ForEach(section.items) { item in
                                                 let isSelected = !viewModel.isBottomBarFocused && viewModel.selectedRowIndex == item.index
                                                 
                                                 switch item {
                                                 case .staged(let move, _):
-                                                    Button {
+                                                    WindowBatchRowView(window: move.window, isSelected: isSelected, isStaged: true, stagedActionText: move.actionType.description, shortcutText: viewModel.showCommandNumbers && viewModel.commandKTargetWindow == nil && item.index < 9 ? "⌘\(item.index + 1)" : nil)
+                                                        .contentShape(Rectangle())
+                                                        .onTapGesture {
                                                             viewModel.isKeyboardSelection = true
                                                             viewModel.selectedRowIndex = item.index
                                                             viewModel.executeRowAction()
-                                                    } label: {
-                                                        WindowBatchRowView(window: move.window, isSelected: isSelected, isStaged: true, stagedActionText: move.actionType.description, shortcutText: viewModel.showCommandNumbers && viewModel.commandKTargetWindow == nil && item.index < 9 ? "⌘\(item.index + 1)" : nil)
-                                                    }
-                                                    .buttonStyle(.plain)
-                                                    .id(item.id)
+                                                        }
+                                                        .id(item.index)
                                                         
                                                 case .unstaged(let window, _):
-                                                    Button {
+                                                    WindowBatchRowView(window: window, isSelected: isSelected, isStaged: false, stagedActionText: "", shortcutText: viewModel.showCommandNumbers && viewModel.commandKTargetWindow == nil && item.index < 9 ? "⌘\(item.index + 1)" : nil)
+                                                        .contentShape(Rectangle())
+                                                        .onTapGesture {
                                                             viewModel.isKeyboardSelection = true
                                                             viewModel.selectedRowIndex = item.index
                                                             viewModel.executeRowAction()
-                                                    } label: {
-                                                        WindowBatchRowView(window: window, isSelected: isSelected, isStaged: false, stagedActionText: "", shortcutText: viewModel.showCommandNumbers && viewModel.commandKTargetWindow == nil && item.index < 9 ? "⌘\(item.index + 1)" : nil)
-                                                    }
-                                                    .buttonStyle(.plain)
-                                                    .id(item.id)
+                                                        }
+                                                        .id(item.index)
                                                 }
                                             }
                                         }
@@ -447,17 +442,13 @@ struct ListAreaView: View {
                                 .onChange(of: viewModel.selectedRowIndex) { index in
                                     if viewModel.isKeyboardSelection {
                                         withAnimation(.easeInOut(duration: 0.12)) {
-                                            if let item = sections.flatMap(\.items).first(where: { $0.index == index }) {
-                                                proxy.scrollTo(item.id, anchor: .center)
-                                            }
+                                            proxy.scrollTo(index, anchor: .center)
                                         }
                                     }
                                 }
                                 .onAppear {
                                     DispatchQueue.main.async {
-                                        if let item = sections.flatMap(\.items).first(where: { $0.index == viewModel.selectedRowIndex }) {
-                                            proxy.scrollTo(item.id, anchor: .center)
-                                        }
+                                        proxy.scrollTo(viewModel.selectedRowIndex, anchor: .center)
                                     }
                                 }
                             }

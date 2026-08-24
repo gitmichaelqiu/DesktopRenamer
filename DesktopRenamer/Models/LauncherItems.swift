@@ -5,7 +5,6 @@ struct SpaceGroup: Identifiable, Equatable {
     let id: String
     let name: String
     let displayName: String
-    let displayID: String
     let num: Int
     let isFullscreen: Bool
     let appPath: String?
@@ -14,11 +13,10 @@ struct SpaceGroup: Identifiable, Equatable {
     let pinyinName: String
     let pinyinDisplayName: String
 
-    init(id: String, name: String, displayName: String, displayID: String = "", num: Int, isFullscreen: Bool, appPath: String? = nil) {
+    init(id: String, name: String, displayName: String, num: Int, isFullscreen: Bool, appPath: String? = nil) {
         self.id = id
         self.name = name
         self.displayName = displayName
-        self.displayID = displayID
         self.num = num
         self.isFullscreen = isFullscreen
         self.appPath = appPath
@@ -126,7 +124,7 @@ enum BatchMoveItem: Identifiable, Equatable {
 }
 
 struct BatchMoveSection: Identifiable {
-    let id: String
+    var id: String { title }
     let title: String
     let subtitle: String
     let items: [BatchMoveItem]
@@ -144,7 +142,7 @@ struct ListWindowsItem: Identifiable, Equatable {
 }
 
 struct ListWindowsSection: Identifiable {
-    let id: String
+    var id: String { title }
     let title: String
     let subtitle: String
     let items: [ListWindowsItem]

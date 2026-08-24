@@ -21,7 +21,7 @@ struct CommandKOverlayView: View {
             VStack(spacing: 0) {
                 // Header details
                 HStack(spacing: 12) {
-                    let appIcon = ApplicationIconCache.icon(forFilePath: window.appPath)
+                    let appIcon = NSWorkspace.shared.icon(forFile: window.appPath)
                     Image(nsImage: appIcon)
                         .resizable()
                         .aspectRatio(contentMode: .fit)
@@ -172,4 +172,5 @@ struct CommandKActionRowView: View {
         }
     }
 }
+
 

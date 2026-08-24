@@ -171,12 +171,11 @@ extension EnvironmentValues {
 }
 
 struct SearchableSettingItem: Identifiable, Hashable {
+    let id = UUID()
     let title: String
     let localizedTitle: String
     let tab: SettingsTab
     let keywords: [String]
-
-    var id: String { "\(tab.rawValue):\(title)" }
     
     func hash(into hasher: inout Hasher) {
         hasher.combine(title)
@@ -188,85 +187,58 @@ struct SearchableSettingItem: Identifiable, Hashable {
     }
 }
 
-enum SettingsCatalog {
-    static let items: [SearchableSettingItem] = [
-        item("Show preview labels", tab: .general),
-        item("Show active space labels", tab: .general),
-        item("Hide menubar icon", tab: .general),
-        item("Settings.General.General.LaunchAtLogin", tab: .general),
-        item("Settings.General.Updates.AutoCheckUpdate", tab: .general),
-        item("Automatically download updates", tab: .general),
-        item("Settings.General.Updates.ManualCheck", tab: .general),
-        item("Settings.General.Advanced.EnableAPI", tab: .general),
-        item("Diagnostic Report", tab: .general),
-        item("Review Splash", tab: .general),
-        item("Factory Reset", tab: .general),
-        item("Keep full-screen spaces next to source desktop", tab: .space),
-        item("Settings.Spaces.Edit.Name", tab: .space, keywords: ["rename", "name", "title", "label", "custom", "edit"]),
-        item("Settings.Spaces.Edit.Actions", tab: .space, keywords: ["reorder", "arrange", "display", "monitor", "position"]),
-        item("Show preview labels", tab: .labels),
-        item("Hide when switching spaces", tab: .labels),
-        item("Disable Liquid Glass effects", tab: .labels),
-        item("Font size", tab: .labels),
-        item("Window size", tab: .labels),
-        item("Show active space labels", tab: .labels),
-        item("Keep visible on space", tab: .labels),
-        item("Reload space labels", tab: .labels),
-        item("Switch to previous space", tab: .sswitch),
-        item("Switch to next space", tab: .sswitch),
-        item("Switch to space number", tab: .sswitch),
-        item("Move window to previous space", tab: .sswitch),
-        item("Move window to next space", tab: .sswitch),
-        item("Move window to space number", tab: .sswitch),
-        item("Move window to previous display", tab: .sswitch),
-        item("Move window to next display", tab: .sswitch),
-        item("Toggle lock for current space", tab: .sswitch),
-        item("Restore windows moved by lock", tab: .sswitch),
-        item("Enable switch gesture override", tab: .sswitch),
-        item("Gesture type", tab: .sswitch),
-        item("Switch display with", tab: .sswitch),
-        item("Move window when holding Option", tab: .sswitch),
-        item("Switch duration", tab: .sswitch),
-        item("Switch override threshold", tab: .sswitch),
-        item("Grab offset X", tab: .sswitch),
-        item("Grab offset Y", tab: .sswitch),
-        item("Exceptions", tab: .sswitch),
-        item("Drag window slightly before switching", tab: .sswitch),
-        item("Open launcher", tab: .launcher),
-        item("Automatically return to original space", tab: .launcher),
-        item("Automatically rank commands", tab: .launcher),
-        item("Settings.Launcher.Command.Actions", tab: .launcher, keywords: ["reorder", "arrange", "sequence", "position", "move", "up", "down", "rank"]),
-        item("GitHub / Support", tab: .about, keywords: ["github", "website", "developer", "contact", "support"]),
-        item("Accessibility", tab: .permissions)
-    ]
-
-    private static func item(_ title: String, tab: SettingsTab, keywords: [String] = []) -> SearchableSettingItem {
-        let localizedTitle = NSLocalizedString(title, comment: "")
-        let generatedKeywords = keywords
-            + title.lowercased().components(separatedBy: CharacterSet.alphanumerics.inverted)
-            + localizedTitle.lowercased().components(separatedBy: CharacterSet.alphanumerics.inverted)
-
-        return SearchableSettingItem(
-            title: title,
-            localizedTitle: localizedTitle,
-            tab: tab,
-            keywords: Array(Set(generatedKeywords.filter { $0.count > 1 }))
-        )
-    }
-}
-
 class SettingsNavigationState: ObservableObject {
     @Published var scrollToItemID: String? = nil
     @Published var searchText: String = ""
-    @Published var registeredItems: [SearchableSettingItem] = SettingsCatalog.items
+    @Published var registeredItems: [SearchableSettingItem] = []
+    
+    private var registeredTitlesCounts = [String: Int]()
+    
+    private func extractKeywords(from string: String) -> [String] {
+        string.lowercased()
+            .components(separatedBy: CharacterSet.alphanumerics.inverted)
+            .filter { !$0.isEmpty && $0.count > 1 }
+    }
     
     func register(title: String, tab: SettingsTab, keywords: [String] = []) {
-        // Search items are indexed statically so settings pages do not need to be
-        // instantiated off-screen just to register their labels.
+        let registrationKey = "\(title)-\(tab.rawValue)"
+        let count = registeredTitlesCounts[registrationKey] ?? 0
+        registeredTitlesCounts[registrationKey] = count + 1
+        
+        guard count == 0 else { return }
+        
+        let localizedTitle = NSLocalizedString(title, comment: "")
+        var generatedKeywords = keywords.map { $0.lowercased() }
+        
+        generatedKeywords.append(contentsOf: extractKeywords(from: localizedTitle))
+        generatedKeywords.append(contentsOf: extractKeywords(from: title))
+        
+        let uniqueKeywords = Array(Set(generatedKeywords))
+        
+        let item = SearchableSettingItem(
+            title: title,
+            localizedTitle: localizedTitle,
+            tab: tab,
+            keywords: uniqueKeywords
+        )
+        
+        DispatchQueue.main.async {
+            self.registeredItems.append(item)
+        }
     }
-
+    
     func unregister(title: String, tab: SettingsTab) {
-        // Kept as a no-op for existing SettingsRow lifecycle calls.
+        let registrationKey = "\(title)-\(tab.rawValue)"
+        let count = registeredTitlesCounts[registrationKey] ?? 0
+        
+        if count <= 1 {
+            registeredTitlesCounts[registrationKey] = nil
+            DispatchQueue.main.async {
+                self.registeredItems.removeAll { $0.title == title && $0.tab == tab }
+            }
+        } else {
+            registeredTitlesCounts[registrationKey] = count - 1
+        }
     }
 }
 

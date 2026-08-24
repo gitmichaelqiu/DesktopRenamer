@@ -133,26 +133,6 @@ extension SpaceHelper {
             return
         }
 
-        // Labels may be disabled or temporarily unavailable while their windows
-        // are being rebuilt. A fullscreen space still has an owning application,
-        // and activating it is the native fallback that brings that space forward.
-        if targetIsFullscreen,
-           let pid = getOwnerPID(for: spaceID),
-           let app = NSRunningApplication(processIdentifier: pid) {
-            DiagnosticEventLog.shared.record(
-                subsystem: "SpaceHelper",
-                level: "info",
-                "Activating fullscreen owner as label-window fallback for space " + spaceID + "."
-            )
-            app.activate(options: .activateIgnoringOtherApps)
-            return
-        }
-
-        DiagnosticEventLog.shared.record(
-            subsystem: "SpaceHelper",
-            level: "error",
-            "Unable to switch to space " + spaceID + ": no shortcut, gesture, or activation target succeeded."
-        )
 
     }
 
@@ -211,3 +191,4 @@ extension SpaceHelper {
         return true
     }
 }
+

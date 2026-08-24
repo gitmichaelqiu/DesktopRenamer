@@ -12,15 +12,8 @@ extension LauncherViewModel {
         incrementCommandFrequency(LauncherCommandType.batchMoveWindows.rawValue)
         
         let actions = Array(stagedMoves.values)
-        let originalSpaceByDisplay: [String: String] = Dictionary(
-            uniqueKeysWithValues: SpaceHelper.getAllDisplayUUIDs().compactMap { displayID in
-                guard let spaceID = SpaceHelper.getCurrentSpaceID(for: displayID) else {
-                    return nil
-                }
-                return (displayID, spaceID)
-            }
-        )
-        DiagnosticEventLog.shared.record(subsystem: "Launcher", level: "info", "executeBatchMove: Starting batch move. Actions count=\(actions.count), originalSpaces=\(originalSpaceByDisplay)")
+        let originalSpaceUUID = AppDelegate.shared.spaceManager?.currentSpaceUUID
+        DiagnosticEventLog.shared.record(subsystem: "Launcher", level: "info", "executeBatchMove: Starting batch move. Actions count=\(actions.count), originalSpaceUUID=\(originalSpaceUUID ?? "nil")")
         
         batchExecutionTask = Task { [weak self] in
             guard let self else { return }
@@ -110,7 +103,7 @@ extension LauncherViewModel {
                                 }
                             }
                             if let targetAXWindow = axWindow {
-                                _ = SpaceHelper.performWindowAction(.exitFullScreen, on: targetAXWindow)
+                                AXUIElementSetAttributeValue(targetAXWindow, "AXFullScreen" as CFString, false as CFTypeRef)
                                 try await Task.sleep(nanoseconds: 1_200_000_000) // Wait for exit-fullscreen animation to settle
                             }
                         }
@@ -164,7 +157,7 @@ extension LauncherViewModel {
                         }
                     }
                     if let targetAXWindow = axWindow {
-                        _ = SpaceHelper.performWindowAction(.exitFullScreen, on: targetAXWindow)
+                        AXUIElementSetAttributeValue(targetAXWindow, "AXFullScreen" as CFString, false as CFTypeRef)
                         try await Task.sleep(nanoseconds: 1_200_000_000) // Wait for exit-fullscreen animation to settle
                     }
                 }
@@ -180,7 +173,14 @@ extension LauncherViewModel {
                         }
                     }
                     if let targetAXWindow = axWindow {
-                        _ = SpaceHelper.performWindowAction(.close, on: targetAXWindow)
+                        var closeButtonRef: CFTypeRef?
+                        if AXUIElementCopyAttributeValue(targetAXWindow, kAXCloseButtonAttribute as CFString, &closeButtonRef) == .success,
+                           let closeButton = closeButtonRef,
+                           CFGetTypeID(closeButton) == AXUIElementGetTypeID() {
+                            // The Core Foundation type check guarantees this bridge.
+                            let closeButtonElement = closeButton as! AXUIElement
+                            AXUIElementPerformAction(closeButtonElement, kAXPressAction as CFString)
+                        }
                     }
                 case .minimize:
                     var axWindow = SpaceHelper.getAXWindow(id: action.window.id, pid: action.window.pid)
@@ -192,7 +192,7 @@ extension LauncherViewModel {
                         }
                     }
                     if let targetAXWindow = axWindow {
-                        _ = SpaceHelper.performWindowAction(.minimize, on: targetAXWindow)
+                        AXUIElementSetAttributeValue(targetAXWindow, kAXMinimizedAttribute as CFString, true as CFTypeRef)
                     }
                 case .hide:
                     if let app = NSRunningApplication(processIdentifier: action.window.pid) {
@@ -208,7 +208,7 @@ extension LauncherViewModel {
                         }
                     }
                     if let targetAXWindow = axWindow {
-                        _ = SpaceHelper.performWindowAction(.enterFullScreen, on: targetAXWindow)
+                        AXUIElementSetAttributeValue(targetAXWindow, "AXFullScreen" as CFString, true as CFTypeRef)
                         try await Task.sleep(nanoseconds: 1_000_000_000)
                     }
                 case .exitFullScreen:
@@ -221,7 +221,7 @@ extension LauncherViewModel {
                         }
                     }
                     if let targetAXWindow = axWindow {
-                        _ = SpaceHelper.performWindowAction(.exitFullScreen, on: targetAXWindow)
+                        AXUIElementSetAttributeValue(targetAXWindow, "AXFullScreen" as CFString, false as CFTypeRef)
                         try await Task.sleep(nanoseconds: 1_000_000_000)
                     }
                 case .quit:
@@ -241,7 +241,7 @@ extension LauncherViewModel {
                         }
                     }
                     if let targetAXWindow = axWindow {
-                        _ = SpaceHelper.performWindowAction(.restore, on: targetAXWindow)
+                        AXUIElementSetAttributeValue(targetAXWindow, kAXMinimizedAttribute as CFString, false as CFTypeRef)
                     }
                 default:
                     break
@@ -252,17 +252,9 @@ extension LauncherViewModel {
             DiagnosticEventLog.shared.record(subsystem: "Launcher", level: "info", "executeBatchMove: Finished batch move execution.")
             if let manager = AppDelegate.shared.spaceManager {
                 if manager.returnToOriginalAfterBatchMove {
-                    for (displayID, originalSpaceID) in originalSpaceByDisplay {
-                        guard let originalSpace = manager.spaceNameDict.first(where: {
-                            $0.id == originalSpaceID && $0.displayID == displayID
-                        }) else {
-                            continue
-                        }
-
-                        if SpaceHelper.getCurrentSpaceID(for: displayID) != originalSpaceID {
-                            manager.switchToSpace(originalSpace, forceInstant: true)
-                            try await Task.sleep(nanoseconds: 600_000_000)
-                        }
+                    if let originalUUID = originalSpaceUUID,
+                       let targetSpace = manager.spaceNameDict.first(where: { $0.id == originalUUID }) {
+                        manager.switchToSpace(targetSpace, forceInstant: true)
                     }
                 } else if let lastMoveAction = spaceMoveActions.last {
                     let lastTargetSpaceID: String

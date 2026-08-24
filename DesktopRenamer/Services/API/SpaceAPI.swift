@@ -251,16 +251,7 @@ final class SpaceAPI {
         case "getWindows":
             let spaces = manager.spaceNameDict
             let names = Dictionary(uniqueKeysWithValues: spaces.map { ($0.id, manager.getSpaceName($0.id)) })
-            return await fetchWindowsForAPI(spaces: spaces, names: names)
-        case "getWindowsSnapshot":
-            let spaces = manager.spaceNameDict
-            let names = Dictionary(uniqueKeysWithValues: spaces.map { ($0.id, manager.getSpaceName($0.id)) })
-            let snapshots = await fetchWindowSnapshots(spaces: spaces, names: names)
-            guard let data = try? JSONEncoder().encode(snapshots),
-                  let result = String(data: data, encoding: .utf8) else {
-                throw SpaceAPIError.operationFailed("Could not encode the window snapshot.")
-            }
-            return result
+            return SpaceHelper.getWindowsForAllSpaces(spaces: spaces, spaceNames: names)
         case "focusWindow":
             guard let windowID = Int(arguments["windowID"] ?? ""), let pid = Int32(arguments["pid"] ?? "") else {
                 throw SpaceAPIError.invalidArgument("Missing window ID or process ID.")
@@ -336,58 +327,28 @@ final class SpaceAPI {
 
         switch action {
         case "close":
-            guard SpaceHelper.performWindowAction(.close, on: axWindow) else {
+            var closeButtonRef: CFTypeRef?
+            guard AXUIElementCopyAttributeValue(axWindow, kAXCloseButtonAttribute as CFString, &closeButtonRef) == .success,
+                  let closeButton = closeButtonRef,
+                  CFGetTypeID(closeButton) == AXUIElementGetTypeID() else {
                 throw SpaceAPIError.operationFailed("Window does not expose a close action.")
             }
+            AXUIElementPerformAction(closeButton as! AXUIElement, kAXPressAction as CFString)
         case "minimize", "restore":
-            let accessibilityAction: SpaceHelper.WindowAccessibilityAction =
-                action == "minimize" ? .minimize : .restore
-            guard SpaceHelper.performWindowAction(accessibilityAction, on: axWindow) else {
-                throw SpaceAPIError.operationFailed("Window visibility action failed.")
-            }
+            AXUIElementSetAttributeValue(
+                axWindow,
+                kAXMinimizedAttribute as CFString,
+                (action == "minimize") as CFTypeRef
+            )
         case "enterFullScreen", "exitFullScreen":
-            let accessibilityAction: SpaceHelper.WindowAccessibilityAction =
-                action == "enterFullScreen" ? .enterFullScreen : .exitFullScreen
-            guard SpaceHelper.performWindowAction(accessibilityAction, on: axWindow) else {
-                throw SpaceAPIError.operationFailed("Window full-screen action failed.")
-            }
+            AXUIElementSetAttributeValue(
+                axWindow,
+                "AXFullScreen" as CFString,
+                (action == "enterFullScreen") as CFTypeRef
+            )
             try await Task.sleep(nanoseconds: 1_000_000_000)
         default:
             throw SpaceAPIError.invalidArgument("Unsupported window action: \(action)")
-        }
-    }
-
-    private func fetchWindowsForAPI(spaces: [DesktopSpace], names: [String: String]) async -> String {
-        let context = SpaceHelper.makeWindowEnumerationContext()
-        return await withCheckedContinuation { continuation in
-            DispatchQueue.global(qos: .userInitiated).async {
-                let result = SpaceHelper.getWindowSnapshots(
-                    spaces: spaces,
-                    spaceNames: names,
-                    context: context
-                ).map { space in
-                    var output = ">\(space.id)~\(space.name)~\(space.displayName)~\(space.num)~\(space.isFullscreen ? "1" : "0")~\(space.appPath ?? "")\n"
-                    for window in space.windows {
-                        output += "  \(window.id)|\(window.pid)|\(window.ownerName)|\(window.appPath)|\(window.title)|\(window.isMinimized ? "1" : "0")|\(window.isHidden ? "1" : "0")\n"
-                    }
-                    return output
-                }.joined()
-                continuation.resume(returning: result)
-            }
-        }
-    }
-
-    private func fetchWindowSnapshots(spaces: [DesktopSpace], names: [String: String]) async -> [SpaceWindowSnapshot] {
-        let context = SpaceHelper.makeWindowEnumerationContext()
-        return await withCheckedContinuation { continuation in
-            DispatchQueue.global(qos: .userInitiated).async {
-                let result = SpaceHelper.getWindowSnapshots(
-                    spaces: spaces,
-                    spaceNames: names,
-                    context: context
-                )
-                continuation.resume(returning: result)
-            }
         }
     }
 

@@ -32,16 +32,7 @@ extension SpaceLabelManager {
     func updateWindows() {
         let windows = Array(createdWindows.values)
         for window in windows {
-            let isEnabled = window.isActiveMode ? showActiveLabels : showPreviewLabels
-            if isEnabled {
-                window.refreshAppearance()
-            } else {
-                // A setting toggle must hide the already-ordered window too.
-                // Refreshing its appearance alone can leave the NSWindow in
-                // front while an in-flight visibility animation is active.
-                window.hideImmediately()
-                window.orderOut(nil)
-            }
+            window.refreshAppearance()
         }
     }
 
@@ -127,12 +118,9 @@ extension SpaceLabelManager {
 
         // Reordering does not change currentSpaceUUID, so the normal space-change
         // observer cannot restore preview labels hidden during the operation.
-        delayedRearrangementRestoreWorkItem?.cancel()
-        let workItem = DispatchWorkItem { [weak self] in
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) { [weak self] in
             self?.updateAllWindowModes()
         }
-        delayedRearrangementRestoreWorkItem = workItem
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.6, execute: workItem)
     }
 
     func syncWindowsWithDict(updateModes: Bool = true) {
@@ -161,8 +149,6 @@ extension SpaceLabelManager {
         let redundantIDs = createdWindows.keys.filter { !validUUIDs.contains($0) }
 
         for id in redundantIDs {
-            labelUpdateTasks[id]?.cancel()
-            labelUpdateTasks.removeValue(forKey: id)
             if let window = createdWindows[id] {
                 window.close()
             }
@@ -204,7 +190,7 @@ extension SpaceLabelManager {
 
         var finalSize = NSSize(width: maxWidth + paddingH, height: maxHeight + paddingV)
 
-        if let screen = NSScreen.main {
+        if let screen = NSScreen.screens.first {
             finalSize.width = min(finalSize.width, screen.frame.width * 0.95)
             finalSize.height = min(finalSize.height, screen.frame.height * 0.9)
         }
@@ -269,19 +255,15 @@ extension SpaceLabelManager {
             return
         }
 
-        labelUpdateTasks[spaceId]?.cancel()
-        labelUpdateTasks[spaceId] = Task { @MainActor [weak self] in
-            do {
-                // Wait for the transition animation to settle before creating the label.
-                try await Task.sleep(nanoseconds: 500_000_000)
-                guard !Task.isCancelled, let self else { return }
+        Task { @MainActor in
+            // FIX: Increase delay to 0.5s (500ms) to ensure macOS space transition (swipe animation)
+            // is fully complete before creating the window. This prevents the window from being
+            // created on the 'source' desktop instead of the 'destination' fullscreen app.
+            try? await Task.sleep(nanoseconds: 500_000_000)
 
-                guard let state = SpaceHelper.getSystemState(), state.currentUUID == spaceId else {
-                    return
-                }
+            guard let state = SpaceHelper.getSystemState() else { return }
+            if state.currentUUID == spaceId {
                 self.ensureWindow(for: spaceId, name: name, displayID: state.displayID)
-            } catch {
-                // Cancellation is expected when a newer space update supersedes this one.
             }
         }
     }
@@ -338,24 +320,12 @@ extension SpaceLabelManager {
     func resetForSystemTransition() {
         delayedRestoreWorkItem?.cancel()
         delayedRestoreWorkItem = nil
-        delayedRearrangementRestoreWorkItem?.cancel()
-        delayedRearrangementRestoreWorkItem = nil
-        labelUpdateTasks.values.forEach { $0.cancel() }
-        labelUpdateTasks.removeAll()
         removeAllWindows()
     }
 
     func removeAllWindows() {
-        delayedRearrangementRestoreWorkItem?.cancel()
-        delayedRearrangementRestoreWorkItem = nil
-        labelUpdateTasks.values.forEach { $0.cancel() }
-        labelUpdateTasks.removeAll()
         let windows = Array(createdWindows.values)
-        // Ordering out is insufficient here: AppKit can retain an NSWindow
-        // after it is removed from our dictionary, along with its CGS space
-        // assignment. Close each window so reloads cannot leave stale labels
-        // attached to fullscreen spaces that no longer exist.
-        for window in windows { window.close() }
+        for window in windows { window.orderOut(nil) }
         createdWindows.removeAll()
     }
 

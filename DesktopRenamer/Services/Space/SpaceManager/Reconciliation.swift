@@ -6,10 +6,7 @@ import WidgetKit
 extension SpaceManager {
 
     func refreshConnectedDisplays() {
-        let mainDisplayID = SpaceHelper.mainDisplayUUID()
-        self.connectedDisplayUUIDs = Set(SpaceHelper.getAllDisplayUUIDs().map {
-            SpaceReconciliationSupport.normalizedDisplayID($0, mainDisplayID: mainDisplayID)
-        })
+        self.connectedDisplayUUIDs = Set(SpaceHelper.getAllDisplayUUIDs().map { $0.uppercased() })
         // print("SpaceManager: Refreshed connected displays: \(connectedDisplayUUIDs)")
     }
     
@@ -99,14 +96,16 @@ extension SpaceManager {
                     if let cachedName = nameCache[sysSpace.id], !cachedName.isEmpty {
                         finalSpace.customName = cachedName
                     } else {
-                        if let fallbackName = SpaceReconciliationSupport.claimAvailableName(
-                            from: [indexCache[indexKey], indexCache[legacyIndexKey]],
-                            claimedNames: &claimedNames
-                        ) {
-                            finalSpace.customName = fallbackName
+                        if let fallbackName = indexCache[indexKey], !fallbackName.isEmpty {
+                            if !claimedNames.contains(fallbackName) {
+                                finalSpace.customName = fallbackName
+                            }
+                        } else if let fallbackName = indexCache[legacyIndexKey], !fallbackName.isEmpty {
+                            if !claimedNames.contains(fallbackName) {
+                                finalSpace.customName = fallbackName
+                            }
                         } else if let existing = spaceNameDict.first(where: { $0.id == sysSpace.id }), !existing.customName.isEmpty {
                             finalSpace.customName = existing.customName
-                            claimedNames.insert(existing.customName)
                             nameCache[sysSpace.id] = existing.customName
                             if indexCache[indexKey]?.isEmpty ?? true {
                                 indexCache[indexKey] = existing.customName
@@ -149,19 +148,12 @@ extension SpaceManager {
             // STABILITY GUARD: Reject partial space lists to prevent corrupting
             // saved state. Transient CGS failures can return fewer spaces,
             // which would erase user data if saved.
-            let validation = SpaceReconciliationSupport.validateSnapshot(
-                detectedSpaces: newSpaceList,
-                cachedSpaces: self.spaceNameDict,
-                connectedDisplayIDs: self.connectedDisplayUUIDs,
-                mainDisplayID: SpaceHelper.mainDisplayUUID()
-            )
-            let isInconsistentSnapshot = !validation.isValid
-
-            if !self.spaceNameDict.isEmpty && isInconsistentSnapshot {
-                print("SpaceManager: Rejecting inconsistent space list (\(newSpaceList.count) vs cached \(self.spaceNameDict.count)). Skipping update.")
-                DiagnosticEventLog.shared.record(subsystem: "SpaceManager", level: "warning", "Rejected inconsistent space snapshot: new=\(newSpaceList.count), cached=\(self.spaceNameDict.count), missingDisplay=\(validation.hasMissingSpacesOnExistingDisplay), duplicateIDs=\(validation.hasDuplicateSpaceIDs), duplicatePositions=\(validation.hasDuplicatePositions), source=\(source), wakeCooling=\(self.isInWakeCoolingPeriod)")
-                if source == "Monitor" {
-                    scheduleSpaceChangeRetry()
+            let isPartialList = !self.spaceNameDict.isEmpty && newSpaceList.count < self.spaceNameDict.count
+            if isPartialList && (self.isInWakeCoolingPeriod || newSpaceList.count <= 1) {
+                print("SpaceManager: Rejecting partial space list (\(newSpaceList.count) vs cached \(self.spaceNameDict.count)). Skipping update.")
+                DiagnosticEventLog.shared.record(subsystem: "SpaceManager", level: "warning", "Rejected partial space list: new=\(newSpaceList.count), cached=\(self.spaceNameDict.count), source=\(source), wakeCooling=\(self.isInWakeCoolingPeriod)")
+                if !cgsState.currentUUID.isEmpty {
+                    self.currentSpaceUUID = cgsState.currentUUID
                 }
                 return
             }
@@ -266,7 +258,6 @@ extension SpaceManager {
             if self.currentDisplayID != cgsState.displayID {
                 self.currentDisplayID = cgsState.displayID
             }
-            self.currentSpaceByDisplay[cgsState.displayID] = cgsState.currentUUID
             if self.currentRawSpaceUUID != cgsState.currentUUID {
                 self.currentRawSpaceUUID = cgsState.currentUUID
             }
@@ -388,11 +379,8 @@ extension SpaceManager {
             )
         }
         
-        var didChange = false
-
-        if let data = try? JSONEncoder().encode(widgetSpaces), defaults.data(forKey: "widget_spacesData") != data {
+        if let data = try? JSONEncoder().encode(widgetSpaces) {
             defaults.set(data, forKey: "widget_spacesData")
-            didChange = true
         }
         
         // Some simple fields for basic widgets to use
@@ -400,36 +388,17 @@ extension SpaceManager {
             if !space.customName.isEmpty { return space.customName }
             return space.isFullscreen ? (space.appName ?? "Fullscreen") : "\(space.num)"
         }
-        if defaults.array(forKey: "widget_allSpaces") as? [String] != allSpaceNames {
-            defaults.set(allSpaceNames, forKey: "widget_allSpaces")
-            didChange = true
-        }
+        defaults.set(allSpaceNames, forKey: "widget_allSpaces")
         
-        if defaults.string(forKey: "widget_spaceName") != name {
-            defaults.set(name, forKey: "widget_spaceName")
-            didChange = true
-        }
-        if defaults.object(forKey: "widget_spaceNum") as? Int != num {
-            defaults.set(num, forKey: "widget_spaceNum")
-            didChange = true
-        }
-        if defaults.object(forKey: "widget_isDesktop") as? Bool != isDesktop {
-            defaults.set(isDesktop, forKey: "widget_isDesktop")
-            didChange = true
-        }
-        if defaults.string(forKey: "widget_currentSpaceUUID") != currentSpaceUUID {
-            defaults.set(currentSpaceUUID, forKey: "widget_currentSpaceUUID")
-            didChange = true
-        }
+        defaults.set(name, forKey: "widget_spaceName")
+        defaults.set(num, forKey: "widget_spaceNum")
+        defaults.set(isDesktop, forKey: "widget_isDesktop")
+        defaults.set(currentSpaceUUID, forKey: "widget_currentSpaceUUID")
 
-        if didChange {
-            WidgetCenter.shared.reloadAllTimelines()
-        }
+        WidgetCenter.shared.reloadAllTimelines()
     }
     
     func prepareForTermination() {
-        widgetUpdateWorkItem?.cancel()
-        widgetUpdateWorkItem = nil
         wakeRecoveryWorkItem?.cancel()
         spaceChangeRetryWorkItem?.cancel()
         stopPeriodicSpaceLayoutCheck()

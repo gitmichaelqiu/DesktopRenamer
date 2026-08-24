@@ -10,7 +10,8 @@ extension SpaceHelper {
             return nil
         }
         
-        let mainScreenUUID = mainDisplayUUID()
+        let screenUUIDs = getAllDisplayUUIDs()
+        let mainScreenUUID = screenUUIDs.first
 
         for display in displays {
             if let rawID = display["Display Identifier"] as? String,
@@ -144,26 +145,19 @@ extension SpaceHelper {
         return nil
     }
 
-    static func getWindowDisplayID(
-        for frame: CGRect,
-        displays: [WindowEnumerationContext.Display]
-    ) -> String? {
-        let center = CGPoint(x: frame.midX, y: frame.midY)
-        return displays.first(where: { $0.frame.contains(center) })?.id
-    }
-
     static func getCurrentSpaceID(for displayID: String) -> String? {
         let conn = _CGSDefaultConnection()
         guard let displays = CGSCopyManagedDisplaySpaces(conn) as? [NSDictionary] else {
             return nil
         }
         
-        let mainScreenUUID = mainDisplayUUID()
+        let screenUUIDs = getAllDisplayUUIDs()
+        let mainScreenUUID = screenUUIDs.first
 
         for display in displays {
             if let rawID = display["Display Identifier"] as? String {
                 let currentID = normalizeDisplayID(rawID, mainUUID: mainScreenUUID)
-                if currentID == normalizeDisplayID(displayID, mainUUID: mainScreenUUID),
+                if currentID == displayID,
                    let currentDict = display["Current Space"] as? [String: Any],
                    let managedID = currentDict["ManagedSpaceID"] as? Int
                 {
@@ -176,7 +170,9 @@ extension SpaceHelper {
 
     static func isPoint(_ point: CGPoint, inside screenFrame: CGRect) -> Bool {
         guard
-            let primaryScreen = NSScreen.main
+            let primaryScreen = NSScreen.screens.first(where: {
+                $0.frame.origin.x == 0 && $0.frame.origin.y == 0
+            })
         else {
             return screenFrame.contains(point)
         }
@@ -243,7 +239,7 @@ extension SpaceHelper {
             if AXUIElementCopyAttributeValue(axElement, "AXParent" as CFString, &parentRef) == .success,
                let parentVal = parentRef,
                CFGetTypeID(parentVal) == AXUIElementGetTypeID() {
-                let parentElement = unsafeBitCast(parentVal, to: AXUIElement.self)
+                let parentElement = parentVal as! AXUIElement
                 var parentRoleRef: CFTypeRef?
                 if AXUIElementCopyAttributeValue(parentElement, kAXRoleAttribute as CFString, &parentRoleRef) == .success,
                    let parentRole = parentRoleRef as? String {

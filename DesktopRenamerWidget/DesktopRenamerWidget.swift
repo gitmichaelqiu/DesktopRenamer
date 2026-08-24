@@ -1,7 +1,6 @@
 import WidgetKit
 import SwiftUI
 import AppIntents
-import Foundation
 
 // MARK: - 1. Configuration Enum
 enum WidgetBackgroundStyle: String, AppEnum {
@@ -45,133 +44,86 @@ struct DesktopNameEntry: TimelineEntry {
 }
 
 // MARK: - 4. Async Data Fetcher (IPC without App Groups)
-@MainActor
-private final class WidgetFetchSession {
-    private let backgroundStyle: WidgetBackgroundStyle
-    private let dnc = DistributedNotificationCenter.default()
-    private var continuation: CheckedContinuation<DesktopNameEntry, Never>?
-    private var observers: [Any] = []
-    private var timeoutTask: Task<Void, Never>?
-    private var activeSpaceUUID = ""
-    private var activeSpaceName = "Desktop"
-    private var activeSpaceNum = 1
-    private var spaces: [WidgetSpace] = []
-    private var receivedActive = false
-    private var receivedList = false
-    private var isFinished = false
-
-    init(backgroundStyle: WidgetBackgroundStyle) {
-        self.backgroundStyle = backgroundStyle
-    }
-
-    func start() async -> DesktopNameEntry {
-        await withCheckedContinuation { continuation in
-            self.continuation = continuation
-            guard !Task.isCancelled else {
-                finish()
-                return
-            }
-
-            timeoutTask = Task { @MainActor [weak self] in
-                try? await Task.sleep(nanoseconds: 1_000_000_000)
-                guard let self, !self.receivedActive || !self.receivedList else { return }
-                self.finish()
-            }
-            installObservers()
-            postRequests()
-        }
-    }
-
-    func cancel() {
-        finish()
-    }
-
-    private func installObservers() {
-        let activeObserver = dnc.addObserver(
-            forName: NSNotification.Name("com.michaelqiu.DesktopRenamer.ReturnActiveSpace"),
-            object: nil,
-            queue: .main
-        ) { [weak self] notification in
-            MainActor.assumeIsolated {
-                self?.receiveActiveSpace(notification)
-            }
-        }
-
-        let listObserver = dnc.addObserver(
-            forName: NSNotification.Name("com.michaelqiu.DesktopRenamer.ReturnSpaceList"),
-            object: nil,
-            queue: .main
-        ) { [weak self] notification in
-            MainActor.assumeIsolated {
-                self?.receiveSpaceList(notification)
-            }
-        }
-        observers = [activeObserver, listObserver]
-    }
-
-    private func receiveActiveSpace(_ notification: Notification) {
-        guard let userInfo = notification.userInfo else { return }
-        activeSpaceUUID = userInfo["spaceUUID"] as? String ?? ""
-        activeSpaceName = userInfo["spaceName"] as? String ?? "Desktop"
-        activeSpaceNum = (userInfo["spaceNumber"] as? NSNumber)?.intValue ?? 1
-        receivedActive = true
-        if receivedList { finish() }
-    }
-
-    private func receiveSpaceList(_ notification: Notification) {
-        guard let userInfo = notification.userInfo,
-              let spacesList = userInfo["spaces"] as? [[String: Any]] else { return }
-        spaces = spacesList.compactMap { dictionary in
-            guard let id = dictionary["spaceUUID"] as? String,
-                  let name = dictionary["spaceName"] as? String,
-                  let num = (dictionary["spaceNumber"] as? NSNumber)?.intValue else { return nil }
-            return WidgetSpace(
-                id: id,
-                name: name,
-                num: num,
-                displayID: dictionary["displayID"] as? String ?? ""
-            )
-        }
-        receivedList = true
-        if receivedActive { finish() }
-    }
-
-    private func postRequests() {
-        dnc.postNotificationName(NSNotification.Name("com.michaelqiu.DesktopRenamer.GetActiveSpace"), object: nil, userInfo: nil, deliverImmediately: true)
-        dnc.postNotificationName(NSNotification.Name("com.michaelqiu.DesktopRenamer.GetSpaceList"), object: nil, userInfo: nil, deliverImmediately: true)
-    }
-
-    private func finish() {
-        guard !isFinished else { return }
-        isFinished = true
-        timeoutTask?.cancel()
-        observers.forEach { dnc.removeObserver($0) }
-        observers.removeAll()
-
-        let isConnected = receivedActive || receivedList
-        let entry = DesktopNameEntry(
-            date: Date(),
-            spaceName: isConnected ? activeSpaceName : "Launch App",
-            spaceNumber: activeSpaceNum,
-            isDesktop: activeSpaceUUID != "FULLSCREEN",
-            spaces: isConnected ? spaces : [WidgetSpace(id: "1", name: "Launch TopMenu", num: 1, displayID: "")],
-            currentUUID: activeSpaceUUID,
-            backgroundStyle: backgroundStyle,
-            isConnected: isConnected
-        )
-        continuation?.resume(returning: entry)
-        continuation = nil
-    }
-}
-
-final class StandaloneDataFetcher {
+class StandaloneDataFetcher {
     static func fetch(backgroundStyle: WidgetBackgroundStyle) async -> DesktopNameEntry {
-        let session = await MainActor.run { WidgetFetchSession(backgroundStyle: backgroundStyle) }
-        return await withTaskCancellationHandler(operation: {
-            await session.start()
-        }, onCancel: {
-            Task { @MainActor in session.cancel() }
-        })
+        return await withCheckedContinuation { continuation in
+            var activeSpaceUUID = ""
+            var activeSpaceName = "Desktop"
+            var activeSpaceNum = 1
+            var spaces: [WidgetSpace] = []
+            
+            var receivedActive = false
+            var receivedList = false
+            
+            let dnc = DistributedNotificationCenter.default()
+            var observers: [Any] = []
+            var isFinished = false
+            
+            // Completion handler to gather results
+            let finish = {
+                if isFinished { return }
+                isFinished = true
+                
+                for obs in observers { dnc.removeObserver(obs) }
+                
+                let isDesktop = activeSpaceUUID != "FULLSCREEN"
+                let isConnected = receivedActive || receivedList
+                
+                // If not connected, provide a placeholder state pointing to launch the app
+                let finalName = isConnected ? activeSpaceName : "Launch App"
+                let finalSpaces = isConnected ? spaces : [WidgetSpace(id: "1", name: "Launch TopMenu", num: 1, displayID: "")]
+                
+                let entry = DesktopNameEntry(
+                    date: Date(),
+                    spaceName: finalName,
+                    spaceNumber: activeSpaceNum,
+                    isDesktop: isDesktop,
+                    spaces: finalSpaces,
+                    currentUUID: activeSpaceUUID,
+                    backgroundStyle: backgroundStyle,
+                    isConnected: isConnected
+                )
+                continuation.resume(returning: entry)
+            }
+            
+            // Timeout in case the main app is completely closed or SpaceAPI is disabled
+            // 0.5s is usually plenty for local IPC, max 1.5s to not block WidgetKit indefinitely
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+                if !receivedActive || !receivedList {
+                    finish()
+                }
+            }
+            
+            // Setup Observers for SpaceAPI notifications
+            let obs1 = dnc.addObserver(forName: NSNotification.Name("com.michaelqiu.DesktopRenamer.ReturnActiveSpace"), object: nil, queue: .main) { notif in
+                guard let userInfo = notif.userInfo else { return }
+                activeSpaceUUID = userInfo["spaceUUID"] as? String ?? ""
+                activeSpaceName = userInfo["spaceName"] as? String ?? "Desktop"
+                activeSpaceNum = (userInfo["spaceNumber"] as? NSNumber)?.intValue ?? 1
+                receivedActive = true
+                if receivedList { finish() }
+            }
+            
+            let obs2 = dnc.addObserver(forName: NSNotification.Name("com.michaelqiu.DesktopRenamer.ReturnSpaceList"), object: nil, queue: .main) { notif in
+                guard let userInfo = notif.userInfo, let spacesList = userInfo["spaces"] as? [[String: Any]] else { return }
+                
+                spaces = spacesList.compactMap { dict in
+                    guard let id = dict["spaceUUID"] as? String,
+                          let name = dict["spaceName"] as? String,
+                          let num = (dict["spaceNumber"] as? NSNumber)?.intValue else { return nil }
+                    let displayID = dict["displayID"] as? String ?? ""
+                    return WidgetSpace(id: id, name: name, num: num, displayID: displayID)
+                }
+                receivedList = true
+                if receivedActive { finish() }
+            }
+            
+            observers = [obs1, obs2]
+            
+            // Broadcast the requests to the main app
+            dnc.postNotificationName(NSNotification.Name("com.michaelqiu.DesktopRenamer.GetActiveSpace"), object: nil, userInfo: nil, deliverImmediately: true)
+            dnc.postNotificationName(NSNotification.Name("com.michaelqiu.DesktopRenamer.GetSpaceList"), object: nil, userInfo: nil, deliverImmediately: true)
+        }
     }
 }
 
