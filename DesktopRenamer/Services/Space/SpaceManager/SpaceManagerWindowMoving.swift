@@ -212,6 +212,16 @@ extension SpaceManager {
     private func moveActiveWindowToDisplay(offset: Int) {
         guard let windowInfo = SpaceHelper.getActiveWindowInfo() else { return }
         let sourceDisplayID = SpaceHelper.getWindowDisplayID(for: windowInfo.frame) ?? self.currentDisplayID
+
+        let originalSpacesByDisplay: [String: String] = Dictionary(
+            uniqueKeysWithValues: SpaceHelper.getAllDisplayUUIDs().compactMap { displayID in
+                guard let spaceID = SpaceHelper.getCurrentSpaceID(for: displayID) else {
+                    return nil
+                }
+                return (displayID, spaceID)
+            }
+        )
+        let shouldReturnToOriginalSpaces = returnToOriginalAfterBatchMove
         
         let displayIDs = SpaceHelper.getAllDisplayUUIDs()
         guard displayIDs.count > 1 else { return }
@@ -234,6 +244,26 @@ extension SpaceManager {
         
         // Switch to the target space to follow the window
         self.switchToSpace(targetSpace, forceInstant: true)
+
+        guard shouldReturnToOriginalSpaces else { return }
+
+        Task { @MainActor [weak self] in
+            try? await Task.sleep(nanoseconds: 1_200_000_000)
+            guard let self else { return }
+
+            for (displayID, originalSpaceID) in originalSpacesByDisplay {
+                guard let originalSpace = self.spaceNameDict.first(where: {
+                    $0.id == originalSpaceID && $0.displayID == displayID
+                }) else {
+                    continue
+                }
+
+                if SpaceHelper.getCurrentSpaceID(for: displayID) != originalSpaceID {
+                    self.switchToSpace(originalSpace, forceInstant: true)
+                    try? await Task.sleep(nanoseconds: 600_000_000)
+                }
+            }
+        }
     }
     
     func isLastSpace(onDisplayID displayID: String? = nil) -> Bool {
