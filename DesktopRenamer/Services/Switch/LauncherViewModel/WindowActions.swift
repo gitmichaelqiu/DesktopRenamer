@@ -59,6 +59,7 @@ extension LauncherViewModel {
         }
 
         let originalSpaceID = manager.currentSpaceUUID
+        let originalDestinationSpaceID = SpaceHelper.getCurrentSpaceID(for: targetSpace.displayID)
 
         guard !targetSpace.isFullscreen else {
             DiagnosticEventLog.shared.record(subsystem: "Launcher", level: "info", "movePreviouslyActiveWindow: target space is fullscreen; no move performed")
@@ -83,6 +84,12 @@ extension LauncherViewModel {
                   manager.returnToOriginalAfterBatchMove,
                   let originalSpace = manager.spaceNameDict.first(where: { $0.id == originalSpaceID }) else {
                 return
+            }
+
+            if let originalDestinationSpaceID,
+               let originalDestinationSpace = manager.spaceNameDict.first(where: { $0.id == originalDestinationSpaceID }),
+               SpaceHelper.getCurrentSpaceID(for: originalDestinationSpace.displayID) != originalDestinationSpace.id {
+                manager.switchToSpace(originalDestinationSpace, forceInstant: true)
             }
 
             if SpaceHelper.getCurrentSpaceID(for: originalSpace.displayID) != originalSpace.id {
