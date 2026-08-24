@@ -359,7 +359,7 @@ final class SpaceAPI {
 
     private func fetchWindowsForAPI(spaces: [DesktopSpace], names: [String: String]) async -> String {
         let context = SpaceHelper.makeWindowEnumerationContext()
-        await withCheckedContinuation { continuation in
+        return await withCheckedContinuation { continuation in
             DispatchQueue.global(qos: .userInitiated).async {
                 let result = SpaceHelper.getWindowSnapshots(
                     spaces: spaces,
@@ -379,7 +379,7 @@ final class SpaceAPI {
 
     private func fetchWindowSnapshots(spaces: [DesktopSpace], names: [String: String]) async -> [SpaceWindowSnapshot] {
         let context = SpaceHelper.makeWindowEnumerationContext()
-        await withCheckedContinuation { continuation in
+        return await withCheckedContinuation { continuation in
             DispatchQueue.global(qos: .userInitiated).async {
                 let result = SpaceHelper.getWindowSnapshots(
                     spaces: spaces,

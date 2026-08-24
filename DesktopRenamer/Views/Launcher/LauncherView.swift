@@ -365,17 +365,18 @@ struct ListAreaView: View {
                                             
                                             ForEach(section.items) { item in
                                                 let isSelected = !viewModel.isBottomBarFocused && viewModel.selectedRowIndex == item.index
-                                                WindowRowView(
-                                                    window: item.window,
-                                                    isSelected: isSelected,
-                                                    shortcutText: viewModel.showCommandNumbers && viewModel.commandKTargetWindow == nil && item.index < 9 ? "⌘\(item.index + 1)" : nil
-                                                )
-                                                .contentShape(Rectangle())
-                                                .onTapGesture {
+                                                Button {
                                                     viewModel.isKeyboardSelection = true
                                                     viewModel.selectedRowIndex = item.index
                                                     viewModel.executeRowAction()
+                                                } label: {
+                                                    WindowRowView(
+                                                        window: item.window,
+                                                        isSelected: isSelected,
+                                                        shortcutText: viewModel.showCommandNumbers && viewModel.commandKTargetWindow == nil && item.index < 9 ? "⌘\(item.index + 1)" : nil
+                                                    )
                                                 }
+                                                .buttonStyle(.plain)
                                                 .id(item.id)
                                             }
                                         }
@@ -416,24 +417,26 @@ struct ListAreaView: View {
                                                 
                                                 switch item {
                                                 case .staged(let move, _):
-                                                    WindowBatchRowView(window: move.window, isSelected: isSelected, isStaged: true, stagedActionText: move.actionType.description, shortcutText: viewModel.showCommandNumbers && viewModel.commandKTargetWindow == nil && item.index < 9 ? "⌘\(item.index + 1)" : nil)
-                                                        .contentShape(Rectangle())
-                                                        .onTapGesture {
+                                                    Button {
                                                             viewModel.isKeyboardSelection = true
                                                             viewModel.selectedRowIndex = item.index
                                                             viewModel.executeRowAction()
-                                                        }
-                                                        .id(item.id)
+                                                    } label: {
+                                                        WindowBatchRowView(window: move.window, isSelected: isSelected, isStaged: true, stagedActionText: move.actionType.description, shortcutText: viewModel.showCommandNumbers && viewModel.commandKTargetWindow == nil && item.index < 9 ? "⌘\(item.index + 1)" : nil)
+                                                    }
+                                                    .buttonStyle(.plain)
+                                                    .id(item.id)
                                                         
                                                 case .unstaged(let window, _):
-                                                    WindowBatchRowView(window: window, isSelected: isSelected, isStaged: false, stagedActionText: "", shortcutText: viewModel.showCommandNumbers && viewModel.commandKTargetWindow == nil && item.index < 9 ? "⌘\(item.index + 1)" : nil)
-                                                        .contentShape(Rectangle())
-                                                        .onTapGesture {
+                                                    Button {
                                                             viewModel.isKeyboardSelection = true
                                                             viewModel.selectedRowIndex = item.index
                                                             viewModel.executeRowAction()
-                                                        }
-                                                        .id(item.id)
+                                                    } label: {
+                                                        WindowBatchRowView(window: window, isSelected: isSelected, isStaged: false, stagedActionText: "", shortcutText: viewModel.showCommandNumbers && viewModel.commandKTargetWindow == nil && item.index < 9 ? "⌘\(item.index + 1)" : nil)
+                                                    }
+                                                    .buttonStyle(.plain)
+                                                    .id(item.id)
                                                 }
                                             }
                                         }

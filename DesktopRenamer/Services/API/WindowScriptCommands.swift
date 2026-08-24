@@ -93,20 +93,26 @@ class GetWindowsCommand: NSScriptCommand {
         guard isAPIEnabled() else { return "API Disabled" }
         
         // Fetch necessary space data on the main thread.
-        let data: ([DesktopSpace], [String: String])? = runOnMain {
+        let data: ([DesktopSpace], [String: String], WindowEnumerationContext)? = runOnMain {
             guard let manager = AppDelegate.shared.spaceManager else { return nil }
             let spaces = manager.spaceNameDict
             var names: [String: String] = [:]
             for s in spaces {
                 names[s.id] = manager.getSpaceName(s.id)
             }
-            return (spaces, names)
+            return (spaces, names, SpaceHelper.makeWindowEnumerationContext())
         }
         
-        guard let (spaces, names) = data else { return "" }
+        guard let (spaces, names, context) = data else { return "" }
         
         // Perform heavy window enumeration on the background thread (NSScriptCommand defaults to background).
-        return SpaceHelper.getWindowsForAllSpaces(spaces: spaces, spaceNames: names)
+        return SpaceHelper.getWindowSnapshots(spaces: spaces, spaceNames: names, context: context).map { space in
+            var output = ">\(space.id)~\(space.name)~\(space.displayName)~\(space.num)~\(space.isFullscreen ? "1" : "0")~\(space.appPath ?? "")\n"
+            for window in space.windows {
+                output += "  \(window.id)|\(window.pid)|\(window.ownerName)|\(window.appPath)|\(window.title)|\(window.isMinimized ? "1" : "0")|\(window.isHidden ? "1" : "0")\n"
+            }
+            return output
+        }.joined()
     }
 }
 

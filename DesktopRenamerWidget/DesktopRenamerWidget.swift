@@ -92,13 +92,9 @@ private final class WidgetFetchSession {
             object: nil,
             queue: .main
         ) { [weak self] notification in
-            guard let self,
-                  let userInfo = notification.userInfo else { return }
-            self.activeSpaceUUID = userInfo["spaceUUID"] as? String ?? ""
-            self.activeSpaceName = userInfo["spaceName"] as? String ?? "Desktop"
-            self.activeSpaceNum = (userInfo["spaceNumber"] as? NSNumber)?.intValue ?? 1
-            self.receivedActive = true
-            if self.receivedList { self.finish() }
+            MainActor.assumeIsolated {
+                self?.receiveActiveSpace(notification)
+            }
         }
 
         let listObserver = dnc.addObserver(
@@ -106,24 +102,38 @@ private final class WidgetFetchSession {
             object: nil,
             queue: .main
         ) { [weak self] notification in
-            guard let self,
-                  let userInfo = notification.userInfo,
-                  let spacesList = userInfo["spaces"] as? [[String: Any]] else { return }
-            self.spaces = spacesList.compactMap { dictionary in
-                guard let id = dictionary["spaceUUID"] as? String,
-                      let name = dictionary["spaceName"] as? String,
-                      let num = (dictionary["spaceNumber"] as? NSNumber)?.intValue else { return nil }
-                return WidgetSpace(
-                    id: id,
-                    name: name,
-                    num: num,
-                    displayID: dictionary["displayID"] as? String ?? ""
-                )
+            MainActor.assumeIsolated {
+                self?.receiveSpaceList(notification)
             }
-            self.receivedList = true
-            if self.receivedActive { self.finish() }
         }
         observers = [activeObserver, listObserver]
+    }
+
+    private func receiveActiveSpace(_ notification: Notification) {
+        guard let userInfo = notification.userInfo else { return }
+        activeSpaceUUID = userInfo["spaceUUID"] as? String ?? ""
+        activeSpaceName = userInfo["spaceName"] as? String ?? "Desktop"
+        activeSpaceNum = (userInfo["spaceNumber"] as? NSNumber)?.intValue ?? 1
+        receivedActive = true
+        if receivedList { finish() }
+    }
+
+    private func receiveSpaceList(_ notification: Notification) {
+        guard let userInfo = notification.userInfo,
+              let spacesList = userInfo["spaces"] as? [[String: Any]] else { return }
+        spaces = spacesList.compactMap { dictionary in
+            guard let id = dictionary["spaceUUID"] as? String,
+                  let name = dictionary["spaceName"] as? String,
+                  let num = (dictionary["spaceNumber"] as? NSNumber)?.intValue else { return nil }
+            return WidgetSpace(
+                id: id,
+                name: name,
+                num: num,
+                displayID: dictionary["displayID"] as? String ?? ""
+            )
+        }
+        receivedList = true
+        if receivedActive { finish() }
     }
 
     private func postRequests() {

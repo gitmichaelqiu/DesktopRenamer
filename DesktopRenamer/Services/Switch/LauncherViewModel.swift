@@ -147,7 +147,9 @@ enum DesktopRearrangementDirection {
         ) { [weak self] notification in
             guard let application = notification.userInfo?[NSWorkspace.applicationUserInfoKey]
                     as? NSRunningApplication else { return }
-            self?.handleApplicationTermination(application.processIdentifier)
+            MainActor.assumeIsolated {
+                self?.handleApplicationTermination(application.processIdentifier)
+            }
         }
     }
 
