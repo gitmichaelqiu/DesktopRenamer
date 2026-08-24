@@ -58,8 +58,8 @@ extension LauncherViewModel {
             return false
         }
 
-        let originalSpaceID = manager.currentSpaceUUID
-        let originalDestinationSpaceID = SpaceHelper.getCurrentSpaceID(for: targetSpace.displayID)
+        let originalSourceSpaceID = SpaceHelper.getCurrentSpaceID(for: displayID)
+        let isCrossDisplayMove = displayID != targetSpace.displayID
 
         guard !targetSpace.isFullscreen else {
             DiagnosticEventLog.shared.record(subsystem: "Launcher", level: "info", "movePreviouslyActiveWindow: target space is fullscreen; no move performed")
@@ -84,20 +84,20 @@ extension LauncherViewModel {
                 return
             }
 
-            // Cross-display moves can finish their CGS assignment shortly
-            // after the coordinator returns. Wait for that assignment before
-            // restoring either display's original space.
+            // Cross-display moves restore both displays in the lower-level
+            // SpaceManager path. Do not issue a second return here: this
+            // launcher task may hold a stale global current-space ID and could
+            // overwrite the correct source-display restoration.
+            guard !isCrossDisplayMove else { return }
+
             try? await Task.sleep(nanoseconds: 800_000_000)
 
-            if let originalDestinationSpaceID,
-               let originalDestinationSpace = manager.spaceNameDict.first(where: { $0.id == originalDestinationSpaceID }),
-               SpaceHelper.getCurrentSpaceID(for: originalDestinationSpace.displayID) != originalDestinationSpace.id {
-                manager.switchToSpace(originalDestinationSpace, forceInstant: true)
-            }
-
-            if let originalSpace = manager.spaceNameDict.first(where: { $0.id == originalSpaceID }),
-               SpaceHelper.getCurrentSpaceID(for: originalSpace.displayID) != originalSpace.id {
-                manager.switchToSpace(originalSpace, forceInstant: true)
+            if let originalSourceSpaceID,
+               let originalSourceSpace = manager.spaceNameDict.first(where: {
+                   $0.id == originalSourceSpaceID && $0.displayID == displayID
+               }),
+               SpaceHelper.getCurrentSpaceID(for: displayID) != originalSourceSpace.id {
+                manager.switchToSpace(originalSourceSpace, forceInstant: true)
             }
         }
         return true
