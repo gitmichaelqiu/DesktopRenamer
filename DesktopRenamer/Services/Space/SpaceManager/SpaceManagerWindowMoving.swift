@@ -213,8 +213,22 @@ extension SpaceManager {
         guard let windowInfo = SpaceHelper.getActiveWindowInfo() else { return }
         let sourceDisplayID = SpaceHelper.getWindowDisplayID(for: windowInfo.frame) ?? self.currentDisplayID
 
+        let displayIDs = SpaceHelper.getAllDisplayUUIDs()
+        guard displayIDs.count > 1 else { return }
+
+        guard let currentIndex = displayIDs.firstIndex(of: sourceDisplayID) else { return }
+
+        let targetIndex = (currentIndex + offset + displayIDs.count) % displayIDs.count
+        let targetDisplayID = displayIDs[targetIndex]
+
+        // Find the current space on the target display
+        guard let targetSpaceIDStr = SpaceHelper.getCurrentSpaceID(for: targetDisplayID),
+              let targetSpace = spaceNameDict.first(where: { $0.id == targetSpaceIDStr }) else { return }
+
+        displayMoveRestorationTask?.cancel()
+
         let originalSpacesByDisplay: [String: String] = Dictionary(
-            uniqueKeysWithValues: SpaceHelper.getAllDisplayUUIDs().compactMap { displayID in
+            uniqueKeysWithValues: displayIDs.compactMap { displayID in
                 guard let spaceID = SpaceHelper.getCurrentSpaceID(for: displayID) else {
                     return nil
                 }
@@ -222,19 +236,7 @@ extension SpaceManager {
             }
         )
         let shouldReturnToOriginalSpaces = returnToOriginalAfterBatchMove
-        
-        let displayIDs = SpaceHelper.getAllDisplayUUIDs()
-        guard displayIDs.count > 1 else { return }
-        
-        guard let currentIndex = displayIDs.firstIndex(of: sourceDisplayID) else { return }
-        
-        let targetIndex = (currentIndex + offset + displayIDs.count) % displayIDs.count
-        let targetDisplayID = displayIDs[targetIndex]
-        
-        // Find the current space on the target display
-        guard let targetSpaceIDStr = SpaceHelper.getCurrentSpaceID(for: targetDisplayID),
-              let targetSpace = spaceNameDict.first(where: { $0.id == targetSpaceIDStr }) else { return }
-        
+
         // Perform move using the robust cross-monitor logic
         let fromSpaceID = Int(SpaceHelper.getCurrentSpaceID(for: sourceDisplayID) ?? "0") ?? 0
         let targetSpaceID = Int(targetSpaceIDStr) ?? 0
@@ -247,11 +249,20 @@ extension SpaceManager {
 
         guard shouldReturnToOriginalSpaces else { return }
 
-        Task { @MainActor [weak self] in
-            try? await Task.sleep(nanoseconds: 1_200_000_000)
+        displayMoveRestorationTask = Task { @MainActor [weak self] in
+            defer { self?.displayMoveRestorationTask = nil }
+
+            do {
+                try await Task.sleep(nanoseconds: 1_200_000_000)
+            } catch {
+                return
+            }
+
             guard let self else { return }
 
             for (displayID, originalSpaceID) in originalSpacesByDisplay {
+                guard !Task.isCancelled else { return }
+
                 guard let originalSpace = self.spaceNameDict.first(where: {
                     $0.id == originalSpaceID && $0.displayID == displayID
                 }) else {
@@ -260,7 +271,11 @@ extension SpaceManager {
 
                 if SpaceHelper.getCurrentSpaceID(for: displayID) != originalSpaceID {
                     self.switchToSpace(originalSpace, forceInstant: true)
-                    try? await Task.sleep(nanoseconds: 600_000_000)
+                    do {
+                        try await Task.sleep(nanoseconds: 600_000_000)
+                    } catch {
+                        return
+                    }
                 }
             }
         }
