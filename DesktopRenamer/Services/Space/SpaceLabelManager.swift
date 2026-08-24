@@ -162,7 +162,5 @@ class SpaceLabelManager: ObservableObject {
         delayedRearrangementRestoreWorkItem?.cancel()
         labelUpdateTasks.values.forEach { $0.cancel() }
         NotificationCenter.default.removeObserver(self)
-        let windows = createdWindows.values
-        for window in windows { window.orderOut(nil) }
     }
 }

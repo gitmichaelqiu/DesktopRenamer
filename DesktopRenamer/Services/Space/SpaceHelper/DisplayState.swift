@@ -144,6 +144,14 @@ extension SpaceHelper {
         return nil
     }
 
+    static func getWindowDisplayID(
+        for frame: CGRect,
+        displays: [WindowEnumerationContext.Display]
+    ) -> String? {
+        let center = CGPoint(x: frame.midX, y: frame.midY)
+        return displays.first(where: { $0.frame.contains(center) })?.id
+    }
+
     static func getCurrentSpaceID(for displayID: String) -> String? {
         let conn = _CGSDefaultConnection()
         guard let displays = CGSCopyManagedDisplaySpaces(conn) as? [NSDictionary] else {

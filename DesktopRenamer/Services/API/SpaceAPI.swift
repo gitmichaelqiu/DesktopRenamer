@@ -358,18 +358,34 @@ final class SpaceAPI {
     }
 
     private func fetchWindowsForAPI(spaces: [DesktopSpace], names: [String: String]) async -> String {
+        let context = SpaceHelper.makeWindowEnumerationContext()
         await withCheckedContinuation { continuation in
             DispatchQueue.global(qos: .userInitiated).async {
-                let result = SpaceHelper.getWindowsForAllSpaces(spaces: spaces, spaceNames: names)
+                let result = SpaceHelper.getWindowSnapshots(
+                    spaces: spaces,
+                    spaceNames: names,
+                    context: context
+                ).map { space in
+                    var output = ">\(space.id)~\(space.name)~\(space.displayName)~\(space.num)~\(space.isFullscreen ? "1" : "0")~\(space.appPath ?? "")\n"
+                    for window in space.windows {
+                        output += "  \(window.id)|\(window.pid)|\(window.ownerName)|\(window.appPath)|\(window.title)|\(window.isMinimized ? "1" : "0")|\(window.isHidden ? "1" : "0")\n"
+                    }
+                    return output
+                }.joined()
                 continuation.resume(returning: result)
             }
         }
     }
 
     private func fetchWindowSnapshots(spaces: [DesktopSpace], names: [String: String]) async -> [SpaceWindowSnapshot] {
+        let context = SpaceHelper.makeWindowEnumerationContext()
         await withCheckedContinuation { continuation in
             DispatchQueue.global(qos: .userInitiated).async {
-                let result = SpaceHelper.getWindowSnapshots(spaces: spaces, spaceNames: names)
+                let result = SpaceHelper.getWindowSnapshots(
+                    spaces: spaces,
+                    spaceNames: names,
+                    context: context
+                )
                 continuation.resume(returning: result)
             }
         }

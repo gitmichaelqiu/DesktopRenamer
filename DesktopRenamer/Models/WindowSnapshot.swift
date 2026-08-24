@@ -10,6 +10,22 @@ struct WindowSnapshot: Codable, Sendable {
     let isHidden: Bool
 }
 
+struct WindowEnumerationContext: Sendable {
+    struct Display: Sendable {
+        let id: String
+        let name: String
+        let frame: CGRect
+    }
+
+    struct Application: Sendable {
+        let path: String
+        let isHidden: Bool
+    }
+
+    let displays: [Display]
+    let applications: [Int32: Application]
+}
+
 struct SpaceWindowSnapshot: Codable, Sendable {
     let id: String
     let name: String

@@ -105,11 +105,18 @@ extension LauncherViewModel {
             return
         }
         
-        // Query windows in background
+        let enumerationContext = SpaceHelper.makeWindowEnumerationContext()
+
+        // Query CGS and Accessibility windows in background. AppKit metadata
+        // was captured above on the main actor and is immutable from here on.
         DispatchQueue.global(qos: .userInitiated).async { [weak self] in
             guard let self = self else { return }
             
-            let snapshots = SpaceHelper.getWindowSnapshots(spaces: spaces, spaceNames: names)
+            let snapshots = SpaceHelper.getWindowSnapshots(
+                spaces: spaces,
+                spaceNames: names,
+                context: enumerationContext
+            )
             let parsed = Self.makeWindowData(from: snapshots)
             
             DispatchQueue.main.async {

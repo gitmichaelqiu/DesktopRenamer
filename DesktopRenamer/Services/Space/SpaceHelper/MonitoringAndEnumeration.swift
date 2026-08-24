@@ -306,34 +306,54 @@ extension SpaceHelper {
         return true
     }
 
+    @MainActor
+    static func makeWindowEnumerationContext() -> WindowEnumerationContext {
+        let displays = NSScreen.screens.compactMap { screen -> WindowEnumerationContext.Display? in
+            guard let id = screen.deviceDescription[NSDeviceDescriptionKey("NSScreenNumber")] as? CGDirectDisplayID,
+                  let uuidRef = CGDisplayCreateUUIDFromDisplayID(id) else { return nil }
+            let uuid = uuidRef.takeRetainedValue()
+            return WindowEnumerationContext.Display(
+                id: (CFUUIDCreateString(nil, uuid) as String).uppercased(),
+                name: screen.localizedName,
+                frame: CGDisplayBounds(id)
+            )
+        }
+
+        let applications = NSWorkspace.shared.runningApplications.reduce(into: [Int32: WindowEnumerationContext.Application]()) { result, app in
+            guard app.activationPolicy == .regular, let path = app.bundleURL?.path else { return }
+            result[app.processIdentifier] = WindowEnumerationContext.Application(path: path, isHidden: app.isHidden)
+        }
+        return WindowEnumerationContext(displays: displays, applications: applications)
+    }
+
+    @MainActor
     static func getWindowSnapshots(spaces: [DesktopSpace], spaceNames: [String: String]) -> [SpaceWindowSnapshot] {
+        getWindowSnapshots(
+            spaces: spaces,
+            spaceNames: spaceNames,
+            context: makeWindowEnumerationContext()
+        )
+    }
+
+    static func getWindowSnapshots(
+        spaces: [DesktopSpace],
+        spaceNames: [String: String],
+        context: WindowEnumerationContext
+    ) -> [SpaceWindowSnapshot] {
         let conn = _CGSDefaultConnection()
         let ourPID = ProcessInfo.processInfo.processIdentifier
 
-        // Pre-calculate screen mapping for efficiency as recommended by reviewer.
-        var screenMap: [String: String] = [:]
-        for screen in NSScreen.screens {
-            if let id = screen.deviceDescription[NSDeviceDescriptionKey("NSScreenNumber")] as? CGDirectDisplayID,
-               let uuidRef = CGDisplayCreateUUIDFromDisplayID(id) {
-                let uuid = uuidRef.takeRetainedValue()
-                let uuidStr = (CFUUIDCreateString(nil, uuid) as String).uppercased()
-                screenMap[uuidStr] = screen.localizedName
-            }
-        }
+        let screenMap = Dictionary(uniqueKeysWithValues: context.displays.map { ($0.id, $0.name) })
 
         // Build PID → app bundle path cache from running applications.
         // Only include apps with .regular activation policy (shown in Dock).
         // This excludes background agents like Ollama, menu bar-only apps, etc.
-        var pidToAppPath: [Int32: String] = [:]
         var axWindowIDs = Set<Int>()
         var minimizedAXWindowIDs = Set<Int>()
-        for app in NSWorkspace.shared.runningApplications {
-            if app.activationPolicy == .regular, let path = app.bundleURL?.path {
-                pidToAppPath[app.processIdentifier] = path
-
+        for (pid, app) in context.applications {
                 // Get all valid window IDs directly from the app's Accessibility hierarchy.
                 // This definitively eliminates closed/ghost windows that CGWindowList retains.
-                let appElement = AXUIElementCreateApplication(app.processIdentifier)
+                let appElement = AXUIElementCreateApplication(pid)
 
                 let extractWID = { (element: AXUIElement) in
                     var cgWID: CGWindowID = 0
@@ -357,14 +377,13 @@ extension SpaceHelper {
                 }
 
                 // 2. Check AXChildren for non-standard apps (e.g., Preview)
-                if app.bundleIdentifier == "com.apple.Preview" {
+                if app.path.hasSuffix("/Preview.app") {
                     var childrenRef: CFTypeRef?
                     if AXUIElementCopyAttributeValue(appElement, kAXChildrenAttribute as CFString, &childrenRef) == .success,
                        let axChildren = childrenRef as? [AXUIElement] {
                         axChildren.forEach(extractWID)
                     }
                 }
-            }
         }
 
         // Get ALL windows, not just on-screen, to include off-screen spaces.
@@ -379,7 +398,7 @@ extension SpaceHelper {
             guard isValidWindow(window, ourPID: ourPID),
                   let wid = window[kCGWindowNumber as String] as? Int,
                   let pid = window[kCGWindowOwnerPID as String] as? Int,
-                  pidToAppPath[Int32(pid)] != nil  // skip windows without bundle path
+                  context.applications[Int32(pid)] != nil  // skip windows without bundle path
             else { continue }
             validWindows.append((wid: wid, dict: window))
         }
@@ -424,7 +443,7 @@ extension SpaceHelper {
         if windowsBySpaceID.isEmpty {
             // Build current-space-per-display map and fullscreen PID→space map.
             guard let displays = CGSCopyManagedDisplaySpaces(conn) as? [NSDictionary] else { return [] }
-            let mainUUID = mainDisplayUUID()
+            let mainUUID = context.displays.first(where: { $0.frame.origin == .zero })?.id
             var currentSpaceForDisplay: [String: String] = [:]
             var fullscreenPIDToSpace: [Int32: String] = [:]
 
@@ -460,14 +479,14 @@ extension SpaceHelper {
                       let wid = window[kCGWindowNumber as String] as? Int,
                       axWindowIDs.contains(wid),
                       let pid = window[kCGWindowOwnerPID as String] as? Int,
-                      pidToAppPath[Int32(pid)] != nil,
+                      context.applications[Int32(pid)] != nil,
                       let bounds = window[kCGWindowBounds as String] as? [String: Any],
                       let x = bounds["X"] as? CGFloat, let y = bounds["Y"] as? CGFloat,
                       let w = bounds["Width"] as? CGFloat, let h = bounds["Height"] as? CGFloat
                 else { continue }
 
                 let frame = CGRect(x: x, y: y, width: w, height: h)
-                guard let displayID = getWindowDisplayID(for: frame) else { continue }
+                guard let displayID = getWindowDisplayID(for: frame, displays: context.displays) else { continue }
 
                 let spaceID: String
                 if let fsSpace = fullscreenPIDToSpace[Int32(pid)] {
@@ -496,13 +515,13 @@ extension SpaceHelper {
             let windowSnapshots = (windowsBySpaceID[space.id] ?? []).compactMap { window -> WindowSnapshot? in
                 guard let wid = window[kCGWindowNumber as String] as? Int,
                       let pid = window[kCGWindowOwnerPID as String] as? Int,
-                      let appPath = pidToAppPath[Int32(pid)]
+                      let appPath = context.applications[Int32(pid)]?.path
                 else { return nil }
 
                 let ownerName = window[kCGWindowOwnerName as String] as? String ?? ""
                 let title = window[kCGWindowName as String] as? String ?? ""
                 let isMinimized = minimizedAXWindowIDs.contains(wid) ? "1" : "0"
-                let isHidden = (NSRunningApplication(processIdentifier: Int32(pid))?.isHidden ?? false) ? "1" : "0"
+                let isHidden = context.applications[Int32(pid)]?.isHidden == true ? "1" : "0"
                 return WindowSnapshot(
                     id: wid,
                     pid: Int32(pid),
@@ -518,6 +537,7 @@ extension SpaceHelper {
                 id: space.id,
                 name: name,
                 displayName: displayName,
+                displayID: space.displayID,
                 num: space.num,
                 isFullscreen: space.isFullscreen,
                 appPath: space.appPath,
@@ -527,6 +547,7 @@ extension SpaceHelper {
         return snapshots
     }
 
+    @MainActor
     static func getWindowsForAllSpaces(spaces: [DesktopSpace], spaceNames: [String: String]) -> String {
         getWindowSnapshots(spaces: spaces, spaceNames: spaceNames).map { space in
             var output = ">\(space.id)~\(space.name)~\(space.displayName)~\(space.num)~\(space.isFullscreen ? "1" : "0")~\(space.appPath ?? "")\n"
