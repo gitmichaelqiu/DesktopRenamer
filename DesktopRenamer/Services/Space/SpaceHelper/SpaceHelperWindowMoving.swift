@@ -7,6 +7,13 @@ extension SpaceHelper {
     // MARK: - Window Moving Logic
     
     static func dragActiveWindow(to spaceID: String, forceInstant: Bool = false) {
+        // Option+swipe can emit several callbacks while the same gesture is
+        // settling. Repeating the same request would cancel the existing
+        // restoration timer and leave the mouse-down session stuck.
+        if isDragging, targetSpaceID == spaceID {
+            return
+        }
+
         DiagnosticEventLog.shared.record(subsystem: "SpaceHelper", level: "info", "dragActiveWindow → \(spaceID)")
         targetSpaceID = spaceID
         // Cancel any pending restoration from a previous "chained" move
