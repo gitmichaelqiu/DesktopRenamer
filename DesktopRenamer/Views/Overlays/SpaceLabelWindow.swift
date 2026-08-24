@@ -131,15 +131,12 @@ class SpaceLabelWindow: NSWindow {
         self.level = .floating
 
         // Collection Behavior
-        // Preview labels must participate in Mission Control so their large
-        // labels can be shown for each space. Active labels are desktop-only;
-        // making them transient prevents Mission Control from representing
-        // them as DesktopRenamer windows and placing the app icon over the UI.
+        // Both label roles must participate in Mission Control. Active labels
+        // are separate windows so they can stay synchronized on the desktop,
+        // but they must remain managed here to stay visible in Mission Control.
         // .fullScreenAuxiliary is retained to allow visibility over fullscreen apps.
         // .ignoresCycle prevents label windows from appearing in Alt+Tab window cycling.
-        self.collectionBehavior = isActiveLabel
-            ? [.transient, .fullScreenAuxiliary, .ignoresCycle]
-            : [.managed, .fullScreenAuxiliary, .ignoresCycle]
+        self.collectionBehavior = [.managed, .fullScreenAuxiliary, .ignoresCycle]
 
         // Observers
         self.spaceManager.$spaceNameDict
