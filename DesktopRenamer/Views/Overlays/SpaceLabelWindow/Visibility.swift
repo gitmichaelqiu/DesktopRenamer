@@ -92,9 +92,10 @@ extension SpaceLabelWindow {
                     // place this label on the wrong (current) desktop, causing clustering.
                     if isBoundToTargetSpace() || !isOnCurrentSpace() {
                         print("SpaceLabelWindow[\(self.spaceId)]: Non-activating orderFront() for background preview.")
-                        // Keep preview ordering non-activating; explicit space
-                        // switches use SpaceHelper.switchByActivatingOwnWindow.
-                        self.orderFront(nil)
+                        // Use WindowServer ordering here. AppKit orderFront(nil)
+                        // can still select a background space while Mission
+                        // Control is reconciling labels on macOS 27.
+                        self.orderPreviewWithoutActivating()
                         self.bindToTargetSpace()
                         self.hasOrderedInOnce = true
                     } else {
@@ -113,7 +114,7 @@ extension SpaceLabelWindow {
                 if !inCoolingPeriod {
                     if isBoundToTargetSpace() || !isOnCurrentSpace() {
                         print("SpaceLabelWindow[\(self.spaceId)]: Non-activating orderFront() for background preview.")
-                        self.orderFront(nil)
+                        self.orderPreviewWithoutActivating()
                         self.bindToTargetSpace()
                     } else {
                         print("SpaceLabelWindow[\(self.spaceId)]: Re-order blocked — preview label would appear on wrong space.")

@@ -4,6 +4,13 @@ import QuartzCore
 
 extension SpaceLabelWindow {
 
+    /// Orders a preview label through WindowServer without asking AppKit to
+    /// activate the application or select the label's space.
+    func orderPreviewWithoutActivating() {
+        guard windowNumber > 0 else { return }
+        _ = CGSOrderWindow(_CGSDefaultConnection(), UInt32(windowNumber), 0, 0)
+    }
+
     // Binds the window to a specific space via private APIs.
     func bindToTargetSpace() {
         let cid = _CGSDefaultConnection()
