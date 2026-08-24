@@ -64,9 +64,9 @@ extension SpaceLabelManager {
                 }
 
                 let workItem = DispatchWorkItem { [weak self] in
-                    // Restore ALL displays — hideAllPreviewLabels hid everything,
-                    // and when hideWhenSwitching is on the current display was not
-                    // restored either. This unfiltered call is the sole restore point.
+                    // Restore ALL displays — hideAllPreviewLabels hid previews on
+                    // every display, and the current display was not restored
+                    // either. This unfiltered call is the sole restore point.
                     DiagnosticEventLog.shared.record(subsystem: "Labels", level: "info", "delayed restore firing")
                     self?.updateAllWindowModes()
                 }
@@ -257,14 +257,14 @@ extension SpaceLabelManager {
     }
 
     func hidePreviewLabel(for spaceId: String) {
-        if let window = createdWindows[spaceId] {
+        if let window = createdWindows[spaceId], !window.isActiveMode {
             window.hideImmediately()
         }
     }
 
     func hideAllPreviewLabels() {
         DiagnosticEventLog.shared.record(subsystem: "Labels", level: "info", "hideAllPreviewLabels (windows=\(createdWindows.count))")
-        for window in createdWindows.values {
+        for window in createdWindows.values where !window.isActiveMode {
             window.hideImmediately()
         }
     }

@@ -33,13 +33,12 @@ extension SpaceLabelWindow {
             isVisuallyVisible = labelManager?.showPreviewLabels ?? true
         }
         
-        // Robust Fix: Suppress all labels during space transitions when hideWhenSwitching is enabled.
-        // Previously only preview labels were suppressed, but the active label also needs to stay
-        // hidden — switchByActivatingOwnWindow may have already ordered it front and made it key.
+        // Suppress preview labels during space transitions when hideWhenSwitching
+        // is enabled. The active-space label remains visible throughout a switch.
         // Use a longer cooling period on multi-display setups where animations
         // (especially on external displays) may take longer to complete.
         let coolingPeriod: TimeInterval = 0.3
-        if labelManager?.hideWhenSwitching == true {
+        if !isActiveMode && labelManager?.hideWhenSwitching == true {
             let now = Date().timeIntervalSince1970
             let timeSinceSwitch = now - SpaceHelper.lastProgrammaticSwitchTime
             if timeSinceSwitch < coolingPeriod {
