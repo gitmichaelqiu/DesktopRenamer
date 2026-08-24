@@ -69,15 +69,16 @@ extension SpaceLabelWindow {
             let inCoolingPeriod = timeSinceSwitch < coolingPeriod
 
             if self.isActiveMode {
-                if !self.isVisible {
+                if self.needsActiveRaise || !self.isVisible {
                     if !inCoolingPeriod {
-                        print("SpaceLabelWindow[\(self.spaceId)]: orderFrontRegardless() for ACTIVE space.")
+                        print("SpaceLabelWindow[\(self.spaceId)]: Raising active label after transition.")
                         // Preview labels must not activate their owning space.
                         // orderFrontRegardless() can make macOS navigate to a
                         // background Space when the display topology is changing.
                         self.orderFront(nil)
                         self.bindToTargetSpace()
                         self.hasOrderedInOnce = true
+                        self.needsActiveRaise = false
                     } else {
                         print("SpaceLabelWindow[\(self.spaceId)]: Suppressing orderFrontRegardless (Active) during switch cooling period (\(String(format: "%.2f", timeSinceSwitch))s). Scheduling retry.")
                         scheduleVisibilityRetry(delay: coolingPeriod - timeSinceSwitch + 0.1)

@@ -21,8 +21,13 @@ extension SpaceLabelWindow {
     }
 
     func setMode(isCurrentSpace: Bool) {
+        let wasActive = self.isActiveMode
         if self.isActiveMode != isCurrentSpace {
             print("SpaceLabelWindow[\(self.spaceId)]: setMode(isCurrentSpace: \(isCurrentSpace))")
+        }
+
+        if isCurrentSpace && !wasActive {
+            self.needsActiveRaise = true
         }
         
         let wasAnchor = self.isInvisibleAnchorMode
