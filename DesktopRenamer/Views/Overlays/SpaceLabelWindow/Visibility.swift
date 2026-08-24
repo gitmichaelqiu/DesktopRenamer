@@ -72,7 +72,10 @@ extension SpaceLabelWindow {
                 if !self.isVisible {
                     if !inCoolingPeriod {
                         print("SpaceLabelWindow[\(self.spaceId)]: orderFrontRegardless() for ACTIVE space.")
-                        self.orderFrontRegardless()
+                        // Preview labels must not activate their owning space.
+                        // orderFrontRegardless() can make macOS navigate to a
+                        // background Space when the display topology is changing.
+                        self.orderFront(nil)
                         self.bindToTargetSpace()
                         self.hasOrderedInOnce = true
                     } else {
@@ -88,8 +91,10 @@ extension SpaceLabelWindow {
                     // If CGSAddWindowsToSpaces failed silently, ordering front would
                     // place this label on the wrong (current) desktop, causing clustering.
                     if isBoundToTargetSpace() || !isOnCurrentSpace() {
-                        print("SpaceLabelWindow[\(self.spaceId)]: Initial orderFrontRegardless() for background preview.")
-                        self.orderFrontRegardless()
+                        print("SpaceLabelWindow[\(self.spaceId)]: Non-activating orderFront() for background preview.")
+                        // Keep preview ordering non-activating; explicit space
+                        // switches use SpaceHelper.switchByActivatingOwnWindow.
+                        self.orderFront(nil)
                         self.bindToTargetSpace()
                         self.hasOrderedInOnce = true
                     } else {
@@ -107,7 +112,7 @@ extension SpaceLabelWindow {
                 // Preview labels only order front once, so re-order it now to recover.
                 if !inCoolingPeriod {
                     if isBoundToTargetSpace() || !isOnCurrentSpace() {
-                        print("SpaceLabelWindow[\(self.spaceId)]: orderFrontRegardless() for background preview (re-order after external orderOut).")
+                        print("SpaceLabelWindow[\(self.spaceId)]: Non-activating orderFront() for background preview.")
                         self.orderFrontRegardless()
                         self.bindToTargetSpace()
                     } else {
