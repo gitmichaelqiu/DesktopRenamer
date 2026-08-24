@@ -321,7 +321,8 @@ extension SpaceLabelManager {
 
     func hidePreviewLabel(for spaceId: String) {
         if let window = createdWindows[spaceId],
-            !window.isActiveMode && !window.preserveVisibilityDuringSwitch {
+            !window.isActiveMode && !window.preserveVisibilityDuringSwitch
+                && !window.isTransitionDestination {
             window.hideImmediately()
         }
     }
@@ -329,7 +330,8 @@ extension SpaceLabelManager {
     func hideAllPreviewLabels() {
         DiagnosticEventLog.shared.record(subsystem: "Labels", level: "info", "hideAllPreviewLabels (windows=\(createdWindows.count))")
         for window in createdWindows.values
-            where !window.isActiveMode && !window.preserveVisibilityDuringSwitch {
+            where !window.isActiveMode && !window.preserveVisibilityDuringSwitch
+                && !window.isTransitionDestination {
             window.hideImmediately()
         }
     }
