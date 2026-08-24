@@ -121,10 +121,17 @@ extension SpaceManager {
     }
     
     func moveActiveWindowToSpace(id: String) {
-        // BUG FIX: Prevent redundant move attempts if the target is already current.
-        if id == currentSpaceUUID { return }
-
         guard let targetSpace = spaceNameDict.first(where: { $0.id == id }), !targetSpace.isFullscreen else {
+            return
+        }
+
+        // The global current-space ID belongs to whichever display most
+        // recently reported a transition. It cannot be used to decide whether
+        // a window on another display is already in the target space.
+        if let windowInfo = SpaceHelper.getActiveWindowInfo(),
+           let sourceDisplayID = SpaceHelper.getWindowDisplayID(for: windowInfo.frame),
+           sourceDisplayID == targetSpace.displayID,
+           SpaceHelper.getCurrentSpaceID(for: sourceDisplayID) == id {
             return
         }
 
@@ -159,10 +166,11 @@ extension SpaceManager {
                 let fromSpaceID = Int(SpaceHelper.getCurrentSpaceID(for: sourceDisplay) ?? "0") ?? 0
                 let targetSpaceID = Int(targetSpace.id) ?? 0
                 
-                SpaceHelper.moveWindowToSpace(windowID: windowInfo.id, fromSpaceID: fromSpaceID, targetSpaceID: targetSpaceID)
-                
-                // Switch to the target space to follow the window
+                // Activate the destination display's space before the direct
+                // CGS assignment. The helper also performs this preflight for
+                // API callers that do not go through this method.
                 self.switchToSpace(targetSpace, forceInstant: true)
+                SpaceHelper.moveWindowToSpace(windowID: windowInfo.id, fromSpaceID: fromSpaceID, targetSpaceID: targetSpaceID)
                 return
             }
         }
@@ -250,4 +258,3 @@ extension SpaceManager {
          return currentIndex == displaySpaces.count - 1
     }
 }
-

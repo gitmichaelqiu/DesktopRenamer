@@ -128,11 +128,22 @@ enum WindowActionCoordinator {
             return false
         }
 
+        let isCrossDisplayMove = sourceSpace.displayID != targetSpace.displayID
+        if isCrossDisplayMove {
+            guard await prepareTargetDisplay(targetSpace, manager: manager) else {
+                return false
+            }
+        }
+
         let originalVisibility = visibilityState(windowID: windowID, pid: pid)
 
-        if manager.currentSpaceUUID != fromSpaceID {
+        if SpaceHelper.getCurrentSpaceID(for: sourceSpace.displayID) != fromSpaceID {
             manager.switchToSpace(sourceSpace, forceInstant: true)
-            guard await wait(600_000_000, operation: "switch to the source space") else {
+            guard await waitForSpace(
+                fromSpaceID,
+                on: sourceSpace.displayID,
+                operation: "switch to the source space"
+            ) else {
                 return false
             }
         }
@@ -191,6 +202,41 @@ enum WindowActionCoordinator {
         }
 
         return true
+    }
+
+    private static func prepareTargetDisplay(_ targetSpace: DesktopSpace, manager: SpaceManager) async -> Bool {
+        guard SpaceHelper.getCurrentSpaceID(for: targetSpace.displayID) != targetSpace.id else {
+            return true
+        }
+
+        manager.switchToSpace(targetSpace, forceInstant: true)
+        return await waitForSpace(
+            targetSpace.id,
+            on: targetSpace.displayID,
+            operation: "switch to the target display space"
+        )
+    }
+
+    private static func waitForSpace(
+        _ spaceID: String,
+        on displayID: String,
+        operation: String
+    ) async -> Bool {
+        for _ in 0..<8 {
+            if SpaceHelper.getCurrentSpaceID(for: displayID) == spaceID {
+                return true
+            }
+            guard await wait(100_000_000, operation: operation) else {
+                return false
+            }
+        }
+
+        DiagnosticEventLog.shared.record(
+            subsystem: "WindowActions",
+            level: "error",
+            "Timed out waiting for space \(spaceID) on display \(displayID)."
+        )
+        return false
     }
 }
 
