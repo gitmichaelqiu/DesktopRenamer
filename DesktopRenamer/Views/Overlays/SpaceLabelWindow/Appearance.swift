@@ -6,6 +6,11 @@ extension SpaceLabelWindow {
 
     func refreshAppearance() {
         configureEffectView()
+        if !isActiveMode && SpaceHelper.getVisibleSystemSpaceIDs().contains(spaceId) {
+            updateLayout(isCurrentSpace: false, updateFrame: false)
+            hideImmediately()
+            return
+        }
         if isActiveMode && !isCurrentSpaceLabel {
             updateLayout(isCurrentSpace: true, updateFrame: false)
             alphaValue = 0.0
@@ -43,8 +48,12 @@ extension SpaceLabelWindow {
         if self.previewSize != size {
             self.previewSize = size
             if !isActiveMode {
-                updateLayout(isCurrentSpace: false)
-                updateVisibility(animated: false)
+                if SpaceHelper.getVisibleSystemSpaceIDs().contains(spaceId) {
+                    hideImmediately()
+                } else {
+                    updateLayout(isCurrentSpace: false)
+                    updateVisibility(animated: false)
+                }
             }
         }
     }

@@ -260,7 +260,14 @@ extension SpaceLabelManager {
                 continue // Skip windows that are on a different display than the one we are updating
             }
             
-            window.updateVisibility(animated: false)
+            if visibleUUIDs.contains(key) {
+                // The active space has its own dedicated label window. Keep
+                // the preview window bound to the space, but never visible on
+                // the active desktop alongside the active label.
+                window.hideImmediately()
+            } else {
+                window.updateVisibility(animated: false)
+            }
         }
 
         for (key, window) in activeWindows {
@@ -365,6 +372,9 @@ extension SpaceLabelManager {
         self.recalculateUnifiedSize()
         previewWindow.refreshAppearance()
         previewWindow.bindToTargetSpace()
+        if isCurrent {
+            previewWindow.hideImmediately()
+        }
         activeWindow.bindToTargetSpace()
     }
 
