@@ -50,9 +50,14 @@ extension SpaceLabelManager {
                 self.delayedRestoreWorkItem?.cancel()
                 self.delayedRestoreWorkItem = nil
 
+                let isRecentProgrammaticSwitch =
+                    Date().timeIntervalSince1970 - SpaceHelper.lastProgrammaticSwitchTime < 1.0
+                if self.hideWhenSwitching && isRecentProgrammaticSwitch {
+                    self.preserveActiveLabelsDuringSwitch()
+                }
+
                 if self.hideWhenSwitching {
-                    let isRecent = Date().timeIntervalSince1970 - SpaceHelper.lastProgrammaticSwitchTime < 1.0
-                    if isRecent {
+                    if isRecentProgrammaticSwitch {
                         DiagnosticEventLog.shared.record(subsystem: "Labels", level: "info", "programmatic switch — hiding labels")
                         self.hideAllPreviewLabels()
                     } else {
@@ -110,20 +115,33 @@ extension SpaceLabelManager {
         // restore never fires mid-transition of the next switch.
         // This may be called from a background thread (GestureManager's MT callback),
         // so dispatch to main for thread-safe access.
-        DispatchQueue.main.async { [weak self] in
+        let preserveAndHide = { [weak self] in
             guard let self = self else { return }
             self.delayedRestoreWorkItem?.cancel()
             self.delayedRestoreWorkItem = nil
 
             // Snapshot active labels before SpaceManager changes their mode to
             // preview. They must remain visible for the duration of the switch.
-            for window in self.createdWindows.values where window.isActiveMode {
-                window.preserveVisibilityDuringSwitch = true
-            }
+            self.preserveActiveLabelsDuringSwitch()
 
             if self.hideWhenSwitching {
                 self.hideAllPreviewLabels()
             }
+        }
+
+        // GestureManager posts this notification before starting the switch,
+        // often from its input thread. Complete the snapshot synchronously so
+        // the current active label cannot be reclassified and hidden first.
+        if Thread.isMainThread {
+            preserveAndHide()
+        } else {
+            DispatchQueue.main.sync(execute: preserveAndHide)
+        }
+    }
+
+    private func preserveActiveLabelsDuringSwitch() {
+        for window in createdWindows.values where window.isActiveMode {
+            window.preserveVisibilityDuringSwitch = true
         }
     }
 
