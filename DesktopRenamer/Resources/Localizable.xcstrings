@@ -166,6 +166,16 @@
         }
       }
     },
+    "A space rearrangement is already in progress." : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "桌面正在重新排列。"
+          }
+        }
+      }
+    },
     "Accessibility" : {
       "localizations" : {
         "zh-Hans" : {
@@ -506,16 +516,6 @@
         }
       }
     },
-    "A space rearrangement is already in progress." : {
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "桌面正在重新排列。"
-          }
-        }
-      }
-    },
     "Clean Restoration Queues (%d)" : {
       "localizations" : {
         "zh-Hans" : {
@@ -755,7 +755,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "禁用 Liquid Glass"
+            "value" : "禁用液态玻璃"
           }
         }
       }
@@ -912,16 +912,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "退出全屏"
-          }
-        }
-      }
-    },
-    "SpaceAPI v%@" : {
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "SpaceAPI v%@"
           }
         }
       }
@@ -3046,6 +3036,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "桌面 %d"
+          }
+        }
+      }
+    },
+    "SpaceAPI v%@" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "SpaceAPI v%@"
           }
         }
       }
