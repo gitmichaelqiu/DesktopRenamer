@@ -316,10 +316,13 @@ extension SpaceHelper {
             )
         }
 
-        let mainDisplayID = NSScreen.main.flatMap { screen in
-            guard let id = screen.deviceDescription[NSDeviceDescriptionKey("NSScreenNumber")] as? CGDirectDisplayID,
-                  let uuidRef = CGDisplayCreateUUIDFromDisplayID(id) else { return nil }
-            return (CFUUIDCreateString(nil, uuidRef.takeRetainedValue()) as String).uppercased()
+        let mainDisplayID: String?
+        if let mainScreen = NSScreen.main,
+           let id = mainScreen.deviceDescription[NSDeviceDescriptionKey("NSScreenNumber")] as? CGDirectDisplayID,
+           let uuidRef = CGDisplayCreateUUIDFromDisplayID(id) {
+            mainDisplayID = (CFUUIDCreateString(nil, uuidRef.takeRetainedValue()) as String).uppercased()
+        } else {
+            mainDisplayID = nil
         }
 
         let applications = NSWorkspace.shared.runningApplications.reduce(into: [Int32: WindowEnumerationContext.Application]()) { result, app in
