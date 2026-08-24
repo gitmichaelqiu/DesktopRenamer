@@ -39,6 +39,10 @@ extension SpaceLabelWindow {
             return
         }
 
+        // Each space has its own active-label window. Reload the shared
+        // position/docking state before laying out this window; otherwise a
+        // window created on launch keeps the state it had when it was created.
+        syncFromGlobalState()
         updateLayout(isCurrentSpace: true, updateFrame: false)
         updateVisibility(animated: animated)
         bindToTargetSpace()
