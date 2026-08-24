@@ -6,55 +6,47 @@ extension SpaceLabelWindow {
 
     func refreshAppearance() {
         configureEffectView()
+        if isActiveMode && !isCurrentSpaceLabel {
+            updateLayout(isCurrentSpace: true, updateFrame: false)
+            alphaValue = 0.0
+            contentView?.alphaValue = 0.0
+            orderOut(nil)
+            return
+        }
         updateInteractivity()
         updateLayout(isCurrentSpace: self.isActiveMode)
         updateVisibility(animated: true)
+    }
+
+    /// Shows or hides a dedicated active-label window without changing its
+    /// layout role. Preview windows never pass through this path.
+    func setActiveVisibility(_ isVisible: Bool, animated: Bool) {
+        guard isActiveMode else { return }
+
+        pendingVisibilityTask?.cancel()
+        pendingVisibilityTask = nil
+        isCurrentSpaceLabel = isVisible
+
+        guard isVisible else {
+            alphaValue = 0.0
+            contentView?.alphaValue = 0.0
+            orderOut(nil)
+            return
+        }
+
+        updateLayout(isCurrentSpace: true, updateFrame: false)
+        updateVisibility(animated: animated)
+        bindToTargetSpace()
     }
 
     func setPreviewSize(_ size: NSSize) {
         if self.previewSize != size {
             self.previewSize = size
             if !isActiveMode {
-                setMode(isCurrentSpace: false)
+                updateLayout(isCurrentSpace: false)
+                updateVisibility(animated: false)
             }
         }
-    }
-
-    func setMode(isCurrentSpace: Bool) {
-        let wasActive = self.isActiveMode
-        if self.isActiveMode != isCurrentSpace {
-            print("SpaceLabelWindow[\(self.spaceId)]: setMode(isCurrentSpace: \(isCurrentSpace))")
-        }
-
-        if isCurrentSpace && !wasActive {
-            self.needsActiveRaise = true
-        }
-        
-        let wasAnchor = self.isInvisibleAnchorMode
-        let wasHidden = self.contentView?.alphaValue == 0
-        
-        // Pre-calculate visibility to avoid "flashing" or "stuttering" during mode change
-        let willBeVisible = isCurrentSpace ? (labelManager?.showActiveLabels ?? true) : (labelManager?.showPreviewLabels ?? true)
-        
-        self.isActiveMode = isCurrentSpace
-        self.isInvisibleAnchorMode = !willBeVisible
-        configureEffectView()
-
-        if isCurrentSpace {
-            syncFromGlobalState()
-            if let manager = labelManager, !manager.showOnDesktop {
-                self.isDocked = true
-            }
-        }
-
-        // We only animate the transition if the window was ALREADY visible as a preview window
-        // and is now becoming an active window (shrinking/docking).
-        // If it was an invisible anchor or explicitly hidden via hideImmediately, we snap it.
-        let shouldAnimate = isCurrentSpace ? (!wasAnchor && !wasHidden) : true
-        
-        self.updateLayout(isCurrentSpace: isCurrentSpace, updateFrame: shouldAnimate)
-        updateVisibility(animated: shouldAnimate)
-        updateInteractivity()
     }
 
     private func shouldUseGlassEffect() -> Bool {
@@ -101,8 +93,8 @@ extension SpaceLabelWindow {
         effectView.material = .hudWindow
         effectView.blendingMode = .behindWindow
         effectView.state = .active
-        // Inherit the window's effective appearance so the fallback label updates
-        // when the system switches between Light and Dark mode.
+        // Inherit the effect view's appearance so the fallback label follows
+        // the system's light/dark appearance changes.
         effectView.appearance = nil
         effectView.addSubview(self.contentContainer)
 

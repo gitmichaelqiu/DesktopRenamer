@@ -153,7 +153,12 @@ extension SpaceHelper {
         for window in NSApp.windows {
             if let labelWindow = window as? SpaceLabelWindow {
                 if labelWindow.spaceId == spaceID {
-                    targetWindow = labelWindow
+                    // Use the dedicated preview window as the activation
+                    // anchor. The active window is independently managed and
+                    // may be hidden until the destination is confirmed.
+                    if !labelWindow.isActiveMode || targetWindow == nil {
+                        targetWindow = labelWindow
+                    }
                 } else if labelWindow.isVisible && !labelWindow.isActiveMode {
                     // Only hide preview windows during the handoff. The active-space
                     // label is a persistent status indicator and must remain visible.

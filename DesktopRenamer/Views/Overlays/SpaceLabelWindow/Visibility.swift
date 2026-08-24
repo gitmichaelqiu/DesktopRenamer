@@ -14,6 +14,13 @@ extension SpaceLabelWindow {
             return
         }
 
+        guard !isActiveMode || isCurrentSpaceLabel else {
+            self.alphaValue = 0.0
+            self.contentView?.alphaValue = 0.0
+            self.orderOut(nil)
+            return
+        }
+
         let labelsEnabled = isActiveMode
             ? (labelManager?.showActiveLabels ?? true)
             : (labelManager?.showPreviewLabels ?? true)
@@ -43,7 +50,7 @@ extension SpaceLabelWindow {
         // The destination label is still in preview mode until SpaceManager
         // confirms the switch, but it must remain visible to bridge the
         // transition after the outgoing active label leaves its space.
-        if !isActiveMode && !preserveVisibilityDuringSwitch && !isTransitionDestination
+        if !isActiveMode && !isTransitionDestination
             && !isProgrammaticDestination
             && labelManager?.hideWhenSwitching == true {
             let now = Date().timeIntervalSince1970

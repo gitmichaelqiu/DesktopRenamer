@@ -30,7 +30,7 @@ extension SpaceLabelManager {
     }
 
     func updateWindows() {
-        let windows = Array(createdWindows.values)
+        let windows = Array(createdWindows.values) + Array(activeWindows.values)
         for window in windows {
             window.refreshAppearance()
         }
@@ -52,10 +52,6 @@ extension SpaceLabelManager {
 
                 let isRecentProgrammaticSwitch =
                     Date().timeIntervalSince1970 - SpaceHelper.lastProgrammaticSwitchTime < 1.0
-                if self.hideWhenSwitching && isRecentProgrammaticSwitch {
-                    self.preserveActiveLabelsDuringSwitch()
-                }
-
                 if self.hideWhenSwitching {
                     if isRecentProgrammaticSwitch {
                         DiagnosticEventLog.shared.record(subsystem: "Labels", level: "info", "programmatic switch — hiding labels")
@@ -74,13 +70,6 @@ extension SpaceLabelManager {
                     // either. This unfiltered call is the sole restore point.
                     DiagnosticEventLog.shared.record(subsystem: "Labels", level: "info", "delayed restore firing")
                     self?.updateAllWindowModes()
-                    // Allow former active labels to follow normal preview
-                    // visibility rules after the transition has settled.
-                    DispatchQueue.main.async { [weak self] in
-                        self?.createdWindows.values.forEach {
-                            $0.preserveVisibilityDuringSwitch = false
-                        }
-                    }
                 }
                 self.delayedRestoreWorkItem = workItem
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.6, execute: workItem)
@@ -124,10 +113,6 @@ extension SpaceLabelManager {
             self.delayedRestoreWorkItem?.cancel()
             self.delayedRestoreWorkItem = nil
 
-            // Snapshot active labels before SpaceManager changes their mode to
-            // preview. They must remain visible for the duration of the switch.
-            self.preserveActiveLabelsDuringSwitch()
-
             if self.hideWhenSwitching {
                 self.hideAllPreviewLabels()
             }
@@ -147,29 +132,26 @@ extension SpaceLabelManager {
         let prepareDestination = { [weak self] in
             guard let self = self,
                   let spaceID = notification.userInfo?["spaceID"] as? String,
-                  let window = self.createdWindows[spaceID] else { return }
+                  let previewWindow = self.createdWindows[spaceID],
+                  let activeWindow = self.activeWindows[spaceID] else { return }
 
-            window.isTransitionDestination = true
+            previewWindow.isTransitionDestination = true
             DiagnosticEventLog.shared.record(
                 subsystem: "Labels",
                 level: "info",
                 "prepared destination label for switch: \(spaceID)"
             )
-            // The target is already bound to its destination space. Restore its
-            // content now so it is ready when WindowServer reveals that space.
-            window.updateVisibility(animated: false)
+            // Keep the preview ready for the transition and independently make
+            // the active label ready for the destination space. Neither window
+            // changes visual mode during the handoff.
+            previewWindow.updateVisibility(animated: false)
+            activeWindow.setActiveVisibility(true, animated: false)
         }
 
         if Thread.isMainThread {
             prepareDestination()
         } else {
             DispatchQueue.main.sync(execute: prepareDestination)
-        }
-    }
-
-    private func preserveActiveLabelsDuringSwitch() {
-        for window in createdWindows.values where window.isActiveMode {
-            window.preserveVisibilityDuringSwitch = true
         }
     }
 
@@ -206,7 +188,8 @@ extension SpaceLabelManager {
         guard let spaceManager = spaceManager else { return }
         let validUUIDs = Set(spaceManager.spaceNameDict.map { $0.id })
 
-        let redundantIDs = createdWindows.keys.filter { !validUUIDs.contains($0) }
+        let redundantIDs = Set(createdWindows.keys).union(activeWindows.keys)
+            .filter { !validUUIDs.contains($0) }
 
         for id in redundantIDs {
             if let window = createdWindows[id] {
@@ -214,6 +197,11 @@ extension SpaceLabelManager {
                 window.close()
             }
             createdWindows.removeValue(forKey: id)
+            if let window = activeWindows[id] {
+                window.pendingVisibilityTask?.cancel()
+                window.close()
+            }
+            activeWindows.removeValue(forKey: id)
             print("SpaceLabelManager: Removed redundant window for space \(id)")
         }
 
@@ -224,13 +212,16 @@ extension SpaceLabelManager {
     /// label instances after a rebuild has replaced that bookkeeping, so also
     /// sweep the application's actual windows for duplicates and orphans.
     private func purgeOrphanedLabelWindows(validUUIDs: Set<String>) {
-        let registeredWindows = Set(createdWindows.values.map(ObjectIdentifier.init))
+        let registeredWindows = Set(
+            (Array(createdWindows.values) + Array(activeWindows.values)).map(ObjectIdentifier.init)
+        )
         let applicationLabelWindows = NSApp.windows.compactMap { $0 as? SpaceLabelWindow }
 
         for window in applicationLabelWindows {
             let isValid = validUUIDs.contains(window.spaceId)
             let isRegistered = registeredWindows.contains(ObjectIdentifier(window))
-            let isCanonical = createdWindows[window.spaceId].map { $0 === window } ?? false
+            let isCanonical = createdWindows[window.spaceId].map { $0 === window } == true
+                || activeWindows[window.spaceId].map { $0 === window } == true
 
             if !isValid || !isRegistered || !isCanonical {
                 window.pendingVisibilityTask?.cancel()
@@ -311,18 +302,22 @@ extension SpaceLabelManager {
                 continue // Skip windows that are on a different display than the one we are updating
             }
             
-            let isVisibleOnAnyScreen = visibleUUIDs.contains(key)
-            if isVisibleOnAnyScreen {
-                window.isTransitionDestination = false
+            window.isTransitionDestination = false
+            window.updateVisibility(animated: false)
+        }
+
+        for (key, window) in activeWindows {
+            if let targetDisplay = displayID, window.displayID != targetDisplay {
+                continue
             }
-            window.setMode(isCurrentSpace: isVisibleOnAnyScreen)
+
+            window.setActiveVisibility(visibleUUIDs.contains(key), animated: false)
         }
     }
 
     func hidePreviewLabel(for spaceId: String) {
         if let window = createdWindows[spaceId],
-            !window.isActiveMode && !window.preserveVisibilityDuringSwitch
-                && !window.isTransitionDestination {
+            !window.isTransitionDestination {
             window.hideImmediately()
         }
     }
@@ -330,8 +325,7 @@ extension SpaceLabelManager {
     func hideAllPreviewLabels() {
         DiagnosticEventLog.shared.record(subsystem: "Labels", level: "info", "hideAllPreviewLabels (windows=\(createdWindows.count))")
         for window in createdWindows.values
-            where !window.isActiveMode && !window.preserveVisibilityDuringSwitch
-                && !window.isTransitionDestination {
+            where !window.isTransitionDestination {
             window.hideImmediately()
         }
     }
@@ -360,28 +354,28 @@ extension SpaceLabelManager {
 
     // Asserts that a window exists for the specified space, refreshing if already present.
     func ensureWindow(for spaceId: String, name: String, displayID: String, updateMode: Bool = true) {
-        if let existingWindow = createdWindows[spaceId] {
-            if existingWindow.findTargetScreen() == nil {
-                existingWindow.pendingVisibilityTask?.cancel()
-                existingWindow.close()
+        let existingWindows = [createdWindows[spaceId], activeWindows[spaceId]].compactMap { $0 }
+        if existingWindows.count == 2 {
+            if existingWindows.contains(where: { $0.findTargetScreen() == nil || $0.displayID != displayID }) {
+                existingWindows.forEach {
+                    $0.pendingVisibilityTask?.cancel()
+                    $0.close()
+                }
                 createdWindows.removeValue(forKey: spaceId)
-            } else if existingWindow.displayID != displayID {
-                existingWindow.pendingVisibilityTask?.cancel()
-                existingWindow.close()
-                createdWindows.removeValue(forKey: spaceId)
+                activeWindows.removeValue(forKey: spaceId)
             } else {
-                // BUG FIX: Even if the window exists and is visible, we MUST update its mode
-                // (Active vs Preview) and refresh its appearance. Otherwise, labels can
-                // get stuck in Preview mode when returning from fullscreen.
-                // During a switch (updateMode: false), skip this — setMode + refreshAppearance
-                // both call updateVisibility which can make labels visible prematurely.
                 if updateMode {
-                    let isCurrent = (spaceId == spaceManager?.currentSpaceUUID)
-                    existingWindow.setMode(isCurrentSpace: isCurrent)
-                    existingWindow.refreshAppearance()
+                    existingWindows.forEach { $0.refreshAppearance() }
                 }
                 return
             }
+        } else if !existingWindows.isEmpty {
+            existingWindows.forEach {
+                $0.pendingVisibilityTask?.cancel()
+                $0.close()
+            }
+            createdWindows.removeValue(forKey: spaceId)
+            activeWindows.removeValue(forKey: spaceId)
         }
         createWindow(for: spaceId, name: name, displayID: displayID)
     }
@@ -393,24 +387,31 @@ extension SpaceLabelManager {
         let isFullscreen =
             spaceManager.spaceNameDict.first(where: { $0.id == spaceId })?.isFullscreen ?? false
 
-        let window = SpaceLabelWindow(
+        let previewWindow = SpaceLabelWindow(
             spaceId: spaceId, name: name, displayID: displayID, isFullscreen: isFullscreen,
-            spaceManager: spaceManager, labelManager: self)
+            spaceManager: spaceManager, labelManager: self, isActiveLabel: false)
+        let activeWindow = SpaceLabelWindow(
+            spaceId: spaceId, name: name, displayID: displayID, isFullscreen: isFullscreen,
+            spaceManager: spaceManager, labelManager: self, isActiveLabel: true)
 
         // Do not allow a label for an unavailable external display to fall
         // back onto the main display. A later topology pass will recreate it
         // when macOS exposes the screen.
-        guard window.findTargetScreen() != nil else {
-            window.close()
+        guard previewWindow.findTargetScreen() != nil,
+              activeWindow.findTargetScreen() != nil else {
+            previewWindow.close()
+            activeWindow.close()
             return
         }
 
-        createdWindows[spaceId] = window
+        createdWindows[spaceId] = previewWindow
+        activeWindows[spaceId] = activeWindow
         let isCurrent = (spaceId == spaceManager.currentSpaceUUID)
-        window.setMode(isCurrentSpace: isCurrent)
+        activeWindow.setActiveVisibility(isCurrent, animated: false)
         self.recalculateUnifiedSize()
-        window.refreshAppearance()
-        window.bindToTargetSpace()
+        previewWindow.refreshAppearance()
+        previewWindow.bindToTargetSpace()
+        activeWindow.bindToTargetSpace()
     }
 
     func reloadAllWindows() {
@@ -465,7 +466,7 @@ extension SpaceLabelManager {
     }
 
     func removeAllWindows() {
-        var windows = Array(createdWindows.values)
+        var windows = Array(createdWindows.values) + Array(activeWindows.values)
         let registeredIDs = Set(windows.map(ObjectIdentifier.init))
         for window in NSApp.windows.compactMap({ $0 as? SpaceLabelWindow })
             where !registeredIDs.contains(ObjectIdentifier(window)) {
@@ -478,11 +479,12 @@ extension SpaceLabelManager {
             window.close()
         }
         createdWindows.removeAll()
+        activeWindows.removeAll()
     }
 
 
     func seedAllLabels() {
-        guard showPreviewLabels, let spaceManager = spaceManager else { return }
+        guard let spaceManager = spaceManager else { return }
         print("SpaceLabelManager: Background seeding all labels for Mission Control...")
         let allSpaces = spaceManager.spaceNameDict
         for space in allSpaces {
@@ -504,7 +506,7 @@ extension SpaceLabelManager {
     func verifyLabelBinding() {
         guard let currentSpaceID = spaceManager?.currentSpaceUUID else { return }
         for (spaceId, window) in createdWindows {
-            guard !window.isActiveMode, window.windowNumber > 0 else { continue }
+            guard window.windowNumber > 0 else { continue }
             let currentSpaces = SpaceHelper.getWindowCurrentSpaces(windowID: window.windowNumber)
             if currentSpaces.isEmpty { continue }
             if currentSpaces.contains(currentSpaceID) && spaceId != currentSpaceID {
