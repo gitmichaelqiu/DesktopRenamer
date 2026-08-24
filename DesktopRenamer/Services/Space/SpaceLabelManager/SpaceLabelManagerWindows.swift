@@ -132,19 +132,15 @@ extension SpaceLabelManager {
         let prepareDestination = { [weak self] in
             guard let self = self,
                   let spaceID = notification.userInfo?["spaceID"] as? String,
-                  let previewWindow = self.createdWindows[spaceID],
                   let activeWindow = self.activeWindows[spaceID] else { return }
 
-            previewWindow.isTransitionDestination = true
             DiagnosticEventLog.shared.record(
                 subsystem: "Labels",
                 level: "info",
                 "prepared destination label for switch: \(spaceID)"
             )
-            // Keep the preview ready for the transition and independently make
-            // the active label ready for the destination space. Neither window
-            // changes visual mode during the handoff.
-            previewWindow.updateVisibility(animated: false)
+            // The active label has its own window, so the preview remains
+            // subject to hideWhenSwitching while the destination is prepared.
             activeWindow.setActiveVisibility(true, animated: false)
         }
 
@@ -302,7 +298,6 @@ extension SpaceLabelManager {
                 continue // Skip windows that are on a different display than the one we are updating
             }
             
-            window.isTransitionDestination = false
             window.updateVisibility(animated: false)
         }
 
@@ -316,16 +311,14 @@ extension SpaceLabelManager {
     }
 
     func hidePreviewLabel(for spaceId: String) {
-        if let window = createdWindows[spaceId],
-            !window.isTransitionDestination {
+        if let window = createdWindows[spaceId] {
             window.hideImmediately()
         }
     }
 
     func hideAllPreviewLabels() {
         DiagnosticEventLog.shared.record(subsystem: "Labels", level: "info", "hideAllPreviewLabels (windows=\(createdWindows.count))")
-        for window in createdWindows.values
-            where !window.isTransitionDestination {
+        for window in createdWindows.values {
             window.hideImmediately()
         }
     }

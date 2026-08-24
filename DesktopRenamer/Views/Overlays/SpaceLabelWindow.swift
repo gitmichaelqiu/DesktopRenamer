@@ -37,7 +37,6 @@ class SpaceLabelWindow: NSWindow {
 
     var hasOrderedInOnce = false
     var needsActiveRaise = false
-    var isTransitionDestination = false
 
 
     var isHiddenCornerMode: Bool {
