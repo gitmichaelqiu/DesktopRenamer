@@ -7,7 +7,7 @@ struct SplashView: View {
     
     @State private var currentPage = 0
     @State private var movingForward = true
-    private let totalPages = 10
+    private let totalPages = 12
 
     var body: some View {
         VStack(spacing: 0) {
@@ -39,9 +39,15 @@ struct SplashView: View {
                     RaycastBatchMovePage()
                         .transition(pageTransition)
                 case 8:
-                    PermissionsPage()
+                    SpaceOrganizationPage()
                         .transition(pageTransition)
                 case 9:
+                    AutomationPage()
+                        .transition(pageTransition)
+                case 10:
+                    PermissionsPage()
+                        .transition(pageTransition)
+                case 11:
                     MoreAppsPage()
                         .transition(pageTransition)
                 default:
@@ -325,6 +331,118 @@ struct RaycastBatchMovePage: View {
             subtitle: NSLocalizedString("Use the Raycast extension to move all windows of an app to another space in one command.", comment: ""),
             videoName: "RaycastBatchMove"
         )
+    }
+}
+
+struct SpaceOrganizationPage: View {
+    var body: some View {
+        VStack(spacing: 24) {
+            VStack(spacing: 10) {
+                Text("Organize Your Spaces")
+                    .font(.system(size: 30, weight: .bold, design: .rounded))
+                Text("Keep Spaces in the order you want, even across fullscreen apps and multiple displays.")
+                    .font(.body)
+                    .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center)
+                    .lineSpacing(4)
+                    .padding(.horizontal, 35)
+            }
+
+            HStack(spacing: 16) {
+                OnboardingFeatureCard(
+                    icon: "arrow.up.arrow.down.square",
+                    title: "Rearrange Spaces",
+                    detail: "Drag Spaces in Settings or use launcher shortcuts to change their order."
+                )
+                OnboardingFeatureCard(
+                    icon: "rectangle.inset.filled.and.person.filled",
+                    title: "Fullscreen Spaces",
+                    detail: "Automatically place newly created fullscreen Spaces beside their source desktop."
+                )
+                OnboardingFeatureCard(
+                    icon: "display.2",
+                    title: "Multiple Displays",
+                    detail: "Move windows between displays while preserving your Space context."
+                )
+            }
+            .padding(.horizontal, 28)
+
+            HStack(spacing: 12) {
+                Image(systemName: "info.circle.fill")
+                    .foregroundStyle(Color.accentColor)
+                Text("Space rearrangement is available from Settings → Spaces and the launcher.")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+            }
+        }
+        .padding(.top, 28)
+    }
+}
+
+struct AutomationPage: View {
+    var body: some View {
+        VStack(spacing: 24) {
+            VStack(spacing: 10) {
+                Text("Automate Your Workspace")
+                    .font(.system(size: 30, weight: .bold, design: .rounded))
+                Text("DesktopRenamer works with scripts, launchers, and app-specific rules so repeated Space tasks stay effortless.")
+                    .font(.body)
+                    .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center)
+                    .lineSpacing(4)
+                    .padding(.horizontal, 35)
+            }
+
+            HStack(spacing: 16) {
+                OnboardingFeatureCard(
+                    icon: "terminal",
+                    title: "SpaceAPI & AppleScript",
+                    detail: "Inspect Spaces, rename them, switch Spaces, move windows, and rearrange desktops from scripts."
+                )
+                OnboardingFeatureCard(
+                    icon: "app.badge",
+                    title: "App Exceptions",
+                    detail: "Customize window-grab offsets and movement behavior for individual applications."
+                )
+            }
+            .padding(.horizontal, 80)
+
+            HStack(spacing: 12) {
+                Image(systemName: "bolt.fill")
+                    .foregroundStyle(.orange)
+                Text("Power users can combine hotkeys, gestures, Raycast, SpaceAPI, and AppleScript in one workflow.")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center)
+            }
+            .padding(.horizontal, 60)
+        }
+        .padding(.top, 28)
+    }
+}
+
+struct OnboardingFeatureCard: View {
+    let icon: String
+    let title: String
+    let detail: String
+
+    var body: some View {
+        VStack(spacing: 12) {
+            Image(systemName: icon)
+                .font(.system(size: 30, weight: .medium))
+                .foregroundStyle(Color.accentColor)
+            Text(title)
+                .font(.headline)
+                .multilineTextAlignment(.center)
+            Text(detail)
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .multilineTextAlignment(.center)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .frame(maxWidth: .infinity, minHeight: 160)
+        .padding(16)
+        .background(Color.secondary.opacity(0.08), in: RoundedRectangle(cornerRadius: 14))
     }
 }
 
