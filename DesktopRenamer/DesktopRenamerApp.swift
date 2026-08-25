@@ -158,7 +158,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
         let hostingController = NSHostingController(rootView: splashView)
         let window = NSWindow(
-            contentRect: NSRect(x: 0, y: 0, width: 760, height: 600),
+            contentRect: NSRect(x: 0, y: 0, width: 550, height: 450),
             styleMask: [.titled, .closable, .fullSizeContentView],
             backing: .buffered,
             defer: false

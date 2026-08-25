@@ -7,7 +7,7 @@ struct SplashView: View {
     
     @State private var currentPage = 0
     @State private var movingForward = true
-    private let totalPages = 6
+    private let totalPages = 10
 
     var body: some View {
         VStack(spacing: 0) {
@@ -18,19 +18,31 @@ struct SplashView: View {
                     WelcomePage()
                         .transition(pageTransition)
                 case 1:
-                    MissionControlPage()
+                    RenamePage()
                         .transition(pageTransition)
                 case 2:
-                    SwitchMovePage()
+                    MissionControlPage()
                         .transition(pageTransition)
                 case 3:
-                    OrganizeSpacesPage()
+                    MenuBarSwitchPage()
                         .transition(pageTransition)
                 case 4:
-                    PowerToolsPage(openURL: openURL)
+                    LockSpacePage()
                         .transition(pageTransition)
                 case 5:
-                    SetupPage()
+                    FastSwitchingPage()
+                        .transition(pageTransition)
+                case 6:
+                    RaycastFeaturePage(openURL: openURL)
+                        .transition(pageTransition)
+                case 7:
+                    RaycastBatchMovePage()
+                        .transition(pageTransition)
+                case 8:
+                    PermissionsPage()
+                        .transition(pageTransition)
+                case 9:
+                    MoreAppsPage()
                         .transition(pageTransition)
                 default:
                     EmptyView()
@@ -51,15 +63,6 @@ struct SplashView: View {
                 }
                 
                 Spacer()
-
-                if currentPage < totalPages - 1 {
-                    Button("Skip") {
-                        onClose()
-                    }
-                    .buttonStyle(.plain)
-                    .foregroundStyle(.secondary)
-                    .padding(.horizontal, 10)
-                }
                 
                 // Navigation: Back
                 if currentPage > 0 {
@@ -108,7 +111,7 @@ struct SplashView: View {
             }
             .padding(24)
         }
-        .frame(width: 760, height: 600)
+        .frame(width: 700, height: 550)
         .background(Color(NSColor.windowBackgroundColor))
     }
     
@@ -131,216 +134,30 @@ struct SplashView: View {
 
 struct WelcomePage: View {
     var body: some View {
-        VStack(spacing: 20) {
+        VStack(spacing: 24) {
             if let nsImage = NSApplication.shared.applicationIconImage {
                 Image(nsImage: nsImage)
                     .resizable()
                     .aspectRatio(contentMode: .fit)
-                    .frame(width: 92, height: 92)
+                    .frame(width: 120, height: 120)
                     .shadow(radius: 5)
             }
             
-            VStack(spacing: 10) {
-                Text("Welcome to DesktopRenamer")
-                    .font(.system(size: 30, weight: .bold, design: .rounded))
-                Text("Name, organize, and move through your macOS Spaces with confidence.")
-                    .font(.title3)
-                    .foregroundStyle(.secondary)
-                    .multilineTextAlignment(.center)
-            }
-            .padding(.horizontal, 32)
-
-            HStack(spacing: 12) {
-                SplashValueCard(icon: "rectangle.3.group", title: "See", detail: "Clear labels for every Space")
-                SplashValueCard(icon: "arrow.left.arrow.right", title: "Switch", detail: "Jump or move windows instantly")
-                SplashValueCard(icon: "square.3.layers.3d", title: "Organize", detail: "Reorder and protect your workspace")
-            }
-            .padding(.horizontal, 26)
-        }
-        .padding()
-    }
-}
-
-struct SplashValueCard: View {
-    let icon: String
-    let title: String
-    let detail: String
-
-    var body: some View {
-        VStack(spacing: 8) {
-            Image(systemName: icon)
-                .font(.system(size: 24, weight: .semibold))
-                .foregroundStyle(Color.accentColor)
-            Text(title)
-                .font(.headline)
-            Text(detail)
-                .font(.caption)
-                .foregroundStyle(.secondary)
-                .multilineTextAlignment(.center)
-                .fixedSize(horizontal: false, vertical: true)
-        }
-        .frame(maxWidth: .infinity, minHeight: 92)
-        .padding(12)
-        .background(Color.secondary.opacity(0.08), in: RoundedRectangle(cornerRadius: 12))
-    }
-}
-
-struct SwitchMovePage: View {
-    var body: some View {
-        DoubleVideoFeaturePage(
-            title: NSLocalizedString("Switch and Move", comment: ""),
-            subtitle: NSLocalizedString("Jump between Spaces from the menu bar, or move the active window with Option-click.", comment: ""),
-            videoName1: "SwitchSpace",
-            videoName2: "MoveWindow",
-            label1: NSLocalizedString("Switch Space", comment: ""),
-            label2: NSLocalizedString("Option-click to move", comment: "")
-        )
-    }
-}
-
-struct OrganizeSpacesPage: View {
-    var body: some View {
-        VStack(spacing: 20) {
-            VStack(spacing: 8) {
-                Text("Organize Your Spaces")
-                    .font(.system(size: 28, weight: .bold, design: .rounded))
-                Text("Keep your workspace predictable, even when macOS or fullscreen apps rearrange it.")
-                    .font(.body)
-                    .foregroundStyle(.secondary)
-                    .multilineTextAlignment(.center)
-                    .padding(.horizontal, 32)
-            }
-
-            HStack(spacing: 14) {
-                SplashValueCard(icon: "arrow.up.arrow.down.square", title: "Rearrange", detail: "Drag or use shortcuts to reorder Spaces.")
-                SplashValueCard(icon: "lock.shield", title: "Lock", detail: "Prevent unwanted Space changes.")
-                SplashValueCard(icon: "rectangle.inset.filled.and.person.filled", title: "Fullscreen", detail: "Keep fullscreen Spaces in the right place.")
-            }
-            .padding(.horizontal, 28)
-
-            HStack(spacing: 14) {
-                Image(systemName: "display.2")
-                    .font(.system(size: 26, weight: .medium))
-                    .foregroundStyle(Color.accentColor)
-                Text("Multiple displays are supported, including moving windows between displays.")
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
-            .padding(16)
-            .frame(maxWidth: .infinity)
-            .background(Color.accentColor.opacity(0.1), in: RoundedRectangle(cornerRadius: 12))
-            .padding(.horizontal, 28)
-        }
-        .padding(.top, 28)
-    }
-}
-
-struct PowerToolsPage: View {
-    var openURL: OpenURLAction
-
-    var body: some View {
-        VStack(spacing: 18) {
-            VStack(spacing: 8) {
-                Text("Power Tools")
-                    .font(.system(size: 28, weight: .bold, design: .rounded))
-                Text("Automate Space management from your favorite tools.")
-                    .font(.body)
-                    .foregroundStyle(.secondary)
-            }
-
-            HStack(spacing: 18) {
-                VStack(spacing: 10) {
-                    if let imageURL = Bundle.main.url(forResource: "RaycastExtension", withExtension: "png"),
-                       let nsImage = NSImage(contentsOf: imageURL) {
-                        Image(nsImage: nsImage)
-                            .resizable()
-                            .aspectRatio(contentMode: .fit)
-                            .clipShape(RoundedRectangle(cornerRadius: 10))
-                    }
-                    Text("Raycast")
-                        .font(.headline)
-                    Text("Switch Spaces and batch-move windows in one command.")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                        .multilineTextAlignment(.center)
-                }
-                .frame(maxWidth: .infinity)
-
                 VStack(spacing: 12) {
-                    SplashValueCard(icon: "terminal", title: "SpaceAPI", detail: "Control and inspect Spaces from scripts and integrations.")
-                    SplashValueCard(icon: "arrow.left.arrow.right.square", title: "App automation", detail: "Customize how individual apps move between Spaces.")
+                    Text("Welcome to")
+                        .font(.system(size: 30, weight: .medium, design: .rounded))
+
+
+                    Text("DesktopRenamer")
+                        .font(.custom("Syncopate-Bold", size: 28))
                 }
-                .frame(maxWidth: .infinity)
+                .multilineTextAlignment(.center)
+                
+                Text("Take back control of your macOS spaces.")
+                    .font(.title3)
+                    .foregroundColor(.secondary)
             }
-            .padding(.horizontal, 28)
-
-            Button {
-                guard let url = URL(string: "https://www.raycast.com/michael_qiu/desktoprenamer") else { return }
-                openURL(url)
-            } label: {
-                Label("Install Raycast Extension", systemImage: "arrow.up.right.square")
-                    .fontWeight(.semibold)
-                    .padding(.vertical, 10)
-                    .padding(.horizontal, 18)
-            }
-            .buttonStyle(.borderedProminent)
-        }
-        .padding(.top, 26)
-    }
-}
-
-struct SetupPage: View {
-    @AppStorage("kShowPreviewLabels") private var showPreviewLabels = true
-    @AppStorage("kShowActiveLabels") private var showActiveLabels = true
-    @AppStorage("kShowOnDesktop") private var showOnDesktop = false
-    @AppStorage("GestureManager.Enabled") private var gestureEnabled = false
-    @StateObject private var permissionManager = PermissionManager.shared
-
-    var body: some View {
-        VStack(spacing: 18) {
-            VStack(spacing: 8) {
-                Text("Make It Yours")
-                    .font(.system(size: 28, weight: .bold, design: .rounded))
-                Text("Choose the essentials now. Everything can be changed later in Settings.")
-                    .font(.body)
-                    .foregroundStyle(.secondary)
-                    .multilineTextAlignment(.center)
-            }
-
-            VStack(alignment: .leading, spacing: 10) {
-                Toggle("Show preview labels in Mission Control", isOn: $showPreviewLabels)
-                Toggle("Show active Space labels", isOn: $showActiveLabels)
-                if showActiveLabels {
-                    Toggle("Keep active labels visible on the desktop", isOn: $showOnDesktop)
-                }
-                Toggle("Enable faster switching gestures", isOn: $gestureEnabled)
-            }
-            .toggleStyle(.switch)
-            .padding(18)
-            .background(Color.secondary.opacity(0.08), in: RoundedRectangle(cornerRadius: 12))
-            .padding(.horizontal, 70)
-
-            HStack(spacing: 10) {
-                Image(systemName: permissionManager.isAccessibilityGranted ? "checkmark.shield.fill" : "lock.shield")
-                    .foregroundStyle(permissionManager.isAccessibilityGranted ? .green : .orange)
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("Accessibility permission")
-                        .font(.subheadline.weight(.semibold))
-                    Text("Needed for gestures, hotkeys, and moving windows.")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
-                Spacer()
-                Button(permissionManager.isAccessibilityGranted ? "Granted" : "Allow") {
-                    permissionManager.requestAccessibilityPermission()
-                }
-                .buttonStyle(.bordered)
-                .disabled(permissionManager.isAccessibilityGranted)
-            }
-            .padding(.horizontal, 70)
-        }
-        .padding(.top, 26)
+            .padding()
     }
 }
 
