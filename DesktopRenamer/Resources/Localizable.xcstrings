@@ -566,6 +566,16 @@
         }
       }
     },
+    "Choose Raycast or the built-in launcher to manage your Spaces and windows." : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "选择 Raycast 或内置启动器来管理桌面和窗口。"
+          }
+        }
+      }
+    },
     "Close" : {
       "localizations" : {
         "zh-Hans" : {
@@ -1215,6 +1225,16 @@
         }
       }
     },
+    "Install Extension" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "安装扩展"
+          }
+        }
+      }
+    },
     "Keep full-screen spaces next to source desktop" : {
       "localizations" : {
         "zh-Hans" : {
@@ -1303,6 +1323,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "启动器…"
+          }
+        }
+      }
+    },
+    "Launchers" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "启动器"
           }
         }
       }

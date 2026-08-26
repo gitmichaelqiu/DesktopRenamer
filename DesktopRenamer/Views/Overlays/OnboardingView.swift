@@ -3,6 +3,7 @@ import AVKit
 
 struct OnboardingView: View {
     @Environment(\.openURL) var openURL
+    @ObservedObject var hotkeyManager: HotkeyManager
     var onClose: () -> Void
     
     @State private var currentPage = 0
@@ -30,7 +31,11 @@ struct OnboardingView: View {
                     FastSwitchingPage()
                         .transition(pageTransition)
                 case 5:
-                    RaycastFeaturePage(openURL: openURL)
+                    LaunchersPage(
+                        openURL: openURL,
+                        hotkeyManager: hotkeyManager,
+                        launcherViewModel: LauncherWindowController.shared.viewModel
+                    )
                         .transition(pageTransition)
                 case 6:
                     ManageWindowsPage()
@@ -279,76 +284,103 @@ struct FastSwitchingPage: View {
     }
 }
 
-struct RaycastFeaturePage: View {
+struct LaunchersPage: View {
     var openURL: OpenURLAction
+    @ObservedObject var hotkeyManager: HotkeyManager
+    @ObservedObject var launcherViewModel: LauncherViewModel
 
     var body: some View {
-        VStack(spacing: 30) {
+        VStack(spacing: 18) {
             VStack(spacing: 12) {
-                Text("Raycast Integration")
+                Text("Launchers")
                     .font(.system(size: 30, weight: .bold, design: .rounded))
                 
-                Text("Are you a power user? Integrate directly with Raycast to manage and switch spaces elegantly via your favorite launcher.")
+                Text("Choose Raycast or the built-in launcher to manage your Spaces and windows.")
                     .font(.body)
                     .foregroundColor(.secondary)
                     .multilineTextAlignment(.center)
-                    .lineSpacing(6)
-                    .padding(.horizontal, 40)
+                    .lineSpacing(4)
+                    .padding(.horizontal, 20)
             }
-            
-            // Raycast extension preview.
-            if let imageURL = Bundle.main.url(forResource: "RaycastExtension", withExtension: "png"),
+
+            HStack(alignment: .top, spacing: 20) {
+                LauncherShowcase(
+                    title: "Raycast",
+                    imageName: "RaycastExtension",
+                    imageFallbackSymbol: "puzzlepiece.extension.fill"
+                ) {
+                    Button(action: {
+                        if let url = URL(string: "https://www.raycast.com/michael_qiu/desktoprenamer") {
+                            openURL(url)
+                        }
+                    }) {
+                        Label("Install Extension", systemImage: "arrow.down.circle.fill")
+                            .fontWeight(.semibold)
+                    }
+                    .buttonStyle(.borderedProminent)
+                }
+
+                LauncherShowcase(
+                    title: "DesktopRenamer",
+                    imageName: "DesktopRenamerLauncher",
+                    imageFallbackSymbol: "rectangle.and.text.magnifyingglass"
+                ) {
+                    VStack(alignment: .leading, spacing: 8) {
+                        HStack {
+                            Text("Open launcher")
+                            Spacer()
+                            Text(hotkeyManager.description(for: .launcher))
+                                .foregroundColor(.secondary)
+                            Button("◉") {
+                                hotkeyManager.startListening(for: .launcher)
+                            }
+                            .disabled(hotkeyManager.isListening)
+                            Button("↺") {
+                                hotkeyManager.resetToDefault(for: .launcher)
+                            }
+                            .disabled(hotkeyManager.isDefault(for: .launcher))
+                        }
+
+                        Toggle("Automatically rank commands", isOn: $launcherViewModel.automaticallyRankCommands)
+                            .toggleStyle(.switch)
+                    }
+                }
+            }
+            .padding(.horizontal, 20)
+        }
+        .padding(.top, 20)
+    }
+}
+
+private struct LauncherShowcase<Controls: View>: View {
+    let title: String
+    let imageName: String
+    let imageFallbackSymbol: String
+    @ViewBuilder let controls: () -> Controls
+
+    var body: some View {
+        VStack(spacing: 10) {
+            Text(title)
+                .font(.headline)
+
+            if let imageURL = Bundle.main.url(forResource: imageName, withExtension: "png"),
                let nsImage = NSImage(contentsOf: imageURL) {
                 Image(nsImage: nsImage)
                     .resizable()
                     .aspectRatio(contentMode: .fit)
-                    .cornerRadius(12)
-                    .shadow(color: Color.black.opacity(0.2), radius: 10, x: 0, y: 5)
-                    .padding(.horizontal, 40)
-            } else if let nsImageFallback = NSImage(named: "RaycastExtension") {
-                Image(nsImage: nsImageFallback)
-                    .resizable()
-                    .aspectRatio(contentMode: .fit)
-                    .cornerRadius(12)
-                    .shadow(color: Color.black.opacity(0.2), radius: 10, x: 0, y: 5)
-                    .padding(.horizontal, 40)
+                    .frame(maxHeight: 170)
+                    .clipShape(RoundedRectangle(cornerRadius: 10))
+                    .shadow(color: Color.black.opacity(0.2), radius: 8, x: 0, y: 4)
             } else {
-                // Fallback icon for missing extension image.
-                ZStack {
-                    RoundedRectangle(cornerRadius: 12)
-                        .fill(Color.secondary.opacity(0.1))
-                    Image(systemName: "puzzlepiece.extension.fill")
-                        .font(.system(size: 50))
-                        .foregroundColor(.secondary)
-                }
-                .padding(.horizontal, 40)
+                Image(systemName: imageFallbackSymbol)
+                    .font(.system(size: 48))
+                    .foregroundColor(.secondary)
+                    .frame(maxWidth: .infinity, minHeight: 120)
             }
 
-            Button(action: {
-                if let url = URL(string: "https://www.raycast.com/michael_qiu/desktoprenamer") {
-                    openURL(url)
-                }
-            }) {
-                HStack {
-                    Image(systemName: "command.square.fill")
-                        .resizable()
-                        .frame(width: 16, height: 16)
-                    Text("Install Raycast Extension")
-                        .fontWeight(.semibold)
-                }
-                .foregroundColor(.white)
-                .padding(.vertical, 12)
-                .padding(.horizontal, 24)
-                .background(
-                    Color.red
-                )
-                .cornerRadius(10)
-                .shadow(color: Color.black.opacity(0.15), radius: 5, x: 0, y: 2)
-            }
-            .buttonStyle(PlainButtonStyle())
-            .padding(.top, 8)
+            controls()
         }
-        .padding(.top, 20)
+        .frame(maxWidth: .infinity, alignment: .top)
     }
 }
 

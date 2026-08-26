@@ -24,13 +24,13 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             UserDefaults.standard.set(true, forKey: "HasInitializedDefaults")
         }
 
+        self.hotkeyManager = HotkeyManager()
+
         // Check for first launch to present the onboarding screen.
         let hasSeenOnboarding = UserDefaults.standard.bool(forKey: "hasSeenSplashScreen")
         if !hasSeenOnboarding {
             showOnboarding()
         }
-
-        self.hotkeyManager = HotkeyManager()
 
         DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
             self.spaceManager = SpaceManager()
@@ -132,7 +132,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             }
         }
 
-        let onboardingView = OnboardingView { [weak self] in
+        let onboardingView = OnboardingView(hotkeyManager: hotkeyManager) { [weak self] in
             Task { @MainActor in
                 UserDefaults.standard.set(true, forKey: "hasSeenSplashScreen")
 
