@@ -108,7 +108,7 @@ struct GeneralSettingsView: View {
                     Divider()
 
                     SettingsRow(
-                        "Diagnostic Report",
+                        "Diagnostic report",
                         helperText: "Start collection, reproduce the bug, then stop and save the full diagnostic report."
                     ) {
                         Button("Open") {
@@ -118,7 +118,7 @@ struct GeneralSettingsView: View {
 
                     Divider()
 
-                    SettingsRow("Review Onboarding", helperText: "View the welcome screen again.") {
+                    SettingsRow("Review onboarding", helperText: "View the welcome screen again.") {
                         Button("Review") {
                             AppDelegate.shared.showOnboarding(on: NSApp.suitableSheetWindow)
                         }
