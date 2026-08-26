@@ -239,8 +239,11 @@ extension LauncherViewModel {
                 }            
             }
             
-            // Return to original space
-            if let originalUUID = originalSpaceUUID,
+            // Return to original space after actions that needed a temporary switch.
+            // Quitting an app does not require visiting its space, so preserve the
+            // user's current space for quit actions.
+            if actionType != .quit,
+               let originalUUID = originalSpaceUUID,
                let manager = AppDelegate.shared.spaceManager,
                manager.returnToOriginalAfterBatchMove {
                 if manager.currentSpaceUUID != originalUUID,
@@ -255,4 +258,3 @@ extension LauncherViewModel {
         }
     }
 }
-
