@@ -23,8 +23,7 @@ struct GeneralSettingsView: View {
                 // General configuration options.
                 SettingsSection("Settings.General.General") {
                     SettingsRow(
-                        "Show preview labels",
-                        helperText: "The large label visible in Mission Control."
+                        "Show preview labels"
                     ) {
                         Toggle("", isOn: $labelManager.showPreviewLabels)
                             .toggleStyle(.switch)
@@ -33,11 +32,7 @@ struct GeneralSettingsView: View {
 
                     Divider()
                 
-                    SettingsRow(
-                        "Show active space labels",
-                        helperText:
-                            "The hidden label that slides into the corner of the active desktop.",
-                    ) {
+                    SettingsRow("Show active space labels") {
                         Toggle("", isOn: $labelManager.showActiveLabels)
                             .labelsHidden()
                             .toggleStyle(.switch)
@@ -118,7 +113,7 @@ struct GeneralSettingsView: View {
 
                     Divider()
 
-                    SettingsRow("Review onboarding", helperText: "View the welcome screen again.") {
+                    SettingsRow("Review onboarding") {
                         Button("Review") {
                             AppDelegate.shared.showOnboarding(on: NSApp.suitableSheetWindow)
                         }

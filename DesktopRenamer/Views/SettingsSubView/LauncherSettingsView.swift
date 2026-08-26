@@ -33,8 +33,7 @@ struct LauncherSettingsView: View {
                     Divider()
 
                     SettingsRow(
-                        "Automatically return to original space",
-                        helperText: "Automatically return to your original desktop after moving windows to a different desktop."
+                        "Automatically return to original space"
                     ) {
                         Toggle("", isOn: $spaceManager.returnToOriginalAfterBatchMove)
                             .toggleStyle(.switch)

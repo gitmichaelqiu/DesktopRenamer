@@ -212,9 +212,7 @@ struct SwitchSettingsView: View {
                     
                     Divider()
                     
-                    SettingsRow("Restore windows moved by lock",
-                        helperText: "Restore windows moved by lock to the last space that windows are manually assigned to."
-                    ) {
+                    SettingsRow("Restore windows moved by lock") {
                         HStack {
                             Text(hotkeyManager.description(for: .restoreWindows))
                                 .foregroundColor(.secondary)
@@ -273,8 +271,7 @@ struct SwitchSettingsView: View {
                         Divider()
                         
                         SettingsRow(
-                            "Move window when holding Option",
-                            helperText: "Hold the Option key while swiping on the trackpad to move the active window to the adjacent space."
+                            "Move window when holding Option"
                         ) {
                             Toggle("", isOn: $gestureManager.moveWindowOnOption)
                                 .toggleStyle(.switch)
