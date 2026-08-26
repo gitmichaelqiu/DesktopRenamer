@@ -1042,6 +1042,16 @@
         }
       }
     },
+    "Skip" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "跳过"
+          }
+        }
+      }
+    },
     "GitHub / Support" : {
       "extractionState" : "manual",
       "localizations" : {

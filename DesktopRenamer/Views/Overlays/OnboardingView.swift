@@ -70,6 +70,18 @@ struct OnboardingView: View {
                 
                 Spacer()
                 
+                // Navigation: Skip
+                if currentPage < totalPages - 1 {
+                    Button("Skip") {
+                        onClose()
+                    }
+                    .buttonStyle(.plain)
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 8)
+                    .foregroundColor(.secondary)
+                    .transition(.opacity)
+                }
+
                 // Navigation: Back
                 if currentPage > 0 {
                     Button("Back") {
