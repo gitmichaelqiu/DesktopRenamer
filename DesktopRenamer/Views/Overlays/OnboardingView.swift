@@ -241,6 +241,7 @@ struct MenuBarSwitchPage: View {
 
 struct FastSwitchingPage: View {
     @AppStorage("GestureManager.Enabled") private var gestureEnabled = false
+    @AppStorage("GestureManager.FingerCount") private var fingerCount = 3
 
     var body: some View {
         VStack(spacing: 10) {
@@ -253,6 +254,20 @@ struct FastSwitchingPage: View {
             VStack(alignment: .leading, spacing: 8) {
                 Toggle("Enable switch gesture override", isOn: $gestureEnabled)
                     .toggleStyle(.switch)
+
+                if gestureEnabled {
+                    HStack {
+                        Text("Gesture type")
+
+                        Spacer()
+
+                        Picker("Gesture type", selection: $fingerCount) {
+                            Text("3 Fingers").tag(3)
+                            Text("4 Fingers").tag(4)
+                        }
+                        .labelsHidden()
+                    }
+                }
             }
             .padding(.bottom, 20)
         }
