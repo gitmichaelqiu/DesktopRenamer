@@ -370,7 +370,7 @@ struct RaycastBatchMovePage: View {
 
 struct SpaceOrganizationPage: View {
     var body: some View {
-        VStack(spacing: 24) {
+        VStack(spacing: 20) {
             VStack(spacing: 10) {
                 Text("Organize Your Spaces")
                     .font(.system(size: 30, weight: .bold, design: .rounded))
@@ -382,40 +382,32 @@ struct SpaceOrganizationPage: View {
                     .padding(.horizontal, 35)
             }
 
-            HStack(spacing: 16) {
-                OnboardingFeatureCard(
+            VStack(alignment: .leading, spacing: 16) {
+                OnboardingFeatureRow(
                     icon: "arrow.up.arrow.down.square",
                     title: "Rearrange Spaces",
                     detail: "Drag Spaces in Settings or use launcher shortcuts to change their order."
                 )
-                OnboardingFeatureCard(
+                OnboardingFeatureRow(
                     icon: "rectangle.inset.filled.and.person.filled",
                     title: "Fullscreen Spaces",
                     detail: "Automatically place newly created fullscreen Spaces beside their source desktop."
                 )
-                OnboardingFeatureCard(
+                OnboardingFeatureRow(
                     icon: "display.2",
                     title: "Multiple Displays",
                     detail: "Move windows between displays while preserving your Space context."
                 )
             }
-            .padding(.horizontal, 28)
-
-            HStack(spacing: 12) {
-                Image(systemName: "info.circle.fill")
-                    .foregroundStyle(Color.accentColor)
-                Text("Space rearrangement is available from Settings → Spaces and the launcher.")
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
-            }
+            .padding(.horizontal, 55)
         }
-        .padding(.top, 28)
+        .padding(.top, 30)
     }
 }
 
 struct AutomationPage: View {
     var body: some View {
-        VStack(spacing: 24) {
+        VStack(spacing: 20) {
             VStack(spacing: 10) {
                 Text("Automate Your Workspace")
                     .font(.system(size: 30, weight: .bold, design: .rounded))
@@ -427,56 +419,45 @@ struct AutomationPage: View {
                     .padding(.horizontal, 35)
             }
 
-            HStack(spacing: 16) {
-                OnboardingFeatureCard(
+            VStack(alignment: .leading, spacing: 16) {
+                OnboardingFeatureRow(
                     icon: "terminal",
                     title: "SpaceAPI & AppleScript",
                     detail: "Inspect Spaces, rename them, switch Spaces, move windows, and rearrange desktops from scripts."
                 )
-                OnboardingFeatureCard(
+                OnboardingFeatureRow(
                     icon: "app.badge",
                     title: "App Exceptions",
                     detail: "Customize window-grab offsets and movement behavior for individual applications."
                 )
             }
-            .padding(.horizontal, 80)
-
-            HStack(spacing: 12) {
-                Image(systemName: "bolt.fill")
-                    .foregroundStyle(.orange)
-                Text("Power users can combine hotkeys, gestures, Raycast, SpaceAPI, and AppleScript in one workflow.")
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
-                    .multilineTextAlignment(.center)
-            }
-            .padding(.horizontal, 60)
+            .padding(.horizontal, 55)
         }
-        .padding(.top, 28)
+        .padding(.top, 30)
     }
 }
 
-struct OnboardingFeatureCard: View {
+struct OnboardingFeatureRow: View {
     let icon: String
     let title: String
     let detail: String
 
     var body: some View {
-        VStack(spacing: 12) {
+        HStack(alignment: .top, spacing: 14) {
             Image(systemName: icon)
-                .font(.system(size: 30, weight: .medium))
+                .font(.system(size: 22, weight: .medium))
                 .foregroundStyle(Color.accentColor)
-            Text(title)
-                .font(.headline)
-                .multilineTextAlignment(.center)
-            Text(detail)
-                .font(.caption)
-                .foregroundStyle(.secondary)
-                .multilineTextAlignment(.center)
-                .fixedSize(horizontal: false, vertical: true)
+
+            VStack(alignment: .leading, spacing: 3) {
+                Text(title)
+                    .font(.headline)
+                Text(detail)
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
         }
-        .frame(maxWidth: .infinity, minHeight: 160)
-        .padding(16)
-        .background(Color.secondary.opacity(0.08), in: RoundedRectangle(cornerRadius: 14))
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 }
 
