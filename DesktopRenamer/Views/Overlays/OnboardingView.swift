@@ -318,6 +318,7 @@ struct LaunchersPage: View {
                             .fontWeight(.semibold)
                     }
                     .buttonStyle(.borderedProminent)
+                    .tint(.red)
                 }
 
                 LauncherShowcase(
@@ -346,7 +347,7 @@ struct LaunchersPage: View {
                     }
                 }
             }
-            .padding(.horizontal, 20)
+            .padding(.horizontal, 10)
         }
         .padding(.top, 20)
     }
@@ -354,21 +355,33 @@ struct LaunchersPage: View {
 
 private struct LauncherShowcase<Controls: View>: View {
     let title: String
-    let imageName: String
     let imageFallbackSymbol: String
+    let image: NSImage?
     @ViewBuilder let controls: () -> Controls
+
+    init(
+        title: String,
+        imageName: String,
+        imageFallbackSymbol: String,
+        @ViewBuilder controls: @escaping () -> Controls
+    ) {
+        self.title = title
+        self.imageFallbackSymbol = imageFallbackSymbol
+        self.image = Bundle.main.url(forResource: imageName, withExtension: "png")
+            .flatMap(NSImage.init(contentsOf:))
+        self.controls = controls
+    }
 
     var body: some View {
         VStack(spacing: 10) {
             Text(title)
                 .font(.headline)
 
-            if let imageURL = Bundle.main.url(forResource: imageName, withExtension: "png"),
-               let nsImage = NSImage(contentsOf: imageURL) {
-                Image(nsImage: nsImage)
+            if let image {
+                Image(nsImage: image)
                     .resizable()
                     .aspectRatio(contentMode: .fit)
-                    .frame(maxHeight: 170)
+                    .frame(maxWidth: .infinity, maxHeight: 220)
                     .clipShape(RoundedRectangle(cornerRadius: 10))
                     .shadow(color: Color.black.opacity(0.2), radius: 8, x: 0, y: 4)
             } else {
