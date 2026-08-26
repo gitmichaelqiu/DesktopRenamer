@@ -38,9 +38,9 @@ If a code example is changed, check that all annotations are still valid.
 
 Fork the repository and make changes on your fork in a feature branch:
 
-If it's a bug fix branch, name it `bugfix/TXXXX_something` where XXXX is the number of the issue. For instance, `bugfix/T1_SampleIssue`.
+If it's a bug fix branch, name it `bugfix/TXXXX_Something` where XXXX is the number of the issue. For instance, `bugfix/T1_SampleIssue`.
 
-If it's a feature branch, create an enhancement issue to announce your intentions, and name it `feat/TXXXX-something` where XXXX is the number of the issue.
+If it's a feature branch, create an enhancement issue to announce your intentions, and name it `feat/TXXXX_Something` where XXXX is the number of the issue.
 Submit tests for your changes. For instance, `feat/T1_SampleFeature`.
 
 Update the documentation when creating or modifying features. Test your documentation changes for clarity, concision, and correctness, as well as a clean documentation build.
