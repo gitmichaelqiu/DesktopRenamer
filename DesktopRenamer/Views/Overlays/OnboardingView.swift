@@ -180,6 +180,7 @@ struct RenamePage: View {
 
 struct MissionControlPage: View {
     @AppStorage("kShowPreviewLabels") private var showPreviewLabels = true
+    @AppStorage("kHideWhenSwitching") private var hideWhenSwitching = false
     @AppStorage("kShowActiveLabels") private var showActiveLabels = true
     @AppStorage("kShowOnDesktop") private var showOnDesktop = false
 
@@ -196,8 +197,15 @@ struct MissionControlPage: View {
             
             VStack(spacing: 12) {
                 HStack(alignment: .top, spacing: 40) {
-                    Toggle("Show preview labels", isOn: $showPreviewLabels)
-                        .toggleStyle(.switch)
+                    VStack(alignment: .leading, spacing: 8) {
+                        Toggle("Show preview labels", isOn: $showPreviewLabels)
+                            .toggleStyle(.switch)
+
+                        if showPreviewLabels {
+                            Toggle("Hide when switching spaces", isOn: $hideWhenSwitching)
+                                .toggleStyle(.switch)
+                        }
+                    }
                     
                     VStack(alignment: .leading, spacing: 8) {
                         Toggle("Show active space labels", isOn: $showActiveLabels)
@@ -213,6 +221,7 @@ struct MissionControlPage: View {
             }
             .padding(.bottom, 10)
         }
+        .animation(.easeInOut(duration: 0.25), value: showPreviewLabels)
         .animation(.easeInOut(duration: 0.25), value: showActiveLabels)
     }
 }
