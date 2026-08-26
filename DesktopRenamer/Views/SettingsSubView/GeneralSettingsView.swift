@@ -118,9 +118,9 @@ struct GeneralSettingsView: View {
 
                     Divider()
 
-                    SettingsRow("Review Splash", helperText: "View the welcome screen again.") {
+                    SettingsRow("Review Onboarding", helperText: "View the welcome screen again.") {
                         Button("Review") {
-                            AppDelegate.shared.showSplashScreen(on: NSApp.suitableSheetWindow)
+                            AppDelegate.shared.showOnboarding(on: NSApp.suitableSheetWindow)
                         }
                     }
 

@@ -11,7 +11,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     var gestureManager: GestureManager!
 
     private var cancellables = Set<AnyCancellable>()
-    var splashWindowController: NSWindowController?
+    var onboardingWindowController: NSWindowController?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         AppDelegate.shared = self
@@ -24,10 +24,10 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             UserDefaults.standard.set(true, forKey: "HasInitializedDefaults")
         }
 
-        // Check for first launch to present onboarding splash screen.
-        let hasSeenSplash = UserDefaults.standard.bool(forKey: "hasSeenSplashScreen")
-        if !hasSeenSplash {
-            showSplashScreen()
+        // Check for first launch to present the onboarding screen.
+        let hasSeenOnboarding = UserDefaults.standard.bool(forKey: "hasSeenSplashScreen")
+        if !hasSeenOnboarding {
+            showOnboarding()
         }
 
         self.hotkeyManager = HotkeyManager()
@@ -123,8 +123,8 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             .store(in: &cancellables)
     }
 
-    func showSplashScreen(on parentWindow: NSWindow? = nil) {
-        if let existing = splashWindowController {
+    func showOnboarding(on parentWindow: NSWindow? = nil) {
+        if let existing = onboardingWindowController {
             if let window = existing.window, window.isVisible {
                 NSApp.activate(ignoringOtherApps: true)
                 window.makeKeyAndOrderFront(nil)
@@ -132,7 +132,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             }
         }
 
-        let splashView = SplashView { [weak self] in
+        let onboardingView = OnboardingView { [weak self] in
             Task { @MainActor in
                 UserDefaults.standard.set(true, forKey: "hasSeenSplashScreen")
 
@@ -144,11 +144,11 @@ class AppDelegate: NSObject, NSApplicationDelegate {
                     labelManager.showActiveLabels = UserDefaults.standard.object(forKey: "kShowActiveLabels") == nil ? true : UserDefaults.standard.bool(forKey: "kShowActiveLabels")
                 }
 
-                if let parent = parentWindow, let sheet = self?.splashWindowController?.window {
+                if let parent = parentWindow, let sheet = self?.onboardingWindowController?.window {
                     parent.endSheet(sheet)
                 } else {
-                    self?.splashWindowController?.close()
-                    self?.splashWindowController = nil
+                    self?.onboardingWindowController?.close()
+                    self?.onboardingWindowController = nil
                 }
 
                 // Automatically switch to About page of settings.
@@ -156,7 +156,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             }
         }
 
-        let hostingController = NSHostingController(rootView: splashView)
+        let hostingController = NSHostingController(rootView: onboardingView)
         let window = NSWindow(
             contentRect: NSRect(x: 0, y: 0, width: 550, height: 450),
             styleMask: [.titled, .closable, .fullSizeContentView],
@@ -170,11 +170,11 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         window.contentViewController = hostingController
 
         let windowController = NSWindowController(window: window)
-        self.splashWindowController = windowController
+        self.onboardingWindowController = windowController
 
         if let parent = parentWindow {
             parent.beginSheet(window) { _ in
-                self.splashWindowController = nil
+                self.onboardingWindowController = nil
             }
         } else {
             window.center()

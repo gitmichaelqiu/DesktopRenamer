@@ -1,7 +1,7 @@
 import SwiftUI
 import AVKit
 
-struct SplashView: View {
+struct OnboardingView: View {
     @Environment(\.openURL) var openURL
     var onClose: () -> Void
     
