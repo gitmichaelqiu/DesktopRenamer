@@ -122,7 +122,7 @@ struct OnboardingView: View {
                             }
                         )
                         .cornerRadius(8)
-                        .animation(.none, value: currentPage)
+                        .animation(.easeInOut(duration: 0.25), value: currentPage)
                 }
                 .buttonStyle(.plain)
             }
