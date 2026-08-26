@@ -1724,6 +1724,16 @@
         }
       }
     },
+    "Move all windows of an app to another Space in one command." : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "一键将应用的所有窗口移动到另一个桌面。"
+          }
+        }
+      }
+    },
     "No commands found" : {
       "localizations" : {
         "zh-Hans" : {

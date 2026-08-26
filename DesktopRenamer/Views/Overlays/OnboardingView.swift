@@ -7,7 +7,7 @@ struct OnboardingView: View {
     
     @State private var currentPage = 0
     @State private var movingForward = true
-    private let totalPages = 12
+    private let totalPages = 10
 
     var body: some View {
         VStack(spacing: 0) {
@@ -27,27 +27,21 @@ struct OnboardingView: View {
                     MenuBarSwitchPage()
                         .transition(pageTransition)
                 case 4:
-                    LockSpacePage()
-                        .transition(pageTransition)
-                case 5:
                     FastSwitchingPage()
                         .transition(pageTransition)
-                case 6:
+                case 5:
                     RaycastFeaturePage(openURL: openURL)
                         .transition(pageTransition)
+                case 6:
+                    ManageWindowsPage()
+                        .transition(pageTransition)
                 case 7:
-                    RaycastBatchMovePage()
+                    LockSpacePage()
                         .transition(pageTransition)
                 case 8:
-                    SpaceOrganizationPage()
-                        .transition(pageTransition)
-                case 9:
-                    AutomationPage()
-                        .transition(pageTransition)
-                case 10:
                     PermissionsPage()
                         .transition(pageTransition)
-                case 11:
+                case 9:
                     MoreAppsPage()
                         .transition(pageTransition)
                 default:
@@ -358,55 +352,13 @@ struct RaycastFeaturePage: View {
     }
 }
 
-struct RaycastBatchMovePage: View {
+struct ManageWindowsPage: View {
     var body: some View {
         SingleVideoFeaturePage(
-            title: NSLocalizedString("Raycast: Batch Move", comment: ""),
-            subtitle: NSLocalizedString("Use the Raycast extension to move all windows of an app to another space in one command.", comment: ""),
+            title: NSLocalizedString("Manage Windows", comment: ""),
+            subtitle: NSLocalizedString("Move all windows of an app to another Space in one command.", comment: ""),
             videoName: "RaycastBatchMove"
         )
-    }
-}
-
-struct SpaceOrganizationPage: View {
-    var body: some View {
-        VStack(spacing: 24) {
-            Image(systemName: "arrow.up.arrow.down.square")
-                .font(.system(size: 52, weight: .medium))
-                .foregroundStyle(Color.accentColor)
-
-            VStack(spacing: 10) {
-                Text("Organize Your Spaces")
-                    .font(.system(size: 30, weight: .bold, design: .rounded))
-                Text("Rearrange your Spaces in Settings to keep your desktops in the order you want.")
-                    .font(.body)
-                    .foregroundStyle(.secondary)
-                    .multilineTextAlignment(.center)
-                    .lineSpacing(4)
-            }
-        }
-        .padding(.top, 30)
-    }
-}
-
-struct AutomationPage: View {
-    var body: some View {
-        VStack(spacing: 24) {
-            Image(systemName: "terminal")
-                .font(.system(size: 52, weight: .medium))
-                .foregroundStyle(Color.accentColor)
-
-            VStack(spacing: 10) {
-                Text("Automate Your Workspace")
-                    .font(.system(size: 30, weight: .bold, design: .rounded))
-                Text("Use SpaceAPI and AppleScript to inspect, rename, switch, and rearrange Spaces from scripts.")
-                    .font(.body)
-                    .foregroundStyle(.secondary)
-                    .multilineTextAlignment(.center)
-                    .lineSpacing(4)
-            }
-        }
-        .padding(.top, 30)
     }
 }
 
