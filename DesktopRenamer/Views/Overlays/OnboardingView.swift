@@ -251,15 +251,13 @@ struct FastSwitchingPage: View {
                 videoName: "SwitchOverride"
             )
 
-            VStack(alignment: .leading, spacing: 8) {
+            HStack(alignment: .top, spacing: 40) {
                 Toggle("Enable switch gesture override", isOn: $gestureEnabled)
                     .toggleStyle(.switch)
 
                 if gestureEnabled {
-                    HStack {
+                    HStack(spacing: 8) {
                         Text("Gesture type")
-
-                        Spacer()
 
                         Picker("Gesture type", selection: $fingerCount) {
                             Text("3 Fingers").tag(3)
