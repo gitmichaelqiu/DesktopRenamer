@@ -370,36 +370,20 @@ struct RaycastBatchMovePage: View {
 
 struct SpaceOrganizationPage: View {
     var body: some View {
-        VStack(spacing: 20) {
+        VStack(spacing: 24) {
+            Image(systemName: "arrow.up.arrow.down.square")
+                .font(.system(size: 52, weight: .medium))
+                .foregroundStyle(Color.accentColor)
+
             VStack(spacing: 10) {
                 Text("Organize Your Spaces")
                     .font(.system(size: 30, weight: .bold, design: .rounded))
-                Text("Keep Spaces in the order you want, even across fullscreen apps and multiple displays.")
+                Text("Rearrange your Spaces in Settings to keep your desktops in the order you want.")
                     .font(.body)
                     .foregroundStyle(.secondary)
                     .multilineTextAlignment(.center)
                     .lineSpacing(4)
-                    .padding(.horizontal, 35)
             }
-
-            VStack(alignment: .leading, spacing: 16) {
-                OnboardingFeatureRow(
-                    icon: "arrow.up.arrow.down.square",
-                    title: "Rearrange Spaces",
-                    detail: "Drag Spaces in Settings or use launcher shortcuts to change their order."
-                )
-                OnboardingFeatureRow(
-                    icon: "rectangle.inset.filled.and.person.filled",
-                    title: "Fullscreen Spaces",
-                    detail: "Automatically place newly created fullscreen Spaces beside their source desktop."
-                )
-                OnboardingFeatureRow(
-                    icon: "display.2",
-                    title: "Multiple Displays",
-                    detail: "Move windows between displays while preserving your Space context."
-                )
-            }
-            .padding(.horizontal, 55)
         }
         .padding(.top, 30)
     }
@@ -407,57 +391,22 @@ struct SpaceOrganizationPage: View {
 
 struct AutomationPage: View {
     var body: some View {
-        VStack(spacing: 20) {
+        VStack(spacing: 24) {
+            Image(systemName: "terminal")
+                .font(.system(size: 52, weight: .medium))
+                .foregroundStyle(Color.accentColor)
+
             VStack(spacing: 10) {
                 Text("Automate Your Workspace")
                     .font(.system(size: 30, weight: .bold, design: .rounded))
-                Text("DesktopRenamer works with scripts, launchers, and app-specific rules so repeated Space tasks stay effortless.")
+                Text("Use SpaceAPI and AppleScript to inspect, rename, switch, and rearrange Spaces from scripts.")
                     .font(.body)
                     .foregroundStyle(.secondary)
                     .multilineTextAlignment(.center)
                     .lineSpacing(4)
-                    .padding(.horizontal, 35)
             }
-
-            VStack(alignment: .leading, spacing: 16) {
-                OnboardingFeatureRow(
-                    icon: "terminal",
-                    title: "SpaceAPI & AppleScript",
-                    detail: "Inspect Spaces, rename them, switch Spaces, move windows, and rearrange desktops from scripts."
-                )
-                OnboardingFeatureRow(
-                    icon: "app.badge",
-                    title: "App Exceptions",
-                    detail: "Customize window-grab offsets and movement behavior for individual applications."
-                )
-            }
-            .padding(.horizontal, 55)
         }
         .padding(.top, 30)
-    }
-}
-
-struct OnboardingFeatureRow: View {
-    let icon: String
-    let title: String
-    let detail: String
-
-    var body: some View {
-        HStack(alignment: .top, spacing: 14) {
-            Image(systemName: icon)
-                .font(.system(size: 22, weight: .medium))
-                .foregroundStyle(Color.accentColor)
-
-            VStack(alignment: .leading, spacing: 3) {
-                Text(title)
-                    .font(.headline)
-                Text(detail)
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
     }
 }
 
