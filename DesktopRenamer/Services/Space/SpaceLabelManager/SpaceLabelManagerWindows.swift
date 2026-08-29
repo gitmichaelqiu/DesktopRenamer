@@ -355,18 +355,22 @@ extension SpaceLabelManager {
         } else {
              print("SpaceLabelManager: applyVisibility(visibleUUIDs: \(visibleUUIDs)) GLOBAL refresh")
         }
-        
+
+        let fullscreenDisplayIDs = currentFullscreenDisplayIDs(
+            visibleUUIDs: visibleUUIDs,
+            displayID: displayID
+        )
         let windowsSnapshot = self.createdWindows
 
         for (key, window) in windowsSnapshot {
             if let targetDisplay = displayID, window.displayID != targetDisplay {
                 continue // Skip windows that are on a different display than the one we are updating
             }
-            
-            if visibleUUIDs.contains(key) {
+
+            if visibleUUIDs.contains(key) || fullscreenDisplayIDs.contains(window.displayID) {
                 // The active space has its own dedicated label window. Keep
                 // the preview window bound to the space, but never visible on
-                // the active desktop alongside the active label.
+                // the active desktop or over a fullscreen app.
                 window.hideImmediately()
             } else {
                 window.updateVisibility(animated: false)
@@ -379,6 +383,42 @@ extension SpaceLabelManager {
             }
             window.setActiveVisibility(visibleUUIDs.contains(key), animated: false)
         }
+    }
+
+    private func currentFullscreenDisplayIDs(
+        visibleUUIDs: Set<String>,
+        displayID: String?
+    ) -> Set<String> {
+        guard let spaceManager = spaceManager else { return [] }
+
+        var fullscreenDisplayIDs = Set(
+            spaceManager.spaceNameDict.compactMap { space in
+                guard space.isFullscreen,
+                      visibleUUIDs.contains(space.id),
+                      displayID == nil || displayID == space.displayID else {
+                    return nil
+                }
+                return space.displayID
+            }
+        )
+
+        // Fullscreen metadata can lag behind the managed-space ID during the
+        // enter/exit animation. Use the live state as a fallback so existing
+        // previews are not exposed while WindowServer is still transitioning.
+        if let liveState = SpaceHelper.getSystemState() {
+            fullscreenDisplayIDs.formUnion(
+                liveState.spaces.compactMap { space in
+                    guard space.isFullscreen,
+                          visibleUUIDs.contains(space.id),
+                          displayID == nil || displayID == space.displayID else {
+                        return nil
+                    }
+                    return space.displayID
+                }
+            )
+        }
+
+        return fullscreenDisplayIDs
     }
 
     func hidePreviewLabel(for spaceId: String) {
