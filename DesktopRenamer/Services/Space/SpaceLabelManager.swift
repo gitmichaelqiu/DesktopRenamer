@@ -97,6 +97,7 @@ class SpaceLabelManager: ObservableObject {
     var reloadWorkItem: DispatchWorkItem?
     var reloadGeneration = 0
     var startupSpaceRestoreWorkItem: DispatchWorkItem?
+    var knownSpaceIDs: Set<String> = []
     var knownFullscreenSpaceIDs: Set<String> = []
     var previewLabelsSuppressedUntil: Date?
     let startupDisplayID: String?
@@ -107,6 +108,7 @@ class SpaceLabelManager: ObservableObject {
         let startupState = SpaceHelper.getSystemState()
         self.startupDisplayID = startupState?.displayID
         self.startupSpaceID = startupState?.currentUUID
+        self.knownSpaceIDs = Set(spaceManager.spaceNameDict.map(\.id))
         self.knownFullscreenSpaceIDs = Set(spaceManager.spaceNameDict.filter(\.isFullscreen).map(\.id))
 
         // Load Settings

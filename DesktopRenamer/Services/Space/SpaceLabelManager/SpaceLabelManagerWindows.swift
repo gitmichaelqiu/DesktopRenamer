@@ -85,18 +85,23 @@ extension SpaceLabelManager {
             .sink { [weak self] spaces in
                 guard let self = self else { return }
 
+                let spaceIDs = Set(spaces.map(\.id))
+                let spaceLayoutChanged = self.knownSpaceIDs != spaceIDs
                 let fullscreenSpaceIDs = Set(spaces.filter(\.isFullscreen).map(\.id))
                 let fullscreenLayoutChanged = self.knownFullscreenSpaceIDs != fullscreenSpaceIDs
+                self.knownSpaceIDs = spaceIDs
                 self.knownFullscreenSpaceIDs = fullscreenSpaceIDs
 
                 // Exiting fullscreen changes the managed-space layout without
                 // necessarily changing currentSpaceUUID. Entering fullscreen
                 // has the same timing issue: a new preview can be created
                 // before WindowServer reports the fullscreen space as current.
-                if self.hideWhenSwitching && fullscreenLayoutChanged {
+                // Use the complete ID set as a fallback because fullscreen
+                // metadata can arrive after the new managed space itself.
+                if self.hideWhenSwitching && (spaceLayoutChanged || fullscreenLayoutChanged) {
                     self.suppressPreviewLabelsForTransition(
                         duration: 1.2,
-                        reason: "fullscreen transition"
+                        reason: "space layout transition"
                     )
                 }
 
