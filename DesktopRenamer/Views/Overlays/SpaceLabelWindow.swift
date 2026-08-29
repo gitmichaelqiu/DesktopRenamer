@@ -131,12 +131,15 @@ class SpaceLabelWindow: NSWindow {
         self.level = .floating
 
         // Collection Behavior
-        // Both label roles must participate in Mission Control. Active labels
-        // are separate windows so they can stay synchronized on the desktop,
-        // but they must remain managed here to stay visible in Mission Control.
-        // .fullScreenAuxiliary is retained to allow visibility over fullscreen apps.
-        // .ignoresCycle prevents label windows from appearing in Alt+Tab window cycling.
-        self.collectionBehavior = [.managed, .fullScreenAuxiliary, .ignoresCycle]
+        // Both label roles remain managed so they participate in Mission
+        // Control. Only active labels may accompany a fullscreen app; a
+        // preview label belongs exclusively to its own background Space.
+        // Giving previews .fullScreenAuxiliary lets WindowServer replicate
+        // them over fullscreen Spaces during the enter/exit animation.
+        // .ignoresCycle prevents label windows from appearing in Alt+Tab.
+        self.collectionBehavior = isActiveLabel
+            ? [.managed, .fullScreenAuxiliary, .ignoresCycle]
+            : [.managed, .ignoresCycle]
 
         // Observers
         self.spaceManager.$spaceNameDict
