@@ -391,7 +391,7 @@ extension SpaceLabelManager {
     ) -> Set<String> {
         guard let spaceManager = spaceManager else { return [] }
 
-        var fullscreenDisplayIDs = Set(
+        var fullscreenDisplayIDs = Set<String>(
             spaceManager.spaceNameDict.compactMap { space in
                 guard space.isFullscreen,
                       visibleUUIDs.contains(space.id),
@@ -407,14 +407,14 @@ extension SpaceLabelManager {
         // previews are not exposed while WindowServer is still transitioning.
         if let liveState = SpaceHelper.getSystemState() {
             fullscreenDisplayIDs.formUnion(
-                liveState.spaces.compactMap { space in
+                Set<String>(liveState.spaces.compactMap { space in
                     guard space.isFullscreen,
                           visibleUUIDs.contains(space.id),
                           displayID == nil || displayID == space.displayID else {
                         return nil
                     }
                     return space.displayID
-                }
+                })
             )
         }
 
