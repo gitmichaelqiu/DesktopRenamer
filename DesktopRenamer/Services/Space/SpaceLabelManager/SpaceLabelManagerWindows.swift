@@ -56,30 +56,22 @@ extension SpaceLabelManager {
                 self.scheduleActiveLabelSynchronization()
 
                 if self.hideWhenSwitching {
-                    let now = Date().timeIntervalSince1970
-                    let isRecentProgrammaticSwitch = now - SpaceHelper.lastProgrammaticSwitchTime < 1.0
-                    let isRecentAppActivation = now - SpaceHelper.lastAppActivationTime < 1.0
-                    if isRecentProgrammaticSwitch || isRecentAppActivation {
-                        let switchSource = isRecentProgrammaticSwitch ? "programmatic" : "app activation"
-                        DiagnosticEventLog.shared.record(subsystem: "Labels", level: "info", "\(switchSource) switch — hiding labels")
-                        self.hideAllPreviewLabels()
-                    } else {
-                        DiagnosticEventLog.shared.record(subsystem: "Labels", level: "info", "native switch — restoring immediately")
-                        self.updateAllWindowModes(forDisplay: self.spaceManager?.currentDisplayID)
-                    }
+                    self.suppressPreviewLabelsForTransition(
+                        duration: 0.6,
+                        reason: "space switch"
+                    )
                 } else {
                     self.updateAllWindowModes(forDisplay: self.spaceManager?.currentDisplayID)
                 }
 
-                let workItem = DispatchWorkItem { [weak self] in
-                    // Restore ALL displays — hideAllPreviewLabels hid everything,
-                    // and when hideWhenSwitching is on the current display was not
-                    // restored either. This unfiltered call is the sole restore point.
-                    DiagnosticEventLog.shared.record(subsystem: "Labels", level: "info", "delayed restore firing")
-                    self?.updateAllWindowModes()
+                if !self.hideWhenSwitching {
+                    let workItem = DispatchWorkItem { [weak self] in
+                        DiagnosticEventLog.shared.record(subsystem: "Labels", level: "info", "delayed restore firing")
+                        self?.updateAllWindowModes()
+                    }
+                    self.delayedRestoreWorkItem = workItem
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.6, execute: workItem)
                 }
-                self.delayedRestoreWorkItem = workItem
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.6, execute: workItem)
             }
             .store(in: &cancellables)
 
@@ -110,9 +102,9 @@ extension SpaceLabelManager {
 
                 self.recalculateUnifiedSize()
                 // When hideWhenSwitching is on, don't restore labels here —
-                // the settling delay in the currentSpaceUUID observer is
-                // the sole restore point. syncWindowsWithDict still creates
-                // and removes windows, it just skips the final updateAllWindowModes.
+                // the transition suppression work item owns restoration.
+                // syncWindowsWithDict still creates and removes windows, it
+                // just skips the final updateAllWindowModes.
                 self.syncWindowsWithDict(updateModes: self.hideWhenSwitching != true)
             }
             .store(in: &cancellables)
@@ -150,7 +142,10 @@ extension SpaceLabelManager {
     private func suppressPreviewLabelsForTransition(duration: TimeInterval, reason: String) {
         previewTransitionRestoreWorkItem?.cancel()
         previewTransitionRestoreWorkItem = nil
-        previewLabelsSuppressedUntil = Date().addingTimeInterval(duration)
+
+        let requestedSuppressionEnd = Date().addingTimeInterval(duration)
+        let existingSuppressionEnd = previewLabelsSuppressedUntil ?? .distantPast
+        previewLabelsSuppressedUntil = max(existingSuppressionEnd, requestedSuppressionEnd)
         hideAllPreviewLabels()
 
         DiagnosticEventLog.shared.record(
@@ -161,6 +156,14 @@ extension SpaceLabelManager {
 
         let workItem = DispatchWorkItem { [weak self] in
             guard let self = self else { return }
+
+            // A second transition may have extended the suppression window
+            // while this work item was pending. Do not restore previews early.
+            guard let suppressionEnd = self.previewLabelsSuppressedUntil,
+                  suppressionEnd <= Date() else {
+                return
+            }
+
             self.previewLabelsSuppressedUntil = nil
             self.previewTransitionRestoreWorkItem = nil
             DiagnosticEventLog.shared.record(
@@ -171,7 +174,8 @@ extension SpaceLabelManager {
             self.updateAllWindowModes()
         }
         previewTransitionRestoreWorkItem = workItem
-        DispatchQueue.main.asyncAfter(deadline: .now() + duration, execute: workItem)
+        let delay = max(0.01, previewLabelsSuppressedUntil?.timeIntervalSinceNow ?? duration)
+        DispatchQueue.main.asyncAfter(deadline: .now() + delay, execute: workItem)
     }
 
     @objc private func handleSpaceSwitchTargetRequested(_ notification: Notification) {

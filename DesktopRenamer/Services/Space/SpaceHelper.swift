@@ -38,9 +38,6 @@ class SpaceHelper {
     static var lastProgrammaticSwitchTime: TimeInterval = 0
     static var lastProgrammaticTargetSpaceID: String? = nil
     static var lastProgrammaticSwitchUsedSLS = false
-    // App activation can make macOS switch to the space containing the app's
-    // window without going through SpaceHelper.switchToSpace().
-    static var lastAppActivationTime: TimeInterval = 0
     
     // Session state for active dragging operations.
     static var originalMousePoint: CGPoint? = nil

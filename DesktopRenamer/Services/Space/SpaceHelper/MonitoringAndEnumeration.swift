@@ -15,10 +15,7 @@ extension SpaceHelper {
         ) { _ in detectSpaceChange() }
         appActivationObserver = NSWorkspace.shared.notificationCenter.addObserver(
             forName: NSWorkspace.didActivateApplicationNotification, object: nil, queue: .main
-        ) { _ in
-            lastAppActivationTime = Date().timeIntervalSince1970
-            detectSpaceChange()
-        }
+        ) { _ in detectSpaceChange() }
 
         // Monitor events to detect user-initiated space switches.
         localEventMonitor = NSEvent.addLocalMonitorForEvents(matching: [
@@ -40,7 +37,6 @@ extension SpaceHelper {
             NSWorkspace.shared.notificationCenter.removeObserver(observer)
             appActivationObserver = nil
         }
-        lastAppActivationTime = 0
         if let monitor = globalEventMonitor {
             NSEvent.removeMonitor(monitor)
             globalEventMonitor = nil
