@@ -49,7 +49,6 @@ extension SpaceLabelManager {
                 // so the old restore doesn't fire in the middle of a new transition.
                 self.delayedRestoreWorkItem?.cancel()
                 self.delayedRestoreWorkItem = nil
-                self.previewLabelsSuppressedUntil = nil
 
                 // Active labels are independent of preview-label hiding. Keep
                 // their state synchronized immediately and retry briefly while
@@ -134,7 +133,6 @@ extension SpaceLabelManager {
             guard let self = self else { return }
             self.delayedRestoreWorkItem?.cancel()
             self.delayedRestoreWorkItem = nil
-            self.previewLabelsSuppressedUntil = nil
             if self.hideWhenSwitching {
                 self.hideAllPreviewLabels()
             }
@@ -142,8 +140,8 @@ extension SpaceLabelManager {
     }
 
     private func suppressPreviewLabelsForTransition(duration: TimeInterval, reason: String) {
-        delayedRestoreWorkItem?.cancel()
-        delayedRestoreWorkItem = nil
+        previewTransitionRestoreWorkItem?.cancel()
+        previewTransitionRestoreWorkItem = nil
         previewLabelsSuppressedUntil = Date().addingTimeInterval(duration)
         hideAllPreviewLabels()
 
@@ -156,6 +154,7 @@ extension SpaceLabelManager {
         let workItem = DispatchWorkItem { [weak self] in
             guard let self = self else { return }
             self.previewLabelsSuppressedUntil = nil
+            self.previewTransitionRestoreWorkItem = nil
             DiagnosticEventLog.shared.record(
                 subsystem: "Labels",
                 level: "info",
@@ -163,7 +162,7 @@ extension SpaceLabelManager {
             )
             self.updateAllWindowModes()
         }
-        delayedRestoreWorkItem = workItem
+        previewTransitionRestoreWorkItem = workItem
         DispatchQueue.main.asyncAfter(deadline: .now() + duration, execute: workItem)
     }
 
@@ -527,6 +526,9 @@ extension SpaceLabelManager {
     func resetForSystemTransition() {
         delayedRestoreWorkItem?.cancel()
         delayedRestoreWorkItem = nil
+        previewTransitionRestoreWorkItem?.cancel()
+        previewTransitionRestoreWorkItem = nil
+        previewLabelsSuppressedUntil = nil
         activeSyncWorkItems.forEach { $0.cancel() }
         activeSyncWorkItems.removeAll()
         reloadWorkItem?.cancel()
