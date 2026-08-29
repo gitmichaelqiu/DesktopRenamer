@@ -10,6 +10,11 @@ extension SpaceLabelWindow {
     }
 
     func hideImmediately() {
+        // A preview may have a delayed retry queued from the switch cooldown.
+        // Cancel it before hiding so the retry cannot reveal the preview again
+        // after the manager has determined that this is the current space.
+        pendingVisibilityTask?.cancel()
+        pendingVisibilityTask = nil
         self.alphaValue = 0.0
         self.contentView?.alphaValue = 0.0
     }

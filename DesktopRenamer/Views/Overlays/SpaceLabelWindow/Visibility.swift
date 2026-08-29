@@ -33,6 +33,16 @@ extension SpaceLabelWindow {
             return
         }
 
+        // Keep this check in the window itself, not only in
+        // SpaceLabelManager.applyVisibility. A delayed retry or an unrelated
+        // appearance refresh can arrive after the manager hid the preview.
+        // Preview labels must never be rendered on their current space.
+        if !isActiveMode && SpaceHelper.getVisibleSystemSpaceIDs().contains(spaceId) {
+            alphaValue = 0.0
+            contentView?.alphaValue = 0.0
+            return
+        }
+
         var isVisuallyVisible = false
         if isActiveMode {
             isVisuallyVisible = labelManager?.showActiveLabels ?? true
