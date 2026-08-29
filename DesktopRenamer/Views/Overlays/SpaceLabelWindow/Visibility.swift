@@ -43,6 +43,14 @@ extension SpaceLabelWindow {
             return
         }
 
+        if !isActiveMode,
+           let suppressedUntil = labelManager?.previewLabelsSuppressedUntil,
+           suppressedUntil > Date() {
+            alphaValue = 0.0
+            contentView?.alphaValue = 0.0
+            return
+        }
+
         var isVisuallyVisible = false
         if isActiveMode {
             isVisuallyVisible = labelManager?.showActiveLabels ?? true

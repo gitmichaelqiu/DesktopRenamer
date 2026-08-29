@@ -49,6 +49,7 @@ extension SpaceLabelManager {
                 // so the old restore doesn't fire in the middle of a new transition.
                 self.delayedRestoreWorkItem?.cancel()
                 self.delayedRestoreWorkItem = nil
+                self.previewLabelsSuppressedUntil = nil
 
                 // Active labels are independent of preview-label hiding. Keep
                 // their state synchronized immediately and retry briefly while
@@ -86,17 +87,17 @@ extension SpaceLabelManager {
                 guard let self = self else { return }
 
                 let fullscreenSpaceIDs = Set(spaces.filter(\.isFullscreen).map(\.id))
-                let exitedFullscreenSpaceIDs = self.knownFullscreenSpaceIDs.subtracting(fullscreenSpaceIDs)
+                let fullscreenLayoutChanged = self.knownFullscreenSpaceIDs != fullscreenSpaceIDs
                 self.knownFullscreenSpaceIDs = fullscreenSpaceIDs
 
                 // Exiting fullscreen changes the managed-space layout without
-                // necessarily changing currentSpaceUUID. Treat it as a space
-                // transition so previews stay hidden during the fullscreen
-                // animation instead of appearing on the desktop immediately.
-                if self.hideWhenSwitching && !exitedFullscreenSpaceIDs.isEmpty {
+                // necessarily changing currentSpaceUUID. Entering fullscreen
+                // has the same timing issue: a new preview can be created
+                // before WindowServer reports the fullscreen space as current.
+                if self.hideWhenSwitching && fullscreenLayoutChanged {
                     self.suppressPreviewLabelsForTransition(
                         duration: 1.2,
-                        reason: "fullscreen exit"
+                        reason: "fullscreen transition"
                     )
                 }
 
@@ -133,6 +134,7 @@ extension SpaceLabelManager {
             guard let self = self else { return }
             self.delayedRestoreWorkItem?.cancel()
             self.delayedRestoreWorkItem = nil
+            self.previewLabelsSuppressedUntil = nil
             if self.hideWhenSwitching {
                 self.hideAllPreviewLabels()
             }
@@ -142,6 +144,7 @@ extension SpaceLabelManager {
     private func suppressPreviewLabelsForTransition(duration: TimeInterval, reason: String) {
         delayedRestoreWorkItem?.cancel()
         delayedRestoreWorkItem = nil
+        previewLabelsSuppressedUntil = Date().addingTimeInterval(duration)
         hideAllPreviewLabels()
 
         DiagnosticEventLog.shared.record(
@@ -152,6 +155,7 @@ extension SpaceLabelManager {
 
         let workItem = DispatchWorkItem { [weak self] in
             guard let self = self else { return }
+            self.previewLabelsSuppressedUntil = nil
             DiagnosticEventLog.shared.record(
                 subsystem: "Labels",
                 level: "info",

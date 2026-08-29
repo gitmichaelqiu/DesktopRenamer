@@ -97,6 +97,7 @@ class SpaceLabelManager: ObservableObject {
     var reloadGeneration = 0
     var startupSpaceRestoreWorkItem: DispatchWorkItem?
     var knownFullscreenSpaceIDs: Set<String> = []
+    var previewLabelsSuppressedUntil: Date?
     let startupDisplayID: String?
     let startupSpaceID: String?
 
