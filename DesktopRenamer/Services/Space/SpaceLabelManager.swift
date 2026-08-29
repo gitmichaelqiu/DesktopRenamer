@@ -96,6 +96,7 @@ class SpaceLabelManager: ObservableObject {
     var reloadWorkItem: DispatchWorkItem?
     var reloadGeneration = 0
     var startupSpaceRestoreWorkItem: DispatchWorkItem?
+    var knownFullscreenSpaceIDs: Set<String> = []
     let startupDisplayID: String?
     let startupSpaceID: String?
 
@@ -104,6 +105,7 @@ class SpaceLabelManager: ObservableObject {
         let startupState = SpaceHelper.getSystemState()
         self.startupDisplayID = startupState?.displayID
         self.startupSpaceID = startupState?.currentUUID
+        self.knownFullscreenSpaceIDs = Set(spaceManager.spaceNameDict.filter(\.isFullscreen).map(\.id))
 
         // Load Settings
         let loadedActiveFont = UserDefaults.standard.double(forKey: kActiveFontScale)

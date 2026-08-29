@@ -82,13 +82,30 @@ extension SpaceLabelManager {
 
         spaceManager.$spaceNameDict
             .receive(on: DispatchQueue.main)
-            .sink { [weak self] _ in
-                self?.recalculateUnifiedSize()
+            .sink { [weak self] spaces in
+                guard let self = self else { return }
+
+                let fullscreenSpaceIDs = Set(spaces.filter(\.isFullscreen).map(\.id))
+                let exitedFullscreenSpaceIDs = self.knownFullscreenSpaceIDs.subtracting(fullscreenSpaceIDs)
+                self.knownFullscreenSpaceIDs = fullscreenSpaceIDs
+
+                // Exiting fullscreen changes the managed-space layout without
+                // necessarily changing currentSpaceUUID. Treat it as a space
+                // transition so previews stay hidden during the fullscreen
+                // animation instead of appearing on the desktop immediately.
+                if self.hideWhenSwitching && !exitedFullscreenSpaceIDs.isEmpty {
+                    self.suppressPreviewLabelsForTransition(
+                        duration: 1.2,
+                        reason: "fullscreen exit"
+                    )
+                }
+
+                self.recalculateUnifiedSize()
                 // When hideWhenSwitching is on, don't restore labels here —
                 // the settling delay in the currentSpaceUUID observer is
                 // the sole restore point. syncWindowsWithDict still creates
                 // and removes windows, it just skips the final updateAllWindowModes.
-                self?.syncWindowsWithDict(updateModes: self?.hideWhenSwitching != true)
+                self.syncWindowsWithDict(updateModes: self.hideWhenSwitching != true)
             }
             .store(in: &cancellables)
 
@@ -120,6 +137,30 @@ extension SpaceLabelManager {
                 self.hideAllPreviewLabels()
             }
         }
+    }
+
+    private func suppressPreviewLabelsForTransition(duration: TimeInterval, reason: String) {
+        delayedRestoreWorkItem?.cancel()
+        delayedRestoreWorkItem = nil
+        hideAllPreviewLabels()
+
+        DiagnosticEventLog.shared.record(
+            subsystem: "Labels",
+            level: "info",
+            "\(reason) — hiding previews during transition"
+        )
+
+        let workItem = DispatchWorkItem { [weak self] in
+            guard let self = self else { return }
+            DiagnosticEventLog.shared.record(
+                subsystem: "Labels",
+                level: "info",
+                "\(reason) transition settled — restoring previews"
+            )
+            self.updateAllWindowModes()
+        }
+        delayedRestoreWorkItem = workItem
+        DispatchQueue.main.asyncAfter(deadline: .now() + duration, execute: workItem)
     }
 
     @objc private func handleSpaceSwitchTargetRequested(_ notification: Notification) {
