@@ -56,9 +56,12 @@ extension SpaceLabelManager {
                 self.scheduleActiveLabelSynchronization()
 
                 if self.hideWhenSwitching {
-                    let isRecent = Date().timeIntervalSince1970 - SpaceHelper.lastProgrammaticSwitchTime < 1.0
-                    if isRecent {
-                        DiagnosticEventLog.shared.record(subsystem: "Labels", level: "info", "programmatic switch — hiding labels")
+                    let now = Date().timeIntervalSince1970
+                    let isRecentProgrammaticSwitch = now - SpaceHelper.lastProgrammaticSwitchTime < 1.0
+                    let isRecentAppActivation = now - SpaceHelper.lastAppActivationTime < 1.0
+                    if isRecentProgrammaticSwitch || isRecentAppActivation {
+                        let switchSource = isRecentProgrammaticSwitch ? "programmatic" : "app activation"
+                        DiagnosticEventLog.shared.record(subsystem: "Labels", level: "info", "\(switchSource) switch — hiding labels")
                         self.hideAllPreviewLabels()
                     } else {
                         DiagnosticEventLog.shared.record(subsystem: "Labels", level: "info", "native switch — restoring immediately")
