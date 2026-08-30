@@ -108,10 +108,7 @@ class LauncherWindowController: NSWindowController, NSWindowDelegate {
         centerOnActiveScreen()
         
         // Reset state
-        viewModel.searchQuery = ""
-        viewModel.selectedRowIndex = 0
-        viewModel.activeCommand = nil
-        viewModel.stagingWindow = nil
+        viewModel.resetForPresentation()
         
         // Make key and focus
         NSApp.activate(ignoringOtherApps: true)
@@ -128,6 +125,7 @@ class LauncherWindowController: NSWindowController, NSWindowDelegate {
         isCommandKeyPressed = false
         cmdLongPressWorkItem?.cancel()
         cmdLongPressWorkItem = nil
+        viewModel.resetForPresentation()
         viewModel.showCommandNumbers = false
         
         if shouldRestoreFocus, let prev = viewModel.previouslyActiveWindow {
