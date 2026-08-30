@@ -12,7 +12,10 @@ extension SpaceHelper {
 
         spaceChangeObserver = NSWorkspace.shared.notificationCenter.addObserver(
             forName: NSWorkspace.activeSpaceDidChangeNotification, object: nil, queue: .main
-        ) { _ in detectSpaceChange() }
+        ) { _ in
+            noteActiveSpaceDidChange()
+            detectSpaceChange()
+        }
         appActivationObserver = NSWorkspace.shared.notificationCenter.addObserver(
             forName: NSWorkspace.didActivateApplicationNotification, object: nil, queue: .main
         ) { _ in detectSpaceChange() }
@@ -30,6 +33,11 @@ extension SpaceHelper {
 
     static func stopMonitoring() {
         spaceDetectionGeneration += 1
+        programmaticSwitchCompletionWorkItem?.cancel()
+        programmaticSwitchCompletionWorkItem = nil
+        isSwitching = false
+        programmaticSwitchDestinationObserved = false
+        programmaticSwitchNotificationObserved = false
         if let observer = spaceChangeObserver {
             NSWorkspace.shared.notificationCenter.removeObserver(observer)
             spaceChangeObserver = nil

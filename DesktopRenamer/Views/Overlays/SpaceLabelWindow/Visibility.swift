@@ -27,6 +27,8 @@ extension SpaceLabelWindow {
         guard labelsEnabled else {
             pendingVisibilityTask?.cancel()
             pendingVisibilityTask = nil
+            contentView?.layer?.removeAllAnimations()
+            contentContainer.layer?.removeAllAnimations()
             alphaValue = 0.0
             contentView?.alphaValue = 0.0
             orderOut(nil)
@@ -38,16 +40,12 @@ extension SpaceLabelWindow {
         // appearance refresh can arrive after the manager hid the preview.
         // Preview labels must never be rendered on their current space.
         if !isActiveMode && SpaceHelper.getVisibleSystemSpaceIDs().contains(spaceId) {
-            alphaValue = 0.0
-            contentView?.alphaValue = 0.0
+            hideImmediately()
             return
         }
 
-        if !isActiveMode,
-           let suppressedUntil = labelManager?.previewLabelsSuppressedUntil,
-           suppressedUntil > Date() {
-            alphaValue = 0.0
-            contentView?.alphaValue = 0.0
+        if !isActiveMode, labelManager?.isPreviewTransitionSuppressed == true {
+            hideImmediately()
             return
         }
 

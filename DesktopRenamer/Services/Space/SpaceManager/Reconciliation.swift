@@ -265,10 +265,9 @@ extension SpaceManager {
                 }
             }
 
-            // Keep the switch transition open until this reconciliation pass
-            // has observed the requested destination in live WindowServer
-            // state. This prevents the preview restore timer from treating a
-            // stale 0.5-second timeout as a settled switch.
+            // Record the destination observation. SpaceHelper also waits for
+            // the matching active-space notification before declaring the
+            // programmatic transition complete.
             SpaceHelper.markProgrammaticSwitchComplete(at: targetUUID)
             
             if self.currentDisplayID != cgsState.displayID {

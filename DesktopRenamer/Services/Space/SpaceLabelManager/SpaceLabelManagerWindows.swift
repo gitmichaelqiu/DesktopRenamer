@@ -56,9 +56,15 @@ extension SpaceLabelManager {
                 self.scheduleActiveLabelSynchronization()
 
                 if self.hideWhenSwitching {
+                    let visibleUUIDs = SpaceHelper.getVisibleSystemSpaceIDs()
+                    let visibleSpaceSetChanged = self.recordVisibleSpaceIDs(visibleUUIDs)
+                    let currentSpaceIsVisible = !visibleUUIDs.isEmpty
+                        && visibleUUIDs.contains(self.spaceManager?.currentSpaceUUID ?? "")
                     self.suppressPreviewLabelsForTransition(
                         duration: 0.6,
-                        reason: "space switch"
+                        reason: "space switch",
+                        beginsNewTransition: visibleSpaceSetChanged,
+                        transitionCompleted: currentSpaceIsVisible && !SpaceHelper.isSwitching
                     )
                 } else {
                     self.updateAllWindowModes(forDisplay: self.spaceManager?.currentDisplayID)
@@ -96,7 +102,8 @@ extension SpaceLabelManager {
                 if self.hideWhenSwitching && (spaceLayoutChanged || fullscreenLayoutChanged) {
                     self.suppressPreviewLabelsForTransition(
                         duration: 1.2,
-                        reason: "space layout transition"
+                        reason: "space layout transition",
+                        beginsNewTransition: true
                     )
                 }
 
@@ -138,6 +145,10 @@ extension SpaceLabelManager {
             name: NSNotification.Name("SpaceChangeWillReconcile"), object: nil)
 
         NotificationCenter.default.addObserver(
+            self, selector: #selector(handleProgrammaticSpaceTransitionSettled(_:)),
+            name: NSNotification.Name("SpaceProgrammaticSwitchSettled"), object: nil)
+
+        NotificationCenter.default.addObserver(
             self, selector: #selector(handleSpaceSwitchTargetRequested(_:)),
             name: NSNotification.Name("SpaceSwitchTargetRequested"), object: nil)
 
@@ -167,7 +178,8 @@ extension SpaceLabelManager {
         if hideWhenSwitching {
             suppressPreviewLabelsForTransition(
                 duration: 1.2,
-                reason: "space switch requested"
+                reason: "space switch requested",
+                beginsNewTransition: true
             )
         }
     }
@@ -186,10 +198,29 @@ extension SpaceLabelManager {
         guard hideWhenSwitching else { return }
 
         let visibleSpaceIDs = SpaceHelper.getVisibleSystemSpaceIDs()
-        recordVisibleSpaceIDs(visibleSpaceIDs)
+        let didChange = recordVisibleSpaceIDs(visibleSpaceIDs)
         suppressPreviewLabelsForTransition(
             duration: 1.2,
-            reason: "active space notification"
+            reason: "active space notification",
+            beginsNewTransition: didChange
+        )
+    }
+
+    @objc private func handleProgrammaticSpaceTransitionSettled(_ notification: Notification) {
+        guard hideWhenSwitching else { return }
+
+        let visibleSpaceIDs = SpaceHelper.getVisibleSystemSpaceIDs()
+        guard !visibleSpaceIDs.isEmpty else { return }
+
+        let targetSpaceID = notification.userInfo?["spaceID"] as? String
+        guard targetSpaceID == nil || visibleSpaceIDs.contains(targetSpaceID ?? "") else {
+            return
+        }
+
+        suppressPreviewLabelsForTransition(
+            duration: 0.15,
+            reason: "programmatic space transition settled",
+            transitionCompleted: true
         )
     }
 
@@ -209,7 +240,8 @@ extension SpaceLabelManager {
         if liveSpaceSetChangedSinceLastObservation() {
             suppressPreviewLabelsForTransition(
                 duration: 1.2,
-                reason: "application activation space transition"
+                reason: "application activation space transition",
+                beginsNewTransition: true
             )
             return
         }
@@ -259,7 +291,8 @@ extension SpaceLabelManager {
         applicationActivationTransitionCheckWorkItem = nil
         suppressPreviewLabelsForTransition(
             duration: 1.2,
-            reason: "application activation space transition"
+            reason: "application activation space transition",
+            beginsNewTransition: true
         )
     }
 
@@ -292,22 +325,62 @@ extension SpaceLabelManager {
         // the same suppression state as the actual switch.
         suppressPreviewLabelsForTransition(
             duration: 1.2,
-            reason: "space reconciliation"
+            reason: "space reconciliation",
+            beginsNewTransition: true
         )
     }
 
-    private func suppressPreviewLabelsForTransition(duration: TimeInterval, reason: String) {
+    private func suppressPreviewLabelsForTransition(
+        duration: TimeInterval,
+        reason: String,
+        beginsNewTransition: Bool = false,
+        transitionCompleted: Bool = false
+    ) {
+        let now = Date()
+        let hasPendingTransition = previewTransitionRestoreWorkItem != nil
+            || previewLabelsSuppressedUntil != nil
+        let shouldBeginNewTransition = beginsNewTransition || !hasPendingTransition
+
         previewTransitionRestoreWorkItem?.cancel()
         previewTransitionRestoreWorkItem = nil
         previewTransitionGeneration += 1
         let generation = previewTransitionGeneration
-        previewTransitionRestoreAttempt = 0
-        previewTransitionStablePasses = 0
-        previewTransitionLastVisibleUUIDs = nil
 
-        let requestedSuppressionEnd = Date().addingTimeInterval(duration)
-        let existingSuppressionEnd = previewLabelsSuppressedUntil ?? .distantPast
-        previewLabelsSuppressedUntil = max(existingSuppressionEnd, requestedSuppressionEnd)
+        if shouldBeginNewTransition {
+            previewTransitionRestoreAttempt = 0
+            previewTransitionStablePasses = 0
+            previewTransitionLastVisibleUUIDs = nil
+            previewTransitionCompletionObserved = false
+            previewTransitionFallbackDeadline = now.addingTimeInterval(duration)
+        } else if !previewTransitionCompletionObserved {
+            // Extend an unconfirmed transition when another WindowServer
+            // reconciliation pass arrives, but never extend a transition after
+            // its active-space notification has confirmed completion.
+            let requestedFallback = now.addingTimeInterval(duration)
+            previewTransitionFallbackDeadline = max(
+                previewTransitionFallbackDeadline ?? .distantPast,
+                requestedFallback
+            )
+        }
+
+        if transitionCompleted {
+            let wasAlreadyCompleted = previewTransitionCompletionObserved
+            previewTransitionCompletionObserved = true
+            if !wasAlreadyCompleted {
+                previewTransitionStablePasses = 0
+                previewTransitionLastVisibleUUIDs = nil
+            }
+
+            // The notification is the completion boundary. Keep a short
+            // settling interval for the final WindowServer snapshot instead of
+            // waiting out the original blind suppression delay.
+            previewLabelsSuppressedUntil = now.addingTimeInterval(0.15)
+        } else if !previewTransitionCompletionObserved {
+            let requestedSuppressionEnd = now.addingTimeInterval(duration)
+            let existingSuppressionEnd = previewLabelsSuppressedUntil ?? .distantPast
+            previewLabelsSuppressedUntil = max(existingSuppressionEnd, requestedSuppressionEnd)
+        }
+
         hideAllPreviewLabels()
 
         DiagnosticEventLog.shared.record(
@@ -356,6 +429,20 @@ extension SpaceLabelManager {
             return
         }
 
+        // If the active-space notification has not arrived yet, keep the
+        // previews hidden until the bounded fallback deadline. The short
+        // minimum suppression interval above is not a completion signal.
+        if !previewTransitionCompletionObserved,
+           let fallbackDeadline = previewTransitionFallbackDeadline,
+           fallbackDeadline > now {
+            schedulePreviewTransitionRestore(
+                after: fallbackDeadline.timeIntervalSince(now),
+                generation: generation,
+                reason: reason
+            )
+            return
+        }
+
         let visibleUUIDs = SpaceHelper.getVisibleSystemSpaceIDs()
         let currentSpaceID = spaceManager?.currentSpaceUUID ?? ""
         let hasKnownCurrentSpace = !currentSpaceID.isEmpty
@@ -391,6 +478,8 @@ extension SpaceLabelManager {
         previewLabelsSuppressedUntil = nil
         previewTransitionRestoreWorkItem = nil
         previewTransitionLastVisibleUUIDs = nil
+        previewTransitionCompletionObserved = false
+        previewTransitionFallbackDeadline = nil
         DiagnosticEventLog.shared.record(
             subsystem: "Labels",
             level: "info",
@@ -584,10 +673,16 @@ extension SpaceLabelManager {
         let managerHasStaleCurrentSpace = !currentSpaceID.isEmpty
             && !visibleUUIDs.isEmpty
             && !visibleUUIDs.contains(currentSpaceID)
-        if hideWhenSwitching && (recordVisibleSpaceIDs(visibleUUIDs) || managerHasStaleCurrentSpace) {
+        let visibleSpaceSetChanged = recordVisibleSpaceIDs(visibleUUIDs)
+        if hideWhenSwitching && (visibleSpaceSetChanged || managerHasStaleCurrentSpace) {
+            // A changed visible-space set is the first destination snapshot,
+            // not proof that the animation has finished. Keep previews hidden
+            // until the current-space publisher confirms the destination and
+            // the settling pass observes a stable WindowServer state.
             suppressPreviewLabelsForTransition(
                 duration: 1.2,
-                reason: "visibility refresh detected space transition"
+                reason: "visibility refresh detected space transition",
+                beginsNewTransition: visibleSpaceSetChanged
             )
         }
 
@@ -601,6 +696,7 @@ extension SpaceLabelManager {
             visibleUUIDs: visibleUUIDs,
             displayID: displayID
         )
+        let suppressPreviews = hideWhenSwitching && isPreviewTransitionSuppressed
         let windowsSnapshot = self.createdWindows
 
         for (key, window) in windowsSnapshot {
@@ -608,7 +704,9 @@ extension SpaceLabelManager {
                 continue // Skip windows that are on a different display than the one we are updating
             }
 
-            if visibleUUIDs.contains(key) || fullscreenDisplayIDs.contains(window.displayID) {
+            if suppressPreviews
+                || visibleUUIDs.contains(key)
+                || fullscreenDisplayIDs.contains(window.displayID) {
                 // The active space has its own dedicated label window. Keep
                 // the preview window bound to the space, but never visible on
                 // the active desktop or over a fullscreen app.
@@ -821,6 +919,8 @@ extension SpaceLabelManager {
         previewTransitionRestoreAttempt = 0
         previewTransitionStablePasses = 0
         previewTransitionLastVisibleUUIDs = nil
+        previewTransitionCompletionObserved = false
+        previewTransitionFallbackDeadline = nil
         previewLabelsSuppressedUntil = nil
         activeSyncWorkItems.forEach { $0.cancel() }
         activeSyncWorkItems.removeAll()

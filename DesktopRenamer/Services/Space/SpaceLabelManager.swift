@@ -109,8 +109,23 @@ class SpaceLabelManager: ObservableObject {
     var previewTransitionRestoreAttempt = 0
     var previewTransitionStablePasses = 0
     var previewTransitionLastVisibleUUIDs: Set<String>?
+    var previewTransitionCompletionObserved = false
+    var previewTransitionFallbackDeadline: Date?
     let startupDisplayID: String?
     let startupSpaceID: String?
+
+    var isPreviewTransitionSuppressed: Bool {
+        guard hideWhenSwitching else { return false }
+        if let suppressionEnd = previewLabelsSuppressedUntil,
+           suppressionEnd > Date() {
+            return true
+        }
+
+        // A restore work item means the transition is still being validated.
+        // Keep previews hidden during that validation even if the minimum
+        // suppression interval has elapsed.
+        return previewTransitionRestoreWorkItem != nil || SpaceHelper.isSwitching
+    }
 
     init(spaceManager: SpaceManager) {
         self.spaceManager = spaceManager

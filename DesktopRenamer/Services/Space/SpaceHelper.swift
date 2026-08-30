@@ -42,6 +42,13 @@ class SpaceHelper {
     static var lastProgrammaticSwitchTime: TimeInterval = 0
     static var lastProgrammaticTargetSpaceID: String? = nil
     static var lastProgrammaticSwitchUsedSLS = false
+    // A WindowServer space read can reach SpaceManager before macOS delivers
+    // the active-space notification. Keep the programmatic transition open
+    // until both signals have arrived, so label restoration cannot use the
+    // first destination snapshot as proof that the animation has finished.
+    static var programmaticSwitchDestinationObserved = false
+    static var programmaticSwitchNotificationObserved = false
+    static var programmaticSwitchCompletionWorkItem: DispatchWorkItem?
     
     // Session state for active dragging operations.
     static var originalMousePoint: CGPoint? = nil

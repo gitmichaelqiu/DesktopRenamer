@@ -15,6 +15,12 @@ extension SpaceLabelWindow {
         // after the manager has determined that this is the current space.
         pendingVisibilityTask?.cancel()
         pendingVisibilityTask = nil
+
+        // updateVisibility(animated:) uses the content view's animator. A
+        // pending fade-to-visible animation can otherwise complete after this
+        // call and paint the preview back in during a space transition.
+        contentView?.layer?.removeAllAnimations()
+        contentContainer.layer?.removeAllAnimations()
         self.alphaValue = 0.0
         self.contentView?.alphaValue = 0.0
     }

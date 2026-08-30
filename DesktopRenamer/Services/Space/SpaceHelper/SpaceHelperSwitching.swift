@@ -11,7 +11,11 @@ extension SpaceHelper {
 
         if !forceInstant {
             guard !isSwitching else { return }
+            programmaticSwitchCompletionWorkItem?.cancel()
+            programmaticSwitchCompletionWorkItem = nil
             isSwitching = true
+            programmaticSwitchDestinationObserved = false
+            programmaticSwitchNotificationObserved = false
         }
 
         lastProgrammaticSwitchTime = switchStartedAt
@@ -38,7 +42,11 @@ extension SpaceHelper {
                           lastProgrammaticTargetSpaceID == spaceID else {
                         return
                     }
+                    programmaticSwitchCompletionWorkItem?.cancel()
+                    programmaticSwitchCompletionWorkItem = nil
                     isSwitching = false
+                    programmaticSwitchDestinationObserved = false
+                    programmaticSwitchNotificationObserved = false
                 }
             }
         }
@@ -154,16 +162,76 @@ extension SpaceHelper {
 
     }
 
-    /// Marks a programmatic switch complete once SpaceManager has read the
-    /// requested destination from the live WindowServer state.
+    /// Records that SpaceManager has read the requested destination from live
+    /// WindowServer state. The active-space notification is also required
+    /// before the transition is considered complete.
     static func markProgrammaticSwitchComplete(at spaceID: String) {
         guard isSwitching, lastProgrammaticTargetSpaceID == spaceID else { return }
-        isSwitching = false
-        DiagnosticEventLog.shared.record(
-            subsystem: "SpaceHelper",
-            level: "info",
-            "programmatic switch confirmed at space \(spaceID)"
-        )
+        guard getVisibleSystemSpaceIDs().contains(spaceID) else {
+            DiagnosticEventLog.shared.record(
+                subsystem: "SpaceHelper",
+                level: "info",
+                "programmatic destination snapshot is not visible yet at space \(spaceID); waiting for a consistent WindowServer read"
+            )
+            return
+        }
+        programmaticSwitchDestinationObserved = true
+        guard programmaticSwitchNotificationObserved else {
+            DiagnosticEventLog.shared.record(
+                subsystem: "SpaceHelper",
+                level: "info",
+                "programmatic destination observed at space \(spaceID); waiting for active-space notification"
+            )
+            return
+        }
+
+        finishProgrammaticSwitch(at: spaceID)
+    }
+
+    /// Records the completion signal emitted by NSWorkspace when the active
+    /// space changes. SpaceManager may have observed the destination first, so
+    /// either ordering is accepted.
+    static func noteActiveSpaceDidChange() {
+        guard isSwitching else { return }
+        programmaticSwitchNotificationObserved = true
+        guard programmaticSwitchDestinationObserved,
+              let targetSpaceID = lastProgrammaticTargetSpaceID else { return }
+
+        finishProgrammaticSwitch(at: targetSpaceID)
+    }
+
+    private static func finishProgrammaticSwitch(at spaceID: String) {
+        guard programmaticSwitchCompletionWorkItem == nil else { return }
+
+        // The first matching WindowServer read and the active-space
+        // notification can both arrive before the visual swipe has finished.
+        // Keep the transition open for one settling interval, then notify the
+        // label manager so it can perform its own stable-state verification.
+        let switchStartedAt = lastProgrammaticSwitchTime
+        let workItem = DispatchWorkItem {
+            programmaticSwitchCompletionWorkItem = nil
+            guard isSwitching,
+                  lastProgrammaticSwitchTime == switchStartedAt,
+                  lastProgrammaticTargetSpaceID == spaceID else {
+                return
+            }
+
+            isSwitching = false
+            programmaticSwitchDestinationObserved = false
+            programmaticSwitchNotificationObserved = false
+            DiagnosticEventLog.shared.record(
+                subsystem: "SpaceHelper",
+                level: "info",
+                "programmatic switch confirmed at space \(spaceID)"
+            )
+            NotificationCenter.default.post(
+                name: NSNotification.Name("SpaceProgrammaticSwitchSettled"),
+                object: nil,
+                userInfo: ["spaceID": spaceID]
+            )
+        }
+        programmaticSwitchCompletionWorkItem = workItem
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.35, execute: workItem)
     }
 
     private static func switchByActivatingOwnWindow(for spaceID: String, isFullscreen: Bool) -> Bool
