@@ -60,6 +60,7 @@ class SpaceManager: ObservableObject {
     var spaceChangeRetryCount: Int = 0
     let maxSpaceChangeRetries: Int = 5
     var spaceChangeRetryWorkItem: DispatchWorkItem?
+    var spaceChangeRetryGeneration = 0
     var screenParametersWorkItem: DispatchWorkItem?
     
     // Display Cache

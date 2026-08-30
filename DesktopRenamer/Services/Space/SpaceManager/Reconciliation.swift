@@ -301,12 +301,16 @@ extension SpaceManager {
         guard !isSystemSleeping else { return }
         guard spaceChangeRetryCount < maxSpaceChangeRetries else { return }
         spaceChangeRetryWorkItem?.cancel()
+        spaceChangeRetryGeneration += 1
+        let generation = spaceChangeRetryGeneration
 
         let delay = TimeInterval(0.3 + Double(spaceChangeRetryCount) * 0.2)
         spaceChangeRetryCount += 1
 
         let workItem = DispatchWorkItem { [weak self] in
-            self?.performRetryDetection()
+            guard let self = self,
+                  generation == self.spaceChangeRetryGeneration else { return }
+            self.performRetryDetection()
         }
         spaceChangeRetryWorkItem = workItem
         DispatchQueue.main.asyncAfter(deadline: .now() + delay, execute: workItem)
@@ -315,12 +319,31 @@ extension SpaceManager {
     func cancelSpaceChangeRetry() {
         spaceChangeRetryWorkItem?.cancel()
         spaceChangeRetryWorkItem = nil
+        spaceChangeRetryGeneration += 1
         spaceChangeRetryCount = 0
     }
 
     private func performRetryDetection() {
         guard !isSystemSleeping else { return }
         guard let cgsState = SpaceHelper.getSystemState() else {
+            scheduleSpaceChangeRetry()
+            return
+        }
+
+        // A retry is specifically for a stale or incomplete monitor event.
+        // Do not reconcile from a snapshot whose current space is not one of
+        // the spaces WindowServer currently exposes as visible. During Dock
+        // activation and animated switches these two CGS reads can briefly
+        // disagree; accepting the older snapshot would move the model back to
+        // the source space and reopen its preview label.
+        let visibleSpaceIDs = SpaceHelper.getVisibleSystemSpaceIDs()
+        guard !visibleSpaceIDs.isEmpty,
+              visibleSpaceIDs.contains(cgsState.currentUUID) else {
+            DiagnosticEventLog.shared.record(
+                subsystem: "SpaceManager",
+                level: "info",
+                "Ignoring inconsistent space retry: current=\(cgsState.currentUUID), visible=\(visibleSpaceIDs.sorted())"
+            )
             scheduleSpaceChangeRetry()
             return
         }

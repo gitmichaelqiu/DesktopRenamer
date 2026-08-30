@@ -8,6 +8,10 @@ extension SpaceManager {
     // Space navigation and switching logic.
     func switchToSpace(_ space: DesktopSpace, forceInstant: Bool = false, isManual: Bool = true) {
         print("SpaceManager: switchToSpace(\(space.id)) on display \(space.displayID) forceInstant: \(forceInstant) isManual: \(isManual)")
+        // A monitor retry may have been scheduled from an earlier stale
+        // snapshot. It must not reconcile the old space after this explicit
+        // switch has established a new target.
+        cancelSpaceChangeRetry()
         if isManual {
             self.lastManualSwitchTime = Date().timeIntervalSince1970
             self.lastManualSwitchTargetUUID = space.id
