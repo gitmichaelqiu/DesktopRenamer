@@ -114,12 +114,18 @@ extension SpaceLabelManager {
             object: nil,
             queue: .main
         ) { [weak self] _ in
-            Task { @MainActor [weak self] in
-                guard let self = self, self.hideWhenSwitching else { return }
-                self.suppressPreviewLabelsForTransition(
-                    duration: 1.2,
-                    reason: "active space notification"
-                )
+            MainActor.assumeIsolated {
+                self?.handleExternalSpaceTransitionNotification()
+            }
+        }
+
+        workspaceApplicationActivationObserver = NSWorkspace.shared.notificationCenter.addObserver(
+            forName: NSWorkspace.didActivateApplicationNotification,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            MainActor.assumeIsolated {
+                self?.handleApplicationActivationNotification()
             }
         }
 
@@ -164,6 +170,90 @@ extension SpaceLabelManager {
                 reason: "space switch requested"
             )
         }
+    }
+
+    private func handleExternalSpaceTransitionNotification() {
+        if Thread.isMainThread {
+            handleConfirmedExternalSpaceTransition()
+        } else {
+            DispatchQueue.main.sync { [weak self] in
+                self?.handleConfirmedExternalSpaceTransition()
+            }
+        }
+    }
+
+    private func handleConfirmedExternalSpaceTransition() {
+        guard hideWhenSwitching else { return }
+
+        let visibleSpaceIDs = SpaceHelper.getVisibleSystemSpaceIDs()
+        recordVisibleSpaceIDs(visibleSpaceIDs)
+        suppressPreviewLabelsForTransition(
+            duration: 1.2,
+            reason: "active space notification"
+        )
+    }
+
+    private func handleApplicationActivationNotification() {
+        if Thread.isMainThread {
+            processApplicationActivationNotification()
+        } else {
+            DispatchQueue.main.sync { [weak self] in
+                self?.processApplicationActivationNotification()
+            }
+        }
+    }
+
+    private func processApplicationActivationNotification() {
+        guard hideWhenSwitching else { return }
+
+        if liveSpaceSetChangedSinceLastObservation() {
+            suppressPreviewLabelsForTransition(
+                duration: 1.2,
+                reason: "application activation space transition"
+            )
+            return
+        }
+
+        // Application activation can arrive just before WindowServer updates
+        // its Current Space entry. Recheck once after that small handoff, while
+        // leaving same-space app switches visually untouched.
+        applicationActivationTransitionCheckWorkItem?.cancel()
+        let workItem = DispatchWorkItem { [weak self] in
+            self?.checkApplicationActivationSpaceTransition()
+        }
+        applicationActivationTransitionCheckWorkItem = workItem
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.12, execute: workItem)
+    }
+
+    private func checkApplicationActivationSpaceTransition() {
+        guard hideWhenSwitching else { return }
+        guard liveSpaceSetChangedSinceLastObservation() else { return }
+
+        suppressPreviewLabelsForTransition(
+            duration: 1.2,
+            reason: "application activation space transition"
+        )
+    }
+
+    private func liveSpaceSetChangedSinceLastObservation() -> Bool {
+        let visibleSpaceIDs = SpaceHelper.getVisibleSystemSpaceIDs()
+        guard !visibleSpaceIDs.isEmpty else { return false }
+
+        let currentSpaceID = spaceManager?.currentSpaceUUID ?? ""
+        let managerHasStaleCurrentSpace = !currentSpaceID.isEmpty
+            && !visibleSpaceIDs.contains(currentSpaceID)
+        let didChange = recordVisibleSpaceIDs(visibleSpaceIDs)
+        return managerHasStaleCurrentSpace || didChange
+    }
+
+    @discardableResult
+    private func recordVisibleSpaceIDs(_ visibleSpaceIDs: Set<String>) -> Bool {
+        guard !visibleSpaceIDs.isEmpty else { return false }
+
+        let didChange = !lastKnownVisibleSpaceIDs.isEmpty
+            && visibleSpaceIDs != lastKnownVisibleSpaceIDs
+        lastKnownVisibleSpaceIDs = visibleSpaceIDs
+        return didChange
     }
 
     @objc private func handleSpaceChangeWillReconcile() {
@@ -459,6 +549,17 @@ extension SpaceLabelManager {
     }
 
     func applyVisibility(_ visibleUUIDs: Set<String>, forDisplay displayID: String? = nil) {
+        // Every visibility refresh is also a source-independent transition
+        // checkpoint. This closes the race where a refresh was queued before
+        // NSWorkspace delivered its space-change notification (for example
+        // after a notification click or an external app activation).
+        if hideWhenSwitching && recordVisibleSpaceIDs(visibleUUIDs) {
+            suppressPreviewLabelsForTransition(
+                duration: 1.2,
+                reason: "visibility refresh detected space transition"
+            )
+        }
+
         if let id = displayID {
              print("SpaceLabelManager: applyVisibility(visibleUUIDs: \(visibleUUIDs)) SCOPED to display: \(id)")
         } else {

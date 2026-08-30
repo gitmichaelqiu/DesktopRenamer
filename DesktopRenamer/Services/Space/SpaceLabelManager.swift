@@ -96,10 +96,13 @@ class SpaceLabelManager: ObservableObject {
     var activeSyncWorkItems: [DispatchWorkItem] = []
     var reloadWorkItem: DispatchWorkItem?
     var workspaceSpaceChangeObserver: NSObjectProtocol?
+    var workspaceApplicationActivationObserver: NSObjectProtocol?
+    var applicationActivationTransitionCheckWorkItem: DispatchWorkItem?
     var reloadGeneration = 0
     var startupSpaceRestoreWorkItem: DispatchWorkItem?
     var knownSpaceIDs: Set<String> = []
     var knownFullscreenSpaceIDs: Set<String> = []
+    var lastKnownVisibleSpaceIDs: Set<String> = []
     var previewLabelsSuppressedUntil: Date?
     var previewTransitionGeneration = 0
     var previewTransitionRestoreAttempt = 0
@@ -115,6 +118,7 @@ class SpaceLabelManager: ObservableObject {
         self.startupSpaceID = startupState?.currentUUID
         self.knownSpaceIDs = Set(spaceManager.spaceNameDict.map(\.id))
         self.knownFullscreenSpaceIDs = Set(spaceManager.spaceNameDict.filter(\.isFullscreen).map(\.id))
+        self.lastKnownVisibleSpaceIDs = SpaceHelper.getVisibleSystemSpaceIDs()
 
         // Load Settings
         let loadedActiveFont = UserDefaults.standard.double(forKey: kActiveFontScale)
@@ -176,6 +180,10 @@ class SpaceLabelManager: ObservableObject {
         if let observer = workspaceSpaceChangeObserver {
             NSWorkspace.shared.notificationCenter.removeObserver(observer)
         }
+        if let observer = workspaceApplicationActivationObserver {
+            NSWorkspace.shared.notificationCenter.removeObserver(observer)
+        }
+        applicationActivationTransitionCheckWorkItem?.cancel()
         delayedRestoreWorkItem?.cancel()
         previewTransitionRestoreWorkItem?.cancel()
         startupSpaceRestoreWorkItem?.cancel()
