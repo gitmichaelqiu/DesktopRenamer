@@ -95,6 +95,7 @@ class SpaceLabelManager: ObservableObject {
     var previewTransitionRestoreWorkItem: DispatchWorkItem?
     var activeSyncWorkItems: [DispatchWorkItem] = []
     var reloadWorkItem: DispatchWorkItem?
+    var workspaceSpaceChangeObserver: NSObjectProtocol?
     var reloadGeneration = 0
     var startupSpaceRestoreWorkItem: DispatchWorkItem?
     var knownSpaceIDs: Set<String> = []
@@ -168,6 +169,9 @@ class SpaceLabelManager: ObservableObject {
 
     deinit {
         NotificationCenter.default.removeObserver(self)
+        if let observer = workspaceSpaceChangeObserver {
+            NSWorkspace.shared.notificationCenter.removeObserver(observer)
+        }
         delayedRestoreWorkItem?.cancel()
         previewTransitionRestoreWorkItem?.cancel()
         startupSpaceRestoreWorkItem?.cancel()

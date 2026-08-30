@@ -109,6 +109,20 @@ extension SpaceLabelManager {
             }
             .store(in: &cancellables)
 
+        workspaceSpaceChangeObserver = NSWorkspace.shared.notificationCenter.addObserver(
+            forName: NSWorkspace.activeSpaceDidChangeNotification,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            Task { @MainActor [weak self] in
+                guard let self = self, self.hideWhenSwitching else { return }
+                self.suppressPreviewLabelsForTransition(
+                    duration: 1.2,
+                    reason: "active space notification"
+                )
+            }
+        }
+
         NotificationCenter.default.addObserver(
             self, selector: #selector(handleSpaceSwitchRequested),
             name: NSNotification.Name("SpaceSwitchRequested"), object: nil)
@@ -124,18 +138,27 @@ extension SpaceLabelManager {
     }
 
     @objc private func handleSpaceSwitchRequested() {
-        // Cancel any pending delayed restore from a previous switch at the START
-        // of each new switch (before currentSpaceUUID changes), so the old
-        // restore never fires mid-transition of the next switch.
-        // This may be called from a background thread (GestureManager's MT callback),
-        // so dispatch to main for thread-safe access.
-        DispatchQueue.main.async { [weak self] in
-            guard let self = self else { return }
-            self.delayedRestoreWorkItem?.cancel()
-            self.delayedRestoreWorkItem = nil
-            if self.hideWhenSwitching {
-                self.hideAllPreviewLabels()
+        // Start suppression at the request boundary, before WindowServer or the
+        // reconciliation callbacks can enqueue a visibility refresh. This may
+        // be called from GestureManager's background callback, so only hop to
+        // the main queue when necessary.
+        if Thread.isMainThread {
+            beginPreviewSuppressionForSwitchRequest()
+        } else {
+            DispatchQueue.main.sync { [weak self] in
+                self?.beginPreviewSuppressionForSwitchRequest()
             }
+        }
+    }
+
+    private func beginPreviewSuppressionForSwitchRequest() {
+        delayedRestoreWorkItem?.cancel()
+        delayedRestoreWorkItem = nil
+        if hideWhenSwitching {
+            suppressPreviewLabelsForTransition(
+                duration: 1.2,
+                reason: "space switch requested"
+            )
         }
     }
 
