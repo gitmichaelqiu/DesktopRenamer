@@ -101,7 +101,17 @@ extension SpaceHelper {
         // Record switch completion time for self-calibrating velocity.
         endGestureTiming()
 
+        spaceDetectionGeneration += 1
+        let generation = spaceDetectionGeneration
         getRawSpaceUUID { spaceUUID, isDesktop, ncCnt, displayID in
+            guard generation == spaceDetectionGeneration else {
+                DiagnosticEventLog.shared.record(
+                    subsystem: "SpaceHelper",
+                    level: "info",
+                    "Ignoring stale space detection result"
+                )
+                return
+            }
             onSpaceChange?(spaceUUID, isDesktop, ncCnt, displayID)
         }
     }

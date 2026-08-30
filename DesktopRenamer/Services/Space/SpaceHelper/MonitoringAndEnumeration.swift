@@ -29,6 +29,7 @@ extension SpaceHelper {
     }
 
     static func stopMonitoring() {
+        spaceDetectionGeneration += 1
         if let observer = spaceChangeObserver {
             NSWorkspace.shared.notificationCenter.removeObserver(observer)
             spaceChangeObserver = nil

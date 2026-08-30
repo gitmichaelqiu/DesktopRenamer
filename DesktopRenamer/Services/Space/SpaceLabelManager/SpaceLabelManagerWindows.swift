@@ -214,21 +214,49 @@ extension SpaceLabelManager {
             return
         }
 
-        // Application activation can arrive just before WindowServer updates
-        // its Current Space entry. Recheck once after that small handoff, while
-        // leaving same-space app switches visually untouched.
+        // Application activation can arrive before WindowServer updates its
+        // Current Space entry. Keep checking the live managed-space set during
+        // the handoff instead of relying on one timing-sensitive read. A
+        // same-space activation remains untouched because suppression starts
+        // only after an actual space-set change is observed.
         applicationActivationTransitionCheckWorkItem?.cancel()
-        let workItem = DispatchWorkItem { [weak self] in
-            self?.checkApplicationActivationSpaceTransition()
-        }
-        applicationActivationTransitionCheckWorkItem = workItem
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.12, execute: workItem)
+        applicationActivationTransitionGeneration += 1
+        scheduleApplicationActivationTransitionCheck(
+            attempt: 0,
+            generation: applicationActivationTransitionGeneration
+        )
     }
 
-    private func checkApplicationActivationSpaceTransition() {
-        guard hideWhenSwitching else { return }
-        guard liveSpaceSetChangedSinceLastObservation() else { return }
+    private func scheduleApplicationActivationTransitionCheck(attempt: Int, generation: Int) {
+        let delays: [TimeInterval] = [0.05, 0.12, 0.25, 0.45, 0.7, 1.0]
+        guard generation == applicationActivationTransitionGeneration,
+              attempt < delays.count else {
+            applicationActivationTransitionCheckWorkItem = nil
+            return
+        }
 
+        let workItem = DispatchWorkItem { [weak self] in
+            self?.checkApplicationActivationSpaceTransition(
+                attempt: attempt,
+                generation: generation
+            )
+        }
+        applicationActivationTransitionCheckWorkItem = workItem
+        DispatchQueue.main.asyncAfter(deadline: .now() + delays[attempt], execute: workItem)
+    }
+
+    private func checkApplicationActivationSpaceTransition(attempt: Int, generation: Int) {
+        guard hideWhenSwitching,
+              generation == applicationActivationTransitionGeneration else { return }
+        if !liveSpaceSetChangedSinceLastObservation() {
+            scheduleApplicationActivationTransitionCheck(
+                attempt: attempt + 1,
+                generation: generation
+            )
+            return
+        }
+
+        applicationActivationTransitionCheckWorkItem = nil
         suppressPreviewLabelsForTransition(
             duration: 1.2,
             reason: "application activation space transition"
@@ -346,13 +374,14 @@ extension SpaceLabelManager {
 
         // Require two identical, non-transitioning WindowServer snapshots.
         // This prevents a late visibility refresh from reopening previews while
-        // macOS is still publishing the destination space.
+        // macOS is still publishing the destination space. Never fall through
+        // to restoration after a fixed number of attempts: doing so reopens
+        // previews precisely when a Dock/app activation transition is still
+        // reporting stale state.
         let requiredStablePasses = 2
-        let maximumRestoreAttempts = 10
-        if previewTransitionStablePasses < requiredStablePasses,
-           previewTransitionRestoreAttempt < maximumRestoreAttempts {
+        if previewTransitionStablePasses < requiredStablePasses {
             schedulePreviewTransitionRestore(
-                after: 0.15,
+                after: liveStateIsStable ? 0.15 : 0.25,
                 generation: generation,
                 reason: reason
             )
@@ -517,10 +546,8 @@ extension SpaceLabelManager {
     }
 
     func updateAllWindowModes(forDisplay displayID: String? = nil) {
-        Task { @MainActor in
-            let visibleUUIDs = SpaceHelper.getVisibleSystemSpaceIDs()
-            self.applyVisibility(visibleUUIDs, forDisplay: displayID)
-        }
+        let visibleUUIDs = SpaceHelper.getVisibleSystemSpaceIDs()
+        applyVisibility(visibleUUIDs, forDisplay: displayID)
     }
 
     private func scheduleActiveLabelSynchronization() {
@@ -553,7 +580,11 @@ extension SpaceLabelManager {
         // checkpoint. This closes the race where a refresh was queued before
         // NSWorkspace delivered its space-change notification (for example
         // after a notification click or an external app activation).
-        if hideWhenSwitching && recordVisibleSpaceIDs(visibleUUIDs) {
+        let currentSpaceID = spaceManager?.currentSpaceUUID ?? ""
+        let managerHasStaleCurrentSpace = !currentSpaceID.isEmpty
+            && !visibleUUIDs.isEmpty
+            && !visibleUUIDs.contains(currentSpaceID)
+        if hideWhenSwitching && (recordVisibleSpaceIDs(visibleUUIDs) || managerHasStaleCurrentSpace) {
             suppressPreviewLabelsForTransition(
                 duration: 1.2,
                 reason: "visibility refresh detected space transition"
@@ -781,6 +812,9 @@ extension SpaceLabelManager {
     func resetForSystemTransition() {
         delayedRestoreWorkItem?.cancel()
         delayedRestoreWorkItem = nil
+        applicationActivationTransitionCheckWorkItem?.cancel()
+        applicationActivationTransitionCheckWorkItem = nil
+        applicationActivationTransitionGeneration += 1
         previewTransitionRestoreWorkItem?.cancel()
         previewTransitionRestoreWorkItem = nil
         previewTransitionGeneration += 1

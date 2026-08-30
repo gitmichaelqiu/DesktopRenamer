@@ -32,6 +32,10 @@ class SpaceHelper {
     // Tokens for block-based notification observers (required for proper cleanup).
     static var spaceChangeObserver: NSObjectProtocol?
     static var appActivationObserver: NSObjectProtocol?
+    // Only the most recent delayed WindowServer read may publish a space
+    // change. Dock activation and mouse events can otherwise queue several
+    // reads whose callbacks arrive after a newer transition has started.
+    static var spaceDetectionGeneration = 0
 
     // Tracks switching state to prevent recursion during transitions.
     static var isSwitching = false
