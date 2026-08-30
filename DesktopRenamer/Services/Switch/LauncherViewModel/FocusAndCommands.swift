@@ -110,4 +110,18 @@ extension LauncherViewModel {
         isBottomBarFocused = false
         onClose?()
     }
+
+    func resetForPresentation() {
+        searchQuery = ""
+        spaceBarQuery = ""
+        selectedRowIndex = 0
+        selectedSpaceIndex = 0
+        activeCommand = nil
+        stagingWindow = nil
+        isBottomBarFocused = false
+        isStagingForRestoreTo = false
+        isExecutingRestoreToImmediately = false
+        commandKTargetWindow = nil
+        commandKSelectedIndex = 0
+    }
 }
