@@ -101,6 +101,10 @@ class SpaceLabelManager: ObservableObject {
     var knownSpaceIDs: Set<String> = []
     var knownFullscreenSpaceIDs: Set<String> = []
     var previewLabelsSuppressedUntil: Date?
+    var previewTransitionGeneration = 0
+    var previewTransitionRestoreAttempt = 0
+    var previewTransitionStablePasses = 0
+    var previewTransitionLastVisibleUUIDs: Set<String>?
     let startupDisplayID: String?
     let startupSpaceID: String?
 

@@ -41,6 +41,7 @@ extension SpaceManager {
         }
 
         let previousUUID = self.currentSpaceUUID
+        let targetUUID = cgsState.currentUUID
             
         let now = Date().timeIntervalSince1970
             let isRecentManualSwitch = now - lastManualSwitchTime < 2.0
@@ -158,6 +159,17 @@ extension SpaceManager {
                 return
             }
 
+            // The space list publisher is delivered independently from the
+            // current-space publisher. Tell the label manager before publishing
+            // the list so creating or refreshing a preview cannot bypass the
+            // switch-transition suppression window.
+            if previousUUID != targetUUID {
+                NotificationCenter.default.post(
+                    name: NSNotification.Name("SpaceChangeWillReconcile"),
+                    object: nil
+                )
+            }
+
             if self.spaceNameDict != newSpaceList {
                 self.spaceNameDict = newSpaceList
                 
@@ -192,8 +204,6 @@ extension SpaceManager {
                 }
             }
             
-            let targetUUID = cgsState.currentUUID
-
             if previousUUID != targetUUID {
                 // Check if previousUUID is in lockedSpaceIDs and this switch is not manual
                 if self.lockedSpaceIDs.contains(previousUUID) {

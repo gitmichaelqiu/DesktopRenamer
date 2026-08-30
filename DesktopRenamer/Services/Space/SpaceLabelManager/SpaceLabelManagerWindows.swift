@@ -128,6 +128,10 @@ extension SpaceLabelManager {
             name: NSNotification.Name("SpaceSwitchRequested"), object: nil)
 
         NotificationCenter.default.addObserver(
+            self, selector: #selector(handleSpaceChangeWillReconcile),
+            name: NSNotification.Name("SpaceChangeWillReconcile"), object: nil)
+
+        NotificationCenter.default.addObserver(
             self, selector: #selector(handleSpaceSwitchTargetRequested(_:)),
             name: NSNotification.Name("SpaceSwitchTargetRequested"), object: nil)
 
@@ -162,9 +166,26 @@ extension SpaceLabelManager {
         }
     }
 
+    @objc private func handleSpaceChangeWillReconcile() {
+        guard hideWhenSwitching else { return }
+
+        // SpaceManager publishes spaceNameDict before currentSpaceUUID. This
+        // boundary keeps window creation and dictionary-driven refreshes inside
+        // the same suppression state as the actual switch.
+        suppressPreviewLabelsForTransition(
+            duration: 1.2,
+            reason: "space reconciliation"
+        )
+    }
+
     private func suppressPreviewLabelsForTransition(duration: TimeInterval, reason: String) {
         previewTransitionRestoreWorkItem?.cancel()
         previewTransitionRestoreWorkItem = nil
+        previewTransitionGeneration += 1
+        let generation = previewTransitionGeneration
+        previewTransitionRestoreAttempt = 0
+        previewTransitionStablePasses = 0
+        previewTransitionLastVisibleUUIDs = nil
 
         let requestedSuppressionEnd = Date().addingTimeInterval(duration)
         let existingSuppressionEnd = previewLabelsSuppressedUntil ?? .distantPast
@@ -177,28 +198,86 @@ extension SpaceLabelManager {
             "\(reason) — hiding previews during transition"
         )
 
+        let delay = max(0.01, previewLabelsSuppressedUntil?.timeIntervalSinceNow ?? duration)
+        schedulePreviewTransitionRestore(
+            after: delay,
+            generation: generation,
+            reason: reason
+        )
+    }
+
+    private func schedulePreviewTransitionRestore(
+        after delay: TimeInterval,
+        generation: Int,
+        reason: String
+    ) {
         let workItem = DispatchWorkItem { [weak self] in
-            guard let self = self else { return }
-
-            // A second transition may have extended the suppression window
-            // while this work item was pending. Do not restore previews early.
-            guard let suppressionEnd = self.previewLabelsSuppressedUntil,
-                  suppressionEnd <= Date() else {
-                return
-            }
-
-            self.previewLabelsSuppressedUntil = nil
-            self.previewTransitionRestoreWorkItem = nil
-            DiagnosticEventLog.shared.record(
-                subsystem: "Labels",
-                level: "info",
-                "\(reason) transition settled — restoring previews"
-            )
-            self.updateAllWindowModes()
+            self?.attemptPreviewTransitionRestore(generation: generation, reason: reason)
         }
         previewTransitionRestoreWorkItem = workItem
-        let delay = max(0.01, previewLabelsSuppressedUntil?.timeIntervalSinceNow ?? duration)
-        DispatchQueue.main.asyncAfter(deadline: .now() + delay, execute: workItem)
+        DispatchQueue.main.asyncAfter(
+            deadline: .now() + max(0.01, delay),
+            execute: workItem
+        )
+    }
+
+    private func attemptPreviewTransitionRestore(generation: Int, reason: String) {
+        guard generation == previewTransitionGeneration else { return }
+        guard let suppressionEnd = previewLabelsSuppressedUntil else {
+            previewTransitionRestoreWorkItem = nil
+            return
+        }
+
+        let now = Date()
+        if suppressionEnd > now {
+            schedulePreviewTransitionRestore(
+                after: suppressionEnd.timeIntervalSince(now),
+                generation: generation,
+                reason: reason
+            )
+            return
+        }
+
+        let visibleUUIDs = SpaceHelper.getVisibleSystemSpaceIDs()
+        let currentSpaceID = spaceManager?.currentSpaceUUID ?? ""
+        let hasKnownCurrentSpace = !currentSpaceID.isEmpty
+        let currentSpaceIsVisible = !hasKnownCurrentSpace || visibleUUIDs.contains(currentSpaceID)
+        let liveStateIsStable = !visibleUUIDs.isEmpty
+            && currentSpaceIsVisible
+            && !SpaceHelper.isSwitching
+
+        if liveStateIsStable && previewTransitionLastVisibleUUIDs == visibleUUIDs {
+            previewTransitionStablePasses += 1
+        } else {
+            previewTransitionStablePasses = 0
+        }
+        previewTransitionLastVisibleUUIDs = visibleUUIDs
+        previewTransitionRestoreAttempt += 1
+
+        // Require two identical, non-transitioning WindowServer snapshots.
+        // This prevents a late visibility refresh from reopening previews while
+        // macOS is still publishing the destination space.
+        let requiredStablePasses = 2
+        let maximumRestoreAttempts = 10
+        if previewTransitionStablePasses < requiredStablePasses,
+           previewTransitionRestoreAttempt < maximumRestoreAttempts {
+            schedulePreviewTransitionRestore(
+                after: 0.15,
+                generation: generation,
+                reason: reason
+            )
+            return
+        }
+
+        previewLabelsSuppressedUntil = nil
+        previewTransitionRestoreWorkItem = nil
+        previewTransitionLastVisibleUUIDs = nil
+        DiagnosticEventLog.shared.record(
+            subsystem: "Labels",
+            level: "info",
+            "\(reason) transition settled — restoring previews"
+        )
+        updateAllWindowModes()
     }
 
     @objc private func handleSpaceSwitchTargetRequested(_ notification: Notification) {
@@ -603,6 +682,10 @@ extension SpaceLabelManager {
         delayedRestoreWorkItem = nil
         previewTransitionRestoreWorkItem?.cancel()
         previewTransitionRestoreWorkItem = nil
+        previewTransitionGeneration += 1
+        previewTransitionRestoreAttempt = 0
+        previewTransitionStablePasses = 0
+        previewTransitionLastVisibleUUIDs = nil
         previewLabelsSuppressedUntil = nil
         activeSyncWorkItems.forEach { $0.cancel() }
         activeSyncWorkItems.removeAll()
