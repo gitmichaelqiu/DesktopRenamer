@@ -7,14 +7,16 @@ extension SpaceHelper {
     // Core space switching implementation.
     static func switchToSpace(_ spaceID: String, forceInstant: Bool = false) {
         DiagnosticEventLog.shared.record(subsystem: "SpaceHelper", level: "info", "switchToSpace(\(spaceID), forceInstant=\(forceInstant))")
-        lastProgrammaticSwitchTime = Date().timeIntervalSince1970
-        lastProgrammaticTargetSpaceID = spaceID
-        lastProgrammaticSwitchUsedSLS = false
+        let switchStartedAt = Date().timeIntervalSince1970
 
         if !forceInstant {
             guard !isSwitching else { return }
             isSwitching = true
         }
+
+        lastProgrammaticSwitchTime = switchStartedAt
+        lastProgrammaticTargetSpaceID = spaceID
+        lastProgrammaticSwitchUsedSLS = false
 
         // Prepare only the dedicated active label for the destination. Preview
         // labels still follow the existing hideWhenSwitching behavior.
@@ -26,8 +28,16 @@ extension SpaceHelper {
 
         defer {
             if !forceInstant {
-                // Short delay to allow OS animations to settle before allowing another switch
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                // SpaceManager normally clears this when WindowServer confirms
+                // the destination. Keep a guarded fallback for notifications
+                // that macOS drops, without allowing an older switch to clear a
+                // newer request's state.
+                DispatchQueue.main.asyncAfter(deadline: .now() + 2.5) {
+                    guard isSwitching,
+                          lastProgrammaticSwitchTime == switchStartedAt,
+                          lastProgrammaticTargetSpaceID == spaceID else {
+                        return
+                    }
                     isSwitching = false
                 }
             }
@@ -142,6 +152,18 @@ extension SpaceHelper {
         }
 
 
+    }
+
+    /// Marks a programmatic switch complete once SpaceManager has read the
+    /// requested destination from the live WindowServer state.
+    static func markProgrammaticSwitchComplete(at spaceID: String) {
+        guard isSwitching, lastProgrammaticTargetSpaceID == spaceID else { return }
+        isSwitching = false
+        DiagnosticEventLog.shared.record(
+            subsystem: "SpaceHelper",
+            level: "info",
+            "programmatic switch confirmed at space \(spaceID)"
+        )
     }
 
     private static func switchByActivatingOwnWindow(for spaceID: String, isFullscreen: Bool) -> Bool
