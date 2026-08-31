@@ -7,6 +7,7 @@ final class APITester: NSObject, ObservableObject {
     @Published var structuredResponseText: String = ""
 
     private let distributedCenter = DistributedNotificationCenter.default()
+    private var pendingStructuredRequestID: String?
 
     override init() {
         super.init()
@@ -39,7 +40,9 @@ final class APITester: NSObject, ObservableObject {
     }
 
     func sendStructuredAPIInfoRequest() {
-        let request = SpaceAPIJSONRPCRequest(id: UUID().uuidString, method: "getAPIInfo")
+        let requestID = UUID().uuidString
+        pendingStructuredRequestID = requestID
+        let request = SpaceAPIJSONRPCRequest(id: requestID, method: "getAPIInfo")
         do {
             let payload = try SpaceAPIJSONRPCCodec.encode(request)
             structuredResponseText = "Requesting structured API information..."
@@ -50,6 +53,7 @@ final class APITester: NSObject, ObservableObject {
                 deliverImmediately: true
             )
         } catch {
+            pendingStructuredRequestID = nil
             structuredResponseText = "Could not encode request: \(error.localizedDescription)"
         }
     }
@@ -97,6 +101,8 @@ final class APITester: NSObject, ObservableObject {
 
             do {
                 let response = try SpaceAPIJSONRPCCodec.decodeResponse(payload)
+                guard response.id == self.pendingStructuredRequestID else { return }
+                self.pendingStructuredRequestID = nil
                 if let error = response.error {
                     self.structuredResponseText = "Structured API error \(error.code): \(error.message)"
                 } else if let result = response.result,
@@ -106,6 +112,7 @@ final class APITester: NSObject, ObservableObject {
                     self.structuredResponseText = "Received structured API response"
                 }
             } catch {
+                self.pendingStructuredRequestID = nil
                 self.structuredResponseText = "Invalid structured response: \(error.localizedDescription)"
             }
         }

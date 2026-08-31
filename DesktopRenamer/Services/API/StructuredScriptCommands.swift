@@ -88,7 +88,7 @@ class GetStructuredSpacesCommand: NSScriptCommand {
         }
         return runOnMain {
             let api = manager.spaceAPI ?? SpaceAPI(spaceManager: manager)
-            return api.makeSpaceSnapshotPayload(manager, revision: 0).spaces.map(scriptSpaceRecord)
+            return api.makeSpaceRecords(manager).map(scriptSpaceRecord)
         }
     }
 }
