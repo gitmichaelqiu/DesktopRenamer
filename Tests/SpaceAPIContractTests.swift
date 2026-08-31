@@ -40,6 +40,11 @@ struct SpaceAPIContractTests {
             operation: SpaceAPIJSONRPCCodec.decodeRequest
         )
         expectError(
+            -32602,
+            payload: "{\"jsonrpc\":\"2.0\",\"id\":\"1\",\"method\":\"getAPIInfo\",\"params\":null}",
+            operation: SpaceAPIJSONRPCCodec.decodeRequest
+        )
+        expectError(
             -32006,
             payload: String(repeating: "x", count: DesktopRenamerAPIContract.maxPayloadBytes + 1),
             operation: SpaceAPIJSONRPCCodec.decodeRequest
@@ -112,6 +117,11 @@ struct SpaceAPIContractTests {
         check(decodedError.error?.code == -32602, "error code round trip")
         let errorData = try decodedError.error?.data?.decode(SpaceAPIErrorData.self)
         check(errorData?.parameter == "spaceID", "error metadata round trip")
+
+        let nullResult = try SpaceAPIJSONRPCCodec.decodeResponse(
+            "{\"jsonrpc\":\"2.0\",\"id\":\"null-result\",\"result\":null}"
+        )
+        check(nullResult.result == .null, "nullable JSON-RPC result is preserved")
 
         expectError(
             -32600,

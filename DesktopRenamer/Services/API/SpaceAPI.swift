@@ -364,7 +364,7 @@ final class SpaceAPI {
     }
 
     private func validateRequiredParameters(_ arguments: [String: String], method: String) throws -> [String: String] {
-        for parameter in DesktopRenamerAPIContract.requiredParameters[method] ?? [] {
+        for parameter in (DesktopRenamerAPIContract.requiredParameters[method] ?? []).sorted() {
             guard let value = arguments[parameter], !value.isEmpty else {
                 throw invalidParameter(
                     method: method,
@@ -384,6 +384,9 @@ final class SpaceAPI {
     private func isInteger(_ value: String, parameter: String) -> Bool {
         if parameter == "pid", let pid = Int32(value) {
             return pid > 0
+        }
+        if parameter == "windowID", let windowID = Int(value) {
+            return windowID > 0
         }
         return Int(value) != nil
     }
@@ -723,12 +726,14 @@ final class SpaceAPI {
             return
         }
 
+        let recoverableRequestID = Self.recoverableRequestID(from: payload)
+
         let request: SpaceAPIJSONRPCRequest
         do {
             request = try SpaceAPIJSONRPCCodec.decodeRequest(payload)
         } catch let error as SpaceAPIContractError {
             postRPCResponse(SpaceAPIJSONRPCCodec.errorResponse(
-                id: nil,
+                id: recoverableRequestID,
                 code: error.jsonRPCCode,
                 message: error.localizedDescription
             ))
@@ -740,7 +745,7 @@ final class SpaceAPI {
             return
         } catch {
             postRPCResponse(SpaceAPIJSONRPCCodec.errorResponse(
-                id: nil,
+                id: recoverableRequestID,
                 code: -32600,
                 message: "Request could not be validated."
             ))
@@ -785,6 +790,18 @@ final class SpaceAPI {
                 message: "DesktopRenamer could not complete the request."
             ))
         }
+    }
+
+    private static func recoverableRequestID(from payload: String) -> String? {
+        guard payload.utf8.count <= DesktopRenamerAPIContract.maxPayloadBytes,
+              let data = payload.data(using: .utf8),
+              let object = try? JSONSerialization.jsonObject(with: data, options: [.fragmentsAllowed]),
+              let dictionary = object as? [String: Any],
+              let id = dictionary["id"] as? String,
+              !id.isEmpty else {
+            return nil
+        }
+        return id
     }
 }
 

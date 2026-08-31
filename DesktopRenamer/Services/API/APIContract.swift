@@ -170,6 +170,21 @@ struct SpaceAPIJSONRPCRequest: Codable, Equatable {
         self.method = method
         self.params = params.isEmpty ? nil : .object(params)
     }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        jsonrpc = try container.decode(String.self, forKey: .jsonrpc)
+        id = try container.decodeIfPresent(String.self, forKey: .id)
+        method = try container.decode(String.self, forKey: .method)
+        params = container.contains(.params) ? try container.decode(SpaceAPIJSONValue.self, forKey: .params) : nil
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case jsonrpc
+        case id
+        case method
+        case params
+    }
 }
 
 struct SpaceAPIJSONRPCError: Codable, Equatable {
@@ -196,6 +211,21 @@ struct SpaceAPIJSONRPCResponse: Codable, Equatable {
         self.id = id
         self.result = nil
         self.error = error
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        jsonrpc = try container.decode(String.self, forKey: .jsonrpc)
+        id = try container.decodeIfPresent(String.self, forKey: .id)
+        result = container.contains(.result) ? try container.decode(SpaceAPIJSONValue.self, forKey: .result) : nil
+        error = container.contains(.error) ? try container.decode(SpaceAPIJSONRPCError.self, forKey: .error) : nil
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case jsonrpc
+        case id
+        case result
+        case error
     }
 }
 
