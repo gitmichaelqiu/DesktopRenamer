@@ -66,8 +66,7 @@ class GetAPIInformationCommand: NSScriptCommand {
         DiagnosticEventLog.shared.record(subsystem: "AppleScript", level: "info", "Command performed: GetAPIInformationCommand")
         guard isAPIEnabled() else { return nil }
         guard let manager = runOnMain({ AppDelegate.shared.spaceManager }) else {
-            scriptErrorNumber = -3
-            scriptErrorString = "DesktopRenamer is not ready."
+            _ = failAppUnavailable()
             return nil
         }
         return runOnMain {
@@ -82,8 +81,7 @@ class GetStructuredSpacesCommand: NSScriptCommand {
         DiagnosticEventLog.shared.record(subsystem: "AppleScript", level: "info", "Command performed: GetStructuredSpacesCommand")
         guard isAPIEnabled() else { return nil }
         guard let manager = runOnMain({ AppDelegate.shared.spaceManager }) else {
-            scriptErrorNumber = -3
-            scriptErrorString = "DesktopRenamer is not ready."
+            _ = failAppUnavailable()
             return nil
         }
         return runOnMain {
@@ -98,8 +96,7 @@ class GetStructuredSnapshotCommand: NSScriptCommand {
         DiagnosticEventLog.shared.record(subsystem: "AppleScript", level: "info", "Command performed: GetStructuredSnapshotCommand")
         guard isAPIEnabled() else { return nil }
         guard let manager = runOnMain({ AppDelegate.shared.spaceManager }) else {
-            scriptErrorNumber = -3
-            scriptErrorString = "DesktopRenamer is not ready."
+            _ = failAppUnavailable()
             return nil
         }
         return runOnMain {
@@ -114,8 +111,7 @@ class GetStructuredWindowsCommand: NSScriptCommand {
         DiagnosticEventLog.shared.record(subsystem: "AppleScript", level: "info", "Command performed: GetStructuredWindowsCommand")
         guard isAPIEnabled() else { return nil }
         guard let manager = runOnMain({ AppDelegate.shared.spaceManager }) else {
-            scriptErrorNumber = -3
-            scriptErrorString = "DesktopRenamer is not ready."
+            _ = failAppUnavailable()
             return nil
         }
         let context = runOnMain {

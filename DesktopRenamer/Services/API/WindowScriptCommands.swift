@@ -61,11 +61,12 @@ class ReloadSpaceLabelsCommand: NSScriptCommand {
         DiagnosticEventLog.shared.record(subsystem: "AppleScript", level: "info", "Command performed: ReloadSpaceLabelsCommand")
         guard isAPIEnabled() else { return false }
         return runOnMain {
-            if let manager = AppDelegate.shared.statusBarController?.labelManager {
-                manager.reloadAllWindows()
-                return true
+            guard let manager = AppDelegate.shared.statusBarController?.labelManager else {
+                _ = failAppUnavailable()
+                return nil
             }
-            return false
+            manager.reloadAllWindows()
+            return true
         }
     }
 }
@@ -99,7 +100,7 @@ class GetWindowsCommand: NSScriptCommand {
 class FocusWindowCommand: NSScriptCommand {
     override func performDefaultImplementation() -> Any? {
         guard isAPIEnabled() else { return nil }
-        guard let windowIDStr = requiredIntegerString(directParameter, parameter: "window ID"),
+        guard let windowIDStr = requiredPositiveIntegerString(directParameter, parameter: "window ID"),
               let windowID = Int(windowIDStr),
               let pidStr = requiredProcessIDString(evaluatedArguments?["ownerPID"], parameter: "owner PID"),
               let pid = Int32(pidStr)
@@ -116,7 +117,7 @@ class FocusWindowCommand: NSScriptCommand {
 class MoveSpecificWindowToSpaceCommand: NSScriptCommand {
     override func performDefaultImplementation() -> Any? {
         guard isAPIEnabled() else { return nil }
-        guard let windowIDStr = requiredIntegerString(directParameter, parameter: "window ID"),
+        guard let windowIDStr = requiredPositiveIntegerString(directParameter, parameter: "window ID"),
               let windowID = Int(windowIDStr),
               let fromSpaceStr = requiredArgumentString("fromSpace"),
               let targetSpaceStr = requiredArgumentString("targetSpace")
@@ -162,14 +163,13 @@ class GetCurrentSpaceIDCommand: NSScriptCommand {
 class ExecuteWindowActionCommand: NSScriptCommand {
     override func performDefaultImplementation() -> Any? {
         guard isAPIEnabled() else { return nil }
-        guard let windowIDStr = requiredIntegerString(directParameter, parameter: "window ID"),
+        guard let windowIDStr = requiredPositiveIntegerString(directParameter, parameter: "window ID"),
               let windowID = Int(windowIDStr),
               let pidStr = requiredProcessIDString(evaluatedArguments?["ownerPID"], parameter: "owner PID"),
               let pid = Int32(pidStr),
               let actionName = requiredArgumentString("actionName")
         else { return nil }
-        let supportedActions = ["close", "minimize", "hide", "enterFullScreen", "exitFullScreen", "quit", "restore"]
-        guard supportedActions.contains(actionName) else {
+        guard DesktopRenamerAPIContract.windowActionNames.contains(actionName) else {
             _ = failInvalidArgument("Unsupported window action: \(actionName)")
             return nil
         }

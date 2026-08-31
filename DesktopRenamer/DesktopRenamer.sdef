@@ -21,9 +21,9 @@
             <property name="display name" code="DsNm" type="text"><cocoa key="displayName"/></property>
             <property name="number" code="SpNo" type="integer"><cocoa key="number"/></property>
             <property name="full screen" code="Fscr" type="boolean"><cocoa key="isFullscreen"/></property>
-            <property name="app name" code="ApNm" type="text"><cocoa key="appName"/></property>
-            <property name="app path" code="ApPt" type="text"><cocoa key="appPath"/></property>
-            <property name="global shortcut number" code="GsNo" type="integer"><cocoa key="globalShortcutNumber"/></property>
+            <property name="app name" code="ApNm" type="text" description="Full-screen app name when available"><cocoa key="appName"/></property>
+            <property name="app path" code="ApPt" type="text" description="Full-screen app path when available"><cocoa key="appPath"/></property>
+            <property name="global shortcut number" code="GsNo" type="integer" description="Configured shortcut number when available"><cocoa key="globalShortcutNumber"/></property>
         </record-type>
 
         <record-type name="space snapshot" code="DkSn" description="A versioned snapshot of Mission Control spaces">
@@ -39,8 +39,8 @@
             <property name="id" code="WiID" type="integer"><cocoa key="id"/></property>
             <property name="process ID" code="PrID" type="integer"><cocoa key="pid"/></property>
             <property name="owner name" code="OwNm" type="text"><cocoa key="ownerName"/></property>
-            <property name="app path" code="WiPt" type="text"><cocoa key="appPath"/></property>
-            <property name="title" code="WiTl" type="text"><cocoa key="title"/></property>
+            <property name="app path" code="WiPt" type="text" description="Application path when available"><cocoa key="appPath"/></property>
+            <property name="title" code="WiTl" type="text" description="Window title when available"><cocoa key="title"/></property>
             <property name="space ID" code="WiSp" type="text"><cocoa key="spaceID"/></property>
             <property name="minimized" code="MiWd" type="boolean"><cocoa key="isMinimized"/></property>
             <property name="hidden" code="HiWd" type="boolean"><cocoa key="isHidden"/></property>
@@ -119,9 +119,9 @@
             <result type="text" description="The semantic version of the external API contract"/>
         </command>
         
-        <command name="get all spaces" code="DskRGAll" description="Get a list of all spaces in format 'ID~Name~DisplayID~Num'">
+        <command name="get all spaces" code="DskRGAll" description="Get a list of all spaces in the legacy delimiter format">
             <cocoa class="DesktopRenamer.GetAllSpacesCommand"/>
-            <result type="text" description="List of spaces separated by newlines, format: ID~Name~DisplayID~Num"/>
+            <result type="text" description="List of spaces separated by newlines, format: ID~Name~DisplayName~Num~IsFullscreen~AppPath"/>
         </command>
         
         <command name="rename space" code="DskRRnSp" description="Rename a specific space by ID">

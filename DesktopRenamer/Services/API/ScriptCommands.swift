@@ -1,6 +1,12 @@
 import Foundation
 import AppKit
 
+enum DesktopRenamerScriptErrorCode {
+    static let apiDisabled = -1
+    static let invalidArgument = -2
+    static let appUnavailable = -3
+}
+
 // Resolves MainActor isolation for NSScriptCommand implementation.
 // Note: Explicitly enters actor context to satisfy concurrency requirements.
 func runOnMain<T>(_ block: @MainActor () -> T) -> T {
@@ -16,7 +22,7 @@ func runOnMain<T>(_ block: @MainActor () -> T) -> T {
 extension NSScriptCommand {
     func isAPIEnabled() -> Bool {
         if !SpaceManager.isAPIEnabled {
-            self.scriptErrorNumber = -1
+            self.scriptErrorNumber = DesktopRenamerScriptErrorCode.apiDisabled
             self.scriptErrorString = "API Disabled"
             return false
         }
@@ -25,14 +31,14 @@ extension NSScriptCommand {
 
     @discardableResult
     func failInvalidArgument(_ message: String) -> Bool {
-        scriptErrorNumber = -2
+        scriptErrorNumber = DesktopRenamerScriptErrorCode.invalidArgument
         scriptErrorString = message
         return false
     }
 
     @discardableResult
     func failAppUnavailable(_ message: String = "DesktopRenamer is not ready.") -> Bool {
-        scriptErrorNumber = -3
+        scriptErrorNumber = DesktopRenamerScriptErrorCode.appUnavailable
         scriptErrorString = message
         return false
     }
@@ -53,19 +59,18 @@ extension NSScriptCommand {
         requiredString(evaluatedArguments?[parameter], parameter: parameter)
     }
 
-    func requiredIntegerString(_ value: Any?, parameter: String) -> String? {
-        guard let string = requiredString(value, parameter: parameter), Int(string) != nil else {
-            if scriptErrorNumber == 0 {
-                failInvalidArgument("Parameter '\(parameter)' must be an integer.")
-            }
+    func requiredPositiveIntegerString(_ value: Any?, parameter: String) -> String? {
+        guard let string = requiredString(value, parameter: parameter) else { return nil }
+        guard let integer = Int(string), integer > 0 else {
+            failInvalidArgument("Parameter '\(parameter)' must be a positive integer.")
             return nil
         }
         return string
     }
 
     func requiredProcessIDString(_ value: Any?, parameter: String) -> String? {
-        guard let string = requiredIntegerString(value, parameter: parameter),
-              let pid = Int32(string), pid > 0 else {
+        guard let string = requiredString(value, parameter: parameter) else { return nil }
+        guard let pid = Int32(string), pid > 0 else {
             failInvalidArgument("Parameter '\(parameter)' must be a positive process ID.")
             return nil
         }
@@ -211,7 +216,6 @@ class GetAllSpacesCommand: NSScriptCommand {
                 return nil
             }
             
-            // Format: "UUID|Name|DisplayID|Num"
             // Entries are grouped by display and sorted by displayID (UUID) and number.
             let sortedSpaces = manager.spaceNameDict.sorted {
                 if $0.displayID != $1.displayID { return $0.displayID < $1.displayID }
@@ -223,7 +227,7 @@ class GetAllSpacesCommand: NSScriptCommand {
                 let name = manager.getSpaceName(space.id)
                 let displayName = getDisplayName(for: space.displayID)
 
-                // Return string split by ~ to prevent escaping issues.
+                // Keep the historical delimiter format for existing clients.
                 return "\(space.id)~\(name)~\(displayName)~\(space.num)~\(space.isFullscreen ? "1" : "0")~\(space.appPath ?? "")"
             }
             return lines.joined(separator: "\n")
@@ -282,8 +286,7 @@ class RearrangeSpaceCommand: NSScriptCommand {
         case "down":
             rearrangementDirection = .down
         default:
-            self.scriptErrorNumber = -2
-            self.scriptErrorString = "Direction must be up or down"
+            _ = failInvalidArgument("Direction must be up or down")
             return nil
         }
 
