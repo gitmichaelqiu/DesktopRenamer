@@ -16,6 +16,7 @@ extension SpaceAPI {
     /// Returns the historical snapshot shape used by the legacy command channel.
     /// Structured clients should use makeSpaceSnapshotPayload instead.
     func makeSpaceSnapshot(_ manager: SpaceManager) throws -> String {
+        let displayNames = displayNamesByID()
         let spaces = manager.spaceNameDict
             .sorted {
                 if $0.displayID != $1.displayID {
@@ -28,7 +29,7 @@ extension SpaceAPI {
                     "id": space.id,
                     "name": manager.getSpaceName(space.id),
                     "displayID": space.displayID,
-                    "displayName": displayName(for: space.displayID),
+                    "displayName": displayName(for: space.displayID, using: displayNames),
                     "number": space.num,
                     "isFullscreen": space.isFullscreen
                 ]
@@ -99,7 +100,8 @@ extension SpaceAPI {
     }
 
     func makeSpaceRecords(_ manager: SpaceManager) -> [SpaceAPISpace] {
-        manager.spaceNameDict
+        let displayNames = displayNamesByID()
+        return manager.spaceNameDict
             .sorted {
                 if $0.displayID != $1.displayID {
                     return $0.displayID.localizedStandardCompare($1.displayID) == .orderedAscending
@@ -111,7 +113,7 @@ extension SpaceAPI {
                     id: space.id,
                     name: manager.getSpaceName(space.id),
                     displayID: space.displayID,
-                    displayName: displayName(for: space.displayID),
+                    displayName: displayName(for: space.displayID, using: displayNames),
                     number: space.num,
                     isFullscreen: space.isFullscreen,
                     appName: space.appName,
@@ -121,18 +123,25 @@ extension SpaceAPI {
             }
     }
 
-    private func displayName(for displayID: String) -> String {
-        for screen in NSScreen.screens {
+    private func displayNamesByID() -> [String: String] {
+        NSScreen.screens.reduce(into: [String: String]()) { names, screen in
             guard let screenNumber = screen.deviceDescription[NSDeviceDescriptionKey("NSScreenNumber")] as? NSNumber,
                   let uuid = CGDisplayCreateUUIDFromDisplayID(screenNumber.uint32Value)?.takeRetainedValue(),
                   let uuidString = CFUUIDCreateString(nil, uuid) as String? else {
-                continue
+                return
             }
-            if uuidString.caseInsensitiveCompare(displayID) == .orderedSame {
-                return screen.localizedName
-            }
+            names[uuidString.uppercased()] = screen.localizedName
         }
-        return displayID == "Main" ? "Main Display" : "Display"
+    }
+
+    private func displayName(for displayID: String, using displayNames: [String: String]) -> String {
+        if let name = displayNames[displayID.uppercased()] {
+            return name
+        }
+        if displayID.caseInsensitiveCompare("Main") == .orderedSame {
+            return "Main Display"
+        }
+        return "Display"
     }
 
     private func encodeJSON<T: Encodable>(_ value: T) throws -> String {

@@ -527,6 +527,7 @@ extension SpaceHelper {
             if $0.displayID != $1.displayID { return $0.displayID < $1.displayID }
             return $0.num < $1.num
         }
+        let windowsBySpaceID = Dictionary(grouping: records, by: \.spaceID)
 
         var output = ""
         for space in sortedSpaces {
@@ -538,7 +539,7 @@ extension SpaceHelper {
                 isFullscreen: space.isFullscreen,
                 appPath: space.appPath
             )
-            for window in records where window.spaceID == space.id {
+            for window in windowsBySpaceID[space.id] ?? [] {
                 output += SpaceAPILegacyFormatter.windowLine(
                     id: window.id,
                     pid: window.pid,

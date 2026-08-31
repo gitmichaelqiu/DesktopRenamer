@@ -278,169 +278,42 @@ final class SpaceAPI {
     }
 
     private func executeRPCMethod(_ request: SpaceAPIJSONRPCRequest) async throws -> SpaceAPIJSONValue {
-        guard DesktopRenamerAPIContract.supportedMethods.contains(request.method) else {
+        guard let definition = DesktopRenamerAPIContract.definition(for: request.method) else {
             throw SpaceAPIContractError.unsupportedMethod(request.method)
         }
 
-        let arguments = try stringArguments(from: request.params, method: request.method)
+        let arguments = try SpaceAPIArgumentValidator.stringArguments(from: request.params, method: request.method)
         switch request.method {
         case "getAPIInfo":
-            guard arguments.isEmpty else {
-                throw SpaceAPIContractError.invalidParams("getAPIInfo does not accept parameters.")
-            }
             return try SpaceAPIJSONValue.from(makeAPIInfo())
         case "getAPIVersion":
-            guard arguments.isEmpty else {
-                throw SpaceAPIContractError.invalidParams("getAPIVersion does not accept parameters.")
-            }
             return .string(DesktopRenamerAPIVersion.current)
         case "getSpaceSnapshot":
-            guard arguments.isEmpty, let manager = spaceManager else {
-                if !arguments.isEmpty {
-                    throw SpaceAPIContractError.invalidParams("getSpaceSnapshot does not accept parameters.")
-                }
-                throw SpaceAPIError.appUnavailable
-            }
+            guard let manager = spaceManager else { throw SpaceAPIError.appUnavailable }
             return try SpaceAPIJSONValue.from(makeSpaceSnapshotPayload(manager, revision: snapshotRevision))
         case "getAllSpaces":
-            guard arguments.isEmpty, let manager = spaceManager else {
-                if !arguments.isEmpty {
-                    throw SpaceAPIContractError.invalidParams("getAllSpaces does not accept parameters.")
-                }
-                throw SpaceAPIError.appUnavailable
-            }
-            let spaces = makeSpaceSnapshotPayload(manager, revision: snapshotRevision).spaces
-            return try SpaceAPIJSONValue.from(["spaces": spaces])
+            guard let manager = spaceManager else { throw SpaceAPIError.appUnavailable }
+            let spaces = makeSpaceRecords(manager)
+            return try SpaceAPIJSONValue.from(spaces)
         case "getWindows":
-            guard arguments.isEmpty, let manager = spaceManager else {
-                if !arguments.isEmpty {
-                    throw SpaceAPIContractError.invalidParams("getWindows does not accept parameters.")
-                }
-                throw SpaceAPIError.appUnavailable
-            }
+            guard let manager = spaceManager else { throw SpaceAPIError.appUnavailable }
             let snapshot = await makeWindowsSnapshotPayloadAsync(manager, revision: snapshotRevision)
             return try SpaceAPIJSONValue.from(snapshot)
         case "getCurrentSpaceName":
-            guard arguments.isEmpty, let manager = spaceManager else {
-                if !arguments.isEmpty {
-                    throw SpaceAPIContractError.invalidParams("getCurrentSpaceName does not accept parameters.")
-                }
-                throw SpaceAPIError.appUnavailable
-            }
+            guard let manager = spaceManager else { throw SpaceAPIError.appUnavailable }
             return .string(manager.getSpaceName(manager.currentSpaceUUID))
         case "getCurrentSpaceID":
-            guard arguments.isEmpty else {
-                throw SpaceAPIContractError.invalidParams("getCurrentSpaceID does not accept parameters.")
-            }
             return .array(SpaceHelper.getCurrentSpaceIDs().map(SpaceAPIJSONValue.string))
         default:
             let result = try await executeCommand(request.method, arguments: arguments)
-            if [
-                "toggleMenubar",
-                "toggleLauncher",
-                "toggleLabels",
-                "toggleActiveLabel",
-                "togglePreviewLabel",
-                "toggleDesktopVisibility"
-            ].contains(request.method) {
+            if definition.resultKind == .boolean {
+                guard result == "true" || result == "false" else {
+                    throw SpaceAPIError.operationFailed("The command returned an invalid Boolean result.")
+                }
                 return .bool(result == "true")
             }
             return try SpaceAPIJSONValue.from(SpaceAPIOperationResult(accepted: true))
         }
-    }
-
-    private func stringArguments(from params: SpaceAPIJSONValue?, method: String) throws -> [String: String] {
-        guard let params else {
-            return try validateRequiredParameters([:], method: method)
-        }
-        guard let object = params.objectValue else {
-            throw SpaceAPIContractError.invalidParams("Parameters must be a JSON object.")
-        }
-
-        let allowedParameters = DesktopRenamerAPIContract.allowedParameters[method] ?? []
-        if let unknownParameter = object.keys.sorted().first(where: { !allowedParameters.contains($0) }) {
-            throw invalidParameter(
-                method: method,
-                name: unknownParameter,
-                expected: "a supported parameter",
-                message: "Parameter '\(unknownParameter)' is not supported for \(method)."
-            )
-        }
-
-        let arguments = try object.reduce(into: [String: String]()) { result, item in
-            let expected = expectedParameterType(for: item.key)
-            switch item.value {
-            case .string(let value):
-                if expected == "integer", !isInteger(value, parameter: item.key) {
-                    throw invalidParameter(
-                        method: method,
-                        name: item.key,
-                        expected: expected,
-                        message: "Parameter '\(item.key)' must be an integer."
-                    )
-                }
-                result[item.key] = value
-            case .number(let value) where value.isFinite && value.rounded() == value && expected == "integer":
-                guard let integer = Int(exactly: value) else {
-                    throw invalidParameter(
-                        method: method,
-                        name: item.key,
-                        expected: expected,
-                        message: "Parameter '\(item.key)' is outside the supported integer range."
-                    )
-                }
-                result[item.key] = String(integer)
-            default:
-                throw invalidParameter(
-                    method: method,
-                    name: item.key,
-                    expected: expected,
-                    message: "Parameter '\(item.key)' must be an \(expected)."
-                )
-            }
-        }
-
-        return try validateRequiredParameters(arguments, method: method)
-    }
-
-    private func validateRequiredParameters(_ arguments: [String: String], method: String) throws -> [String: String] {
-        for parameter in (DesktopRenamerAPIContract.requiredParameters[method] ?? []).sorted() {
-            guard let value = arguments[parameter], !value.isEmpty else {
-                throw invalidParameter(
-                    method: method,
-                    name: parameter,
-                    expected: expectedParameterType(for: parameter),
-                    message: "Missing required parameter '\(parameter)'."
-                )
-            }
-        }
-        return arguments
-    }
-
-    private func expectedParameterType(for parameter: String) -> String {
-        ["windowID", "pid"].contains(parameter) ? "integer" : "string"
-    }
-
-    private func isInteger(_ value: String, parameter: String) -> Bool {
-        if parameter == "pid", let pid = Int32(value) {
-            return pid > 0
-        }
-        if parameter == "windowID", let windowID = Int(value) {
-            return windowID > 0
-        }
-        return Int(value) != nil
-    }
-
-    private func invalidParameter(
-        method: String,
-        name: String,
-        expected: String,
-        message: String
-    ) -> SpaceAPIContractError {
-        .invalidParamsWithData(
-            message,
-            SpaceAPIErrorData(parameter: name, expected: expected, command: method)
-        )
     }
 
     private func executeCommand(_ command: String, arguments: [String: String]) async throws -> String {
@@ -498,7 +371,10 @@ final class SpaceAPI {
             manager.moveActiveWindowToSpace(id: spaceID)
             return ""
         case "reloadSpaceLabels":
-            AppDelegate.shared.statusBarController?.labelManager.reloadAllWindows()
+            guard let labelManager = AppDelegate.shared.statusBarController?.labelManager else {
+                throw SpaceAPIError.appUnavailable
+            }
+            labelManager.reloadAllWindows()
             return ""
         case "toggleMenubar":
             StatusBarController.toggleStatusBar()
@@ -581,13 +457,9 @@ final class SpaceAPI {
     }
 
     private func executeWindowAction(windowID: Int, pid: Int32, action: String, manager: SpaceManager) async throws {
-        if let spaceID = SpaceHelper.getWindowSpaceID(id: windowID),
-           manager.currentSpaceUUID != spaceID,
-           let space = manager.spaceNameDict.first(where: { $0.id == spaceID }) {
-            manager.switchToSpace(space, forceInstant: true)
-            try await Task.sleep(nanoseconds: 600_000_000)
-        }
-
+        // Quitting an app is process-scoped and does not require its window to
+        // be made frontmost. Avoid moving the user's desktop just to terminate
+        // an application in another space.
         if action == "quit" {
             guard let app = NSRunningApplication(processIdentifier: pid) else {
                 throw SpaceAPIError.operationFailed("Application is no longer running.")
@@ -595,6 +467,14 @@ final class SpaceAPI {
             app.terminate()
             return
         }
+
+        if let spaceID = SpaceHelper.getWindowSpaceID(id: windowID),
+           manager.currentSpaceUUID != spaceID,
+           let space = manager.spaceNameDict.first(where: { $0.id == spaceID }) {
+            manager.switchToSpace(space, forceInstant: true)
+            try await Task.sleep(nanoseconds: 600_000_000)
+        }
+
         if action == "hide" {
             NSRunningApplication(processIdentifier: pid)?.hide()
             return
@@ -722,15 +602,23 @@ final class SpaceAPI {
 
     @objc nonisolated private func handleCommandRequest(_ notification: Notification) {
         let userInfo = notification.userInfo ?? [:]
-        let requestID = userInfo["requestID"] as? String ?? UUID().uuidString
+        let requestID = (userInfo["requestID"] as? String).flatMap { $0.isEmpty ? nil : $0 } ?? UUID().uuidString
         let command = userInfo["command"] as? String ?? ""
-        let arguments: [String: String]
-        if let argumentsJSON = userInfo["argumentsJSON"] as? String,
-           let data = argumentsJSON.data(using: .utf8),
-           let decoded = try? JSONDecoder().decode([String: String].self, from: data) {
-            arguments = decoded
-        } else {
-            arguments = userInfo["arguments"] as? [String: String] ?? [:]
+        var arguments: [String: String] = [:]
+        var argumentError: String?
+        if let argumentsJSON = userInfo["argumentsJSON"] as? String {
+            if let data = argumentsJSON.data(using: .utf8),
+               let decoded = try? JSONDecoder().decode([String: String].self, from: data) {
+                arguments = decoded
+            } else {
+                argumentError = "Arguments must be a JSON object containing only string values."
+            }
+        } else if let rawArguments = userInfo["arguments"] {
+            if let decoded = rawArguments as? [String: String] {
+                arguments = decoded
+            } else {
+                argumentError = "Arguments must be a dictionary containing only string values."
+            }
         }
 
         Task { @MainActor [weak self] in
@@ -739,8 +627,16 @@ final class SpaceAPI {
                 self.postCommandResult(requestID: requestID, error: SpaceAPIError.apiDisabled.localizedDescription)
                 return
             }
+            if let argumentError {
+                self.postCommandResult(requestID: requestID, error: argumentError)
+                return
+            }
             do {
-                let result = try await self.executeCommand(command, arguments: arguments)
+                let validatedArguments = try SpaceAPIArgumentValidator.stringArguments(
+                    from: .object(arguments.mapValues { .string($0) }),
+                    method: command
+                )
+                let result = try await self.executeCommand(command, arguments: validatedArguments)
                 self.postCommandResult(requestID: requestID, result: result)
             } catch {
                 self.postCommandResult(requestID: requestID, error: error.localizedDescription)
@@ -760,7 +656,7 @@ final class SpaceAPI {
         guard let payload else {
             postRPCResponse(SpaceAPIJSONRPCCodec.errorResponse(
                 id: nil,
-                code: -32600,
+                code: SpaceAPIJSONRPCCode.invalidRequest,
                 message: "A JSON-RPC payload is required."
             ))
             return
@@ -775,7 +671,8 @@ final class SpaceAPI {
             postRPCResponse(SpaceAPIJSONRPCCodec.errorResponse(
                 id: recoverableRequestID,
                 code: error.jsonRPCCode,
-                message: error.localizedDescription
+                message: error.localizedDescription,
+                data: error.jsonRPCData
             ))
             DiagnosticEventLog.shared.record(
                 subsystem: "SpaceAPI",
@@ -786,7 +683,7 @@ final class SpaceAPI {
         } catch {
             postRPCResponse(SpaceAPIJSONRPCCodec.errorResponse(
                 id: recoverableRequestID,
-                code: -32600,
+                code: SpaceAPIJSONRPCCode.invalidRequest,
                 message: "Request could not be validated."
             ))
             return
@@ -807,26 +704,26 @@ final class SpaceAPI {
             DiagnosticEventLog.shared.record(
                 subsystem: "SpaceAPI",
                 level: "info",
-                "Completed structured request method=\(request.method) id=\(request.id ?? "nil")"
+                "Completed structured request method=\(request.method) id=\(request.id)"
             )
         } catch let error as SpaceAPIContractError {
             postRPCResponse(SpaceAPIJSONRPCCodec.errorResponse(
                 id: request.id,
                 code: error.jsonRPCCode,
                 message: error.localizedDescription,
-                data: error.jsonRPCData
+                data: error.jsonRPCData(command: request.method)
             ))
         } catch let error as SpaceAPIError {
             postRPCResponse(SpaceAPIJSONRPCCodec.errorResponse(
                 id: request.id,
                 code: error.jsonRPCCode,
                 message: error.localizedDescription,
-                data: error.jsonRPCData
+                data: error.jsonRPCData(command: request.method)
             ))
         } catch {
             postRPCResponse(SpaceAPIJSONRPCCodec.errorResponse(
                 id: request.id,
-                code: -32603,
+                code: SpaceAPIJSONRPCCode.internalError,
                 message: "DesktopRenamer could not complete the request."
             ))
         }
@@ -866,22 +763,24 @@ private extension SpaceAPIError {
     var jsonRPCCode: Int {
         switch self {
         case .apiDisabled:
-            return -32001
+            return SpaceAPIJSONRPCCode.apiDisabled
         case .appUnavailable:
-            return -32002
+            return SpaceAPIJSONRPCCode.appUnavailable
         case .invalidArgument:
-            return -32602
+            return SpaceAPIJSONRPCCode.invalidParams
         case .operationFailed:
-            return -32004
+            return SpaceAPIJSONRPCCode.operationFailed
         case .unsupportedCommand:
-            return -32601
+            return SpaceAPIJSONRPCCode.methodNotFound
         }
     }
 
-    var jsonRPCData: SpaceAPIErrorData? {
+    func jsonRPCData(command: String? = nil) -> SpaceAPIErrorData? {
         switch self {
         case .invalidArgument:
-            return SpaceAPIErrorData(expected: "valid command parameters")
+            return SpaceAPIErrorData(expected: "valid command parameters", command: command)
+        case .operationFailed:
+            return command.map { SpaceAPIErrorData(command: $0) }
         case .unsupportedCommand(let command):
             return SpaceAPIErrorData(command: command)
         default:
