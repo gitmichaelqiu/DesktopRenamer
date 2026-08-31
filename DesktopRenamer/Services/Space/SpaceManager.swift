@@ -61,6 +61,8 @@ class SpaceManager: ObservableObject {
     let maxSpaceChangeRetries: Int = 5
     var spaceChangeRetryWorkItem: DispatchWorkItem?
     var spaceChangeRetryGeneration = 0
+    var spaceChangeRetryObservedSpaceID: String?
+    var spaceChangeRetryObservedPasses = 0
     var screenParametersWorkItem: DispatchWorkItem?
     
     // Display Cache
@@ -81,6 +83,7 @@ class SpaceManager: ObservableObject {
     @Published var movedWindowsOriginalSpaces: [Int: (originalSpaceUUID: String, currentSpaceUUID: String, pid: Int32)] = [:]
     var lastManualSwitchTime: TimeInterval = 0
     var lastManualSwitchTargetUUID: String? = nil
+    var activeProgrammaticSwitchGeneration: UInt64?
     
     @Published var returnToOriginalAfterBatchMove: Bool {
         didSet {
@@ -160,6 +163,13 @@ class SpaceManager: ObservableObject {
             self,
             selector: #selector(handleProgrammaticSwitchStarted(_:)),
             name: NSNotification.Name("SpaceProgrammaticSwitchStarted"),
+            object: nil
+        )
+
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(handleProgrammaticSwitchFinished(_:)),
+            name: NSNotification.Name("SpaceProgrammaticSwitchFinished"),
             object: nil
         )
         

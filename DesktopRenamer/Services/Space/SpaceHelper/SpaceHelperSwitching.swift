@@ -559,6 +559,15 @@ extension SpaceHelper {
                 "programmatic switch confirmed: generation=\(generation), target=\(spaceID)"
             )
             NotificationCenter.default.post(
+                name: NSNotification.Name("SpaceProgrammaticSwitchFinished"),
+                object: nil,
+                userInfo: [
+                    "spaceID": spaceID,
+                    "generation": generation,
+                    "confirmed": true
+                ]
+            )
+            NotificationCenter.default.post(
                 name: NSNotification.Name("SpaceProgrammaticSwitchSettled"),
                 object: nil,
                 userInfo: ["spaceID": spaceID, "generation": generation]
@@ -573,6 +582,15 @@ extension SpaceHelper {
                 subsystem: "SpaceHelper",
                 level: "warning",
                 "programmatic switch timed out: generation=\(generation), target=\(spaceID)"
+            )
+            NotificationCenter.default.post(
+                name: NSNotification.Name("SpaceProgrammaticSwitchFinished"),
+                object: nil,
+                userInfo: [
+                    "spaceID": spaceID,
+                    "generation": generation,
+                    "confirmed": false
+                ]
             )
         }
 

@@ -21,9 +21,12 @@ extension SpaceManager {
         )
 
         // A monitor retry may have been scheduled from an earlier stale
-        // snapshot. Cancel it only after a real switch starts; a queued request
-        // must leave the active transaction's verification retry intact.
+        // snapshot. Cancel it after a real switch starts or a request is
+        // rejected; a queued request must leave the active transaction's
+        // verification retry intact.
         if case .started = disposition {
+            cancelSpaceChangeRetry()
+        } else if case .unavailable = disposition {
             cancelSpaceChangeRetry()
         }
         return disposition
@@ -37,6 +40,14 @@ extension SpaceManager {
         let update = { [weak self] in
             guard let self else { return }
             let isManual = notification.userInfo?["isManual"] as? Bool == true
+            let generation = notification.userInfo?["generation"] as? UInt64
+
+            // This notification also arrives for a transaction promoted from
+            // the pending queue. Cancel any retry belonging to the previous
+            // transition before the new generation can be observed.
+            self.cancelSpaceChangeRetry()
+            self.activeProgrammaticSwitchGeneration = generation
+
             if isManual {
                 self.lastManualSwitchTime = Date().timeIntervalSince1970
                 self.lastManualSwitchTargetUUID = spaceID
@@ -46,11 +57,52 @@ extension SpaceManager {
                 self.lastManualSwitchTime = 0
                 self.lastManualSwitchTargetUUID = nil
             }
-            let generation = notification.userInfo?["generation"] as? UInt64
             DiagnosticEventLog.shared.record(
                 subsystem: "SpaceManager",
                 level: "info",
                 "programmatic switch transaction started: target=\(spaceID), manual=\(isManual), generation=\(generation.map(String.init) ?? "instant")"
+            )
+        }
+
+        if Thread.isMainThread {
+            update()
+        } else {
+            DispatchQueue.main.async(execute: update)
+        }
+    }
+
+    @objc func handleProgrammaticSwitchFinished(_ notification: Notification) {
+        guard let generation = notification.userInfo?["generation"] as? UInt64,
+              let confirmed = notification.userInfo?["confirmed"] as? Bool else {
+            return
+        }
+
+        let update = { [weak self] in
+            guard let self else { return }
+
+            guard self.activeProgrammaticSwitchGeneration == generation else {
+                DiagnosticEventLog.shared.record(
+                    subsystem: "SpaceManager",
+                    level: "info",
+                    "Ignoring stale programmatic switch completion: generation=\(generation), active=\(self.activeProgrammaticSwitchGeneration.map(String.init) ?? "nil")"
+                )
+                return
+            }
+
+            // A retry scheduled from a transaction is no longer allowed to
+            // publish its old WindowServer snapshot after that transaction has
+            // ended. A timed-out transaction gets a new, unassociated retry
+            // chain below so a genuine destination change is still recovered.
+            self.activeProgrammaticSwitchGeneration = nil
+            self.cancelSpaceChangeRetry()
+            if !confirmed {
+                self.scheduleSpaceChangeRetry()
+            }
+
+            DiagnosticEventLog.shared.record(
+                subsystem: "SpaceManager",
+                level: confirmed ? "info" : "warning",
+                "programmatic switch finished: generation=\(generation), confirmed=\(confirmed), retry chain reset"
             )
         }
 

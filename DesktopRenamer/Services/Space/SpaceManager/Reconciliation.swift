@@ -5,6 +5,32 @@ import WidgetKit
 
 extension SpaceManager {
 
+    /// WindowServer can briefly report a neighboring space while a synthetic
+    /// gesture is still settling. The transaction coordinator is authoritative
+    /// during that interval; a timestamp is not sufficient because the retry
+    /// window can outlive the manual-attribution window.
+    private func shouldIgnoreStaleTransactionObservation(_ observedSpaceID: String, source: String) -> Bool {
+        guard SpaceHelper.isSwitching,
+              let activeTargetSpaceID = SpaceHelper.activeProgrammaticSwitchTargetSpaceID,
+              observedSpaceID != activeTargetSpaceID else {
+            return false
+        }
+
+        let generation = SpaceHelper.activeProgrammaticSwitchGeneration.map(String.init) ?? "nil"
+        print("SpaceManager: Stale space \(observedSpaceID) detected during active switch to \(activeTargetSpaceID) (source: \(source)). Ignoring.")
+        DiagnosticEventLog.shared.record(
+            subsystem: "SpaceManager",
+            level: "info",
+            "Ignoring stale transaction observation: generation=\(generation), observed=\(observedSpaceID), target=\(activeTargetSpaceID), source=\(source)"
+        )
+
+        // Do not schedule a SpaceManager retry while the transaction is still
+        // active. The transaction's generation-scoped completion or timeout
+        // owns recovery; a retry created here can outlive the transaction and
+        // publish the stale observation that was just rejected.
+        return true
+    }
+
     func refreshConnectedDisplays() {
         self.connectedDisplayUUIDs = Set(SpaceHelper.getAllDisplayUUIDs().map { $0.uppercased() })
         // print("SpaceManager: Refreshed connected displays: \(connectedDisplayUUIDs)")
@@ -42,6 +68,10 @@ extension SpaceManager {
 
         let previousUUID = self.currentSpaceUUID
         let targetUUID = cgsState.currentUUID
+
+        if shouldIgnoreStaleTransactionObservation(targetUUID, source: source) {
+            return
+        }
             
         let now = Date().timeIntervalSince1970
             let isRecentManualSwitch = now - lastManualSwitchTime < 2.0
@@ -296,7 +326,7 @@ extension SpaceManager {
         if shouldUpdateWidget { scheduleWidgetUpdate() }
     }
 
-    private func scheduleSpaceChangeRetry() {
+    func scheduleSpaceChangeRetry() {
         guard !isSystemSleeping else { return }
         guard spaceChangeRetryCount < maxSpaceChangeRetries else { return }
         spaceChangeRetryWorkItem?.cancel()
@@ -320,12 +350,18 @@ extension SpaceManager {
         spaceChangeRetryWorkItem = nil
         spaceChangeRetryGeneration += 1
         spaceChangeRetryCount = 0
+        spaceChangeRetryObservedSpaceID = nil
+        spaceChangeRetryObservedPasses = 0
     }
 
     private func performRetryDetection() {
         guard !isSystemSleeping else { return }
         guard let cgsState = SpaceHelper.getSystemState() else {
             scheduleSpaceChangeRetry()
+            return
+        }
+
+        if shouldIgnoreStaleTransactionObservation(cgsState.currentUUID, source: "Retry") {
             return
         }
 
@@ -342,6 +378,34 @@ extension SpaceManager {
                 subsystem: "SpaceManager",
                 level: "info",
                 "Ignoring inconsistent space retry: current=\(cgsState.currentUUID), visible=\(visibleSpaceIDs.sorted())"
+            )
+            scheduleSpaceChangeRetry()
+            return
+        }
+
+        if let independentlyObservedSpaceID = SpaceHelper.getCurrentSpaceID(for: cgsState.displayID),
+           independentlyObservedSpaceID != cgsState.currentUUID {
+            DiagnosticEventLog.shared.record(
+                subsystem: "SpaceManager",
+                level: "info",
+                "Ignoring inconsistent space retry read: state=\(cgsState.currentUUID), independent=\(independentlyObservedSpaceID), display=\(cgsState.displayID)"
+            )
+            scheduleSpaceChangeRetry()
+            return
+        }
+
+        if spaceChangeRetryObservedSpaceID == cgsState.currentUUID {
+            spaceChangeRetryObservedPasses += 1
+        } else {
+            spaceChangeRetryObservedSpaceID = cgsState.currentUUID
+            spaceChangeRetryObservedPasses = 1
+        }
+
+        guard spaceChangeRetryObservedPasses >= 2 else {
+            DiagnosticEventLog.shared.record(
+                subsystem: "SpaceManager",
+                level: "info",
+                "Waiting for stable space retry candidate: current=\(cgsState.currentUUID), pass=\(spaceChangeRetryObservedPasses)/2"
             )
             scheduleSpaceChangeRetry()
             return
