@@ -23,9 +23,10 @@ final class SpaceAPI {
     private weak var spaceManager: SpaceManager?
     private var cancellables = Set<AnyCancellable>()
     private var snapshotRevision: UInt64 = 0
+    private var rpcListenerInstalled = false
 
     /// Whether the DNC listener is active (Combine pipeline has subscriptions).
-    var hasActiveListeners: Bool { !cancellables.isEmpty }
+    var hasActiveListeners: Bool { rpcListenerInstalled || !cancellables.isEmpty }
 
     /// The revision clients should use when comparing structured snapshots.
     var currentSnapshotRevision: UInt64 { snapshotRevision }
@@ -36,8 +37,13 @@ final class SpaceAPI {
     
     func setupListener() {
         DiagnosticEventLog.shared.record(subsystem: "SpaceAPI", level: "info", "setupListener")
-        guard let spaceManager = spaceManager else { return }
         removeListener()
+        installRPCListener()
+
+        guard SpaceManager.isAPIEnabled, let spaceManager = spaceManager else {
+            print("SpaceAPI: Structured listener Started (API disabled)")
+            return
+        }
         
         let dnc = DistributedNotificationCenter.default()
         
@@ -46,7 +52,6 @@ final class SpaceAPI {
         dnc.addObserver(self, selector: #selector(handleSpaceListRequest), name: SpaceAPI.getSpaceList, object: nil, suspensionBehavior: .deliverImmediately)
         dnc.addObserver(self, selector: #selector(handleAPIVersionRequest), name: SpaceAPI.getAPIVersion, object: nil, suspensionBehavior: .deliverImmediately)
         dnc.addObserver(self, selector: #selector(handleCommandRequest), name: SpaceAPI.performCommand, object: nil, suspensionBehavior: .deliverImmediately)
-        dnc.addObserver(self, selector: #selector(handleRPCRequest), name: SpaceAPI.rpcRequest, object: nil, suspensionBehavior: .deliverImmediately)
         
         // Broadcast space state changes to observers.
         spaceManager.$currentSpaceUUID
@@ -74,8 +79,24 @@ final class SpaceAPI {
     func removeListener() {
         DiagnosticEventLog.shared.record(subsystem: "SpaceAPI", level: "info", "removeListener")
         DistributedNotificationCenter.default().removeObserver(self)
+        rpcListenerInstalled = false
         cancellables.removeAll()
+        if !SpaceManager.isAPIEnabled {
+            installRPCListener()
+        }
         print("SpaceAPI: Listener Stopped")
+    }
+
+    private func installRPCListener() {
+        guard !rpcListenerInstalled else { return }
+        DistributedNotificationCenter.default().addObserver(
+            self,
+            selector: #selector(handleRPCRequest),
+            name: SpaceAPI.rpcRequest,
+            object: nil,
+            suspensionBehavior: .deliverImmediately
+        )
+        rpcListenerInstalled = true
     }
     
     // API status management.

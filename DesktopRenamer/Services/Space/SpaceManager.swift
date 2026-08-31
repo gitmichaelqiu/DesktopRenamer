@@ -145,10 +145,10 @@ class SpaceManager: ObservableObject {
         }
         
 
+        MainActor.assumeIsolated {
+            self.spaceAPI?.setupListener()
+        }
         if SpaceManager.isAPIEnabled {
-            MainActor.assumeIsolated {
-                self.spaceAPI?.setupListener()
-            }
             DistributedNotificationCenter.default().postNotificationName(SpaceAPI.apiToggleNotification, object: nil, userInfo: ["isEnabled": true], deliverImmediately: true)
         }
         
