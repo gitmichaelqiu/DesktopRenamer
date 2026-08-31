@@ -204,21 +204,40 @@ final class SpaceAPI {
     }
 
     private func postRPCResponse(_ response: SpaceAPIJSONRPCResponse) {
+        let payload: String
         do {
-            let payload = try SpaceAPIJSONRPCCodec.encode(response)
-            DistributedNotificationCenter.default().postNotificationName(
-                SpaceAPI.rpcResponse,
-                object: nil,
-                userInfo: [DesktopRenamerAPIContract.payloadKey: payload],
-                deliverImmediately: true
+            payload = try SpaceAPIJSONRPCCodec.encode(response)
+        } catch let error as SpaceAPIContractError {
+            let fallback = SpaceAPIJSONRPCCodec.errorResponse(
+                id: response.id,
+                code: error.jsonRPCCode,
+                message: error.localizedDescription,
+                data: error.jsonRPCData
             )
+            guard let fallbackPayload = try? SpaceAPIJSONRPCCodec.encode(fallback) else {
+                DiagnosticEventLog.shared.record(
+                    subsystem: "SpaceAPI",
+                    level: "warning",
+                    "Could not encode structured error response: \(error.localizedDescription)"
+                )
+                return
+            }
+            payload = fallbackPayload
         } catch {
             DiagnosticEventLog.shared.record(
                 subsystem: "SpaceAPI",
                 level: "warning",
-                "Could not post structured response: \(error.localizedDescription)"
+                "Could not encode structured response: \(error.localizedDescription)"
             )
+            return
         }
+
+        DistributedNotificationCenter.default().postNotificationName(
+            SpaceAPI.rpcResponse,
+            object: nil,
+            userInfo: [DesktopRenamerAPIContract.payloadKey: payload],
+            deliverImmediately: true
+        )
     }
 
     private func postCommandResult(requestID: String, result: String? = nil, error: String? = nil) {
