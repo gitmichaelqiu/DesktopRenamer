@@ -72,7 +72,8 @@ extension SpaceHelper {
                 // not the global active display.
                 if let liveCurrentID = getCurrentSpaceID(for: targetSpace.displayID) {
                     print("SpaceHelper: switchToSpace check. Live ID: \(liveCurrentID), Target: \(spaceID)")
-                    currentSpaceIsFullscreen = state.spaces.first(where: { $0.id == liveCurrentID })?.isFullscreen ?? false
+                    currentSpaceIsFullscreen = state.spaces
+                        .first(where: { $0.id == liveCurrentID })?.isFullscreen ?? false
                     if liveCurrentID == spaceID {
                         print("SpaceHelper: Already on target space \(spaceID). Stopping.")
                         return 
@@ -83,15 +84,11 @@ extension SpaceHelper {
             // If we are already on the target space, stop.
             if state.currentUUID == spaceID { return }
             
-            // Gesture-based Space Switch handling
-            // We use the gesture method for ordinary desktop switches. Fullscreen
-            // transitions need the window/owner handoff below because macOS does
-            // not reliably accept a synthetic desktop swipe while a fullscreen
-            // Space is involved.
-            if !isDragging,
-               !targetIsFullscreen,
-               !currentSpaceIsFullscreen,
-               let targetSpace = state.spaces.first(where: { $0.id == spaceID }) {
+            // Gesture-based Space Switch handling. Keep the synthetic desktop
+            // gesture as the primary path for fullscreen transitions too; the
+            // WindowServer accepts it in the normal case and preserves the
+            // native animation.
+            if !isDragging, let targetSpace = state.spaces.first(where: { $0.id == spaceID }) {
                 let displayID = targetSpace.displayID
                 if let liveCurrentID = getCurrentSpaceID(for: displayID) {
                     let displaySpaces = state.spaces
@@ -103,6 +100,14 @@ extension SpaceHelper {
                         let steps = targetIndex - currentIndex
                         if steps != 0 {
                             performSpaceSwitchGesture(steps: steps, targetDisplayID: displayID, forceInstant: forceInstant)
+                            if !forceInstant && (targetIsFullscreen || currentSpaceIsFullscreen) {
+                                scheduleFullscreenGestureRetry(
+                                    spaceID: spaceID,
+                                    displayID: displayID,
+                                    switchStartedAt: switchStartedAt,
+                                    attempt: 1
+                                )
+                            }
                             return
                         }
                     }
@@ -251,17 +256,9 @@ extension SpaceHelper {
         for window in NSApp.windows {
             if let labelWindow = window as? SpaceLabelWindow {
                 if labelWindow.spaceId == spaceID {
-                    // Fullscreen transitions need the dedicated active label:
-                    // unlike previews, it is allowed to accompany a fullscreen
-                    // app via .fullScreenAuxiliary. Ordinary desktop switches
-                    // continue to use the preview as their activation anchor.
-                    if isFullscreen {
-                        if labelWindow.isActiveMode {
-                            targetWindow = labelWindow
-                        } else if targetWindow == nil {
-                            targetWindow = labelWindow
-                        }
-                    } else if !labelWindow.isActiveMode || targetWindow == nil {
+                    // Use the preview window as the activation anchor. The
+                    // active label is managed independently by the manager.
+                    if !labelWindow.isActiveMode || targetWindow == nil {
                         targetWindow = labelWindow
                     }
                 } else if labelWindow.isVisible {
@@ -300,7 +297,6 @@ extension SpaceHelper {
 
         // Force window activation.
         DiagnosticEventLog.shared.record(subsystem: "SpaceHelper", level: "info", "switchByActivatingOwnWindow space=\(spaceID)")
-        window.bindToTargetSpace()
         window.orderFrontRegardless()
         window.canBecomeKeyOverride = true
         window.makeKey()
@@ -308,5 +304,58 @@ extension SpaceHelper {
         NSApp.activate(ignoringOtherApps: true)
 
         return true
+    }
+
+    private static func scheduleFullscreenGestureRetry(
+        spaceID: String,
+        displayID: String,
+        switchStartedAt: TimeInterval,
+        attempt: Int
+    ) {
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.75) {
+            guard isSwitching,
+                  lastProgrammaticSwitchTime == switchStartedAt,
+                  lastProgrammaticTargetSpaceID == spaceID,
+                  getCurrentSpaceID(for: displayID) != spaceID,
+                  let state = getSystemState(),
+                  let liveCurrentID = getCurrentSpaceID(for: displayID) else {
+                return
+            }
+
+            let displaySpaces = state.spaces
+                .filter { $0.displayID == displayID }
+                .sorted { $0.num < $1.num }
+            guard let currentIndex = displaySpaces.firstIndex(where: { $0.id == liveCurrentID }),
+                  let targetIndex = displaySpaces.firstIndex(where: { $0.id == spaceID }) else {
+                return
+            }
+
+            let steps = targetIndex - currentIndex
+            guard steps != 0 else { return }
+
+            DiagnosticEventLog.shared.record(
+                subsystem: "SpaceHelper",
+                level: "warning",
+                "Fullscreen gesture has not reached "
+                    + spaceID
+                    + "; retrying synthetic gesture (attempt "
+                    + String(attempt)
+                    + ")"
+            )
+            performSpaceSwitchGesture(
+                steps: steps,
+                targetDisplayID: displayID,
+                forceInstant: false
+            )
+
+            if attempt < 2 {
+                scheduleFullscreenGestureRetry(
+                    spaceID: spaceID,
+                    displayID: displayID,
+                    switchStartedAt: switchStartedAt,
+                    attempt: attempt + 1
+                )
+            }
+        }
     }
 }
