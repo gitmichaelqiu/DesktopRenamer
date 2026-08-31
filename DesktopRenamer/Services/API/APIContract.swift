@@ -1,7 +1,7 @@
 import Foundation
 
 enum DesktopRenamerAPIContract {
-    static let version = "1.2.0"
+    static let version = "1.0.0"
     static let jsonRPCVersion = "2.0"
     static let payloadKey = "payload"
     static let maxPayloadBytes = 1_048_576
