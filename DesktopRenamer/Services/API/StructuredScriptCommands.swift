@@ -118,10 +118,23 @@ class GetStructuredWindowsCommand: NSScriptCommand {
             scriptErrorString = "DesktopRenamer is not ready."
             return nil
         }
-        return runOnMain {
+        let context = runOnMain {
             let api = manager.spaceAPI ?? SpaceAPI(spaceManager: manager)
-            return scriptWindowsSnapshotRecord(api.makeWindowsSnapshotPayload(manager, revision: 0))
+            return (manager.spaceNameDict, api.makeSpaceRecords(manager))
         }
+        let (spaces, spaceRecords) = context
+
+        // Window enumeration uses CoreGraphics and Accessibility APIs. Keep it
+        // outside the main-actor capture so a structured AppleScript read does
+        // not hold up the app while it walks other applications' windows.
+        let snapshot = SpaceAPIWindowsSnapshot(
+            apiVersion: DesktopRenamerAPIVersion.current,
+            revision: 0,
+            timestamp: ISO8601DateFormatter().string(from: Date()),
+            spaces: spaceRecords,
+            windows: SpaceHelper.getWindowRecordsForAllSpaces(spaces: spaces)
+        )
+        return scriptWindowsSnapshotRecord(snapshot)
     }
 }
 

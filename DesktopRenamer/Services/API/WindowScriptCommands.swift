@@ -72,7 +72,10 @@ class GetWindowsCommand: NSScriptCommand {
             return (spaces, names)
         }
         
-        guard let (spaces, names) = data else { return "" }
+        guard let (spaces, names) = data else {
+            _ = failAppUnavailable()
+            return nil
+        }
         
         // Perform heavy window enumeration on the background thread (NSScriptCommand defaults to background).
         return SpaceHelper.getWindowsForAllSpaces(spaces: spaces, spaceNames: names)
@@ -151,6 +154,11 @@ class ExecuteWindowActionCommand: NSScriptCommand {
               let pid = Int32(pidStr),
               let actionName = requiredArgumentString("actionName")
         else { return nil }
+        let supportedActions = ["close", "minimize", "hide", "enterFullScreen", "exitFullScreen", "quit", "restore"]
+        guard supportedActions.contains(actionName) else {
+            _ = failInvalidArgument("Unsupported window action: \(actionName)")
+            return nil
+        }
         DiagnosticEventLog.shared.record(subsystem: "AppleScript", level: "info", "Command performed: ExecuteWindowActionCommand (windowID: \(windowIDStr), pid: \(pidStr), actionName: \(actionName))")
         
         // Fire-and-forget: the command returns nil, so there is no need to block
