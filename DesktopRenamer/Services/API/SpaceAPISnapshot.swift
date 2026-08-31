@@ -42,7 +42,7 @@ extension SpaceAPI {
         )
     }
 
-    private func makeSpaceRecords(_ manager: SpaceManager) -> [SpaceAPISpace] {
+    func makeSpaceRecords(_ manager: SpaceManager) -> [SpaceAPISpace] {
         manager.spaceNameDict
             .sorted {
                 if $0.displayID != $1.displayID {
