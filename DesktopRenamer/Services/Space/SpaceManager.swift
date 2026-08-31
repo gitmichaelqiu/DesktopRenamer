@@ -155,6 +155,13 @@ class SpaceManager: ObservableObject {
         SpaceHelper.startMonitoring { [weak self] rawUUID, isDesktop, ncCnt, displayID in
             self?.handleSpaceChange(rawUUID, isDesktop: isDesktop, ncCount: ncCnt, displayID: displayID, source: "Monitor")
         }
+
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(handleProgrammaticSwitchStarted(_:)),
+            name: NSNotification.Name("SpaceProgrammaticSwitchStarted"),
+            object: nil
+        )
         
         NotificationCenter.default.addObserver(self, selector: #selector(screenParametersDidChange), name: NSApplication.didChangeScreenParametersNotification, object: nil)
         

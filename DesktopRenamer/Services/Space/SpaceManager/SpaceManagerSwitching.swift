@@ -6,17 +6,59 @@ import WidgetKit
 extension SpaceManager {
 
     // Space navigation and switching logic.
-    func switchToSpace(_ space: DesktopSpace, forceInstant: Bool = false, isManual: Bool = true) {
+    @discardableResult
+    func switchToSpace(
+        _ space: DesktopSpace,
+        forceInstant: Bool = false,
+        isManual: Bool = true
+    ) -> SpaceSwitchRequestDisposition {
         print("SpaceManager: switchToSpace(\(space.id)) on display \(space.displayID) forceInstant: \(forceInstant) isManual: \(isManual)")
+
+        let disposition = SpaceHelper.switchToSpace(
+            space.id,
+            forceInstant: forceInstant,
+            isManual: isManual
+        )
+
         // A monitor retry may have been scheduled from an earlier stale
-        // snapshot. It must not reconcile the old space after this explicit
-        // switch has established a new target.
-        cancelSpaceChangeRetry()
-        if isManual {
-            self.lastManualSwitchTime = Date().timeIntervalSince1970
-            self.lastManualSwitchTargetUUID = space.id
+        // snapshot. Cancel it only after a real switch starts; a queued request
+        // must leave the active transaction's verification retry intact.
+        if case .started = disposition {
+            cancelSpaceChangeRetry()
         }
-        SpaceHelper.switchToSpace(space.id, forceInstant: forceInstant)
+        return disposition
+    }
+
+    @objc func handleProgrammaticSwitchStarted(_ notification: Notification) {
+        guard let spaceID = notification.userInfo?["spaceID"] as? String else {
+            return
+        }
+
+        let update = { [weak self] in
+            guard let self else { return }
+            let isManual = notification.userInfo?["isManual"] as? Bool == true
+            if isManual {
+                self.lastManualSwitchTime = Date().timeIntervalSince1970
+                self.lastManualSwitchTargetUUID = spaceID
+            } else {
+                // A non-manual transaction supersedes any short-lived manual
+                // attribution left by an earlier gesture.
+                self.lastManualSwitchTime = 0
+                self.lastManualSwitchTargetUUID = nil
+            }
+            let generation = notification.userInfo?["generation"] as? UInt64
+            DiagnosticEventLog.shared.record(
+                subsystem: "SpaceManager",
+                level: "info",
+                "programmatic switch transaction started: target=\(spaceID), manual=\(isManual), generation=\(generation.map(String.init) ?? "instant")"
+            )
+        }
+
+        if Thread.isMainThread {
+            update()
+        } else {
+            DispatchQueue.main.async(execute: update)
+        }
     }
     
     func switchToPreviousSpace(onDisplayID displayID: String? = nil, forceInstant: Bool? = nil) {

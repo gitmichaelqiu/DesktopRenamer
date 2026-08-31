@@ -161,8 +161,9 @@ extension GestureManager {
                     if lockedDirection == direction {
                         print("GestureManager: Triggered \(direction)")
 
-                        // Fire a nil-target SpaceSwitchRequested so SpaceLabelManager can hide all active Preview Labels
-                        SpaceHelper.lastProgrammaticSwitchTime = Date().timeIntervalSince1970
+                        // Fire a nil-target SpaceSwitchRequested so SpaceLabelManager can hide all active Preview Labels.
+                        // SpaceHelper owns its programmatic-switch timestamp; the gesture marker must not
+                        // overwrite the active transaction's identity while WindowServer is settling.
                         NotificationCenter.default.post(
                             name: NSNotification.Name("SpaceSwitchRequested"), object: nil)
 
