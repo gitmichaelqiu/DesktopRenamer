@@ -23,6 +23,13 @@ extension SpaceLabelWindow {
         contentContainer.layer?.removeAllAnimations()
         self.alphaValue = 0.0
         self.contentView?.alphaValue = 0.0
+
+        // A transparent managed window is still represented by Mission
+        // Control, which leaves a large empty frame for the hidden preview.
+        // Ordering it out removes that frame without changing its assigned
+        // Space; updateVisibility() orders it back in when the preview is
+        // allowed to show again.
+        self.orderOut(nil)
     }
 
     // Interaction handling for mouse events.
