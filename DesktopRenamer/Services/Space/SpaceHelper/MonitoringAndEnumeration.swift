@@ -315,6 +315,10 @@ extension SpaceHelper {
     }
 
     static func getWindowRecordsForAllSpaces(spaces: [DesktopSpace]) -> [SpaceAPIWindow] {
+        getWindowRecordsForAllSpacesIfAvailable(spaces: spaces) ?? []
+    }
+
+    private static func getWindowRecordsForAllSpacesIfAvailable(spaces: [DesktopSpace]) -> [SpaceAPIWindow]? {
         let conn = _CGSDefaultConnection()
         let ourPID = ProcessInfo.processInfo.processIdentifier
 
@@ -368,7 +372,7 @@ extension SpaceHelper {
         let options = CGWindowListOption(arrayLiteral: .excludeDesktopElements)
         guard let allWindows = CGWindowListCopyWindowInfo(options, kCGNullWindowID)
                 as? [[String: Any]]
-        else { return [] }
+        else { return nil }
 
         // Collect valid windows with their IDs.
         var validWindows: [(wid: Int, dict: [String: Any])] = []
@@ -420,7 +424,7 @@ extension SpaceHelper {
         // Fallback: assign windows to current space per display if CGS API unavailable or empty.
         if windowsBySpaceID.isEmpty {
             // Build current-space-per-display map and fullscreen PID→space map.
-            guard let displays = CGSCopyManagedDisplaySpaces(conn) as? [NSDictionary] else { return [] }
+            guard let displays = CGSCopyManagedDisplaySpaces(conn) as? [NSDictionary] else { return nil }
             let screenUUIDs = getAllDisplayUUIDs()
             let mainUUID = screenUUIDs.first
             var currentSpaceForDisplay: [String: String] = [:]
@@ -509,7 +513,7 @@ extension SpaceHelper {
     /// Returns the historical delimiter-based representation for existing clients.
     /// New integrations should use getWindowRecordsForAllSpaces instead.
     static func getWindowsForAllSpaces(spaces: [DesktopSpace], spaceNames: [String: String]) -> String {
-        let records = getWindowRecordsForAllSpaces(spaces: spaces)
+        guard let records = getWindowRecordsForAllSpacesIfAvailable(spaces: spaces) else { return "" }
         var screenMap: [String: String] = [:]
         for screen in NSScreen.screens {
             if let id = screen.deviceDescription[NSDeviceDescriptionKey("NSScreenNumber")] as? CGDirectDisplayID,
