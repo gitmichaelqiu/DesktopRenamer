@@ -1,5 +1,61 @@
 import Foundation
 
+enum SpaceAPIParameterKind: Equatable {
+    case string
+    case positiveInteger
+    case direction
+    case windowAction
+
+    var description: String {
+        switch self {
+        case .string:
+            return "string"
+        case .positiveInteger:
+            return "positive integer"
+        case .direction:
+            return "one of: up, down"
+        case .windowAction:
+            return "one of: " + DesktopRenamerAPIContract.windowActionNames.joined(separator: ", ")
+        }
+    }
+}
+
+enum SpaceAPIResultKind: Equatable {
+    case operation
+    case boolean
+}
+
+enum SpaceAPIJSONRPCCode {
+    static let parseError = -32700
+    static let invalidRequest = -32600
+    static let methodNotFound = -32601
+    static let invalidParams = -32602
+    static let internalError = -32603
+    static let apiDisabled = -32001
+    static let appUnavailable = -32002
+    static let operationFailed = -32004
+    static let payloadTooLarge = -32006
+}
+
+struct SpaceAPIMethodDefinition: Equatable {
+    let name: String
+    let parameters: [String: SpaceAPIParameterKind]
+    let requiredParameters: Set<String>
+    let resultKind: SpaceAPIResultKind
+
+    init(
+        name: String,
+        parameters: [String: SpaceAPIParameterKind] = [:],
+        requiredParameters: Set<String> = [],
+        resultKind: SpaceAPIResultKind = .operation
+    ) {
+        self.name = name
+        self.parameters = parameters
+        self.requiredParameters = requiredParameters
+        self.resultKind = resultKind
+    }
+}
+
 enum DesktopRenamerAPIContract {
     static let version = "1.0.0"
     static let jsonRPCVersion = "2.0"
@@ -9,71 +65,86 @@ enum DesktopRenamerAPIContract {
     static let rpcRequest = Notification.Name("com.michaelqiu.DesktopRenamer.RPCRequest")
     static let rpcResponse = Notification.Name("com.michaelqiu.DesktopRenamer.RPCResponse")
     static let rpcEvent = Notification.Name("com.michaelqiu.DesktopRenamer.RPCEvent")
-
-    static let supportedMethods = [
-        "getAPIInfo",
-        "getAPIVersion",
-        "getSpaceSnapshot",
-        "getCurrentSpaceName",
-        "getCurrentSpaceID",
-        "getAllSpaces",
-        "switchToSpace",
-        "renameCurrentSpace",
-        "renameSpace",
-        "rearrangeSpace",
-        "moveWindowNext",
-        "moveWindowPrevious",
-        "moveWindowToSpace",
-        "reloadSpaceLabels",
-        "toggleMenubar",
-        "toggleLauncher",
-        "toggleLabels",
-        "toggleActiveLabel",
-        "togglePreviewLabel",
-        "toggleDesktopVisibility",
-        "getWindows",
-        "focusWindow",
-        "executeWindowAction",
-        "moveSpecificWindow"
+    static let windowActionNames = [
+        "close", "minimize", "hide", "enterFullScreen", "exitFullScreen", "quit", "restore"
     ]
 
-    static let allowedParameters: [String: Set<String>] = [
-        "getAPIInfo": [],
-        "getAPIVersion": [],
-        "getSpaceSnapshot": [],
-        "getCurrentSpaceName": [],
-        "getCurrentSpaceID": [],
-        "getAllSpaces": [],
-        "switchToSpace": ["spaceID"],
-        "renameCurrentSpace": ["name"],
-        "renameSpace": ["spaceID", "name"],
-        "rearrangeSpace": ["spaceID", "direction"],
-        "moveWindowNext": [],
-        "moveWindowPrevious": [],
-        "moveWindowToSpace": ["spaceID"],
-        "reloadSpaceLabels": [],
-        "toggleMenubar": [],
-        "toggleLauncher": [],
-        "toggleLabels": [],
-        "toggleActiveLabel": [],
-        "togglePreviewLabel": [],
-        "toggleDesktopVisibility": [],
-        "getWindows": [],
-        "focusWindow": ["windowID", "pid"],
-        "executeWindowAction": ["windowID", "pid", "action"],
-        "moveSpecificWindow": ["windowID", "pid", "fromSpaceID", "targetSpaceID"]
+    static let methodDefinitions = [
+        SpaceAPIMethodDefinition(name: "getAPIInfo"),
+        SpaceAPIMethodDefinition(name: "getAPIVersion"),
+        SpaceAPIMethodDefinition(name: "getSpaceSnapshot"),
+        SpaceAPIMethodDefinition(name: "getCurrentSpaceName"),
+        SpaceAPIMethodDefinition(name: "getCurrentSpaceID"),
+        SpaceAPIMethodDefinition(name: "getAllSpaces"),
+        SpaceAPIMethodDefinition(
+            name: "switchToSpace",
+            parameters: ["spaceID": .string],
+            requiredParameters: ["spaceID"]
+        ),
+        SpaceAPIMethodDefinition(
+            name: "renameCurrentSpace",
+            parameters: ["name": .string],
+            requiredParameters: ["name"]
+        ),
+        SpaceAPIMethodDefinition(
+            name: "renameSpace",
+            parameters: ["spaceID": .string, "name": .string],
+            requiredParameters: ["spaceID", "name"]
+        ),
+        SpaceAPIMethodDefinition(
+            name: "rearrangeSpace",
+            parameters: ["spaceID": .string, "direction": .direction],
+            requiredParameters: ["spaceID", "direction"]
+        ),
+        SpaceAPIMethodDefinition(name: "moveWindowNext"),
+        SpaceAPIMethodDefinition(name: "moveWindowPrevious"),
+        SpaceAPIMethodDefinition(
+            name: "moveWindowToSpace",
+            parameters: ["spaceID": .string],
+            requiredParameters: ["spaceID"]
+        ),
+        SpaceAPIMethodDefinition(name: "reloadSpaceLabels"),
+        SpaceAPIMethodDefinition(name: "toggleMenubar", resultKind: .boolean),
+        SpaceAPIMethodDefinition(name: "toggleLauncher", resultKind: .boolean),
+        SpaceAPIMethodDefinition(name: "toggleLabels", resultKind: .boolean),
+        SpaceAPIMethodDefinition(name: "toggleActiveLabel", resultKind: .boolean),
+        SpaceAPIMethodDefinition(name: "togglePreviewLabel", resultKind: .boolean),
+        SpaceAPIMethodDefinition(name: "toggleDesktopVisibility", resultKind: .boolean),
+        SpaceAPIMethodDefinition(name: "getWindows"),
+        SpaceAPIMethodDefinition(
+            name: "focusWindow",
+            parameters: ["windowID": .positiveInteger, "pid": .positiveInteger],
+            requiredParameters: ["windowID", "pid"]
+        ),
+        SpaceAPIMethodDefinition(
+            name: "executeWindowAction",
+            parameters: [
+                "windowID": .positiveInteger,
+                "pid": .positiveInteger,
+                "action": .windowAction
+            ],
+            requiredParameters: ["windowID", "pid", "action"]
+        ),
+        SpaceAPIMethodDefinition(
+            name: "moveSpecificWindow",
+            parameters: [
+                "windowID": .positiveInteger,
+                "pid": .positiveInteger,
+                "fromSpaceID": .string,
+                "targetSpaceID": .string
+            ],
+            requiredParameters: ["windowID", "fromSpaceID", "targetSpaceID"]
+        )
     ]
 
-    static let requiredParameters: [String: Set<String>] = [
-        "switchToSpace": ["spaceID"],
-        "renameCurrentSpace": ["name"],
-        "renameSpace": ["spaceID", "name"],
-        "rearrangeSpace": ["spaceID", "direction"],
-        "moveWindowToSpace": ["spaceID"],
-        "focusWindow": ["windowID", "pid"],
-        "executeWindowAction": ["windowID", "pid", "action"],
-        "moveSpecificWindow": ["windowID", "fromSpaceID", "targetSpaceID"]
-    ]
+    static let supportedMethods = methodDefinitions.map(\.name)
+    private static let methodDefinitionsByName = Dictionary(
+        uniqueKeysWithValues: methodDefinitions.map { ($0.name, $0) }
+    )
+
+    static func definition(for method: String) -> SpaceAPIMethodDefinition? {
+        methodDefinitionsByName[method]
+    }
 }
 
 enum SpaceAPIJSONValue: Codable, Equatable {
@@ -160,7 +231,7 @@ enum SpaceAPIJSONValue: Codable, Equatable {
 
 struct SpaceAPIJSONRPCRequest: Codable, Equatable {
     let jsonrpc: String
-    let id: String?
+    let id: String
     let method: String
     let params: SpaceAPIJSONValue?
 
@@ -174,7 +245,7 @@ struct SpaceAPIJSONRPCRequest: Codable, Equatable {
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         jsonrpc = try container.decode(String.self, forKey: .jsonrpc)
-        id = try container.decodeIfPresent(String.self, forKey: .id)
+        id = try container.decode(String.self, forKey: .id)
         method = try container.decode(String.self, forKey: .method)
         params = container.contains(.params) ? try container.decode(SpaceAPIJSONValue.self, forKey: .params) : nil
     }
@@ -216,9 +287,22 @@ struct SpaceAPIJSONRPCResponse: Codable, Equatable {
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         jsonrpc = try container.decode(String.self, forKey: .jsonrpc)
+        guard container.contains(.id) else {
+            throw SpaceAPIContractError.invalidRequest("A JSON-RPC response requires an ID, including null when unknown.")
+        }
         id = try container.decodeIfPresent(String.self, forKey: .id)
         result = container.contains(.result) ? try container.decode(SpaceAPIJSONValue.self, forKey: .result) : nil
         error = container.contains(.error) ? try container.decode(SpaceAPIJSONRPCError.self, forKey: .error) : nil
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(jsonrpc, forKey: .jsonrpc)
+        // JSON-RPC requires an explicit null ID when the request ID cannot be
+        // recovered (for example, after a parse error).
+        try container.encode(id, forKey: .id)
+        try container.encodeIfPresent(result, forKey: .result)
+        try container.encodeIfPresent(error, forKey: .error)
     }
 
     private enum CodingKeys: String, CodingKey {
@@ -263,6 +347,66 @@ struct SpaceAPISpace: Codable, Equatable {
     let appName: String?
     let appPath: String?
     let globalShortcutNumber: Int?
+
+    init(
+        id: String,
+        name: String,
+        displayID: String,
+        displayName: String,
+        number: Int,
+        isFullscreen: Bool,
+        appName: String?,
+        appPath: String?,
+        globalShortcutNumber: Int?
+    ) {
+        self.id = id
+        self.name = name
+        self.displayID = displayID
+        self.displayName = displayName
+        self.number = number
+        self.isFullscreen = isFullscreen
+        self.appName = appName
+        self.appPath = appPath
+        self.globalShortcutNumber = globalShortcutNumber
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        id = try container.decode(String.self, forKey: .id)
+        name = try container.decode(String.self, forKey: .name)
+        displayID = try container.decode(String.self, forKey: .displayID)
+        displayName = try container.decode(String.self, forKey: .displayName)
+        number = try container.decode(Int.self, forKey: .number)
+        isFullscreen = try container.decode(Bool.self, forKey: .isFullscreen)
+        appName = try container.decodeIfPresent(String.self, forKey: .appName)
+        appPath = try container.decodeIfPresent(String.self, forKey: .appPath)
+        globalShortcutNumber = try container.decodeIfPresent(Int.self, forKey: .globalShortcutNumber)
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(id, forKey: .id)
+        try container.encode(name, forKey: .name)
+        try container.encode(displayID, forKey: .displayID)
+        try container.encode(displayName, forKey: .displayName)
+        try container.encode(number, forKey: .number)
+        try container.encode(isFullscreen, forKey: .isFullscreen)
+        try container.encode(appName, forKey: .appName)
+        try container.encode(appPath, forKey: .appPath)
+        try container.encode(globalShortcutNumber, forKey: .globalShortcutNumber)
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case id
+        case name
+        case displayID
+        case displayName
+        case number
+        case isFullscreen
+        case appName
+        case appPath
+        case globalShortcutNumber
+    }
 }
 
 struct SpaceAPIWindow: Codable, Equatable {
@@ -274,6 +418,61 @@ struct SpaceAPIWindow: Codable, Equatable {
     let spaceID: String
     let isMinimized: Bool
     let isHidden: Bool
+
+    init(
+        id: Int,
+        pid: Int32,
+        ownerName: String,
+        appPath: String?,
+        title: String?,
+        spaceID: String,
+        isMinimized: Bool,
+        isHidden: Bool
+    ) {
+        self.id = id
+        self.pid = pid
+        self.ownerName = ownerName
+        self.appPath = appPath
+        self.title = title
+        self.spaceID = spaceID
+        self.isMinimized = isMinimized
+        self.isHidden = isHidden
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        id = try container.decode(Int.self, forKey: .id)
+        pid = try container.decode(Int32.self, forKey: .pid)
+        ownerName = try container.decode(String.self, forKey: .ownerName)
+        appPath = try container.decodeIfPresent(String.self, forKey: .appPath)
+        title = try container.decodeIfPresent(String.self, forKey: .title)
+        spaceID = try container.decode(String.self, forKey: .spaceID)
+        isMinimized = try container.decode(Bool.self, forKey: .isMinimized)
+        isHidden = try container.decode(Bool.self, forKey: .isHidden)
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(id, forKey: .id)
+        try container.encode(pid, forKey: .pid)
+        try container.encode(ownerName, forKey: .ownerName)
+        try container.encode(appPath, forKey: .appPath)
+        try container.encode(title, forKey: .title)
+        try container.encode(spaceID, forKey: .spaceID)
+        try container.encode(isMinimized, forKey: .isMinimized)
+        try container.encode(isHidden, forKey: .isHidden)
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case id
+        case pid
+        case ownerName
+        case appPath
+        case title
+        case spaceID
+        case isMinimized
+        case isHidden
+    }
 }
 
 struct SpaceAPISnapshot: Codable, Equatable {
@@ -329,10 +528,150 @@ enum SpaceAPIContractError: LocalizedError, Equatable {
     }
 }
 
+enum SpaceAPIArgumentValidator {
+    static func stringArguments(from params: SpaceAPIJSONValue?, method: String) throws -> [String: String] {
+        guard let definition = DesktopRenamerAPIContract.definition(for: method) else {
+            throw SpaceAPIContractError.unsupportedMethod(method)
+        }
+
+        guard let params else {
+            return try validateRequiredParameters([:], definition: definition)
+        }
+        guard let object = params.objectValue else {
+            throw invalidParameter(
+                method: method,
+                name: "params",
+                expected: "object",
+                message: "Parameters must be a JSON object."
+            )
+        }
+
+        let allowedParameters = Set(definition.parameters.keys)
+        if let unknownParameter = object.keys.sorted().first(where: { !allowedParameters.contains($0) }) {
+            throw invalidParameter(
+                method: method,
+                name: unknownParameter,
+                expected: "a supported parameter",
+                message: "Parameter '\(unknownParameter)' is not supported for \(method)."
+            )
+        }
+
+        let arguments = try object.reduce(into: [String: String]()) { result, item in
+            guard let kind = definition.parameters[item.key] else { return }
+            let expected = kind.description
+            switch item.value {
+            case .string(let value):
+                if kind == .positiveInteger, !isPositiveInteger(value, parameter: item.key) {
+                    throw invalidParameter(
+                        method: method,
+                        name: item.key,
+                        expected: expected,
+                        message: "Parameter '\(item.key)' must be a positive integer."
+                    )
+                }
+                if kind == .direction {
+                    let direction = value.lowercased()
+                    guard direction == "up" || direction == "down" else {
+                        throw invalidParameter(
+                            method: method,
+                            name: item.key,
+                            expected: expected,
+                            message: "Parameter '\(item.key)' must be either 'up' or 'down'."
+                        )
+                    }
+                    result[item.key] = direction
+                } else if kind == .windowAction {
+                    guard DesktopRenamerAPIContract.windowActionNames.contains(value) else {
+                        throw invalidParameter(
+                            method: method,
+                            name: item.key,
+                            expected: expected,
+                            message: "Parameter '\(item.key)' is not a supported window action."
+                        )
+                    }
+                    result[item.key] = value
+                } else {
+                    result[item.key] = value
+                }
+            case .number(let value) where value.isFinite && value.rounded() == value && kind == .positiveInteger:
+                guard let integer = Int(exactly: value) else {
+                    throw invalidParameter(
+                        method: method,
+                        name: item.key,
+                        expected: expected,
+                        message: "Parameter '\(item.key)' is outside the supported integer range."
+                    )
+                }
+                guard integer > 0 else {
+                    throw invalidParameter(
+                        method: method,
+                        name: item.key,
+                        expected: expected,
+                        message: "Parameter '\(item.key)' must be a positive integer."
+                    )
+                }
+                result[item.key] = String(integer)
+            default:
+                throw invalidParameter(
+                    method: method,
+                    name: item.key,
+                    expected: expected,
+                    message: "Parameter '\(item.key)' must be \(typeDescription(expected))."
+                )
+            }
+        }
+
+        return try validateRequiredParameters(arguments, definition: definition)
+    }
+
+    private static func validateRequiredParameters(
+        _ arguments: [String: String],
+        definition: SpaceAPIMethodDefinition
+    ) throws -> [String: String] {
+        for parameter in definition.requiredParameters.sorted() {
+            guard let value = arguments[parameter], !value.isEmpty else {
+                throw invalidParameter(
+                    method: definition.name,
+                    name: parameter,
+                    expected: definition.parameters[parameter]?.description ?? "string",
+                    message: "Missing required parameter '\(parameter)'."
+                )
+            }
+        }
+        return arguments
+    }
+
+    private static func isPositiveInteger(_ value: String, parameter: String) -> Bool {
+        if parameter == "pid", let pid = Int32(value) {
+            return pid > 0
+        }
+        if parameter == "windowID", let windowID = Int(value) {
+            return windowID > 0
+        }
+        return Int(value).map { $0 > 0 } ?? false
+    }
+
+    private static func typeDescription(_ expected: String) -> String {
+        expected.hasPrefix("one of:") ? expected : "a \(expected)"
+    }
+
+    private static func invalidParameter(
+        method: String,
+        name: String,
+        expected: String,
+        message: String
+    ) -> SpaceAPIContractError {
+        .invalidParamsWithData(
+            message,
+            SpaceAPIErrorData(parameter: name, expected: expected, command: method)
+        )
+    }
+}
+
 enum SpaceAPIJSONRPCCodec {
     static func encode(_ request: SpaceAPIJSONRPCRequest) throws -> String {
         guard request.jsonrpc == DesktopRenamerAPIContract.jsonRPCVersion,
-              let id = request.id, !id.isEmpty,
+              !request.id.isEmpty,
               !request.method.isEmpty, request.method.count <= 128 else {
             throw SpaceAPIContractError.invalidRequest("A JSON-RPC request requires a non-empty ID and method.")
         }
@@ -356,7 +695,7 @@ enum SpaceAPIJSONRPCCodec {
         guard request.jsonrpc == DesktopRenamerAPIContract.jsonRPCVersion else {
             throw SpaceAPIContractError.invalidRequest("Only JSON-RPC 2.0 requests are supported.")
         }
-        guard let id = request.id, !id.isEmpty else {
+        guard !request.id.isEmpty else {
             throw SpaceAPIContractError.invalidRequest("A non-empty string request ID is required.")
         }
         guard !request.method.isEmpty, request.method.count <= 128 else {
@@ -382,16 +721,7 @@ enum SpaceAPIJSONRPCCodec {
         guard response.jsonrpc == DesktopRenamerAPIContract.jsonRPCVersion else {
             throw SpaceAPIContractError.invalidRequest("Only JSON-RPC 2.0 responses are supported.")
         }
-        if let id = response.id, id.isEmpty {
-            throw SpaceAPIContractError.invalidRequest("A response ID must be a non-empty string when present.")
-        }
-        guard (response.result == nil) != (response.error == nil) else {
-            throw SpaceAPIContractError.invalidRequest("A response must contain exactly one of result or error.")
-        }
-        if let error = response.error, error.message.isEmpty {
-            throw SpaceAPIContractError.invalidRequest("A JSON-RPC error requires a message.")
-        }
-        return response
+        return try validateResponse(response)
     }
 
     static func decodeEvent(_ payload: String) throws -> SpaceAPIJSONRPCEvent {
@@ -405,6 +735,10 @@ enum SpaceAPIJSONRPCCodec {
             throw SpaceAPIContractError.invalidRequest("Event is not a valid JSON-RPC 2.0 notification.")
         }
 
+        if let object = try? JSONSerialization.jsonObject(with: data, options: [.fragmentsAllowed]) as? [String: Any],
+           object["id"] != nil {
+            throw SpaceAPIContractError.invalidRequest("JSON-RPC events must not contain an ID.")
+        }
         guard event.jsonrpc == DesktopRenamerAPIContract.jsonRPCVersion else {
             throw SpaceAPIContractError.invalidRequest("Only JSON-RPC 2.0 events are supported.")
         }
@@ -421,13 +755,7 @@ enum SpaceAPIJSONRPCCodec {
         guard response.jsonrpc == DesktopRenamerAPIContract.jsonRPCVersion else {
             throw SpaceAPIContractError.invalidRequest("Only JSON-RPC 2.0 responses are supported.")
         }
-        if let id = response.id, id.isEmpty {
-            throw SpaceAPIContractError.invalidRequest("A response ID must be a non-empty string when present.")
-        }
-        guard (response.result == nil) != (response.error == nil) else {
-            throw SpaceAPIContractError.invalidRequest("A response must contain exactly one of result or error.")
-        }
-        return try encodeJSON(response)
+        return try encodeJSON(try validateResponse(response))
     }
 
     static func encode(_ event: SpaceAPIJSONRPCEvent) throws -> String {
@@ -489,30 +817,57 @@ enum SpaceAPIJSONRPCCodec {
         }
     }
 
+    private static func validateResponse(_ response: SpaceAPIJSONRPCResponse) throws -> SpaceAPIJSONRPCResponse {
+        if let id = response.id, id.isEmpty {
+            throw SpaceAPIContractError.invalidRequest("A response ID must be a non-empty string when present.")
+        }
+        if response.id == nil, response.result != nil {
+            throw SpaceAPIContractError.invalidRequest("A successful response requires a non-null request ID.")
+        }
+        guard (response.result == nil) != (response.error == nil) else {
+            throw SpaceAPIContractError.invalidRequest("A response must contain exactly one of result or error.")
+        }
+        if let error = response.error, error.message.isEmpty {
+            throw SpaceAPIContractError.invalidRequest("A JSON-RPC error requires a message.")
+        }
+        return response
+    }
+
 }
 
 extension SpaceAPIContractError {
     var jsonRPCCode: Int {
         switch self {
         case .invalidJSON:
-            return -32700
+            return SpaceAPIJSONRPCCode.parseError
         case .invalidRequest:
-            return -32600
+            return SpaceAPIJSONRPCCode.invalidRequest
         case .invalidParams:
-            return -32602
+            return SpaceAPIJSONRPCCode.invalidParams
         case .invalidParamsWithData:
-            return -32602
+            return SpaceAPIJSONRPCCode.invalidParams
         case .unsupportedMethod:
-            return -32601
+            return SpaceAPIJSONRPCCode.methodNotFound
         case .payloadTooLarge:
-            return -32006
+            return SpaceAPIJSONRPCCode.payloadTooLarge
         }
     }
 
     var jsonRPCData: SpaceAPIErrorData? {
+        jsonRPCData(command: nil)
+    }
+
+    func jsonRPCData(command: String?) -> SpaceAPIErrorData? {
         switch self {
         case .invalidParamsWithData(_, let data):
-            return data
+            guard data.command == nil, let command else { return data }
+            return SpaceAPIErrorData(
+                parameter: data.parameter,
+                expected: data.expected,
+                command: command
+            )
+        case .invalidParams:
+            return command.map { SpaceAPIErrorData(command: $0) }
         case .unsupportedMethod(let method):
             return SpaceAPIErrorData(command: method)
         default:
