@@ -526,9 +526,24 @@ extension SpaceHelper {
 
         var output = ""
         for space in sortedSpaces {
-            output += ">\(space.id)~\(spaceNames[space.id] ?? "")~\(getDisplayName(for: space.displayID, screenMap: screenMap))~\(space.num)~\(space.isFullscreen ? "1" : "0")~\(space.appPath ?? "")\n"
+            output += SpaceAPILegacyFormatter.spaceLine(
+                id: space.id,
+                name: spaceNames[space.id] ?? "",
+                displayName: getDisplayName(for: space.displayID, screenMap: screenMap),
+                number: space.num,
+                isFullscreen: space.isFullscreen,
+                appPath: space.appPath
+            )
             for window in records where window.spaceID == space.id {
-                output += "  \(window.id)|\(window.pid)|\(window.ownerName)|\(window.appPath ?? "")|\(window.title ?? "")|\(window.isMinimized ? "1" : "0")|\(window.isHidden ? "1" : "0")\n"
+                output += SpaceAPILegacyFormatter.windowLine(
+                    id: window.id,
+                    pid: window.pid,
+                    ownerName: window.ownerName,
+                    appPath: window.appPath,
+                    title: window.title,
+                    isMinimized: window.isMinimized,
+                    isHidden: window.isHidden
+                )
             }
         }
         return output
