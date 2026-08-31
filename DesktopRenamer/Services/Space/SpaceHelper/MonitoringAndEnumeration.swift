@@ -314,20 +314,9 @@ extension SpaceHelper {
         return true
     }
 
-    static func getWindowsForAllSpaces(spaces: [DesktopSpace], spaceNames: [String: String]) -> String {
+    static func getWindowRecordsForAllSpaces(spaces: [DesktopSpace]) -> [SpaceAPIWindow] {
         let conn = _CGSDefaultConnection()
         let ourPID = ProcessInfo.processInfo.processIdentifier
-
-        // Pre-calculate screen mapping for efficiency as recommended by reviewer.
-        var screenMap: [String: String] = [:]
-        for screen in NSScreen.screens {
-            if let id = screen.deviceDescription[NSDeviceDescriptionKey("NSScreenNumber")] as? CGDirectDisplayID,
-               let uuidRef = CGDisplayCreateUUIDFromDisplayID(id) {
-                let uuid = uuidRef.takeRetainedValue()
-                let uuidStr = (CFUUIDCreateString(nil, uuid) as String).uppercased()
-                screenMap[uuidStr] = screen.localizedName
-            }
-        }
 
         // Build PID → app bundle path cache from running applications.
         // Only include apps with .regular activation policy (shown in Dock).
@@ -379,7 +368,7 @@ extension SpaceHelper {
         let options = CGWindowListOption(arrayLiteral: .excludeDesktopElements)
         guard let allWindows = CGWindowListCopyWindowInfo(options, kCGNullWindowID)
                 as? [[String: Any]]
-        else { return "" }
+        else { return [] }
 
         // Collect valid windows with their IDs.
         var validWindows: [(wid: Int, dict: [String: Any])] = []
@@ -431,7 +420,7 @@ extension SpaceHelper {
         // Fallback: assign windows to current space per display if CGS API unavailable or empty.
         if windowsBySpaceID.isEmpty {
             // Build current-space-per-display map and fullscreen PID→space map.
-            guard let displays = CGSCopyManagedDisplaySpaces(conn) as? [NSDictionary] else { return "" }
+            guard let displays = CGSCopyManagedDisplaySpaces(conn) as? [NSDictionary] else { return [] }
             let screenUUIDs = getAllDisplayUUIDs()
             let mainUUID = screenUUIDs.first
             var currentSpaceForDisplay: [String: String] = [:]
@@ -492,7 +481,44 @@ extension SpaceHelper {
             }
         }
 
-        // Build output sorted by display then number.
+        return spaces
+            .sorted {
+                if $0.displayID != $1.displayID { return $0.displayID < $1.displayID }
+                return $0.num < $1.num
+            }
+            .flatMap { space in
+                (windowsBySpaceID[space.id] ?? []).compactMap { window -> SpaceAPIWindow? in
+                    guard let wid = window[kCGWindowNumber as String] as? Int,
+                          let pid = window[kCGWindowOwnerPID as String] as? Int,
+                          let appPath = pidToAppPath[Int32(pid)] else { return nil }
+
+                    return SpaceAPIWindow(
+                        id: wid,
+                        pid: Int32(pid),
+                        ownerName: window[kCGWindowOwnerName as String] as? String ?? "",
+                        appPath: appPath,
+                        title: window[kCGWindowName as String] as? String,
+                        spaceID: space.id,
+                        isMinimized: minimizedAXWindowIDs.contains(wid),
+                        isHidden: NSRunningApplication(processIdentifier: Int32(pid))?.isHidden ?? false
+                    )
+                }
+            }
+    }
+
+    /// Returns the historical delimiter-based representation for existing clients.
+    /// New integrations should use getWindowRecordsForAllSpaces instead.
+    static func getWindowsForAllSpaces(spaces: [DesktopSpace], spaceNames: [String: String]) -> String {
+        let records = getWindowRecordsForAllSpaces(spaces: spaces)
+        var screenMap: [String: String] = [:]
+        for screen in NSScreen.screens {
+            if let id = screen.deviceDescription[NSDeviceDescriptionKey("NSScreenNumber")] as? CGDirectDisplayID,
+               let uuidRef = CGDisplayCreateUUIDFromDisplayID(id) {
+                let uuid = uuidRef.takeRetainedValue()
+                let uuidString = (CFUUIDCreateString(nil, uuid) as String).uppercased()
+                screenMap[uuidString] = screen.localizedName
+            }
+        }
         let sortedSpaces = spaces.sorted {
             if $0.displayID != $1.displayID { return $0.displayID < $1.displayID }
             return $0.num < $1.num
@@ -500,22 +526,9 @@ extension SpaceHelper {
 
         var output = ""
         for space in sortedSpaces {
-            let name = spaceNames[space.id] ?? ""
-            let displayName = getDisplayName(for: space.displayID, screenMap: screenMap)
-            output += ">\(space.id)~\(name)~\(displayName)~\(space.num)~\(space.isFullscreen ? "1" : "0")~\(space.appPath ?? "")\n"
-
-            guard let windows = windowsBySpaceID[space.id] else { continue }
-            for window in windows {
-                guard let wid = window[kCGWindowNumber as String] as? Int,
-                      let pid = window[kCGWindowOwnerPID as String] as? Int,
-                      let appPath = pidToAppPath[Int32(pid)]
-                else { continue }
-
-                let ownerName = window[kCGWindowOwnerName as String] as? String ?? ""
-                let title = window[kCGWindowName as String] as? String ?? ""
-                let isMinimized = minimizedAXWindowIDs.contains(wid) ? "1" : "0"
-                let isHidden = (NSRunningApplication(processIdentifier: Int32(pid))?.isHidden ?? false) ? "1" : "0"
-                output += "  \(wid)|\(pid)|\(ownerName)|\(appPath)|\(title)|\(isMinimized)|\(isHidden)\n"
+            output += ">\(space.id)~\(spaceNames[space.id] ?? "")~\(getDisplayName(for: space.displayID, screenMap: screenMap))~\(space.num)~\(space.isFullscreen ? "1" : "0")~\(space.appPath ?? "")\n"
+            for window in records where window.spaceID == space.id {
+                output += "  \(window.id)|\(window.pid)|\(window.ownerName)|\(window.appPath ?? "")|\(window.title ?? "")|\(window.isMinimized ? "1" : "0")|\(window.isHidden ? "1" : "0")\n"
             }
         }
         return output
