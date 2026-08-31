@@ -13,8 +13,45 @@ extension SpaceAPI {
         )
     }
 
-    func makeSpaceSnapshot(_ manager: SpaceManager, revision: UInt64 = 0) throws -> String {
-        try encodeJSON(makeSpaceSnapshotPayload(manager, revision: revision))
+    /// Returns the historical snapshot shape used by the legacy command channel.
+    /// Structured clients should use makeSpaceSnapshotPayload instead.
+    func makeSpaceSnapshot(_ manager: SpaceManager) throws -> String {
+        let spaces = manager.spaceNameDict
+            .sorted {
+                if $0.displayID != $1.displayID {
+                    return $0.displayID.localizedStandardCompare($1.displayID) == .orderedAscending
+                }
+                return $0.num < $1.num
+            }
+            .map { space -> [String: Any] in
+                var record: [String: Any] = [
+                    "id": space.id,
+                    "name": manager.getSpaceName(space.id),
+                    "displayID": space.displayID,
+                    "displayName": displayName(for: space.displayID),
+                    "number": space.num,
+                    "isFullscreen": space.isFullscreen
+                ]
+                if let appPath = space.appPath {
+                    record["appPath"] = appPath
+                }
+                return record
+            }
+        let snapshot: [String: Any] = [
+            "apiVersion": DesktopRenamerAPIVersion.current,
+            "currentSpaceIDs": SpaceHelper.getCurrentSpaceIDs(),
+            "currentSpaceName": manager.getSpaceName(manager.currentSpaceUUID),
+            "spaces": spaces
+        ]
+        guard JSONSerialization.isValidJSONObject(snapshot) else {
+            throw NSError(
+                domain: "DesktopRenamer.SpaceAPI",
+                code: 1,
+                userInfo: [NSLocalizedDescriptionKey: "Could not encode space snapshot."]
+            )
+        }
+        let data = try JSONSerialization.data(withJSONObject: snapshot)
+        return String(decoding: data, as: UTF8.self)
     }
 
     func makeWindowsSnapshotPayload(_ manager: SpaceManager, revision: UInt64) -> SpaceAPIWindowsSnapshot {
