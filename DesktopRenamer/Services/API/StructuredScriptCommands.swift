@@ -131,7 +131,9 @@ private func scriptAPIInfoRecord(_ info: SpaceAPIInfo) -> [String: Any] {
         "jsonRPCVersion": info.jsonRPCVersion,
         "supportedMethods": info.supportedMethods,
         "legacyNotifications": info.legacyNotifications,
+        "legacyCompatibility": info.legacyCompatibility,
         "eventNotifications": info.eventNotifications,
+        "eventCapabilities": info.eventCapabilities,
         "maxPayloadBytes": info.maxPayloadBytes
     ]
 }

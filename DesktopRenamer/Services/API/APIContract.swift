@@ -36,6 +36,44 @@ enum DesktopRenamerAPIContract {
         "executeWindowAction",
         "moveSpecificWindow"
     ]
+
+    static let allowedParameters: [String: Set<String>] = [
+        "getAPIInfo": [],
+        "getAPIVersion": [],
+        "getSpaceSnapshot": [],
+        "getCurrentSpaceName": [],
+        "getCurrentSpaceID": [],
+        "getAllSpaces": [],
+        "switchToSpace": ["spaceID"],
+        "renameCurrentSpace": ["name"],
+        "renameSpace": ["spaceID", "name"],
+        "rearrangeSpace": ["spaceID", "direction"],
+        "moveWindowNext": [],
+        "moveWindowPrevious": [],
+        "moveWindowToSpace": ["spaceID"],
+        "reloadSpaceLabels": [],
+        "toggleMenubar": [],
+        "toggleLauncher": [],
+        "toggleLabels": [],
+        "toggleActiveLabel": [],
+        "togglePreviewLabel": [],
+        "toggleDesktopVisibility": [],
+        "getWindows": [],
+        "focusWindow": ["windowID", "pid"],
+        "executeWindowAction": ["windowID", "pid", "action"],
+        "moveSpecificWindow": ["windowID", "pid", "fromSpaceID", "targetSpaceID"]
+    ]
+
+    static let requiredParameters: [String: Set<String>] = [
+        "switchToSpace": ["spaceID"],
+        "renameCurrentSpace": ["name"],
+        "renameSpace": ["spaceID", "name"],
+        "rearrangeSpace": ["spaceID", "direction"],
+        "moveWindowToSpace": ["spaceID"],
+        "focusWindow": ["windowID", "pid"],
+        "executeWindowAction": ["windowID", "pid", "action"],
+        "moveSpecificWindow": ["windowID", "fromSpaceID", "targetSpaceID"]
+    ]
 }
 
 enum SpaceAPIJSONValue: Codable, Equatable {
@@ -92,14 +130,12 @@ enum SpaceAPIJSONValue: Codable, Equatable {
     }
 
     static func from<T: Encodable>(_ value: T, using encoder: JSONEncoder = JSONEncoder()) throws -> SpaceAPIJSONValue {
-        try decoder.decode(SpaceAPIJSONValue.self, from: encoder.encode(value))
+        try JSONDecoder().decode(SpaceAPIJSONValue.self, from: encoder.encode(value))
     }
 
     func decode<T: Decodable>(_ type: T.Type, using decoder: JSONDecoder = JSONDecoder()) throws -> T {
         try decoder.decode(type, from: JSONEncoder().encode(self))
     }
-
-    private static let decoder = JSONDecoder()
 
     var objectValue: [String: SpaceAPIJSONValue]? {
         guard case .object(let value) = self else { return nil }
@@ -236,7 +272,9 @@ struct SpaceAPIInfo: Codable, Equatable {
     let jsonRPCVersion: String
     let supportedMethods: [String]
     let legacyNotifications: Bool
+    let legacyCompatibility: String
     let eventNotifications: Bool
+    let eventCapabilities: [String]
     let maxPayloadBytes: Int
 }
 
@@ -244,12 +282,14 @@ enum SpaceAPIContractError: LocalizedError, Equatable {
     case invalidJSON(String)
     case invalidRequest(String)
     case invalidParams(String)
+    case invalidParamsWithData(String, SpaceAPIErrorData)
     case payloadTooLarge
     case unsupportedMethod(String)
 
     var errorDescription: String? {
         switch self {
-        case .invalidJSON(let message), .invalidRequest(let message), .invalidParams(let message):
+        case .invalidJSON(let message), .invalidRequest(let message), .invalidParams(let message),
+             .invalidParamsWithData(let message, _):
             return message
         case .payloadTooLarge:
             return "SpaceAPI payload exceeds the maximum size."
@@ -260,11 +300,21 @@ enum SpaceAPIContractError: LocalizedError, Equatable {
 }
 
 enum SpaceAPIJSONRPCCodec {
-    static func decodeRequest(_ payload: String) throws -> SpaceAPIJSONRPCRequest {
-        try validatePayloadSize(payload)
-        guard let data = payload.data(using: .utf8) else {
-            throw SpaceAPIContractError.invalidJSON("Payload is not valid UTF-8.")
+    static func encode(_ request: SpaceAPIJSONRPCRequest) throws -> String {
+        guard request.jsonrpc == DesktopRenamerAPIContract.jsonRPCVersion,
+              let id = request.id, !id.isEmpty,
+              !request.method.isEmpty, request.method.count <= 128 else {
+            throw SpaceAPIContractError.invalidRequest("A JSON-RPC request requires a non-empty ID and method.")
         }
+        if let params = request.params, params.objectValue == nil {
+            throw SpaceAPIContractError.invalidParams("Named parameters must be a JSON object.")
+        }
+        return try encodeJSON(request)
+    }
+
+    static func decodeRequest(_ payload: String) throws -> SpaceAPIJSONRPCRequest {
+        let data = try validatedPayloadData(payload)
+        try requireJSONObject(data, message: "Request must be a JSON object.")
 
         let request: SpaceAPIJSONRPCRequest
         do {
@@ -288,27 +338,75 @@ enum SpaceAPIJSONRPCCodec {
         return request
     }
 
-    static func encode(_ response: SpaceAPIJSONRPCResponse) throws -> String {
+    static func decodeResponse(_ payload: String) throws -> SpaceAPIJSONRPCResponse {
+        let data = try validatedPayloadData(payload)
+        try requireJSONObject(data, message: "Response must be a JSON object.")
+
+        let response: SpaceAPIJSONRPCResponse
+        do {
+            response = try JSONDecoder().decode(SpaceAPIJSONRPCResponse.self, from: data)
+        } catch {
+            throw SpaceAPIContractError.invalidRequest("Response is not a valid JSON-RPC 2.0 object.")
+        }
+
+        guard response.jsonrpc == DesktopRenamerAPIContract.jsonRPCVersion else {
+            throw SpaceAPIContractError.invalidRequest("Only JSON-RPC 2.0 responses are supported.")
+        }
+        if let id = response.id, id.isEmpty {
+            throw SpaceAPIContractError.invalidRequest("A response ID must be a non-empty string when present.")
+        }
         guard (response.result == nil) != (response.error == nil) else {
             throw SpaceAPIContractError.invalidRequest("A response must contain exactly one of result or error.")
         }
-        let encoder = JSONEncoder()
-        encoder.outputFormatting = [.sortedKeys]
-        let data = try encoder.encode(response)
-        guard data.count <= DesktopRenamerAPIContract.maxPayloadBytes else {
-            throw SpaceAPIContractError.payloadTooLarge
+        if let error = response.error, error.message.isEmpty {
+            throw SpaceAPIContractError.invalidRequest("A JSON-RPC error requires a message.")
         }
-        return String(decoding: data, as: UTF8.self)
+        return response
+    }
+
+    static func decodeEvent(_ payload: String) throws -> SpaceAPIJSONRPCEvent {
+        let data = try validatedPayloadData(payload)
+        try requireJSONObject(data, message: "Event must be a JSON object.")
+
+        let event: SpaceAPIJSONRPCEvent
+        do {
+            event = try JSONDecoder().decode(SpaceAPIJSONRPCEvent.self, from: data)
+        } catch {
+            throw SpaceAPIContractError.invalidRequest("Event is not a valid JSON-RPC 2.0 notification.")
+        }
+
+        guard event.jsonrpc == DesktopRenamerAPIContract.jsonRPCVersion else {
+            throw SpaceAPIContractError.invalidRequest("Only JSON-RPC 2.0 events are supported.")
+        }
+        guard !event.method.isEmpty, event.method.count <= 128 else {
+            throw SpaceAPIContractError.invalidRequest("A non-empty event method of at most 128 characters is required.")
+        }
+        guard event.params.objectValue != nil else {
+            throw SpaceAPIContractError.invalidParams("Event parameters must be a JSON object.")
+        }
+        return event
+    }
+
+    static func encode(_ response: SpaceAPIJSONRPCResponse) throws -> String {
+        guard response.jsonrpc == DesktopRenamerAPIContract.jsonRPCVersion else {
+            throw SpaceAPIContractError.invalidRequest("Only JSON-RPC 2.0 responses are supported.")
+        }
+        if let id = response.id, id.isEmpty {
+            throw SpaceAPIContractError.invalidRequest("A response ID must be a non-empty string when present.")
+        }
+        guard (response.result == nil) != (response.error == nil) else {
+            throw SpaceAPIContractError.invalidRequest("A response must contain exactly one of result or error.")
+        }
+        return try encodeJSON(response)
     }
 
     static func encode(_ event: SpaceAPIJSONRPCEvent) throws -> String {
-        let encoder = JSONEncoder()
-        encoder.outputFormatting = [.sortedKeys]
-        let data = try encoder.encode(event)
-        guard data.count <= DesktopRenamerAPIContract.maxPayloadBytes else {
-            throw SpaceAPIContractError.payloadTooLarge
+        guard event.jsonrpc == DesktopRenamerAPIContract.jsonRPCVersion,
+              !event.method.isEmpty, event.method.count <= 128,
+              event.params.objectValue != nil else {
+            throw SpaceAPIContractError.invalidRequest("Events require JSON-RPC 2.0, a method, and object parameters.")
         }
-        return String(decoding: data, as: UTF8.self)
+        return try encodeJSON(event)
     }
 
     static func errorResponse(
@@ -329,11 +427,38 @@ enum SpaceAPIJSONRPCCodec {
         )
     }
 
-    private static func validatePayloadSize(_ payload: String) throws {
+    private static func encodeJSON<T: Encodable>(_ value: T) throws -> String {
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.sortedKeys]
+        let data = try encoder.encode(value)
+        guard data.count <= DesktopRenamerAPIContract.maxPayloadBytes else {
+            throw SpaceAPIContractError.payloadTooLarge
+        }
+        return String(decoding: data, as: UTF8.self)
+    }
+
+    private static func validatedPayloadData(_ payload: String) throws -> Data {
         guard payload.utf8.count <= DesktopRenamerAPIContract.maxPayloadBytes else {
             throw SpaceAPIContractError.payloadTooLarge
         }
+        guard let data = payload.data(using: .utf8) else {
+            throw SpaceAPIContractError.invalidJSON("Payload is not valid UTF-8.")
+        }
+        do {
+            _ = try JSONSerialization.jsonObject(with: data, options: [.fragmentsAllowed])
+        } catch {
+            throw SpaceAPIContractError.invalidJSON("Payload is not valid JSON.")
+        }
+        return data
     }
+
+    private static func requireJSONObject(_ data: Data, message: String) throws {
+        guard let object = try? JSONSerialization.jsonObject(with: data, options: [.fragmentsAllowed]),
+              object is [String: Any] else {
+            throw SpaceAPIContractError.invalidRequest(message)
+        }
+    }
+
 }
 
 extension SpaceAPIContractError {
@@ -345,10 +470,23 @@ extension SpaceAPIContractError {
             return -32600
         case .invalidParams:
             return -32602
+        case .invalidParamsWithData:
+            return -32602
         case .unsupportedMethod:
             return -32601
         case .payloadTooLarge:
             return -32006
+        }
+    }
+
+    var jsonRPCData: SpaceAPIErrorData? {
+        switch self {
+        case .invalidParamsWithData(_, let data):
+            return data
+        case .unsupportedMethod(let method):
+            return SpaceAPIErrorData(command: method)
+        default:
+            return nil
         }
     }
 }

@@ -1,33 +1,57 @@
 import Foundation
 import Combine
 
-// Helper class for testing SpaceAPI functionality.
-class APITester: ObservableObject {
+// Helper class for testing both compatibility and structured SpaceAPI paths.
+final class APITester: NSObject, ObservableObject {
     @Published var responseText: String = ""
+    @Published var structuredResponseText: String = ""
 
-    init() {
-        NotificationCenter.default.addObserver(
+    private let distributedCenter = DistributedNotificationCenter.default()
+
+    override init() {
+        super.init()
+
+        distributedCenter.addObserver(
             self, selector: #selector(handleCurrentSpaceResponse(_:)),
-            name: SpaceAPI.returnActiveSpace, object: nil)
-        NotificationCenter.default.addObserver(
+            name: SpaceAPI.returnActiveSpace, object: nil, suspensionBehavior: .deliverImmediately)
+        distributedCenter.addObserver(
             self, selector: #selector(handleAllSpacesResponse(_:)), name: SpaceAPI.returnSpaceList,
-            object: nil)
+            object: nil, suspensionBehavior: .deliverImmediately)
+        distributedCenter.addObserver(
+            self, selector: #selector(handleRPCResponse(_:)), name: SpaceAPI.rpcResponse,
+            object: nil, suspensionBehavior: .deliverImmediately)
     }
 
     deinit {
-        NotificationCenter.default.removeObserver(self)
+        distributedCenter.removeObserver(self)
     }
 
     func sendCurrentSpaceRequest() {
         responseText = "Requesting current space..."
-        DistributedNotificationCenter.default().postNotificationName(
+        distributedCenter.postNotificationName(
             SpaceAPI.getActiveSpace, object: nil, userInfo: nil, deliverImmediately: true)
     }
 
     func sendAllSpacesRequest() {
         responseText = "Requesting all spaces..."
-        DistributedNotificationCenter.default().postNotificationName(
+        distributedCenter.postNotificationName(
             SpaceAPI.getSpaceList, object: nil, userInfo: nil, deliverImmediately: true)
+    }
+
+    func sendStructuredAPIInfoRequest() {
+        let request = SpaceAPIJSONRPCRequest(id: UUID().uuidString, method: "getAPIInfo")
+        do {
+            let payload = try SpaceAPIJSONRPCCodec.encode(request)
+            structuredResponseText = "Requesting structured API information..."
+            distributedCenter.postNotificationName(
+                SpaceAPI.rpcRequest,
+                object: nil,
+                userInfo: [DesktopRenamerAPIContract.payloadKey: payload],
+                deliverImmediately: true
+            )
+        } catch {
+            structuredResponseText = "Could not encode request: \(error.localizedDescription)"
+        }
     }
 
     @objc private func handleCurrentSpaceResponse(_ notification: Notification) {
@@ -61,6 +85,29 @@ class APITester: ObservableObject {
                 result += "#\(num): \(name) [\(uuid).. ]\n"
             }
             self.responseText = result
+        }
+    }
+
+    @objc private func handleRPCResponse(_ notification: Notification) {
+        DispatchQueue.main.async {
+            guard let payload = notification.userInfo?[DesktopRenamerAPIContract.payloadKey] as? String else {
+                self.structuredResponseText = "Received empty structured response"
+                return
+            }
+
+            do {
+                let response = try SpaceAPIJSONRPCCodec.decodeResponse(payload)
+                if let error = response.error {
+                    self.structuredResponseText = "Structured API error \(error.code): \(error.message)"
+                } else if let result = response.result,
+                          let info = try? result.decode(SpaceAPIInfo.self) {
+                    self.structuredResponseText = "Structured API \(info.contractVersion), JSON-RPC \(info.jsonRPCVersion)"
+                } else {
+                    self.structuredResponseText = "Received structured API response"
+                }
+            } catch {
+                self.structuredResponseText = "Invalid structured response: \(error.localizedDescription)"
+            }
         }
     }
 }

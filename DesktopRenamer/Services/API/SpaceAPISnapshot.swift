@@ -27,6 +27,23 @@ extension SpaceAPI {
         )
     }
 
+    func makeWindowsSnapshotPayloadAsync(_ manager: SpaceManager, revision: UInt64) async -> SpaceAPIWindowsSnapshot {
+        let spaces = manager.spaceNameDict
+        let spaceRecords = makeSpaceRecords(manager)
+        let timestamp = Self.apiTimestamp()
+        let windows = await Task.detached(priority: .userInitiated) {
+            SpaceHelper.getWindowRecordsForAllSpaces(spaces: spaces)
+        }.value
+
+        return SpaceAPIWindowsSnapshot(
+            apiVersion: DesktopRenamerAPIVersion.current,
+            revision: revision,
+            timestamp: timestamp,
+            spaces: spaceRecords,
+            windows: windows
+        )
+    }
+
     func makeWindowsSnapshot(_ manager: SpaceManager, revision: UInt64) throws -> String {
         try encodeJSON(makeWindowsSnapshotPayload(manager, revision: revision))
     }
@@ -37,7 +54,9 @@ extension SpaceAPI {
             jsonRPCVersion: DesktopRenamerAPIContract.jsonRPCVersion,
             supportedMethods: DesktopRenamerAPIContract.supportedMethods,
             legacyNotifications: true,
+            legacyCompatibility: "supported",
             eventNotifications: true,
+            eventCapabilities: ["stateChanged"],
             maxPayloadBytes: DesktopRenamerAPIContract.maxPayloadBytes
         )
     }

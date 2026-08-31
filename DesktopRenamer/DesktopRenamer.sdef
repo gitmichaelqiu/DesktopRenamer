@@ -8,7 +8,9 @@
             <property name="JSON-RPC version" code="JRpc" type="text"><cocoa key="jsonRPCVersion"/></property>
             <property name="supported methods" code="SMet" type="list of text"><cocoa key="supportedMethods"/></property>
             <property name="legacy notifications" code="LNot" type="boolean"><cocoa key="legacyNotifications"/></property>
+            <property name="legacy compatibility" code="LCom" type="text"><cocoa key="legacyCompatibility"/></property>
             <property name="event notifications" code="ENot" type="boolean"><cocoa key="eventNotifications"/></property>
+            <property name="event capabilities" code="ECap" type="list of text"><cocoa key="eventCapabilities"/></property>
             <property name="maximum payload bytes" code="MPBy" type="integer"><cocoa key="maxPayloadBytes"/></property>
         </record-type>
 

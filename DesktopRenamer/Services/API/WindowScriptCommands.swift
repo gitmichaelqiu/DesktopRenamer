@@ -30,7 +30,7 @@ class MoveWindowPreviousCommand: NSScriptCommand {
 class MoveWindowToSpaceCommand: NSScriptCommand {
     override func performDefaultImplementation() -> Any? {
         guard isAPIEnabled() else { return nil }
-        guard let spaceID = self.directParameter as? String else { return nil }
+        guard let spaceID = requiredDirectString(parameter: "space ID") else { return nil }
         DiagnosticEventLog.shared.record(subsystem: "AppleScript", level: "info", "Command performed: MoveWindowToSpaceCommand (spaceID: \(spaceID))")
         
         DispatchQueue.main.async {
@@ -82,10 +82,9 @@ class GetWindowsCommand: NSScriptCommand {
 class FocusWindowCommand: NSScriptCommand {
     override func performDefaultImplementation() -> Any? {
         guard isAPIEnabled() else { return nil }
-        guard let windowIDStr = self.directParameter as? String,
+        guard let windowIDStr = requiredIntegerString(directParameter, parameter: "window ID"),
               let windowID = Int(windowIDStr),
-              let arguments = self.evaluatedArguments,
-              let pidStr = arguments["ownerPID"] as? String,
+              let pidStr = requiredProcessIDString(evaluatedArguments?["ownerPID"], parameter: "owner PID"),
               let pid = Int32(pidStr)
         else { return nil }
         DiagnosticEventLog.shared.record(subsystem: "AppleScript", level: "info", "Command performed: FocusWindowCommand (windowID: \(windowIDStr), pid: \(pidStr))")
@@ -100,16 +99,17 @@ class FocusWindowCommand: NSScriptCommand {
 class MoveSpecificWindowToSpaceCommand: NSScriptCommand {
     override func performDefaultImplementation() -> Any? {
         guard isAPIEnabled() else { return nil }
-        guard let windowIDStr = self.directParameter as? String,
+        guard let windowIDStr = requiredIntegerString(directParameter, parameter: "window ID"),
               let windowID = Int(windowIDStr),
-              let arguments = self.evaluatedArguments,
-              let fromSpaceStr = arguments["fromSpace"] as? String,
-              let targetSpaceStr = arguments["targetSpace"] as? String
+              let fromSpaceStr = requiredArgumentString("fromSpace"),
+              let targetSpaceStr = requiredArgumentString("targetSpace")
         else { return nil }
+        let arguments = evaluatedArguments ?? [:]
         DiagnosticEventLog.shared.record(subsystem: "AppleScript", level: "info", "Command performed: MoveSpecificWindowToSpaceCommand (windowID: \(windowIDStr), fromSpace: \(fromSpaceStr), targetSpace: \(targetSpaceStr))")
 
-        if let pidStr = arguments["ownerPID"] as? String,
-           let pid = Int32(pidStr) {
+        if let pidValue = arguments["ownerPID"] {
+            guard let pidStr = requiredProcessIDString(pidValue, parameter: "owner PID"),
+                  let pid = Int32(pidStr) else { return nil }
             Task { @MainActor in
                 await WindowActionCoordinator.moveWindow(
                     windowID: windowID,
@@ -123,6 +123,9 @@ class MoveSpecificWindowToSpaceCommand: NSScriptCommand {
             DispatchQueue.main.async {
                 SpaceHelper.moveWindowToSpace(windowID: windowID, fromSpaceID: fromSpaceID, targetSpaceID: targetSpaceID)
             }
+        } else {
+            failInvalidArgument("Space IDs must be integer values when owner PID is omitted.")
+            return nil
         }
         return nil
     }
@@ -142,12 +145,11 @@ class GetCurrentSpaceIDCommand: NSScriptCommand {
 class ExecuteWindowActionCommand: NSScriptCommand {
     override func performDefaultImplementation() -> Any? {
         guard isAPIEnabled() else { return nil }
-        guard let windowIDStr = self.directParameter as? String,
+        guard let windowIDStr = requiredIntegerString(directParameter, parameter: "window ID"),
               let windowID = Int(windowIDStr),
-              let arguments = self.evaluatedArguments,
-              let pidStr = arguments["ownerPID"] as? String,
+              let pidStr = requiredProcessIDString(evaluatedArguments?["ownerPID"], parameter: "owner PID"),
               let pid = Int32(pidStr),
-              let actionName = arguments["actionName"] as? String
+              let actionName = requiredArgumentString("actionName")
         else { return nil }
         DiagnosticEventLog.shared.record(subsystem: "AppleScript", level: "info", "Command performed: ExecuteWindowActionCommand (windowID: \(windowIDStr), pid: \(pidStr), actionName: \(actionName))")
         

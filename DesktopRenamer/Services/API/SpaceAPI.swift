@@ -239,7 +239,7 @@ final class SpaceAPI {
             throw SpaceAPIContractError.unsupportedMethod(request.method)
         }
 
-        let arguments = try stringArguments(from: request.params)
+        let arguments = try stringArguments(from: request.params, method: request.method)
         switch request.method {
         case "getAPIInfo":
             guard arguments.isEmpty else {
@@ -275,7 +275,8 @@ final class SpaceAPI {
                 }
                 throw SpaceAPIError.appUnavailable
             }
-            return try SpaceAPIJSONValue.from(makeWindowsSnapshotPayload(manager, revision: snapshotRevision))
+            let snapshot = await makeWindowsSnapshotPayloadAsync(manager, revision: snapshotRevision)
+            return try SpaceAPIJSONValue.from(snapshot)
         case "getCurrentSpaceName":
             guard arguments.isEmpty, let manager = spaceManager else {
                 if !arguments.isEmpty {
@@ -305,26 +306,95 @@ final class SpaceAPI {
         }
     }
 
-    private func stringArguments(from params: SpaceAPIJSONValue?) throws -> [String: String] {
-        guard let params else { return [:] }
+    private func stringArguments(from params: SpaceAPIJSONValue?, method: String) throws -> [String: String] {
+        guard let params else {
+            return try validateRequiredParameters([:], method: method)
+        }
         guard let object = params.objectValue else {
             throw SpaceAPIContractError.invalidParams("Parameters must be a JSON object.")
         }
 
-        return try object.reduce(into: [String: String]()) { result, item in
+        let allowedParameters = DesktopRenamerAPIContract.allowedParameters[method] ?? []
+        if let unknownParameter = object.keys.sorted().first(where: { !allowedParameters.contains($0) }) {
+            throw invalidParameter(
+                method: method,
+                name: unknownParameter,
+                expected: "a supported parameter",
+                message: "Parameter '\(unknownParameter)' is not supported for \(method)."
+            )
+        }
+
+        let arguments = try object.reduce(into: [String: String]()) { result, item in
+            let expected = expectedParameterType(for: item.key)
             switch item.value {
             case .string(let value):
+                if expected == "integer", !isInteger(value, parameter: item.key) {
+                    throw invalidParameter(
+                        method: method,
+                        name: item.key,
+                        expected: expected,
+                        message: "Parameter '\(item.key)' must be an integer."
+                    )
+                }
                 result[item.key] = value
-            case .number(let value) where value.isFinite:
-                result[item.key] = value.rounded() == value ? String(Int(value)) : String(value)
-            case .bool(let value):
-                result[item.key] = value ? "true" : "false"
+            case .number(let value) where value.isFinite && value.rounded() == value && expected == "integer":
+                guard let integer = Int(exactly: value) else {
+                    throw invalidParameter(
+                        method: method,
+                        name: item.key,
+                        expected: expected,
+                        message: "Parameter '\(item.key)' is outside the supported integer range."
+                    )
+                }
+                result[item.key] = String(integer)
             default:
-                throw SpaceAPIContractError.invalidParams(
-                    "Parameter '\(item.key)' must be a string, number, or Boolean."
+                throw invalidParameter(
+                    method: method,
+                    name: item.key,
+                    expected: expected,
+                    message: "Parameter '\(item.key)' must be an \(expected)."
                 )
             }
         }
+
+        return try validateRequiredParameters(arguments, method: method)
+    }
+
+    private func validateRequiredParameters(_ arguments: [String: String], method: String) throws -> [String: String] {
+        for parameter in DesktopRenamerAPIContract.requiredParameters[method] ?? [] {
+            guard let value = arguments[parameter], !value.isEmpty else {
+                throw invalidParameter(
+                    method: method,
+                    name: parameter,
+                    expected: expectedParameterType(for: parameter),
+                    message: "Missing required parameter '\(parameter)'."
+                )
+            }
+        }
+        return arguments
+    }
+
+    private func expectedParameterType(for parameter: String) -> String {
+        ["windowID", "pid"].contains(parameter) ? "integer" : "string"
+    }
+
+    private func isInteger(_ value: String, parameter: String) -> Bool {
+        if parameter == "pid", let pid = Int32(value) {
+            return pid > 0
+        }
+        return Int(value) != nil
+    }
+
+    private func invalidParameter(
+        method: String,
+        name: String,
+        expected: String,
+        message: String
+    ) -> SpaceAPIContractError {
+        .invalidParamsWithData(
+            message,
+            SpaceAPIErrorData(parameter: name, expected: expected, command: method)
+        )
     }
 
     private func executeCommand(_ command: String, arguments: [String: String]) async throws -> String {
@@ -695,7 +765,8 @@ final class SpaceAPI {
             postRPCResponse(SpaceAPIJSONRPCCodec.errorResponse(
                 id: request.id,
                 code: error.jsonRPCCode,
-                message: error.localizedDescription
+                message: error.localizedDescription,
+                data: error.jsonRPCData
             ))
         } catch let error as SpaceAPIError {
             postRPCResponse(SpaceAPIJSONRPCCodec.errorResponse(
