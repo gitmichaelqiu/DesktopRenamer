@@ -49,6 +49,54 @@ class SpaceHelper {
     static var programmaticSwitchDestinationObserved = false
     static var programmaticSwitchNotificationObserved = false
     static var programmaticSwitchCompletionWorkItem: DispatchWorkItem?
+    static var programmaticSwitchTimeoutWorkItem: DispatchWorkItem?
+    static var fullscreenGestureRetryWorkItem: DispatchWorkItem?
+    static var programmaticSwitchPromotionWorkItem: DispatchWorkItem?
+    static var programmaticSwitchPromotionRequest: SpaceSwitchTransactionCoordinator.Request?
+    static var programmaticSwitchPromotionGeneration: UInt64?
+    // All transaction coordinator mutations are performed on the main queue,
+    // alongside the WindowServer and AppKit callbacks that consume them.
+    static var switchTransactionCoordinator = SpaceSwitchTransactionCoordinator()
+
+    static var activeProgrammaticSwitchGeneration: UInt64? {
+        switchTransactionCoordinator.active?.generation
+    }
+
+    static var activeProgrammaticSwitchTargetSpaceID: String? {
+        switchTransactionCoordinator.active?.request.spaceID
+    }
+
+    static var pendingProgrammaticSwitchTargetSpaceID: String? {
+        switchTransactionCoordinator.pending?.spaceID
+            ?? programmaticSwitchPromotionRequest?.spaceID
+    }
+
+    /// Current transaction state for diagnostic reports. The generation makes
+    /// stale completion and retry callbacks distinguishable from a newer
+    /// transition even when they target the same ManagedSpaceID.
+    static var programmaticSwitchStateInfo: String {
+        let activeGeneration = activeProgrammaticSwitchGeneration.map(String.init) ?? "nil"
+        let activeTarget = activeProgrammaticSwitchTargetSpaceID ?? "nil"
+        let pendingTarget = pendingProgrammaticSwitchTargetSpaceID ?? "nil"
+        let promotionGeneration = programmaticSwitchPromotionGeneration.map(String.init) ?? "nil"
+        let promotionTarget = programmaticSwitchPromotionRequest?.spaceID ?? "nil"
+        let pendingRequest = switchTransactionCoordinator.pending
+            ?? programmaticSwitchPromotionRequest
+        let pendingManual = pendingRequest.map {
+            String($0.isManual)
+        } ?? "nil"
+        return """
+          isSwitching: \(isSwitching)
+          activeGeneration: \(activeGeneration)
+          activeTargetSpaceID: \(activeTarget)
+          pendingTargetSpaceID: \(pendingTarget)
+          pendingIsManual: \(pendingManual)
+          promotionGeneration: \(promotionGeneration)
+          promotionTargetSpaceID: \(promotionTarget)
+          destinationObserved: \(programmaticSwitchDestinationObserved)
+          notificationObserved: \(programmaticSwitchNotificationObserved)
+        """
+    }
     
     // Session state for active dragging operations.
     static var originalMousePoint: CGPoint? = nil

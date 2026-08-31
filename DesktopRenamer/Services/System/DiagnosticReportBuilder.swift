@@ -332,6 +332,7 @@ struct DiagnosticReportBuilder {
         s += "fullscreenExitRetrying: \(sm.fullscreenExitRetryingInfo)\n"
         s += "connectedDisplayUUIDs: \(sm.connectedDisplayUUIDsInfo)\n"
         s += "lastManualSwitchTargetUUID: \(sm.lastManualSwitchTargetUUIDInfo)\n"
+        s += "programmaticSwitch:\n\(SpaceHelper.programmaticSwitchStateInfo)"
         s += "autoEditBundleID: \(sm.autoEditBundleID ?? "nil")\n"
         return s
     }

@@ -35,9 +35,21 @@ extension SpaceHelper {
         spaceDetectionGeneration += 1
         programmaticSwitchCompletionWorkItem?.cancel()
         programmaticSwitchCompletionWorkItem = nil
+        programmaticSwitchTimeoutWorkItem?.cancel()
+        programmaticSwitchTimeoutWorkItem = nil
+        fullscreenGestureRetryWorkItem?.cancel()
+        fullscreenGestureRetryWorkItem = nil
+        programmaticSwitchPromotionWorkItem?.cancel()
+        programmaticSwitchPromotionWorkItem = nil
+        programmaticSwitchPromotionRequest = nil
+        programmaticSwitchPromotionGeneration = nil
+        switchTransactionCoordinator.reset()
         isSwitching = false
         programmaticSwitchDestinationObserved = false
         programmaticSwitchNotificationObserved = false
+        lastProgrammaticSwitchTime = 0
+        lastProgrammaticTargetSpaceID = nil
+        lastProgrammaticSwitchUsedSLS = false
         if let observer = spaceChangeObserver {
             NSWorkspace.shared.notificationCenter.removeObserver(observer)
             spaceChangeObserver = nil
