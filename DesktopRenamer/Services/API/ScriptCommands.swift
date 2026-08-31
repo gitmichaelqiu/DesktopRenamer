@@ -163,6 +163,10 @@ class RenameCurrentSpaceCommand: NSScriptCommand {
     override func performDefaultImplementation() -> Any? {
         guard isAPIEnabled() else { return nil }
         guard let newName = requiredDirectString(parameter: "name") else { return nil }
+        guard runOnMain({ AppDelegate.shared.spaceManager != nil }) else {
+            _ = failAppUnavailable()
+            return nil
+        }
         DiagnosticEventLog.shared.record(subsystem: "AppleScript", level: "info", "Command performed: RenameCurrentSpaceCommand (newName: \(newName))")
         
         // No return value needed, so standard async is fine.
@@ -244,14 +248,21 @@ class SwitchToSpaceCommand: NSScriptCommand {
     override func performDefaultImplementation() -> Any? {
         guard isAPIEnabled() else { return nil }
         guard let spaceID = requiredDirectString(parameter: "space ID") else { return nil }
+        guard let manager = runOnMain({ AppDelegate.shared.spaceManager }) else {
+            _ = failAppUnavailable()
+            return nil
+        }
+        guard runOnMain({ manager.spaceNameDict.contains(where: { $0.id == spaceID }) }) else {
+            _ = failInvalidArgument("Invalid space ID.")
+            return nil
+        }
         DiagnosticEventLog.shared.record(subsystem: "AppleScript", level: "info", "Command performed: SwitchToSpaceCommand (spaceID: \(spaceID))")
         
         DispatchQueue.main.async {
-            if let manager = AppDelegate.shared.spaceManager {
-                // Resolve space object by identifier.
-                if let space = manager.spaceNameDict.first(where: { $0.id == spaceID }) {
-                    manager.switchToSpace(space, forceInstant: true)
-                }
+            // Resolve space object by identifier again because Mission Control
+            // may have recreated the space between validation and dispatch.
+            if let space = manager.spaceNameDict.first(where: { $0.id == spaceID }) {
+                manager.switchToSpace(space, forceInstant: true)
             }
         }
         return nil
@@ -276,6 +287,15 @@ class RearrangeSpaceCommand: NSScriptCommand {
             return nil
         }
 
+        guard let manager = runOnMain({ AppDelegate.shared.spaceManager }) else {
+            _ = failAppUnavailable()
+            return nil
+        }
+        guard runOnMain({ manager.spaceNameDict.contains(where: { $0.id == sourceID }) }) else {
+            _ = failInvalidArgument("Invalid space ID.")
+            return nil
+        }
+
         DiagnosticEventLog.shared.record(
             subsystem: "AppleScript",
             level: "info",
@@ -283,8 +303,10 @@ class RearrangeSpaceCommand: NSScriptCommand {
         )
 
         DispatchQueue.main.async {
-            guard let manager = AppDelegate.shared.spaceManager,
-                  let sourceSpace = manager.spaceNameDict.first(where: { $0.id == sourceID }) else { return }
+            guard let sourceSpace = manager.spaceNameDict.first(where: { $0.id == sourceID }) else {
+                DiagnosticEventLog.shared.record(subsystem: "AppleScript", level: "warning", "Space disappeared before rearrangement: \(sourceID)")
+                return
+            }
 
             let orderedSpaces = manager.spaceNameDict
                 .filter {
@@ -292,11 +314,17 @@ class RearrangeSpaceCommand: NSScriptCommand {
                 }
                 .sorted { $0.num < $1.num }
             let orderedIDs = orderedSpaces.map(\.id)
-            guard let sourceIndex = orderedIDs.firstIndex(of: sourceID) else { return }
+            guard let sourceIndex = orderedIDs.firstIndex(of: sourceID) else {
+                DiagnosticEventLog.shared.record(subsystem: "AppleScript", level: "warning", "Space is not rearrangeable: \(sourceID)")
+                return
+            }
 
             switch rearrangementDirection {
             case .up:
-                guard sourceIndex > 0 else { return }
+                guard sourceIndex > 0 else {
+                    DiagnosticEventLog.shared.record(subsystem: "AppleScript", level: "warning", "Space is already first: \(sourceID)")
+                    return
+                }
                 SpaceRearrangementService.shared.rearrange(
                     sourceID: sourceID,
                     before: orderedIDs[sourceIndex - 1],
@@ -309,7 +337,10 @@ class RearrangeSpaceCommand: NSScriptCommand {
                     manager.refreshSpaceState()
                 }
             case .down:
-                guard sourceIndex < orderedIDs.count - 1 else { return }
+                guard sourceIndex < orderedIDs.count - 1 else {
+                    DiagnosticEventLog.shared.record(subsystem: "AppleScript", level: "warning", "Space is already last: \(sourceID)")
+                    return
+                }
                 let completion: (SpaceRearrangementService.Result) -> Void = { result in
                     if case .failure(let message) = result {
                         DiagnosticEventLog.shared.record(subsystem: "AppleScript", level: "warning", message)
@@ -343,12 +374,18 @@ class RenameSpaceCommand: NSScriptCommand {
         guard isAPIEnabled() else { return nil }
         guard let spaceID = requiredDirectString(parameter: "space ID"),
               let newName = requiredArgumentString("newName") else { return nil }
+        guard let manager = runOnMain({ AppDelegate.shared.spaceManager }) else {
+            _ = failAppUnavailable()
+            return nil
+        }
+        guard runOnMain({ manager.spaceNameDict.contains(where: { $0.id == spaceID }) }) else {
+            _ = failInvalidArgument("Invalid space ID.")
+            return nil
+        }
         DiagnosticEventLog.shared.record(subsystem: "AppleScript", level: "info", "Command performed: RenameSpaceCommand (spaceID: \(spaceID), newName: \(newName))")
         
         DispatchQueue.main.async {
-            if let manager = AppDelegate.shared.spaceManager {
-                manager.renameSpace(spaceID, to: newName)
-            }
+            manager.renameSpace(spaceID, to: newName)
         }
         return nil
     }

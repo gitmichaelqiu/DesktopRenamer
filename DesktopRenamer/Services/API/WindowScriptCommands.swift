@@ -5,6 +5,10 @@ class MoveWindowNextCommand: NSScriptCommand {
     override func performDefaultImplementation() -> Any? {
         DiagnosticEventLog.shared.record(subsystem: "AppleScript", level: "info", "Command performed: MoveWindowNextCommand")
         guard isAPIEnabled() else { return nil }
+        guard runOnMain({ AppDelegate.shared.spaceManager != nil }) else {
+            _ = failAppUnavailable()
+            return nil
+        }
         DispatchQueue.main.async {
             if let manager = AppDelegate.shared.spaceManager {
                 manager.moveActiveWindowToNextSpace()
@@ -18,6 +22,10 @@ class MoveWindowPreviousCommand: NSScriptCommand {
     override func performDefaultImplementation() -> Any? {
         DiagnosticEventLog.shared.record(subsystem: "AppleScript", level: "info", "Command performed: MoveWindowPreviousCommand")
         guard isAPIEnabled() else { return nil }
+        guard runOnMain({ AppDelegate.shared.spaceManager != nil }) else {
+            _ = failAppUnavailable()
+            return nil
+        }
         DispatchQueue.main.async {
             if let manager = AppDelegate.shared.spaceManager {
                 manager.moveActiveWindowToPreviousSpace()
@@ -31,12 +39,18 @@ class MoveWindowToSpaceCommand: NSScriptCommand {
     override func performDefaultImplementation() -> Any? {
         guard isAPIEnabled() else { return nil }
         guard let spaceID = requiredDirectString(parameter: "space ID") else { return nil }
+        guard let manager = runOnMain({ AppDelegate.shared.spaceManager }) else {
+            _ = failAppUnavailable()
+            return nil
+        }
+        guard runOnMain({ manager.spaceNameDict.contains(where: { $0.id == spaceID }) }) else {
+            _ = failInvalidArgument("Invalid space ID.")
+            return nil
+        }
         DiagnosticEventLog.shared.record(subsystem: "AppleScript", level: "info", "Command performed: MoveWindowToSpaceCommand (spaceID: \(spaceID))")
         
         DispatchQueue.main.async {
-            if let manager = AppDelegate.shared.spaceManager {
-                manager.moveActiveWindowToSpace(id: spaceID)
-            }
+            manager.moveActiveWindowToSpace(id: spaceID)
         }
         return nil
     }
