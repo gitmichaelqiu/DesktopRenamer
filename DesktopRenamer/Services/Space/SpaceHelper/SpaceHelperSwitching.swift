@@ -59,6 +59,7 @@ extension SpaceHelper {
         var targetGlobalNum: Int? = nil
         var shouldUseShortcut = true
         var targetIsFullscreen = false
+        var currentSpaceIsFullscreen = false
 
         if let state = getSystemState() {
             if let targetSpace = state.spaces.first(where: { $0.id == spaceID }) {
@@ -71,6 +72,7 @@ extension SpaceHelper {
                 // not the global active display.
                 if let liveCurrentID = getCurrentSpaceID(for: targetSpace.displayID) {
                     print("SpaceHelper: switchToSpace check. Live ID: \(liveCurrentID), Target: \(spaceID)")
+                    currentSpaceIsFullscreen = state.spaces.first(where: { $0.id == liveCurrentID })?.isFullscreen ?? false
                     if liveCurrentID == spaceID {
                         print("SpaceHelper: Already on target space \(spaceID). Stopping.")
                         return 
@@ -82,8 +84,14 @@ extension SpaceHelper {
             if state.currentUUID == spaceID { return }
             
             // Gesture-based Space Switch handling
-            // We use the gesture method for all normal switches (no window moving).
-            if !isDragging, let targetSpace = state.spaces.first(where: { $0.id == spaceID }) {
+            // We use the gesture method for ordinary desktop switches. Fullscreen
+            // transitions need the window/owner handoff below because macOS does
+            // not reliably accept a synthetic desktop swipe while a fullscreen
+            // Space is involved.
+            if !isDragging,
+               !targetIsFullscreen,
+               !currentSpaceIsFullscreen,
+               let targetSpace = state.spaces.first(where: { $0.id == spaceID }) {
                 let displayID = targetSpace.displayID
                 if let liveCurrentID = getCurrentSpaceID(for: displayID) {
                     let displaySpaces = state.spaces
@@ -243,9 +251,17 @@ extension SpaceHelper {
         for window in NSApp.windows {
             if let labelWindow = window as? SpaceLabelWindow {
                 if labelWindow.spaceId == spaceID {
-                    // Use the preview window as the activation anchor. The
-                    // active label is managed independently by the manager.
-                    if !labelWindow.isActiveMode || targetWindow == nil {
+                    // Fullscreen transitions need the dedicated active label:
+                    // unlike previews, it is allowed to accompany a fullscreen
+                    // app via .fullScreenAuxiliary. Ordinary desktop switches
+                    // continue to use the preview as their activation anchor.
+                    if isFullscreen {
+                        if labelWindow.isActiveMode {
+                            targetWindow = labelWindow
+                        } else if targetWindow == nil {
+                            targetWindow = labelWindow
+                        }
+                    } else if !labelWindow.isActiveMode || targetWindow == nil {
                         targetWindow = labelWindow
                     }
                 } else if labelWindow.isVisible {
@@ -284,6 +300,7 @@ extension SpaceHelper {
 
         // Force window activation.
         DiagnosticEventLog.shared.record(subsystem: "SpaceHelper", level: "info", "switchByActivatingOwnWindow space=\(spaceID)")
+        window.bindToTargetSpace()
         window.orderFrontRegardless()
         window.canBecomeKeyOverride = true
         window.makeKey()
