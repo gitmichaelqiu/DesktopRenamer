@@ -163,6 +163,18 @@ struct SpaceAPIJSONRPCResponse: Codable, Equatable {
     }
 }
 
+struct SpaceAPIJSONRPCEvent: Codable, Equatable {
+    let jsonrpc: String
+    let method: String
+    let params: SpaceAPIJSONValue
+
+    init(method: String, params: SpaceAPIJSONValue) {
+        self.jsonrpc = DesktopRenamerAPIContract.jsonRPCVersion
+        self.method = method
+        self.params = params
+    }
+}
+
 struct SpaceAPIErrorData: Codable, Equatable {
     let parameter: String?
     let expected: String?
@@ -283,6 +295,16 @@ enum SpaceAPIJSONRPCCodec {
         let encoder = JSONEncoder()
         encoder.outputFormatting = [.sortedKeys]
         let data = try encoder.encode(response)
+        guard data.count <= DesktopRenamerAPIContract.maxPayloadBytes else {
+            throw SpaceAPIContractError.payloadTooLarge
+        }
+        return String(decoding: data, as: UTF8.self)
+    }
+
+    static func encode(_ event: SpaceAPIJSONRPCEvent) throws -> String {
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.sortedKeys]
+        let data = try encoder.encode(event)
         guard data.count <= DesktopRenamerAPIContract.maxPayloadBytes else {
             throw SpaceAPIContractError.payloadTooLarge
         }
