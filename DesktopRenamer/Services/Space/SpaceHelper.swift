@@ -49,10 +49,11 @@ class SpaceHelper {
     static var lastProgrammaticSwitchTime: TimeInterval = 0
     static var lastProgrammaticTargetSpaceID: String? = nil
     static var lastProgrammaticSwitchUsedSLS = false
-    // A WindowServer space read can reach SpaceManager before macOS delivers
-    // the active-space notification. Keep the programmatic transition open
-    // until both signals have arrived, so label restoration cannot use the
-    // first destination snapshot as proof that the animation has finished.
+    // WindowServer state is the authoritative completion signal. The
+    // active-space notification is useful corroboration, but it is delivered
+    // through a lossy XPC path and can be absent even after the destination is
+    // current. The generation-scoped settle verification below prevents one
+    // early snapshot from completing the transition by itself.
     static var programmaticSwitchDestinationObserved = false
     static var programmaticSwitchNotificationObserved = false
     static var programmaticSwitchCompletionWorkItem: DispatchWorkItem?

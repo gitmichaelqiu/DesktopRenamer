@@ -560,8 +560,9 @@ extension SpaceHelper {
     }
 
     /// Records that SpaceManager has read the requested destination from live
-    /// WindowServer state. The active-space notification is also required
-    /// before the transition is considered complete.
+    /// WindowServer state. NSWorkspace's active-space notification can be
+    /// dropped when its XPC session resets, so a stable WindowServer result is
+    /// sufficient after the normal settle verification.
     static func markProgrammaticSwitchComplete(at spaceID: String) {
         guard let active = switchTransactionCoordinator.active,
               isSwitching,
@@ -575,13 +576,12 @@ extension SpaceHelper {
             return
         }
         programmaticSwitchDestinationObserved = true
-        guard programmaticSwitchNotificationObserved else {
+        if !programmaticSwitchNotificationObserved {
             DiagnosticEventLog.shared.record(
                 subsystem: "SpaceHelper",
                 level: "info",
-                "programmatic destination observed at space \(spaceID); waiting for active-space notification"
+                "programmatic destination observed at space \(spaceID) without active-space notification; using WindowServer settle verification"
             )
-            return
         }
 
         finishProgrammaticSwitch(at: spaceID, generation: active.generation)
@@ -601,10 +601,10 @@ extension SpaceHelper {
     private static func finishProgrammaticSwitch(at spaceID: String, generation: UInt64) {
         guard programmaticSwitchCompletionWorkItem == nil else { return }
 
-        // The first matching WindowServer read and the active-space
-        // notification can both arrive before the visual swipe has finished.
-        // Keep the transition open for one settling interval, then notify the
-        // label manager so it can perform its own stable-state verification.
+        // The first matching WindowServer read can arrive before the visual
+        // swipe has finished. Keep the transition open for one settling
+        // interval, then verify the authoritative live state again before
+        // releasing queued requests and restoring labels.
         let workItem = DispatchWorkItem {
             guard let active = switchTransactionCoordinator.active,
                   isSwitching,
