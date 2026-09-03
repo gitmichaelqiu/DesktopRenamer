@@ -376,20 +376,14 @@ extension GestureManager {
         var shouldSchedule = false
         let disposition: String
         let transactionActive: Bool
+        let pendingCount: Int
 
         gestureSwitchStateLock.lock()
         if isGestureSwitchActionScheduled
             || isGestureSwitchOperationInFlight
             || isGestureSwitchTransactionActive {
-            let previousDirection = pendingGestureSwitchDirection
-            pendingGestureSwitchDirection = direction
-            if let previousDirection, previousDirection == direction {
-                disposition = "coalesced duplicate"
-            } else if let previousDirection {
-                disposition = "replaced pending \(previousDirection)"
-            } else {
-                disposition = "queued"
-            }
+            pendingGestureSwitchDirections.append(direction)
+            disposition = "queued"
             transactionActive = isGestureSwitchTransactionActive
         } else {
             isGestureSwitchActionScheduled = true
@@ -397,19 +391,14 @@ extension GestureManager {
             disposition = "scheduled"
             transactionActive = false
         }
+        pendingCount = pendingGestureSwitchDirections.count
         gestureSwitchStateLock.unlock()
 
         DiagnosticEventLog.shared.record(
             subsystem: "GestureManager",
             level: "info",
-            "gesture switch request \(disposition): direction=\(direction), transactionActive=\(transactionActive)"
+            "gesture switch request \(disposition): direction=\(direction), transactionActive=\(transactionActive), pending=\(pendingCount)"
         )
-
-        if transactionActive {
-            DispatchQueue.main.async {
-                SpaceHelper.requestFastFollowUpSwitch()
-            }
-        }
 
         guard shouldSchedule else { return }
         let execute: () -> Void = { [weak self] in
@@ -420,7 +409,7 @@ extension GestureManager {
         // The multitouch callback is delivered by the private driver on a
         // worker thread. Never block that callback while the main thread is
         // reconciling WindowServer state. The gate preserves ordering and
-        // coalesces any additional directions before this work item runs.
+        // queues any additional directions before this work item runs.
         if Thread.isMainThread {
             execute()
         } else {
@@ -493,19 +482,18 @@ extension GestureManager {
 
         isGestureSwitchActionScheduled = false
         isGestureSwitchOperationInFlight = true
-        let direction = pendingGestureSwitchDirection ?? initialDirection
-        pendingGestureSwitchDirection = nil
         gestureSwitchStateLock.unlock()
-        return direction
+        return initialDirection
     }
 
     private func retainGestureSwitchForActiveTransaction(_ direction: SwitchDirection) {
         gestureSwitchStateLock.lock()
         isGestureSwitchOperationInFlight = false
         isGestureSwitchTransactionActive = true
-        if pendingGestureSwitchDirection == nil {
-            pendingGestureSwitchDirection = direction
-        }
+        // This operation was already accepted before any directions currently
+        // in the queue, so keep it at the front when an external SpaceHelper
+        // transaction temporarily prevents it from starting.
+        pendingGestureSwitchDirections.insert(direction, at: 0)
         gestureSwitchStateLock.unlock()
 
         DiagnosticEventLog.shared.record(
@@ -513,11 +501,6 @@ extension GestureManager {
             level: "info",
             "gesture switch deferred by active transaction: direction=\(direction)"
         )
-        // This request can only come from a new contact session because the
-        // recognizer waits for all fingers to lift after each accepted swipe.
-        // Regular desktops can therefore finish their verified settle sooner;
-        // fullscreen transitions retain the conservative interval.
-        SpaceHelper.requestFastFollowUpSwitch()
         scheduleGestureSwitchResumeProbe()
     }
 
@@ -530,8 +513,8 @@ extension GestureManager {
 
         if !transactionStarted,
            !isGestureSwitchActionScheduled,
-           let pendingDirection = pendingGestureSwitchDirection {
-            pendingGestureSwitchDirection = nil
+           !pendingGestureSwitchDirections.isEmpty {
+            let pendingDirection = pendingGestureSwitchDirections.removeFirst()
             isGestureSwitchActionScheduled = true
             nextDirection = pendingDirection
         }
@@ -591,8 +574,8 @@ extension GestureManager {
         }
 
         isGestureSwitchTransactionActive = false
-        if let pendingDirection = pendingGestureSwitchDirection {
-            pendingGestureSwitchDirection = nil
+        if !pendingGestureSwitchDirections.isEmpty {
+            let pendingDirection = pendingGestureSwitchDirections.removeFirst()
             isGestureSwitchActionScheduled = true
             nextDirection = pendingDirection
         }
