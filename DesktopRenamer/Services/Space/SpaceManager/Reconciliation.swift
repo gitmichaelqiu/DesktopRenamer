@@ -512,7 +512,7 @@ extension SpaceManager {
         let workItem = DispatchWorkItem { [weak self] in
             guard let self = self,
                   generation == self.spaceChangeRetryGeneration else { return }
-            self.performRetryDetection()
+            self.performRetryDetection(generation: generation)
         }
         spaceChangeRetryWorkItem = workItem
         DispatchQueue.main.asyncAfter(deadline: .now() + delay, execute: workItem)
@@ -527,12 +527,18 @@ extension SpaceManager {
         spaceChangeRetryObservedPasses = 0
     }
 
-    private func performRetryDetection() {
-        guard !isSystemSleeping else { return }
+    private func performRetryDetection(generation: Int) {
+        guard !isSystemSleeping,
+              generation == spaceChangeRetryGeneration else { return }
         guard let cgsState = SpaceHelper.getSystemState() else {
             scheduleSpaceChangeRetry()
             return
         }
+
+        // A WindowServer query may overlap a newer monitor observation or a
+        // newly started switch. Cancellation cannot stop a work item that is
+        // already executing, so reject its result again after the read.
+        guard generation == spaceChangeRetryGeneration else { return }
 
         if shouldIgnoreStaleTransactionObservation(cgsState.currentUUID, source: "Retry") {
             return
@@ -545,6 +551,7 @@ extension SpaceManager {
         // disagree; accepting the older snapshot would move the model back to
         // the source space and reopen its preview label.
         let visibleSpaceIDs = SpaceHelper.getVisibleSystemSpaceIDs()
+        guard generation == spaceChangeRetryGeneration else { return }
         guard !visibleSpaceIDs.isEmpty,
               visibleSpaceIDs.contains(cgsState.currentUUID) else {
             DiagnosticEventLog.shared.record(
@@ -556,7 +563,9 @@ extension SpaceManager {
             return
         }
 
-        if let independentlyObservedSpaceID = SpaceHelper.getCurrentSpaceID(for: cgsState.displayID),
+        let independentlyObservedSpaceID = SpaceHelper.getCurrentSpaceID(for: cgsState.displayID)
+        guard generation == spaceChangeRetryGeneration else { return }
+        if let independentlyObservedSpaceID,
            independentlyObservedSpaceID != cgsState.currentUUID {
             DiagnosticEventLog.shared.record(
                 subsystem: "SpaceManager",
@@ -583,6 +592,10 @@ extension SpaceManager {
             scheduleSpaceChangeRetry()
             return
         }
+
+        // Do not let an old retry commit after a transaction-start observer or
+        // a newer retry chain invalidated it during the stability checks.
+        guard generation == spaceChangeRetryGeneration else { return }
 
         let now = Date().timeIntervalSince1970
         let isRecentManualSwitch = now - lastManualSwitchTime < 2.0
