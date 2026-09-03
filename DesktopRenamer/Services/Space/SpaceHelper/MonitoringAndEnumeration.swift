@@ -33,6 +33,7 @@ extension SpaceHelper {
 
     static func stopMonitoring() {
         spaceDetectionGeneration += 1
+        cancelPendingRawSpaceUUIDScan()
         programmaticSwitchCompletionWorkItem?.cancel()
         programmaticSwitchCompletionWorkItem = nil
         programmaticSwitchTimeoutWorkItem?.cancel()
@@ -69,84 +70,246 @@ extension SpaceHelper {
         onSpaceChange = nil
     }
 
-    private static func getActiveDisplay() -> NSScreen? {
-        if let frontApp = NSWorkspace.shared.frontmostApplication,
-            frontApp.bundleIdentifier != "com.apple.finder"
-        {
-            let options = CGWindowListOption(
-                arrayLiteral: .optionOnScreenOnly, .excludeDesktopElements)
-            let windowList =
-                CGWindowListCopyWindowInfo(options, kCGNullWindowID) as? [[String: Any]] ?? []
+    private struct RawSpaceScreen {
+        let screenID: CGDirectDisplayID
+        let frame: CGRect
+        let localizedName: String
+    }
 
+    private struct RawSpaceScanContext {
+        let screens: [RawSpaceScreen]
+        let primaryScreenMaxY: CGFloat
+        let frontmostProcessID: Int32?
+        let mouseLocation: CGPoint
+    }
+
+    private struct RawSpaceScanResult {
+        let uuid: String
+        let hasFinderDesktop: Bool
+        let notificationCount: Int
+        let displayIdentifier: String
+    }
+
+    private static func makeRawSpaceScanContext() -> RawSpaceScanContext? {
+        let screens = NSScreen.screens.compactMap { screen -> RawSpaceScreen? in
+            guard let screenID = screen.deviceDescription[
+                NSDeviceDescriptionKey("NSScreenNumber")
+            ] as? CGDirectDisplayID else {
+                return nil
+            }
+            return RawSpaceScreen(
+                screenID: screenID,
+                frame: screen.frame,
+                localizedName: screen.localizedName
+            )
+        }
+        guard !screens.isEmpty else { return nil }
+
+        let primaryScreenMaxY = NSScreen.screens.first(where: {
+            $0.frame.origin.x == 0 && $0.frame.origin.y == 0
+        })?.frame.maxY ?? screens[0].frame.maxY
+
+        let frontmostApplication = NSWorkspace.shared.frontmostApplication
+        let frontmostProcessID: Int32?
+        if frontmostApplication?.bundleIdentifier == "com.apple.finder" {
+            frontmostProcessID = nil
+        } else {
+            frontmostProcessID = frontmostApplication?.processIdentifier
+        }
+
+        return RawSpaceScanContext(
+            screens: screens,
+            primaryScreenMaxY: primaryScreenMaxY,
+            frontmostProcessID: frontmostProcessID,
+            mouseLocation: NSEvent.mouseLocation
+        )
+    }
+
+    private static func isPoint(
+        _ point: CGPoint,
+        inside screenFrame: CGRect,
+        primaryScreenMaxY: CGFloat
+    ) -> Bool {
+        let flippedY = primaryScreenMaxY - point.y
+        return screenFrame.contains(CGPoint(x: point.x, y: flippedY))
+    }
+
+    private static func scanRawSpace(_ context: RawSpaceScanContext) -> RawSpaceScanResult? {
+        let options = CGWindowListOption(arrayLiteral: .optionOnScreenOnly)
+        let windowList = CGWindowListCopyWindowInfo(options, kCGNullWindowID)
+            as? [[String: Any]] ?? []
+
+        var activeScreen: RawSpaceScreen?
+        if let frontmostProcessID = context.frontmostProcessID {
             for window in windowList {
-                if let pid = window[kCGWindowOwnerPID as String] as? Int,
-                    pid == frontApp.processIdentifier,
-                    let layer = window[kCGWindowLayer as String] as? Int, layer == 0,
-                    let bounds = window[kCGWindowBounds as String] as? [String: Any],
-                    let x = bounds["X"] as? CGFloat, let y = bounds["Y"] as? CGFloat,
-                    let w = bounds["Width"] as? CGFloat, let h = bounds["Height"] as? CGFloat
-                {
-                    let center = CGPoint(x: x + w / 2, y: y + h / 2)
-                    for screen in NSScreen.screens {
-                        if isPoint(center, inside: screen.frame) { return screen }
-                    }
+                guard let pid = window[kCGWindowOwnerPID as String] as? Int,
+                      pid == Int(frontmostProcessID),
+                      let layer = window[kCGWindowLayer as String] as? Int,
+                      layer == 0,
+                      let bounds = window[kCGWindowBounds as String] as? [String: Any],
+                      let x = bounds["X"] as? CGFloat,
+                      let y = bounds["Y"] as? CGFloat,
+                      let width = bounds["Width"] as? CGFloat,
+                      let height = bounds["Height"] as? CGFloat else {
+                    continue
                 }
+
+                let center = CGPoint(x: x + width / 2, y: y + height / 2)
+                activeScreen = context.screens.first(where: {
+                    isPoint(
+                        center,
+                        inside: $0.frame,
+                        primaryScreenMaxY: context.primaryScreenMaxY
+                    )
+                })
+                if activeScreen != nil { break }
             }
         }
-        let mouseLocation = NSEvent.mouseLocation
-        return NSScreen.screens.first { NSMouseInRect(mouseLocation, $0.frame, false) }
+
+        if activeScreen == nil {
+            activeScreen = context.screens.first(where: {
+                isPoint(
+                    context.mouseLocation,
+                    inside: $0.frame,
+                    primaryScreenMaxY: context.primaryScreenMaxY
+                )
+            })
+        }
+
+        guard let activeScreen else {
+            return RawSpaceScanResult(
+                uuid: "",
+                hasFinderDesktop: false,
+                notificationCount: 0,
+                displayIdentifier: "Unknown"
+            )
+        }
+
+        let displayIdentifier = activeScreen.localizedName
+            + " ("
+            + String(activeScreen.screenID)
+            + ")"
+        var resolvedDisplayIdentifier = displayIdentifier
+        if let uuidRef = CGDisplayCreateUUIDFromDisplayID(activeScreen.screenID) {
+            let uuid = uuidRef.takeRetainedValue()
+            if let uuidString = CFUUIDCreateString(nil, uuid) as String? {
+                resolvedDisplayIdentifier = uuidString.uppercased()
+            }
+        }
+
+        var uuid = ""
+        var notificationCount = 0
+        var hasFinderDesktop = false
+        for window in windowList {
+            guard let bounds = window[kCGWindowBounds as String] as? [String: Any],
+                  let x = bounds["X"] as? CGFloat,
+                  let y = bounds["Y"] as? CGFloat,
+                  let width = bounds["Width"] as? CGFloat,
+                  let height = bounds["Height"] as? CGFloat,
+                  isPoint(
+                      CGPoint(x: x + width / 2, y: y + height / 2),
+                      inside: activeScreen.frame,
+                      primaryScreenMaxY: context.primaryScreenMaxY
+                  ),
+                  let owner = window[kCGWindowOwnerName as String] as? String else {
+                continue
+            }
+
+            if owner == "Dock",
+               let name = window[kCGWindowName as String] as? String,
+               name.starts(with: "Wallpaper-") {
+                uuid = String(name.dropFirst("Wallpaper-".count))
+                if uuid.isEmpty { uuid = "MAIN" }
+            }
+            if owner == "Notification Center" {
+                notificationCount += 1
+            }
+            if owner == "Finder",
+               let layer = window[kCGWindowLayer as String] as? Int,
+               layer < 0 {
+                hasFinderDesktop = true
+            }
+        }
+
+        return RawSpaceScanResult(
+            uuid: uuid,
+            hasFinderDesktop: hasFinderDesktop,
+            notificationCount: notificationCount,
+            displayIdentifier: resolvedDisplayIdentifier
+        )
     }
 
     static func getRawSpaceUUID(completion: @escaping (String, Bool, Int, String) -> Void) {
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-            guard let activeScreen = getActiveDisplay() else {
+        // Snapshot AppKit state and schedule the scan from the main queue.
+        // Callers are normally already on main, but this also prevents a
+        // background caller from racing the monitor lifecycle state.
+        guard Thread.isMainThread else {
+            DispatchQueue.main.async {
+                getRawSpaceUUID(completion: completion)
+            }
+            return
+        }
+
+        rawSpaceUUIDStateLock.lock()
+        rawSpaceUUIDWorkItem?.cancel()
+        rawSpaceUUIDGeneration += 1
+        let generation = rawSpaceUUIDGeneration
+
+        let workItem = DispatchWorkItem {
+            rawSpaceUUIDStateLock.lock()
+            guard generation == rawSpaceUUIDGeneration else {
+                rawSpaceUUIDStateLock.unlock()
+                return
+            }
+            // Clear this before invoking the callback. The callback may
+            // immediately request another scan, which must remain registered.
+            rawSpaceUUIDWorkItem = nil
+            rawSpaceUUIDStateLock.unlock()
+
+            guard let context = makeRawSpaceScanContext() else {
+                guard isCurrentRawSpaceUUIDGeneration(generation) else { return }
                 completion("", false, 0, "Unknown")
                 return
             }
-            let screenID =
-                activeScreen.deviceDescription[NSDeviceDescriptionKey("NSScreenNumber")]
-                as? NSNumber ?? 0
-            
-            var displayIdentifier = "\(activeScreen.localizedName) (\(screenID))"
-            if let uuidRef = CGDisplayCreateUUIDFromDisplayID(screenID.uint32Value) {
-                let uuid = uuidRef.takeRetainedValue()
-                if let uuidStr = CFUUIDCreateString(nil, uuid) as String? {
-                    displayIdentifier = uuidStr.uppercased()
+
+            // CGWindowListCopyWindowInfo is independent of AppKit state. Run
+            // the potentially expensive enumeration away from the main queue,
+            // then deliver the existing callback contract back on main.
+            DispatchQueue.global(qos: .userInitiated).async {
+                guard let result = scanRawSpace(context) else { return }
+                DispatchQueue.main.async {
+                    guard isCurrentRawSpaceUUIDGeneration(generation) else { return }
+                    completion(
+                        result.uuid,
+                        result.hasFinderDesktop,
+                        result.notificationCount,
+                        result.displayIdentifier
+                    )
                 }
             }
-
-            let options = CGWindowListOption(arrayLiteral: .optionOnScreenOnly)
-            let windowList =
-                CGWindowListCopyWindowInfo(options, kCGNullWindowID) as? [[String: Any]] ?? []
-
-            var uuid = ""
-            var ncCnt = 0
-            var hasFinderDesktop = false
-            for window in windowList {
-                guard let bounds = window[kCGWindowBounds as String] as? [String: Any],
-                    let x = bounds["X"] as? CGFloat, let y = bounds["Y"] as? CGFloat,
-                    let w = bounds["Width"] as? CGFloat, let h = bounds["Height"] as? CGFloat
-                else { continue }
-
-                if isPoint(CGPoint(x: x + w / 2, y: y + h / 2), inside: activeScreen.frame),
-                    let owner = window[kCGWindowOwnerName as String] as? String
-                {
-                    if owner == "Dock", let name = window[kCGWindowName as String] as? String,
-                        name.starts(with: "Wallpaper-")
-                    {
-                        uuid = String(name.dropFirst("Wallpaper-".count))
-                        if uuid == "" { uuid = "MAIN" }
-                    }
-                    if owner == "Notification Center" { ncCnt += 1 }
-                    if owner == "Finder", let layer = window[kCGWindowLayer as String] as? Int,
-                        layer < 0
-                    {
-                        hasFinderDesktop = true
-                    }
-                }
-            }
-            completion(uuid, hasFinderDesktop, ncCnt, displayIdentifier)
         }
+
+        rawSpaceUUIDWorkItem = workItem
+        rawSpaceUUIDStateLock.unlock()
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1, execute: workItem)
+    }
+
+    /// Cancels a pending raw space scan without blocking the multitouch
+    /// callback. The generation check also discards a scan that has already
+    /// started but has not reached its completion callback.
+    static func cancelPendingRawSpaceUUIDScan() {
+        rawSpaceUUIDStateLock.lock()
+        rawSpaceUUIDGeneration += 1
+        let workItem = rawSpaceUUIDWorkItem
+        rawSpaceUUIDWorkItem = nil
+        rawSpaceUUIDStateLock.unlock()
+        workItem?.cancel()
+    }
+
+    private static func isCurrentRawSpaceUUIDGeneration(_ generation: Int) -> Bool {
+        rawSpaceUUIDStateLock.lock()
+        defer { rawSpaceUUIDStateLock.unlock() }
+        return generation == rawSpaceUUIDGeneration
     }
 
     static func getAllDisplayUUIDs() -> [String] {
@@ -177,7 +340,10 @@ extension SpaceHelper {
         return cleanId.uppercased()
     }
 
-    static func getSystemState(onDisplayID specificDisplayID: String? = nil) -> (
+    static func getSystemState(
+        onDisplayID specificDisplayID: String? = nil,
+        includeFullscreenAppMetadata: Bool = true
+    ) -> (
         spaces: [DesktopSpace], currentUUID: String, displayID: String
     )? {
         let conn = _CGSDefaultConnection()
@@ -239,7 +405,7 @@ extension SpaceHelper {
                 var appPath: String? = nil
                 var globalShortcutNum: Int? = nil
 
-                if isFullscreen {
+                if isFullscreen, includeFullscreenAppMetadata {
                     if let p = space["pid"] as? Int32 ?? space["owner pid"] as? Int32 {
                         if let runningApp = NSRunningApplication(processIdentifier: p) {
                             appName = runningApp.localizedName

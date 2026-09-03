@@ -36,6 +36,13 @@ class SpaceHelper {
     // change. Dock activation and mouse events can otherwise queue several
     // reads whose callbacks arrive after a newer transition has started.
     static var spaceDetectionGeneration = 0
+    // The raw WindowServer scan is relatively expensive because it also walks
+    // the on-screen window list. Keep only the newest scheduled scan so a
+    // burst of activation or mouse events cannot occupy the main queue after
+    // a gesture has already begun.
+    static let rawSpaceUUIDStateLock = NSLock()
+    static var rawSpaceUUIDWorkItem: DispatchWorkItem?
+    static var rawSpaceUUIDGeneration = 0
 
     // Tracks switching state to prevent recursion during transitions.
     static var isSwitching = false
@@ -69,6 +76,14 @@ class SpaceHelper {
     static var pendingProgrammaticSwitchTargetSpaceID: String? {
         switchTransactionCoordinator.pending?.spaceID
             ?? programmaticSwitchPromotionRequest?.spaceID
+    }
+
+    // `isSwitching` becomes false for the short settle interval before a
+    // coalesced request is promoted. Gesture requests must not run in that
+    // gap or they can race the promotion and discard the latest destination.
+    static var isProgrammaticSwitchPromotionPending: Bool {
+        programmaticSwitchPromotionRequest != nil
+            || programmaticSwitchPromotionWorkItem != nil
     }
 
     /// Current transaction state for diagnostic reports. The generation makes

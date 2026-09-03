@@ -108,6 +108,79 @@ extension SpaceHelper {
         return startSpaceSwitch(context, forceInstant: forceInstant, isManual: isManual)
     }
 
+    /// Resolves one adjacent space from a single managed-space snapshot. The
+    /// gesture override uses this path so it does not first ask SpaceManager
+    /// for the current space and then ask WindowServer for the same state again
+    /// before emitting the synthetic gesture.
+    @discardableResult
+    static func switchToAdjacentSpace(
+        direction: Int,
+        onDisplayID requestedDisplayID: String? = nil,
+        forceInstant: Bool = false,
+        isManual: Bool = false
+    ) -> SpaceSwitchRequestDisposition {
+        guard direction != 0,
+              let state = getSystemState(includeFullscreenAppMetadata: false) else {
+            return .unavailable
+        }
+
+        let displayID = requestedDisplayID ?? state.displayID
+        let liveCurrentSpaceID: String?
+        if displayID == state.displayID {
+            liveCurrentSpaceID = state.currentUUID
+        } else {
+            liveCurrentSpaceID = getCurrentSpaceID(for: displayID)
+        }
+
+        let displaySpaces = state.spaces
+            .filter { $0.displayID == displayID }
+            .sorted { $0.num < $1.num }
+
+        guard let liveCurrentSpaceID,
+              let currentIndex = displaySpaces.firstIndex(where: {
+                  $0.id == liveCurrentSpaceID
+              }) else {
+            DiagnosticEventLog.shared.record(
+                subsystem: "SpaceHelper",
+                level: "warning",
+                "adjacent switch unavailable: display="
+                    + displayID
+                    + ", current="
+                    + (liveCurrentSpaceID ?? "nil")
+                    + ", direction="
+                    + String(direction)
+            )
+            return .unavailable
+        }
+
+        let targetIndex = currentIndex + direction
+        guard displaySpaces.indices.contains(targetIndex) else {
+            return .unavailable
+        }
+        let targetSpace = displaySpaces[targetIndex]
+        let context = makeSpaceSwitchContext(
+            state: state,
+            targetSpace: targetSpace,
+            liveCurrentSpaceID: liveCurrentSpaceID
+        )
+
+        // If another request won the race after the snapshot, let the normal
+        // absolute-target path coalesce this request instead of starting a
+        // second primitive.
+        if !forceInstant, switchTransactionCoordinator.active != nil {
+            return switchToSpace(
+                targetSpace.id,
+                forceInstant: false,
+                isManual: isManual
+            )
+        }
+
+        if liveCurrentSpaceID == targetSpace.id {
+            return .alreadyCurrent
+        }
+        return startSpaceSwitch(context, forceInstant: forceInstant, isManual: isManual)
+    }
+
     private static func makeSpaceSwitchContext(for spaceID: String) -> SpaceSwitchContext? {
         guard let state = getSystemState(),
               let targetSpace = state.spaces.first(where: { $0.id == spaceID }) else {
@@ -119,6 +192,19 @@ extension SpaceHelper {
             print("SpaceHelper: switchToSpace check. Live ID: \(liveCurrentSpaceID), Target: \(spaceID)")
         }
 
+        return makeSpaceSwitchContext(
+            state: state,
+            targetSpace: targetSpace,
+            liveCurrentSpaceID: liveCurrentSpaceID
+        )
+    }
+
+    private static func makeSpaceSwitchContext(
+        state: (spaces: [DesktopSpace], currentUUID: String, displayID: String),
+        targetSpace: DesktopSpace,
+        liveCurrentSpaceID: String?
+    ) -> SpaceSwitchContext {
+
         let currentSpaceIsFullscreen = state.spaces
             .first(where: { $0.id == liveCurrentSpaceID })?.isFullscreen ?? false
         let displaySpaces = state.spaces
@@ -127,7 +213,7 @@ extension SpaceHelper {
         let steps: Int?
         if let liveCurrentSpaceID,
            let currentIndex = displaySpaces.firstIndex(where: { $0.id == liveCurrentSpaceID }),
-           let targetIndex = displaySpaces.firstIndex(where: { $0.id == spaceID }) {
+           let targetIndex = displaySpaces.firstIndex(where: { $0.id == targetSpace.id }) {
             steps = targetIndex - currentIndex
         } else {
             steps = nil
@@ -188,17 +274,6 @@ extension SpaceHelper {
         lastProgrammaticTargetSpaceID = spaceID
         lastProgrammaticSwitchUsedSLS = false
 
-        // Prepare only the dedicated active label for the destination. Preview
-        // labels still follow the existing hideWhenSwitching behavior.
-        NotificationCenter.default.post(
-            name: NSNotification.Name("SpaceSwitchTargetRequested"),
-            object: nil,
-            userInfo: ["spaceID": spaceID]
-        )
-
-        NotificationCenter.default.post(
-            name: NSNotification.Name("SpaceSwitchRequested"), object: nil)
-
         // Gesture-based Space Switch handling. Keep the synthetic desktop
         // gesture as the primary path for fullscreen transitions too; the
         // WindowServer accepts it in the normal case and preserves the
@@ -233,6 +308,8 @@ extension SpaceHelper {
                     attempt: 1
                 )
             }
+            scheduleSpaceSwitchLabelSuppression(generation: generation)
+            scheduleActiveLabelPreparation(spaceID: spaceID, generation: generation)
             return .started
         }
 
@@ -262,6 +339,8 @@ extension SpaceHelper {
                         displayID: displayID,
                         isFullscreen: context.targetIsFullscreen
                     )
+                    scheduleSpaceSwitchLabelSuppression(generation: generation)
+                    scheduleActiveLabelPreparation(spaceID: spaceID, generation: generation)
                     return .started
                 }
             } else if let localNum = context.targetNum {
@@ -275,6 +354,8 @@ extension SpaceHelper {
                         displayID: displayID,
                         isFullscreen: context.targetIsFullscreen
                     )
+                    scheduleSpaceSwitchLabelSuppression(generation: generation)
+                    scheduleActiveLabelPreparation(spaceID: spaceID, generation: generation)
                     return .started
                 }
             }
@@ -310,6 +391,8 @@ extension SpaceHelper {
                     }
                 }
             }
+            scheduleSpaceSwitchLabelSuppression(generation: generation)
+            scheduleActiveLabelPreparation(spaceID: spaceID, generation: generation)
             return .started
         }
 
@@ -325,6 +408,52 @@ extension SpaceHelper {
             "switch request unavailable after transaction start: generation=\(generation.map(String.init) ?? "instant"), target=\(spaceID)"
         )
         return .unavailable
+    }
+
+    private static func scheduleSpaceSwitchLabelSuppression(generation: UInt64?) {
+        let suppress = {
+            NotificationCenter.default.post(
+                name: NSNotification.Name("SpaceSwitchRequested"),
+                object: nil
+            )
+        }
+
+        // Synthetic events must be posted before preview-window work. An
+        // instant operation has no event to protect, so keep its existing
+        // synchronous notification behavior.
+        if generation == nil {
+            suppress()
+        } else {
+            DispatchQueue.main.async(execute: suppress)
+        }
+    }
+
+    private static func scheduleActiveLabelPreparation(spaceID: String, generation: UInt64?) {
+        let prepare = {
+            if let generation {
+                guard let active = switchTransactionCoordinator.active,
+                      isSwitching,
+                      active.generation == generation,
+                      active.request.spaceID == spaceID else {
+                    return
+                }
+            }
+
+            NotificationCenter.default.post(
+                name: NSNotification.Name("SpaceSwitchTargetRequested"),
+                object: nil,
+                userInfo: ["spaceID": spaceID]
+            )
+        }
+
+        // The synthetic gesture must reach WindowServer before the active
+        // label performs its layout/binding work. Force-instant operations do
+        // not have a gesture to protect, so preserve their immediate behavior.
+        if generation == nil {
+            prepare()
+        } else {
+            DispatchQueue.main.async(execute: prepare)
+        }
     }
 
     private static func markProgrammaticSwitchStarted(
