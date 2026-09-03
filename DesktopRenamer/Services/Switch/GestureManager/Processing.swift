@@ -78,33 +78,15 @@ extension GestureManager {
             if abs(avgDX) > abs(avgDY) {
                 let direction: SwitchDirection = avgDX < 0 ? .next : .previous
 
-                // Determine target display to check boundaries
-                var targetDisplayID: String? = nil
-                if self.switchOverride == .cursor {
-                    targetDisplayID = SpaceHelper.getCursorDisplayID()
-                }
-                // If .activeWindow, we leave nil, relying on SpaceManager's default context
-
-                if direction == .previous {
-                    if spaceManager?.isFirstSpace(onDisplayID: targetDisplayID) == true {
-                        isOverscroll = true
-                        // avgDX is positive here.
-                        let progress = Double(abs(avgDX) / swipeThreshold)
-                        // Previous means going "Left". Wall is on Left. Edge is .leading.
-                        DispatchQueue.main.async {
-                            OverscrollOverlayManager.shared.update(progress: progress, edge: .leading)
-                        }
-                    }
-                } else {  // .next
-                    if spaceManager?.isLastSpace(onDisplayID: targetDisplayID) == true {
-                        isOverscroll = true
-                        // avgDX is negative here.
-                        let progress = Double(abs(avgDX) / swipeThreshold)
-                        // Next means going "Right". Wall is on Right. Edge is .trailing.
-                        DispatchQueue.main.async {
-                            OverscrollOverlayManager.shared.update(progress: progress, edge: .trailing)
-                        }
-                    }
+                // Boundary feedback is only useful near the trigger point.
+                // Avoid asking WindowServer for the current space on every
+                // early touch frame; that query runs on the private multitouch
+                // callback and can delay recognition of the actual switch.
+                let isNearSwitchThreshold = abs(avgDX) >= swipeThreshold * 0.75
+                if isNearSwitchThreshold && isAtBoundary(for: direction, now: now) {
+                    isOverscroll = true
+                    let progress = Double(abs(avgDX) / swipeThreshold)
+                    updateOverscrollIndicator(progress: progress, direction: direction)
                 }
             }
         }
@@ -112,9 +94,7 @@ extension GestureManager {
         if isOverscroll {
             return
         } else {
-            DispatchQueue.main.async {
-                OverscrollOverlayManager.shared.hide()
-            }
+            hideOverscrollIndicator()
         }
 
         // Trigger Logic.
@@ -160,15 +140,21 @@ extension GestureManager {
                     // Only act if matches locked direction
                     if lockedDirection == direction {
                         print("GestureManager: Triggered \(direction)")
-
-                        // Fire a nil-target SpaceSwitchRequested so SpaceLabelManager can hide all active Preview Labels.
-                        // SpaceHelper owns its programmatic-switch timestamp; the gesture marker must not
-                        // overwrite the active transaction's identity while WindowServer is settling.
-                        NotificationCenter.default.post(
-                            name: NSNotification.Name("SpaceSwitchRequested"), object: nil)
+                        SpaceHelper.cancelPendingRawSpaceUUIDScan()
 
                         // Only perform the switch action if SwitchOverride is enabled AND finger count matches user preference
-                        if numFingers == self.fingerCount && self.isEnabled {
+                        let performsSwitchOverride = numFingers == self.fingerCount && self.isEnabled
+
+                        // Native macOS gestures still need an early label-hide
+                        // notification. An overridden gesture hides previews
+                        // at the actual SpaceHelper transaction boundary,
+                        // avoiding a duplicate main-queue suppression pass.
+                        if !performsSwitchOverride {
+                            NotificationCenter.default.post(
+                                name: NSNotification.Name("SpaceSwitchRequested"), object: nil)
+                        }
+
+                        if performsSwitchOverride {
                             triggerSwitch(direction: direction)
                         }
 
@@ -178,6 +164,7 @@ extension GestureManager {
                             initialTouchPositions[touch.identifier] =
                                 touch.normalizedVector.position
                         }
+                        invalidateBoundaryCache()
                     }
                 }
             }
@@ -187,49 +174,379 @@ extension GestureManager {
     func resetTrackingState() {
         initialTouchPositions.removeAll()
         lockedDirection = nil
-
-        DispatchQueue.main.async {
-            OverscrollOverlayManager.shared.hide()
-        }
+        invalidateBoundaryCache()
+        hideOverscrollIndicator()
     }
 
-    enum SwitchDirection {
+    private func invalidateBoundaryCache() {
+        boundaryRefreshGeneration += 1
+        boundaryRefreshWorkItem?.cancel()
+        boundaryRefreshWorkItem = nil
+        cachedBoundaryDisplayID = nil
+        cachedBoundaryDirection = nil
+        cachedBoundaryMode = nil
+        cachedBoundaryTime = 0
+    }
+
+    enum SwitchDirection: Equatable {
         case next
         case previous
     }
 
+    private func isAtBoundary(for direction: SwitchDirection, now: TimeInterval) -> Bool {
+        let mode = switchOverride
+
+        if cachedBoundaryDirection == direction,
+           cachedBoundaryMode == mode,
+           now - cachedBoundaryTime < boundaryCacheDuration {
+            return cachedBoundaryValue
+        }
+
+        // The multitouch driver invokes handleTouches synchronously on its
+        // callback thread. Do not call WindowServer or AppKit here: even one
+        // boundary query can stall the callback immediately before the swipe
+        // crosses the trigger threshold. Refresh the optional overscroll
+        // affordance on the main queue and let the real switch request decide
+        // whether an adjacent space exists.
+        scheduleBoundaryRefresh(direction: direction, mode: mode)
+        return false
+    }
+
+    private func scheduleBoundaryRefresh(
+        direction: SwitchDirection,
+        mode: SwitchOverrideMode
+    ) {
+        guard boundaryRefreshWorkItem == nil else { return }
+
+        let generation = boundaryRefreshGeneration
+        let workItem = DispatchWorkItem { [weak self] in
+            guard let self else { return }
+            guard generation == self.boundaryRefreshGeneration else {
+                return
+            }
+            self.boundaryRefreshWorkItem = nil
+            guard self.switchOverride == mode else { return }
+
+            let targetDisplayID: String?
+            if mode == .cursor {
+                let displayID = SpaceHelper.getCursorDisplayID()
+                self.cachedBoundaryDisplayID = displayID
+                targetDisplayID = displayID
+            } else {
+                targetDisplayID = nil
+            }
+
+            let value: Bool
+            if direction == .previous {
+                value = self.spaceManager?.isFirstSpace(onDisplayID: targetDisplayID) == true
+            } else {
+                value = self.spaceManager?.isLastSpace(onDisplayID: targetDisplayID) == true
+            }
+
+            self.cachedBoundaryDirection = direction
+            self.cachedBoundaryMode = mode
+            self.cachedBoundaryValue = value
+            self.cachedBoundaryTime = Date().timeIntervalSince1970
+        }
+
+        boundaryRefreshWorkItem = workItem
+        // Delay the optional boundary read by one short run-loop interval so a
+        // real gesture request already queued on main is emitted first.
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.08, execute: workItem)
+    }
+
+    private func updateOverscrollIndicator(progress: Double, direction: SwitchDirection) {
+        let progressChanged = !isOverscrollIndicatorActive
+            || lastOverscrollDirection != direction
+            || abs(progress - lastOverscrollProgress) >= 0.04
+        guard progressChanged else { return }
+
+        isOverscrollIndicatorActive = true
+        lastOverscrollDirection = direction
+        lastOverscrollProgress = progress
+        let edge: OverscrollIndicatorView.Edge = direction == .previous ? .leading : .trailing
+        overscrollUpdateGeneration += 1
+        let generation = overscrollUpdateGeneration
+        overscrollUpdateWorkItem?.cancel()
+        let workItem = DispatchWorkItem { [weak self] in
+            guard let self,
+                  generation == self.overscrollUpdateGeneration,
+                  self.isOverscrollIndicatorActive else {
+                return
+            }
+            self.overscrollUpdateWorkItem = nil
+            OverscrollOverlayManager.shared.update(progress: progress, edge: edge)
+        }
+        overscrollUpdateWorkItem = workItem
+        DispatchQueue.main.async(execute: workItem)
+    }
+
+    private func hideOverscrollIndicator() {
+        guard isOverscrollIndicatorActive else { return }
+        isOverscrollIndicatorActive = false
+        lastOverscrollDirection = nil
+        lastOverscrollProgress = 0
+        overscrollUpdateGeneration += 1
+        let generation = overscrollUpdateGeneration
+        overscrollUpdateWorkItem?.cancel()
+        let workItem = DispatchWorkItem { [weak self] in
+            guard let self,
+                  generation == self.overscrollUpdateGeneration else {
+                return
+            }
+            self.overscrollUpdateWorkItem = nil
+            OverscrollOverlayManager.shared.hide()
+        }
+        overscrollUpdateWorkItem = workItem
+        DispatchQueue.main.async(execute: workItem)
+    }
+
     func triggerSwitch(direction: SwitchDirection) {
-        DiagnosticEventLog.shared.record(subsystem: "GestureManager", level: "info", "triggerSwitch(\(direction))")
+        DiagnosticEventLog.shared.record(
+            subsystem: "GestureManager",
+            level: "info",
+            "triggerSwitch(\(direction))"
+        )
         lastSwitchTime = Date().timeIntervalSince1970
-        guard let sm = spaceManager, self.isEnabled else { return }
+        guard spaceManager != nil, self.isEnabled else { return }
 
-        DispatchQueue.main.async { [weak self] in
-            guard let self = self else { return }
+        enqueueGestureSwitchRequest(direction)
+    }
 
-            let isHoldingOption = NSEvent.modifierFlags.contains(.option)
-            if self.moveWindowOnOption && isHoldingOption {
-                // If the current space is a fullscreen app, just exit fullscreen.
-                if sm.spaceNameDict.first(where: { $0.id == sm.currentSpaceUUID })?.isFullscreen == true {
-                    Task { @MainActor in
-                        await Self.exitFullscreen()
-                    }
-                } else {
-                    switch direction {
-                    case .next:
-                        sm.moveActiveWindowToNextSpace()
-                    case .previous:
-                        sm.moveActiveWindowToPreviousSpace()
-                    }
+    private func enqueueGestureSwitchRequest(_ direction: SwitchDirection) {
+        var shouldSchedule = false
+        let disposition: String
+        let transactionActive: Bool
+
+        gestureSwitchStateLock.lock()
+        if isGestureSwitchActionScheduled
+            || isGestureSwitchOperationInFlight
+            || isGestureSwitchTransactionActive {
+            let previousDirection = pendingGestureSwitchDirection
+            pendingGestureSwitchDirection = direction
+            if let previousDirection, previousDirection == direction {
+                disposition = "coalesced duplicate"
+            } else if let previousDirection {
+                disposition = "replaced pending \(previousDirection)"
+            } else {
+                disposition = "queued"
+            }
+            transactionActive = isGestureSwitchTransactionActive
+        } else {
+            isGestureSwitchActionScheduled = true
+            shouldSchedule = true
+            disposition = "scheduled"
+            transactionActive = false
+        }
+        gestureSwitchStateLock.unlock()
+
+        DiagnosticEventLog.shared.record(
+            subsystem: "GestureManager",
+            level: "info",
+            "gesture switch request \(disposition): direction=\(direction), transactionActive=\(transactionActive)"
+        )
+
+        guard shouldSchedule else { return }
+        let execute: () -> Void = { [weak self] in
+            guard let self else { return }
+            self.performScheduledGestureSwitch(initialDirection: direction)
+        }
+
+        // The multitouch callback is delivered by the private driver on a
+        // worker thread. Never block that callback while the main thread is
+        // reconciling WindowServer state. The gate preserves ordering and
+        // coalesces any additional directions before this work item runs.
+        if Thread.isMainThread {
+            execute()
+        } else {
+            DispatchQueue.main.async(execute: execute)
+        }
+    }
+
+    private func performScheduledGestureSwitch(initialDirection: SwitchDirection) {
+        guard let direction = takeScheduledGestureDirection(initialDirection) else {
+            return
+        }
+
+        guard let sm = spaceManager, self.isEnabled else {
+            completeGestureSwitchOperation(transactionStarted: false)
+            return
+        }
+
+        let isHoldingOption = NSEvent.modifierFlags.contains(.option)
+        if moveWindowOnOption && isHoldingOption {
+            // Window moves and fullscreen exit have their own asynchronous
+            // cleanup and do not emit SpaceProgrammaticSwitchFinished.
+            // Keep them outside the serialized space-switch gate.
+            if sm.spaceNameDict.first(where: { $0.id == sm.currentSpaceUUID })?.isFullscreen == true {
+                Task { @MainActor in
+                    await Self.exitFullscreen()
                 }
             } else {
-                let targetDisplayID = (self.switchOverride == .cursor) ? SpaceHelper.getCursorDisplayID() : nil
                 switch direction {
                 case .next:
-                    sm.switchToNextSpace(onDisplayID: targetDisplayID)
+                    sm.moveActiveWindowToNextSpace()
                 case .previous:
-                    sm.switchToPreviousSpace(onDisplayID: targetDisplayID)
+                    sm.moveActiveWindowToPreviousSpace()
                 }
             }
+            completeGestureSwitchOperation(transactionStarted: false)
+            return
+        }
+
+        // Avoid doing the expensive adjacent-space lookup while another
+        // transaction is settling. The direction is retained and resolved
+        // against the live space only after promotion has completed.
+        if SpaceHelper.isSwitching {
+            retainGestureSwitchForActiveTransaction(direction)
+            return
+        }
+
+        let targetDisplayID = (switchOverride == .cursor) ? SpaceHelper.getCursorDisplayID() : nil
+        let step = direction == .next ? 1 : -1
+        let disposition = SpaceHelper.switchToAdjacentSpace(
+            direction: step,
+            onDisplayID: targetDisplayID,
+            isManual: true
+        )
+
+        let transactionStarted = disposition == .started || disposition == .queued
+        DiagnosticEventLog.shared.record(
+            subsystem: "GestureManager",
+            level: "info",
+            "gesture switch executed: direction=\(direction), disposition=\(disposition), transactionStarted=\(transactionStarted)"
+        )
+        completeGestureSwitchOperation(transactionStarted: transactionStarted)
+    }
+
+    private func takeScheduledGestureDirection(_ initialDirection: SwitchDirection) -> SwitchDirection? {
+        gestureSwitchStateLock.lock()
+        guard isGestureSwitchActionScheduled else {
+            gestureSwitchStateLock.unlock()
+            return nil
+        }
+
+        isGestureSwitchActionScheduled = false
+        isGestureSwitchOperationInFlight = true
+        let direction = pendingGestureSwitchDirection ?? initialDirection
+        pendingGestureSwitchDirection = nil
+        gestureSwitchStateLock.unlock()
+        return direction
+    }
+
+    private func retainGestureSwitchForActiveTransaction(_ direction: SwitchDirection) {
+        gestureSwitchStateLock.lock()
+        isGestureSwitchOperationInFlight = false
+        isGestureSwitchTransactionActive = true
+        if pendingGestureSwitchDirection == nil {
+            pendingGestureSwitchDirection = direction
+        }
+        gestureSwitchStateLock.unlock()
+
+        DiagnosticEventLog.shared.record(
+            subsystem: "GestureManager",
+            level: "info",
+            "gesture switch deferred by active transaction: direction=\(direction)"
+        )
+        scheduleGestureSwitchResumeProbe()
+    }
+
+    private func completeGestureSwitchOperation(transactionStarted: Bool) {
+        var nextDirection: SwitchDirection?
+
+        gestureSwitchStateLock.lock()
+        isGestureSwitchOperationInFlight = false
+        isGestureSwitchTransactionActive = transactionStarted
+
+        if !transactionStarted,
+           !isGestureSwitchActionScheduled,
+           let pendingDirection = pendingGestureSwitchDirection {
+            pendingGestureSwitchDirection = nil
+            isGestureSwitchActionScheduled = true
+            nextDirection = pendingDirection
+        }
+        gestureSwitchStateLock.unlock()
+
+        if transactionStarted {
+            scheduleGestureSwitchResumeProbe()
+        } else if let nextDirection {
+            DiagnosticEventLog.shared.record(
+                subsystem: "GestureManager",
+                level: "info",
+                "resuming pending gesture switch after \(transactionStarted ? "transaction" : "rejected request"): direction=\(nextDirection)"
+            )
+            DispatchQueue.main.async { [weak self] in
+                self?.performScheduledGestureSwitch(initialDirection: nextDirection)
+            }
+        } else {
+            gestureSwitchResumeWorkItem?.cancel()
+            gestureSwitchResumeWorkItem = nil
+        }
+    }
+
+    func schedulePendingGestureSwitchResume() {
+        // The completion notification is posted before SpaceHelper promotes
+        // its own pending destination. Two main-queue turns put this check
+        // after that promotion without adding a fixed delay to the switch.
+        DispatchQueue.main.async { [weak self] in
+            DispatchQueue.main.async { [weak self] in
+                self?.resumePendingGestureSwitchIfPossible()
+            }
+        }
+    }
+
+    private func scheduleGestureSwitchResumeProbe() {
+        gestureSwitchResumeWorkItem?.cancel()
+        let workItem = DispatchWorkItem { [weak self] in
+            self?.resumePendingGestureSwitchIfPossible()
+        }
+        gestureSwitchResumeWorkItem = workItem
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.15, execute: workItem)
+    }
+
+    private func resumePendingGestureSwitchIfPossible() {
+        guard !SpaceHelper.isSwitching,
+              !SpaceHelper.isProgrammaticSwitchPromotionPending else {
+            scheduleGestureSwitchResumeProbe()
+            return
+        }
+
+        var nextDirection: SwitchDirection?
+        gestureSwitchStateLock.lock()
+        guard isGestureSwitchTransactionActive,
+              !isGestureSwitchActionScheduled,
+              !isGestureSwitchOperationInFlight else {
+            gestureSwitchStateLock.unlock()
+            return
+        }
+
+        isGestureSwitchTransactionActive = false
+        if let pendingDirection = pendingGestureSwitchDirection {
+            pendingGestureSwitchDirection = nil
+            isGestureSwitchActionScheduled = true
+            nextDirection = pendingDirection
+        }
+        gestureSwitchStateLock.unlock()
+
+        gestureSwitchResumeWorkItem?.cancel()
+        gestureSwitchResumeWorkItem = nil
+
+        guard let nextDirection else {
+            DiagnosticEventLog.shared.record(
+                subsystem: "GestureManager",
+                level: "info",
+                "gesture switch gate idle: no pending direction"
+            )
+            return
+        }
+
+        DiagnosticEventLog.shared.record(
+            subsystem: "GestureManager",
+            level: "info",
+            "promoting pending gesture direction: direction=\(nextDirection)"
+        )
+        DispatchQueue.main.async { [weak self] in
+            self?.performScheduledGestureSwitch(initialDirection: nextDirection)
         }
     }
 
