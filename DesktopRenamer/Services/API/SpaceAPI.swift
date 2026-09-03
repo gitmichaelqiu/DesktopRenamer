@@ -15,13 +15,21 @@ final class SpaceAPI {
     nonisolated static let apiToggleNotification = Notification.Name("\(apiPrefix).ReturnAPIState")
     nonisolated static let performCommand = Notification.Name("\(apiPrefix).PerformCommand")
     nonisolated static let commandResult = Notification.Name("\(apiPrefix).CommandResult")
+    nonisolated static let rpcRequest = DesktopRenamerAPIContract.rpcRequest
+    nonisolated static let rpcResponse = DesktopRenamerAPIContract.rpcResponse
+    nonisolated static let rpcEvent = DesktopRenamerAPIContract.rpcEvent
     
     // Use weak to avoid retain cycle (SpaceManager owns API, API shouldn't strongly own SpaceManager)
     private weak var spaceManager: SpaceManager?
     private var cancellables = Set<AnyCancellable>()
+    private var snapshotRevision: UInt64 = 0
+    private var rpcListenerInstalled = false
 
     /// Whether the DNC listener is active (Combine pipeline has subscriptions).
-    var hasActiveListeners: Bool { !cancellables.isEmpty }
+    var hasActiveListeners: Bool { rpcListenerInstalled || !cancellables.isEmpty }
+
+    /// The revision clients should use when comparing structured snapshots.
+    var currentSnapshotRevision: UInt64 { snapshotRevision }
     
     init(spaceManager: SpaceManager) {
         self.spaceManager = spaceManager
@@ -29,8 +37,13 @@ final class SpaceAPI {
     
     func setupListener() {
         DiagnosticEventLog.shared.record(subsystem: "SpaceAPI", level: "info", "setupListener")
-        guard let spaceManager = spaceManager else { return }
         removeListener()
+        installRPCListener()
+
+        guard SpaceManager.isAPIEnabled, let spaceManager = spaceManager else {
+            print("SpaceAPI: Structured listener Started (API disabled)")
+            return
+        }
         
         let dnc = DistributedNotificationCenter.default()
         
@@ -44,7 +57,10 @@ final class SpaceAPI {
         spaceManager.$currentSpaceUUID
             .dropFirst()
             .receive(on: DispatchQueue.main)
-            .sink { [weak self] _ in self?.broadcastCurrentSpace() }
+            .sink { [weak self] _ in
+                self?.broadcastCurrentSpace()
+                self?.broadcastRPCEvent(reason: "activeSpaceChanged")
+            }
             .store(in: &cancellables)
             
         spaceManager.$spaceNameDict
@@ -53,6 +69,7 @@ final class SpaceAPI {
             .sink { [weak self] _ in
                 self?.broadcastCurrentSpace()
                 self?.broadcastSpaceList()
+                self?.broadcastRPCEvent(reason: "spaceListChanged")
             }
             .store(in: &cancellables)
             
@@ -62,8 +79,24 @@ final class SpaceAPI {
     func removeListener() {
         DiagnosticEventLog.shared.record(subsystem: "SpaceAPI", level: "info", "removeListener")
         DistributedNotificationCenter.default().removeObserver(self)
+        rpcListenerInstalled = false
         cancellables.removeAll()
+        if !SpaceManager.isAPIEnabled {
+            installRPCListener()
+        }
         print("SpaceAPI: Listener Stopped")
+    }
+
+    private func installRPCListener() {
+        guard !rpcListenerInstalled else { return }
+        DistributedNotificationCenter.default().addObserver(
+            self,
+            selector: #selector(handleRPCRequest),
+            name: SpaceAPI.rpcRequest,
+            object: nil,
+            suspensionBehavior: .deliverImmediately
+        )
+        rpcListenerInstalled = true
     }
     
     // API status management.
@@ -144,6 +177,90 @@ final class SpaceAPI {
         )
     }
 
+    private func broadcastRPCEvent(reason: String) {
+        guard let manager = spaceManager, SpaceManager.isAPIEnabled else { return }
+
+        snapshotRevision &+= 1
+        let snapshot = makeSpaceSnapshotPayload(manager, revision: snapshotRevision)
+        guard let snapshotValue = try? SpaceAPIJSONValue.from(snapshot) else {
+            DiagnosticEventLog.shared.record(
+                subsystem: "SpaceAPI",
+                level: "warning",
+                "Could not encode structured event snapshot."
+            )
+            return
+        }
+
+        let event = SpaceAPIJSONRPCEvent(
+            method: "stateChanged",
+            params: .object([
+                "reason": .string(reason),
+                "snapshot": snapshotValue
+            ])
+        )
+        do {
+            let payload = try SpaceAPIJSONRPCCodec.encode(event)
+            postRPCPayload(payload)
+            DiagnosticEventLog.shared.record(
+                subsystem: "SpaceAPI",
+                level: "info",
+                "broadcastRPCEvent(reason: \(reason), revision: \(snapshotRevision))"
+            )
+        } catch {
+            DiagnosticEventLog.shared.record(
+                subsystem: "SpaceAPI",
+                level: "warning",
+                "Could not encode structured event: \(error.localizedDescription)"
+            )
+        }
+    }
+
+    private func postRPCPayload(_ payload: String) {
+        DistributedNotificationCenter.default().postNotificationName(
+            SpaceAPI.rpcEvent,
+            object: nil,
+            userInfo: [DesktopRenamerAPIContract.payloadKey: payload],
+            deliverImmediately: true
+        )
+    }
+
+    private func postRPCResponse(_ response: SpaceAPIJSONRPCResponse) {
+        let payload: String
+        do {
+            payload = try SpaceAPIJSONRPCCodec.encode(response)
+        } catch let error as SpaceAPIContractError {
+            let fallback = SpaceAPIJSONRPCCodec.errorResponse(
+                id: response.id,
+                code: error.jsonRPCCode,
+                message: error.localizedDescription,
+                data: error.jsonRPCData
+            )
+            guard let fallbackPayload = try? SpaceAPIJSONRPCCodec.encode(fallback) else {
+                DiagnosticEventLog.shared.record(
+                    subsystem: "SpaceAPI",
+                    level: "warning",
+                    "Could not encode structured error response: \(error.localizedDescription)"
+                )
+                return
+            }
+            payload = fallbackPayload
+        } catch {
+            DiagnosticEventLog.shared.record(
+                subsystem: "SpaceAPI",
+                level: "warning",
+                "Could not encode structured response: \(error.localizedDescription)"
+            )
+            return
+        }
+
+        DistributedNotificationCenter.default().postNotificationName(
+            SpaceAPI.rpcResponse,
+            object: nil,
+            userInfo: [DesktopRenamerAPIContract.payloadKey: payload],
+            deliverImmediately: true
+        )
+    }
+
     private func postCommandResult(requestID: String, result: String? = nil, error: String? = nil) {
         var userInfo: [String: Any] = [
             "requestID": requestID,
@@ -158,6 +275,45 @@ final class SpaceAPI {
             userInfo: userInfo,
             deliverImmediately: true
         )
+    }
+
+    private func executeRPCMethod(_ request: SpaceAPIJSONRPCRequest) async throws -> SpaceAPIJSONValue {
+        guard let definition = DesktopRenamerAPIContract.definition(for: request.method) else {
+            throw SpaceAPIContractError.unsupportedMethod(request.method)
+        }
+
+        let arguments = try SpaceAPIArgumentValidator.stringArguments(from: request.params, method: request.method)
+        switch request.method {
+        case "getAPIInfo":
+            return try SpaceAPIJSONValue.from(makeAPIInfo())
+        case "getAPIVersion":
+            return .string(DesktopRenamerAPIVersion.current)
+        case "getSpaceSnapshot":
+            guard let manager = spaceManager else { throw SpaceAPIError.appUnavailable }
+            return try SpaceAPIJSONValue.from(makeSpaceSnapshotPayload(manager, revision: snapshotRevision))
+        case "getAllSpaces":
+            guard let manager = spaceManager else { throw SpaceAPIError.appUnavailable }
+            let spaces = makeSpaceRecords(manager)
+            return try SpaceAPIJSONValue.from(spaces)
+        case "getWindows":
+            guard let manager = spaceManager else { throw SpaceAPIError.appUnavailable }
+            let snapshot = await makeWindowsSnapshotPayloadAsync(manager, revision: snapshotRevision)
+            return try SpaceAPIJSONValue.from(snapshot)
+        case "getCurrentSpaceName":
+            guard let manager = spaceManager else { throw SpaceAPIError.appUnavailable }
+            return .string(manager.getSpaceName(manager.currentSpaceUUID))
+        case "getCurrentSpaceID":
+            return .array(SpaceHelper.getCurrentSpaceIDs().map(SpaceAPIJSONValue.string))
+        default:
+            let result = try await executeCommand(request.method, arguments: arguments)
+            if definition.resultKind == .boolean {
+                guard result == "true" || result == "false" else {
+                    throw SpaceAPIError.operationFailed("The command returned an invalid Boolean result.")
+                }
+                return .bool(result == "true")
+            }
+            return try SpaceAPIJSONValue.from(SpaceAPIOperationResult(accepted: true))
+        }
     }
 
     private func executeCommand(_ command: String, arguments: [String: String]) async throws -> String {
@@ -215,7 +371,10 @@ final class SpaceAPI {
             manager.moveActiveWindowToSpace(id: spaceID)
             return ""
         case "reloadSpaceLabels":
-            AppDelegate.shared.statusBarController?.labelManager.reloadAllWindows()
+            guard let labelManager = AppDelegate.shared.statusBarController?.labelManager else {
+                throw SpaceAPIError.appUnavailable
+            }
+            labelManager.reloadAllWindows()
             return ""
         case "toggleMenubar":
             StatusBarController.toggleStatusBar()
@@ -298,13 +457,9 @@ final class SpaceAPI {
     }
 
     private func executeWindowAction(windowID: Int, pid: Int32, action: String, manager: SpaceManager) async throws {
-        if let spaceID = SpaceHelper.getWindowSpaceID(id: windowID),
-           manager.currentSpaceUUID != spaceID,
-           let space = manager.spaceNameDict.first(where: { $0.id == spaceID }) {
-            manager.switchToSpace(space, forceInstant: true)
-            try await Task.sleep(nanoseconds: 600_000_000)
-        }
-
+        // Quitting an app is process-scoped and does not require its window to
+        // be made frontmost. Avoid moving the user's desktop just to terminate
+        // an application in another space.
         if action == "quit" {
             guard let app = NSRunningApplication(processIdentifier: pid) else {
                 throw SpaceAPIError.operationFailed("Application is no longer running.")
@@ -312,6 +467,14 @@ final class SpaceAPI {
             app.terminate()
             return
         }
+
+        if let spaceID = SpaceHelper.getWindowSpaceID(id: windowID),
+           manager.currentSpaceUUID != spaceID,
+           let space = manager.spaceNameDict.first(where: { $0.id == spaceID }) {
+            manager.switchToSpace(space, forceInstant: true)
+            try await Task.sleep(nanoseconds: 600_000_000)
+        }
+
         if action == "hide" {
             NSRunningApplication(processIdentifier: pid)?.hide()
             return
@@ -439,15 +602,23 @@ final class SpaceAPI {
 
     @objc nonisolated private func handleCommandRequest(_ notification: Notification) {
         let userInfo = notification.userInfo ?? [:]
-        let requestID = userInfo["requestID"] as? String ?? UUID().uuidString
+        let requestID = (userInfo["requestID"] as? String).flatMap { $0.isEmpty ? nil : $0 } ?? UUID().uuidString
         let command = userInfo["command"] as? String ?? ""
-        let arguments: [String: String]
-        if let argumentsJSON = userInfo["argumentsJSON"] as? String,
-           let data = argumentsJSON.data(using: .utf8),
-           let decoded = try? JSONDecoder().decode([String: String].self, from: data) {
-            arguments = decoded
-        } else {
-            arguments = userInfo["arguments"] as? [String: String] ?? [:]
+        var arguments: [String: String] = [:]
+        var argumentError: String?
+        if let argumentsJSON = userInfo["argumentsJSON"] as? String {
+            if let data = argumentsJSON.data(using: .utf8),
+               let decoded = try? JSONDecoder().decode([String: String].self, from: data) {
+                arguments = decoded
+            } else {
+                argumentError = "Arguments must be a JSON object containing only string values."
+            }
+        } else if let rawArguments = userInfo["arguments"] {
+            if let decoded = rawArguments as? [String: String] {
+                arguments = decoded
+            } else {
+                argumentError = "Arguments must be a dictionary containing only string values."
+            }
         }
 
         Task { @MainActor [weak self] in
@@ -456,13 +627,118 @@ final class SpaceAPI {
                 self.postCommandResult(requestID: requestID, error: SpaceAPIError.apiDisabled.localizedDescription)
                 return
             }
+            if let argumentError {
+                self.postCommandResult(requestID: requestID, error: argumentError)
+                return
+            }
             do {
-                let result = try await self.executeCommand(command, arguments: arguments)
+                let validatedArguments = try SpaceAPIArgumentValidator.stringArguments(
+                    from: .object(arguments.mapValues { .string($0) }),
+                    method: command
+                )
+                let result = try await self.executeCommand(command, arguments: validatedArguments)
                 self.postCommandResult(requestID: requestID, result: result)
             } catch {
                 self.postCommandResult(requestID: requestID, error: error.localizedDescription)
             }
         }
+    }
+
+    @objc nonisolated private func handleRPCRequest(_ notification: Notification) {
+        let payload = notification.userInfo?[DesktopRenamerAPIContract.payloadKey] as? String
+        Task { @MainActor [weak self] in
+            guard let self else { return }
+            await self.processRPCRequest(payload)
+        }
+    }
+
+    private func processRPCRequest(_ payload: String?) async {
+        guard let payload else {
+            postRPCResponse(SpaceAPIJSONRPCCodec.errorResponse(
+                id: nil,
+                code: SpaceAPIJSONRPCCode.invalidRequest,
+                message: "A JSON-RPC payload is required."
+            ))
+            return
+        }
+
+        let recoverableRequestID = Self.recoverableRequestID(from: payload)
+
+        let request: SpaceAPIJSONRPCRequest
+        do {
+            request = try SpaceAPIJSONRPCCodec.decodeRequest(payload)
+        } catch let error as SpaceAPIContractError {
+            postRPCResponse(SpaceAPIJSONRPCCodec.errorResponse(
+                id: recoverableRequestID,
+                code: error.jsonRPCCode,
+                message: error.localizedDescription,
+                data: error.jsonRPCData
+            ))
+            DiagnosticEventLog.shared.record(
+                subsystem: "SpaceAPI",
+                level: "warning",
+                "Rejected structured request: \(error.localizedDescription)"
+            )
+            return
+        } catch {
+            postRPCResponse(SpaceAPIJSONRPCCodec.errorResponse(
+                id: recoverableRequestID,
+                code: SpaceAPIJSONRPCCode.invalidRequest,
+                message: "Request could not be validated."
+            ))
+            return
+        }
+
+        guard SpaceManager.isAPIEnabled else {
+            postRPCResponse(SpaceAPIJSONRPCCodec.errorResponse(
+                id: request.id,
+                code: SpaceAPIError.apiDisabled.jsonRPCCode,
+                message: SpaceAPIError.apiDisabled.localizedDescription
+            ))
+            return
+        }
+
+        do {
+            let result = try await executeRPCMethod(request)
+            postRPCResponse(SpaceAPIJSONRPCResponse(id: request.id, result: result))
+            DiagnosticEventLog.shared.record(
+                subsystem: "SpaceAPI",
+                level: "info",
+                "Completed structured request method=\(request.method) id=\(request.id)"
+            )
+        } catch let error as SpaceAPIContractError {
+            postRPCResponse(SpaceAPIJSONRPCCodec.errorResponse(
+                id: request.id,
+                code: error.jsonRPCCode,
+                message: error.localizedDescription,
+                data: error.jsonRPCData(command: request.method)
+            ))
+        } catch let error as SpaceAPIError {
+            postRPCResponse(SpaceAPIJSONRPCCodec.errorResponse(
+                id: request.id,
+                code: error.jsonRPCCode,
+                message: error.localizedDescription,
+                data: error.jsonRPCData(command: request.method)
+            ))
+        } catch {
+            postRPCResponse(SpaceAPIJSONRPCCodec.errorResponse(
+                id: request.id,
+                code: SpaceAPIJSONRPCCode.internalError,
+                message: "DesktopRenamer could not complete the request."
+            ))
+        }
+    }
+
+    private static func recoverableRequestID(from payload: String) -> String? {
+        guard payload.utf8.count <= DesktopRenamerAPIContract.maxPayloadBytes,
+              let data = payload.data(using: .utf8),
+              let object = try? JSONSerialization.jsonObject(with: data, options: [.fragmentsAllowed]),
+              let dictionary = object as? [String: Any],
+              let id = dictionary["id"] as? String,
+              !id.isEmpty else {
+            return nil
+        }
+        return id
     }
 }
 
@@ -479,6 +755,36 @@ private enum SpaceAPIError: LocalizedError {
         case .appUnavailable: return "DesktopRenamer is not ready."
         case .invalidArgument(let message), .operationFailed(let message): return message
         case .unsupportedCommand(let command): return "Unsupported SpaceAPI command: \(command)"
+        }
+    }
+}
+
+private extension SpaceAPIError {
+    var jsonRPCCode: Int {
+        switch self {
+        case .apiDisabled:
+            return SpaceAPIJSONRPCCode.apiDisabled
+        case .appUnavailable:
+            return SpaceAPIJSONRPCCode.appUnavailable
+        case .invalidArgument:
+            return SpaceAPIJSONRPCCode.invalidParams
+        case .operationFailed:
+            return SpaceAPIJSONRPCCode.operationFailed
+        case .unsupportedCommand:
+            return SpaceAPIJSONRPCCode.methodNotFound
+        }
+    }
+
+    func jsonRPCData(command: String? = nil) -> SpaceAPIErrorData? {
+        switch self {
+        case .invalidArgument:
+            return SpaceAPIErrorData(expected: "valid command parameters", command: command)
+        case .operationFailed:
+            return command.map { SpaceAPIErrorData(command: $0) }
+        case .unsupportedCommand(let command):
+            return SpaceAPIErrorData(command: command)
+        default:
+            return nil
         }
     }
 }

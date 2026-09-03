@@ -2,6 +2,77 @@
 <!DOCTYPE dictionary SYSTEM "file://localhost/System/Library/DTDs/sdef.dtd">
 <dictionary title="DesktopRenamer Terminology">
     <suite name="DesktopRenamer Suite" code="DskR" description="Commands for DesktopRenamer">
+
+        <record-type name="api information" code="DskI" description="Structured API capabilities and version information">
+            <property name="contract version" code="Cvrs" type="text"><cocoa key="contractVersion"/></property>
+            <property name="JSON-RPC version" code="JRpc" type="text"><cocoa key="jsonRPCVersion"/></property>
+            <property name="supported methods" code="SMet" type="list of text"><cocoa key="supportedMethods"/></property>
+            <property name="legacy notifications" code="LNot" type="boolean"><cocoa key="legacyNotifications"/></property>
+            <property name="legacy compatibility" code="LCom" type="text"><cocoa key="legacyCompatibility"/></property>
+            <property name="event notifications" code="ENot" type="boolean"><cocoa key="eventNotifications"/></property>
+            <property name="event capabilities" code="ECap" type="list of text"><cocoa key="eventCapabilities"/></property>
+            <property name="maximum payload bytes" code="MPBy" type="integer"><cocoa key="maxPayloadBytes"/></property>
+        </record-type>
+
+        <record-type name="space" code="DkSp" description="A managed Mission Control space">
+            <property name="id" code="SpID" type="text"><cocoa key="id"/></property>
+            <property name="name" code="SpNm" type="text"><cocoa key="name"/></property>
+            <property name="display ID" code="DsID" type="text"><cocoa key="displayID"/></property>
+            <property name="display name" code="DsNm" type="text"><cocoa key="displayName"/></property>
+            <property name="number" code="SpNo" type="integer"><cocoa key="number"/></property>
+            <property name="full screen" code="Fscr" type="boolean"><cocoa key="isFullscreen"/></property>
+            <property name="app name" code="ApNm" type="text" description="Full-screen app name when available"><cocoa key="appName"/></property>
+            <property name="app path" code="ApPt" type="text" description="Full-screen app path when available"><cocoa key="appPath"/></property>
+            <property name="global shortcut number" code="GsNo" type="integer" description="Configured shortcut number when available"><cocoa key="globalShortcutNumber"/></property>
+        </record-type>
+
+        <record-type name="space snapshot" code="DkSn" description="A versioned snapshot of Mission Control spaces">
+            <property name="API version" code="ApiV" type="text"><cocoa key="apiVersion"/></property>
+            <property name="revision" code="RvNo" type="integer"><cocoa key="revision"/></property>
+            <property name="timestamp" code="TmSt" type="text"><cocoa key="timestamp"/></property>
+            <property name="current space IDs" code="CsID" type="list of text"><cocoa key="currentSpaceIDs"/></property>
+            <property name="current space name" code="CsNm" type="text"><cocoa key="currentSpaceName"/></property>
+            <property name="spaces" code="Spcs" type="list of space"><cocoa key="spaces"/></property>
+        </record-type>
+
+        <record-type name="window" code="DkWi" description="An application window assigned to a space">
+            <property name="id" code="WiID" type="integer"><cocoa key="id"/></property>
+            <property name="process ID" code="PrID" type="integer"><cocoa key="pid"/></property>
+            <property name="owner name" code="OwNm" type="text"><cocoa key="ownerName"/></property>
+            <property name="app path" code="WiPt" type="text" description="Application path when available"><cocoa key="appPath"/></property>
+            <property name="title" code="WiTl" type="text" description="Window title when available"><cocoa key="title"/></property>
+            <property name="space ID" code="WiSp" type="text"><cocoa key="spaceID"/></property>
+            <property name="minimized" code="MiWd" type="boolean"><cocoa key="isMinimized"/></property>
+            <property name="hidden" code="HiWd" type="boolean"><cocoa key="isHidden"/></property>
+        </record-type>
+
+        <record-type name="window snapshot" code="DkWs" description="A versioned snapshot of spaces and application windows">
+            <property name="API version" code="WApi" type="text"><cocoa key="apiVersion"/></property>
+            <property name="revision" code="WRNo" type="integer"><cocoa key="revision"/></property>
+            <property name="timestamp" code="WTmS" type="text"><cocoa key="timestamp"/></property>
+            <property name="spaces" code="WSpc" type="list of space"><cocoa key="spaces"/></property>
+            <property name="windows" code="WWns" type="list of window"><cocoa key="windows"/></property>
+        </record-type>
+
+        <command name="get api information" code="DskRGInf" description="Get structured API version and capability information">
+            <cocoa class="DesktopRenamer.GetAPIInformationCommand"/>
+            <result type="api information" description="API contract and capability information"/>
+        </command>
+
+        <command name="get structured spaces" code="DskRGSps" description="Get all spaces as typed records">
+            <cocoa class="DesktopRenamer.GetStructuredSpacesCommand"/>
+            <result type="list of space" description="Spaces sorted by display and space number"/>
+        </command>
+
+        <command name="get structured snapshot" code="DskRGSnp" description="Get a versioned typed snapshot of all spaces">
+            <cocoa class="DesktopRenamer.GetStructuredSnapshotCommand"/>
+            <result type="space snapshot" description="Versioned space snapshot"/>
+        </command>
+
+        <command name="get structured windows" code="DskRGWsn" description="Get spaces and windows as typed records">
+            <cocoa class="DesktopRenamer.GetStructuredWindowsCommand"/>
+            <result type="window snapshot" description="Versioned space and window snapshot"/>
+        </command>
         
         <command name="toggle menubar" code="DskRTMen" description="Toggle the visibility of the menubar item">
             <cocoa class="DesktopRenamer.ToggleMenubarCommand"/>
@@ -48,9 +119,9 @@
             <result type="text" description="The semantic version of the external API contract"/>
         </command>
         
-        <command name="get all spaces" code="DskRGAll" description="Get a list of all spaces in format 'ID~Name~DisplayID~Num'">
+        <command name="get all spaces" code="DskRGAll" description="Get a list of all spaces in the legacy delimiter format">
             <cocoa class="DesktopRenamer.GetAllSpacesCommand"/>
-            <result type="text" description="List of spaces separated by newlines, format: ID~Name~DisplayID~Num"/>
+            <result type="text" description="List of spaces separated by newlines, format: ID~Name~DisplayName~Num~IsFullscreen~AppPath"/>
         </command>
         
         <command name="rename space" code="DskRRnSp" description="Rename a specific space by ID">

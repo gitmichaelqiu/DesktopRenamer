@@ -10,6 +10,8 @@ extension SpaceLabelWindow {
     }
 
     func hideImmediately() {
+        let wasVisible = isVisible
+
         // A preview may have a delayed retry queued from the switch cooldown.
         // Cancel it before hiding so the retry cannot reveal the preview again
         // after the manager has determined that this is the current space.
@@ -29,7 +31,9 @@ extension SpaceLabelWindow {
         // Ordering it out removes that frame without changing its assigned
         // Space; updateVisibility() orders it back in when the preview is
         // allowed to show again.
-        self.orderOut(nil)
+        if wasVisible {
+            self.orderOut(nil)
+        }
     }
 
     // Interaction handling for mouse events.

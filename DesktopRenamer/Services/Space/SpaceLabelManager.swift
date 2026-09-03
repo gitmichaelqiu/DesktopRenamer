@@ -94,6 +94,9 @@ class SpaceLabelManager: ObservableObject {
     var delayedRestoreWorkItem: DispatchWorkItem?
     var previewTransitionRestoreWorkItem: DispatchWorkItem?
     var activeSyncWorkItems: [DispatchWorkItem] = []
+    var lastActiveVisibilitySpaceIDs: Set<String>?
+    var lastActiveVisibilityWindowIDs: Set<String> = []
+    var lastActiveVisibilityDisplayID: String?
     var reloadWorkItem: DispatchWorkItem?
     var workspaceSpaceChangeObserver: NSObjectProtocol?
     var workspaceApplicationActivationObserver: NSObjectProtocol?
@@ -104,6 +107,9 @@ class SpaceLabelManager: ObservableObject {
     var knownSpaceIDs: Set<String> = []
     var knownFullscreenSpaceIDs: Set<String> = []
     var lastKnownVisibleSpaceIDs: Set<String> = []
+    var lastLiveFullscreenVisibleSpaceIDs: Set<String> = []
+    var lastLiveFullscreenDisplayIDs: Set<String> = []
+    var lastLiveFullscreenDisplayScope: String?
     var previewLabelsSuppressedUntil: Date?
     var previewTransitionGeneration = 0
     var previewTransitionRestoreAttempt = 0

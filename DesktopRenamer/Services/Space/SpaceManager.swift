@@ -10,6 +10,7 @@ class SpaceManager: ObservableObject {
     static let spacesKey = "com.michaelqiu.desktoprenamer.spaces"
     static let nameCacheKey = "com.michaelqiu.desktoprenamer.namecache"
     static let indexCacheKey = "com.michaelqiu.desktoprenamer.indexcache"
+    static let bootSessionKey = "com.michaelqiu.desktoprenamer.namecache.bootsession"
     static let isAPIEnabledKey = "com.michaelqiu.desktoprenamer.isapienabled"
     static let grabOffsetXKey = "com.michaelqiu.desktoprenamer.grabOffsetX"
     static let grabOffsetYKey = "com.michaelqiu.desktoprenamer.grabOffsetY"
@@ -38,6 +39,8 @@ class SpaceManager: ObservableObject {
     
     var nameCache: [String: String] = [:]
     var indexCache: [String: String] = [:]
+    var currentBootSessionID: String?
+    var shouldRestoreNamesByPositionAfterBoot = false
     
     @Published var currentNcCount: Int = 0
     @Published var currentIsDesktop: Bool = false
@@ -61,6 +64,14 @@ class SpaceManager: ObservableObject {
     let maxSpaceChangeRetries: Int = 5
     var spaceChangeRetryWorkItem: DispatchWorkItem?
     var spaceChangeRetryGeneration = 0
+    var spaceChangeRetryObservedSpaceID: String?
+    var spaceChangeRetryObservedPasses = 0
+    // Monitor notifications can arrive in bursts while WindowServer is
+    // settling a gesture. Keep only the newest observation and give the
+    // gesture transaction a chance to emit before reconciling the model.
+    var pendingMonitorSpaceChange: (rawUUID: String, isDesktop: Bool, ncCount: Int, displayID: String)?
+    var monitorSpaceChangeWorkItem: DispatchWorkItem?
+    var monitorSpaceChangeGeneration = 0
     var screenParametersWorkItem: DispatchWorkItem?
     
     // Display Cache
@@ -81,6 +92,7 @@ class SpaceManager: ObservableObject {
     @Published var movedWindowsOriginalSpaces: [Int: (originalSpaceUUID: String, currentSpaceUUID: String, pid: Int32)] = [:]
     var lastManualSwitchTime: TimeInterval = 0
     var lastManualSwitchTargetUUID: String? = nil
+    var activeProgrammaticSwitchGeneration: UInt64?
     
     @Published var returnToOriginalAfterBatchMove: Bool {
         didSet {
@@ -145,10 +157,10 @@ class SpaceManager: ObservableObject {
         }
         
 
+        MainActor.assumeIsolated {
+            self.spaceAPI?.setupListener()
+        }
         if SpaceManager.isAPIEnabled {
-            MainActor.assumeIsolated {
-                self.spaceAPI?.setupListener()
-            }
             DistributedNotificationCenter.default().postNotificationName(SpaceAPI.apiToggleNotification, object: nil, userInfo: ["isEnabled": true], deliverImmediately: true)
         }
         
@@ -160,6 +172,13 @@ class SpaceManager: ObservableObject {
             self,
             selector: #selector(handleProgrammaticSwitchStarted(_:)),
             name: NSNotification.Name("SpaceProgrammaticSwitchStarted"),
+            object: nil
+        )
+
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(handleProgrammaticSwitchFinished(_:)),
+            name: NSNotification.Name("SpaceProgrammaticSwitchFinished"),
             object: nil
         )
         
@@ -201,6 +220,7 @@ class SpaceManager: ObservableObject {
     deinit {
         wakeRecoveryWorkItem?.cancel()
         spaceChangeRetryWorkItem?.cancel()
+        monitorSpaceChangeWorkItem?.cancel()
         screenParametersWorkItem?.cancel()
         if Thread.isMainThread {
             SpaceHelper.stopMonitoring()
@@ -243,6 +263,7 @@ class SpaceManager: ObservableObject {
         isSystemSleeping = true
         wakeRecoveryWorkItem?.cancel()
         wakeRecoveryWorkItem = nil
+        cancelPendingMonitorSpaceChange()
         cancelSpaceChangeRetry()
         stopPeriodicSpaceLayoutCheck()
         SpaceHelper.stopMonitoring()

@@ -45,7 +45,6 @@ extension SpaceLabelWindow {
         syncFromGlobalState()
         updateLayout(isCurrentSpace: true, updateFrame: false)
         updateVisibility(animated: animated)
-        bindToTargetSpace()
     }
 
     func setPreviewSize(_ size: NSSize) {

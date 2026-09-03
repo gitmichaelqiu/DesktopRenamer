@@ -1,9 +1,31 @@
 import AppKit
+import Darwin.sys.sysctl
 import Foundation
 import SwiftUI
 import WidgetKit
 
 extension SpaceManager {
+
+    static let persistentNameCachePrefix = "PersistentSpace|"
+
+    static func persistentNameCacheKey(for persistentID: String) -> String {
+        persistentNameCachePrefix + persistentID.uppercased()
+    }
+
+    private static func readBootSessionID() -> String? {
+        var size = 0
+        guard sysctlbyname("kern.bootsessionuuid", nil, &size, nil, 0) == 0,
+              size > 1 else {
+            return nil
+        }
+
+        var value = [CChar](repeating: 0, count: size)
+        guard sysctlbyname("kern.bootsessionuuid", &value, &size, nil, 0) == 0 else {
+            return nil
+        }
+        let sessionID = String(cString: value).trimmingCharacters(in: .whitespacesAndNewlines)
+        return sessionID.isEmpty ? nil : sessionID.uppercased()
+    }
 
     // MARK: - Periodic Space Layout Check
 
@@ -83,6 +105,11 @@ extension SpaceManager {
     }
     
     func loadSavedData() {
+        currentBootSessionID = Self.readBootSessionID()
+        let savedBootSessionID = UserDefaults.standard.string(forKey: SpaceManager.bootSessionKey)
+        shouldRestoreNamesByPositionAfterBoot = currentBootSessionID != nil
+            && currentBootSessionID != savedBootSessionID?.uppercased()
+
         if let data = UserDefaults.standard.data(forKey: SpaceManager.spacesKey),
            let spaces = try? JSONDecoder().decode([DesktopSpace].self, from: data) {
             spaceNameDict = spaces.map {
@@ -148,5 +175,32 @@ extension SpaceManager {
         if let data = try? JSONEncoder().encode(indexCache) {
             UserDefaults.standard.set(data, forKey: SpaceManager.indexCacheKey)
         }
+    }
+
+    func completeBootNameMigration(using spaces: [DesktopSpace]) {
+        guard shouldRestoreNamesByPositionAfterBoot else { return }
+
+        // Numeric ManagedSpaceIDs from the previous boot are unsafe. Preserve
+        // durable UUID entries and rebuild the numeric aliases from the names
+        // that were just reconciled against the new boot's space list.
+        var rebuiltCache = nameCache.filter {
+            $0.key.hasPrefix(Self.persistentNameCachePrefix)
+        }
+        for space in spaces where !space.isFullscreen && !space.customName.isEmpty {
+            rebuiltCache[space.id] = space.customName
+            if let persistentID = space.persistentID {
+                rebuiltCache[Self.persistentNameCacheKey(for: persistentID)] = space.customName
+            }
+        }
+        nameCache = rebuiltCache
+        shouldRestoreNamesByPositionAfterBoot = false
+        if let currentBootSessionID {
+            UserDefaults.standard.set(currentBootSessionID, forKey: SpaceManager.bootSessionKey)
+        }
+        DiagnosticEventLog.shared.record(
+            subsystem: "SpaceManager",
+            level: "info",
+            "Rebuilt space-name identity cache for the current boot session"
+        )
     }
 }

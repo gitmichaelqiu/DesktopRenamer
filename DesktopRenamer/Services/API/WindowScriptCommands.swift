@@ -5,6 +5,10 @@ class MoveWindowNextCommand: NSScriptCommand {
     override func performDefaultImplementation() -> Any? {
         DiagnosticEventLog.shared.record(subsystem: "AppleScript", level: "info", "Command performed: MoveWindowNextCommand")
         guard isAPIEnabled() else { return nil }
+        guard runOnMain({ AppDelegate.shared.spaceManager != nil }) else {
+            _ = failAppUnavailable()
+            return nil
+        }
         DispatchQueue.main.async {
             if let manager = AppDelegate.shared.spaceManager {
                 manager.moveActiveWindowToNextSpace()
@@ -18,6 +22,10 @@ class MoveWindowPreviousCommand: NSScriptCommand {
     override func performDefaultImplementation() -> Any? {
         DiagnosticEventLog.shared.record(subsystem: "AppleScript", level: "info", "Command performed: MoveWindowPreviousCommand")
         guard isAPIEnabled() else { return nil }
+        guard runOnMain({ AppDelegate.shared.spaceManager != nil }) else {
+            _ = failAppUnavailable()
+            return nil
+        }
         DispatchQueue.main.async {
             if let manager = AppDelegate.shared.spaceManager {
                 manager.moveActiveWindowToPreviousSpace()
@@ -30,13 +38,19 @@ class MoveWindowPreviousCommand: NSScriptCommand {
 class MoveWindowToSpaceCommand: NSScriptCommand {
     override func performDefaultImplementation() -> Any? {
         guard isAPIEnabled() else { return nil }
-        guard let spaceID = self.directParameter as? String else { return nil }
+        guard let spaceID = requiredDirectString(parameter: "space ID") else { return nil }
+        guard let manager = runOnMain({ AppDelegate.shared.spaceManager }) else {
+            _ = failAppUnavailable()
+            return nil
+        }
+        guard runOnMain({ manager.spaceNameDict.contains(where: { $0.id == spaceID }) }) else {
+            _ = failInvalidArgument("Invalid space ID.")
+            return nil
+        }
         DiagnosticEventLog.shared.record(subsystem: "AppleScript", level: "info", "Command performed: MoveWindowToSpaceCommand (spaceID: \(spaceID))")
         
         DispatchQueue.main.async {
-            if let manager = AppDelegate.shared.spaceManager {
-                manager.moveActiveWindowToSpace(id: spaceID)
-            }
+            manager.moveActiveWindowToSpace(id: spaceID)
         }
         return nil
     }
@@ -47,11 +61,12 @@ class ReloadSpaceLabelsCommand: NSScriptCommand {
         DiagnosticEventLog.shared.record(subsystem: "AppleScript", level: "info", "Command performed: ReloadSpaceLabelsCommand")
         guard isAPIEnabled() else { return false }
         return runOnMain {
-            if let manager = AppDelegate.shared.statusBarController?.labelManager {
-                manager.reloadAllWindows()
-                return true
+            guard let manager = AppDelegate.shared.statusBarController?.labelManager else {
+                _ = failAppUnavailable()
+                return nil
             }
-            return false
+            manager.reloadAllWindows()
+            return true
         }
     }
 }
@@ -72,7 +87,10 @@ class GetWindowsCommand: NSScriptCommand {
             return (spaces, names)
         }
         
-        guard let (spaces, names) = data else { return "" }
+        guard let (spaces, names) = data else {
+            _ = failAppUnavailable()
+            return nil
+        }
         
         // Perform heavy window enumeration on the background thread (NSScriptCommand defaults to background).
         return SpaceHelper.getWindowsForAllSpaces(spaces: spaces, spaceNames: names)
@@ -82,10 +100,9 @@ class GetWindowsCommand: NSScriptCommand {
 class FocusWindowCommand: NSScriptCommand {
     override func performDefaultImplementation() -> Any? {
         guard isAPIEnabled() else { return nil }
-        guard let windowIDStr = self.directParameter as? String,
+        guard let windowIDStr = requiredPositiveIntegerString(directParameter, parameter: "window ID"),
               let windowID = Int(windowIDStr),
-              let arguments = self.evaluatedArguments,
-              let pidStr = arguments["ownerPID"] as? String,
+              let pidStr = requiredProcessIDString(evaluatedArguments?["ownerPID"], parameter: "owner PID"),
               let pid = Int32(pidStr)
         else { return nil }
         DiagnosticEventLog.shared.record(subsystem: "AppleScript", level: "info", "Command performed: FocusWindowCommand (windowID: \(windowIDStr), pid: \(pidStr))")
@@ -100,16 +117,17 @@ class FocusWindowCommand: NSScriptCommand {
 class MoveSpecificWindowToSpaceCommand: NSScriptCommand {
     override func performDefaultImplementation() -> Any? {
         guard isAPIEnabled() else { return nil }
-        guard let windowIDStr = self.directParameter as? String,
+        guard let windowIDStr = requiredPositiveIntegerString(directParameter, parameter: "window ID"),
               let windowID = Int(windowIDStr),
-              let arguments = self.evaluatedArguments,
-              let fromSpaceStr = arguments["fromSpace"] as? String,
-              let targetSpaceStr = arguments["targetSpace"] as? String
+              let fromSpaceStr = requiredArgumentString("fromSpace"),
+              let targetSpaceStr = requiredArgumentString("targetSpace")
         else { return nil }
+        let arguments = evaluatedArguments ?? [:]
         DiagnosticEventLog.shared.record(subsystem: "AppleScript", level: "info", "Command performed: MoveSpecificWindowToSpaceCommand (windowID: \(windowIDStr), fromSpace: \(fromSpaceStr), targetSpace: \(targetSpaceStr))")
 
-        if let pidStr = arguments["ownerPID"] as? String,
-           let pid = Int32(pidStr) {
+        if let pidValue = arguments["ownerPID"] {
+            guard let pidStr = requiredProcessIDString(pidValue, parameter: "owner PID"),
+                  let pid = Int32(pidStr) else { return nil }
             Task { @MainActor in
                 await WindowActionCoordinator.moveWindow(
                     windowID: windowID,
@@ -123,6 +141,9 @@ class MoveSpecificWindowToSpaceCommand: NSScriptCommand {
             DispatchQueue.main.async {
                 SpaceHelper.moveWindowToSpace(windowID: windowID, fromSpaceID: fromSpaceID, targetSpaceID: targetSpaceID)
             }
+        } else {
+            failInvalidArgument("Space IDs must be integer values when owner PID is omitted.")
+            return nil
         }
         return nil
     }
@@ -142,13 +163,16 @@ class GetCurrentSpaceIDCommand: NSScriptCommand {
 class ExecuteWindowActionCommand: NSScriptCommand {
     override func performDefaultImplementation() -> Any? {
         guard isAPIEnabled() else { return nil }
-        guard let windowIDStr = self.directParameter as? String,
+        guard let windowIDStr = requiredPositiveIntegerString(directParameter, parameter: "window ID"),
               let windowID = Int(windowIDStr),
-              let arguments = self.evaluatedArguments,
-              let pidStr = arguments["ownerPID"] as? String,
+              let pidStr = requiredProcessIDString(evaluatedArguments?["ownerPID"], parameter: "owner PID"),
               let pid = Int32(pidStr),
-              let actionName = arguments["actionName"] as? String
+              let actionName = requiredArgumentString("actionName")
         else { return nil }
+        guard DesktopRenamerAPIContract.windowActionNames.contains(actionName) else {
+            _ = failInvalidArgument("Unsupported window action: \(actionName)")
+            return nil
+        }
         DiagnosticEventLog.shared.record(subsystem: "AppleScript", level: "info", "Command performed: ExecuteWindowActionCommand (windowID: \(windowIDStr), pid: \(pidStr), actionName: \(actionName))")
         
         // Fire-and-forget: the command returns nil, so there is no need to block

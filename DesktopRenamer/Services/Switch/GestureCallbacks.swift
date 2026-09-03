@@ -18,10 +18,13 @@ func mtCallback(
 
     let typedPointer = touchPointer.assumingMemoryBound(to: MTTouch.self)
     let buffer = UnsafeBufferPointer(start: typedPointer, count: Int(numFingers))
-    let touches = Array(buffer)
 
     // Valid states: 1 (Hover/Range), 2 (Touching), 3 (Dragging), 4 (Lifting)
-    let validTouches = touches.filter { $0.state > 0 && $0.state < 7 }
+    var validTouches: [MTTouch] = []
+    validTouches.reserveCapacity(min(Int(numFingers), 4))
+    for touch in buffer where touch.state > 0 && touch.state < 7 {
+        validTouches.append(touch)
+    }
 
     if validTouches.count >= 3 {
         GestureManager.lastTrackpadSwipeTime = Date().timeIntervalSince1970
@@ -37,4 +40,3 @@ func mtCallback(
         manager.handleTouches(touches: [], numFingers: 0)
     }
 }
-

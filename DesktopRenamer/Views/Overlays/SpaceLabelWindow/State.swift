@@ -30,11 +30,18 @@ extension SpaceLabelWindow {
 
         let winID = [NSNumber(value: self.windowNumber)] as CFArray
         let targetSpaces = [NSNumber(value: targetSpaceInt)] as CFArray
-
-        CGSAddWindowsToSpaces(cid, winID, targetSpaces)
-
         let currentSpacesCF = CGSCopySpacesForWindows(cid, 7, winID)
         let currentSpaces = (currentSpacesCF as? [NSNumber])?.map { $0.intValue } ?? []
+
+        // Rebinding an already-correct label is a synchronous WindowServer
+        // operation. Visibility and active-label synchronization can call
+        // this method several times during one transition, so avoid changing
+        // the window's space assignment when there is nothing to repair.
+        if currentSpaces == [targetSpaceInt] {
+            return
+        }
+
+        CGSAddWindowsToSpaces(cid, winID, targetSpaces)
 
         print("SpaceLabelWindow[\(self.spaceId)]: bindToTargetSpace. Window Number: \(self.windowNumber). Current spaces: \(currentSpaces). Target space: \(targetSpaceInt)")
         DiagnosticEventLog.shared.record(subsystem: "SpaceLabelWindow", "bindToTargetSpace[\(self.spaceId)]: win=\(self.windowNumber), currentSpaces=\(currentSpaces), target=\(targetSpaceInt)")

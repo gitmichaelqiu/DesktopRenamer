@@ -36,18 +36,28 @@ class SpaceHelper {
     // change. Dock activation and mouse events can otherwise queue several
     // reads whose callbacks arrive after a newer transition has started.
     static var spaceDetectionGeneration = 0
+    // The raw WindowServer scan is relatively expensive because it also walks
+    // the on-screen window list. Keep only the newest scheduled scan so a
+    // burst of activation or mouse events cannot occupy the main queue after
+    // a gesture has already begun.
+    static let rawSpaceUUIDStateLock = NSLock()
+    static var rawSpaceUUIDWorkItem: DispatchWorkItem?
+    static var rawSpaceUUIDGeneration = 0
 
     // Tracks switching state to prevent recursion during transitions.
     static var isSwitching = false
     static var lastProgrammaticSwitchTime: TimeInterval = 0
     static var lastProgrammaticTargetSpaceID: String? = nil
     static var lastProgrammaticSwitchUsedSLS = false
-    // A WindowServer space read can reach SpaceManager before macOS delivers
-    // the active-space notification. Keep the programmatic transition open
-    // until both signals have arrived, so label restoration cannot use the
-    // first destination snapshot as proof that the animation has finished.
+    // WindowServer state is the authoritative completion signal. The
+    // active-space notification is useful corroboration, but it is delivered
+    // through a lossy XPC path and can be absent even after the destination is
+    // current. The generation-scoped settle verification below prevents one
+    // early snapshot from completing the transition by itself.
     static var programmaticSwitchDestinationObserved = false
     static var programmaticSwitchNotificationObserved = false
+    static var programmaticSwitchUsesExtendedSettle = false
+    static var programmaticSwitchFastFollowUpRequested = false
     static var programmaticSwitchCompletionWorkItem: DispatchWorkItem?
     static var programmaticSwitchTimeoutWorkItem: DispatchWorkItem?
     static var fullscreenGestureRetryWorkItem: DispatchWorkItem?
@@ -69,6 +79,14 @@ class SpaceHelper {
     static var pendingProgrammaticSwitchTargetSpaceID: String? {
         switchTransactionCoordinator.pending?.spaceID
             ?? programmaticSwitchPromotionRequest?.spaceID
+    }
+
+    // `isSwitching` becomes false for the short settle interval before a
+    // coalesced request is promoted. Gesture requests must not run in that
+    // gap or they can race the promotion and discard the latest destination.
+    static var isProgrammaticSwitchPromotionPending: Bool {
+        programmaticSwitchPromotionRequest != nil
+            || programmaticSwitchPromotionWorkItem != nil
     }
 
     /// Current transaction state for diagnostic reports. The generation makes

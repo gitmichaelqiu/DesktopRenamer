@@ -108,6 +108,79 @@ extension SpaceHelper {
         return startSpaceSwitch(context, forceInstant: forceInstant, isManual: isManual)
     }
 
+    /// Resolves one adjacent space from a single managed-space snapshot. The
+    /// gesture override uses this path so it does not first ask SpaceManager
+    /// for the current space and then ask WindowServer for the same state again
+    /// before emitting the synthetic gesture.
+    @discardableResult
+    static func switchToAdjacentSpace(
+        direction: Int,
+        onDisplayID requestedDisplayID: String? = nil,
+        forceInstant: Bool = false,
+        isManual: Bool = false
+    ) -> SpaceSwitchRequestDisposition {
+        guard direction != 0,
+              let state = getSystemState(includeFullscreenAppMetadata: false) else {
+            return .unavailable
+        }
+
+        let displayID = requestedDisplayID ?? state.displayID
+        let liveCurrentSpaceID: String?
+        if displayID == state.displayID {
+            liveCurrentSpaceID = state.currentUUID
+        } else {
+            liveCurrentSpaceID = getCurrentSpaceID(for: displayID)
+        }
+
+        let displaySpaces = state.spaces
+            .filter { $0.displayID == displayID }
+            .sorted { $0.num < $1.num }
+
+        guard let liveCurrentSpaceID,
+              let currentIndex = displaySpaces.firstIndex(where: {
+                  $0.id == liveCurrentSpaceID
+              }) else {
+            DiagnosticEventLog.shared.record(
+                subsystem: "SpaceHelper",
+                level: "warning",
+                "adjacent switch unavailable: display="
+                    + displayID
+                    + ", current="
+                    + (liveCurrentSpaceID ?? "nil")
+                    + ", direction="
+                    + String(direction)
+            )
+            return .unavailable
+        }
+
+        let targetIndex = currentIndex + direction
+        guard displaySpaces.indices.contains(targetIndex) else {
+            return .unavailable
+        }
+        let targetSpace = displaySpaces[targetIndex]
+        let context = makeSpaceSwitchContext(
+            state: state,
+            targetSpace: targetSpace,
+            liveCurrentSpaceID: liveCurrentSpaceID
+        )
+
+        // If another request won the race after the snapshot, let the normal
+        // absolute-target path coalesce this request instead of starting a
+        // second primitive.
+        if !forceInstant, switchTransactionCoordinator.active != nil {
+            return switchToSpace(
+                targetSpace.id,
+                forceInstant: false,
+                isManual: isManual
+            )
+        }
+
+        if liveCurrentSpaceID == targetSpace.id {
+            return .alreadyCurrent
+        }
+        return startSpaceSwitch(context, forceInstant: forceInstant, isManual: isManual)
+    }
+
     private static func makeSpaceSwitchContext(for spaceID: String) -> SpaceSwitchContext? {
         guard let state = getSystemState(),
               let targetSpace = state.spaces.first(where: { $0.id == spaceID }) else {
@@ -119,6 +192,19 @@ extension SpaceHelper {
             print("SpaceHelper: switchToSpace check. Live ID: \(liveCurrentSpaceID), Target: \(spaceID)")
         }
 
+        return makeSpaceSwitchContext(
+            state: state,
+            targetSpace: targetSpace,
+            liveCurrentSpaceID: liveCurrentSpaceID
+        )
+    }
+
+    private static func makeSpaceSwitchContext(
+        state: (spaces: [DesktopSpace], currentUUID: String, displayID: String),
+        targetSpace: DesktopSpace,
+        liveCurrentSpaceID: String?
+    ) -> SpaceSwitchContext {
+
         let currentSpaceIsFullscreen = state.spaces
             .first(where: { $0.id == liveCurrentSpaceID })?.isFullscreen ?? false
         let displaySpaces = state.spaces
@@ -127,7 +213,7 @@ extension SpaceHelper {
         let steps: Int?
         if let liveCurrentSpaceID,
            let currentIndex = displaySpaces.firstIndex(where: { $0.id == liveCurrentSpaceID }),
-           let targetIndex = displaySpaces.firstIndex(where: { $0.id == spaceID }) {
+           let targetIndex = displaySpaces.firstIndex(where: { $0.id == targetSpace.id }) {
             steps = targetIndex - currentIndex
         } else {
             steps = nil
@@ -163,6 +249,8 @@ extension SpaceHelper {
             isSwitching = false
             programmaticSwitchDestinationObserved = false
             programmaticSwitchNotificationObserved = false
+            programmaticSwitchUsesExtendedSettle = false
+            programmaticSwitchFastFollowUpRequested = false
         } else {
             let newGeneration = switchTransactionCoordinator.begin(
                 spaceID: spaceID,
@@ -172,6 +260,9 @@ extension SpaceHelper {
             isSwitching = true
             programmaticSwitchDestinationObserved = false
             programmaticSwitchNotificationObserved = false
+            programmaticSwitchUsesExtendedSettle =
+                context.targetIsFullscreen || context.currentSpaceIsFullscreen
+            programmaticSwitchFastFollowUpRequested = false
             programmaticSwitchCompletionWorkItem?.cancel()
             programmaticSwitchCompletionWorkItem = nil
             programmaticSwitchTimeoutWorkItem?.cancel()
@@ -187,17 +278,6 @@ extension SpaceHelper {
         lastProgrammaticSwitchTime = Date().timeIntervalSince1970
         lastProgrammaticTargetSpaceID = spaceID
         lastProgrammaticSwitchUsedSLS = false
-
-        // Prepare only the dedicated active label for the destination. Preview
-        // labels still follow the existing hideWhenSwitching behavior.
-        NotificationCenter.default.post(
-            name: NSNotification.Name("SpaceSwitchTargetRequested"),
-            object: nil,
-            userInfo: ["spaceID": spaceID]
-        )
-
-        NotificationCenter.default.post(
-            name: NSNotification.Name("SpaceSwitchRequested"), object: nil)
 
         // Gesture-based Space Switch handling. Keep the synthetic desktop
         // gesture as the primary path for fullscreen transitions too; the
@@ -233,6 +313,8 @@ extension SpaceHelper {
                     attempt: 1
                 )
             }
+            scheduleSpaceSwitchLabelSuppression(generation: generation)
+            scheduleActiveLabelPreparation(spaceID: spaceID, generation: generation)
             return .started
         }
 
@@ -262,6 +344,8 @@ extension SpaceHelper {
                         displayID: displayID,
                         isFullscreen: context.targetIsFullscreen
                     )
+                    scheduleSpaceSwitchLabelSuppression(generation: generation)
+                    scheduleActiveLabelPreparation(spaceID: spaceID, generation: generation)
                     return .started
                 }
             } else if let localNum = context.targetNum {
@@ -275,6 +359,8 @@ extension SpaceHelper {
                         displayID: displayID,
                         isFullscreen: context.targetIsFullscreen
                     )
+                    scheduleSpaceSwitchLabelSuppression(generation: generation)
+                    scheduleActiveLabelPreparation(spaceID: spaceID, generation: generation)
                     return .started
                 }
             }
@@ -310,6 +396,8 @@ extension SpaceHelper {
                     }
                 }
             }
+            scheduleSpaceSwitchLabelSuppression(generation: generation)
+            scheduleActiveLabelPreparation(spaceID: spaceID, generation: generation)
             return .started
         }
 
@@ -325,6 +413,52 @@ extension SpaceHelper {
             "switch request unavailable after transaction start: generation=\(generation.map(String.init) ?? "instant"), target=\(spaceID)"
         )
         return .unavailable
+    }
+
+    private static func scheduleSpaceSwitchLabelSuppression(generation: UInt64?) {
+        let suppress = {
+            NotificationCenter.default.post(
+                name: NSNotification.Name("SpaceSwitchRequested"),
+                object: nil
+            )
+        }
+
+        // Synthetic events must be posted before preview-window work. An
+        // instant operation has no event to protect, so keep its existing
+        // synchronous notification behavior.
+        if generation == nil {
+            suppress()
+        } else {
+            DispatchQueue.main.async(execute: suppress)
+        }
+    }
+
+    private static func scheduleActiveLabelPreparation(spaceID: String, generation: UInt64?) {
+        let prepare = {
+            if let generation {
+                guard let active = switchTransactionCoordinator.active,
+                      isSwitching,
+                      active.generation == generation,
+                      active.request.spaceID == spaceID else {
+                    return
+                }
+            }
+
+            NotificationCenter.default.post(
+                name: NSNotification.Name("SpaceSwitchTargetRequested"),
+                object: nil,
+                userInfo: ["spaceID": spaceID]
+            )
+        }
+
+        // The synthetic gesture must reach WindowServer before the active
+        // label performs its layout/binding work. Force-instant operations do
+        // not have a gesture to protect, so preserve their immediate behavior.
+        if generation == nil {
+            prepare()
+        } else {
+            DispatchQueue.main.async(execute: prepare)
+        }
     }
 
     private static func markProgrammaticSwitchStarted(
@@ -377,6 +511,8 @@ extension SpaceHelper {
             isSwitching = false
             programmaticSwitchDestinationObserved = false
             programmaticSwitchNotificationObserved = false
+            programmaticSwitchUsesExtendedSettle = false
+            programmaticSwitchFastFollowUpRequested = false
             programmaticSwitchCompletionWorkItem?.cancel()
             programmaticSwitchCompletionWorkItem = nil
             programmaticSwitchTimeoutWorkItem?.cancel()
@@ -401,6 +537,8 @@ extension SpaceHelper {
         isSwitching = false
         programmaticSwitchDestinationObserved = false
         programmaticSwitchNotificationObserved = false
+        programmaticSwitchUsesExtendedSettle = false
+        programmaticSwitchFastFollowUpRequested = false
         lastProgrammaticSwitchTime = 0
         lastProgrammaticTargetSpaceID = nil
         lastProgrammaticSwitchUsedSLS = false
@@ -431,8 +569,9 @@ extension SpaceHelper {
     }
 
     /// Records that SpaceManager has read the requested destination from live
-    /// WindowServer state. The active-space notification is also required
-    /// before the transition is considered complete.
+    /// WindowServer state. NSWorkspace's active-space notification can be
+    /// dropped when its XPC session resets, so a stable WindowServer result is
+    /// sufficient after the normal settle verification.
     static func markProgrammaticSwitchComplete(at spaceID: String) {
         guard let active = switchTransactionCoordinator.active,
               isSwitching,
@@ -446,13 +585,12 @@ extension SpaceHelper {
             return
         }
         programmaticSwitchDestinationObserved = true
-        guard programmaticSwitchNotificationObserved else {
+        if !programmaticSwitchNotificationObserved {
             DiagnosticEventLog.shared.record(
                 subsystem: "SpaceHelper",
                 level: "info",
-                "programmatic destination observed at space \(spaceID); waiting for active-space notification"
+                "programmatic destination observed at space \(spaceID) without active-space notification; using WindowServer settle verification"
             )
-            return
         }
 
         finishProgrammaticSwitch(at: spaceID, generation: active.generation)
@@ -469,13 +607,43 @@ extension SpaceHelper {
         finishProgrammaticSwitch(at: active.request.spaceID, generation: active.generation)
     }
 
+    /// Requests faster serialization for a genuinely new trackpad gesture.
+    /// Fullscreen transitions keep their longer settle interval because Dock
+    /// can transiently expose their destination before focus is stable.
+    static func requestFastFollowUpSwitch() {
+        guard let active = switchTransactionCoordinator.active,
+              isSwitching,
+              !programmaticSwitchUsesExtendedSettle else {
+            return
+        }
+
+        programmaticSwitchFastFollowUpRequested = true
+        guard programmaticSwitchDestinationObserved else { return }
+
+        programmaticSwitchCompletionWorkItem?.cancel()
+        programmaticSwitchCompletionWorkItem = nil
+        DiagnosticEventLog.shared.record(
+            subsystem: "SpaceHelper",
+            level: "info",
+            "accelerating verified switch settle for follow-up gesture: generation=\(active.generation), target=\(active.request.spaceID)"
+        )
+        finishProgrammaticSwitch(
+            at: active.request.spaceID,
+            generation: active.generation
+        )
+    }
+
     private static func finishProgrammaticSwitch(at spaceID: String, generation: UInt64) {
         guard programmaticSwitchCompletionWorkItem == nil else { return }
 
-        // The first matching WindowServer read and the active-space
-        // notification can both arrive before the visual swipe has finished.
-        // Keep the transition open for one settling interval, then notify the
-        // label manager so it can perform its own stable-state verification.
+        // The first matching WindowServer read can arrive before the visual
+        // swipe has finished. Keep the transition open for one settling
+        // interval, then verify the authoritative live state again before
+        // releasing queued requests and restoring labels.
+        let settleDelay: TimeInterval =
+            programmaticSwitchFastFollowUpRequested && !programmaticSwitchUsesExtendedSettle
+            ? 0.08
+            : 0.35
         let workItem = DispatchWorkItem {
             guard let active = switchTransactionCoordinator.active,
                   isSwitching,
@@ -506,7 +674,7 @@ extension SpaceHelper {
             )
         }
         programmaticSwitchCompletionWorkItem = workItem
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.35, execute: workItem)
+        DispatchQueue.main.asyncAfter(deadline: .now() + settleDelay, execute: workItem)
     }
 
     private static func scheduleProgrammaticSwitchCompletionVerification(
@@ -550,6 +718,8 @@ extension SpaceHelper {
         isSwitching = false
         programmaticSwitchDestinationObserved = false
         programmaticSwitchNotificationObserved = false
+        programmaticSwitchUsesExtendedSettle = false
+        programmaticSwitchFastFollowUpRequested = false
 
         switch reason {
         case .confirmed:
@@ -557,6 +727,15 @@ extension SpaceHelper {
                 subsystem: "SpaceHelper",
                 level: "info",
                 "programmatic switch confirmed: generation=\(generation), target=\(spaceID)"
+            )
+            NotificationCenter.default.post(
+                name: NSNotification.Name("SpaceProgrammaticSwitchFinished"),
+                object: nil,
+                userInfo: [
+                    "spaceID": spaceID,
+                    "generation": generation,
+                    "confirmed": true
+                ]
             )
             NotificationCenter.default.post(
                 name: NSNotification.Name("SpaceProgrammaticSwitchSettled"),
@@ -573,6 +752,15 @@ extension SpaceHelper {
                 subsystem: "SpaceHelper",
                 level: "warning",
                 "programmatic switch timed out: generation=\(generation), target=\(spaceID)"
+            )
+            NotificationCenter.default.post(
+                name: NSNotification.Name("SpaceProgrammaticSwitchFinished"),
+                object: nil,
+                userInfo: [
+                    "spaceID": spaceID,
+                    "generation": generation,
+                    "confirmed": false
+                ]
             )
         }
 

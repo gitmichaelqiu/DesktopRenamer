@@ -5,6 +5,122 @@ import WidgetKit
 
 extension SpaceManager {
 
+    /// WindowServer can briefly report a neighboring space while a synthetic
+    /// gesture is still settling. The transaction coordinator is authoritative
+    /// during that interval; a timestamp is not sufficient because the retry
+    /// window can outlive the manual-attribution window.
+    private func shouldIgnoreStaleTransactionObservation(_ observedSpaceID: String, source: String) -> Bool {
+        guard SpaceHelper.isSwitching,
+              let activeTargetSpaceID = SpaceHelper.activeProgrammaticSwitchTargetSpaceID,
+              observedSpaceID != activeTargetSpaceID else {
+            return false
+        }
+
+        let generation = SpaceHelper.activeProgrammaticSwitchGeneration.map(String.init) ?? "nil"
+        print("SpaceManager: Stale space \(observedSpaceID) detected during active switch to \(activeTargetSpaceID) (source: \(source)). Ignoring.")
+        DiagnosticEventLog.shared.record(
+            subsystem: "SpaceManager",
+            level: "info",
+            "Ignoring stale transaction observation: generation=\(generation), observed=\(observedSpaceID), target=\(activeTargetSpaceID), source=\(source)"
+        )
+
+        // Do not schedule a SpaceManager retry while the transaction is still
+        // active. The transaction's generation-scoped completion or timeout
+        // owns recovery; a retry created here can outlive the transaction and
+        // publish the stale observation that was just rejected.
+        return true
+    }
+
+    /// A regular gesture changes only the current managed space. When the
+    /// WindowServer space topology is unchanged, rebuilding names, publishing
+    /// the full space array, and refreshing every label is unnecessary work on
+    /// the main thread. Fullscreen entry/exit and space creation still take the
+    /// normal reconciliation path because their topology differs.
+    private func hasSameSpaceTopology(as detectedSpaces: [DesktopSpace]) -> Bool {
+        guard spaceNameDict.count == detectedSpaces.count else { return false }
+
+        var cachedByID: [String: DesktopSpace] = [:]
+        for cachedSpace in spaceNameDict {
+            guard cachedByID.updateValue(cachedSpace, forKey: cachedSpace.id) == nil else {
+                return false
+            }
+        }
+        guard cachedByID.count == detectedSpaces.count else { return false }
+
+        return detectedSpaces.allSatisfy { detected in
+            guard let cached = cachedByID[detected.id] else { return false }
+            return cached.num == detected.num
+                && cached.displayID == detected.displayID
+                && cached.isFullscreen == detected.isFullscreen
+                && cached.appName == detected.appName
+                && cached.appPath == detected.appPath
+                && cached.globalShortcutNum == detected.globalShortcutNum
+                && cached.persistentID == detected.persistentID
+        }
+    }
+
+    /// Applies only the current-space fields for an in-flight transaction when
+    /// its managed-space topology is already known to be stable.
+    private func applyStableProgrammaticObservation(
+        _ cgsState: (spaces: [DesktopSpace], currentUUID: String, displayID: String),
+        ncCount: Int,
+        source: String
+    ) -> Bool {
+        guard SpaceHelper.isSwitching,
+              SpaceHelper.activeProgrammaticSwitchTargetSpaceID == cgsState.currentUUID,
+              hasSameSpaceTopology(as: cgsState.spaces) else {
+            return false
+        }
+
+        let previousUUID = currentSpaceUUID
+        currentSpaceUUID = cgsState.currentUUID
+        currentRawSpaceUUID = cgsState.currentUUID
+        currentDisplayID = cgsState.displayID
+        currentNcCount = ncCount
+        currentSpaceByDisplay[cgsState.displayID] = cgsState.currentUUID
+        currentIsDesktop = !(spaceNameDict.first(where: { $0.id == cgsState.currentUUID })?.isFullscreen ?? false)
+
+        if previousUUID != cgsState.currentUUID {
+            print(
+                "SpaceManager: Fast-path current-space reconciliation "
+                    + previousUUID
+                    + " -> "
+                    + cgsState.currentUUID
+                    + " (source: "
+                    + source
+                    + ")"
+            )
+            DiagnosticEventLog.shared.record(
+                subsystem: "SpaceManager",
+                level: "info",
+                "Fast-path current-space reconciliation: "
+                    + previousUUID
+                    + " -> "
+                    + cgsState.currentUUID
+                    + ", source="
+                    + source
+            )
+
+            let now = Date().timeIntervalSince1970
+            let isProgrammaticSLS = SpaceHelper.lastProgrammaticSwitchUsedSLS
+                && now - SpaceHelper.lastProgrammaticSwitchTime < 2.0
+                && cgsState.currentUUID == SpaceHelper.lastProgrammaticTargetSpaceID
+            if isProgrammaticSLS {
+                SpaceHelper.restoreFocusAfterSLSSwitch(
+                    spaceID: cgsState.currentUUID,
+                    immediate: true
+                )
+            }
+        }
+
+        // The compact path is used only for a matching transaction target, so
+        // this observation is also the earliest safe completion checkpoint.
+        SpaceHelper.markProgrammaticSwitchComplete(at: cgsState.currentUUID)
+        cancelSpaceChangeRetry()
+        scheduleWidgetUpdate()
+        return true
+    }
+
     func refreshConnectedDisplays() {
         self.connectedDisplayUUIDs = Set(SpaceHelper.getAllDisplayUUIDs().map { $0.uppercased() })
         // print("SpaceManager: Refreshed connected displays: \(connectedDisplayUUIDs)")
@@ -17,18 +133,44 @@ extension SpaceManager {
         }
     }
     
-    func handleSpaceChange(_ rawUUID: String, isDesktop: Bool, ncCount: Int, displayID: String, source: String) {
+    func handleSpaceChange(
+        _ rawUUID: String,
+        isDesktop: Bool,
+        ncCount: Int,
+        displayID: String,
+        source: String,
+        bypassMonitorCoalescing: Bool = false
+    ) {
         DiagnosticEventLog.shared.record(subsystem: "SpaceManager", level: "info", "handleSpaceChange(display=\(displayID), source=\(source))")
         if SpaceHelper.isDragging {
             SpaceHelper.signalSpaceSwitchComplete(arrivedAtSpaceID: rawUUID)
         }
         
         if !Thread.isMainThread {
-            DispatchQueue.main.async { [weak self] in self?.handleSpaceChange(rawUUID, isDesktop: isDesktop, ncCount: ncCount, displayID: displayID, source: source) }
+            DispatchQueue.main.async { [weak self] in
+                self?.handleSpaceChange(
+                    rawUUID,
+                    isDesktop: isDesktop,
+                    ncCount: ncCount,
+                    displayID: displayID,
+                    source: source,
+                    bypassMonitorCoalescing: bypassMonitorCoalescing
+                )
+            }
             return
         }
 
         guard !isSystemSleeping else { return }
+
+        if source == "Monitor" && !bypassMonitorCoalescing {
+            scheduleMonitorSpaceChange(
+                rawUUID: rawUUID,
+                isDesktop: isDesktop,
+                ncCount: ncCount,
+                displayID: displayID
+            )
+            return
+        }
 
         print("SpaceManager: handleSpaceChange(rawUUID: \(rawUUID), displayID: \(displayID), source: \(source))")
 
@@ -42,6 +184,10 @@ extension SpaceManager {
 
         let previousUUID = self.currentSpaceUUID
         let targetUUID = cgsState.currentUUID
+
+        if shouldIgnoreStaleTransactionObservation(targetUUID, source: source) {
+            return
+        }
             
         let now = Date().timeIntervalSince1970
             let isRecentManualSwitch = now - lastManualSwitchTime < 2.0
@@ -55,13 +201,25 @@ extension SpaceManager {
                     return
                 }
             }
+
+            if applyStableProgrammaticObservation(
+                cgsState,
+                ncCount: ncCount,
+                source: source
+            ) {
+                return
+            }
             
             // First, see which names are already taken by active UUIDs so we don't double-assign.
             var claimedNames: Set<String> = []
-            let activeUUIDs = Set(cgsState.spaces.map { $0.id })
-            
-            for (uuid, name) in nameCache {
-                if activeUUIDs.contains(uuid) && !name.isEmpty {
+            for space in cgsState.spaces where !space.isFullscreen {
+                if let persistentID = space.persistentID,
+                   let name = nameCache[Self.persistentNameCacheKey(for: persistentID)],
+                   !name.isEmpty {
+                    claimedNames.insert(name)
+                } else if !shouldRestoreNamesByPositionAfterBoot,
+                          let name = nameCache[space.id],
+                          !name.isEmpty {
                     claimedNames.insert(name)
                 }
             }
@@ -93,24 +251,43 @@ extension SpaceManager {
                     let dIndex = spaceDesktopIndices[sysSpace.id] ?? 1
                     let indexKey = "\(finalSpace.displayID)|Desktop|\(dIndex)"
                     let legacyIndexKey = "\(finalSpace.displayID)|\(finalSpace.num)"
-                    
-                    if let cachedName = nameCache[sysSpace.id], !cachedName.isEmpty {
-                        finalSpace.customName = cachedName
-                    } else {
-                        if let fallbackName = indexCache[indexKey], !fallbackName.isEmpty {
-                            if !claimedNames.contains(fallbackName) {
-                                finalSpace.customName = fallbackName
-                            }
-                        } else if let fallbackName = indexCache[legacyIndexKey], !fallbackName.isEmpty {
-                            if !claimedNames.contains(fallbackName) {
-                                finalSpace.customName = fallbackName
-                            }
-                        } else if let existing = spaceNameDict.first(where: { $0.id == sysSpace.id }), !existing.customName.isEmpty {
-                            finalSpace.customName = existing.customName
-                            nameCache[sysSpace.id] = existing.customName
-                            if indexCache[indexKey]?.isEmpty ?? true {
-                                indexCache[indexKey] = existing.customName
-                            }
+
+                    let persistentName = finalSpace.persistentID.flatMap {
+                        nameCache[Self.persistentNameCacheKey(for: $0)]
+                    }
+                    let positionalName = indexCache[indexKey]
+                    let legacyPositionalName = indexCache[legacyIndexKey]
+                    let managedIDName = shouldRestoreNamesByPositionAfterBoot
+                        ? nil
+                        : nameCache[sysSpace.id]
+
+                    if let persistentName, !persistentName.isEmpty {
+                        finalSpace.customName = persistentName
+                    } else if let managedIDName, !managedIDName.isEmpty {
+                        finalSpace.customName = managedIDName
+                    } else if let positionalName,
+                              !positionalName.isEmpty,
+                              !claimedNames.contains(positionalName) {
+                        finalSpace.customName = positionalName
+                    } else if let legacyPositionalName,
+                              !legacyPositionalName.isEmpty,
+                              !claimedNames.contains(legacyPositionalName) {
+                        finalSpace.customName = legacyPositionalName
+                    } else if !shouldRestoreNamesByPositionAfterBoot,
+                              let existing = spaceNameDict.first(where: { $0.id == sysSpace.id }),
+                              !existing.customName.isEmpty {
+                        finalSpace.customName = existing.customName
+                    }
+
+                    if !finalSpace.customName.isEmpty {
+                        claimedNames.insert(finalSpace.customName)
+                        nameCache[finalSpace.id] = finalSpace.customName
+                        if let persistentID = finalSpace.persistentID {
+                            nameCache[Self.persistentNameCacheKey(for: persistentID)] =
+                                finalSpace.customName
+                        }
+                        if indexCache[indexKey]?.isEmpty ?? true {
+                            indexCache[indexKey] = finalSpace.customName
                         }
                     }
                 }
@@ -170,9 +347,13 @@ extension SpaceManager {
                 )
             }
 
-            if self.spaceNameDict != newSpaceList {
+            let completesBootNameMigration = shouldRestoreNamesByPositionAfterBoot
+            let spaceListChanged = self.spaceNameDict != newSpaceList
+            if spaceListChanged {
                 self.spaceNameDict = newSpaceList
-                
+            }
+
+            if spaceListChanged || completesBootNameMigration {
                 // Refresh missing index entries only. CGS can briefly report a
                 // reordered space list after reboot, so automatic detection must
                 // not replace explicit desktop-position names.
@@ -188,7 +369,10 @@ extension SpaceManager {
                         }
                     }
                 }
-                
+
+                if completesBootNameMigration {
+                    completeBootNameMigration(using: self.spaceNameDict)
+                }
                 saveData()
                 shouldUpdateWidget = true
             }
@@ -296,7 +480,57 @@ extension SpaceManager {
         if shouldUpdateWidget { scheduleWidgetUpdate() }
     }
 
-    private func scheduleSpaceChangeRetry() {
+    private func scheduleMonitorSpaceChange(
+        rawUUID: String,
+        isDesktop: Bool,
+        ncCount: Int,
+        displayID: String
+    ) {
+        pendingMonitorSpaceChange = (rawUUID, isDesktop, ncCount, displayID)
+        guard monitorSpaceChangeWorkItem == nil else {
+            DiagnosticEventLog.shared.record(
+                subsystem: "SpaceManager",
+                level: "info",
+                "coalesced monitor observation: display=\(displayID)"
+            )
+            return
+        }
+
+        monitorSpaceChangeGeneration += 1
+        let generation = monitorSpaceChangeGeneration
+        let workItem = DispatchWorkItem { [weak self] in
+            guard let self,
+                  generation == self.monitorSpaceChangeGeneration else {
+                return
+            }
+
+            self.monitorSpaceChangeWorkItem = nil
+            guard let pending = self.pendingMonitorSpaceChange else { return }
+            self.pendingMonitorSpaceChange = nil
+            self.handleSpaceChange(
+                pending.rawUUID,
+                isDesktop: pending.isDesktop,
+                ncCount: pending.ncCount,
+                displayID: pending.displayID,
+                source: "Monitor",
+                bypassMonitorCoalescing: true
+            )
+        }
+
+        monitorSpaceChangeWorkItem = workItem
+        // A single short run-loop interval absorbs duplicate WindowServer
+        // notifications but does not add a perceptible delay to a gesture.
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.02, execute: workItem)
+    }
+
+    func cancelPendingMonitorSpaceChange() {
+        monitorSpaceChangeGeneration += 1
+        monitorSpaceChangeWorkItem?.cancel()
+        monitorSpaceChangeWorkItem = nil
+        pendingMonitorSpaceChange = nil
+    }
+
+    func scheduleSpaceChangeRetry() {
         guard !isSystemSleeping else { return }
         guard spaceChangeRetryCount < maxSpaceChangeRetries else { return }
         spaceChangeRetryWorkItem?.cancel()
@@ -309,7 +543,7 @@ extension SpaceManager {
         let workItem = DispatchWorkItem { [weak self] in
             guard let self = self,
                   generation == self.spaceChangeRetryGeneration else { return }
-            self.performRetryDetection()
+            self.performRetryDetection(generation: generation)
         }
         spaceChangeRetryWorkItem = workItem
         DispatchQueue.main.asyncAfter(deadline: .now() + delay, execute: workItem)
@@ -320,12 +554,24 @@ extension SpaceManager {
         spaceChangeRetryWorkItem = nil
         spaceChangeRetryGeneration += 1
         spaceChangeRetryCount = 0
+        spaceChangeRetryObservedSpaceID = nil
+        spaceChangeRetryObservedPasses = 0
     }
 
-    private func performRetryDetection() {
-        guard !isSystemSleeping else { return }
+    private func performRetryDetection(generation: Int) {
+        guard !isSystemSleeping,
+              generation == spaceChangeRetryGeneration else { return }
         guard let cgsState = SpaceHelper.getSystemState() else {
             scheduleSpaceChangeRetry()
+            return
+        }
+
+        // A WindowServer query may overlap a newer monitor observation or a
+        // newly started switch. Cancellation cannot stop a work item that is
+        // already executing, so reject its result again after the read.
+        guard generation == spaceChangeRetryGeneration else { return }
+
+        if shouldIgnoreStaleTransactionObservation(cgsState.currentUUID, source: "Retry") {
             return
         }
 
@@ -336,6 +582,7 @@ extension SpaceManager {
         // disagree; accepting the older snapshot would move the model back to
         // the source space and reopen its preview label.
         let visibleSpaceIDs = SpaceHelper.getVisibleSystemSpaceIDs()
+        guard generation == spaceChangeRetryGeneration else { return }
         guard !visibleSpaceIDs.isEmpty,
               visibleSpaceIDs.contains(cgsState.currentUUID) else {
             DiagnosticEventLog.shared.record(
@@ -346,6 +593,40 @@ extension SpaceManager {
             scheduleSpaceChangeRetry()
             return
         }
+
+        let independentlyObservedSpaceID = SpaceHelper.getCurrentSpaceID(for: cgsState.displayID)
+        guard generation == spaceChangeRetryGeneration else { return }
+        if let independentlyObservedSpaceID,
+           independentlyObservedSpaceID != cgsState.currentUUID {
+            DiagnosticEventLog.shared.record(
+                subsystem: "SpaceManager",
+                level: "info",
+                "Ignoring inconsistent space retry read: state=\(cgsState.currentUUID), independent=\(independentlyObservedSpaceID), display=\(cgsState.displayID)"
+            )
+            scheduleSpaceChangeRetry()
+            return
+        }
+
+        if spaceChangeRetryObservedSpaceID == cgsState.currentUUID {
+            spaceChangeRetryObservedPasses += 1
+        } else {
+            spaceChangeRetryObservedSpaceID = cgsState.currentUUID
+            spaceChangeRetryObservedPasses = 1
+        }
+
+        guard spaceChangeRetryObservedPasses >= 2 else {
+            DiagnosticEventLog.shared.record(
+                subsystem: "SpaceManager",
+                level: "info",
+                "Waiting for stable space retry candidate: current=\(cgsState.currentUUID), pass=\(spaceChangeRetryObservedPasses)/2"
+            )
+            scheduleSpaceChangeRetry()
+            return
+        }
+
+        // Do not let an old retry commit after a transaction-start observer or
+        // a newer retry chain invalidated it during the stability checks.
+        guard generation == spaceChangeRetryGeneration else { return }
 
         let now = Date().timeIntervalSince1970
         let isRecentManualSwitch = now - lastManualSwitchTime < 2.0

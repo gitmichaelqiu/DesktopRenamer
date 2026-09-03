@@ -64,7 +64,7 @@ class GestureManager: ObservableObject {
     let kMoveWindowOnOption = "GestureManager.MoveWindowOnOption"
     let kSwitchDuration = "GestureManager.SwitchDuration"
 
-    public enum SwitchOverrideMode: String, CaseIterable, Identifiable {
+    public enum SwitchOverrideMode: String, CaseIterable, Identifiable, Equatable {
         case cursor = "Cursor"
         case activeWindow = "Active Window"
 
@@ -127,12 +127,50 @@ class GestureManager: ObservableObject {
 
     var lastTouchTime: TimeInterval = 0
     var lastSwitchTime: TimeInterval = 0
+    // One physical contact session produces at most one switch. A quick
+    // follow-up remains possible, but only after every finger has left the
+    // trackpad and a new contact session begins.
+    var isWaitingForAllFingersToLift = false
+
+    // The multitouch callback can outpace the main queue while WindowServer
+    // is reconciling a space. Keep the callback lightweight and allow only
+    // one main-queue action at a time. A later request replaces the pending
+    // direction and is resumed after the current SpaceHelper transaction is
+    // settled.
+    let gestureSwitchStateLock = NSLock()
+    var isGestureSwitchActionScheduled = false
+    var isGestureSwitchOperationInFlight = false
+    var isGestureSwitchTransactionActive = false
+    var pendingGestureSwitchDirection: SwitchDirection?
+    var gestureSwitchResumeWorkItem: DispatchWorkItem?
+    var programmaticSwitchFinishedObserver: NSObjectProtocol?
+
+    // Boundary checks are used only for the overscroll affordance. Cache the
+    // result during a short touch sequence instead of querying CGS for every
+    // multitouch frame, which can otherwise delay the actual switch request.
+    var cachedBoundaryDisplayID: String?
+    var cachedBoundaryDirection: SwitchDirection?
+    var cachedBoundaryMode: SwitchOverrideMode?
+    var cachedBoundaryValue = false
+    var cachedBoundaryTime: TimeInterval = 0
+    let boundaryCacheDuration: TimeInterval = 0.5
+    let boundaryStateLock = NSLock()
+    var boundaryRefreshWorkItem: DispatchWorkItem?
+    var boundaryRefreshGeneration = 0
+
+    // These values are written by the multitouch callback and are used to
+    // avoid enqueueing redundant overlay updates on the main queue.
+    var isOverscrollIndicatorActive = false
+    var lastOverscrollDirection: SwitchDirection?
+    var lastOverscrollProgress: Double = 0
+    var overscrollUpdateWorkItem: DispatchWorkItem?
+    var overscrollUpdateGeneration = 0
 
     // Gesture direction locking to prevent oscillation during a single swipe.
     var lockedDirection: SwitchDirection? = nil
 
     // Sensitivity and timing configuration.
-    let switchCooldown: TimeInterval = 0.15
+    let switchCooldown: TimeInterval = 0.06
     // private let minSwipeDistance: Float = 0.10 // Moved to swipeThreshold
     let consistencyThreshold: Float = 0.01  // 5% Minimum movement per finger (Anti-Tap)
     let touchTimeout: TimeInterval = 0.15
@@ -169,6 +207,14 @@ class GestureManager: ObservableObject {
 
         GestureManager.sharedManager = self
 
+        programmaticSwitchFinishedObserver = NotificationCenter.default.addObserver(
+            forName: NSNotification.Name("SpaceProgrammaticSwitchFinished"),
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            self?.schedulePendingGestureSwitchResume()
+        }
+
         loadPrivateFramework()
 
         // Start monitoring always because we need it to intercept macOS switching gestures for hideWhenSwitching,
@@ -177,6 +223,12 @@ class GestureManager: ObservableObject {
     }
 
     deinit {
+        if let observer = programmaticSwitchFinishedObserver {
+            NotificationCenter.default.removeObserver(observer)
+        }
+        gestureSwitchResumeWorkItem?.cancel()
+        boundaryRefreshWorkItem?.cancel()
+        overscrollUpdateWorkItem?.cancel()
         stopMonitoring()
     }
 

@@ -1,6 +1,12 @@
 import Foundation
 import AppKit
 
+enum DesktopRenamerScriptErrorCode {
+    static let apiDisabled = -1
+    static let invalidArgument = -2
+    static let appUnavailable = -3
+}
+
 // Resolves MainActor isolation for NSScriptCommand implementation.
 // Note: Explicitly enters actor context to satisfy concurrency requirements.
 func runOnMain<T>(_ block: @MainActor () -> T) -> T {
@@ -16,11 +22,59 @@ func runOnMain<T>(_ block: @MainActor () -> T) -> T {
 extension NSScriptCommand {
     func isAPIEnabled() -> Bool {
         if !SpaceManager.isAPIEnabled {
-            self.scriptErrorNumber = -1
+            self.scriptErrorNumber = DesktopRenamerScriptErrorCode.apiDisabled
             self.scriptErrorString = "API Disabled"
             return false
         }
         return true
+    }
+
+    @discardableResult
+    func failInvalidArgument(_ message: String) -> Bool {
+        scriptErrorNumber = DesktopRenamerScriptErrorCode.invalidArgument
+        scriptErrorString = message
+        return false
+    }
+
+    @discardableResult
+    func failAppUnavailable(_ message: String = "DesktopRenamer is not ready.") -> Bool {
+        scriptErrorNumber = DesktopRenamerScriptErrorCode.appUnavailable
+        scriptErrorString = message
+        return false
+    }
+
+    func requiredString(_ value: Any?, parameter: String) -> String? {
+        guard let string = value as? String, !string.isEmpty else {
+            failInvalidArgument("Parameter '\(parameter)' must be a non-empty text value.")
+            return nil
+        }
+        return string
+    }
+
+    func requiredDirectString(parameter: String) -> String? {
+        requiredString(directParameter, parameter: parameter)
+    }
+
+    func requiredArgumentString(_ parameter: String) -> String? {
+        requiredString(evaluatedArguments?[parameter], parameter: parameter)
+    }
+
+    func requiredPositiveIntegerString(_ value: Any?, parameter: String) -> String? {
+        guard let string = requiredString(value, parameter: parameter) else { return nil }
+        guard let integer = Int(string), integer > 0 else {
+            failInvalidArgument("Parameter '\(parameter)' must be a positive integer.")
+            return nil
+        }
+        return string
+    }
+
+    func requiredProcessIDString(_ value: Any?, parameter: String) -> String? {
+        guard let string = requiredString(value, parameter: parameter) else { return nil }
+        guard let pid = Int32(string), pid > 0 else {
+            failInvalidArgument("Parameter '\(parameter)' must be a positive process ID.")
+            return nil
+        }
+        return string
     }
 }
 
@@ -51,7 +105,10 @@ class ToggleLabelsCommand: NSScriptCommand {
         DiagnosticEventLog.shared.record(subsystem: "AppleScript", level: "info", "Command performed: ToggleLabelsCommand")
         guard isAPIEnabled() else { return false }
         return runOnMain {
-            guard let manager = AppDelegate.shared.statusBarController?.labelManager else { return false }
+            guard let manager = AppDelegate.shared.statusBarController?.labelManager else {
+                failAppUnavailable()
+                return false
+            }
             manager.showActiveLabels.toggle()
             manager.showPreviewLabels.toggle()
             return manager.showActiveLabels && manager.showPreviewLabels
@@ -68,6 +125,7 @@ class ToggleActiveLabelCommand: NSScriptCommand {
                 manager.showActiveLabels.toggle()
                 return manager.showActiveLabels
             }
+            failAppUnavailable()
             return false
         }
     }
@@ -82,6 +140,7 @@ class TogglePreviewLabelCommand: NSScriptCommand {
                 manager.showPreviewLabels.toggle()
                 return manager.showPreviewLabels
             }
+            failAppUnavailable()
             return false
         }
     }
@@ -99,6 +158,7 @@ class ToggleDesktopVisibilityCommand: NSScriptCommand {
                 manager.showOnDesktop.toggle()
                 return manager.showOnDesktop
             }
+            failAppUnavailable()
             return false
         }
     }
@@ -107,7 +167,11 @@ class ToggleDesktopVisibilityCommand: NSScriptCommand {
 class RenameCurrentSpaceCommand: NSScriptCommand {
     override func performDefaultImplementation() -> Any? {
         guard isAPIEnabled() else { return nil }
-        guard let newName = self.directParameter as? String else { return nil }
+        guard let newName = requiredDirectString(parameter: "name") else { return nil }
+        guard runOnMain({ AppDelegate.shared.spaceManager != nil }) else {
+            _ = failAppUnavailable()
+            return nil
+        }
         DiagnosticEventLog.shared.record(subsystem: "AppleScript", level: "info", "Command performed: RenameCurrentSpaceCommand (newName: \(newName))")
         
         // No return value needed, so standard async is fine.
@@ -128,7 +192,8 @@ class GetCurrentSpaceNameCommand: NSScriptCommand {
             if let manager = AppDelegate.shared.spaceManager {
                 return manager.getSpaceName(manager.currentSpaceUUID)
             }
-            return "Unknown"
+            failAppUnavailable()
+            return nil
         }
     }
 }
@@ -146,9 +211,11 @@ class GetAllSpacesCommand: NSScriptCommand {
         DiagnosticEventLog.shared.record(subsystem: "AppleScript", level: "info", "Command performed: GetAllSpacesCommand")
         guard isAPIEnabled() else { return "API Disabled" }
         return runOnMain {
-            guard let manager = AppDelegate.shared.spaceManager else { return "" }
+            guard let manager = AppDelegate.shared.spaceManager else {
+                failAppUnavailable()
+                return nil
+            }
             
-            // Format: "UUID|Name|DisplayID|Num"
             // Entries are grouped by display and sorted by displayID (UUID) and number.
             let sortedSpaces = manager.spaceNameDict.sorted {
                 if $0.displayID != $1.displayID { return $0.displayID < $1.displayID }
@@ -160,7 +227,7 @@ class GetAllSpacesCommand: NSScriptCommand {
                 let name = manager.getSpaceName(space.id)
                 let displayName = getDisplayName(for: space.displayID)
 
-                // Return string split by ~ to prevent escaping issues.
+                // Keep the historical delimiter format for existing clients.
                 return "\(space.id)~\(name)~\(displayName)~\(space.num)~\(space.isFullscreen ? "1" : "0")~\(space.appPath ?? "")"
             }
             return lines.joined(separator: "\n")
@@ -184,15 +251,22 @@ private func getDisplayName(for uuidString: String) -> String {
 class SwitchToSpaceCommand: NSScriptCommand {
     override func performDefaultImplementation() -> Any? {
         guard isAPIEnabled() else { return nil }
-        guard let spaceID = self.directParameter as? String else { return nil }
+        guard let spaceID = requiredDirectString(parameter: "space ID") else { return nil }
+        guard let manager = runOnMain({ AppDelegate.shared.spaceManager }) else {
+            _ = failAppUnavailable()
+            return nil
+        }
+        guard runOnMain({ manager.spaceNameDict.contains(where: { $0.id == spaceID }) }) else {
+            _ = failInvalidArgument("Invalid space ID.")
+            return nil
+        }
         DiagnosticEventLog.shared.record(subsystem: "AppleScript", level: "info", "Command performed: SwitchToSpaceCommand (spaceID: \(spaceID))")
         
         DispatchQueue.main.async {
-            if let manager = AppDelegate.shared.spaceManager {
-                // Resolve space object by identifier.
-                if let space = manager.spaceNameDict.first(where: { $0.id == spaceID }) {
-                    manager.switchToSpace(space, forceInstant: true)
-                }
+            // Resolve space object by identifier again because Mission Control
+            // may have recreated the space between validation and dispatch.
+            if let space = manager.spaceNameDict.first(where: { $0.id == spaceID }) {
+                manager.switchToSpace(space, forceInstant: true)
             }
         }
         return nil
@@ -202,8 +276,8 @@ class SwitchToSpaceCommand: NSScriptCommand {
 class RearrangeSpaceCommand: NSScriptCommand {
     override func performDefaultImplementation() -> Any? {
         guard isAPIEnabled() else { return nil }
-        guard let sourceID = self.directParameter as? String,
-              let direction = self.evaluatedArguments?["direction"] as? String else { return nil }
+        guard let sourceID = requiredDirectString(parameter: "space ID"),
+              let direction = requiredArgumentString("direction") else { return nil }
 
         let rearrangementDirection: DesktopRearrangementDirection
         switch direction.lowercased() {
@@ -212,8 +286,16 @@ class RearrangeSpaceCommand: NSScriptCommand {
         case "down":
             rearrangementDirection = .down
         default:
-            self.scriptErrorNumber = -2
-            self.scriptErrorString = "Direction must be up or down"
+            _ = failInvalidArgument("Direction must be up or down")
+            return nil
+        }
+
+        guard let manager = runOnMain({ AppDelegate.shared.spaceManager }) else {
+            _ = failAppUnavailable()
+            return nil
+        }
+        guard runOnMain({ manager.spaceNameDict.contains(where: { $0.id == sourceID }) }) else {
+            _ = failInvalidArgument("Invalid space ID.")
             return nil
         }
 
@@ -224,8 +306,10 @@ class RearrangeSpaceCommand: NSScriptCommand {
         )
 
         DispatchQueue.main.async {
-            guard let manager = AppDelegate.shared.spaceManager,
-                  let sourceSpace = manager.spaceNameDict.first(where: { $0.id == sourceID }) else { return }
+            guard let sourceSpace = manager.spaceNameDict.first(where: { $0.id == sourceID }) else {
+                DiagnosticEventLog.shared.record(subsystem: "AppleScript", level: "warning", "Space disappeared before rearrangement: \(sourceID)")
+                return
+            }
 
             let orderedSpaces = manager.spaceNameDict
                 .filter {
@@ -233,11 +317,17 @@ class RearrangeSpaceCommand: NSScriptCommand {
                 }
                 .sorted { $0.num < $1.num }
             let orderedIDs = orderedSpaces.map(\.id)
-            guard let sourceIndex = orderedIDs.firstIndex(of: sourceID) else { return }
+            guard let sourceIndex = orderedIDs.firstIndex(of: sourceID) else {
+                DiagnosticEventLog.shared.record(subsystem: "AppleScript", level: "warning", "Space is not rearrangeable: \(sourceID)")
+                return
+            }
 
             switch rearrangementDirection {
             case .up:
-                guard sourceIndex > 0 else { return }
+                guard sourceIndex > 0 else {
+                    DiagnosticEventLog.shared.record(subsystem: "AppleScript", level: "warning", "Space is already first: \(sourceID)")
+                    return
+                }
                 SpaceRearrangementService.shared.rearrange(
                     sourceID: sourceID,
                     before: orderedIDs[sourceIndex - 1],
@@ -250,7 +340,10 @@ class RearrangeSpaceCommand: NSScriptCommand {
                     manager.refreshSpaceState()
                 }
             case .down:
-                guard sourceIndex < orderedIDs.count - 1 else { return }
+                guard sourceIndex < orderedIDs.count - 1 else {
+                    DiagnosticEventLog.shared.record(subsystem: "AppleScript", level: "warning", "Space is already last: \(sourceID)")
+                    return
+                }
                 let completion: (SpaceRearrangementService.Result) -> Void = { result in
                     if case .failure(let message) = result {
                         DiagnosticEventLog.shared.record(subsystem: "AppleScript", level: "warning", message)
@@ -282,15 +375,20 @@ class RearrangeSpaceCommand: NSScriptCommand {
 class RenameSpaceCommand: NSScriptCommand {
     override func performDefaultImplementation() -> Any? {
         guard isAPIEnabled() else { return nil }
-        guard let spaceID = self.directParameter as? String,
-              let arguments = self.evaluatedArguments,
-              let newName = arguments["newName"] as? String else { return nil }
+        guard let spaceID = requiredDirectString(parameter: "space ID"),
+              let newName = requiredArgumentString("newName") else { return nil }
+        guard let manager = runOnMain({ AppDelegate.shared.spaceManager }) else {
+            _ = failAppUnavailable()
+            return nil
+        }
+        guard runOnMain({ manager.spaceNameDict.contains(where: { $0.id == spaceID }) }) else {
+            _ = failInvalidArgument("Invalid space ID.")
+            return nil
+        }
         DiagnosticEventLog.shared.record(subsystem: "AppleScript", level: "info", "Command performed: RenameSpaceCommand (spaceID: \(spaceID), newName: \(newName))")
         
         DispatchQueue.main.async {
-            if let manager = AppDelegate.shared.spaceManager {
-                manager.renameSpace(spaceID, to: newName)
-            }
+            manager.renameSpace(spaceID, to: newName)
         }
         return nil
     }
