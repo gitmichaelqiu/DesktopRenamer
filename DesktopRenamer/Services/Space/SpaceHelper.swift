@@ -58,7 +58,7 @@ class SpaceHelper {
     static var programmaticSwitchNotificationObserved = false
     static var programmaticSwitchCompletionWorkItem: DispatchWorkItem?
     static var programmaticSwitchTimeoutWorkItem: DispatchWorkItem?
-    static var fullscreenGestureRetryWorkItem: DispatchWorkItem?
+    static var syntheticGestureRetryWorkItem: DispatchWorkItem?
     static var programmaticSwitchPromotionWorkItem: DispatchWorkItem?
     static var programmaticSwitchPromotionRequest: SpaceSwitchTransactionCoordinator.Request?
     static var programmaticSwitchPromotionGeneration: UInt64?

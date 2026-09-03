@@ -262,8 +262,8 @@ extension SpaceHelper {
             programmaticSwitchCompletionWorkItem = nil
             programmaticSwitchTimeoutWorkItem?.cancel()
             programmaticSwitchTimeoutWorkItem = nil
-            fullscreenGestureRetryWorkItem?.cancel()
-            fullscreenGestureRetryWorkItem = nil
+            syntheticGestureRetryWorkItem?.cancel()
+            syntheticGestureRetryWorkItem = nil
         }
 
         // Keep the timestamp available for the label cooling period from the
@@ -274,34 +274,11 @@ extension SpaceHelper {
         lastProgrammaticTargetSpaceID = spaceID
         lastProgrammaticSwitchUsedSLS = false
 
-        // On macOS 27+, target the requested managed space directly. A
-        // velocity-based synthetic swipe can carry momentum across more than
-        // one space, which breaks the adjacent-switch contract and leaves
-        // queued gesture requests draining against the wrong boundary.
+        // Gesture-based Space Switch handling. Keep the synthetic desktop
+        // gesture as the primary path for fullscreen transitions too; the
+        // WindowServer accepts it in the normal case and preserves the
+        // native animation.
         if !isDragging, let steps = context.steps, steps != 0 {
-            if shouldSwitchToSpaceUsingSLS(),
-               let managedSpaceID = Int(spaceID),
-               switchSpaceUsingSLSOperation(
-                   displayUUID: displayID,
-                   spaceID: managedSpaceID
-               ) {
-                print("SpaceHelper: Executed exact-target SLS switch to \(spaceID) on \(displayID)")
-                markProgrammaticSwitchStarted(
-                    spaceID: spaceID,
-                    generation: generation,
-                    isManual: isManual,
-                    forceInstant: forceInstant,
-                    displayID: displayID,
-                    isFullscreen: context.targetIsFullscreen,
-                    usedSLS: true
-                )
-                scheduleSpaceSwitchLabelSuppression(generation: generation)
-                scheduleActiveLabelPreparation(spaceID: spaceID, generation: generation)
-                return .started
-            }
-
-            // Keep the synthetic desktop gesture as a compatibility fallback
-            // when the exact-target operation is unavailable.
             if let generation {
                 DiagnosticEventLog.shared.record(
                     subsystem: "SpaceHelper",
@@ -322,13 +299,19 @@ extension SpaceHelper {
                 targetDisplayID: displayID,
                 forceInstant: forceInstant
             )
-            if let generation,
-               context.targetIsFullscreen || context.currentSpaceIsFullscreen {
-                scheduleFullscreenGestureRetry(
+            if let generation {
+                let involvesFullscreen =
+                    context.targetIsFullscreen || context.currentSpaceIsFullscreen
+                let retryDelay: TimeInterval = involvesFullscreen
+                    ? 0.75
+                    : max(0.75, min(targetDuration + 0.35, 1.35))
+                scheduleSyntheticGestureRetry(
                     spaceID: spaceID,
                     displayID: displayID,
                     generation: generation,
-                    attempt: 1
+                    attempt: 1,
+                    delay: retryDelay,
+                    maxAttempts: involvesFullscreen ? 2 : 1
                 )
             }
             scheduleSpaceSwitchLabelSuppression(generation: generation)
@@ -485,12 +468,11 @@ extension SpaceHelper {
         isManual: Bool,
         forceInstant: Bool,
         displayID: String,
-        isFullscreen: Bool,
-        usedSLS: Bool = false
+        isFullscreen: Bool
     ) {
         lastProgrammaticSwitchTime = Date().timeIntervalSince1970
         lastProgrammaticTargetSpaceID = spaceID
-        lastProgrammaticSwitchUsedSLS = usedSLS
+        lastProgrammaticSwitchUsedSLS = false
 
         DiagnosticEventLog.shared.record(
             subsystem: "SpaceHelper",
@@ -534,8 +516,8 @@ extension SpaceHelper {
             programmaticSwitchCompletionWorkItem = nil
             programmaticSwitchTimeoutWorkItem?.cancel()
             programmaticSwitchTimeoutWorkItem = nil
-            fullscreenGestureRetryWorkItem?.cancel()
-            fullscreenGestureRetryWorkItem = nil
+            syntheticGestureRetryWorkItem?.cancel()
+            syntheticGestureRetryWorkItem = nil
             cancelPendingSwitchPromotion()
             lastProgrammaticSwitchTime = 0
             lastProgrammaticTargetSpaceID = nil
@@ -547,8 +529,8 @@ extension SpaceHelper {
         programmaticSwitchCompletionWorkItem = nil
         programmaticSwitchTimeoutWorkItem?.cancel()
         programmaticSwitchTimeoutWorkItem = nil
-        fullscreenGestureRetryWorkItem?.cancel()
-        fullscreenGestureRetryWorkItem = nil
+        syntheticGestureRetryWorkItem?.cancel()
+        syntheticGestureRetryWorkItem = nil
         cancelPendingSwitchPromotion()
         switchTransactionCoordinator.cancelActive(dropPending: true)
         isSwitching = false
@@ -697,8 +679,8 @@ extension SpaceHelper {
         programmaticSwitchCompletionWorkItem = nil
         programmaticSwitchTimeoutWorkItem?.cancel()
         programmaticSwitchTimeoutWorkItem = nil
-        fullscreenGestureRetryWorkItem?.cancel()
-        fullscreenGestureRetryWorkItem = nil
+        syntheticGestureRetryWorkItem?.cancel()
+        syntheticGestureRetryWorkItem = nil
 
         let pendingRequest = switchTransactionCoordinator.endActive()
         isSwitching = false
@@ -865,13 +847,15 @@ extension SpaceHelper {
         return true
     }
 
-    private static func scheduleFullscreenGestureRetry(
+    private static func scheduleSyntheticGestureRetry(
         spaceID: String,
         displayID: String,
         generation: UInt64,
-        attempt: Int
+        attempt: Int,
+        delay: TimeInterval,
+        maxAttempts: Int
     ) {
-        fullscreenGestureRetryWorkItem?.cancel()
+        syntheticGestureRetryWorkItem?.cancel()
         let workItem = DispatchWorkItem {
             guard let active = switchTransactionCoordinator.active,
                   isSwitching,
@@ -882,7 +866,7 @@ extension SpaceHelper {
                   let liveCurrentID = getCurrentSpaceID(for: displayID) else {
                 return
             }
-            fullscreenGestureRetryWorkItem = nil
+            syntheticGestureRetryWorkItem = nil
 
             let displaySpaces = state.spaces
                 .filter { $0.displayID == displayID }
@@ -898,11 +882,18 @@ extension SpaceHelper {
             DiagnosticEventLog.shared.record(
                 subsystem: "SpaceHelper",
                 level: "warning",
-                "Fullscreen gesture has not reached "
+                "Synthetic gesture has not reached "
                     + spaceID
                     + " for generation "
                     + String(generation)
                     + "; retrying synthetic gesture (attempt "
+                    + String(attempt)
+                    + ")"
+            )
+            print(
+                "SpaceHelper: Retrying dropped synthetic gesture to "
+                    + spaceID
+                    + " (attempt "
                     + String(attempt)
                     + ")"
             )
@@ -912,16 +903,18 @@ extension SpaceHelper {
                 forceInstant: false
             )
 
-            if attempt < 2 {
-                scheduleFullscreenGestureRetry(
+            if attempt < maxAttempts {
+                scheduleSyntheticGestureRetry(
                     spaceID: spaceID,
                     displayID: displayID,
                     generation: generation,
-                    attempt: attempt + 1
+                    attempt: attempt + 1,
+                    delay: delay,
+                    maxAttempts: maxAttempts
                 )
             }
         }
-        fullscreenGestureRetryWorkItem = workItem
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.75, execute: workItem)
+        syntheticGestureRetryWorkItem = workItem
+        DispatchQueue.main.asyncAfter(deadline: .now() + delay, execute: workItem)
     }
 }

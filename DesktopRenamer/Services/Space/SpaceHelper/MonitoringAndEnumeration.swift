@@ -38,8 +38,8 @@ extension SpaceHelper {
         programmaticSwitchCompletionWorkItem = nil
         programmaticSwitchTimeoutWorkItem?.cancel()
         programmaticSwitchTimeoutWorkItem = nil
-        fullscreenGestureRetryWorkItem?.cancel()
-        fullscreenGestureRetryWorkItem = nil
+        syntheticGestureRetryWorkItem?.cancel()
+        syntheticGestureRetryWorkItem = nil
         programmaticSwitchPromotionWorkItem?.cancel()
         programmaticSwitchPromotionWorkItem = nil
         programmaticSwitchPromotionRequest = nil
