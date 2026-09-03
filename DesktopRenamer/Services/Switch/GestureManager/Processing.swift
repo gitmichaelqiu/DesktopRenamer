@@ -9,6 +9,17 @@ extension GestureManager {
     func handleTouches(touches: [MTTouch], numFingers: Int) {
         let now = Date().timeIntervalSince1970
 
+        if numFingers == 0 {
+            isWaitingForAllFingersToLift = false
+            resetTrackingState()
+            return
+        }
+
+        // After a recognized swipe, lifting only one or two fingers must not
+        // arm another switch. Wait for a frame with no active contacts so a
+        // long swipe cannot be mistaken for several independent gestures.
+        guard !isWaitingForAllFingersToLift else { return }
+
         // Timeout Check.
         if now - lastTouchTime > touchTimeout {
             resetTrackingState()
@@ -140,6 +151,7 @@ extension GestureManager {
                     // Only act if matches locked direction
                     if lockedDirection == direction {
                         print("GestureManager: Triggered \(direction)")
+                        isWaitingForAllFingersToLift = true
                         SpaceHelper.cancelPendingRawSpaceUUIDScan()
 
                         // Only perform the switch action if SwitchOverride is enabled AND finger count matches user preference
@@ -158,12 +170,10 @@ extension GestureManager {
                             triggerSwitch(direction: direction)
                         }
 
-                        // CRITICAL: Reset anchors to current position to allow consecutive swipes
+                        // A new switch is armed only by the zero-contact frame
+                        // at the start of handleTouches.
                         initialTouchPositions.removeAll()
-                        for touch in touches {
-                            initialTouchPositions[touch.identifier] =
-                                touch.normalizedVector.position
-                        }
+                        lockedDirection = nil
                         invalidateBoundaryCache()
                     }
                 }
@@ -346,6 +356,12 @@ extension GestureManager {
             "gesture switch request \(disposition): direction=\(direction), transactionActive=\(transactionActive)"
         )
 
+        if transactionActive {
+            DispatchQueue.main.async {
+                SpaceHelper.requestFastFollowUpSwitch()
+            }
+        }
+
         guard shouldSchedule else { return }
         let execute: () -> Void = { [weak self] in
             guard let self else { return }
@@ -448,6 +464,11 @@ extension GestureManager {
             level: "info",
             "gesture switch deferred by active transaction: direction=\(direction)"
         )
+        // This request can only come from a new contact session because the
+        // recognizer waits for all fingers to lift after each accepted swipe.
+        // Regular desktops can therefore finish their verified settle sooner;
+        // fullscreen transitions retain the conservative interval.
+        SpaceHelper.requestFastFollowUpSwitch()
         scheduleGestureSwitchResumeProbe()
     }
 

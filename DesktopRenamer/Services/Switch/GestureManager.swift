@@ -127,6 +127,10 @@ class GestureManager: ObservableObject {
 
     var lastTouchTime: TimeInterval = 0
     var lastSwitchTime: TimeInterval = 0
+    // One physical contact session produces at most one switch. A quick
+    // follow-up remains possible, but only after every finger has left the
+    // trackpad and a new contact session begins.
+    var isWaitingForAllFingersToLift = false
 
     // The multitouch callback can outpace the main queue while WindowServer
     // is reconciling a space. Keep the callback lightweight and allow only
@@ -165,7 +169,7 @@ class GestureManager: ObservableObject {
     var lockedDirection: SwitchDirection? = nil
 
     // Sensitivity and timing configuration.
-    let switchCooldown: TimeInterval = 0.15
+    let switchCooldown: TimeInterval = 0.06
     // private let minSwipeDistance: Float = 0.10 // Moved to swipeThreshold
     let consistencyThreshold: Float = 0.01  // 5% Minimum movement per finger (Anti-Tap)
     let touchTimeout: TimeInterval = 0.15

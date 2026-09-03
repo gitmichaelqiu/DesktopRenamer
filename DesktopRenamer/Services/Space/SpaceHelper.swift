@@ -56,6 +56,8 @@ class SpaceHelper {
     // early snapshot from completing the transition by itself.
     static var programmaticSwitchDestinationObserved = false
     static var programmaticSwitchNotificationObserved = false
+    static var programmaticSwitchUsesExtendedSettle = false
+    static var programmaticSwitchFastFollowUpRequested = false
     static var programmaticSwitchCompletionWorkItem: DispatchWorkItem?
     static var programmaticSwitchTimeoutWorkItem: DispatchWorkItem?
     static var fullscreenGestureRetryWorkItem: DispatchWorkItem?

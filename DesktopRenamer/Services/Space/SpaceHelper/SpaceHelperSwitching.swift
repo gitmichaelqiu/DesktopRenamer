@@ -249,6 +249,8 @@ extension SpaceHelper {
             isSwitching = false
             programmaticSwitchDestinationObserved = false
             programmaticSwitchNotificationObserved = false
+            programmaticSwitchUsesExtendedSettle = false
+            programmaticSwitchFastFollowUpRequested = false
         } else {
             let newGeneration = switchTransactionCoordinator.begin(
                 spaceID: spaceID,
@@ -258,6 +260,9 @@ extension SpaceHelper {
             isSwitching = true
             programmaticSwitchDestinationObserved = false
             programmaticSwitchNotificationObserved = false
+            programmaticSwitchUsesExtendedSettle =
+                context.targetIsFullscreen || context.currentSpaceIsFullscreen
+            programmaticSwitchFastFollowUpRequested = false
             programmaticSwitchCompletionWorkItem?.cancel()
             programmaticSwitchCompletionWorkItem = nil
             programmaticSwitchTimeoutWorkItem?.cancel()
@@ -506,6 +511,8 @@ extension SpaceHelper {
             isSwitching = false
             programmaticSwitchDestinationObserved = false
             programmaticSwitchNotificationObserved = false
+            programmaticSwitchUsesExtendedSettle = false
+            programmaticSwitchFastFollowUpRequested = false
             programmaticSwitchCompletionWorkItem?.cancel()
             programmaticSwitchCompletionWorkItem = nil
             programmaticSwitchTimeoutWorkItem?.cancel()
@@ -530,6 +537,8 @@ extension SpaceHelper {
         isSwitching = false
         programmaticSwitchDestinationObserved = false
         programmaticSwitchNotificationObserved = false
+        programmaticSwitchUsesExtendedSettle = false
+        programmaticSwitchFastFollowUpRequested = false
         lastProgrammaticSwitchTime = 0
         lastProgrammaticTargetSpaceID = nil
         lastProgrammaticSwitchUsedSLS = false
@@ -598,6 +607,32 @@ extension SpaceHelper {
         finishProgrammaticSwitch(at: active.request.spaceID, generation: active.generation)
     }
 
+    /// Requests faster serialization for a genuinely new trackpad gesture.
+    /// Fullscreen transitions keep their longer settle interval because Dock
+    /// can transiently expose their destination before focus is stable.
+    static func requestFastFollowUpSwitch() {
+        guard let active = switchTransactionCoordinator.active,
+              isSwitching,
+              !programmaticSwitchUsesExtendedSettle else {
+            return
+        }
+
+        programmaticSwitchFastFollowUpRequested = true
+        guard programmaticSwitchDestinationObserved else { return }
+
+        programmaticSwitchCompletionWorkItem?.cancel()
+        programmaticSwitchCompletionWorkItem = nil
+        DiagnosticEventLog.shared.record(
+            subsystem: "SpaceHelper",
+            level: "info",
+            "accelerating verified switch settle for follow-up gesture: generation=\(active.generation), target=\(active.request.spaceID)"
+        )
+        finishProgrammaticSwitch(
+            at: active.request.spaceID,
+            generation: active.generation
+        )
+    }
+
     private static func finishProgrammaticSwitch(at spaceID: String, generation: UInt64) {
         guard programmaticSwitchCompletionWorkItem == nil else { return }
 
@@ -605,6 +640,10 @@ extension SpaceHelper {
         // swipe has finished. Keep the transition open for one settling
         // interval, then verify the authoritative live state again before
         // releasing queued requests and restoring labels.
+        let settleDelay: TimeInterval =
+            programmaticSwitchFastFollowUpRequested && !programmaticSwitchUsesExtendedSettle
+            ? 0.08
+            : 0.35
         let workItem = DispatchWorkItem {
             guard let active = switchTransactionCoordinator.active,
                   isSwitching,
@@ -635,7 +674,7 @@ extension SpaceHelper {
             )
         }
         programmaticSwitchCompletionWorkItem = workItem
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.35, execute: workItem)
+        DispatchQueue.main.asyncAfter(deadline: .now() + settleDelay, execute: workItem)
     }
 
     private static func scheduleProgrammaticSwitchCompletionVerification(
@@ -679,6 +718,8 @@ extension SpaceHelper {
         isSwitching = false
         programmaticSwitchDestinationObserved = false
         programmaticSwitchNotificationObserved = false
+        programmaticSwitchUsesExtendedSettle = false
+        programmaticSwitchFastFollowUpRequested = false
 
         switch reason {
         case .confirmed:
