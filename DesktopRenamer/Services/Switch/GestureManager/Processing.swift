@@ -89,15 +89,28 @@ extension GestureManager {
             if abs(avgDX) > abs(avgDY) {
                 let direction: SwitchDirection = avgDX < 0 ? .next : .previous
 
-                // Boundary feedback is only useful near the trigger point.
-                // Avoid asking WindowServer for the current space on every
-                // early touch frame; that query runs on the private multitouch
-                // callback and can delay recognition of the actual switch.
+                // Start the asynchronous boundary lookup as soon as intent is
+                // clear, leaving enough time for it to finish before the
+                // gesture reaches the trigger threshold.
+                if abs(avgDX) >= consistencyThreshold {
+                    scheduleBoundaryRefresh(direction: direction, mode: switchOverride)
+                }
+
                 let isNearSwitchThreshold = abs(avgDX) >= swipeThreshold * 0.75
-                if isNearSwitchThreshold && isAtBoundary(for: direction, now: now) {
-                    isOverscroll = true
-                    let progress = Double(abs(avgDX) / swipeThreshold)
-                    updateOverscrollIndicator(progress: progress, direction: direction)
+                if isNearSwitchThreshold {
+                    switch boundaryStatus(for: direction, now: now) {
+                    case .boundary:
+                        isOverscroll = true
+                        let progress = Double(abs(avgDX) / swipeThreshold)
+                        updateOverscrollIndicator(progress: progress, direction: direction)
+                    case .unknown:
+                        // The actual switch also requires the main queue. Wait
+                        // for the already-scheduled lookup instead of treating
+                        // an unresolved edge as an available destination.
+                        return
+                    case .available:
+                        break
+                    }
                 }
             }
         }
@@ -189,13 +202,16 @@ extension GestureManager {
     }
 
     private func invalidateBoundaryCache() {
+        boundaryStateLock.lock()
         boundaryRefreshGeneration += 1
-        boundaryRefreshWorkItem?.cancel()
+        let workItem = boundaryRefreshWorkItem
         boundaryRefreshWorkItem = nil
         cachedBoundaryDisplayID = nil
         cachedBoundaryDirection = nil
         cachedBoundaryMode = nil
         cachedBoundaryTime = 0
+        boundaryStateLock.unlock()
+        workItem?.cancel()
     }
 
     enum SwitchDirection: Equatable {
@@ -203,14 +219,27 @@ extension GestureManager {
         case previous
     }
 
-    private func isAtBoundary(for direction: SwitchDirection, now: TimeInterval) -> Bool {
+    private enum BoundaryStatus {
+        case unknown
+        case boundary
+        case available
+    }
+
+    private func boundaryStatus(
+        for direction: SwitchDirection,
+        now: TimeInterval
+    ) -> BoundaryStatus {
         let mode = switchOverride
 
+        boundaryStateLock.lock()
         if cachedBoundaryDirection == direction,
            cachedBoundaryMode == mode,
            now - cachedBoundaryTime < boundaryCacheDuration {
-            return cachedBoundaryValue
+            let status: BoundaryStatus = cachedBoundaryValue ? .boundary : .available
+            boundaryStateLock.unlock()
+            return status
         }
+        boundaryStateLock.unlock()
 
         // The multitouch driver invokes handleTouches synchronously on its
         // callback thread. Do not call WindowServer or AppKit here: even one
@@ -219,23 +248,37 @@ extension GestureManager {
         // affordance on the main queue and let the real switch request decide
         // whether an adjacent space exists.
         scheduleBoundaryRefresh(direction: direction, mode: mode)
-        return false
+        return .unknown
     }
 
     private func scheduleBoundaryRefresh(
         direction: SwitchDirection,
         mode: SwitchOverrideMode
     ) {
-        guard boundaryRefreshWorkItem == nil else { return }
+        boundaryStateLock.lock()
+        let now = Date().timeIntervalSince1970
+        if cachedBoundaryDirection == direction,
+           cachedBoundaryMode == mode,
+           now - cachedBoundaryTime < boundaryCacheDuration {
+            boundaryStateLock.unlock()
+            return
+        }
+        guard boundaryRefreshWorkItem == nil else {
+            boundaryStateLock.unlock()
+            return
+        }
 
         let generation = boundaryRefreshGeneration
         let workItem = DispatchWorkItem { [weak self] in
             guard let self else { return }
-            guard generation == self.boundaryRefreshGeneration else {
+            guard self.switchOverride == mode else {
+                self.boundaryStateLock.lock()
+                if generation == self.boundaryRefreshGeneration {
+                    self.boundaryRefreshWorkItem = nil
+                }
+                self.boundaryStateLock.unlock()
                 return
             }
-            self.boundaryRefreshWorkItem = nil
-            guard self.switchOverride == mode else { return }
 
             let targetDisplayID: String?
             if mode == .cursor {
@@ -253,16 +296,22 @@ extension GestureManager {
                 value = self.spaceManager?.isLastSpace(onDisplayID: targetDisplayID) == true
             }
 
+            self.boundaryStateLock.lock()
+            guard generation == self.boundaryRefreshGeneration else {
+                self.boundaryStateLock.unlock()
+                return
+            }
+            self.boundaryRefreshWorkItem = nil
             self.cachedBoundaryDirection = direction
             self.cachedBoundaryMode = mode
             self.cachedBoundaryValue = value
             self.cachedBoundaryTime = Date().timeIntervalSince1970
+            self.boundaryStateLock.unlock()
         }
 
         boundaryRefreshWorkItem = workItem
-        // Delay the optional boundary read by one short run-loop interval so a
-        // real gesture request already queued on main is emitted first.
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.08, execute: workItem)
+        boundaryStateLock.unlock()
+        DispatchQueue.main.async(execute: workItem)
     }
 
     private func updateOverscrollIndicator(progress: Double, direction: SwitchDirection) {

@@ -153,7 +153,8 @@ class GestureManager: ObservableObject {
     var cachedBoundaryMode: SwitchOverrideMode?
     var cachedBoundaryValue = false
     var cachedBoundaryTime: TimeInterval = 0
-    let boundaryCacheDuration: TimeInterval = 0.12
+    let boundaryCacheDuration: TimeInterval = 0.5
+    let boundaryStateLock = NSLock()
     var boundaryRefreshWorkItem: DispatchWorkItem?
     var boundaryRefreshGeneration = 0
 
