@@ -63,6 +63,12 @@ class SpaceManager: ObservableObject {
     var spaceChangeRetryGeneration = 0
     var spaceChangeRetryObservedSpaceID: String?
     var spaceChangeRetryObservedPasses = 0
+    // Monitor notifications can arrive in bursts while WindowServer is
+    // settling a gesture. Keep only the newest observation and give the
+    // gesture transaction a chance to emit before reconciling the model.
+    var pendingMonitorSpaceChange: (rawUUID: String, isDesktop: Bool, ncCount: Int, displayID: String)?
+    var monitorSpaceChangeWorkItem: DispatchWorkItem?
+    var monitorSpaceChangeGeneration = 0
     var screenParametersWorkItem: DispatchWorkItem?
     
     // Display Cache
@@ -211,6 +217,7 @@ class SpaceManager: ObservableObject {
     deinit {
         wakeRecoveryWorkItem?.cancel()
         spaceChangeRetryWorkItem?.cancel()
+        monitorSpaceChangeWorkItem?.cancel()
         screenParametersWorkItem?.cancel()
         if Thread.isMainThread {
             SpaceHelper.stopMonitoring()
@@ -253,6 +260,7 @@ class SpaceManager: ObservableObject {
         isSystemSleeping = true
         wakeRecoveryWorkItem?.cancel()
         wakeRecoveryWorkItem = nil
+        cancelPendingMonitorSpaceChange()
         cancelSpaceChangeRetry()
         stopPeriodicSpaceLayoutCheck()
         SpaceHelper.stopMonitoring()

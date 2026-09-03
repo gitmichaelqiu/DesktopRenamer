@@ -4,7 +4,7 @@ import QuartzCore
 
 extension SpaceLabelWindow {
 
-    func updateVisibility(animated: Bool) {
+    func updateVisibility(animated: Bool, visibleSpaceIDs: Set<String>? = nil) {
         pendingVisibilityTask?.cancel()
         pendingVisibilityTask = nil
 
@@ -39,7 +39,8 @@ extension SpaceLabelWindow {
         // SpaceLabelManager.applyVisibility. A delayed retry or an unrelated
         // appearance refresh can arrive after the manager hid the preview.
         // Preview labels must never be rendered on their current space.
-        if !isActiveMode && SpaceHelper.getVisibleSystemSpaceIDs().contains(spaceId) {
+        let knownVisibleSpaceIDs = visibleSpaceIDs ?? SpaceHelper.getVisibleSystemSpaceIDs()
+        if !isActiveMode && knownVisibleSpaceIDs.contains(spaceId) {
             hideImmediately()
             return
         }
@@ -55,6 +56,8 @@ extension SpaceLabelWindow {
         } else {
             isVisuallyVisible = labelManager?.showPreviewLabels ?? true
         }
+
+        var didBindToTargetSpace = false
         
         // hideWhenSwitching applies only to preview windows. Active labels have
         // dedicated windows and must remain synchronized with the active space.
@@ -92,6 +95,7 @@ extension SpaceLabelWindow {
                     print("SpaceLabelWindow[\(self.spaceId)]: orderFrontRegardless() for ACTIVE space.")
                     self.orderFront(nil)
                     self.bindToTargetSpace()
+                    didBindToTargetSpace = true
                     self.hasOrderedInOnce = true
                 }
             } else if !hasOrderedInOnce {
@@ -108,11 +112,13 @@ extension SpaceLabelWindow {
                         // Control is reconciling labels on macOS 27.
                         self.orderPreviewWithoutActivating()
                         self.bindToTargetSpace()
+                        didBindToTargetSpace = true
                         self.hasOrderedInOnce = true
                     } else {
                         print("SpaceLabelWindow[\(self.spaceId)]: Binding check failed — preview label would appear on wrong space. Staying hidden.")
                         DiagnosticEventLog.shared.record(subsystem: "SpaceLabelWindow", level: "warning", "BLOCKED orderFrontRegardless for preview label \(self.spaceId): bound=\(isBoundToTargetSpace()), onCurrent=\(isOnCurrentSpace())")
                         self.bindToTargetSpace()
+                        didBindToTargetSpace = true
                     }
                 } else {
                     print("SpaceLabelWindow[\(self.spaceId)]: Suppressing orderFrontRegardless (Preview) during switch cooling period (\(String(format: "%.2f", timeSinceSwitch))s). Scheduling retry.")
@@ -127,10 +133,12 @@ extension SpaceLabelWindow {
                         print("SpaceLabelWindow[\(self.spaceId)]: Non-activating orderFront() for background preview.")
                         self.orderPreviewWithoutActivating()
                         self.bindToTargetSpace()
+                        didBindToTargetSpace = true
                     } else {
                         print("SpaceLabelWindow[\(self.spaceId)]: Re-order blocked — preview label would appear on wrong space.")
                         DiagnosticEventLog.shared.record(subsystem: "SpaceLabelWindow", level: "warning", "BLOCKED re-order for preview label \(self.spaceId): bound=\(isBoundToTargetSpace()), onCurrent=\(isOnCurrentSpace())")
                         self.bindToTargetSpace()
+                        didBindToTargetSpace = true
                     }
                 } else {
                     scheduleVisibilityRetry(delay: coolingPeriod - timeSinceSwitch + 0.1)
@@ -138,7 +146,7 @@ extension SpaceLabelWindow {
             }
         }
 
-        if self.isVisible {
+        if self.isVisible && !didBindToTargetSpace {
             self.bindToTargetSpace()
         }
 

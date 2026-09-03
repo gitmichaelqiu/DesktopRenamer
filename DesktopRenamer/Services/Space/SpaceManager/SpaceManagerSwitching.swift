@@ -45,6 +45,7 @@ extension SpaceManager {
             // This notification also arrives for a transaction promoted from
             // the pending queue. Cancel any retry belonging to the previous
             // transition before the new generation can be observed.
+            self.cancelPendingMonitorSpaceChange()
             self.cancelSpaceChangeRetry()
             self.activeProgrammaticSwitchGeneration = generation
 
@@ -113,18 +114,38 @@ extension SpaceManager {
         }
     }
     
-    func switchToPreviousSpace(onDisplayID displayID: String? = nil, forceInstant: Bool? = nil) {
+    @discardableResult
+    func switchToPreviousSpace(
+        onDisplayID displayID: String? = nil,
+        forceInstant: Bool? = nil
+    ) -> SpaceSwitchRequestDisposition {
         let targetDisplayID = displayID ?? spaceNameDict.first(where: { $0.id == currentSpaceUUID })?.displayID ?? currentDisplayID
-        if let current = findBestCurrentSpace(for: targetDisplayID) {
-            proceedToSwitch(from: current, on: targetDisplayID, direction: -1, forceInstant: forceInstant ?? false)
+        guard let current = findBestCurrentSpace(for: targetDisplayID) else {
+            return .unavailable
         }
+        return proceedToSwitch(
+            from: current,
+            on: targetDisplayID,
+            direction: -1,
+            forceInstant: forceInstant ?? false
+        )
     }
 
-    func switchToNextSpace(onDisplayID displayID: String? = nil, forceInstant: Bool? = nil) {
+    @discardableResult
+    func switchToNextSpace(
+        onDisplayID displayID: String? = nil,
+        forceInstant: Bool? = nil
+    ) -> SpaceSwitchRequestDisposition {
         let targetDisplayID = displayID ?? spaceNameDict.first(where: { $0.id == currentSpaceUUID })?.displayID ?? currentDisplayID
-        if let current = findBestCurrentSpace(for: targetDisplayID) {
-            proceedToSwitch(from: current, on: targetDisplayID, direction: 1, forceInstant: forceInstant ?? false)
+        guard let current = findBestCurrentSpace(for: targetDisplayID) else {
+            return .unavailable
         }
+        return proceedToSwitch(
+            from: current,
+            on: targetDisplayID,
+            direction: 1,
+            forceInstant: forceInstant ?? false
+        )
     }
 
     private func findBestCurrentSpace(for displayID: String) -> DesktopSpace? {
@@ -151,18 +172,28 @@ extension SpaceManager {
         return spaceNameDict.first(where: { $0.displayID == displayID })
     }
 
-    private func proceedToSwitch(from current: DesktopSpace, on targetDisplayID: String, direction: Int, forceInstant: Bool = false) {
+    @discardableResult
+    private func proceedToSwitch(
+        from current: DesktopSpace,
+        on targetDisplayID: String,
+        direction: Int,
+        forceInstant: Bool = false
+    ) -> SpaceSwitchRequestDisposition {
         // Use spaces from the TARGET display
         let displaySpaces = spaceNameDict
             .filter { $0.displayID == targetDisplayID }
             .sorted { $0.num < $1.num }
         
-        guard let currentIndex = displaySpaces.firstIndex(of: current) else { return }
+        guard let currentIndex = displaySpaces.firstIndex(of: current) else {
+            return .unavailable
+        }
         
         let targetIndex = currentIndex + direction
-        guard targetIndex >= 0 && targetIndex < displaySpaces.count else { return }
+        guard targetIndex >= 0 && targetIndex < displaySpaces.count else {
+            return .unavailable
+        }
         
         let target = displaySpaces[targetIndex]
-        switchToSpace(target, forceInstant: forceInstant)
+        return switchToSpace(target, forceInstant: forceInstant)
     }
 }

@@ -166,7 +166,11 @@ extension SpaceLabelManager {
         if Thread.isMainThread {
             beginPreviewSuppressionForSwitchRequest()
         } else {
-            DispatchQueue.main.sync { [weak self] in
+            // GestureManager posts this from the multitouch callback. Queue
+            // the suppression without blocking that callback; the gesture's
+            // subsequent main-queue switch request is enqueued after this
+            // notification, so preview hiding still happens first.
+            DispatchQueue.main.async { [weak self] in
                 self?.beginPreviewSuppressionForSwitchRequest()
             }
         }
@@ -522,6 +526,10 @@ extension SpaceLabelManager {
         guard let spaceManager = spaceManager else { return }
         let allSpaces = spaceManager.spaceNameDict
 
+        // Window creation/removal changes the set covered by the active-label
+        // cache, even when the visible-space set remains unchanged.
+        lastActiveVisibilitySpaceIDs = nil
+
         // Add windows for new spaces.
         for space in allSpaces {
             ensureWindow(for: space.id, name: space.customName, displayID: space.displayID, updateMode: updateModes)
@@ -659,7 +667,35 @@ extension SpaceLabelManager {
 
     private func updateActiveWindowModes() {
         let visibleUUIDs = SpaceHelper.getVisibleSystemSpaceIDs()
-        for (key, window) in activeWindows {
+        updateActiveWindowModes(for: visibleUUIDs)
+    }
+
+    private func updateActiveWindowModes(
+        for visibleUUIDs: Set<String>,
+        displayID: String? = nil,
+        force: Bool = false
+    ) {
+        let eligibleWindows = activeWindows.filter {
+            displayID == nil || $0.value.displayID == displayID
+        }
+        let windowIDs = Set(eligibleWindows.keys)
+        let currentLabelNeedsRepair = showActiveLabels
+            && eligibleWindows.contains { key, window in
+                visibleUUIDs.contains(key)
+                    && (!window.isCurrentSpaceLabel || !window.isVisible)
+            }
+        guard force
+            || lastActiveVisibilitySpaceIDs != visibleUUIDs
+            || lastActiveVisibilityWindowIDs != windowIDs
+            || lastActiveVisibilityDisplayID != displayID
+            || currentLabelNeedsRepair else {
+            return
+        }
+
+        lastActiveVisibilitySpaceIDs = visibleUUIDs
+        lastActiveVisibilityWindowIDs = windowIDs
+        lastActiveVisibilityDisplayID = displayID
+        for (key, window) in eligibleWindows {
             window.setActiveVisibility(visibleUUIDs.contains(key), animated: false)
         }
     }
@@ -692,11 +728,17 @@ extension SpaceLabelManager {
              print("SpaceLabelManager: applyVisibility(visibleUUIDs: \(visibleUUIDs)) GLOBAL refresh")
         }
 
-        let fullscreenDisplayIDs = currentFullscreenDisplayIDs(
-            visibleUUIDs: visibleUUIDs,
-            displayID: displayID
-        )
         let suppressPreviews = hideWhenSwitching && isPreviewTransitionSuppressed
+        // During a transition every preview is hidden regardless of fullscreen
+        // metadata. Avoid another synchronous managed-space read on this hot
+        // path; the stable refresh below still rechecks fullscreen metadata
+        // when previews are allowed to return.
+        let fullscreenDisplayIDs = suppressPreviews
+            ? []
+            : currentFullscreenDisplayIDs(
+                visibleUUIDs: visibleUUIDs,
+                displayID: displayID
+            )
         let windowsSnapshot = self.createdWindows
 
         for (key, window) in windowsSnapshot {
@@ -712,16 +754,11 @@ extension SpaceLabelManager {
                 // the active desktop or over a fullscreen app.
                 window.hideImmediately()
             } else {
-                window.updateVisibility(animated: false)
+                window.updateVisibility(animated: false, visibleSpaceIDs: visibleUUIDs)
             }
         }
 
-        for (key, window) in activeWindows {
-            if let targetDisplay = displayID, window.displayID != targetDisplay {
-                continue
-            }
-            window.setActiveVisibility(visibleUUIDs.contains(key), animated: false)
-        }
+        updateActiveWindowModes(for: visibleUUIDs, displayID: displayID)
     }
 
     private func currentFullscreenDisplayIDs(
@@ -741,12 +778,16 @@ extension SpaceLabelManager {
             }
         )
 
-        // Fullscreen metadata can lag behind the managed-space ID during the
-        // enter/exit animation. Use the live state as a fallback so existing
-        // previews are not exposed while WindowServer is still transitioning.
-        if let liveState = SpaceHelper.getSystemState() {
-            fullscreenDisplayIDs.formUnion(
-                Set<String>(liveState.spaces.compactMap { space in
+        // Fullscreen metadata can lag behind the managed-space ID. Refresh the
+        // live fallback only when the visible-space set changes; repeated label
+        // refreshes during one transition can otherwise perform the same CGS
+        // read once per window.
+        if visibleUUIDs != lastLiveFullscreenVisibleSpaceIDs
+            || displayID != lastLiveFullscreenDisplayScope {
+            lastLiveFullscreenVisibleSpaceIDs = visibleUUIDs
+            lastLiveFullscreenDisplayScope = displayID
+            if let liveState = SpaceHelper.getSystemState() {
+                lastLiveFullscreenDisplayIDs = Set<String>(liveState.spaces.compactMap { space in
                     guard space.isFullscreen,
                           visibleUUIDs.contains(space.id),
                           displayID == nil || displayID == space.displayID else {
@@ -754,9 +795,12 @@ extension SpaceLabelManager {
                     }
                     return space.displayID
                 })
-            )
+            } else {
+                lastLiveFullscreenDisplayIDs = []
+            }
         }
 
+        fullscreenDisplayIDs.formUnion(lastLiveFullscreenDisplayIDs)
         return fullscreenDisplayIDs
     }
 
