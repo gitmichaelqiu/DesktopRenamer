@@ -400,6 +400,12 @@ extension SpaceHelper {
                 guard let managedID = space["ManagedSpaceID"] as? Int else { continue }
                 let idString = String(managedID)
                 let isFullscreen = space["TileLayoutManager"] != nil
+                let rawPersistentID = space["uuid"] as? String
+                let persistentID = rawPersistentID.flatMap {
+                    let normalized = $0.trimmingCharacters(in: .whitespacesAndNewlines)
+                        .uppercased()
+                    return normalized.isEmpty ? nil : normalized
+                }
 
                 var appName: String? = nil
                 var appPath: String? = nil
@@ -427,7 +433,8 @@ extension SpaceHelper {
                         isFullscreen: isFullscreen,
                         appName: appName,
                         appPath: appPath,
-                        globalShortcutNum: globalShortcutNum
+                        globalShortcutNum: globalShortcutNum,
+                        persistentID: persistentID
                     ))
 
                 if let currentDict = display["Current Space"] as? [String: Any],
