@@ -66,10 +66,18 @@ extension SpaceManager {
                     
                     if trimmedName.isEmpty {
                         nameCache.removeValue(forKey: spaceUUID)
+                        if let persistentID = space.persistentID {
+                            nameCache.removeValue(
+                                forKey: Self.persistentNameCacheKey(for: persistentID)
+                            )
+                        }
                         indexCache.removeValue(forKey: indexKey)
                         indexCache.removeValue(forKey: legacyIndexKey)
                     } else {
                         nameCache[spaceUUID] = trimmedName
+                        if let persistentID = space.persistentID {
+                            nameCache[Self.persistentNameCacheKey(for: persistentID)] = trimmedName
+                        }
                         indexCache[indexKey] = trimmedName
                     }
                 }

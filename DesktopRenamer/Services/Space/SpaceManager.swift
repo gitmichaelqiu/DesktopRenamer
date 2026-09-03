@@ -10,6 +10,7 @@ class SpaceManager: ObservableObject {
     static let spacesKey = "com.michaelqiu.desktoprenamer.spaces"
     static let nameCacheKey = "com.michaelqiu.desktoprenamer.namecache"
     static let indexCacheKey = "com.michaelqiu.desktoprenamer.indexcache"
+    static let bootSessionKey = "com.michaelqiu.desktoprenamer.namecache.bootsession"
     static let isAPIEnabledKey = "com.michaelqiu.desktoprenamer.isapienabled"
     static let grabOffsetXKey = "com.michaelqiu.desktoprenamer.grabOffsetX"
     static let grabOffsetYKey = "com.michaelqiu.desktoprenamer.grabOffsetY"
@@ -38,6 +39,8 @@ class SpaceManager: ObservableObject {
     
     var nameCache: [String: String] = [:]
     var indexCache: [String: String] = [:]
+    var currentBootSessionID: String?
+    var shouldRestoreNamesByPositionAfterBoot = false
     
     @Published var currentNcCount: Int = 0
     @Published var currentIsDesktop: Bool = false

@@ -55,6 +55,7 @@ extension SpaceManager {
                 && cached.appName == detected.appName
                 && cached.appPath == detected.appPath
                 && cached.globalShortcutNum == detected.globalShortcutNum
+                && cached.persistentID == detected.persistentID
         }
     }
 
@@ -211,10 +212,14 @@ extension SpaceManager {
             
             // First, see which names are already taken by active UUIDs so we don't double-assign.
             var claimedNames: Set<String> = []
-            let activeUUIDs = Set(cgsState.spaces.map { $0.id })
-            
-            for (uuid, name) in nameCache {
-                if activeUUIDs.contains(uuid) && !name.isEmpty {
+            for space in cgsState.spaces where !space.isFullscreen {
+                if let persistentID = space.persistentID,
+                   let name = nameCache[Self.persistentNameCacheKey(for: persistentID)],
+                   !name.isEmpty {
+                    claimedNames.insert(name)
+                } else if !shouldRestoreNamesByPositionAfterBoot,
+                          let name = nameCache[space.id],
+                          !name.isEmpty {
                     claimedNames.insert(name)
                 }
             }
@@ -246,24 +251,43 @@ extension SpaceManager {
                     let dIndex = spaceDesktopIndices[sysSpace.id] ?? 1
                     let indexKey = "\(finalSpace.displayID)|Desktop|\(dIndex)"
                     let legacyIndexKey = "\(finalSpace.displayID)|\(finalSpace.num)"
-                    
-                    if let cachedName = nameCache[sysSpace.id], !cachedName.isEmpty {
-                        finalSpace.customName = cachedName
-                    } else {
-                        if let fallbackName = indexCache[indexKey], !fallbackName.isEmpty {
-                            if !claimedNames.contains(fallbackName) {
-                                finalSpace.customName = fallbackName
-                            }
-                        } else if let fallbackName = indexCache[legacyIndexKey], !fallbackName.isEmpty {
-                            if !claimedNames.contains(fallbackName) {
-                                finalSpace.customName = fallbackName
-                            }
-                        } else if let existing = spaceNameDict.first(where: { $0.id == sysSpace.id }), !existing.customName.isEmpty {
-                            finalSpace.customName = existing.customName
-                            nameCache[sysSpace.id] = existing.customName
-                            if indexCache[indexKey]?.isEmpty ?? true {
-                                indexCache[indexKey] = existing.customName
-                            }
+
+                    let persistentName = finalSpace.persistentID.flatMap {
+                        nameCache[Self.persistentNameCacheKey(for: $0)]
+                    }
+                    let positionalName = indexCache[indexKey]
+                    let legacyPositionalName = indexCache[legacyIndexKey]
+                    let managedIDName = shouldRestoreNamesByPositionAfterBoot
+                        ? nil
+                        : nameCache[sysSpace.id]
+
+                    if let persistentName, !persistentName.isEmpty {
+                        finalSpace.customName = persistentName
+                    } else if let managedIDName, !managedIDName.isEmpty {
+                        finalSpace.customName = managedIDName
+                    } else if let positionalName,
+                              !positionalName.isEmpty,
+                              !claimedNames.contains(positionalName) {
+                        finalSpace.customName = positionalName
+                    } else if let legacyPositionalName,
+                              !legacyPositionalName.isEmpty,
+                              !claimedNames.contains(legacyPositionalName) {
+                        finalSpace.customName = legacyPositionalName
+                    } else if !shouldRestoreNamesByPositionAfterBoot,
+                              let existing = spaceNameDict.first(where: { $0.id == sysSpace.id }),
+                              !existing.customName.isEmpty {
+                        finalSpace.customName = existing.customName
+                    }
+
+                    if !finalSpace.customName.isEmpty {
+                        claimedNames.insert(finalSpace.customName)
+                        nameCache[finalSpace.id] = finalSpace.customName
+                        if let persistentID = finalSpace.persistentID {
+                            nameCache[Self.persistentNameCacheKey(for: persistentID)] =
+                                finalSpace.customName
+                        }
+                        if indexCache[indexKey]?.isEmpty ?? true {
+                            indexCache[indexKey] = finalSpace.customName
                         }
                     }
                 }
@@ -323,9 +347,13 @@ extension SpaceManager {
                 )
             }
 
-            if self.spaceNameDict != newSpaceList {
+            let completesBootNameMigration = shouldRestoreNamesByPositionAfterBoot
+            let spaceListChanged = self.spaceNameDict != newSpaceList
+            if spaceListChanged {
                 self.spaceNameDict = newSpaceList
-                
+            }
+
+            if spaceListChanged || completesBootNameMigration {
                 // Refresh missing index entries only. CGS can briefly report a
                 // reordered space list after reboot, so automatic detection must
                 // not replace explicit desktop-position names.
@@ -341,7 +369,10 @@ extension SpaceManager {
                         }
                     }
                 }
-                
+
+                if completesBootNameMigration {
+                    completeBootNameMigration(using: self.spaceNameDict)
+                }
                 saveData()
                 shouldUpdateWidget = true
             }
