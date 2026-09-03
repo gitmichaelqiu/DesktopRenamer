@@ -274,11 +274,34 @@ extension SpaceHelper {
         lastProgrammaticTargetSpaceID = spaceID
         lastProgrammaticSwitchUsedSLS = false
 
-        // Gesture-based Space Switch handling. Keep the synthetic desktop
-        // gesture as the primary path for fullscreen transitions too; the
-        // WindowServer accepts it in the normal case and preserves the
-        // native animation.
+        // On macOS 27+, target the requested managed space directly. A
+        // velocity-based synthetic swipe can carry momentum across more than
+        // one space, which breaks the adjacent-switch contract and leaves
+        // queued gesture requests draining against the wrong boundary.
         if !isDragging, let steps = context.steps, steps != 0 {
+            if shouldSwitchToSpaceUsingSLS(),
+               let managedSpaceID = Int(spaceID),
+               switchSpaceUsingSLSOperation(
+                   displayUUID: displayID,
+                   spaceID: managedSpaceID
+               ) {
+                print("SpaceHelper: Executed exact-target SLS switch to \(spaceID) on \(displayID)")
+                markProgrammaticSwitchStarted(
+                    spaceID: spaceID,
+                    generation: generation,
+                    isManual: isManual,
+                    forceInstant: forceInstant,
+                    displayID: displayID,
+                    isFullscreen: context.targetIsFullscreen,
+                    usedSLS: true
+                )
+                scheduleSpaceSwitchLabelSuppression(generation: generation)
+                scheduleActiveLabelPreparation(spaceID: spaceID, generation: generation)
+                return .started
+            }
+
+            // Keep the synthetic desktop gesture as a compatibility fallback
+            // when the exact-target operation is unavailable.
             if let generation {
                 DiagnosticEventLog.shared.record(
                     subsystem: "SpaceHelper",
@@ -462,11 +485,12 @@ extension SpaceHelper {
         isManual: Bool,
         forceInstant: Bool,
         displayID: String,
-        isFullscreen: Bool
+        isFullscreen: Bool,
+        usedSLS: Bool = false
     ) {
         lastProgrammaticSwitchTime = Date().timeIntervalSince1970
         lastProgrammaticTargetSpaceID = spaceID
-        lastProgrammaticSwitchUsedSLS = false
+        lastProgrammaticSwitchUsedSLS = usedSLS
 
         DiagnosticEventLog.shared.record(
             subsystem: "SpaceHelper",
