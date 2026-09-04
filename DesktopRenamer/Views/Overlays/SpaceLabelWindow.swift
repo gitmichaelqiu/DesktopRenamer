@@ -3,7 +3,7 @@ import Combine
 import QuartzCore
 
 // The floating label window used to display space names.
-class SpaceLabelWindow: NSWindow {
+class SpaceLabelWindow: NSPanel {
     let label: NSTextField
     let handleView: CollapsibleHandleView
     let contentContainer: NSView
@@ -112,9 +112,10 @@ class SpaceLabelWindow: NSWindow {
             startRect = NSRect(x: 0, y: 0, width: 200, height: 100)
         }
 
-        super.init(
-            contentRect: startRect, styleMask: [.borderless, .fullSizeContentView],
-            backing: .buffered, defer: false)
+        let styleMask: NSWindow.StyleMask = isActiveLabel
+            ? [.borderless, .fullSizeContentView]
+            : [.borderless, .fullSizeContentView, .nonactivatingPanel]
+        super.init(contentRect: startRect, styleMask: styleMask, backing: .buffered, defer: false)
 
         self.isReleasedWhenClosed = false
 
@@ -129,6 +130,8 @@ class SpaceLabelWindow: NSWindow {
         self.isOpaque = false
         self.hasShadow = false
         self.level = .floating
+        self.becomesKeyOnlyIfNeeded = false
+        self.hidesOnDeactivate = false
 
         // Collection Behavior
         // Both label roles remain managed so they participate in Mission

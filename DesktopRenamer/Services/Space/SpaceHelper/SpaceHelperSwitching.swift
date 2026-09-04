@@ -840,9 +840,11 @@ extension SpaceHelper {
         for window in NSApp.windows {
             if let labelWindow = window as? SpaceLabelWindow {
                 if labelWindow.spaceId == spaceID {
-                    // Use the preview window as the activation anchor. The
-                    // active label is managed independently by the manager.
-                    if !labelWindow.isActiveMode || targetWindow == nil {
+                    // Preview labels are nonactivating panels and must never
+                    // be used as the explicit switch anchor. Prefer the
+                    // target space's active label, which remains an ordinary
+                    // key-capable panel for this activation path.
+                    if labelWindow.isActiveMode || targetWindow == nil {
                         targetWindow = labelWindow
                     }
                 } else if labelWindow.isVisible {

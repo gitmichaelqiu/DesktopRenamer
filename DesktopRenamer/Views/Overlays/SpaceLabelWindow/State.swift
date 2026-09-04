@@ -9,9 +9,9 @@ extension SpaceLabelWindow {
     func orderPreviewWithoutActivating() {
         guard windowNumber > 0 else { return }
         // CGSOrderWindow only changes z-order; it does not unhide an NSWindow.
-        // orderFront(nil) makes the window visible without making it key or
-        // activating the application. The WindowServer call then restores the
-        // intended ordering without using orderFrontRegardless().
+        // The preview is a nonactivating NSPanel, and preventWindowOrdering
+        // covers the AppKit handoff while it is being ordered in.
+        NSApp.preventWindowOrdering()
         orderFront(nil)
         let result = CGSOrderWindow(_CGSDefaultConnection(), UInt32(windowNumber), 1, 0)
         if result != 0 {
