@@ -15,17 +15,6 @@ extension GestureManager {
             return
         }
 
-        // An active space label consumes the mouse drag, but the private
-        // multitouch callback continues to receive trackpad contacts. Do not
-        // let those contacts become a space switch while the label owns the
-        // interaction. Requiring all fingers to lift also prevents the same
-        // contact session from arming a switch when the drag finishes.
-        if GestureManager.isActiveLabelDragInProgress() {
-            isWaitingForAllFingersToLift = true
-            resetTrackingState()
-            return
-        }
-
         // After a recognized swipe, lifting only one or two fingers must not
         // arm another switch. Wait for a frame with no active contacts so a
         // long swipe cannot be mistaken for several independent gestures.

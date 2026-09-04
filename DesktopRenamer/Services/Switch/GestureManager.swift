@@ -121,20 +121,6 @@ class GestureManager: ObservableObject {
     // Internal state for active gesture tracking.
     static var sharedManager: GestureManager?
     static var lastTrackpadSwipeTime: TimeInterval = 0
-    private static let interactionStateLock = NSLock()
-    private static var activeLabelDragInProgress = false
-
-    static func setActiveLabelDragInProgress(_ inProgress: Bool) {
-        interactionStateLock.lock()
-        activeLabelDragInProgress = inProgress
-        interactionStateLock.unlock()
-    }
-
-    static func isActiveLabelDragInProgress() -> Bool {
-        interactionStateLock.lock()
-        defer { interactionStateLock.unlock() }
-        return activeLabelDragInProgress
-    }
 
     // Per-finger tracking is used instead of a single centroid to allow for consistency verification.
     var initialTouchPositions: [Int32: MTPoint] = [:]

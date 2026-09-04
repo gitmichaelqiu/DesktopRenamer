@@ -43,9 +43,6 @@ extension SpaceLabelWindow {
             return
         }
 
-        GestureManager.setActiveLabelDragInProgress(true)
-        defer { GestureManager.setActiveLabelDragInProgress(false) }
-
         var startMouseLocation = NSEvent.mouseLocation
         let startWindowOrigin = self.frame.origin
         var mouseOffset = NSPoint(
