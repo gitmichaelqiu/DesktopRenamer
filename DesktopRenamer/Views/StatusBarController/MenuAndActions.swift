@@ -327,13 +327,16 @@ extension StatusBarController {
     }
 
     func openSettingsWindow(tab: SettingsTab? = nil) {
+        labelManager.beginSettingsWindowPresentation()
+
         if let windowController = settingsWindowController {
             if let window = windowController.window {
                 configureSettingsWindow(window)
             }
             NSApp.setActivationPolicy(.regular)
-            windowController.showWindow(nil)
             NSApp.activate(ignoringOtherApps: true)
+            windowController.showWindow(nil)
+            windowController.window?.makeKeyAndOrderFront(nil)
             return
         }
         
@@ -373,8 +376,9 @@ extension StatusBarController {
         NotificationCenter.default.addObserver(self, selector: #selector(settingsWindowWillClose), name: NSWindow.willCloseNotification, object: window)
         
         NSApp.setActivationPolicy(.regular)
-        windowController.showWindow(nil)
         NSApp.activate(ignoringOtherApps: true)
+        windowController.showWindow(nil)
+        window.makeKeyAndOrderFront(nil)
     }
 
     private func configureSettingsWindow(_ window: NSWindow) {
@@ -390,7 +394,10 @@ extension StatusBarController {
     }
     
     @objc private func settingsWindowWillClose(_ notification: Notification) {
-        DispatchQueue.main.async { NSApp.setActivationPolicy(.accessory) }
+        DispatchQueue.main.async { [weak self] in
+            NSApp.setActivationPolicy(.accessory)
+            self?.labelManager.endSettingsWindowPresentation()
+        }
         settingsWindowController = nil
     }
     

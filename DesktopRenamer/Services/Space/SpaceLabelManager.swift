@@ -120,7 +120,12 @@ class SpaceLabelManager: ObservableObject {
     var previewTransitionLastVisibleUUIDs: Set<String>?
     var previewTransitionCompletionObserved = false
     var previewTransitionFallbackDeadline: Date?
+    var arePreviewLabelsSuppressedForSettings = false
     var isPreviewTransitionSuppressed: Bool {
+        if arePreviewLabelsSuppressedForSettings {
+            return true
+        }
+
         guard hideWhenSwitching else { return false }
         if let suppressionEnd = previewLabelsSuppressedUntil,
            suppressionEnd > Date() {

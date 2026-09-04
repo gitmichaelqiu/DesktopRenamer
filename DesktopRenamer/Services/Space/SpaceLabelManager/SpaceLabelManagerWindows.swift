@@ -304,6 +304,39 @@ extension SpaceLabelManager {
         DispatchQueue.main.asyncAfter(deadline: .now() + delays[attempt], execute: workItem)
     }
 
+    /// Prevent preview panels from becoming activation candidates while the
+    /// menu-bar app presents its regular Settings window.
+    func beginSettingsWindowPresentation() {
+        applicationActivationTransitionCheckWorkItem?.cancel()
+        applicationActivationTransitionCheckWorkItem = nil
+        applicationActivationTransitionGeneration += 1
+        delayedRestoreWorkItem?.cancel()
+        delayedRestoreWorkItem = nil
+        arePreviewLabelsSuppressedForSettings = true
+        hideAllPreviewLabels()
+        DiagnosticEventLog.shared.record(
+            subsystem: "Labels",
+            level: "info",
+            "Settings presentation started — suppressing preview labels before app activation"
+        )
+    }
+
+    /// Restore preview panels after Settings closes and the app returns to its
+    /// menu-bar-only activation policy.
+    func endSettingsWindowPresentation() {
+        guard arePreviewLabelsSuppressedForSettings else { return }
+
+        arePreviewLabelsSuppressedForSettings = false
+        DiagnosticEventLog.shared.record(
+            subsystem: "Labels",
+            level: "info",
+            "Settings presentation ended — restoring preview labels"
+        )
+        DispatchQueue.main.async { [weak self] in
+            self?.updateAllWindowModes()
+        }
+    }
+
     private func checkApplicationActivationSpaceTransition(attempt: Int, generation: Int) {
         guard hideWhenSwitching,
               generation == applicationActivationTransitionGeneration else { return }
@@ -751,7 +784,7 @@ extension SpaceLabelManager {
              print("SpaceLabelManager: applyVisibility(visibleUUIDs: \(visibleUUIDs)) GLOBAL refresh")
         }
 
-        let suppressPreviews = hideWhenSwitching && isPreviewTransitionSuppressed
+        let suppressPreviews = isPreviewTransitionSuppressed
         // During a transition every preview is hidden regardless of fullscreen
         // metadata. Avoid another synchronous managed-space read on this hot
         // path; the stable refresh below still rechecks fullscreen metadata

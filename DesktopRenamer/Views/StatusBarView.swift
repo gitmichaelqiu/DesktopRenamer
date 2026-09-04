@@ -125,7 +125,10 @@ extension StatusBarController: NSMenuItemValidation {
 extension StatusBarController: NSWindowDelegate {
     func windowWillClose(_ notification: Notification) {
         if notification.object as? NSWindow == settingsWindowController?.window {
-            DispatchQueue.main.async { NSApp.setActivationPolicy(.accessory) }
+            DispatchQueue.main.async { [weak self] in
+                NSApp.setActivationPolicy(.accessory)
+                self?.labelManager.endSettingsWindowPresentation()
+            }
             settingsWindowController = nil
         }
     }
