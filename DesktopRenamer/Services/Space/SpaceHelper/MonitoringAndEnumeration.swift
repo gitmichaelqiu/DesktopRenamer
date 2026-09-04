@@ -18,12 +18,28 @@ extension SpaceHelper {
         }
         appActivationObserver = NSWorkspace.shared.notificationCenter.addObserver(
             forName: NSWorkspace.didActivateApplicationNotification, object: nil, queue: .main
-        ) { _ in detectSpaceChange() }
+        ) { notification in
+            let activatedApplication = notification.userInfo?[
+                NSWorkspace.applicationUserInfoKey
+            ] as? NSRunningApplication ?? notification.object as? NSRunningApplication
+            guard activatedApplication?.processIdentifier
+                    != ProcessInfo.processInfo.processIdentifier else {
+                return
+            }
+            detectSpaceChange()
+        }
 
         // Monitor events to detect user-initiated space switches.
         localEventMonitor = NSEvent.addLocalMonitorForEvents(matching: [
             .leftMouseDown, .rightMouseDown,
         ]) { event in
+            // Clicking an active label can activate DesktopRenamer, but it is
+            // not a user-initiated Space change. Scanning here can reconcile
+            // the wrong display while WindowServer is processing that
+            // activation and make the label manager order another label in.
+            if event.window is SpaceLabelWindow {
+                return event
+            }
             detectSpaceChange()
             return event
         }

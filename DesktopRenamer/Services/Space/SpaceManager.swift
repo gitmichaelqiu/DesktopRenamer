@@ -66,6 +66,7 @@ class SpaceManager: ObservableObject {
     var spaceChangeRetryGeneration = 0
     var spaceChangeRetryObservedSpaceID: String?
     var spaceChangeRetryObservedPasses = 0
+    var spaceChangeRetryDisplayID: String?
     // Monitor notifications can arrive in bursts while WindowServer is
     // settling a gesture. Keep only the newest observation and give the
     // gesture transaction a chance to emit before reconciling the model.

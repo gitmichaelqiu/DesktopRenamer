@@ -177,8 +177,8 @@ extension SpaceManager {
         
         var shouldUpdateWidget = false
 
-        guard let cgsState = SpaceHelper.getSystemState() else {
-            if source == "Monitor" { scheduleSpaceChangeRetry() }
+        guard let cgsState = SpaceHelper.getSystemState(onDisplayID: displayID) else {
+            if source == "Monitor" { scheduleSpaceChangeRetry(displayID: displayID) }
             return
         }
 
@@ -196,7 +196,7 @@ extension SpaceManager {
                 if cgsState.currentUUID != targetUUID {
                     print("SpaceManager: Stale space \(cgsState.currentUUID) detected during active switch to \(targetUUID) (source: \(source)). Ignoring.")
                     if source == "Monitor" {
-                        scheduleSpaceChangeRetry()
+                        scheduleSpaceChangeRetry(displayID: displayID)
                     }
                     return
                 }
@@ -472,7 +472,7 @@ extension SpaceManager {
             // verification retries. Cmd+Tab can fire notifications before CGS
             // state stabilizes, causing stale labels when hideWhenSwitching is off.
             if previousUUID == self.currentSpaceUUID && source == "Monitor" {
-                scheduleSpaceChangeRetry()
+                scheduleSpaceChangeRetry(displayID: displayID)
             } else {
                 cancelSpaceChangeRetry()
             }
@@ -530,9 +530,12 @@ extension SpaceManager {
         pendingMonitorSpaceChange = nil
     }
 
-    func scheduleSpaceChangeRetry() {
+    func scheduleSpaceChangeRetry(displayID: String? = nil) {
         guard !isSystemSleeping else { return }
         guard spaceChangeRetryCount < maxSpaceChangeRetries else { return }
+        if let displayID {
+            spaceChangeRetryDisplayID = displayID
+        }
         spaceChangeRetryWorkItem?.cancel()
         spaceChangeRetryGeneration += 1
         let generation = spaceChangeRetryGeneration
@@ -556,12 +559,13 @@ extension SpaceManager {
         spaceChangeRetryCount = 0
         spaceChangeRetryObservedSpaceID = nil
         spaceChangeRetryObservedPasses = 0
+        spaceChangeRetryDisplayID = nil
     }
 
     private func performRetryDetection(generation: Int) {
         guard !isSystemSleeping,
               generation == spaceChangeRetryGeneration else { return }
-        guard let cgsState = SpaceHelper.getSystemState() else {
+        guard let cgsState = SpaceHelper.getSystemState(onDisplayID: spaceChangeRetryDisplayID) else {
             scheduleSpaceChangeRetry()
             return
         }
