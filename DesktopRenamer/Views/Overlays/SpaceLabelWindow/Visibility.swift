@@ -92,7 +92,7 @@ extension SpaceLabelWindow {
             let inCoolingPeriod = timeSinceSwitch < coolingPeriod
             if self.isActiveMode {
                 if !self.isVisible {
-                    print("SpaceLabelWindow[\(self.spaceId)]: orderFrontRegardless() for ACTIVE space.")
+                    print("SpaceLabelWindow[\(self.spaceId)]: orderFront() for ACTIVE space.")
                     self.orderFront(nil)
                     self.bindToTargetSpace()
                     didBindToTargetSpace = true

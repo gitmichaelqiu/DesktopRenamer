@@ -4,6 +4,26 @@ import QuartzCore
 
 extension SpaceLabelWindow {
 
+    /// Temporarily makes this label activation-capable for an intentional
+    /// programmatic Space switch. Normal label interaction remains
+    /// non-activating so clicking or dragging a label cannot select its Space.
+    func activateForSpaceSwitch() {
+        let originalStyleMask = self.styleMask
+        var activationStyleMask = originalStyleMask
+        activationStyleMask.remove(.nonactivatingPanel)
+        self.styleMask = activationStyleMask
+
+        defer {
+            self.canBecomeKeyOverride = false
+            self.styleMask = originalStyleMask
+        }
+
+        self.orderFrontRegardless()
+        self.canBecomeKeyOverride = true
+        self.makeKey()
+        NSApp.activate(ignoringOtherApps: true)
+    }
+
     /// Shows a preview label without asking AppKit to activate the application
     /// or make the label's space current.
     func orderPreviewWithoutActivating() {

@@ -112,9 +112,14 @@ class SpaceLabelWindow: NSPanel {
             startRect = NSRect(x: 0, y: 0, width: 200, height: 100)
         }
 
-        let styleMask: NSWindow.StyleMask = isActiveLabel
-            ? [.borderless, .fullSizeContentView]
-            : [.borderless, .fullSizeContentView, .nonactivatingPanel]
+        // Labels are interactive, but clicking or dragging one must not make
+        // DesktopRenamer the active application. Activating a panel that is
+        // assigned to a managed Space can make WindowServer select that Space.
+        // Intentional programmatic switches temporarily opt out of this mode
+        // through activateForSpaceSwitch().
+        let styleMask: NSWindow.StyleMask = [
+            .borderless, .fullSizeContentView, .nonactivatingPanel,
+        ]
         super.init(contentRect: startRect, styleMask: styleMask, backing: .buffered, defer: false)
 
         self.isReleasedWhenClosed = false

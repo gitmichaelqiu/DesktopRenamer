@@ -842,8 +842,8 @@ extension SpaceHelper {
                 if labelWindow.spaceId == spaceID {
                     // Preview labels are nonactivating panels and must never
                     // be used as the explicit switch anchor. Prefer the
-                    // target space's active label, which remains an ordinary
-                    // key-capable panel for this activation path.
+                    // target space's active label; it temporarily becomes
+                    // activation-capable only for this intentional switch.
                     if labelWindow.isActiveMode || targetWindow == nil {
                         targetWindow = labelWindow
                     }
@@ -881,13 +881,11 @@ extension SpaceHelper {
             }
         }
 
-        // Force window activation.
+        // Force window activation. Active labels are nonactivating during
+        // normal interaction, so this is the only path that opts into app and
+        // Space activation.
         DiagnosticEventLog.shared.record(subsystem: "SpaceHelper", level: "info", "switchByActivatingOwnWindow space=\(spaceID)")
-        window.orderFrontRegardless()
-        window.canBecomeKeyOverride = true
-        window.makeKey()
-        window.canBecomeKeyOverride = false
-        NSApp.activate(ignoringOtherApps: true)
+        window.activateForSpaceSwitch()
 
         return true
     }
