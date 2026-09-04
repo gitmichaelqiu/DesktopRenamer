@@ -995,12 +995,22 @@ extension SpaceLabelManager {
     func seedAllLabels() {
         guard let spaceManager = spaceManager else { return }
         print("SpaceLabelManager: Background seeding all labels for Mission Control...")
+        // SpaceManager may still be settling its first monitor callbacks when
+        // label seeding starts. Capture the live state here, immediately before
+        // creating windows, instead of restoring a stale snapshot from init.
+        let seedState = SpaceHelper.getSystemState()
+        let seedDisplayID = seedState?.displayID ?? spaceManager.currentDisplayID
+        let spaceIDBeforeSeeding = SpaceHelper.getCurrentSpaceID(for: seedDisplayID)
+            ?? (spaceManager.currentSpaceUUID.isEmpty ? nil : spaceManager.currentSpaceUUID)
         let allSpaces = spaceManager.spaceNameDict
         for space in allSpaces {
             ensureWindow(for: space.id, name: space.customName, displayID: space.displayID)
         }
         updateAllWindowModes()
-        restoreStartupSpaceIfNeeded()
+        restoreSpaceAfterSeedingIfNeeded(
+            displayID: seedDisplayID,
+            spaceIDBeforeSeeding: spaceIDBeforeSeeding
+        )
 
         // SAFETY: 2 seconds after seeding, verify no labels are stranded on the
         // wrong space. Preview labels that failed CGS binding would otherwise
@@ -1010,30 +1020,37 @@ extension SpaceLabelManager {
         }
     }
 
-    private func restoreStartupSpaceIfNeeded() {
-        guard let startupDisplayID,
-              let startupSpaceID,
-              let spaceManager,
-              let liveSpaceID = SpaceHelper.getCurrentSpaceID(for: startupDisplayID),
-              liveSpaceID != startupSpaceID else {
+    private func restoreSpaceAfterSeedingIfNeeded(
+        displayID: String,
+        spaceIDBeforeSeeding: String?
+    ) {
+        guard let spaceIDBeforeSeeding,
+              !spaceIDBeforeSeeding.isEmpty,
+              let liveSpaceID = SpaceHelper.getCurrentSpaceID(for: displayID),
+              liveSpaceID != spaceIDBeforeSeeding,
+              !SpaceHelper.isSwitching else {
             return
         }
 
         DiagnosticEventLog.shared.record(
             subsystem: "Labels",
             level: "warning",
-            "Startup label seeding changed the launch space from \(startupSpaceID) to \(liveSpaceID); restoring the launch space."
+            "Label seeding changed display \(displayID)'s current space from \(spaceIDBeforeSeeding) to \(liveSpaceID); restoring the pre-seeding space."
         )
 
-        // Label creation can order managed windows on a background Space.
-        // Restore the user's original Space once seeding is complete, without
-        // changing the normal behavior of later manual switches.
+        // Label creation can order managed windows on a background Space. Only
+        // restore while the same changed Space is still current; a user or app
+        // activation that changes Spaces during this handoff must win.
         let workItem = DispatchWorkItem { [weak spaceManager] in
-            guard spaceManager != nil else { return }
-            SpaceHelper.switchToSpace(startupSpaceID, forceInstant: true)
+            guard spaceManager != nil,
+                  !SpaceHelper.isSwitching,
+                  SpaceHelper.getCurrentSpaceID(for: displayID) == liveSpaceID else {
+                return
+            }
+            SpaceHelper.switchToSpace(spaceIDBeforeSeeding, forceInstant: true)
         }
-        startupSpaceRestoreWorkItem?.cancel()
-        startupSpaceRestoreWorkItem = workItem
+        spaceSeedingRestoreWorkItem?.cancel()
+        spaceSeedingRestoreWorkItem = workItem
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.1, execute: workItem)
     }
 

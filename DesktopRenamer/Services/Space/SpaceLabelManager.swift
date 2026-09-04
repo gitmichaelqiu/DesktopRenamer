@@ -103,7 +103,7 @@ class SpaceLabelManager: ObservableObject {
     var applicationActivationTransitionCheckWorkItem: DispatchWorkItem?
     var applicationActivationTransitionGeneration = 0
     var reloadGeneration = 0
-    var startupSpaceRestoreWorkItem: DispatchWorkItem?
+    var spaceSeedingRestoreWorkItem: DispatchWorkItem?
     var knownSpaceIDs: Set<String> = []
     var knownFullscreenSpaceIDs: Set<String> = []
     var lastKnownVisibleSpaceIDs: Set<String> = []
@@ -117,9 +117,6 @@ class SpaceLabelManager: ObservableObject {
     var previewTransitionLastVisibleUUIDs: Set<String>?
     var previewTransitionCompletionObserved = false
     var previewTransitionFallbackDeadline: Date?
-    let startupDisplayID: String?
-    let startupSpaceID: String?
-
     var isPreviewTransitionSuppressed: Bool {
         guard hideWhenSwitching else { return false }
         if let suppressionEnd = previewLabelsSuppressedUntil,
@@ -135,9 +132,6 @@ class SpaceLabelManager: ObservableObject {
 
     init(spaceManager: SpaceManager) {
         self.spaceManager = spaceManager
-        let startupState = SpaceHelper.getSystemState()
-        self.startupDisplayID = startupState?.displayID
-        self.startupSpaceID = startupState?.currentUUID
         self.knownSpaceIDs = Set(spaceManager.spaceNameDict.map(\.id))
         self.knownFullscreenSpaceIDs = Set(spaceManager.spaceNameDict.filter(\.isFullscreen).map(\.id))
         self.lastKnownVisibleSpaceIDs = SpaceHelper.getVisibleSystemSpaceIDs()
@@ -209,7 +203,7 @@ class SpaceLabelManager: ObservableObject {
         applicationActivationTransitionGeneration += 1
         delayedRestoreWorkItem?.cancel()
         previewTransitionRestoreWorkItem?.cancel()
-        startupSpaceRestoreWorkItem?.cancel()
+        spaceSeedingRestoreWorkItem?.cancel()
         reloadWorkItem?.cancel()
         let windows = Array(createdWindows.values) + Array(activeWindows.values)
         Task { @MainActor in
