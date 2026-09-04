@@ -103,7 +103,10 @@ class SpaceLabelManager: ObservableObject {
     var applicationActivationTransitionCheckWorkItem: DispatchWorkItem?
     var applicationActivationTransitionGeneration = 0
     var reloadGeneration = 0
-    var spaceSeedingRestoreWorkItem: DispatchWorkItem?
+    var launchSpaceRestoreWorkItem: DispatchWorkItem?
+    var launchSpaceRestoreIsPending = true
+    let launchDisplayID: String?
+    let launchSpaceID: String?
     var knownSpaceIDs: Set<String> = []
     var knownFullscreenSpaceIDs: Set<String> = []
     var lastKnownVisibleSpaceIDs: Set<String> = []
@@ -132,6 +135,9 @@ class SpaceLabelManager: ObservableObject {
 
     init(spaceManager: SpaceManager) {
         self.spaceManager = spaceManager
+        let launchState = SpaceHelper.getSystemState()
+        self.launchDisplayID = launchState?.displayID
+        self.launchSpaceID = launchState?.currentUUID
         self.knownSpaceIDs = Set(spaceManager.spaceNameDict.map(\.id))
         self.knownFullscreenSpaceIDs = Set(spaceManager.spaceNameDict.filter(\.isFullscreen).map(\.id))
         self.lastKnownVisibleSpaceIDs = SpaceHelper.getVisibleSystemSpaceIDs()
@@ -203,7 +209,7 @@ class SpaceLabelManager: ObservableObject {
         applicationActivationTransitionGeneration += 1
         delayedRestoreWorkItem?.cancel()
         previewTransitionRestoreWorkItem?.cancel()
-        spaceSeedingRestoreWorkItem?.cancel()
+        launchSpaceRestoreWorkItem?.cancel()
         reloadWorkItem?.cancel()
         let windows = Array(createdWindows.values) + Array(activeWindows.values)
         Task { @MainActor in
