@@ -731,13 +731,14 @@ extension SpaceLabelManager {
         displayID: String? = nil,
         force: Bool = false
     ) {
+        let activeSpaceIDs = currentActiveSpaceIDs(fallback: visibleUUIDs)
         let eligibleWindows = activeWindows.filter {
             displayID == nil || $0.value.displayID == displayID
         }
         let windowIDs = Set(eligibleWindows.keys)
         let currentLabelNeedsRepair = showActiveLabels
             && eligibleWindows.contains { key, window in
-                visibleUUIDs.contains(key)
+                activeSpaceIDs.contains(key)
                     && (!window.isCurrentSpaceLabel || !window.isVisible)
             }
         guard force
@@ -752,8 +753,32 @@ extension SpaceLabelManager {
         lastActiveVisibilityWindowIDs = windowIDs
         lastActiveVisibilityDisplayID = displayID
         for (key, window) in eligibleWindows {
-            window.setActiveVisibility(visibleUUIDs.contains(key), animated: false)
+            window.setActiveVisibility(activeSpaceIDs.contains(key), animated: false)
         }
+    }
+
+    /// Resolves the active Space independently for every display. The
+    /// SpaceManager's currentSpaceUUID tracks the display reported by the
+    /// latest reconciliation callback, so using it for label visibility can
+    /// hide a valid active label on another display or accept a stale snapshot
+    /// during a rapid transition.
+    private func currentActiveSpaceIDs(fallback visibleUUIDs: Set<String>) -> Set<String> {
+        var spaceIDs = Set<String>()
+        var fallbackByDisplay: [String: String] = [:]
+
+        for (spaceID, window) in activeWindows where visibleUUIDs.contains(spaceID) {
+            fallbackByDisplay[window.displayID] = spaceID
+        }
+
+        for displayID in Set(activeWindows.values.map(\.displayID)) {
+            if let liveSpaceID = SpaceHelper.getCurrentSpaceID(for: displayID) {
+                spaceIDs.insert(liveSpaceID)
+            } else if let fallbackSpaceID = fallbackByDisplay[displayID] {
+                spaceIDs.insert(fallbackSpaceID)
+            }
+        }
+
+        return spaceIDs.isEmpty ? visibleUUIDs : spaceIDs
     }
 
     func applyVisibility(_ visibleUUIDs: Set<String>, forDisplay displayID: String? = nil) {
@@ -956,7 +981,12 @@ extension SpaceLabelManager {
         previewWindow.bindToTargetSpace()
         activeWindow.bindToTargetSpace()
 
-        let isCurrent = (spaceId == spaceManager.currentSpaceUUID)
+        let isCurrent: Bool
+        if let liveSpaceID = SpaceHelper.getCurrentSpaceID(for: displayID) {
+            isCurrent = liveSpaceID == spaceId
+        } else {
+            isCurrent = SpaceHelper.getVisibleSystemSpaceIDs().contains(spaceId)
+        }
         activeWindow.setActiveVisibility(isCurrent, animated: false)
         self.recalculateUnifiedSize()
         previewWindow.refreshAppearance()

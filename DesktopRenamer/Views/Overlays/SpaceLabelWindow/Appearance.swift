@@ -6,6 +6,15 @@ extension SpaceLabelWindow {
 
     func refreshAppearance() {
         configureEffectView()
+        if isActiveMode,
+           !SpaceHelper.isSwitching,
+           let liveSpaceID = SpaceHelper.getCurrentSpaceID(for: displayID) {
+            // Settings and appearance changes can arrive after a visibility
+            // refresh marked this window as non-current. Reconcile directly
+            // with WindowServer so the active label repairs itself without
+            // waiting for another space-change notification.
+            isCurrentSpaceLabel = liveSpaceID == spaceId
+        }
         if !isActiveMode && SpaceHelper.getVisibleSystemSpaceIDs().contains(spaceId) {
             updateLayout(isCurrentSpace: false, updateFrame: false)
             hideImmediately()
