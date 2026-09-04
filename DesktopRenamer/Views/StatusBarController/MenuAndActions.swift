@@ -327,9 +327,11 @@ extension StatusBarController {
     }
 
     func openSettingsWindow(tab: SettingsTab? = nil) {
-        NSApp.setActivationPolicy(.regular)
-        
         if let windowController = settingsWindowController {
+            if let window = windowController.window {
+                configureSettingsWindow(window)
+            }
+            NSApp.setActivationPolicy(.regular)
             windowController.showWindow(nil)
             NSApp.activate(ignoringOtherApps: true)
             return
@@ -351,7 +353,7 @@ extension StatusBarController {
         // modifier needs it to exist in order to suppress the toggle.
         window.center()
         window.minSize = NSSize(width: defaultSettingsWindowWidth, height: defaultSettingsWindowHeight)
-        window.collectionBehavior = [.participatesInCycle]
+        configureSettingsWindow(window)
         window.level = .normal
         
         // Initialize host controller with required managers and optional tab.
@@ -370,8 +372,21 @@ extension StatusBarController {
         
         NotificationCenter.default.addObserver(self, selector: #selector(settingsWindowWillClose), name: NSWindow.willCloseNotification, object: window)
         
+        NSApp.setActivationPolicy(.regular)
         windowController.showWindow(nil)
         NSApp.activate(ignoringOtherApps: true)
+    }
+
+    private func configureSettingsWindow(_ window: NSWindow) {
+        // Settings is opened from a menu-bar-only app. Keeping the window tied
+        // to the Space where it was first shown makes activating the app from
+        // another Space bring that old Space to the front. Let the window join
+        // every Space so opening Settings never changes the user's desktop.
+        window.collectionBehavior = [
+            .canJoinAllSpaces,
+            .fullScreenAuxiliary,
+            .participatesInCycle,
+        ]
     }
     
     @objc private func settingsWindowWillClose(_ notification: Notification) {
