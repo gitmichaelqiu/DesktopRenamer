@@ -187,7 +187,7 @@ extension SpaceLabelManager {
     }
 
     private func cancelLaunchSpaceRestore(reason: String) {
-        guard launchSpaceRestoreIsPending else { return }
+        guard launchSpaceRestoreIsPending || launchSpaceRestoreWorkItem != nil else { return }
 
         launchSpaceRestoreIsPending = false
         launchSpaceRestoreWorkItem?.cancel()
@@ -197,6 +197,10 @@ extension SpaceLabelManager {
             level: "info",
             "Launch-space restore cancelled: \(reason)"
         )
+    }
+
+    func cancelLaunchSpaceRestoreForUserInteraction() {
+        cancelLaunchSpaceRestore(reason: "active label interaction started")
     }
 
     private func beginPreviewSuppressionForSwitchRequest() {

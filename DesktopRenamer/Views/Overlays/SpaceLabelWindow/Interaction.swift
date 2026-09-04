@@ -43,6 +43,12 @@ extension SpaceLabelWindow {
             return
         }
 
+        // A delayed launch-space recovery must never override an explicit
+        // interaction with the active label. This is especially important for
+        // the first drag after launch, when label seeding may still have a
+        // queued recovery task.
+        manager.cancelLaunchSpaceRestoreForUserInteraction()
+
         var startMouseLocation = NSEvent.mouseLocation
         let startWindowOrigin = self.frame.origin
         var mouseOffset = NSPoint(
