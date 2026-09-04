@@ -175,12 +175,29 @@ class ExecuteWindowActionCommand: NSScriptCommand {
         }
         DiagnosticEventLog.shared.record(subsystem: "AppleScript", level: "info", "Command performed: ExecuteWindowActionCommand (windowID: \(windowIDStr), pid: \(pidStr), actionName: \(actionName))")
         
-        // Fire-and-forget: the command returns nil, so there is no need to block
-        // the calling thread. All other AppleScript commands use the same pattern.
+        // Raycast restores the original desktop after this command completes.
+        // Wait for the main-actor action to finish so that restoration cannot
+        // race the delayed switch to the window's space.
+        let completion = DispatchSemaphore(value: 0)
         Task { @MainActor in
+            defer { completion.signal() }
             await executeActionAsync(windowID: windowID, pid: pid, actionName: actionName)
         }
-        return nil
+        waitForCompletion(completion)
+        return true
+    }
+
+    private func waitForCompletion(_ completion: DispatchSemaphore) {
+        guard Thread.isMainThread else {
+            completion.wait()
+            return
+        }
+
+        // NSScriptCommand may be invoked on the main thread. Pump the run loop
+        // while the main-actor task performs its asynchronous settling delays.
+        while completion.wait(timeout: .now()) == .timedOut {
+            RunLoop.current.run(mode: .default, before: Date(timeIntervalSinceNow: 0.01))
+        }
     }
     
     @MainActor
