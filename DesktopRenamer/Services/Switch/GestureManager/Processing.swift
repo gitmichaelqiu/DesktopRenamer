@@ -400,6 +400,12 @@ extension GestureManager {
             "gesture switch request \(disposition): direction=\(direction), transactionActive=\(transactionActive), pending=\(pendingCount)"
         )
 
+        if transactionActive {
+            DispatchQueue.main.async {
+                SpaceHelper.requestFastFollowUpSwitch()
+            }
+        }
+
         guard shouldSchedule else { return }
         let execute: () -> Void = { [weak self] in
             guard let self else { return }
@@ -463,6 +469,7 @@ extension GestureManager {
             onDisplayID: targetDisplayID,
             isManual: true
         )
+        print("GestureManager: Dispatched \(direction) (\(disposition))")
 
         let transactionStarted = disposition == .started || disposition == .queued
         DiagnosticEventLog.shared.record(
@@ -501,6 +508,7 @@ extension GestureManager {
             level: "info",
             "gesture switch deferred by active transaction: direction=\(direction)"
         )
+        SpaceHelper.requestFastFollowUpSwitch()
         scheduleGestureSwitchResumeProbe()
     }
 

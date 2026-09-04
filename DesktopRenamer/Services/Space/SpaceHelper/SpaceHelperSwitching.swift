@@ -249,6 +249,8 @@ extension SpaceHelper {
             isSwitching = false
             programmaticSwitchDestinationObserved = false
             programmaticSwitchNotificationObserved = false
+            programmaticSwitchUsesExtendedSettle = false
+            programmaticSwitchFastFollowUpRequested = false
         } else {
             let newGeneration = switchTransactionCoordinator.begin(
                 spaceID: spaceID,
@@ -258,6 +260,9 @@ extension SpaceHelper {
             isSwitching = true
             programmaticSwitchDestinationObserved = false
             programmaticSwitchNotificationObserved = false
+            programmaticSwitchUsesExtendedSettle =
+                context.targetIsFullscreen || context.currentSpaceIsFullscreen
+            programmaticSwitchFastFollowUpRequested = false
             programmaticSwitchCompletionWorkItem?.cancel()
             programmaticSwitchCompletionWorkItem = nil
             programmaticSwitchTimeoutWorkItem?.cancel()
@@ -512,6 +517,8 @@ extension SpaceHelper {
             isSwitching = false
             programmaticSwitchDestinationObserved = false
             programmaticSwitchNotificationObserved = false
+            programmaticSwitchUsesExtendedSettle = false
+            programmaticSwitchFastFollowUpRequested = false
             programmaticSwitchCompletionWorkItem?.cancel()
             programmaticSwitchCompletionWorkItem = nil
             programmaticSwitchTimeoutWorkItem?.cancel()
@@ -536,6 +543,8 @@ extension SpaceHelper {
         isSwitching = false
         programmaticSwitchDestinationObserved = false
         programmaticSwitchNotificationObserved = false
+        programmaticSwitchUsesExtendedSettle = false
+        programmaticSwitchFastFollowUpRequested = false
         lastProgrammaticSwitchTime = 0
         lastProgrammaticTargetSpaceID = nil
         lastProgrammaticSwitchUsedSLS = false
@@ -604,6 +613,33 @@ extension SpaceHelper {
         finishProgrammaticSwitch(at: active.request.spaceID, generation: active.generation)
     }
 
+    /// Releases a confirmed regular-desktop transaction promptly when a new
+    /// physical swipe is already waiting. Without this signal, the gesture
+    /// gate accumulates inputs for the full visual settle interval and later
+    /// executes them out of phase with the user's current gesture.
+    static func requestFastFollowUpSwitch() {
+        guard let active = switchTransactionCoordinator.active,
+              isSwitching,
+              !programmaticSwitchUsesExtendedSettle else {
+            return
+        }
+
+        programmaticSwitchFastFollowUpRequested = true
+        guard programmaticSwitchDestinationObserved else { return }
+
+        programmaticSwitchCompletionWorkItem?.cancel()
+        programmaticSwitchCompletionWorkItem = nil
+        DiagnosticEventLog.shared.record(
+            subsystem: "SpaceHelper",
+            level: "info",
+            "accelerating confirmed switch for waiting gesture: generation=\(active.generation), target=\(active.request.spaceID)"
+        )
+        finishProgrammaticSwitch(
+            at: active.request.spaceID,
+            generation: active.generation
+        )
+    }
+
     private static func finishProgrammaticSwitch(at spaceID: String, generation: UInt64) {
         guard programmaticSwitchCompletionWorkItem == nil else { return }
 
@@ -611,7 +647,10 @@ extension SpaceHelper {
         // swipe has finished. Keep the transition open for one settling
         // interval, then verify the authoritative live state again before
         // releasing queued requests and restoring labels.
-        let settleDelay: TimeInterval = 0.35
+        let settleDelay: TimeInterval =
+            programmaticSwitchFastFollowUpRequested && !programmaticSwitchUsesExtendedSettle
+            ? 0.08
+            : 0.35
         let workItem = DispatchWorkItem {
             guard let active = switchTransactionCoordinator.active,
                   isSwitching,
@@ -686,6 +725,8 @@ extension SpaceHelper {
         isSwitching = false
         programmaticSwitchDestinationObserved = false
         programmaticSwitchNotificationObserved = false
+        programmaticSwitchUsesExtendedSettle = false
+        programmaticSwitchFastFollowUpRequested = false
 
         switch reason {
         case .confirmed:

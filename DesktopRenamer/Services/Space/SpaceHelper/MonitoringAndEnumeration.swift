@@ -48,6 +48,8 @@ extension SpaceHelper {
         isSwitching = false
         programmaticSwitchDestinationObserved = false
         programmaticSwitchNotificationObserved = false
+        programmaticSwitchUsesExtendedSettle = false
+        programmaticSwitchFastFollowUpRequested = false
         lastProgrammaticSwitchTime = 0
         lastProgrammaticTargetSpaceID = nil
         lastProgrammaticSwitchUsedSLS = false
