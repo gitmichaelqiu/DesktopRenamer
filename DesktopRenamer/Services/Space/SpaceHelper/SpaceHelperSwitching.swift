@@ -315,8 +315,10 @@ extension SpaceHelper {
                     displayID: displayID,
                     generation: generation,
                     attempt: 1,
-                    delay: retryDelay,
-                    maxAttempts: involvesFullscreen ? 2 : 1
+                    scheduledDelay: retryDelay,
+                    retryInterval: retryDelay,
+                    maxAttempts: involvesFullscreen ? 2 : 1,
+                    snapshotProbeAttempt: 0
                 )
             }
             scheduleSpaceSwitchLabelSuppression(generation: generation)
@@ -893,32 +895,93 @@ extension SpaceHelper {
         displayID: String,
         generation: UInt64,
         attempt: Int,
-        delay: TimeInterval,
-        maxAttempts: Int
+        scheduledDelay: TimeInterval,
+        retryInterval: TimeInterval,
+        maxAttempts: Int,
+        snapshotProbeAttempt: Int
     ) {
         syntheticGestureRetryWorkItem?.cancel()
         let workItem = DispatchWorkItem {
             guard let active = switchTransactionCoordinator.active,
                   isSwitching,
                   active.generation == generation,
-                  active.request.spaceID == spaceID,
-                  getCurrentSpaceID(for: displayID) != spaceID,
-                  let state = getSystemState(),
-                  let liveCurrentID = getCurrentSpaceID(for: displayID) else {
+                  active.request.spaceID == spaceID else {
                 return
             }
             syntheticGestureRetryWorkItem = nil
+
+            guard let liveCurrentID = getCurrentSpaceID(for: displayID) else {
+                scheduleSyntheticGestureSnapshotProbe(
+                    spaceID: spaceID,
+                    displayID: displayID,
+                    generation: generation,
+                    attempt: attempt,
+                    retryInterval: retryInterval,
+                    maxAttempts: maxAttempts,
+                    snapshotProbeAttempt: snapshotProbeAttempt
+                )
+                return
+            }
+
+            if liveCurrentID == spaceID {
+                // The monitor callback is lossy under sustained switching.
+                // Complete from the authoritative WindowServer read instead
+                // of holding every later gesture until the timeout.
+                if !programmaticSwitchDestinationObserved {
+                    print(
+                        "SpaceHelper: Watchdog confirmed synthetic gesture at "
+                            + spaceID
+                            + " after a missed monitor completion"
+                    )
+                }
+                markProgrammaticSwitchComplete(at: spaceID)
+                if !programmaticSwitchDestinationObserved {
+                    scheduleSyntheticGestureSnapshotProbe(
+                        spaceID: spaceID,
+                        displayID: displayID,
+                        generation: generation,
+                        attempt: attempt,
+                        retryInterval: retryInterval,
+                        maxAttempts: maxAttempts,
+                        snapshotProbeAttempt: snapshotProbeAttempt
+                    )
+                }
+                return
+            }
+
+            guard let state = getSystemState() else {
+                scheduleSyntheticGestureSnapshotProbe(
+                    spaceID: spaceID,
+                    displayID: displayID,
+                    generation: generation,
+                    attempt: attempt,
+                    retryInterval: retryInterval,
+                    maxAttempts: maxAttempts,
+                    snapshotProbeAttempt: snapshotProbeAttempt
+                )
+                return
+            }
 
             let displaySpaces = state.spaces
                 .filter { $0.displayID == displayID }
                 .sorted { $0.num < $1.num }
             guard let currentIndex = displaySpaces.firstIndex(where: { $0.id == liveCurrentID }),
                   let targetIndex = displaySpaces.firstIndex(where: { $0.id == spaceID }) else {
+                scheduleSyntheticGestureSnapshotProbe(
+                    spaceID: spaceID,
+                    displayID: displayID,
+                    generation: generation,
+                    attempt: attempt,
+                    retryInterval: retryInterval,
+                    maxAttempts: maxAttempts,
+                    snapshotProbeAttempt: snapshotProbeAttempt
+                )
                 return
             }
 
             let steps = targetIndex - currentIndex
             guard steps != 0 else { return }
+            guard attempt <= maxAttempts else { return }
 
             DiagnosticEventLog.shared.record(
                 subsystem: "SpaceHelper",
@@ -944,18 +1007,63 @@ extension SpaceHelper {
                 forceInstant: false
             )
 
-            if attempt < maxAttempts {
-                scheduleSyntheticGestureRetry(
-                    spaceID: spaceID,
-                    displayID: displayID,
-                    generation: generation,
-                    attempt: attempt + 1,
-                    delay: delay,
-                    maxAttempts: maxAttempts
-                )
-            }
+            // Always schedule one verification after the last allowed repost.
+            // It closes the transaction even if the normal monitor callback
+            // is lost during an extreme run.
+            let followUpDelay =
+                attempt == maxAttempts ? min(retryInterval, 0.5) : retryInterval
+            scheduleSyntheticGestureRetry(
+                spaceID: spaceID,
+                displayID: displayID,
+                generation: generation,
+                attempt: attempt + 1,
+                scheduledDelay: followUpDelay,
+                retryInterval: retryInterval,
+                maxAttempts: maxAttempts,
+                snapshotProbeAttempt: 0
+            )
         }
         syntheticGestureRetryWorkItem = workItem
-        DispatchQueue.main.asyncAfter(deadline: .now() + delay, execute: workItem)
+        DispatchQueue.main.asyncAfter(deadline: .now() + scheduledDelay, execute: workItem)
+    }
+
+    private static func scheduleSyntheticGestureSnapshotProbe(
+        spaceID: String,
+        displayID: String,
+        generation: UInt64,
+        attempt: Int,
+        retryInterval: TimeInterval,
+        maxAttempts: Int,
+        snapshotProbeAttempt: Int
+    ) {
+        let snapshotProbeLimit = 4
+        guard snapshotProbeAttempt < snapshotProbeLimit else {
+            print(
+                "SpaceHelper: Synthetic gesture watchdog could not obtain a stable snapshot for "
+                    + spaceID
+            )
+            DiagnosticEventLog.shared.record(
+                subsystem: "SpaceHelper",
+                level: "warning",
+                "Synthetic gesture watchdog exhausted transient snapshot probes: generation=\(generation), target=\(spaceID)"
+            )
+            return
+        }
+
+        DiagnosticEventLog.shared.record(
+            subsystem: "SpaceHelper",
+            level: "info",
+            "Synthetic gesture watchdog retrying transient snapshot: generation=\(generation), target=\(spaceID), probe=\(snapshotProbeAttempt + 1)"
+        )
+        scheduleSyntheticGestureRetry(
+            spaceID: spaceID,
+            displayID: displayID,
+            generation: generation,
+            attempt: attempt,
+            scheduledDelay: 0.12,
+            retryInterval: retryInterval,
+            maxAttempts: maxAttempts,
+            snapshotProbeAttempt: snapshotProbeAttempt + 1
+        )
     }
 }
