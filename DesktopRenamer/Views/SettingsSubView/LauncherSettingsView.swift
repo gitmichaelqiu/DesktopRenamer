@@ -190,6 +190,7 @@ struct LauncherSettingsView: View {
         .padding(.horizontal, 12)
         .padding(.vertical, 6)
         .frame(minWidth: 320, alignment: .leading)
+        .contentShape(.dragPreview, RoundedRectangle(cornerRadius: 8, style: .continuous))
         .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
     }
 

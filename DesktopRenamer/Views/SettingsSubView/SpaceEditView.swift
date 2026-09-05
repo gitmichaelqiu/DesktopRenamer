@@ -258,11 +258,25 @@ struct SpaceEditView: View {
     }
 
     private func dragPreview(for space: DesktopSpace) -> some View {
-        Text(defaultName(for: space))
-            .font(.body)
-            .padding(.horizontal, 16)
-            .padding(.vertical, 10)
-            .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+        HStack(spacing: 10) {
+            Image(systemName: "line.3.horizontal")
+                .font(.caption)
+                .foregroundStyle(.tertiary)
+                .frame(width: 16)
+            Text(spaceNumberText(for: space))
+                .font(.system(.body, design: .monospaced))
+                .foregroundColor(.secondary)
+                .frame(width: 30, alignment: .leading)
+            Text(space.customName.isEmpty ? defaultName(for: space) : space.customName)
+                .font(.body)
+                .lineLimit(1)
+            Spacer(minLength: 0)
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 6)
+        .frame(minWidth: 320, alignment: .leading)
+        .contentShape(.dragPreview, RoundedRectangle(cornerRadius: 8, style: .continuous))
+        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
     }
 
     private func rearrange(_ sourceID: String, before target: DesktopSpace, in spaces: [DesktopSpace]) -> Bool {

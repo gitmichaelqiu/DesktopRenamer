@@ -58,6 +58,8 @@ struct ReorderableSettingsList<Item: Identifiable, RowContent: View, DragPreview
     private func decoratedRow(for item: Item) -> some View {
         rowContent(item, items)
             .contentShape(Rectangle())
+            .contentShape(.dragPreview, RoundedRectangle(cornerRadius: 8, style: .continuous))
+            .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
             .background(
                 targetedItemID == item.id
                     ? Color.accentColor.opacity(0.12)
