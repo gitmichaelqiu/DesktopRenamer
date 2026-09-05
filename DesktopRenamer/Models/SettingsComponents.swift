@@ -380,6 +380,10 @@ struct SettingsRow<Content: View>: View {
 }
 
 enum SettingsSectionStyle {
+    static var rowBackgroundColor: Color {
+        Color(nsColor: .underPageBackgroundColor)
+    }
+
     static var backgroundColor: Color {
         let nsColor = NSColor(name: nil) { appearance in
             if appearance.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua {

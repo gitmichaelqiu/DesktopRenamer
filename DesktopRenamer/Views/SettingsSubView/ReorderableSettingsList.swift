@@ -59,11 +59,7 @@ struct ReorderableSettingsList<Item: Identifiable, RowContent: View, DragPreview
         rowContent(item, items)
             .contentShape(Rectangle())
             .contentShape(.dragPreview, Rectangle())
-            .background(
-                Rectangle()
-                    .fill(SettingsSectionStyle.backgroundColor.opacity(0.6))
-                    .overlay(Rectangle().fill(.regularMaterial))
-            )
+            .background(SettingsSectionStyle.rowBackgroundColor)
             .background(
                 targetedItemID == item.id
                     ? Color.accentColor.opacity(0.12)
