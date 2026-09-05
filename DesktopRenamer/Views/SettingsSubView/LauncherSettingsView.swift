@@ -52,10 +52,10 @@ struct LauncherSettingsView: View {
                             .toggleStyle(.switch)
                             .labelsHidden()
                     }
-                    
-                    if !viewModel.automaticallyRankCommands {
-                        Divider()
-                        
+                }
+
+                if !viewModel.automaticallyRankCommands {
+                    SettingsSection(nil) {
                         VStack(spacing: 0) {
                             HStack(spacing: 10) {
                                 Color.clear.frame(width: 16)
@@ -80,15 +80,8 @@ struct LauncherSettingsView: View {
                                 commandRows(orderedCommands)
                             }
                         }
-                        .background(
-                            RoundedRectangle(cornerRadius: 12, style: .continuous)
-                                .fill(sectionBackgroundColor.opacity(0.6))
-                                .overlay(RoundedRectangle(cornerRadius: 12, style: .continuous).fill(.regularMaterial))
-                        )
-                        .padding(.horizontal, 10)
-                        .padding(.vertical, 10)
-                        .transition(.opacity.combined(with: .move(edge: .top)))
                     }
+                    .transition(.opacity.combined(with: .move(edge: .top)))
                 }
             }
             .frame(maxWidth: .infinity, alignment: .topLeading)
@@ -106,17 +99,6 @@ struct LauncherSettingsView: View {
         }
     }
     
-    private var sectionBackgroundColor: Color {
-        let nsColor = NSColor(name: nil) { appearance in
-            if appearance.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua {
-                return NSColor(calibratedWhite: 0.20, alpha: 1.0)
-            } else {
-                return NSColor(calibratedWhite: 1.00, alpha: 1.0)
-            }
-        }
-        return Color(nsColor: nsColor)
-    }
-
     private var orderedCommands: [LauncherCommand] {
         viewModel.manualCommandOrder.compactMap { id in
             viewModel.allCommands.first(where: { $0.id == id })
