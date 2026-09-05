@@ -30,6 +30,31 @@ enum DesktopRearrangementDirection {
         let targetIndex = index + direction
         guard targetIndex >= 0 && targetIndex < order.count else { return }
         order.swapAt(index, targetIndex)
+        saveManualCommandOrder(order)
+    }
+
+    func moveCommand(id sourceID: String, before targetID: String) {
+        var order = manualCommandOrder
+        guard sourceID != targetID,
+              let sourceIndex = order.firstIndex(of: sourceID),
+              let targetIndex = order.firstIndex(of: targetID) else { return }
+
+        order.remove(at: sourceIndex)
+        let insertionIndex = order.firstIndex(of: targetID) ?? targetIndex
+        order.insert(sourceID, at: insertionIndex)
+        saveManualCommandOrder(order)
+    }
+
+    func moveCommandToEnd(id sourceID: String) {
+        var order = manualCommandOrder
+        guard let sourceIndex = order.firstIndex(of: sourceID), sourceIndex < order.count - 1 else { return }
+
+        let source = order.remove(at: sourceIndex)
+        order.append(source)
+        saveManualCommandOrder(order)
+    }
+
+    private func saveManualCommandOrder(_ order: [String]) {
         launcherManualCommandOrder = order.joined(separator: ",")
         objectWillChange.send()
     }

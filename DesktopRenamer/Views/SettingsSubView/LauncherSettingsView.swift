@@ -8,6 +8,7 @@ struct LauncherSettingsView: View {
     @StateObject private var permissionManager = PermissionManager.shared
     @EnvironmentObject var navigationState: SettingsNavigationState
     @Environment(\.isSettingsPreRendering) private var isPreRendering
+    @State private var targetedCommandID: String?
     
     var body: some View {
         SettingsContainer(.launcher) {
@@ -57,13 +58,11 @@ struct LauncherSettingsView: View {
                         
                         VStack(spacing: 0) {
                             HStack(spacing: 10) {
+                                Color.clear.frame(width: 16)
                                 Text("#").frame(width: 30, alignment: .leading)
                                 Text(NSLocalizedString("Settings.Launcher.Command.Name", comment: ""))
                                     .frame(maxWidth: .infinity, alignment: .leading)
                                     .id("Settings.Launcher.Command.Name")
-                                Text(NSLocalizedString("Settings.Launcher.Command.Actions", comment: ""))
-                                    .frame(width: 60, alignment: .trailing)
-                                    .id("Settings.Launcher.Command.Actions")
                             }
                             .font(.caption)
                             .foregroundColor(.secondary)
@@ -72,73 +71,13 @@ struct LauncherSettingsView: View {
                             
                             Divider()
                             
-                            let orderedCommands = viewModel.manualCommandOrder.compactMap { id in
-                                viewModel.allCommands.first(where: { $0.id == id })
-                            }
-                            
                             if orderedCommands.isEmpty {
                                 Text("No commands found")
                                     .font(.caption)
                                     .foregroundColor(.secondary)
                                     .padding(10)
                             } else {
-                                ForEach(Array(orderedCommands.enumerated()), id: \.element.id) { index, command in
-                                    VStack(spacing: 0) {
-                                        HStack(spacing: 10) {
-                                            Text("\(index + 1)")
-                                                .font(.system(.body, design: .monospaced))
-                                                .foregroundColor(.secondary)
-                                                .frame(width: 30, alignment: .leading)
-                                            
-                                            HStack(spacing: 8) {
-                                                Image(systemName: command.iconName)
-                                                    .font(.system(size: 14))
-                                                    .foregroundColor(.secondary)
-                                                    .frame(width: 20)
-                                                
-                                                VStack(alignment: .leading, spacing: 2) {
-                                                    Text(command.title)
-                                                        .font(.body)
-                                                        .fontWeight(.medium)
-                                                    Text(command.subtitle)
-                                                        .font(.caption)
-                                                        .foregroundColor(.secondary)
-                                                }
-                                            }
-                                            .frame(maxWidth: .infinity, alignment: .leading)
-                                            
-                                            HStack(spacing: 4) {
-                                                Button(action: {
-                                                    withAnimation(.easeInOut(duration: 0.2)) {
-                                                        viewModel.moveCommand(at: index, direction: -1)
-                                                    }
-                                                }) {
-                                                    Image(systemName: "chevron.up").frame(width: 16, height: 16)
-                                                }
-                                                .disabled(index == 0)
-                                                .opacity(index == 0 ? 0.3 : 1.0)
-                                                
-                                                Button(action: {
-                                                    withAnimation(.easeInOut(duration: 0.2)) {
-                                                        viewModel.moveCommand(at: index, direction: 1)
-                                                    }
-                                                }) {
-                                                    Image(systemName: "chevron.down").frame(width: 16, height: 16)
-                                                }
-                                                .disabled(index == orderedCommands.count - 1)
-                                                .opacity(index == orderedCommands.count - 1 ? 0.3 : 1.0)
-                                            }
-                                            .buttonStyle(.borderless)
-                                            .frame(width: 60, alignment: .trailing)
-                                        }
-                                        .padding(.horizontal, 12)
-                                        .padding(.vertical, 6)
-                                        
-                                        if command.id != orderedCommands.last?.id {
-                                            Divider().padding(.leading, 12)
-                                        }
-                                    }
-                                }
+                                commandRows(orderedCommands)
                             }
                         }
                         .background(
@@ -156,11 +95,11 @@ struct LauncherSettingsView: View {
             .animation(.easeInOut(duration: 0.2), value: viewModel.automaticallyRankCommands)
             .animation(.easeInOut(duration: 0.2), value: viewModel.launcherManualCommandOrder)
             .onAppear {
-                navigationState.register(title: "Settings.Launcher.Command.Actions", tab: .launcher, keywords: ["reorder", "arrange", "sequence", "position", "move", "up", "down", "rank"])
+                navigationState.register(title: "Settings.Launcher.Command.Name", tab: .launcher, keywords: ["reorder", "arrange", "sequence", "position", "move", "rank"])
             }
             .onDisappear {
                 if !isPreRendering {
-                    navigationState.unregister(title: "Settings.Launcher.Command.Actions", tab: .launcher)
+                    navigationState.unregister(title: "Settings.Launcher.Command.Name", tab: .launcher)
                 }
             }
             .environment(\.settingsTab, .launcher)
@@ -176,5 +115,119 @@ struct LauncherSettingsView: View {
             }
         }
         return Color(nsColor: nsColor)
+    }
+
+    private var orderedCommands: [LauncherCommand] {
+        viewModel.manualCommandOrder.compactMap { id in
+            viewModel.allCommands.first(where: { $0.id == id })
+        }
+    }
+
+    @ViewBuilder
+    private func commandRows(_ commands: [LauncherCommand]) -> some View {
+        if #available(macOS 27.0, *) {
+            VStack(spacing: 0) {
+                ForEach(commands) { command in
+                    commandRow(for: command, in: commands)
+                }
+                .reorderable()
+            }
+            .reorderContainer(for: LauncherCommand.self) { difference in
+                applyNativeReorder(difference)
+            }
+        } else {
+            ForEach(commands) { command in
+                commandRow(for: command, in: commands)
+                    .draggable(command.id) {
+                        dragPreview(for: command)
+                    }
+                    .dropDestination(for: String.self) { sourceIDs, _ in
+                        guard let sourceID = sourceIDs.first else { return false }
+                        return rearrange(sourceID, before: command)
+                    } isTargeted: { isTargeted in
+                        if isTargeted {
+                            targetedCommandID = command.id
+                        } else if targetedCommandID == command.id {
+                            targetedCommandID = nil
+                        }
+                    }
+            }
+        }
+    }
+
+    private func commandRow(for command: LauncherCommand, in commands: [LauncherCommand]) -> some View {
+        let commandIndex = commands.firstIndex(where: { $0.id == command.id }) ?? 0
+
+        return VStack(spacing: 0) {
+            HStack(spacing: 10) {
+                Image(systemName: "line.3.horizontal")
+                    .font(.caption)
+                    .foregroundStyle(.tertiary)
+                    .frame(width: 16)
+                    .accessibilityLabel("Drag to rearrange")
+                Text("\(commandIndex + 1)")
+                    .font(.system(.body, design: .monospaced))
+                    .foregroundColor(.secondary)
+                    .frame(width: 30, alignment: .leading)
+
+                HStack(spacing: 8) {
+                    Image(systemName: command.iconName)
+                        .font(.system(size: 14))
+                        .foregroundColor(.secondary)
+                        .frame(width: 20)
+
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(command.title)
+                            .font(.body)
+                            .fontWeight(.medium)
+                        Text(command.subtitle)
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+            }
+            .padding(.horizontal, 12)
+            .padding(.vertical, 6)
+
+            if command.id != commands.last?.id {
+                Divider().padding(.leading, 12)
+            }
+        }
+        .contentShape(Rectangle())
+        .background(
+            targetedCommandID == command.id
+                ? Color.accentColor.opacity(0.12)
+                : Color.clear
+        )
+        .transition(.opacity.combined(with: .move(edge: .top)))
+    }
+
+    private func dragPreview(for command: LauncherCommand) -> some View {
+        Text(command.title)
+            .font(.body)
+            .padding(.horizontal, 16)
+            .padding(.vertical, 10)
+            .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+    }
+
+    private func rearrange(_ sourceID: String, before target: LauncherCommand) -> Bool {
+        guard sourceID != target.id else { return false }
+        viewModel.moveCommand(id: sourceID, before: target.id)
+        return true
+    }
+
+    @available(macOS 27.0, *)
+    private func applyNativeReorder(
+        _ difference: ReorderDifference<String, ReorderableSingleCollectionIdentifier>
+    ) {
+        guard let sourceID = difference.sources.first else { return }
+
+        switch difference.destination.position {
+        case .before(let targetID):
+            viewModel.moveCommand(id: sourceID, before: targetID)
+        case .end:
+            viewModel.moveCommandToEnd(id: sourceID)
+        }
     }
 }
