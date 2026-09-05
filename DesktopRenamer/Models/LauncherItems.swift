@@ -4,6 +4,7 @@ import AppKit
 struct SpaceGroup: Identifiable, Equatable {
     let id: String
     let name: String
+    let displayID: String
     let displayName: String
     let num: Int
     let isFullscreen: Bool
@@ -13,9 +14,18 @@ struct SpaceGroup: Identifiable, Equatable {
     let pinyinName: String
     let pinyinDisplayName: String
 
-    init(id: String, name: String, displayName: String, num: Int, isFullscreen: Bool, appPath: String? = nil) {
+    init(
+        id: String,
+        name: String,
+        displayName: String,
+        num: Int,
+        isFullscreen: Bool,
+        appPath: String? = nil,
+        displayID: String = ""
+    ) {
         self.id = id
         self.name = name
+        self.displayID = displayID
         self.displayName = displayName
         self.num = num
         self.isFullscreen = isFullscreen

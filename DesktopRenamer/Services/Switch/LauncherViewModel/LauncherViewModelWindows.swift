@@ -90,7 +90,8 @@ extension LauncherViewModel {
                 displayName: getDisplayName(for: space.displayID),
                 num: space.num,
                 isFullscreen: space.isFullscreen,
-                appPath: space.appPath
+                appPath: space.appPath,
+                displayID: space.displayID
             )
         }
         
@@ -106,7 +107,8 @@ extension LauncherViewModel {
             guard let self = self else { return }
             
             let raw = SpaceHelper.getWindowsForAllSpaces(spaces: spaces, spaceNames: names)
-            let parsed = Self.parseWindowData(raw)
+            let displayIDs = Dictionary(uniqueKeysWithValues: spaces.map { ($0.id, $0.displayID) })
+            let parsed = Self.parseWindowData(raw, displayIDs: displayIDs)
             
             DispatchQueue.main.async {
                 let terminatingPIDs = self.terminatingApplicationPIDs
@@ -137,7 +139,10 @@ extension LauncherViewModel {
         return "Display"
     }
     
-    private nonisolated static func parseWindowData(_ raw: String) -> (spaces: [SpaceGroup], windows: [WindowEntry]) {
+    private nonisolated static func parseWindowData(
+        _ raw: String,
+        displayIDs: [String: String] = [:]
+    ) -> (spaces: [SpaceGroup], windows: [WindowEntry]) {
         var spaces: [SpaceGroup] = []
         var windows: [WindowEntry] = []
         var currentSpace: SpaceGroup? = nil
@@ -155,7 +160,8 @@ extension LauncherViewModel {
                         displayName: parts[2],
                         num: Int(parts[3]) ?? 0,
                         isFullscreen: isFS,
-                        appPath: appPath
+                        appPath: appPath,
+                        displayID: displayIDs[parts[0]] ?? ""
                     )
                     currentSpace = space
                     spaces.append(space)

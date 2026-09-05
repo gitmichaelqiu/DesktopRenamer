@@ -122,7 +122,7 @@ extension LauncherViewModel {
     private func applyLocalSpaceOrder(orderedIDs: [String], displayID: String) {
         let spaceByID = Dictionary(uniqueKeysWithValues: currentSpaces.map { ($0.id, $0) })
         let displayIndices = currentSpaces.indices
-            .filter { currentSpaces[$0].displayName == getDisplayName(for: displayID) && !currentSpaces[$0].isFullscreen }
+            .filter { currentSpaces[$0].displayID == displayID && !currentSpaces[$0].isFullscreen }
             .sorted { currentSpaces[$0].num < currentSpaces[$1].num }
 
         for (index, spaceID) in orderedIDs.enumerated() {
