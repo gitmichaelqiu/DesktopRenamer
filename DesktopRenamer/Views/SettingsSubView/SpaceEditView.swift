@@ -215,7 +215,6 @@ struct SpaceEditView: View {
             dragPreview: { space in
                 dragPreview(for: space)
             },
-            useNativeReorder: false,
             moveBefore: { sourceID, targetID in
                 guard let target = spaces.first(where: { $0.id == targetID }) else { return false }
                 return rearrange(sourceID, before: target, in: spaces)
