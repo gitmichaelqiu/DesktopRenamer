@@ -211,18 +211,10 @@ struct OtherAppRow: View {
             HStack(spacing: 16) {
                 // Icon
                 ZStack {
-                    if let nsImage = NSImage(named: imageName) {
-                        Image(nsImage: nsImage)
-                            .resizable()
-                            .aspectRatio(contentMode: .fit)
-                            .frame(width: 44, height: 44)
-                    } else {
-                        Image(systemName: "app.dashed")
-                            .resizable()
-                            .aspectRatio(contentMode: .fit)
-                            .frame(width: 40, height: 40)
-                            .foregroundColor(.secondary)
-                    }
+                    Image(imageName)
+                        .resizable()
+                        .aspectRatio(contentMode: .fit)
+                        .frame(width: 44, height: 44)
                 }
                 .shadow(color: .black.opacity(isHovering ? 0.2 : 0.1), radius: isHovering ? 6 : 2, x: 0, y: 2)
                 .scaleEffect(isHovering ? 1.05 : 1.0)
