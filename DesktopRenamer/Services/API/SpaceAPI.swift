@@ -487,6 +487,10 @@ final class SpaceAPI {
             return
         }
 
+        if action == "restore" {
+            NSRunningApplication(processIdentifier: pid)?.unhide()
+        }
+
         var axWindow = SpaceHelper.getAXWindow(id: windowID, pid: pid)
         if axWindow == nil, let app = NSRunningApplication(processIdentifier: pid) {
             app.activate(options: .activateIgnoringOtherApps)
