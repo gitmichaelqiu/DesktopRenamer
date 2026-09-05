@@ -4,7 +4,19 @@ import Foundation
 
 extension SpaceLabelManager {
 
-    func updateGlobalState(isDocked: Bool, edge: NSRectEdge, center: NSPoint) {
+    func updateGlobalState(
+        isDocked: Bool,
+        edge: NSRectEdge,
+        center: NSPoint,
+        sourceWindow: SpaceLabelWindow? = nil
+    ) {
+        let centerChanged = globalCenterPoint.map {
+            $0.x != center.x || $0.y != center.y
+        } ?? true
+        let stateChanged = globalIsDocked != isDocked
+            || globalDockEdge.rawValue != edge.rawValue
+            || centerChanged
+
         self.globalIsDocked = isDocked
         self.globalDockEdge = edge
         self.globalCenterPoint = center
@@ -13,6 +25,24 @@ extension SpaceLabelManager {
         UserDefaults.standard.set(Int(edge.rawValue), forKey: kGlobalDockEdge)
         UserDefaults.standard.set(center.x, forKey: kGlobalCenterX)
         UserDefaults.standard.set(center.y, forKey: kGlobalCenterY)
+
+        if stateChanged {
+            synchronizeActiveWindows(excluding: sourceWindow)
+        }
+    }
+
+    /// Applies shared label geometry to every display immediately. A drag on
+    /// one active label changes global state without changing the current
+    /// Space, so the normal SpaceManager visibility reconciliation does not
+    /// run for the other displays.
+    private func synchronizeActiveWindows(excluding sourceWindow: SpaceLabelWindow?) {
+        for window in activeWindows.values {
+            if let sourceWindow, window === sourceWindow {
+                continue
+            }
+            window.syncFromGlobalState()
+            window.updateLayout(isCurrentSpace: true, updateFrame: false)
+        }
     }
 
     func saveSettings() {

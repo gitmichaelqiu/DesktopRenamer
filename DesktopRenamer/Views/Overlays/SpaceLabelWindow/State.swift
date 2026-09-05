@@ -159,7 +159,11 @@ extension SpaceLabelWindow {
         }
 
         manager.updateGlobalState(
-            isDocked: self.isDocked, edge: self.dockEdge, center: NSPoint(x: relX, y: relY))
+            isDocked: self.isDocked,
+            edge: self.dockEdge,
+            center: NSPoint(x: relX, y: relY),
+            sourceWindow: self
+        )
     }
 
     // Calculates the target center point based on docking and layout settings.

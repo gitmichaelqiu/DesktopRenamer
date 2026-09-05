@@ -181,7 +181,11 @@ extension SpaceLabelWindow {
 
                 if let manager = labelManager {
                     manager.updateGlobalState(
-                        isDocked: false, edge: self.dockEdge, center: NSPoint(x: relX, y: relY))
+                        isDocked: false,
+                        edge: self.dockEdge,
+                        center: NSPoint(x: relX, y: relY),
+                        sourceWindow: self
+                    )
                 }
             }
             animateFrameChange()
