@@ -4,6 +4,7 @@ struct ReorderableSettingsList<Item: Identifiable, RowContent: View, DragPreview
     let items: [Item]
     let rowContent: (Item, [Item]) -> RowContent
     let dragPreview: (Item) -> DragPreview
+    let useNativeReorder: Bool
     let moveBefore: (String, String) -> Bool
     let moveToEnd: (String) -> Void
 
@@ -13,19 +14,21 @@ struct ReorderableSettingsList<Item: Identifiable, RowContent: View, DragPreview
         items: [Item],
         @ViewBuilder rowContent: @escaping (Item, [Item]) -> RowContent,
         @ViewBuilder dragPreview: @escaping (Item) -> DragPreview,
+        useNativeReorder: Bool = true,
         moveBefore: @escaping (String, String) -> Bool,
         moveToEnd: @escaping (String) -> Void
     ) {
         self.items = items
         self.rowContent = rowContent
         self.dragPreview = dragPreview
+        self.useNativeReorder = useNativeReorder
         self.moveBefore = moveBefore
         self.moveToEnd = moveToEnd
     }
 
     @ViewBuilder
     var body: some View {
-        if #available(macOS 27.0, *) {
+        if #available(macOS 27.0, *), useNativeReorder {
             VStack(spacing: 0) {
                 ForEach(items) { item in
                     decoratedRow(for: item)
