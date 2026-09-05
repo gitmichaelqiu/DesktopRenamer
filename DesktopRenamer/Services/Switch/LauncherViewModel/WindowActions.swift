@@ -60,11 +60,6 @@ extension LauncherViewModel {
 
         let originalSpaceID = fromSpaceIDStr
 
-        guard !targetSpace.isFullscreen else {
-            DiagnosticEventLog.shared.record(subsystem: "Launcher", level: "info", "movePreviouslyActiveWindow: target space is fullscreen; no move performed")
-            return false
-        }
-
         DiagnosticEventLog.shared.record(subsystem: "Launcher", level: "info", "movePreviouslyActiveWindow: moving window \(prevWindow.id) from space \(fromSpaceIDStr) to space \(spaceID)")
 
         LauncherWindowController.shared.shouldRestoreFocus = true

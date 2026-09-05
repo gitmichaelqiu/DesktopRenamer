@@ -77,48 +77,19 @@ extension LauncherViewModel {
                             continue
                         }
 
-                        if case .restoreTo = action.actionType {
-                            await WindowActionCoordinator.moveWindow(
-                                windowID: action.window.id,
-                                pid: action.window.pid,
-                                fromSpaceID: action.window.space.id,
-                                targetSpaceID: targetSpaceID
+                        let moved = await WindowActionCoordinator.moveWindow(
+                            windowID: action.window.id,
+                            pid: action.window.pid,
+                            fromSpaceID: action.window.space.id,
+                            targetSpaceID: targetSpaceID
+                        )
+                        if !moved {
+                            DiagnosticEventLog.shared.record(
+                                subsystem: "Launcher",
+                                level: "warning",
+                                "executeBatchMove: Failed to move window id=\(action.window.id) to space=\(targetSpaceID)"
                             )
-                            if index < sourceActions.count - 1 {
-                                if let manager = AppDelegate.shared.spaceManager,
-                                   let spaceObj = manager.spaceNameDict.first(where: { $0.id == sourceId }) {
-                                    manager.switchToSpace(spaceObj, forceInstant: true)
-                                }
-                                try await Task.sleep(nanoseconds: 600_000_000) // 0.6s switch settle
-                            }
-                            continue
                         }
-                        
-                        // Focus the targeted window first
-                        SpaceHelper.focusWindow(id: action.window.id, pid: action.window.pid)
-                        try await Task.sleep(nanoseconds: 250_000_000) // 0.25s focus settle
-                        
-                        // Un-fullscreen first if the window is currently in a fullscreen space
-                        if action.window.space.isFullscreen {
-                            DiagnosticEventLog.shared.record(subsystem: "Launcher", level: "info", "executeBatchMove: Un-fullscreen window id=\(action.window.id)")
-                            var axWindow = SpaceHelper.getAXWindow(id: action.window.id, pid: action.window.pid)
-                            if axWindow == nil {
-                                if let app = NSRunningApplication(processIdentifier: action.window.pid) {
-                                    app.activate(options: .activateIgnoringOtherApps)
-                                    try await Task.sleep(nanoseconds: 400_000_000)
-                                    axWindow = SpaceHelper.getAXWindow(id: action.window.id, pid: action.window.pid)
-                                }
-                            }
-                            if let targetAXWindow = axWindow {
-                                AXUIElementSetAttributeValue(targetAXWindow, "AXFullScreen" as CFString, false as CFTypeRef)
-                                try await Task.sleep(nanoseconds: 1_200_000_000) // Wait for exit-fullscreen animation to settle
-                            }
-                        }
-                        
-                        if let manager = AppDelegate.shared.spaceManager {
-                            manager.moveActiveWindowToSpace(id: targetSpaceID)
-                        }
-                        try await Task.sleep(nanoseconds: 500_000_000) // 0.5s movement settle
                         
                         // Switch back to source space
                         if index < sourceActions.count - 1 {
