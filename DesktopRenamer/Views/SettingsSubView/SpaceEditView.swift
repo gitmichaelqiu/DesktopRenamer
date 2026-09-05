@@ -4,7 +4,6 @@ struct SpaceEditView: View {
     @ObservedObject var spaceManager: SpaceManager
     @EnvironmentObject var navigationState: SettingsNavigationState
     @Environment(\.isSettingsPreRendering) private var isPreRendering
-    @State private var targetedSpaceID: String?
     
     var body: some View {
         VStack(spacing: 0) {
@@ -218,36 +217,23 @@ struct SpaceEditView: View {
         spaceManager.renameSpace(space.id, to: newName)
     }
 
-    @ViewBuilder
     private func spaceRows(_ spaces: [DesktopSpace]) -> some View {
-        if #available(macOS 27.0, *) {
-            VStack(spacing: 0) {
-                ForEach(spaces) { space in
-                    spaceRow(for: space, in: spaces)
-                }
-                .reorderable()
+        ReorderableSettingsList(
+            items: spaces,
+            rowContent: { space, items in
+                spaceRow(for: space, in: items)
+            },
+            dragPreview: { space in
+                dragPreview(for: space)
+            },
+            moveBefore: { sourceID, targetID in
+                guard let target = spaces.first(where: { $0.id == targetID }) else { return false }
+                return rearrange(sourceID, before: target, in: spaces)
+            },
+            moveToEnd: { sourceID in
+                rearrangeToEnd(sourceID, in: spaces)
             }
-            .reorderContainer(for: DesktopSpace.self) { difference in
-                applyNativeReorder(difference, in: spaces)
-            }
-        } else {
-            ForEach(spaces) { space in
-                spaceRow(for: space, in: spaces)
-                    .draggable(space.id) {
-                        dragPreview(for: space)
-                    }
-                    .dropDestination(for: String.self) { sourceIDs, _ in
-                        guard let sourceID = sourceIDs.first else { return false }
-                        return rearrange(sourceID, before: space, in: spaces)
-                    } isTargeted: { isTargeted in
-                        if isTargeted {
-                            targetedSpaceID = space.id
-                        } else if targetedSpaceID == space.id {
-                            targetedSpaceID = nil
-                        }
-                    }
-            }
-        }
+        )
     }
 
     private func spaceRow(for space: DesktopSpace, in spaces: [DesktopSpace]) -> some View {
@@ -269,13 +255,6 @@ struct SpaceEditView: View {
                 Divider().padding(.leading, 12)
             }
         }
-        .contentShape(Rectangle())
-        .background(
-            targetedSpaceID == space.id
-                ? Color.accentColor.opacity(0.12)
-                : Color.clear
-        )
-        .transition(.opacity.combined(with: .move(edge: .top)))
     }
 
     private func dragPreview(for space: DesktopSpace) -> some View {
@@ -300,26 +279,14 @@ struct SpaceEditView: View {
         return true
     }
 
-    @available(macOS 27.0, *)
-    private func applyNativeReorder(
-        _ difference: ReorderDifference<String, ReorderableSingleCollectionIdentifier>,
-        in spaces: [DesktopSpace]
-    ) {
-        guard let sourceID = difference.sources.first else { return }
-
-        switch difference.destination.position {
-        case .before(let targetID):
-            guard let target = spaces.first(where: { $0.id == targetID }) else { return }
-            _ = rearrange(sourceID, before: target, in: spaces)
-        case .end:
-            SpaceRearrangementService.shared.rearrangeToEnd(
-                sourceID: sourceID,
-                orderedSpaceIDs: spaces.map(\.id),
-                displayID: spaces.first?.displayID
-            ) { result in
-                if case .success = result {
-                    spaceManager.refreshSpaceState()
-                }
+    private func rearrangeToEnd(_ sourceID: String, in spaces: [DesktopSpace]) {
+        SpaceRearrangementService.shared.rearrangeToEnd(
+            sourceID: sourceID,
+            orderedSpaceIDs: spaces.map(\.id),
+            displayID: spaces.first?.displayID
+        ) { result in
+            if case .success = result {
+                spaceManager.refreshSpaceState()
             }
         }
     }

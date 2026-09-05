@@ -8,7 +8,6 @@ struct LauncherSettingsView: View {
     @StateObject private var permissionManager = PermissionManager.shared
     @EnvironmentObject var navigationState: SettingsNavigationState
     @Environment(\.isSettingsPreRendering) private var isPreRendering
-    @State private var targetedCommandID: String?
     
     var body: some View {
         SettingsContainer(.launcher) {
@@ -107,34 +106,21 @@ struct LauncherSettingsView: View {
 
     @ViewBuilder
     private func commandRows(_ commands: [LauncherCommand]) -> some View {
-        if #available(macOS 27.0, *) {
-            VStack(spacing: 0) {
-                ForEach(commands) { command in
-                    commandRow(for: command, in: commands)
-                }
-                .reorderable()
+        ReorderableSettingsList(
+            items: commands,
+            rowContent: { command, items in
+                commandRow(for: command, in: items)
+            },
+            dragPreview: { command in
+                dragPreview(for: command)
+            },
+            moveBefore: { sourceID, targetID in
+                rearrange(sourceID, before: targetID)
+            },
+            moveToEnd: { sourceID in
+                viewModel.moveCommandToEnd(id: sourceID)
             }
-            .reorderContainer(for: LauncherCommand.self) { difference in
-                applyNativeReorder(difference)
-            }
-        } else {
-            ForEach(commands) { command in
-                commandRow(for: command, in: commands)
-                    .draggable(command.id) {
-                        dragPreview(for: command)
-                    }
-                    .dropDestination(for: String.self) { sourceIDs, _ in
-                        guard let sourceID = sourceIDs.first else { return false }
-                        return rearrange(sourceID, before: command)
-                    } isTargeted: { isTargeted in
-                        if isTargeted {
-                            targetedCommandID = command.id
-                        } else if targetedCommandID == command.id {
-                            targetedCommandID = nil
-                        }
-                    }
-            }
-        }
+        )
     }
 
     private func commandRow(for command: LauncherCommand, in commands: [LauncherCommand]) -> some View {
@@ -176,40 +162,40 @@ struct LauncherSettingsView: View {
                 Divider().padding(.leading, 12)
             }
         }
-        .contentShape(Rectangle())
-        .background(
-            targetedCommandID == command.id
-                ? Color.accentColor.opacity(0.12)
-                : Color.clear
-        )
-        .transition(.opacity.combined(with: .move(edge: .top)))
     }
 
     private func dragPreview(for command: LauncherCommand) -> some View {
-        Text(command.title)
-            .font(.body)
-            .padding(.horizontal, 16)
-            .padding(.vertical, 10)
-            .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
-    }
+        HStack(spacing: 10) {
+            Image(systemName: "line.3.horizontal")
+                .font(.caption)
+                .foregroundStyle(.tertiary)
+                .frame(width: 16)
 
-    private func rearrange(_ sourceID: String, before target: LauncherCommand) -> Bool {
-        guard sourceID != target.id else { return false }
-        viewModel.moveCommand(id: sourceID, before: target.id)
-        return true
-    }
+            HStack(spacing: 8) {
+                Image(systemName: command.iconName)
+                    .font(.system(size: 14))
+                    .foregroundColor(.secondary)
+                    .frame(width: 20)
 
-    @available(macOS 27.0, *)
-    private func applyNativeReorder(
-        _ difference: ReorderDifference<String, ReorderableSingleCollectionIdentifier>
-    ) {
-        guard let sourceID = difference.sources.first else { return }
-
-        switch difference.destination.position {
-        case .before(let targetID):
-            viewModel.moveCommand(id: sourceID, before: targetID)
-        case .end:
-            viewModel.moveCommandToEnd(id: sourceID)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(command.title)
+                        .font(.body)
+                        .fontWeight(.medium)
+                    Text(command.subtitle)
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                }
+            }
         }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 6)
+        .frame(minWidth: 320, alignment: .leading)
+        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+    }
+
+    private func rearrange(_ sourceID: String, before targetID: String) -> Bool {
+        guard sourceID != targetID else { return false }
+        viewModel.moveCommand(id: sourceID, before: targetID)
+        return true
     }
 }
