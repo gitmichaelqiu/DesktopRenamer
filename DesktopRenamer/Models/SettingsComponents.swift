@@ -379,6 +379,19 @@ struct SettingsRow<Content: View>: View {
     }
 }
 
+enum SettingsSectionStyle {
+    static var backgroundColor: Color {
+        let nsColor = NSColor(name: nil) { appearance in
+            if appearance.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua {
+                return NSColor(calibratedWhite: 0.20, alpha: 1.0)
+            } else {
+                return NSColor(calibratedWhite: 1.00, alpha: 1.0)
+            }
+        }
+        return Color(nsColor: nsColor)
+    }
+}
+
 struct SettingsSection<Content: View>: View {
     let title: LocalizedStringKey?
     let helperText: LocalizedStringKey?
@@ -412,7 +425,7 @@ struct SettingsSection<Content: View>: View {
             }
             .background(
                 RoundedRectangle(cornerRadius: 12, style: .continuous)
-                    .fill(backgroundColor.opacity(0.6))
+                    .fill(SettingsSectionStyle.backgroundColor.opacity(0.6))
                     .overlay(
                         RoundedRectangle(cornerRadius: 12, style: .continuous)
                             .fill(.regularMaterial)
@@ -422,16 +435,6 @@ struct SettingsSection<Content: View>: View {
         .padding(.top, title == nil ? -10 : 0)
     }
 
-    private var backgroundColor: Color {
-        let nsColor = NSColor(name: nil) { appearance in
-            if appearance.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua {
-                return NSColor(calibratedWhite: 0.20, alpha: 1.0)
-            } else {
-                return NSColor(calibratedWhite: 1.00, alpha: 1.0)
-            }
-        }
-        return Color(nsColor: nsColor)
-    }
 }
 
 struct HelperInfoButton: View {

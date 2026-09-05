@@ -54,17 +54,6 @@ struct SpaceEditView: View {
         .environment(\.settingsTab, .space)
     }
     
-    private var sectionBackgroundColor: Color {
-        let nsColor = NSColor(name: nil) { appearance in
-            if appearance.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua {
-                return NSColor(calibratedWhite: 0.20, alpha: 1.0)
-            } else {
-                return NSColor(calibratedWhite: 1.00, alpha: 1.0)
-            }
-        }
-        return Color(nsColor: nsColor)
-    }
-    
     private var groupedDisplayIDs: [String] {
         let ids = Array(Set(spaceManager.spaceNameDict.map { $0.displayID }))
         return ids.sorted { id1, id2 in
@@ -145,7 +134,7 @@ struct SpaceEditView: View {
         }
         .background(
             RoundedRectangle(cornerRadius: 12, style: .continuous)
-                .fill(sectionBackgroundColor.opacity(0.6))
+                .fill(SettingsSectionStyle.backgroundColor.opacity(0.6))
                 .overlay(RoundedRectangle(cornerRadius: 12, style: .continuous).fill(.regularMaterial))
         )
     }
@@ -276,7 +265,11 @@ struct SpaceEditView: View {
         .padding(.vertical, 6)
         .frame(minWidth: 320, alignment: .leading)
         .contentShape(.dragPreview, Rectangle())
-        .background(Color(nsColor: NSColor.controlBackgroundColor))
+        .background(
+            Rectangle()
+                .fill(SettingsSectionStyle.backgroundColor.opacity(0.6))
+                .overlay(Rectangle().fill(.regularMaterial))
+        )
     }
 
     private func rearrange(_ sourceID: String, before target: DesktopSpace, in spaces: [DesktopSpace]) -> Bool {
