@@ -424,6 +424,14 @@ extension SpaceHelper {
     }
 
     private static func scheduleSpaceSwitchLabelSuppression(generation: UInt64?) {
+        // dragActiveWindow() posts this notification before it synthesizes the
+        // mouse-down event. Repeating the notification from the switch path
+        // makes every preview label perform another synchronous WindowServer
+        // update while the window is being dragged.
+        if isDragging {
+            return
+        }
+
         let suppress = {
             NotificationCenter.default.post(
                 name: NSNotification.Name("SpaceSwitchRequested"),
@@ -442,6 +450,14 @@ extension SpaceHelper {
     }
 
     private static func scheduleActiveLabelPreparation(spaceID: String, generation: UInt64?) {
+        // The active label is reconciled after the move arrives at its target
+        // space. Preparing it here would add synchronous layout/binding work
+        // to the drag initiation path, and is redundant with the pre-drag
+        // preview suppression above.
+        if isDragging {
+            return
+        }
+
         let prepare = {
             if let generation {
                 guard let active = switchTransactionCoordinator.active,
