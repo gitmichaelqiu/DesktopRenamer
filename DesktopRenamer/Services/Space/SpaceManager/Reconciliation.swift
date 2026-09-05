@@ -188,6 +188,8 @@ extension SpaceManager {
         if shouldIgnoreStaleTransactionObservation(targetUUID, source: source) {
             return
         }
+
+        let isIntentionalWindowMove = SpaceHelper.consumeWindowMoveIntent(for: targetUUID)
             
         let now = Date().timeIntervalSince1970
             let isRecentManualSwitch = now - lastManualSwitchTime < 2.0
@@ -394,7 +396,9 @@ extension SpaceManager {
                 // treat its destination as an external escape from a locked
                 // space, or the recovery path will immediately drag the same
                 // window back to the source space.
-                if self.lockedSpaceIDs.contains(previousUUID), !SpaceHelper.isDragging {
+                if self.lockedSpaceIDs.contains(previousUUID),
+                   !SpaceHelper.isDragging,
+                   !isIntentionalWindowMove {
                     let now = Date().timeIntervalSince1970
                     let isOurAppManual = (now - self.lastManualSwitchTime < 2.0) && (targetUUID == self.lastManualSwitchTargetUUID)
                     let isTrackpadManual = now - GestureManager.lastTrackpadSwipeTime < 1.5

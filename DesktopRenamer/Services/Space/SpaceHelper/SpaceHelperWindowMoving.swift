@@ -14,6 +14,7 @@ extension SpaceHelper {
             return
         }
 
+        markWindowMoveIntent(to: spaceID)
         DiagnosticEventLog.shared.record(subsystem: "SpaceHelper", level: "info", "dragActiveWindow → \(spaceID)")
         targetSpaceID = spaceID
         // Cancel any pending restoration from a previous "chained" move

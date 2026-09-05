@@ -49,6 +49,11 @@ class SpaceHelper {
     static var lastProgrammaticSwitchTime: TimeInterval = 0
     static var lastProgrammaticTargetSpaceID: String? = nil
     static var lastProgrammaticSwitchUsedSLS = false
+    // Window moves intentionally change the active space. Keep this separate
+    // from the short-lived mouse-drag session because reconciliation can run
+    // after the synthetic mouse button has already been released.
+    static var pendingWindowMoveTargetSpaceID: String?
+    static var pendingWindowMoveIntentTime: TimeInterval = 0
     // WindowServer state is the authoritative completion signal. The
     // active-space notification is useful corroboration, but it is delivered
     // through a lossy XPC path and can be absent even after the destination is
@@ -129,6 +134,25 @@ class SpaceHelper {
     static var draggedWindowAppName: String? = nil
     static var draggedWindowOriginalFrame: CGRect? = nil
     static var isDragging: Bool { originalMousePoint != nil }
+
+    static func markWindowMoveIntent(to spaceID: String) {
+        pendingWindowMoveTargetSpaceID = spaceID
+        pendingWindowMoveIntentTime = Date().timeIntervalSince1970
+    }
+
+    static func consumeWindowMoveIntent(for spaceID: String) -> Bool {
+        let age = Date().timeIntervalSince1970 - pendingWindowMoveIntentTime
+        guard pendingWindowMoveTargetSpaceID == spaceID, age < 2.5 else {
+            if age >= 2.5 {
+                pendingWindowMoveTargetSpaceID = nil
+                pendingWindowMoveIntentTime = 0
+            }
+            return false
+        }
+        pendingWindowMoveTargetSpaceID = nil
+        pendingWindowMoveIntentTime = 0
+        return true
+    }
 
     /// Full drag state summary for diagnostic reports.
     static var dragStateInfo: String {

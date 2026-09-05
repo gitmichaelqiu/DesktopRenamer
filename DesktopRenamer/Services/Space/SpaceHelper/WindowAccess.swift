@@ -55,6 +55,7 @@ extension SpaceHelper {
     /// Uses CGSAddWindowsToSpaces + CGSRemoveWindowsFromSpaces (proven in SpaceLabelWindow).
     /// Now handles cross-monitor moves by repositioning the window via Accessibility API.
     static func moveWindowToSpace(windowID: Int, fromSpaceID: Int, targetSpaceID: Int) {
+        markWindowMoveIntent(to: String(targetSpaceID))
         let targetSpaceIDString = String(targetSpaceID)
         let conn = _CGSDefaultConnection()
         let windowArray = [windowID as NSNumber] as CFArray
