@@ -475,6 +475,13 @@ final class SpaceAPI {
             try await Task.sleep(nanoseconds: 600_000_000)
         }
 
+        await exitFullscreenWindowIfNeeded(
+            windowID: windowID,
+            pid: pid,
+            action: action,
+            manager: manager
+        )
+
         if action == "hide" {
             NSRunningApplication(processIdentifier: pid)?.hide()
             return
@@ -512,6 +519,32 @@ final class SpaceAPI {
             try await Task.sleep(nanoseconds: 1_000_000_000)
         default:
             throw SpaceAPIError.invalidArgument("Unsupported window action: \(action)")
+        }
+    }
+
+    private func exitFullscreenWindowIfNeeded(
+        windowID: Int,
+        pid: Int32,
+        action: String,
+        manager: SpaceManager
+    ) async {
+        guard action == "close" || action == "minimize" || action == "hide",
+              let spaceID = SpaceHelper.getWindowSpaceID(id: windowID),
+              let space = manager.spaceNameDict.first(where: { $0.id == spaceID }),
+              space.isFullscreen else {
+            return
+        }
+
+        var axWindow = SpaceHelper.getAXWindow(id: windowID, pid: pid)
+        if axWindow == nil, let app = NSRunningApplication(processIdentifier: pid) {
+            app.activate(options: .activateIgnoringOtherApps)
+            try? await Task.sleep(nanoseconds: 400_000_000)
+            axWindow = SpaceHelper.getAXWindow(id: windowID, pid: pid)
+        }
+
+        if let axWindow {
+            AXUIElementSetAttributeValue(axWindow, "AXFullScreen" as CFString, false as CFTypeRef)
+            try? await Task.sleep(nanoseconds: 1_200_000_000)
         }
     }
 
