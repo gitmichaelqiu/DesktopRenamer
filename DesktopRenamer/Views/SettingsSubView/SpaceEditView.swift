@@ -275,8 +275,8 @@ struct SpaceEditView: View {
         .padding(.horizontal, 12)
         .padding(.vertical, 6)
         .frame(minWidth: 320, alignment: .leading)
-        .contentShape(.dragPreview, RoundedRectangle(cornerRadius: 8, style: .continuous))
-        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+        .contentShape(.dragPreview, Rectangle())
+        .background(Color(nsColor: NSColor.controlBackgroundColor))
     }
 
     private func rearrange(_ sourceID: String, before target: DesktopSpace, in spaces: [DesktopSpace]) -> Bool {
