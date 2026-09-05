@@ -390,7 +390,11 @@ extension SpaceManager {
             
             if previousUUID != targetUUID {
                 // Check if previousUUID is in lockedSpaceIDs and this switch is not manual
-                if self.lockedSpaceIDs.contains(previousUUID) {
+                // A synthetic window drag intentionally changes spaces. Do not
+                // treat its destination as an external escape from a locked
+                // space, or the recovery path will immediately drag the same
+                // window back to the source space.
+                if self.lockedSpaceIDs.contains(previousUUID), !SpaceHelper.isDragging {
                     let now = Date().timeIntervalSince1970
                     let isOurAppManual = (now - self.lastManualSwitchTime < 2.0) && (targetUUID == self.lastManualSwitchTargetUUID)
                     let isTrackpadManual = now - GestureManager.lastTrackpadSwipeTime < 1.5

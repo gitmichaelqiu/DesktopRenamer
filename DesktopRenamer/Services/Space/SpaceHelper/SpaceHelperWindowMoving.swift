@@ -7,6 +7,13 @@ extension SpaceHelper {
     // MARK: - Window Moving Logic
     
     static func dragActiveWindow(to spaceID: String, forceInstant: Bool = false) {
+        // A repeated request for the same destination can arrive while the
+        // first synthetic drag is still settling. Keep the original mouse
+        // session intact instead of cancelling its restoration timer.
+        if isDragging, targetSpaceID == spaceID {
+            return
+        }
+
         DiagnosticEventLog.shared.record(subsystem: "SpaceHelper", level: "info", "dragActiveWindow → \(spaceID)")
         targetSpaceID = spaceID
         // Cancel any pending restoration from a previous "chained" move

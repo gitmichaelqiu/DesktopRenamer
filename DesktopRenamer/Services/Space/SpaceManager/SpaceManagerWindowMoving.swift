@@ -107,9 +107,18 @@ extension SpaceManager {
     }
     
     func moveActiveWindowToSpace(number: Int) {
-        if let target = spaceNameDict.first(where: { $0.num == number && $0.displayID == currentDisplayID }) {
-            // BUG FIX: Prevent redundant move attempts if the target is already current.
-            if target.id == currentSpaceUUID { return }
+        let displayID: String
+        let currentSpaceID: String
+        if let frame = SpaceHelper.getActiveWindowFrame() {
+            displayID = SpaceHelper.getWindowDisplayID(for: frame) ?? currentDisplayID
+            currentSpaceID = SpaceHelper.getCurrentSpaceID(for: displayID) ?? currentSpaceUUID
+        } else {
+            displayID = currentDisplayID
+            currentSpaceID = currentSpaceUUID
+        }
+
+        if let target = spaceNameDict.first(where: { $0.num == number && $0.displayID == displayID }) {
+            if target.id == currentSpaceID { return }
             SpaceHelper.dragActiveWindow(to: target.id, forceInstant: true)
         }
     }
@@ -121,15 +130,25 @@ extension SpaceManager {
     }
     
     func moveActiveWindowToSpace(id: String) {
-        // BUG FIX: Prevent redundant move attempts if the target is already current.
-        if id == currentSpaceUUID { return }
-
         guard let targetSpace = spaceNameDict.first(where: { $0.id == id }), !targetSpace.isFullscreen else {
             return
         }
 
+        let activeWindow = SpaceHelper.getActiveWindowInfo()
+        let sourceDisplayID = activeWindow.flatMap { SpaceHelper.getWindowDisplayID(for: $0.frame) }
+            ?? currentDisplayID
+        let sourceSpaceID = SpaceHelper.getCurrentSpaceID(for: sourceDisplayID) ?? currentSpaceUUID
+
+        // The manager's currentSpaceUUID represents the most recently
+        // reported display, not necessarily the display containing the active
+        // window. Only skip when the target is current on that window's own
+        // display.
+        if targetSpace.displayID == sourceDisplayID, targetSpace.id == sourceSpaceID {
+            return
+        }
+
         // Un-fullscreen first if current space is fullscreen
-        if let currentSpaceObj = spaceNameDict.first(where: { $0.id == currentSpaceUUID }), currentSpaceObj.isFullscreen {
+        if let currentSpaceObj = spaceNameDict.first(where: { $0.id == sourceSpaceID }), currentSpaceObj.isFullscreen {
             // Guard against unbounded recursive retry: if the AX exit is silently
             // ignored (sandboxed app, slow animation) we would loop forever.
             guard fullscreenExitRetrying.insert(id).inserted else { return }
@@ -151,20 +170,16 @@ extension SpaceManager {
         // Robust Cross-Monitor Support: 
         // If the target space is on a different monitor, we use the direct CGS+AX move method
         // since the "swipe while dragging" gesture is limited to a single display.
-        if let windowInfo = SpaceHelper.getActiveWindowInfo() {
-            let sourceDisplayID = SpaceHelper.getWindowDisplayID(for: windowInfo.frame)
-            if let sourceDisplay = sourceDisplayID, sourceDisplay != targetSpace.displayID {
+        if let windowInfo = activeWindow,
+           let sourceDisplay = SpaceHelper.getWindowDisplayID(for: windowInfo.frame),
+           sourceDisplay != targetSpace.displayID {
                 print("SpaceManager: Cross-monitor move requested (\(sourceDisplay) -> \(targetSpace.displayID)). Using robust method.")
                 
                 let fromSpaceID = Int(SpaceHelper.getCurrentSpaceID(for: sourceDisplay) ?? "0") ?? 0
                 let targetSpaceID = Int(targetSpace.id) ?? 0
                 
-                if SpaceHelper.getCurrentSpaceID(for: targetSpace.displayID) != targetSpace.id {
-                    self.switchToSpace(targetSpace, forceInstant: true)
-                }
                 SpaceHelper.moveWindowToSpace(windowID: windowInfo.id, fromSpaceID: fromSpaceID, targetSpaceID: targetSpaceID)
                 return
-            }
         }
         
         SpaceHelper.dragActiveWindow(to: id, forceInstant: true)
@@ -215,7 +230,7 @@ extension SpaceManager {
         
         // Find the current space on the target display
         guard let targetSpaceIDStr = SpaceHelper.getCurrentSpaceID(for: targetDisplayID),
-              let targetSpace = spaceNameDict.first(where: { $0.id == targetSpaceIDStr }) else { return }
+              spaceNameDict.contains(where: { $0.id == targetSpaceIDStr }) else { return }
         
         // Perform move using the robust cross-monitor logic
         let fromSpaceID = Int(SpaceHelper.getCurrentSpaceID(for: sourceDisplayID) ?? "0") ?? 0
@@ -223,9 +238,6 @@ extension SpaceManager {
         
         print("SpaceManager: Moving active window to display \(targetDisplayID)")
         SpaceHelper.moveWindowToSpace(windowID: windowInfo.id, fromSpaceID: fromSpaceID, targetSpaceID: targetSpaceID)
-        
-        // Switch to the target space to follow the window
-        self.switchToSpace(targetSpace, forceInstant: true)
     }
     
     func isLastSpace(onDisplayID displayID: String? = nil) -> Bool {
