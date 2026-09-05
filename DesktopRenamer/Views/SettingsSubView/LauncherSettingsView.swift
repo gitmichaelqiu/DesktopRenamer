@@ -7,6 +7,7 @@ struct LauncherSettingsView: View {
     @ObservedObject var viewModel = LauncherWindowController.shared.viewModel
     @StateObject private var permissionManager = PermissionManager.shared
     @EnvironmentObject var navigationState: SettingsNavigationState
+    @Environment(\.isSettingsPreRendering) private var isPreRendering
     
     var body: some View {
         SettingsContainer(.launcher) {
@@ -158,7 +159,9 @@ struct LauncherSettingsView: View {
                 navigationState.register(title: "Settings.Launcher.Command.Actions", tab: .launcher, keywords: ["reorder", "arrange", "sequence", "position", "move", "up", "down", "rank"])
             }
             .onDisappear {
-                navigationState.unregister(title: "Settings.Launcher.Command.Actions", tab: .launcher)
+                if !isPreRendering {
+                    navigationState.unregister(title: "Settings.Launcher.Command.Actions", tab: .launcher)
+                }
             }
             .environment(\.settingsTab, .launcher)
         }

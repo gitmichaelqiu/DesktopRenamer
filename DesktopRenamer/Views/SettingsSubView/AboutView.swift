@@ -16,6 +16,7 @@ struct AboutView: View {
 
     @Environment(\.colorScheme) var colorScheme
     @EnvironmentObject var navigationState: SettingsNavigationState
+    @Environment(\.isSettingsPreRendering) private var isPreRendering
 
     var iconSuffix: String {
         colorScheme == .dark ? "_Dark" : "_Default"
@@ -117,7 +118,9 @@ struct AboutView: View {
             navigationState.register(title: "GitHub / Support", tab: .about, keywords: ["github", "website", "developer", "contact", "support"])
         }
         .onDisappear {
-            navigationState.unregister(title: "GitHub / Support", tab: .about)
+            if !isPreRendering {
+                navigationState.unregister(title: "GitHub / Support", tab: .about)
+            }
         }
     }
 

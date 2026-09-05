@@ -3,6 +3,7 @@ import SwiftUI
 struct SpaceEditView: View {
     @ObservedObject var spaceManager: SpaceManager
     @EnvironmentObject var navigationState: SettingsNavigationState
+    @Environment(\.isSettingsPreRendering) private var isPreRendering
     @State private var targetedSpaceID: String?
     
     var body: some View {
@@ -46,8 +47,10 @@ struct SpaceEditView: View {
             navigationState.register(title: "Settings.Spaces.Edit.Actions", tab: .space, keywords: ["reorder", "arrange", "display", "monitor", "position"])
         }
         .onDisappear {
-            navigationState.unregister(title: "Settings.Spaces.Edit.Name", tab: .space)
-            navigationState.unregister(title: "Settings.Spaces.Edit.Actions", tab: .space)
+            if !isPreRendering {
+                navigationState.unregister(title: "Settings.Spaces.Edit.Name", tab: .space)
+                navigationState.unregister(title: "Settings.Spaces.Edit.Actions", tab: .space)
+            }
         }
         .environment(\.settingsTab, .space)
     }
