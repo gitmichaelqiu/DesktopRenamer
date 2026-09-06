@@ -197,6 +197,7 @@ struct DiagnosticReportBuilder {
         let pm = PermissionManager.shared
         s += "Accessibility: \(pm.isAccessibilityGranted ? "Granted" : "Not Granted")\n"
         s += "Event synthesis: \(pm.isEventSynthesisGranted ? "Granted" : "Not Granted")\n"
+        s += "Screen capture: \(pm.isScreenCaptureGranted ? "Granted" : "Not Granted")\n"
         return s
     }
 

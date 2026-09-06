@@ -886,6 +886,9 @@
         }
       }
     },
+    "Event synthesis" : {
+
+    },
     "Exceptions" : {
       "localizations" : {
         "zh-Hans" : {
@@ -2137,6 +2140,9 @@
           }
         }
       }
+    },
+    "Required for moving windows with Option + swipe." : {
+
     },
     "Requires Accessibility permission." : {
       "localizations" : {

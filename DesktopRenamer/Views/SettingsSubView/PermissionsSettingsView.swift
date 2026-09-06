@@ -40,6 +40,24 @@ struct PermissionsSettingsView: View {
                             }
                         }
                     }
+
+                    Divider()
+
+                    SettingsRow("Screen Recording", helperText: "Required for reading the active window before moving it with Option + swipe.") {
+                        HStack {
+                            if permissionManager.isScreenCaptureGranted {
+                                Image(systemName: "checkmark.circle.fill")
+                                    .foregroundColor(.green)
+                            } else {
+                                Image(systemName: "xmark.circle.fill")
+                                    .foregroundColor(.red)
+                            }
+
+                            Button(permissionManager.isScreenCaptureGranted ? "Settings" : "Grant") {
+                                permissionManager.requestScreenCapturePermission()
+                            }
+                        }
+                    }
                 }
                 
                 Spacer()

@@ -18,6 +18,17 @@ extension SpaceHelper {
             return
         }
 
+        guard CGPreflightScreenCaptureAccess() else {
+            print("SpaceHelper: Cannot move window; screen recording permission is not granted")
+            DiagnosticEventLog.shared.record(
+                subsystem: "SpaceHelper",
+                level: "error",
+                "Cannot move window: screen capture permission is not granted"
+            )
+            _ = CGRequestScreenCaptureAccess()
+            return
+        }
+
         // A repeated request for the same destination can arrive while the
         // first synthetic drag is still settling. Keep the original mouse
         // session intact instead of cancelling its restoration timer.
