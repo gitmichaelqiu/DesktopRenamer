@@ -53,7 +53,7 @@ extension LauncherViewModel {
         }
         
         guard let manager = AppDelegate.shared.spaceManager,
-              let targetSpace = manager.spaceNameDict.first(where: { $0.id == spaceID }) else {
+              manager.spaceNameDict.contains(where: { $0.id == spaceID }) else {
             DiagnosticEventLog.shared.record(subsystem: "Launcher", level: "warning", "movePreviouslyActiveWindow: targetSpace object not found for ID \(spaceID)")
             return false
         }
@@ -62,7 +62,11 @@ extension LauncherViewModel {
 
         DiagnosticEventLog.shared.record(subsystem: "Launcher", level: "info", "movePreviouslyActiveWindow: moving window \(prevWindow.id) from space \(fromSpaceIDStr) to space \(spaceID)")
 
-        LauncherWindowController.shared.shouldRestoreFocus = true
+        // WindowActionCoordinator owns focus restoration for this move. Do
+        // not let LauncherWindowController schedule a second asynchronous
+        // focus operation while the launcher is closing, because that can
+        // activate a different Space before the exact window is moved.
+        LauncherWindowController.shared.shouldRestoreFocus = false
         closeLauncher()
 
         Task { @MainActor in
