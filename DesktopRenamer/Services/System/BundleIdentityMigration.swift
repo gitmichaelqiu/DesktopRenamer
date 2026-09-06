@@ -468,7 +468,7 @@ final class DesktopRenamerBridgeMigrationManager {
             arguments: ["--check-signature", packageURL.path]
         ), runTool(
             "/usr/sbin/spctl",
-            arguments: ["--assess", "--type", "installpkg", packageURL.path]
+            arguments: ["--assess", "--type", "install", packageURL.path]
         ) else {
             throw DesktopRenamerMigrationError.packageVerificationFailed
         }
