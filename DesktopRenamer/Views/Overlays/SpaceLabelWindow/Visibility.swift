@@ -41,12 +41,16 @@ extension SpaceLabelWindow {
         // Preview labels must never be rendered on their current space.
         let knownVisibleSpaceIDs = visibleSpaceIDs ?? SpaceHelper.getVisibleSystemSpaceIDs()
         if !isActiveMode && knownVisibleSpaceIDs.contains(spaceId) {
-            hideImmediately()
+            if labelManager?.shouldPreservePreviewWindowOrderingForSettings == true {
+                hideForSettingsActivation()
+            } else {
+                hideImmediately()
+            }
             return
         }
 
         if !isActiveMode, labelManager?.isPreviewTransitionSuppressed == true {
-            if labelManager?.arePreviewLabelsSuppressedForSettings == true {
+            if labelManager?.shouldPreservePreviewWindowOrderingForSettings == true {
                 hideForSettingsActivation()
             } else {
                 hideImmediately()

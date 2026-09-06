@@ -297,6 +297,7 @@ extension SpaceLabelManager {
 
     private func processApplicationActivationNotification() {
         guard hideWhenSwitching else { return }
+        guard !shouldPreservePreviewWindowOrderingForSettings else { return }
 
         if liveSpaceSetChangedSinceLastObservation() {
             suppressPreviewLabelsForTransition(
@@ -344,6 +345,9 @@ extension SpaceLabelManager {
         applicationActivationTransitionCheckWorkItem?.cancel()
         applicationActivationTransitionCheckWorkItem = nil
         applicationActivationTransitionGeneration += 1
+        settingsPreviewRestoreWorkItem?.cancel()
+        settingsPreviewRestoreWorkItem = nil
+        isSettingsWindowOpen = false
         delayedRestoreWorkItem?.cancel()
         delayedRestoreWorkItem = nil
         arePreviewLabelsSuppressedForSettings = true
@@ -359,6 +363,7 @@ extension SpaceLabelManager {
     func completeSettingsWindowActivation() {
         guard arePreviewLabelsSuppressedForSettings else { return }
 
+        isSettingsWindowOpen = true
         arePreviewLabelsSuppressedForSettings = false
         DiagnosticEventLog.shared.record(
             subsystem: "Labels",
@@ -366,14 +371,24 @@ extension SpaceLabelManager {
             "Settings window became key — restoring preview labels"
         )
         DispatchQueue.main.async { [weak self] in
-            self?.restorePreviewLabelsAfterSettingsActivation()
+            self?.scheduleSettingsPreviewRestore()
         }
     }
 
     /// Restore preview panels if Settings closes before its key-window
     /// activation callback is delivered.
     func endSettingsWindowPresentation() {
-        completeSettingsWindowActivation()
+        let needsRestore = arePreviewLabelsSuppressedForSettings || isSettingsWindowOpen
+        settingsPreviewRestoreWorkItem?.cancel()
+        settingsPreviewRestoreWorkItem = nil
+        arePreviewLabelsSuppressedForSettings = false
+        isSettingsWindowOpen = false
+
+        guard needsRestore else { return }
+        DispatchQueue.main.async { [weak self] in
+            guard let self, !SpaceHelper.isSwitching else { return }
+            self.updateAllWindowModes()
+        }
     }
 
     private func checkApplicationActivationSpaceTransition(attempt: Int, generation: Int) {
@@ -872,7 +887,7 @@ extension SpaceLabelManager {
                 // The active space has its own dedicated label window. Keep
                 // the preview window bound to the space, but never visible on
                 // the active desktop or over a fullscreen app.
-                if arePreviewLabelsSuppressedForSettings {
+                if shouldPreservePreviewWindowOrderingForSettings {
                     window.hideForSettingsActivation()
                 } else {
                     window.hideImmediately()
@@ -930,14 +945,22 @@ extension SpaceLabelManager {
 
     func hidePreviewLabel(for spaceId: String) {
         if let window = createdWindows[spaceId] {
-            window.hideImmediately()
+            if shouldPreservePreviewWindowOrderingForSettings {
+                window.hideForSettingsActivation()
+            } else {
+                window.hideImmediately()
+            }
         }
     }
 
     func hideAllPreviewLabels() {
         DiagnosticEventLog.shared.record(subsystem: "Labels", level: "info", "hideAllPreviewLabels (windows=\(createdWindows.count))")
         for window in createdWindows.values {
-            window.hideImmediately()
+            if shouldPreservePreviewWindowOrderingForSettings {
+                window.hideForSettingsActivation()
+            } else {
+                window.hideImmediately()
+            }
         }
     }
 
@@ -953,6 +976,15 @@ extension SpaceLabelManager {
     }
 
     private func restorePreviewLabelsAfterSettingsActivation() {
+        guard isSettingsWindowOpen else { return }
+        guard !SpaceHelper.isSwitching,
+              !SpaceHelper.isProgrammaticSwitchPromotionPending,
+              !isPreviewTransitionSuppressed else {
+            scheduleSettingsPreviewRestore()
+            return
+        }
+
+        settingsPreviewRestoreWorkItem = nil
         let visibleUUIDs = SpaceHelper.getVisibleSystemSpaceIDs()
         guard !visibleUUIDs.isEmpty else { return }
 
@@ -963,7 +995,7 @@ extension SpaceLabelManager {
         for (spaceID, window) in createdWindows {
             if visibleUUIDs.contains(spaceID)
                 || fullscreenDisplayIDs.contains(window.displayID) {
-                window.hideImmediately()
+                window.hideForSettingsActivation()
             } else {
                 // Existing previews remain ordered in their target Space, so
                 // this only restores their alpha and interaction state. The
@@ -973,6 +1005,16 @@ extension SpaceLabelManager {
                 window.updateVisibility(animated: false, visibleSpaceIDs: visibleUUIDs)
             }
         }
+    }
+
+    private func scheduleSettingsPreviewRestore() {
+        guard isSettingsWindowOpen else { return }
+        settingsPreviewRestoreWorkItem?.cancel()
+        let workItem = DispatchWorkItem { [weak self] in
+            self?.restorePreviewLabelsAfterSettingsActivation()
+        }
+        settingsPreviewRestoreWorkItem = workItem
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1, execute: workItem)
     }
 
     func updateLabel(for spaceId: String, name: String, verifySpace: Bool = true) {
@@ -1129,6 +1171,10 @@ extension SpaceLabelManager {
         previewTransitionCompletionObserved = false
         previewTransitionFallbackDeadline = nil
         previewLabelsSuppressedUntil = nil
+        settingsPreviewRestoreWorkItem?.cancel()
+        settingsPreviewRestoreWorkItem = nil
+        arePreviewLabelsSuppressedForSettings = false
+        isSettingsWindowOpen = false
         activeSyncWorkItems.forEach { $0.cancel() }
         activeSyncWorkItems.removeAll()
         reloadWorkItem?.cancel()
@@ -1228,7 +1274,11 @@ extension SpaceLabelManager {
             if currentSpaces.contains(currentSpaceID) && spaceId != currentSpaceID {
                 print("SpaceLabelManager: Safety — preview label \(spaceId) found on current space. Hiding.")
                 DiagnosticEventLog.shared.record(subsystem: "SpaceLabelManager", level: "warning", "Safety: preview label \(spaceId) on wrong space (current=\(currentSpaceID)). Hiding.")
-                window.hideImmediately()
+                if shouldPreservePreviewWindowOrderingForSettings {
+                    window.hideForSettingsActivation()
+                } else {
+                    window.hideImmediately()
+                }
             }
         }
     }

@@ -17,7 +17,11 @@ extension SpaceLabelWindow {
         }
         if !isActiveMode && SpaceHelper.getVisibleSystemSpaceIDs().contains(spaceId) {
             updateLayout(isCurrentSpace: false, updateFrame: false)
-            hideImmediately()
+            if labelManager?.shouldPreservePreviewWindowOrderingForSettings == true {
+                hideForSettingsActivation()
+            } else {
+                hideImmediately()
+            }
             return
         }
         if isActiveMode && !isCurrentSpaceLabel {
@@ -61,7 +65,11 @@ extension SpaceLabelWindow {
             self.previewSize = size
             if !isActiveMode {
                 if SpaceHelper.getVisibleSystemSpaceIDs().contains(spaceId) {
-                    hideImmediately()
+                    if labelManager?.shouldPreservePreviewWindowOrderingForSettings == true {
+                        hideForSettingsActivation()
+                    } else {
+                        hideImmediately()
+                    }
                 } else {
                     updateLayout(isCurrentSpace: false)
                     updateVisibility(animated: false)

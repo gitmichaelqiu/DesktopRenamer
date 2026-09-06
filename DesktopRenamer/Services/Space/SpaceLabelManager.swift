@@ -121,6 +121,11 @@ class SpaceLabelManager: ObservableObject {
     var previewTransitionCompletionObserved = false
     var previewTransitionFallbackDeadline: Date?
     var arePreviewLabelsSuppressedForSettings = false
+    var isSettingsWindowOpen = false
+    var settingsPreviewRestoreWorkItem: DispatchWorkItem?
+    var shouldPreservePreviewWindowOrderingForSettings: Bool {
+        arePreviewLabelsSuppressedForSettings || isSettingsWindowOpen
+    }
     var isPreviewTransitionSuppressed: Bool {
         if arePreviewLabelsSuppressedForSettings {
             return true
