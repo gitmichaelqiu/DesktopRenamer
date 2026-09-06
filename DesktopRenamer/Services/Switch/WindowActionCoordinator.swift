@@ -137,9 +137,23 @@ enum WindowActionCoordinator {
             // before SpaceManager receives its reconciliation callback. Move the
             // specific window directly so the stale fullscreen guard cannot discard
             // the request.
-            SpaceHelper.dragActiveWindow(to: targetSpaceID, forceInstant: true)
+            SpaceHelper.dragWindow(
+                windowID: windowID,
+                pid: pid,
+                to: targetSpaceID,
+                forceInstant: true
+            )
         } else {
-            manager.moveActiveWindowToSpace(id: targetSpaceID)
+            // The launcher may still be the active application while focus is
+            // being handed back to the captured window. Keep the original
+            // window identity instead of letting SpaceManager re-query the
+            // active window and move the wrong window.
+            SpaceHelper.dragWindow(
+                windowID: windowID,
+                pid: pid,
+                to: targetSpaceID,
+                forceInstant: true
+            )
         }
         try? await Task.sleep(nanoseconds: 500_000_000)
 
