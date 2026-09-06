@@ -7,6 +7,16 @@ extension SpaceHelper {
     // MARK: - Window Moving Logic
     
     static func dragActiveWindow(to spaceID: String, forceInstant: Bool = false) {
+        guard CGPreflightPostEventAccess() else {
+            DiagnosticEventLog.shared.record(
+                subsystem: "SpaceHelper",
+                level: "error",
+                "Cannot move window: event synthesis permission is not granted"
+            )
+            _ = CGRequestPostEventAccess()
+            return
+        }
+
         // A repeated request for the same destination can arrive while the
         // first synthetic drag is still settling. Keep the original mouse
         // session intact instead of cancelling its restoration timer.

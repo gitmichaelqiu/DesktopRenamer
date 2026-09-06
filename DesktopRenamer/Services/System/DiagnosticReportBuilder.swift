@@ -196,6 +196,7 @@ struct DiagnosticReportBuilder {
         var s = "─── Permissions ───\n"
         let pm = PermissionManager.shared
         s += "Accessibility: \(pm.isAccessibilityGranted ? "Granted" : "Not Granted")\n"
+        s += "Event synthesis: \(pm.isEventSynthesisGranted ? "Granted" : "Not Granted")\n"
         return s
     }
 
