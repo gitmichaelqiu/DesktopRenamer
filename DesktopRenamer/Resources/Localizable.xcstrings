@@ -316,16 +316,6 @@
         }
       }
     },
-    "Are you a power user? Integrate directly with Raycast to manage and switch spaces elegantly via your favorite launcher." : {
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "是个高级用户？在 Raycast 内直接控制你的桌面。"
-          }
-        }
-      }
-    },
     "Are you sure? This will delete all your space names and settings. The app will quit immediately." : {
       "localizations" : {
         "zh-Hans" : {
@@ -351,7 +341,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "自动排序命令"
+            "value" : "自动排序指令"
           }
         }
       }
@@ -367,7 +357,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "根据执行频率自动对命令进行排序。关闭以手动调整命令顺序。"
+            "value" : "根据执行频率自动对指令进行排序。关闭以手动调整指令顺序。"
           }
         }
       }
@@ -378,16 +368,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "自动返回原桌面"
-          }
-        }
-      }
-    },
-    "Automatically return to your original desktop after moving windows to a different desktop." : {
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "在将窗口移动到其他桌面后，自动返回到您原本的桌面。"
           }
         }
       }
@@ -506,6 +486,16 @@
         }
       }
     },
+    "Choose Raycast or the built-in launcher to manage your Spaces and windows." : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "选择 Raycast 或内置启动器来管理桌面和窗口。"
+          }
+        }
+      }
+    },
     "Choose two different spaces." : {
       "localizations" : {
         "zh-Hans" : {
@@ -562,16 +552,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "点击切换，Option+点击移动窗口。"
-          }
-        }
-      }
-    },
-    "Choose Raycast or the built-in launcher to manage your Spaces and windows." : {
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "选择 Raycast 或内置启动器来管理桌面和窗口。"
           }
         }
       }
@@ -746,6 +726,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "DesktopRenamer的网站"
+          }
+        }
+      }
+    },
+    "Diagnostic report" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "诊断报告"
           }
         }
       }
@@ -1052,16 +1042,6 @@
         }
       }
     },
-    "Skip" : {
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "跳过"
-          }
-        }
-      }
-    },
     "GitHub / Support" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -1175,16 +1155,6 @@
         }
       }
     },
-    "Hold the Option key while swiping on the trackpad to move the active window to the adjacent space." : {
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "切换时按住Option将当前窗口移动到相邻桌面。"
-          }
-        }
-      }
-    },
     "If enabled, the label stays on the desktop instead of hiding.\n\nIf disabled, the label will only be visible in Mission Control.\n\nTip: You can drag the window to the screen edge to shrink it into a 'Picture-in-Picture' mode." : {
       "localizations" : {
         "zh-Hans" : {
@@ -1211,16 +1181,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "如果使用 Control + 箭头切换，需要在系统设置 → 键盘 → 键盘快捷键 → 调度中心中关闭系统快捷键。"
-          }
-        }
-      }
-    },
-    "Install Raycast Extension" : {
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "安装 Raycast 拓展"
           }
         }
       }
@@ -1296,7 +1256,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "启动器命令排序"
+            "value" : "启动器指令排序"
           }
         }
       }
@@ -1552,6 +1512,16 @@
         }
       }
     },
+    "Move all windows of an app to another Space in one command." : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "一键将应用的所有窗口移动到另一个桌面。"
+          }
+        }
+      }
+    },
     "Move Space Down" : {
       "localizations" : {
         "zh-Hans" : {
@@ -1754,22 +1724,12 @@
         }
       }
     },
-    "Move all windows of an app to another Space in one command." : {
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "一键将应用的所有窗口移动到另一个桌面。"
-          }
-        }
-      }
-    },
     "No commands found" : {
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "无相关命令"
+            "value" : "无相关指令"
           }
         }
       }
@@ -1976,26 +1936,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "退出"
-          }
-        }
-      }
-    },
-    "Raycast Integration" : {
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Raycast 集成"
-          }
-        }
-      }
-    },
-    "Raycast: Batch Move" : {
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Raycast: 批量移动窗口"
           }
         }
       }
@@ -2288,22 +2228,6 @@
         }
       }
     },
-    "Restore windows moved by lock to the last space that windows are manually assigned to." : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Restore windows moved by lock to the last space that windows are manually assigned to."
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "将因锁定而被移动的窗口恢复到上次手动分配的桌面。"
-          }
-        }
-      }
-    },
     "Review" : {
       "localizations" : {
         "zh-Hans" : {
@@ -2314,18 +2238,12 @@
         }
       }
     },
-    "Review Splash" : {
+    "Review onboarding" : {
       "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Review splash"
-          }
-        },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "浏览介绍"
+            "value" : "查看介绍"
           }
         }
       }
@@ -2391,7 +2309,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "搜索命令..."
+            "value" : "搜索指令..."
           }
         }
       }
@@ -2787,22 +2705,6 @@
         }
       }
     },
-    "Settings.Launcher.Command.Actions" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Actions"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "操作"
-          }
-        }
-      }
-    },
     "Settings.Launcher.Command.Name" : {
       "localizations" : {
         "en" : {
@@ -2814,7 +2716,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "命令"
+            "value" : "指令"
           }
         }
       }
@@ -3039,6 +2941,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "显示预览标签"
+          }
+        }
+      }
+    },
+    "Skip" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "跳过"
           }
         }
       }
@@ -3342,33 +3254,6 @@
         }
       }
     },
-    "The hidden label that slides into the corner of the active desktop." : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "The hidden label that slides into the corner of the active desktop. Only appears in Mission Control."
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "在桌面角落的隐藏标签，仅在调度中心显示。"
-          }
-        }
-      }
-    },
-    "The large label visible in Mission Control." : {
-      "comment" : "The large label visible in Mission Control.",
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "调度中心预览的大标签。"
-          }
-        }
-      }
-    },
     "The native space rearrangement bridge is unavailable." : {
       "localizations" : {
         "zh-Hans" : {
@@ -3519,16 +3404,6 @@
         }
       }
     },
-    "Use the Raycast extension to move all windows of an app to another space in one command." : {
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "用 Raycast 拓展快速移动窗口到指定的桌面。"
-          }
-        }
-      }
-    },
     "v%@" : {
       "localizations" : {
         "zh-Hans" : {
@@ -3539,16 +3414,6 @@
         }
       },
       "shouldTranslate" : false
-    },
-    "View the welcome screen again." : {
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "重新观看欢迎界面。"
-          }
-        }
-      }
     },
     "Welcome to" : {
       "localizations" : {
