@@ -74,6 +74,7 @@ extension SpaceManager {
 
     @objc func handleProgrammaticSwitchFinished(_ notification: Notification) {
         guard let generation = notification.userInfo?["generation"] as? UInt64,
+              let spaceID = notification.userInfo?["spaceID"] as? String,
               let confirmed = notification.userInfo?["confirmed"] as? Bool else {
             return
         }
@@ -98,10 +99,10 @@ extension SpaceManager {
             self.cancelSpaceChangeRetry()
             if !confirmed {
                 self.scheduleSpaceChangeRetry()
-            } else {
-                // The transaction intentionally kept transient destination
-                // observations out of the model. Reconcile once the helper
-                // has verified that WindowServer remained on the destination.
+            } else if !self.applyConfirmedSpace(spaceID) {
+                // A newly created fullscreen space may not be in the cached
+                // list yet. Fall back to the normal topology reconciliation
+                // in that case.
                 self.refreshSpaceState()
             }
 
@@ -117,6 +118,27 @@ extension SpaceManager {
         } else {
             DispatchQueue.main.async(execute: update)
         }
+    }
+
+    /// Publishes a destination only after SpaceHelper has completed its
+    /// independent WindowServer settle verification. Existing spaces already
+    /// have all metadata needed by the status bar, so another asynchronous raw
+    /// space query would only add latency to the visible update.
+    private func applyConfirmedSpace(_ spaceID: String) -> Bool {
+        guard let space = spaceNameDict.first(where: { $0.id == spaceID }) else {
+            return false
+        }
+
+        currentDisplayID = space.displayID
+        currentRawSpaceUUID = spaceID
+        currentSpaceByDisplay[space.displayID] = spaceID
+        currentIsDesktop = !space.isFullscreen
+
+        if currentSpaceUUID != spaceID {
+            currentSpaceUUID = spaceID
+            scheduleWidgetUpdate()
+        }
+        return true
     }
     
     @discardableResult
