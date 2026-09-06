@@ -2,59 +2,6 @@ import AppKit
 
 @MainActor
 enum WindowActionCoordinator {
-    struct VisibilityState {
-        let isMinimized: Bool
-        let isHidden: Bool
-    }
-
-    static func visibilityState(windowID: Int, pid: Int32) -> VisibilityState {
-        var isMinimized = false
-        let isHidden = NSRunningApplication(processIdentifier: pid)?.isHidden ?? false
-
-        if let axWindow = SpaceHelper.getAXWindow(id: windowID, pid: pid) {
-            var minimizedRef: CFTypeRef?
-            if AXUIElementCopyAttributeValue(axWindow, kAXMinimizedAttribute as CFString, &minimizedRef) == .success,
-               let minimized = minimizedRef as? Bool {
-                isMinimized = minimized
-            }
-        }
-
-        return VisibilityState(isMinimized: isMinimized, isHidden: isHidden)
-    }
-
-    static func restoreWindowForMove(windowID: Int, pid: Int32) async {
-        if let app = NSRunningApplication(processIdentifier: pid) {
-            app.unhide()
-        }
-        if let axWindow = SpaceHelper.getAXWindow(id: windowID, pid: pid) {
-            AXUIElementSetAttributeValue(axWindow, kAXMinimizedAttribute as CFString, false as CFTypeRef)
-        }
-        try? await Task.sleep(nanoseconds: 300_000_000)
-    }
-
-    static func reapplyVisibility(_ state: VisibilityState, windowID: Int, pid: Int32) async {
-        guard state.isMinimized || state.isHidden else { return }
-
-        if state.isMinimized {
-            var axWindow = SpaceHelper.getAXWindow(id: windowID, pid: pid)
-            if axWindow == nil {
-                if let app = NSRunningApplication(processIdentifier: pid) {
-                    app.activate(options: .activateIgnoringOtherApps)
-                    try? await Task.sleep(nanoseconds: 400_000_000)
-                    axWindow = SpaceHelper.getAXWindow(id: windowID, pid: pid)
-                }
-            }
-            if let targetAXWindow = axWindow {
-                AXUIElementSetAttributeValue(targetAXWindow, kAXMinimizedAttribute as CFString, true as CFTypeRef)
-            }
-        }
-
-        if state.isHidden,
-           let app = NSRunningApplication(processIdentifier: pid) {
-            app.hide()
-        }
-    }
-
     /// Selects the window's desktop before raising it. Focusing a window while
     /// its desktop is still in the background can make WindowServer restore the
     /// previous desktop, especially when the window is on another display.
@@ -80,8 +27,7 @@ enum WindowActionCoordinator {
         windowID: Int,
         pid: Int32,
         fromSpaceID: String,
-        targetSpaceID: String,
-        preserveVisibility: Bool = true
+        targetSpaceID: String
     ) async -> Bool {
         guard fromSpaceID != targetSpaceID else { return true }
         guard let manager = AppDelegate.shared.spaceManager,
@@ -90,76 +36,27 @@ enum WindowActionCoordinator {
             return false
         }
 
-        // Mission Control assigns a cross-display window to the destination
-        // display's active space. Activate the requested destination first,
-        // then return to the source display to perform the move.
-        if sourceSpace.displayID != targetSpace.displayID,
-           SpaceHelper.getCurrentSpaceID(for: targetSpace.displayID) != targetSpace.id {
-            manager.switchToSpace(targetSpace, forceInstant: true)
-            guard await waitForSpace(targetSpace.id, on: targetSpace.displayID) else {
-                return false
-            }
-        }
-
-        let originalVisibility = visibilityState(windowID: windowID, pid: pid)
-
-        if SpaceHelper.getCurrentSpaceID(for: sourceSpace.displayID) != fromSpaceID {
-            manager.switchToSpace(sourceSpace, forceInstant: true)
-            guard await waitForSpace(fromSpaceID, on: sourceSpace.displayID) else {
-                return false
-            }
-        }
-
-        if originalVisibility.isMinimized || originalVisibility.isHidden {
-            await restoreWindowForMove(windowID: windowID, pid: pid)
-        }
-
-        SpaceHelper.focusWindow(id: windowID, pid: pid)
-        try? await Task.sleep(nanoseconds: 250_000_000)
-
         if sourceSpace.isFullscreen || targetSpace.isFullscreen {
             if sourceSpace.isFullscreen {
-            var axWindow = SpaceHelper.getAXWindow(id: windowID, pid: pid)
-            if axWindow == nil {
-                if let app = NSRunningApplication(processIdentifier: pid) {
-                    app.activate(options: .activateIgnoringOtherApps)
-                    try? await Task.sleep(nanoseconds: 400_000_000)
-                    axWindow = SpaceHelper.getAXWindow(id: windowID, pid: pid)
+                guard let axWindow = SpaceHelper.getAXWindow(id: windowID, pid: pid) else {
+                    return false
                 }
-            }
-            if let targetAXWindow = axWindow {
-                AXUIElementSetAttributeValue(targetAXWindow, "AXFullScreen" as CFString, false as CFTypeRef)
+                AXUIElementSetAttributeValue(axWindow, "AXFullScreen" as CFString, false as CFTypeRef)
                 try? await Task.sleep(nanoseconds: 1_200_000_000)
             }
-            }
-
-            // Exiting fullscreen invalidates the cached source-space classification
-            // before SpaceManager receives its reconciliation callback. Move the
-            // specific window directly so the stale fullscreen guard cannot discard
-            // the request.
-            SpaceHelper.dragWindow(
-                windowID: windowID,
-                pid: pid,
-                to: targetSpaceID,
-                forceInstant: true
-            )
-        } else {
-            // The launcher may still be the active application while focus is
-            // being handed back to the captured window. Keep the original
-            // window identity instead of letting SpaceManager re-query the
-            // active window and move the wrong window.
-            SpaceHelper.dragWindow(
-                windowID: windowID,
-                pid: pid,
-                to: targetSpaceID,
-                forceInstant: true
-            )
         }
-        try? await Task.sleep(nanoseconds: 500_000_000)
 
-        if preserveVisibility {
-            await reapplyVisibility(originalVisibility, windowID: windowID, pid: pid)
+        // A launcher move must not raise or activate the target window. Move
+        // the captured window directly between Spaces instead of synthesizing
+        // an active-window drag.
+        guard SpaceHelper.moveWindowToSpace(
+            windowID: windowID,
+            fromSpaceID: fromSpaceID,
+            targetSpaceID: targetSpaceID
+        ) else {
+            return false
         }
+        try? await Task.sleep(nanoseconds: 150_000_000)
 
         return true
     }

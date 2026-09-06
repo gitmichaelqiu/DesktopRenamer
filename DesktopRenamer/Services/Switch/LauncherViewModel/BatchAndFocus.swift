@@ -54,13 +54,8 @@ extension LauncherViewModel {
                 
                 for (sourceId, sourceActions) in movesBySource {
                     DiagnosticEventLog.shared.record(subsystem: "Launcher", level: "info", "executeBatchMove: Group sourceID=\(sourceId), sourceActions count=\(sourceActions.count)")
-                    if let manager = AppDelegate.shared.spaceManager,
-                       let spaceObj = manager.spaceNameDict.first(where: { $0.id == sourceId }) {
-                        manager.switchToSpace(spaceObj, forceInstant: true)
-                    }
-                    try await Task.sleep(nanoseconds: 600_000_000) // 0.6s settle time
                     
-                    for (index, action) in sourceActions.enumerated() {
+                    for action in sourceActions {
                         let targetSpaceID: String
                         
                         switch action.actionType {
@@ -89,15 +84,6 @@ extension LauncherViewModel {
                                 level: "warning",
                                 "executeBatchMove: Failed to move window id=\(action.window.id) to space=\(targetSpaceID)"
                             )
-                        }
-                        
-                        // Switch back to source space
-                        if index < sourceActions.count - 1 {
-                            if let manager = AppDelegate.shared.spaceManager,
-                               let spaceObj = manager.spaceNameDict.first(where: { $0.id == sourceId }) {
-                                manager.switchToSpace(spaceObj, forceInstant: true)
-                            }
-                            try await Task.sleep(nanoseconds: 600_000_000) // 0.6s switch settle
                         }
                     }
                 }

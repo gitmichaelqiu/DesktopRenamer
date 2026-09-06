@@ -14,34 +14,6 @@ extension SpaceHelper {
         dragWindow(activeWindowInfo, to: spaceID, forceInstant: forceInstant)
     }
 
-    /// Moves the exact window captured by a launcher or batch action.
-    ///
-    /// The launcher temporarily owns focus while a command is selected. Do
-    /// not re-read the active window after that handoff: the active window can
-    /// be the launcher itself or another app even though the command still
-    /// refers to the originally captured window.
-    static func dragWindow(
-        windowID: Int,
-        pid: Int32,
-        to spaceID: String,
-        forceInstant: Bool = false
-    ) {
-        guard let windowInfo = getWindowInfo(id: windowID), windowInfo.pid == pid else {
-            DiagnosticEventLog.shared.record(
-                subsystem: "SpaceHelper",
-                level: "warning",
-                "Cannot move captured window \(windowID): window no longer belongs to PID \(pid)"
-            )
-            return
-        }
-
-        dragWindow(
-            (id: windowID, pid: windowInfo.pid, frame: windowInfo.frame),
-            to: spaceID,
-            forceInstant: forceInstant
-        )
-    }
-
     private static func dragWindow(
         _ windowInfo: (id: Int, pid: Int32, frame: CGRect),
         to spaceID: String,

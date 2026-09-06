@@ -54,6 +54,25 @@ extension SpaceHelper {
     /// Moves a specific window (by CGWindowID) between spaces.
     /// Uses CGSAddWindowsToSpaces + CGSRemoveWindowsFromSpaces (proven in SpaceLabelWindow).
     /// Now handles cross-monitor moves by repositioning the window via Accessibility API.
+    @discardableResult
+    static func moveWindowToSpace(
+        windowID: Int,
+        fromSpaceID: String,
+        targetSpaceID: String
+    ) -> Bool {
+        guard let fromID = Int(fromSpaceID), let targetID = Int(targetSpaceID) else {
+            DiagnosticEventLog.shared.record(
+                subsystem: "SpaceHelper",
+                level: "warning",
+                "Cannot move window \(windowID): non-numeric Space IDs"
+            )
+            return false
+        }
+
+        moveWindowToSpace(windowID: windowID, fromSpaceID: fromID, targetSpaceID: targetID)
+        return true
+    }
+
     static func moveWindowToSpace(windowID: Int, fromSpaceID: Int, targetSpaceID: Int) {
         markWindowMoveIntent(to: String(targetSpaceID))
         let targetSpaceIDString = String(targetSpaceID)
