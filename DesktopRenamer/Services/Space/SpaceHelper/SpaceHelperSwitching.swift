@@ -662,13 +662,17 @@ extension SpaceHelper {
         guard programmaticSwitchCompletionWorkItem == nil else { return }
 
         // The first matching WindowServer read can arrive before the visual
-        // swipe has finished. Keep the transition open for one settling
+        // swipe has finished. Keep the transition open for a short settling
         // interval, then verify the authoritative live state again before
-        // releasing queued requests and restoring labels.
+        // releasing queued requests and restoring labels. Regular desktop
+        // switches do not need the full animation duration here because the
+        // destination was already independently observed above.
         let settleDelay: TimeInterval =
             programmaticSwitchFastFollowUpRequested && !programmaticSwitchUsesExtendedSettle
             ? 0.08
-            : 0.35
+            : programmaticSwitchUsesExtendedSettle
+                ? 0.35
+                : 0.18
         let workItem = DispatchWorkItem {
             guard let active = switchTransactionCoordinator.active,
                   isSwitching,
