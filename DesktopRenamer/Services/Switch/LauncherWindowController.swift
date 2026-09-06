@@ -38,6 +38,14 @@ class LauncherWindowController: NSWindowController, NSWindowDelegate {
         panel.level = .statusBar
         panel.hidesOnDeactivate = false
         panel.becomesKeyOnlyIfNeeded = false
+        // The launcher is a transient app-owned panel. Keeping it tied to the
+        // Space where it was first created makes activating the launcher from
+        // another Space bring that old Space to the front.
+        panel.collectionBehavior = [
+            .canJoinAllSpaces,
+            .fullScreenAuxiliary,
+            .ignoresCycle,
+        ]
         
         super.init(window: panel)
         panel.delegate = self
