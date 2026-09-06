@@ -467,7 +467,6 @@ struct PermissionsPage: View {
                 Text(title)
                     .fontWeight(.semibold)
             }
-            .frame(maxWidth: .infinity)
             .foregroundColor(.white)
             .padding(.vertical, 10)
             .padding(.horizontal, 20)
