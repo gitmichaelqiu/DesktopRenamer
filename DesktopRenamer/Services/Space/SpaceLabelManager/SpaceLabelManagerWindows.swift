@@ -385,10 +385,29 @@ extension SpaceLabelManager {
         isSettingsWindowOpen = false
 
         guard needsRestore else { return }
-        DispatchQueue.main.async { [weak self] in
-            guard let self, !SpaceHelper.isSwitching else { return }
+        scheduleSettingsPreviewRestoreAfterClose()
+    }
+
+    /// Reconcile previews after Settings closes, but wait for an in-flight
+    /// programmatic switch or pending promotion to finish first. A switch can
+    /// publish its final space before Settings' close callback is delivered,
+    /// so dropping the reconciliation at that boundary can leave previews
+    /// hidden indefinitely when transition hiding is disabled.
+    private func scheduleSettingsPreviewRestoreAfterClose() {
+        settingsPreviewRestoreWorkItem?.cancel()
+        let workItem = DispatchWorkItem { [weak self] in
+            guard let self else { return }
+            guard !SpaceHelper.isSwitching,
+                  !SpaceHelper.isProgrammaticSwitchPromotionPending else {
+                self.scheduleSettingsPreviewRestoreAfterClose()
+                return
+            }
+
+            self.settingsPreviewRestoreWorkItem = nil
             self.updateAllWindowModes()
         }
+        settingsPreviewRestoreWorkItem = workItem
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1, execute: workItem)
     }
 
     private func checkApplicationActivationSpaceTransition(attempt: Int, generation: Int) {
