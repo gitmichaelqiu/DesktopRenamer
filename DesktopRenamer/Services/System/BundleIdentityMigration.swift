@@ -174,7 +174,7 @@ private enum DesktopRenamerMigrationConfiguration {
         ) as? String {
             let value = rawValue.trimmingCharacters(in: .whitespacesAndNewlines)
             if value.hasPrefix("/") && value.hasSuffix(".app") {
-                return URL(fileURLWithPath: value, isDirectory: true)
+                return URL(fileURLWithPath: value, isDirectory: true).standardizedFileURL
             }
         }
 
@@ -324,7 +324,7 @@ private func runTool(_ path: String, arguments: [String]) -> Bool {
         process.waitUntilExit()
         return process.terminationReason == .exit && process.terminationStatus == 0
     } catch {
-        print("IdentityMigration: failed to run (path): (error)")
+        print("IdentityMigration: failed to run \(path): \(error)")
         return false
     }
 }
@@ -389,7 +389,8 @@ final class DesktopRenamerBridgeMigrationManager {
             sourceProcessIdentifier: ProcessInfo.processInfo.processIdentifier,
             targetBundleIdentifier: DesktopRenamerIdentity.currentBundleIdentifier,
             stagingApplicationPath: DesktopRenamerMigrationConfiguration.stagingApplicationURL.path,
-            launchAtLoginEnabled: SMAppService.mainApp.status == .enabled,
+            launchAtLoginEnabled: SMAppService.mainApp.status == .enabled
+                || SMAppService.mainApp.status == .requiresApproval,
             expectedVersion: expectedVersion,
             createdAt: Date()
         )
