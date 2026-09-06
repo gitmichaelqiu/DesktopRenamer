@@ -180,7 +180,10 @@ extension GestureManager {
                         }
 
                         if performsSwitchOverride {
-                            triggerSwitch(direction: direction)
+                            triggerSwitch(
+                                direction: direction,
+                                movesWindowOnOption: moveWindowOnOption && isOptionKeyDown()
+                            )
                         }
 
                         // A new switch is armed only by the zero-contact frame
@@ -360,19 +363,29 @@ extension GestureManager {
         DispatchQueue.main.async(execute: workItem)
     }
 
-    func triggerSwitch(direction: SwitchDirection) {
+    private func isOptionKeyDown() -> Bool {
+        CGEventSource.flagsState(.combinedSessionState).contains(.maskAlternate)
+            || NSEvent.modifierFlags.contains(.option)
+    }
+
+    func triggerSwitch(direction: SwitchDirection, movesWindowOnOption: Bool) {
         DiagnosticEventLog.shared.record(
             subsystem: "GestureManager",
             level: "info",
-            "triggerSwitch(\(direction))"
+            "triggerSwitch(\(direction)), movesWindowOnOption=\(movesWindowOnOption)"
         )
         lastSwitchTime = Date().timeIntervalSince1970
         guard spaceManager != nil, self.isEnabled else { return }
 
-        enqueueGestureSwitchRequest(direction)
+        enqueueGestureSwitchRequest(
+            PendingGestureSwitch(
+                direction: direction,
+                movesWindowOnOption: movesWindowOnOption
+            )
+        )
     }
 
-    private func enqueueGestureSwitchRequest(_ direction: SwitchDirection) {
+    private func enqueueGestureSwitchRequest(_ request: PendingGestureSwitch) {
         var shouldSchedule = false
         let disposition: String
         let transactionActive: Bool
@@ -382,7 +395,7 @@ extension GestureManager {
         if isGestureSwitchActionScheduled
             || isGestureSwitchOperationInFlight
             || isGestureSwitchTransactionActive {
-            pendingGestureSwitchDirections.append(direction)
+            pendingGestureSwitches.append(request)
             disposition = "queued"
             transactionActive = isGestureSwitchTransactionActive
         } else {
@@ -391,13 +404,13 @@ extension GestureManager {
             disposition = "scheduled"
             transactionActive = false
         }
-        pendingCount = pendingGestureSwitchDirections.count
+        pendingCount = pendingGestureSwitches.count
         gestureSwitchStateLock.unlock()
 
         DiagnosticEventLog.shared.record(
             subsystem: "GestureManager",
             level: "info",
-            "gesture switch request \(disposition): direction=\(direction), transactionActive=\(transactionActive), pending=\(pendingCount)"
+            "gesture switch request \(disposition): direction=\(request.direction), movesWindowOnOption=\(request.movesWindowOnOption), transactionActive=\(transactionActive), pending=\(pendingCount)"
         )
 
         if transactionActive {
@@ -409,7 +422,7 @@ extension GestureManager {
         guard shouldSchedule else { return }
         let execute: () -> Void = { [weak self] in
             guard let self else { return }
-            self.performScheduledGestureSwitch(initialDirection: direction)
+            self.performScheduledGestureSwitch(initialRequest: request)
         }
 
         // The multitouch callback is delivered by the private driver on a
@@ -423,18 +436,18 @@ extension GestureManager {
         }
     }
 
-    private func performScheduledGestureSwitch(initialDirection: SwitchDirection) {
-        guard let direction = takeScheduledGestureDirection(initialDirection) else {
+    private func performScheduledGestureSwitch(initialRequest: PendingGestureSwitch) {
+        guard let request = takeScheduledGestureSwitch(initialRequest) else {
             return
         }
+        let direction = request.direction
 
         guard let sm = spaceManager, self.isEnabled else {
             completeGestureSwitchOperation(transactionStarted: false)
             return
         }
 
-        let isHoldingOption = NSEvent.modifierFlags.contains(.option)
-        if moveWindowOnOption && isHoldingOption {
+        if request.movesWindowOnOption {
             // Window moves and fullscreen exit have their own asynchronous
             // cleanup and do not emit SpaceProgrammaticSwitchFinished.
             // Keep them outside the serialized space-switch gate.
@@ -458,7 +471,7 @@ extension GestureManager {
         // transaction is settling. The direction is retained and resolved
         // against the live space only after promotion has completed.
         if SpaceHelper.isSwitching {
-            retainGestureSwitchForActiveTransaction(direction)
+            retainGestureSwitchForActiveTransaction(request)
             return
         }
 
@@ -480,7 +493,7 @@ extension GestureManager {
         completeGestureSwitchOperation(transactionStarted: transactionStarted)
     }
 
-    private func takeScheduledGestureDirection(_ initialDirection: SwitchDirection) -> SwitchDirection? {
+    private func takeScheduledGestureSwitch(_ initialRequest: PendingGestureSwitch) -> PendingGestureSwitch? {
         gestureSwitchStateLock.lock()
         guard isGestureSwitchActionScheduled else {
             gestureSwitchStateLock.unlock()
@@ -490,30 +503,30 @@ extension GestureManager {
         isGestureSwitchActionScheduled = false
         isGestureSwitchOperationInFlight = true
         gestureSwitchStateLock.unlock()
-        return initialDirection
+        return initialRequest
     }
 
-    private func retainGestureSwitchForActiveTransaction(_ direction: SwitchDirection) {
+    private func retainGestureSwitchForActiveTransaction(_ request: PendingGestureSwitch) {
         gestureSwitchStateLock.lock()
         isGestureSwitchOperationInFlight = false
         isGestureSwitchTransactionActive = true
         // This operation was already accepted before any directions currently
         // in the queue, so keep it at the front when an external SpaceHelper
         // transaction temporarily prevents it from starting.
-        pendingGestureSwitchDirections.insert(direction, at: 0)
+        pendingGestureSwitches.insert(request, at: 0)
         gestureSwitchStateLock.unlock()
 
         DiagnosticEventLog.shared.record(
             subsystem: "GestureManager",
             level: "info",
-            "gesture switch deferred by active transaction: direction=\(direction)"
+            "gesture switch deferred by active transaction: direction=\(request.direction), movesWindowOnOption=\(request.movesWindowOnOption)"
         )
         SpaceHelper.requestFastFollowUpSwitch()
         scheduleGestureSwitchResumeProbe()
     }
 
     private func completeGestureSwitchOperation(transactionStarted: Bool) {
-        var nextDirection: SwitchDirection?
+        var nextRequest: PendingGestureSwitch?
 
         gestureSwitchStateLock.lock()
         isGestureSwitchOperationInFlight = false
@@ -521,23 +534,23 @@ extension GestureManager {
 
         if !transactionStarted,
            !isGestureSwitchActionScheduled,
-           !pendingGestureSwitchDirections.isEmpty {
-            let pendingDirection = pendingGestureSwitchDirections.removeFirst()
+           !pendingGestureSwitches.isEmpty {
+            let pendingRequest = pendingGestureSwitches.removeFirst()
             isGestureSwitchActionScheduled = true
-            nextDirection = pendingDirection
+            nextRequest = pendingRequest
         }
         gestureSwitchStateLock.unlock()
 
         if transactionStarted {
             scheduleGestureSwitchResumeProbe()
-        } else if let nextDirection {
+        } else if let nextRequest {
             DiagnosticEventLog.shared.record(
                 subsystem: "GestureManager",
                 level: "info",
-                "resuming pending gesture switch after \(transactionStarted ? "transaction" : "rejected request"): direction=\(nextDirection)"
+                "resuming pending gesture switch after \(transactionStarted ? "transaction" : "rejected request"): direction=\(nextRequest.direction), movesWindowOnOption=\(nextRequest.movesWindowOnOption)"
             )
             DispatchQueue.main.async { [weak self] in
-                self?.performScheduledGestureSwitch(initialDirection: nextDirection)
+                self?.performScheduledGestureSwitch(initialRequest: nextRequest)
             }
         } else {
             gestureSwitchResumeWorkItem?.cancel()
@@ -572,7 +585,7 @@ extension GestureManager {
             return
         }
 
-        var nextDirection: SwitchDirection?
+        var nextRequest: PendingGestureSwitch?
         gestureSwitchStateLock.lock()
         guard isGestureSwitchTransactionActive,
               !isGestureSwitchActionScheduled,
@@ -582,17 +595,17 @@ extension GestureManager {
         }
 
         isGestureSwitchTransactionActive = false
-        if !pendingGestureSwitchDirections.isEmpty {
-            let pendingDirection = pendingGestureSwitchDirections.removeFirst()
+        if !pendingGestureSwitches.isEmpty {
+            let pendingRequest = pendingGestureSwitches.removeFirst()
             isGestureSwitchActionScheduled = true
-            nextDirection = pendingDirection
+            nextRequest = pendingRequest
         }
         gestureSwitchStateLock.unlock()
 
         gestureSwitchResumeWorkItem?.cancel()
         gestureSwitchResumeWorkItem = nil
 
-        guard let nextDirection else {
+        guard let nextRequest else {
             DiagnosticEventLog.shared.record(
                 subsystem: "GestureManager",
                 level: "info",
@@ -604,10 +617,10 @@ extension GestureManager {
         DiagnosticEventLog.shared.record(
             subsystem: "GestureManager",
             level: "info",
-            "promoting pending gesture direction: direction=\(nextDirection)"
+            "promoting pending gesture direction: direction=\(nextRequest.direction), movesWindowOnOption=\(nextRequest.movesWindowOnOption)"
         )
         DispatchQueue.main.async { [weak self] in
-            self?.performScheduledGestureSwitch(initialDirection: nextDirection)
+            self?.performScheduledGestureSwitch(initialRequest: nextRequest)
         }
     }
 
