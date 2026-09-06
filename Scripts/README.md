@@ -56,6 +56,7 @@ source is ready:
      --build-number "$BRIDGE_BUILD" \
      --release-tag "$RELEASE_TAG" \
      --feed-url "$LEGACY_FEED_URL" \
+     --staged-feed-url "$CURRENT_FEED_URL" \
      --migration-package-url "$MIGRATION_PACKAGE_URL" \
      --migration-package-sha256 "$MIGRATION_PACKAGE_SHA256" \
      --migration-package-version "$CURRENT_BUILD" \

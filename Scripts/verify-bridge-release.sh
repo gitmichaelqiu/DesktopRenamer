@@ -24,7 +24,8 @@ Required:
   --version VERSION               Expected bridge marketing version
   --build-number BUILD            Expected bridge CFBundleVersion
   --release-tag TAG               Expected bridge release tag
-  --feed-url URL                  Expected legacy Sparkle feed URL
+    --feed-url URL                  Expected legacy Sparkle feed URL
+  --staged-feed-url URL             Expected current-ID Sparkle feed URL
   --migration-package-url URL     Expected package URL in bridge metadata
   --migration-package-sha256 SHA256
                                   Expected package checksum in bridge metadata
@@ -83,6 +84,7 @@ MARKETING_VERSION=""
 BUILD_NUMBER=""
 RELEASE_TAG=""
 FEED_URL=""
+STAGED_FEED_URL=""
 MIGRATION_PACKAGE_URL=""
 MIGRATION_PACKAGE_SHA256=""
 MIGRATION_PACKAGE_VERSION=""
@@ -124,6 +126,11 @@ while (($# > 0)); do
         --feed-url)
             (($# >= 2)) || die "--feed-url requires a URL"
             FEED_URL="$2"
+            shift 2
+            ;;
+        --staged-feed-url)
+            (($# >= 2)) || die "--staged-feed-url requires a URL"
+            STAGED_FEED_URL="$2"
             shift 2
             ;;
         --migration-package-url)
@@ -178,6 +185,7 @@ done
 [[ "$RELEASE_TAG" =~ ^[A-Za-z0-9._-]+$ ]] \
     || die "release tag contains unsupported characters"
 is_https_url "$FEED_URL" || die "--feed-url must be an HTTPS URL"
+is_https_url "$STAGED_FEED_URL" || die "--staged-feed-url must be an HTTPS URL"
 is_https_url "$MIGRATION_PACKAGE_URL" \
     || die "--migration-package-url must be an HTTPS URL"
 [[ "$MIGRATION_PACKAGE_SHA256" =~ ^[0-9A-Fa-f]{64}$ ]] \
@@ -208,7 +216,7 @@ mkdir -p "$MOUNT_POINT"
 DMG_ATTACHED=0
 cleanup() {
     if ((DMG_ATTACHED == 1)); then
-        hdiutil detach "$MOUNT_POINT" -quiet >/dev/null 2>&1 || true
+        hdiutil detach -quiet "$MOUNT_POINT" >/dev/null 2>&1 || true
     fi
     rm -rf "$WORK_DIR"
 }
@@ -218,7 +226,7 @@ if [[ -n "$BRIDGE_DMG" ]]; then
     if ((SKIP_NOTARIZATION_CHECKS == 0)); then
         xcrun stapler validate -q "$BRIDGE_DMG"
     fi
-    hdiutil attach "$BRIDGE_DMG" -nobrowse -readonly -mountpoint "$MOUNT_POINT" >/dev/null
+    hdiutil attach -nobrowse -readonly -mountpoint "$MOUNT_POINT" "$BRIDGE_DMG" >/dev/null
     DMG_ATTACHED=1
     BRIDGE_APP="$MOUNT_POINT/DesktopRenamer.app"
 else
@@ -275,6 +283,13 @@ assert_equal "staged app bundle identifier" "$CURRENT_BUNDLE_IDENTIFIER" \
     "$(read_plist_value "$STAGED_INFO_PLIST" CFBundleIdentifier)"
 assert_equal "staged app build number" "$MIGRATION_PACKAGE_VERSION" \
     "$(read_plist_value "$STAGED_INFO_PLIST" CFBundleVersion)"
+assert_equal "staged app feed URL" "$STAGED_FEED_URL" \
+    "$(read_plist_value "$STAGED_INFO_PLIST" SUFeedURL)"
+STAGED_WIDGET_INFO_PLIST="$STAGED_APP/Contents/PlugIns/DesktopRenamerWidgetExtension.appex/Contents/Info.plist"
+[[ -f "$STAGED_WIDGET_INFO_PLIST" ]] || die "migration package widget extension is missing"
+assert_equal "staged widget bundle identifier" \
+    "dev.mqiu.DesktopRenamer.DesktopRenamerWidget" \
+    "$(read_plist_value "$STAGED_WIDGET_INFO_PLIST" CFBundleIdentifier)"
 codesign --verify --deep --strict "$STAGED_APP"
 
 echo "Bridge release verification passed"
