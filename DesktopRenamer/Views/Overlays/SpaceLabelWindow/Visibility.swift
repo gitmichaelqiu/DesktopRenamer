@@ -46,7 +46,11 @@ extension SpaceLabelWindow {
         }
 
         if !isActiveMode, labelManager?.isPreviewTransitionSuppressed == true {
-            hideImmediately()
+            if labelManager?.arePreviewLabelsSuppressedForSettings == true {
+                hideForSettingsActivation()
+            } else {
+                hideImmediately()
+            }
             return
         }
 

@@ -347,7 +347,7 @@ extension SpaceLabelManager {
         delayedRestoreWorkItem?.cancel()
         delayedRestoreWorkItem = nil
         arePreviewLabelsSuppressedForSettings = true
-        hideAllPreviewLabels()
+        hideAllPreviewLabelsForSettingsActivation()
         DiagnosticEventLog.shared.record(
             subsystem: "Labels",
             level: "info",
@@ -366,7 +366,7 @@ extension SpaceLabelManager {
             "Settings window became key — restoring preview labels"
         )
         DispatchQueue.main.async { [weak self] in
-            self?.updateAllWindowModes()
+            self?.restorePreviewLabelsAfterSettingsActivation()
         }
     }
 
@@ -872,7 +872,11 @@ extension SpaceLabelManager {
                 // The active space has its own dedicated label window. Keep
                 // the preview window bound to the space, but never visible on
                 // the active desktop or over a fullscreen app.
-                window.hideImmediately()
+                if arePreviewLabelsSuppressedForSettings {
+                    window.hideForSettingsActivation()
+                } else {
+                    window.hideImmediately()
+                }
             } else {
                 window.updateVisibility(animated: false, visibleSpaceIDs: visibleUUIDs)
             }
@@ -934,6 +938,40 @@ extension SpaceLabelManager {
         DiagnosticEventLog.shared.record(subsystem: "Labels", level: "info", "hideAllPreviewLabels (windows=\(createdWindows.count))")
         for window in createdWindows.values {
             window.hideImmediately()
+        }
+    }
+
+    private func hideAllPreviewLabelsForSettingsActivation() {
+        DiagnosticEventLog.shared.record(
+            subsystem: "Labels",
+            level: "info",
+            "hideAllPreviewLabelsForSettingsActivation (windows=\(createdWindows.count))"
+        )
+        for window in createdWindows.values {
+            window.hideForSettingsActivation()
+        }
+    }
+
+    private func restorePreviewLabelsAfterSettingsActivation() {
+        let visibleUUIDs = SpaceHelper.getVisibleSystemSpaceIDs()
+        guard !visibleUUIDs.isEmpty else { return }
+
+        let fullscreenDisplayIDs = currentFullscreenDisplayIDs(
+            visibleUUIDs: visibleUUIDs,
+            displayID: nil
+        )
+        for (spaceID, window) in createdWindows {
+            if visibleUUIDs.contains(spaceID)
+                || fullscreenDisplayIDs.contains(window.displayID) {
+                window.hideImmediately()
+            } else {
+                // Existing previews remain ordered in their target Space, so
+                // this only restores their alpha and interaction state. The
+                // regular global reconciliation path is intentionally avoided
+                // here because it can infer a transient stale current Space
+                // during Settings activation and reorder windows.
+                window.updateVisibility(animated: false, visibleSpaceIDs: visibleUUIDs)
+            }
         }
     }
 

@@ -36,6 +36,21 @@ extension SpaceLabelWindow {
         }
     }
 
+    /// Temporarily hides a preview while Settings is becoming active without
+    /// ordering the managed window out of its Space. Re-ordering a preview
+    /// during AppKit activation can make WindowServer select that preview's
+    /// Space, so the existing window must keep its current assignment and
+    /// ordering until activation has settled.
+    func hideForSettingsActivation() {
+        pendingVisibilityTask?.cancel()
+        pendingVisibilityTask = nil
+        contentView?.layer?.removeAllAnimations()
+        contentContainer.layer?.removeAllAnimations()
+        alphaValue = 0.0
+        contentView?.alphaValue = 0.0
+        ignoresMouseEvents = true
+    }
+
     // Interaction handling for mouse events.
     override func mouseDown(with event: NSEvent) {
         guard let manager = labelManager, manager.showOnDesktop, isActiveMode else {
