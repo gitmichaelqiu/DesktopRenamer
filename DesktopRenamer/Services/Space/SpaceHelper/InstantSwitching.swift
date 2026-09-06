@@ -58,7 +58,6 @@ extension SpaceHelper {
                 if initializedBridge.responds(to: performSel) {
                     DiagnosticEventLog.shared.record(subsystem: "SpaceHelper", level: "info", "Executing SLS operation via SLSWindowManagementFallbackBridge: \(displayUUID), \(spaceID)")
                     initializedBridge.perform(performSel, with: initializedOp)
-                    lastProgrammaticSwitchUsedSLS = true
                     return true
                 }
             }
@@ -68,14 +67,12 @@ extension SpaceHelper {
         if let operation = initializedOp as? Operation {
             DiagnosticEventLog.shared.record(subsystem: "SpaceHelper", level: "info", "Executing SLS operation via OperationQueue: \(displayUUID), \(spaceID)")
             OperationQueue.main.addOperation(operation)
-            lastProgrammaticSwitchUsedSLS = true
             return true
         } else {
             let startSel = NSSelectorFromString("start")
             if initializedOp.responds(to: startSel) {
                 DiagnosticEventLog.shared.record(subsystem: "SpaceHelper", level: "info", "Starting SLS operation via start selector: \(displayUUID), \(spaceID)")
                 initializedOp.perform(startSel)
-                lastProgrammaticSwitchUsedSLS = true
                 return true
             }
         }
@@ -84,145 +81,6 @@ extension SpaceHelper {
         return false
     }
     
-    private static func hasAXWindows(pid: Int32) -> Bool {
-        let appRef = AXUIElementCreateApplication(pid)
-        var windowsValue: AnyObject?
-        let result = AXUIElementCopyAttributeValue(appRef, kAXWindowsAttribute as CFString, &windowsValue)
-        guard result == .success, let windows = windowsValue as? [AXUIElement] else {
-            return false
-        }
-        return !windows.isEmpty
-    }
-
-    private static func getTopWindowInfo(forSpace spaceID: String) -> (pid: Int32, windowID: Int)? {
-        guard let targetSpaceInt = Int(spaceID) else { return nil }
-        let conn = _CGSDefaultConnection()
-        
-        let options = CGWindowListOption(arrayLiteral: .excludeDesktopElements)
-        guard let windowList = CGWindowListCopyWindowInfo(options, kCGNullWindowID) as? [[String: Any]] else {
-            print("SpaceHelper: Failed to copy window list")
-            return nil
-        }
-        
-        let ourPID = ProcessInfo.processInfo.processIdentifier
-        
-        for window in windowList {
-            guard let layer = window[kCGWindowLayer as String] as? Int, layer == 0,
-                  let wID = window[kCGWindowNumber as String] as? Int,
-                  let pid = window[kCGWindowOwnerPID as String] as? Int,
-                  pid != ourPID,
-                  let app = NSRunningApplication(processIdentifier: Int32(pid)),
-                  app.activationPolicy == .regular,
-                  hasAXWindows(pid: Int32(pid)),
-                  (window[kCGWindowAlpha as String] as? Double ?? 1.0) > 0.1,
-                  let bounds = window[kCGWindowBounds as String] as? [String: Any],
-                  let w = bounds["Width"] as? CGFloat, let h = bounds["Height"] as? CGFloat,
-                  w > 100, h > 100
-            else { continue }
-            
-            // Check spaces for this window
-            let wIDArray = [wID as NSNumber] as CFArray
-            if let result = CGSCopySpacesForWindows(conn, 7, wIDArray),
-               let spaceIDs = result as? [NSNumber] {
-                let spaceInts = spaceIDs.map { $0.intValue }
-                if spaceInts.contains(targetSpaceInt), spaceInts.count == 1 {
-                    let appName = window[kCGWindowOwnerName as String] as? String ?? "Unknown"
-                    print("SpaceHelper: Found top window on Space \(spaceID): \(appName) (PID: \(pid), WindowID: \(wID), Spaces: \(spaceInts))")
-                    DiagnosticEventLog.shared.record(subsystem: "SpaceHelper", "Found top window on Space \(spaceID): \(appName) (PID: \(pid), WindowID: \(wID), Spaces: \(spaceInts))")
-                    return (Int32(pid), wID)
-                }
-            }
-        }
-        print("SpaceHelper: No top window found on Space \(spaceID)")
-        return nil
-    }
-
-    private static func focusWindowViaAccessibility(pid: Int32, windowID: Int) -> Bool {
-        let appRef = AXUIElementCreateApplication(pid)
-        var windowsValue: AnyObject?
-        let result = AXUIElementCopyAttributeValue(appRef, kAXWindowsAttribute as CFString, &windowsValue)
-        
-        print("SpaceHelper: focusWindowViaAccessibility pid \(pid), windowID \(windowID). Copy windows result: \(result.rawValue)")
-        DiagnosticEventLog.shared.record(subsystem: "SpaceHelper", "focusWindowViaAccessibility pid \(pid), windowID \(windowID). result=\(result.rawValue)")
-        
-        guard result == .success, let windows = windowsValue as? [AXUIElement] else {
-            print("SpaceHelper: Failed to copy windows for PID \(pid)")
-            return false
-        }
-        
-        print("SpaceHelper: App PID \(pid) has \(windows.count) windows in accessibility")
-        for windowRef in windows {
-            var wID: CGWindowID = 0
-            if _AXUIElementGetWindow(windowRef, &wID) == 0, Int(wID) == windowID {
-                AXUIElementPerformAction(windowRef, kAXRaiseAction as CFString)
-                AXUIElementSetAttributeValue(windowRef, kAXMainAttribute as CFString, kCFBooleanTrue)
-                AXUIElementSetAttributeValue(windowRef, kAXFocusedAttribute as CFString, kCFBooleanTrue)
-                print("SpaceHelper: Successfully focused window \(windowID) via AX API")
-                DiagnosticEventLog.shared.record(subsystem: "SpaceHelper", "Successfully focused window \(windowID) via AX API")
-                return true
-            }
-        }
-        
-        // Fallback: Focus first window
-        if let firstWindow = windows.first {
-            AXUIElementPerformAction(firstWindow, kAXRaiseAction as CFString)
-            AXUIElementSetAttributeValue(firstWindow, kAXMainAttribute as CFString, kCFBooleanTrue)
-            AXUIElementSetAttributeValue(firstWindow, kAXFocusedAttribute as CFString, kCFBooleanTrue)
-            print("SpaceHelper: Focused first window of PID \(pid) via AX API fallback")
-            DiagnosticEventLog.shared.record(subsystem: "SpaceHelper", "Focused first window of PID \(pid) via AX API fallback")
-            return true
-        }
-        
-        print("SpaceHelper: No windows found to focus for PID \(pid)")
-        return false
-    }
-
-    static func restoreFocusAfterSLSSwitch(spaceID: String, immediate: Bool = false) {
-        print("SpaceHelper: restoreFocusAfterSLSSwitch for Space \(spaceID), immediate: \(immediate)")
-        DiagnosticEventLog.shared.record(subsystem: "SpaceHelper", "restoreFocusAfterSLSSwitch for Space \(spaceID), immediate: \(immediate)")
-        
-        pendingFocusTask?.cancel()
-        
-        // Use 350ms for immediate switches so it runs after transition slide animations settle.
-        // This is key to preventing glitched, mangled, or stacked menu bar items.
-        let delay = immediate ? 0.35 : 0.45
-        
-        let task = DispatchWorkItem {
-            // Post-switch settlement: Activate target space owner app if fullscreen
-            if let pid = getOwnerPID(for: spaceID),
-               let app = NSRunningApplication(processIdentifier: pid) {
-                print("SpaceHelper: Activating fullscreen owner app (PID: \(pid)) on Space \(spaceID)")
-                app.activate(options: .activateIgnoringOtherApps)
-                return
-            }
-            
-            guard let topWinInfo = getTopWindowInfo(forSpace: spaceID) else {
-                // Fallback: Activate Finder to reset the menu bar
-                print("SpaceHelper: No top window found on Space \(spaceID). Activating Finder.")
-                if let finder = NSRunningApplication.runningApplications(withBundleIdentifier: "com.apple.finder").first {
-                    finder.activate(options: .activateIgnoringOtherApps)
-                }
-                return
-            }
-            
-            let pid = topWinInfo.pid
-            let windowID = topWinInfo.windowID
-            
-            if let app = NSRunningApplication(processIdentifier: pid) {
-                print("SpaceHelper: Activating top window app \(app.localizedName ?? "") (PID: \(pid), Window: \(windowID)) on Space \(spaceID)")
-                
-                // 1. Activate application
-                app.activate(options: .activateIgnoringOtherApps)
-                
-                // 2. Focus the specific window via Accessibility API
-                _ = focusWindowViaAccessibility(pid: pid, windowID: windowID)
-            }
-        }
-        
-        pendingFocusTask = task
-        DispatchQueue.main.asyncAfter(deadline: .now() + delay, execute: task)
-    }
-
     private static func postDockSwipe(phase: Int, directionRight: Bool, velocity: Double) -> Bool {
         // Use Float.leastNonzeroMagnitude to precisely match FLT_TRUE_MIN used in ISS.c
         // Double.leastNonzeroMagnitude is too small (e-324) and gets truncated to 0.0 by the OS when positive.
@@ -317,4 +175,3 @@ extension SpaceHelper {
         }
     }
 }
-

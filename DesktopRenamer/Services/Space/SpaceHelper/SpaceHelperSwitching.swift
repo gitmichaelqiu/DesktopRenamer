@@ -277,7 +277,6 @@ extension SpaceHelper {
         // every asynchronous callback.
         lastProgrammaticSwitchTime = Date().timeIntervalSince1970
         lastProgrammaticTargetSpaceID = spaceID
-        lastProgrammaticSwitchUsedSLS = false
 
         // Gesture-based Space Switch handling. Keep the synthetic desktop
         // gesture as the primary path for fullscreen transitions too; the
@@ -386,24 +385,6 @@ extension SpaceHelper {
                 isFullscreen: context.targetIsFullscreen
             )
 
-            // High-priority fix for Fullscreen Focus:
-            // When switching to a Fullscreen space via SpaceLabelWindow, DesktopRenamer initially gets focus.
-            // This can cause the OS to revert to the previous space if we don't hand off focus immediately.
-            // We must identify the "owner" app of the fullscreen space and activate it.
-            // Since we just triggered the visual switch, activating the app now should correctly
-            // prioritize the window on the target space (resolving the "multiple windows" ambiguity).
-            if context.targetIsFullscreen {
-                if let pid = getOwnerPID(for: spaceID),
-                    let app = NSRunningApplication(processIdentifier: pid)
-                {
-
-                    // A very short delay ensures the Window Server registers the space switch intent
-                    // before we force the app activation.
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-                        app.activate(options: .activateIgnoringOtherApps)
-                    }
-                }
-            }
             scheduleSpaceSwitchLabelSuppression(generation: generation)
             scheduleActiveLabelPreparation(spaceID: spaceID, generation: generation)
             return .started
@@ -495,7 +476,6 @@ extension SpaceHelper {
     ) {
         lastProgrammaticSwitchTime = Date().timeIntervalSince1970
         lastProgrammaticTargetSpaceID = spaceID
-        lastProgrammaticSwitchUsedSLS = false
 
         DiagnosticEventLog.shared.record(
             subsystem: "SpaceHelper",
@@ -546,7 +526,6 @@ extension SpaceHelper {
             cancelPendingSwitchPromotion()
             lastProgrammaticSwitchTime = 0
             lastProgrammaticTargetSpaceID = nil
-            lastProgrammaticSwitchUsedSLS = false
             return
         }
 
@@ -565,7 +544,6 @@ extension SpaceHelper {
         programmaticSwitchFastFollowUpRequested = false
         lastProgrammaticSwitchTime = 0
         lastProgrammaticTargetSpaceID = nil
-        lastProgrammaticSwitchUsedSLS = false
 
         DiagnosticEventLog.shared.record(
             subsystem: "SpaceHelper",
@@ -776,7 +754,6 @@ extension SpaceHelper {
             // available to classify a later external switch as ours.
             lastProgrammaticSwitchTime = 0
             lastProgrammaticTargetSpaceID = nil
-            lastProgrammaticSwitchUsedSLS = false
             DiagnosticEventLog.shared.record(
                 subsystem: "SpaceHelper",
                 level: "warning",

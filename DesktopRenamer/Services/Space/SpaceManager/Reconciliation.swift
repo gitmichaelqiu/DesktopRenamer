@@ -357,18 +357,6 @@ extension SpaceManager {
                 self.pruneStaleMovedWindows()
                 shouldUpdateWidget = true
 
-                // If it was an SLS programmatic space switch, restore focus now
-                // that the space change is complete. Native dock-swipe events
-                // preserve focus on their own; raising a guessed top window here
-                // can reorder the target space unexpectedly.
-                let now = Date().timeIntervalSince1970
-                let isProgrammatic = SpaceHelper.lastProgrammaticSwitchUsedSLS &&
-                                     (now - SpaceHelper.lastProgrammaticSwitchTime < 2.0) &&
-                                     (targetUUID == SpaceHelper.lastProgrammaticTargetSpaceID)
-                if isProgrammatic {
-                    print("SpaceManager: Programmatic space switch confirmed. Restoring focus on Space \(targetUUID).")
-                    SpaceHelper.restoreFocusAfterSLSSwitch(spaceID: targetUUID, immediate: true)
-                }
             }
 
             // Record the destination observation. SpaceHelper also waits for

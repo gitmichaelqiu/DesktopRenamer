@@ -48,7 +48,6 @@ class SpaceHelper {
     static var isSwitching = false
     static var lastProgrammaticSwitchTime: TimeInterval = 0
     static var lastProgrammaticTargetSpaceID: String? = nil
-    static var lastProgrammaticSwitchUsedSLS = false
     // Window moves intentionally change the active space. Keep this separate
     // from the short-lived mouse-drag session because reconciliation can run
     // after the synthetic mouse button has already been released.
@@ -124,7 +123,6 @@ class SpaceHelper {
     // Session state for active dragging operations.
     static var originalMousePoint: CGPoint? = nil
     static var restorationTask: DispatchWorkItem? = nil
-    static var pendingFocusTask: DispatchWorkItem? = nil
     static var pendingMoveCount = 0
     static var isInstantDrag = false
     static var targetSpaceID: String? = nil
