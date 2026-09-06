@@ -441,7 +441,7 @@ struct PermissionsPage: View {
                     action: permissionManager.requestAccessibilityPermission
                 )
                 permissionButton(
-                    title: "Event synthesis",
+                    title: "Event Synthesis",
                     isGranted: permissionManager.isEventSynthesisGranted,
                     action: permissionManager.requestEventSynthesisPermission
                 )

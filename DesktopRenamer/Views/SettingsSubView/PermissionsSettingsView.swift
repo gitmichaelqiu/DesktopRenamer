@@ -25,7 +25,7 @@ struct PermissionsSettingsView: View {
 
                     Divider()
 
-                    SettingsRow("Event synthesis", helperText: "Required for moving windows with Option + swipe.") {
+                    SettingsRow("Event Synthesis", helperText: "Required for moving windows with Option + swipe.") {
                         HStack {
                             if permissionManager.isEventSynthesisGranted {
                                 Image(systemName: "checkmark.circle.fill")
