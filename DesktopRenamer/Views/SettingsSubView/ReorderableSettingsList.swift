@@ -40,6 +40,7 @@ struct ReorderableSettingsList<Item: Identifiable, RowContent: View, DragPreview
                 decoratedRow(for: item)
                     .draggable(item.id) {
                         dragPreview(item)
+                            .background(SettingsSectionStyle.dragPreviewBackgroundColor)
                     }
                     .dropDestination(for: String.self) { sourceIDs, _ in
                         guard let sourceID = sourceIDs.first else { return false }
@@ -59,8 +60,7 @@ struct ReorderableSettingsList<Item: Identifiable, RowContent: View, DragPreview
         rowContent(item, items)
             .contentShape(Rectangle())
             .contentShape(.dragPreview, Rectangle())
-            .background(SettingsSectionStyle.rowBackgroundColor)
-            .background(
+            .overlay(
                 targetedItemID == item.id
                     ? Color.accentColor.opacity(0.12)
                     : Color.clear

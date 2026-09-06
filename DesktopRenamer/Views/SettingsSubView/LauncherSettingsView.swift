@@ -191,7 +191,6 @@ struct LauncherSettingsView: View {
         .padding(.vertical, 6)
         .frame(minWidth: 320, alignment: .leading)
         .contentShape(.dragPreview, Rectangle())
-        .background(SettingsSectionStyle.rowBackgroundColor)
     }
 
     private func rearrange(_ sourceID: String, before targetID: String) -> Bool {

@@ -380,7 +380,7 @@ struct SettingsRow<Content: View>: View {
 }
 
 enum SettingsSectionStyle {
-    static var rowBackgroundColor: Color {
+    static var dragPreviewBackgroundColor: Color {
         Color(nsColor: .underPageBackgroundColor)
     }
 
