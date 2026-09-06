@@ -46,6 +46,11 @@ class PermissionManager: ObservableObject {
         openSystemSettings(type: "Privacy_Accessibility")
     }
 
+    func requestEventSynthesisPermission() {
+        self.isEventSynthesisGranted = CGRequestPostEventAccess()
+        openSystemSettings(type: "Privacy_Accessibility")
+    }
+
     func openSystemSettings(type: String) {
         if let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?\(type)")
         {

@@ -22,6 +22,24 @@ struct PermissionsSettingsView: View {
                             }
                         }
                     }
+
+                    Divider()
+
+                    SettingsRow("Event synthesis", helperText: "Required for moving windows with Option + swipe.") {
+                        HStack {
+                            if permissionManager.isEventSynthesisGranted {
+                                Image(systemName: "checkmark.circle.fill")
+                                    .foregroundColor(.green)
+                            } else {
+                                Image(systemName: "xmark.circle.fill")
+                                    .foregroundColor(.red)
+                            }
+
+                            Button(permissionManager.isEventSynthesisGranted ? "Settings" : "Grant") {
+                                permissionManager.requestEventSynthesisPermission()
+                            }
+                        }
+                    }
                 }
                 
                 Spacer()
