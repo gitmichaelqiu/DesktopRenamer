@@ -224,14 +224,6 @@ enum DesktopRenamerIdentityMigration {
     static func prepareNormalLaunch() {
         guard DesktopRenamerIdentity.isCurrentApplication else { return }
 
-        // A manually installed build with the new bundle identifier does not
-        // pass through the legacy bridge process. Migrate the preference
-        // domain here as well, before services read their persisted settings.
-        migrateLegacyDefaults(
-            launchAtLoginEnabled: SMAppService.mainApp.status == .enabled
-                || SMAppService.mainApp.status == .requiresApproval
-        )
-
         let isCanonicalLaunchAfterMigration = UserDefaults.standard.string(
             forKey: DesktopRenamerIdentity.migrationCleanupStagedPathKey
         ) != nil

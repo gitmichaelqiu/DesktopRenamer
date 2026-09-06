@@ -141,11 +141,7 @@ class GestureManager: ObservableObject {
     var isGestureSwitchActionScheduled = false
     var isGestureSwitchOperationInFlight = false
     var isGestureSwitchTransactionActive = false
-    struct PendingGestureSwitch {
-        let direction: SwitchDirection
-        let movesWindowOnOption: Bool
-    }
-    var pendingGestureSwitches: [PendingGestureSwitch] = []
+    var pendingGestureSwitchDirections: [SwitchDirection] = []
     var gestureSwitchResumeWorkItem: DispatchWorkItem?
     var programmaticSwitchFinishedObserver: NSObjectProtocol?
 
