@@ -72,7 +72,7 @@ extension SpaceManager {
             if let initialSpaceObj = self.spaceNameDict.first(where: { $0.id == initialSpaceUUID }) {
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [weak self] in
                     print("SpaceManager: All restorations complete. Switching back to initial space \(initialSpaceUUID)")
-                    self?.switchToSpace(initialSpaceObj, forceInstant: true, isManual: true)
+                    self?.switchToSpace(initialSpaceObj, forceInstant: true, isManual: false)
                 }
             }
             return

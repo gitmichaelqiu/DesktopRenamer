@@ -104,9 +104,9 @@ extension LauncherViewModel {
                 // If the target window is on a different space, switch to its space first so AX APIs can access it.
                 if requiresAX,
                    let manager = AppDelegate.shared.spaceManager,
-                   manager.currentSpaceUUID != windowSpaceID,
+                   SpaceHelper.getCurrentSpaceID(for: action.window.space.displayID) != windowSpaceID,
                    let spaceObj = manager.spaceNameDict.first(where: { $0.id == windowSpaceID }) {
-                    manager.switchToSpace(spaceObj, forceInstant: true)
+                    manager.switchToSpace(spaceObj, forceInstant: true, isManual: false)
                     try await Task.sleep(nanoseconds: 600_000_000) // 0.6s settle time
                 }
                 
@@ -227,7 +227,7 @@ extension LauncherViewModel {
                     }
                     if !lastTargetSpaceID.isEmpty,
                        let targetSpace = manager.spaceNameDict.first(where: { $0.id == lastTargetSpaceID }) {
-                        manager.switchToSpace(targetSpace, forceInstant: true)
+                        manager.switchToSpace(targetSpace, forceInstant: true, isManual: false)
                     }
                 }
             }
@@ -260,7 +260,7 @@ extension LauncherViewModel {
             }
 
             if SpaceHelper.getCurrentSpaceID(for: displayID) != originalSpaceID {
-                manager.switchToSpace(originalSpace, forceInstant: true)
+                manager.switchToSpace(originalSpace, forceInstant: true, isManual: false)
                 await waitForSpaceRestoration()
             }
         }

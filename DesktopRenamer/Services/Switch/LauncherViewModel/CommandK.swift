@@ -104,8 +104,9 @@ extension LauncherViewModel {
     }
     
     func executeActionImmediately(window: WindowEntry, actionType: BatchStagedActionType) {
-        let originalSpaceUUID = AppDelegate.shared.spaceManager?.currentSpaceUUID
-        DiagnosticEventLog.shared.record(subsystem: "Launcher", level: "info", "executeActionImmediately: window=\(window.title) (id=\(window.id)), actionType=\(actionType.description), originalSpaceUUID=\(originalSpaceUUID ?? "nil")")
+        let windowDisplayID = window.space.displayID
+        let originalSpaceUUID = SpaceHelper.getCurrentSpaceID(for: windowDisplayID)
+        DiagnosticEventLog.shared.record(subsystem: "Launcher", level: "info", "executeActionImmediately: window=\(window.title) (id=\(window.id)), actionType=\(actionType.description), display=\(windowDisplayID), originalSpaceUUID=\(originalSpaceUUID ?? "nil")")
 
         if actionType == .quit {
             removeApplicationWindowsFromList(pid: window.pid)
@@ -120,9 +121,9 @@ extension LauncherViewModel {
             // If the target window is on a different space, switch to its space first so AX APIs can access it.
             if requiresAX,
                let manager = AppDelegate.shared.spaceManager,
-               manager.currentSpaceUUID != windowSpaceID,
+               SpaceHelper.getCurrentSpaceID(for: windowDisplayID) != windowSpaceID,
                let spaceObj = manager.spaceNameDict.first(where: { $0.id == windowSpaceID }) {
-                manager.switchToSpace(spaceObj, forceInstant: true)
+                manager.switchToSpace(spaceObj, forceInstant: true, isManual: false)
                 try? await Task.sleep(nanoseconds: 600_000_000) // 0.6s settle time
             }
             
@@ -246,9 +247,11 @@ extension LauncherViewModel {
                let originalUUID = originalSpaceUUID,
                let manager = AppDelegate.shared.spaceManager,
                manager.returnToOriginalAfterBatchMove {
-                if manager.currentSpaceUUID != originalUUID,
-                   let targetSpace = manager.spaceNameDict.first(where: { $0.id == originalUUID }) {
-                    manager.switchToSpace(targetSpace, forceInstant: true)
+                if SpaceHelper.getCurrentSpaceID(for: windowDisplayID) != originalUUID,
+                   let targetSpace = manager.spaceNameDict.first(where: {
+                       $0.id == originalUUID && $0.displayID == windowDisplayID
+                   }) {
+                    manager.switchToSpace(targetSpace, forceInstant: true, isManual: false)
                 }
             }
             

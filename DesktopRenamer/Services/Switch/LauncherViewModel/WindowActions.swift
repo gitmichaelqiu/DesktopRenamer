@@ -85,7 +85,7 @@ extension LauncherViewModel {
             }
 
             if SpaceHelper.getCurrentSpaceID(for: originalSpace.displayID) != originalSpace.id {
-                manager.switchToSpace(originalSpace, forceInstant: true)
+                manager.switchToSpace(originalSpace, forceInstant: true, isManual: false)
             }
         }
         return true
