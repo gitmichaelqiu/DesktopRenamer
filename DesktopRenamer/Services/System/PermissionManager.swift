@@ -9,6 +9,10 @@ class PermissionManager: ObservableObject {
     @Published var isEventSynthesisGranted: Bool = false
     @Published var isScreenCaptureGranted: Bool = false
 
+    var hasAccessibilityPermission: Bool {
+        isAccessibilityGranted && isEventSynthesisGranted
+    }
+
     // Token for the block-based observer — required for proper cleanup.
     private var becomeActiveObserver: NSObjectProtocol?
 
@@ -44,11 +48,6 @@ class PermissionManager: ObservableObject {
         ]
         let trusted = AXIsProcessTrustedWithOptions(axOptions)
         self.isAccessibilityGranted = trusted
-        self.isEventSynthesisGranted = CGRequestPostEventAccess()
-        openSystemSettings(type: "Privacy_Accessibility")
-    }
-
-    func requestEventSynthesisPermission() {
         self.isEventSynthesisGranted = CGRequestPostEventAccess()
         openSystemSettings(type: "Privacy_Accessibility")
     }

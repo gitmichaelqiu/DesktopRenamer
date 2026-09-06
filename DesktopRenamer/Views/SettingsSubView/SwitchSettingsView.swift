@@ -314,7 +314,7 @@ struct SwitchSettingsView: View {
                             "Move window when holding Option",
                             requirements: [
                                 .accessibility(isGranted: permissionManager.isAccessibilityGranted),
-                                .eventSynthesis(isGranted: permissionManager.isEventSynthesisGranted),
+                                .accessibilityEventPosting(isGranted: permissionManager.isEventSynthesisGranted),
                                 .screenRecording(isGranted: permissionManager.isScreenCaptureGranted)
                             ]
                         ) {

@@ -394,8 +394,8 @@ struct SettingsRequirement: Identifiable {
         Self(name: "Accessibility permission", isSatisfied: isGranted)
     }
 
-    static func eventSynthesis(isGranted: Bool) -> Self {
-        Self(name: "Event Synthesis permission", isSatisfied: isGranted)
+    static func accessibilityEventPosting(isGranted: Bool) -> Self {
+        Self(name: "Accessibility permission", isSatisfied: isGranted)
     }
 
     static func screenRecording(isGranted: Bool) -> Self {
@@ -411,7 +411,10 @@ struct SettingsRequirementWarning: View {
     let requirements: [SettingsRequirement]
 
     private var missingRequirements: [SettingsRequirement] {
-        requirements.filter { !$0.isSatisfied }
+        var seenNames = Set<String>()
+        return requirements.filter { requirement in
+            !requirement.isSatisfied && seenNames.insert(requirement.name).inserted
+        }
     }
 
     private var warningText: LocalizedStringKey {

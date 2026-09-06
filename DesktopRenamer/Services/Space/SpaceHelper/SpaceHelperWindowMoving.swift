@@ -8,11 +8,11 @@ extension SpaceHelper {
     
     static func dragActiveWindow(to spaceID: String, forceInstant: Bool = false) {
         guard CGPreflightPostEventAccess() else {
-            print("SpaceHelper: Cannot move window; event synthesis permission is not granted")
+            print("SpaceHelper: Cannot move window; Accessibility permission for event posting is not granted")
             DiagnosticEventLog.shared.record(
                 subsystem: "SpaceHelper",
                 level: "error",
-                "Cannot move window: event synthesis permission is not granted"
+                "Cannot move window: Accessibility permission for event posting is not granted"
             )
             _ = CGRequestPostEventAccess()
             return
