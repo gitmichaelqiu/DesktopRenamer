@@ -92,7 +92,10 @@ struct GeneralSettingsView: View {
                 SettingsSection("Settings.General.Advanced") {
                     SettingsRow(
                         "Settings.General.Advanced.EnableAPI",
-                        helperText: "Allow other apps to get space names."
+                        helperText: "Allow other apps to get space names.",
+                        requirements: [
+                            .spaceAPI(isAvailable: spaceManager.spaceAPI != nil)
+                        ]
                     ) {
                         Toggle("", isOn: $isAPIEnabled).labelsHidden().toggleStyle(.switch)
                             .onChange(of: isAPIEnabled) { _ in

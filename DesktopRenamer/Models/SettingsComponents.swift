@@ -309,6 +309,7 @@ struct SettingsRow<Content: View>: View {
     let content: Content
     let helperText: LocalizedStringKey?
     let warningText: LocalizedStringKey?
+    let requirements: [SettingsRequirement]
     let demoVideoName: String?
     
     @AppStorage("ShowDemoVideos") private var showDemoVideos = true
@@ -320,12 +321,14 @@ struct SettingsRow<Content: View>: View {
         _ title: LocalizedStringResource,
         helperText: LocalizedStringKey? = nil,
         warningText: LocalizedStringKey? = nil,
+        requirements: [SettingsRequirement] = [],
         demoVideoName: String? = nil,
         @ViewBuilder content: () -> Content
     ) {
         self.title = title
         self.helperText = helperText
         self.warningText = warningText
+        self.requirements = requirements
         self.demoVideoName = demoVideoName
         self.content = content()
     }
@@ -344,6 +347,8 @@ struct SettingsRow<Content: View>: View {
                     if let warningText = warningText {
                         WarningInfoButton(text: warningText)
                     }
+
+                    SettingsRequirementWarning(requirements: requirements)
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
 
@@ -375,6 +380,47 @@ struct SettingsRow<Content: View>: View {
             if !isPreRendering {
                 navigationState.unregister(title: title.key, tab: currentTab)
             }
+        }
+    }
+}
+
+struct SettingsRequirement: Identifiable {
+    let name: String
+    let isSatisfied: Bool
+
+    var id: String { name }
+
+    static func accessibility(isGranted: Bool) -> Self {
+        Self(name: "Accessibility permission", isSatisfied: isGranted)
+    }
+
+    static func eventSynthesis(isGranted: Bool) -> Self {
+        Self(name: "Event Synthesis permission", isSatisfied: isGranted)
+    }
+
+    static func screenRecording(isGranted: Bool) -> Self {
+        Self(name: "Screen Recording permission", isSatisfied: isGranted)
+    }
+
+    static func spaceAPI(isAvailable: Bool) -> Self {
+        Self(name: "SpaceAPI", isSatisfied: isAvailable)
+    }
+}
+
+struct SettingsRequirementWarning: View {
+    let requirements: [SettingsRequirement]
+
+    private var missingRequirements: [SettingsRequirement] {
+        requirements.filter { !$0.isSatisfied }
+    }
+
+    private var warningText: LocalizedStringKey {
+        LocalizedStringKey("Requires \(missingRequirements.map(\.name).joined(separator: ", ")).")
+    }
+
+    var body: some View {
+        if !missingRequirements.isEmpty {
+            WarningInfoButton(text: warningText)
         }
     }
 }
