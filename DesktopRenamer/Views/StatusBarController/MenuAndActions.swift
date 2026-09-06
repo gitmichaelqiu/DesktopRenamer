@@ -336,7 +336,9 @@ extension StatusBarController {
             NSApp.setActivationPolicy(.regular)
             NSApp.activate(ignoringOtherApps: true)
             windowController.showWindow(nil)
-            windowController.window?.makeKeyAndOrderFront(nil)
+            let window = windowController.window
+            window?.makeKeyAndOrderFront(nil)
+            completeSettingsWindowActivationWhenReady(for: window)
             return
         }
         
@@ -379,6 +381,16 @@ extension StatusBarController {
         NSApp.activate(ignoringOtherApps: true)
         windowController.showWindow(nil)
         window.makeKeyAndOrderFront(nil)
+        completeSettingsWindowActivationWhenReady(for: window)
+    }
+
+    private func completeSettingsWindowActivationWhenReady(for window: NSWindow?) {
+        guard let window else { return }
+
+        DispatchQueue.main.async { [weak self, weak window] in
+            guard window?.isKeyWindow == true else { return }
+            self?.labelManager.completeSettingsWindowActivation()
+        }
     }
 
     private func configureSettingsWindow(_ window: NSWindow) {

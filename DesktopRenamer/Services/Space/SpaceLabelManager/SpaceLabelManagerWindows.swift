@@ -339,7 +339,7 @@ extension SpaceLabelManager {
     }
 
     /// Prevent preview panels from becoming activation candidates while the
-    /// menu-bar app presents its regular Settings window.
+    /// menu-bar app activates its regular Settings window.
     func beginSettingsWindowPresentation() {
         applicationActivationTransitionCheckWorkItem?.cancel()
         applicationActivationTransitionCheckWorkItem = nil
@@ -355,20 +355,25 @@ extension SpaceLabelManager {
         )
     }
 
-    /// Restore preview panels after Settings closes and the app returns to its
-    /// menu-bar-only activation policy.
-    func endSettingsWindowPresentation() {
+    /// Restore preview panels after Settings has become the active window.
+    func completeSettingsWindowActivation() {
         guard arePreviewLabelsSuppressedForSettings else { return }
 
         arePreviewLabelsSuppressedForSettings = false
         DiagnosticEventLog.shared.record(
             subsystem: "Labels",
             level: "info",
-            "Settings presentation ended — restoring preview labels"
+            "Settings window became key — restoring preview labels"
         )
         DispatchQueue.main.async { [weak self] in
             self?.updateAllWindowModes()
         }
+    }
+
+    /// Restore preview panels if Settings closes before its key-window
+    /// activation callback is delivered.
+    func endSettingsWindowPresentation() {
+        completeSettingsWindowActivation()
     }
 
     private func checkApplicationActivationSpaceTransition(attempt: Int, generation: Int) {
