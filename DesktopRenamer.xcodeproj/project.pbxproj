@@ -402,7 +402,7 @@
 				CODE_SIGN_ENTITLEMENTS = DesktopRenamer/DesktopRenamer.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 37;
+				CURRENT_PROJECT_VERSION = 38;
 				DEAD_CODE_STRIPPING = YES;
 				DEVELOPMENT_TEAM = W94S87F4LJ;
 				ENABLE_APP_SANDBOX = NO;
@@ -427,8 +427,8 @@
 					"@executable_path/../Frameworks",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 13.0;
-				MARKETING_VERSION = "1.14.0-beta.1";
-				PRODUCT_BUNDLE_IDENTIFIER = com.michaelqiu.DesktopRenamer;
+				MARKETING_VERSION = 1.14.0;
+				PRODUCT_BUNDLE_IDENTIFIER = dev.mqiu.DesktopRenamer;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				REGISTER_APP_GROUPS = YES;
 				RUNTIME_EXCEPTION_ALLOW_DYLD_ENVIRONMENT_VARIABLES = NO;
@@ -453,7 +453,7 @@
 				CODE_SIGN_ENTITLEMENTS = DesktopRenamer/DesktopRenamer.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 37;
+				CURRENT_PROJECT_VERSION = 38;
 				DEAD_CODE_STRIPPING = YES;
 				DEVELOPMENT_TEAM = W94S87F4LJ;
 				ENABLE_APP_SANDBOX = NO;
@@ -478,8 +478,8 @@
 					"@executable_path/../Frameworks",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 13.0;
-				MARKETING_VERSION = "1.14.0-beta.1";
-				PRODUCT_BUNDLE_IDENTIFIER = com.michaelqiu.DesktopRenamer;
+				MARKETING_VERSION = 1.14.0;
+				PRODUCT_BUNDLE_IDENTIFIER = dev.mqiu.DesktopRenamer;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				REGISTER_APP_GROUPS = YES;
 				RUNTIME_EXCEPTION_ALLOW_DYLD_ENVIRONMENT_VARIABLES = NO;
@@ -502,7 +502,7 @@
 				AUTOMATION_APPLE_EVENTS = NO;
 				CODE_SIGN_ENTITLEMENTS = DesktopRenamerWidget/DesktopRenamerWidgetExtension.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 37;
+				CURRENT_PROJECT_VERSION = 38;
 				DEVELOPMENT_TEAM = W94S87F4LJ;
 				ENABLE_APP_SANDBOX = YES;
 				ENABLE_HARDENED_RUNTIME = NO;
@@ -527,8 +527,8 @@
 					"@executable_path/../../../../Frameworks",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 14.0;
-				MARKETING_VERSION = "1.14.0-beta.1";
-				PRODUCT_BUNDLE_IDENTIFIER = com.michaelqiu.DesktopRenamer.DesktopRenamerWidget;
+				MARKETING_VERSION = 1.14.0;
+				PRODUCT_BUNDLE_IDENTIFIER = dev.mqiu.DesktopRenamer.DesktopRenamerWidget;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				RUNTIME_EXCEPTION_ALLOW_DYLD_ENVIRONMENT_VARIABLES = NO;
 				RUNTIME_EXCEPTION_ALLOW_JIT = NO;
@@ -553,7 +553,7 @@
 				AUTOMATION_APPLE_EVENTS = NO;
 				CODE_SIGN_ENTITLEMENTS = DesktopRenamerWidget/DesktopRenamerWidgetExtension.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 37;
+				CURRENT_PROJECT_VERSION = 38;
 				DEVELOPMENT_TEAM = W94S87F4LJ;
 				ENABLE_APP_SANDBOX = YES;
 				ENABLE_HARDENED_RUNTIME = NO;
@@ -578,8 +578,8 @@
 					"@executable_path/../../../../Frameworks",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 14.0;
-				MARKETING_VERSION = "1.14.0-beta.1";
-				PRODUCT_BUNDLE_IDENTIFIER = com.michaelqiu.DesktopRenamer.DesktopRenamerWidget;
+				MARKETING_VERSION = 1.14.0;
+				PRODUCT_BUNDLE_IDENTIFIER = dev.mqiu.DesktopRenamer.DesktopRenamerWidget;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				RUNTIME_EXCEPTION_ALLOW_DYLD_ENVIRONMENT_VARIABLES = NO;
 				RUNTIME_EXCEPTION_ALLOW_JIT = NO;
