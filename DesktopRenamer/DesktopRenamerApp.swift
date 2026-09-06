@@ -16,7 +16,23 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationDidFinishLaunching(_ notification: Notification) {
         AppDelegate.shared = self
 
+        if DesktopRenamerMigrationFinalizer.shared.startIfRequested() {
+            return
+        }
+
+        if DesktopRenamerBridgeMigrationManager.shared.beginIfNeeded(completion: { [weak self] in
+            self?.startNormalApplication()
+        }) {
+            return
+        }
+
+        startNormalApplication()
+    }
+
+    private func startNormalApplication() {
         NSApp.setActivationPolicy(.accessory)
+
+        DesktopRenamerIdentityMigration.prepareNormalLaunch()
 
         let hasInitialized = UserDefaults.standard.bool(forKey: "HasInitializedDefaults")
         if !hasInitialized {
