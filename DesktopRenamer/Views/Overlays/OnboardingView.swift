@@ -426,7 +426,7 @@ struct PermissionsPage: View {
                 Text("Require Permissions")
                     .font(.system(size: 30, weight: .bold, design: .rounded))
                 
-                Text("DesktopRenamer requires Accessibility permission for hotkeys and trackpad overrides to function correctly.")
+                Text("DesktopRenamer requires Accessibility, event synthesis, and Screen Recording permissions for hotkeys, trackpad overrides, and window movement to function correctly.")
                     .font(.body)
                     .foregroundColor(.secondary)
                     .multilineTextAlignment(.center)
@@ -434,26 +434,47 @@ struct PermissionsPage: View {
                     .padding(.horizontal, 40)
             }
             
-            HStack(spacing: 20) {
-                Button(action: {
-                    permissionManager.requestAccessibilityPermission()
-                }) {
-                    HStack {
-                        Image(systemName: permissionManager.isAccessibilityGranted ? "checkmark.circle.fill" : "xmark.circle.fill")
-                            .foregroundColor(permissionManager.isAccessibilityGranted ? .green : .white)
-                        Text("Accessibility")
-                            .fontWeight(.semibold)
-                    }
-                    .foregroundColor(.white)
-                    .padding(.vertical, 10)
-                    .padding(.horizontal, 20)
-                    .background(permissionManager.isAccessibilityGranted ? Color.blue : Color.red)
-                    .cornerRadius(8)
-                }
-                .buttonStyle(PlainButtonStyle())
+            VStack(spacing: 10) {
+                permissionButton(
+                    title: "Accessibility",
+                    isGranted: permissionManager.isAccessibilityGranted,
+                    action: permissionManager.requestAccessibilityPermission
+                )
+                permissionButton(
+                    title: "Event synthesis",
+                    isGranted: permissionManager.isEventSynthesisGranted,
+                    action: permissionManager.requestEventSynthesisPermission
+                )
+                permissionButton(
+                    title: "Screen Recording",
+                    isGranted: permissionManager.isScreenCaptureGranted,
+                    action: permissionManager.requestScreenCapturePermission
+                )
             }
         }
         .padding()
+    }
+
+    private func permissionButton(
+        title: String,
+        isGranted: Bool,
+        action: @escaping () -> Void
+    ) -> some View {
+        Button(action: action) {
+            HStack {
+                Image(systemName: isGranted ? "checkmark.circle.fill" : "xmark.circle.fill")
+                    .foregroundColor(isGranted ? .green : .white)
+                Text(title)
+                    .fontWeight(.semibold)
+            }
+            .frame(maxWidth: .infinity)
+            .foregroundColor(.white)
+            .padding(.vertical, 10)
+            .padding(.horizontal, 20)
+            .background(isGranted ? Color.blue : Color.red)
+            .cornerRadius(8)
+        }
+        .buttonStyle(PlainButtonStyle())
     }
 }
 

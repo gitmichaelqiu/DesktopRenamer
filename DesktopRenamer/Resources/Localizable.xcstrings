@@ -2144,6 +2144,9 @@
     "Required for moving windows with Option + swipe." : {
 
     },
+    "Required for reading the active window before moving it with Option + swipe." : {
+
+    },
     "Requires Accessibility permission." : {
       "localizations" : {
         "zh-Hans" : {
@@ -2283,6 +2286,9 @@
           }
         }
       }
+    },
+    "Screen Recording" : {
+
     },
     "Search" : {
       "localizations" : {
