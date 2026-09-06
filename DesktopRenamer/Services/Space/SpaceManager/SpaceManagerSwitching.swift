@@ -14,22 +14,78 @@ extension SpaceManager {
     ) -> SpaceSwitchRequestDisposition {
         print("SpaceManager: switchToSpace(\(space.id)) on display \(space.displayID) forceInstant: \(forceInstant) isManual: \(isManual)")
 
+        // Every explicit request invalidates observations from the previous
+        // destination before WindowServer can deliver another delayed read.
+        // This also covers force-instant requests, which do not have a
+        // transaction completion notification of their own.
+        let observationGeneration = beginSpaceObservation(
+            spaceID: space.id,
+            displayID: space.displayID
+        )
+
         let disposition = SpaceHelper.switchToSpace(
             space.id,
             forceInstant: forceInstant,
             isManual: isManual
         )
 
-        // A monitor retry may have been scheduled from an earlier stale
-        // snapshot. Cancel it after a real switch starts or a request is
-        // rejected; a queued request must leave the active transaction's
-        // verification retry intact.
-        if case .started = disposition {
+        switch disposition {
+        case .alreadyCurrent:
+            // A no-op selection must not leave a retry from an earlier
+            // transition alive. If the live query agrees, it is also a valid
+            // confirmed destination and should fence older snapshots.
+            cancelPendingMonitorSpaceChange()
             cancelSpaceChangeRetry()
-        } else if case .unavailable = disposition {
+            if SpaceHelper.getCurrentSpaceID(for: space.displayID) == space.id {
+                confirmSpaceObservation(
+                    displayID: space.displayID,
+                    spaceID: space.id,
+                    generation: observationGeneration
+                )
+            }
+        case .unavailable:
+            cancelPendingMonitorSpaceChange()
             cancelSpaceChangeRetry()
+            pendingProgrammaticSpaceSwitches.removeValue(forKey: space.displayID)
+            confirmedSpaceObservationFence.invalidate(displayID: space.displayID)
+        case .started, .queued:
+            break
         }
         return disposition
+    }
+
+    private func beginSpaceObservation(spaceID: String, displayID: String) -> UInt64 {
+        nextSpaceObservationGeneration += 1
+        let generation = nextSpaceObservationGeneration
+        confirmedSpaceObservationFence.beginSwitch(
+            displayID: displayID,
+            generation: generation
+        )
+        pendingProgrammaticSpaceSwitches[displayID] = (
+            spaceID: spaceID,
+            generation: generation
+        )
+        cancelPendingMonitorSpaceChange()
+        cancelSpaceChangeRetry()
+        return generation
+    }
+
+    func confirmSpaceObservation(
+        displayID: String,
+        spaceID: String,
+        generation: UInt64
+    ) {
+        confirmedSpaceObservationFence.confirm(
+            displayID: displayID,
+            spaceID: spaceID,
+            generation: generation
+        )
+        guard let pending = pendingProgrammaticSpaceSwitches[displayID],
+              pending.spaceID == spaceID,
+              pending.generation == generation else {
+            return
+        }
+        pendingProgrammaticSpaceSwitches.removeValue(forKey: displayID)
     }
 
     @objc func handleProgrammaticSwitchStarted(_ notification: Notification) {
@@ -41,6 +97,28 @@ extension SpaceManager {
             guard let self else { return }
             let isManual = notification.userInfo?["isManual"] as? Bool == true
             let generation = notification.userInfo?["generation"] as? UInt64
+            let displayID = notification.userInfo?["displayID"] as? String
+                ?? self.spaceNameDict.first(where: { $0.id == spaceID })?.displayID
+                ?? self.currentDisplayID
+
+            // SpaceHelper can be called directly by a service, without going
+            // through SpaceManager.switchToSpace. Give that request the same
+            // per-display fence as manager-owned switches. A newer manager
+            // request already occupying this display remains authoritative.
+            if let pending = self.pendingProgrammaticSpaceSwitches[displayID] {
+                if pending.spaceID != spaceID {
+                    DiagnosticEventLog.shared.record(
+                        subsystem: "SpaceManager",
+                        level: "info",
+                        "Keeping newer pending observation: display=\(displayID), pending=\(pending.spaceID), started=\(spaceID)"
+                    )
+                }
+            } else {
+                _ = self.beginSpaceObservation(
+                    spaceID: spaceID,
+                    displayID: displayID
+                )
+            }
 
             // This notification also arrives for a transaction promoted from
             // the pending queue. Cancel any retry belonging to the previous
@@ -61,7 +139,7 @@ extension SpaceManager {
             DiagnosticEventLog.shared.record(
                 subsystem: "SpaceManager",
                 level: "info",
-                "programmatic switch transaction started: target=\(spaceID), manual=\(isManual), generation=\(generation.map(String.init) ?? "instant")"
+                "programmatic switch transaction started: target=\(spaceID), display=\(displayID), manual=\(isManual), generation=\(generation.map(String.init) ?? "instant")"
             )
         }
 
@@ -82,6 +160,10 @@ extension SpaceManager {
         let update = { [weak self] in
             guard let self else { return }
 
+            let displayID = notification.userInfo?["displayID"] as? String
+                ?? self.spaceNameDict.first(where: { $0.id == spaceID })?.displayID
+                ?? self.currentDisplayID
+
             guard self.activeProgrammaticSwitchGeneration == generation else {
                 DiagnosticEventLog.shared.record(
                     subsystem: "SpaceManager",
@@ -98,18 +180,36 @@ extension SpaceManager {
             self.activeProgrammaticSwitchGeneration = nil
             self.cancelSpaceChangeRetry()
             if !confirmed {
-                self.scheduleSpaceChangeRetry()
-            } else if !self.applyConfirmedSpace(spaceID) {
-                // A newly created fullscreen space may not be in the cached
-                // list yet. Fall back to the normal topology reconciliation
-                // in that case.
-                self.refreshSpaceState()
+                if let pending = self.pendingProgrammaticSpaceSwitches[displayID],
+                   pending.spaceID == spaceID {
+                    self.pendingProgrammaticSpaceSwitches.removeValue(forKey: displayID)
+                    self.confirmedSpaceObservationFence.invalidate(displayID: displayID)
+                }
+                self.scheduleSpaceChangeRetry(displayID: displayID)
+            } else {
+                // A newer queued request may already own this display. Do not
+                // let the older completion recreate its fence.
+                if let pending = self.pendingProgrammaticSpaceSwitches[displayID],
+                   pending.spaceID == spaceID {
+                    self.confirmSpaceObservation(
+                        displayID: displayID,
+                        spaceID: spaceID,
+                        generation: pending.generation
+                    )
+                }
+
+                if !self.applyConfirmedSpace(spaceID) {
+                    // A newly created fullscreen space may not be in the
+                    // cached list yet. Fall back to the normal topology
+                    // reconciliation in that case.
+                    self.refreshSpaceState()
+                }
             }
 
             DiagnosticEventLog.shared.record(
                 subsystem: "SpaceManager",
                 level: confirmed ? "info" : "warning",
-                "programmatic switch finished: generation=\(generation), confirmed=\(confirmed), retry chain reset"
+                "programmatic switch finished: generation=\(generation), display=\(displayID), confirmed=\(confirmed), retry chain reset"
             )
         }
 

@@ -68,6 +68,7 @@ extension SpaceHelper {
         programmaticSwitchFastFollowUpRequested = false
         lastProgrammaticSwitchTime = 0
         lastProgrammaticTargetSpaceID = nil
+        programmaticSwitchDisplayID = nil
         if let observer = spaceChangeObserver {
             NSWorkspace.shared.notificationCenter.removeObserver(observer)
             spaceChangeObserver = nil

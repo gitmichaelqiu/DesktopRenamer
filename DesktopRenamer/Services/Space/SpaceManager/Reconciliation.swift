@@ -95,6 +95,56 @@ extension SpaceManager {
         let previousUUID = self.currentSpaceUUID
         let targetUUID = cgsState.currentUUID
 
+        if source == "Monitor" || source == "Retry" {
+            let authoritativeLiveSpaceID = SpaceHelper.getCurrentSpaceID(for: cgsState.displayID)
+
+            if let pending = pendingProgrammaticSpaceSwitches[cgsState.displayID],
+               pending.spaceID == targetUUID,
+               authoritativeLiveSpaceID == targetUUID {
+                confirmSpaceObservation(
+                    displayID: cgsState.displayID,
+                    spaceID: targetUUID,
+                    generation: pending.generation
+                )
+            }
+
+            let existingConfirmation = confirmedSpaceObservationFence.confirmation(
+                for: cgsState.displayID
+            )
+            if confirmedSpaceObservationFence.shouldIgnore(
+                displayID: cgsState.displayID,
+                observedSpaceID: targetUUID,
+                liveSpaceID: authoritativeLiveSpaceID
+            ) {
+                DiagnosticEventLog.shared.record(
+                    subsystem: "SpaceManager",
+                    level: "info",
+                    "Ignoring stale space observation: display=\(cgsState.displayID), observed=\(targetUUID), live=\(authoritativeLiveSpaceID ?? "nil"), confirmed=\(existingConfirmation?.spaceID ?? "nil"), source=\(source)"
+                )
+
+                if existingConfirmation?.spaceID == authoritativeLiveSpaceID {
+                    cancelSpaceChangeRetry()
+                } else {
+                    scheduleSpaceChangeRetry(displayID: cgsState.displayID)
+                }
+                return
+            }
+
+            // A monitor snapshot and the independent live query can overlap
+            // while WindowServer is settling. Never publish the snapshot when
+            // the authoritative read already identifies a different Space.
+            if let authoritativeLiveSpaceID,
+               authoritativeLiveSpaceID != targetUUID {
+                DiagnosticEventLog.shared.record(
+                    subsystem: "SpaceManager",
+                    level: "info",
+                    "Ignoring inconsistent space observation: display=\(cgsState.displayID), state=\(targetUUID), live=\(authoritativeLiveSpaceID), source=\(source)"
+                )
+                scheduleSpaceChangeRetry(displayID: cgsState.displayID)
+                return
+            }
+        }
+
         if shouldIgnoreStaleTransactionObservation(targetUUID, source: source) {
             return
         }

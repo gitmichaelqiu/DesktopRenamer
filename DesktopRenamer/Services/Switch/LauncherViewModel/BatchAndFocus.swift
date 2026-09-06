@@ -28,7 +28,6 @@ extension LauncherViewModel {
                 self.isExecutingBatchMove = false
                 self.stagedMoves.removeAll()
                 self.batchExecutionTask = nil
-                LauncherWindowController.shared.shouldRestoreFocus = false
             }
 
             do {

@@ -7,7 +7,6 @@ extension LauncherViewModel {
 
     func executeSwitchToDesktop(_ space: SpaceGroup) {
         DiagnosticEventLog.shared.record(subsystem: "Launcher", level: "info", "executeSwitchToDesktop: space=\(space.name) (id=\(space.id))")
-        LauncherWindowController.shared.shouldRestoreFocus = false
         incrementCommandFrequency(LauncherCommandType.switchToDesktop.rawValue)
         if let manager = AppDelegate.shared.spaceManager,
            let desktopSpace = manager.spaceNameDict.first(where: { $0.id == space.id }) {
@@ -18,7 +17,6 @@ extension LauncherViewModel {
     
     func executeSwitchToSpaceID(_ spaceID: String) {
         DiagnosticEventLog.shared.record(subsystem: "Launcher", level: "info", "executeSwitchToSpaceID: spaceID=\(spaceID)")
-        LauncherWindowController.shared.shouldRestoreFocus = false
         incrementCommandFrequency(LauncherCommandType.switchToDesktop.rawValue)
         if let manager = AppDelegate.shared.spaceManager,
            let desktopSpace = manager.spaceNameDict.first(where: { $0.id == spaceID }) {
@@ -62,11 +60,6 @@ extension LauncherViewModel {
 
         DiagnosticEventLog.shared.record(subsystem: "Launcher", level: "info", "movePreviouslyActiveWindow: moving window \(prevWindow.id) from space \(fromSpaceIDStr) to space \(spaceID)")
 
-        // WindowActionCoordinator owns focus restoration for this move. Do
-        // not let LauncherWindowController schedule a second asynchronous
-        // focus operation while the launcher is closing, because that can
-        // activate a different Space before the exact window is moved.
-        LauncherWindowController.shared.shouldRestoreFocus = false
         closeLauncher()
 
         Task { @MainActor in
@@ -93,7 +86,6 @@ extension LauncherViewModel {
     
     func executeFocusWindow(_ window: WindowEntry) {
         DiagnosticEventLog.shared.record(subsystem: "Launcher", level: "info", "executeFocusWindow: window=\(window.title) (id=\(window.id), pid=\(window.pid))")
-        LauncherWindowController.shared.shouldRestoreFocus = false
         incrementCommandFrequency(LauncherCommandType.listWindows.rawValue)
         closeLauncher()
 

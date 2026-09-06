@@ -476,6 +476,7 @@ extension SpaceHelper {
     ) {
         lastProgrammaticSwitchTime = Date().timeIntervalSince1970
         lastProgrammaticTargetSpaceID = spaceID
+        programmaticSwitchDisplayID = displayID
 
         DiagnosticEventLog.shared.record(
             subsystem: "SpaceHelper",
@@ -486,7 +487,8 @@ extension SpaceHelper {
         var startedUserInfo: [String: Any] = [
             "spaceID": spaceID,
             "isManual": isManual,
-            "forceInstant": forceInstant
+            "forceInstant": forceInstant,
+            "displayID": displayID
         ]
         if let generation {
             startedUserInfo["generation"] = generation
@@ -526,6 +528,7 @@ extension SpaceHelper {
             cancelPendingSwitchPromotion()
             lastProgrammaticSwitchTime = 0
             lastProgrammaticTargetSpaceID = nil
+            programmaticSwitchDisplayID = nil
             return
         }
 
@@ -544,6 +547,7 @@ extension SpaceHelper {
         programmaticSwitchFastFollowUpRequested = false
         lastProgrammaticSwitchTime = 0
         lastProgrammaticTargetSpaceID = nil
+        programmaticSwitchDisplayID = nil
 
         DiagnosticEventLog.shared.record(
             subsystem: "SpaceHelper",
@@ -722,11 +726,13 @@ extension SpaceHelper {
         syntheticGestureRetryWorkItem = nil
 
         let pendingRequest = switchTransactionCoordinator.endActive()
+        let displayID = programmaticSwitchDisplayID
         isSwitching = false
         programmaticSwitchDestinationObserved = false
         programmaticSwitchNotificationObserved = false
         programmaticSwitchUsesExtendedSettle = false
         programmaticSwitchFastFollowUpRequested = false
+        programmaticSwitchDisplayID = nil
 
         switch reason {
         case .confirmed:
@@ -735,19 +741,30 @@ extension SpaceHelper {
                 level: "info",
                 "programmatic switch confirmed: generation=\(generation), target=\(spaceID)"
             )
+            var completionUserInfo: [String: Any] = [
+                "spaceID": spaceID,
+                "generation": generation,
+                "confirmed": true
+            ]
+            if let displayID {
+                completionUserInfo["displayID"] = displayID
+            }
             NotificationCenter.default.post(
                 name: NSNotification.Name("SpaceProgrammaticSwitchFinished"),
                 object: nil,
-                userInfo: [
-                    "spaceID": spaceID,
-                    "generation": generation,
-                    "confirmed": true
-                ]
+                userInfo: completionUserInfo
             )
+            var settledUserInfo: [String: Any] = [
+                "spaceID": spaceID,
+                "generation": generation
+            ]
+            if let displayID {
+                settledUserInfo["displayID"] = displayID
+            }
             NotificationCenter.default.post(
                 name: NSNotification.Name("SpaceProgrammaticSwitchSettled"),
                 object: nil,
-                userInfo: ["spaceID": spaceID, "generation": generation]
+                userInfo: settledUserInfo
             )
         case .timedOut:
             // The target was not confirmed. Do not leave its timestamp and ID
@@ -759,14 +776,18 @@ extension SpaceHelper {
                 level: "warning",
                 "programmatic switch timed out: generation=\(generation), target=\(spaceID)"
             )
+            var timeoutUserInfo: [String: Any] = [
+                "spaceID": spaceID,
+                "generation": generation,
+                "confirmed": false
+            ]
+            if let displayID {
+                timeoutUserInfo["displayID"] = displayID
+            }
             NotificationCenter.default.post(
                 name: NSNotification.Name("SpaceProgrammaticSwitchFinished"),
                 object: nil,
-                userInfo: [
-                    "spaceID": spaceID,
-                    "generation": generation,
-                    "confirmed": false
-                ]
+                userInfo: timeoutUserInfo
             )
         }
 

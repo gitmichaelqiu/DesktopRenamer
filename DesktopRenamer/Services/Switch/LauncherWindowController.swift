@@ -16,7 +16,6 @@ class LauncherWindowController: NSWindowController, NSWindowDelegate {
     static let shared = LauncherWindowController()
     
     let viewModel = LauncherViewModel()
-    var shouldRestoreFocus = true
     
     private var isCommandKeyPressed = false
     private var cmdLongPressWorkItem: DispatchWorkItem?
@@ -38,11 +37,11 @@ class LauncherWindowController: NSWindowController, NSWindowDelegate {
         panel.level = .statusBar
         panel.hidesOnDeactivate = false
         panel.becomesKeyOnlyIfNeeded = false
-        // The launcher is a transient app-owned panel. Keeping it tied to the
-        // Space where it was first created makes activating the launcher from
-        // another Space bring that old Space to the front.
+        // The launcher follows the Space that is active when it is presented.
+        // It must not remain attached to the Space where the panel was first
+        // created, because activating it there can switch the user's Space.
         panel.collectionBehavior = [
-            .canJoinAllSpaces,
+            .moveToActiveSpace,
             .fullScreenAuxiliary,
             .ignoresCycle,
         ]
@@ -107,8 +106,6 @@ class LauncherWindowController: NSWindowController, NSWindowDelegate {
     func show() {
         guard let panel = window as? LauncherNSPanel else { return }
         
-        shouldRestoreFocus = true
-        
         // Capture previously active window before we activate the launcher and take focus
         viewModel.previouslyActiveWindow = SpaceHelper.getActiveWindowInfo()
         
@@ -135,12 +132,7 @@ class LauncherWindowController: NSWindowController, NSWindowDelegate {
         cmdLongPressWorkItem = nil
         viewModel.resetForPresentation()
         viewModel.showCommandNumbers = false
-        
-        if shouldRestoreFocus, let prev = viewModel.previouslyActiveWindow {
-            DispatchQueue.main.async {
-                SpaceHelper.focusWindow(id: prev.id, pid: prev.pid)
-            }
-        }
+        viewModel.previouslyActiveWindow = nil
     }
     
     func toggle() {

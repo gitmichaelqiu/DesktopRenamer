@@ -94,3 +94,73 @@ struct SpaceSwitchTransactionCoordinator {
         pending = nil
     }
 }
+
+/// Protects a confirmed destination from an older monitor or retry snapshot.
+///
+/// WindowServer can return an earlier space after a newer programmatic switch
+/// has already been confirmed. The fence is deliberately independent of
+/// AppKit so its generation and per-display behavior can be tested without a
+/// running WindowServer.
+struct SpaceObservationFence {
+    struct Confirmation: Equatable {
+        let spaceID: String
+        let generation: UInt64
+    }
+
+    private(set) var confirmations: [String: Confirmation] = [:]
+    private var latestGenerationByDisplay: [String: UInt64] = [:]
+
+    mutating func beginSwitch(displayID: String, generation: UInt64) {
+        let latestGeneration = latestGenerationByDisplay[displayID] ?? 0
+        guard generation >= latestGeneration else { return }
+
+        latestGenerationByDisplay[displayID] = generation
+        confirmations.removeValue(forKey: displayID)
+    }
+
+    mutating func confirm(
+        displayID: String,
+        spaceID: String,
+        generation: UInt64
+    ) {
+        let latestGeneration = latestGenerationByDisplay[displayID] ?? 0
+        guard generation >= latestGeneration else { return }
+
+        latestGenerationByDisplay[displayID] = generation
+        confirmations[displayID] = Confirmation(
+            spaceID: spaceID,
+            generation: generation
+        )
+    }
+
+    mutating func invalidate(displayID: String) {
+        confirmations.removeValue(forKey: displayID)
+    }
+
+    func confirmation(for displayID: String) -> Confirmation? {
+        confirmations[displayID]
+    }
+
+    /// Returns true when the candidate is stale relative to the fence or to
+    /// a newer authoritative live-space read. A live read for a different
+    /// space clears the fence because it is evidence of a genuine external
+    /// change; a candidate that does not match that live read is still stale
+    /// and must not be published.
+    mutating func shouldIgnore(
+        displayID: String,
+        observedSpaceID: String,
+        liveSpaceID: String?
+    ) -> Bool {
+        guard let confirmation = confirmations[displayID],
+              let liveSpaceID else {
+            return false
+        }
+
+        if liveSpaceID == confirmation.spaceID {
+            return observedSpaceID != confirmation.spaceID
+        }
+
+        confirmations.removeValue(forKey: displayID)
+        return observedSpaceID != liveSpaceID
+    }
+}

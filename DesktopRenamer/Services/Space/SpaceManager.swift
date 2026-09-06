@@ -94,6 +94,13 @@ class SpaceManager: ObservableObject {
     var lastManualSwitchTime: TimeInterval = 0
     var lastManualSwitchTargetUUID: String? = nil
     var activeProgrammaticSwitchGeneration: UInt64?
+    // A confirmed destination is protected from older monitor/retry reads on
+    // the same display. The pending request is separate so instant switches,
+    // which do not emit a completion notification, can be fenced when their
+    // next authoritative monitor read arrives.
+    var confirmedSpaceObservationFence = SpaceObservationFence()
+    var nextSpaceObservationGeneration: UInt64 = 0
+    var pendingProgrammaticSpaceSwitches: [String: (spaceID: String, generation: UInt64)] = [:]
     
     @Published var returnToOriginalAfterBatchMove: Bool {
         didSet {

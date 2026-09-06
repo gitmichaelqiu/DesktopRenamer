@@ -48,6 +48,7 @@ class SpaceHelper {
     static var isSwitching = false
     static var lastProgrammaticSwitchTime: TimeInterval = 0
     static var lastProgrammaticTargetSpaceID: String? = nil
+    static var programmaticSwitchDisplayID: String?
     // Window moves intentionally change the active space. Keep this separate
     // from the short-lived mouse-drag session because reconciliation can run
     // after the synthetic mouse button has already been released.
