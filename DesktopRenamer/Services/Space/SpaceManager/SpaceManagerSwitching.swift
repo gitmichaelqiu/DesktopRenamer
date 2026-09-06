@@ -98,6 +98,11 @@ extension SpaceManager {
             self.cancelSpaceChangeRetry()
             if !confirmed {
                 self.scheduleSpaceChangeRetry()
+            } else {
+                // The transaction intentionally kept transient destination
+                // observations out of the model. Reconcile once the helper
+                // has verified that WindowServer remained on the destination.
+                self.refreshSpaceState()
             }
 
             DiagnosticEventLog.shared.record(

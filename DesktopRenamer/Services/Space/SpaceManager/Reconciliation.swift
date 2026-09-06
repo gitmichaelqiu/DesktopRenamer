@@ -31,96 +31,6 @@ extension SpaceManager {
         return true
     }
 
-    /// A regular gesture changes only the current managed space. When the
-    /// WindowServer space topology is unchanged, rebuilding names, publishing
-    /// the full space array, and refreshing every label is unnecessary work on
-    /// the main thread. Fullscreen entry/exit and space creation still take the
-    /// normal reconciliation path because their topology differs.
-    private func hasSameSpaceTopology(as detectedSpaces: [DesktopSpace]) -> Bool {
-        guard spaceNameDict.count == detectedSpaces.count else { return false }
-
-        var cachedByID: [String: DesktopSpace] = [:]
-        for cachedSpace in spaceNameDict {
-            guard cachedByID.updateValue(cachedSpace, forKey: cachedSpace.id) == nil else {
-                return false
-            }
-        }
-        guard cachedByID.count == detectedSpaces.count else { return false }
-
-        return detectedSpaces.allSatisfy { detected in
-            guard let cached = cachedByID[detected.id] else { return false }
-            return cached.num == detected.num
-                && cached.displayID == detected.displayID
-                && cached.isFullscreen == detected.isFullscreen
-                && cached.appName == detected.appName
-                && cached.appPath == detected.appPath
-                && cached.globalShortcutNum == detected.globalShortcutNum
-                && cached.persistentID == detected.persistentID
-        }
-    }
-
-    /// Applies only the current-space fields for an in-flight transaction when
-    /// its managed-space topology is already known to be stable.
-    private func applyStableProgrammaticObservation(
-        _ cgsState: (spaces: [DesktopSpace], currentUUID: String, displayID: String),
-        ncCount: Int,
-        source: String
-    ) -> Bool {
-        guard SpaceHelper.isSwitching,
-              SpaceHelper.activeProgrammaticSwitchTargetSpaceID == cgsState.currentUUID,
-              hasSameSpaceTopology(as: cgsState.spaces) else {
-            return false
-        }
-
-        let previousUUID = currentSpaceUUID
-        currentSpaceUUID = cgsState.currentUUID
-        currentRawSpaceUUID = cgsState.currentUUID
-        currentDisplayID = cgsState.displayID
-        currentNcCount = ncCount
-        currentSpaceByDisplay[cgsState.displayID] = cgsState.currentUUID
-        currentIsDesktop = !(spaceNameDict.first(where: { $0.id == cgsState.currentUUID })?.isFullscreen ?? false)
-
-        if previousUUID != cgsState.currentUUID {
-            print(
-                "SpaceManager: Fast-path current-space reconciliation "
-                    + previousUUID
-                    + " -> "
-                    + cgsState.currentUUID
-                    + " (source: "
-                    + source
-                    + ")"
-            )
-            DiagnosticEventLog.shared.record(
-                subsystem: "SpaceManager",
-                level: "info",
-                "Fast-path current-space reconciliation: "
-                    + previousUUID
-                    + " -> "
-                    + cgsState.currentUUID
-                    + ", source="
-                    + source
-            )
-
-            let now = Date().timeIntervalSince1970
-            let isProgrammaticSLS = SpaceHelper.lastProgrammaticSwitchUsedSLS
-                && now - SpaceHelper.lastProgrammaticSwitchTime < 2.0
-                && cgsState.currentUUID == SpaceHelper.lastProgrammaticTargetSpaceID
-            if isProgrammaticSLS {
-                SpaceHelper.restoreFocusAfterSLSSwitch(
-                    spaceID: cgsState.currentUUID,
-                    immediate: true
-                )
-            }
-        }
-
-        // The compact path is used only for a matching transaction target, so
-        // this observation is also the earliest safe completion checkpoint.
-        SpaceHelper.markProgrammaticSwitchComplete(at: cgsState.currentUUID)
-        cancelSpaceChangeRetry()
-        scheduleWidgetUpdate()
-        return true
-    }
-
     func refreshConnectedDisplays() {
         self.connectedDisplayUUIDs = Set(SpaceHelper.getAllDisplayUUIDs().map { $0.uppercased() })
         // print("SpaceManager: Refreshed connected displays: \(connectedDisplayUUIDs)")
@@ -204,11 +114,15 @@ extension SpaceManager {
                 }
             }
 
-            if applyStableProgrammaticObservation(
-                cgsState,
-                ncCount: ncCount,
-                source: source
-            ) {
+            // A programmatic switch can expose its destination in one
+            // WindowServer snapshot before the transition settles, then
+            // briefly report the source space again. Do not publish the
+            // destination from that first observation. The switch helper
+            // verifies it independently and the completion handler refreshes
+            // the model after confirmation.
+            if SpaceHelper.isSwitching,
+               SpaceHelper.activeProgrammaticSwitchTargetSpaceID == targetUUID {
+                SpaceHelper.markProgrammaticSwitchComplete(at: targetUUID)
                 return
             }
             
