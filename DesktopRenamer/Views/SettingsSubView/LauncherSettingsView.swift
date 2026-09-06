@@ -108,8 +108,8 @@ struct LauncherSettingsView: View {
     private func commandRows(_ commands: [LauncherCommand]) -> some View {
         ReorderableSettingsList(
             items: commands,
-            rowContent: { command, items in
-                commandRow(for: command, in: items)
+            rowContent: { command, context in
+                commandRow(for: command, index: context.index, isLast: context.isLast)
             },
             dragPreview: { command in
                 dragPreview(for: command)
@@ -123,9 +123,7 @@ struct LauncherSettingsView: View {
         )
     }
 
-    private func commandRow(for command: LauncherCommand, in commands: [LauncherCommand]) -> some View {
-        let commandIndex = commands.firstIndex(where: { $0.id == command.id }) ?? 0
-
+    private func commandRow(for command: LauncherCommand, index: Int, isLast: Bool) -> some View {
         return VStack(spacing: 0) {
             HStack(spacing: 10) {
                 Image(systemName: "line.3.horizontal")
@@ -133,7 +131,7 @@ struct LauncherSettingsView: View {
                     .foregroundStyle(.tertiary)
                     .frame(width: 16)
                     .accessibilityLabel("Drag to rearrange")
-                Text("\(commandIndex + 1)")
+                Text("\(index + 1)")
                     .font(.system(.body, design: .monospaced))
                     .foregroundColor(.secondary)
                     .frame(width: 30, alignment: .leading)
@@ -158,7 +156,7 @@ struct LauncherSettingsView: View {
             .padding(.horizontal, 12)
             .padding(.vertical, 6)
 
-            if command.id != commands.last?.id {
+            if !isLast {
                 Divider().padding(.leading, 12)
             }
         }

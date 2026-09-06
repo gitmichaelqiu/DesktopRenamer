@@ -209,8 +209,8 @@ struct SpaceEditView: View {
     private func spaceRows(_ spaces: [DesktopSpace]) -> some View {
         ReorderableSettingsList(
             items: spaces,
-            rowContent: { space, items in
-                spaceRow(for: space, in: items)
+            rowContent: { space, context in
+                spaceRow(for: space, isLast: context.isLast)
             },
             dragPreview: { space in
                 dragPreview(for: space)
@@ -225,7 +225,7 @@ struct SpaceEditView: View {
         )
     }
 
-    private func spaceRow(for space: DesktopSpace, in spaces: [DesktopSpace]) -> some View {
+    private func spaceRow(for space: DesktopSpace, isLast: Bool) -> some View {
         VStack(spacing: 0) {
             HStack(spacing: 10) {
                 Image(systemName: "line.3.horizontal")
@@ -240,7 +240,7 @@ struct SpaceEditView: View {
             .padding(.horizontal, 12)
             .padding(.vertical, 6)
 
-            if space.id != spaces.last?.id {
+            if !isLast {
                 Divider().padding(.leading, 12)
             }
         }

@@ -1,8 +1,13 @@
 import SwiftUI
 
+struct ReorderableSettingsRowContext {
+    let index: Int
+    let isLast: Bool
+}
+
 struct ReorderableSettingsList<Item: Identifiable, RowContent: View, DragPreview: View>: View where Item.ID == String {
     let items: [Item]
-    let rowContent: (Item, [Item]) -> RowContent
+    let rowContent: (Item, ReorderableSettingsRowContext) -> RowContent
     let dragPreview: (Item) -> DragPreview
     let moveBefore: (String, String) -> Bool
     let moveToEnd: (String) -> Void
@@ -11,7 +16,7 @@ struct ReorderableSettingsList<Item: Identifiable, RowContent: View, DragPreview
 
     init(
         items: [Item],
-        @ViewBuilder rowContent: @escaping (Item, [Item]) -> RowContent,
+        @ViewBuilder rowContent: @escaping (Item, ReorderableSettingsRowContext) -> RowContent,
         @ViewBuilder dragPreview: @escaping (Item) -> DragPreview,
         moveBefore: @escaping (String, String) -> Bool,
         moveToEnd: @escaping (String) -> Void
@@ -27,8 +32,11 @@ struct ReorderableSettingsList<Item: Identifiable, RowContent: View, DragPreview
     var body: some View {
         if #available(macOS 27.0, *) {
             VStack(spacing: 0) {
-                ForEach(items) { item in
-                    decoratedRow(for: item)
+                ForEach(Array(items.enumerated()), id: \.element.id) { index, item in
+                    decoratedRow(
+                        for: item,
+                        context: ReorderableSettingsRowContext(index: index, isLast: index == items.count - 1)
+                    )
                 }
                 .reorderable()
             }
@@ -36,14 +44,19 @@ struct ReorderableSettingsList<Item: Identifiable, RowContent: View, DragPreview
                 applyNativeReorder(difference)
             }
         } else {
-            ForEach(items) { item in
-                decoratedRow(for: item)
+            ForEach(Array(items.enumerated()), id: \.element.id) { index, item in
+                decoratedRow(
+                    for: item,
+                    context: ReorderableSettingsRowContext(index: index, isLast: index == items.count - 1)
+                )
                     .draggable(item.id) {
                         dragPreview(item)
                             .background(SettingsSectionStyle.dragPreviewBackgroundColor)
                     }
                     .dropDestination(for: String.self) { sourceIDs, _ in
-                        guard let sourceID = sourceIDs.first else { return false }
+                        guard let sourceID = sourceIDs.first,
+                              sourceID != item.id,
+                              items.contains(where: { $0.id == sourceID }) else { return false }
                         return moveBefore(sourceID, item.id)
                     } isTargeted: { isTargeted in
                         if isTargeted {
@@ -56,8 +69,8 @@ struct ReorderableSettingsList<Item: Identifiable, RowContent: View, DragPreview
         }
     }
 
-    private func decoratedRow(for item: Item) -> some View {
-        rowContent(item, items)
+    private func decoratedRow(for item: Item, context: ReorderableSettingsRowContext) -> some View {
+        rowContent(item, context)
             .contentShape(Rectangle())
             .contentShape(.dragPreview, Rectangle())
             .overlay(
