@@ -672,7 +672,7 @@ extension SpaceHelper {
             ? 0.08
             : programmaticSwitchUsesExtendedSettle
                 ? 0.35
-                : 0.18
+                : max(0.08, min(0.18, targetDuration * 0.4))
         let workItem = DispatchWorkItem {
             guard let active = switchTransactionCoordinator.active,
                   isSwitching,
