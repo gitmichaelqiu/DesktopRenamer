@@ -609,8 +609,17 @@ extension SpaceHelper {
     /// Records the completion signal emitted by NSWorkspace when the active
     /// space changes. SpaceManager may have observed the destination first, so
     /// either ordering is accepted.
-    static func noteActiveSpaceDidChange() {
+    static func noteActiveSpaceDidChange(_ currentSpaceIDsByDisplay: [String: String]) {
         guard let active = switchTransactionCoordinator.active, isSwitching else { return }
+        guard let displayID = programmaticSwitchDisplayID,
+              currentSpaceIDsByDisplay[displayID] == active.request.spaceID else {
+            DiagnosticEventLog.shared.record(
+                subsystem: "SpaceHelper",
+                level: "info",
+                "Ignoring active-space notification for a different Space: display=\(programmaticSwitchDisplayID ?? "nil"), observed=\(programmaticSwitchDisplayID.flatMap { currentSpaceIDsByDisplay[$0] } ?? "nil"), target=\(active.request.spaceID)"
+            )
+            return
+        }
         programmaticSwitchNotificationObserved = true
         guard programmaticSwitchDestinationObserved else { return }
 

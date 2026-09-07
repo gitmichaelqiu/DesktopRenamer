@@ -39,7 +39,9 @@ extension SpaceLabelWindow {
         // SpaceLabelManager.applyVisibility. A delayed retry or an unrelated
         // appearance refresh can arrive after the manager hid the preview.
         // Preview labels must never be rendered on their current space.
-        let knownVisibleSpaceIDs = visibleSpaceIDs ?? SpaceHelper.getVisibleSystemSpaceIDs()
+        let knownVisibleSpaceIDs = visibleSpaceIDs
+            ?? labelManager?.resolvedVisibleSpaceIDs()
+            ?? SpaceHelper.getVisibleSystemSpaceIDs()
         if !isActiveMode && knownVisibleSpaceIDs.contains(spaceId) {
             if labelManager?.shouldPreservePreviewWindowOrderingForSettings == true {
                 hideForSettingsActivation()
@@ -101,32 +103,40 @@ extension SpaceLabelWindow {
             if self.isActiveMode {
                 if !self.isVisible {
                     print("SpaceLabelWindow[\(self.spaceId)]: orderFront() for ACTIVE space.")
-                    self.orderFront(nil)
                     self.bindToTargetSpace()
-                    didBindToTargetSpace = true
-                    self.hasOrderedInOnce = true
+                    if isBoundToTargetSpace() {
+                        self.orderFront(nil)
+                        didBindToTargetSpace = true
+                        self.hasOrderedInOnce = true
+                    } else {
+                        DiagnosticEventLog.shared.record(
+                            subsystem: "SpaceLabelWindow",
+                            level: "warning",
+                            "Blocked active-label ordering until target Space binding is confirmed: \(self.spaceId)"
+                        )
+                        scheduleVisibilityRetry(delay: 0.1)
+                    }
                 }
             } else if !hasOrderedInOnce {
-                // For preview windows (on background spaces), we ONLY order front once.
+                // For preview windows (on background spaces), bind first and
+                // only order the window in after WindowServer confirms that
+                // assignment. An empty CGS space list is not evidence that a
+                // preview is safely off the current Space.
                 if !inCoolingPeriod {
-                    // SAFETY GUARD: Only order front if the window is actually bound
-                    // to its target space (or at least not on the current space).
-                    // If CGSAddWindowsToSpaces failed silently, ordering front would
-                    // place this label on the wrong (current) desktop, causing clustering.
-                    if isBoundToTargetSpace() || !isOnCurrentSpace() {
+                    self.bindToTargetSpace()
+                    if isBoundToTargetSpace() {
                         print("SpaceLabelWindow[\(self.spaceId)]: Non-activating orderFront() for background preview.")
                         // Use WindowServer ordering here. AppKit orderFront(nil)
                         // can still select a background space while Mission
                         // Control is reconciling labels on macOS 27.
                         self.orderPreviewWithoutActivating()
-                        self.bindToTargetSpace()
                         didBindToTargetSpace = true
                         self.hasOrderedInOnce = true
                     } else {
-                        print("SpaceLabelWindow[\(self.spaceId)]: Binding check failed — preview label would appear on wrong space. Staying hidden.")
-                        DiagnosticEventLog.shared.record(subsystem: "SpaceLabelWindow", level: "warning", "BLOCKED orderFrontRegardless for preview label \(self.spaceId): bound=\(isBoundToTargetSpace()), onCurrent=\(isOnCurrentSpace())")
-                        self.bindToTargetSpace()
+                        print("SpaceLabelWindow[\(self.spaceId)]: Binding is not confirmed — keeping preview hidden.")
+                        DiagnosticEventLog.shared.record(subsystem: "SpaceLabelWindow", level: "warning", "Blocked preview ordering until target Space binding is confirmed: \(self.spaceId)")
                         didBindToTargetSpace = true
+                        scheduleVisibilityRetry(delay: 0.1)
                     }
                 } else {
                     print("SpaceLabelWindow[\(self.spaceId)]: Suppressing orderFrontRegardless (Preview) during switch cooling period (\(String(format: "%.2f", timeSinceSwitch))s). Scheduling retry.")
@@ -137,16 +147,16 @@ extension SpaceLabelWindow {
                 // which hides other labels via orderOut during drag-based switching).
                 // Preview labels only order front once, so re-order it now to recover.
                 if !inCoolingPeriod {
-                    if isBoundToTargetSpace() || !isOnCurrentSpace() {
+                    self.bindToTargetSpace()
+                    if isBoundToTargetSpace() {
                         print("SpaceLabelWindow[\(self.spaceId)]: Non-activating orderFront() for background preview.")
                         self.orderPreviewWithoutActivating()
-                        self.bindToTargetSpace()
                         didBindToTargetSpace = true
                     } else {
-                        print("SpaceLabelWindow[\(self.spaceId)]: Re-order blocked — preview label would appear on wrong space.")
-                        DiagnosticEventLog.shared.record(subsystem: "SpaceLabelWindow", level: "warning", "BLOCKED re-order for preview label \(self.spaceId): bound=\(isBoundToTargetSpace()), onCurrent=\(isOnCurrentSpace())")
-                        self.bindToTargetSpace()
+                        print("SpaceLabelWindow[\(self.spaceId)]: Binding is not confirmed — keeping preview hidden.")
+                        DiagnosticEventLog.shared.record(subsystem: "SpaceLabelWindow", level: "warning", "Blocked preview re-order until target Space binding is confirmed: \(self.spaceId)")
                         didBindToTargetSpace = true
+                        scheduleVisibilityRetry(delay: 0.1)
                     }
                 } else {
                     scheduleVisibilityRetry(delay: coolingPeriod - timeSinceSwitch + 0.1)

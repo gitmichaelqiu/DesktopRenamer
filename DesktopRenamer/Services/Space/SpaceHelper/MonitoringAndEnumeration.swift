@@ -4,16 +4,22 @@ import Foundation
 
 extension SpaceHelper {
 
-    static func startMonitoring(onChange: @escaping (String, Bool, Int, String) -> Void) {
+    static func startMonitoring(
+        onChange: @escaping (String, Bool, Int, String) -> Void,
+        onAuthoritativeChange: (([String: String]) -> Void)? = nil
+    ) {
         // Make startup idempotent. The monitor is intentionally restarted after
         // system wake, and duplicate observers can otherwise multiply CGS reads.
         stopMonitoring()
         onSpaceChange = onChange
+        onAuthoritativeSpaceChange = onAuthoritativeChange
 
         spaceChangeObserver = NSWorkspace.shared.notificationCenter.addObserver(
             forName: NSWorkspace.activeSpaceDidChangeNotification, object: nil, queue: .main
         ) { _ in
-            noteActiveSpaceDidChange()
+            let currentSpaceIDsByDisplay = getCurrentSpaceIDsByDisplay()
+            noteActiveSpaceDidChange(currentSpaceIDsByDisplay)
+            onAuthoritativeSpaceChange?(currentSpaceIDsByDisplay)
             detectSpaceChange()
         }
         appActivationObserver = NSWorkspace.shared.notificationCenter.addObserver(
@@ -86,6 +92,7 @@ extension SpaceHelper {
             localEventMonitor = nil
         }
         onSpaceChange = nil
+        onAuthoritativeSpaceChange = nil
     }
 
     private struct RawSpaceScreen {
@@ -468,17 +475,7 @@ extension SpaceHelper {
     }
 
     static func getVisibleSystemSpaceIDs() -> Set<String> {
-        let conn = _CGSDefaultConnection()
-        guard let displays = CGSCopyManagedDisplaySpaces(conn) as? [NSDictionary] else { return [] }
-        var visibleIDs = Set<String>()
-        for display in displays {
-            if let currentDict = display["Current Space"] as? [String: Any],
-                let currentID = currentDict["ManagedSpaceID"] as? Int
-            {
-                visibleIDs.insert(String(currentID))
-            }
-        }
-        return visibleIDs
+        Set(getCurrentSpaceIDsByDisplay().values)
     }
 }
 

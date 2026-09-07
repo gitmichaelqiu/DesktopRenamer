@@ -143,6 +143,12 @@ class SpaceLabelManager: ObservableObject {
         return previewTransitionRestoreWorkItem != nil || SpaceHelper.isSwitching
     }
 
+    /// Uses SpaceManager's confirmed destination when WindowServer is still
+    /// returning an older visible-space snapshot during a rapid switch.
+    func resolvedVisibleSpaceIDs() -> Set<String> {
+        spaceManager?.visibleSpaceIDsForLabels() ?? SpaceHelper.getVisibleSystemSpaceIDs()
+    }
+
     init(spaceManager: SpaceManager) {
         self.spaceManager = spaceManager
         let launchState = SpaceHelper.getSystemState()

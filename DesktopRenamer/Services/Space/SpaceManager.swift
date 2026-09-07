@@ -175,6 +175,8 @@ class SpaceManager: ObservableObject {
         
         SpaceHelper.startMonitoring { [weak self] rawUUID, isDesktop, ncCnt, displayID in
             self?.handleSpaceChange(rawUUID, isDesktop: isDesktop, ncCount: ncCnt, displayID: displayID, source: "Monitor")
+        } onAuthoritativeChange: { [weak self] spacesByDisplay in
+            self?.handleAuthoritativeSpaceChange(spacesByDisplay)
         }
 
         NotificationCenter.default.addObserver(
@@ -297,6 +299,8 @@ class SpaceManager: ObservableObject {
             print("SpaceManager: Wake stabilization complete. Restarting space monitoring.")
             SpaceHelper.startMonitoring { [weak self] rawUUID, isDesktop, ncCnt, displayID in
                 self?.handleSpaceChange(rawUUID, isDesktop: isDesktop, ncCount: ncCnt, displayID: displayID, source: "Monitor")
+            } onAuthoritativeChange: { [weak self] spacesByDisplay in
+                self?.handleAuthoritativeSpaceChange(spacesByDisplay)
             }
             self.refreshConnectedDisplays()
             self.startPeriodicSpaceLayoutCheck()

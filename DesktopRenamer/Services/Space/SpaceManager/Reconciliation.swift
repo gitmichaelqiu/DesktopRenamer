@@ -31,6 +31,118 @@ extension SpaceManager {
         return true
     }
 
+    /// Handles the active-space notification before the delayed raw-space scan
+    /// runs. This is the only path allowed to release a confirmed destination
+    /// fence: monitor and retry reads can repeat an old WindowServer snapshot,
+    /// while an ordered active-space notification represents a new transition.
+    func handleAuthoritativeSpaceChange(_ spacesByDisplay: [String: String]) {
+        let update = { [weak self] in
+            guard let self else { return }
+
+            for (displayID, spaceID) in spacesByDisplay {
+                guard let confirmation = self.confirmedSpaceObservationFence.confirmation(
+                    for: displayID
+                ) else {
+                    continue
+                }
+
+                if spaceID == confirmation.spaceID {
+                    self.confirmedSpaceObservationFence.markDestinationObserved(
+                        displayID: displayID,
+                        spaceID: spaceID
+                    )
+                    self.currentSpaceByDisplay[displayID] = spaceID
+                    continue
+                }
+
+                let recentProgrammaticSwitch = Date().timeIntervalSince1970
+                    - SpaceHelper.lastProgrammaticSwitchTime < 2.0
+                if recentProgrammaticSwitch,
+                   SpaceHelper.lastProgrammaticTargetSpaceID == confirmation.spaceID {
+                    DiagnosticEventLog.shared.record(
+                        subsystem: "SpaceManager",
+                        level: "info",
+                        "Ignoring superseded programmatic active-space observation: display=\(displayID), observed=\(spaceID), confirmed=\(confirmation.spaceID)"
+                    )
+                    continue
+                }
+
+                guard self.confirmedSpaceObservationFence.clearForExternalObservation(
+                    displayID: displayID,
+                    spaceID: spaceID
+                ) else {
+                    DiagnosticEventLog.shared.record(
+                        subsystem: "SpaceManager",
+                        level: "info",
+                        "Ignoring pre-confirmation active-space observation: display=\(displayID), observed=\(spaceID), confirmed=\(confirmation.spaceID)"
+                    )
+                    continue
+                }
+
+                DiagnosticEventLog.shared.record(
+                    subsystem: "SpaceManager",
+                    level: "info",
+                    "Cleared confirmed-space fence after external transition: display=\(displayID), observed=\(spaceID), previous=\(confirmation.spaceID)"
+                )
+                if self.spaceChangeRetryDisplayID == displayID {
+                    self.cancelSpaceChangeRetry()
+                }
+            }
+        }
+
+        if Thread.isMainThread {
+            update()
+        } else {
+            DispatchQueue.main.async(execute: update)
+        }
+    }
+
+    /// Returns the space that label windows should treat as current for a
+    /// display. A confirmed programmatic destination takes precedence over a
+    /// stale CGS read until the active-space notification has observed it.
+    func currentSpaceIDForLabels(onDisplayID displayID: String) -> String? {
+        currentSpaceIDsForLabels()[displayID]
+    }
+
+    /// Reads the visible Space for every display once, then overlays any
+    /// confirmed programmatic destinations. Label windows otherwise perform
+    /// several independent CGS reads during one refresh and can combine an
+    /// old display snapshot with a new one.
+    func currentSpaceIDsForLabels() -> [String: String] {
+        var currentSpaceIDs = SpaceHelper.getCurrentSpaceIDsByDisplay()
+        for displayID in Set(spaceNameDict.map(\.displayID)) {
+            if let confirmation = confirmedSpaceObservationFence.confirmation(for: displayID) {
+                currentSpaceIDs[displayID] = confirmation.spaceID
+            } else if currentSpaceIDs[displayID] == nil,
+                      let cachedSpaceID = currentSpaceByDisplay[displayID] {
+                currentSpaceIDs[displayID] = cachedSpaceID
+            }
+        }
+        return currentSpaceIDs
+    }
+
+    /// Resolves one visible space per display while preserving a confirmed
+    /// destination over a stale WindowServer snapshot. This keeps all label
+    /// refresh paths on the same authority as SpaceManager reconciliation.
+    func visibleSpaceIDsForLabels() -> Set<String> {
+        let currentSpaceIDs = currentSpaceIDsForLabels()
+        var visibleSpaceIDs = Set(currentSpaceIDs.values)
+        if visibleSpaceIDs.isEmpty {
+            visibleSpaceIDs = SpaceHelper.getVisibleSystemSpaceIDs()
+        }
+        let spacesByDisplay = Dictionary(grouping: spaceNameDict, by: \.displayID)
+
+        for (displayID, spaces) in spacesByDisplay {
+            guard let currentSpaceID = currentSpaceIDs[displayID] else {
+                continue
+            }
+            visibleSpaceIDs.subtract(spaces.map(\.id))
+            visibleSpaceIDs.insert(currentSpaceID)
+        }
+
+        return visibleSpaceIDs
+    }
+
     func refreshConnectedDisplays() {
         self.connectedDisplayUUIDs = Set(SpaceHelper.getAllDisplayUUIDs().map { $0.uppercased() })
         // print("SpaceManager: Refreshed connected displays: \(connectedDisplayUUIDs)")
@@ -95,7 +207,7 @@ extension SpaceManager {
         let previousUUID = self.currentSpaceUUID
         let targetUUID = cgsState.currentUUID
 
-        if source == "Monitor" || source == "Retry" {
+        if source == "Monitor" || source == "Retry" || source == "Refresh" {
             let authoritativeLiveSpaceID = SpaceHelper.getCurrentSpaceID(for: cgsState.displayID)
 
             if let pending = pendingProgrammaticSpaceSwitches[cgsState.displayID],
@@ -111,6 +223,12 @@ extension SpaceManager {
             let existingConfirmation = confirmedSpaceObservationFence.confirmation(
                 for: cgsState.displayID
             )
+            if targetUUID == existingConfirmation?.spaceID {
+                confirmedSpaceObservationFence.markDestinationObserved(
+                    displayID: cgsState.displayID,
+                    spaceID: targetUUID
+                )
+            }
             if confirmedSpaceObservationFence.shouldIgnore(
                 displayID: cgsState.displayID,
                 observedSpaceID: targetUUID,
@@ -122,10 +240,8 @@ extension SpaceManager {
                     "Ignoring stale space observation: display=\(cgsState.displayID), observed=\(targetUUID), live=\(authoritativeLiveSpaceID ?? "nil"), confirmed=\(existingConfirmation?.spaceID ?? "nil"), source=\(source)"
                 )
 
-                if existingConfirmation?.spaceID == authoritativeLiveSpaceID {
+                if self.spaceChangeRetryDisplayID == cgsState.displayID {
                     cancelSpaceChangeRetry()
-                } else {
-                    scheduleSpaceChangeRetry(displayID: cgsState.displayID)
                 }
                 return
             }
@@ -409,6 +525,8 @@ extension SpaceManager {
 
             }
 
+            self.currentSpaceByDisplay[cgsState.displayID] = targetUUID
+
             // Record the destination observation. SpaceHelper also waits for
             // the matching active-space notification before declaring the
             // programmatic transition complete.
@@ -534,6 +652,27 @@ extension SpaceManager {
         // newly started switch. Cancellation cannot stop a work item that is
         // already executing, so reject its result again after the read.
         guard generation == spaceChangeRetryGeneration else { return }
+
+        if let confirmation = confirmedSpaceObservationFence.confirmation(
+            for: cgsState.displayID
+        ) {
+            if cgsState.currentUUID == confirmation.spaceID {
+                confirmedSpaceObservationFence.markDestinationObserved(
+                    displayID: cgsState.displayID,
+                    spaceID: cgsState.currentUUID
+                )
+            } else {
+                DiagnosticEventLog.shared.record(
+                    subsystem: "SpaceManager",
+                    level: "info",
+                    "Ignoring retry behind confirmed destination: display=\(cgsState.displayID), observed=\(cgsState.currentUUID), confirmed=\(confirmation.spaceID)"
+                )
+                if spaceChangeRetryDisplayID == cgsState.displayID {
+                    cancelSpaceChangeRetry()
+                }
+                return
+            }
+        }
 
         if shouldIgnoreStaleTransactionObservation(cgsState.currentUUID, source: "Retry") {
             return

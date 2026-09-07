@@ -15,7 +15,7 @@ extension SpaceLabelWindow {
             // waiting for another space-change notification.
             isCurrentSpaceLabel = liveSpaceID == spaceId
         }
-        if !isActiveMode && SpaceHelper.getVisibleSystemSpaceIDs().contains(spaceId) {
+        if !isActiveMode && (labelManager?.resolvedVisibleSpaceIDs() ?? SpaceHelper.getVisibleSystemSpaceIDs()).contains(spaceId) {
             updateLayout(isCurrentSpace: false, updateFrame: false)
             if labelManager?.shouldPreservePreviewWindowOrderingForSettings == true {
                 hideForSettingsActivation()
@@ -64,7 +64,7 @@ extension SpaceLabelWindow {
         if self.previewSize != size {
             self.previewSize = size
             if !isActiveMode {
-                if SpaceHelper.getVisibleSystemSpaceIDs().contains(spaceId) {
+                if (labelManager?.resolvedVisibleSpaceIDs() ?? SpaceHelper.getVisibleSystemSpaceIDs()).contains(spaceId) {
                     if labelManager?.shouldPreservePreviewWindowOrderingForSettings == true {
                         hideForSettingsActivation()
                     } else {

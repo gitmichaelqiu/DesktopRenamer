@@ -109,7 +109,7 @@ struct SpaceObservationFence {
 
     private(set) var confirmations: [String: Confirmation] = [:]
     private var latestGenerationByDisplay: [String: UInt64] = [:]
-    private var externalCandidates: [String: (spaceID: String, passes: Int)] = [:]
+    private var observedDestinations: [String: String] = [:]
 
     mutating func beginSwitch(displayID: String, generation: UInt64) {
         let latestGeneration = latestGenerationByDisplay[displayID] ?? 0
@@ -117,7 +117,7 @@ struct SpaceObservationFence {
 
         latestGenerationByDisplay[displayID] = generation
         confirmations.removeValue(forKey: displayID)
-        externalCandidates.removeValue(forKey: displayID)
+        observedDestinations.removeValue(forKey: displayID)
     }
 
     mutating func confirm(
@@ -133,58 +133,60 @@ struct SpaceObservationFence {
             spaceID: spaceID,
             generation: generation
         )
-        externalCandidates.removeValue(forKey: displayID)
+        observedDestinations.removeValue(forKey: displayID)
     }
 
     mutating func invalidate(displayID: String) {
         confirmations.removeValue(forKey: displayID)
-        externalCandidates.removeValue(forKey: displayID)
+        observedDestinations.removeValue(forKey: displayID)
     }
 
     func confirmation(for displayID: String) -> Confirmation? {
         confirmations[displayID]
     }
 
-    /// Returns true when the candidate is stale relative to the fence or to
-    /// an inconsistent WindowServer read. A single different live-space read
-    /// is not enough to clear the fence: the first read can be one of the old
-    /// snapshots that caused the fence to be needed in the first place. The
-    /// newer space must be observed consistently twice before it becomes an
-    /// authoritative external change.
-    mutating func shouldIgnore(
+    /// Records that the confirmed destination has been observed by an
+    /// authoritative WindowServer path. Monitor and retry snapshots may mark
+    /// the destination as observed, but they can never release the fence for
+    /// a different Space.
+    mutating func markDestinationObserved(displayID: String, spaceID: String) {
+        guard let confirmation = confirmations[displayID],
+              confirmation.spaceID == spaceID else {
+            return
+        }
+        observedDestinations[displayID] = spaceID
+    }
+
+    /// Releases a fence only after its destination has been observed and a
+    /// subsequent active-space notification reports a different Space. This
+    /// path is intentionally separate from monitor/retry reconciliation: an
+    /// old CGS snapshot can be repeated indefinitely without becoming an
+    /// external transition.
+    mutating func clearForExternalObservation(
+        displayID: String,
+        spaceID: String
+    ) -> Bool {
+        guard let confirmation = confirmations[displayID],
+              observedDestinations[displayID] == confirmation.spaceID,
+              spaceID != confirmation.spaceID else {
+            return false
+        }
+
+        confirmations.removeValue(forKey: displayID)
+        observedDestinations.removeValue(forKey: displayID)
+        return true
+    }
+
+    /// Returns true when a monitor or retry candidate is stale relative to a
+    /// confirmed destination. A different candidate never clears the fence;
+    /// only clearForExternalObservation can do that after an authoritative
+    /// active-space notification has established a real external transition.
+    func shouldIgnore(
         displayID: String,
         observedSpaceID: String,
-        liveSpaceID: String?
+        liveSpaceID _: String?
     ) -> Bool {
-        guard let confirmation = confirmations[displayID] else {
-            return false
-        }
-
-        if observedSpaceID == confirmation.spaceID {
-            externalCandidates.removeValue(forKey: displayID)
-            return false
-        }
-
-        guard let liveSpaceID,
-              liveSpaceID == observedSpaceID else {
-            externalCandidates.removeValue(forKey: displayID)
-            return true
-        }
-
-        let passes: Int
-        if let previous = externalCandidates[displayID],
-           previous.spaceID == liveSpaceID {
-            passes = previous.passes + 1
-        } else {
-            passes = 1
-        }
-        guard passes >= 2 else {
-            externalCandidates[displayID] = (spaceID: liveSpaceID, passes: passes)
-            return true
-        }
-
-        externalCandidates.removeValue(forKey: displayID)
-        confirmations.removeValue(forKey: displayID)
-        return false
+        guard let confirmation = confirmations[displayID] else { return false }
+        return observedSpaceID != confirmation.spaceID
     }
 }

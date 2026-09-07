@@ -26,6 +26,7 @@ func CGSOrderWindow(_ cid: Int32, _ windowID: UInt32, _ op: Int32, _ relativeToW
 class SpaceHelper {
 
     static var onSpaceChange: ((String, Bool, Int, String) -> Void)?
+    static var onAuthoritativeSpaceChange: (([String: String]) -> Void)?
     static var globalEventMonitor: Any?
     static var localEventMonitor: Any?
 

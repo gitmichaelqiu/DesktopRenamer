@@ -86,7 +86,7 @@ extension SpaceLabelManager {
                 self.scheduleActiveLabelSynchronization()
 
                 if self.hideWhenSwitching {
-                    let visibleUUIDs = SpaceHelper.getVisibleSystemSpaceIDs()
+                    let visibleUUIDs = self.resolvedVisibleSpaceIDs()
                     let visibleSpaceSetChanged = self.recordVisibleSpaceIDs(visibleUUIDs)
                     let currentSpaceIsVisible = !visibleUUIDs.isEmpty
                         && visibleUUIDs.contains(self.spaceManager?.currentSpaceUUID ?? "")
@@ -258,7 +258,7 @@ extension SpaceLabelManager {
     private func handleConfirmedExternalSpaceTransition() {
         guard hideWhenSwitching else { return }
 
-        let visibleSpaceIDs = SpaceHelper.getVisibleSystemSpaceIDs()
+        let visibleSpaceIDs = resolvedVisibleSpaceIDs()
         let didChange = recordVisibleSpaceIDs(visibleSpaceIDs)
         suppressPreviewLabelsForTransition(
             duration: 1.2,
@@ -270,7 +270,7 @@ extension SpaceLabelManager {
     @objc private func handleProgrammaticSpaceTransitionSettled(_ notification: Notification) {
         guard hideWhenSwitching else { return }
 
-        let visibleSpaceIDs = SpaceHelper.getVisibleSystemSpaceIDs()
+        let visibleSpaceIDs = resolvedVisibleSpaceIDs()
         guard !visibleSpaceIDs.isEmpty else { return }
 
         let targetSpaceID = notification.userInfo?["spaceID"] as? String
@@ -430,7 +430,7 @@ extension SpaceLabelManager {
     }
 
     private func liveSpaceSetChangedSinceLastObservation() -> Bool {
-        let visibleSpaceIDs = SpaceHelper.getVisibleSystemSpaceIDs()
+        let visibleSpaceIDs = resolvedVisibleSpaceIDs()
         guard !visibleSpaceIDs.isEmpty else { return false }
 
         let currentSpaceID = spaceManager?.currentSpaceUUID ?? ""
@@ -576,7 +576,7 @@ extension SpaceLabelManager {
             return
         }
 
-        let visibleUUIDs = SpaceHelper.getVisibleSystemSpaceIDs()
+        let visibleUUIDs = resolvedVisibleSpaceIDs()
         let currentSpaceID = spaceManager?.currentSpaceUUID ?? ""
         let hasKnownCurrentSpace = !currentSpaceID.isEmpty
         let currentSpaceIsVisible = !hasKnownCurrentSpace || visibleUUIDs.contains(currentSpaceID)
@@ -772,7 +772,7 @@ extension SpaceLabelManager {
     }
 
     func updateAllWindowModes(forDisplay displayID: String? = nil) {
-        let visibleUUIDs = SpaceHelper.getVisibleSystemSpaceIDs()
+        let visibleUUIDs = resolvedVisibleSpaceIDs()
         applyVisibility(visibleUUIDs, forDisplay: displayID)
     }
 
@@ -795,7 +795,7 @@ extension SpaceLabelManager {
     }
 
     private func updateActiveWindowModes() {
-        let visibleUUIDs = SpaceHelper.getVisibleSystemSpaceIDs()
+        let visibleUUIDs = resolvedVisibleSpaceIDs()
         updateActiveWindowModes(for: visibleUUIDs)
     }
 
@@ -838,13 +838,14 @@ extension SpaceLabelManager {
     private func currentActiveSpaceIDs(fallback visibleUUIDs: Set<String>) -> Set<String> {
         var spaceIDs = Set<String>()
         var fallbackByDisplay: [String: String] = [:]
+        let currentSpaceIDs = spaceManager?.currentSpaceIDsForLabels() ?? [:]
 
         for (spaceID, window) in activeWindows where visibleUUIDs.contains(spaceID) {
             fallbackByDisplay[window.displayID] = spaceID
         }
 
         for displayID in Set(activeWindows.values.map(\.displayID)) {
-            if let liveSpaceID = SpaceHelper.getCurrentSpaceID(for: displayID) {
+            if let liveSpaceID = currentSpaceIDs[displayID] {
                 spaceIDs.insert(liveSpaceID)
             } else if let fallbackSpaceID = fallbackByDisplay[displayID] {
                 spaceIDs.insert(fallbackSpaceID)
@@ -1004,7 +1005,7 @@ extension SpaceLabelManager {
         }
 
         settingsPreviewRestoreWorkItem = nil
-        let visibleUUIDs = SpaceHelper.getVisibleSystemSpaceIDs()
+        let visibleUUIDs = resolvedVisibleSpaceIDs()
         guard !visibleUUIDs.isEmpty else { return }
 
         let fullscreenDisplayIDs = currentFullscreenDisplayIDs(
@@ -1120,10 +1121,10 @@ extension SpaceLabelManager {
         activeWindow.bindToTargetSpace()
 
         let isCurrent: Bool
-        if let liveSpaceID = SpaceHelper.getCurrentSpaceID(for: displayID) {
+        if let liveSpaceID = spaceManager.currentSpaceIDForLabels(onDisplayID: displayID) {
             isCurrent = liveSpaceID == spaceId
         } else {
-            isCurrent = SpaceHelper.getVisibleSystemSpaceIDs().contains(spaceId)
+            isCurrent = resolvedVisibleSpaceIDs().contains(spaceId)
         }
         activeWindow.setActiveVisibility(isCurrent, animated: false)
         self.recalculateUnifiedSize()

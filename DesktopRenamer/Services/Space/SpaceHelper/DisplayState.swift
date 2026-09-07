@@ -47,16 +47,7 @@ extension SpaceHelper {
 
     /// Returns the ManagedSpaceIDs of the currently visible spaces (one per display).
     static func getCurrentSpaceIDs() -> [String] {
-        let conn = _CGSDefaultConnection()
-        guard let displays = CGSCopyManagedDisplaySpaces(conn) as? [NSDictionary] else { return [] }
-        var ids: [String] = []
-        for display in displays {
-            if let currentDict = display["Current Space"] as? [String: Any],
-               let managedID = currentDict["ManagedSpaceID"] as? Int {
-                ids.append(String(managedID))
-            }
-        }
-        return ids
+        Array(getCurrentSpaceIDsByDisplay().values)
     }
 
     /// Returns a formatted description of the raw display spaces managed by macOS.
@@ -156,26 +147,33 @@ extension SpaceHelper {
     }
 
     static func getCurrentSpaceID(for displayID: String) -> String? {
+        getCurrentSpaceIDsByDisplay()[displayID]
+    }
+
+    /// Returns one current managed-space ID per display from one WindowServer
+    /// snapshot. This prevents callers that compare displays from combining
+    /// values read at different points during a transition.
+    static func getCurrentSpaceIDsByDisplay() -> [String: String] {
         let conn = _CGSDefaultConnection()
         guard let displays = CGSCopyManagedDisplaySpaces(conn) as? [NSDictionary] else {
-            return nil
+            return [:]
         }
-        
+
         let screenUUIDs = getAllDisplayUUIDs()
         let mainScreenUUID = screenUUIDs.first
+        var currentSpaceIDs: [String: String] = [:]
 
         for display in displays {
             if let rawID = display["Display Identifier"] as? String {
                 let currentID = normalizeDisplayID(rawID, mainUUID: mainScreenUUID)
-                if currentID == displayID,
-                   let currentDict = display["Current Space"] as? [String: Any],
+                if let currentDict = display["Current Space"] as? [String: Any],
                    let managedID = currentDict["ManagedSpaceID"] as? Int
                 {
-                    return String(managedID)
+                    currentSpaceIDs[currentID] = String(managedID)
                 }
             }
         }
-        return nil
+        return currentSpaceIDs
     }
 
     static func isPoint(_ point: CGPoint, inside screenFrame: CGRect) -> Bool {
