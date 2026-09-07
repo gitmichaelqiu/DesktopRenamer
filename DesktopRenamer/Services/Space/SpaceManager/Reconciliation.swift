@@ -316,23 +316,11 @@ extension SpaceManager {
         }
 
         let isIntentionalWindowMove = SpaceHelper.consumeWindowMoveIntent(for: targetUUID)
-            
-        let now = Date().timeIntervalSince1970
-            let isRecentManualSwitch = now - lastManualSwitchTime < 2.0
-            
-            if isRecentManualSwitch, let targetUUID = lastManualSwitchTargetUUID {
-                if cgsState.currentUUID != targetUUID {
-                    print("SpaceManager: Stale space \(cgsState.currentUUID) detected during active switch to \(targetUUID) (source: \(source)). Ignoring.")
-                    if source == "Monitor" {
-                        scheduleSpaceChangeRetry(displayID: displayID)
-                    }
-                    SpaceHelper.debugTrace(
-                        traceID,
-                        "manager observation decision=ignore-manual-attribution observed=\(cgsState.currentUUID), expected=\(targetUUID), source=\(source)"
-                    )
-                    return
-                }
-            }
+
+        // Programmatic transaction state and the per-display observation
+        // fence already reject stale snapshots. A wall-clock manual-switch
+        // window cannot distinguish a real user switch immediately after a
+        // completed request, so it must not gate reconciliation here.
 
             // A programmatic switch can expose its destination in one
             // WindowServer snapshot before the transition settles, then
@@ -842,29 +830,11 @@ extension SpaceManager {
         // a newer retry chain invalidated it during the stability checks.
         guard generation == spaceChangeRetryGeneration else { return }
 
-        let now = Date().timeIntervalSince1970
-        let isRecentManualSwitch = now - lastManualSwitchTime < 2.0
-        
-        if isRecentManualSwitch {
-            if let targetUUID = lastManualSwitchTargetUUID, cgsState.currentUUID == targetUUID {
-                if currentSpaceUUID != targetUUID {
-                    handleSpaceChange(targetUUID, isDesktop: true, ncCount: 0,
-                                     displayID: cgsState.displayID, source: "Retry")
-                }
-                cancelSpaceChangeRetry()
-            } else {
-                // Still transitioning, reschedule retry to check again later without reverting
-                scheduleSpaceChangeRetry()
-            }
-        } else {
-            if currentSpaceUUID != cgsState.currentUUID {
-                handleSpaceChange(cgsState.currentUUID, isDesktop: true, ncCount: 0,
-                                 displayID: cgsState.displayID, source: "Retry")
-                cancelSpaceChangeRetry()
-            } else {
-                scheduleSpaceChangeRetry()
-            }
+        if currentSpaceUUID != cgsState.currentUUID {
+            handleSpaceChange(cgsState.currentUUID, isDesktop: true, ncCount: 0,
+                             displayID: cgsState.displayID, source: "Retry")
         }
+        cancelSpaceChangeRetry()
         SpaceHelper.debugTrace(
             traceID,
             "retry decision=complete generation=\(generation), candidate=\(cgsState.currentUUID), modelCurrentNow=\(currentSpaceUUID)"
