@@ -700,12 +700,12 @@
     "DesktopRenamer" : {
       "shouldTranslate" : false
     },
-    "DesktopRenamer requires Accessibility permission for hotkeys and trackpad overrides to function correctly." : {
+    "DesktopRenamer requires Accessibility and Screen Recording permissions for hotkeys, trackpad overrides, and window movement to function correctly." : {
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "DesktopRenamer 需要辅助权限以配置快捷键和触控板覆盖。"
+            "value" : "DesktopRenamer需要辅助权限以及屏幕录制权限以运行快捷键，触控板，以及移动窗口。"
           }
         }
       }
@@ -885,9 +885,6 @@
           }
         }
       }
-    },
-    "Event Synthesis" : {
-
     },
     "Exceptions" : {
       "localizations" : {
@@ -2131,28 +2128,32 @@
         }
       }
     },
-    "Required for injecting shortcuts to switch spaces, and reading active window information." : {
+    "Required for injecting shortcuts, reading active window information, and moving windows with Option + swipe." : {
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "在切换桌面，获取当前桌面时需要此权限。"
+            "value" : "用于添加快捷键，获取当前窗口，以及移动窗口。"
           }
         }
       }
     },
-    "Required for moving windows with Option + swipe." : {
-
-    },
     "Required for reading the active window before moving it with Option + swipe." : {
-
-    },
-    "Requires Accessibility permission." : {
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "需要辅助权限。"
+            "value" : "用于在一定窗口前获取当前窗口。"
+          }
+        }
+      }
+    },
+    "Requires %@." : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "需要 %@。"
           }
         }
       }
@@ -2288,7 +2289,14 @@
       }
     },
     "Screen Recording" : {
-
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "屏幕录制"
+          }
+        }
+      }
     },
     "Search" : {
       "localizations" : {
