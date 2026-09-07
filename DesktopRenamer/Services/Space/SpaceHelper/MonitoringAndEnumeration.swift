@@ -18,6 +18,11 @@ extension SpaceHelper {
             forName: NSWorkspace.activeSpaceDidChangeNotification, object: nil, queue: .main
         ) { _ in
             let currentSpaceIDsByDisplay = getCurrentSpaceIDsByDisplay()
+            let traceID = debugTraceID()
+            debugTrace(
+                traceID,
+                "activeSpaceDidChange authoritativeSnapshot=\(debugFormatSpaceMap(currentSpaceIDsByDisplay)), managerSwitching=\(isSwitching), managerTarget=\(activeProgrammaticSwitchTargetSpaceID ?? "nil"), display=\(programmaticSwitchDisplayID ?? "nil")"
+            )
             noteActiveSpaceDidChange(currentSpaceIDsByDisplay)
             onAuthoritativeSpaceChange?(currentSpaceIDsByDisplay)
             detectSpaceChange()
@@ -279,11 +284,20 @@ extension SpaceHelper {
         rawSpaceUUIDWorkItem?.cancel()
         rawSpaceUUIDGeneration += 1
         let generation = rawSpaceUUIDGeneration
+        let traceID = debugTraceID()
+        debugTrace(
+            traceID,
+            "rawSpaceScan scheduled rawGeneration=\(generation), detectionGeneration=\(spaceDetectionGeneration)"
+        )
 
         let workItem = DispatchWorkItem {
             rawSpaceUUIDStateLock.lock()
             guard generation == rawSpaceUUIDGeneration else {
                 rawSpaceUUIDStateLock.unlock()
+                debugTrace(
+                    traceID,
+                    "rawSpaceScan canceled before context rawGeneration=\(generation), currentRawGeneration=\(rawSpaceUUIDGeneration)"
+                )
                 return
             }
             // Clear this before invoking the callback. The callback may
@@ -293,6 +307,7 @@ extension SpaceHelper {
 
             guard let context = makeRawSpaceScanContext() else {
                 guard isCurrentRawSpaceUUIDGeneration(generation) else { return }
+                debugTrace(traceID, "rawSpaceScan has no context; publishing empty result")
                 completion("", false, 0, "Unknown")
                 return
             }
@@ -304,6 +319,10 @@ extension SpaceHelper {
                 guard let result = scanRawSpace(context) else { return }
                 DispatchQueue.main.async {
                     guard isCurrentRawSpaceUUIDGeneration(generation) else { return }
+                    debugTrace(
+                        traceID,
+                        "rawSpaceScan completed rawGeneration=\(generation), raw=\(result.uuid), display=\(result.displayIdentifier), desktop=\(result.hasFinderDesktop), notifications=\(result.notificationCount)"
+                    )
                     completion(
                         result.uuid,
                         result.hasFinderDesktop,

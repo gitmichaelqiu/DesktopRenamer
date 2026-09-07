@@ -42,7 +42,16 @@ extension SpaceLabelWindow {
         let knownVisibleSpaceIDs = visibleSpaceIDs
             ?? labelManager?.resolvedVisibleSpaceIDs()
             ?? SpaceHelper.getVisibleSystemSpaceIDs()
+        let traceID = SpaceHelper.debugTraceID()
+        SpaceHelper.debugTrace(
+            traceID,
+            "label visibility input label=\(spaceId), window=\(windowNumber), active=\(isActiveMode), isVisible=\(isVisible), knownVisible=\(knownVisibleSpaceIDs.sorted()), windowSpaces=\(SpaceHelper.getWindowCurrentSpaces(windowID: windowNumber).sorted()), live=\(SpaceHelper.debugFormatSpaceMap(SpaceHelper.getCurrentSpaceIDsByDisplay())), managerCurrent=\(spaceManager.currentSpaceUUID)"
+        )
         if !isActiveMode && knownVisibleSpaceIDs.contains(spaceId) {
+            SpaceHelper.debugTrace(
+                traceID,
+                "label visibility decision=hide-current-space-preview label=\(spaceId)"
+            )
             if labelManager?.shouldPreservePreviewWindowOrderingForSettings == true {
                 hideForSettingsActivation()
             } else {
@@ -52,6 +61,10 @@ extension SpaceLabelWindow {
         }
 
         if !isActiveMode, labelManager?.isPreviewTransitionSuppressed == true {
+            SpaceHelper.debugTrace(
+                traceID,
+                "label visibility decision=hide-transition-suppressed label=\(spaceId)"
+            )
             if labelManager?.shouldPreservePreviewWindowOrderingForSettings == true {
                 hideForSettingsActivation()
             } else {
@@ -102,10 +115,18 @@ extension SpaceLabelWindow {
             let inCoolingPeriod = timeSinceSwitch < coolingPeriod
             if self.isActiveMode {
                 if !self.isVisible {
+                    SpaceHelper.debugTrace(
+                        traceID,
+                        "label visibility decision=order-active label=\(spaceId), target=\(spaceId), liveBefore=\(SpaceHelper.debugFormatSpaceMap(SpaceHelper.getCurrentSpaceIDsByDisplay()))"
+                    )
                     print("SpaceLabelWindow[\(self.spaceId)]: orderFront() for ACTIVE space.")
                     self.bindToTargetSpace()
                     if isBoundToTargetSpace() {
                         self.orderFront(nil)
+                        SpaceHelper.debugTrace(
+                            traceID,
+                            "label visibility active-order complete label=\(spaceId), liveAfter=\(SpaceHelper.debugFormatSpaceMap(SpaceHelper.getCurrentSpaceIDsByDisplay())), windowSpaces=\(SpaceHelper.getWindowCurrentSpaces(windowID: windowNumber).sorted())"
+                        )
                         didBindToTargetSpace = true
                         self.hasOrderedInOnce = true
                     } else {
@@ -123,6 +144,10 @@ extension SpaceLabelWindow {
                 // assignment. An empty CGS space list is not evidence that a
                 // preview is safely off the current Space.
                 if !inCoolingPeriod {
+                    SpaceHelper.debugTrace(
+                        traceID,
+                        "label visibility decision=order-preview label=\(spaceId), liveBefore=\(SpaceHelper.debugFormatSpaceMap(SpaceHelper.getCurrentSpaceIDsByDisplay())), windowSpaces=\(SpaceHelper.getWindowCurrentSpaces(windowID: windowNumber).sorted())"
+                    )
                     self.bindToTargetSpace()
                     if isBoundToTargetSpace() {
                         print("SpaceLabelWindow[\(self.spaceId)]: Non-activating orderFront() for background preview.")
@@ -147,6 +172,10 @@ extension SpaceLabelWindow {
                 // which hides other labels via orderOut during drag-based switching).
                 // Preview labels only order front once, so re-order it now to recover.
                 if !inCoolingPeriod {
+                    SpaceHelper.debugTrace(
+                        traceID,
+                        "label visibility decision=reorder-preview label=\(spaceId), liveBefore=\(SpaceHelper.debugFormatSpaceMap(SpaceHelper.getCurrentSpaceIDsByDisplay())), windowSpaces=\(SpaceHelper.getWindowCurrentSpaces(windowID: windowNumber).sorted())"
+                    )
                     self.bindToTargetSpace()
                     if isBoundToTargetSpace() {
                         print("SpaceLabelWindow[\(self.spaceId)]: Non-activating orderFront() for background preview.")
@@ -184,6 +213,10 @@ extension SpaceLabelWindow {
         } else {
             self.ignoresMouseEvents = true
         }
+        SpaceHelper.debugTrace(
+            traceID,
+            "label visibility end label=\(spaceId), active=\(isActiveMode), isVisible=\(isVisible), visuallyVisible=\(isVisuallyVisible), windowSpaces=\(SpaceHelper.getWindowCurrentSpaces(windowID: windowNumber).sorted()), live=\(SpaceHelper.debugFormatSpaceMap(SpaceHelper.getCurrentSpaceIDsByDisplay()))"
+        )
     }
 
     @objc func repositionWindow() {

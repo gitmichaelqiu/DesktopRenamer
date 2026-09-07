@@ -36,6 +36,11 @@ extension SpaceManager {
     /// fence: monitor and retry reads can repeat an old WindowServer snapshot,
     /// while an ordered active-space notification represents a new transition.
     func handleAuthoritativeSpaceChange(_ spacesByDisplay: [String: String]) {
+        let traceID = SpaceHelper.debugTraceID()
+        SpaceHelper.debugTrace(
+            traceID,
+            "manager authoritative notification received snapshot=\(SpaceHelper.debugFormatSpaceMap(spacesByDisplay)), modelCurrent=\(currentSpaceUUID), fences=\(confirmedSpaceObservationFence.confirmations.mapValues { $0.spaceID + "/g" + String($0.generation) })"
+        )
         let update = { [weak self] in
             guard let self else { return }
 
@@ -43,6 +48,10 @@ extension SpaceManager {
                 guard let confirmation = self.confirmedSpaceObservationFence.confirmation(
                     for: displayID
                 ) else {
+                    SpaceHelper.debugTrace(
+                        traceID,
+                        "manager authoritative display=\(displayID), space=\(spaceID), decision=no-fence"
+                    )
                     continue
                 }
 
@@ -52,6 +61,10 @@ extension SpaceManager {
                         spaceID: spaceID
                     )
                     self.currentSpaceByDisplay[displayID] = spaceID
+                    SpaceHelper.debugTrace(
+                        traceID,
+                        "manager authoritative display=\(displayID), space=\(spaceID), decision=mark-confirmed-destination generation=\(confirmation.generation)"
+                    )
                     continue
                 }
 
@@ -59,6 +72,10 @@ extension SpaceManager {
                     - SpaceHelper.lastProgrammaticSwitchTime < 2.0
                 if recentProgrammaticSwitch,
                    SpaceHelper.lastProgrammaticTargetSpaceID == confirmation.spaceID {
+                    SpaceHelper.debugTrace(
+                        traceID,
+                        "manager authoritative display=\(displayID), space=\(spaceID), decision=ignore-recent-programmatic-confirmation confirmed=\(confirmation.spaceID)"
+                    )
                     DiagnosticEventLog.shared.record(
                         subsystem: "SpaceManager",
                         level: "info",
@@ -71,6 +88,10 @@ extension SpaceManager {
                     displayID: displayID,
                     spaceID: spaceID
                 ) else {
+                    SpaceHelper.debugTrace(
+                        traceID,
+                        "manager authoritative display=\(displayID), space=\(spaceID), decision=ignore-before-destination-observed confirmed=\(confirmation.spaceID)"
+                    )
                     DiagnosticEventLog.shared.record(
                         subsystem: "SpaceManager",
                         level: "info",
@@ -87,6 +108,10 @@ extension SpaceManager {
                 if self.spaceChangeRetryDisplayID == displayID {
                     self.cancelSpaceChangeRetry()
                 }
+                SpaceHelper.debugTrace(
+                    traceID,
+                    "manager authoritative display=\(displayID), space=\(spaceID), decision=clear-fence previous=\(confirmation.spaceID)"
+                )
             }
         }
 
@@ -184,12 +209,25 @@ extension SpaceManager {
 
         guard !isSystemSleeping else { return }
 
+        let traceID = SpaceHelper.debugTraceID()
+        let receivedFence = confirmedSpaceObservationFence.confirmation(for: displayID)
+            .map { $0.spaceID + "/g" + String($0.generation) } ?? "nil"
+        let receivedTarget = SpaceHelper.activeProgrammaticSwitchTargetSpaceID ?? "nil"
+        SpaceHelper.debugTrace(
+            traceID,
+            "manager observation received source=\(source), raw=\(rawUUID), display=\(displayID), bypassCoalescing=\(bypassMonitorCoalescing), modelCurrent=\(currentSpaceUUID), modelByDisplay=\(SpaceHelper.debugFormatSpaceMap(currentSpaceByDisplay)), liveBefore=\(SpaceHelper.debugFormatSpaceMap(SpaceHelper.getCurrentSpaceIDsByDisplay())), fence=\(receivedFence), switching=\(SpaceHelper.isSwitching), target=\(receivedTarget)"
+        )
+
         if source == "Monitor" && !bypassMonitorCoalescing {
             scheduleMonitorSpaceChange(
                 rawUUID: rawUUID,
                 isDesktop: isDesktop,
                 ncCount: ncCount,
                 displayID: displayID
+            )
+            SpaceHelper.debugTrace(
+                traceID,
+                "manager observation deferred source=Monitor pendingMonitor=\(pendingMonitorSpaceChange?.rawUUID ?? "nil") monitorGeneration=\(monitorSpaceChangeGeneration)"
             )
             return
         }
@@ -200,12 +238,21 @@ extension SpaceManager {
         var shouldUpdateWidget = false
 
         guard let cgsState = SpaceHelper.getSystemState(onDisplayID: displayID) else {
+            SpaceHelper.debugTrace(traceID, "manager observation decision=discard-no-cgs-state source=\(source)")
             if source == "Monitor" { scheduleSpaceChangeRetry(displayID: displayID) }
             return
         }
 
         let previousUUID = self.currentSpaceUUID
         let targetUUID = cgsState.currentUUID
+        let liveSpaceIDsByDisplay = SpaceHelper.getCurrentSpaceIDsByDisplay()
+        let fenceDescription = confirmedSpaceObservationFence.confirmation(for: cgsState.displayID)
+            .map { $0.spaceID + "/g" + String($0.generation) } ?? "nil"
+        let pendingTarget = pendingProgrammaticSpaceSwitches[cgsState.displayID]?.spaceID ?? "nil"
+        SpaceHelper.debugTrace(
+            traceID,
+            "manager snapshot source=\(source), cgsCurrent=\(targetUUID), cgsDisplay=\(cgsState.displayID), cgsSpaces=\(cgsState.spaces.map(\.id).joined(separator: ",")), liveAfter=\(SpaceHelper.debugFormatSpaceMap(liveSpaceIDsByDisplay)), fence=\(fenceDescription), pending=\(pendingTarget)"
+        )
 
         if source == "Monitor" || source == "Retry" || source == "Refresh" {
             let authoritativeLiveSpaceID = SpaceHelper.getCurrentSpaceID(for: cgsState.displayID)
@@ -243,6 +290,10 @@ extension SpaceManager {
                 if self.spaceChangeRetryDisplayID == cgsState.displayID {
                     cancelSpaceChangeRetry()
                 }
+                SpaceHelper.debugTrace(
+                    traceID,
+                    "manager observation decision=ignore-confirmed-fence observed=\(targetUUID), live=\(authoritativeLiveSpaceID ?? "nil"), source=\(source)"
+                )
                 return
             }
 
@@ -257,11 +308,19 @@ extension SpaceManager {
                     "Ignoring inconsistent space observation: display=\(cgsState.displayID), state=\(targetUUID), live=\(authoritativeLiveSpaceID), source=\(source)"
                 )
                 scheduleSpaceChangeRetry(displayID: cgsState.displayID)
+                SpaceHelper.debugTrace(
+                    traceID,
+                    "manager observation decision=ignore-inconsistent-snapshot state=\(targetUUID), live=\(authoritativeLiveSpaceID), source=\(source)"
+                )
                 return
             }
         }
 
         if shouldIgnoreStaleTransactionObservation(targetUUID, source: source) {
+            SpaceHelper.debugTrace(
+                traceID,
+                "manager observation decision=ignore-active-transaction observed=\(targetUUID), activeTarget=\(SpaceHelper.activeProgrammaticSwitchTargetSpaceID ?? "nil"), source=\(source)"
+            )
             return
         }
 
@@ -276,6 +335,10 @@ extension SpaceManager {
                     if source == "Monitor" {
                         scheduleSpaceChangeRetry(displayID: displayID)
                     }
+                    SpaceHelper.debugTrace(
+                        traceID,
+                        "manager observation decision=ignore-manual-attribution observed=\(cgsState.currentUUID), expected=\(targetUUID), source=\(source)"
+                    )
                     return
                 }
             }
@@ -288,6 +351,10 @@ extension SpaceManager {
             // the model after confirmation.
             if SpaceHelper.isSwitching,
                SpaceHelper.activeProgrammaticSwitchTargetSpaceID == targetUUID {
+                SpaceHelper.debugTrace(
+                    traceID,
+                    "manager observation decision=hold-for-programmatic-completion target=\(targetUUID), source=\(source)"
+                )
                 SpaceHelper.markProgrammaticSwitchComplete(at: targetUUID)
                 return
             }
@@ -555,6 +622,11 @@ extension SpaceManager {
                 cancelSpaceChangeRetry()
             }
 
+            SpaceHelper.debugTrace(
+                traceID,
+                "manager observation decision=publish previousModel=\(previousUUID), published=\(targetUUID), modelCurrentNow=\(self.currentSpaceUUID), modelByDisplayNow=\(SpaceHelper.debugFormatSpaceMap(self.currentSpaceByDisplay)), source=\(source)"
+            )
+
         if shouldUpdateWidget { scheduleWidgetUpdate() }
     }
 
@@ -565,6 +637,11 @@ extension SpaceManager {
         displayID: String
     ) {
         pendingMonitorSpaceChange = (rawUUID, isDesktop, ncCount, displayID)
+        let traceID = SpaceHelper.debugTraceID()
+        SpaceHelper.debugTrace(
+            traceID,
+            "monitor observation queued raw=\(rawUUID), display=\(displayID), existingWork=\(monitorSpaceChangeWorkItem != nil), nextGeneration=\(monitorSpaceChangeGeneration + 1)"
+        )
         guard monitorSpaceChangeWorkItem == nil else {
             DiagnosticEventLog.shared.record(
                 subsystem: "SpaceManager",
@@ -585,6 +662,10 @@ extension SpaceManager {
             self.monitorSpaceChangeWorkItem = nil
             guard let pending = self.pendingMonitorSpaceChange else { return }
             self.pendingMonitorSpaceChange = nil
+            SpaceHelper.debugTrace(
+                traceID,
+                "monitor observation executing generation=\(generation), raw=\(pending.rawUUID), display=\(pending.displayID)"
+            )
             self.handleSpaceChange(
                 pending.rawUUID,
                 isDesktop: pending.isDesktop,
@@ -602,6 +683,12 @@ extension SpaceManager {
     }
 
     func cancelPendingMonitorSpaceChange() {
+        if monitorSpaceChangeWorkItem != nil || pendingMonitorSpaceChange != nil {
+            SpaceHelper.debugTrace(
+                SpaceHelper.debugTraceID(),
+                "monitor observation canceled generation=\(monitorSpaceChangeGeneration), pendingRaw=\(pendingMonitorSpaceChange?.rawUUID ?? "nil"), pendingDisplay=\(pendingMonitorSpaceChange?.displayID ?? "nil")"
+            )
+        }
         monitorSpaceChangeGeneration += 1
         monitorSpaceChangeWorkItem?.cancel()
         monitorSpaceChangeWorkItem = nil
@@ -620,10 +707,19 @@ extension SpaceManager {
 
         let delay = TimeInterval(0.3 + Double(spaceChangeRetryCount) * 0.2)
         spaceChangeRetryCount += 1
+        let traceID = SpaceHelper.debugTraceID()
+        SpaceHelper.debugTrace(
+            traceID,
+            "retry scheduled generation=\(generation), display=\(spaceChangeRetryDisplayID ?? "nil"), count=\(spaceChangeRetryCount), delay=\(String(format: "%.2f", delay)), fence=\(spaceChangeRetryDisplayID.flatMap { confirmedSpaceObservationFence.confirmation(for: $0)?.spaceID } ?? "nil")"
+        )
 
         let workItem = DispatchWorkItem { [weak self] in
             guard let self = self,
                   generation == self.spaceChangeRetryGeneration else { return }
+            SpaceHelper.debugTrace(
+                traceID,
+                "retry executing generation=\(generation), display=\(self.spaceChangeRetryDisplayID ?? "nil")"
+            )
             self.performRetryDetection(generation: generation)
         }
         spaceChangeRetryWorkItem = workItem
@@ -643,7 +739,9 @@ extension SpaceManager {
     private func performRetryDetection(generation: Int) {
         guard !isSystemSleeping,
               generation == spaceChangeRetryGeneration else { return }
+        let traceID = SpaceHelper.debugTraceID()
         guard let cgsState = SpaceHelper.getSystemState(onDisplayID: spaceChangeRetryDisplayID) else {
+            SpaceHelper.debugTrace(traceID, "retry decision=reschedule-no-cgs-state generation=\(generation)")
             scheduleSpaceChangeRetry()
             return
         }
@@ -652,6 +750,11 @@ extension SpaceManager {
         // newly started switch. Cancellation cannot stop a work item that is
         // already executing, so reject its result again after the read.
         guard generation == spaceChangeRetryGeneration else { return }
+        let liveSpaceID = SpaceHelper.getCurrentSpaceID(for: cgsState.displayID)
+        SpaceHelper.debugTrace(
+            traceID,
+            "retry snapshot generation=\(generation), cgsCurrent=\(cgsState.currentUUID), display=\(cgsState.displayID), live=\(liveSpaceID ?? "nil"), fence=\(confirmedSpaceObservationFence.confirmation(for: cgsState.displayID)?.spaceID ?? "nil"), modelCurrent=\(currentSpaceUUID)"
+        )
 
         if let confirmation = confirmedSpaceObservationFence.confirmation(
             for: cgsState.displayID
@@ -670,11 +773,16 @@ extension SpaceManager {
                 if spaceChangeRetryDisplayID == cgsState.displayID {
                     cancelSpaceChangeRetry()
                 }
+                SpaceHelper.debugTrace(
+                    traceID,
+                    "retry decision=discard-behind-fence observed=\(cgsState.currentUUID), confirmed=\(confirmation.spaceID)"
+                )
                 return
             }
         }
 
         if shouldIgnoreStaleTransactionObservation(cgsState.currentUUID, source: "Retry") {
+            SpaceHelper.debugTrace(traceID, "retry decision=discard-active-transaction observed=\(cgsState.currentUUID)")
             return
         }
 
@@ -694,6 +802,10 @@ extension SpaceManager {
                 "Ignoring inconsistent space retry: current=\(cgsState.currentUUID), visible=\(visibleSpaceIDs.sorted())"
             )
             scheduleSpaceChangeRetry()
+            SpaceHelper.debugTrace(
+                traceID,
+                "retry decision=reschedule-not-visible current=\(cgsState.currentUUID), visible=\(visibleSpaceIDs.sorted())"
+            )
             return
         }
 
@@ -707,6 +819,10 @@ extension SpaceManager {
                 "Ignoring inconsistent space retry read: state=\(cgsState.currentUUID), independent=\(independentlyObservedSpaceID), display=\(cgsState.displayID)"
             )
             scheduleSpaceChangeRetry()
+            SpaceHelper.debugTrace(
+                traceID,
+                "retry decision=reschedule-live-mismatch state=\(cgsState.currentUUID), independent=\(independentlyObservedSpaceID)"
+            )
             return
         }
 
@@ -724,6 +840,10 @@ extension SpaceManager {
                 "Waiting for stable space retry candidate: current=\(cgsState.currentUUID), pass=\(spaceChangeRetryObservedPasses)/2"
             )
             scheduleSpaceChangeRetry()
+            SpaceHelper.debugTrace(
+                traceID,
+                "retry decision=reschedule-unstable candidate=\(cgsState.currentUUID), pass=\(spaceChangeRetryObservedPasses)/2"
+            )
             return
         }
 
@@ -754,6 +874,10 @@ extension SpaceManager {
                 scheduleSpaceChangeRetry()
             }
         }
+        SpaceHelper.debugTrace(
+            traceID,
+            "retry decision=complete generation=\(generation), candidate=\(cgsState.currentUUID), modelCurrentNow=\(currentSpaceUUID)"
+        )
     }
 
     // Debounces widget updates to throttle system load.

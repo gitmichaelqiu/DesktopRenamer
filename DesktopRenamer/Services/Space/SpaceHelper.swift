@@ -25,6 +25,34 @@ func CGSOrderWindow(_ cid: Int32, _ windowID: UInt32, _ op: Int32, _ relativeToW
 
 class SpaceHelper {
 
+    #if DEBUG
+    private static var debugTraceSequence: UInt64 = 0
+
+    /// Monotonic IDs make interleaved WindowServer, monitor, and label output
+    /// reconstructable from the Xcode console without changing runtime state.
+    static func debugTraceID() -> UInt64 {
+        debugTraceSequence += 1
+        return debugTraceSequence
+    }
+
+    static func debugTrace(_ id: UInt64, _ message: @autoclosure () -> String) {
+        let queue = Thread.isMainThread ? "main" : "background"
+        print("SpaceTrace[\(id)][\(queue)] \(message())")
+    }
+    #else
+    static func debugTraceID() -> UInt64 { 0 }
+
+    static func debugTrace(_ id: UInt64, _ message: @autoclosure () -> String) {}
+    #endif
+
+    static func debugFormatSpaceMap(_ spacesByDisplay: [String: String]) -> String {
+        guard !spacesByDisplay.isEmpty else { return "{}" }
+        return "{"
+            + spacesByDisplay.keys.sorted().map { "\($0)=\(spacesByDisplay[$0] ?? "nil")" }
+                .joined(separator: ", ")
+            + "}"
+    }
+
     static var onSpaceChange: ((String, Bool, Int, String) -> Void)?
     static var onAuthoritativeSpaceChange: (([String: String]) -> Void)?
     static var globalEventMonitor: Any?

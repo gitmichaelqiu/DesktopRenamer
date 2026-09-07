@@ -13,6 +13,11 @@ extension SpaceManager {
         isManual: Bool = true
     ) -> SpaceSwitchRequestDisposition {
         print("SpaceManager: switchToSpace(\(space.id)) on display \(space.displayID) forceInstant: \(forceInstant) isManual: \(isManual)")
+        let traceID = SpaceHelper.debugTraceID()
+        SpaceHelper.debugTrace(
+            traceID,
+            "manager switch request target=\(space.id), display=\(space.displayID), forceInstant=\(forceInstant), manual=\(isManual), modelCurrent=\(currentSpaceUUID), live=\(SpaceHelper.debugFormatSpaceMap(SpaceHelper.getCurrentSpaceIDsByDisplay()))"
+        )
 
         // Every explicit request invalidates observations from the previous
         // destination before WindowServer can deliver another delayed read.
@@ -70,6 +75,10 @@ extension SpaceManager {
         case .queued:
             break
         }
+        SpaceHelper.debugTrace(
+            traceID,
+            "manager switch result target=\(space.id), display=\(space.displayID), disposition=\(String(describing: disposition)), fence=\(confirmedSpaceObservationFence.confirmation(for: space.displayID).map { $0.spaceID + "/g" + String($0.generation) } ?? "nil"), modelCurrent=\(currentSpaceUUID), liveAfter=\(SpaceHelper.debugFormatSpaceMap(SpaceHelper.getCurrentSpaceIDsByDisplay()))"
+        )
         return disposition
     }
 
@@ -86,6 +95,10 @@ extension SpaceManager {
         )
         cancelPendingMonitorSpaceChange()
         cancelSpaceChangeRetry()
+        SpaceHelper.debugTrace(
+            SpaceHelper.debugTraceID(),
+            "manager observation fence begun display=\(displayID), target=\(spaceID), generation=\(generation), live=\(SpaceHelper.debugFormatSpaceMap(SpaceHelper.getCurrentSpaceIDsByDisplay()))"
+        )
         return generation
     }
 
@@ -98,6 +111,10 @@ extension SpaceManager {
             displayID: displayID,
             spaceID: spaceID,
             generation: generation
+        )
+        SpaceHelper.debugTrace(
+            SpaceHelper.debugTraceID(),
+            "manager observation fence confirmed display=\(displayID), target=\(spaceID), generation=\(generation), live=\(SpaceHelper.debugFormatSpaceMap(SpaceHelper.getCurrentSpaceIDsByDisplay()))"
         )
         guard let pending = pendingProgrammaticSpaceSwitches[displayID],
               pending.spaceID == spaceID,
@@ -121,6 +138,10 @@ extension SpaceManager {
             let displayID = notification.userInfo?["displayID"] as? String
                 ?? self.spaceNameDict.first(where: { $0.id == spaceID })?.displayID
                 ?? self.currentDisplayID
+            SpaceHelper.debugTrace(
+                SpaceHelper.debugTraceID(),
+                "manager received programmatic-start target=\(spaceID), display=\(displayID), request=\(requestID.map(String.init) ?? "nil"), generation=\(generation.map(String.init) ?? "instant"), forceInstant=\(forceInstant), manual=\(isManual), live=\(SpaceHelper.debugFormatSpaceMap(SpaceHelper.getCurrentSpaceIDsByDisplay()))"
+            )
 
             if let requestID {
                 if let latestRequestID = self.latestProgrammaticSwitchRequestIDs[displayID],
@@ -192,6 +213,10 @@ extension SpaceManager {
                 level: "info",
                 "programmatic switch transaction started: target=\(spaceID), display=\(displayID), manual=\(isManual), generation=\(generation.map(String.init) ?? "instant")"
             )
+            SpaceHelper.debugTrace(
+                SpaceHelper.debugTraceID(),
+                "manager programmatic-start applied target=\(spaceID), display=\(displayID), activeGeneration=\(self.activeProgrammaticSwitchGeneration.map(String.init) ?? "nil"), fence=\(self.confirmedSpaceObservationFence.confirmation(for: displayID).map { $0.spaceID + "/g" + String($0.generation) } ?? "nil")"
+            )
         }
 
         if Thread.isMainThread {
@@ -214,6 +239,10 @@ extension SpaceManager {
             let displayID = notification.userInfo?["displayID"] as? String
                 ?? self.spaceNameDict.first(where: { $0.id == spaceID })?.displayID
                 ?? self.currentDisplayID
+            SpaceHelper.debugTrace(
+                SpaceHelper.debugTraceID(),
+                "manager received programmatic-finish target=\(spaceID), display=\(displayID), generation=\(generation), confirmed=\(confirmed), live=\(SpaceHelper.debugFormatSpaceMap(SpaceHelper.getCurrentSpaceIDsByDisplay()))"
+            )
 
             guard self.activeProgrammaticSwitchGeneration == generation else {
                 DiagnosticEventLog.shared.record(

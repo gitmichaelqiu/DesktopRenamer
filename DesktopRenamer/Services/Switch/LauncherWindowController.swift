@@ -105,6 +105,11 @@ class LauncherWindowController: NSWindowController, NSWindowDelegate {
     
     func show() {
         guard let panel = window as? LauncherNSPanel else { return }
+        let traceID = SpaceHelper.debugTraceID()
+        SpaceHelper.debugTrace(
+            traceID,
+            "launcher show begin visible=\(panel.isVisible), key=\(panel.isKeyWindow), windowSpaces=\(SpaceHelper.getWindowCurrentSpaces(windowID: panel.windowNumber).sorted()), live=\(SpaceHelper.debugFormatSpaceMap(SpaceHelper.getCurrentSpaceIDsByDisplay())), collectionBehavior=\(panel.collectionBehavior.rawValue)"
+        )
         
         // Capture previously active window before we activate the launcher and take focus
         viewModel.previouslyActiveWindow = SpaceHelper.getActiveWindowInfo()
@@ -117,7 +122,15 @@ class LauncherWindowController: NSWindowController, NSWindowDelegate {
         
         // Make key and focus
         NSApp.activate(ignoringOtherApps: true)
+        SpaceHelper.debugTrace(
+            traceID,
+            "launcher show after-app-activation live=\(SpaceHelper.debugFormatSpaceMap(SpaceHelper.getCurrentSpaceIDsByDisplay())), windowSpaces=\(SpaceHelper.getWindowCurrentSpaces(windowID: panel.windowNumber).sorted()), key=\(panel.isKeyWindow)"
+        )
         panel.makeKeyAndOrderFront(nil)
+        SpaceHelper.debugTrace(
+            traceID,
+            "launcher show end visible=\(panel.isVisible), key=\(panel.isKeyWindow), windowSpaces=\(SpaceHelper.getWindowCurrentSpaces(windowID: panel.windowNumber).sorted()), live=\(SpaceHelper.debugFormatSpaceMap(SpaceHelper.getCurrentSpaceIDsByDisplay()))"
+        )
         
         // Post a notification to force focus
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
@@ -126,6 +139,12 @@ class LauncherWindowController: NSWindowController, NSWindowDelegate {
     }
     
     func hide() {
+        let traceID = SpaceHelper.debugTraceID()
+        let panel = window
+        SpaceHelper.debugTrace(
+            traceID,
+            "launcher hide begin visible=\(panel?.isVisible ?? false), key=\(panel?.isKeyWindow ?? false), windowSpaces=\(panel.map { SpaceHelper.getWindowCurrentSpaces(windowID: $0.windowNumber).sorted() } ?? []), live=\(SpaceHelper.debugFormatSpaceMap(SpaceHelper.getCurrentSpaceIDsByDisplay()))"
+        )
         window?.orderOut(nil)
         isCommandKeyPressed = false
         cmdLongPressWorkItem?.cancel()
@@ -133,6 +152,10 @@ class LauncherWindowController: NSWindowController, NSWindowDelegate {
         viewModel.resetForPresentation()
         viewModel.showCommandNumbers = false
         viewModel.previouslyActiveWindow = nil
+        SpaceHelper.debugTrace(
+            traceID,
+            "launcher hide end visible=\(panel?.isVisible ?? false), key=\(panel?.isKeyWindow ?? false), windowSpaces=\(panel.map { SpaceHelper.getWindowCurrentSpaces(windowID: $0.windowNumber).sorted() } ?? []), live=\(SpaceHelper.debugFormatSpaceMap(SpaceHelper.getCurrentSpaceIDsByDisplay()))"
+        )
     }
     
     func toggle() {

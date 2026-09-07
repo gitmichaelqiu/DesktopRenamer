@@ -856,6 +856,15 @@ extension SpaceLabelManager {
     }
 
     func applyVisibility(_ visibleUUIDs: Set<String>, forDisplay displayID: String? = nil) {
+        let traceID = SpaceHelper.debugTraceID()
+        let liveSpaceIDsByDisplay = SpaceHelper.getCurrentSpaceIDsByDisplay()
+        let fenceDescription = displayID.flatMap {
+            spaceManager?.confirmedSpaceObservationFence.confirmation(for: $0)
+        }.map { $0.spaceID + "/g" + String($0.generation) } ?? "nil"
+        SpaceHelper.debugTrace(
+            traceID,
+            "labels apply begin scope=\(displayID ?? "global"), visible=\(visibleUUIDs.sorted()), live=\(SpaceHelper.debugFormatSpaceMap(liveSpaceIDsByDisplay)), managerCurrent=\(spaceManager?.currentSpaceUUID ?? "nil"), managerByDisplay=\(SpaceHelper.debugFormatSpaceMap(spaceManager?.currentSpaceByDisplay ?? [:])), fence=\(fenceDescription), previewSuppressed=\(isPreviewTransitionSuppressed)"
+        )
         // Every visibility refresh is also a source-independent transition
         // checkpoint. This closes the race where a refresh was queued before
         // NSWorkspace delivered its space-change notification (for example
@@ -918,6 +927,10 @@ extension SpaceLabelManager {
         }
 
         updateActiveWindowModes(for: visibleUUIDs, displayID: displayID)
+        SpaceHelper.debugTrace(
+            traceID,
+            "labels apply end scope=\(displayID ?? "global"), visible=\(visibleUUIDs.sorted()), previewSuppressed=\(isPreviewTransitionSuppressed), activeWindows=\(activeWindows.count), previewWindows=\(createdWindows.count), live=\(SpaceHelper.debugFormatSpaceMap(SpaceHelper.getCurrentSpaceIDsByDisplay()))"
+        )
     }
 
     private func currentFullscreenDisplayIDs(
@@ -1223,12 +1236,21 @@ extension SpaceLabelManager {
 
     func seedAllLabels() {
         guard let spaceManager = spaceManager else { return }
+        let traceID = SpaceHelper.debugTraceID()
+        SpaceHelper.debugTrace(
+            traceID,
+            "labels seed begin spaces=\(spaceManager.spaceNameDict.map(\.id).joined(separator: ",")), live=\(SpaceHelper.debugFormatSpaceMap(SpaceHelper.getCurrentSpaceIDsByDisplay())), modelCurrent=\(spaceManager.currentSpaceUUID)"
+        )
         print("SpaceLabelManager: Background seeding all labels for Mission Control...")
         let allSpaces = spaceManager.spaceNameDict
         for space in allSpaces {
             ensureWindow(for: space.id, name: space.customName, displayID: space.displayID)
         }
         updateAllWindowModes()
+        SpaceHelper.debugTrace(
+            traceID,
+            "labels seed end live=\(SpaceHelper.debugFormatSpaceMap(SpaceHelper.getCurrentSpaceIDsByDisplay())), modelCurrent=\(spaceManager.currentSpaceUUID)"
+        )
         restoreLaunchSpaceIfNeeded()
 
         // SAFETY: 2 seconds after seeding, verify no labels are stranded on the

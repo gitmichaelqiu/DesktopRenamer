@@ -39,6 +39,11 @@ extension SpaceHelper {
         forceInstant: Bool = false,
         isManual: Bool = false
     ) -> SpaceSwitchRequestDisposition {
+        let traceID = debugTraceID()
+        debugTrace(
+            traceID,
+            "switch request target=\(spaceID), forceInstant=\(forceInstant), manual=\(isManual), live=\(debugFormatSpaceMap(getCurrentSpaceIDsByDisplay())), active=\(activeProgrammaticSwitchTargetSpaceID ?? "nil")/\(activeProgrammaticSwitchGeneration.map(String.init) ?? "nil"), pending=\(pendingProgrammaticSwitchTargetSpaceID ?? "nil")"
+        )
         DiagnosticEventLog.shared.record(
             subsystem: "SpaceHelper",
             level: "info",
@@ -102,10 +107,16 @@ extension SpaceHelper {
                 level: "info",
                 "switch request already current: target=\(spaceID)"
             )
+            debugTrace(traceID, "switch request disposition=alreadyCurrent target=\(spaceID)")
             return .alreadyCurrent
         }
 
-        return startSpaceSwitch(context, forceInstant: forceInstant, isManual: isManual)
+        let disposition = startSpaceSwitch(context, forceInstant: forceInstant, isManual: isManual)
+        debugTrace(
+            traceID,
+            "switch request disposition=\(String(describing: disposition)), target=\(spaceID), liveAfterRequest=\(debugFormatSpaceMap(getCurrentSpaceIDsByDisplay()))"
+        )
+        return disposition
     }
 
     /// Resolves one adjacent space from a single managed-space snapshot. The
@@ -242,6 +253,11 @@ extension SpaceHelper {
 
         let spaceID = context.targetSpace.id
         let displayID = context.targetSpace.displayID
+        let traceID = debugTraceID()
+        debugTrace(
+            traceID,
+            "startSpaceSwitch target=\(spaceID), display=\(displayID), from=\(context.liveCurrentSpaceID ?? "nil"), steps=\(context.steps.map(String.init) ?? "nil"), forceInstant=\(forceInstant), fullscreen=\(context.targetIsFullscreen)"
+        )
         let generation: UInt64?
 
         if forceInstant {
@@ -277,6 +293,10 @@ extension SpaceHelper {
         // every asynchronous callback.
         lastProgrammaticSwitchTime = Date().timeIntervalSince1970
         lastProgrammaticTargetSpaceID = spaceID
+        debugTrace(
+            traceID,
+            "switch transaction armed generation=\(generation.map(String.init) ?? "instant"), target=\(spaceID), display=\(displayID), liveBeforePrimitive=\(debugFormatSpaceMap(getCurrentSpaceIDsByDisplay()))"
+        )
 
         // Gesture-based Space Switch handling. Keep the synthetic desktop
         // gesture as the primary path for fullscreen transitions too; the
@@ -481,6 +501,12 @@ extension SpaceHelper {
         let requestID = nextProgrammaticSwitchRequestID
         lastProgrammaticSwitchRequestID = requestID
 
+        let traceID = debugTraceID()
+        debugTrace(
+            traceID,
+            "programmatic switch primitive emitted request=\(requestID), generation=\(generation.map(String.init) ?? "instant"), target=\(spaceID), display=\(displayID), forceInstant=\(forceInstant), live=\(debugFormatSpaceMap(getCurrentSpaceIDsByDisplay()))"
+        )
+
         DiagnosticEventLog.shared.record(
             subsystem: "SpaceHelper",
             level: "info",
@@ -586,7 +612,14 @@ extension SpaceHelper {
         guard let active = switchTransactionCoordinator.active,
               isSwitching,
               active.request.spaceID == spaceID else { return }
-        guard isSpaceCurrentAndVisible(spaceID) else {
+        let liveSpaceMap = getCurrentSpaceIDsByDisplay()
+        let isCurrentAndVisible = isSpaceCurrentAndVisible(spaceID)
+        let traceID = debugTraceID()
+        debugTrace(
+            traceID,
+            "destination observation candidate target=\(spaceID), generation=\(active.generation), live=\(debugFormatSpaceMap(liveSpaceMap)), currentAndVisible=\(isCurrentAndVisible), notificationObserved=\(programmaticSwitchNotificationObserved)"
+        )
+        guard isCurrentAndVisible else {
             DiagnosticEventLog.shared.record(
                 subsystem: "SpaceHelper",
                 level: "info",
@@ -595,6 +628,7 @@ extension SpaceHelper {
             return
         }
         programmaticSwitchDestinationObserved = true
+        debugTrace(traceID, "destination observation accepted target=\(spaceID)")
         if !programmaticSwitchNotificationObserved {
             DiagnosticEventLog.shared.record(
                 subsystem: "SpaceHelper",
@@ -610,9 +644,15 @@ extension SpaceHelper {
     /// space changes. SpaceManager may have observed the destination first, so
     /// either ordering is accepted.
     static func noteActiveSpaceDidChange(_ currentSpaceIDsByDisplay: [String: String]) {
+        let traceID = debugTraceID()
+        debugTrace(
+            traceID,
+            "noteActiveSpaceDidChange snapshot=\(debugFormatSpaceMap(currentSpaceIDsByDisplay)), switching=\(isSwitching), expectedDisplay=\(programmaticSwitchDisplayID ?? "nil"), expectedTarget=\(activeProgrammaticSwitchTargetSpaceID ?? "nil"), destinationObserved=\(programmaticSwitchDestinationObserved)"
+        )
         guard let active = switchTransactionCoordinator.active, isSwitching else { return }
         guard let displayID = programmaticSwitchDisplayID,
               currentSpaceIDsByDisplay[displayID] == active.request.spaceID else {
+            debugTrace(traceID, "active-space notification decision=ignored-not-current-target")
             DiagnosticEventLog.shared.record(
                 subsystem: "SpaceHelper",
                 level: "info",
@@ -621,6 +661,7 @@ extension SpaceHelper {
             return
         }
         programmaticSwitchNotificationObserved = true
+        debugTrace(traceID, "active-space notification matched target=\(active.request.spaceID)")
         guard programmaticSwitchDestinationObserved else { return }
 
         finishProgrammaticSwitch(at: active.request.spaceID, generation: active.generation)
@@ -740,6 +781,11 @@ extension SpaceHelper {
 
         let pendingRequest = switchTransactionCoordinator.endActive()
         let displayID = programmaticSwitchDisplayID
+        let traceID = debugTraceID()
+        debugTrace(
+            traceID,
+            "finishProgrammaticSwitch reason=\(reason), generation=\(generation), target=\(spaceID), display=\(displayID ?? "nil"), live=\(debugFormatSpaceMap(getCurrentSpaceIDsByDisplay())), pending=\(pendingRequest?.spaceID ?? "nil")"
+        )
         isSwitching = false
         programmaticSwitchDestinationObserved = false
         programmaticSwitchNotificationObserved = false

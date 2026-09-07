@@ -94,8 +94,17 @@ extension SpaceHelper {
 
         spaceDetectionGeneration += 1
         let generation = spaceDetectionGeneration
+        let traceID = debugTraceID()
+        debugTrace(
+            traceID,
+            "detectSpaceChange scheduled detectionGeneration=\(generation), rawGeneration=\(rawSpaceUUIDGeneration)"
+        )
         getRawSpaceUUID { spaceUUID, isDesktop, ncCnt, displayID in
             guard generation == spaceDetectionGeneration else {
+                debugTrace(
+                    traceID,
+                    "detectSpaceChange discarded result detectionGeneration=\(generation), currentDetectionGeneration=\(spaceDetectionGeneration), raw=\(spaceUUID), display=\(displayID)"
+                )
                 DiagnosticEventLog.shared.record(
                     subsystem: "SpaceHelper",
                     level: "info",
@@ -103,6 +112,10 @@ extension SpaceHelper {
                 )
                 return
             }
+            debugTrace(
+                traceID,
+                "detectSpaceChange publishing raw=\(spaceUUID), desktop=\(isDesktop), notifications=\(ncCnt), display=\(displayID)"
+            )
             onSpaceChange?(spaceUUID, isDesktop, ncCnt, displayID)
         }
     }

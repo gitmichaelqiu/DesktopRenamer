@@ -28,6 +28,13 @@ extension SpaceLabelWindow {
     /// or make the label's space current.
     func orderPreviewWithoutActivating() {
         guard windowNumber > 0 else { return }
+        let traceID = SpaceHelper.debugTraceID()
+        let beforeSpaces = SpaceHelper.getWindowCurrentSpaces(windowID: windowNumber)
+        let beforeCurrentSpaces = SpaceHelper.getCurrentSpaceIDsByDisplay()
+        SpaceHelper.debugTrace(
+            traceID,
+            "label order-preview begin label=\(spaceId), window=\(windowNumber), windowSpaces=\(beforeSpaces.sorted()), live=\(SpaceHelper.debugFormatSpaceMap(beforeCurrentSpaces)), visible=\(isVisible), key=\(isKeyWindow)"
+        )
         // CGSOrderWindow only changes z-order; it does not unhide an NSWindow.
         // The preview is a nonactivating NSPanel, and preventWindowOrdering
         // covers the AppKit handoff while it is being ordered in.
@@ -41,6 +48,12 @@ extension SpaceLabelWindow {
                 "Could not order preview label \(self.spaceId) above (result=\(result))"
             )
         }
+        let afterSpaces = SpaceHelper.getWindowCurrentSpaces(windowID: windowNumber)
+        let afterCurrentSpaces = SpaceHelper.getCurrentSpaceIDsByDisplay()
+        SpaceHelper.debugTrace(
+            traceID,
+            "label order-preview end label=\(spaceId), window=\(windowNumber), result=\(result), windowSpaces=\(afterSpaces.sorted()), live=\(SpaceHelper.debugFormatSpaceMap(afterCurrentSpaces)), visible=\(isVisible), key=\(isKeyWindow)"
+        )
     }
 
     // Binds the window to a specific space via private APIs.
@@ -52,16 +65,23 @@ extension SpaceLabelWindow {
         let targetSpaces = [NSNumber(value: targetSpaceInt)] as CFArray
         let currentSpacesCF = CGSCopySpacesForWindows(cid, 7, winID)
         let currentSpaces = (currentSpacesCF as? [NSNumber])?.map { $0.intValue } ?? []
+        let traceID = SpaceHelper.debugTraceID()
 
         // Rebinding an already-correct label is a synchronous WindowServer
         // operation. Visibility and active-label synchronization can call
         // this method several times during one transition, so avoid changing
         // the window's space assignment when there is nothing to repair.
         if currentSpaces == [targetSpaceInt] {
+            SpaceHelper.debugTrace(
+                traceID,
+                "label bind skipped label=\(spaceId), window=\(windowNumber), target=\(targetSpaceInt), windowSpaces=\(currentSpaces), reason=already-bound"
+            )
             return
         }
 
         CGSAddWindowsToSpaces(cid, winID, targetSpaces)
+        let spacesAfterAddCF = CGSCopySpacesForWindows(cid, 7, winID)
+        let spacesAfterAdd = (spacesAfterAddCF as? [NSNumber])?.map { $0.intValue } ?? []
 
         print("SpaceLabelWindow[\(self.spaceId)]: bindToTargetSpace. Window Number: \(self.windowNumber). Current spaces: \(currentSpaces). Target space: \(targetSpaceInt)")
         DiagnosticEventLog.shared.record(subsystem: "SpaceLabelWindow", "bindToTargetSpace[\(self.spaceId)]: win=\(self.windowNumber), currentSpaces=\(currentSpaces), target=\(targetSpaceInt)")
@@ -72,6 +92,12 @@ extension SpaceLabelWindow {
             let removeCF = spacesToRemove.map { NSNumber(value: $0) } as CFArray
             CGSRemoveWindowsFromSpaces(cid, winID, removeCF)
         }
+        let finalSpacesCF = CGSCopySpacesForWindows(cid, 7, winID)
+        let finalSpaces = (finalSpacesCF as? [NSNumber])?.map { $0.intValue } ?? []
+        SpaceHelper.debugTrace(
+            traceID,
+            "label bind end label=\(spaceId), window=\(windowNumber), target=\(targetSpaceInt), before=\(currentSpaces), afterAdd=\(spacesAfterAdd), removed=\(spacesToRemove), final=\(finalSpaces), live=\(SpaceHelper.debugFormatSpaceMap(SpaceHelper.getCurrentSpaceIDsByDisplay()))"
+        )
     }
 
     /// Returns true if this window is currently assigned to its target space by the CGS window server.
@@ -79,6 +105,10 @@ extension SpaceLabelWindow {
         guard windowNumber > 0 else { return false }
         let currentSpaces = SpaceHelper.getWindowCurrentSpaces(windowID: windowNumber)
         let bound = currentSpaces.contains(spaceId)
+        SpaceHelper.debugTrace(
+            SpaceHelper.debugTraceID(),
+            "label binding check label=\(spaceId), window=\(windowNumber), target=\(spaceId), bound=\(bound), windowSpaces=\(currentSpaces.sorted()), live=\(SpaceHelper.debugFormatSpaceMap(SpaceHelper.getCurrentSpaceIDsByDisplay()))"
+        )
         DiagnosticEventLog.shared.record(subsystem: "SpaceLabelWindow", level: "info", "isBoundToTargetSpace[\(self.spaceId)]: win=\(self.windowNumber), bound=\(bound), spaces=\(currentSpaces.sorted().joined(separator: ","))")
         return bound
     }
