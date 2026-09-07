@@ -24,8 +24,8 @@ extension SpaceLabelWindow {
         NSApp.activate(ignoringOtherApps: true)
     }
 
-    /// Shows a preview label without asking AppKit to activate the application
-    /// or make the label's space current.
+    /// Shows a preview label without activating the application or making the
+    /// label's Space current.
     func orderPreviewWithoutActivating() {
         guard windowNumber > 0 else { return }
         let traceID = SpaceHelper.debugTraceID()
@@ -35,24 +35,16 @@ extension SpaceLabelWindow {
             traceID,
             "label order-preview begin label=\(spaceId), window=\(windowNumber), windowSpaces=\(beforeSpaces.sorted()), live=\(SpaceHelper.debugFormatSpaceMap(beforeCurrentSpaces)), visible=\(isVisible), key=\(isKeyWindow)"
         )
-        // CGSOrderWindow only changes z-order; it does not unhide an NSWindow.
-        // The preview is a nonactivating NSPanel, and preventWindowOrdering
-        // covers the AppKit handoff while it is being ordered in.
-        NSApp.preventWindowOrdering()
-        orderFront(nil)
-        let result = CGSOrderWindow(_CGSDefaultConnection(), UInt32(windowNumber), 1, 0)
-        if result != 0 {
-            DiagnosticEventLog.shared.record(
-                subsystem: "SpaceLabelWindow",
-                level: "warning",
-                "Could not order preview label \(self.spaceId) above (result=\(result))"
-            )
-        }
+        // orderFront(_:) can ask WindowServer to select the Space containing a
+        // managed window even when the panel is nonactivating. orderWindow is
+        // the non-key ordering operation: it makes the panel visible and
+        // changes its z-order without requesting application activation.
+        order(.above, relativeTo: 0)
         let afterSpaces = SpaceHelper.getWindowCurrentSpaces(windowID: windowNumber)
         let afterCurrentSpaces = SpaceHelper.getCurrentSpaceIDsByDisplay()
         SpaceHelper.debugTrace(
             traceID,
-            "label order-preview end label=\(spaceId), window=\(windowNumber), result=\(result), windowSpaces=\(afterSpaces.sorted()), live=\(SpaceHelper.debugFormatSpaceMap(afterCurrentSpaces)), visible=\(isVisible), key=\(isKeyWindow)"
+            "label order-preview end label=\(spaceId), window=\(windowNumber), windowSpaces=\(afterSpaces.sorted()), live=\(SpaceHelper.debugFormatSpaceMap(afterCurrentSpaces)), visible=\(isVisible), key=\(isKeyWindow)"
         )
     }
 

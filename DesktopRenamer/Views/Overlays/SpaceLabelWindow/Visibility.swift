@@ -119,10 +119,10 @@ extension SpaceLabelWindow {
                         traceID,
                         "label visibility decision=order-active label=\(spaceId), target=\(spaceId), liveBefore=\(SpaceHelper.debugFormatSpaceMap(SpaceHelper.getCurrentSpaceIDsByDisplay()))"
                     )
-                    print("SpaceLabelWindow[\(self.spaceId)]: orderFront() for ACTIVE space.")
+                    print("SpaceLabelWindow[\(self.spaceId)]: orderWindow(.above) for ACTIVE space.")
                     self.bindToTargetSpace()
                     if isBoundToTargetSpace() {
-                        self.orderFront(nil)
+                        self.order(.above, relativeTo: 0)
                         SpaceHelper.debugTrace(
                             traceID,
                             "label visibility active-order complete label=\(spaceId), liveAfter=\(SpaceHelper.debugFormatSpaceMap(SpaceHelper.getCurrentSpaceIDsByDisplay())), windowSpaces=\(SpaceHelper.getWindowCurrentSpaces(windowID: windowNumber).sorted())"
@@ -150,10 +150,7 @@ extension SpaceLabelWindow {
                     )
                     self.bindToTargetSpace()
                     if isBoundToTargetSpace() {
-                        print("SpaceLabelWindow[\(self.spaceId)]: Non-activating orderFront() for background preview.")
-                        // Use WindowServer ordering here. AppKit orderFront(nil)
-                        // can still select a background space while Mission
-                        // Control is reconciling labels on macOS 27.
+                        print("SpaceLabelWindow[\(self.spaceId)]: Non-activating orderWindow(.above) for background preview.")
                         self.orderPreviewWithoutActivating()
                         didBindToTargetSpace = true
                         self.hasOrderedInOnce = true
@@ -178,7 +175,7 @@ extension SpaceLabelWindow {
                     )
                     self.bindToTargetSpace()
                     if isBoundToTargetSpace() {
-                        print("SpaceLabelWindow[\(self.spaceId)]: Non-activating orderFront() for background preview.")
+                        print("SpaceLabelWindow[\(self.spaceId)]: Non-activating orderWindow(.above) for background preview.")
                         self.orderPreviewWithoutActivating()
                         didBindToTargetSpace = true
                     } else {

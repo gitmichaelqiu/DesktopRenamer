@@ -20,11 +20,12 @@ class LauncherWindowController: NSWindowController, NSWindowDelegate {
     private var isCommandKeyPressed = false
     private var cmdLongPressWorkItem: DispatchWorkItem?
     private var flagsChangedMonitor: Any?
+    private var isHiding = false
     
     init() {
         let panel = LauncherNSPanel(
             contentRect: NSRect(x: 0, y: 0, width: 840, height: 570),
-            styleMask: [.borderless],
+            styleMask: [.borderless, .nonactivatingPanel],
             backing: .buffered,
             defer: false
         )
@@ -120,12 +121,9 @@ class LauncherWindowController: NSWindowController, NSWindowDelegate {
         // Reset state
         viewModel.resetForPresentation()
         
-        // Make key and focus
-        NSApp.activate(ignoringOtherApps: true)
-        SpaceHelper.debugTrace(
-            traceID,
-            "launcher show after-app-activation live=\(SpaceHelper.debugFormatSpaceMap(SpaceHelper.getCurrentSpaceIDsByDisplay())), windowSpaces=\(SpaceHelper.getWindowCurrentSpaces(windowID: panel.windowNumber).sorted()), key=\(panel.isKeyWindow)"
-        )
+        // A nonactivating panel can become key for text input without making
+        // DesktopRenamer the active application. Activating the app here can
+        // make WindowServer select the Space where this panel was last shown.
         panel.makeKeyAndOrderFront(nil)
         SpaceHelper.debugTrace(
             traceID,
@@ -139,6 +137,10 @@ class LauncherWindowController: NSWindowController, NSWindowDelegate {
     }
     
     func hide() {
+        guard !isHiding else { return }
+        isHiding = true
+        defer { isHiding = false }
+
         let traceID = SpaceHelper.debugTraceID()
         let panel = window
         SpaceHelper.debugTrace(
