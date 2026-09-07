@@ -477,6 +477,9 @@ extension SpaceHelper {
         lastProgrammaticSwitchTime = Date().timeIntervalSince1970
         lastProgrammaticTargetSpaceID = spaceID
         programmaticSwitchDisplayID = displayID
+        nextProgrammaticSwitchRequestID += 1
+        let requestID = nextProgrammaticSwitchRequestID
+        lastProgrammaticSwitchRequestID = requestID
 
         DiagnosticEventLog.shared.record(
             subsystem: "SpaceHelper",
@@ -488,7 +491,8 @@ extension SpaceHelper {
             "spaceID": spaceID,
             "isManual": isManual,
             "forceInstant": forceInstant,
-            "displayID": displayID
+            "displayID": displayID,
+            "requestID": requestID
         ]
         if let generation {
             startedUserInfo["generation"] = generation

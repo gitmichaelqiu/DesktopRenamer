@@ -101,6 +101,7 @@ class SpaceManager: ObservableObject {
     var confirmedSpaceObservationFence = SpaceObservationFence()
     var nextSpaceObservationGeneration: UInt64 = 0
     var pendingProgrammaticSpaceSwitches: [String: (spaceID: String, generation: UInt64)] = [:]
+    var latestProgrammaticSwitchRequestIDs: [String: UInt64] = [:]
     
     @Published var returnToOriginalAfterBatchMove: Bool {
         didSet {

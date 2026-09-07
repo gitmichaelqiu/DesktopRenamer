@@ -49,6 +49,13 @@ extension SpaceManager {
             pendingProgrammaticSpaceSwitches.removeValue(forKey: space.displayID)
             confirmedSpaceObservationFence.invalidate(displayID: space.displayID)
         case .started:
+            if let requestID = SpaceHelper.lastProgrammaticSwitchRequestID {
+                latestProgrammaticSwitchRequestIDs[space.displayID] = max(
+                    latestProgrammaticSwitchRequestIDs[space.displayID] ?? 0,
+                    requestID
+                )
+            }
+
             // Force-instant switches do not emit a completion notification.
             // The switching primitive has been emitted by this point, so
             // protect its destination immediately while WindowServer drains
@@ -110,9 +117,26 @@ extension SpaceManager {
             let isManual = notification.userInfo?["isManual"] as? Bool == true
             let forceInstant = notification.userInfo?["forceInstant"] as? Bool == true
             let generation = notification.userInfo?["generation"] as? UInt64
+            let requestID = notification.userInfo?["requestID"] as? UInt64
             let displayID = notification.userInfo?["displayID"] as? String
                 ?? self.spaceNameDict.first(where: { $0.id == spaceID })?.displayID
                 ?? self.currentDisplayID
+
+            if let requestID {
+                if let latestRequestID = self.latestProgrammaticSwitchRequestIDs[displayID],
+                   requestID < latestRequestID {
+                    DiagnosticEventLog.shared.record(
+                        subsystem: "SpaceManager",
+                        level: "info",
+                        "Ignoring stale programmatic switch start: display=\(displayID), request=\(requestID), latest=\(latestRequestID), target=\(spaceID)"
+                    )
+                    return
+                }
+                self.latestProgrammaticSwitchRequestIDs[displayID] = max(
+                    self.latestProgrammaticSwitchRequestIDs[displayID] ?? 0,
+                    requestID
+                )
+            }
 
             // SpaceHelper can be called directly by a service, without going
             // through SpaceManager.switchToSpace. Give that request the same
