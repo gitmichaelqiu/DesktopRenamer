@@ -8,6 +8,7 @@ class FocusTextField: NSTextField {
     var onKeyEquivalent: ((NSEvent) -> Bool)?
     var isTypingDisabled: Bool = false
     var focusNotificationName = NSNotification.Name("FocusLauncherTextField")
+    private var keyDownMonitor: Any?
 
     override var acceptsFirstResponder: Bool {
         return true
@@ -33,6 +34,38 @@ class FocusTextField: NSTextField {
             onOptionEnter?()
         }
         return true
+    }
+
+    private func installKeyDownMonitor() {
+        removeKeyDownMonitor()
+
+        keyDownMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
+            guard let self,
+                  let window = self.window,
+                  window.isKeyWindow,
+                  self.isFirstResponder(in: window),
+                  self.handleModifiedEnter(event) else {
+                return event
+            }
+
+            return nil
+        }
+    }
+
+    private func removeKeyDownMonitor() {
+        if let keyDownMonitor {
+            NSEvent.removeMonitor(keyDownMonitor)
+            self.keyDownMonitor = nil
+        }
+    }
+
+    private func isFirstResponder(in window: NSWindow) -> Bool {
+        guard let firstResponder = window.firstResponder else { return false }
+        if firstResponder === self {
+            return true
+        }
+
+        return firstResponder === currentEditor()
     }
 
     override func performKeyEquivalent(with event: NSEvent) -> Bool {
@@ -83,9 +116,11 @@ class FocusTextField: NSTextField {
 
     override func viewDidMoveToWindow() {
         super.viewDidMoveToWindow()
+        removeKeyDownMonitor()
         if window != nil {
             NotificationCenter.default.addObserver(self, selector: #selector(windowDidBecomeKey), name: NSWindow.didBecomeKeyNotification, object: window)
             NotificationCenter.default.addObserver(self, selector: #selector(forceFocus), name: focusNotificationName, object: nil)
+            installKeyDownMonitor()
             if window?.isKeyWindow == true {
                 DispatchQueue.main.async { [weak self] in
                     self?.forceFocus()
@@ -110,6 +145,7 @@ class FocusTextField: NSTextField {
     }
     
     deinit {
+        removeKeyDownMonitor()
         NotificationCenter.default.removeObserver(self)
     }
 }

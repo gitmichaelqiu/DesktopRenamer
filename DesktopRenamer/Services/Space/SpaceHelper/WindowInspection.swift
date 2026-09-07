@@ -4,6 +4,19 @@ import Foundation
 
 extension SpaceHelper {
 
+    private static func integerValue(_ value: Any?) -> Int? {
+        if let value = value as? Int {
+            return value
+        }
+        if let value = value as? Int32 {
+            return Int(value)
+        }
+        if let value = value as? NSNumber {
+            return value.intValue
+        }
+        return nil
+    }
+
     private static func getFocusedWindowInfo(ourPID: pid_t) -> (id: Int, pid: Int32, frame: CGRect)? {
         let systemWideElement = AXUIElementCreateSystemWide()
         var focusedWindowRef: CFTypeRef?
@@ -126,7 +139,7 @@ extension SpaceHelper {
         let windowList = CGWindowListCopyWindowInfo(options, CGWindowID(id)) as? [[String: Any]] ?? []
         
         if let window = windowList.first,
-           let rawPID = window[kCGWindowOwnerPID as String] as? Int,
+           let rawPID = integerValue(window[kCGWindowOwnerPID as String]),
            let bounds = window[kCGWindowBounds as String] as? [String: Any],
            let x = bounds["X"] as? CGFloat, let y = bounds["Y"] as? CGFloat,
            let w = bounds["Width"] as? CGFloat, let h = bounds["Height"] as? CGFloat {
