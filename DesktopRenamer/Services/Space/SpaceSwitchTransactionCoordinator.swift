@@ -109,6 +109,7 @@ struct SpaceObservationFence {
 
     private(set) var confirmations: [String: Confirmation] = [:]
     private var latestGenerationByDisplay: [String: UInt64] = [:]
+    private var externalCandidates: [String: (spaceID: String, passes: Int)] = [:]
 
     mutating func beginSwitch(displayID: String, generation: UInt64) {
         let latestGeneration = latestGenerationByDisplay[displayID] ?? 0
@@ -116,6 +117,7 @@ struct SpaceObservationFence {
 
         latestGenerationByDisplay[displayID] = generation
         confirmations.removeValue(forKey: displayID)
+        externalCandidates.removeValue(forKey: displayID)
     }
 
     mutating func confirm(
@@ -131,10 +133,12 @@ struct SpaceObservationFence {
             spaceID: spaceID,
             generation: generation
         )
+        externalCandidates.removeValue(forKey: displayID)
     }
 
     mutating func invalidate(displayID: String) {
         confirmations.removeValue(forKey: displayID)
+        externalCandidates.removeValue(forKey: displayID)
     }
 
     func confirmation(for displayID: String) -> Confirmation? {
@@ -142,25 +146,45 @@ struct SpaceObservationFence {
     }
 
     /// Returns true when the candidate is stale relative to the fence or to
-    /// a newer authoritative live-space read. A live read for a different
-    /// space clears the fence because it is evidence of a genuine external
-    /// change; a candidate that does not match that live read is still stale
-    /// and must not be published.
+    /// an inconsistent WindowServer read. A single different live-space read
+    /// is not enough to clear the fence: the first read can be one of the old
+    /// snapshots that caused the fence to be needed in the first place. The
+    /// newer space must be observed consistently twice before it becomes an
+    /// authoritative external change.
     mutating func shouldIgnore(
         displayID: String,
         observedSpaceID: String,
         liveSpaceID: String?
     ) -> Bool {
-        guard let confirmation = confirmations[displayID],
-              let liveSpaceID else {
+        guard let confirmation = confirmations[displayID] else {
             return false
         }
 
-        if liveSpaceID == confirmation.spaceID {
-            return observedSpaceID != confirmation.spaceID
+        if observedSpaceID == confirmation.spaceID {
+            externalCandidates.removeValue(forKey: displayID)
+            return false
         }
 
+        guard let liveSpaceID,
+              liveSpaceID == observedSpaceID else {
+            externalCandidates.removeValue(forKey: displayID)
+            return true
+        }
+
+        let passes: Int
+        if let previous = externalCandidates[displayID],
+           previous.spaceID == liveSpaceID {
+            passes = previous.passes + 1
+        } else {
+            passes = 1
+        }
+        guard passes >= 2 else {
+            externalCandidates[displayID] = (spaceID: liveSpaceID, passes: passes)
+            return true
+        }
+
+        externalCandidates.removeValue(forKey: displayID)
         confirmations.removeValue(forKey: displayID)
-        return observedSpaceID != liveSpaceID
+        return false
     }
 }

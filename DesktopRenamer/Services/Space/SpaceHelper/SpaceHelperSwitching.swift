@@ -58,7 +58,7 @@ extension SpaceHelper {
         // in-flight non-instant transaction before checking whether this
         // request is already current, so a stale transaction cannot continue
         // after a forceInstant no-op.
-        if forceInstant, switchTransactionCoordinator.active != nil {
+        if forceInstant && (switchTransactionCoordinator.active != nil || isSwitching) {
             cancelActiveProgrammaticSwitch(reason: "forceInstant request")
         }
 

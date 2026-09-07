@@ -48,7 +48,19 @@ extension SpaceManager {
             cancelSpaceChangeRetry()
             pendingProgrammaticSpaceSwitches.removeValue(forKey: space.displayID)
             confirmedSpaceObservationFence.invalidate(displayID: space.displayID)
-        case .started, .queued:
+        case .started:
+            // Force-instant switches do not emit a completion notification.
+            // The switching primitive has been emitted by this point, so
+            // protect its destination immediately while WindowServer drains
+            // older monitor and retry snapshots.
+            if forceInstant {
+                confirmSpaceObservation(
+                    displayID: space.displayID,
+                    spaceID: space.id,
+                    generation: observationGeneration
+                )
+            }
+        case .queued:
             break
         }
         return disposition
@@ -96,6 +108,7 @@ extension SpaceManager {
         let update = { [weak self] in
             guard let self else { return }
             let isManual = notification.userInfo?["isManual"] as? Bool == true
+            let forceInstant = notification.userInfo?["forceInstant"] as? Bool == true
             let generation = notification.userInfo?["generation"] as? UInt64
             let displayID = notification.userInfo?["displayID"] as? String
                 ?? self.spaceNameDict.first(where: { $0.id == spaceID })?.displayID
@@ -105,6 +118,7 @@ extension SpaceManager {
             // through SpaceManager.switchToSpace. Give that request the same
             // per-display fence as manager-owned switches. A newer manager
             // request already occupying this display remains authoritative.
+            var ownsObservation = false
             if let pending = self.pendingProgrammaticSpaceSwitches[displayID] {
                 if pending.spaceID != spaceID {
                     DiagnosticEventLog.shared.record(
@@ -112,11 +126,24 @@ extension SpaceManager {
                         level: "info",
                         "Keeping newer pending observation: display=\(displayID), pending=\(pending.spaceID), started=\(spaceID)"
                     )
+                } else {
+                    ownsObservation = true
                 }
             } else {
                 _ = self.beginSpaceObservation(
                     spaceID: spaceID,
                     displayID: displayID
+                )
+                ownsObservation = true
+            }
+
+            if forceInstant,
+               ownsObservation,
+               let pending = self.pendingProgrammaticSpaceSwitches[displayID] {
+                self.confirmSpaceObservation(
+                    displayID: displayID,
+                    spaceID: spaceID,
+                    generation: pending.generation
                 )
             }
 
