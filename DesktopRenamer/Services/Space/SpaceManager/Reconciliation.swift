@@ -68,22 +68,13 @@ extension SpaceManager {
                     continue
                 }
 
-                let recentProgrammaticSwitch = Date().timeIntervalSince1970
-                    - SpaceHelper.lastProgrammaticSwitchTime < 2.0
-                if recentProgrammaticSwitch,
-                   SpaceHelper.lastProgrammaticTargetSpaceID == confirmation.spaceID {
-                    SpaceHelper.debugTrace(
-                        traceID,
-                        "manager authoritative display=\(displayID), space=\(spaceID), decision=ignore-recent-programmatic-confirmation confirmed=\(confirmation.spaceID)"
-                    )
-                    DiagnosticEventLog.shared.record(
-                        subsystem: "SpaceManager",
-                        level: "info",
-                        "Ignoring superseded programmatic active-space observation: display=\(displayID), observed=\(spaceID), confirmed=\(confirmation.spaceID)"
-                    )
-                    continue
-                }
-
+                // The destination-observed marker is the authoritative guard
+                // here. Once WindowServer has reported the confirmed
+                // destination, a later authoritative notification for a
+                // different Space is a genuine external transition, even if
+                // it happens immediately after the programmatic switch.
+                // Timestamp-based suppression would leave the model stuck on
+                // the old destination and make labels/status-bar state stale.
                 guard self.confirmedSpaceObservationFence.clearForExternalObservation(
                     displayID: displayID,
                     spaceID: spaceID
