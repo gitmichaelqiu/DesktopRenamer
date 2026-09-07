@@ -69,11 +69,13 @@ extension SpaceHelper {
             return false
         }
 
-        moveWindowToSpace(windowID: windowID, fromSpaceID: fromID, targetSpaceID: targetID)
-        return true
+        return moveWindowToSpace(windowID: windowID, fromSpaceID: fromID, targetSpaceID: targetID)
     }
 
-    static func moveWindowToSpace(windowID: Int, fromSpaceID: Int, targetSpaceID: Int) {
+    @discardableResult
+    static func moveWindowToSpace(windowID: Int, fromSpaceID: Int, targetSpaceID: Int) -> Bool {
+        guard fromSpaceID != targetSpaceID else { return true }
+
         markWindowMoveIntent(to: String(targetSpaceID))
         let targetSpaceIDString = String(targetSpaceID)
         let conn = _CGSDefaultConnection()
@@ -107,7 +109,7 @@ extension SpaceHelper {
                     }
                     moveWindowToSpace(windowID: windowID, fromSpaceID: fromSpaceID, targetSpaceID: targetSpaceID)
                 }
-                return
+                return true
             }
 
             if let pid = windowPID, let frame = windowFrame {
@@ -116,11 +118,34 @@ extension SpaceHelper {
             }
         }
 
+        // Use the window server's current assignment instead of trusting a
+        // cached source Space from a launcher list. A stale source ID would
+        // otherwise leave the window in its old Space and make the move look
+        // successful while it remains visible in the original location.
+        let currentSpaces = getWindowCurrentSpaces(windowID: windowID)
+        var spacesToRemove = currentSpaces.filter { $0 != targetSpaceIDString }
+        if spacesToRemove.isEmpty, fromSpaceID != targetSpaceID {
+            spacesToRemove = [String(fromSpaceID)]
+        }
+
         // Add to target space first for visual stability.
         CGSAddWindowsToSpaces(conn, windowArray, [targetSpaceID as NSNumber] as CFArray)
 
-        // Then remove from source space.
-        CGSRemoveWindowsFromSpaces(conn, windowArray, [fromSpaceID as NSNumber] as CFArray)
+        // Then remove every previous assignment. This also handles windows
+        // that were temporarily assigned to more than one Space by a prior
+        // move or by WindowServer while a transition was settling.
+        if !spacesToRemove.isEmpty {
+            let spacesToRemoveCF = spacesToRemove.compactMap(Int.init).map { NSNumber(value: $0) } as CFArray
+            CGSRemoveWindowsFromSpaces(conn, windowArray, spacesToRemoveCF)
+        }
+
+        let finalSpaces = getWindowCurrentSpaces(windowID: windowID)
+        DiagnosticEventLog.shared.record(
+            subsystem: "SpaceHelper",
+            level: finalSpaces.contains(targetSpaceIDString) ? "info" : "warning",
+            "moveWindowToSpace: window=\(windowID), requestedSource=\(fromSpaceID), target=\(targetSpaceID), before=\(currentSpaces.sorted()), removed=\(spacesToRemove.sorted()), after=\(finalSpaces.sorted())"
+        )
+        return finalSpaces.contains(targetSpaceIDString)
     }
 
     private static func repositionWindowToDisplay(windowID: Int, pid: Int32, frame: CGRect, sourceDisplayID: String, targetDisplayID: String) {

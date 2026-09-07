@@ -4,8 +4,44 @@ import Foundation
 
 extension SpaceHelper {
 
+    private static func getFocusedWindowInfo(ourPID: pid_t) -> (id: Int, pid: Int32, frame: CGRect)? {
+        let systemWideElement = AXUIElementCreateSystemWide()
+        var focusedWindowRef: CFTypeRef?
+        guard AXUIElementCopyAttributeValue(
+            systemWideElement,
+            kAXFocusedWindowAttribute as CFString,
+            &focusedWindowRef
+        ) == .success,
+              let focusedWindowRef else {
+            return nil
+        }
+        let focusedWindow = focusedWindowRef as! AXUIElement
+
+        var windowID: CGWindowID = 0
+        guard _AXUIElementGetWindow(focusedWindow, &windowID) == 0,
+              windowID != 0,
+              let info = getWindowInfo(id: Int(windowID)),
+              info.pid != Int32(ourPID),
+              info.frame.width >= minActiveWindowWidth,
+              info.frame.height >= minActiveWindowHeight else {
+            return nil
+        }
+
+        return (id: Int(windowID), pid: info.pid, frame: info.frame)
+    }
+
     static func getActiveWindowInfo() -> (id: Int, pid: Int32, frame: CGRect)? {
         let ourPID = ProcessInfo.processInfo.processIdentifier
+
+        // The front application's first CGWindow entry is not necessarily
+        // its focused window. The launcher needs the exact focused window so
+        // Option+Enter cannot move a different window or lose the move target
+        // when the application has multiple windows.
+        if let focusedWindow = getFocusedWindowInfo(ourPID: ourPID) {
+            print("SpaceHelper: Captured focused window ID: \(focusedWindow.id), PID: \(focusedWindow.pid), frame: \(focusedWindow.frame)")
+            return focusedWindow
+        }
+
         guard let frontApp = NSWorkspace.shared.frontmostApplication else { return nil }
         
         let options = CGWindowListOption(arrayLiteral: .optionOnScreenOnly, .excludeDesktopElements)
@@ -90,11 +126,11 @@ extension SpaceHelper {
         let windowList = CGWindowListCopyWindowInfo(options, CGWindowID(id)) as? [[String: Any]] ?? []
         
         if let window = windowList.first,
-           let pid = window[kCGWindowOwnerPID as String] as? Int32,
+           let rawPID = window[kCGWindowOwnerPID as String] as? Int,
            let bounds = window[kCGWindowBounds as String] as? [String: Any],
            let x = bounds["X"] as? CGFloat, let y = bounds["Y"] as? CGFloat,
            let w = bounds["Width"] as? CGFloat, let h = bounds["Height"] as? CGFloat {
-               return (pid: pid, frame: CGRect(x: x, y: y, width: w, height: h))
+               return (pid: Int32(rawPID), frame: CGRect(x: x, y: y, width: w, height: h))
         }
         return nil
     }

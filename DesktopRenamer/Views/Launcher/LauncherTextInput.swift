@@ -13,6 +13,28 @@ class FocusTextField: NSTextField {
         return true
     }
 
+    private func handleModifiedEnter(_ event: NSEvent) -> Bool {
+        guard event.type == .keyDown,
+              event.keyCode == 36 || event.keyCode == 76 else {
+            return false
+        }
+
+        let modifiers = event.modifierFlags.intersection(.deviceIndependentFlagsMask)
+        let hasCommand = modifiers.contains(.command)
+        let hasOption = modifiers.contains(.option)
+        let hasOtherModifiers = !modifiers.subtracting([.command, .option, .numericPad, .function]).isEmpty
+        guard !hasOtherModifiers, hasCommand || hasOption else {
+            return false
+        }
+
+        if hasCommand {
+            onCommandEnter?()
+        } else {
+            onOptionEnter?()
+        }
+        return true
+    }
+
     override func performKeyEquivalent(with event: NSEvent) -> Bool {
         if let handled = onKeyEquivalent?(event), handled {
             return true
@@ -21,16 +43,10 @@ class FocusTextField: NSTextField {
         if event.type == .keyDown {
             let modifiers = event.modifierFlags.intersection(.deviceIndependentFlagsMask)
             let hasCommand = modifiers.contains(.command)
-            let hasOption = modifiers.contains(.option)
             let hasOtherModifiers = !modifiers.subtracting([.command, .option, .numericPad, .function]).isEmpty
             
             if !hasOtherModifiers {
-                if (hasCommand || hasOption) && (event.keyCode == 36 || event.keyCode == 76) {
-                    if hasCommand {
-                        onCommandEnter?()
-                    } else if hasOption {
-                        onOptionEnter?()
-                    }
+                if handleModifiedEnter(event) {
                     return true
                 }
                 
@@ -52,6 +68,17 @@ class FocusTextField: NSTextField {
             }
         }
         return super.performKeyEquivalent(with: event)
+    }
+
+    override func keyDown(with event: NSEvent) {
+        // Some AppKit text-field configurations deliver Option+Return through
+        // keyDown instead of performKeyEquivalent. Handle the actual event
+        // flags here so the space-bar move command cannot degrade into a plain
+        // Space selection.
+        if handleModifiedEnter(event) {
+            return
+        }
+        super.keyDown(with: event)
     }
 
     override func viewDidMoveToWindow() {
@@ -298,4 +325,3 @@ struct SearchTextField: NSViewRepresentable {
         }
     }
 }
-

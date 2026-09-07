@@ -47,43 +47,39 @@ extension LauncherViewModel {
                 }
             }
             
-            // 3. Execute space moves grouped by source space
+            // 3. Execute space moves one at a time. The window list is a
+            // snapshot, so the coordinator re-resolves each window's source
+            // Space against WindowServer immediately before moving it.
             if !spaceMoveActions.isEmpty {
-                let movesBySource = Dictionary(grouping: spaceMoveActions, by: { $0.window.space.id })
-                
-                for (sourceId, sourceActions) in movesBySource {
-                    DiagnosticEventLog.shared.record(subsystem: "Launcher", level: "info", "executeBatchMove: Group sourceID=\(sourceId), sourceActions count=\(sourceActions.count)")
-                    
-                    for action in sourceActions {
-                        let targetSpaceID: String
-                        
-                        switch action.actionType {
-                        case .move(let space):
-                            targetSpaceID = space.id
-                        case .restoreTo(let space):
-                            targetSpaceID = space.id
-                        default:
-                            continue
-                        }
-                        
-                        DiagnosticEventLog.shared.record(subsystem: "Launcher", level: "info", "executeBatchMove: Move window id=\(action.window.id) from space=\(action.window.space.id) to space=\(targetSpaceID)")
-                        if action.window.space.id == targetSpaceID {
-                            continue
-                        }
+                for action in spaceMoveActions {
+                    let targetSpaceID: String
 
-                        let moved = await WindowActionCoordinator.moveWindow(
-                            windowID: action.window.id,
-                            pid: action.window.pid,
-                            fromSpaceID: action.window.space.id,
-                            targetSpaceID: targetSpaceID
+                    switch action.actionType {
+                    case .move(let space):
+                        targetSpaceID = space.id
+                    case .restoreTo(let space):
+                        targetSpaceID = space.id
+                    default:
+                        continue
+                    }
+
+                    DiagnosticEventLog.shared.record(
+                        subsystem: "Launcher",
+                        level: "info",
+                        "executeBatchMove: Move window id=\(action.window.id) from cached space=\(action.window.space.id) to space=\(targetSpaceID)"
+                    )
+                    let moved = await WindowActionCoordinator.moveWindow(
+                        windowID: action.window.id,
+                        pid: action.window.pid,
+                        fromSpaceID: action.window.space.id,
+                        targetSpaceID: targetSpaceID
+                    )
+                    if !moved {
+                        DiagnosticEventLog.shared.record(
+                            subsystem: "Launcher",
+                            level: "warning",
+                            "executeBatchMove: Failed to move window id=\(action.window.id) to space=\(targetSpaceID)"
                         )
-                        if !moved {
-                            DiagnosticEventLog.shared.record(
-                                subsystem: "Launcher",
-                                level: "warning",
-                                "executeBatchMove: Failed to move window id=\(action.window.id) to space=\(targetSpaceID)"
-                            )
-                        }
                     }
                 }
             }

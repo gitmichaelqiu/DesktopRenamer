@@ -29,20 +29,55 @@ enum WindowActionCoordinator {
         fromSpaceID: String,
         targetSpaceID: String
     ) async -> Bool {
-        guard fromSpaceID != targetSpaceID else { return true }
         guard let manager = AppDelegate.shared.spaceManager,
-              let sourceSpace = manager.spaceNameDict.first(where: { $0.id == fromSpaceID }),
+              let resolvedFromSpaceID = resolveSourceSpaceID(
+                  windowID: windowID,
+                  requestedSpaceID: fromSpaceID,
+                  manager: manager
+              ),
+              let sourceSpace = manager.spaceNameDict.first(where: { $0.id == resolvedFromSpaceID }),
               let targetSpace = manager.spaceNameDict.first(where: { $0.id == targetSpaceID }) else {
             return false
         }
 
-        if sourceSpace.isFullscreen || targetSpace.isFullscreen {
-            if sourceSpace.isFullscreen {
-                guard let axWindow = SpaceHelper.getAXWindow(id: windowID, pid: pid) else {
+        guard resolvedFromSpaceID != targetSpaceID else { return true }
+
+        let requiresFullscreenHandling = sourceSpace.isFullscreen || targetSpace.isFullscreen
+
+        // AX cannot reliably access a window in a background fullscreen
+        // Space. Make only that source Space current long enough to leave
+        // fullscreen; ordinary moves remain non-activating.
+        if requiresFullscreenHandling, sourceSpace.isFullscreen {
+            if SpaceHelper.getCurrentSpaceID(for: sourceSpace.displayID) != sourceSpace.id {
+                manager.switchToSpace(sourceSpace, forceInstant: true, isManual: false)
+                guard await waitForSpace(sourceSpace.id, on: sourceSpace.displayID) else {
                     return false
                 }
-                AXUIElementSetAttributeValue(axWindow, "AXFullScreen" as CFString, false as CFTypeRef)
-                try? await Task.sleep(nanoseconds: 1_200_000_000)
+            }
+
+            guard let axWindow = SpaceHelper.getAXWindow(id: windowID, pid: pid) else {
+                DiagnosticEventLog.shared.record(
+                    subsystem: "WindowActionCoordinator",
+                    level: "warning",
+                    "Could not access fullscreen window \(windowID) before moving it from \(resolvedFromSpaceID)."
+                )
+                return false
+            }
+            AXUIElementSetAttributeValue(axWindow, "AXFullScreen" as CFString, false as CFTypeRef)
+            try? await Task.sleep(nanoseconds: 1_200_000_000)
+        }
+
+        // Cross-display moves need the destination display's Space active so
+        // WindowServer can place and reposition the window on that display.
+        // A fullscreen destination has the same requirement even when it is
+        // on the source display.
+        let destinationMustBeCurrent = sourceSpace.displayID != targetSpace.displayID
+            || (requiresFullscreenHandling && targetSpace.isFullscreen)
+        if destinationMustBeCurrent,
+           SpaceHelper.getCurrentSpaceID(for: targetSpace.displayID) != targetSpace.id {
+            manager.switchToSpace(targetSpace, forceInstant: true, isManual: false)
+            guard await waitForSpace(targetSpace.id, on: targetSpace.displayID) else {
+                return false
             }
         }
 
@@ -51,14 +86,39 @@ enum WindowActionCoordinator {
         // an active-window drag.
         guard SpaceHelper.moveWindowToSpace(
             windowID: windowID,
-            fromSpaceID: fromSpaceID,
+            fromSpaceID: resolvedFromSpaceID,
             targetSpaceID: targetSpaceID
         ) else {
             return false
         }
-        try? await Task.sleep(nanoseconds: 150_000_000)
 
-        return true
+        return await waitForWindow(windowID: windowID, inSpace: targetSpaceID)
+    }
+
+    private static func resolveSourceSpaceID(
+        windowID: Int,
+        requestedSpaceID: String,
+        manager: SpaceManager
+    ) -> String? {
+        let assignedSpaceIDs = SpaceHelper.getWindowCurrentSpaces(windowID: windowID)
+        if assignedSpaceIDs.contains(requestedSpaceID) {
+            return requestedSpaceID
+        }
+
+        if let authoritativeSpaceID = SpaceHelper.getWindowSpaceID(id: windowID),
+           manager.spaceNameDict.contains(where: { $0.id == authoritativeSpaceID }) {
+            DiagnosticEventLog.shared.record(
+                subsystem: "WindowActionCoordinator",
+                level: "info",
+                "Using authoritative source Space \(authoritativeSpaceID) for window \(windowID) instead of requested \(requestedSpaceID), assigned=\(assignedSpaceIDs.sorted())"
+            )
+            return authoritativeSpaceID
+        }
+
+        guard manager.spaceNameDict.contains(where: { $0.id == requestedSpaceID }) else {
+            return nil
+        }
+        return requestedSpaceID
     }
 
     private static func waitForSpace(_ spaceID: String, on displayID: String) async -> Bool {
@@ -68,6 +128,22 @@ enum WindowActionCoordinator {
             }
             try? await Task.sleep(nanoseconds: 100_000_000)
         }
+        return false
+    }
+
+    private static func waitForWindow(windowID: Int, inSpace spaceID: String) async -> Bool {
+        for _ in 0..<12 {
+            if SpaceHelper.getWindowCurrentSpaces(windowID: windowID).contains(spaceID) {
+                return true
+            }
+            try? await Task.sleep(nanoseconds: 100_000_000)
+        }
+
+        DiagnosticEventLog.shared.record(
+            subsystem: "WindowActionCoordinator",
+            level: "warning",
+            "Window \(windowID) was not observed in destination Space \(spaceID) after move."
+        )
         return false
     }
 }

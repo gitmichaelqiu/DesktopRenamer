@@ -41,18 +41,32 @@ extension LauncherViewModel {
             return false
         }
         
-        let displayID = SpaceHelper.getWindowDisplayID(for: prevWindow.frame) ?? ""
-        let fromSpaceIDStr = SpaceHelper.getCurrentSpaceID(for: displayID) ?? "0"
-        DiagnosticEventLog.shared.record(subsystem: "Launcher", level: "info", "movePreviouslyActiveWindow: window=\(prevWindow.id), fromSpace=\(fromSpaceIDStr), targetSpace=\(spaceID)")
-        
-        if spaceID == fromSpaceIDStr {
-            print("Launcher: Window \(prevWindow.id) is already on space \(spaceID). No move needed.")
+        let displayID = SpaceHelper.getWindowDisplayID(for: prevWindow.frame)
+        let currentSpaceID = displayID.flatMap { SpaceHelper.getCurrentSpaceID(for: $0) }
+        let assignedSpaceIDs = SpaceHelper.getWindowCurrentSpaces(windowID: prevWindow.id)
+        let fromSpaceIDStr = currentSpaceID.flatMap { assignedSpaceIDs.contains($0) ? $0 : nil }
+            ?? SpaceHelper.getWindowSpaceID(id: prevWindow.id)
+            ?? currentSpaceID
+
+        guard let fromSpaceIDStr else {
+            DiagnosticEventLog.shared.record(
+                subsystem: "Launcher",
+                level: "warning",
+                "movePreviouslyActiveWindow: could not resolve source Space for window \(prevWindow.id), assigned=\(assignedSpaceIDs.sorted()), current=\(currentSpaceID ?? "nil")"
+            )
             return false
         }
+        DiagnosticEventLog.shared.record(subsystem: "Launcher", level: "info", "movePreviouslyActiveWindow: window=\(prevWindow.id), fromSpace=\(fromSpaceIDStr), targetSpace=\(spaceID)")
         
         guard let manager = AppDelegate.shared.spaceManager,
+              manager.spaceNameDict.contains(where: { $0.id == fromSpaceIDStr }),
               manager.spaceNameDict.contains(where: { $0.id == spaceID }) else {
-            DiagnosticEventLog.shared.record(subsystem: "Launcher", level: "warning", "movePreviouslyActiveWindow: targetSpace object not found for ID \(spaceID)")
+            DiagnosticEventLog.shared.record(subsystem: "Launcher", level: "warning", "movePreviouslyActiveWindow: source or target Space is no longer available, source=\(fromSpaceIDStr), target=\(spaceID)")
+            return false
+        }
+
+        if spaceID == fromSpaceIDStr {
+            print("Launcher: Window \(prevWindow.id) is already on space \(spaceID). No move needed.")
             return false
         }
 
