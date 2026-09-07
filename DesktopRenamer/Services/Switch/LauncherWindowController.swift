@@ -21,6 +21,7 @@ class LauncherWindowController: NSWindowController, NSWindowDelegate {
     private var cmdLongPressWorkItem: DispatchWorkItem?
     private var flagsChangedMonitor: Any?
     private var isHiding = false
+    private let launcherFieldEditor = LauncherFieldEditor(frame: .zero)
     
     init() {
         let panel = LauncherNSPanel(
@@ -96,6 +97,16 @@ class LauncherWindowController: NSWindowController, NSWindowDelegate {
     
     required init?(coder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
+    }
+
+    func windowWillReturnFieldEditor(_ sender: NSWindow, to client: Any?) -> Any? {
+        guard let textField = client as? FocusTextField else {
+            return nil
+        }
+
+        launcherFieldEditor.client = textField
+        launcherFieldEditor.delegate = textField.delegate as? NSTextViewDelegate
+        return launcherFieldEditor
     }
     
     deinit {

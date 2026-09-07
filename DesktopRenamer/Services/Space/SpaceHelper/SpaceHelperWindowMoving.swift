@@ -14,7 +14,7 @@ extension SpaceHelper {
         dragWindow(activeWindowInfo, to: spaceID, forceInstant: forceInstant)
     }
 
-    private static func dragWindow(
+    static func dragWindow(
         _ windowInfo: (id: Int, pid: Int32, frame: CGRect),
         to spaceID: String,
         forceInstant: Bool

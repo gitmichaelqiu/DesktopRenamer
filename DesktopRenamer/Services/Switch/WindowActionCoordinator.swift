@@ -81,14 +81,23 @@ enum WindowActionCoordinator {
             }
         }
 
-        // A launcher move must not raise or activate the target window. Move
-        // the captured window directly between Spaces instead of synthesizing
-        // an active-window drag.
-        guard SpaceHelper.moveWindowToSpace(
+        // Same-display moves use the same captured-window drag primitive as
+        // the Raycast/API path. It preserves the app-specific grab offsets
+        // and lets WindowServer complete the move through the established
+        // Space-switch transaction. Cross-display moves still require the
+        // direct CGS path above because a synthetic drag cannot cross displays.
+        if !destinationMustBeCurrent,
+           let windowInfo = SpaceHelper.getWindowInfo(id: windowID) {
+            SpaceHelper.dragWindow(
+                (id: windowID, pid: pid, frame: windowInfo.frame),
+                to: targetSpaceID,
+                forceInstant: true
+            )
+        } else if !SpaceHelper.moveWindowToSpace(
             windowID: windowID,
             fromSpaceID: resolvedFromSpaceID,
             targetSpaceID: targetSpaceID
-        ) else {
+        ) {
             return false
         }
 

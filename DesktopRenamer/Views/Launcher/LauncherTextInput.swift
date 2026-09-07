@@ -1,20 +1,60 @@
 import AppKit
 import SwiftUI
+
+final class LauncherFieldEditor: NSTextView {
+    weak var client: FocusTextField?
+
+    override init(frame frameRect: NSRect) {
+        super.init(frame: frameRect)
+        isFieldEditor = true
+        isRichText = false
+        isEditable = true
+        isSelectable = true
+        drawsBackground = false
+    }
+
+    required init?(coder: NSCoder) {
+        super.init(coder: coder)
+        isFieldEditor = true
+    }
+
+    override func performKeyEquivalent(with event: NSEvent) -> Bool {
+        if client?.handleKeyEquivalent(event) == true {
+            return true
+        }
+        return super.performKeyEquivalent(with: event)
+    }
+
+    override func keyDown(with event: NSEvent) {
+        if client?.handleModifiedEnter(event) == true {
+            return
+        }
+        super.keyDown(with: event)
+    }
+
+    override func doCommand(by selector: Selector) {
+        if client?.onCommandSelector?(selector) == true {
+            return
+        }
+        super.doCommand(by: selector)
+    }
+}
+
 class FocusTextField: NSTextField {
     var onCommandEnter: (() -> Void)?
     var onOptionEnter: (() -> Void)?
     var onCommandNumber: ((Int) -> Void)?
     var onCommandK: (() -> Void)?
+    var onCommandSelector: ((Selector) -> Bool)?
     var onKeyEquivalent: ((NSEvent) -> Bool)?
     var isTypingDisabled: Bool = false
     var focusNotificationName = NSNotification.Name("FocusLauncherTextField")
-    private var keyDownMonitor: Any?
 
     override var acceptsFirstResponder: Bool {
         return true
     }
 
-    private func handleModifiedEnter(_ event: NSEvent) -> Bool {
+    func handleModifiedEnter(_ event: NSEvent) -> Bool {
         guard event.type == .keyDown,
               event.keyCode == 36 || event.keyCode == 76 else {
             return false
@@ -36,39 +76,7 @@ class FocusTextField: NSTextField {
         return true
     }
 
-    private func installKeyDownMonitor() {
-        removeKeyDownMonitor()
-
-        keyDownMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
-            guard let self,
-                  let window = self.window,
-                  window.isKeyWindow,
-                  self.isFirstResponder(in: window),
-                  self.handleModifiedEnter(event) else {
-                return event
-            }
-
-            return nil
-        }
-    }
-
-    private func removeKeyDownMonitor() {
-        if let keyDownMonitor {
-            NSEvent.removeMonitor(keyDownMonitor)
-            self.keyDownMonitor = nil
-        }
-    }
-
-    private func isFirstResponder(in window: NSWindow) -> Bool {
-        guard let firstResponder = window.firstResponder else { return false }
-        if firstResponder === self {
-            return true
-        }
-
-        return firstResponder === currentEditor()
-    }
-
-    override func performKeyEquivalent(with event: NSEvent) -> Bool {
+    func handleKeyEquivalent(_ event: NSEvent) -> Bool {
         if let handled = onKeyEquivalent?(event), handled {
             return true
         }
@@ -100,6 +108,13 @@ class FocusTextField: NSTextField {
                 }
             }
         }
+        return false
+    }
+
+    override func performKeyEquivalent(with event: NSEvent) -> Bool {
+        if handleKeyEquivalent(event) {
+            return true
+        }
         return super.performKeyEquivalent(with: event)
     }
 
@@ -116,11 +131,9 @@ class FocusTextField: NSTextField {
 
     override func viewDidMoveToWindow() {
         super.viewDidMoveToWindow()
-        removeKeyDownMonitor()
         if window != nil {
             NotificationCenter.default.addObserver(self, selector: #selector(windowDidBecomeKey), name: NSWindow.didBecomeKeyNotification, object: window)
             NotificationCenter.default.addObserver(self, selector: #selector(forceFocus), name: focusNotificationName, object: nil)
-            installKeyDownMonitor()
             if window?.isKeyWindow == true {
                 DispatchQueue.main.async { [weak self] in
                     self?.forceFocus()
@@ -145,7 +158,6 @@ class FocusTextField: NSTextField {
     }
     
     deinit {
-        removeKeyDownMonitor()
         NotificationCenter.default.removeObserver(self)
     }
 }
@@ -233,6 +245,14 @@ struct SearchTextField: NSViewRepresentable {
         }
         
         func control(_ control: NSControl, textView: NSTextView, doCommandBy commandSelector: Selector) -> Bool {
+            handleCommand(commandSelector)
+        }
+
+        func textView(_ textView: NSTextView, doCommandBy commandSelector: Selector) -> Bool {
+            handleCommand(commandSelector)
+        }
+
+        func handleCommand(_ commandSelector: Selector) -> Bool {
             if commandSelector == #selector(NSResponder.moveUp(_:)) {
                 parent.onUpArrow()
                 return true
@@ -295,6 +315,9 @@ struct SearchTextField: NSViewRepresentable {
         }
         textField.onCommandK = { [weak coordinator = context.coordinator] in
             coordinator?.parent.onCommandK?()
+        }
+        textField.onCommandSelector = { [weak coordinator = context.coordinator] selector in
+            coordinator?.handleCommand(selector) ?? false
         }
         textField.onKeyEquivalent = onKeyEquivalent
         textField.isTypingDisabled = isTypingDisabled
