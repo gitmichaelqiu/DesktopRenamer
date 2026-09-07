@@ -5,7 +5,18 @@ final class LauncherFieldEditor: NSTextView {
     weak var client: FocusTextField?
 
     override convenience init(frame frameRect: NSRect) {
-        self.init(frame: frameRect, textContainer: nil)
+        let textStorage = NSTextStorage()
+        let layoutManager = NSLayoutManager()
+        let textContainer = NSTextContainer(
+            size: NSSize(
+                width: max(frameRect.width, 1),
+                height: CGFloat.greatestFiniteMagnitude
+            )
+        )
+        textContainer.widthTracksTextView = true
+        textStorage.addLayoutManager(layoutManager)
+        layoutManager.addTextContainer(textContainer)
+        self.init(frame: frameRect, textContainer: textContainer)
     }
 
     override init(frame frameRect: NSRect, textContainer container: NSTextContainer?) {
