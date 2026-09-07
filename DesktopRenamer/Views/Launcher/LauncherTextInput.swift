@@ -4,8 +4,16 @@ import SwiftUI
 final class LauncherFieldEditor: NSTextView {
     weak var client: FocusTextField?
 
-    override init(frame frameRect: NSRect) {
-        super.init(frame: frameRect)
+    override convenience init(frame frameRect: NSRect) {
+        self.init(frame: frameRect, textContainer: nil)
+    }
+
+    override init(frame frameRect: NSRect, textContainer container: NSTextContainer?) {
+        super.init(frame: frameRect, textContainer: container)
+        configure()
+    }
+
+    private func configure() {
         isFieldEditor = true
         isRichText = false
         isEditable = true
@@ -15,7 +23,7 @@ final class LauncherFieldEditor: NSTextView {
 
     required init?(coder: NSCoder) {
         super.init(coder: coder)
-        isFieldEditor = true
+        configure()
     }
 
     override func performKeyEquivalent(with event: NSEvent) -> Bool {
