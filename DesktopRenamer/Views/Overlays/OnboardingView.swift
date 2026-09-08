@@ -459,7 +459,7 @@ struct PermissionsPage: View {
     }
 
     private func permissionButton(
-        title: String,
+        title: LocalizedStringKey,
         isGranted: Bool,
         action: @escaping () -> Void
     ) -> some View {
