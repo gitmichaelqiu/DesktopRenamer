@@ -141,6 +141,14 @@ struct SpaceObservationFence {
         confirmations[displayID]
     }
 
+    var diagnosticDescription: String {
+        guard !confirmations.isEmpty else { return "  confirmations: (none)\n" }
+        return confirmations.keys.sorted().map { displayID in
+            let confirmation = confirmations[displayID]!
+            return "  display=\(displayID) space=\(confirmation.spaceID) generation=\(confirmation.generation)\n"
+        }.joined()
+    }
+
     /// Releases a fence when an authoritative read proves that WindowServer
     /// has moved to another Space. The active-space notification can be lost,
     /// so requiring the confirmed destination to have been observed by that

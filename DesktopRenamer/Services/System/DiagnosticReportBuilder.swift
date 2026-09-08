@@ -19,9 +19,9 @@ public struct DiagnosticEvent: Codable {
 public class DiagnosticEventLog {
     public static let shared = DiagnosticEventLog()
 
-    public private(set) var isCollecting: Bool = false
-    public private(set) var collectionStartTime: Date?
-    public private(set) var sessionEvents: [DiagnosticEvent] = []
+    private var collecting = false
+    private var startTime: Date?
+    private var sessionEventStorage: [DiagnosticEvent] = []
 
     private var ring: [DiagnosticEvent] = []
     private var nextIndex = 0
@@ -45,19 +45,37 @@ public class DiagnosticEventLog {
             ring[nextIndex % capacity] = ev
             nextIndex += 1
         }
-        if isCollecting {
-            sessionEvents.append(ev)
+        if collecting {
+            sessionEventStorage.append(ev)
         }
+    }
+
+    public var isCollecting: Bool {
+        lock.lock()
+        defer { lock.unlock() }
+        return collecting
+    }
+
+    public var collectionStartTime: Date? {
+        lock.lock()
+        defer { lock.unlock() }
+        return startTime
+    }
+
+    public var sessionEvents: [DiagnosticEvent] {
+        lock.lock()
+        defer { lock.unlock() }
+        return sessionEventStorage
     }
 
     /// Start a diagnostic collection session.
     /// Thread-safe.
     public func startCollection() {
         lock.lock()
-        isCollecting = true
-        collectionStartTime = Date()
-        sessionEvents.removeAll()
-        sessionEvents.append(DiagnosticEvent(timestamp: Date(), subsystem: "System", level: "info", message: "Diagnostic collection started"))
+        collecting = true
+        startTime = Date()
+        sessionEventStorage.removeAll()
+        sessionEventStorage.append(DiagnosticEvent(timestamp: Date(), subsystem: "System", level: "info", message: "Diagnostic collection started"))
         lock.unlock()
     }
 
@@ -65,8 +83,8 @@ public class DiagnosticEventLog {
     /// Thread-safe.
     public func stopCollection() {
         lock.lock()
-        isCollecting = false
-        sessionEvents.append(DiagnosticEvent(timestamp: Date(), subsystem: "System", level: "info", message: "Diagnostic collection stopped"))
+        collecting = false
+        sessionEventStorage.append(DiagnosticEvent(timestamp: Date(), subsystem: "System", level: "info", message: "Diagnostic collection stopped"))
         lock.unlock()
     }
 
@@ -84,7 +102,7 @@ public class DiagnosticEventLog {
     /// Thread-safe.
     public func formattedSession() -> String {
         lock.lock()
-        let copy = sessionEvents
+        let copy = sessionEventStorage
         lock.unlock()
         return format(copy)
     }
@@ -116,11 +134,13 @@ struct DiagnosticReportBuilder {
         sections.append(makePermissions())
         sections.append(makeSpaceState())
         sections.append(makeLabelSystem())
+        sections.append(makeLabelWindows())
         sections.append(makeGestureOverride())
         sections.append(makeHotkeys())
         sections.append(makeDragState())
         sections.append(makeCalibration())
         sections.append(makeSpaceManagerInternals())
+        sections.append(makeLauncherState())
         sections.append(makeSpaceAPIState())
         sections.append(makeUpdaterState())
         sections.append(makeEventLog())
@@ -154,12 +174,20 @@ struct DiagnosticReportBuilder {
         s += "macOS: \(os.majorVersion).\(os.minorVersion).\(os.patchVersion)\n"
         let uptime = ProcessInfo.processInfo.systemUptime
         s += "Uptime: \(String(format: "%.1f", uptime))s\n"
+        if let frontmost = NSWorkspace.shared.frontmostApplication {
+            let bundleID = frontmost.bundleIdentifier ?? "?"
+            s += "Frontmost Application: \(frontmost.localizedName ?? "?") (bundleID=\(bundleID), pid=\(frontmost.processIdentifier))\n"
+        } else {
+            s += "Frontmost Application: nil\n"
+        }
         s += "Screens: \(NSScreen.screens.count)\n"
         for (i, screen) in NSScreen.screens.enumerated() {
             let id = screen.deviceDescription[NSDeviceDescriptionKey("NSScreenNumber")] as? CGDirectDisplayID ?? 0
             let bounds = CGDisplayBounds(id)
             let isBuiltin = CGDisplayIsBuiltin(id) != 0
-            s += "  Screen \(i): \"\(screen.localizedName)\" \(Int(bounds.width))×\(Int(bounds.height)) isBuiltin=\(isBuiltin ? 1 : 0)\n"
+            let scale = String(format: "%.2f", screen.backingScaleFactor)
+            s += "  Screen \(i): \"\(screen.localizedName)\" displayID=\(id) \(Int(bounds.width))×\(Int(bounds.height)) scale=\(scale)"
+            s += " frame=\(NSStringFromRect(screen.frame)) visibleFrame=\(NSStringFromRect(screen.visibleFrame)) isBuiltin=\(isBuiltin ? 1 : 0)\n"
         }
         // Hardware details
         let processCount = ProcessInfo.processInfo.processorCount
@@ -258,6 +286,51 @@ struct DiagnosticReportBuilder {
         return s
     }
 
+    private static func makeLabelWindows() -> String {
+        guard let labelManager = AppDelegate.shared.statusBarController?.labelManager else {
+            return "─── Label Windows ───\nLabelManager: nil\n"
+        }
+
+        var s = "─── Label Windows ───\n"
+        s += "previewWindowCount: \(labelManager.createdWindows.count)\n"
+        s += "activeWindowCount: \(labelManager.activeWindows.count)\n"
+        s += "knownSpaceCount: \(labelManager.knownSpaceIDs.count)\n"
+        s += "knownFullscreenSpaceCount: \(labelManager.knownFullscreenSpaceIDs.count)\n"
+        s += "lastKnownVisibleSpaceIDs: \(labelManager.lastKnownVisibleSpaceIDs.sorted())\n"
+        s += "previewTransitionSuppressed: \(labelManager.isPreviewTransitionSuppressed)\n"
+        s += "previewSuppressedForSettings: \(labelManager.arePreviewLabelsSuppressedForSettings)\n"
+        s += "settingsWindowOpen: \(labelManager.isSettingsWindowOpen)\n"
+        s += "previewTransitionGeneration: \(labelManager.previewTransitionGeneration)\n"
+        s += "previewTransitionRestoreAttempt: \(labelManager.previewTransitionRestoreAttempt)\n"
+        s += "previewTransitionStablePasses: \(labelManager.previewTransitionStablePasses)\n"
+        s += "previewTransitionCompletionObserved: \(labelManager.previewTransitionCompletionObserved)\n"
+
+        let windows = labelManager.createdWindows.map { (role: "preview", window: $0.value) }
+            + labelManager.activeWindows.map { (role: "active", window: $0.value) }
+        for entry in windows.sorted(by: { lhs, rhs in
+            if lhs.window.displayID != rhs.window.displayID {
+                return lhs.window.displayID < rhs.window.displayID
+            }
+            if lhs.window.spaceId != rhs.window.spaceId {
+                return lhs.window.spaceId < rhs.window.spaceId
+            }
+            return lhs.role < rhs.role
+        }) {
+            let window = entry.window
+            let assignedSpaces = window.windowNumber > 0
+                ? SpaceHelper.getWindowCurrentSpaces(windowID: window.windowNumber).sorted()
+                : []
+            s += "  \(entry.role) space=\(window.spaceId) display=\(window.displayID) window=\(window.windowNumber)"
+            s += " visible=\(window.isVisible) alpha=\(String(format: "%.2f", window.alphaValue))"
+            s += " activeMode=\(window.isActiveMode) current=\(window.isCurrentSpaceLabel)"
+            s += " dragging=\(window.isDragging) anchor=\(window.isInvisibleAnchorMode)"
+            s += " key=\(window.isKeyWindow) main=\(window.isMainWindow) level=\(window.level.rawValue)"
+            s += " behavior=\(window.collectionBehavior.rawValue) assignedSpaces=\(assignedSpaces)"
+            s += " frame=\(NSStringFromRect(window.frame))\n"
+        }
+        return s
+    }
+
     private static func makeGestureOverride() -> String {
         guard let gm = AppDelegate.shared.gestureManager else {
             return "─── Gesture Override ───\nGestureManager: nil\n"
@@ -335,7 +408,45 @@ struct DiagnosticReportBuilder {
         s += "connectedDisplayUUIDs: \(sm.connectedDisplayUUIDsInfo)\n"
         s += "lastManualSwitchTargetUUID: \(sm.lastManualSwitchTargetUUIDInfo)\n"
         s += "programmaticSwitch:\n\(SpaceHelper.programmaticSwitchStateInfo)"
+        s += "observationFence:\n\(sm.confirmedSpaceObservationFence.diagnosticDescription)"
+        s += "pendingProgrammaticSpaceSwitches: \(sm.pendingProgrammaticSpaceSwitches.map { "\($0.key)=\($0.value.spaceID)/g\($0.value.generation)" }.sorted())\n"
+        s += "latestProgrammaticSwitchRequestIDs: \(sm.latestProgrammaticSwitchRequestIDs)\n"
+        s += "retryObservedSpace: \(sm.spaceChangeRetryObservedSpaceID ?? "nil") passes=\(sm.spaceChangeRetryObservedPasses) display=\(sm.spaceChangeRetryDisplayID ?? "nil") generation=\(sm.spaceChangeRetryGeneration)\n"
+        if let pending = sm.pendingMonitorSpaceChange {
+            s += "pendingMonitorSpaceChange: raw=\(pending.rawUUID) desktop=\(pending.isDesktop) notifications=\(pending.ncCount) display=\(pending.displayID) generation=\(sm.monitorSpaceChangeGeneration)\n"
+        } else {
+            s += "pendingMonitorSpaceChange: nil generation=\(sm.monitorSpaceChangeGeneration)\n"
+        }
         s += "autoEditBundleID: \(sm.autoEditBundleID ?? "nil")\n"
+        return s
+    }
+
+    private static func makeLauncherState() -> String {
+        let controller = LauncherWindowController.shared
+        let viewModel = controller.viewModel
+        var s = "─── Launcher State ───\n"
+        if let window = controller.window {
+            s += "window: visible=\(window.isVisible) key=\(window.isKeyWindow) main=\(window.isMainWindow)"
+            s += " level=\(window.level.rawValue) behavior=\(window.collectionBehavior.rawValue)"
+            s += " frame=\(NSStringFromRect(window.frame))\n"
+        } else {
+            s += "window: nil\n"
+        }
+        s += "activeCommand: \(viewModel.activeCommand?.type.rawValue ?? "nil")\n"
+        s += "searchQuery: \(viewModel.searchQuery.debugDescription) spaceBarQuery: \(viewModel.spaceBarQuery.debugDescription)\n"
+        s += "selectedRowIndex: \(viewModel.selectedRowIndex) selectedSpaceIndex: \(viewModel.selectedSpaceIndex)\n"
+        s += "isLoadingData: \(viewModel.isLoadingData) keyboardSelection=\(viewModel.isKeyboardSelection) bottomBarFocused=\(viewModel.isBottomBarFocused)\n"
+        s += "showCommandNumbers: \(viewModel.showCommandNumbers) isRearrangingSpace=\(viewModel.isRearrangingSpace)\n"
+        s += "currentSpaces: \(viewModel.currentSpaces.count) currentWindows: \(viewModel.currentWindows.count)\n"
+        s += "stagedMoves: \(viewModel.stagedMoves.count) isExecutingBatchMove=\(viewModel.isExecutingBatchMove)\n"
+        s += "commandKTargetWindow: \(viewModel.commandKTargetWindow?.id.description ?? "nil") commandKSelectedIndex=\(viewModel.commandKSelectedIndex)\n"
+        s += "isStagingForRestoreTo: \(viewModel.isStagingForRestoreTo) isExecutingRestoreToImmediately=\(viewModel.isExecutingRestoreToImmediately)\n"
+        if let window = viewModel.previouslyActiveWindow {
+            s += "previouslyActiveWindow: id=\(window.id) pid=\(window.pid) frame=\(NSStringFromRect(window.frame))\n"
+        } else {
+            s += "previouslyActiveWindow: nil\n"
+        }
+        s += "renameInputText: \(viewModel.renameInputText.debugDescription) terminatingApplicationPIDs: \(viewModel.terminatingApplicationPIDs.sorted())\n"
         return s
     }
 
@@ -344,6 +455,7 @@ struct DiagnosticReportBuilder {
         s += "isAPIEnabled: \(SpaceManager.isAPIEnabled)\n"
         if let api = AppDelegate.shared.spaceManager?.spaceAPI {
             s += "hasActiveListeners: \(api.hasActiveListeners)\n"
+            s += "currentSnapshotRevision: \(api.currentSnapshotRevision)\n"
         } else {
             s += "spaceAPI: nil\n"
         }
