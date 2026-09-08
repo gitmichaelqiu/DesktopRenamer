@@ -23,7 +23,7 @@ extension LauncherViewModel {
             // Subpage selection
             if let staging = stagingWindow {
                 // Staging a window to target space
-                let spaces = filteredSpaces
+                let spaces = filteredMoveWindowSpaces
                 guard index >= 0 && index < spaces.count else { return }
                 let space = spaces[index]
                 
@@ -49,7 +49,7 @@ extension LauncherViewModel {
                 executeSwitchToDesktop(spaces[index])
                 
             case .moveWindow:
-                let spaces = filteredSpaces
+                let spaces = filteredActiveWindowMoveSpaces
                 guard index >= 0 && index < spaces.count else { return }
                 executeMoveWindow(spaces[index])
                 
@@ -85,4 +85,3 @@ extension LauncherViewModel {
         }
     }
 }
-

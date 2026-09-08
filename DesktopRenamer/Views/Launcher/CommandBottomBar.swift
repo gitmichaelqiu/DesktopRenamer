@@ -121,19 +121,26 @@ struct CommandBottomBar: View {
                             
                             HStack(spacing: 4) {
                                 Text(verbatim: String(localized: "Move"))
-                                Text("⌘M")
+                                Text("⌘T")
                                     .font(.system(.subheadline))
                                     .fontWeight(.bold)
                             }
                             .modifier(BottomBarCapsule(isSelected: false, isActive: false, colorScheme: colorScheme))
                             .contentShape(Rectangle())
                             .onTapGesture {
-                                if let window = viewModel.selectedWindowForListWindows {
-                                    viewModel.batchMoveLastSelectedIndex = viewModel.selectedRowIndex
-                                    viewModel.stagingWindow = window
-                                    viewModel.isExecutingRestoreToImmediately = true
-                                    viewModel.selectedRowIndex = 0
-                                }
+                                viewModel.moveSelectedListWindowToCurrentDesktop()
+                            }
+
+                            HStack(spacing: 4) {
+                                Text(verbatim: String(localized: "Move to..."))
+                                Text("⌘⇧T")
+                                    .font(.system(.subheadline))
+                                    .fontWeight(.bold)
+                            }
+                            .modifier(BottomBarCapsule(isSelected: false, isActive: false, colorScheme: colorScheme))
+                            .contentShape(Rectangle())
+                            .onTapGesture {
+                                viewModel.stageSelectedListWindowForMove()
                             }
                             
                             HStack(spacing: 4) {

@@ -211,7 +211,7 @@ extension LauncherViewModel {
             DiagnosticEventLog.shared.record(subsystem: "Launcher", level: "info", "executeBatchMove: Finished batch move execution.")
             if let manager = AppDelegate.shared.spaceManager {
                 if manager.returnToOriginalAfterBatchMove {
-                    await restoreOriginalSpaces(originalSpaceByDisplay, using: manager)
+                    await WindowActionCoordinator.restoreOriginalSpaces(originalSpaceByDisplay, using: manager)
                 } else if let lastMoveAction = spaceMoveActions.last {
                     let lastTargetSpaceID: String
                     switch lastMoveAction.actionType {
@@ -235,37 +235,10 @@ extension LauncherViewModel {
                     "executeBatchMove: Cancelled or interrupted (\(error))."
                 )
                 if let manager = AppDelegate.shared.spaceManager {
-                    await restoreOriginalSpaces(originalSpaceByDisplay, using: manager)
+                    await WindowActionCoordinator.restoreOriginalSpaces(originalSpaceByDisplay, using: manager)
                 }
             }
         }
     }
 
-    private func restoreOriginalSpaces(
-        _ originalSpaceByDisplay: [String: String],
-        using manager: SpaceManager
-    ) async {
-        guard manager.returnToOriginalAfterBatchMove else { return }
-
-        for (displayID, originalSpaceID) in originalSpaceByDisplay {
-            guard let originalSpace = manager.spaceNameDict.first(where: {
-                $0.id == originalSpaceID && $0.displayID == displayID
-            }) else {
-                continue
-            }
-
-            if SpaceHelper.getCurrentSpaceID(for: displayID) != originalSpaceID {
-                manager.switchToSpace(originalSpace, forceInstant: true, isManual: false)
-                await waitForSpaceRestoration()
-            }
-        }
-    }
-
-    private func waitForSpaceRestoration() async {
-        await withCheckedContinuation { continuation in
-            DispatchQueue.main.asyncAfter(deadline: .now() + .milliseconds(600)) {
-                continuation.resume()
-            }
-        }
-    }
 }

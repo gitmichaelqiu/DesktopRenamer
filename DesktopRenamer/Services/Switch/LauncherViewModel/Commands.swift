@@ -66,6 +66,29 @@ extension LauncherViewModel {
             }
         }
     }
+
+    /// Targets for moving a window must be ordinary desktops. Fullscreen
+    /// Spaces belong to the app that owns them and cannot receive an
+    /// arbitrary window through the launcher move commands.
+    var filteredMoveWindowSpaces: [SpaceGroup] {
+        filteredSpaces.filter { !$0.isFullscreen }
+    }
+
+    /// The top-level Move Window command operates on the window captured when
+    /// the launcher opened, so do not offer its source desktop as a target.
+    var filteredActiveWindowMoveSpaces: [SpaceGroup] {
+        guard let previousWindow = previouslyActiveWindow else {
+            return filteredMoveWindowSpaces
+        }
+
+        let displayID = SpaceHelper.getWindowDisplayID(for: previousWindow.frame)
+        let sourceSpaceID = displayID.flatMap { SpaceHelper.getCurrentSpaceID(for: $0) }
+
+        guard let sourceSpaceID else {
+            return filteredMoveWindowSpaces
+        }
+        return filteredMoveWindowSpaces.filter { $0.id != sourceSpaceID }
+    }
     
     var filteredStagedActions: [BatchStagedAction] {
         let allStaged = stagedMoves.values.sorted { $0.window.title < $1.window.title }

@@ -56,11 +56,13 @@ extension LauncherViewModel {
             return filteredCommands.count
         } else {
             if stagingWindow != nil {
-                return filteredSpaces.count
+                return filteredMoveWindowSpaces.count
             }
             switch activeCommand?.type {
-            case .switchToDesktop, .moveWindow:
+            case .switchToDesktop:
                 return filteredSpaces.count
+            case .moveWindow:
+                return filteredActiveWindowMoveSpaces.count
             case .listWindows:
                 return filteredWindows.count
             case .batchMoveWindows:

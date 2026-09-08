@@ -38,29 +38,76 @@ extension LauncherView {
                     if let chars = event.charactersIgnoringModifiers?.lowercased(), chars.count == 1 {
                         let char = chars.first!
 
-                        if char == "m" && !hasShift {
-                            viewModel.batchMoveLastSelectedIndex = viewModel.selectedRowIndex
-                            viewModel.stagingWindow = window
-                            viewModel.isExecutingRestoreToImmediately = true
-                            viewModel.selectedRowIndex = 0
-                            return true
-                        } else if hasShift {
-                            switch char {
-                            case "w": viewModel.executeActionImmediately(window: window, actionType: .close); return true
-                            case "m": viewModel.executeActionImmediately(window: window, actionType: .minimize); return true
-                            case "r": viewModel.executeActionImmediately(window: window, actionType: .restore); return true
-                            case "f":
-                                let isFS = window.space.isFullscreen
-                                viewModel.executeActionImmediately(window: window, actionType: isFS ? .exitFullScreen : .enterFullScreen)
-                                return true
-                            case "h": viewModel.executeActionImmediately(window: window, actionType: .hide); return true
-                            case "q": viewModel.executeActionImmediately(window: window, actionType: .quit); return true
-                            default: break
+                        if char == "t" {
+                            if hasShift {
+                                viewModel.stageSelectedListWindowForMove()
+                            } else {
+                                viewModel.moveSelectedListWindowToCurrentDesktop()
                             }
+                            return true
+                        }
+                    }
+                }
+
+                // Keep direct window actions in sync with the Raycast
+                // command: Control+Shift is reserved for window operations,
+                // while Command+T/Command+Shift+T handle window moves.
+                if hasControl && hasShift && !hasCommand && !hasOption {
+                    if let chars = event.charactersIgnoringModifiers?.lowercased(), chars.count == 1 {
+                        switch chars.first! {
+                        case "w": viewModel.executeActionImmediately(window: window, actionType: .close); return true
+                        case "m": viewModel.executeActionImmediately(window: window, actionType: .minimize); return true
+                        case "r": viewModel.executeActionImmediately(window: window, actionType: .restore); return true
+                        case "f":
+                            let isFS = window.space.isFullscreen
+                            viewModel.executeActionImmediately(window: window, actionType: isFS ? .exitFullScreen : .enterFullScreen)
+                            return true
+                        case "h": viewModel.executeActionImmediately(window: window, actionType: .hide); return true
+                        case "q": viewModel.executeActionImmediately(window: window, actionType: .quit); return true
+                        default: break
                         }
                     }
                 }
             }
+        }
+
+        if viewModel.activeCommand?.type == .batchMoveWindows,
+           viewModel.commandKTargetWindow == nil,
+           viewModel.stagingWindow == nil,
+           hasControl && hasShift && !hasCommand && !hasOption,
+           let chars = event.charactersIgnoringModifiers?.lowercased(),
+           chars.count == 1 {
+            let items = viewModel.batchMoveSelectableItems
+            let index = viewModel.selectedRowIndex
+            guard index >= 0, index < items.count,
+                  case .unstaged(let window, _) = items[index] else {
+                return false
+            }
+
+            switch chars.first! {
+            case "w":
+                viewModel.stageSelectedBatchWindowAction(.close)
+            case "r":
+                let state = viewModel.isWindowMinimizedOrAppHidden(window)
+                guard state.minimized || state.hidden else { return true }
+                viewModel.stageSelectedBatchWindowAction(.restore)
+            case "m":
+                let state = viewModel.isWindowMinimizedOrAppHidden(window)
+                guard !state.minimized else { return true }
+                viewModel.stageSelectedBatchWindowAction(.minimize)
+            case "h":
+                let state = viewModel.isWindowMinimizedOrAppHidden(window)
+                guard !state.hidden else { return true }
+                viewModel.stageSelectedBatchWindowAction(.hide)
+            case "f":
+                let action: BatchStagedActionType = window.space.isFullscreen ? .exitFullScreen : .enterFullScreen
+                viewModel.stageSelectedBatchWindowAction(action)
+            case "q":
+                viewModel.stageSelectedBatchWindowAction(.quit)
+            default:
+                return false
+            }
+            return true
         }
 
         if viewModel.activeCommand?.type == .switchToDesktop,

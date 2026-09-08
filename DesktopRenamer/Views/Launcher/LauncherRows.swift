@@ -245,8 +245,8 @@ struct SpaceRowView: View {
 private struct CurrentSpaceIndicator: View {
     var body: some View {
         Circle()
-            .fill(Color.blue)
-            .frame(width: 8, height: 8)
+            .stroke(Color.blue, lineWidth: 2)
+            .frame(width: 20, height: 20)
             .frame(width: 32, height: 32)
             .accessibilityLabel(Text("Current space"))
     }

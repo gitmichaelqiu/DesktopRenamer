@@ -33,6 +33,73 @@ extension LauncherViewModel {
             closeLauncher()
         }
     }
+
+    func stageSelectedListWindowForMove() {
+        guard activeCommand?.type == .listWindows,
+              stagingWindow == nil,
+              let window = selectedWindowForListWindows else {
+            return
+        }
+
+        batchMoveLastSelectedIndex = selectedRowIndex
+        stagingWindow = window
+        isExecutingRestoreToImmediately = true
+        selectedRowIndex = 0
+    }
+
+    /// Matches Raycast's Move to Current Desktop action. The first current
+    /// Space returned by SpaceAPI is the user's active desktop, while the
+    /// launcher still uses the selected window's authoritative source Space.
+    func moveSelectedListWindowToCurrentDesktop() {
+        guard let window = selectedWindowForListWindows,
+              let manager = AppDelegate.shared.spaceManager,
+              let targetSpaceID = SpaceHelper.getCurrentSpaceIDs().first,
+              let targetSpace = manager.spaceNameDict.first(where: { $0.id == targetSpaceID }) else {
+            return
+        }
+
+        guard !targetSpace.isFullscreen else {
+            DiagnosticEventLog.shared.record(
+                subsystem: "Launcher",
+                level: "warning",
+                "moveSelectedListWindowToCurrentDesktop: current Space \(targetSpaceID) is fullscreen"
+            )
+            return
+        }
+
+        guard window.space.id != targetSpace.id else {
+            DiagnosticEventLog.shared.record(
+                subsystem: "Launcher",
+                level: "info",
+                "moveSelectedListWindowToCurrentDesktop: window \(window.id) is already on \(targetSpaceID)"
+            )
+            return
+        }
+
+        incrementCommandFrequency(LauncherCommandType.listWindows.rawValue)
+        moveListWindow(window, to: targetSpace, using: manager)
+    }
+
+    private func moveListWindow(_ window: WindowEntry, to targetSpace: DesktopSpace, using manager: SpaceManager) {
+        let originalSpaces = manager.returnToOriginalAfterBatchMove
+            ? SpaceHelper.getCurrentSpaceIDsByDisplay()
+            : [:]
+
+        closeLauncher()
+
+        Task { @MainActor in
+            try? await Task.sleep(nanoseconds: 200_000_000)
+            let moved = await WindowActionCoordinator.moveWindow(
+                windowID: window.id,
+                pid: window.pid,
+                fromSpaceID: window.space.id,
+                targetSpaceID: targetSpace.id
+            )
+
+            guard moved, manager.returnToOriginalAfterBatchMove else { return }
+            await WindowActionCoordinator.restoreOriginalSpaces(originalSpaces, using: manager)
+        }
+    }
     
     @discardableResult
     func movePreviouslyActiveWindow(toSpaceID spaceID: String) -> Bool {
@@ -60,7 +127,8 @@ extension LauncherViewModel {
         
         guard let manager = AppDelegate.shared.spaceManager,
               manager.spaceNameDict.contains(where: { $0.id == fromSpaceIDStr }),
-              manager.spaceNameDict.contains(where: { $0.id == spaceID }) else {
+              let targetSpace = manager.spaceNameDict.first(where: { $0.id == spaceID }),
+              !targetSpace.isFullscreen else {
             DiagnosticEventLog.shared.record(subsystem: "Launcher", level: "warning", "movePreviouslyActiveWindow: source or target Space is no longer available, source=\(fromSpaceIDStr), target=\(spaceID)")
             return false
         }
@@ -70,7 +138,9 @@ extension LauncherViewModel {
             return false
         }
 
-        let originalSpaceID = fromSpaceIDStr
+        let originalSpaces = manager.returnToOriginalAfterBatchMove
+            ? SpaceHelper.getCurrentSpaceIDsByDisplay()
+            : [:]
 
         DiagnosticEventLog.shared.record(subsystem: "Launcher", level: "info", "movePreviouslyActiveWindow: moving window \(prevWindow.id) from space \(fromSpaceIDStr) to space \(spaceID)")
 
@@ -85,15 +155,10 @@ extension LauncherViewModel {
                 targetSpaceID: spaceID
             )
 
-            guard moved,
-                  manager.returnToOriginalAfterBatchMove,
-                  let originalSpace = manager.spaceNameDict.first(where: { $0.id == originalSpaceID }) else {
+            guard moved, manager.returnToOriginalAfterBatchMove else {
                 return
             }
-
-            if SpaceHelper.getCurrentSpaceID(for: originalSpace.displayID) != originalSpace.id {
-                manager.switchToSpace(originalSpace, forceInstant: true, isManual: false)
-            }
+            await WindowActionCoordinator.restoreOriginalSpaces(originalSpaces, using: manager)
         }
         return true
     }

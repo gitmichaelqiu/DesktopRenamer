@@ -102,10 +102,49 @@ extension LauncherViewModel {
             stagedMoves[window.id] = BatchStagedAction(window: window, actionType: action)
         }
     }
+
+    /// Raycast stages window actions from the Manage Windows action panel.
+    /// Keep the native launcher's direct Control+Shift shortcuts on that same
+    /// staging path instead of executing a background window immediately.
+    func stageSelectedBatchWindowAction(_ actionType: BatchStagedActionType) {
+        guard activeCommand?.type == .batchMoveWindows,
+              stagingWindow == nil,
+              selectedRowIndex >= 0,
+              selectedRowIndex < batchMoveSelectableItems.count else {
+            return
+        }
+
+        let item = batchMoveSelectableItems[selectedRowIndex]
+        guard case .unstaged(let window, _) = item else { return }
+        stagedMoves[window.id] = BatchStagedAction(window: window, actionType: actionType)
+        selectedRowIndex = min(selectedRowIndex, max(batchMoveSelectableItems.count - 1, 0))
+    }
     
     func executeActionImmediately(window: WindowEntry, actionType: BatchStagedActionType) {
+        switch actionType {
+        case .move(let space), .restoreTo(let space):
+            guard !space.isFullscreen else {
+                DiagnosticEventLog.shared.record(
+                    subsystem: "Launcher",
+                    level: "warning",
+                    "executeActionImmediately: refusing to move window \(window.id) into fullscreen Space \(space.id)"
+                )
+                return
+            }
+        default:
+            break
+        }
+
         let windowDisplayID = window.space.displayID
         let originalSpaceUUID = SpaceHelper.getCurrentSpaceID(for: windowDisplayID)
+        let originalSpacesByDisplay: [String: String] = {
+            guard actionType != .quit,
+                  let manager = AppDelegate.shared.spaceManager,
+                  manager.returnToOriginalAfterBatchMove else {
+                return [:]
+            }
+            return SpaceHelper.getCurrentSpaceIDsByDisplay()
+        }()
         DiagnosticEventLog.shared.record(subsystem: "Launcher", level: "info", "executeActionImmediately: window=\(window.title) (id=\(window.id)), actionType=\(actionType.description), display=\(windowDisplayID), originalSpaceUUID=\(originalSpaceUUID ?? "nil")")
 
         if actionType == .quit {
@@ -244,13 +283,15 @@ extension LauncherViewModel {
             // Quitting an app does not require visiting its space, so preserve the
             // user's current space for quit actions.
             if actionType != .quit,
-               let originalUUID = originalSpaceUUID,
                let manager = AppDelegate.shared.spaceManager,
                manager.returnToOriginalAfterBatchMove {
-                if SpaceHelper.getCurrentSpaceID(for: windowDisplayID) != originalUUID,
-                   let targetSpace = manager.spaceNameDict.first(where: {
-                       $0.id == originalUUID && $0.displayID == windowDisplayID
-                   }) {
+                if !originalSpacesByDisplay.isEmpty {
+                    await WindowActionCoordinator.restoreOriginalSpaces(originalSpacesByDisplay, using: manager)
+                } else if let originalUUID = originalSpaceUUID,
+                          let targetSpace = manager.spaceNameDict.first(where: {
+                              $0.id == originalUUID && $0.displayID == windowDisplayID
+                          }),
+                          SpaceHelper.getCurrentSpaceID(for: windowDisplayID) != originalUUID {
                     manager.switchToSpace(targetSpace, forceInstant: true, isManual: false)
                 }
             }

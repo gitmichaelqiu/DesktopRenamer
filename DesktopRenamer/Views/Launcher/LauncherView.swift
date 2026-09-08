@@ -234,8 +234,10 @@ struct ListAreaView: View {
     var colors: ThemeColors {
         ThemeColors(isDark: colorScheme == .dark)
     }
-    
+
     var body: some View {
+        let currentSpaceIDsByDisplay = SpaceHelper.getCurrentSpaceIDsByDisplay()
+
         VStack(spacing: 0) {
             if viewModel.activeCommand == nil {
                 // Main command list
@@ -274,7 +276,7 @@ struct ListAreaView: View {
             } else {
                 if viewModel.stagingWindow != nil {
                     // Staging target space selection
-                    let spaces = viewModel.filteredSpaces
+                    let spaces = viewModel.filteredMoveWindowSpaces
                     if spaces.isEmpty {
                         EmptyResultsView()
                     } else {
@@ -283,7 +285,7 @@ struct ListAreaView: View {
                                 VStack(spacing: 4) {
                                     ForEach(Array(spaces.enumerated()), id: \.element.id) { i, space in
                                         let isSelected = !viewModel.isBottomBarFocused && viewModel.selectedRowIndex == i
-                                        let isCurrent = AppDelegate.shared.spaceManager?.currentSpaceIDForLabels(onDisplayID: space.displayID) == space.id
+                                        let isCurrent = currentSpaceIDsByDisplay[space.displayID] == space.id
                                         SpaceRowView(space: space, isSelected: isSelected, isCurrent: isCurrent, shortcutText: viewModel.showCommandNumbers && viewModel.commandKTargetWindow == nil && i < 9 ? "⌘\(i + 1)" : nil)
                                             .contentShape(Rectangle())
                                             .onTapGesture {
@@ -315,7 +317,9 @@ struct ListAreaView: View {
                 } else {
                     switch viewModel.activeCommand?.type {
                     case .switchToDesktop, .moveWindow:
-                        let spaces = viewModel.filteredSpaces
+                        let spaces = viewModel.activeCommand?.type == .moveWindow
+                            ? viewModel.filteredActiveWindowMoveSpaces
+                            : viewModel.filteredSpaces
                         if spaces.isEmpty {
                             EmptyResultsView()
                         } else {
@@ -324,7 +328,7 @@ struct ListAreaView: View {
                                     VStack(spacing: 4) {
                                         ForEach(Array(spaces.enumerated()), id: \.element.id) { i, space in
                                             let isSelected = !viewModel.isBottomBarFocused && viewModel.selectedRowIndex == i
-                                            let isCurrent = AppDelegate.shared.spaceManager?.currentSpaceIDForLabels(onDisplayID: space.displayID) == space.id
+                                            let isCurrent = currentSpaceIDsByDisplay[space.displayID] == space.id
                                             SpaceRowView(space: space, isSelected: isSelected, isCurrent: isCurrent, shortcutText: viewModel.showCommandNumbers && viewModel.commandKTargetWindow == nil && i < 9 ? "⌘\(i + 1)" : nil)
                                                 .contentShape(Rectangle())
                                                 .onTapGesture {

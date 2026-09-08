@@ -40,9 +40,18 @@ enum WindowActionCoordinator {
             return false
         }
 
+        guard !targetSpace.isFullscreen else {
+            DiagnosticEventLog.shared.record(
+                subsystem: "WindowActionCoordinator",
+                level: "warning",
+                "Refusing to move window \(windowID) into fullscreen Space \(targetSpaceID)."
+            )
+            return false
+        }
+
         guard resolvedFromSpaceID != targetSpaceID else { return true }
 
-        let requiresFullscreenHandling = sourceSpace.isFullscreen || targetSpace.isFullscreen
+        let requiresFullscreenHandling = sourceSpace.isFullscreen
 
         // AX cannot reliably access a window in a background fullscreen
         // Space. Make only that source Space current long enough to leave
@@ -69,10 +78,7 @@ enum WindowActionCoordinator {
 
         // Cross-display moves need the destination display's Space active so
         // WindowServer can place and reposition the window on that display.
-        // A fullscreen destination has the same requirement even when it is
-        // on the source display.
         let destinationMustBeCurrent = sourceSpace.displayID != targetSpace.displayID
-            || (requiresFullscreenHandling && targetSpace.isFullscreen)
         let destinationIsCurrent = SpaceHelper.getCurrentSpaceID(for: targetSpace.displayID) == targetSpace.id
         if destinationMustBeCurrent, !destinationIsCurrent {
             manager.switchToSpace(targetSpace, forceInstant: true, isManual: false)
@@ -108,6 +114,30 @@ enum WindowActionCoordinator {
         }
 
         return await waitForWindow(windowID: windowID, inSpace: targetSpaceID)
+    }
+
+    /// Restores every display to the snapshot captured before a launcher
+    /// operation. Window actions can temporarily activate a different display,
+    /// so restoring only the selected window's display leaves multi-monitor
+    /// sessions in a different arrangement than where they started.
+    static func restoreOriginalSpaces(
+        _ originalSpaceByDisplay: [String: String],
+        using manager: SpaceManager
+    ) async {
+        guard manager.returnToOriginalAfterBatchMove else { return }
+
+        for (displayID, originalSpaceID) in originalSpaceByDisplay {
+            guard let originalSpace = manager.spaceNameDict.first(where: {
+                $0.id == originalSpaceID && $0.displayID == displayID
+            }) else {
+                continue
+            }
+
+            if SpaceHelper.getCurrentSpaceID(for: displayID) != originalSpaceID {
+                manager.switchToSpace(originalSpace, forceInstant: true, isManual: false)
+                _ = await waitForSpace(originalSpace.id, on: displayID)
+            }
+        }
     }
 
     private static func resolveSourceSpaceID(
