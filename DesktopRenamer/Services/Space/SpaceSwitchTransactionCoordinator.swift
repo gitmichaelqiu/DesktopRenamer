@@ -109,7 +109,6 @@ struct SpaceObservationFence {
 
     private(set) var confirmations: [String: Confirmation] = [:]
     private var latestGenerationByDisplay: [String: UInt64] = [:]
-    private var observedDestinations: [String: String] = [:]
 
     mutating func beginSwitch(displayID: String, generation: UInt64) {
         let latestGeneration = latestGenerationByDisplay[displayID] ?? 0
@@ -117,7 +116,6 @@ struct SpaceObservationFence {
 
         latestGenerationByDisplay[displayID] = generation
         confirmations.removeValue(forKey: displayID)
-        observedDestinations.removeValue(forKey: displayID)
     }
 
     mutating func confirm(
@@ -133,60 +131,48 @@ struct SpaceObservationFence {
             spaceID: spaceID,
             generation: generation
         )
-        observedDestinations.removeValue(forKey: displayID)
     }
 
     mutating func invalidate(displayID: String) {
         confirmations.removeValue(forKey: displayID)
-        observedDestinations.removeValue(forKey: displayID)
     }
 
     func confirmation(for displayID: String) -> Confirmation? {
         confirmations[displayID]
     }
 
-    /// Records that the confirmed destination has been observed by an
-    /// authoritative WindowServer path. Monitor and retry snapshots may mark
-    /// the destination as observed, but they can never release the fence for
-    /// a different Space.
-    mutating func markDestinationObserved(displayID: String, spaceID: String) {
-        guard let confirmation = confirmations[displayID],
-              confirmation.spaceID == spaceID else {
-            return
-        }
-        observedDestinations[displayID] = spaceID
-    }
-
-    /// Releases a fence only after its destination has been observed and a
-    /// subsequent active-space notification reports a different Space. This
-    /// path is intentionally separate from monitor/retry reconciliation: an
-    /// old CGS snapshot can be repeated indefinitely without becoming an
-    /// external transition.
+    /// Releases a fence when an authoritative read proves that WindowServer
+    /// has moved to another Space. The active-space notification can be lost,
+    /// so requiring the confirmed destination to have been observed by that
+    /// notification path would leave the fence permanently suppressing the
+    /// real current Space.
     mutating func clearForExternalObservation(
         displayID: String,
-        spaceID: String
+        spaceID: String,
+        liveSpaceID: String?
     ) -> Bool {
         guard let confirmation = confirmations[displayID],
-              observedDestinations[displayID] == confirmation.spaceID,
-              spaceID != confirmation.spaceID else {
+              spaceID != confirmation.spaceID,
+              let liveSpaceID,
+              liveSpaceID != confirmation.spaceID else {
             return false
         }
 
         confirmations.removeValue(forKey: displayID)
-        observedDestinations.removeValue(forKey: displayID)
         return true
     }
 
-    /// Returns true when a monitor or retry candidate is stale relative to a
-    /// confirmed destination. A different candidate never clears the fence;
-    /// only clearForExternalObservation can do that after an authoritative
-    /// active-space notification has established a real external transition.
+    /// Returns true only when a monitor or retry candidate conflicts with a
+    /// confirmed destination while the independent live query still reports
+    /// that destination. If the live query has moved elsewhere, the candidate
+    /// is the current Space and must be allowed to reconcile the model.
     func shouldIgnore(
         displayID: String,
         observedSpaceID: String,
-        liveSpaceID _: String?
+        liveSpaceID: String?
     ) -> Bool {
         guard let confirmation = confirmations[displayID] else { return false }
-        return observedSpaceID != confirmation.spaceID
+        guard observedSpaceID != confirmation.spaceID else { return false }
+        return liveSpaceID == nil || liveSpaceID == confirmation.spaceID
     }
 }
