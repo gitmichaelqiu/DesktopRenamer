@@ -119,24 +119,21 @@ extension SpaceAPI {
                   let targetSpaceID = arguments["targetSpaceID"] else {
                 throw SpaceAPIError.invalidArgument("Missing window move arguments.")
             }
-            let moved: Bool
-            if let pid = Int32(arguments["pid"] ?? "") {
-                moved = await WindowActionCoordinator.moveWindow(
-                    windowID: windowID,
-                    pid: pid,
-                    fromSpaceID: fromSpaceID,
-                    targetSpaceID: targetSpaceID
-                )
-            } else if let fromSpaceID = Int(fromSpaceID), let targetSpaceID = Int(targetSpaceID) {
-                SpaceHelper.moveWindowToSpace(
-                    windowID: windowID,
-                    fromSpaceID: fromSpaceID,
-                    targetSpaceID: targetSpaceID
-                )
-                moved = true
+            let pid: Int32
+            if let requestedPID = Int32(arguments["pid"] ?? ""), requestedPID > 0 {
+                pid = requestedPID
+            } else if let windowInfo = SpaceHelper.getWindowInfo(id: windowID) {
+                pid = windowInfo.pid
             } else {
-                throw SpaceAPIError.invalidArgument("A process ID or numeric space IDs are required.")
+                throw SpaceAPIError.operationFailed("Could not resolve the window's process ID.")
             }
+
+            let moved = await WindowActionCoordinator.moveWindow(
+                windowID: windowID,
+                pid: pid,
+                fromSpaceID: fromSpaceID,
+                targetSpaceID: targetSpaceID
+            )
             guard moved else { throw SpaceAPIError.operationFailed("Window move failed.") }
             return ""
         default:
