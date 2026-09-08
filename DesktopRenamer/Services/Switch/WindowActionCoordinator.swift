@@ -73,8 +73,8 @@ enum WindowActionCoordinator {
         // on the source display.
         let destinationMustBeCurrent = sourceSpace.displayID != targetSpace.displayID
             || (requiresFullscreenHandling && targetSpace.isFullscreen)
-        if destinationMustBeCurrent,
-           SpaceHelper.getCurrentSpaceID(for: targetSpace.displayID) != targetSpace.id {
+        let destinationIsCurrent = SpaceHelper.getCurrentSpaceID(for: targetSpace.displayID) == targetSpace.id
+        if destinationMustBeCurrent, !destinationIsCurrent {
             manager.switchToSpace(targetSpace, forceInstant: true, isManual: false)
             guard await waitForSpace(targetSpace.id, on: targetSpace.displayID) else {
                 return false
@@ -84,9 +84,15 @@ enum WindowActionCoordinator {
         // Same-display moves use the same captured-window drag primitive as
         // the Raycast/API path. It preserves the app-specific grab offsets
         // and lets WindowServer complete the move through the established
-        // Space-switch transaction. Cross-display moves still require the
-        // direct CGS path above because a synthetic drag cannot cross displays.
-        if !destinationMustBeCurrent,
+        // Space-switch transaction. Cross-display moves and already-current
+        // destinations use the direct CGS path because a synthetic drag cannot
+        // reliably address a background window in those cases.
+        // Synthetic dragging requires the target Space to become current: the
+        // source window may be in a background Space, so its captured frame is
+        // not a reliable hit-test location while the destination is already
+        // visible. Direct WindowServer assignment handles that case without
+        // activating or raising either application.
+        if !destinationMustBeCurrent && !destinationIsCurrent,
            let windowInfo = SpaceHelper.getWindowInfo(id: windowID) {
             SpaceHelper.dragWindow(
                 (id: windowID, pid: pid, frame: windowInfo.frame),
