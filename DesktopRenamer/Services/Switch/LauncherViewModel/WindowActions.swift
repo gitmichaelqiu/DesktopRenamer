@@ -47,13 +47,13 @@ extension LauncherViewModel {
         selectedRowIndex = 0
     }
 
-    /// Matches Raycast's Move to Current Desktop action. The first current
-    /// Space returned by SpaceAPI is the user's active desktop, while the
-    /// launcher still uses the selected window's authoritative source Space.
+    /// Matches Raycast's Move to Current Desktop action. The target must be
+    /// the current Space on the selected window's display, not the first
+    /// current Space returned across all displays.
     func moveSelectedListWindowToCurrentDesktop() {
         guard let window = selectedWindowForListWindows,
               let manager = AppDelegate.shared.spaceManager,
-              let targetSpaceID = SpaceHelper.getCurrentSpaceIDs().first,
+              let targetSpaceID = SpaceHelper.getCurrentSpaceID(for: window.space.displayID),
               let targetSpace = manager.spaceNameDict.first(where: { $0.id == targetSpaceID }) else {
             return
         }
