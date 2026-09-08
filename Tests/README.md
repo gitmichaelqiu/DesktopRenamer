@@ -6,6 +6,9 @@ contract harness can be compiled and run from the repository root with:
 ```sh
 swiftc -swift-version 5 \
     DesktopRenamer/Services/API/APIContract.swift \
+    DesktopRenamer/Services/API/APIContractJSON.swift \
+    DesktopRenamer/Services/API/APIContractValidation.swift \
+    DesktopRenamer/Services/API/APIContractCodec.swift \
     DesktopRenamer/Services/API/SpaceAPILegacyFormat.swift \
     Tests/SpaceAPIContractTests.swift \
     -o /tmp/DesktopRenamerSpaceAPIContractTests
