@@ -178,9 +178,9 @@ struct SpaceRowView: View {
     
     var body: some View {
         HStack(spacing: 12) {
-            CurrentSpaceIndicator(isCurrent: isCurrent)
-
-            if space.isFullscreen, let appPath = space.appPath {
+            if isCurrent {
+                CurrentSpaceIndicator()
+            } else if space.isFullscreen, let appPath = space.appPath {
                 let appIcon = NSWorkspace.shared.icon(forFile: appPath)
                 Image(nsImage: appIcon)
                     .resizable()
@@ -243,13 +243,11 @@ struct SpaceRowView: View {
 }
 
 private struct CurrentSpaceIndicator: View {
-    let isCurrent: Bool
-
     var body: some View {
         Circle()
-            .fill(isCurrent ? Color.blue : Color.clear)
+            .fill(Color.blue)
             .frame(width: 8, height: 8)
-            .accessibilityHidden(!isCurrent)
+            .frame(width: 32, height: 32)
             .accessibilityLabel(Text("Current space"))
     }
 }
@@ -498,4 +496,3 @@ struct ListSectionHeader: View {
         .padding(.bottom, 4)
     }
 }
-
