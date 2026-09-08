@@ -178,6 +178,8 @@ struct SpaceRowView: View {
     
     var body: some View {
         HStack(spacing: 12) {
+            CurrentSpaceIndicator(isCurrent: isCurrent)
+
             if space.isFullscreen, let appPath = space.appPath {
                 let appIcon = NSWorkspace.shared.icon(forFile: appPath)
                 Image(nsImage: appIcon)
@@ -210,12 +212,8 @@ struct SpaceRowView: View {
                         .lineLimit(1)
                 }
             }
-            
-            Spacer()
 
-            if isCurrent {
-                WindowStateBadge(label: String(localized: "Current"), color: .blue)
-            }
+            Spacer()
 
             if let shortcut = shortcutText {
                 KeycapView(text: LocalizedStringKey(shortcut), isSelected: isSelected)
@@ -241,6 +239,18 @@ struct SpaceRowView: View {
         .onHover { hovering in
             isHovered = hovering
         }
+    }
+}
+
+private struct CurrentSpaceIndicator: View {
+    let isCurrent: Bool
+
+    var body: some View {
+        Circle()
+            .fill(isCurrent ? Color.blue : Color.clear)
+            .frame(width: 8, height: 8)
+            .accessibilityHidden(!isCurrent)
+            .accessibilityLabel(Text("Current space"))
     }
 }
 
@@ -488,5 +498,4 @@ struct ListSectionHeader: View {
         .padding(.bottom, 4)
     }
 }
-
 

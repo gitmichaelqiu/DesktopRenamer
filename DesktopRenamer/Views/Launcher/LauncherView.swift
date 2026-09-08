@@ -283,7 +283,8 @@ struct ListAreaView: View {
                                 VStack(spacing: 4) {
                                     ForEach(Array(spaces.enumerated()), id: \.element.id) { i, space in
                                         let isSelected = !viewModel.isBottomBarFocused && viewModel.selectedRowIndex == i
-                                        SpaceRowView(space: space, isSelected: isSelected, isCurrent: AppDelegate.shared.spaceManager?.currentSpaceUUID == space.id, shortcutText: viewModel.showCommandNumbers && viewModel.commandKTargetWindow == nil && i < 9 ? "⌘\(i + 1)" : nil)
+                                        let isCurrent = AppDelegate.shared.spaceManager?.currentSpaceIDForLabels(onDisplayID: space.displayID) == space.id
+                                        SpaceRowView(space: space, isSelected: isSelected, isCurrent: isCurrent, shortcutText: viewModel.showCommandNumbers && viewModel.commandKTargetWindow == nil && i < 9 ? "⌘\(i + 1)" : nil)
                                             .contentShape(Rectangle())
                                             .onTapGesture {
                                                 viewModel.isKeyboardSelection = true
@@ -323,7 +324,8 @@ struct ListAreaView: View {
                                     VStack(spacing: 4) {
                                         ForEach(Array(spaces.enumerated()), id: \.element.id) { i, space in
                                             let isSelected = !viewModel.isBottomBarFocused && viewModel.selectedRowIndex == i
-                                            SpaceRowView(space: space, isSelected: isSelected, isCurrent: AppDelegate.shared.spaceManager?.currentSpaceUUID == space.id, shortcutText: viewModel.showCommandNumbers && viewModel.commandKTargetWindow == nil && i < 9 ? "⌘\(i + 1)" : nil)
+                                            let isCurrent = AppDelegate.shared.spaceManager?.currentSpaceIDForLabels(onDisplayID: space.displayID) == space.id
+                                            SpaceRowView(space: space, isSelected: isSelected, isCurrent: isCurrent, shortcutText: viewModel.showCommandNumbers && viewModel.commandKTargetWindow == nil && i < 9 ? "⌘\(i + 1)" : nil)
                                                 .contentShape(Rectangle())
                                                 .onTapGesture {
                                                     viewModel.isKeyboardSelection = true
