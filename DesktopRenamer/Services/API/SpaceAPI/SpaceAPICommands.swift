@@ -56,7 +56,7 @@ extension SpaceAPI {
             return ""
         case "moveWindowToSpace":
             guard let spaceID = arguments["spaceID"] else { throw SpaceAPIError.invalidArgument("Missing space ID.") }
-            manager.moveActiveWindowToSpace(id: spaceID)
+            try await moveActiveWindow(toSpaceID: spaceID, manager: manager)
             return ""
         case "reloadSpaceLabels":
             guard let labelManager = AppDelegate.shared.statusBarController?.labelManager else {
@@ -141,6 +141,37 @@ extension SpaceAPI {
             return ""
         default:
             throw SpaceAPIError.unsupportedCommand(command)
+        }
+    }
+
+    private func moveActiveWindow(toSpaceID targetSpaceID: String, manager: SpaceManager) async throws {
+        guard let targetSpace = manager.spaceNameDict.first(where: { $0.id == targetSpaceID }) else {
+            throw SpaceAPIError.invalidArgument("Invalid target Space ID.")
+        }
+        guard !targetSpace.isFullscreen else {
+            throw SpaceAPIError.operationFailed("Window moves into fullscreen Spaces are not supported.")
+        }
+        guard let activeWindow = SpaceHelper.getActiveWindowInfo() else {
+            throw SpaceAPIError.operationFailed("Could not identify the active window.")
+        }
+
+        let sourceDisplayID = SpaceHelper.getWindowDisplayID(for: activeWindow.frame)
+        let sourceSpaceID = sourceDisplayID.flatMap { SpaceHelper.getCurrentSpaceID(for: $0) }
+            ?? SpaceHelper.getWindowSpaceID(id: activeWindow.id)
+            ?? manager.currentSpaceUUID
+
+        guard manager.spaceNameDict.contains(where: { $0.id == sourceSpaceID }) else {
+            throw SpaceAPIError.operationFailed("Could not identify the active window's source Space.")
+        }
+
+        let moved = await WindowActionCoordinator.moveWindow(
+            windowID: activeWindow.id,
+            pid: activeWindow.pid,
+            fromSpaceID: sourceSpaceID,
+            targetSpaceID: targetSpaceID
+        )
+        guard moved else {
+            throw SpaceAPIError.operationFailed("Window move failed.")
         }
     }
 
