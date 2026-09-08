@@ -1,70 +1,11 @@
 import AppKit
 import SwiftUI
 
-final class LauncherFieldEditor: NSTextView {
-    weak var client: FocusTextField?
-
-    override convenience init(frame frameRect: NSRect) {
-        let textStorage = NSTextStorage()
-        let layoutManager = NSLayoutManager()
-        let textContainer = NSTextContainer(
-            size: NSSize(
-                width: max(frameRect.width, 1),
-                height: CGFloat.greatestFiniteMagnitude
-            )
-        )
-        textContainer.widthTracksTextView = true
-        textStorage.addLayoutManager(layoutManager)
-        layoutManager.addTextContainer(textContainer)
-        self.init(frame: frameRect, textContainer: textContainer)
-    }
-
-    override init(frame frameRect: NSRect, textContainer container: NSTextContainer?) {
-        super.init(frame: frameRect, textContainer: container)
-        configure()
-    }
-
-    private func configure() {
-        isFieldEditor = true
-        isRichText = false
-        isEditable = true
-        isSelectable = true
-        drawsBackground = false
-    }
-
-    required init?(coder: NSCoder) {
-        super.init(coder: coder)
-        configure()
-    }
-
-    override func performKeyEquivalent(with event: NSEvent) -> Bool {
-        if client?.handleKeyEquivalent(event) == true {
-            return true
-        }
-        return super.performKeyEquivalent(with: event)
-    }
-
-    override func keyDown(with event: NSEvent) {
-        if client?.handleModifiedEnter(event) == true {
-            return
-        }
-        super.keyDown(with: event)
-    }
-
-    override func doCommand(by selector: Selector) {
-        if client?.onCommandSelector?(selector) == true {
-            return
-        }
-        super.doCommand(by: selector)
-    }
-}
-
 class FocusTextField: NSTextField {
     var onCommandEnter: (() -> Void)?
     var onOptionEnter: (() -> Void)?
     var onCommandNumber: ((Int) -> Void)?
     var onCommandK: (() -> Void)?
-    var onCommandSelector: ((Selector) -> Bool)?
     var onKeyEquivalent: ((NSEvent) -> Bool)?
     var isTypingDisabled: Bool = false
     var focusNotificationName = NSNotification.Name("FocusLauncherTextField")
@@ -173,6 +114,7 @@ class FocusTextField: NSTextField {
     @objc private func forceFocus() {
         guard let window = self.window else { return }
         window.makeFirstResponder(self)
+        (window as? LauncherNSPanel)?.focusedTextField = self
         self.currentEditor()?.selectAll(nil)
     }
     
@@ -267,11 +209,7 @@ struct SearchTextField: NSViewRepresentable {
             handleCommand(commandSelector)
         }
 
-        func textView(_ textView: NSTextView, doCommandBy commandSelector: Selector) -> Bool {
-            handleCommand(commandSelector)
-        }
-
-        func handleCommand(_ commandSelector: Selector) -> Bool {
+        private func handleCommand(_ commandSelector: Selector) -> Bool {
             if commandSelector == #selector(NSResponder.moveUp(_:)) {
                 parent.onUpArrow()
                 return true
@@ -334,9 +272,6 @@ struct SearchTextField: NSViewRepresentable {
         }
         textField.onCommandK = { [weak coordinator = context.coordinator] in
             coordinator?.parent.onCommandK?()
-        }
-        textField.onCommandSelector = { [weak coordinator = context.coordinator] selector in
-            coordinator?.handleCommand(selector) ?? false
         }
         textField.onKeyEquivalent = onKeyEquivalent
         textField.isTypingDisabled = isTypingDisabled

@@ -3,6 +3,8 @@ import AppKit
 import SwiftUI
 
 class LauncherNSPanel: NSPanel {
+    weak var focusedTextField: FocusTextField?
+
     override var canBecomeKey: Bool {
         return true
     }
@@ -20,8 +22,8 @@ class LauncherWindowController: NSWindowController, NSWindowDelegate {
     private var isCommandKeyPressed = false
     private var cmdLongPressWorkItem: DispatchWorkItem?
     private var flagsChangedMonitor: Any?
+    private var keyDownMonitor: Any?
     private var isHiding = false
-    private let launcherFieldEditor = LauncherFieldEditor(frame: .zero)
     
     init() {
         let panel = LauncherNSPanel(
@@ -93,24 +95,31 @@ class LauncherWindowController: NSWindowController, NSWindowDelegate {
             }
             return event
         }
+
+        keyDownMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
+            guard let self,
+                  let panel = self.window as? LauncherNSPanel,
+                  panel.isKeyWindow,
+                  let focusedTextField = panel.focusedTextField,
+                  focusedTextField.window === panel,
+                  panel.firstResponder === focusedTextField || panel.firstResponder === focusedTextField.currentEditor()
+            else {
+                return event
+            }
+
+            return focusedTextField.handleKeyEquivalent(event) ? nil : event
+        }
     }
     
     required init?(coder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
     }
-
-    func windowWillReturnFieldEditor(_ sender: NSWindow, to client: Any?) -> Any? {
-        guard let textField = client as? FocusTextField else {
-            return nil
-        }
-
-        launcherFieldEditor.client = textField
-        launcherFieldEditor.delegate = textField.delegate as? NSTextViewDelegate
-        return launcherFieldEditor
-    }
     
     deinit {
         if let monitor = flagsChangedMonitor {
+            NSEvent.removeMonitor(monitor)
+        }
+        if let monitor = keyDownMonitor {
             NSEvent.removeMonitor(monitor)
         }
     }
