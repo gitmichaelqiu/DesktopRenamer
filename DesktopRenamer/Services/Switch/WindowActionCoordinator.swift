@@ -51,7 +51,7 @@ enum WindowActionCoordinator {
 
         guard resolvedFromSpaceID != targetSpaceID else { return true }
 
-        let requiresFullscreenHandling = sourceSpace.isFullscreen
+        let requiresFullscreenHandling = sourceSpace.isFullscreen || targetSpace.isFullscreen
 
         // AX cannot reliably access a window in a background fullscreen
         // Space. Make only that source Space current long enough to leave
@@ -87,30 +87,23 @@ enum WindowActionCoordinator {
             }
         }
 
-        // Same-display moves use the same captured-window drag primitive as
-        // the Raycast/API path. It preserves the app-specific grab offsets
-        // and lets WindowServer complete the move through the established
-        // Space-switch transaction. Cross-display moves and already-current
-        // destinations use the direct CGS path because a synthetic drag cannot
-        // reliably address a background window in those cases.
-        // Synthetic dragging requires the target Space to become current: the
-        // source window may be in a background Space, so its captured frame is
-        // not a reliable hit-test location while the destination is already
-        // visible. Direct WindowServer assignment handles that case without
-        // activating or raising either application.
-        if !destinationMustBeCurrent && !destinationIsCurrent,
-           let windowInfo = SpaceHelper.getWindowInfo(id: windowID) {
-            SpaceHelper.dragWindow(
-                (id: windowID, pid: pid, frame: windowInfo.frame),
-                to: targetSpaceID,
-                forceInstant: true
-            )
-        } else if !SpaceHelper.moveWindowToSpace(
+        // Use direct WindowServer assignment for every move. Synthetic mouse
+        // dragging depends on the window being visible and hit-testable, so it
+        // can fail for background, minimized, hidden, or timing-sensitive
+        // windows and can also disturb the user's cursor. The direct path
+        // preserves the window's visibility state and does not activate or
+        // raise either application.
+        let wasImmediatelyObserved = SpaceHelper.moveWindowToSpace(
             windowID: windowID,
             fromSpaceID: resolvedFromSpaceID,
             targetSpaceID: targetSpaceID
-        ) {
-            return false
+        )
+        if !wasImmediatelyObserved {
+            DiagnosticEventLog.shared.record(
+                subsystem: "WindowActionCoordinator",
+                level: "info",
+                "Window \(windowID) move was not visible in the immediate WindowServer read; waiting for destination \(targetSpaceID)."
+            )
         }
 
         return await waitForWindow(windowID: windowID, inSpace: targetSpaceID)
