@@ -87,12 +87,48 @@ enum WindowActionCoordinator {
             }
         }
 
-        // Use direct WindowServer assignment for every move. Synthetic mouse
-        // dragging depends on the window being visible and hit-testable, so it
-        // can fail for background, minimized, hidden, or timing-sensitive
-        // windows and can also disturb the user's cursor. The direct path
-        // preserves the window's visibility state and does not activate or
-        // raise either application.
+        // Ordinary same-display visible windows follow the same established
+        // Option-drag primitive as a user move. A background window must have
+        // its source Space current before its frame can be hit-tested; focus is
+        // not required as a separate step. Hidden and minimized windows stay
+        // on direct WindowServer assignment because they cannot be dragged.
+        if !destinationMustBeCurrent,
+           !sourceSpace.isFullscreen,
+           NSRunningApplication(processIdentifier: pid)?.isHidden != true {
+            if SpaceHelper.getCurrentSpaceID(for: sourceSpace.displayID) != sourceSpace.id {
+                manager.switchToSpace(sourceSpace, forceInstant: true, isManual: false)
+                guard await waitForSpace(sourceSpace.id, on: sourceSpace.displayID) else {
+                    return false
+                }
+            }
+
+            let isMinimized = SpaceHelper.getAXWindow(id: windowID, pid: pid).map { axWindow in
+                var minimizedRef: CFTypeRef?
+                guard AXUIElementCopyAttributeValue(
+                    axWindow,
+                    kAXMinimizedAttribute as CFString,
+                    &minimizedRef
+                ) == .success else {
+                    return false
+                }
+                return (minimizedRef as? Bool) == true
+            } ?? false
+
+            if !isMinimized, let windowInfo = SpaceHelper.getWindowInfo(id: windowID) {
+                SpaceHelper.dragWindow(
+                    (id: windowID, pid: pid, frame: windowInfo.frame),
+                    to: targetSpaceID,
+                    forceInstant: true
+                )
+                if await waitForWindow(windowID: windowID, inSpace: targetSpaceID) {
+                    return true
+                }
+            }
+        }
+
+        // Direct assignment is the fallback for hidden/minimized/fullscreen or
+        // cross-display windows, and also recovers if a synthetic drag did not
+        // complete. It never raises or activates the application.
         let wasImmediatelyObserved = SpaceHelper.moveWindowToSpace(
             windowID: windowID,
             fromSpaceID: resolvedFromSpaceID,
@@ -105,7 +141,6 @@ enum WindowActionCoordinator {
                 "Window \(windowID) move was not visible in the immediate WindowServer read; waiting for destination \(targetSpaceID)."
             )
         }
-
         return await waitForWindow(windowID: windowID, inSpace: targetSpaceID)
     }
 
