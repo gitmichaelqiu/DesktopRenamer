@@ -8,6 +8,8 @@ extension SpaceAPI {
             revision: revision,
             timestamp: Self.apiTimestamp(),
             currentSpaceIDs: SpaceHelper.getCurrentSpaceIDs(),
+            currentSpaceID: manager.currentSpaceUUID,
+            currentDisplayID: manager.currentDisplayID,
             currentSpaceName: manager.getSpaceName(manager.currentSpaceUUID),
             spaces: makeSpaceRecords(manager)
         )
@@ -41,6 +43,8 @@ extension SpaceAPI {
         let snapshot: [String: Any] = [
             "apiVersion": DesktopRenamerAPIVersion.current,
             "currentSpaceIDs": SpaceHelper.getCurrentSpaceIDs(),
+            "currentSpaceID": manager.currentSpaceUUID,
+            "currentDisplayID": manager.currentDisplayID,
             "currentSpaceName": manager.getSpaceName(manager.currentSpaceUUID),
             "spaces": spaces
         ]

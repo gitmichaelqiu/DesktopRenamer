@@ -333,6 +333,8 @@ struct SpaceAPISnapshot: Codable, Equatable {
     let revision: UInt64
     let timestamp: String
     let currentSpaceIDs: [String]
+    let currentSpaceID: String
+    let currentDisplayID: String
     let currentSpaceName: String
     let spaces: [SpaceAPISpace]
 }

@@ -178,6 +178,8 @@ struct SpaceAPIContractTests {
             revision: 42,
             timestamp: "2026-08-31T00:00:00Z",
             currentSpaceIDs: [space.id],
+            currentSpaceID: space.id,
+            currentDisplayID: space.displayID,
             currentSpaceName: space.name,
             spaces: [space]
         )
