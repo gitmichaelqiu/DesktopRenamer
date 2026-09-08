@@ -154,6 +154,9 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
                 if let gestureManager = self?.gestureManager {
                     gestureManager.isEnabled = UserDefaults.standard.bool(forKey: "GestureManager.Enabled")
+                    if let moveWindowOnOption = UserDefaults.standard.object(forKey: "GestureManager.MoveWindowOnOption") as? Bool {
+                        gestureManager.moveWindowOnOption = moveWindowOnOption
+                    }
                 }
                 if let labelManager = self?.statusBarController?.labelManager {
                     labelManager.showPreviewLabels = UserDefaults.standard.object(forKey: "kShowPreviewLabels") == nil ? true : UserDefaults.standard.bool(forKey: "kShowPreviewLabels")
