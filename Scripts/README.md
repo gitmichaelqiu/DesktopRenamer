@@ -37,8 +37,9 @@ the channel and target element.
 The scripts support two distribution modes:
 
 - `--manual-approval`: uses the existing development-signing workflow, skips
-  notarization, and permits users to approve Gatekeeper manually. This is the
-  mode used for the current DesktopRenamer release.
+  notarization, keeps the package checksum requirement, and permits users to
+  approve the package manually in Installer/Gatekeeper. This is the mode used
+  for the current DesktopRenamer release.
 - Developer ID mode: pass the required signing identities and notary profile
   and omit `--manual-approval`.
 

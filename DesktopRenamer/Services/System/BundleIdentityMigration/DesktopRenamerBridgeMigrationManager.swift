@@ -154,14 +154,16 @@ final class DesktopRenamerBridgeMigrationManager {
             throw DesktopRenamerMigrationError.invalidPackageHash
         }
 
-        guard runTool(
-            "/usr/sbin/pkgutil",
-            arguments: ["--check-signature", packageURL.path]
-        ), runTool(
-            "/usr/sbin/spctl",
-            arguments: ["--assess", "--type", "install", packageURL.path]
-        ) else {
-            throw DesktopRenamerMigrationError.packageVerificationFailed
+        if !DesktopRenamerMigrationConfiguration.allowsManualApproval {
+            guard runTool(
+                "/usr/sbin/pkgutil",
+                arguments: ["--check-signature", packageURL.path]
+            ), runTool(
+                "/usr/sbin/spctl",
+                arguments: ["--assess", "--type", "install", packageURL.path]
+            ) else {
+                throw DesktopRenamerMigrationError.packageVerificationFailed
+            }
         }
     }
 

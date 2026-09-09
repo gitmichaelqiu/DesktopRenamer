@@ -13,6 +13,7 @@ enum DesktopRenamerIdentity {
     static let migrationPackageURLKey = "DesktopRenamerMigrationPackageURL"
     static let migrationPackageSHA256Key = "DesktopRenamerMigrationPackageSHA256"
     static let migrationPackageVersionKey = "DesktopRenamerMigrationPackageVersion"
+    static let migrationAllowManualApprovalKey = "DesktopRenamerMigrationAllowManualApproval"
     static let migrationStagingPathKey = "DesktopRenamerMigrationStagingPath"
     static let releaseTagKey = "DesktopRenamerReleaseTag"
 

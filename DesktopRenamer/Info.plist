@@ -18,6 +18,8 @@
 	<string>$(DESKTOP_RENAMER_MIGRATION_PACKAGE_SHA256)</string>
 	<key>DesktopRenamerMigrationPackageVersion</key>
 	<string>$(DESKTOP_RENAMER_MIGRATION_PACKAGE_VERSION)</string>
+	<key>DesktopRenamerMigrationAllowManualApproval</key>
+	<string>$(DESKTOP_RENAMER_MIGRATION_ALLOW_MANUAL_APPROVAL)</string>
 	<key>DesktopRenamerMigrationStagingPath</key>
 	<string>$(DESKTOP_RENAMER_MIGRATION_STAGING_PATH)</string>
 	<key>DesktopRenamerReleaseTag</key>

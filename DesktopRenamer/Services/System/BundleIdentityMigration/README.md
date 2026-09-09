@@ -26,7 +26,9 @@ The migration is implemented as a one-time legacy bridge. Normal builds using
    domain, excluding Sparkle-owned keys. Sparkle state stays in the legacy
    domain until the bridge has completed.
 5. The bridge downloads the migration package over HTTPS and verifies its
-   SHA-256 checksum, package signature, and Gatekeeper assessment.
+   SHA-256 checksum. Developer ID builds also require package signature and
+   Gatekeeper verification; manual-approval builds leave that final approval
+   to the user and Installer.
 6. The package installer stages the current-ID app at
    `/Applications/DesktopRenamer-Migration.app`.
 7. The staged app starts with the migration manifest arguments, waits for the

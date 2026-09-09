@@ -253,6 +253,8 @@ assert_equal "bridge migration package checksum" "$MIGRATION_PACKAGE_SHA256" \
     "$(read_plist_value "$BRIDGE_INFO_PLIST" DesktopRenamerMigrationPackageSHA256)"
 assert_equal "bridge migration package version" "$MIGRATION_PACKAGE_VERSION" \
     "$(read_plist_value "$BRIDGE_INFO_PLIST" DesktopRenamerMigrationPackageVersion)"
+assert_equal "bridge manual approval mode" "$MANUAL_APPROVAL" \
+    "$(read_plist_value "$BRIDGE_INFO_PLIST" DesktopRenamerMigrationAllowManualApproval)"
 assert_equal "bridge staging path" "$STAGING_PATH" \
     "$(read_plist_value "$BRIDGE_INFO_PLIST" DesktopRenamerMigrationStagingPath)"
 assert_equal "bridge release tag" "$RELEASE_TAG" \

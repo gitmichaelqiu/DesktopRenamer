@@ -137,6 +137,23 @@ enum DesktopRenamerMigrationConfiguration {
         return value.isEmpty ? nil : value
     }
 
+    static var allowsManualApproval: Bool {
+        let rawValue = Bundle.main.object(
+            forInfoDictionaryKey: DesktopRenamerIdentity.migrationAllowManualApprovalKey
+        )
+
+        if let value = rawValue as? Bool {
+            return value
+        }
+
+        guard let value = rawValue as? String else {
+            return false
+        }
+
+        let normalizedValue = value.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        return ["1", "yes", "true"].contains(normalizedValue)
+    }
+
     static var stagingApplicationURL: URL {
         if let rawValue = Bundle.main.object(
             forInfoDictionaryKey: DesktopRenamerIdentity.migrationStagingPathKey
