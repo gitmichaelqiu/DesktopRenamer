@@ -1,4 +1,5 @@
 import AppKit
+import Darwin
 import Foundation
 
 final class DesktopRenamerMigrationFinalizer {
@@ -95,51 +96,144 @@ final class DesktopRenamerMigrationFinalizer {
 
         let sourceURL = URL(fileURLWithPath: manifest.sourceApplicationPath, isDirectory: true)
             .standardizedFileURL
-        let legacyApplication = NSWorkspace.shared.runningApplications.first { application in
-            application.bundleIdentifier == DesktopRenamerIdentity.legacyBundleIdentifier
-                && application.bundleURL?.standardizedFileURL == sourceURL
-                && application.processIdentifier == manifest.sourceProcessIdentifier
-        } ?? NSWorkspace.shared.runningApplications.first { application in
-            application.bundleIdentifier == DesktopRenamerIdentity.legacyBundleIdentifier
-                && application.bundleURL?.standardizedFileURL == sourceURL
+        let legacyApplications = NSWorkspace.shared.runningApplications.filter { application in
+            guard application.bundleIdentifier == DesktopRenamerIdentity.legacyBundleIdentifier else {
+                return false
+            }
+
+            // The URL is the authoritative match. Keep the recorded PID as a
+            // fallback because LaunchServices can briefly report a nil bundle
+            // URL while Sparkle is relaunching the bridge.
+            return application.bundleURL?.standardizedFileURL == sourceURL
+                || application.processIdentifier == manifest.sourceProcessIdentifier
         }
 
-        guard let legacyApplication, !legacyApplication.isTerminated else {
+        let runningApplications = legacyApplications.filter(isApplicationRunning)
+        guard !runningApplications.isEmpty else {
             performApplicationSwap()
             return
         }
 
-        legacyApplication.terminate()
-        waitForLegacyApplicationToTerminate(legacyApplication, attemptsRemaining: 20)
+        print(
+            "IdentityMigration: requesting termination for legacy process(es): "
+                + runningApplications.map { String($0.processIdentifier) }.joined(separator: ", ")
+        )
+        runningApplications.forEach { $0.terminate() }
+        waitForLegacyApplicationsToTerminate(
+            runningApplications,
+            sourceURL: sourceURL,
+            attemptsRemaining: 20,
+            didForceTerminate: false
+        )
     }
 
-    private func waitForLegacyApplicationToTerminate(
-        _ application: NSRunningApplication,
-        attemptsRemaining: Int
+    private func waitForLegacyApplicationsToTerminate(
+        _ applications: [NSRunningApplication],
+        sourceURL: URL,
+        attemptsRemaining: Int,
+        didForceTerminate: Bool
     ) {
-        let isStillRunning = NSWorkspace.shared.runningApplications.contains { runningApplication in
-            runningApplication.processIdentifier == application.processIdentifier
-        }
-        guard !application.isTerminated && isStillRunning else {
+        let runningApplications = applications.filter(isApplicationRunning)
+        guard !runningApplications.isEmpty else {
             performApplicationSwap()
             return
         }
 
         guard attemptsRemaining > 0 else {
-            guard application.forceTerminate() else {
+            guard !didForceTerminate else {
                 failMigration(DesktopRenamerMigrationError.legacyApplicationDidNotTerminate)
                 return
             }
-            waitForLegacyApplicationToTerminate(application, attemptsRemaining: 20)
+
+            let forceTerminationSucceeded = runningApplications.allSatisfy {
+                forciblyTerminate($0, sourceURL: sourceURL)
+            }
+            guard forceTerminationSucceeded else {
+                failMigration(DesktopRenamerMigrationError.legacyApplicationDidNotTerminate)
+                return
+            }
+
+            waitForLegacyApplicationsToTerminate(
+                applications,
+                sourceURL: sourceURL,
+                attemptsRemaining: 20,
+                didForceTerminate: true
+            )
             return
         }
 
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) { [weak self, weak application] in
-            guard let self, let application else { return }
-            self.waitForLegacyApplicationToTerminate(
-                application,
-                attemptsRemaining: attemptsRemaining - 1
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) { [weak self] in
+            guard let self else { return }
+            self.waitForLegacyApplicationsToTerminate(
+                applications,
+                sourceURL: sourceURL,
+                attemptsRemaining: attemptsRemaining - 1,
+                didForceTerminate: didForceTerminate
             )
+        }
+    }
+
+    private func isApplicationRunning(_ application: NSRunningApplication) -> Bool {
+        let processIdentifier = application.processIdentifier
+        guard processIdentifier > 0 else { return false }
+
+        if Darwin.kill(processIdentifier, 0) == 0 {
+            return true
+        }
+        return errno == EPERM
+    }
+
+    private func forciblyTerminate(
+        _ application: NSRunningApplication,
+        sourceURL: URL
+    ) -> Bool {
+        guard isApplicationRunning(application) else { return true }
+
+        if application.forceTerminate() && !isApplicationRunning(application) {
+            return true
+        }
+
+        guard isApplicationRunning(application) else {
+            return true
+        }
+
+        // forceTerminate() can fail while the bridge is presenting a modal
+        // alert or while LaunchServices is still relaunching it. The user has
+        // explicitly approved migration, so use a verified PID-level fallback
+        // rather than leaving two installed applications behind.
+        let processIdentifier = application.processIdentifier
+        guard isVerifiedLegacyApplication(application, sourceURL: sourceURL) else {
+            print(
+                "IdentityMigration: refusing to signal an unverified process "
+                    + "\(processIdentifier)"
+            )
+            return false
+        }
+        guard Darwin.kill(processIdentifier, SIGKILL) == 0 || errno == ESRCH else {
+            print(
+                "IdentityMigration: failed to force-terminate legacy process "
+                    + "\(processIdentifier): errno=\(errno)"
+            )
+            return false
+        }
+        return true
+    }
+
+    private func isVerifiedLegacyApplication(
+        _ application: NSRunningApplication,
+        sourceURL: URL
+    ) -> Bool {
+        NSWorkspace.shared.runningApplications.contains { runningApplication in
+            guard runningApplication.processIdentifier == application.processIdentifier,
+                  runningApplication.bundleIdentifier == DesktopRenamerIdentity.legacyBundleIdentifier
+            else {
+                return false
+            }
+
+            // A nil URL is possible during a LaunchServices relaunch. The
+            // manifest PID still identifies the process in that short window.
+            return runningApplication.bundleURL?.standardizedFileURL == sourceURL
+                || runningApplication.bundleURL == nil
         }
     }
 
