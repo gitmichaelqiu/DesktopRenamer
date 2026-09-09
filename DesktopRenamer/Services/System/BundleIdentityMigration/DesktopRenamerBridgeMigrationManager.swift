@@ -378,6 +378,8 @@ final class DesktopRenamerBridgeMigrationManager: NSObject {
             return
         }
 
+        installerWasObserved = false
+        installerLaunchDeadline = Date().addingTimeInterval(20)
         stageMonitorDeadline = Date().addingTimeInterval(10 * 60)
         stageMonitor?.invalidate()
         stageMonitor = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { [weak self] _ in
@@ -399,6 +401,20 @@ final class DesktopRenamerBridgeMigrationManager: NSObject {
               bundle.bundleIdentifier == DesktopRenamerIdentity.currentBundleIdentifier,
               bundle.object(forInfoDictionaryKey: "CFBundleVersion") as? String
                 == DesktopRenamerMigrationConfiguration.packageVersion else {
+            let installerIsRunning = NSWorkspace.shared.runningApplications.contains {
+                $0.bundleIdentifier == "com.apple.installer" && !$0.isTerminated
+            }
+            if installerIsRunning {
+                installerWasObserved = true
+            } else if installerWasObserved {
+                stopStageMonitoring()
+                showFailure(DesktopRenamerMigrationError.installerClosed)
+                return
+            } else if let installerLaunchDeadline, Date() > installerLaunchDeadline {
+                stopStageMonitoring()
+                showFailure(DesktopRenamerMigrationError.stagingApplicationNotFound)
+                return
+            }
             return
         }
 
@@ -543,6 +559,8 @@ final class DesktopRenamerBridgeMigrationManager: NSObject {
         stageMonitor?.invalidate()
         stageMonitor = nil
         stageMonitorDeadline = nil
+        installerWasObserved = false
+        installerLaunchDeadline = nil
     }
 
     private func continueNormalApplication() {

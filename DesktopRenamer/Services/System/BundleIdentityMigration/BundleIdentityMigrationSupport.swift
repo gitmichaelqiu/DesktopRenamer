@@ -104,6 +104,7 @@ enum DesktopRenamerMigrationError: LocalizedError {
     case invalidDownloadResponse
     case invalidPackageHash
     case packageVerificationFailed
+    case installerClosed
     case stagingApplicationNotFound
     case stagingApplicationInvalid
     case stagingApplicationDidNotTerminate
@@ -123,6 +124,8 @@ enum DesktopRenamerMigrationError: LocalizedError {
             return "The migration package checksum did not match the signed release."
         case .packageVerificationFailed:
             return "The migration package did not pass macOS package verification."
+        case .installerClosed:
+            return "The migration installer was closed before the new application was installed."
         case .stagingApplicationNotFound:
             return "The migration package was installed, but its staged application was not found."
         case .stagingApplicationInvalid:
