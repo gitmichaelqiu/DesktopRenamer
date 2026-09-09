@@ -1,7 +1,17 @@
 <?xml version="1.0" standalone="yes"?>
-<rss xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle" version="2.0">
+<rss xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle" xmlns:desktoprenamer="https://mqiu.dev/desktoprenamer/appcast" version="2.0">
     <channel>
         <title>DesktopRenamer</title>
+        <item>
+            <title>1.14.0</title>
+            <pubDate>Wed, 09 Sep 2026 11:44:06 +0800</pubDate>
+            <sparkle:version>39</sparkle:version>
+            <sparkle:shortVersionString>1.14.0</sparkle:shortVersionString>
+            <sparkle:minimumSystemVersion>13.0</sparkle:minimumSystemVersion>
+            <desktoprenamer:targetBundleIdentifier>com.michaelqiu.DesktopRenamer</desktoprenamer:targetBundleIdentifier>
+            <enclosure url="https://github.com/gitmichaelqiu/DesktopRenamer/releases/download/v1.14.0-bridge/DesktopRenamer-1.14.0-bridge.dmg" length="58741089" type="application/octet-stream" sparkle:edSignature="UAnIDffBtoawcTZXE4GlXQGqbaGYIMYIHhIUS8UWeZQCwU0y19bmbnL+bZaylNUxtzNTPhx0VusfRYNLfQJTAA=="/>
+            <sparkle:releaseNotesLink>https://github.com/gitmichaelqiu/DesktopRenamer/releases/tag/v1.14.0-bridge</sparkle:releaseNotesLink>
+        </item>
         <item>
             <title>1.13.2</title>
             <pubDate>Wed, 08 Jul 2026 23:57:53 -0400</pubDate>
