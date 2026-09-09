@@ -53,13 +53,13 @@ Use the current-ID app built from the final source. The package version is the
 app build number (`CFBundleVersion`), not the marketing version.
 
 ```sh
-CURRENT_APP="tmp/DesktopRenamer 2026-09-09 10-19-25/DesktopRenamer.app"
-MIGRATION_PACKAGE="tmp/DesktopRenamer-migration-38.pkg"
+CURRENT_APP="tmp/DesktopRenamer-current-build-39/DesktopRenamer.app"
+MIGRATION_PACKAGE="tmp/DesktopRenamer-migration-39.pkg"
 APPCAST_URL="https://raw.githubusercontent.com/gitmichaelqiu/DesktopRenamer/main/appcast.xml"
 
 Scripts/build-migration-package.sh \
   --app "$CURRENT_APP" \
-  --version 38 \
+  --version 39 \
   --update-feed-url "$APPCAST_URL" \
   --output "$MIGRATION_PACKAGE" \
   --manual-approval
@@ -77,7 +77,7 @@ identifiers.
 
 ```sh
 MIGRATION_PACKAGE_SHA256="$(shasum -a 256 "$MIGRATION_PACKAGE" | awk '{print $1}')"
-MIGRATION_PACKAGE_URL="https://github.com/gitmichaelqiu/DesktopRenamer/releases/download/v1.14.0-bridge/DesktopRenamer-migration-38.pkg"
+MIGRATION_PACKAGE_URL="https://github.com/gitmichaelqiu/DesktopRenamer/releases/download/v1.14.0-bridge/DesktopRenamer-migration-39.pkg"
 BRIDGE_OUTPUT_DIRECTORY="tmp/DesktopRenamer-bridge-release"
 
 Scripts/build-bridge-release.sh \
@@ -87,7 +87,7 @@ Scripts/build-bridge-release.sh \
   --feed-url "$APPCAST_URL" \
   --migration-package-url "$MIGRATION_PACKAGE_URL" \
   --migration-package-sha256 "$MIGRATION_PACKAGE_SHA256" \
-  --migration-package-version 38 \
+  --migration-package-version 39 \
   --output-dir "$BRIDGE_OUTPUT_DIRECTORY" \
   --manual-approval
 ```
@@ -108,7 +108,7 @@ Scripts/verify-bridge-release.sh \
   --feed-url "$APPCAST_URL" \
   --migration-package-url "$MIGRATION_PACKAGE_URL" \
   --migration-package-sha256 "$MIGRATION_PACKAGE_SHA256" \
-  --migration-package-version 38 \
+  --migration-package-version 39 \
   --manual-approval
 ```
 
