@@ -1,0 +1,27 @@
+#!/bin/sh
+set -eu
+
+STAGED_APPLICATION="/Applications/DesktopRenamer-Migration.app"
+CANONICAL_APPLICATION="/Applications/DesktopRenamer.app"
+CURRENT_BUNDLE_IDENTIFIER="dev.mqiu.DesktopRenamer"
+
+if [ -f "$CANONICAL_APPLICATION/Contents/Info.plist" ]; then
+    canonical_bundle_identifier=$(/usr/libexec/PlistBuddy \
+        -c 'Print :CFBundleIdentifier' \
+        "$CANONICAL_APPLICATION/Contents/Info.plist" 2>/dev/null || true)
+
+    if [ "$canonical_bundle_identifier" = "$CURRENT_BUNDLE_IDENTIFIER" ]; then
+        # The migration already completed, so this package was opened again
+        # or an interrupted installer left a duplicate staged copy behind.
+        # Remove only the package's fixed staging path.
+        /bin/rm -rf "$STAGED_APPLICATION"
+        exit 0
+    fi
+fi
+
+if [ -d "$STAGED_APPLICATION" ]; then
+    console_user=$(/usr/bin/stat -f '%Su' /dev/console)
+    if [ -n "$console_user" ] && [ "$console_user" != "root" ]; then
+        /usr/sbin/chown -R "$console_user:staff" "$STAGED_APPLICATION"
+    fi
+fi
