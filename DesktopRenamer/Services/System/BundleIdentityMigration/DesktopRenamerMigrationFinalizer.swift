@@ -10,6 +10,7 @@ final class DesktopRenamerMigrationFinalizer {
     private var targetURL: URL?
     private var temporaryTargetURL: URL?
     private var launchAttempts = 0
+    private var terminationRequested = false
 
     private init() {}
 
@@ -380,7 +381,8 @@ final class DesktopRenamerMigrationFinalizer {
         UserDefaults.standard.removeObject(
             forKey: DesktopRenamerIdentity.migrationLaunchAcknowledgedKey
         )
-        NSApp.terminate(nil)
+        UserDefaults.standard.synchronize()
+        terminateMigrationApplication()
     }
 
     private func restoreAfterFailedSwap(targetURL: URL, temporaryURL: URL, backupURL: URL) {
@@ -427,7 +429,25 @@ final class DesktopRenamerMigrationFinalizer {
         alert.informativeText = "\(error.localizedDescription) The previous application was preserved."
         alert.addButton(withTitle: "Quit")
         alert.runModal()
+        terminateMigrationApplication()
+    }
+
+    private func terminateMigrationApplication() {
+        guard !terminationRequested else { return }
+        terminationRequested = true
+
         NSApp.terminate(nil)
+
+        // The finalizer is a one-shot helper, not the normal application. If
+        // AppKit leaves the process alive after requesting termination, the
+        // staged bundle remains locked and the canonical app cannot remove it.
+        // State has already been persisted before this method is called, so a
+        // direct process exit is safe after the short grace period.
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1) {
+            guard NSApp.isRunning else { return }
+            print("IdentityMigration: AppKit did not terminate the finalizer; exiting")
+            Darwin.exit(0)
+        }
     }
 
     private func relaunchLegacyApplicationIfNeeded() {
