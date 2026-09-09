@@ -34,6 +34,7 @@ final class DesktopRenamerBridgeMigrationManager: NSObject {
     private var downloadProgressWindow: NSWindow?
     private var downloadProgressIndicator: NSProgressIndicator?
     private var downloadProgressMessage: NSTextField?
+    private var downloadProgressPercentage: NSTextField?
 
     private override init() {
         super.init()
@@ -221,20 +222,61 @@ final class DesktopRenamerBridgeMigrationManager: NSObject {
     private func presentDownloadProgress() {
         guard downloadProgressWindow == nil else { return }
 
-        let titleLabel = NSTextField(labelWithString: "Downloading DesktopRenamer migration")
-        titleLabel.font = .boldSystemFont(ofSize: 16)
+        let iconView = NSImageView(
+            image: NSImage(named: NSImage.applicationIconName) ?? NSImage()
+        )
+        iconView.imageScaling = .scaleProportionallyUpOrDown
+        iconView.translatesAutoresizingMaskIntoConstraints = false
+        iconView.widthAnchor.constraint(equalToConstant: 40).isActive = true
+        iconView.heightAnchor.constraint(equalToConstant: 40).isActive = true
+
+        let titleLabel = NSTextField(labelWithString: "DesktopRenamer Migration")
+        titleLabel.font = .systemFont(ofSize: 17, weight: .semibold)
+
+        let subtitleLabel = NSTextField(
+            labelWithString: "Preparing the new app while keeping your settings safe."
+        )
+        subtitleLabel.font = .systemFont(ofSize: 12)
+        subtitleLabel.textColor = .secondaryLabelColor
+        subtitleLabel.maximumNumberOfLines = 2
+        subtitleLabel.lineBreakMode = .byWordWrapping
+
+        let headingTextStack = NSStackView(views: [titleLabel, subtitleLabel])
+        headingTextStack.orientation = .vertical
+        headingTextStack.alignment = .leading
+        headingTextStack.spacing = 3
+
+        let headingStack = NSStackView(views: [iconView, headingTextStack])
+        headingStack.orientation = .horizontal
+        headingStack.alignment = .centerY
+        headingStack.spacing = 12
 
         let messageLabel = NSTextField(
-            labelWithString: "Downloading the migration package. Please keep DesktopRenamer open."
+            labelWithString: "Downloading migration package"
         )
-        messageLabel.maximumNumberOfLines = 2
+        messageLabel.font = .systemFont(ofSize: 13)
+        messageLabel.textColor = .secondaryLabelColor
+        messageLabel.maximumNumberOfLines = 1
         messageLabel.lineBreakMode = .byWordWrapping
 
+        let percentageLabel = NSTextField(labelWithString: "")
+        percentageLabel.font = .monospacedDigitSystemFont(ofSize: 13, weight: .medium)
+        percentageLabel.alignment = .right
+        percentageLabel.textColor = .secondaryLabelColor
+        percentageLabel.setContentHuggingPriority(.required, for: .horizontal)
+        percentageLabel.setContentCompressionResistancePriority(.required, for: .horizontal)
+
+        let statusStack = NSStackView(views: [messageLabel, percentageLabel])
+        statusStack.orientation = .horizontal
+        statusStack.alignment = .centerY
+        statusStack.spacing = 12
+        messageLabel.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
+
         let progressIndicator = NSProgressIndicator(
-            frame: NSRect(x: 0, y: 0, width: 280, height: 20)
+            frame: NSRect(x: 0, y: 0, width: 360, height: 12)
         )
         progressIndicator.style = .bar
-        progressIndicator.controlSize = .regular
+        progressIndicator.controlSize = .small
         progressIndicator.minValue = 0
         progressIndicator.maxValue = 100
         progressIndicator.isIndeterminate = true
@@ -242,39 +284,60 @@ final class DesktopRenamerBridgeMigrationManager: NSObject {
 
         let cancelButton = NSButton(title: "Cancel", target: self, action: #selector(cancelDownload))
         cancelButton.bezelStyle = .rounded
-        cancelButton.widthAnchor.constraint(equalToConstant: 120).isActive = true
+        cancelButton.controlSize = .regular
+        cancelButton.widthAnchor.constraint(equalToConstant: 92).isActive = true
 
-        let stackView = NSStackView(views: [titleLabel, messageLabel, progressIndicator, cancelButton])
+        let footerSpacer = NSView()
+        let footerStack = NSStackView(views: [footerSpacer, cancelButton])
+        footerStack.orientation = .horizontal
+        footerStack.alignment = .centerY
+        footerStack.spacing = 12
+
+        let stackView = NSStackView(
+            views: [headingStack, statusStack, progressIndicator, footerStack]
+        )
         stackView.orientation = .vertical
         stackView.alignment = .width
-        stackView.spacing = 14
+        stackView.spacing = 16
         stackView.translatesAutoresizingMaskIntoConstraints = false
         progressIndicator.translatesAutoresizingMaskIntoConstraints = false
-        progressIndicator.heightAnchor.constraint(equalToConstant: 20).isActive = true
+        progressIndicator.heightAnchor.constraint(equalToConstant: 12).isActive = true
 
-        let contentView = NSView(frame: NSRect(x: 0, y: 0, width: 420, height: 170))
-        contentView.addSubview(stackView)
+        let visualEffectView = NSVisualEffectView(
+            frame: NSRect(x: 0, y: 0, width: 440, height: 204)
+        )
+        visualEffectView.material = .hudWindow
+        visualEffectView.blendingMode = .behindWindow
+        visualEffectView.state = .active
+        visualEffectView.wantsLayer = true
+        visualEffectView.layer?.cornerRadius = 16
+        visualEffectView.layer?.masksToBounds = true
+        visualEffectView.addSubview(stackView)
         NSLayoutConstraint.activate([
-            stackView.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 24),
-            stackView.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -24),
-            stackView.topAnchor.constraint(equalTo: contentView.topAnchor, constant: 24),
-            stackView.bottomAnchor.constraint(equalTo: contentView.bottomAnchor, constant: -24)
+            stackView.leadingAnchor.constraint(equalTo: visualEffectView.leadingAnchor, constant: 28),
+            stackView.trailingAnchor.constraint(equalTo: visualEffectView.trailingAnchor, constant: -28),
+            stackView.topAnchor.constraint(equalTo: visualEffectView.topAnchor, constant: 26),
+            stackView.bottomAnchor.constraint(equalTo: visualEffectView.bottomAnchor, constant: -24)
         ])
 
         let window = NSWindow(
-            contentRect: contentView.frame,
-            styleMask: [.titled],
+            contentRect: visualEffectView.frame,
+            styleMask: [.borderless],
             backing: .buffered,
             defer: false
         )
-        window.title = "DesktopRenamer Migration"
+        window.backgroundColor = .clear
+        window.isOpaque = false
+        window.hasShadow = true
         window.isReleasedWhenClosed = false
-        window.contentView = contentView
+        window.isMovableByWindowBackground = true
+        window.contentView = visualEffectView
         window.center()
 
         downloadProgressWindow = window
         downloadProgressIndicator = progressIndicator
         downloadProgressMessage = messageLabel
+        downloadProgressPercentage = percentageLabel
         let progressTimer = Timer(
             timeInterval: 0.1,
             repeats: true
@@ -297,6 +360,8 @@ final class DesktopRenamerBridgeMigrationManager: NSObject {
         guard progress.totalUnitCount > 0 else {
             progressIndicator.isIndeterminate = true
             progressIndicator.startAnimation(nil)
+            downloadProgressMessage?.stringValue = "Preparing migration package"
+            downloadProgressPercentage?.stringValue = ""
             return
         }
 
@@ -306,10 +371,10 @@ final class DesktopRenamerBridgeMigrationManager: NSObject {
         let isDownloadComplete = fractionCompleted >= 1
         let percentage = Int(fractionCompleted * 100)
         progressIndicator.doubleValue = isDownloadComplete ? 99 : fractionCompleted * 100
-        downloadProgressMessage?.stringValue =
-            isDownloadComplete
-                ? "Finalizing the downloaded migration package…"
-                : "Downloading the migration package… \(percentage)% complete."
+        downloadProgressMessage?.stringValue = isDownloadComplete
+            ? "Verifying migration package"
+            : "Downloading migration package"
+        downloadProgressPercentage?.stringValue = "\(percentage)%"
     }
 
     private func completeDownload(_ result: Result<URL, Error>) {
@@ -319,7 +384,8 @@ final class DesktopRenamerBridgeMigrationManager: NSObject {
                 self.downloadProgressIndicator?.isIndeterminate = false
                 self.downloadProgressIndicator?.doubleValue = 100
                 self.downloadProgressMessage?.stringValue =
-                    "Download complete. Preparing the installer…"
+                    "Package verified. Opening installer…"
+                self.downloadProgressPercentage?.stringValue = "100%"
             }
             self.downloadTask = nil
             self.stopDownloadProgress()
@@ -340,6 +406,7 @@ final class DesktopRenamerBridgeMigrationManager: NSObject {
         downloadProgressWindow = nil
         downloadProgressIndicator = nil
         downloadProgressMessage = nil
+        downloadProgressPercentage = nil
     }
 
     @objc private func cancelDownload() {
