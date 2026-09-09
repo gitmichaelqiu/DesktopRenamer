@@ -56,8 +56,11 @@ final class DesktopRenamerMigrationFinalizer {
             guard manifest.schemaVersion == DesktopRenamerMigrationManifest.currentSchemaVersion,
                   manifest.targetBundleIdentifier == DesktopRenamerIdentity.currentBundleIdentifier,
                   manifest.stagingApplicationPath == Bundle.main.bundleURL.standardizedFileURL.path,
-                  Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String
-                    == manifest.expectedVersion else {
+                  let stagedVersion = Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String,
+                  DesktopRenamerMigrationVersion.isAtLeast(
+                      stagedVersion,
+                      manifest.expectedVersion
+                  ) else {
                 throw DesktopRenamerMigrationError.manifestInvalid
             }
 

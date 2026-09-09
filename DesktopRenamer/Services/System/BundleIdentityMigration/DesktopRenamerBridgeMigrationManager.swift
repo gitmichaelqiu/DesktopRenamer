@@ -1,5 +1,6 @@
 import AppKit
 import CryptoKit
+import Darwin
 import Foundation
 import ServiceManagement
 
@@ -43,6 +44,10 @@ final class DesktopRenamerBridgeMigrationManager {
         guard !hasPresentedPrompt else { return true }
         hasPresentedPrompt = true
 
+        if resumePendingMigrationIfNeeded() {
+            return true
+        }
+
         DispatchQueue.main.async { [weak self] in
             self?.presentMigrationPrompt()
         }
@@ -64,11 +69,64 @@ final class DesktopRenamerBridgeMigrationManager {
         }
     }
 
-    private func startMigration() {
+    private func resumePendingMigrationIfNeeded() -> Bool {
+        let manifestURL = DesktopRenamerMigrationStorage.manifestURL
+        guard FileManager.default.fileExists(atPath: manifestURL.path),
+              let manifest = try? DesktopRenamerMigrationStorage.readManifest(from: manifestURL),
+              let expectedVersion = DesktopRenamerMigrationConfiguration.packageVersion else {
+            return false
+        }
+
+        let sourceURL = Bundle.main.bundleURL.standardizedFileURL
+        let stagingURL = DesktopRenamerMigrationConfiguration.stagingApplicationURL
+        guard manifest.schemaVersion == DesktopRenamerMigrationManifest.currentSchemaVersion,
+              manifest.sourceApplicationPath == sourceURL.path,
+              manifest.targetBundleIdentifier == DesktopRenamerIdentity.currentBundleIdentifier,
+              manifest.stagingApplicationPath == stagingURL.path,
+              DesktopRenamerMigrationVersion.isAtLeast(expectedVersion, manifest.expectedVersion),
+              let stagedBundle = Bundle(url: stagingURL),
+              stagedBundle.bundleIdentifier == DesktopRenamerIdentity.currentBundleIdentifier,
+              let stagedVersion = stagedBundle.object(forInfoDictionaryKey: "CFBundleVersion") as? String
+        else {
+            return false
+        }
+
+        self.manifestURL = manifestURL
+
+        if stagedVersion == expectedVersion {
+            print("IdentityMigration: resuming the installed staged application")
+            DispatchQueue.main.async { [weak self] in
+                self?.launchInstalledStagingApplication()
+            }
+        } else if DesktopRenamerMigrationVersion.isAtLeast(expectedVersion, stagedVersion) {
+            // A previous bridge may have left a newer staged app behind with
+            // an older manifest. Replace it with this bridge's verified
+            // package so the staged executable contains the current recovery
+            // logic before it is launched.
+            print(
+                "IdentityMigration: refreshing stale staged build \(stagedVersion) "
+                    + "with build \(expectedVersion)"
+            )
+            DispatchQueue.main.async { [weak self] in
+                self?.startMigration(launchAtLoginEnabled: manifest.launchAtLoginEnabled)
+            }
+        } else {
+            return false
+        }
+
+        return true
+    }
+
+    private func startMigration(launchAtLoginEnabled: Bool? = nil) {
         guard let packageURL = DesktopRenamerMigrationConfiguration.packageURL,
               let expectedHash = DesktopRenamerMigrationConfiguration.packageSHA256,
               let expectedVersion = DesktopRenamerMigrationConfiguration.packageVersion else {
             showFailure(DesktopRenamerMigrationError.invalidConfiguration)
+            return
+        }
+
+        guard terminateRunningStagingApplicationsIfNeeded() else {
+            showFailure(DesktopRenamerMigrationError.stagingApplicationDidNotTerminate)
             return
         }
 
@@ -79,8 +137,9 @@ final class DesktopRenamerBridgeMigrationManager {
             sourceProcessIdentifier: ProcessInfo.processInfo.processIdentifier,
             targetBundleIdentifier: DesktopRenamerIdentity.currentBundleIdentifier,
             stagingApplicationPath: DesktopRenamerMigrationConfiguration.stagingApplicationURL.path,
-            launchAtLoginEnabled: SMAppService.mainApp.status == .enabled
-                || SMAppService.mainApp.status == .requiresApproval,
+            launchAtLoginEnabled: launchAtLoginEnabled
+                ?? (SMAppService.mainApp.status == .enabled
+                    || SMAppService.mainApp.status == .requiresApproval),
             expectedVersion: expectedVersion,
             createdAt: Date()
         )
@@ -93,6 +152,10 @@ final class DesktopRenamerBridgeMigrationManager {
             return
         }
 
+        downloadMigrationPackage(at: packageURL, expectedSHA256: expectedHash)
+    }
+
+    private func downloadMigrationPackage(at packageURL: URL, expectedSHA256: String) {
         let task = URLSession.shared.downloadTask(with: packageURL) { [weak self] temporaryURL, response, error in
             guard let self else { return }
 
@@ -116,7 +179,7 @@ final class DesktopRenamerBridgeMigrationManager {
                 )
                 try self.validatePackage(
                     at: packageURL,
-                    expectedSHA256: expectedHash
+                    expectedSHA256: expectedSHA256
                 )
                 DispatchQueue.main.async {
                     self.installPackage(at: packageURL)
@@ -197,6 +260,11 @@ final class DesktopRenamerBridgeMigrationManager {
             return
         }
 
+        launchInstalledStagingApplication()
+    }
+
+    private func launchInstalledStagingApplication() {
+        guard !stageLaunchStarted else { return }
         stageLaunchStarted = true
         stopStageMonitoring()
 
@@ -204,6 +272,63 @@ final class DesktopRenamerBridgeMigrationManager {
             showFailure(DesktopRenamerMigrationError.manifestInvalid)
             return
         }
+
+        let stagingURL = DesktopRenamerMigrationConfiguration.stagingApplicationURL
+        waitForStagingApplicationsToTerminate(
+            at: stagingURL,
+            manifestURL: manifestURL,
+            attemptsRemaining: 20,
+            didForceTerminate: false
+        )
+    }
+
+    private func waitForStagingApplicationsToTerminate(
+        at stagingURL: URL,
+        manifestURL: URL,
+        attemptsRemaining: Int,
+        didForceTerminate: Bool
+    ) {
+        let runningApplications = runningStagingApplications(at: stagingURL)
+        guard !runningApplications.isEmpty else {
+            openStagingApplication(at: stagingURL, manifestURL: manifestURL)
+            return
+        }
+
+        guard attemptsRemaining > 0 else {
+            guard !didForceTerminate else {
+                showFailure(DesktopRenamerMigrationError.stagingApplicationDidNotTerminate)
+                return
+            }
+
+            let forceTerminationSucceeded = runningApplications.allSatisfy {
+                forciblyTerminateStagingApplication($0, at: stagingURL)
+            }
+            guard forceTerminationSucceeded else {
+                showFailure(DesktopRenamerMigrationError.stagingApplicationDidNotTerminate)
+                return
+            }
+
+            waitForStagingApplicationsToTerminate(
+                at: stagingURL,
+                manifestURL: manifestURL,
+                attemptsRemaining: 20,
+                didForceTerminate: true
+            )
+            return
+        }
+
+        runningApplications.forEach { $0.terminate() }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) { [weak self] in
+            self?.waitForStagingApplicationsToTerminate(
+                at: stagingURL,
+                manifestURL: manifestURL,
+                attemptsRemaining: attemptsRemaining - 1,
+                didForceTerminate: didForceTerminate
+            )
+        }
+    }
+
+    private func openStagingApplication(at stagingURL: URL, manifestURL: URL) {
 
         let configuration = NSWorkspace.OpenConfiguration()
         configuration.activates = true
@@ -220,6 +345,56 @@ final class DesktopRenamerBridgeMigrationManager {
                 DispatchQueue.main.async { self.showFailure(error) }
             }
         }
+    }
+
+    private func terminateRunningStagingApplicationsIfNeeded() -> Bool {
+        let stagingURL = DesktopRenamerMigrationConfiguration.stagingApplicationURL
+        let runningApplications = runningStagingApplications(at: stagingURL)
+        guard !runningApplications.isEmpty else { return true }
+
+        print(
+            "IdentityMigration: stopping stale staged process(es): "
+                + runningApplications.map { String($0.processIdentifier) }.joined(separator: ", ")
+        )
+        runningApplications.forEach { $0.terminate() }
+        return runningApplications.allSatisfy {
+            forciblyTerminateStagingApplication($0, at: stagingURL)
+        }
+    }
+
+    private func runningStagingApplications(at stagingURL: URL) -> [NSRunningApplication] {
+        NSWorkspace.shared.runningApplications.filter { application in
+            guard application.bundleIdentifier == DesktopRenamerIdentity.currentBundleIdentifier,
+                  application.bundleURL?.standardizedFileURL == stagingURL.standardizedFileURL else {
+                return false
+            }
+
+            let processIdentifier = application.processIdentifier
+            guard processIdentifier > 0 else { return false }
+            return Darwin.kill(processIdentifier, 0) == 0 || errno == EPERM
+        }
+    }
+
+    private func forciblyTerminateStagingApplication(
+        _ application: NSRunningApplication,
+        at stagingURL: URL
+    ) -> Bool {
+        guard runningStagingApplications(at: stagingURL).contains(where: {
+            $0.processIdentifier == application.processIdentifier
+        }) else {
+            return true
+        }
+
+        if application.forceTerminate() {
+            return true
+        }
+
+        guard application.bundleIdentifier == DesktopRenamerIdentity.currentBundleIdentifier,
+              application.bundleURL?.standardizedFileURL == stagingURL.standardizedFileURL else {
+            return false
+        }
+
+        return Darwin.kill(application.processIdentifier, SIGKILL) == 0 || errno == ESRCH
     }
 
     private func stopStageMonitoring() {
