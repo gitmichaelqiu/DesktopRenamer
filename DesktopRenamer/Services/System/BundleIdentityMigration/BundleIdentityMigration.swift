@@ -7,6 +7,9 @@ enum DesktopRenamerIdentity {
     static let legacyWidgetBundleIdentifier = "com.michaelqiu.DesktopRenamer.DesktopRenamerWidget"
     static let currentWidgetBundleIdentifier = "dev.mqiu.DesktopRenamer.DesktopRenamerWidget"
 
+    static let currentUpdateChannel = "dev-mqiu"
+    static let appcastTargetBundleIdentifierKey = "desktoprenamer:targetBundleIdentifier"
+
     static let migrationPackageURLKey = "DesktopRenamerMigrationPackageURL"
     static let migrationPackageSHA256Key = "DesktopRenamerMigrationPackageSHA256"
     static let migrationPackageVersionKey = "DesktopRenamerMigrationPackageVersion"

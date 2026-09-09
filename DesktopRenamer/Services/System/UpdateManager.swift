@@ -19,7 +19,7 @@ extension NSApplication {
     }
 }
 
-class UpdateManager: NSObject, SPUStandardUserDriverDelegate {
+class UpdateManager: NSObject, SPUStandardUserDriverDelegate, SPUUpdaterDelegate {
     static let shared = UpdateManager()
     
     var updaterController: SPUStandardUpdaterController!
@@ -28,9 +28,37 @@ class UpdateManager: NSObject, SPUStandardUserDriverDelegate {
         super.init()
         self.updaterController = SPUStandardUpdaterController(
             startingUpdater: true,
-            updaterDelegate: nil,
+            updaterDelegate: self,
             userDriverDelegate: self
         )
+    }
+
+    func allowedChannels(for updater: SPUUpdater) -> Set<String> {
+        guard DesktopRenamerIdentity.isCurrentApplication else {
+            return []
+        }
+
+        return [DesktopRenamerIdentity.currentUpdateChannel]
+    }
+
+    func bestValidUpdate(in appcast: SUAppcast, for updater: SPUUpdater) -> SUAppcastItem? {
+        guard DesktopRenamerIdentity.isCurrentApplication else {
+            return nil
+        }
+
+        let eligibleItems = appcast.items.filter { item in
+            item.propertiesDictionary[DesktopRenamerIdentity.appcastTargetBundleIdentifierKey] as? String
+                == DesktopRenamerIdentity.currentBundleIdentifier
+        }
+
+        guard !eligibleItems.isEmpty else {
+            return SUAppcastItem.empty()
+        }
+
+        let comparator = SUStandardVersionComparator.default
+        return eligibleItems.max { left, right in
+            comparator.compareVersion(left.versionString, toVersion: right.versionString) == .orderedAscending
+        }
     }
     
     var supportsGentleScheduledUpdateReminders: Bool {
