@@ -230,6 +230,8 @@ final class DesktopRenamerBridgeMigrationManager: NSObject {
         )
         progressIndicator.style = .bar
         progressIndicator.controlSize = .regular
+        progressIndicator.minValue = 0
+        progressIndicator.maxValue = 100
         progressIndicator.isIndeterminate = true
         progressIndicator.startAnimation(nil)
         alert.accessoryView = progressIndicator
@@ -284,10 +286,14 @@ final class DesktopRenamerBridgeMigrationManager: NSObject {
 
         progressIndicator.isIndeterminate = false
         progressIndicator.stopAnimation(nil)
-        progressIndicator.doubleValue = progress.fractionCompleted * 100
-        let percentage = Int(progress.fractionCompleted * 100)
+        let fractionCompleted = min(max(progress.fractionCompleted, 0), 1)
+        let isDownloadComplete = fractionCompleted >= 1
+        let percentage = Int(fractionCompleted * 100)
+        progressIndicator.doubleValue = isDownloadComplete ? 99 : fractionCompleted * 100
         downloadProgressAlert?.informativeText =
-            "Downloading the migration package… \(percentage)% complete."
+            isDownloadComplete
+                ? "Finalizing the downloaded migration package…"
+                : "Downloading the migration package… \(percentage)% complete."
     }
 
     private func completeDownload(_ result: Result<URL, Error>) {
@@ -295,6 +301,12 @@ final class DesktopRenamerBridgeMigrationManager: NSObject {
             guard let self, self.downloadTask != nil else { return }
             self.pendingDownloadResult = result
             guard self.downloadProgressAlert != nil else { return }
+            if case .success = result {
+                self.downloadProgressIndicator?.isIndeterminate = false
+                self.downloadProgressIndicator?.doubleValue = 100
+                self.downloadProgressAlert?.informativeText =
+                    "Download complete. Preparing the installer…"
+            }
             NSApp.stopModal(withCode: .alertSecondButtonReturn)
         }
     }
