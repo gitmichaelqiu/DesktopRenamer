@@ -31,9 +31,7 @@ final class DesktopRenamerBridgeMigrationManager: NSObject {
     private var manifestURL: URL?
     private var downloadTask: URLSessionDownloadTask?
     private var downloadProgressTimer: Timer?
-    private var downloadProgressAlert: NSAlert?
-    private var downloadProgressIndicator: NSProgressIndicator?
-    private var pendingDownloadResult: Result<URL, Error>?
+    private var downloadProgressWindowController: DesktopRenamerMigrationProgressWindowController?
     private var legacyDefaultsSnapshot: [String: Any]?
     private var installerWasObserved = false
     private var installerLaunchDeadline: Date?
@@ -51,6 +49,7 @@ final class DesktopRenamerBridgeMigrationManager: NSObject {
         }
 
         self.completion = completion
+        DesktopRenamerIdentityMigration.prepareLegacyBridgeLaunch()
         guard !hasPresentedPrompt else { return true }
         hasPresentedPrompt = true
 
@@ -225,28 +224,17 @@ final class DesktopRenamerBridgeMigrationManager: NSObject {
     }
 
     private func presentDownloadProgress() {
-        guard downloadProgressAlert == nil else { return }
+        guard downloadProgressWindowController == nil else { return }
 
-        let alert = NSAlert()
-        alert.alertStyle = .informational
-        alert.messageText = "Downloading DesktopRenamer migration"
-        alert.informativeText = "Downloading the migration package. Please keep DesktopRenamer open."
-        alert.addButton(withTitle: "Cancel")
-
-        let progressIndicator = NSProgressIndicator(
-            frame: NSRect(x: 0, y: 0, width: 280, height: 20)
+        let controller = DesktopRenamerMigrationProgressWindowController { [weak self] in
+            self?.cancelDownload()
+        }
+        controller.update(
+            message: "Downloading migration package",
+            percentage: "",
+            fractionCompleted: 0
         )
-        progressIndicator.style = .bar
-        progressIndicator.controlSize = .regular
-        progressIndicator.minValue = 0
-        progressIndicator.maxValue = 100
-        progressIndicator.isIndeterminate = false
-        progressIndicator.isDisplayedWhenStopped = true
-        progressIndicator.doubleValue = 0
-        alert.accessoryView = progressIndicator
-
-        downloadProgressAlert = alert
-        downloadProgressIndicator = progressIndicator
+        downloadProgressWindowController = controller
         let progressTimer = Timer(
             timeInterval: 0.1,
             repeats: true
@@ -255,79 +243,64 @@ final class DesktopRenamerBridgeMigrationManager: NSObject {
         }
         downloadProgressTimer = progressTimer
         RunLoop.main.add(progressTimer, forMode: .common)
-
-        let response = alert.runModal()
-        let result = pendingDownloadResult
-        pendingDownloadResult = nil
-        stopDownloadProgress()
-
-        guard response == .alertSecondButtonReturn else {
-            downloadTask?.cancel()
-            downloadTask = nil
-            cancelPendingMigration()
-            return
-        }
-
-        guard let result else { return }
-        switch result {
-        case .success(let packageURL):
-            installPackage(at: packageURL)
-        case .failure(let error):
-            showFailure(error)
-        }
+        controller.show()
     }
 
     private func updateDownloadProgress() {
         guard let downloadTask,
-              let progressIndicator = downloadProgressIndicator else {
+              let progressWindowController = downloadProgressWindowController else {
             return
         }
 
         let progress = downloadTask.progress
-        progressIndicator.isIndeterminate = false
-        progressIndicator.stopAnimation(nil)
         guard progress.totalUnitCount > 0 else {
-            progressIndicator.doubleValue = 0
-            downloadProgressAlert?.informativeText =
-                "Preparing the migration package…"
+            progressWindowController.update(
+                message: "Preparing migration package",
+                percentage: "",
+                fractionCompleted: 0
+            )
             return
         }
 
         let fractionCompleted = min(max(progress.fractionCompleted, 0), 1)
         let isDownloadComplete = fractionCompleted >= 1
         let percentage = Int(fractionCompleted * 100)
-        progressIndicator.doubleValue = isDownloadComplete ? 99 : fractionCompleted * 100
-        downloadProgressAlert?.informativeText =
-            isDownloadComplete
-                ? "Finalizing the downloaded migration package…"
-                : "Downloading the migration package… \(percentage)% complete."
+        progressWindowController.update(
+            message: isDownloadComplete
+                ? "Verifying migration package"
+                : "Downloading migration package",
+            percentage: "\(isDownloadComplete ? 99 : percentage)%",
+            fractionCompleted: isDownloadComplete ? 0.99 : fractionCompleted
+        )
     }
 
     private func completeDownload(_ result: Result<URL, Error>) {
         DispatchQueue.main.async { [weak self] in
             guard let self, self.downloadTask != nil else { return }
-            self.pendingDownloadResult = result
             if case .success = result {
-                self.downloadProgressIndicator?.isIndeterminate = false
-                self.downloadProgressIndicator?.stopAnimation(nil)
-                self.downloadProgressIndicator?.doubleValue = 100
-                self.downloadProgressAlert?.informativeText =
-                    "Download complete. Preparing the installer…"
+                self.downloadProgressWindowController?.update(
+                    message: "Package verified. Opening installer…",
+                    percentage: "100%",
+                    fractionCompleted: 1
+                )
             }
-            guard self.downloadProgressAlert != nil else {
-                self.pendingDownloadResult = nil
-                self.downloadTask = nil
-                return
+            self.downloadTask = nil
+            self.stopDownloadProgress()
+
+            switch result {
+            case .success(let packageURL):
+                self.installPackage(at: packageURL)
+            case .failure(let error):
+                self.showFailure(error)
             }
-            NSApp.stopModal(withCode: .alertSecondButtonReturn)
         }
     }
 
     private func stopDownloadProgress() {
         downloadProgressTimer?.invalidate()
         downloadProgressTimer = nil
-        downloadProgressAlert = nil
-        downloadProgressIndicator = nil
+        downloadProgressWindowController?.close()
+        downloadProgressWindowController = nil
     }
 
     @objc private func cancelDownload() {
@@ -335,7 +308,6 @@ final class DesktopRenamerBridgeMigrationManager: NSObject {
 
         downloadTask?.cancel()
         downloadTask = nil
-        pendingDownloadResult = nil
         stopDownloadProgress()
         cancelPendingMigration()
     }
@@ -343,7 +315,6 @@ final class DesktopRenamerBridgeMigrationManager: NSObject {
     private func cancelPendingMigration() {
         downloadTask?.cancel()
         downloadTask = nil
-        pendingDownloadResult = nil
         stopDownloadProgress()
         DesktopRenamerMigrationStorage.discardPendingMigration()
         if let legacyDefaultsSnapshot {
