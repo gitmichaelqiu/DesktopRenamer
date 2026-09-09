@@ -11,7 +11,7 @@ usage() {
 Usage: build-migration-package.sh --app PATH --version BUILD \
     --update-feed-url URL [options]
 
-Builds the signed package that stages a current-ID DesktopRenamer app at
+Builds the package that stages a current-ID DesktopRenamer app at
 /Applications/DesktopRenamer-Migration.app for the legacy bridge handoff.
 
 Required:
@@ -23,6 +23,7 @@ Signing and notarization:
   --signing-identity NAME       Developer ID Installer certificate name
   --notary-profile NAME         notarytool keychain profile
   --skip-notarization           Build and sign without submitting/stapling
+  --manual-approval              Build for development signing/manual Gatekeeper approval
 
 Other options:
   --output PATH                 Destination .pkg (default: tmp/migration.pkg)
@@ -62,6 +63,7 @@ PACKAGE_IDENTIFIER="$DEFAULT_PACKAGE_IDENTIFIER"
 SIGNING_IDENTITY="${DEVELOPER_ID_INSTALLER:-}"
 NOTARY_PROFILE="${NOTARY_PROFILE:-}"
 SKIP_NOTARIZATION=0
+MANUAL_APPROVAL=0
 
 while (($# > 0)); do
     case "$1" in
@@ -104,6 +106,10 @@ while (($# > 0)); do
             SKIP_NOTARIZATION=1
             shift
             ;;
+        --manual-approval)
+            MANUAL_APPROVAL=1
+            shift
+            ;;
         -h|--help)
             usage
             exit 0
@@ -122,7 +128,11 @@ done
     || die "--update-feed-url must be an HTTPS URL"
 [[ "$PACKAGE_IDENTIFIER" =~ ^[A-Za-z0-9.-]+$ ]] \
     || die "package identifier contains unsupported characters"
-[[ -n "$SIGNING_IDENTITY" ]] || die "a Developer ID Installer identity is required"
+if ((MANUAL_APPROVAL == 1)); then
+    SKIP_NOTARIZATION=1
+elif [[ -z "$SIGNING_IDENTITY" ]]; then
+    die "a Developer ID Installer identity is required, or use --manual-approval"
+fi
 if ((SKIP_NOTARIZATION == 0)); then
     [[ -n "$NOTARY_PROFILE" ]] || die "--notary-profile or NOTARY_PROFILE is required"
 fi
@@ -134,9 +144,13 @@ OUTPUT_PATH="$(to_absolute_path "$OUTPUT_PATH")"
 [[ "${OUTPUT_PATH##*.}" == "pkg" ]] || die "--output must point to a .pkg file"
 [[ ! -e "$OUTPUT_PATH" ]] || die "output already exists: $OUTPUT_PATH"
 
-for command_name in codesign ditto mkdir pkgbuild pkgutil shasum spctl xcrun; do
+for command_name in codesign ditto mkdir pkgbuild pkgutil shasum; do
     require_command "$command_name"
 done
+if ((SKIP_NOTARIZATION == 0)); then
+    require_command spctl
+    require_command xcrun
+fi
 
 APP_INFO_PLIST="$APP_PATH/Contents/Info.plist"
 [[ -f "$APP_INFO_PLIST" ]] || die "app Info.plist not found: $APP_INFO_PLIST"
@@ -162,18 +176,37 @@ PACKAGE_ROOT="$WORK_DIR/root"
 mkdir -p "$PACKAGE_ROOT/Applications"
 ditto "$APP_PATH" "$PACKAGE_ROOT/Applications/$STAGED_APPLICATION_NAME"
 
-codesign --verify --deep --strict "$APP_PATH"
+if ! codesign --verify --deep --strict "$APP_PATH" >/dev/null 2>&1; then
+    if ((MANUAL_APPROVAL == 1)); then
+        echo "warning: staged app signature is not trusted; manual approval is required" >&2
+    else
+        die "staged app failed strict code-signature verification"
+    fi
+fi
 
-pkgbuild \
-    --root "$PACKAGE_ROOT" \
-    --identifier "$PACKAGE_IDENTIFIER" \
-    --version "$PACKAGE_VERSION" \
-    --install-location / \
-    --sign "$SIGNING_IDENTITY" \
-    "$OUTPUT_PATH"
+PACKAGE_BUILD_ARGUMENTS=(
+    --root "$PACKAGE_ROOT"
+    --identifier "$PACKAGE_IDENTIFIER"
+    --version "$PACKAGE_VERSION"
+    --install-location /
+)
+if [[ -n "$SIGNING_IDENTITY" ]]; then
+    PACKAGE_BUILD_ARGUMENTS+=(--sign "$SIGNING_IDENTITY")
+fi
 
-pkgutil --check-signature "$OUTPUT_PATH" >/dev/null \
-    || die "pkgbuild output did not pass package signature verification"
+pkgbuild "${PACKAGE_BUILD_ARGUMENTS[@]}" "$OUTPUT_PATH"
+
+if [[ -n "$SIGNING_IDENTITY" ]]; then
+    if ! pkgutil --check-signature "$OUTPUT_PATH" >/dev/null 2>&1; then
+        if ((MANUAL_APPROVAL == 1)); then
+            echo "warning: migration package signature is not trusted; manual approval is required" >&2
+        else
+            die "pkgbuild output did not pass package signature verification"
+        fi
+    fi
+elif ((MANUAL_APPROVAL == 0)); then
+    die "an unsigned package requires --manual-approval"
+fi
 
 if ((SKIP_NOTARIZATION == 0)); then
     xcrun notarytool submit "$OUTPUT_PATH" \
@@ -183,7 +216,11 @@ if ((SKIP_NOTARIZATION == 0)); then
     xcrun stapler validate -q "$OUTPUT_PATH"
     spctl --assess --type install --verbose=2 "$OUTPUT_PATH"
 else
-    echo "warning: notarization and Gatekeeper assessment were skipped" >&2
+    if ((MANUAL_APPROVAL == 1)); then
+        echo "warning: package is intended for manual Gatekeeper approval; notarization was skipped" >&2
+    else
+        echo "warning: notarization and Gatekeeper assessment were skipped" >&2
+    fi
 fi
 
 echo "Migration package: $OUTPUT_PATH"

@@ -18,14 +18,13 @@ Verifies bundle identities, embedded build-time metadata, code signatures,
 Gatekeeper assessment, notarization tickets, and the migration package payload.
 
 Required:
-  --bridge-dmg PATH               Signed/notarized bridge DMG
+  --bridge-dmg PATH               Bridge DMG
   --bridge-app PATH               Bridge app directory (alternative to DMG)
-  --migration-package PATH        Signed/notarized migration .pkg
+  --migration-package PATH        Migration .pkg
   --version VERSION               Expected bridge marketing version
   --build-number BUILD            Expected bridge CFBundleVersion
   --release-tag TAG               Expected bridge release tag
-    --feed-url URL                  Expected legacy Sparkle feed URL
-  --staged-feed-url URL             Expected current-ID Sparkle feed URL
+  --feed-url URL                  Expected shared Sparkle appcast URL
   --migration-package-url URL     Expected package URL in bridge metadata
   --migration-package-sha256 SHA256
                                   Expected package checksum in bridge metadata
@@ -34,10 +33,12 @@ Required:
 
 Other options:
   --staging-path PATH             Expected package staging path
+  --manual-approval               Allow development/unsigned artifacts for manual Gatekeeper approval
   --skip-notarization-checks      Skip stapler ticket checks (local diagnostics)
   -h, --help                     Show this help
 
-Production verification should omit --skip-notarization-checks.
+Production verification should omit --skip-notarization-checks and
+--manual-approval.
 EOF
 }
 
@@ -84,12 +85,12 @@ MARKETING_VERSION=""
 BUILD_NUMBER=""
 RELEASE_TAG=""
 FEED_URL=""
-STAGED_FEED_URL=""
 MIGRATION_PACKAGE_URL=""
 MIGRATION_PACKAGE_SHA256=""
 MIGRATION_PACKAGE_VERSION=""
 STAGING_PATH="$DEFAULT_STAGING_PATH"
 SKIP_NOTARIZATION_CHECKS=0
+MANUAL_APPROVAL=0
 
 while (($# > 0)); do
     case "$1" in
@@ -128,11 +129,6 @@ while (($# > 0)); do
             FEED_URL="$2"
             shift 2
             ;;
-        --staged-feed-url)
-            (($# >= 2)) || die "--staged-feed-url requires a URL"
-            STAGED_FEED_URL="$2"
-            shift 2
-            ;;
         --migration-package-url)
             (($# >= 2)) || die "--migration-package-url requires a URL"
             MIGRATION_PACKAGE_URL="$2"
@@ -154,6 +150,11 @@ while (($# > 0)); do
             shift 2
             ;;
         --skip-notarization-checks)
+            SKIP_NOTARIZATION_CHECKS=1
+            shift
+            ;;
+        --manual-approval)
+            MANUAL_APPROVAL=1
             SKIP_NOTARIZATION_CHECKS=1
             shift
             ;;
@@ -185,7 +186,6 @@ done
 [[ "$RELEASE_TAG" =~ ^[A-Za-z0-9._-]+$ ]] \
     || die "release tag contains unsupported characters"
 is_https_url "$FEED_URL" || die "--feed-url must be an HTTPS URL"
-is_https_url "$STAGED_FEED_URL" || die "--staged-feed-url must be an HTTPS URL"
 is_https_url "$MIGRATION_PACKAGE_URL" \
     || die "--migration-package-url must be an HTTPS URL"
 [[ "$MIGRATION_PACKAGE_SHA256" =~ ^[0-9A-Fa-f]{64}$ ]] \
@@ -206,9 +206,13 @@ fi
 MIGRATION_PACKAGE="$(to_absolute_path "$MIGRATION_PACKAGE")"
 [[ -f "$MIGRATION_PACKAGE" ]] || die "migration package not found: $MIGRATION_PACKAGE"
 
-for command_name in codesign ditto hdiutil mkdir pkgutil rm shasum spctl xcrun; do
+for command_name in codesign ditto hdiutil mkdir pkgutil rm shasum; do
     require_command "$command_name"
 done
+if ((SKIP_NOTARIZATION_CHECKS == 0)); then
+    require_command spctl
+    require_command xcrun
+fi
 
 WORK_DIR="$(mktemp -d "${TMPDIR:-/tmp}/DesktopRenamerBridgeVerification.XXXXXX")"
 MOUNT_POINT="$WORK_DIR/mount"
@@ -260,12 +264,24 @@ WIDGET_INFO_PLIST="$WIDGET_APP/Contents/Info.plist"
 assert_equal "bridge widget bundle identifier" "$LEGACY_WIDGET_BUNDLE_IDENTIFIER" \
     "$(read_plist_value "$WIDGET_INFO_PLIST" CFBundleIdentifier)"
 
-codesign --verify --deep --strict "$BRIDGE_APP"
+if ! codesign --verify --deep --strict "$BRIDGE_APP" >/dev/null 2>&1; then
+    if ((MANUAL_APPROVAL == 1)); then
+        echo "warning: bridge app signature is not trusted; manual approval is required" >&2
+    else
+        die "bridge app failed strict code-signature verification"
+    fi
+fi
 if ((SKIP_NOTARIZATION_CHECKS == 0)); then
     spctl --assess --type execute --verbose=2 "$BRIDGE_APP"
 fi
 
-pkgutil --check-signature "$MIGRATION_PACKAGE" >/dev/null
+if ! pkgutil --check-signature "$MIGRATION_PACKAGE" >/dev/null 2>&1; then
+    if ((MANUAL_APPROVAL == 1)); then
+        echo "warning: migration package is not trusted; manual approval is required" >&2
+    else
+        die "migration package failed package signature verification"
+    fi
+fi
 if ((SKIP_NOTARIZATION_CHECKS == 0)); then
     xcrun stapler validate -q "$MIGRATION_PACKAGE"
     spctl --assess --type install --verbose=2 "$MIGRATION_PACKAGE"
@@ -283,14 +299,20 @@ assert_equal "staged app bundle identifier" "$CURRENT_BUNDLE_IDENTIFIER" \
     "$(read_plist_value "$STAGED_INFO_PLIST" CFBundleIdentifier)"
 assert_equal "staged app build number" "$MIGRATION_PACKAGE_VERSION" \
     "$(read_plist_value "$STAGED_INFO_PLIST" CFBundleVersion)"
-assert_equal "staged app feed URL" "$STAGED_FEED_URL" \
+assert_equal "staged app feed URL" "$FEED_URL" \
     "$(read_plist_value "$STAGED_INFO_PLIST" SUFeedURL)"
 STAGED_WIDGET_INFO_PLIST="$STAGED_APP/Contents/PlugIns/DesktopRenamerWidgetExtension.appex/Contents/Info.plist"
 [[ -f "$STAGED_WIDGET_INFO_PLIST" ]] || die "migration package widget extension is missing"
 assert_equal "staged widget bundle identifier" \
     "dev.mqiu.DesktopRenamer.DesktopRenamerWidget" \
     "$(read_plist_value "$STAGED_WIDGET_INFO_PLIST" CFBundleIdentifier)"
-codesign --verify --deep --strict "$STAGED_APP"
+if ! codesign --verify --deep --strict "$STAGED_APP" >/dev/null 2>&1; then
+    if ((MANUAL_APPROVAL == 1)); then
+        echo "warning: staged app signature is not trusted; manual approval is required" >&2
+    else
+        die "staged app failed strict code-signature verification"
+    fi
+fi
 
 echo "Bridge release verification passed"
 echo "Bridge artifact: ${BRIDGE_DMG:-$BRIDGE_APP_INPUT}"

@@ -12,17 +12,16 @@ Usage: build-bridge-release.sh --version VERSION --build-number BUILD \
     --release-tag TAG --feed-url URL --migration-package-url URL \
     --migration-package-sha256 SHA256 [options]
 
-Builds the legacy-bundle-ID bridge release as a signed and notarized DMG.
-The bridge's Sparkle feed points to the legacy appcast; after installation it
-downloads the separately signed migration package and hands off to the current
-bundle ID.
+Builds the legacy-bundle-ID bridge release as a DMG. The bridge and current
+application use the same Sparkle appcast; after installation the bridge
+downloads the migration package and hands off to the current bundle ID.
 
 Required:
   --version VERSION             Marketing version for the bridge app
   --build-number BUILD          CFBundleVersion for the bridge app
   --release-tag TAG             Release tag used in metadata and artifact name
-  --feed-url URL                 Legacy Sparkle appcast URL
-  --migration-package-url URL    HTTPS URL for the signed migration package
+  --feed-url URL                 Shared Sparkle appcast URL
+  --migration-package-url URL    HTTPS URL for the migration package
   --migration-package-sha256 SHA256
                                  SHA256 pinned by the bridge
 
@@ -31,6 +30,7 @@ Signing and notarization:
   --team-id ID                   Apple Developer Team ID (optional)
   --notary-profile NAME          notarytool keychain profile
   --skip-notarization             Build and sign without submitting/stapling
+  --manual-approval               Build with automatic development signing and skip notarization
 
 Other options:
   --migration-package-version BUILD
@@ -87,6 +87,7 @@ SIGNING_IDENTITY="${DEVELOPER_ID_APPLICATION:-}"
 TEAM_ID="${DEVELOPMENT_TEAM:-}"
 NOTARY_PROFILE="${NOTARY_PROFILE:-}"
 SKIP_NOTARIZATION=0
+MANUAL_APPROVAL=0
 
 while (($# > 0)); do
     case "$1" in
@@ -154,6 +155,10 @@ while (($# > 0)); do
             SKIP_NOTARIZATION=1
             shift
             ;;
+        --manual-approval)
+            MANUAL_APPROVAL=1
+            shift
+            ;;
         -h|--help)
             usage
             exit 0
@@ -184,7 +189,11 @@ is_https_url "$MIGRATION_PACKAGE_URL" \
 MIGRATION_PACKAGE_SHA256="$(normalize_sha256 "$MIGRATION_PACKAGE_SHA256")"
 [[ "$STAGING_PATH" == /* && "$STAGING_PATH" == *.app ]] \
     || die "--staging-path must be an absolute .app path"
-[[ -n "$SIGNING_IDENTITY" ]] || die "a Developer ID Application identity is required"
+if ((MANUAL_APPROVAL == 1)); then
+    SKIP_NOTARIZATION=1
+elif [[ -z "$SIGNING_IDENTITY" ]]; then
+    die "a Developer ID Application identity is required, or use --manual-approval"
+fi
 if ((SKIP_NOTARIZATION == 0)); then
     [[ -n "$NOTARY_PROFILE" ]] || die "--notary-profile or NOTARY_PROFILE is required"
 fi
@@ -193,9 +202,13 @@ PROJECT_PATH="$(cd "$PROJECT_PATH" && pwd -P)"
 OUTPUT_DIRECTORY="$(to_absolute_path "$OUTPUT_DIRECTORY")"
 [[ -d "$PROJECT_PATH" ]] || die "Xcode project not found: $PROJECT_PATH"
 
-for command_name in codesign ditto hdiutil mkdir shasum spctl xcodebuild xcrun; do
+for command_name in codesign ditto hdiutil mkdir shasum xcodebuild; do
     require_command "$command_name"
 done
+if ((SKIP_NOTARIZATION == 0)); then
+    require_command spctl
+    require_command xcrun
+fi
 
 mkdir -p "$OUTPUT_DIRECTORY"
 BRIDGE_APP_PATH="$OUTPUT_DIRECTORY/DesktopRenamer.app"
@@ -212,8 +225,6 @@ trap cleanup EXIT
 ARCHIVE_PATH="$WORK_DIR/DesktopRenamerBridge.xcarchive"
 DERIVED_DATA_PATH="$WORK_DIR/DerivedData"
 BUILD_SETTINGS=(
-    "CODE_SIGN_STYLE=Manual"
-    "CODE_SIGN_IDENTITY=$SIGNING_IDENTITY"
     "MARKETING_VERSION=$MARKETING_VERSION"
     "CURRENT_PROJECT_VERSION=$BUILD_NUMBER"
     "DESKTOP_RENAMER_UPDATE_FEED_URL=$FEED_URL"
@@ -223,6 +234,14 @@ BUILD_SETTINGS=(
     "DESKTOP_RENAMER_MIGRATION_STAGING_PATH=$STAGING_PATH"
     "DESKTOP_RENAMER_RELEASE_TAG=$RELEASE_TAG"
 )
+if ((MANUAL_APPROVAL == 0)); then
+    BUILD_SETTINGS+=(
+        "CODE_SIGN_STYLE=Manual"
+        "CODE_SIGN_IDENTITY=$SIGNING_IDENTITY"
+    )
+else
+    BUILD_SETTINGS+=("CODE_SIGN_STYLE=Automatic")
+fi
 if [[ -n "$TEAM_ID" ]]; then
     BUILD_SETTINGS+=("DEVELOPMENT_TEAM=$TEAM_ID")
 fi
@@ -267,7 +286,13 @@ WIDGET_INFO_PLIST="$BRIDGE_APP_PATH/Contents/PlugIns/DesktopRenamerWidgetExtensi
 [[ "$(read_plist_value "$WIDGET_INFO_PLIST" CFBundleIdentifier)" == "$LEGACY_WIDGET_BUNDLE_IDENTIFIER" ]] \
     || die "bridge widget has the wrong bundle identifier"
 
-codesign --verify --deep --strict "$BRIDGE_APP_PATH"
+if ! codesign --verify --deep --strict "$BRIDGE_APP_PATH" >/dev/null 2>&1; then
+    if ((MANUAL_APPROVAL == 1)); then
+        echo "warning: bridge app signature is not trusted; manual approval is required" >&2
+    else
+        die "bridge app failed strict code-signature verification"
+    fi
+fi
 
 hdiutil create \
     -volname DesktopRenamer \
@@ -284,7 +309,11 @@ if ((SKIP_NOTARIZATION == 0)); then
     xcrun stapler validate -q "$DMG_PATH"
     spctl --assess --type open --verbose=2 "$DMG_PATH"
 else
-    echo "warning: notarization and Gatekeeper assessment were skipped" >&2
+    if ((MANUAL_APPROVAL == 1)); then
+        echo "warning: bridge is intended for manual Gatekeeper approval; notarization was skipped" >&2
+    else
+        echo "warning: notarization and Gatekeeper assessment were skipped" >&2
+    fi
 fi
 
 echo "Bridge app: $BRIDGE_APP_PATH"
