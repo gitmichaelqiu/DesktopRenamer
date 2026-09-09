@@ -3,7 +3,6 @@ import CryptoKit
 import Darwin
 import Foundation
 import ServiceManagement
-import SwiftUI
 
 @discardableResult
 private func runTool(_ path: String, arguments: [String]) -> Bool {
@@ -32,8 +31,11 @@ final class DesktopRenamerBridgeMigrationManager: NSObject {
     private var manifestURL: URL?
     private var downloadTask: URLSessionDownloadTask?
     private var downloadProgressTimer: Timer?
-    private var downloadProgressWindow: NSWindow?
-    private var downloadProgressHostingView: NSHostingView<DesktopRenamerMigrationProgressView>?
+    private var downloadProgressAlert: NSAlert?
+    private var downloadProgressIndicator: NSProgressIndicator?
+    private var pendingDownloadResult: Result<URL, Error>?
+    private var installerWasObserved = false
+    private var installerLaunchDeadline: Date?
 
     private override init() {
         super.init()
@@ -219,35 +221,27 @@ final class DesktopRenamerBridgeMigrationManager: NSObject {
     }
 
     private func presentDownloadProgress() {
-        guard downloadProgressWindow == nil else { return }
+        guard downloadProgressAlert == nil else { return }
 
-        let hostingView = NSHostingView(
-            rootView: DesktopRenamerMigrationProgressView(
-                message: "Preparing migration package",
-                percentage: "",
-                progress: nil,
-                cancel: { [weak self] in self?.cancelDownload() }
-            )
+        let alert = NSAlert()
+        alert.alertStyle = .informational
+        alert.messageText = "Downloading DesktopRenamer migration"
+        alert.informativeText = "Downloading the migration package. Please keep DesktopRenamer open."
+        alert.addButton(withTitle: "Cancel")
+
+        let progressIndicator = NSProgressIndicator(
+            frame: NSRect(x: 0, y: 0, width: 280, height: 20)
         )
-        hostingView.frame = NSRect(x: 0, y: 0, width: 440, height: 204)
-        hostingView.autoresizingMask = [.width, .height]
+        progressIndicator.style = .bar
+        progressIndicator.controlSize = .regular
+        progressIndicator.minValue = 0
+        progressIndicator.maxValue = 100
+        progressIndicator.isIndeterminate = true
+        progressIndicator.startAnimation(nil)
+        alert.accessoryView = progressIndicator
 
-        let window = NSWindow(
-            contentRect: hostingView.frame,
-            styleMask: [.borderless],
-            backing: .buffered,
-            defer: false
-        )
-        window.backgroundColor = .clear
-        window.isOpaque = false
-        window.hasShadow = true
-        window.isReleasedWhenClosed = false
-        window.isMovableByWindowBackground = true
-        window.contentView = hostingView
-        window.center()
-
-        downloadProgressWindow = window
-        downloadProgressHostingView = hostingView
+        downloadProgressAlert = alert
+        downloadProgressIndicator = progressIndicator
         let progressTimer = Timer(
             timeInterval: 0.1,
             repeats: true
@@ -256,79 +250,77 @@ final class DesktopRenamerBridgeMigrationManager: NSObject {
         }
         downloadProgressTimer = progressTimer
         RunLoop.main.add(progressTimer, forMode: .common)
-        window.makeKeyAndOrderFront(nil)
-        NSApp.activate(ignoringOtherApps: true)
+
+        let response = alert.runModal()
+        let result = pendingDownloadResult
+        pendingDownloadResult = nil
+        stopDownloadProgress()
+
+        guard response == .alertSecondButtonReturn else {
+            downloadTask?.cancel()
+            downloadTask = nil
+            continueNormalApplication()
+            return
+        }
+
+        guard let result else { return }
+        switch result {
+        case .success(let packageURL):
+            installPackage(at: packageURL)
+        case .failure(let error):
+            showFailure(error)
+        }
     }
 
     private func updateDownloadProgress() {
         guard let downloadTask,
-              downloadProgressHostingView != nil else {
+              let progressIndicator = downloadProgressIndicator else {
             return
         }
 
         let progress = downloadTask.progress
         guard progress.totalUnitCount > 0 else {
-            updateDownloadProgressView(
-                message: "Preparing migration package",
-                percentage: "",
-                progress: nil
-            )
+            progressIndicator.isIndeterminate = true
+            progressIndicator.startAnimation(nil)
             return
         }
 
+        progressIndicator.isIndeterminate = false
+        progressIndicator.stopAnimation(nil)
         let fractionCompleted = min(max(progress.fractionCompleted, 0), 1)
         let isDownloadComplete = fractionCompleted >= 1
         let percentage = Int(fractionCompleted * 100)
-        updateDownloadProgressView(
-            message: isDownloadComplete
-                ? "Verifying migration package"
-                : "Downloading migration package",
-            percentage: "\(percentage)%",
-            progress: isDownloadComplete ? 0.99 : fractionCompleted
-        )
-    }
-
-    private func updateDownloadProgressView(
-        message: String,
-        percentage: String,
-        progress: Double?
-    ) {
-        downloadProgressHostingView?.rootView = DesktopRenamerMigrationProgressView(
-            message: message,
-            percentage: percentage,
-            progress: progress,
-            cancel: { [weak self] in self?.cancelDownload() }
-        )
+        progressIndicator.doubleValue = isDownloadComplete ? 99 : fractionCompleted * 100
+        downloadProgressAlert?.informativeText =
+            isDownloadComplete
+                ? "Finalizing the downloaded migration package…"
+                : "Downloading the migration package… \(percentage)% complete."
     }
 
     private func completeDownload(_ result: Result<URL, Error>) {
         DispatchQueue.main.async { [weak self] in
             guard let self, self.downloadTask != nil else { return }
+            self.pendingDownloadResult = result
             if case .success = result {
-                self.updateDownloadProgressView(
-                    message: "Package verified. Opening installer…",
-                    percentage: "100%",
-                    progress: 1
-                )
+                self.downloadProgressIndicator?.isIndeterminate = false
+                self.downloadProgressIndicator?.doubleValue = 100
+                self.downloadProgressAlert?.informativeText =
+                    "Download complete. Preparing the installer…"
             }
-            self.downloadTask = nil
-            self.stopDownloadProgress()
-
-            switch result {
-            case .success(let packageURL):
-                self.installPackage(at: packageURL)
-            case .failure(let error):
-                self.showFailure(error)
+            guard self.downloadProgressAlert != nil else {
+                self.pendingDownloadResult = nil
+                self.downloadTask = nil
+                return
             }
+            NSApp.stopModal(withCode: .alertSecondButtonReturn)
         }
     }
 
     private func stopDownloadProgress() {
         downloadProgressTimer?.invalidate()
         downloadProgressTimer = nil
-        downloadProgressWindow?.close()
-        downloadProgressWindow = nil
-        downloadProgressHostingView = nil
+        downloadProgressAlert = nil
+        downloadProgressIndicator = nil
     }
 
     @objc private func cancelDownload() {
@@ -336,6 +328,7 @@ final class DesktopRenamerBridgeMigrationManager: NSObject {
 
         downloadTask?.cancel()
         downloadTask = nil
+        pendingDownloadResult = nil
         stopDownloadProgress()
         continueNormalApplication()
     }
@@ -575,67 +568,5 @@ final class DesktopRenamerBridgeMigrationManager: NSObject {
         } else {
             continueNormalApplication()
         }
-    }
-}
-
-private struct DesktopRenamerMigrationProgressView: View {
-    let message: String
-    let percentage: String
-    let progress: Double?
-    let cancel: () -> Void
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 20) {
-            HStack(alignment: .center, spacing: 12) {
-                Image(nsImage: NSApp.applicationIconImage)
-                    .resizable()
-                    .scaledToFit()
-                    .frame(width: 40, height: 40)
-
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("DesktopRenamer Migration")
-                        .font(.headline)
-
-                    Text("Preparing the new app while keeping your settings safe.")
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
-                        .fixedSize(horizontal: false, vertical: true)
-                }
-            }
-
-            VStack(alignment: .leading, spacing: 8) {
-                HStack(alignment: .firstTextBaseline) {
-                    Text(message)
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
-
-                    Spacer(minLength: 12)
-
-                    if !percentage.isEmpty {
-                        Text(percentage)
-                            .font(.system(.subheadline, design: .monospaced))
-                            .foregroundStyle(.secondary)
-                    }
-                }
-
-                if let progress {
-                    ProgressView(value: progress, total: 1)
-                        .progressViewStyle(.linear)
-                } else {
-                    ProgressView()
-                        .progressViewStyle(.linear)
-                }
-            }
-
-            HStack {
-                Spacer()
-
-                Button("Cancel", action: cancel)
-                    .keyboardShortcut(.cancelAction)
-            }
-        }
-        .padding(28)
-        .frame(width: 440, height: 204)
-        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
     }
 }
