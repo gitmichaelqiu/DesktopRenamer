@@ -70,6 +70,7 @@ final class DesktopRenamerBridgeMigrationManager: NSObject {
             return
         }
 
+        stageLaunchStarted = false
         if resumePendingMigrationIfNeeded() {
             return
         }
@@ -148,6 +149,7 @@ final class DesktopRenamerBridgeMigrationManager: NSObject {
             return
         }
 
+        stageLaunchStarted = false
         guard terminateRunningStagingApplicationsIfNeeded() else {
             showFailure(DesktopRenamerMigrationError.stagingApplicationDidNotTerminate)
             return
