@@ -42,6 +42,12 @@ enum DesktopRenamerMigrationStorage {
         let data = try Data(contentsOf: url)
         return try JSONDecoder().decode(DesktopRenamerMigrationManifest.self, from: data)
     }
+
+    static func discardPendingMigration() {
+        let fileManager = FileManager.default
+        try? fileManager.removeItem(at: manifestURL)
+        try? fileManager.removeItem(at: cacheDirectoryURL)
+    }
 }
 
 struct DesktopRenamerMigrationManifest: Codable {

@@ -35,6 +35,7 @@ final class DesktopRenamerBridgeMigrationManager: NSObject {
     private var downloadProgressIndicator: NSProgressIndicator?
     private var pendingDownloadResult: Result<URL, Error>?
     private var isFinalizingDownload = false
+    private var legacyDefaultsSnapshot: [String: Any]?
     private var installerWasObserved = false
     private var installerLaunchDeadline: Date?
 
@@ -156,6 +157,9 @@ final class DesktopRenamerBridgeMigrationManager: NSObject {
 
         stageLaunchStarted = false
         isFinalizingDownload = false
+        legacyDefaultsSnapshot = UserDefaults.standard.persistentDomain(
+            forName: DesktopRenamerIdentity.legacyBundleIdentifier
+        )
         guard terminateRunningStagingApplicationsIfNeeded() else {
             showFailure(DesktopRenamerMigrationError.stagingApplicationDidNotTerminate)
             return
@@ -261,7 +265,7 @@ final class DesktopRenamerBridgeMigrationManager: NSObject {
         guard response == .alertSecondButtonReturn else {
             downloadTask?.cancel()
             downloadTask = nil
-            continueNormalApplication()
+            cancelPendingMigration()
             return
         }
 
@@ -347,6 +351,25 @@ final class DesktopRenamerBridgeMigrationManager: NSObject {
         downloadTask = nil
         pendingDownloadResult = nil
         stopDownloadProgress()
+        cancelPendingMigration()
+    }
+
+    private func cancelPendingMigration() {
+        downloadTask?.cancel()
+        downloadTask = nil
+        pendingDownloadResult = nil
+        stopDownloadProgress()
+        DesktopRenamerMigrationStorage.discardPendingMigration()
+        if let legacyDefaultsSnapshot {
+            UserDefaults.standard.setPersistentDomain(
+                legacyDefaultsSnapshot,
+                forName: DesktopRenamerIdentity.legacyBundleIdentifier
+            )
+            UserDefaults.standard.synchronize()
+        }
+        self.legacyDefaultsSnapshot = nil
+        manifestURL = nil
+        stageLaunchStarted = false
         continueNormalApplication()
     }
 
