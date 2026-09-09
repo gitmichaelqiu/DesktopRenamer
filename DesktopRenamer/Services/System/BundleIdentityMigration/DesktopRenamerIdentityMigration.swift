@@ -2,6 +2,33 @@ import Foundation
 import ServiceManagement
 
 enum DesktopRenamerIdentityMigration {
+    static func prepareLegacyBridgeLaunch() {
+        guard DesktopRenamerIdentity.isLegacyBridge else { return }
+
+        let legacyDomain = UserDefaults.standard.persistentDomain(
+            forName: DesktopRenamerIdentity.legacyBundleIdentifier
+        ) ?? [:]
+        guard legacyDomain.isEmpty,
+              var currentDomain = UserDefaults.standard.persistentDomain(
+                  forName: DesktopRenamerIdentity.currentBundleIdentifier
+              ),
+              !currentDomain.isEmpty else {
+            return
+        }
+
+        currentDomain = currentDomain.filter { key, _ in
+            !isSparkleKey(key)
+                && !key.hasPrefix("DesktopRenamer.IdentityMigration.")
+        }
+        guard !currentDomain.isEmpty else { return }
+
+        UserDefaults.standard.setPersistentDomain(
+            currentDomain,
+            forName: DesktopRenamerIdentity.legacyBundleIdentifier
+        )
+        UserDefaults.standard.synchronize()
+    }
+
     static func migrateLegacyDefaults(launchAtLoginEnabled: Bool) {
         guard DesktopRenamerIdentity.isCurrentApplication else { return }
         guard !UserDefaults.standard.bool(forKey: DesktopRenamerIdentity.migrationCompletedKey) else {

@@ -32,6 +32,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     private func startNormalApplication() {
         NSApp.setActivationPolicy(.accessory)
 
+        DesktopRenamerIdentityMigration.prepareLegacyBridgeLaunch()
         DesktopRenamerIdentityMigration.prepareNormalLaunch()
 
         let hasInitialized = UserDefaults.standard.bool(forKey: "HasInitializedDefaults")
