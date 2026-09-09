@@ -266,14 +266,14 @@ final class DesktopRenamerMigrationFinalizer {
             }
 
             if fileManager.fileExists(atPath: sourceURL.path) {
-                guard Bundle(url: sourceURL)?.bundleIdentifier
+                guard bundleIdentifier(at: sourceURL)
                     == DesktopRenamerIdentity.legacyBundleIdentifier else {
                     throw DesktopRenamerMigrationError.targetApplicationInvalid
                 }
             }
 
             try fileManager.copyItem(at: stagingURL, to: temporaryURL)
-            guard Bundle(url: temporaryURL)?.bundleIdentifier
+            guard bundleIdentifier(at: temporaryURL)
                 == DesktopRenamerIdentity.currentBundleIdentifier else {
                 throw DesktopRenamerMigrationError.stagingApplicationInvalid
             }
@@ -287,7 +287,7 @@ final class DesktopRenamerMigrationFinalizer {
             self.temporaryTargetURL = temporaryURL
             self.targetURL = sourceURL
 
-            guard Bundle(url: sourceURL)?.bundleIdentifier
+            guard bundleIdentifier(at: sourceURL)
                 == DesktopRenamerIdentity.currentBundleIdentifier else {
                 throw DesktopRenamerMigrationError.applicationSwapFailed
             }
@@ -394,7 +394,7 @@ final class DesktopRenamerMigrationFinalizer {
             try? fileManager.removeItem(at: temporaryURL)
         }
 
-        if Bundle(url: targetURL)?.bundleIdentifier == DesktopRenamerIdentity.currentBundleIdentifier {
+        if bundleIdentifier(at: targetURL) == DesktopRenamerIdentity.currentBundleIdentifier {
             try? fileManager.removeItem(at: targetURL)
         }
 
@@ -405,7 +405,7 @@ final class DesktopRenamerMigrationFinalizer {
 
     private func failMigration(_ error: Error) {
         if let targetURL,
-           Bundle(url: targetURL)?.bundleIdentifier == DesktopRenamerIdentity.currentBundleIdentifier {
+           bundleIdentifier(at: targetURL) == DesktopRenamerIdentity.currentBundleIdentifier {
             NSWorkspace.shared.runningApplications
                 .filter {
                     $0.bundleIdentifier == DesktopRenamerIdentity.currentBundleIdentifier
@@ -459,7 +459,7 @@ final class DesktopRenamerMigrationFinalizer {
         let sourceURL = URL(fileURLWithPath: manifest.sourceApplicationPath, isDirectory: true)
             .standardizedFileURL
         guard FileManager.default.fileExists(atPath: sourceURL.path),
-              Bundle(url: sourceURL)?.bundleIdentifier
+              bundleIdentifier(at: sourceURL)
                 == DesktopRenamerIdentity.legacyBundleIdentifier else {
             return
         }
@@ -481,5 +481,20 @@ final class DesktopRenamerMigrationFinalizer {
                 print("IdentityMigration: failed to relaunch the legacy application: \(error)")
             }
         }
+    }
+
+    private func bundleIdentifier(at applicationURL: URL) -> String? {
+        let infoURL = applicationURL.appendingPathComponent("Contents/Info.plist")
+        guard let data = try? Data(contentsOf: infoURL),
+              let propertyList = try? PropertyListSerialization.propertyList(
+                  from: data,
+                  options: [],
+                  format: nil
+              ),
+              let infoDictionary = propertyList as? [String: Any] else {
+            return nil
+        }
+
+        return infoDictionary["CFBundleIdentifier"] as? String
     }
 }
