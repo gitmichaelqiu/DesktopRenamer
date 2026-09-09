@@ -34,6 +34,7 @@ final class DesktopRenamerBridgeMigrationManager: NSObject {
     private var downloadProgressAlert: NSAlert?
     private var downloadProgressIndicator: NSProgressIndicator?
     private var pendingDownloadResult: Result<URL, Error>?
+    private var isFinalizingDownload = false
     private var installerWasObserved = false
     private var installerLaunchDeadline: Date?
 
@@ -154,6 +155,7 @@ final class DesktopRenamerBridgeMigrationManager: NSObject {
         }
 
         stageLaunchStarted = false
+        isFinalizingDownload = false
         guard terminateRunningStagingApplicationsIfNeeded() else {
             showFailure(DesktopRenamerMigrationError.stagingApplicationDidNotTerminate)
             return
@@ -279,6 +281,13 @@ final class DesktopRenamerBridgeMigrationManager: NSObject {
         }
 
         let progress = downloadTask.progress
+        if isFinalizingDownload {
+            progressIndicator.isIndeterminate = false
+            progressIndicator.stopAnimation(nil)
+            progressIndicator.doubleValue = 99
+            return
+        }
+
         guard progress.totalUnitCount > 0 else {
             progressIndicator.isIndeterminate = true
             progressIndicator.startAnimation(nil)
@@ -291,6 +300,11 @@ final class DesktopRenamerBridgeMigrationManager: NSObject {
         let isDownloadComplete = fractionCompleted >= 1
         let percentage = Int(fractionCompleted * 100)
         progressIndicator.doubleValue = isDownloadComplete ? 99 : fractionCompleted * 100
+        if isDownloadComplete {
+            isFinalizingDownload = true
+            progressIndicator.isIndeterminate = false
+            progressIndicator.stopAnimation(nil)
+        }
         downloadProgressAlert?.informativeText =
             isDownloadComplete
                 ? "Finalizing the downloaded migration package…"
@@ -302,7 +316,9 @@ final class DesktopRenamerBridgeMigrationManager: NSObject {
             guard let self, self.downloadTask != nil else { return }
             self.pendingDownloadResult = result
             if case .success = result {
+                self.isFinalizingDownload = true
                 self.downloadProgressIndicator?.isIndeterminate = false
+                self.downloadProgressIndicator?.stopAnimation(nil)
                 self.downloadProgressIndicator?.doubleValue = 100
                 self.downloadProgressAlert?.informativeText =
                     "Download complete. Preparing the installer…"
@@ -321,6 +337,7 @@ final class DesktopRenamerBridgeMigrationManager: NSObject {
         downloadProgressTimer = nil
         downloadProgressAlert = nil
         downloadProgressIndicator = nil
+        isFinalizingDownload = false
     }
 
     @objc private func cancelDownload() {
