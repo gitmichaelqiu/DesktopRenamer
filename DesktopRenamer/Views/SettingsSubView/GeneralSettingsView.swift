@@ -83,7 +83,11 @@ struct GeneralSettingsView: View {
                     }
 
                     SettingsRow("Settings.General.Updates.ManualCheck") {
-                        Button(NSLocalizedString("Settings.General.Updates.Button", comment: "")) {
+                        Button(
+                            DesktopRenamerIdentity.isLegacyBridge
+                                ? NSLocalizedString("Migrate", comment: "")
+                                : NSLocalizedString("Settings.General.Updates.Button", comment: "")
+                        ) {
                             checkForUpdate()
                         }
                     }
@@ -161,6 +165,11 @@ struct GeneralSettingsView: View {
     }
 
     private func checkForUpdate() {
+        if DesktopRenamerIdentity.isLegacyBridge {
+            DesktopRenamerBridgeMigrationManager.shared.startMigrationFromUserAction()
+            return
+        }
+
         UpdateManager.shared.updaterController.checkForUpdates(nil)
     }
 

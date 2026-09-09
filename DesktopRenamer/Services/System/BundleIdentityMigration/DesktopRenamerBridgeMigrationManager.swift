@@ -20,7 +20,7 @@ private func runTool(_ path: String, arguments: [String]) -> Bool {
     }
 }
 
-final class DesktopRenamerBridgeMigrationManager {
+final class DesktopRenamerBridgeMigrationManager: NSObject {
     static let shared = DesktopRenamerBridgeMigrationManager()
 
     private var hasPresentedPrompt = false
@@ -29,8 +29,15 @@ final class DesktopRenamerBridgeMigrationManager {
     private var stageMonitorDeadline: Date?
     private var stageLaunchStarted = false
     private var manifestURL: URL?
+    private var downloadTask: URLSessionDownloadTask?
+    private var downloadProgressTimer: Timer?
+    private var downloadProgressAlert: NSAlert?
+    private var downloadProgressIndicator: NSProgressIndicator?
+    private var pendingDownloadResult: Result<URL, Error>?
 
-    private init() {}
+    private override init() {
+        super.init()
+    }
 
     /// Returns true when the caller must pause normal application startup while
     /// the legacy bridge offers or performs the migration.
@@ -52,6 +59,22 @@ final class DesktopRenamerBridgeMigrationManager {
             self?.presentMigrationPrompt()
         }
         return true
+    }
+
+    /// Starts migration from the settings button after the user previously
+    /// chose to defer the one-time bridge prompt.
+    func startMigrationFromUserAction() {
+        guard DesktopRenamerIdentity.isLegacyBridge,
+              DesktopRenamerMigrationConfiguration.isConfigured,
+              downloadTask == nil else {
+            return
+        }
+
+        if resumePendingMigrationIfNeeded() {
+            return
+        }
+
+        startMigration()
     }
 
     private func presentMigrationPrompt() {
@@ -160,16 +183,16 @@ final class DesktopRenamerBridgeMigrationManager {
             guard let self else { return }
 
             if let error {
-                DispatchQueue.main.async { self.showFailure(error) }
+                self.completeDownload(.failure(error))
                 return
             }
 
             guard let temporaryURL,
                   let response = response as? HTTPURLResponse,
                   (200...299).contains(response.statusCode) else {
-                DispatchQueue.main.async {
-                    self.showFailure(DesktopRenamerMigrationError.invalidDownloadResponse)
-                }
+                self.completeDownload(
+                    .failure(DesktopRenamerMigrationError.invalidDownloadResponse)
+                )
                 return
             }
 
@@ -181,14 +204,104 @@ final class DesktopRenamerBridgeMigrationManager {
                     at: packageURL,
                     expectedSHA256: expectedSHA256
                 )
-                DispatchQueue.main.async {
-                    self.installPackage(at: packageURL)
-                }
+                self.completeDownload(.success(packageURL))
             } catch {
-                DispatchQueue.main.async { self.showFailure(error) }
+                self.completeDownload(.failure(error))
             }
         }
+        downloadTask = task
         task.resume()
+        presentDownloadProgress()
+    }
+
+    private func presentDownloadProgress() {
+        guard downloadProgressAlert == nil else { return }
+
+        let alert = NSAlert()
+        alert.alertStyle = .informational
+        alert.messageText = "Downloading DesktopRenamer migration"
+        alert.informativeText = "Downloading the migration package. Please keep DesktopRenamer open."
+        alert.addButton(withTitle: "Cancel")
+
+        let progressIndicator = NSProgressIndicator(
+            frame: NSRect(x: 0, y: 0, width: 280, height: 20)
+        )
+        progressIndicator.style = .bar
+        progressIndicator.controlSize = .regular
+        progressIndicator.isIndeterminate = true
+        progressIndicator.startAnimation(nil)
+        alert.accessoryView = progressIndicator
+
+        downloadProgressAlert = alert
+        downloadProgressIndicator = progressIndicator
+        let progressTimer = Timer(
+            timeInterval: 0.1,
+            repeats: true
+        ) { [weak self] _ in
+            self?.updateDownloadProgress()
+        }
+        downloadProgressTimer = progressTimer
+        RunLoop.main.add(progressTimer, forMode: .common)
+
+        let response = alert.runModal()
+        stopDownloadProgress()
+
+        guard response == .alertSecondButtonReturn else {
+            downloadTask?.cancel()
+            downloadTask = nil
+            pendingDownloadResult = nil
+            continueNormalApplication()
+            return
+        }
+
+        let result = pendingDownloadResult
+        pendingDownloadResult = nil
+        downloadTask = nil
+
+        guard let result else { return }
+        switch result {
+        case .success(let packageURL):
+            installPackage(at: packageURL)
+        case .failure(let error):
+            showFailure(error)
+        }
+    }
+
+    private func updateDownloadProgress() {
+        guard let downloadTask,
+              let progressIndicator = downloadProgressIndicator else {
+            return
+        }
+
+        let progress = downloadTask.progress
+        guard progress.totalUnitCount > 0 else {
+            progressIndicator.isIndeterminate = true
+            progressIndicator.startAnimation(nil)
+            return
+        }
+
+        progressIndicator.isIndeterminate = false
+        progressIndicator.stopAnimation(nil)
+        progressIndicator.doubleValue = progress.fractionCompleted * 100
+        let percentage = Int(progress.fractionCompleted * 100)
+        downloadProgressAlert?.informativeText =
+            "Downloading the migration package… \(percentage)% complete."
+    }
+
+    private func completeDownload(_ result: Result<URL, Error>) {
+        DispatchQueue.main.async { [weak self] in
+            guard let self, self.downloadTask != nil else { return }
+            self.pendingDownloadResult = result
+            guard self.downloadProgressAlert != nil else { return }
+            NSApp.stopModal(withCode: .alertSecondButtonReturn)
+        }
+    }
+
+    private func stopDownloadProgress() {
+        downloadProgressTimer?.invalidate()
+        downloadProgressTimer = nil
+        downloadProgressAlert = nil
+        downloadProgressIndicator = nil
     }
 
     private func cacheDownloadedPackage(at temporaryURL: URL) throws -> URL {
