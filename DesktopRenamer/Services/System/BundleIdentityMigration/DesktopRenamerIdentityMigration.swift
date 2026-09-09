@@ -16,9 +16,7 @@ enum DesktopRenamerIdentityMigration {
         ) ?? [:]
 
         for (key, value) in legacyDomain where !isSparkleKey(key) {
-            if currentDomain[key] == nil {
-                currentDomain[key] = value
-            }
+            currentDomain[key] = value
         }
         currentDomain["HasInitializedDefaults"] = true
 
