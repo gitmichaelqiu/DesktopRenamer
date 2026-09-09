@@ -13,7 +13,23 @@ final class DesktopRenamerMigrationFinalizer {
     private init() {}
 
     static var isRequested: Bool {
-        CommandLine.arguments.contains("--desktoprenamer-migration")
+        if CommandLine.arguments.contains("--desktoprenamer-migration") {
+            return true
+        }
+
+        guard DesktopRenamerIdentity.isCurrentApplication,
+              Bundle.main.bundleURL.standardizedFileURL
+                == DesktopRenamerMigrationConfiguration.stagingApplicationURL,
+              FileManager.default.fileExists(
+                atPath: DesktopRenamerMigrationStorage.manifestURL.path
+              ) else {
+            return false
+        }
+
+        // The bridge may have exited while Installer was running, or macOS may
+        // have blocked its automatic launch. Opening the staged app directly
+        // should resume the pending handoff from its durable manifest.
+        return true
     }
 
     func startIfRequested() -> Bool {
@@ -110,7 +126,11 @@ final class DesktopRenamerMigrationFinalizer {
         }
 
         guard attemptsRemaining > 0 else {
-            failMigration(DesktopRenamerMigrationError.legacyApplicationDidNotTerminate)
+            guard application.forceTerminate() else {
+                failMigration(DesktopRenamerMigrationError.legacyApplicationDidNotTerminate)
+                return
+            }
+            waitForLegacyApplicationToTerminate(application, attemptsRemaining: 20)
             return
         }
 
