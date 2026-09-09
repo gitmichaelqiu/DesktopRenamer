@@ -14,7 +14,10 @@ The migration is implemented as a one-time legacy bridge. Normal builds using
 
 ## Runtime flow
 
-1. Sparkle delivers a signed legacy bridge update through the legacy appcast.
+1. Sparkle delivers a signed legacy bridge update through the shared appcast.
+   The bridge item stays on Sparkle's default channel and is tagged for
+   `com.michaelqiu.DesktopRenamer`; current-ID items use the `dev-mqiu`
+   channel and are tagged for `dev.mqiu.DesktopRenamer`.
 2. The bridge starts and shows a one-time migration prompt. Choosing **Later**
    continues to launch the legacy application normally.
 3. Choosing **Migrate Now** records a manifest containing the original app
@@ -42,7 +45,7 @@ is never removed before the current app has started successfully.
 ## Producing a release
 
 Do this only after the final current-ID source is ready. The release tooling
-keeps package URL, checksum, versions, feed URLs, staging path, and release
+keeps package URL, checksum, versions, the appcast URL, staging path, and release
 tag as build-time inputs; do not hardcode release values in source.
 
 The complete command reference is also available in
@@ -51,59 +54,51 @@ The complete command reference is also available in
 ### Prerequisites
 
 - A final current-ID `DesktopRenamer.app` archive.
-- Developer ID Application and Developer ID Installer certificates.
-- A configured `notarytool` keychain profile.
 - A final HTTPS URL where the migration package will be hosted.
-- The legacy and current Sparkle feed URLs.
+- The shared Sparkle appcast URL.
+
+For the current DesktopRenamer distribution, use `--manual-approval` with the
+release scripts. This keeps the existing development-signing/manual-Gatekeeper
+workflow and does not require a paid Developer ID certificate. For a stronger
+distribution, omit that flag and provide Developer ID Application and
+Developer ID Installer certificates plus a configured `notarytool` keychain
+profile.
 
 Signing credentials and notarization profiles must remain in the local
 keychain. Do not put them, generated archives, packages, DMGs, or checksums in
 the repository.
 
-### 1. Build the current-ID app
+### 1. Build the migration package
 
-Archive the final app with the normal `DesktopRenamer` scheme and its new
-Sparkle feed:
+Set the paths and shared appcast URL for the final current-ID app:
 
 ```sh
-xcodebuild \
-  -project DesktopRenamer.xcodeproj \
-  -scheme DesktopRenamer \
-  -configuration Release \
-  -archivePath "$CURRENT_ARCHIVE" \
-  archive \
-  MARKETING_VERSION="$CURRENT_VERSION" \
-  CURRENT_PROJECT_VERSION="$CURRENT_BUILD" \
-  DESKTOP_RENAMER_UPDATE_FEED_URL="$CURRENT_FEED_URL" \
-  DESKTOP_RENAMER_RELEASE_TAG="$RELEASE_TAG"
+CURRENT_APP="tmp/DesktopRenamer 2026-09-09 10-19-25/DesktopRenamer.app"
+CURRENT_BUILD=38
+MIGRATION_PACKAGE="tmp/DesktopRenamer-migration-${CURRENT_BUILD}.pkg"
+APPCAST_URL="https://raw.githubusercontent.com/gitmichaelqiu/DesktopRenamer/main/appcast.xml"
 ```
 
-The archived app must use `dev.mqiu.DesktopRenamer`; its widget must use
-`dev.mqiu.DesktopRenamer.DesktopRenamerWidget`.
-
-### 2. Build the migration package
-
-Build and notarize a package containing the archived current-ID app:
+Build a package containing the current-ID app:
 
 ```sh
 Scripts/build-migration-package.sh \
-  --app "$CURRENT_ARCHIVE/Products/Applications/DesktopRenamer.app" \
+  --app "$CURRENT_APP" \
   --version "$CURRENT_BUILD" \
-  --update-feed-url "$CURRENT_FEED_URL" \
+  --update-feed-url "$APPCAST_URL" \
   --output "$MIGRATION_PACKAGE" \
-  --signing-identity "$DEVELOPER_ID_INSTALLER" \
-  --notary-profile "$NOTARY_PROFILE"
+  --manual-approval
 ```
 
 `--version` is the app build number (`CFBundleVersion`), not the marketing
-version. The script verifies the app and widget identifiers, embeds the
-current Sparkle feed, signs the `.pkg`, notarizes it, staples the ticket, and
-prints the SHA-256 checksum.
+version. The script verifies the app and widget identifiers, verifies the
+shared Sparkle feed, creates the `.pkg`, and prints the SHA-256 checksum.
+With Developer ID mode, it also signs, notarizes, and staples the package.
 
 Upload the resulting package to its final HTTPS URL before building the
 bridge. The URL and checksum must remain stable after the bridge is released.
 
-### 3. Build the legacy bridge
+### 2. Build the legacy bridge
 
 Build the legacy bridge DMG with the package metadata supplied explicitly:
 
@@ -114,21 +109,19 @@ Scripts/build-bridge-release.sh \
   --version "$BRIDGE_VERSION" \
   --build-number "$BRIDGE_BUILD" \
   --release-tag "$RELEASE_TAG" \
-  --feed-url "$LEGACY_FEED_URL" \
-  --staged-feed-url "$CURRENT_FEED_URL" \
+  --feed-url "$APPCAST_URL" \
   --migration-package-url "$MIGRATION_PACKAGE_URL" \
   --migration-package-sha256 "$MIGRATION_PACKAGE_SHA256" \
   --migration-package-version "$CURRENT_BUILD" \
   --output-dir "$BRIDGE_OUTPUT_DIRECTORY" \
-  --signing-identity "$DEVELOPER_ID_APPLICATION" \
-  --notary-profile "$NOTARY_PROFILE"
+  --manual-approval
 ```
 
 This uses the `DesktopRenamerBridge` scheme and the `Bridge` configuration.
 The resulting app retains the legacy application and widget identifiers so
 Sparkle can update existing installations.
 
-### 4. Verify before publishing
+### 3. Verify before publishing
 
 Verify the bridge DMG and migration package together:
 
@@ -139,21 +132,23 @@ Scripts/verify-bridge-release.sh \
   --version "$BRIDGE_VERSION" \
   --build-number "$BRIDGE_BUILD" \
   --release-tag "$RELEASE_TAG" \
-  --feed-url "$LEGACY_FEED_URL" \
-  --staged-feed-url "$CURRENT_FEED_URL" \
+  --feed-url "$APPCAST_URL" \
   --migration-package-url "$MIGRATION_PACKAGE_URL" \
   --migration-package-sha256 "$MIGRATION_PACKAGE_SHA256" \
-  --migration-package-version "$CURRENT_BUILD"
+  --migration-package-version "$CURRENT_BUILD" \
+  --manual-approval
 ```
 
 The verifier checks bundle identifiers, embedded metadata, signatures,
-notarization tickets, package contents, current and legacy feed separation,
-and the package checksum. Publish the legacy appcast item only after this
-verification succeeds. The current appcast must remain separate and must use
-the current bundle identifier.
+notarization tickets when applicable, package contents, shared-feed metadata,
+and the package checksum. Publish the bridge item in the shared appcast only
+after this verification succeeds. Keep the bridge item on the default channel
+and tag it for the legacy bundle identifier; keep future current-ID items on
+`dev-mqiu` and tag them for the current bundle identifier.
 
-`--skip-notarization` and `--skip-notarization-checks` are for local
-diagnostics only. They must not be used for a production bridge release.
+`--manual-approval` is the intended mode for the current distribution.
+`--skip-notarization` and `--skip-notarization-checks` are lower-level local
+diagnostic options and should not replace the explicit mode choice.
 
 ## Diagnostics and recovery
 
