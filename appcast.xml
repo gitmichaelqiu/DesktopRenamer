@@ -3,16 +3,6 @@
     <channel>
         <title>DesktopRenamer</title>
         <item>
-            <title>1.14.0</title>
-            <pubDate>Wed, 09 Sep 2026 11:44:06 +0800</pubDate>
-            <sparkle:version>40</sparkle:version>
-            <sparkle:shortVersionString>1.14.0</sparkle:shortVersionString>
-            <sparkle:minimumSystemVersion>13.0</sparkle:minimumSystemVersion>
-            <desktoprenamer:targetBundleIdentifier>com.michaelqiu.DesktopRenamer</desktoprenamer:targetBundleIdentifier>
-            <enclosure url="https://github.com/gitmichaelqiu/DesktopRenamer/releases/download/v1.14.0-bridge/DesktopRenamer-1.14.0-bridge-2.dmg" length="58742090" type="application/octet-stream" sparkle:edSignature="bwBpNJcTqsVHZJix4981D2HW/IywVurHrOFDB8vsOHRjn/fH9eXnn2c+dzmZD4paGuBHzku+DA5a55JFdAmWAQ=="/>
-            <sparkle:releaseNotesLink>https://github.com/gitmichaelqiu/DesktopRenamer/releases/tag/v1.14.0-bridge</sparkle:releaseNotesLink>
-        </item>
-        <item>
             <title>1.13.2</title>
             <pubDate>Wed, 08 Jul 2026 23:57:53 -0400</pubDate>
             <sparkle:version>36</sparkle:version>
