@@ -66,7 +66,9 @@ final class DesktopRenamerBridgeMigrationManager: NSObject {
     func startMigrationFromUserAction() {
         guard DesktopRenamerIdentity.isLegacyBridge,
               DesktopRenamerMigrationConfiguration.isConfigured,
-              downloadTask == nil else {
+              downloadTask == nil,
+              stageMonitor == nil,
+              !stageLaunchStarted else {
             return
         }
 
