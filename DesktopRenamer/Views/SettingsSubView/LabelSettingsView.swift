@@ -17,7 +17,6 @@ struct LabelSettingsView: View {
                 SettingsSection("Preview Labels") {
                     SettingsRow(
                         "Show preview labels",
-                        helperText: "The large label visible in Mission Control.",
                         demoVideoName: "MissionControl"
                     ) {
                         Toggle("", isOn: $labelManager.showPreviewLabels)
@@ -79,8 +78,6 @@ struct LabelSettingsView: View {
                     // Visibility toggle for active space labels.
                     SettingsRow(
                         "Show active space labels",
-                        helperText:
-                            "The hidden label that slides into the corner of the active desktop.",
                         demoVideoName: "ActiveLabel"
                     ) {
                         Toggle("", isOn: $labelManager.showActiveLabels)

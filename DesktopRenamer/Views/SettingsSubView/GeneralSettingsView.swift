@@ -2,70 +2,6 @@ import AppKit
 import ServiceManagement
 import SwiftUI
 
-// Helper class for testing SpaceAPI functionality.
-class APITester: ObservableObject {
-    @Published var responseText: String = ""
-
-    init() {
-        NotificationCenter.default.addObserver(
-            self, selector: #selector(handleCurrentSpaceResponse(_:)),
-            name: SpaceAPI.returnActiveSpace, object: nil)
-        NotificationCenter.default.addObserver(
-            self, selector: #selector(handleAllSpacesResponse(_:)), name: SpaceAPI.returnSpaceList,
-            object: nil)
-    }
-
-    deinit {
-        NotificationCenter.default.removeObserver(self)
-    }
-
-    func sendCurrentSpaceRequest() {
-        responseText = "Requesting current space..."
-        DistributedNotificationCenter.default().postNotificationName(
-            SpaceAPI.getActiveSpace, object: nil, userInfo: nil, deliverImmediately: true)
-    }
-
-    func sendAllSpacesRequest() {
-        responseText = "Requesting all spaces..."
-        DistributedNotificationCenter.default().postNotificationName(
-            SpaceAPI.getSpaceList, object: nil, userInfo: nil, deliverImmediately: true)
-    }
-
-    @objc private func handleCurrentSpaceResponse(_ notification: Notification) {
-        DispatchQueue.main.async {
-            guard let userInfo = notification.userInfo else {
-                self.responseText = "Received empty response"
-                return
-            }
-            let name = userInfo["spaceName"] as? String ?? "N/A"
-            let num =
-                (userInfo["spaceNumber"] as? NSNumber)?.intValue
-                ?? (userInfo["spaceNumber"] as? Int) ?? -1
-            let uuid = userInfo["spaceUUID"] as? String ?? "N/A"
-            self.responseText = "Current Space:\nName: \(name)\n#: \(num)\nUUID: \(uuid)"
-        }
-    }
-
-    @objc private func handleAllSpacesResponse(_ notification: Notification) {
-        DispatchQueue.main.async {
-            guard let userInfo = notification.userInfo,
-                let spaces = userInfo["spaces"] as? [[String: Any]]
-            else {
-                self.responseText = "Received empty space list"
-                return
-            }
-            var result = "All Spaces (\(spaces.count)):\n"
-            for space in spaces {
-                let name = space["spaceName"] as? String ?? "N/A"
-                let num = (space["spaceNumber"] as? NSNumber)?.intValue ?? -1
-                let uuid = (space["spaceUUID"] as? String)?.prefix(8) ?? "N/A"
-                result += "#\(num): \(name) [\(uuid).. ]\n"
-            }
-            self.responseText = result
-        }
-    }
-}
-
 struct GeneralSettingsView: View {
     @ObservedObject var spaceManager: SpaceManager
     @ObservedObject var labelManager: SpaceLabelManager
@@ -87,8 +23,7 @@ struct GeneralSettingsView: View {
                 // General configuration options.
                 SettingsSection("Settings.General.General") {
                     SettingsRow(
-                        "Show preview labels",
-                        helperText: "The large label visible in Mission Control."
+                        "Show preview labels"
                     ) {
                         Toggle("", isOn: $labelManager.showPreviewLabels)
                             .toggleStyle(.switch)
@@ -97,11 +32,7 @@ struct GeneralSettingsView: View {
 
                     Divider()
                 
-                    SettingsRow(
-                        "Show active space labels",
-                        helperText:
-                            "The hidden label that slides into the corner of the active desktop.",
-                    ) {
+                    SettingsRow("Show active space labels") {
                         Toggle("", isOn: $labelManager.showActiveLabels)
                             .labelsHidden()
                             .toggleStyle(.switch)
@@ -161,7 +92,10 @@ struct GeneralSettingsView: View {
                 SettingsSection("Settings.General.Advanced") {
                     SettingsRow(
                         "Settings.General.Advanced.EnableAPI",
-                        helperText: "Allow other apps to get space names."
+                        helperText: "Allow other apps to get space names.",
+                        requirements: [
+                            .spaceAPI(isAvailable: spaceManager.spaceAPI != nil)
+                        ]
                     ) {
                         Toggle("", isOn: $isAPIEnabled).labelsHidden().toggleStyle(.switch)
                             .onChange(of: isAPIEnabled) { _ in
@@ -172,7 +106,7 @@ struct GeneralSettingsView: View {
                     Divider()
 
                     SettingsRow(
-                        "Diagnostic Report",
+                        "Diagnostic report",
                         helperText: "Start collection, reproduce the bug, then stop and save the full diagnostic report."
                     ) {
                         Button("Open") {
@@ -182,9 +116,9 @@ struct GeneralSettingsView: View {
 
                     Divider()
 
-                    SettingsRow("Review Splash", helperText: "View the welcome screen again.") {
+                    SettingsRow("Review onboarding") {
                         Button("Review") {
-                            AppDelegate.shared.showSplashScreen(on: NSApp.suitableSheetWindow)
+                            AppDelegate.shared.showOnboarding(on: NSApp.suitableSheetWindow)
                         }
                     }
 

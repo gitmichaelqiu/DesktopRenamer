@@ -1,10 +1,17 @@
 import ApplicationServices
 import Cocoa
+import CoreGraphics
 
 class PermissionManager: ObservableObject {
     static let shared = PermissionManager()
 
     @Published var isAccessibilityGranted: Bool = false
+    @Published var isEventSynthesisGranted: Bool = false
+    @Published var isScreenCaptureGranted: Bool = false
+
+    var hasAccessibilityPermission: Bool {
+        isAccessibilityGranted && isEventSynthesisGranted
+    }
 
     // Token for the block-based observer — required for proper cleanup.
     private var becomeActiveObserver: NSObjectProtocol?
@@ -31,6 +38,8 @@ class PermissionManager: ObservableObject {
             kAXTrustedCheckOptionPrompt.takeUnretainedValue() as String: false
         ]
         self.isAccessibilityGranted = AXIsProcessTrustedWithOptions(axOptions)
+        self.isEventSynthesisGranted = CGPreflightPostEventAccess()
+        self.isScreenCaptureGranted = CGPreflightScreenCaptureAccess()
     }
 
     func requestAccessibilityPermission() {
@@ -39,7 +48,13 @@ class PermissionManager: ObservableObject {
         ]
         let trusted = AXIsProcessTrustedWithOptions(axOptions)
         self.isAccessibilityGranted = trusted
+        self.isEventSynthesisGranted = CGRequestPostEventAccess()
         openSystemSettings(type: "Privacy_Accessibility")
+    }
+
+    func requestScreenCapturePermission() {
+        self.isScreenCaptureGranted = CGRequestScreenCaptureAccess()
+        openSystemSettings(type: "Privacy_ScreenCapture")
     }
 
     func openSystemSettings(type: String) {

@@ -128,10 +128,19 @@
     "⌘↵" : {
       "shouldTranslate" : false
     },
+    "⌘⇧↑" : {
+      "shouldTranslate" : false
+    },
+    "⌘⇧↓" : {
+      "shouldTranslate" : false
+    },
+    "⌘⇧T" : {
+      "shouldTranslate" : false
+    },
     "⌘K" : {
       "shouldTranslate" : false
     },
-    "⌘M" : {
+    "⌘T" : {
       "shouldTranslate" : false
     },
     "⌥↵" : {
@@ -156,6 +165,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "4指"
+          }
+        }
+      }
+    },
+    "A space rearrangement is already in progress." : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "桌面正在重新排列。"
           }
         }
       }
@@ -300,16 +319,6 @@
         }
       }
     },
-    "Are you a power user? Integrate directly with Raycast to manage and switch spaces elegantly via your favorite launcher." : {
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "是个高级用户？在 Raycast 内直接控制你的桌面。"
-          }
-        }
-      }
-    },
     "Are you sure? This will delete all your space names and settings. The app will quit immediately." : {
       "localizations" : {
         "zh-Hans" : {
@@ -335,7 +344,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "自动排序命令"
+            "value" : "自动排序指令"
           }
         }
       }
@@ -351,7 +360,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "根据执行频率自动对命令进行排序。关闭以手动调整命令顺序。"
+            "value" : "根据执行频率自动对指令进行排序。关闭以手动调整指令顺序。"
           }
         }
       }
@@ -362,16 +371,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "自动返回原桌面"
-          }
-        }
-      }
-    },
-    "Automatically return to your original desktop after moving windows to a different desktop." : {
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "在将窗口移动到其他桌面后，自动返回到您原本的桌面。"
           }
         }
       }
@@ -470,12 +469,42 @@
         }
       }
     },
+    "Choose a valid space." : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "请选择有效的桌面。"
+          }
+        }
+      }
+    },
     "Choose Application..." : {
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "选择App…"
+          }
+        }
+      }
+    },
+    "Choose Raycast or the built-in launcher to manage your Spaces and windows." : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "选择 Raycast 或内置启动器来管理桌面和窗口。"
+          }
+        }
+      }
+    },
+    "Choose two different spaces." : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "请选择两个不同的桌面。"
           }
         }
       }
@@ -588,6 +617,26 @@
         }
       }
     },
+    "Could not create the native space rearrangement operation." : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "无法创建原生桌面重排操作。"
+          }
+        }
+      }
+    },
+    "Could not initialize the native space rearrangement operation." : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "无法初始化原生桌面重排操作。"
+          }
+        }
+      }
+    },
     "Crystal Clear Labels" : {
       "localizations" : {
         "zh-Hans" : {
@@ -598,12 +647,12 @@
         }
       }
     },
-    "Current" : {
+    "Current space" : {
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "当前"
+            "value" : "当前桌面"
           }
         }
       }
@@ -654,12 +703,12 @@
     "DesktopRenamer" : {
       "shouldTranslate" : false
     },
-    "DesktopRenamer requires Accessibility permission for hotkeys and trackpad overrides to function correctly." : {
+    "DesktopRenamer requires Accessibility and Screen Recording permissions for hotkeys, trackpad overrides, and window movement to function correctly." : {
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "DesktopRenamer 需要辅助权限以配置快捷键和触控板覆盖。"
+            "value" : "DesktopRenamer需要辅助权限以及屏幕录制权限以运行快捷键，触控板，以及移动窗口。"
           }
         }
       }
@@ -684,6 +733,16 @@
         }
       }
     },
+    "Diagnostic report" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "诊断报告"
+          }
+        }
+      }
+    },
     "Diagnostic Report" : {
       "localizations" : {
         "zh-Hans" : {
@@ -699,7 +758,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "禁用 Liquid Glass"
+            "value" : "禁用液态玻璃"
           }
         }
       }
@@ -730,6 +789,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "完成"
+          }
+        }
+      }
+    },
+    "Drag to rearrange" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "拖动以重新排列"
           }
         }
       }
@@ -1089,16 +1158,6 @@
         }
       }
     },
-    "Hold the Option key while swiping on the trackpad to move the active window to the adjacent space." : {
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "切换时按住Option将当前窗口移动到相邻桌面。"
-          }
-        }
-      }
-    },
     "If enabled, the label stays on the desktop instead of hiding.\n\nIf disabled, the label will only be visible in Mission Control.\n\nTip: You can drag the window to the screen edge to shrink it into a 'Picture-in-Picture' mode." : {
       "localizations" : {
         "zh-Hans" : {
@@ -1129,12 +1188,22 @@
         }
       }
     },
-    "Install Raycast Extension" : {
+    "Install Extension" : {
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "安装 Raycast 拓展"
+            "value" : "安装扩展"
+          }
+        }
+      }
+    },
+    "Keep full-screen spaces next to source desktop" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "将全屏桌面放在源桌面旁边"
           }
         }
       }
@@ -1190,7 +1259,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "启动器命令排序"
+            "value" : "启动器指令排序"
           }
         }
       }
@@ -1217,6 +1286,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "启动器…"
+          }
+        }
+      }
+    },
+    "Launchers" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "启动器"
           }
         }
       }
@@ -1436,6 +1515,36 @@
         }
       }
     },
+    "Move all windows of an app to another Space in one command." : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "一键将应用的所有窗口移动到另一个桌面。"
+          }
+        }
+      }
+    },
+    "Move Space Down" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "向下移动桌面"
+          }
+        }
+      }
+    },
+    "Move Space Up" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "向上移动桌面"
+          }
+        }
+      }
+    },
     "Move the active window to a selected space" : {
       "localizations" : {
         "zh-Hans" : {
@@ -1623,7 +1732,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "无相关命令"
+            "value" : "无相关指令"
           }
         }
       }
@@ -1834,22 +1943,12 @@
         }
       }
     },
-    "Raycast Integration" : {
+    "Real-time video enhancing player." : {
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Raycast 集成"
-          }
-        }
-      }
-    },
-    "Raycast: Batch Move" : {
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Raycast: 批量移动窗口"
+            "value" : "实时视频增强播放器。"
           }
         }
       }
@@ -2032,22 +2131,32 @@
         }
       }
     },
-    "Required for injecting shortcuts to switch spaces, and reading active window information." : {
+    "Required for injecting shortcuts, reading active window information, and moving windows with Option + swipe." : {
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "在切换桌面，获取当前桌面时需要此权限。"
+            "value" : "用于添加快捷键，获取当前窗口，以及移动窗口。"
           }
         }
       }
     },
-    "Requires Accessibility permission." : {
+    "Required for reading the active window before moving it with Option + swipe." : {
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "需要辅助权限。"
+            "value" : "用于在一定窗口前获取当前窗口。"
+          }
+        }
+      }
+    },
+    "Requires %@." : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "需要 %@。"
           }
         }
       }
@@ -2132,22 +2241,6 @@
         }
       }
     },
-    "Restore windows moved by lock to the last space that windows are manually assigned to." : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Restore windows moved by lock to the last space that windows are manually assigned to."
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "将因锁定而被移动的窗口恢复到上次手动分配的桌面。"
-          }
-        }
-      }
-    },
     "Review" : {
       "localizations" : {
         "zh-Hans" : {
@@ -2158,18 +2251,12 @@
         }
       }
     },
-    "Review Splash" : {
+    "Review onboarding" : {
       "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Review splash"
-          }
-        },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "浏览介绍"
+            "value" : "查看介绍"
           }
         }
       }
@@ -2200,6 +2287,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "保存报告"
+          }
+        }
+      }
+    },
+    "Screen Recording" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "屏幕录制"
           }
         }
       }
@@ -2235,7 +2332,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "搜索命令..."
+            "value" : "搜索指令..."
           }
         }
       }
@@ -2631,22 +2728,6 @@
         }
       }
     },
-    "Settings.Launcher.Command.Actions" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Actions"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "操作"
-          }
-        }
-      }
-    },
     "Settings.Launcher.Command.Name" : {
       "localizations" : {
         "en" : {
@@ -2658,7 +2739,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "命令"
+            "value" : "指令"
           }
         }
       }
@@ -2887,12 +2968,42 @@
         }
       }
     },
+    "Skip" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "跳过"
+          }
+        }
+      }
+    },
+    "Space Arrangement" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "桌面排列"
+          }
+        }
+      }
+    },
     "Space Labels Reloaded" : {
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "桌面标签已重新加载"
+          }
+        }
+      }
+    },
+    "Space rearrangement was cancelled." : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "桌面重排已取消。"
           }
         }
       }
@@ -2910,6 +3021,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "桌面 %d"
+          }
+        }
+      }
+    },
+    "SpaceAPI v%@" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "SpaceAPI v%@"
           }
         }
       }
@@ -3146,29 +3267,32 @@
         }
       }
     },
-    "The hidden label that slides into the corner of the active desktop." : {
+    "The backend completed without producing the requested space order." : {
       "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "The hidden label that slides into the corner of the active desktop. Only appears in Mission Control."
-          }
-        },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "在桌面角落的隐藏标签，仅在调度中心显示。"
+            "value" : "后端完成了操作，但未生成请求的桌面顺序。"
           }
         }
       }
     },
-    "The large label visible in Mission Control." : {
-      "comment" : "The large label visible in Mission Control.",
+    "The native space rearrangement bridge is unavailable." : {
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "调度中心预览的大标签。"
+            "value" : "原生桌面重排桥接不可用。"
+          }
+        }
+      }
+    },
+    "The native space rearrangement operation is unavailable on this macOS version." : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "此 macOS 版本不支持原生桌面重排操作。"
           }
         }
       }
@@ -3179,6 +3303,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "重现遇到的问题。"
+          }
+        }
+      }
+    },
+    "This macOS version does not expose the native space rearrangement operation." : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "此 macOS 版本未提供原生桌面重排操作。"
           }
         }
       }
@@ -3293,16 +3427,6 @@
         }
       }
     },
-    "Use the Raycast extension to move all windows of an app to another space in one command." : {
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "用 Raycast 拓展快速移动窗口到指定的桌面。"
-          }
-        }
-      }
-    },
     "v%@" : {
       "localizations" : {
         "zh-Hans" : {
@@ -3313,16 +3437,6 @@
         }
       },
       "shouldTranslate" : false
-    },
-    "View the welcome screen again." : {
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "重新观看欢迎界面。"
-          }
-        }
-      }
     },
     "Welcome to" : {
       "localizations" : {
@@ -3346,6 +3460,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "当打开某个应用程序的窗口触发桌面切换时，将该窗口移回原桌面。这样，您将始终专注于锁定的桌面。"
+          }
+        }
+      }
+    },
+    "When macOS automatically rearranges Spaces is disabled, move a newly created full-screen space immediately after the desktop that opened it." : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "关闭 macOS 自动重新排列桌面后，将新建的全屏桌面紧邻创建它的桌面放置。"
           }
         }
       }
@@ -3376,6 +3500,12 @@
           "stringUnit" : {
             "state" : "new",
             "value" : "X: %1$lld px, Y: %2$lld px"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "X：%lld 像素，Y：%lld 像素"
           }
         }
       },

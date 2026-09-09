@@ -1,12 +1,12 @@
 {
   "images" : [
     {
-      "filename" : "SpaceSwitcherIcon-iOS-Default-1024@1x 1.png",
+      "filename" : "SpaceSwitcherIcon-iOS-Default-1024@1x.png",
       "idiom" : "universal",
       "scale" : "1x"
     },
     {
-      "filename" : "SpaceSwitcherIcon-iOS-Default-1024@1x.png",
+      "filename" : "SpaceSwitcherIcon-iOS-Default-1024@1x 1.png",
       "idiom" : "universal",
       "scale" : "2x"
     },

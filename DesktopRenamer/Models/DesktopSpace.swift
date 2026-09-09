@@ -9,6 +9,9 @@ struct DesktopSpace: Identifiable, Codable, Equatable {
     var appName: String?
     var appPath: String?
     var globalShortcutNum: Int? // Unified index for keyboard shortcuts (1, 2, 3...) across displays
+    // Unlike ManagedSpaceID, this UUID normally survives a system reboot.
+    // It is optional because macOS can leave it empty for some desktops.
+    var persistentID: String?
     
     // Custom decoding to handle legacy data
     init(from decoder: Decoder) throws {
@@ -21,10 +24,11 @@ struct DesktopSpace: Identifiable, Codable, Equatable {
         appName = try container.decodeIfPresent(String.self, forKey: .appName)
         appPath = try container.decodeIfPresent(String.self, forKey: .appPath)
         globalShortcutNum = try container.decodeIfPresent(Int.self, forKey: .globalShortcutNum)
+        persistentID = try container.decodeIfPresent(String.self, forKey: .persistentID)
     }
     
     // Default init
-    init(id: String, customName: String, num: Int, displayID: String, isFullscreen: Bool = false, appName: String? = nil, appPath: String? = nil, globalShortcutNum: Int? = nil) {
+    init(id: String, customName: String, num: Int, displayID: String, isFullscreen: Bool = false, appName: String? = nil, appPath: String? = nil, globalShortcutNum: Int? = nil, persistentID: String? = nil) {
         self.id = id
         self.customName = customName
         self.num = num
@@ -33,5 +37,6 @@ struct DesktopSpace: Identifiable, Codable, Equatable {
         self.appName = appName
         self.appPath = appPath
         self.globalShortcutNum = globalShortcutNum
+        self.persistentID = persistentID
     }
 }

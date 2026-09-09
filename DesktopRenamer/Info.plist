@@ -2,18 +2,27 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
+	<key>ATSApplicationFontsPath</key>
+	<string>Fonts</string>
 	<key>NSAppleScriptEnabled</key>
 	<true/>
 	<key>OSAScriptingDefinition</key>
 	<string>DesktopRenamer.sdef</string>
-	<key>LSUIElement</key>
-	<true/>
 	<key>SUFeedURL</key>
-	<string>https://raw.githubusercontent.com/gitmichaelqiu/DesktopRenamer/main/appcast.xml</string>
+	<string>$(DESKTOP_RENAMER_UPDATE_FEED_URL)</string>
 	<key>SUPublicEDKey</key>
 	<string>e9YKamydRddgnYK6Kq41W0vPbwI4F9XJAhks/9rzT0w=</string>
-
-	<key>ATSApplicationFontsPath</key>
-	<string>Fonts</string>
+	<key>DesktopRenamerMigrationPackageURL</key>
+	<string>$(DESKTOP_RENAMER_MIGRATION_PACKAGE_URL)</string>
+	<key>DesktopRenamerMigrationPackageSHA256</key>
+	<string>$(DESKTOP_RENAMER_MIGRATION_PACKAGE_SHA256)</string>
+	<key>DesktopRenamerMigrationPackageVersion</key>
+	<string>$(DESKTOP_RENAMER_MIGRATION_PACKAGE_VERSION)</string>
+	<key>DesktopRenamerMigrationAllowManualApproval</key>
+	<string>$(DESKTOP_RENAMER_MIGRATION_ALLOW_MANUAL_APPROVAL)</string>
+	<key>DesktopRenamerMigrationStagingPath</key>
+	<string>$(DESKTOP_RENAMER_MIGRATION_STAGING_PATH)</string>
+	<key>DesktopRenamerReleaseTag</key>
+	<string>$(DESKTOP_RENAMER_RELEASE_TAG)</string>
 </dict>
 </plist>

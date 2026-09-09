@@ -3,6 +3,8 @@ import AppKit
 import SwiftUI
 
 class LauncherNSPanel: NSPanel {
+    weak var focusedTextField: FocusTextField?
+
     override var canBecomeKey: Bool {
         return true
     }
@@ -16,16 +18,17 @@ class LauncherWindowController: NSWindowController, NSWindowDelegate {
     static let shared = LauncherWindowController()
     
     let viewModel = LauncherViewModel()
-    var shouldRestoreFocus = true
     
     private var isCommandKeyPressed = false
     private var cmdLongPressWorkItem: DispatchWorkItem?
     private var flagsChangedMonitor: Any?
+    private var keyDownMonitor: Any?
+    private var isHiding = false
     
     init() {
         let panel = LauncherNSPanel(
             contentRect: NSRect(x: 0, y: 0, width: 840, height: 570),
-            styleMask: [.borderless],
+            styleMask: [.borderless, .nonactivatingPanel],
             backing: .buffered,
             defer: false
         )
@@ -38,6 +41,14 @@ class LauncherWindowController: NSWindowController, NSWindowDelegate {
         panel.level = .statusBar
         panel.hidesOnDeactivate = false
         panel.becomesKeyOnlyIfNeeded = false
+        // The launcher follows the Space that is active when it is presented.
+        // It must not remain attached to the Space where the panel was first
+        // created, because activating it there can switch the user's Space.
+        panel.collectionBehavior = [
+            .moveToActiveSpace,
+            .fullScreenAuxiliary,
+            .ignoresCycle,
+        ]
         
         super.init(window: panel)
         panel.delegate = self
@@ -84,6 +95,20 @@ class LauncherWindowController: NSWindowController, NSWindowDelegate {
             }
             return event
         }
+
+        keyDownMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
+            guard let self,
+                  let panel = self.window as? LauncherNSPanel,
+                  panel.isKeyWindow,
+                  let focusedTextField = panel.focusedTextField,
+                  focusedTextField.window === panel,
+                  panel.firstResponder === focusedTextField || panel.firstResponder === focusedTextField.currentEditor()
+            else {
+                return event
+            }
+
+            return focusedTextField.handleKeyEquivalent(event) ? nil : event
+        }
     }
     
     required init?(coder: NSCoder) {
@@ -94,12 +119,18 @@ class LauncherWindowController: NSWindowController, NSWindowDelegate {
         if let monitor = flagsChangedMonitor {
             NSEvent.removeMonitor(monitor)
         }
+        if let monitor = keyDownMonitor {
+            NSEvent.removeMonitor(monitor)
+        }
     }
     
     func show() {
         guard let panel = window as? LauncherNSPanel else { return }
-        
-        shouldRestoreFocus = true
+        let traceID = SpaceHelper.debugTraceID()
+        SpaceHelper.debugTrace(
+            traceID,
+            "launcher show begin visible=\(panel.isVisible), key=\(panel.isKeyWindow), windowSpaces=\(SpaceHelper.getWindowCurrentSpaces(windowID: panel.windowNumber).sorted()), live=\(SpaceHelper.debugFormatSpaceMap(SpaceHelper.getCurrentSpaceIDsByDisplay())), collectionBehavior=\(panel.collectionBehavior.rawValue)"
+        )
         
         // Capture previously active window before we activate the launcher and take focus
         viewModel.previouslyActiveWindow = SpaceHelper.getActiveWindowInfo()
@@ -108,14 +139,16 @@ class LauncherWindowController: NSWindowController, NSWindowDelegate {
         centerOnActiveScreen()
         
         // Reset state
-        viewModel.searchQuery = ""
-        viewModel.selectedRowIndex = 0
-        viewModel.activeCommand = nil
-        viewModel.stagingWindow = nil
+        viewModel.resetForPresentation()
         
-        // Make key and focus
-        NSApp.activate(ignoringOtherApps: true)
+        // A nonactivating panel can become key for text input without making
+        // DesktopRenamer the active application. Activating the app here can
+        // make WindowServer select the Space where this panel was last shown.
         panel.makeKeyAndOrderFront(nil)
+        SpaceHelper.debugTrace(
+            traceID,
+            "launcher show end visible=\(panel.isVisible), key=\(panel.isKeyWindow), windowSpaces=\(SpaceHelper.getWindowCurrentSpaces(windowID: panel.windowNumber).sorted()), live=\(SpaceHelper.debugFormatSpaceMap(SpaceHelper.getCurrentSpaceIDsByDisplay()))"
+        )
         
         // Post a notification to force focus
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
@@ -124,17 +157,27 @@ class LauncherWindowController: NSWindowController, NSWindowDelegate {
     }
     
     func hide() {
+        guard !isHiding else { return }
+        isHiding = true
+        defer { isHiding = false }
+
+        let traceID = SpaceHelper.debugTraceID()
+        let panel = window
+        SpaceHelper.debugTrace(
+            traceID,
+            "launcher hide begin visible=\(panel?.isVisible ?? false), key=\(panel?.isKeyWindow ?? false), windowSpaces=\(panel.map { SpaceHelper.getWindowCurrentSpaces(windowID: $0.windowNumber).sorted() } ?? []), live=\(SpaceHelper.debugFormatSpaceMap(SpaceHelper.getCurrentSpaceIDsByDisplay()))"
+        )
         window?.orderOut(nil)
         isCommandKeyPressed = false
         cmdLongPressWorkItem?.cancel()
         cmdLongPressWorkItem = nil
+        viewModel.resetForPresentation()
         viewModel.showCommandNumbers = false
-        
-        if shouldRestoreFocus, let prev = viewModel.previouslyActiveWindow {
-            DispatchQueue.main.async {
-                SpaceHelper.focusWindow(id: prev.id, pid: prev.pid)
-            }
-        }
+        viewModel.previouslyActiveWindow = nil
+        SpaceHelper.debugTrace(
+            traceID,
+            "launcher hide end visible=\(panel?.isVisible ?? false), key=\(panel?.isKeyWindow ?? false), windowSpaces=\(panel.map { SpaceHelper.getWindowCurrentSpaces(windowID: $0.windowNumber).sorted() } ?? []), live=\(SpaceHelper.debugFormatSpaceMap(SpaceHelper.getCurrentSpaceIDsByDisplay()))"
+        )
     }
     
     func toggle() {

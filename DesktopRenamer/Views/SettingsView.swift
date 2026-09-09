@@ -50,6 +50,7 @@ struct SettingsView: View {
     @StateObject private var navigationState = SettingsNavigationState()
     @State private var selectedTab: SettingsTab?
     @State private var searchText = ""
+    @State private var isIndexingSettings = true
     
     init(spaceManager: SpaceManager, labelManager: SpaceLabelManager, initialTab: SettingsTab? = .general) {
         self.spaceManager = spaceManager
@@ -65,28 +66,31 @@ struct SettingsView: View {
                 detailView
             }
 
-            // Pre-render settings views off-screen in the active root hierarchy to index them
-            ZStack {
-                GeneralSettingsView(spaceManager: spaceManager, labelManager: labelManager)
-                    .environment(\.settingsTab, .general)
-                SpaceEditView(spaceManager: spaceManager)
-                    .environment(\.settingsTab, .space)
-                LabelSettingsView(labelManager: labelManager)
-                    .environment(\.settingsTab, .labels)
-                SwitchSettingsView()
-                    .environment(\.settingsTab, .sswitch)
-                LauncherSettingsView()
-                    .environment(\.settingsTab, .launcher)
-                PermissionsSettingsView()
-                    .environment(\.settingsTab, .permissions)
-                AboutView()
-                    .environment(\.settingsTab, .about)
+            if isIndexingSettings {
+                // Temporarily pre-render settings views to index searchable items. Keeping this
+                // hierarchy alive would duplicate live manager updates during interactions.
+                ZStack {
+                    GeneralSettingsView(spaceManager: spaceManager, labelManager: labelManager)
+                        .environment(\.settingsTab, .general)
+                    SpaceEditView(spaceManager: spaceManager)
+                        .environment(\.settingsTab, .space)
+                    LabelSettingsView(labelManager: labelManager)
+                        .environment(\.settingsTab, .labels)
+                    SwitchSettingsView()
+                        .environment(\.settingsTab, .sswitch)
+                    LauncherSettingsView()
+                        .environment(\.settingsTab, .launcher)
+                    PermissionsSettingsView()
+                        .environment(\.settingsTab, .permissions)
+                    AboutView()
+                        .environment(\.settingsTab, .about)
+                }
+                .environmentObject(navigationState)
+                .environment(\.isSettingsPreRendering, true)
+                .frame(width: CGFloat(defaultSettingsWindowWidth), height: CGFloat(defaultSettingsWindowHeight))
+                .opacity(0.001)
+                .allowsHitTesting(false)
             }
-            .environmentObject(navigationState)
-            .environment(\.isSettingsPreRendering, true)
-            .frame(width: CGFloat(defaultSettingsWindowWidth), height: CGFloat(defaultSettingsWindowHeight))
-            .opacity(0.001)
-            .allowsHitTesting(false)
         }
         .environmentObject(navigationState)
         .navigationTitle("")
@@ -103,6 +107,11 @@ struct SettingsView: View {
                 } else if selectedTab == nil {
                     selectedTab = tabs.first
                 }
+            }
+        }
+        .onAppear {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                isIndexingSettings = false
             }
         }
     }

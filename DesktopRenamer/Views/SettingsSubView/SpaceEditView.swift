@@ -3,14 +3,26 @@ import SwiftUI
 struct SpaceEditView: View {
     @ObservedObject var spaceManager: SpaceManager
     @EnvironmentObject var navigationState: SettingsNavigationState
+    @Environment(\.isSettingsPreRendering) private var isPreRendering
     
     var body: some View {
         VStack(spacing: 0) {
-            if spaceManager.spaceNameDict.isEmpty {
-                emptyStateView
-            } else {
-                ScrollView {
-                    VStack(alignment: .leading, spacing: 20) {
+            ScrollView {
+                VStack(alignment: .leading, spacing: 20) {
+                    SettingsSection("Space Arrangement") {
+                        SettingsRow(
+                            "Keep full-screen spaces next to source desktop",
+                            helperText: "When macOS automatically rearranges Spaces is disabled, move a newly created full-screen space immediately after the desktop that opened it."
+                        ) {
+                            Toggle("", isOn: $spaceManager.autoRearrangeFullscreenSpaces)
+                                .toggleStyle(.switch)
+                                .labelsHidden()
+                        }
+                    }
+
+                    if spaceManager.spaceNameDict.isEmpty {
+                        emptyStateView
+                    } else {
                         ForEach(groupedDisplayIDs, id: \.self) { displayID in
                             VStack(alignment: .leading, spacing: 8) {
                                 Text(resolveDisplayName(for: displayID))
@@ -23,9 +35,9 @@ struct SpaceEditView: View {
                             }
                         }
                     }
-                    .padding()
-                    .padding(.bottom, 40)
                 }
+                .padding()
+                .padding(.bottom, 40)
             }
         }
         .animation(.easeInOut(duration: 0.2), value: spaceManager.spaceNameDict)
@@ -34,21 +46,12 @@ struct SpaceEditView: View {
             navigationState.register(title: "Settings.Spaces.Edit.Actions", tab: .space, keywords: ["reorder", "arrange", "display", "monitor", "position"])
         }
         .onDisappear {
-            navigationState.unregister(title: "Settings.Spaces.Edit.Name", tab: .space)
-            navigationState.unregister(title: "Settings.Spaces.Edit.Actions", tab: .space)
-        }
-        .environment(\.settingsTab, .space)
-    }
-    
-    private var sectionBackgroundColor: Color {
-        let nsColor = NSColor(name: nil) { appearance in
-            if appearance.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua {
-                return NSColor(calibratedWhite: 0.20, alpha: 1.0)
-            } else {
-                return NSColor(calibratedWhite: 1.00, alpha: 1.0)
+            if !isPreRendering {
+                navigationState.unregister(title: "Settings.Spaces.Edit.Name", tab: .space)
+                navigationState.unregister(title: "Settings.Spaces.Edit.Actions", tab: .space)
             }
         }
-        return Color(nsColor: nsColor)
+        .environment(\.settingsTab, .space)
     }
     
     private var groupedDisplayIDs: [String] {
@@ -102,6 +105,7 @@ struct SpaceEditView: View {
     private func spacesStack(for displayID: String) -> some View {
         VStack(spacing: 0) {
             HStack(spacing: 10) {
+                Color.clear.frame(width: 16)
                 Text("#").frame(width: 30, alignment: .leading)
                 Text(NSLocalizedString("Settings.Spaces.Edit.Name", comment: ""))
                     .frame(maxWidth: .infinity, alignment: .leading)
@@ -125,27 +129,12 @@ struct SpaceEditView: View {
                     .foregroundColor(.secondary)
                     .padding(10)
             } else {
-                ForEach(displaySpaces) { space in
-                    VStack(spacing: 0) {
-                        HStack(spacing: 10) {
-                            spaceNumberView(for: space).frame(width: 30, alignment: .leading)
-                            spaceNameEditor(for: space).frame(maxWidth: .infinity)
-                            actionButtons(for: space).frame(width: 20, alignment: .trailing)
-                        }
-                        .padding(.horizontal, 12)
-                        .padding(.vertical, 6)
-                        
-                        if space.id != displaySpaces.last?.id {
-                            Divider().padding(.leading, 12)
-                        }
-                    }
-                    .transition(.opacity.combined(with: .move(edge: .top)))
-                }
+                spaceRows(displaySpaces)
             }
         }
         .background(
             RoundedRectangle(cornerRadius: 12, style: .continuous)
-                .fill(sectionBackgroundColor.opacity(0.6))
+                .fill(SettingsSectionStyle.backgroundColor.opacity(0.6))
                 .overlay(RoundedRectangle(cornerRadius: 12, style: .continuous).fill(.regularMaterial))
         )
     }
@@ -216,5 +205,91 @@ struct SpaceEditView: View {
     private func updateSpaceName(_ space: DesktopSpace, _ newName: String) {
         spaceManager.renameSpace(space.id, to: newName)
     }
-    
+
+    private func spaceRows(_ spaces: [DesktopSpace]) -> some View {
+        ReorderableSettingsList(
+            items: spaces,
+            rowContent: { space, context in
+                spaceRow(for: space, isLast: context.isLast)
+            },
+            dragPreview: { space in
+                dragPreview(for: space)
+            },
+            moveBefore: { sourceID, targetID in
+                guard let target = spaces.first(where: { $0.id == targetID }) else { return false }
+                return rearrange(sourceID, before: target, in: spaces)
+            },
+            moveToEnd: { sourceID in
+                rearrangeToEnd(sourceID, in: spaces)
+            }
+        )
+    }
+
+    private func spaceRow(for space: DesktopSpace, isLast: Bool) -> some View {
+        VStack(spacing: 0) {
+            HStack(spacing: 10) {
+                Image(systemName: "line.3.horizontal")
+                    .font(.caption)
+                    .foregroundStyle(.tertiary)
+                    .frame(width: 16)
+                    .accessibilityLabel("Drag to rearrange")
+                spaceNumberView(for: space).frame(width: 30, alignment: .leading)
+                spaceNameEditor(for: space).frame(maxWidth: .infinity)
+                actionButtons(for: space).frame(width: 20, alignment: .trailing)
+            }
+            .padding(.horizontal, 12)
+            .padding(.vertical, 6)
+
+            if !isLast {
+                Divider().padding(.leading, 12)
+            }
+        }
+    }
+
+    private func dragPreview(for space: DesktopSpace) -> some View {
+        HStack(spacing: 10) {
+            Image(systemName: "line.3.horizontal")
+                .font(.caption)
+                .foregroundStyle(.tertiary)
+                .frame(width: 16)
+            Text(spaceNumberText(for: space))
+                .font(.system(.body, design: .monospaced))
+                .foregroundColor(.secondary)
+                .frame(width: 30, alignment: .leading)
+            Text(space.customName.isEmpty ? defaultName(for: space) : space.customName)
+                .font(.body)
+                .lineLimit(1)
+            Spacer(minLength: 0)
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 6)
+        .frame(minWidth: 320, alignment: .leading)
+        .contentShape(.dragPreview, Rectangle())
+    }
+
+    private func rearrange(_ sourceID: String, before target: DesktopSpace, in spaces: [DesktopSpace]) -> Bool {
+        SpaceRearrangementService.shared.rearrange(
+            sourceID: sourceID,
+            before: target.id,
+            orderedSpaceIDs: spaces.map(\.id),
+            displayID: target.displayID
+        ) { result in
+            if case .success = result {
+                spaceManager.refreshSpaceState()
+            }
+        }
+        return true
+    }
+
+    private func rearrangeToEnd(_ sourceID: String, in spaces: [DesktopSpace]) {
+        SpaceRearrangementService.shared.rearrangeToEnd(
+            sourceID: sourceID,
+            orderedSpaceIDs: spaces.map(\.id),
+            displayID: spaces.first?.displayID
+        ) { result in
+            if case .success = result {
+                spaceManager.refreshSpaceState()
+            }
+        }
+    }
 }

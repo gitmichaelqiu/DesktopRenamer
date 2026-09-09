@@ -16,6 +16,7 @@ struct AboutView: View {
 
     @Environment(\.colorScheme) var colorScheme
     @EnvironmentObject var navigationState: SettingsNavigationState
+    @Environment(\.isSettingsPreRendering) private var isPreRendering
 
     var iconSuffix: String {
         colorScheme == .dark ? "_Dark" : "_Default"
@@ -26,11 +27,15 @@ struct AboutView: View {
             VStack(alignment: .leading, spacing: 32) {
                 // Header Section
                 HStack(spacing: 20) {
-                    if let nsImage = NSApplication.shared.applicationIconImage {
-                        Image(nsImage: nsImage)
-                            .resizable()
-                            .aspectRatio(contentMode: .fit)
-                            .frame(width: 100, height: 100)
+                    if let nsImage = NSImage(named: "DesktopRenamerIcon\(iconSuffix)")
+                        ?? NSApplication.shared.applicationIconImage {
+                        ZStack {
+                            Image(nsImage: nsImage)
+                                .resizable()
+                                .aspectRatio(contentMode: .fit)
+                                .frame(width: 88, height: 88)
+                        }
+                        .frame(width: 100, height: 100)
                             .shadow(color: .black.opacity(0.1), radius: 4, x: 0, y: 2)
                     }
 
@@ -40,6 +45,10 @@ struct AboutView: View {
                         
                         Text("v\(appVersion)")
                             .font(.title3)
+                            .foregroundColor(.secondary)
+
+                        Text(String(format: NSLocalizedString("SpaceAPI v%@", comment: ""), DesktopRenamerAPIVersion.current))
+                            .font(.subheadline)
                             .foregroundColor(.secondary)
                         
                         Text("© \(currentYear) Michael Yicheng Qiu")
@@ -84,6 +93,13 @@ struct AboutView: View {
                             description: NSLocalizedString("Control which app and dock to show in each space.", comment: ""),
                             url: "https://spaceswitcher.mqiu.dev"
                         )
+
+                        OtherAppRow(
+                            imageName: "VTPlayerIcon\(iconSuffix)",
+                            appName: "VTPlayer",
+                            description: NSLocalizedString("Real-time video enhancing player.", comment: ""),
+                            url: "https://vtplayer.mqiu.dev"
+                        )
                     }
                 }
 
@@ -102,7 +118,9 @@ struct AboutView: View {
             navigationState.register(title: "GitHub / Support", tab: .about, keywords: ["github", "website", "developer", "contact", "support"])
         }
         .onDisappear {
-            navigationState.unregister(title: "GitHub / Support", tab: .about)
+            if !isPreRendering {
+                navigationState.unregister(title: "GitHub / Support", tab: .about)
+            }
         }
     }
 
@@ -193,18 +211,10 @@ struct OtherAppRow: View {
             HStack(spacing: 16) {
                 // Icon
                 ZStack {
-                    if let nsImage = NSImage(named: imageName) {
-                        Image(nsImage: nsImage)
-                            .resizable()
-                            .aspectRatio(contentMode: .fit)
-                            .frame(width: 44, height: 44)
-                    } else {
-                        Image(systemName: "app.dashed")
-                            .resizable()
-                            .aspectRatio(contentMode: .fit)
-                            .frame(width: 40, height: 40)
-                            .foregroundColor(.secondary)
-                    }
+                    Image(imageName)
+                        .resizable()
+                        .aspectRatio(contentMode: .fit)
+                        .frame(width: 44, height: 44)
                 }
                 .shadow(color: .black.opacity(isHovering ? 0.2 : 0.1), radius: isHovering ? 6 : 2, x: 0, y: 2)
                 .scaleEffect(isHovering ? 1.05 : 1.0)
@@ -253,4 +263,3 @@ struct OtherAppRow: View {
         }
     }
 }
-
