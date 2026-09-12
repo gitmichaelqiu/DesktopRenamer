@@ -131,9 +131,16 @@ struct BatchMoveBottomBar: View {
                 }
             }
         }
-        .padding(.horizontal, 18)
-        .padding(.vertical, 10)
-        .background(colors.bottomBarBg)
+        .padding(.horizontal, 14)
+        .padding(.vertical, 8)
+        .frame(height: 58)
+        .background(colors.bottomBarBg, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .overlay {
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .stroke(colors.border.opacity(0.7), lineWidth: 1)
+        }
+        .padding(.horizontal, 12)
+        .padding(.bottom, 10)
     }
 }
 
@@ -239,8 +246,8 @@ struct SpacesBottomBar: View {
                             .id(space.id)
                         }
                     }
-                    .padding(.leading, 32)
-                    .padding(.trailing, 32)
+                    .padding(.leading, 6)
+                    .padding(.trailing, 6)
                 }
                 .mask(
                     HStack(spacing: 0) {
@@ -366,9 +373,16 @@ struct SpacesBottomBar: View {
             }
             .padding(.leading, 12)
         }
-        .padding(.horizontal, 18)
-        .frame(height: 46)
-        .background(colors.bottomBarBg)
+        .padding(.horizontal, 12)
+        .padding(.vertical, 8)
+        .frame(height: 58)
+        .background(colors.bottomBarBg, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .overlay {
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .stroke(colors.border.opacity(0.7), lineWidth: 1)
+        }
+        .padding(.horizontal, 12)
+        .padding(.bottom, 10)
         .animation(.spring(response: 0.35, dampingFraction: 0.85), value: viewModel.isBottomBarFocused)
     }
 }

@@ -29,15 +29,14 @@ struct VisualEffectView: NSViewRepresentable {
 extension View {
     @ViewBuilder
     func launcherBackground(cornerRadius: CGFloat, borderColor: Color) -> some View {
-        if #available(macOS 26.0, *) {
-            self.glassEffect(.regular, in: RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
-        } else {
-            self.background(.ultraThinMaterial)
-                .clipShape(RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
-                .overlay(
-                    RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
-                        .stroke(borderColor, lineWidth: 1)
-                )
-        }
+        self
+            .background {
+                VisualEffectView(material: .hudWindow, blendingMode: .withinWindow)
+            }
+            .clipShape(RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
+            .overlay {
+                RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+                    .stroke(borderColor, lineWidth: 1)
+            }
     }
 }

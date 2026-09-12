@@ -3,16 +3,19 @@ import SwiftUI
 struct ThemeColors {
     let isDark: Bool
 
-    var backgroundOverlay: Color { Color.clear }
+    var backgroundOverlay: Color {
+        isDark ? Color.black.opacity(0.30) : Color.white.opacity(0.32)
+    }
     var textPrimary: Color { .primary }
-    var textSecondary: Color { .secondary }
-    var textTertiary: Color { .secondary.opacity(0.65) }
-    var textQuaternary: Color { .secondary.opacity(0.4) }
-    var border: Color { Color(nsColor: .separatorColor) }
-    var rowHover: Color { Color.primary.opacity(0.08) }
-    var badgeBg: Color { Color.primary.opacity(0.06) }
-    var badgeBorder: Color { Color.primary.opacity(0.08) }
-    var separator: Color { Color(nsColor: .separatorColor) }
-    var bottomBarBg: Color { Color.primary.opacity(0.01) }
+    var textSecondary: Color { Color.primary.opacity(isDark ? 0.68 : 0.62) }
+    var textTertiary: Color { Color.primary.opacity(isDark ? 0.46 : 0.48) }
+    var textQuaternary: Color { Color.primary.opacity(isDark ? 0.30 : 0.34) }
+    var border: Color { Color.primary.opacity(isDark ? 0.18 : 0.14) }
+    var rowHover: Color { Color.primary.opacity(isDark ? 0.07 : 0.055) }
+    var rowSelection: Color { Color.primary.opacity(isDark ? 0.13 : 0.10) }
+    var badgeBg: Color { Color.primary.opacity(isDark ? 0.09 : 0.07) }
+    var badgeBorder: Color { Color.primary.opacity(isDark ? 0.18 : 0.14) }
+    var separator: Color { Color.primary.opacity(isDark ? 0.12 : 0.10) }
+    var bottomBarBg: Color { Color.primary.opacity(isDark ? 0.035 : 0.025) }
     var greenText: Color { Color.green }
 }

@@ -175,8 +175,15 @@ struct CommandBottomBar: View {
                 }
             }
         }
-        .padding(.horizontal, 18)
-        .padding(.vertical, 10)
-        .background(colors.bottomBarBg)
+        .padding(.horizontal, 14)
+        .padding(.vertical, 8)
+        .frame(height: 58)
+        .background(colors.bottomBarBg, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .overlay {
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .stroke(colors.border.opacity(0.7), lineWidth: 1)
+        }
+        .padding(.horizontal, 12)
+        .padding(.bottom, 10)
     }
 }

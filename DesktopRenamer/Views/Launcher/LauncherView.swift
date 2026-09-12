@@ -16,9 +16,10 @@ struct LauncherView: View {
                 // Header (Typing Bar)
                 HStack(spacing: 12) {
                     Image(systemName: "magnifyingglass")
-                        .foregroundColor(.secondary)
-                        .font(.system(size: 16, weight: .medium))
-                        .frame(width: 28, height: 28)
+                        .foregroundStyle(colors.textSecondary)
+                        .font(.system(size: 20, weight: .medium))
+                        .symbolRenderingMode(.hierarchical)
+                        .frame(width: 34, height: 34)
                     
                     if viewModel.activeCommand?.type == .renameCurrentSpace {
                         SearchTextField(
@@ -33,9 +34,13 @@ struct LauncherView: View {
                                 viewModel.handleEscapeKey()
                             },
                             onKeyEquivalent: { _ in false },
-                            placeholder: NSLocalizedString("New Space Name...", comment: "")
+                            placeholder: NSLocalizedString("New Space Name...", comment: ""),
+                            textFieldFont: NSFont.systemFont(ofSize: 20, weight: .regular),
+                            textFieldColor: .labelColor,
+                            placeholderColor: .placeholderTextColor,
+                            usesSingleLineMode: true
                         )
-                        .frame(height: 36)
+                        .frame(height: 44)
                     } else {
                         SearchTextField(
                             text: $viewModel.searchQuery,
@@ -148,9 +153,13 @@ struct LauncherView: View {
                             onKeyEquivalent: { event in
                                 return self.handleTextFieldKeyEquivalent(event)
                             },
-                            placeholder: viewModel.activeCommand == nil ? NSLocalizedString("Search commands...", comment: "") : (viewModel.stagingWindow != nil ? NSLocalizedString("Search target space...", comment: "") : NSLocalizedString("Search items...", comment: ""))
+                            placeholder: viewModel.activeCommand == nil ? NSLocalizedString("Search commands...", comment: "") : (viewModel.stagingWindow != nil ? NSLocalizedString("Search target space...", comment: "") : NSLocalizedString("Search items...", comment: "")),
+                            textFieldFont: NSFont.systemFont(ofSize: 20, weight: .regular),
+                            textFieldColor: .labelColor,
+                            placeholderColor: .placeholderTextColor,
+                            usesSingleLineMode: true
                         )
-                        .frame(height: 36)
+                        .frame(height: 44)
                     }
                     
                     if viewModel.isLoadingData {
@@ -159,10 +168,14 @@ struct LauncherView: View {
                             .frame(width: 20, height: 20)
                     }
                 }
-                .frame(height: 52)
-                .padding(.horizontal, 18)
+                .frame(height: 68)
+                .padding(.horizontal, 20)
+                .padding(.top, 8)
                 
-                Divider()
+                Rectangle()
+                    .fill(colors.separator)
+                    .frame(height: 1)
+                    .padding(.horizontal, 14)
                 
                 // Content area
                 if viewModel.activeCommand?.type == .renameCurrentSpace {
@@ -200,7 +213,10 @@ struct LauncherView: View {
                         .frame(maxHeight: .infinity)
                 }
                 
-                Divider()
+                Rectangle()
+                    .fill(colors.separator)
+                    .frame(height: 1)
+                    .padding(.horizontal, 14)
                 
                 // Bottom bar
                 if viewModel.activeCommand == nil {
@@ -219,8 +235,8 @@ struct LauncherView: View {
             }
         }
         .frame(width: 720, height: 450)
-        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-        .launcherBackground(cornerRadius: 16, borderColor: colors.border)
+        .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
+        .launcherBackground(cornerRadius: 24, borderColor: colors.border)
         .shadow(color: Color.black.opacity(colorScheme == .dark ? 0.45 : 0.20), radius: 24, x: 0, y: 12)
         .padding(60)
         .disabled(viewModel.isRearrangingSpace)
@@ -247,7 +263,7 @@ struct ListAreaView: View {
                 } else {
                     ScrollViewReader { proxy in
                         ScrollView {
-                            VStack(spacing: 4) {
+                            VStack(spacing: 2) {
                                 ForEach(Array(commands.enumerated()), id: \.element.id) { i, cmd in
                                     let isSelected = !viewModel.isBottomBarFocused && viewModel.selectedRowIndex == i
                                     CommandRowView(command: cmd, isSelected: isSelected, shortcutText: viewModel.showCommandNumbers && viewModel.commandKTargetWindow == nil && i < 9 ? "⌘\(i + 1)" : nil)
@@ -260,8 +276,8 @@ struct ListAreaView: View {
                                         .id(cmd.id)
                                 }
                             }
-                            .padding(.horizontal, 10)
-                            .padding(.vertical, 8)
+                            .padding(.horizontal, 14)
+                            .padding(.vertical, 10)
                         }
                         .onChange(of: viewModel.selectedRowIndex) { index in
                             if viewModel.isKeyboardSelection {
@@ -282,7 +298,7 @@ struct ListAreaView: View {
                     } else {
                         ScrollViewReader { proxy in
                             ScrollView {
-                                VStack(spacing: 4) {
+                                VStack(spacing: 2) {
                                     ForEach(Array(spaces.enumerated()), id: \.element.id) { i, space in
                                         let isSelected = !viewModel.isBottomBarFocused && viewModel.selectedRowIndex == i
                                         let isCurrent = currentSpaceIDsByDisplay[space.displayID] == space.id
@@ -296,8 +312,8 @@ struct ListAreaView: View {
                                             .id(space.id)
                                     }
                                 }
-                                .padding(.horizontal, 10)
-                                .padding(.vertical, 8)
+                                .padding(.horizontal, 14)
+                                .padding(.vertical, 10)
                             }
                             .onChange(of: viewModel.selectedRowIndex) { index in
                                 if viewModel.isKeyboardSelection {
@@ -325,7 +341,7 @@ struct ListAreaView: View {
                         } else {
                             ScrollViewReader { proxy in
                                 ScrollView {
-                                    VStack(spacing: 4) {
+                                    VStack(spacing: 2) {
                                         ForEach(Array(spaces.enumerated()), id: \.element.id) { i, space in
                                             let isSelected = !viewModel.isBottomBarFocused && viewModel.selectedRowIndex == i
                                             let isCurrent = currentSpaceIDsByDisplay[space.displayID] == space.id
@@ -339,8 +355,8 @@ struct ListAreaView: View {
                                                 .id(space.id)
                                         }
                                     }
-                                    .padding(.horizontal, 10)
-                                    .padding(.vertical, 8)
+                                    .padding(.horizontal, 14)
+                                    .padding(.vertical, 10)
                                 }
                                 .onChange(of: viewModel.selectedRowIndex) { index in
                                     if viewModel.isKeyboardSelection {
@@ -365,7 +381,7 @@ struct ListAreaView: View {
                         } else {
                             ScrollViewReader { proxy in
                                 ScrollView {
-                                    VStack(alignment: .leading, spacing: 4) {
+                                    VStack(alignment: .leading, spacing: 2) {
                                         ForEach(0..<sections.count, id: \.self) { sIdx in
                                             let section = sections[sIdx]
                                             ListSectionHeader(title: section.title, subtitle: section.subtitle, isFirst: sIdx == 0)
@@ -387,8 +403,8 @@ struct ListAreaView: View {
                                             }
                                         }
                                     }
-                                    .padding(.horizontal, 10)
-                                    .padding(.vertical, 8)
+                                    .padding(.horizontal, 14)
+                                    .padding(.vertical, 10)
                                 }
                                 .onChange(of: viewModel.selectedRowIndex) { index in
                                     if viewModel.isKeyboardSelection {
@@ -410,7 +426,7 @@ struct ListAreaView: View {
                         } else {
                             ScrollViewReader { proxy in
                                 ScrollView {
-                                    VStack(alignment: .leading, spacing: 4) {
+                                    VStack(alignment: .leading, spacing: 2) {
                                         ForEach(0..<sections.count, id: \.self) { sIdx in
                                             let section = sections[sIdx]
                                             ListSectionHeader(title: section.title, subtitle: section.subtitle, isFirst: sIdx == 0)
@@ -442,8 +458,8 @@ struct ListAreaView: View {
                                             }
                                         }
                                     }
-                                    .padding(.horizontal, 10)
-                                    .padding(.vertical, 8)
+                                    .padding(.horizontal, 14)
+                                    .padding(.vertical, 10)
                                 }
                                 .onChange(of: viewModel.selectedRowIndex) { index in
                                     if viewModel.isKeyboardSelection {
