@@ -64,26 +64,32 @@ struct GeneralSettingsView: View {
                 }
 
                 SettingsSection("Settings.General.Updates") {
-                    SettingsRow("Settings.General.Updates.AutoCheckUpdate") {
-                        Toggle("", isOn: $autoCheckUpdate).labelsHidden().toggleStyle(.switch)
-                            .onChange(of: autoCheckUpdate) { value in
-                                UpdateManager.shared.updaterController.updater.automaticallyChecksForUpdates = value
-                            }
-                    }
-                    Divider()
-
-                    if autoCheckUpdate {
-                        SettingsRow("Automatically download updates") {
-                            Toggle("", isOn: $autoDownloadUpdate).labelsHidden().toggleStyle(.switch)
-                                .onChange(of: autoDownloadUpdate) { value in
-                                    UpdateManager.shared.updaterController.updater.automaticallyDownloadsUpdates = value
+                    if !DesktopRenamerIdentity.isLegacyBridge {
+                        SettingsRow("Settings.General.Updates.AutoCheckUpdate") {
+                            Toggle("", isOn: $autoCheckUpdate).labelsHidden().toggleStyle(.switch)
+                                .onChange(of: autoCheckUpdate) { value in
+                                    UpdateManager.shared.updaterController.updater.automaticallyChecksForUpdates = value
                                 }
                         }
                         Divider()
+
+                        if autoCheckUpdate {
+                            SettingsRow("Automatically download updates") {
+                                Toggle("", isOn: $autoDownloadUpdate).labelsHidden().toggleStyle(.switch)
+                                    .onChange(of: autoDownloadUpdate) { value in
+                                        UpdateManager.shared.updaterController.updater.automaticallyDownloadsUpdates = value
+                                    }
+                            }
+                            Divider()
+                        }
                     }
 
                     SettingsRow("Settings.General.Updates.ManualCheck") {
-                        Button(NSLocalizedString("Settings.General.Updates.Button", comment: "")) {
+                        Button(
+                            DesktopRenamerIdentity.isLegacyBridge
+                                ? NSLocalizedString("Migrate", comment: "")
+                                : NSLocalizedString("Settings.General.Updates.Button", comment: "")
+                        ) {
                             checkForUpdate()
                         }
                     }
@@ -161,6 +167,11 @@ struct GeneralSettingsView: View {
     }
 
     private func checkForUpdate() {
+        if DesktopRenamerIdentity.isLegacyBridge {
+            DesktopRenamerBridgeMigrationManager.shared.startMigrationFromUserAction()
+            return
+        }
+
         UpdateManager.shared.updaterController.checkForUpdates(nil)
     }
 

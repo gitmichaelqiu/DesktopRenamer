@@ -1,4 +1,5 @@
 import AppKit
+import Darwin
 import Foundation
 
 final class DesktopRenamerMigrationFinalizer {
@@ -9,11 +10,28 @@ final class DesktopRenamerMigrationFinalizer {
     private var targetURL: URL?
     private var temporaryTargetURL: URL?
     private var launchAttempts = 0
+    private var terminationRequested = false
 
     private init() {}
 
     static var isRequested: Bool {
-        CommandLine.arguments.contains("--desktoprenamer-migration")
+        if CommandLine.arguments.contains("--desktoprenamer-migration") {
+            return true
+        }
+
+        guard DesktopRenamerIdentity.isCurrentApplication,
+              Bundle.main.bundleURL.standardizedFileURL
+                == DesktopRenamerMigrationConfiguration.stagingApplicationURL,
+              FileManager.default.fileExists(
+                atPath: DesktopRenamerMigrationStorage.manifestURL.path
+              ) else {
+            return false
+        }
+
+        // The bridge may have exited while Installer was running, or macOS may
+        // have blocked its automatic launch. Opening the staged app directly
+        // should resume the pending handoff from its durable manifest.
+        return true
     }
 
     func startIfRequested() -> Bool {
@@ -38,8 +56,11 @@ final class DesktopRenamerMigrationFinalizer {
             guard manifest.schemaVersion == DesktopRenamerMigrationManifest.currentSchemaVersion,
                   manifest.targetBundleIdentifier == DesktopRenamerIdentity.currentBundleIdentifier,
                   manifest.stagingApplicationPath == Bundle.main.bundleURL.standardizedFileURL.path,
-                  Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String
-                    == manifest.expectedVersion else {
+                  let stagedVersion = Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String,
+                  DesktopRenamerMigrationVersion.isAtLeast(
+                      stagedVersion,
+                      manifest.expectedVersion
+                  ) else {
                 throw DesktopRenamerMigrationError.manifestInvalid
             }
 
@@ -79,47 +100,144 @@ final class DesktopRenamerMigrationFinalizer {
 
         let sourceURL = URL(fileURLWithPath: manifest.sourceApplicationPath, isDirectory: true)
             .standardizedFileURL
-        let legacyApplication = NSWorkspace.shared.runningApplications.first { application in
-            application.bundleIdentifier == DesktopRenamerIdentity.legacyBundleIdentifier
-                && application.bundleURL?.standardizedFileURL == sourceURL
-                && application.processIdentifier == manifest.sourceProcessIdentifier
-        } ?? NSWorkspace.shared.runningApplications.first { application in
-            application.bundleIdentifier == DesktopRenamerIdentity.legacyBundleIdentifier
-                && application.bundleURL?.standardizedFileURL == sourceURL
+        let legacyApplications = NSWorkspace.shared.runningApplications.filter { application in
+            guard application.bundleIdentifier == DesktopRenamerIdentity.legacyBundleIdentifier else {
+                return false
+            }
+
+            // The URL is the authoritative match. Keep the recorded PID as a
+            // fallback because LaunchServices can briefly report a nil bundle
+            // URL while Sparkle is relaunching the bridge.
+            return application.bundleURL?.standardizedFileURL == sourceURL
+                || application.processIdentifier == manifest.sourceProcessIdentifier
         }
 
-        guard let legacyApplication, !legacyApplication.isTerminated else {
+        let runningApplications = legacyApplications.filter(isApplicationRunning)
+        guard !runningApplications.isEmpty else {
             performApplicationSwap()
             return
         }
 
-        legacyApplication.terminate()
-        waitForLegacyApplicationToTerminate(legacyApplication, attemptsRemaining: 20)
+        print(
+            "IdentityMigration: requesting termination for legacy process(es): "
+                + runningApplications.map { String($0.processIdentifier) }.joined(separator: ", ")
+        )
+        runningApplications.forEach { $0.terminate() }
+        waitForLegacyApplicationsToTerminate(
+            runningApplications,
+            sourceURL: sourceURL,
+            attemptsRemaining: 20,
+            didForceTerminate: false
+        )
     }
 
-    private func waitForLegacyApplicationToTerminate(
-        _ application: NSRunningApplication,
-        attemptsRemaining: Int
+    private func waitForLegacyApplicationsToTerminate(
+        _ applications: [NSRunningApplication],
+        sourceURL: URL,
+        attemptsRemaining: Int,
+        didForceTerminate: Bool
     ) {
-        let isStillRunning = NSWorkspace.shared.runningApplications.contains { runningApplication in
-            runningApplication.processIdentifier == application.processIdentifier
-        }
-        guard !application.isTerminated && isStillRunning else {
+        let runningApplications = applications.filter(isApplicationRunning)
+        guard !runningApplications.isEmpty else {
             performApplicationSwap()
             return
         }
 
         guard attemptsRemaining > 0 else {
-            failMigration(DesktopRenamerMigrationError.legacyApplicationDidNotTerminate)
+            guard !didForceTerminate else {
+                failMigration(DesktopRenamerMigrationError.legacyApplicationDidNotTerminate)
+                return
+            }
+
+            let forceTerminationSucceeded = runningApplications.allSatisfy {
+                forciblyTerminate($0, sourceURL: sourceURL)
+            }
+            guard forceTerminationSucceeded else {
+                failMigration(DesktopRenamerMigrationError.legacyApplicationDidNotTerminate)
+                return
+            }
+
+            waitForLegacyApplicationsToTerminate(
+                applications,
+                sourceURL: sourceURL,
+                attemptsRemaining: 20,
+                didForceTerminate: true
+            )
             return
         }
 
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) { [weak self, weak application] in
-            guard let self, let application else { return }
-            self.waitForLegacyApplicationToTerminate(
-                application,
-                attemptsRemaining: attemptsRemaining - 1
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) { [weak self] in
+            guard let self else { return }
+            self.waitForLegacyApplicationsToTerminate(
+                applications,
+                sourceURL: sourceURL,
+                attemptsRemaining: attemptsRemaining - 1,
+                didForceTerminate: didForceTerminate
             )
+        }
+    }
+
+    private func isApplicationRunning(_ application: NSRunningApplication) -> Bool {
+        let processIdentifier = application.processIdentifier
+        guard processIdentifier > 0 else { return false }
+
+        if Darwin.kill(processIdentifier, 0) == 0 {
+            return true
+        }
+        return errno == EPERM
+    }
+
+    private func forciblyTerminate(
+        _ application: NSRunningApplication,
+        sourceURL: URL
+    ) -> Bool {
+        guard isApplicationRunning(application) else { return true }
+
+        if application.forceTerminate() && !isApplicationRunning(application) {
+            return true
+        }
+
+        guard isApplicationRunning(application) else {
+            return true
+        }
+
+        // forceTerminate() can fail while the bridge is presenting a modal
+        // alert or while LaunchServices is still relaunching it. The user has
+        // explicitly approved migration, so use a verified PID-level fallback
+        // rather than leaving two installed applications behind.
+        let processIdentifier = application.processIdentifier
+        guard isVerifiedLegacyApplication(application, sourceURL: sourceURL) else {
+            print(
+                "IdentityMigration: refusing to signal an unverified process "
+                    + "\(processIdentifier)"
+            )
+            return false
+        }
+        guard Darwin.kill(processIdentifier, SIGKILL) == 0 || errno == ESRCH else {
+            print(
+                "IdentityMigration: failed to force-terminate legacy process "
+                    + "\(processIdentifier): errno=\(errno)"
+            )
+            return false
+        }
+        return true
+    }
+
+    private func isVerifiedLegacyApplication(
+        _ application: NSRunningApplication,
+        sourceURL: URL
+    ) -> Bool {
+        NSWorkspace.shared.runningApplications.contains { runningApplication in
+            guard runningApplication.processIdentifier == application.processIdentifier,
+                  runningApplication.bundleIdentifier == DesktopRenamerIdentity.legacyBundleIdentifier
+            else {
+                return false
+            }
+
+            // A nil URL is possible during a LaunchServices relaunch. The
+            // manifest PID still identifies the process in that short window.
+            return runningApplication.bundleURL?.standardizedFileURL == sourceURL
+                || runningApplication.bundleURL == nil
         }
     }
 
@@ -148,14 +266,14 @@ final class DesktopRenamerMigrationFinalizer {
             }
 
             if fileManager.fileExists(atPath: sourceURL.path) {
-                guard Bundle(url: sourceURL)?.bundleIdentifier
+                guard bundleIdentifier(at: sourceURL)
                     == DesktopRenamerIdentity.legacyBundleIdentifier else {
                     throw DesktopRenamerMigrationError.targetApplicationInvalid
                 }
             }
 
             try fileManager.copyItem(at: stagingURL, to: temporaryURL)
-            guard Bundle(url: temporaryURL)?.bundleIdentifier
+            guard bundleIdentifier(at: temporaryURL)
                 == DesktopRenamerIdentity.currentBundleIdentifier else {
                 throw DesktopRenamerMigrationError.stagingApplicationInvalid
             }
@@ -169,7 +287,7 @@ final class DesktopRenamerMigrationFinalizer {
             self.temporaryTargetURL = temporaryURL
             self.targetURL = sourceURL
 
-            guard Bundle(url: sourceURL)?.bundleIdentifier
+            guard bundleIdentifier(at: sourceURL)
                 == DesktopRenamerIdentity.currentBundleIdentifier else {
                 throw DesktopRenamerMigrationError.applicationSwapFailed
             }
@@ -266,7 +384,8 @@ final class DesktopRenamerMigrationFinalizer {
         UserDefaults.standard.removeObject(
             forKey: DesktopRenamerIdentity.migrationLaunchAcknowledgedKey
         )
-        NSApp.terminate(nil)
+        UserDefaults.standard.synchronize()
+        terminateMigrationApplication()
     }
 
     private func restoreAfterFailedSwap(targetURL: URL, temporaryURL: URL, backupURL: URL) {
@@ -275,7 +394,7 @@ final class DesktopRenamerMigrationFinalizer {
             try? fileManager.removeItem(at: temporaryURL)
         }
 
-        if Bundle(url: targetURL)?.bundleIdentifier == DesktopRenamerIdentity.currentBundleIdentifier {
+        if bundleIdentifier(at: targetURL) == DesktopRenamerIdentity.currentBundleIdentifier {
             try? fileManager.removeItem(at: targetURL)
         }
 
@@ -286,7 +405,7 @@ final class DesktopRenamerMigrationFinalizer {
 
     private func failMigration(_ error: Error) {
         if let targetURL,
-           Bundle(url: targetURL)?.bundleIdentifier == DesktopRenamerIdentity.currentBundleIdentifier {
+           bundleIdentifier(at: targetURL) == DesktopRenamerIdentity.currentBundleIdentifier {
             NSWorkspace.shared.runningApplications
                 .filter {
                     $0.bundleIdentifier == DesktopRenamerIdentity.currentBundleIdentifier
@@ -313,7 +432,25 @@ final class DesktopRenamerMigrationFinalizer {
         alert.informativeText = "\(error.localizedDescription) The previous application was preserved."
         alert.addButton(withTitle: "Quit")
         alert.runModal()
+        terminateMigrationApplication()
+    }
+
+    private func terminateMigrationApplication() {
+        guard !terminationRequested else { return }
+        terminationRequested = true
+
         NSApp.terminate(nil)
+
+        // The finalizer is a one-shot helper, not the normal application. If
+        // AppKit leaves the process alive after requesting termination, the
+        // staged bundle remains locked and the canonical app cannot remove it.
+        // State has already been persisted before this method is called, so a
+        // direct process exit is safe after the short grace period.
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1) {
+            guard NSApp.isRunning else { return }
+            print("IdentityMigration: AppKit did not terminate the finalizer; exiting")
+            Darwin.exit(0)
+        }
     }
 
     private func relaunchLegacyApplicationIfNeeded() {
@@ -322,7 +459,7 @@ final class DesktopRenamerMigrationFinalizer {
         let sourceURL = URL(fileURLWithPath: manifest.sourceApplicationPath, isDirectory: true)
             .standardizedFileURL
         guard FileManager.default.fileExists(atPath: sourceURL.path),
-              Bundle(url: sourceURL)?.bundleIdentifier
+              bundleIdentifier(at: sourceURL)
                 == DesktopRenamerIdentity.legacyBundleIdentifier else {
             return
         }
@@ -344,5 +481,20 @@ final class DesktopRenamerMigrationFinalizer {
                 print("IdentityMigration: failed to relaunch the legacy application: \(error)")
             }
         }
+    }
+
+    private func bundleIdentifier(at applicationURL: URL) -> String? {
+        let infoURL = applicationURL.appendingPathComponent("Contents/Info.plist")
+        guard let data = try? Data(contentsOf: infoURL),
+              let propertyList = try? PropertyListSerialization.propertyList(
+                  from: data,
+                  options: [],
+                  format: nil
+              ),
+              let infoDictionary = propertyList as? [String: Any] else {
+            return nil
+        }
+
+        return infoDictionary["CFBundleIdentifier"] as? String
     }
 }

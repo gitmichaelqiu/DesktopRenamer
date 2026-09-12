@@ -5,6 +5,7 @@ CURRENT_BUNDLE_IDENTIFIER="dev.mqiu.DesktopRenamer"
 CURRENT_WIDGET_BUNDLE_IDENTIFIER="dev.mqiu.DesktopRenamer.DesktopRenamerWidget"
 STAGED_APPLICATION_NAME="DesktopRenamer-Migration.app"
 DEFAULT_PACKAGE_IDENTIFIER="dev.mqiu.DesktopRenamer.migration"
+SCRIPT_DIRECTORY="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd -P)"
 
 usage() {
     cat <<'EOF'
@@ -189,6 +190,7 @@ PACKAGE_BUILD_ARGUMENTS=(
     --identifier "$PACKAGE_IDENTIFIER"
     --version "$PACKAGE_VERSION"
     --install-location /
+    --scripts "$SCRIPT_DIRECTORY/migration-package-scripts"
 )
 if [[ -n "$SIGNING_IDENTITY" ]]; then
     PACKAGE_BUILD_ARGUMENTS+=(--sign "$SIGNING_IDENTITY")

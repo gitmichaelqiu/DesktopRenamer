@@ -2,6 +2,33 @@ import Foundation
 import ServiceManagement
 
 enum DesktopRenamerIdentityMigration {
+    static func prepareLegacyBridgeLaunch() {
+        guard DesktopRenamerIdentity.isLegacyBridge else { return }
+
+        let legacyDomain = UserDefaults.standard.persistentDomain(
+            forName: DesktopRenamerIdentity.legacyBundleIdentifier
+        ) ?? [:]
+        guard legacyDomain.isEmpty,
+              var currentDomain = UserDefaults.standard.persistentDomain(
+                  forName: DesktopRenamerIdentity.currentBundleIdentifier
+              ),
+              !currentDomain.isEmpty else {
+            return
+        }
+
+        currentDomain = currentDomain.filter { key, _ in
+            !isSparkleKey(key)
+                && !key.hasPrefix("DesktopRenamer.IdentityMigration.")
+        }
+        guard !currentDomain.isEmpty else { return }
+
+        UserDefaults.standard.setPersistentDomain(
+            currentDomain,
+            forName: DesktopRenamerIdentity.legacyBundleIdentifier
+        )
+        UserDefaults.standard.synchronize()
+    }
+
     static func migrateLegacyDefaults(launchAtLoginEnabled: Bool) {
         guard DesktopRenamerIdentity.isCurrentApplication else { return }
         guard !UserDefaults.standard.bool(forKey: DesktopRenamerIdentity.migrationCompletedKey) else {
@@ -16,9 +43,7 @@ enum DesktopRenamerIdentityMigration {
         ) ?? [:]
 
         for (key, value) in legacyDomain where !isSparkleKey(key) {
-            if currentDomain[key] == nil {
-                currentDomain[key] = value
-            }
+            currentDomain[key] = value
         }
         currentDomain["HasInitializedDefaults"] = true
 
@@ -39,17 +64,24 @@ enum DesktopRenamerIdentityMigration {
     static func prepareNormalLaunch() {
         guard DesktopRenamerIdentity.isCurrentApplication else { return }
 
-        let isCanonicalLaunchAfterMigration = UserDefaults.standard.string(
+        let hasPendingCleanup = UserDefaults.standard.string(
             forKey: DesktopRenamerIdentity.migrationCleanupStagedPathKey
         ) != nil
-        cleanupStagedApplicationIfNeeded()
+        let cleanupCompleted = cleanupStagedApplicationIfNeeded()
 
-        if isCanonicalLaunchAfterMigration {
+        if hasPendingCleanup {
             UserDefaults.standard.set(
                 true,
                 forKey: DesktopRenamerIdentity.migrationLaunchAcknowledgedKey
             )
             UserDefaults.standard.synchronize()
+
+            // The staged process is still alive when the canonical process
+            // first launches. It will terminate after seeing the
+            // acknowledgement; retry cleanup until that process has exited.
+            if !cleanupCompleted {
+                retryPendingCleanup()
+            }
         }
 
         guard let launchAtLoginValue = UserDefaults.standard.object(
@@ -72,11 +104,37 @@ enum DesktopRenamerIdentityMigration {
         }
     }
 
-    private static func cleanupStagedApplicationIfNeeded() {
+    private static func retryPendingCleanup(attemptsRemaining: Int = 120) {
+        guard UserDefaults.standard.string(
+            forKey: DesktopRenamerIdentity.migrationCleanupStagedPathKey
+        ) != nil else {
+            return
+        }
+
+        guard attemptsRemaining > 0 else {
+            print("IdentityMigration: staged application cleanup still pending after retry limit")
+            return
+        }
+
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+            guard UserDefaults.standard.string(
+                forKey: DesktopRenamerIdentity.migrationCleanupStagedPathKey
+            ) != nil else {
+                return
+            }
+
+            if !cleanupStagedApplicationIfNeeded() {
+                retryPendingCleanup(attemptsRemaining: attemptsRemaining - 1)
+            }
+        }
+    }
+
+    @discardableResult
+    private static func cleanupStagedApplicationIfNeeded() -> Bool {
         guard let stagedPath = UserDefaults.standard.string(
             forKey: DesktopRenamerIdentity.migrationCleanupStagedPathKey
         ) else {
-            return
+            return true
         }
 
         let stagedURL = URL(fileURLWithPath: stagedPath, isDirectory: true).standardizedFileURL
@@ -86,7 +144,7 @@ enum DesktopRenamerIdentityMigration {
             UserDefaults.standard.removeObject(
                 forKey: DesktopRenamerIdentity.migrationCleanupStagedPathKey
             )
-            return
+            return true
         }
 
         do {
@@ -118,8 +176,10 @@ enum DesktopRenamerIdentityMigration {
             UserDefaults.standard.removeObject(
                 forKey: DesktopRenamerIdentity.migrationCleanupBackupPathKey
             )
+            return true
         } catch {
             print("IdentityMigration: staged application cleanup deferred: \(error)")
+            return false
         }
     }
 

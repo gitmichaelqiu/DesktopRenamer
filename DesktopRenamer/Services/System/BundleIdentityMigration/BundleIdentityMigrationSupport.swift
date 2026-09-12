@@ -42,6 +42,12 @@ enum DesktopRenamerMigrationStorage {
         let data = try Data(contentsOf: url)
         return try JSONDecoder().decode(DesktopRenamerMigrationManifest.self, from: data)
     }
+
+    static func discardPendingMigration() {
+        let fileManager = FileManager.default
+        try? fileManager.removeItem(at: manifestURL)
+        try? fileManager.removeItem(at: cacheDirectoryURL)
+    }
 }
 
 struct DesktopRenamerMigrationManifest: Codable {
@@ -57,13 +63,57 @@ struct DesktopRenamerMigrationManifest: Codable {
     let createdAt: Date
 }
 
+enum DesktopRenamerMigrationVersion {
+    static func isAtLeast(_ candidate: String, _ expected: String) -> Bool {
+        guard let candidateComponents = numericComponents(candidate),
+              let expectedComponents = numericComponents(expected) else {
+            return false
+        }
+
+        let componentCount = max(candidateComponents.count, expectedComponents.count)
+        for index in 0..<componentCount {
+            let candidateComponent = index < candidateComponents.count
+                ? candidateComponents[index]
+                : 0
+            let expectedComponent = index < expectedComponents.count
+                ? expectedComponents[index]
+                : 0
+
+            if candidateComponent != expectedComponent {
+                return candidateComponent > expectedComponent
+            }
+        }
+
+        return true
+    }
+
+    private static func numericComponents(_ version: String) -> [Int]? {
+        let components = version.split(separator: ".", omittingEmptySubsequences: false)
+        guard !components.isEmpty,
+              components.count <= 4,
+              components.allSatisfy({ component in
+                  !component.isEmpty
+                      && component.unicodeScalars.allSatisfy { scalar in
+                          scalar.value >= 48 && scalar.value <= 57
+                      }
+              }) else {
+            return nil
+        }
+
+        let values = components.compactMap { Int($0) }
+        return values.count == components.count ? values : nil
+    }
+}
+
 enum DesktopRenamerMigrationError: LocalizedError {
     case invalidConfiguration
     case invalidDownloadResponse
     case invalidPackageHash
     case packageVerificationFailed
+    case installerClosed
     case stagingApplicationNotFound
     case stagingApplicationInvalid
+    case stagingApplicationDidNotTerminate
     case manifestInvalid
     case legacyApplicationDidNotTerminate
     case targetApplicationInvalid
@@ -80,10 +130,14 @@ enum DesktopRenamerMigrationError: LocalizedError {
             return "The migration package checksum did not match the signed release."
         case .packageVerificationFailed:
             return "The migration package did not pass macOS package verification."
+        case .installerClosed:
+            return "The migration installer was closed before the new application was installed."
         case .stagingApplicationNotFound:
             return "The migration package was installed, but its staged application was not found."
         case .stagingApplicationInvalid:
             return "The staged application has an unexpected identity or version."
+        case .stagingApplicationDidNotTerminate:
+            return "The previous staged DesktopRenamer process did not close safely."
         case .manifestInvalid:
             return "The migration manifest is missing or invalid."
         case .legacyApplicationDidNotTerminate:
