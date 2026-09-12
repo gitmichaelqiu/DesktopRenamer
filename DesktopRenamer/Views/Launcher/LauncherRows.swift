@@ -12,12 +12,6 @@ private struct LauncherRowSurface: ViewModifier {
                 RoundedRectangle(cornerRadius: 10, style: .continuous)
                     .fill(isSelected ? colors.rowSelection : (isHovered ? colors.rowHover : .clear))
             }
-            .overlay {
-                if isSelected {
-                    RoundedRectangle(cornerRadius: 10, style: .continuous)
-                        .stroke(Color.primary.opacity(colorScheme == .dark ? 0.16 : 0.13), lineWidth: 1)
-                }
-            }
             .animation(.easeOut(duration: 0.14), value: isSelected)
             .animation(.easeOut(duration: 0.14), value: isHovered)
     }
@@ -124,8 +118,7 @@ struct CommandRowView: View {
             Image(systemName: command.iconName)
                 .font(.system(size: 17, weight: .medium))
                 .foregroundColor(colors.textPrimary)
-                .frame(width: 32, height: 32)
-                .background(colors.badgeBg, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+                .frame(width: 28, height: 28)
             
             VStack(alignment: .leading, spacing: 2) {
                 Text(command.title)
@@ -165,8 +158,8 @@ struct CommandRowView: View {
                 KeycapView(text: "Action", isSelected: isSelected)
             }
         }
-        .padding(.horizontal, 10)
-        .padding(.vertical, 9)
+        .padding(.horizontal, 8)
+        .padding(.vertical, 7)
         .launcherRowSurface(isSelected: isSelected, isHovered: isHovered)
         .onHover { hovering in
             isHovered = hovering
@@ -200,13 +193,12 @@ struct SpaceRowView: View {
                 Image(nsImage: appIcon)
                     .resizable()
                     .aspectRatio(contentMode: .fit)
-                    .frame(width: 32, height: 32)
+                    .frame(width: 28, height: 28)
             } else {
                 Image(systemName: "desktopcomputer")
                     .font(.system(size: 17, weight: .medium))
                     .foregroundColor(colors.textPrimary)
-                    .frame(width: 32, height: 32)
-                    .background(colors.badgeBg, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+                    .frame(width: 28, height: 28)
             }
             
             VStack(alignment: .leading, spacing: 2) {
@@ -236,8 +228,8 @@ struct SpaceRowView: View {
                 KeycapView(text: "Switch ↵", isSelected: isSelected)
             }
         }
-        .padding(.horizontal, 10)
-        .padding(.vertical, 9)
+        .padding(.horizontal, 8)
+        .padding(.vertical, 7)
         .launcherRowSurface(isSelected: isSelected, isHovered: isHovered)
         .onHover { hovering in
             isHovered = hovering
@@ -252,11 +244,7 @@ private struct CurrentSpaceIndicator: View {
         Circle()
             .stroke(Color.blue, lineWidth: 2)
             .frame(width: 20, height: 20)
-            .frame(width: 32, height: 32)
-            .background(
-                ThemeColors(isDark: colorScheme == .dark).badgeBg,
-                in: RoundedRectangle(cornerRadius: 8, style: .continuous)
-            )
+            .frame(width: 28, height: 28)
             .accessibilityLabel(Text("Current space"))
     }
 }
@@ -294,8 +282,7 @@ struct WindowRowView: View {
             Image(nsImage: appIcon)
                 .resizable()
                 .aspectRatio(contentMode: .fit)
-                .frame(width: 32, height: 32)
-                .background(colors.badgeBg, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+                .frame(width: 28, height: 28)
 
             VStack(alignment: .leading, spacing: 2) {
                 Text(window.title.isEmpty ? String(localized: "(No Title)") : window.title)
@@ -328,8 +315,8 @@ struct WindowRowView: View {
                 }
             }
         }
-        .padding(.horizontal, 10)
-        .padding(.vertical, 9)
+        .padding(.horizontal, 8)
+        .padding(.vertical, 7)
         .launcherRowSurface(isSelected: isSelected, isHovered: isHovered)
         .onHover { hovering in
             isHovered = hovering
@@ -365,8 +352,8 @@ struct ConfirmBatchRowView: View {
             
             KeycapView(text: "Run ↵", isSelected: isSelected, isGreenRow: true)
         }
-        .padding(.horizontal, 10)
-        .padding(.vertical, 9)
+        .padding(.horizontal, 8)
+        .padding(.vertical, 7)
         .background(isSelected ? colors.greenText : (isHovered ? colors.greenText.opacity(0.5) : colors.greenText.opacity(0.06)))
         .cornerRadius(8)
         .overlay(
@@ -398,7 +385,7 @@ struct WindowBatchRowView: View {
             Image(nsImage: appIcon)
                 .resizable()
                 .aspectRatio(contentMode: .fit)
-                .frame(width: 32, height: 32)
+                .frame(width: 28, height: 28)
 
             VStack(alignment: .leading, spacing: 2) {
                 Text(window.title.isEmpty ? String(localized: "(No Title)") : window.title)
@@ -445,8 +432,8 @@ struct WindowBatchRowView: View {
                 }
             }
         }
-        .padding(.horizontal, 10)
-        .padding(.vertical, 9)
+        .padding(.horizontal, 8)
+        .padding(.vertical, 7)
         .launcherRowSurface(isSelected: isSelected, isHovered: isHovered)
         .onHover { hovering in
             isHovered = hovering
@@ -467,11 +454,11 @@ struct ListSectionHeader: View {
     var body: some View {
         HStack(spacing: 8) {
             Text(title)
-                .font(.system(size: 11, weight: .semibold))
+                .font(.subheadline.weight(.medium))
                 .foregroundColor(colors.textSecondary)
             
             Text(subtitle)
-                .font(.system(size: 11))
+                .font(.caption)
                 .foregroundColor(colors.textSecondary)
             
             Spacer()

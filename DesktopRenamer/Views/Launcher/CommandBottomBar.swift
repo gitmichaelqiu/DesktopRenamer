@@ -47,7 +47,8 @@ struct CommandBottomBar: View {
             
             // Right side: Context-sensitive actions
             if let type = viewModel.activeCommand?.type {
-                switch type {
+                HStack(spacing: 2) {
+                    switch type {
                 case .switchToDesktop:
                     HStack(spacing: 8) {
                         HStack(spacing: 4) {
@@ -172,18 +173,19 @@ struct CommandBottomBar: View {
                     
                 default:
                     EmptyView()
+                    }
+                }
+                .padding(4)
+                .background(.thinMaterial, in: Capsule())
+                .overlay {
+                    Capsule()
+                        .stroke(colors.border, lineWidth: 1)
                 }
             }
         }
-        .padding(.horizontal, 14)
-        .padding(.vertical, 8)
-        .frame(height: 58)
-        .background(colors.bottomBarBg, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
-        .overlay {
-            RoundedRectangle(cornerRadius: 16, style: .continuous)
-                .stroke(colors.border.opacity(0.7), lineWidth: 1)
-        }
-        .padding(.horizontal, 12)
-        .padding(.bottom, 10)
+        .padding(.horizontal, 18)
+        .padding(.vertical, 6)
+        .frame(height: 52)
+        .padding(.bottom, 6)
     }
 }

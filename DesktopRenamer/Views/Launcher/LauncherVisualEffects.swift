@@ -27,16 +27,28 @@ struct VisualEffectView: NSViewRepresentable {
 }
 
 extension View {
-    @ViewBuilder
     func launcherBackground(cornerRadius: CGFloat, borderColor: Color) -> some View {
         self
+            .modifier(LauncherSurface(cornerRadius: cornerRadius, borderColor: borderColor))
+    }
+}
+
+private struct LauncherSurface: ViewModifier {
+    let cornerRadius: CGFloat
+    let borderColor: Color
+    @Environment(\.colorScheme) private var colorScheme
+
+    func body(content: Content) -> some View {
+        let colors = ThemeColors(isDark: colorScheme == .dark)
+        content
+            .background(colors.backgroundOverlay)
             .background {
                 VisualEffectView(material: .hudWindow, blendingMode: .withinWindow)
             }
             .clipShape(RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
             .overlay {
                 RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
-                    .stroke(borderColor, lineWidth: 1)
+                    .stroke(borderColor.opacity(0.9), lineWidth: 1)
             }
     }
 }

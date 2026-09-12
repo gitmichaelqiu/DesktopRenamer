@@ -19,7 +19,7 @@ struct LauncherView: View {
                         .foregroundStyle(colors.textSecondary)
                         .font(.system(size: 20, weight: .medium))
                         .symbolRenderingMode(.hierarchical)
-                        .frame(width: 34, height: 34)
+                        .frame(width: 28, height: 28)
                     
                     if viewModel.activeCommand?.type == .renameCurrentSpace {
                         SearchTextField(
@@ -40,7 +40,7 @@ struct LauncherView: View {
                             placeholderColor: .placeholderTextColor,
                             usesSingleLineMode: true
                         )
-                        .frame(height: 44)
+                        .frame(height: 36)
                     } else {
                         SearchTextField(
                             text: $viewModel.searchQuery,
@@ -159,7 +159,7 @@ struct LauncherView: View {
                             placeholderColor: .placeholderTextColor,
                             usesSingleLineMode: true
                         )
-                        .frame(height: 44)
+                        .frame(height: 36)
                     }
                     
                     if viewModel.isLoadingData {
@@ -168,14 +168,14 @@ struct LauncherView: View {
                             .frame(width: 20, height: 20)
                     }
                 }
-                .frame(height: 68)
-                .padding(.horizontal, 20)
-                .padding(.top, 8)
+                .frame(height: 56)
+                .padding(.horizontal, 18)
+                .padding(.top, 6)
                 
                 Rectangle()
                     .fill(colors.separator)
                     .frame(height: 1)
-                    .padding(.horizontal, 14)
+                    .padding(.horizontal, 12)
                 
                 // Content area
                 if viewModel.activeCommand?.type == .renameCurrentSpace {
@@ -216,7 +216,7 @@ struct LauncherView: View {
                 Rectangle()
                     .fill(colors.separator)
                     .frame(height: 1)
-                    .padding(.horizontal, 14)
+                    .padding(.horizontal, 12)
                 
                 // Bottom bar
                 if viewModel.activeCommand == nil {
@@ -234,11 +234,11 @@ struct LauncherView: View {
                 CommandKOverlayView(viewModel: viewModel, window: targetWindow)
             }
         }
-        .frame(width: 720, height: 450)
+        .frame(width: 750, height: 475)
         .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
         .launcherBackground(cornerRadius: 24, borderColor: colors.border)
         .shadow(color: Color.black.opacity(colorScheme == .dark ? 0.45 : 0.20), radius: 24, x: 0, y: 12)
-        .padding(60)
+        .padding(45)
         .disabled(viewModel.isRearrangingSpace)
     }
 }
@@ -276,8 +276,8 @@ struct ListAreaView: View {
                                         .id(cmd.id)
                                 }
                             }
-                            .padding(.horizontal, 14)
-                            .padding(.vertical, 10)
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 8)
                         }
                         .onChange(of: viewModel.selectedRowIndex) { index in
                             if viewModel.isKeyboardSelection {
@@ -312,8 +312,8 @@ struct ListAreaView: View {
                                             .id(space.id)
                                     }
                                 }
-                                .padding(.horizontal, 14)
-                                .padding(.vertical, 10)
+                                .padding(.horizontal, 8)
+                                .padding(.vertical, 8)
                             }
                             .onChange(of: viewModel.selectedRowIndex) { index in
                                 if viewModel.isKeyboardSelection {
@@ -355,8 +355,8 @@ struct ListAreaView: View {
                                                 .id(space.id)
                                         }
                                     }
-                                    .padding(.horizontal, 14)
-                                    .padding(.vertical, 10)
+                                    .padding(.horizontal, 8)
+                                    .padding(.vertical, 8)
                                 }
                                 .onChange(of: viewModel.selectedRowIndex) { index in
                                     if viewModel.isKeyboardSelection {
@@ -403,8 +403,8 @@ struct ListAreaView: View {
                                             }
                                         }
                                     }
-                                    .padding(.horizontal, 14)
-                                    .padding(.vertical, 10)
+                                    .padding(.horizontal, 8)
+                                    .padding(.vertical, 8)
                                 }
                                 .onChange(of: viewModel.selectedRowIndex) { index in
                                     if viewModel.isKeyboardSelection {
@@ -458,8 +458,8 @@ struct ListAreaView: View {
                                             }
                                         }
                                     }
-                                    .padding(.horizontal, 14)
-                                    .padding(.vertical, 10)
+                                    .padding(.horizontal, 8)
+                                    .padding(.vertical, 8)
                                 }
                                 .onChange(of: viewModel.selectedRowIndex) { index in
                                     if viewModel.isKeyboardSelection {

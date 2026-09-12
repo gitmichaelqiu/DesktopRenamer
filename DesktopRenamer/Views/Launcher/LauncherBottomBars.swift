@@ -130,17 +130,17 @@ struct BatchMoveBottomBar: View {
                     }
                 }
             }
+            .padding(4)
+            .background(.thinMaterial, in: Capsule())
+            .overlay {
+                Capsule()
+                    .stroke(colors.border, lineWidth: 1)
+            }
         }
-        .padding(.horizontal, 14)
-        .padding(.vertical, 8)
-        .frame(height: 58)
-        .background(colors.bottomBarBg, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
-        .overlay {
-            RoundedRectangle(cornerRadius: 16, style: .continuous)
-                .stroke(colors.border.opacity(0.7), lineWidth: 1)
-        }
-        .padding(.horizontal, 12)
-        .padding(.bottom, 10)
+        .padding(.horizontal, 18)
+        .padding(.vertical, 6)
+        .frame(height: 52)
+        .padding(.bottom, 6)
     }
 }
 
@@ -370,19 +370,19 @@ struct SpacesBottomBar: View {
                         }
                     }
                 }
+                .padding(4)
+                .background(.thinMaterial, in: Capsule())
+                .overlay {
+                    Capsule()
+                        .stroke(colors.border, lineWidth: 1)
+                }
             }
             .padding(.leading, 12)
         }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 8)
-        .frame(height: 58)
-        .background(colors.bottomBarBg, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
-        .overlay {
-            RoundedRectangle(cornerRadius: 16, style: .continuous)
-                .stroke(colors.border.opacity(0.7), lineWidth: 1)
-        }
-        .padding(.horizontal, 12)
-        .padding(.bottom, 10)
+        .padding(.horizontal, 18)
+        .padding(.vertical, 6)
+        .frame(height: 52)
+        .padding(.bottom, 6)
         .animation(.spring(response: 0.35, dampingFraction: 0.85), value: viewModel.isBottomBarFocused)
     }
 }
