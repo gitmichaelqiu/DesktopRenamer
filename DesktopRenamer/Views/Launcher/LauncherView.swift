@@ -221,12 +221,45 @@ struct LauncherView: View {
                     CommandBottomBar(viewModel: viewModel)
                 }
             }
+
+            if viewModel.commandKTargetWindow != nil || viewModel.isSpaceMenuOpen {
+                Color.clear
+                    .contentShape(Rectangle())
+                    .onTapGesture {
+                        if viewModel.commandKTargetWindow != nil {
+                            viewModel.commandKTargetWindow = nil
+                        } else {
+                            viewModel.handleEscapeKey()
+                        }
+                    }
+            }
         }
         .frame(width: 750, height: 475)
         .launcherBackground(cornerRadius: 26)
         .disabled(viewModel.isRearrangingSpace)
         .onChange(of: viewModel.commandKTargetWindow) { targetWindow in
             LauncherWindowController.shared.updateCommandKMenu(for: targetWindow)
+        }
+        .onChange(of: viewModel.activeCommand) { _ in
+            LauncherWindowController.shared.updateSpaceMenu()
+        }
+        .onChange(of: viewModel.stagingWindow) { _ in
+            LauncherWindowController.shared.updateSpaceMenu()
+        }
+        .onChange(of: viewModel.selectedRowIndex) { _ in
+            LauncherWindowController.shared.updateSpaceMenu()
+        }
+        .onChange(of: viewModel.searchQuery) { _ in
+            LauncherWindowController.shared.updateSpaceMenu()
+        }
+        .onChange(of: viewModel.showCommandNumbers) { _ in
+            LauncherWindowController.shared.updateSpaceMenu()
+        }
+        .onChange(of: viewModel.currentSpaces) { _ in
+            LauncherWindowController.shared.updateSpaceMenu()
+        }
+        .onChange(of: viewModel.isSpaceMenuOpen) { _ in
+            LauncherWindowController.shared.updateSpaceMenu()
         }
     }
 }
@@ -243,7 +276,12 @@ struct ListAreaView: View {
         let currentSpaceIDsByDisplay = SpaceHelper.getCurrentSpaceIDsByDisplay()
 
         VStack(spacing: 0) {
-            if viewModel.activeCommand == nil {
+            let showsRootCommands = viewModel.activeCommand == nil || (
+                viewModel.isSpaceMenuOpen &&
+                (viewModel.activeCommand?.type == .switchToDesktop || viewModel.activeCommand?.type == .moveWindow)
+            )
+
+            if showsRootCommands {
                 // Main command list
                 let commands = viewModel.filteredCommands
                 if commands.isEmpty {
@@ -280,7 +318,7 @@ struct ListAreaView: View {
                     }
                 }
             } else {
-                if viewModel.stagingWindow != nil {
+                if viewModel.stagingWindow != nil && !viewModel.isSpaceMenuOpen {
                     // Staging target space selection
                     let spaces = viewModel.filteredMoveWindowSpaces
                     if spaces.isEmpty {

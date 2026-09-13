@@ -16,6 +16,8 @@ extension LauncherViewModel {
             
             if command.hasSubpage {
                 activeCommand = command
+                isSpaceMenuOpen = command.type == .switchToDesktop || command.type == .moveWindow
+                selectedRowIndex = 0
             } else {
                 executeSimpleCommand(command.type)
             }
@@ -38,6 +40,7 @@ extension LauncherViewModel {
                 }
                 
                 stagingWindow = nil
+                isSpaceMenuOpen = false
                 selectedRowIndex = batchMoveLastSelectedIndex
                 return
             }
@@ -73,6 +76,7 @@ extension LauncherViewModel {
                     batchMoveLastSelectedIndex = selectedRowIndex
                     isStagingForRestoreTo = false
                     stagingWindow = window
+                    isSpaceMenuOpen = true
                     selectedRowIndex = 0
                 }
                 

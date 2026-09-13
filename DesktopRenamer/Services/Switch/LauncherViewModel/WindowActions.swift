@@ -43,6 +43,7 @@ extension LauncherViewModel {
 
         batchMoveLastSelectedIndex = selectedRowIndex
         stagingWindow = window
+        isSpaceMenuOpen = true
         isExecutingRestoreToImmediately = true
         selectedRowIndex = 0
     }

@@ -60,6 +60,140 @@ struct LauncherActionMenuView: View {
     }
 }
 
+struct LauncherSpaceMenuView: View {
+    @ObservedObject var viewModel: LauncherViewModel
+    @Environment(\.colorScheme) var colorScheme
+
+    var colors: ThemeColors {
+        ThemeColors(isDark: colorScheme == .dark)
+    }
+
+    private var spaces: [SpaceGroup] {
+        if viewModel.stagingWindow != nil {
+            return viewModel.filteredMoveWindowSpaces
+        }
+
+        switch viewModel.activeCommand?.type {
+        case .moveWindow:
+            return viewModel.filteredActiveWindowMoveSpaces
+        case .switchToDesktop:
+            return viewModel.filteredSpaces
+        default:
+            return []
+        }
+    }
+
+    private var title: String {
+        if let stagingWindow = viewModel.stagingWindow {
+            return String(format: String(localized: "Move %@ to"), stagingWindow.ownerName)
+        }
+
+        return viewModel.activeCommand?.title ?? String(localized: "Select Space")
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            Text(title)
+                .font(.callout)
+                .foregroundColor(colors.textSecondary)
+                .lineLimit(1)
+                .padding(.horizontal, 16)
+                .padding(.top, 12)
+                .padding(.bottom, 8)
+
+            Divider()
+                .opacity(0.5)
+
+            if spaces.isEmpty {
+                Text(String(localized: "No spaces available"))
+                    .font(.body)
+                    .foregroundColor(colors.textSecondary)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(16)
+            } else {
+                ScrollView {
+                    LazyVStack(spacing: 2) {
+                        ForEach(Array(spaces.enumerated()), id: \.element.id) { index, space in
+                            LauncherSpaceMenuRow(
+                                space: space,
+                                isSelected: viewModel.selectedRowIndex == index,
+                                isCurrent: SpaceHelper.getCurrentSpaceID(for: space.displayID) == space.id,
+                                shortcutNumber: index + 1,
+                                showShortcut: viewModel.showCommandNumbers && index < 9,
+                                colors: colors
+                            ) {
+                                viewModel.isKeyboardSelection = true
+                                viewModel.selectedRowIndex = index
+                                viewModel.executeRowAction()
+                            }
+                        }
+                    }
+                    .padding(8)
+                }
+                .frame(height: min(max(CGFloat(spaces.count) * 42, 42), 300))
+                .scrollIndicators(.hidden)
+            }
+        }
+        .frame(width: 380)
+        .launcherFrosted(in: RoundedRectangle(cornerRadius: 26, style: .continuous))
+    }
+}
+
+private struct LauncherSpaceMenuRow: View {
+    let space: SpaceGroup
+    let isSelected: Bool
+    let isCurrent: Bool
+    let shortcutNumber: Int
+    let showShortcut: Bool
+    let colors: ThemeColors
+    let action: () -> Void
+
+    @State private var isHovered = false
+
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: 10) {
+                if isCurrent {
+                    Circle()
+                        .stroke(Color.blue, lineWidth: 2)
+                        .frame(width: 18, height: 18)
+                        .frame(width: 24, height: 24)
+                } else {
+                    Image(systemName: "desktopcomputer")
+                        .font(.system(size: 17, weight: .medium))
+                        .foregroundColor(colors.textSecondary)
+                        .frame(width: 24, height: 24)
+                }
+
+                Text(space.name)
+                    .font(.body)
+                    .foregroundColor(colors.textPrimary)
+                    .lineLimit(1)
+
+                Spacer(minLength: 0)
+
+                Text(String(format: String(localized: "%@ · Space %lld"), space.displayName, space.num))
+                    .font(.callout)
+                    .foregroundColor(colors.textSecondary)
+                    .lineLimit(1)
+
+                if showShortcut {
+                    KeycapView(text: "⌘\(shortcutNumber)", isSelected: isSelected)
+                }
+            }
+            .padding(.horizontal, 12)
+            .padding(.vertical, 8)
+            .background {
+                RoundedRectangle(cornerRadius: 10, style: .continuous)
+                    .fill(isSelected ? colors.rowSelection : (isHovered ? colors.rowHover : .clear))
+            }
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .onHover { isHovered = $0 }
+    }
+}
+
 private struct ActionMenuItem: Identifiable {
     let index: Int
     let action: BatchStagedActionType

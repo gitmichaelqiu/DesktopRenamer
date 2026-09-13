@@ -125,6 +125,7 @@ enum DesktopRearrangementDirection {
             }
         }
     }
+    @Published var isSpaceMenuOpen: Bool = false
     @Published var commandKSelectedIndex: Int = 0
     @Published var isStagingForRestoreTo: Bool = false
     @Published var isExecutingRestoreToImmediately: Bool = false

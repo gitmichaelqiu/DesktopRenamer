@@ -14,7 +14,7 @@ class LauncherNSPanel: NSPanel {
     }
 }
 
-private final class LauncherActionMenuPanel: NSPanel {
+private final class LauncherMenuPanel: NSPanel {
     override var canBecomeKey: Bool {
         return false
     }
@@ -46,12 +46,12 @@ private final class LauncherActionMenuPanel: NSPanel {
 }
 
 @MainActor
-private final class LauncherActionMenuPanelController {
-    private let panel = LauncherActionMenuPanel()
-    private var hostingView: NSHostingView<LauncherActionMenuView>?
+private final class LauncherMenuPanelController {
+    private let panel = LauncherMenuPanel()
+    private var hostingView: NSHostingView<AnyView>?
     private weak var parentWindow: NSWindow?
 
-    func show(window: WindowEntry, parent: NSWindow, viewModel: LauncherViewModel) {
+    func show(content: AnyView, parent: NSWindow) {
         if parentWindow !== parent {
             if let previousParent = parentWindow {
                 previousParent.removeChildWindow(panel)
@@ -63,11 +63,9 @@ private final class LauncherActionMenuPanelController {
         }
 
         if let hostingView {
-            hostingView.rootView = LauncherActionMenuView(viewModel: viewModel, window: window)
+            hostingView.rootView = content
         } else {
-            let hostingView = NSHostingView(
-                rootView: LauncherActionMenuView(viewModel: viewModel, window: window)
-            )
+            let hostingView = NSHostingView(rootView: content)
             hostingView.wantsLayer = true
             hostingView.layer?.backgroundColor = NSColor.clear.cgColor
             hostingView.sizingOptions = [.intrinsicContentSize]
@@ -112,7 +110,7 @@ class LauncherWindowController: NSWindowController, NSWindowDelegate {
     private var flagsChangedMonitor: Any?
     private var keyDownMonitor: Any?
     private var isHiding = false
-    private let actionMenuController = LauncherActionMenuPanelController()
+    private let actionMenuController = LauncherMenuPanelController()
     
     init() {
         let panel = LauncherNSPanel(
@@ -257,7 +255,24 @@ class LauncherWindowController: NSWindowController, NSWindowDelegate {
             return
         }
 
-        actionMenuController.show(window: targetWindow, parent: parent, viewModel: viewModel)
+        actionMenuController.show(
+            content: AnyView(LauncherActionMenuView(viewModel: viewModel, window: targetWindow)),
+            parent: parent
+        )
+    }
+
+    func updateSpaceMenu() {
+        guard let parent = window,
+              viewModel.commandKTargetWindow == nil,
+              viewModel.isSpaceMenuOpen else {
+            actionMenuController.hide()
+            return
+        }
+
+        actionMenuController.show(
+            content: AnyView(LauncherSpaceMenuView(viewModel: viewModel)),
+            parent: parent
+        )
     }
     
     func toggle() {

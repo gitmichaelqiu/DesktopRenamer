@@ -15,6 +15,16 @@ extension LauncherViewModel {
     func handleEscapeKey() {
         if isBottomBarFocused {
             leaveSpaceBarFocus()
+        } else if isSpaceMenuOpen {
+            isSpaceMenuOpen = false
+            if stagingWindow != nil {
+                stagingWindow = nil
+                isStagingForRestoreTo = false
+                isExecutingRestoreToImmediately = false
+                selectedRowIndex = batchMoveLastSelectedIndex
+            } else {
+                activeCommand = nil
+            }
         } else if stagingWindow != nil {
             stagingWindow = nil
             isStagingForRestoreTo = false
@@ -107,6 +117,7 @@ extension LauncherViewModel {
         selectedRowIndex = 0
         activeCommand = nil
         stagingWindow = nil
+        isSpaceMenuOpen = false
         isBottomBarFocused = false
         onClose?()
     }
@@ -118,6 +129,7 @@ extension LauncherViewModel {
         selectedSpaceIndex = 0
         activeCommand = nil
         stagingWindow = nil
+        isSpaceMenuOpen = false
         isBottomBarFocused = false
         isStagingForRestoreTo = false
         isExecutingRestoreToImmediately = false
