@@ -163,5 +163,6 @@ struct CommandBottomBar: View {
         .padding(.horizontal, 8)
         .padding(.vertical, 6)
         .frame(height: 52)
+        .animation(LauncherAnimation.capsule, value: viewModel.stagingWindow?.id ?? 0)
     }
 }

@@ -9,6 +9,13 @@ struct LauncherView: View {
     var colors: ThemeColors {
         ThemeColors(isDark: colorScheme == .dark)
     }
+
+    private var submenuTransitionKey: String {
+        if let targetWindow = viewModel.commandKTargetWindow {
+            return "actions-\(targetWindow.id)"
+        }
+        return viewModel.isSpaceMenuOpen ? "spaces" : "none"
+    }
     
     var body: some View {
         ZStack {
@@ -259,16 +266,19 @@ struct LauncherView: View {
                     LauncherActionMenuView(viewModel: viewModel, window: targetWindow)
                         .padding(8)
                         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomTrailing)
+                        .transition(.launcherSubmenu)
                 } else if viewModel.isSpaceMenuOpen {
                     LauncherSpaceMenuView(viewModel: viewModel)
                         .padding(8)
                         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomTrailing)
+                        .transition(.launcherSubmenu)
                 }
             }
         }
         .frame(width: 750, height: 475)
         .launcherBackground(cornerRadius: 26)
         .disabled(viewModel.isRearrangingSpace)
+        .animation(LauncherAnimation.submenu, value: submenuTransitionKey)
     }
 }
 

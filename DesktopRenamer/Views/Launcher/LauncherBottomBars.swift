@@ -69,7 +69,7 @@ struct BatchMoveBottomBar: View {
                                 if case .move = action.actionType { return true }
                                 return false
                             }()
-                            
+
                             HStack(spacing: 8) {
                                 HStack(spacing: 4) {
                                     Text(verbatim: String(localized: isMove ? "Unstage Move" : "Unstage Action"))
@@ -127,6 +127,8 @@ struct BatchMoveBottomBar: View {
         .padding(.horizontal, 8)
         .padding(.vertical, 6)
         .frame(height: 52)
+        .animation(LauncherAnimation.capsule, value: viewModel.stagingWindow?.id ?? 0)
+        .animation(LauncherAnimation.capsule, value: viewModel.stagedMoves.count)
     }
 }
 
@@ -192,6 +194,7 @@ struct SpacesBottomBar: View {
                 }
                 .frame(width: labelWidth, height: 28, alignment: .leading)
                 .padding(.trailing, 8)
+                .transition(.launcherCapsule)
             } else {
                 Text(verbatim: String(localized: "Spaces:"))
                     .font(.subheadline)
@@ -200,6 +203,7 @@ struct SpacesBottomBar: View {
                     .frame(width: labelWidth, alignment: .leading)
                     .padding(.trailing, 8)
                     .layoutPriority(1)
+                    .transition(.launcherCapsule)
             }
             
             // Scrollable spaces list
@@ -309,28 +313,32 @@ struct SpacesBottomBar: View {
                             .modifier(BottomBarCapsule(isSelected: false, isActive: false, colorScheme: colorScheme))
                         }
                         .buttonStyle(PlainButtonStyle())
+                        .transition(.launcherCapsule)
                     }
                     
                     if viewModel.isBottomBarFocused {
-                        HStack(spacing: 4) {
-                            Text(LocalizedStringKey("Switch Space"))
-                            KeycapView(text: "↵", isSelected: false)
+                        Group {
+                            HStack(spacing: 4) {
+                                Text(LocalizedStringKey("Switch Space"))
+                                KeycapView(text: "↵", isSelected: false)
+                            }
+                            .modifier(BottomBarCapsule(isSelected: false, isActive: false, colorScheme: colorScheme))
+                            .contentShape(Rectangle())
+                            .onTapGesture {
+                                viewModel.executeBottomBarSpaceAction(isOption: false, isCommand: false)
+                            }
+
+                            HStack(spacing: 4) {
+                                Text(LocalizedStringKey("Move Window"))
+                                KeycapView(text: "⌥↵", isSelected: false)
+                            }
+                            .modifier(BottomBarCapsule(isSelected: false, isActive: false, colorScheme: colorScheme))
+                            .contentShape(Rectangle())
+                            .onTapGesture {
+                                viewModel.executeBottomBarSpaceAction(isOption: true, isCommand: false)
+                            }
                         }
-                        .modifier(BottomBarCapsule(isSelected: false, isActive: false, colorScheme: colorScheme))
-                        .contentShape(Rectangle())
-                        .onTapGesture {
-                            viewModel.executeBottomBarSpaceAction(isOption: false, isCommand: false)
-                        }
-                        
-                        HStack(spacing: 4) {
-                            Text(LocalizedStringKey("Move Window"))
-                            KeycapView(text: "⌥↵", isSelected: false)
-                        }
-                        .modifier(BottomBarCapsule(isSelected: false, isActive: false, colorScheme: colorScheme))
-                        .contentShape(Rectangle())
-                        .onTapGesture {
-                            viewModel.executeBottomBarSpaceAction(isOption: true, isCommand: false)
-                        }
+                        .transition(.launcherCapsule)
                     } else {
                         HStack(spacing: 4) {
                             Text(LocalizedStringKey("Action"))
@@ -341,6 +349,7 @@ struct SpacesBottomBar: View {
                         .onTapGesture {
                             viewModel.executeRowAction()
                         }
+                        .transition(.launcherCapsule)
                     }
                 }
                 .padding(4)
@@ -351,6 +360,6 @@ struct SpacesBottomBar: View {
         .padding(.horizontal, 8)
         .padding(.vertical, 6)
         .frame(height: 52)
-        .animation(.spring(response: 0.35, dampingFraction: 0.85), value: viewModel.isBottomBarFocused)
+        .animation(LauncherAnimation.capsule, value: viewModel.isBottomBarFocused)
     }
 }

@@ -1,5 +1,27 @@
 import SwiftUI
 
+enum LauncherAnimation {
+    static let capsule = Animation.spring(response: 0.28, dampingFraction: 0.85)
+    static let submenu = Animation.spring(response: 0.30, dampingFraction: 0.86)
+    static let fade = Animation.easeOut(duration: 0.14)
+}
+
+extension AnyTransition {
+    static var launcherCapsule: AnyTransition {
+        .asymmetric(
+            insertion: .scale(scale: 0.92, anchor: .center).combined(with: .opacity),
+            removal: .scale(scale: 0.96, anchor: .center).combined(with: .opacity)
+        )
+    }
+
+    static var launcherSubmenu: AnyTransition {
+        .asymmetric(
+            insertion: .scale(scale: 0.94, anchor: .bottomTrailing).combined(with: .opacity),
+            removal: .scale(scale: 0.98, anchor: .bottomTrailing).combined(with: .opacity)
+        )
+    }
+}
+
 struct BottomBarCapsule: ViewModifier {
     let isSelected: Bool
     let isActive: Bool
@@ -28,6 +50,9 @@ struct BottomBarCapsule: ViewModifier {
                         : (isActive || isSelected || isHovered ? .primary : neutralText)
             )
             .clipShape(Capsule())
+            .animation(LauncherAnimation.capsule, value: isSelected)
+            .animation(LauncherAnimation.fade, value: isActive)
+            .animation(LauncherAnimation.fade, value: isHovered)
             .onHover { hovering in
                 isHovered = hovering
             }
