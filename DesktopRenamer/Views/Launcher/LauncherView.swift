@@ -10,13 +10,6 @@ struct LauncherView: View {
         ThemeColors(isDark: colorScheme == .dark)
     }
 
-    private var submenuTransitionKey: String {
-        if let targetWindow = viewModel.commandKTargetWindow {
-            return "actions-\(targetWindow.id)"
-        }
-        return viewModel.isSpaceMenuOpen ? "spaces" : "none"
-    }
-
     var body: some View {
         ZStack {
             VStack(spacing: 0) {
@@ -250,35 +243,42 @@ struct LauncherView: View {
                 }
             }
 
-            if viewModel.commandKTargetWindow != nil || viewModel.isSpaceMenuOpen {
-                Color.clear
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-                    .contentShape(Rectangle())
-                    .onTapGesture {
-                        if viewModel.commandKTargetWindow != nil {
-                            viewModel.commandKTargetWindow = nil
-                        } else {
-                            viewModel.handleEscapeKey()
+            ZStack {
+                if viewModel.commandKTargetWindow != nil || viewModel.isSpaceMenuOpen {
+                    Color.clear
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                        .contentShape(Rectangle())
+                        .onTapGesture {
+                            if viewModel.commandKTargetWindow != nil {
+                                viewModel.commandKTargetWindow = nil
+                            } else {
+                                viewModel.handleEscapeKey()
+                            }
                         }
-                    }
 
-                if let targetWindow = viewModel.commandKTargetWindow {
-                    LauncherActionMenuView(viewModel: viewModel, window: targetWindow)
-                        .padding(8)
-                        .transition(.launcherSubmenu)
-                        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomTrailing)
-                } else if viewModel.isSpaceMenuOpen {
-                    LauncherSpaceMenuView(viewModel: viewModel)
-                        .padding(8)
-                        .transition(.launcherSubmenu)
-                        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomTrailing)
+                    if let targetWindow = viewModel.commandKTargetWindow {
+                        LauncherActionMenuView(viewModel: viewModel, window: targetWindow)
+                            .transition(.launcherSubmenu)
+                            .padding(8)
+                            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomTrailing)
+                    } else if viewModel.isSpaceMenuOpen {
+                        LauncherSpaceMenuView(viewModel: viewModel)
+                            .transition(.launcherSubmenu)
+                            .padding(8)
+                            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomTrailing)
+                    }
                 }
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .transaction { transaction in
+                transaction.animation = viewModel.commandKTargetWindow != nil || viewModel.isSpaceMenuOpen
+                    ? LauncherAnimation.submenu
+                    : LauncherAnimation.submenuExit
             }
         }
         .frame(width: 750, height: 475)
         .launcherBackground(cornerRadius: 26)
         .disabled(viewModel.isRearrangingSpace)
-        .animation(LauncherAnimation.submenu, value: submenuTransitionKey)
     }
 }
 
