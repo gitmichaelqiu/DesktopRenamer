@@ -113,14 +113,6 @@ extension SpaceHelper {
             object: nil,
             userInfo: startedUserInfo
         )
-
-        if forceInstant {
-            scheduleInstantSpaceSwitchRecovery(
-                spaceID: spaceID,
-                displayID: displayID,
-                requestID: requestID
-            )
-        }
     }
 
     static func cancelPendingSwitchPromotion() {
@@ -144,8 +136,6 @@ extension SpaceHelper {
             programmaticSwitchTimeoutWorkItem = nil
             syntheticGestureRetryWorkItem?.cancel()
             syntheticGestureRetryWorkItem = nil
-            instantSpaceSwitchRecoveryWorkItem?.cancel()
-            instantSpaceSwitchRecoveryWorkItem = nil
             cancelPendingSwitchPromotion()
             lastProgrammaticSwitchTime = 0
             lastProgrammaticTargetSpaceID = nil
@@ -159,8 +149,6 @@ extension SpaceHelper {
         programmaticSwitchTimeoutWorkItem = nil
         syntheticGestureRetryWorkItem?.cancel()
         syntheticGestureRetryWorkItem = nil
-        instantSpaceSwitchRecoveryWorkItem?.cancel()
-        instantSpaceSwitchRecoveryWorkItem = nil
         cancelPendingSwitchPromotion()
         switchTransactionCoordinator.cancelActive(dropPending: true)
         isSwitching = false

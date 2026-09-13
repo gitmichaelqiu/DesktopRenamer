@@ -72,8 +72,7 @@ extension SpaceHelper {
         scheduledDelay: TimeInterval,
         retryInterval: TimeInterval,
         maxAttempts: Int,
-        snapshotProbeAttempt: Int,
-        slsRecoveryAttempted: Bool
+        snapshotProbeAttempt: Int
     ) {
         syntheticGestureRetryWorkItem?.cancel()
         let workItem = DispatchWorkItem {
@@ -93,8 +92,7 @@ extension SpaceHelper {
                     attempt: attempt,
                     retryInterval: retryInterval,
                     maxAttempts: maxAttempts,
-                    snapshotProbeAttempt: snapshotProbeAttempt,
-                    slsRecoveryAttempted: slsRecoveryAttempted
+                    snapshotProbeAttempt: snapshotProbeAttempt
                 )
                 return
             }
@@ -119,42 +117,11 @@ extension SpaceHelper {
                         attempt: attempt,
                         retryInterval: retryInterval,
                         maxAttempts: maxAttempts,
-                        snapshotProbeAttempt: snapshotProbeAttempt,
-                        slsRecoveryAttempted: slsRecoveryAttempted
+                        snapshotProbeAttempt: snapshotProbeAttempt
                     )
                 }
                 return
             }
-
-            // macOS 27 can accept the synthetic event without handing it to
-            // WindowServer after a long sleep/wake cycle. Recover only after
-            // the live read proves that the gesture had no effect; successful
-            // animated switches never take this path.
-            let canAttemptSLSRecovery =
-                !slsRecoveryAttempted
-                    && shouldSwitchToSpaceUsingSLS()
-                    && Int(spaceID) != nil
-            if canAttemptSLSRecovery,
-               let managedSpaceID = Int(spaceID) {
-                DiagnosticEventLog.shared.record(
-                    subsystem: "SpaceHelper",
-                    level: "warning",
-                    "Synthetic gesture did not change live Space; attempting direct SLS recovery: target=\(spaceID), display=\(displayID), generation=\(generation)"
-                )
-                if switchSpaceUsingSLSOperation(
-                    displayUUID: displayID,
-                    spaceID: managedSpaceID
-                ) {
-                    scheduleSLSRecoveryVerification(
-                        spaceID: spaceID,
-                        displayID: displayID,
-                        generation: generation,
-                        attempt: 0
-                    )
-                    return
-                }
-            }
-            let hasAttemptedSLSRecovery = slsRecoveryAttempted || canAttemptSLSRecovery
 
             guard let state = getSystemState() else {
                 scheduleSyntheticGestureSnapshotProbe(
@@ -164,8 +131,7 @@ extension SpaceHelper {
                     attempt: attempt,
                     retryInterval: retryInterval,
                     maxAttempts: maxAttempts,
-                    snapshotProbeAttempt: snapshotProbeAttempt,
-                    slsRecoveryAttempted: hasAttemptedSLSRecovery
+                    snapshotProbeAttempt: snapshotProbeAttempt
                 )
                 return
             }
@@ -182,8 +148,7 @@ extension SpaceHelper {
                     attempt: attempt,
                     retryInterval: retryInterval,
                     maxAttempts: maxAttempts,
-                    snapshotProbeAttempt: snapshotProbeAttempt,
-                    slsRecoveryAttempted: hasAttemptedSLSRecovery
+                    snapshotProbeAttempt: snapshotProbeAttempt
                 )
                 return
             }
@@ -229,8 +194,7 @@ extension SpaceHelper {
                 scheduledDelay: followUpDelay,
                 retryInterval: retryInterval,
                 maxAttempts: maxAttempts,
-                snapshotProbeAttempt: 0,
-                slsRecoveryAttempted: hasAttemptedSLSRecovery
+                snapshotProbeAttempt: 0
             )
         }
         syntheticGestureRetryWorkItem = workItem
@@ -244,8 +208,7 @@ extension SpaceHelper {
         attempt: Int,
         retryInterval: TimeInterval,
         maxAttempts: Int,
-        snapshotProbeAttempt: Int,
-        slsRecoveryAttempted: Bool
+        snapshotProbeAttempt: Int
     ) {
         let snapshotProbeLimit = 4
         guard snapshotProbeAttempt < snapshotProbeLimit else {
@@ -274,107 +237,7 @@ extension SpaceHelper {
             scheduledDelay: 0.12,
             retryInterval: retryInterval,
             maxAttempts: maxAttempts,
-            snapshotProbeAttempt: snapshotProbeAttempt + 1,
-            slsRecoveryAttempted: slsRecoveryAttempted
+            snapshotProbeAttempt: snapshotProbeAttempt + 1
         )
-    }
-
-    /// Verifies a direct SLS recovery without reposting the failed synthetic
-    /// gesture. WindowServer applies the operation asynchronously, so give it
-    /// a short bounded window before allowing the normal transaction timeout.
-    private static func scheduleSLSRecoveryVerification(
-        spaceID: String,
-        displayID: String,
-        generation: UInt64,
-        attempt: Int
-    ) {
-        let verificationLimit = 10
-        guard attempt < verificationLimit else {
-            DiagnosticEventLog.shared.record(
-                subsystem: "SpaceHelper",
-                level: "warning",
-                "Direct SLS recovery did not reach its target: generation=\(generation), target=\(spaceID), display=\(displayID)"
-            )
-            return
-        }
-
-        let workItem = DispatchWorkItem {
-            guard let active = switchTransactionCoordinator.active,
-                  isSwitching,
-                  active.generation == generation,
-                  active.request.spaceID == spaceID else {
-                return
-            }
-            syntheticGestureRetryWorkItem = nil
-
-            if getCurrentSpaceID(for: displayID) == spaceID {
-                markProgrammaticSwitchComplete(at: spaceID)
-                if programmaticSwitchDestinationObserved {
-                    return
-                }
-            }
-
-            scheduleSLSRecoveryVerification(
-                spaceID: spaceID,
-                displayID: displayID,
-                generation: generation,
-                attempt: attempt + 1
-            )
-        }
-        syntheticGestureRetryWorkItem = workItem
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.12, execute: workItem)
-    }
-
-    /// Force-instant requests have no serialized transaction to own a
-    /// watchdog. Retry the direct operation briefly when the original shortcut
-    /// or activation primitive did not move the target display.
-    static func scheduleInstantSpaceSwitchRecovery(
-        spaceID: String,
-        displayID: String,
-        requestID: UInt64,
-        attempt: Int = 1,
-        scheduledDelay: TimeInterval = 0.15
-    ) {
-        guard shouldSwitchToSpaceUsingSLS(),
-              let managedSpaceID = Int(spaceID) else {
-            return
-        }
-
-        instantSpaceSwitchRecoveryWorkItem?.cancel()
-        let workItem = DispatchWorkItem {
-            guard lastProgrammaticSwitchRequestID == requestID,
-                  lastProgrammaticTargetSpaceID == spaceID else {
-                instantSpaceSwitchRecoveryWorkItem = nil
-                return
-            }
-            guard getCurrentSpaceID(for: displayID) != spaceID else {
-                instantSpaceSwitchRecoveryWorkItem = nil
-                return
-            }
-
-            instantSpaceSwitchRecoveryWorkItem = nil
-            let accepted = switchSpaceUsingSLSOperation(
-                displayUUID: displayID,
-                spaceID: managedSpaceID
-            )
-            if accepted {
-                DiagnosticEventLog.shared.record(
-                    subsystem: "SpaceHelper",
-                    level: "warning",
-                    "Force-instant switch recovered through direct SLS operation: target=\(spaceID), display=\(displayID), request=\(requestID)"
-                )
-            }
-
-            guard attempt < 2 else { return }
-            scheduleInstantSpaceSwitchRecovery(
-                spaceID: spaceID,
-                displayID: displayID,
-                requestID: requestID,
-                attempt: attempt + 1,
-                scheduledDelay: 0.25
-            )
-        }
-        instantSpaceSwitchRecoveryWorkItem = workItem
-        DispatchQueue.main.asyncAfter(deadline: .now() + scheduledDelay, execute: workItem)
     }
 }

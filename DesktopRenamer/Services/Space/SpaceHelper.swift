@@ -101,10 +101,6 @@ class SpaceHelper {
     static var programmaticSwitchCompletionWorkItem: DispatchWorkItem?
     static var programmaticSwitchTimeoutWorkItem: DispatchWorkItem?
     static var syntheticGestureRetryWorkItem: DispatchWorkItem?
-    // Force-instant switches do not enter the serialized transaction. Keep a
-    // separate recovery task so a shortcut or activation primitive dropped by
-    // WindowServer after wake can still be repaired without a transaction.
-    static var instantSpaceSwitchRecoveryWorkItem: DispatchWorkItem?
     static var programmaticSwitchPromotionWorkItem: DispatchWorkItem?
     static var programmaticSwitchPromotionRequest: SpaceSwitchTransactionCoordinator.Request?
     static var programmaticSwitchPromotionGeneration: UInt64?
