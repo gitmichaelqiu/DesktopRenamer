@@ -264,13 +264,13 @@ struct LauncherView: View {
 
                 if let targetWindow = viewModel.commandKTargetWindow {
                     LauncherActionMenuView(viewModel: viewModel, window: targetWindow)
-                        .transition(.launcherSubmenu)
                         .padding(8)
+                        .transition(.launcherSubmenu)
                         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomTrailing)
                 } else if viewModel.isSpaceMenuOpen {
                     LauncherSpaceMenuView(viewModel: viewModel)
-                        .transition(.launcherSubmenu)
                         .padding(8)
+                        .transition(.launcherSubmenu)
                         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomTrailing)
                 }
             }
