@@ -34,7 +34,6 @@ struct CommandBottomBar: View {
                                 .foregroundColor(colors.greenText)
                             Text(String(format: NSLocalizedString("Move: %@", comment: ""), staging.ownerName))
                                 .font(.subheadline)
-                                .fontWeight(.semibold)
                                 .foregroundColor(colors.textPrimary)
                         }
                         .modifier(BottomBarCapsule(isSelected: false, isActive: false, colorScheme: colorScheme))

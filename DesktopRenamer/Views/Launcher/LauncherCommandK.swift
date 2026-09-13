@@ -106,7 +106,7 @@ struct LauncherActionMenuView: View {
 
                 VStack(alignment: .leading, spacing: 2) {
                     Text(window.title.isEmpty ? String(localized: "(No Title)") : window.title)
-                        .font(.headline)
+                        .font(.body)
                         .foregroundColor(colors.textPrimary)
                         .lineLimit(1)
 
@@ -318,7 +318,6 @@ struct CommandKActionRowView: View {
 
                 Text(getActionLabel(for: action))
                     .font(.body)
-                    .fontWeight(isSelected ? .semibold : .regular)
                     .foregroundColor(colors.textPrimary)
 
                 Spacer(minLength: 0)

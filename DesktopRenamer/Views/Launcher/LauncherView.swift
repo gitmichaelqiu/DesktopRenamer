@@ -205,7 +205,6 @@ struct LauncherView: View {
                         
                         Text(verbatim: String(localized: "Rename Current Space"))
                             .font(.body)
-                            .fontWeight(.medium)
                             .foregroundColor(.primary)
  
                         Text(verbatim: String(localized: "Type a new name above and press Enter to save"))
@@ -221,7 +220,6 @@ struct LauncherView: View {
                             .scaleEffect(1.2)
                         Text(verbatim: String(localized: "Executing batch window moves..."))
                             .font(.body)
-                            .fontWeight(.medium)
                             .foregroundColor(.secondary)
                     }
                     .frame(maxHeight: .infinity)

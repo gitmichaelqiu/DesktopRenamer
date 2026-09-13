@@ -32,7 +32,6 @@ struct BatchMoveBottomBar: View {
                             .foregroundColor(colors.greenText)
                         Text(String(format: NSLocalizedString("Stage: %@", comment: ""), staging.ownerName))
                             .font(.subheadline)
-                            .fontWeight(.semibold)
                             .foregroundColor(colors.textPrimary)
                     }
                     .modifier(BottomBarCapsule(isSelected: false, isActive: false, colorScheme: colorScheme))
@@ -149,7 +148,6 @@ struct SpacesBottomBar: View {
                 ZStack(alignment: .leading) {
                     Text(verbatim: String(localized: "Spaces:"))
                         .font(.subheadline)
-                        .fontWeight(.semibold)
                         .foregroundColor(colors.textTertiary)
                         .opacity(viewModel.spaceBarQuery.isEmpty ? 1 : 0)
 
@@ -183,7 +181,7 @@ struct SpacesBottomBar: View {
                         },
                         onKeyEquivalent: { _ in false },
                         placeholder: String(localized: "Spaces:"),
-                        textFieldFont: NSFont.systemFont(ofSize: 13, weight: .semibold),
+                        textFieldFont: NSFont.systemFont(ofSize: 13, weight: .regular),
                         textFieldColor: NSColor.secondaryLabelColor.withAlphaComponent(0.65),
                         placeholderColor: NSColor.clear,
                         usesSingleLineMode: true,
@@ -198,7 +196,6 @@ struct SpacesBottomBar: View {
             } else {
                 Text(verbatim: String(localized: "Spaces:"))
                     .font(.subheadline)
-                    .fontWeight(.semibold)
                     .foregroundColor(colors.textTertiary)
                     .frame(width: labelWidth, alignment: .leading)
                     .padding(.trailing, 8)

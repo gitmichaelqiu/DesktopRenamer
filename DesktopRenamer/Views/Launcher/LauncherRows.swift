@@ -82,7 +82,6 @@ struct EmptyResultsView: View {
                 .foregroundColor(colors.textQuaternary)
             Text(verbatim: String(localized: "No results"))
                 .font(.body)
-                .fontWeight(.medium)
                 .foregroundColor(colors.textTertiary)
             Text(verbatim: String(localized: "No commands matched your search query."))
                 .font(.subheadline)
@@ -148,7 +147,6 @@ struct CommandRowView: View {
             } else if let statusText = toggleStatus {
                 Text(LocalizedStringKey(statusText))
                     .font(.subheadline)
-                    .fontWeight(.semibold)
                     .foregroundColor(statusText == "Enabled" ? colors.greenText : colors.textSecondary)
                     .padding(.horizontal, 8)
                     .padding(.vertical, 3)
@@ -260,7 +258,6 @@ struct WindowStateBadge: View {
     var body: some View {
         Text(label)
             .font(.footnote)
-            .fontWeight(.semibold)
             .foregroundColor(color)
             .padding(.horizontal, 10)
             .padding(.vertical, 4)
@@ -349,7 +346,6 @@ struct ConfirmBatchRowView: View {
             
             Text(verbatim: String(format: String(localized: "Confirm & Execute Batch Move (%lld windows)"), count))
                 .font(.body)
-                .fontWeight(.semibold)
                 .foregroundColor(isSelected ? .white : colors.greenText)
             
             Spacer()
@@ -393,7 +389,6 @@ struct WindowBatchRowView: View {
 
             Text(window.title.isEmpty ? String(localized: "(No Title)") : window.title)
                 .font(.body)
-                .fontWeight(.semibold)
                 .foregroundColor(colors.textPrimary)
                 .lineLimit(1)
                 .truncationMode(.middle)
@@ -423,7 +418,6 @@ struct WindowBatchRowView: View {
                 } else if isStaged {
                     Text(stagedActionText)
                         .font(.subheadline)
-                        .fontWeight(.semibold)
                         .foregroundColor(colors.greenText)
                         .padding(.horizontal, 8)
                         .padding(.vertical, 3)
