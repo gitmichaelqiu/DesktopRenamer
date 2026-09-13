@@ -67,6 +67,8 @@ extension SpaceHelper {
         programmaticSwitchTimeoutWorkItem = nil
         syntheticGestureRetryWorkItem?.cancel()
         syntheticGestureRetryWorkItem = nil
+        instantSpaceSwitchRecoveryWorkItem?.cancel()
+        instantSpaceSwitchRecoveryWorkItem = nil
         programmaticSwitchPromotionWorkItem?.cancel()
         programmaticSwitchPromotionWorkItem = nil
         programmaticSwitchPromotionRequest = nil

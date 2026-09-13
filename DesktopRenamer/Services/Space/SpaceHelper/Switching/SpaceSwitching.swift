@@ -250,6 +250,8 @@ extension SpaceHelper {
         isManual: Bool
     ) -> SpaceSwitchRequestDisposition {
         cancelPendingSwitchPromotion()
+        instantSpaceSwitchRecoveryWorkItem?.cancel()
+        instantSpaceSwitchRecoveryWorkItem = nil
 
         let spaceID = context.targetSpace.id
         let displayID = context.targetSpace.displayID
@@ -337,7 +339,8 @@ extension SpaceHelper {
                     scheduledDelay: retryDelay,
                     retryInterval: retryDelay,
                     maxAttempts: involvesFullscreen ? 2 : 1,
-                    snapshotProbeAttempt: 0
+                    snapshotProbeAttempt: 0,
+                    slsRecoveryAttempted: false
                 )
             }
             scheduleSpaceSwitchLabelSuppression(generation: generation)
