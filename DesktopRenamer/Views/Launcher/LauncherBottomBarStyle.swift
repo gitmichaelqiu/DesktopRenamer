@@ -2,7 +2,7 @@ import SwiftUI
 
 enum LauncherAnimation {
     static let capsule = Animation.spring(response: 0.28, dampingFraction: 0.85)
-    static let submenu = Animation.spring(response: 0.30, dampingFraction: 0.86)
+    static let submenu = Animation.spring(response: 0.18, dampingFraction: 0.82, blendDuration: 0.04)
     static let fade = Animation.easeOut(duration: 0.14)
 }
 
@@ -16,8 +16,8 @@ extension AnyTransition {
 
     static var launcherSubmenu: AnyTransition {
         .asymmetric(
-            insertion: .scale(scale: 0.94, anchor: .bottomTrailing).combined(with: .opacity),
-            removal: .scale(scale: 0.98, anchor: .bottomTrailing).combined(with: .opacity)
+            insertion: .scale(scale: 0.84, anchor: .bottomTrailing).combined(with: .opacity),
+            removal: .scale(scale: 0.94, anchor: .bottomTrailing).combined(with: .opacity)
         )
     }
 }
