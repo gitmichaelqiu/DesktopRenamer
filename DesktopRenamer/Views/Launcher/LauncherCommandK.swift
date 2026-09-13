@@ -1,5 +1,87 @@
 import SwiftUI
 
+private enum LauncherSubmenu {
+    case actions(WindowEntry)
+    case spaces
+}
+
+struct LauncherSubmenuOverlay: View {
+    @ObservedObject var viewModel: LauncherViewModel
+
+    @State private var displayedSubmenu: LauncherSubmenu = .spaces
+    @State private var isPresented = false
+
+    private var requestedSubmenu: LauncherSubmenu? {
+        if let targetWindow = viewModel.commandKTargetWindow {
+            return .actions(targetWindow)
+        }
+        return viewModel.isSpaceMenuOpen ? .spaces : nil
+    }
+
+    private var requestedSubmenuKey: String {
+        if let targetWindow = viewModel.commandKTargetWindow {
+            return "actions-\(targetWindow.id)"
+        }
+        return viewModel.isSpaceMenuOpen ? "spaces" : "none"
+    }
+
+    var body: some View {
+        ZStack {
+            Color.clear
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .contentShape(Rectangle())
+                .allowsHitTesting(isPresented)
+                .onTapGesture {
+                    if viewModel.commandKTargetWindow != nil {
+                        viewModel.commandKTargetWindow = nil
+                    } else {
+                        viewModel.handleEscapeKey()
+                    }
+                }
+
+            submenuView(for: displayedSubmenu)
+                .offset(x: isPresented ? 0 : 6, y: isPresented ? 0 : 6)
+                .opacity(isPresented ? 1 : 0)
+                .padding(8)
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomTrailing)
+                .allowsHitTesting(isPresented)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .onAppear {
+            synchronizeSubmenu()
+        }
+        .onChange(of: requestedSubmenuKey) { _ in
+            synchronizeSubmenu()
+        }
+    }
+
+    @ViewBuilder
+    private func submenuView(for submenu: LauncherSubmenu) -> some View {
+        switch submenu {
+        case .actions(let window):
+            LauncherActionMenuView(viewModel: viewModel, window: window)
+        case .spaces:
+            LauncherSpaceMenuView(viewModel: viewModel)
+        }
+    }
+
+    private func synchronizeSubmenu() {
+        guard let requestedSubmenu else {
+            guard isPresented else { return }
+            withAnimation(LauncherAnimation.submenuExit) {
+                isPresented = false
+            }
+            return
+        }
+
+        displayedSubmenu = requestedSubmenu
+        guard !isPresented else { return }
+        withAnimation(LauncherAnimation.submenu) {
+            isPresented = true
+        }
+    }
+}
+
 struct LauncherActionMenuView: View {
     @ObservedObject var viewModel: LauncherViewModel
     let window: WindowEntry

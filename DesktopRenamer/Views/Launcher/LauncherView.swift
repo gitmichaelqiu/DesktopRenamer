@@ -243,38 +243,7 @@ struct LauncherView: View {
                 }
             }
 
-            ZStack {
-                if viewModel.commandKTargetWindow != nil || viewModel.isSpaceMenuOpen {
-                    Color.clear
-                        .frame(maxWidth: .infinity, maxHeight: .infinity)
-                        .contentShape(Rectangle())
-                        .onTapGesture {
-                            if viewModel.commandKTargetWindow != nil {
-                                viewModel.commandKTargetWindow = nil
-                            } else {
-                                viewModel.handleEscapeKey()
-                            }
-                        }
-
-                    if let targetWindow = viewModel.commandKTargetWindow {
-                        LauncherActionMenuView(viewModel: viewModel, window: targetWindow)
-                            .transition(.launcherSubmenu)
-                            .padding(8)
-                            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomTrailing)
-                    } else if viewModel.isSpaceMenuOpen {
-                        LauncherSpaceMenuView(viewModel: viewModel)
-                            .transition(.launcherSubmenu)
-                            .padding(8)
-                            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomTrailing)
-                    }
-                }
-            }
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .transaction { transaction in
-                transaction.animation = viewModel.commandKTargetWindow != nil || viewModel.isSpaceMenuOpen
-                    ? LauncherAnimation.submenu
-                    : LauncherAnimation.submenuExit
-            }
+            LauncherSubmenuOverlay(viewModel: viewModel)
         }
         .frame(width: 750, height: 475)
         .launcherBackground(cornerRadius: 26)
