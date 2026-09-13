@@ -19,16 +19,14 @@ class LauncherWindowController: NSWindowController, NSWindowDelegate {
     
     let viewModel = LauncherViewModel()
     
-    private var isCommandKeyPressed = false
-    private var cmdLongPressWorkItem: DispatchWorkItem?
     private var flagsChangedMonitor: Any?
     private var keyDownMonitor: Any?
     private var isHiding = false
     
     init() {
         let panel = LauncherNSPanel(
-            contentRect: NSRect(x: 0, y: 0, width: 840, height: 570),
-            styleMask: [.borderless, .nonactivatingPanel],
+            contentRect: NSRect(x: 0, y: 0, width: 750, height: 475),
+            styleMask: [.borderless, .fullSizeContentView, .nonactivatingPanel],
             backing: .buffered,
             defer: false
         )
@@ -38,7 +36,7 @@ class LauncherWindowController: NSWindowController, NSWindowDelegate {
         panel.backgroundColor = .clear
         panel.isOpaque = false
         panel.hasShadow = true
-        panel.level = .statusBar
+        panel.level = .floating
         panel.hidesOnDeactivate = false
         panel.becomesKeyOnlyIfNeeded = false
         // The launcher follows the Space that is active when it is presented.
@@ -60,39 +58,17 @@ class LauncherWindowController: NSWindowController, NSWindowDelegate {
         
         let launcherView = LauncherView(viewModel: self.viewModel)
         let hostingView = NSHostingView(rootView: launcherView)
-        hostingView.frame = NSRect(x: 0, y: 0, width: 840, height: 570)
+        hostingView.frame = NSRect(x: 0, y: 0, width: 750, height: 475)
+        hostingView.wantsLayer = true
+        hostingView.sizingOptions = []
         
         panel.contentView = hostingView
         
         flagsChangedMonitor = NSEvent.addLocalMonitorForEvents(matching: .flagsChanged) { [weak self] event in
             guard let self = self else { return event }
             let hasCommand = event.modifierFlags.contains(.command)
-            
-            if hasCommand {
-                if !self.isCommandKeyPressed {
-                    self.isCommandKeyPressed = true
-                    self.cmdLongPressWorkItem?.cancel()
-                    let workItem = DispatchWorkItem { [weak self] in
-                        guard let self = self else { return }
-                        if self.isCommandKeyPressed {
-                            withAnimation(.easeInOut(duration: 0.12)) {
-                                self.viewModel.showCommandNumbers = true
-                            }
-                        }
-                    }
-                    self.cmdLongPressWorkItem = workItem
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.35, execute: workItem)
-                }
-            } else {
-                if self.isCommandKeyPressed {
-                    self.isCommandKeyPressed = false
-                    self.cmdLongPressWorkItem?.cancel()
-                    self.cmdLongPressWorkItem = nil
-                    withAnimation(.easeInOut(duration: 0.12)) {
-                        self.viewModel.showCommandNumbers = false
-                    }
-                }
-            }
+
+            self.viewModel.showCommandNumbers = hasCommand
             return event
         }
 
@@ -168,9 +144,6 @@ class LauncherWindowController: NSWindowController, NSWindowDelegate {
             "launcher hide begin visible=\(panel?.isVisible ?? false), key=\(panel?.isKeyWindow ?? false), windowSpaces=\(panel.map { SpaceHelper.getWindowCurrentSpaces(windowID: $0.windowNumber).sorted() } ?? []), live=\(SpaceHelper.debugFormatSpaceMap(SpaceHelper.getCurrentSpaceIDsByDisplay()))"
         )
         window?.orderOut(nil)
-        isCommandKeyPressed = false
-        cmdLongPressWorkItem?.cancel()
-        cmdLongPressWorkItem = nil
         viewModel.resetForPresentation()
         viewModel.showCommandNumbers = false
         viewModel.previouslyActiveWindow = nil

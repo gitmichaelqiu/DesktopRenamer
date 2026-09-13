@@ -11,8 +11,8 @@ struct ThemeColors {
     var border: Color { Color.primary.opacity(isDark ? 0.20 : 0.18) }
     var rowHover: Color { Color.primary.opacity(isDark ? 0.05 : 0.045) }
     var rowSelection: Color { Color.primary.opacity(isDark ? 0.10 : 0.09) }
-    var badgeBg: Color { Color.primary.opacity(isDark ? 0.06 : 0.06) }
-    var badgeBorder: Color { Color.primary.opacity(isDark ? 0.16 : 0.14) }
+    var badgeBg: Color { Color.primary.opacity(isDark ? 0.10 : 0.08) }
+    var badgeBorder: Color { Color.primary.opacity(isDark ? 0.20 : 0.18) }
     var separator: Color { Color.primary.opacity(isDark ? 0.10 : 0.12) }
     var bottomBarBg: Color { Color.primary.opacity(isDark ? 0.04 : 0.035) }
     var greenText: Color { Color.green }

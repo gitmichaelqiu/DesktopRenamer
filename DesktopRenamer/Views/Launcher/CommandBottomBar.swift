@@ -156,16 +156,11 @@ struct CommandBottomBar: View {
                     }
                 }
                 .padding(4)
-                .background(.thinMaterial, in: Capsule())
-                .overlay {
-                    Capsule()
-                        .stroke(colors.border, lineWidth: 1)
-                }
+                .launcherFrosted(in: Capsule())
             }
         }
-        .padding(.horizontal, 18)
+        .padding(.horizontal, 8)
         .padding(.vertical, 6)
         .frame(height: 52)
-        .padding(.bottom, 6)
     }
 }

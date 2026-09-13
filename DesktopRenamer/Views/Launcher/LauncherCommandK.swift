@@ -86,7 +86,7 @@ struct CommandKOverlayView: View {
                 .padding(8)
             }
             .frame(width: 380)
-            .launcherBackground(cornerRadius: 12, borderColor: colors.border)
+            .launcherBackground(cornerRadius: 12)
             .shadow(color: Color.black.opacity(colorScheme == .dark ? 0.4 : 0.2), radius: 15, x: 0, y: 8)
         }
     }
@@ -172,5 +172,4 @@ struct CommandKActionRowView: View {
         }
     }
 }
-
 

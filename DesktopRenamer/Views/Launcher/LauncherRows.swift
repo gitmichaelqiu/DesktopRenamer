@@ -47,21 +47,20 @@ struct KeycapView: View {
 
     var body: some View {
         HStack(spacing: 2) {
-            ForEach(Array(tokens.enumerated()), id: \.offset) { _, token in
+            ForEach(tokens, id: \.self) { token in
                 Text(verbatim: token)
                     .font(.caption)
-                    .fontWeight(.medium)
                     .foregroundStyle(isSelected && isGreenRow ? .white : colors.textSecondary)
                     .padding(.horizontal, horizontalPadding)
                     .padding(.vertical, verticalPadding)
                     .frame(minWidth: 18, minHeight: 18)
                     .background {
                         RoundedRectangle(cornerRadius: 6, style: .continuous)
-                            .fill(isSelected && isGreenRow ? Color.white.opacity(0.16) : (isSelected ? Color.primary.opacity(0.08) : Color.clear))
+                            .fill(isSelected && isGreenRow ? Color.white.opacity(0.16) : Color.clear)
                     }
                     .overlay {
                         RoundedRectangle(cornerRadius: 6, style: .continuous)
-                            .stroke(isSelected ? colors.border : colors.badgeBorder, lineWidth: 1)
+                            .stroke(colors.border, lineWidth: 1)
                     }
             }
         }
@@ -124,7 +123,7 @@ struct CommandRowView: View {
     }
     
     var body: some View {
-        HStack(spacing: 8) {
+        HStack(spacing: 10) {
             Image(systemName: command.iconName)
                 .font(.system(size: 17, weight: .medium))
                 .foregroundColor(colors.textPrimary)
@@ -136,13 +135,13 @@ struct CommandRowView: View {
                 .lineLimit(1)
                 .layoutPriority(1)
             
-            Spacer()
-
             Text(command.subtitle)
                 .font(.callout)
                 .foregroundColor(isSelected ? colors.textSecondary : colors.textTertiary)
                 .lineLimit(1)
                 .truncationMode(.tail)
+
+            Spacer()
             
             if let shortcut = shortcutText {
                 KeycapView(text: shortcut, isSelected: isSelected)
@@ -191,7 +190,7 @@ struct SpaceRowView: View {
     }
     
     var body: some View {
-        HStack(spacing: 8) {
+        HStack(spacing: 10) {
             if isCurrent {
                 CurrentSpaceIndicator()
             } else if space.isFullscreen, let appPath = space.appPath {
@@ -213,8 +212,6 @@ struct SpaceRowView: View {
                 .lineLimit(1)
                 .layoutPriority(1)
 
-            Spacer()
-
             if space.isFullscreen {
                 Text(verbatim: String(format: String(localized: "%@ · Fullscreen"), space.displayName))
                     .font(.callout)
@@ -226,6 +223,8 @@ struct SpaceRowView: View {
                     .foregroundColor(isSelected ? colors.textSecondary : colors.textTertiary)
                     .lineLimit(1)
             }
+
+            Spacer()
 
             if let shortcut = shortcutText {
                 KeycapView(text: shortcut, isSelected: isSelected)

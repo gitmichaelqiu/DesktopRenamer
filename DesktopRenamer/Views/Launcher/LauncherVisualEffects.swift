@@ -27,15 +27,17 @@ struct VisualEffectView: NSViewRepresentable {
 }
 
 extension View {
-    func launcherBackground(cornerRadius: CGFloat, borderColor: Color) -> some View {
-        self
-            .modifier(LauncherSurface(cornerRadius: cornerRadius, borderColor: borderColor))
+    func launcherBackground(cornerRadius: CGFloat) -> some View {
+        modifier(LauncherSurface(cornerRadius: cornerRadius))
+    }
+
+    func launcherFrosted<ShapeType: Shape>(in shape: ShapeType) -> some View {
+        modifier(LauncherFrostedSurface(shape: shape))
     }
 }
 
 private struct LauncherSurface: ViewModifier {
     let cornerRadius: CGFloat
-    let borderColor: Color
     @Environment(\.colorScheme) private var colorScheme
 
     func body(content: Content) -> some View {
@@ -46,9 +48,24 @@ private struct LauncherSurface: ViewModifier {
                 VisualEffectView(material: .hudWindow, blendingMode: .behindWindow)
             }
             .clipShape(RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
-            .overlay {
-                RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
-                    .stroke(borderColor.opacity(0.9), lineWidth: 1)
+    }
+}
+
+private struct LauncherFrostedSurface<ShapeType: Shape>: ViewModifier {
+    let shape: ShapeType
+    @Environment(\.colorScheme) private var colorScheme
+
+    func body(content: Content) -> some View {
+        let tint = colorScheme == .dark
+            ? Color.white.opacity(0.05)
+            : Color.white.opacity(0.25)
+
+        content
+            .background {
+                VisualEffectView(material: .hudWindow, blendingMode: .withinWindow)
+                    .clipShape(shape)
             }
+            .background(shape.fill(tint))
+            .clipShape(shape)
     }
 }
