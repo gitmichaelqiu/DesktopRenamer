@@ -1,7 +1,7 @@
 import SwiftUI
 
 private enum LauncherSubmenu {
-    case actions(WindowEntry)
+    case actions(window: WindowEntry, actions: [BatchStagedActionType])
     case spaces
 }
 
@@ -13,7 +13,10 @@ struct LauncherSubmenuOverlay: View {
 
     private var requestedSubmenu: LauncherSubmenu? {
         if let targetWindow = viewModel.commandKTargetWindow {
-            return .actions(targetWindow)
+            return .actions(
+                window: targetWindow,
+                actions: viewModel.getAvailableCommandKActions(for: targetWindow)
+            )
         }
         return viewModel.isSpaceMenuOpen ? .spaces : nil
     }
@@ -58,8 +61,8 @@ struct LauncherSubmenuOverlay: View {
     @ViewBuilder
     private func submenuView(for submenu: LauncherSubmenu) -> some View {
         switch submenu {
-        case .actions(let window):
-            LauncherActionMenuView(viewModel: viewModel, window: window)
+        case .actions(let window, let actions):
+            LauncherActionMenuView(viewModel: viewModel, window: window, actions: actions)
         case .spaces:
             LauncherSpaceMenuView(viewModel: viewModel)
         }
@@ -85,6 +88,7 @@ struct LauncherSubmenuOverlay: View {
 struct LauncherActionMenuView: View {
     @ObservedObject var viewModel: LauncherViewModel
     let window: WindowEntry
+    let actions: [BatchStagedActionType]
     @Environment(\.colorScheme) var colorScheme
     
     var colors: ThemeColors {
@@ -120,7 +124,7 @@ struct LauncherActionMenuView: View {
             Divider()
                 .opacity(0.5)
 
-            let actionItems = viewModel.commandKActions.enumerated().map { index, action in
+            let actionItems = actions.enumerated().map { index, action in
                 ActionMenuItem(index: index, action: action)
             }
             LazyVStack(spacing: 2) {
