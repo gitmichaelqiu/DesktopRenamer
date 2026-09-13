@@ -10,19 +10,16 @@ struct BatchMoveBottomBar: View {
     var body: some View {
         HStack(spacing: 8) {
             // Left side: Active command hierarchy matching Raycast look
-            HStack(spacing: 6) {
+            HStack(spacing: 2) {
                 HStack(spacing: 6) {
                     Image(systemName: viewModel.activeCommand?.iconName ?? "macwindow.badge.plus")
-                        .font(.subheadline.weight(.semibold))
+                        .font(.callout.weight(.medium))
                         .foregroundColor(Color.accentColor)
                     Text(viewModel.activeCommand?.title ?? String(localized: "Batch Move Windows"))
-                        .font(.subheadline)
-                        .fontWeight(.semibold)
-                        .foregroundColor(colors.textPrimary)
+                        .font(.callout.weight(.medium))
+                        .foregroundColor(colors.textSecondary)
                 }
-                .font(.callout.weight(.medium))
-                .padding(.horizontal, 8)
-                .frame(height: 28)
+                .modifier(BottomBarCapsule(isSelected: false, isActive: false, colorScheme: colorScheme))
                 
                 if let staging = viewModel.stagingWindow {
                     Image(systemName: "chevron.right")
@@ -41,6 +38,8 @@ struct BatchMoveBottomBar: View {
                     .modifier(BottomBarCapsule(isSelected: false, isActive: false, colorScheme: colorScheme))
                 }
             }
+            .padding(4)
+            .launcherFrosted(in: Capsule())
             
             Spacer()
             

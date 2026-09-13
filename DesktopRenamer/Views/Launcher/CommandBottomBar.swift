@@ -12,20 +12,17 @@ struct CommandBottomBar: View {
         HStack(spacing: 8) {
             // Left side: Active command pill matching Raycast look
             if let active = viewModel.activeCommand {
-                HStack(spacing: 6) {
+                HStack(spacing: 2) {
                     HStack(spacing: 6) {
                         Image(systemName: active.iconName)
-                            .font(.subheadline.weight(.semibold))
+                            .font(.callout.weight(.medium))
                             .foregroundColor(Color.accentColor)
                         Text(active.title)
-                            .font(.subheadline)
-                            .fontWeight(.semibold)
-                            .foregroundColor(colors.textPrimary)
+                            .font(.callout.weight(.medium))
+                            .foregroundColor(colors.textSecondary)
                     }
-                    .font(.callout.weight(.medium))
-                    .padding(.horizontal, 8)
-                    .frame(height: 28)
-                    
+                    .modifier(BottomBarCapsule(isSelected: false, isActive: false, colorScheme: colorScheme))
+
                     if let staging = viewModel.stagingWindow {
                         Image(systemName: "chevron.right")
                             .font(.system(size: 9, weight: .semibold))
@@ -43,6 +40,8 @@ struct CommandBottomBar: View {
                         .modifier(BottomBarCapsule(isSelected: false, isActive: false, colorScheme: colorScheme))
                     }
                 }
+                .padding(4)
+                .launcherFrosted(in: Capsule())
             }
             
             Spacer()

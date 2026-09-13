@@ -59,12 +59,18 @@ private struct LauncherFrostedSurface<ShapeType: Shape>: ViewModifier {
             ? Color.white.opacity(0.05)
             : Color.white.opacity(0.25)
 
-        content
-            .background {
-                VisualEffectView(material: .hudWindow, blendingMode: .withinWindow)
-                    .clipShape(shape)
-            }
-            .background(shape.fill(tint))
-            .clipShape(shape)
+        if #available(macOS 26.0, *) {
+            content
+                .glassEffect(.regular.interactive().tint(tint), in: shape)
+                .tint(.clear)
+        } else {
+            content
+                .background {
+                    VisualEffectView(material: .hudWindow, blendingMode: .withinWindow)
+                        .clipShape(shape)
+                }
+                .background(shape.fill(tint))
+                .clipShape(shape)
+        }
     }
 }
