@@ -221,16 +221,13 @@ struct LauncherView: View {
                     CommandBottomBar(viewModel: viewModel)
                 }
             }
-            .blur(radius: viewModel.commandKTargetWindow != nil ? 10 : 0)
-            .animation(.easeInOut(duration: 0.12), value: viewModel.commandKTargetWindow != nil)
-            
-            if let targetWindow = viewModel.commandKTargetWindow {
-                CommandKOverlayView(viewModel: viewModel, window: targetWindow)
-            }
         }
         .frame(width: 750, height: 475)
         .launcherBackground(cornerRadius: 26)
         .disabled(viewModel.isRearrangingSpace)
+        .onChange(of: viewModel.commandKTargetWindow) { targetWindow in
+            LauncherWindowController.shared.updateCommandKMenu(for: targetWindow)
+        }
     }
 }
 
