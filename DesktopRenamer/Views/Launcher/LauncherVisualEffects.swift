@@ -5,7 +5,6 @@ struct VisualEffectView: NSViewRepresentable {
     var material: NSVisualEffectView.Material = .hudWindow
     var blendingMode: NSVisualEffectView.BlendingMode = .withinWindow
     var state: NSVisualEffectView.State = .active
-    @Environment(\.colorScheme) private var colorScheme
 
     func makeNSView(context: Context) -> NSVisualEffectView {
         let view = NSVisualEffectView()
@@ -18,8 +17,8 @@ struct VisualEffectView: NSViewRepresentable {
     }
 
     private func update(_ view: NSVisualEffectView) {
-        let isDark = colorScheme == .dark
-        view.appearance = NSAppearance(named: isDark ? .darkAqua : .aqua)
+        // Let the panel's effective appearance drive the native material, as it does in Tinycast.
+        view.appearance = nil
         view.material = material
         view.blendingMode = blendingMode
         view.state = state
