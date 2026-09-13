@@ -17,9 +17,9 @@ struct LauncherView: View {
                 HStack(spacing: 12) {
                     Image(systemName: "magnifyingglass")
                         .foregroundStyle(colors.textSecondary)
-                        .font(.system(size: 20, weight: .medium))
+                        .font(.system(size: 18, weight: .medium))
                         .symbolRenderingMode(.hierarchical)
-                        .frame(width: 28, height: 28)
+                        .frame(width: 22, height: 22)
                     
                     if viewModel.activeCommand?.type == .renameCurrentSpace {
                         SearchTextField(
@@ -168,14 +168,9 @@ struct LauncherView: View {
                             .frame(width: 20, height: 20)
                     }
                 }
-                .frame(height: 56)
-                .padding(.horizontal, 18)
-                .padding(.top, 6)
-                
-                Rectangle()
-                    .fill(colors.separator)
-                    .frame(height: 1)
-                    .padding(.horizontal, 12)
+                .frame(height: 44)
+                .padding(.horizontal, 10)
+                .padding(.top, 10)
                 
                 // Content area
                 if viewModel.activeCommand?.type == .renameCurrentSpace {
@@ -212,11 +207,6 @@ struct LauncherView: View {
                     ListAreaView(viewModel: viewModel)
                         .frame(maxHeight: .infinity)
                 }
-                
-                Rectangle()
-                    .fill(colors.separator)
-                    .frame(height: 1)
-                    .padding(.horizontal, 12)
                 
                 // Bottom bar
                 if viewModel.activeCommand == nil {
@@ -263,7 +253,7 @@ struct ListAreaView: View {
                 } else {
                     ScrollViewReader { proxy in
                         ScrollView {
-                            VStack(spacing: 2) {
+                            VStack(spacing: 0) {
                                 ForEach(Array(commands.enumerated()), id: \.element.id) { i, cmd in
                                     let isSelected = !viewModel.isBottomBarFocused && viewModel.selectedRowIndex == i
                                     CommandRowView(command: cmd, isSelected: isSelected, shortcutText: viewModel.showCommandNumbers && viewModel.commandKTargetWindow == nil && i < 9 ? "⌘\(i + 1)" : nil)
@@ -277,7 +267,7 @@ struct ListAreaView: View {
                                 }
                             }
                             .padding(.horizontal, 8)
-                            .padding(.vertical, 8)
+                            .padding(.vertical, 4)
                         }
                         .onChange(of: viewModel.selectedRowIndex) { index in
                             if viewModel.isKeyboardSelection {
@@ -298,7 +288,7 @@ struct ListAreaView: View {
                     } else {
                         ScrollViewReader { proxy in
                             ScrollView {
-                                VStack(spacing: 2) {
+                                VStack(spacing: 0) {
                                     ForEach(Array(spaces.enumerated()), id: \.element.id) { i, space in
                                         let isSelected = !viewModel.isBottomBarFocused && viewModel.selectedRowIndex == i
                                         let isCurrent = currentSpaceIDsByDisplay[space.displayID] == space.id
@@ -313,7 +303,7 @@ struct ListAreaView: View {
                                     }
                                 }
                                 .padding(.horizontal, 8)
-                                .padding(.vertical, 8)
+                                .padding(.vertical, 4)
                             }
                             .onChange(of: viewModel.selectedRowIndex) { index in
                                 if viewModel.isKeyboardSelection {
@@ -341,7 +331,7 @@ struct ListAreaView: View {
                         } else {
                             ScrollViewReader { proxy in
                                 ScrollView {
-                                    VStack(spacing: 2) {
+                                    VStack(spacing: 0) {
                                         ForEach(Array(spaces.enumerated()), id: \.element.id) { i, space in
                                             let isSelected = !viewModel.isBottomBarFocused && viewModel.selectedRowIndex == i
                                             let isCurrent = currentSpaceIDsByDisplay[space.displayID] == space.id
@@ -356,7 +346,7 @@ struct ListAreaView: View {
                                         }
                                     }
                                     .padding(.horizontal, 8)
-                                    .padding(.vertical, 8)
+                                    .padding(.vertical, 4)
                                 }
                                 .onChange(of: viewModel.selectedRowIndex) { index in
                                     if viewModel.isKeyboardSelection {
@@ -381,7 +371,7 @@ struct ListAreaView: View {
                         } else {
                             ScrollViewReader { proxy in
                                 ScrollView {
-                                    VStack(alignment: .leading, spacing: 2) {
+                                    VStack(alignment: .leading, spacing: 0) {
                                         ForEach(0..<sections.count, id: \.self) { sIdx in
                                             let section = sections[sIdx]
                                             ListSectionHeader(title: section.title, subtitle: section.subtitle, isFirst: sIdx == 0)
@@ -404,7 +394,7 @@ struct ListAreaView: View {
                                         }
                                     }
                                     .padding(.horizontal, 8)
-                                    .padding(.vertical, 8)
+                                    .padding(.vertical, 4)
                                 }
                                 .onChange(of: viewModel.selectedRowIndex) { index in
                                     if viewModel.isKeyboardSelection {
@@ -426,7 +416,7 @@ struct ListAreaView: View {
                         } else {
                             ScrollViewReader { proxy in
                                 ScrollView {
-                                    VStack(alignment: .leading, spacing: 2) {
+                                    VStack(alignment: .leading, spacing: 0) {
                                         ForEach(0..<sections.count, id: \.self) { sIdx in
                                             let section = sections[sIdx]
                                             ListSectionHeader(title: section.title, subtitle: section.subtitle, isFirst: sIdx == 0)
@@ -459,7 +449,7 @@ struct ListAreaView: View {
                                         }
                                     }
                                     .padding(.horizontal, 8)
-                                    .padding(.vertical, 8)
+                                    .padding(.vertical, 4)
                                 }
                                 .onChange(of: viewModel.selectedRowIndex) { index in
                                     if viewModel.isKeyboardSelection {

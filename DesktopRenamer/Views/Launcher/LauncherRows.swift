@@ -114,25 +114,25 @@ struct CommandRowView: View {
     }
     
     var body: some View {
-        HStack(spacing: 12) {
+        HStack(spacing: 8) {
             Image(systemName: command.iconName)
                 .font(.system(size: 17, weight: .medium))
                 .foregroundColor(colors.textPrimary)
-                .frame(width: 28, height: 28)
+                .frame(width: 24, height: 24)
             
-            VStack(alignment: .leading, spacing: 2) {
-                Text(command.title)
-                    .font(.body.weight(.medium))
-                    .foregroundColor(colors.textPrimary)
-                    .lineLimit(1)
-                
-                Text(command.subtitle)
-                    .font(.subheadline)
-                    .foregroundColor(isSelected ? colors.textSecondary : colors.textTertiary)
-                    .lineLimit(1)
-            }
+            Text(command.title)
+                .font(.body)
+                .foregroundColor(colors.textPrimary)
+                .lineLimit(1)
+                .layoutPriority(1)
             
             Spacer()
+
+            Text(command.subtitle)
+                .font(.callout)
+                .foregroundColor(isSelected ? colors.textSecondary : colors.textTertiary)
+                .lineLimit(1)
+                .truncationMode(.tail)
             
             if let shortcut = shortcutText {
                 KeycapView(text: LocalStringKey_compat(shortcut), isSelected: isSelected)
@@ -159,7 +159,7 @@ struct CommandRowView: View {
             }
         }
         .padding(.horizontal, 8)
-        .padding(.vertical, 7)
+        .padding(.vertical, 6)
         .launcherRowSurface(isSelected: isSelected, isHovered: isHovered)
         .onHover { hovering in
             isHovered = hovering
@@ -185,7 +185,7 @@ struct SpaceRowView: View {
     }
     
     var body: some View {
-        HStack(spacing: 12) {
+        HStack(spacing: 8) {
             if isCurrent {
                 CurrentSpaceIndicator()
             } else if space.isFullscreen, let appPath = space.appPath {
@@ -193,34 +193,33 @@ struct SpaceRowView: View {
                 Image(nsImage: appIcon)
                     .resizable()
                     .aspectRatio(contentMode: .fit)
-                    .frame(width: 28, height: 28)
+                    .frame(width: 24, height: 24)
             } else {
                 Image(systemName: "desktopcomputer")
                     .font(.system(size: 17, weight: .medium))
                     .foregroundColor(colors.textPrimary)
-                    .frame(width: 28, height: 28)
+                    .frame(width: 24, height: 24)
             }
             
-            VStack(alignment: .leading, spacing: 2) {
-                Text(space.name)
-                    .font(.body.weight(.medium))
-                    .foregroundColor(colors.textPrimary)
-                    .lineLimit(1)
-                
-                if space.isFullscreen {
-                    Text(verbatim: String(format: String(localized: "%@ · Fullscreen"), space.displayName))
-                        .font(.subheadline)
-                        .foregroundColor(isSelected ? colors.textSecondary : colors.textTertiary)
-                        .lineLimit(1)
-                } else {
-                    Text(verbatim: String(format: String(localized: "%@ · Space %lld"), space.displayName, space.num))
-                        .font(.subheadline)
-                        .foregroundColor(isSelected ? colors.textSecondary : colors.textTertiary)
-                        .lineLimit(1)
-                }
-            }
+            Text(space.name)
+                .font(.body)
+                .foregroundColor(colors.textPrimary)
+                .lineLimit(1)
+                .layoutPriority(1)
 
             Spacer()
+
+            if space.isFullscreen {
+                Text(verbatim: String(format: String(localized: "%@ · Fullscreen"), space.displayName))
+                    .font(.callout)
+                    .foregroundColor(isSelected ? colors.textSecondary : colors.textTertiary)
+                    .lineLimit(1)
+            } else {
+                Text(verbatim: String(format: String(localized: "%@ · Space %lld"), space.displayName, space.num))
+                    .font(.callout)
+                    .foregroundColor(isSelected ? colors.textSecondary : colors.textTertiary)
+                    .lineLimit(1)
+            }
 
             if let shortcut = shortcutText {
                 KeycapView(text: LocalizedStringKey(shortcut), isSelected: isSelected)
@@ -229,7 +228,7 @@ struct SpaceRowView: View {
             }
         }
         .padding(.horizontal, 8)
-        .padding(.vertical, 7)
+        .padding(.vertical, 6)
         .launcherRowSurface(isSelected: isSelected, isHovered: isHovered)
         .onHover { hovering in
             isHovered = hovering
@@ -243,8 +242,8 @@ private struct CurrentSpaceIndicator: View {
     var body: some View {
         Circle()
             .stroke(Color.blue, lineWidth: 2)
-            .frame(width: 20, height: 20)
-            .frame(width: 28, height: 28)
+            .frame(width: 18, height: 18)
+            .frame(width: 24, height: 24)
             .accessibilityLabel(Text("Current space"))
     }
 }
@@ -277,26 +276,26 @@ struct WindowRowView: View {
     }
     
     var body: some View {
-        HStack(spacing: 12) {
+        HStack(spacing: 8) {
             let appIcon = NSWorkspace.shared.icon(forFile: window.appPath)
             Image(nsImage: appIcon)
                 .resizable()
                 .aspectRatio(contentMode: .fit)
-                .frame(width: 28, height: 28)
+                .frame(width: 24, height: 24)
 
-            VStack(alignment: .leading, spacing: 2) {
-                Text(window.title.isEmpty ? String(localized: "(No Title)") : window.title)
-                    .font(.body.weight(.medium))
-                    .foregroundColor(colors.textPrimary)
-                    .lineLimit(1)
-
-                Text(window.ownerName)
-                    .font(.subheadline)
-                    .foregroundColor(isSelected ? colors.textSecondary : colors.textTertiary)
-                    .lineLimit(1)
-            }
+            Text(window.title.isEmpty ? String(localized: "(No Title)") : window.title)
+                .font(.body)
+                .foregroundColor(colors.textPrimary)
+                .lineLimit(1)
+                .truncationMode(.middle)
+                .layoutPriority(1)
 
             Spacer()
+
+            Text(window.ownerName)
+                .font(.callout)
+                .foregroundColor(isSelected ? colors.textSecondary : colors.textTertiary)
+                .lineLimit(1)
 
             HStack(spacing: 4) {
                 if window.isHidden {
@@ -316,7 +315,7 @@ struct WindowRowView: View {
             }
         }
         .padding(.horizontal, 8)
-        .padding(.vertical, 7)
+        .padding(.vertical, 6)
         .launcherRowSurface(isSelected: isSelected, isHovered: isHovered)
         .onHover { hovering in
             isHovered = hovering
@@ -335,7 +334,7 @@ struct ConfirmBatchRowView: View {
     }
     
     var body: some View {
-        HStack(spacing: 12) {
+        HStack(spacing: 8) {
             Image(systemName: "checkmark.circle.fill")
                 .font(.body.weight(.semibold))
                 .foregroundColor(isSelected ? colors.greenText : .white)
@@ -385,22 +384,22 @@ struct WindowBatchRowView: View {
             Image(nsImage: appIcon)
                 .resizable()
                 .aspectRatio(contentMode: .fit)
-                .frame(width: 28, height: 28)
+                .frame(width: 24, height: 24)
 
-            VStack(alignment: .leading, spacing: 2) {
-                Text(window.title.isEmpty ? String(localized: "(No Title)") : window.title)
-                    .font(.body)
-                    .fontWeight(.semibold)
-                    .foregroundColor(colors.textPrimary)
-                    .lineLimit(1)
-
-                Text(window.ownerName)
-                    .font(.subheadline)
-                    .foregroundColor(isSelected ? colors.textSecondary : colors.textTertiary)
-                    .lineLimit(1)
-            }
+            Text(window.title.isEmpty ? String(localized: "(No Title)") : window.title)
+                .font(.body)
+                .fontWeight(.semibold)
+                .foregroundColor(colors.textPrimary)
+                .lineLimit(1)
+                .truncationMode(.middle)
+                .layoutPriority(1)
 
             Spacer()
+
+            Text(window.ownerName)
+                .font(.callout)
+                .foregroundColor(isSelected ? colors.textSecondary : colors.textTertiary)
+                .lineLimit(1)
 
             HStack(spacing: 4) {
                 if !isStaged {
@@ -433,7 +432,7 @@ struct WindowBatchRowView: View {
             }
         }
         .padding(.horizontal, 8)
-        .padding(.vertical, 7)
+        .padding(.vertical, 6)
         .launcherRowSurface(isSelected: isSelected, isHovered: isHovered)
         .onHover { hovering in
             isHovered = hovering

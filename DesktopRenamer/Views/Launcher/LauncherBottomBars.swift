@@ -309,14 +309,9 @@ struct SpacesBottomBar: View {
             }
             
             // Actions Overlay (No longer overlapping, placed in-line)
-            HStack(spacing: 12) {
-                // Separator divider
-                Rectangle()
-                    .fill(colors.border)
-                    .frame(width: 1, height: 16)
-                
+            HStack(spacing: 8) {
                 // Right side action indicators
-                HStack(spacing: 8) {
+                HStack(spacing: 2) {
                     if !viewModel.isBottomBarFocused {
                         Button(action: {
                             viewModel.focusSpaceBar()

@@ -14,10 +14,9 @@ struct BottomBarCapsule: ViewModifier {
 
     func body(content: Content) -> some View {
         content
-            .font(.subheadline)
-            .fontWeight(isSelected || isActive ? .semibold : .medium)
-            .padding(.horizontal, 12)
-            .frame(height: 26)
+            .font(.callout.weight(.medium))
+            .padding(.horizontal, 8)
+            .frame(height: 28)
             .background(
                 ZStack {
                     if isGreen {
@@ -30,11 +29,13 @@ struct BottomBarCapsule: ViewModifier {
                         }
                     } else {
                         if isSelected {
-                            isActive ? Color.primary.opacity(0.24) : Color.primary.opacity(0.16)
+                            isActive ? Color.primary.opacity(0.18) : Color.primary.opacity(0.10)
                         } else if isActive {
-                            Color.primary.opacity(isHovered ? 0.22 : 0.14)
+                            Color.primary.opacity(isHovered ? 0.12 : 0.08)
+                        } else if isHovered {
+                            Color.primary.opacity(0.05)
                         } else {
-                            Color.primary.opacity(isHovered ? 0.12 : 0.06)
+                            Color.clear
                         }
                     }
                 }
@@ -47,12 +48,12 @@ struct BottomBarCapsule: ViewModifier {
             .overlay(
                 Capsule()
                     .strokeBorder(
-                        isGreen ? (isSelected ? Color.primary.opacity(0.15) : (isActive ? greenBgColor.opacity(isHovered ? 0.4 : 0.2) : Color.primary.opacity(isHovered ? 0.25 : 0.08)))
-                                : (isSelected ? (isActive ? Color.primary.opacity(0.48) : Color.primary.opacity(0.40)) : (isActive ? Color.primary.opacity(isHovered ? 0.35 : 0.22) : Color.primary.opacity(isHovered ? 0.25 : 0.08))),
-                        lineWidth: (isSelected && !isGreen) ? 1.5 : 1
+                        isGreen ? (isSelected ? Color.primary.opacity(0.15) : (isActive ? greenBgColor.opacity(isHovered ? 0.4 : 0.2) : Color.clear))
+                                : (isSelected ? Color.primary.opacity(0.22) : (isActive ? Color.primary.opacity(isHovered ? 0.16 : 0.10) : Color.clear)),
+                        lineWidth: 1
                     )
             )
-            .shadow(color: isSelected ? (isGreen ? greenBgColor.opacity(0.25) : Color.primary.opacity(0.1)) : Color.clear, radius: 3, x: 0, y: 1)
+            .shadow(color: Color.clear, radius: 0)
             .onHover { hovering in
                 isHovered = hovering
             }
