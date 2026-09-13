@@ -22,7 +22,7 @@ struct CommandBottomBar: View {
                             .fontWeight(.semibold)
                             .foregroundColor(colors.textPrimary)
                     }
-                    .modifier(BottomBarCapsule(isSelected: false, isActive: true, colorScheme: colorScheme))
+                    .modifier(BottomBarCapsule(isSelected: false, isActive: false, colorScheme: colorScheme))
                     
                     if let staging = viewModel.stagingWindow {
                         Image(systemName: "chevron.right")

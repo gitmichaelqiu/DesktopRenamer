@@ -230,7 +230,6 @@ struct LauncherView: View {
         }
         .frame(width: 750, height: 475)
         .launcherBackground(cornerRadius: 26)
-        .shadow(color: Color.black.opacity(colorScheme == .dark ? 0.45 : 0.20), radius: 24, x: 0, y: 12)
         .disabled(viewModel.isRearrangingSpace)
     }
 }

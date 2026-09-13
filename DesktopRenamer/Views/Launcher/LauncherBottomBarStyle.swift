@@ -16,6 +16,7 @@ struct BottomBarCapsule: ViewModifier {
         let selectionFill = isGreen
             ? greenBgColor.opacity(isSelected ? 1 : (isActive ? 0.15 : 0))
             : Color.primary.opacity(isSelected ? (isActive ? 0.10 : 0.09) : (isActive ? 0.08 : 0))
+        let neutralText = Color.primary.opacity(0.60)
 
         content
             .font(.callout.weight(.medium))
@@ -24,7 +25,7 @@ struct BottomBarCapsule: ViewModifier {
             .background(Capsule().fill(isHovered && !isSelected ? Color.primary.opacity(0.05) : selectionFill))
             .foregroundColor(
                 isGreen ? (isSelected ? .white : (isActive ? greenBgColor : (isHovered ? greenBgColor : .secondary)))
-                        : (isActive ? .primary : (isSelected || isHovered ? .primary : .secondary))
+                        : (isActive || isSelected || isHovered ? .primary : neutralText)
             )
             .clipShape(Capsule())
             .onHover { hovering in

@@ -60,6 +60,8 @@ class LauncherWindowController: NSWindowController, NSWindowDelegate {
         let hostingView = NSHostingView(rootView: launcherView)
         hostingView.frame = NSRect(x: 0, y: 0, width: 750, height: 475)
         hostingView.wantsLayer = true
+        hostingView.layer?.cornerRadius = 26
+        hostingView.layer?.masksToBounds = true
         hostingView.sizingOptions = []
         
         panel.contentView = hostingView
