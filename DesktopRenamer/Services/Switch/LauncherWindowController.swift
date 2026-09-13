@@ -36,9 +36,11 @@ private final class LauncherMenuPanel: NSPanel {
         backgroundColor = .clear
         isOpaque = false
         hasShadow = true
+        acceptsMouseMovedEvents = true
+        ignoresMouseEvents = false
         hidesOnDeactivate = false
         collectionBehavior = [
-            .moveToActiveSpace,
+            .canJoinAllSpaces,
             .fullScreenAuxiliary,
             .ignoresCycle,
         ]
@@ -57,9 +59,6 @@ private final class LauncherMenuPanelController {
                 previousParent.removeChildWindow(panel)
             }
             parentWindow = parent
-            parent.addChildWindow(panel, ordered: .above)
-        } else if panel.parent == nil {
-            parent.addChildWindow(panel, ordered: .above)
         }
 
         if let hostingView {
@@ -74,6 +73,9 @@ private final class LauncherMenuPanelController {
         }
 
         layout(relativeTo: parent)
+        if panel.parent == nil {
+            parent.addChildWindow(panel, ordered: .above)
+        }
         panel.orderFrontRegardless()
     }
 
@@ -89,16 +91,16 @@ private final class LauncherMenuPanelController {
         guard let hostingView else { return }
 
         hostingView.layoutSubtreeIfNeeded()
-        let fittingSize = hostingView.fittingSize
-        let size = NSSize(width: 380, height: max(fittingSize.height, 1))
-        panel.setContentSize(size)
+        let intrinsicSize = hostingView.intrinsicContentSize
+        guard intrinsicSize.width > 0, intrinsicSize.height > 0 else { return }
+        let size = NSSize(width: 380, height: intrinsicSize.height)
 
         let contentFrame = parent.contentRect(forFrameRect: parent.frame)
         let origin = NSPoint(
             x: contentFrame.maxX - size.width - 8,
             y: contentFrame.minY + 8
         )
-        panel.setFrameOrigin(origin)
+        panel.setFrame(NSRect(origin: origin, size: size), display: true)
     }
 }
 

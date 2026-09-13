@@ -18,6 +18,7 @@ extension LauncherViewModel {
                 activeCommand = command
                 isSpaceMenuOpen = command.type == .switchToDesktop || command.type == .moveWindow
                 selectedRowIndex = 0
+                spaceMenuSelectedIndex = 0
             } else {
                 executeSimpleCommand(command.type)
             }
@@ -41,6 +42,7 @@ extension LauncherViewModel {
                 
                 stagingWindow = nil
                 isSpaceMenuOpen = false
+                spaceMenuSelectedIndex = 0
                 selectedRowIndex = batchMoveLastSelectedIndex
                 return
             }
@@ -77,6 +79,7 @@ extension LauncherViewModel {
                     isStagingForRestoreTo = false
                     stagingWindow = window
                     isSpaceMenuOpen = true
+                    spaceMenuSelectedIndex = 0
                     selectedRowIndex = 0
                 }
                 

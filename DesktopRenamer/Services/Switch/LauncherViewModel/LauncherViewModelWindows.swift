@@ -52,6 +52,10 @@ extension LauncherViewModel {
     }
     
     var visibleRowsCount: Int {
+        if isSpaceMenuOpen {
+            return spaceMenuSpaces.count
+        }
+
         if activeCommand == nil {
             return filteredCommands.count
         } else {
@@ -73,6 +77,28 @@ extension LauncherViewModel {
                 return 0
             }
         }
+    }
+
+    var spaceMenuSpaces: [SpaceGroup] {
+        if stagingWindow != nil {
+            return filteredMoveWindowSpaces
+        }
+
+        switch activeCommand?.type {
+        case .moveWindow:
+            return filteredActiveWindowMoveSpaces
+        case .switchToDesktop:
+            return filteredSpaces
+        default:
+            return []
+        }
+    }
+
+    func executeSpaceMenuSelection() {
+        let spaces = spaceMenuSpaces
+        guard spaces.indices.contains(spaceMenuSelectedIndex) else { return }
+        selectedRowIndex = spaceMenuSelectedIndex
+        executeRowAction()
     }
     
     func loadData() {

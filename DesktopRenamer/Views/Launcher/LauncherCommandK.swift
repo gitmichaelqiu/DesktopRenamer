@@ -68,20 +68,7 @@ struct LauncherSpaceMenuView: View {
         ThemeColors(isDark: colorScheme == .dark)
     }
 
-    private var spaces: [SpaceGroup] {
-        if viewModel.stagingWindow != nil {
-            return viewModel.filteredMoveWindowSpaces
-        }
-
-        switch viewModel.activeCommand?.type {
-        case .moveWindow:
-            return viewModel.filteredActiveWindowMoveSpaces
-        case .switchToDesktop:
-            return viewModel.filteredSpaces
-        default:
-            return []
-        }
-    }
+    private var spaces: [SpaceGroup] { viewModel.spaceMenuSpaces }
 
     private var title: String {
         if let stagingWindow = viewModel.stagingWindow {
@@ -111,27 +98,44 @@ struct LauncherSpaceMenuView: View {
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .padding(16)
             } else {
-                ScrollView {
-                    LazyVStack(spacing: 2) {
-                        ForEach(Array(spaces.enumerated()), id: \.element.id) { index, space in
-                            LauncherSpaceMenuRow(
-                                space: space,
-                                isSelected: viewModel.selectedRowIndex == index,
-                                isCurrent: SpaceHelper.getCurrentSpaceID(for: space.displayID) == space.id,
-                                shortcutNumber: index + 1,
-                                showShortcut: viewModel.showCommandNumbers && index < 9,
-                                colors: colors
-                            ) {
-                                viewModel.isKeyboardSelection = true
-                                viewModel.selectedRowIndex = index
-                                viewModel.executeRowAction()
+                ScrollViewReader { proxy in
+                    ScrollView {
+                        LazyVStack(spacing: 2) {
+                            ForEach(Array(spaces.enumerated()), id: \.element.id) { index, space in
+                                LauncherSpaceMenuRow(
+                                    space: space,
+                                    isSelected: viewModel.spaceMenuSelectedIndex == index,
+                                    isCurrent: SpaceHelper.getCurrentSpaceID(for: space.displayID) == space.id,
+                                    shortcutNumber: index + 1,
+                                    showShortcut: viewModel.showCommandNumbers && index < 9,
+                                    colors: colors
+                                ) {
+                                    viewModel.isKeyboardSelection = true
+                                    viewModel.spaceMenuSelectedIndex = index
+                                    viewModel.executeSpaceMenuSelection()
+                                }
+                                .id(space.id)
                             }
                         }
+                        .padding(8)
                     }
-                    .padding(8)
+                    .frame(height: min(max(CGFloat(spaces.count) * 42, 42), 300))
+                    .scrollIndicators(.hidden)
+                    .onAppear {
+                        guard spaces.indices.contains(viewModel.spaceMenuSelectedIndex) else { return }
+                        proxy.scrollTo(spaces[viewModel.spaceMenuSelectedIndex].id, anchor: .center)
+                    }
+                    .onChange(of: viewModel.spaceMenuSelectedIndex) { index in
+                        guard spaces.indices.contains(index) else { return }
+                        withAnimation(.easeInOut(duration: 0.12)) {
+                            proxy.scrollTo(spaces[index].id, anchor: .center)
+                        }
+                    }
+                    .onChange(of: spaces.count) { count in
+                        guard count > 0, viewModel.spaceMenuSelectedIndex >= count else { return }
+                        viewModel.spaceMenuSelectedIndex = count - 1
+                    }
                 }
-                .frame(height: min(max(CGFloat(spaces.count) * 42, 42), 300))
-                .scrollIndicators(.hidden)
             }
         }
         .frame(width: 380)

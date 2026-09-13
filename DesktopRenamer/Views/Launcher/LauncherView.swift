@@ -50,6 +50,9 @@ struct LauncherView: View {
                             onUpArrow: {
                                 if viewModel.commandKTargetWindow != nil {
                                     viewModel.selectPreviousCommandKAction()
+                                } else if viewModel.isSpaceMenuOpen {
+                                    viewModel.isKeyboardSelection = true
+                                    viewModel.spaceMenuSelectedIndex = max(viewModel.spaceMenuSelectedIndex - 1, 0)
                                 } else {
                                     viewModel.isKeyboardSelection = true
                                     if viewModel.selectedRowIndex > 0 {
@@ -60,6 +63,12 @@ struct LauncherView: View {
                             onDownArrow: {
                                 if viewModel.commandKTargetWindow != nil {
                                     viewModel.selectNextCommandKAction()
+                                } else if viewModel.isSpaceMenuOpen {
+                                    viewModel.isKeyboardSelection = true
+                                    viewModel.spaceMenuSelectedIndex = min(
+                                        viewModel.spaceMenuSelectedIndex + 1,
+                                        max(viewModel.spaceMenuSpaces.count - 1, 0)
+                                    )
                                 } else {
                                     viewModel.isKeyboardSelection = true
                                     if viewModel.selectedRowIndex < viewModel.visibleRowsCount - 1 {
@@ -68,7 +77,7 @@ struct LauncherView: View {
                                 }
                             },
                             onLeftArrow: {
-                                if viewModel.commandKTargetWindow != nil {
+                                if viewModel.commandKTargetWindow != nil || viewModel.isSpaceMenuOpen {
                                     return true
                                 }
                                 if viewModel.isBottomBarFocused {
@@ -82,7 +91,7 @@ struct LauncherView: View {
                                 return false
                             },
                             onRightArrow: {
-                                if viewModel.commandKTargetWindow != nil {
+                                if viewModel.commandKTargetWindow != nil || viewModel.isSpaceMenuOpen {
                                     return true
                                 }
                                 if viewModel.isBottomBarFocused {
@@ -98,6 +107,8 @@ struct LauncherView: View {
                             onEnter: {
                                 if viewModel.commandKTargetWindow != nil {
                                     viewModel.executeCommandKAction()
+                                } else if viewModel.isSpaceMenuOpen {
+                                    viewModel.executeSpaceMenuSelection()
                                 } else if viewModel.isBottomBarFocused {
                                     viewModel.executeBottomBarSpaceAction(isOption: false, isCommand: false)
                                 } else {
@@ -107,6 +118,8 @@ struct LauncherView: View {
                             onCommandEnter: {
                                 if viewModel.commandKTargetWindow != nil {
                                     viewModel.executeCommandKAction()
+                                } else if viewModel.isSpaceMenuOpen {
+                                    viewModel.executeSpaceMenuSelection()
                                 } else if viewModel.isBottomBarFocused {
                                     viewModel.executeBottomBarSpaceAction(isOption: false, isCommand: true)
                                 } else if viewModel.activeCommand?.type == .batchMoveWindows {
@@ -116,7 +129,7 @@ struct LauncherView: View {
                                 }
                             },
                             onOptionEnter: {
-                                if viewModel.commandKTargetWindow != nil { return }
+                                if viewModel.commandKTargetWindow != nil || viewModel.isSpaceMenuOpen { return }
                                 if viewModel.isBottomBarFocused {
                                     viewModel.executeBottomBarSpaceAction(isOption: true, isCommand: false)
                                 }
@@ -129,17 +142,25 @@ struct LauncherView: View {
                                         viewModel.commandKSelectedIndex = index
                                         viewModel.executeCommandKAction()
                                     }
+                                } else if viewModel.isSpaceMenuOpen {
+                                    let index = num - 1
+                                    if viewModel.spaceMenuSpaces.indices.contains(index) {
+                                        viewModel.spaceMenuSelectedIndex = index
+                                        viewModel.executeSpaceMenuSelection()
+                                    }
                                 } else {
                                     viewModel.executeNthRowAction(num - 1)
                                 }
                             },
                             onTab: {
-                                if viewModel.commandKTargetWindow != nil { return }
+                                if viewModel.commandKTargetWindow != nil || viewModel.isSpaceMenuOpen { return }
                                 viewModel.handleTabKey()
                             },
                             onEscape: {
                                 if viewModel.commandKTargetWindow != nil {
                                     viewModel.commandKTargetWindow = nil
+                                } else if viewModel.isSpaceMenuOpen {
+                                    viewModel.handleEscapeKey()
                                 } else {
                                     viewModel.handleEscapeKey()
                                 }

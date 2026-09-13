@@ -17,6 +17,7 @@ extension LauncherViewModel {
             leaveSpaceBarFocus()
         } else if isSpaceMenuOpen {
             isSpaceMenuOpen = false
+            spaceMenuSelectedIndex = 0
             if stagingWindow != nil {
                 stagingWindow = nil
                 isStagingForRestoreTo = false
@@ -118,6 +119,7 @@ extension LauncherViewModel {
         activeCommand = nil
         stagingWindow = nil
         isSpaceMenuOpen = false
+        spaceMenuSelectedIndex = 0
         isBottomBarFocused = false
         onClose?()
     }
@@ -130,6 +132,7 @@ extension LauncherViewModel {
         activeCommand = nil
         stagingWindow = nil
         isSpaceMenuOpen = false
+        spaceMenuSelectedIndex = 0
         isBottomBarFocused = false
         isStagingForRestoreTo = false
         isExecutingRestoreToImmediately = false
