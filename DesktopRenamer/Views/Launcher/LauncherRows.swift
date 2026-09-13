@@ -24,37 +24,47 @@ private extension View {
 }
 
 struct KeycapView: View {
-    let text: LocalizedStringKey
+    let text: String
     let isSelected: Bool
     var isGreenRow: Bool = false
-    var verticalPadding: CGFloat = 3
-    var horizontalPadding: CGFloat = 6
+    var verticalPadding: CGFloat = 1
+    var horizontalPadding: CGFloat = 4
     @Environment(\.colorScheme) var colorScheme
     
     var colors: ThemeColors {
         ThemeColors(isDark: colorScheme == .dark)
     }
     
+    private var tokens: [String] {
+        if text.contains(" ") {
+            return text.split(separator: " ").map(String.init)
+        }
+        if text.count > 1 && text.contains(where: { "⌘⌥⇧⌃".contains($0) }) {
+            return text.map(String.init)
+        }
+        return [text]
+    }
+
     var body: some View {
-        let isSelectedWhiteStyle = isSelected && (colorScheme == .dark || isGreenRow)
-        
-        Text(text)
-            .font(.system(size: 11, weight: .semibold))
-            .foregroundColor(isSelected ? (isSelectedWhiteStyle ? .white : colors.textPrimary) : colors.textSecondary)
-            .padding(.horizontal, horizontalPadding)
-            .padding(.vertical, verticalPadding)
-            .background {
-                RoundedRectangle(cornerRadius: 6, style: .continuous)
-                    .fill(isSelected
-                        ? (isSelectedWhiteStyle ? Color.white.opacity(0.20) : Color.primary.opacity(0.12))
-                        : colors.badgeBg)
+        HStack(spacing: 2) {
+            ForEach(Array(tokens.enumerated()), id: \.offset) { _, token in
+                Text(verbatim: token)
+                    .font(.caption)
+                    .fontWeight(.medium)
+                    .foregroundStyle(isSelected && isGreenRow ? .white : colors.textSecondary)
+                    .padding(.horizontal, horizontalPadding)
+                    .padding(.vertical, verticalPadding)
+                    .frame(minWidth: 18, minHeight: 18)
+                    .background {
+                        RoundedRectangle(cornerRadius: 6, style: .continuous)
+                            .fill(isSelected && isGreenRow ? Color.white.opacity(0.16) : (isSelected ? Color.primary.opacity(0.08) : Color.clear))
+                    }
+                    .overlay {
+                        RoundedRectangle(cornerRadius: 6, style: .continuous)
+                            .stroke(isSelected ? colors.border : colors.badgeBorder, lineWidth: 1)
+                    }
             }
-            .overlay {
-                RoundedRectangle(cornerRadius: 6, style: .continuous)
-                    .stroke(isSelected
-                        ? (isSelectedWhiteStyle ? Color.white.opacity(0.30) : Color.primary.opacity(0.18))
-                        : colors.badgeBorder, lineWidth: 1)
-            }
+        }
     }
 }
 
@@ -135,7 +145,7 @@ struct CommandRowView: View {
                 .truncationMode(.tail)
             
             if let shortcut = shortcutText {
-                KeycapView(text: LocalStringKey_compat(shortcut), isSelected: isSelected)
+                KeycapView(text: shortcut, isSelected: isSelected)
             } else if let statusText = toggleStatus {
                 Text(LocalizedStringKey(statusText))
                     .font(.subheadline)
@@ -155,7 +165,7 @@ struct CommandRowView: View {
                     .foregroundColor(isSelected ? colors.textSecondary : colors.textTertiary)
                     .padding(.trailing, 4)
             } else {
-                KeycapView(text: "Action", isSelected: isSelected)
+                KeycapView(text: String(localized: "Action"), isSelected: isSelected)
             }
         }
         .padding(.horizontal, 8)
@@ -166,10 +176,6 @@ struct CommandRowView: View {
         }
     }
     
-    // Helper to safely wrap dynamic String to LocalizedStringKey
-    private func LocalStringKey_compat(_ str: String) -> LocalizedStringKey {
-        return LocalizedStringKey(str)
-    }
 }
 
 struct SpaceRowView: View {
@@ -222,9 +228,9 @@ struct SpaceRowView: View {
             }
 
             if let shortcut = shortcutText {
-                KeycapView(text: LocalizedStringKey(shortcut), isSelected: isSelected)
+                KeycapView(text: shortcut, isSelected: isSelected)
             } else {
-                KeycapView(text: "Switch ↵", isSelected: isSelected)
+                KeycapView(text: String(localized: "Switch ↵"), isSelected: isSelected)
             }
         }
         .padding(.horizontal, 8)
@@ -308,9 +314,9 @@ struct WindowRowView: View {
                 }
 
                 if let shortcut = shortcutText {
-                    KeycapView(text: LocalizedStringKey(shortcut), isSelected: isSelected)
+                    KeycapView(text: shortcut, isSelected: isSelected)
                 } else {
-                    KeycapView(text: "Focus ↵", isSelected: isSelected)
+                    KeycapView(text: String(localized: "Focus ↵"), isSelected: isSelected)
                 }
             }
         }
@@ -349,7 +355,7 @@ struct ConfirmBatchRowView: View {
             
             Spacer()
             
-            KeycapView(text: "Run ↵", isSelected: isSelected, isGreenRow: true)
+            KeycapView(text: String(localized: "Run ↵"), isSelected: isSelected, isGreenRow: true)
         }
         .padding(.horizontal, 8)
         .padding(.vertical, 7)
@@ -414,7 +420,7 @@ struct WindowBatchRowView: View {
                 }
 
                 if let shortcut = shortcutText {
-                    KeycapView(text: LocalizedStringKey(shortcut), isSelected: isSelected)
+                    KeycapView(text: shortcut, isSelected: isSelected)
                 } else if isStaged {
                     Text(stagedActionText)
                         .font(.subheadline)

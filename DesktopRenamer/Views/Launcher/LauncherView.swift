@@ -14,7 +14,7 @@ struct LauncherView: View {
         ZStack {
             VStack(spacing: 0) {
                 // Header (Typing Bar)
-                HStack(spacing: 12) {
+                HStack(spacing: 0) {
                     Image(systemName: "magnifyingglass")
                         .foregroundStyle(colors.textSecondary)
                         .font(.system(size: 18, weight: .medium))
@@ -171,7 +171,9 @@ struct LauncherView: View {
                 .frame(height: 44)
                 .padding(.horizontal, 10)
                 .padding(.top, 10)
-                
+
+                // The list continues underneath the floating footer, as in a native palette.
+                ZStack(alignment: .bottom) {
                 // Content area
                 if viewModel.activeCommand?.type == .renameCurrentSpace {
                     VStack(spacing: 12) {
@@ -216,6 +218,7 @@ struct LauncherView: View {
                 } else {
                     CommandBottomBar(viewModel: viewModel)
                 }
+                }
             }
             .blur(radius: viewModel.commandKTargetWindow != nil ? 10 : 0)
             .animation(.easeInOut(duration: 0.12), value: viewModel.commandKTargetWindow != nil)
@@ -225,8 +228,8 @@ struct LauncherView: View {
             }
         }
         .frame(width: 750, height: 475)
-        .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
-        .launcherBackground(cornerRadius: 24, borderColor: colors.border)
+        .clipShape(RoundedRectangle(cornerRadius: 26, style: .continuous))
+        .launcherBackground(cornerRadius: 26, borderColor: colors.border)
         .shadow(color: Color.black.opacity(colorScheme == .dark ? 0.45 : 0.20), radius: 24, x: 0, y: 12)
         .padding(45)
         .disabled(viewModel.isRearrangingSpace)

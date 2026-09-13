@@ -48,9 +48,7 @@ struct BatchMoveBottomBar: View {
                     // Staging target space selection
                     HStack(spacing: 4) {
                         Text(verbatim: String(localized: "Stage"))
-                        Text("↵")
-                            .font(.system(.caption2))
-                            .fontWeight(.bold)
+                        KeycapView(text: "↵", isSelected: false)
                     }
                     .modifier(BottomBarCapsule(isSelected: false, isActive: false, colorScheme: colorScheme))
                     .contentShape(Rectangle())
@@ -74,9 +72,7 @@ struct BatchMoveBottomBar: View {
                             HStack(spacing: 8) {
                                 HStack(spacing: 4) {
                                     Text(verbatim: String(localized: isMove ? "Unstage Move" : "Unstage Action"))
-                                    Text("↵")
-                                        .font(.system(.subheadline))
-                                        .fontWeight(.bold)
+                                    KeycapView(text: "↵", isSelected: false)
                                 }
                                 .modifier(BottomBarCapsule(isSelected: false, isActive: false, colorScheme: colorScheme))
                                 .contentShape(Rectangle())
@@ -89,9 +85,7 @@ struct BatchMoveBottomBar: View {
                             HStack(spacing: 8) {
                                 HStack(spacing: 4) {
                                     Text(verbatim: String(localized: "Move to..."))
-                                    Text("↵")
-                                        .font(.system(.subheadline))
-                                        .fontWeight(.bold)
+                                    KeycapView(text: "↵", isSelected: false)
                                 }
                                 .modifier(BottomBarCapsule(isSelected: false, isActive: false, colorScheme: colorScheme))
                                 .contentShape(Rectangle())
@@ -101,9 +95,7 @@ struct BatchMoveBottomBar: View {
                                 
                                 HStack(spacing: 4) {
                                     Text(verbatim: String(localized: "Actions"))
-                                    Text("⌘K")
-                                        .font(.system(.subheadline))
-                                        .fontWeight(.bold)
+                                    KeycapView(text: "⌘K", isSelected: false)
                                 }
                                 .modifier(BottomBarCapsule(isSelected: false, isActive: false, colorScheme: colorScheme))
                                 .contentShape(Rectangle())
@@ -118,9 +110,7 @@ struct BatchMoveBottomBar: View {
                     if !viewModel.stagedMoves.isEmpty {
                         HStack(spacing: 4) {
                             Text(verbatim: String(localized: "Run Batch Actions"))
-                            Text("⌘↵")
-                                .font(.system(.subheadline))
-                                .fontWeight(.bold)
+                            KeycapView(text: "⌘↵", isSelected: true, isGreenRow: true)
                         }
                         .modifier(BottomBarCapsule(isSelected: true, isActive: false, isGreen: true, colorScheme: colorScheme))
                         .contentShape(Rectangle())
@@ -318,9 +308,7 @@ struct SpacesBottomBar: View {
                         }) {
                             HStack(spacing: 4) {
                                 Text(LocalizedStringKey("Switch Space"))
-                                Text("⇥")
-                                    .font(.system(.subheadline))
-                                    .fontWeight(.bold)
+                                KeycapView(text: "⇥", isSelected: false)
                             }
                             .modifier(BottomBarCapsule(isSelected: false, isActive: false, colorScheme: colorScheme))
                         }
@@ -330,9 +318,7 @@ struct SpacesBottomBar: View {
                     if viewModel.isBottomBarFocused {
                         HStack(spacing: 4) {
                             Text(LocalizedStringKey("Switch Space"))
-                            Text("↵")
-                                .font(.system(.subheadline))
-                                .fontWeight(.bold)
+                            KeycapView(text: "↵", isSelected: false)
                         }
                         .modifier(BottomBarCapsule(isSelected: false, isActive: false, colorScheme: colorScheme))
                         .contentShape(Rectangle())
@@ -342,9 +328,7 @@ struct SpacesBottomBar: View {
                         
                         HStack(spacing: 4) {
                             Text(LocalizedStringKey("Move Window"))
-                            Text("⌥↵")
-                                .font(.system(.subheadline))
-                                .fontWeight(.bold)
+                            KeycapView(text: "⌥↵", isSelected: false)
                         }
                         .modifier(BottomBarCapsule(isSelected: false, isActive: false, colorScheme: colorScheme))
                         .contentShape(Rectangle())
@@ -354,9 +338,7 @@ struct SpacesBottomBar: View {
                     } else {
                         HStack(spacing: 4) {
                             Text(LocalizedStringKey("Action"))
-                            Text("↵")
-                                .font(.system(.subheadline))
-                                .fontWeight(.bold)
+                            KeycapView(text: "↵", isSelected: false)
                         }
                         .modifier(BottomBarCapsule(isSelected: false, isActive: false, colorScheme: colorScheme))
                         .contentShape(Rectangle())

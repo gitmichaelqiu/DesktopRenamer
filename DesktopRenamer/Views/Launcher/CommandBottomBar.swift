@@ -53,25 +53,19 @@ struct CommandBottomBar: View {
                     HStack(spacing: 8) {
                         HStack(spacing: 4) {
                             Text(verbatim: String(localized: "Move Space Up"))
-                            Text("⌘⇧↑")
-                                .font(.system(.subheadline))
-                                .fontWeight(.bold)
+                            KeycapView(text: "⌘⇧↑", isSelected: false)
                         }
                         .modifier(BottomBarCapsule(isSelected: false, isActive: false, colorScheme: colorScheme))
 
                         HStack(spacing: 4) {
                             Text(verbatim: String(localized: "Move Space Down"))
-                            Text("⌘⇧↓")
-                                .font(.system(.subheadline))
-                                .fontWeight(.bold)
+                            KeycapView(text: "⌘⇧↓", isSelected: false)
                         }
                         .modifier(BottomBarCapsule(isSelected: false, isActive: false, colorScheme: colorScheme))
 
                         HStack(spacing: 4) {
                             Text(verbatim: String(localized: "Switch Space"))
-                            Text("↵")
-                                .font(.system(.subheadline))
-                                .fontWeight(.bold)
+                            KeycapView(text: "↵", isSelected: false)
                         }
                         .modifier(BottomBarCapsule(isSelected: false, isActive: false, colorScheme: colorScheme))
                         .contentShape(Rectangle())
@@ -83,9 +77,7 @@ struct CommandBottomBar: View {
                 case .moveWindow:
                     HStack(spacing: 4) {
                         Text(verbatim: String(localized: "Move Window"))
-                        Text("↵")
-                            .font(.system(.subheadline))
-                            .fontWeight(.bold)
+                        KeycapView(text: "↵", isSelected: false)
                     }
                     .modifier(BottomBarCapsule(isSelected: false, isActive: false, colorScheme: colorScheme))
                     .contentShape(Rectangle())
@@ -97,9 +89,7 @@ struct CommandBottomBar: View {
                     if viewModel.stagingWindow != nil {
                         HStack(spacing: 4) {
                             Text(verbatim: String(localized: "Move"))
-                            Text("↵")
-                                .font(.system(.subheadline))
-                                .fontWeight(.bold)
+                            KeycapView(text: "↵", isSelected: false)
                         }
                         .modifier(BottomBarCapsule(isSelected: false, isActive: false, colorScheme: colorScheme))
                         .contentShape(Rectangle())
@@ -110,9 +100,7 @@ struct CommandBottomBar: View {
                         HStack(spacing: 8) {
                             HStack(spacing: 4) {
                                 Text(verbatim: String(localized: "Focus"))
-                                Text("↵")
-                                    .font(.system(.subheadline))
-                                    .fontWeight(.bold)
+                                KeycapView(text: "↵", isSelected: false)
                             }
                             .modifier(BottomBarCapsule(isSelected: false, isActive: false, colorScheme: colorScheme))
                             .contentShape(Rectangle())
@@ -122,9 +110,7 @@ struct CommandBottomBar: View {
                             
                             HStack(spacing: 4) {
                                 Text(verbatim: String(localized: "Move"))
-                                Text("⌘T")
-                                    .font(.system(.subheadline))
-                                    .fontWeight(.bold)
+                                KeycapView(text: "⌘T", isSelected: false)
                             }
                             .modifier(BottomBarCapsule(isSelected: false, isActive: false, colorScheme: colorScheme))
                             .contentShape(Rectangle())
@@ -134,9 +120,7 @@ struct CommandBottomBar: View {
 
                             HStack(spacing: 4) {
                                 Text(verbatim: String(localized: "Move to..."))
-                                Text("⌘⇧T")
-                                    .font(.system(.subheadline))
-                                    .fontWeight(.bold)
+                                KeycapView(text: "⌘⇧T", isSelected: false)
                             }
                             .modifier(BottomBarCapsule(isSelected: false, isActive: false, colorScheme: colorScheme))
                             .contentShape(Rectangle())
@@ -146,9 +130,7 @@ struct CommandBottomBar: View {
                             
                             HStack(spacing: 4) {
                                 Text(verbatim: String(localized: "Actions"))
-                                Text("⌘K")
-                                    .font(.system(.subheadline))
-                                    .fontWeight(.bold)
+                                KeycapView(text: "⌘K", isSelected: false)
                             }
                             .modifier(BottomBarCapsule(isSelected: false, isActive: false, colorScheme: colorScheme))
                             .contentShape(Rectangle())
@@ -161,9 +143,7 @@ struct CommandBottomBar: View {
                 case .renameCurrentSpace:
                     HStack(spacing: 4) {
                         Text(verbatim: String(localized: "Rename Space"))
-                        Text("↵")
-                            .font(.system(.subheadline))
-                            .fontWeight(.bold)
+                        KeycapView(text: "↵", isSelected: false)
                     }
                     .modifier(BottomBarCapsule(isSelected: false, isActive: false, colorScheme: colorScheme))
                     .contentShape(Rectangle())

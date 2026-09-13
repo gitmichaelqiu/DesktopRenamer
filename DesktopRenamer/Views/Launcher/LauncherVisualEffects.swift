@@ -43,7 +43,7 @@ private struct LauncherSurface: ViewModifier {
         content
             .background(colors.backgroundOverlay)
             .background {
-                VisualEffectView(material: .hudWindow, blendingMode: .withinWindow)
+                VisualEffectView(material: .hudWindow, blendingMode: .behindWindow)
             }
             .clipShape(RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
             .overlay {
