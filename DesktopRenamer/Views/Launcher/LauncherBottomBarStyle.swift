@@ -17,7 +17,7 @@ extension AnyTransition {
     static var launcherSubmenu: AnyTransition {
         .asymmetric(
             insertion: .offset(x: 10, y: 10).combined(with: .opacity),
-            removal: .offset(x: 6, y: 6).combined(with: .opacity)
+            removal: .offset(x: 10, y: 10).combined(with: .opacity)
         )
     }
 }
