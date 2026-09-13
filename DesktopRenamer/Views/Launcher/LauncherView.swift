@@ -245,6 +245,7 @@ struct LauncherView: View {
 
             if viewModel.commandKTargetWindow != nil || viewModel.isSpaceMenuOpen {
                 Color.clear
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
                     .contentShape(Rectangle())
                     .onTapGesture {
                         if viewModel.commandKTargetWindow != nil {
@@ -253,35 +254,21 @@ struct LauncherView: View {
                             viewModel.handleEscapeKey()
                         }
                     }
+
+                if let targetWindow = viewModel.commandKTargetWindow {
+                    LauncherActionMenuView(viewModel: viewModel, window: targetWindow)
+                        .padding(8)
+                        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomTrailing)
+                } else if viewModel.isSpaceMenuOpen {
+                    LauncherSpaceMenuView(viewModel: viewModel)
+                        .padding(8)
+                        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomTrailing)
+                }
             }
         }
         .frame(width: 750, height: 475)
         .launcherBackground(cornerRadius: 26)
         .disabled(viewModel.isRearrangingSpace)
-        .onChange(of: viewModel.commandKTargetWindow) { targetWindow in
-            LauncherWindowController.shared.updateCommandKMenu(for: targetWindow)
-        }
-        .onChange(of: viewModel.activeCommand) { _ in
-            LauncherWindowController.shared.updateSpaceMenu()
-        }
-        .onChange(of: viewModel.stagingWindow) { _ in
-            LauncherWindowController.shared.updateSpaceMenu()
-        }
-        .onChange(of: viewModel.selectedRowIndex) { _ in
-            LauncherWindowController.shared.updateSpaceMenu()
-        }
-        .onChange(of: viewModel.searchQuery) { _ in
-            LauncherWindowController.shared.updateSpaceMenu()
-        }
-        .onChange(of: viewModel.showCommandNumbers) { _ in
-            LauncherWindowController.shared.updateSpaceMenu()
-        }
-        .onChange(of: viewModel.currentSpaces) { _ in
-            LauncherWindowController.shared.updateSpaceMenu()
-        }
-        .onChange(of: viewModel.isSpaceMenuOpen) { _ in
-            LauncherWindowController.shared.updateSpaceMenu()
-        }
     }
 }
 

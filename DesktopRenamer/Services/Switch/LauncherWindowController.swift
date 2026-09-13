@@ -14,98 +14,6 @@ class LauncherNSPanel: NSPanel {
     }
 }
 
-private final class LauncherMenuPanel: NSPanel {
-    override var canBecomeKey: Bool {
-        return false
-    }
-
-    override var canBecomeMain: Bool {
-        return false
-    }
-
-    init() {
-        super.init(
-            contentRect: .zero,
-            styleMask: [.borderless, .nonactivatingPanel],
-            backing: .buffered,
-            defer: false
-        )
-
-        isFloatingPanel = true
-        level = .floating
-        backgroundColor = .clear
-        isOpaque = false
-        hasShadow = true
-        acceptsMouseMovedEvents = true
-        ignoresMouseEvents = false
-        hidesOnDeactivate = false
-        collectionBehavior = [
-            .canJoinAllSpaces,
-            .fullScreenAuxiliary,
-            .ignoresCycle,
-        ]
-    }
-}
-
-@MainActor
-private final class LauncherMenuPanelController {
-    private let panel = LauncherMenuPanel()
-    private var hostingView: NSHostingView<AnyView>?
-    private weak var parentWindow: NSWindow?
-
-    func show(content: AnyView, parent: NSWindow) {
-        if parentWindow !== parent {
-            if let previousParent = parentWindow {
-                previousParent.removeChildWindow(panel)
-            }
-            parentWindow = parent
-        }
-
-        if let hostingView {
-            hostingView.rootView = content
-            hostingView.invalidateIntrinsicContentSize()
-        } else {
-            let hostingView = NSHostingView(rootView: content)
-            hostingView.wantsLayer = true
-            hostingView.layer?.backgroundColor = NSColor.clear.cgColor
-            hostingView.sizingOptions = [.intrinsicContentSize]
-            self.hostingView = hostingView
-            panel.contentView = hostingView
-        }
-
-        layout(relativeTo: parent)
-        if panel.parent == nil {
-            parent.addChildWindow(panel, ordered: .above)
-        }
-        panel.orderFrontRegardless()
-    }
-
-    func hide() {
-        if let parentWindow {
-            parentWindow.removeChildWindow(panel)
-        }
-        parentWindow = nil
-        panel.orderOut(nil)
-    }
-
-    private func layout(relativeTo parent: NSWindow) {
-        guard let hostingView else { return }
-
-        hostingView.needsLayout = true
-        hostingView.layoutSubtreeIfNeeded()
-        let intrinsicSize = hostingView.intrinsicContentSize
-        guard intrinsicSize.width > 0, intrinsicSize.height > 0 else { return }
-        let size = NSSize(width: 380, height: intrinsicSize.height)
-
-        let contentFrame = parent.contentRect(forFrameRect: parent.frame)
-        let origin = NSPoint(
-            x: contentFrame.maxX - size.width - 8,
-            y: contentFrame.minY + 8
-        )
-        panel.setFrame(NSRect(origin: origin, size: size), display: true)
-    }
-}
-
 class LauncherWindowController: NSWindowController, NSWindowDelegate {
     static let shared = LauncherWindowController()
     
@@ -114,7 +22,6 @@ class LauncherWindowController: NSWindowController, NSWindowDelegate {
     private var flagsChangedMonitor: Any?
     private var keyDownMonitor: Any?
     private var isHiding = false
-    private let actionMenuController = LauncherMenuPanelController()
     
     init() {
         let panel = LauncherNSPanel(
@@ -208,7 +115,6 @@ class LauncherWindowController: NSWindowController, NSWindowDelegate {
     
     func show() {
         guard let panel = window as? LauncherNSPanel else { return }
-        actionMenuController.hide()
         let traceID = SpaceHelper.debugTraceID()
         SpaceHelper.debugTrace(
             traceID,
@@ -246,7 +152,6 @@ class LauncherWindowController: NSWindowController, NSWindowDelegate {
 
         let traceID = SpaceHelper.debugTraceID()
         let panel = window
-        actionMenuController.hide()
         SpaceHelper.debugTrace(
             traceID,
             "launcher hide begin visible=\(panel?.isVisible ?? false), key=\(panel?.isKeyWindow ?? false), windowSpaces=\(panel.map { SpaceHelper.getWindowCurrentSpaces(windowID: $0.windowNumber).sorted() } ?? []), live=\(SpaceHelper.debugFormatSpaceMap(SpaceHelper.getCurrentSpaceIDsByDisplay()))"
@@ -258,32 +163,6 @@ class LauncherWindowController: NSWindowController, NSWindowDelegate {
         SpaceHelper.debugTrace(
             traceID,
             "launcher hide end visible=\(panel?.isVisible ?? false), key=\(panel?.isKeyWindow ?? false), windowSpaces=\(panel.map { SpaceHelper.getWindowCurrentSpaces(windowID: $0.windowNumber).sorted() } ?? []), live=\(SpaceHelper.debugFormatSpaceMap(SpaceHelper.getCurrentSpaceIDsByDisplay()))"
-        )
-    }
-
-    func updateCommandKMenu(for targetWindow: WindowEntry?) {
-        guard let parent = window, let targetWindow else {
-            actionMenuController.hide()
-            return
-        }
-
-        actionMenuController.show(
-            content: AnyView(LauncherActionMenuView(viewModel: viewModel, window: targetWindow)),
-            parent: parent
-        )
-    }
-
-    func updateSpaceMenu() {
-        guard let parent = window,
-              viewModel.commandKTargetWindow == nil,
-              viewModel.isSpaceMenuOpen else {
-            actionMenuController.hide()
-            return
-        }
-
-        actionMenuController.show(
-            content: AnyView(LauncherSpaceMenuView(viewModel: viewModel)),
-            parent: parent
         )
     }
 
