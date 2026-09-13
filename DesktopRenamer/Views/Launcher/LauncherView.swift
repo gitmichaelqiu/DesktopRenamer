@@ -173,9 +173,8 @@ struct LauncherView: View {
                 .padding(.horizontal, 16)
                 .padding(.top, 10)
 
-                // The list continues underneath the floating footer, as in a native palette.
-                ZStack(alignment: .bottom) {
-                // Content area
+                // The footer is inserted into the scroll layout, so it never covers a row.
+                Group {
                 if viewModel.activeCommand?.type == .renameCurrentSpace {
                     VStack(spacing: 12) {
                         Spacer()
@@ -211,14 +210,15 @@ struct LauncherView: View {
                         .frame(maxHeight: .infinity)
                 }
                 
-                // Bottom bar
-                if viewModel.activeCommand == nil {
-                    SpacesBottomBar(viewModel: viewModel, spaceManager: spaceManager)
-                } else if viewModel.activeCommand?.type == .batchMoveWindows {
-                    BatchMoveBottomBar(viewModel: viewModel)
-                } else {
-                    CommandBottomBar(viewModel: viewModel)
                 }
+                .safeAreaInset(edge: .bottom, spacing: 0) {
+                    if viewModel.activeCommand == nil {
+                        SpacesBottomBar(viewModel: viewModel, spaceManager: spaceManager)
+                    } else if viewModel.activeCommand?.type == .batchMoveWindows {
+                        BatchMoveBottomBar(viewModel: viewModel)
+                    } else {
+                        CommandBottomBar(viewModel: viewModel)
+                    }
                 }
             }
             .blur(radius: viewModel.commandKTargetWindow != nil ? 10 : 0)

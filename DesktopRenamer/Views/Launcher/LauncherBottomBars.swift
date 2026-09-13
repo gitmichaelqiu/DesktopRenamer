@@ -20,7 +20,9 @@ struct BatchMoveBottomBar: View {
                         .fontWeight(.semibold)
                         .foregroundColor(colors.textPrimary)
                 }
-                .modifier(BottomBarCapsule(isSelected: false, isActive: false, colorScheme: colorScheme))
+                .font(.callout.weight(.medium))
+                .padding(.horizontal, 8)
+                .frame(height: 28)
                 
                 if let staging = viewModel.stagingWindow {
                     Image(systemName: "chevron.right")

@@ -62,9 +62,12 @@ class LauncherWindowController: NSWindowController, NSWindowDelegate {
         hostingView.wantsLayer = true
         hostingView.layer?.cornerRadius = 26
         hostingView.layer?.masksToBounds = true
+        hostingView.layer?.backgroundColor = NSColor.clear.cgColor
         hostingView.sizingOptions = []
         
         panel.contentView = hostingView
+        panel.contentView?.wantsLayer = true
+        panel.contentView?.layer?.backgroundColor = NSColor.clear.cgColor
         
         flagsChangedMonitor = NSEvent.addLocalMonitorForEvents(matching: .flagsChanged) { [weak self] event in
             guard let self = self else { return event }
