@@ -226,7 +226,7 @@ struct SettingsRequirement: Identifiable {
     }
 
     static func accessibilityEventPosting(isGranted: Bool) -> Self {
-        Self(name: "Accessibility permission", isSatisfied: isGranted)
+        Self(name: "Event posting permission", isSatisfied: isGranted)
     }
 
     static func screenRecording(isGranted: Bool) -> Self {

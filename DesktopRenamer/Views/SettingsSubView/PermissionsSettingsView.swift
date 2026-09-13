@@ -6,10 +6,10 @@ struct PermissionsSettingsView: View {
     var body: some View {
         SettingsContainer(.permissions) {
             VStack(alignment: .leading, spacing: 20) {
-                SettingsSection("Permissions", helperText: "If the Settings show that the permission is granted but the app still does not have the permission, remove the app row in Settings and re-grant.") {
+                SettingsSection("Permissions", helperText: "Status is read from macOS for this copy of DesktopRenamer and refreshes automatically while System Settings is open. If a permission remains off, remove the old DesktopRenamer entry and add the copy currently running.") {
                     SettingsRow("Accessibility", helperText: "Required for injecting shortcuts, reading active window information, and moving windows with Option + swipe.") {
                         HStack {
-                            if permissionManager.hasAccessibilityPermission {
+                            if permissionManager.isAccessibilityGranted {
                                 Image(systemName: "checkmark.circle.fill")
                                     .foregroundColor(.green)
                             } else {
@@ -17,8 +17,26 @@ struct PermissionsSettingsView: View {
                                     .foregroundColor(.red)
                             }
                             
-                            Button(permissionManager.hasAccessibilityPermission ? "Settings" : "Grant") {
+                            Button(permissionManager.isAccessibilityGranted ? "Settings" : "Grant") {
                                 permissionManager.requestAccessibilityPermission()
+                            }
+                        }
+                    }
+
+                    Divider()
+
+                    SettingsRow("Event Posting", helperText: "Required for DesktopRenamer to synthesize the keyboard, mouse, and trackpad events used by switching and window movement.") {
+                        HStack {
+                            if permissionManager.isEventSynthesisGranted {
+                                Image(systemName: "checkmark.circle.fill")
+                                    .foregroundColor(.green)
+                            } else {
+                                Image(systemName: "xmark.circle.fill")
+                                    .foregroundColor(.red)
+                            }
+
+                            Button(permissionManager.isEventSynthesisGranted ? "Settings" : "Grant") {
+                                permissionManager.requestEventSynthesisPermission()
                             }
                         }
                     }
@@ -46,6 +64,9 @@ struct PermissionsSettingsView: View {
             }
             .frame(maxWidth: .infinity, alignment: .topLeading)
             .environment(\.settingsTab, .permissions)
+            .onAppear {
+                permissionManager.refresh()
+            }
         }
     }
 }
