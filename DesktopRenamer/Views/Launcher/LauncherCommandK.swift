@@ -53,10 +53,10 @@ struct LauncherActionMenuView: View {
                     )
                 }
             }
-            .padding(8)
         }
+        .padding(6)
         .frame(width: 380)
-        .launcherFrosted(in: RoundedRectangle(cornerRadius: 26, style: .continuous))
+        .launcherFrosted(in: RoundedRectangle(cornerRadius: 16, style: .continuous))
     }
 }
 
@@ -117,7 +117,6 @@ struct LauncherSpaceMenuView: View {
                                 .id(space.id)
                             }
                         }
-                        .padding(8)
                     }
                     .frame(height: min(max(CGFloat(spaces.count) * 42, 42), 300))
                     .scrollIndicators(.hidden)
@@ -138,8 +137,9 @@ struct LauncherSpaceMenuView: View {
                 }
             }
         }
+        .padding(6)
         .frame(width: 380)
-        .launcherFrosted(in: RoundedRectangle(cornerRadius: 26, style: .continuous))
+        .launcherFrosted(in: RoundedRectangle(cornerRadius: 16, style: .continuous))
     }
 }
 

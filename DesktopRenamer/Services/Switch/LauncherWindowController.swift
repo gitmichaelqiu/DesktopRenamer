@@ -63,6 +63,7 @@ private final class LauncherMenuPanelController {
 
         if let hostingView {
             hostingView.rootView = content
+            hostingView.invalidateIntrinsicContentSize()
         } else {
             let hostingView = NSHostingView(rootView: content)
             hostingView.wantsLayer = true
@@ -90,6 +91,7 @@ private final class LauncherMenuPanelController {
     private func layout(relativeTo parent: NSWindow) {
         guard let hostingView else { return }
 
+        hostingView.needsLayout = true
         hostingView.layoutSubtreeIfNeeded()
         let intrinsicSize = hostingView.intrinsicContentSize
         guard intrinsicSize.width > 0, intrinsicSize.height > 0 else { return }
@@ -171,8 +173,16 @@ class LauncherWindowController: NSWindowController, NSWindowDelegate {
         keyDownMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
             guard let self,
                   let panel = self.window as? LauncherNSPanel,
-                  panel.isKeyWindow,
-                  let focusedTextField = panel.focusedTextField,
+                  panel.isKeyWindow
+            else {
+                return event
+            }
+
+            if self.handleLauncherShortcut(event) {
+                return nil
+            }
+
+            guard let focusedTextField = panel.focusedTextField,
                   focusedTextField.window === panel,
                   panel.firstResponder === focusedTextField || panel.firstResponder === focusedTextField.currentEditor()
             else {
@@ -275,6 +285,56 @@ class LauncherWindowController: NSWindowController, NSWindowDelegate {
             content: AnyView(LauncherSpaceMenuView(viewModel: viewModel)),
             parent: parent
         )
+    }
+
+    private func handleLauncherShortcut(_ event: NSEvent) -> Bool {
+        guard event.type == .keyDown else { return false }
+
+        let modifiers = event.modifierFlags.intersection(.deviceIndependentFlagsMask)
+        guard modifiers.contains(.command),
+              modifiers.subtracting([.command, .numericPad, .function]).isEmpty else {
+            return false
+        }
+        let characters = event.charactersIgnoringModifiers?.lowercased() ?? ""
+
+        if event.keyCode == 40 || characters == "k" {
+            if viewModel.commandKTargetWindow != nil {
+                viewModel.commandKTargetWindow = nil
+                return true
+            }
+
+            guard (viewModel.activeCommand?.type == .batchMoveWindows || viewModel.activeCommand?.type == .listWindows),
+                  viewModel.stagingWindow == nil else {
+                return false
+            }
+            viewModel.showCommandKPanel()
+            return true
+        }
+
+        let numberByKeyCode: [UInt16: Int] = [
+            18: 1, 19: 2, 20: 3, 21: 4, 23: 5,
+            22: 6, 26: 7, 28: 8, 25: 9,
+        ]
+        guard let number = numberByKeyCode[event.keyCode]
+                ?? (characters.count == 1 ? Int(characters) : nil),
+              (1...9).contains(number) else {
+            return false
+        }
+
+        if viewModel.commandKTargetWindow != nil {
+            let index = number - 1
+            guard viewModel.commandKActions.indices.contains(index) else { return true }
+            viewModel.commandKSelectedIndex = index
+            viewModel.executeCommandKAction()
+        } else if viewModel.isSpaceMenuOpen {
+            let index = number - 1
+            guard viewModel.spaceMenuSpaces.indices.contains(index) else { return true }
+            viewModel.spaceMenuSelectedIndex = index
+            viewModel.executeSpaceMenuSelection()
+        } else {
+            viewModel.executeNthRowAction(number - 1)
+        }
+        return true
     }
     
     func toggle() {
