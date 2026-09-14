@@ -27,7 +27,7 @@ extension LauncherViewModel {
                 isExecutingRestoreToImmediately = false
                 selectedRowIndex = batchMoveLastSelectedIndex
             } else {
-                activeCommand = nil
+                returnToRootCommandList()
             }
         } else if stagingWindow != nil {
             stagingWindow = nil
@@ -35,12 +35,23 @@ extension LauncherViewModel {
             isExecutingRestoreToImmediately = false
             selectedRowIndex = batchMoveLastSelectedIndex
         } else if activeCommand != nil {
-            activeCommand = nil
+            returnToRootCommandList()
         } else if !searchQuery.isEmpty {
             searchQuery = ""
         } else {
             closeLauncher()
         }
+    }
+
+    private func returnToRootCommandList() {
+        let commandID = rootCommandSelectionID
+        activeCommand = nil
+
+        guard let commandID,
+              let index = filteredCommands.firstIndex(where: { $0.id == commandID }) else {
+            return
+        }
+        selectedRowIndex = index
     }
     
     func handleTabKey() {

@@ -15,6 +15,7 @@ extension LauncherViewModel {
             let command = commands[index]
             
             if command.hasSubpage {
+                rootCommandSelectionID = command.id
                 activeCommand = command
                 submenuSearchQuery = ""
                 // Space selection commands use the same full-page layout as

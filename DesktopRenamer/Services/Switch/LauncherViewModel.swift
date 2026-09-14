@@ -80,6 +80,10 @@ enum DesktopRearrangementDirection {
         }
     }
     @Published var selectedRowIndex: Int = 0
+    // Keep the root command identity while a command page is open. The
+    // visible root order can change when command ranking is updated, so an
+    // index alone cannot reliably restore the selected command.
+    var rootCommandSelectionID: String?
     @Published var activeCommand: LauncherCommand? = nil {
         willSet {
             if activeCommand?.type == .batchMoveWindows && newValue?.type != .batchMoveWindows {
