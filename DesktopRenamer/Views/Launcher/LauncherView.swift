@@ -46,7 +46,7 @@ struct LauncherView: View {
                         SearchTextField(
                             text: $viewModel.searchQuery,
                             isDark: colors.isDark,
-                            isTypingDisabled: viewModel.commandKTargetWindow != nil,
+                            isTypingDisabled: viewModel.isSubmenuOpen,
                             onUpArrow: {
                                 if viewModel.commandKTargetWindow != nil {
                                     viewModel.selectPreviousCommandKAction()

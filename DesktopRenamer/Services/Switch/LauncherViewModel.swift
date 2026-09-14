@@ -152,6 +152,10 @@ enum DesktopRearrangementDirection {
     @Published var commandKSelectedIndex: Int = 0
     @Published var isStagingForRestoreTo: Bool = false
     @Published var isExecutingRestoreToImmediately: Bool = false
+
+    var isSubmenuOpen: Bool {
+        commandKTargetWindow != nil || isSpaceMenuOpen
+    }
     
     // Captured active window before launcher gains focus
     @Published var previouslyActiveWindow: (id: Int, pid: Int32, frame: CGRect)? = nil

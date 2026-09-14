@@ -16,6 +16,17 @@ class LauncherNSPanel: NSPanel {
 
 class LauncherWindowController: NSWindowController, NSWindowDelegate {
     static let shared = LauncherWindowController()
+
+    private static let submenuNavigationKeyCodes: Set<UInt16> = [
+        36,  // Return
+        48,  // Tab
+        53,  // Escape
+        76,  // Keypad Enter
+        123, // Left arrow
+        124, // Right arrow
+        125, // Down arrow
+        126, // Up arrow
+    ]
     
     let viewModel = LauncherViewModel()
     
@@ -86,6 +97,11 @@ class LauncherWindowController: NSWindowController, NSWindowDelegate {
             }
 
             if self.handleLauncherShortcut(event) {
+                return nil
+            }
+
+            if self.viewModel.isSubmenuOpen,
+               !Self.submenuNavigationKeyCodes.contains(event.keyCode) {
                 return nil
             }
 
