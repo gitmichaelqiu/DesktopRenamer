@@ -1,21 +1,39 @@
 import SwiftUI
 
 private enum LauncherSubmenu {
-    case actions(window: WindowEntry)
-    case spaces
+    case actions(window: WindowEntry, fallbackActions: [LauncherCommandKAction])
+    case spaces(
+        fallbackSpaces: [SpaceGroup],
+        fallbackStagingWindow: WindowEntry?,
+        fallbackTitle: String
+    )
 }
 
 struct LauncherSubmenuOverlay: View {
     @ObservedObject var viewModel: LauncherViewModel
 
-    @State private var displayedSubmenu: LauncherSubmenu = .spaces
+    @State private var displayedSubmenu: LauncherSubmenu = .spaces(
+        fallbackSpaces: [],
+        fallbackStagingWindow: nil,
+        fallbackTitle: ""
+    )
     @State private var isPresented = false
 
     private var requestedSubmenu: LauncherSubmenu? {
         if let targetWindow = viewModel.commandKTargetWindow {
-            return .actions(window: targetWindow)
+            return .actions(
+                window: targetWindow,
+                fallbackActions: viewModel.commandKActions
+            )
         }
-        return viewModel.isSpaceMenuOpen ? .spaces : nil
+        if viewModel.isSpaceMenuOpen {
+            return .spaces(
+                fallbackSpaces: viewModel.spaceMenuSpaces,
+                fallbackStagingWindow: viewModel.stagingWindow,
+                fallbackTitle: viewModel.activeCommand?.title ?? String(localized: "Select Space")
+            )
+        }
+        return nil
     }
 
     private var requestedSubmenuKey: String {
@@ -53,15 +71,27 @@ struct LauncherSubmenuOverlay: View {
         .onChange(of: requestedSubmenuKey) { _ in
             synchronizeSubmenu()
         }
+        .onChange(of: viewModel.submenuSearchQuery) { _ in
+            synchronizeSubmenu()
+        }
     }
 
     @ViewBuilder
     private func submenuView(for submenu: LauncherSubmenu) -> some View {
         switch submenu {
-        case .actions(let window):
-            LauncherActionMenuView(viewModel: viewModel, window: window)
-        case .spaces:
-            LauncherSpaceMenuView(viewModel: viewModel)
+        case .actions(let window, let fallbackActions):
+            LauncherActionMenuView(
+                viewModel: viewModel,
+                window: window,
+                fallbackActions: fallbackActions
+            )
+        case .spaces(let fallbackSpaces, let fallbackStagingWindow, let fallbackTitle):
+            LauncherSpaceMenuView(
+                viewModel: viewModel,
+                fallbackSpaces: fallbackSpaces,
+                fallbackStagingWindow: fallbackStagingWindow,
+                fallbackTitle: fallbackTitle
+            )
         }
     }
 
@@ -90,6 +120,7 @@ struct LauncherSubmenuOverlay: View {
 struct LauncherActionMenuView: View {
     @ObservedObject var viewModel: LauncherViewModel
     let window: WindowEntry
+    let fallbackActions: [LauncherCommandKAction]
     @Environment(\.colorScheme) var colorScheme
     
     var colors: ThemeColors {
@@ -97,7 +128,10 @@ struct LauncherActionMenuView: View {
     }
 
     private var actionItems: [ActionMenuItem] {
-        viewModel.commandKActions.enumerated().map { index, action in
+        let actions = viewModel.commandKTargetWindow == nil
+            ? fallbackActions
+            : viewModel.commandKActions
+        return actions.enumerated().map { index, action in
             ActionMenuItem(index: index, action: action)
         }
     }
@@ -146,27 +180,36 @@ struct LauncherActionMenuView: View {
 
 struct LauncherSpaceMenuView: View {
     @ObservedObject var viewModel: LauncherViewModel
+    let fallbackSpaces: [SpaceGroup]
+    let fallbackStagingWindow: WindowEntry?
+    let fallbackTitle: String
     @Environment(\.colorScheme) var colorScheme
 
     var colors: ThemeColors {
         ThemeColors(isDark: colorScheme == .dark)
     }
 
-    private var spaces: [SpaceGroup] { viewModel.spaceMenuSpaces }
+    private var spaces: [SpaceGroup] {
+        viewModel.isSpaceMenuOpen ? viewModel.spaceMenuSpaces : fallbackSpaces
+    }
 
     private var showsDisplayName: Bool {
         Set(viewModel.currentSpaces.map(\.displayID)).count > 1
     }
 
     private var title: String {
-        viewModel.activeCommand?.title ?? String(localized: "Select Space")
+        viewModel.activeCommand?.title ?? fallbackTitle
+    }
+
+    private var stagingWindow: WindowEntry? {
+        viewModel.stagingWindow ?? fallbackStagingWindow
     }
 
     var body: some View {
         LauncherSubmenuPanel {
             VStack(alignment: .leading, spacing: 0) {
                 LauncherSubmenuHeader {
-                    if let stagingWindow = viewModel.stagingWindow {
+                    if let stagingWindow {
                         LauncherSubmenuWindowHeader(window: stagingWindow)
                     } else {
                         LauncherSubmenuTitleHeader(title: title, color: colors.textSecondary)
