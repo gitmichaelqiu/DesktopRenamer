@@ -21,7 +21,7 @@ struct SwitchSettingsView: View {
                     SettingsRow(
                         "Switch to previous space",
                         requirements: [
-                            .accessibility(isGranted: permissionManager.isAccessibilityGranted)
+                            .accessibility(isGranted: permissionManager.hasEventInjectionPermission)
                         ]
                     ) {
                         HStack {
@@ -46,7 +46,7 @@ struct SwitchSettingsView: View {
                     SettingsRow(
                         "Switch to next space",
                         requirements: [
-                            .accessibility(isGranted: permissionManager.isAccessibilityGranted)
+                            .accessibility(isGranted: permissionManager.hasEventInjectionPermission)
                         ]
                     ) {
                         HStack {
@@ -72,7 +72,7 @@ struct SwitchSettingsView: View {
                         "Switch to space number",
                         helperText: "Press modifiers and a number to set the shortcut.",
                         requirements: [
-                            .accessibility(isGranted: permissionManager.isAccessibilityGranted)
+                            .accessibility(isGranted: permissionManager.hasEventInjectionPermission)
                         ]
                     ) {
                         HStack {
@@ -97,7 +97,7 @@ struct SwitchSettingsView: View {
                     SettingsRow(
                         "Move window to previous space",
                         requirements: [
-                            .accessibility(isGranted: permissionManager.isAccessibilityGranted)
+                            .accessibility(isGranted: permissionManager.hasEventInjectionPermission)
                         ]
                     ) {
                         HStack {
@@ -122,7 +122,7 @@ struct SwitchSettingsView: View {
                     SettingsRow(
                         "Move window to next space",
                         requirements: [
-                            .accessibility(isGranted: permissionManager.isAccessibilityGranted)
+                            .accessibility(isGranted: permissionManager.hasEventInjectionPermission)
                         ]
                     ) {
                         HStack {
@@ -148,7 +148,7 @@ struct SwitchSettingsView: View {
                         "Move window to space number",
                         helperText: "Press modifiers and a number to set the shortcut.",
                         requirements: [
-                            .accessibility(isGranted: permissionManager.isAccessibilityGranted)
+                            .accessibility(isGranted: permissionManager.hasEventInjectionPermission)
                         ]
                     ) {
                         HStack {
@@ -173,7 +173,7 @@ struct SwitchSettingsView: View {
                     SettingsRow(
                         "Move window to previous display",
                         requirements: [
-                            .accessibility(isGranted: permissionManager.isAccessibilityGranted)
+                            .accessibility(isGranted: permissionManager.hasEventInjectionPermission)
                         ]
                     ) {
                         HStack {
@@ -198,7 +198,7 @@ struct SwitchSettingsView: View {
                     SettingsRow(
                         "Move window to next display",
                         requirements: [
-                            .accessibility(isGranted: permissionManager.isAccessibilityGranted)
+                            .accessibility(isGranted: permissionManager.hasEventInjectionPermission)
                         ]
                     ) {
                         HStack {
@@ -223,7 +223,7 @@ struct SwitchSettingsView: View {
                     SettingsRow("Toggle lock for current space",
                         helperText: "When a space switch is triggered by opening the window of an app, move that window back to the original space. This way, you are always focused in the locked space.",
                         requirements: [
-                            .accessibility(isGranted: permissionManager.isAccessibilityGranted)
+                            .accessibility(isGranted: permissionManager.hasEventInjectionPermission)
                         ],
                         demoVideoName: "LockSpace"
                     ) {
@@ -249,7 +249,7 @@ struct SwitchSettingsView: View {
                     SettingsRow(
                         "Restore windows moved by lock",
                         requirements: [
-                            .accessibility(isGranted: permissionManager.isAccessibilityGranted)
+                            .accessibility(isGranted: permissionManager.hasEventInjectionPermission)
                         ]
                     ) {
                         HStack {
@@ -277,7 +277,7 @@ struct SwitchSettingsView: View {
                         helperText:
                             "Replaces system switch gestures with instant space switching.\n\nRequired: You must disable 'Swipe between full screen apps' in System Settings → Trackpad → More Gestures or change to different number of fingers to prevent conflicts.\n\nNotice, you must click at the fullscreen app to make it active to avoid issues when leaving the app.",
                         requirements: [
-                            .accessibility(isGranted: permissionManager.isAccessibilityGranted)
+                            .accessibility(isGranted: permissionManager.hasEventInjectionPermission)
                         ],
                         demoVideoName: "SwitchOverride"
                     ) {
@@ -313,8 +313,7 @@ struct SwitchSettingsView: View {
                         SettingsRow(
                             "Move window when holding Option",
                             requirements: [
-                                .accessibility(isGranted: permissionManager.isAccessibilityGranted),
-                                .accessibilityEventPosting(isGranted: permissionManager.isEventSynthesisGranted),
+                                .accessibility(isGranted: permissionManager.hasEventInjectionPermission),
                                 .screenRecording(isGranted: permissionManager.isScreenCaptureGranted)
                             ]
                         ) {

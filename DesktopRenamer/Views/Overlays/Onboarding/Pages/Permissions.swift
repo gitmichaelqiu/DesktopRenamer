@@ -30,7 +30,7 @@ struct PermissionsPage: View {
                 Text("Require Permissions")
                     .font(.system(size: 30, weight: .bold, design: .rounded))
                 
-                Text("DesktopRenamer requires Accessibility, Event Posting, and Screen Recording permissions for hotkeys, trackpad overrides, and window movement to function correctly.")
+                Text("DesktopRenamer requires Accessibility and Screen Recording permissions for hotkeys, trackpad overrides, and window movement to function correctly. Accessibility also covers the event control needed to switch Spaces and move windows.")
                     .font(.body)
                     .foregroundColor(.secondary)
                     .multilineTextAlignment(.center)
@@ -43,11 +43,6 @@ struct PermissionsPage: View {
                     title: "Accessibility",
                     isGranted: permissionManager.hasAccessibilityPermission,
                     action: permissionManager.requestAccessibilityPermission
-                )
-                permissionButton(
-                    title: "Event Posting",
-                    isGranted: permissionManager.isEventSynthesisGranted,
-                    action: permissionManager.requestEventSynthesisPermission
                 )
                 permissionButton(
                     title: "Screen Recording",

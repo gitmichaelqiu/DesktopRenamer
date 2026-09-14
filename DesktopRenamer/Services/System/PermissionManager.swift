@@ -8,17 +8,23 @@ class PermissionManager: ObservableObject {
     @Published var isAccessibilityGranted: Bool = false
     @Published var isEventSynthesisGranted: Bool = false
     @Published var isScreenCaptureGranted: Bool = false
+    @Published private(set) var isRestarting: Bool = false
 
-    /// Reports the Accessibility TCC service only. Event posting is tracked
-    /// separately because macOS can report the two services at different
-    /// times while System Settings is updating.
+    /// Accessibility and event synthesis are separate TCC checks, but macOS
+    /// presents both through the same user-facing Accessibility settings.
+    /// Keep them combined for the permission requirement shown to users.
     var hasAccessibilityPermission: Bool {
-        isAccessibilityGranted
+        isAccessibilityGranted && isEventSynthesisGranted
     }
 
     /// Both services are needed before DesktopRenamer can inject events.
     var hasEventInjectionPermission: Bool {
-        isAccessibilityGranted && isEventSynthesisGranted
+        hasAccessibilityPermission
+    }
+
+    /// All permissions required by DesktopRenamer's core features.
+    var hasAllRequiredPermissions: Bool {
+        hasAccessibilityPermission && isScreenCaptureGranted
     }
 
     private struct PermissionSnapshot: Equatable {
@@ -124,24 +130,6 @@ class PermissionManager: ObservableObject {
         )
     }
 
-    func requestEventSynthesisPermission() {
-        guard Thread.isMainThread else {
-            DispatchQueue.main.async { [weak self] in
-                self?.requestEventSynthesisPermission()
-            }
-            return
-        }
-
-        _ = CGRequestPostEventAccess()
-        checkPermissions()
-        openSystemSettings(type: "Privacy_Accessibility")
-        scheduleRefresh(
-            duration: 90.0,
-            interval: 0.5,
-            reason: "Event posting settings opened"
-        )
-    }
-
     func requestScreenCapturePermission() {
         guard Thread.isMainThread else {
             DispatchQueue.main.async { [weak self] in
@@ -158,6 +146,49 @@ class PermissionManager: ObservableObject {
             interval: 0.5,
             reason: "Screen Recording settings opened"
         )
+    }
+
+    /// Relaunches this exact application bundle so macOS can apply newly
+    /// granted permissions to a fresh process. The current process remains
+    /// available if launching the replacement fails.
+    func restartApplication() {
+        guard Thread.isMainThread else {
+            DispatchQueue.main.async { [weak self] in
+                self?.restartApplication()
+            }
+            return
+        }
+
+        guard !isRestarting else { return }
+
+        let applicationURL = Bundle.main.bundleURL.standardizedFileURL
+        let configuration = NSWorkspace.OpenConfiguration()
+        configuration.activates = true
+        configuration.createsNewApplicationInstance = true
+        isRestarting = true
+
+        DiagnosticEventLog.shared.record(
+            subsystem: "PermissionManager",
+            level: "info",
+            "Restarting application from \(applicationURL.path)"
+        )
+
+        NSWorkspace.shared.openApplication(at: applicationURL, configuration: configuration) {
+            [weak self] application, error in
+            DispatchQueue.main.async {
+                guard error == nil, application != nil else {
+                    self?.isRestarting = false
+                    DiagnosticEventLog.shared.record(
+                        subsystem: "PermissionManager",
+                        level: "error",
+                        "Application restart failed: \(error?.localizedDescription ?? "no application returned")"
+                    )
+                    return
+                }
+
+                NSApp.terminate(nil)
+            }
+        }
     }
 
     func openSystemSettings(type: String) {
