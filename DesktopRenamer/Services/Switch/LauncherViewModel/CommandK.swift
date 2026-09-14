@@ -156,11 +156,16 @@ extension LauncherViewModel {
         switch action {
         case .moveWindow:
             guard isListWindows else { return }
+            commandKTargetWindow = nil
             moveSelectedListWindowToCurrentDesktop()
         case .moveWindowTo:
             guard isListWindows else { return }
-            stageSelectedListWindowForMove()
+            guard stageSelectedListWindowForMove() else { return }
+            // Clear the action target only after the target-space state is
+            // ready, so the overlay transitions directly to the space menu.
+            commandKTargetWindow = nil
         case .window(let actionType):
+            commandKTargetWindow = nil
             if isListWindows {
                 executeActionImmediately(window: window, actionType: actionType)
             } else {

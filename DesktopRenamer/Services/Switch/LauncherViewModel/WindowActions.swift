@@ -34,11 +34,12 @@ extension LauncherViewModel {
         }
     }
 
-    func stageSelectedListWindowForMove() {
+    @discardableResult
+    func stageSelectedListWindowForMove() -> Bool {
         guard activeCommand?.type == .listWindows,
               stagingWindow == nil,
               let window = selectedWindowForListWindows else {
-            return
+            return false
         }
 
         let previousRowIndex = selectedRowIndex
@@ -48,6 +49,7 @@ extension LauncherViewModel {
         spaceMenuSelectedIndex = 0
         isExecutingRestoreToImmediately = true
         selectedRowIndex = previousRowIndex
+        return true
     }
 
     /// Matches Raycast's Move to Current Desktop action. The target must be
