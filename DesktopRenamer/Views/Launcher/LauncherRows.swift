@@ -290,12 +290,12 @@ struct WindowRowView: View {
                 .truncationMode(.middle)
                 .layoutPriority(1)
 
-            Spacer()
-
             Text(window.ownerName)
                 .font(.callout)
                 .foregroundColor(isSelected ? colors.textSecondary : colors.textTertiary)
                 .lineLimit(1)
+
+            Spacer()
 
             HStack(spacing: 4) {
                 if window.isHidden {
@@ -392,12 +392,12 @@ struct WindowBatchRowView: View {
                 .truncationMode(.middle)
                 .layoutPriority(1)
 
-            Spacer()
-
             Text(window.ownerName)
                 .font(.callout)
                 .foregroundColor(isSelected ? colors.textSecondary : colors.textTertiary)
                 .lineLimit(1)
+
+            Spacer()
 
             HStack(spacing: 4) {
                 if !isStaged {

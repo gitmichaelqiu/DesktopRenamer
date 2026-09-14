@@ -44,7 +44,7 @@ struct BatchMoveBottomBar: View {
             
             // Right side: Context-sensitive actions
             HStack(spacing: 8) {
-                if viewModel.stagingWindow != nil {
+                if viewModel.stagingWindow != nil && !viewModel.isSpaceMenuOpen {
                     // Staging target space selection
                     HStack(spacing: 4) {
                         Text(verbatim: String(localized: "Stage"))

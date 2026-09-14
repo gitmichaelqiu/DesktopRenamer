@@ -86,7 +86,7 @@ struct CommandBottomBar: View {
                     }
 
                 case .listWindows:
-                    if viewModel.stagingWindow != nil {
+                    if viewModel.stagingWindow != nil && !viewModel.isSpaceMenuOpen {
                         HStack(spacing: 4) {
                             Text(verbatim: String(localized: "Move"))
                             KeycapView(text: "↵", isSelected: false)
