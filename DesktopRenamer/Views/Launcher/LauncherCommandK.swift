@@ -1,7 +1,7 @@
 import SwiftUI
 
 private enum LauncherSubmenu {
-    case actions(window: WindowEntry, actions: [BatchStagedActionType])
+    case actions(window: WindowEntry)
     case spaces
 }
 
@@ -13,10 +13,7 @@ struct LauncherSubmenuOverlay: View {
 
     private var requestedSubmenu: LauncherSubmenu? {
         if let targetWindow = viewModel.commandKTargetWindow {
-            return .actions(
-                window: targetWindow,
-                actions: viewModel.getAvailableCommandKActions(for: targetWindow)
-            )
+            return .actions(window: targetWindow)
         }
         return viewModel.isSpaceMenuOpen ? .spaces : nil
     }
@@ -61,8 +58,8 @@ struct LauncherSubmenuOverlay: View {
     @ViewBuilder
     private func submenuView(for submenu: LauncherSubmenu) -> some View {
         switch submenu {
-        case .actions(let window, let actions):
-            LauncherActionMenuView(viewModel: viewModel, window: window, actions: actions)
+        case .actions(let window):
+            LauncherActionMenuView(viewModel: viewModel, window: window)
         case .spaces:
             LauncherSpaceMenuView(viewModel: viewModel)
         }
@@ -71,6 +68,7 @@ struct LauncherSubmenuOverlay: View {
     private func synchronizeSubmenu() {
         guard let requestedSubmenu else {
             guard isPresented else { return }
+            viewModel.requestLauncherFieldFocus()
             withAnimation(LauncherAnimation.submenuExit) {
                 isPresented = false
             }
@@ -82,17 +80,23 @@ struct LauncherSubmenuOverlay: View {
         withAnimation(LauncherAnimation.submenu) {
             isPresented = true
         }
+        viewModel.requestSubmenuFieldFocus()
     }
 }
 
 struct LauncherActionMenuView: View {
     @ObservedObject var viewModel: LauncherViewModel
     let window: WindowEntry
-    let actions: [BatchStagedActionType]
     @Environment(\.colorScheme) var colorScheme
     
     var colors: ThemeColors {
         ThemeColors(isDark: colorScheme == .dark)
+    }
+
+    private var actionItems: [ActionMenuItem] {
+        viewModel.commandKActions.enumerated().map { index, action in
+            ActionMenuItem(index: index, action: action)
+        }
     }
     
     var body: some View {
@@ -104,21 +108,34 @@ struct LauncherActionMenuView: View {
 
                 LauncherSubmenuSeparator()
 
-                let actionItems = actions.enumerated().map { index, action in
-                    ActionMenuItem(index: index, action: action)
-                }
-                LazyVStack(spacing: LauncherLayout.submenuRowSpacing) {
-                    ForEach(actionItems) { item in
-                        CommandKActionRowView(
-                            action: item.action,
-                            isSelected: viewModel.commandKSelectedIndex == item.index,
-                            showCommandNumbers: viewModel.showCommandNumbers,
-                            idx: item.index,
-                            colors: colors,
-                            viewModel: viewModel
-                        )
+                if actionItems.isEmpty {
+                    Text(String(localized: "No actions found"))
+                        .font(LauncherTypography.submenuRow)
+                        .foregroundStyle(colors.textSecondary)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(.horizontal, LauncherLayout.submenuRowHorizontalPadding)
+                        .frame(height: LauncherLayout.submenuRowHeight)
+                } else {
+                    LazyVStack(spacing: LauncherLayout.submenuRowSpacing) {
+                        ForEach(actionItems) { item in
+                            CommandKActionRowView(
+                                action: item.action,
+                                isSelected: viewModel.commandKSelectedIndex == item.index,
+                                showCommandNumbers: viewModel.showCommandNumbers,
+                                idx: item.index,
+                                colors: colors,
+                                viewModel: viewModel
+                            )
+                        }
                     }
                 }
+
+                LauncherSubmenuSeparator()
+                LauncherSubmenuSearchField(
+                    viewModel: viewModel,
+                    kind: .actions,
+                    placeholder: String(localized: "Search for actions...")
+                )
             }
         }
     }
@@ -156,11 +173,12 @@ struct LauncherSpaceMenuView: View {
                 LauncherSubmenuSeparator()
 
                 if spaces.isEmpty {
-                    Text(String(localized: "No spaces available"))
+                    Text(String(localized: "No spaces found"))
                         .font(LauncherTypography.submenuRow)
                         .foregroundStyle(colors.textSecondary)
                         .frame(maxWidth: .infinity, alignment: .leading)
-                        .padding(LauncherLayout.submenuRowHorizontalPadding)
+                        .padding(.horizontal, LauncherLayout.submenuRowHorizontalPadding)
+                        .frame(height: LauncherLayout.submenuRowHeight)
                 } else {
                     ScrollViewReader { proxy in
                         ScrollView {
@@ -201,6 +219,15 @@ struct LauncherSpaceMenuView: View {
                         }
                     }
                 }
+
+                LauncherSubmenuSeparator()
+                LauncherSubmenuSearchField(
+                    viewModel: viewModel,
+                    kind: .spaces,
+                    placeholder: viewModel.stagingWindow != nil
+                        ? String(localized: "Search target space...")
+                        : String(localized: "Search spaces...")
+                )
             }
         }
     }
@@ -306,7 +333,7 @@ struct CommandKActionRowView: View {
                     slot: LauncherLayout.submenuIconSlot
                 )
 
-                Text(getActionLabel(for: action))
+                Text(viewModel.commandKActionLabel(action))
                     .font(LauncherTypography.submenuRow)
                     .foregroundStyle(colors.textPrimary)
                     .lineLimit(1)
@@ -334,17 +361,4 @@ struct CommandKActionRowView: View {
         }
     }
     
-    private func getActionLabel(for action: BatchStagedActionType) -> String {
-        switch action {
-        case .close: return NSLocalizedString("Close", comment: "")
-        case .minimize: return NSLocalizedString("Minimize", comment: "")
-        case .hide: return NSLocalizedString("Hide", comment: "")
-        case .enterFullScreen: return NSLocalizedString("Enter Full Screen", comment: "")
-        case .exitFullScreen: return NSLocalizedString("Exit Full Screen", comment: "")
-        case .quit: return NSLocalizedString("Quit", comment: "")
-        case .restore: return NSLocalizedString("Restore", comment: "")
-        case .restoreTo(let space): return space.name.isEmpty ? NSLocalizedString("Restore to...", comment: "") : String(format: NSLocalizedString("Restore to %@", comment: ""), space.name)
-        case .move(let space): return space.name.isEmpty ? NSLocalizedString("Move to...", comment: "") : String(format: NSLocalizedString("Move to %@", comment: ""), space.name)
-        }
-    }
 }

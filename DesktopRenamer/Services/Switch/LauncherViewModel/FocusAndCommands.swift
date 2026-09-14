@@ -13,11 +13,14 @@ extension LauncherViewModel {
     }
     
     func handleEscapeKey() {
-        if isBottomBarFocused {
+        if commandKTargetWindow != nil {
+            commandKTargetWindow = nil
+        } else if isBottomBarFocused {
             leaveSpaceBarFocus()
         } else if isSpaceMenuOpen {
             isSpaceMenuOpen = false
             spaceMenuSelectedIndex = 0
+            submenuSearchQuery = ""
             if stagingWindow != nil {
                 stagingWindow = nil
                 isStagingForRestoreTo = false
@@ -101,6 +104,7 @@ extension LauncherViewModel {
         cancelPendingFocusRequest()
         batchExecutionTask?.cancel()
         searchQuery = ""
+        submenuSearchQuery = ""
         spaceBarQuery = ""
         selectedRowIndex = 0
         activeCommand = nil
@@ -114,6 +118,7 @@ extension LauncherViewModel {
     func resetForPresentation() {
         cancelPendingFocusRequest()
         searchQuery = ""
+        submenuSearchQuery = ""
         spaceBarQuery = ""
         selectedRowIndex = 0
         selectedSpaceIndex = 0
@@ -130,6 +135,10 @@ extension LauncherViewModel {
 
     func requestLauncherFieldFocus() {
         requestFocusNotification(named: "FocusLauncherTextField")
+    }
+
+    func requestSubmenuFieldFocus() {
+        requestFocusNotification(named: "FocusLauncherSubmenuTextField")
     }
 
     private func requestFocusNotification(named name: String) {

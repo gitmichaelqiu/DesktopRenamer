@@ -100,14 +100,19 @@ class LauncherWindowController: NSWindowController, NSWindowDelegate {
                 return nil
             }
 
+            let focusedTextField = panel.focusedTextField
+            let focusedFieldIsActive = focusedTextField?.window === panel &&
+                (panel.firstResponder === focusedTextField || panel.firstResponder === focusedTextField?.currentEditor())
+            let submenuFieldIsFocused = focusedFieldIsActive && focusedTextField?.isSubmenuField == true
+
             if self.viewModel.isSubmenuOpen,
+               !submenuFieldIsFocused,
                !Self.submenuNavigationKeyCodes.contains(event.keyCode) {
                 return nil
             }
 
-            guard let focusedTextField = panel.focusedTextField,
-                  focusedTextField.window === panel,
-                  panel.firstResponder === focusedTextField || panel.firstResponder === focusedTextField.currentEditor()
+            guard let focusedTextField,
+                  focusedFieldIsActive
             else {
                 return event
             }
@@ -159,7 +164,8 @@ class LauncherWindowController: NSWindowController, NSWindowDelegate {
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) { [weak self] in
             guard let self,
                   self.window?.isVisible == true,
-                  !self.viewModel.isBottomBarFocused else { return }
+                  !self.viewModel.isBottomBarFocused,
+                  !self.viewModel.isSubmenuOpen else { return }
             self.viewModel.requestLauncherFieldFocus()
         }
     }

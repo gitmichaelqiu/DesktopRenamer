@@ -66,6 +66,13 @@ enum DesktopRearrangementDirection {
             isBottomBarFocused = false
         }
     }
+    @Published var submenuSearchQuery: String = "" {
+        didSet {
+            spaceMenuSelectedIndex = 0
+            commandKSelectedIndex = 0
+            isKeyboardSelection = true
+        }
+    }
     @Published var spaceBarQuery: String = "" {
         didSet {
             selectedSpaceIndex = 0
@@ -133,6 +140,7 @@ enum DesktopRearrangementDirection {
     @Published var stagingWindow: WindowEntry? = nil {
         didSet {
             searchQuery = ""
+            submenuSearchQuery = ""
             selectedRowIndex = 0
             isKeyboardSelection = true
             isBottomBarFocused = false
@@ -146,10 +154,18 @@ enum DesktopRearrangementDirection {
         didSet {
             if commandKTargetWindow != nil {
                 commandKSelectedIndex = 0
+            } else if oldValue != nil {
+                submenuSearchQuery = ""
             }
         }
     }
-    @Published var isSpaceMenuOpen: Bool = false
+    @Published var isSpaceMenuOpen: Bool = false {
+        didSet {
+            if !isSpaceMenuOpen, oldValue {
+                submenuSearchQuery = ""
+            }
+        }
+    }
     @Published var spaceMenuSelectedIndex: Int = 0
     @Published var commandKSelectedIndex: Int = 0
     @Published var isStagingForRestoreTo: Bool = false

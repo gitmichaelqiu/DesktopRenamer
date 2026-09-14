@@ -175,7 +175,9 @@ struct LauncherView: View {
                             onKeyEquivalent: { event in
                                 return self.handleTextFieldKeyEquivalent(event)
                             },
-                            placeholder: viewModel.activeCommand == nil ? NSLocalizedString("Search commands...", comment: "") : (viewModel.stagingWindow != nil ? NSLocalizedString("Search target space...", comment: "") : NSLocalizedString("Search items...", comment: "")),
+                            placeholder: viewModel.activeCommand == nil
+                                ? NSLocalizedString("Search commands...", comment: "")
+                                : NSLocalizedString("Search items...", comment: ""),
                             textFieldFont: NSFont.systemFont(ofSize: 20, weight: .regular),
                             textFieldColor: .labelColor,
                             placeholderColor: .placeholderTextColor,

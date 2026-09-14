@@ -49,45 +49,55 @@ extension LauncherViewModel {
         }
     }
     
-    var filteredSpaces: [SpaceGroup] {
-        var spaces = currentSpaces
-        if let staging = stagingWindow {
-            spaces = spaces.filter { $0.id != staging.space.id }
-        }
-
-        if searchQuery.isEmpty {
-            return spaces
-        } else {
-            let query = searchQuery.lowercased()
-            return spaces.filter {
-                matchesQuery(query, target: $0.name, pinyin: $0.pinyinName) ||
-                matchesQuery(query, target: $0.displayName, pinyin: $0.pinyinDisplayName) ||
-                "\($0.num)".contains(query)
-            }
-        }
+    var unfilteredSwitchSpaces: [SpaceGroup] {
+        guard let staging = stagingWindow else { return currentSpaces }
+        return currentSpaces.filter { $0.id != staging.space.id }
     }
 
-    /// Targets for moving a window must be ordinary desktops. Fullscreen
-    /// Spaces belong to the app that owns them and cannot receive an
-    /// arbitrary window through the launcher move commands.
-    var filteredMoveWindowSpaces: [SpaceGroup] {
-        filteredSpaces.filter { !$0.isFullscreen }
+    var unfilteredMoveWindowSpaces: [SpaceGroup] {
+        unfilteredSwitchSpaces.filter { !$0.isFullscreen }
     }
 
-    /// The top-level Move Window command operates on the window captured when
-    /// the launcher opened, so do not offer its source desktop as a target.
-    var filteredActiveWindowMoveSpaces: [SpaceGroup] {
+    var unfilteredActiveWindowMoveSpaces: [SpaceGroup] {
         guard let previousWindow = previouslyActiveWindow else {
-            return filteredMoveWindowSpaces
+            return unfilteredMoveWindowSpaces
         }
 
         let displayID = SpaceHelper.getWindowDisplayID(for: previousWindow.frame)
         let sourceSpaceID = displayID.flatMap { SpaceHelper.getCurrentSpaceID(for: $0) }
 
         guard let sourceSpaceID else {
-            return filteredMoveWindowSpaces
+            return unfilteredMoveWindowSpaces
         }
-        return filteredMoveWindowSpaces.filter { $0.id != sourceSpaceID }
+        return unfilteredMoveWindowSpaces.filter { $0.id != sourceSpaceID }
+    }
+
+    func filterSpaceGroups(_ spaces: [SpaceGroup], query: String) -> [SpaceGroup] {
+        guard !query.isEmpty else { return spaces }
+
+        let lowerQuery = query.lowercased()
+        return spaces.filter {
+            matchesQuery(lowerQuery, target: $0.name, pinyin: $0.pinyinName) ||
+            matchesQuery(lowerQuery, target: $0.displayName, pinyin: $0.pinyinDisplayName) ||
+            "\($0.num)".contains(lowerQuery)
+        }
+    }
+
+    var filteredSpaces: [SpaceGroup] {
+        filterSpaceGroups(unfilteredSwitchSpaces, query: searchQuery)
+    }
+
+    /// Targets for moving a window must be ordinary desktops. Fullscreen
+    /// Spaces belong to the app that owns them and cannot receive an
+    /// arbitrary window through the launcher move commands.
+    var filteredMoveWindowSpaces: [SpaceGroup] {
+        filterSpaceGroups(unfilteredMoveWindowSpaces, query: searchQuery)
+    }
+
+    /// The top-level Move Window command operates on the window captured when
+    /// the launcher opened, so do not offer its source desktop as a target.
+    var filteredActiveWindowMoveSpaces: [SpaceGroup] {
+        filterSpaceGroups(unfilteredActiveWindowMoveSpaces, query: searchQuery)
     }
     
     var filteredStagedActions: [BatchStagedAction] {

@@ -80,18 +80,21 @@ extension LauncherViewModel {
     }
 
     var spaceMenuSpaces: [SpaceGroup] {
+        let candidates: [SpaceGroup]
         if stagingWindow != nil {
-            return filteredMoveWindowSpaces
+            candidates = unfilteredMoveWindowSpaces
+        } else {
+            switch activeCommand?.type {
+            case .moveWindow:
+                candidates = unfilteredActiveWindowMoveSpaces
+            case .switchToDesktop:
+                candidates = unfilteredSwitchSpaces
+            default:
+                candidates = []
+            }
         }
 
-        switch activeCommand?.type {
-        case .moveWindow:
-            return filteredActiveWindowMoveSpaces
-        case .switchToDesktop:
-            return filteredSpaces
-        default:
-            return []
-        }
+        return filterSpaceGroups(candidates, query: submenuSearchQuery)
     }
 
     func executeSpaceMenuSelection() {

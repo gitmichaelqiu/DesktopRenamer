@@ -21,6 +21,9 @@ enum LauncherLayout {
     static let submenuRowHorizontalPadding: CGFloat = 8
     static let submenuRowHeight: CGFloat = 36
     static let submenuRowSpacing: CGFloat = 1
+    static let submenuSearchFieldHeight: CGFloat = 24
+    static let submenuSearchHorizontalPadding: CGFloat = 8
+    static let submenuSearchVerticalPadding: CGFloat = 6
 
     static let listTopPadding: CGFloat = 4
     static let listBottomPadding: CGFloat = 8
@@ -285,6 +288,105 @@ struct LauncherSubmenuSeparator: View {
             .fill(colors.separator)
             .frame(height: 1)
             .padding(.bottom, LauncherLayout.submenuSeparatorSpacing)
+    }
+}
+
+/// The filter field belongs to the open submenu, leaving the root query untouched.
+enum LauncherSubmenuSearchKind {
+    case actions
+    case spaces
+}
+
+struct LauncherSubmenuSearchField: View {
+    @ObservedObject var viewModel: LauncherViewModel
+    let kind: LauncherSubmenuSearchKind
+    let placeholder: String
+    @Environment(\.colorScheme) private var colorScheme
+
+    private var colors: ThemeColors {
+        ThemeColors(isDark: colorScheme == .dark)
+    }
+
+    var body: some View {
+        SearchTextField(
+            text: $viewModel.submenuSearchQuery,
+            isDark: colors.isDark,
+            isSubmenuField: true,
+            onUpArrow: selectPrevious,
+            onDownArrow: selectNext,
+            onLeftArrow: { false },
+            onRightArrow: { false },
+            onEnter: executeSelection,
+            onCommandEnter: executeSelection,
+            onCommandNumber: executeNumberedSelection,
+            onTab: {},
+            onEscape: dismissSubmenu,
+            onKeyEquivalent: { _ in false },
+            placeholder: placeholder,
+            textFieldFont: NSFont.systemFont(ofSize: 14, weight: .regular),
+            textFieldColor: .labelColor,
+            placeholderColor: .secondaryLabelColor,
+            usesSingleLineMode: true,
+            focusNotificationName: NSNotification.Name("FocusLauncherSubmenuTextField")
+        )
+        .frame(height: LauncherLayout.submenuSearchFieldHeight)
+        .padding(.horizontal, LauncherLayout.submenuSearchHorizontalPadding)
+        .padding(.vertical, LauncherLayout.submenuSearchVerticalPadding)
+    }
+
+    private func selectPrevious() {
+        switch kind {
+        case .actions:
+            viewModel.selectPreviousCommandKAction()
+        case .spaces:
+            viewModel.isKeyboardSelection = true
+            viewModel.spaceMenuSelectedIndex = max(viewModel.spaceMenuSelectedIndex - 1, 0)
+        }
+    }
+
+    private func selectNext() {
+        switch kind {
+        case .actions:
+            viewModel.selectNextCommandKAction()
+        case .spaces:
+            viewModel.isKeyboardSelection = true
+            viewModel.spaceMenuSelectedIndex = min(
+                viewModel.spaceMenuSelectedIndex + 1,
+                max(viewModel.spaceMenuSpaces.count - 1, 0)
+            )
+        }
+    }
+
+    private func executeSelection() {
+        switch kind {
+        case .actions:
+            viewModel.executeCommandKAction()
+        case .spaces:
+            viewModel.executeSpaceMenuSelection()
+        }
+    }
+
+    private func executeNumberedSelection(_ number: Int) {
+        let index = number - 1
+        switch kind {
+        case .actions:
+            guard viewModel.commandKActions.indices.contains(index) else { return }
+            viewModel.commandKSelectedIndex = index
+            viewModel.executeCommandKAction()
+        case .spaces:
+            guard viewModel.spaceMenuSpaces.indices.contains(index) else { return }
+            viewModel.spaceMenuSelectedIndex = index
+            viewModel.executeSpaceMenuSelection()
+        }
+    }
+
+    private func dismissSubmenu() {
+        switch kind {
+        case .actions:
+            viewModel.commandKTargetWindow = nil
+        case .spaces:
+            viewModel.handleEscapeKey()
+        }
     }
 }
 

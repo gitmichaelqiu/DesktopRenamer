@@ -17,6 +17,7 @@ extension LauncherViewModel {
             if command.hasSubpage {
                 let opensSpaceMenu = command.type == .switchToDesktop || command.type == .moveWindow
                 activeCommand = command
+                submenuSearchQuery = ""
                 isSpaceMenuOpen = opensSpaceMenu
                 // Keep the command row selected behind the target-space
                 // overlay. The overlay has its own selection index.
@@ -29,7 +30,7 @@ extension LauncherViewModel {
             // Subpage selection
             if let staging = stagingWindow {
                 // Staging a window to target space
-                let spaces = filteredMoveWindowSpaces
+                let spaces = isSpaceMenuOpen ? spaceMenuSpaces : filteredMoveWindowSpaces
                 guard index >= 0 && index < spaces.count else { return }
                 let space = spaces[index]
                 
@@ -52,12 +53,12 @@ extension LauncherViewModel {
             
             switch activeCommand?.type {
             case .switchToDesktop:
-                let spaces = filteredSpaces
+                let spaces = isSpaceMenuOpen ? spaceMenuSpaces : filteredSpaces
                 guard index >= 0 && index < spaces.count else { return }
                 executeSwitchToDesktop(spaces[index])
                 
             case .moveWindow:
-                let spaces = filteredActiveWindowMoveSpaces
+                let spaces = isSpaceMenuOpen ? spaceMenuSpaces : filteredActiveWindowMoveSpaces
                 guard index >= 0 && index < spaces.count else { return }
                 executeMoveWindow(spaces[index])
                 

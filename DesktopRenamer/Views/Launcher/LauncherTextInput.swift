@@ -8,6 +8,7 @@ class FocusTextField: NSTextField {
     var onCommandK: (() -> Void)?
     var onKeyEquivalent: ((NSEvent) -> Bool)?
     var isTypingDisabled: Bool = false
+    var isSubmenuField: Bool = false
     var focusNotificationName = NSNotification.Name("FocusLauncherTextField")
 
     override var acceptsFirstResponder: Bool {
@@ -103,7 +104,7 @@ class FocusTextField: NSTextField {
         if window != nil {
             NotificationCenter.default.addObserver(self, selector: #selector(windowDidBecomeKey), name: NSWindow.didBecomeKeyNotification, object: window)
             NotificationCenter.default.addObserver(self, selector: #selector(forceFocus), name: focusNotificationName, object: nil)
-            if window?.isKeyWindow == true {
+            if window?.isKeyWindow == true, !isSubmenuField {
                 DispatchQueue.main.async { [weak self] in
                     self?.forceFocus()
                 }
@@ -115,6 +116,7 @@ class FocusTextField: NSTextField {
     }
     
     @objc private func windowDidBecomeKey() {
+        guard !isSubmenuField else { return }
         DispatchQueue.main.async { [weak self] in
             self?.forceFocus()
         }
@@ -165,6 +167,7 @@ struct SearchTextField: NSViewRepresentable {
     @Binding var text: String
     var isDark: Bool
     var isTypingDisabled: Bool = false
+    var isSubmenuField: Bool = false
     var onUpArrow: () -> Void
     var onDownArrow: () -> Void
     var onLeftArrow: (() -> Bool)? = nil
@@ -198,6 +201,11 @@ struct SearchTextField: NSViewRepresentable {
             if let textField = obj.object as? NSTextField {
                 parent.text = textField.stringValue
             }
+        }
+
+        func controlTextDidBeginEditing(_ obj: Notification) {
+            guard let textField = obj.object as? FocusTextField else { return }
+            (textField.window as? LauncherNSPanel)?.focusedTextField = textField
         }
         
         func textView(_ textView: NSTextView, shouldChangeTextIn affectedCharRange: NSRange, replacementString: String?) -> Bool {
@@ -284,6 +292,7 @@ struct SearchTextField: NSViewRepresentable {
         }
         textField.onKeyEquivalent = onKeyEquivalent
         textField.isTypingDisabled = isTypingDisabled
+        textField.isSubmenuField = isSubmenuField
         
         textField.isBordered = false
         textField.drawsBackground = false
@@ -317,6 +326,7 @@ struct SearchTextField: NSViewRepresentable {
         
         if let focusField = nsView as? FocusTextField {
             focusField.isTypingDisabled = isTypingDisabled
+            focusField.isSubmenuField = isSubmenuField
             focusField.onKeyEquivalent = onKeyEquivalent
         }
         

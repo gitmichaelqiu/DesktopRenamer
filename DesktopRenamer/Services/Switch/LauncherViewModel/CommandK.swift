@@ -48,10 +48,37 @@ extension LauncherViewModel {
     
     var commandKActions: [BatchStagedActionType] {
         guard let window = commandKTargetWindow else { return [] }
-        return getAvailableCommandKActions(for: window)
+        let available = getAvailableCommandKActions(for: window)
+        guard !submenuSearchQuery.isEmpty else { return available }
+
+        return available.filter {
+            commandKActionLabel($0).localizedCaseInsensitiveContains(submenuSearchQuery) ||
+            $0.description.localizedCaseInsensitiveContains(submenuSearchQuery)
+        }
+    }
+
+    func commandKActionLabel(_ action: BatchStagedActionType) -> String {
+        switch action {
+        case .close: return NSLocalizedString("Close", comment: "")
+        case .minimize: return NSLocalizedString("Minimize", comment: "")
+        case .hide: return NSLocalizedString("Hide", comment: "")
+        case .enterFullScreen: return NSLocalizedString("Enter Full Screen", comment: "")
+        case .exitFullScreen: return NSLocalizedString("Exit Full Screen", comment: "")
+        case .quit: return NSLocalizedString("Quit", comment: "")
+        case .restore: return NSLocalizedString("Restore", comment: "")
+        case .restoreTo(let space):
+            return space.name.isEmpty
+                ? NSLocalizedString("Restore to...", comment: "")
+                : String(format: NSLocalizedString("Restore to %@", comment: ""), space.name)
+        case .move(let space):
+            return space.name.isEmpty
+                ? NSLocalizedString("Move to...", comment: "")
+                : String(format: NSLocalizedString("Move to %@", comment: ""), space.name)
+        }
     }
     
     func showCommandKPanel() {
+        submenuSearchQuery = ""
         if activeCommand?.type == .listWindows {
             let windows = filteredWindows
             let index = selectedRowIndex
