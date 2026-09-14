@@ -280,6 +280,7 @@ private struct LauncherSpaceMenuRow: View {
                     LauncherIconSlot(
                         systemName: "desktopcomputer",
                         tint: colors.textSecondary,
+                        symbolSize: LauncherLayout.submenuIconSymbolSize,
                         slot: LauncherLayout.submenuIconSlot
                     )
                 }
@@ -333,6 +334,7 @@ struct CommandKActionRowView: View {
                 LauncherIconSlot(
                     systemName: getIconName(for: action),
                     tint: isSelected ? colors.textPrimary : colors.textSecondary,
+                    symbolSize: LauncherLayout.submenuIconSymbolSize,
                     slot: LauncherLayout.submenuIconSlot
                 )
 
