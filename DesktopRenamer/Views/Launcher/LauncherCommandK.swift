@@ -76,7 +76,10 @@ struct LauncherSubmenuOverlay: View {
         }
 
         displayedSubmenu = requestedSubmenu
-        guard !isPresented else { return }
+        if isPresented {
+            viewModel.requestSubmenuFieldFocus()
+            return
+        }
         withAnimation(LauncherAnimation.submenu) {
             isPresented = true
         }
@@ -303,7 +306,7 @@ private struct LauncherSpaceMenuRow: View {
 
 private struct ActionMenuItem: Identifiable {
     let index: Int
-    let action: BatchStagedActionType
+    let action: LauncherCommandKAction
 
     var id: String {
         "\(index)-\(action.description)"
@@ -311,7 +314,7 @@ private struct ActionMenuItem: Identifiable {
 }
 
 struct CommandKActionRowView: View {
-    let action: BatchStagedActionType
+    let action: LauncherCommandKAction
     let isSelected: Bool
     let showCommandNumbers: Bool
     let idx: Int
@@ -347,17 +350,22 @@ struct CommandKActionRowView: View {
         }
     }
     
-    private func getIconName(for action: BatchStagedActionType) -> String {
+    private func getIconName(for action: LauncherCommandKAction) -> String {
         switch action {
-        case .close: return "xmark"
-        case .minimize: return "minus"
-        case .hide: return "eye.slash"
-        case .enterFullScreen: return "arrow.up.left.and.arrow.down.right"
-        case .exitFullScreen: return "arrow.down.right.and.arrow.up.left"
-        case .quit: return "power"
-        case .restore: return "arrow.uturn.backward"
-        case .restoreTo: return "arrow.forward.square"
-        case .move: return "arrow.right.square"
+        case .moveWindow: return "arrow.right"
+        case .moveWindowTo: return "arrow.right.square"
+        case .window(let action):
+            switch action {
+            case .close: return "xmark"
+            case .minimize: return "minus"
+            case .hide: return "eye.slash"
+            case .enterFullScreen: return "arrow.up.left.and.arrow.down.right"
+            case .exitFullScreen: return "arrow.down.right.and.arrow.up.left"
+            case .quit: return "power"
+            case .restore: return "arrow.uturn.backward"
+            case .restoreTo: return "arrow.forward.square"
+            case .move: return "arrow.right.square"
+            }
         }
     }
     

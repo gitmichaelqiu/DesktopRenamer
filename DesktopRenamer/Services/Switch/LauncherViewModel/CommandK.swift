@@ -2,6 +2,23 @@ import AppKit
 import Foundation
 import SwiftUI
 
+enum LauncherCommandKAction: Equatable {
+    case moveWindow
+    case moveWindowTo
+    case window(BatchStagedActionType)
+
+    var description: String {
+        switch self {
+        case .moveWindow:
+            return "Move Window"
+        case .moveWindowTo:
+            return "Move window to..."
+        case .window(let action):
+            return action.description
+        }
+    }
+}
+
 @MainActor
 extension LauncherViewModel {
 
@@ -46,9 +63,14 @@ extension LauncherViewModel {
         return actions
     }
     
-    var commandKActions: [BatchStagedActionType] {
+    var commandKActions: [LauncherCommandKAction] {
         guard let window = commandKTargetWindow else { return [] }
-        let available = getAvailableCommandKActions(for: window)
+        var available: [LauncherCommandKAction] = []
+        if activeCommand?.type == .listWindows {
+            available.append(.moveWindow)
+            available.append(.moveWindowTo)
+        }
+        available.append(contentsOf: getAvailableCommandKActions(for: window).map { .window($0) })
         guard !submenuSearchQuery.isEmpty else { return available }
 
         return available.filter {
@@ -57,23 +79,30 @@ extension LauncherViewModel {
         }
     }
 
-    func commandKActionLabel(_ action: BatchStagedActionType) -> String {
+    func commandKActionLabel(_ action: LauncherCommandKAction) -> String {
         switch action {
-        case .close: return NSLocalizedString("Close", comment: "")
-        case .minimize: return NSLocalizedString("Minimize", comment: "")
-        case .hide: return NSLocalizedString("Hide", comment: "")
-        case .enterFullScreen: return NSLocalizedString("Enter Full Screen", comment: "")
-        case .exitFullScreen: return NSLocalizedString("Exit Full Screen", comment: "")
-        case .quit: return NSLocalizedString("Quit", comment: "")
-        case .restore: return NSLocalizedString("Restore", comment: "")
-        case .restoreTo(let space):
-            return space.name.isEmpty
-                ? NSLocalizedString("Restore to...", comment: "")
-                : String(format: NSLocalizedString("Restore to %@", comment: ""), space.name)
-        case .move(let space):
-            return space.name.isEmpty
-                ? NSLocalizedString("Move to...", comment: "")
-                : String(format: NSLocalizedString("Move to %@", comment: ""), space.name)
+        case .moveWindow:
+            return NSLocalizedString("Move Window", comment: "")
+        case .moveWindowTo:
+            return NSLocalizedString("Move window to...", comment: "")
+        case .window(let action):
+            switch action {
+            case .close: return NSLocalizedString("Close", comment: "")
+            case .minimize: return NSLocalizedString("Minimize", comment: "")
+            case .hide: return NSLocalizedString("Hide", comment: "")
+            case .enterFullScreen: return NSLocalizedString("Enter Full Screen", comment: "")
+            case .exitFullScreen: return NSLocalizedString("Exit Full Screen", comment: "")
+            case .quit: return NSLocalizedString("Quit", comment: "")
+            case .restore: return NSLocalizedString("Restore", comment: "")
+            case .restoreTo(let space):
+                return space.name.isEmpty
+                    ? NSLocalizedString("Restore to...", comment: "")
+                    : String(format: NSLocalizedString("Restore to %@", comment: ""), space.name)
+            case .move(let space):
+                return space.name.isEmpty
+                    ? NSLocalizedString("Move to...", comment: "")
+                    : String(format: NSLocalizedString("Move to %@", comment: ""), space.name)
+            }
         }
     }
     
@@ -122,11 +151,21 @@ extension LauncherViewModel {
         let action = available[commandKSelectedIndex]
         
         DiagnosticEventLog.shared.record(subsystem: "Launcher", level: "info", "executeCommandKAction: window=\(window.title) (id=\(window.id)), action=\(action.description)")
+        let isListWindows = activeCommand?.type == .listWindows
         commandKTargetWindow = nil
-        if activeCommand?.type == .listWindows {
-            executeActionImmediately(window: window, actionType: action)
-        } else {
-            stagedMoves[window.id] = BatchStagedAction(window: window, actionType: action)
+        switch action {
+        case .moveWindow:
+            guard isListWindows else { return }
+            moveSelectedListWindowToCurrentDesktop()
+        case .moveWindowTo:
+            guard isListWindows else { return }
+            stageSelectedListWindowForMove()
+        case .window(let actionType):
+            if isListWindows {
+                executeActionImmediately(window: window, actionType: actionType)
+            } else {
+                stagedMoves[window.id] = BatchStagedAction(window: window, actionType: actionType)
+            }
         }
     }
 

@@ -109,26 +109,6 @@ struct CommandBottomBar: View {
                             }
                             
                             HStack(spacing: 4) {
-                                Text(verbatim: String(localized: "Move"))
-                                KeycapView(text: "⌘T", isSelected: false)
-                            }
-                            .modifier(BottomBarCapsule(isSelected: false, isActive: false, colorScheme: colorScheme))
-                            .contentShape(Rectangle())
-                            .onTapGesture {
-                                viewModel.moveSelectedListWindowToCurrentDesktop()
-                            }
-
-                            HStack(spacing: 4) {
-                                Text(verbatim: String(localized: "Move to..."))
-                                KeycapView(text: "⌘⇧T", isSelected: false)
-                            }
-                            .modifier(BottomBarCapsule(isSelected: false, isActive: false, colorScheme: colorScheme))
-                            .contentShape(Rectangle())
-                            .onTapGesture {
-                                viewModel.stageSelectedListWindowForMove()
-                            }
-                            
-                            HStack(spacing: 4) {
                                 Text(verbatim: String(localized: "Actions"))
                                 KeycapView(text: "⌘K", isSelected: false)
                             }
