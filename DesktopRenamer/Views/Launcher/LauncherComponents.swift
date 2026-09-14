@@ -288,7 +288,7 @@ struct LauncherSubmenuSeparator: View {
         Rectangle()
             .fill(colors.separator)
             .frame(height: 1)
-            .padding(.bottom, LauncherLayout.submenuSeparatorSpacing)
+            .padding(.vertical, LauncherLayout.submenuSeparatorSpacing)
     }
 }
 
