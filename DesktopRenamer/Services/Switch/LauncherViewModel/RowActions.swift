@@ -15,13 +15,13 @@ extension LauncherViewModel {
             let command = commands[index]
             
             if command.hasSubpage {
-                let opensSpaceMenu = command.type == .switchToDesktop || command.type == .moveWindow
                 activeCommand = command
                 submenuSearchQuery = ""
-                isSpaceMenuOpen = opensSpaceMenu
-                // Keep the command row selected behind the target-space
-                // overlay. The overlay has its own selection index.
-                selectedRowIndex = opensSpaceMenu ? index : 0
+                // Space selection commands use the same full-page layout as
+                // the other launcher commands. The overlay is reserved for
+                // nested target selection, such as staging a window move.
+                isSpaceMenuOpen = false
+                selectedRowIndex = 0
                 spaceMenuSelectedIndex = 0
             } else {
                 executeSimpleCommand(command.type)
