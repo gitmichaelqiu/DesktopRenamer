@@ -1,0 +1,287 @@
+import AppKit
+import SwiftUI
+
+/// Shared geometry for every launcher row and submenu.
+enum LauncherLayout {
+    static let rowIconSlot: CGFloat = 24
+    static let rowHorizontalPadding: CGFloat = 8
+    static let rowVerticalPadding: CGFloat = 6
+    static let rowSpacing: CGFloat = 10
+
+    static let submenuWidth: CGFloat = 380
+    static let submenuPanelPadding: CGFloat = 6
+    static let submenuCornerRadius: CGFloat = 16
+    static let submenuHeaderHorizontalPadding: CGFloat = 16
+    static let submenuHeaderVerticalPadding: CGFloat = 14
+    static let submenuSeparatorSpacing: CGFloat = 4
+    static let submenuRowHorizontalPadding: CGFloat = 12
+    static let submenuRowHeight: CGFloat = 40
+    static let submenuRowSpacing: CGFloat = 2
+
+    static let listTopPadding: CGFloat = 4
+    static let listBottomPadding: CGFloat = 8
+    static let listHorizontalPadding: CGFloat = 8
+    static let sectionHeaderSpacing: CGFloat = 10
+    static let sectionHeaderBottomPadding: CGFloat = 4
+
+    static let bottomBarCapsulePadding: CGFloat = 4
+    static let bottomBarControlHorizontalPadding: CGFloat = 8
+    static let bottomBarControlHeight: CGFloat = 28
+    static let bottomBarHorizontalPadding: CGFloat = 8
+    static let bottomBarVerticalPadding: CGFloat = 6
+    static let bottomBarHeight: CGFloat = 52
+
+    static let keycapSide: CGFloat = 18
+    static let keycapCornerRadius: CGFloat = 6
+}
+
+/// Shared typography for the launcher surface, following Raycast's title/trailing-label hierarchy.
+enum LauncherTypography {
+    static let rowTitle = Font.body
+    static let rowTrailing = Font.callout
+    static let sectionHeader = Font.subheadline.weight(.medium)
+    static let submenuHeader = Font.callout
+    static let submenuRow = Font.body
+    static let bar = Font.callout.weight(.medium)
+    static let keycap = Font.caption
+}
+
+/// A fixed-size icon slot keeps symbols and application icons optically aligned.
+struct LauncherIconSlot: View {
+    private enum Source {
+        case symbol(String)
+        case image(NSImage)
+    }
+
+    private let source: Source
+    private let tint: Color
+    private let symbolSize: CGFloat
+
+    init(systemName: String, tint: Color = .primary, symbolSize: CGFloat = 17) {
+        source = .symbol(systemName)
+        self.tint = tint
+        self.symbolSize = symbolSize
+    }
+
+    init(image: NSImage) {
+        source = .image(image)
+        tint = .primary
+        symbolSize = 17
+    }
+
+    var body: some View {
+        Group {
+            switch source {
+            case .symbol(let name):
+                Image(systemName: name)
+                    .font(.system(size: symbolSize, weight: .medium))
+                    .foregroundStyle(tint)
+            case .image(let image):
+                Image(nsImage: image)
+                    .resizable()
+                    .aspectRatio(contentMode: .fit)
+            }
+        }
+        .frame(width: LauncherLayout.rowIconSlot, height: LauncherLayout.rowIconSlot)
+    }
+}
+
+/// The secondary text used for owners, space metadata, and right-side row labels.
+struct LauncherTrailingLabel: View {
+    let text: String
+    let color: Color
+
+    init(_ text: String, color: Color = .secondary) {
+        self.text = text
+        self.color = color
+    }
+
+    var body: some View {
+        Text(text)
+            .font(LauncherTypography.rowTrailing)
+            .foregroundStyle(color)
+            .lineLimit(1)
+            .truncationMode(.tail)
+    }
+}
+
+/// Raycast-style status label used for window state and staged-action metadata.
+struct LauncherStatusLabel: View {
+    let text: String
+    let color: Color
+    let background: Color
+
+    init(text: String, color: Color, background: Color? = nil) {
+        self.text = text
+        self.color = color
+        self.background = background ?? color.opacity(0.15)
+    }
+
+    var body: some View {
+        Text(text)
+            .font(LauncherTypography.rowTrailing)
+            .foregroundStyle(color)
+            .padding(.horizontal, 10)
+            .padding(.vertical, 4)
+            .background(
+                RoundedRectangle(cornerRadius: LauncherLayout.keycapCornerRadius, style: .continuous)
+                    .fill(background)
+            )
+    }
+}
+
+/// A shared selection/hover surface for the primary launcher lists.
+struct LauncherRowSurface: ViewModifier {
+    let isSelected: Bool
+    let isHovered: Bool
+    @Environment(\.colorScheme) private var colorScheme
+
+    func body(content: Content) -> some View {
+        let colors = ThemeColors(isDark: colorScheme == .dark)
+        content
+            .background {
+                RoundedRectangle(cornerRadius: 10, style: .continuous)
+                    .fill(isSelected ? colors.rowSelection : (isHovered ? colors.rowHover : .clear))
+            }
+    }
+}
+
+extension View {
+    func launcherRowSurface(isSelected: Bool, isHovered: Bool) -> some View {
+        modifier(LauncherRowSurface(isSelected: isSelected, isHovered: isHovered))
+    }
+}
+
+/// Raycast-style outlined keycap chips. Compound shortcuts are split into separate chips.
+struct KeycapView: View {
+    let text: String
+    let isSelected: Bool
+    var isGreenRow: Bool = false
+    var verticalPadding: CGFloat = 1
+    var horizontalPadding: CGFloat = 4
+    @Environment(\.colorScheme) var colorScheme
+
+    var colors: ThemeColors {
+        ThemeColors(isDark: colorScheme == .dark)
+    }
+
+    private var tokens: [String] {
+        if text.contains(" ") {
+            return text.split(separator: " ").map(String.init)
+        }
+        if text.count > 1 && text.contains(where: { "⌘⌥⇧⌃".contains($0) }) {
+            return text.map(String.init)
+        }
+        return [text]
+    }
+
+    var body: some View {
+        HStack(spacing: 2) {
+            ForEach(Array(tokens.enumerated()), id: \.offset) { _, token in
+                Text(verbatim: token)
+                    .font(LauncherTypography.keycap)
+                    .foregroundStyle(isSelected && isGreenRow ? .white : colors.textSecondary)
+                    .padding(.horizontal, horizontalPadding)
+                    .padding(.vertical, verticalPadding)
+                    .frame(minWidth: LauncherLayout.keycapSide, minHeight: LauncherLayout.keycapSide)
+                    .background {
+                        RoundedRectangle(
+                            cornerRadius: LauncherLayout.keycapCornerRadius, style: .continuous
+                        )
+                        .fill(isSelected && isGreenRow ? Color.white.opacity(0.16) : .clear)
+                    }
+                    .overlay {
+                        RoundedRectangle(
+                            cornerRadius: LauncherLayout.keycapCornerRadius, style: .continuous
+                        )
+                        .stroke(colors.border, lineWidth: 1)
+                    }
+            }
+        }
+    }
+}
+
+/// Shared header layout for the Cmd+K actions menu and all space-selection submenus.
+struct LauncherSubmenuHeader<Content: View>: View {
+    private let content: Content
+
+    init(@ViewBuilder content: () -> Content) {
+        self.content = content()
+    }
+
+    var body: some View {
+        content
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.horizontal, LauncherLayout.submenuHeaderHorizontalPadding)
+            .padding(.vertical, LauncherLayout.submenuHeaderVerticalPadding)
+    }
+}
+
+/// A separator with explicit clearance so the first selected row cannot touch the line.
+struct LauncherSubmenuSeparator: View {
+    @Environment(\.colorScheme) private var colorScheme
+
+    var body: some View {
+        let colors = ThemeColors(isDark: colorScheme == .dark)
+        Rectangle()
+            .fill(colors.separator)
+            .frame(height: 1)
+            .padding(.bottom, LauncherLayout.submenuSeparatorSpacing)
+    }
+}
+
+/// Shared frosted panel chrome for every launcher submenu.
+struct LauncherSubmenuPanel<Content: View>: View {
+    private let content: Content
+
+    init(@ViewBuilder content: () -> Content) {
+        self.content = content()
+    }
+
+    var body: some View {
+        content
+            .padding(LauncherLayout.submenuPanelPadding)
+            .frame(width: LauncherLayout.submenuWidth)
+            .launcherFrosted(
+                in: RoundedRectangle(
+                    cornerRadius: LauncherLayout.submenuCornerRadius, style: .continuous
+                )
+            )
+    }
+}
+
+/// Shared selectable row chrome for submenu items.
+struct LauncherSubmenuRow<Content: View>: View {
+    let isSelected: Bool
+    let action: () -> Void
+    private let content: Content
+    @Environment(\.colorScheme) private var colorScheme
+    @State private var isHovered = false
+
+    init(
+        isSelected: Bool,
+        action: @escaping () -> Void,
+        @ViewBuilder content: () -> Content
+    ) {
+        self.isSelected = isSelected
+        self.action = action
+        self.content = content()
+    }
+
+    var body: some View {
+        let colors = ThemeColors(isDark: colorScheme == .dark)
+        Button(action: action) {
+            content
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.horizontal, LauncherLayout.submenuRowHorizontalPadding)
+                .frame(height: LauncherLayout.submenuRowHeight, alignment: .leading)
+                .background {
+                    RoundedRectangle(cornerRadius: 10, style: .continuous)
+                        .fill(isSelected ? colors.rowSelection : (isHovered ? colors.rowHover : .clear))
+                }
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .onHover { isHovered = $0 }
+    }
+}

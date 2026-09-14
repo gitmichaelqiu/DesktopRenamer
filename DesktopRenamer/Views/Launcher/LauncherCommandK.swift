@@ -96,53 +96,46 @@ struct LauncherActionMenuView: View {
     }
     
     var body: some View {
-        VStack(spacing: 0) {
-            HStack(spacing: 10) {
-                let appIcon = NSWorkspace.shared.icon(forFile: window.appPath)
-                Image(nsImage: appIcon)
-                    .resizable()
-                    .aspectRatio(contentMode: .fit)
-                    .frame(width: 28, height: 28)
+        LauncherSubmenuPanel {
+            VStack(spacing: 0) {
+                LauncherSubmenuHeader {
+                    HStack(spacing: LauncherLayout.rowSpacing) {
+                        LauncherIconSlot(
+                            image: NSWorkspace.shared.icon(forFile: window.appPath)
+                        )
 
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(window.title.isEmpty ? String(localized: "(No Title)") : window.title)
-                        .font(.body)
-                        .foregroundColor(colors.textPrimary)
-                        .lineLimit(1)
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(window.title.isEmpty ? String(localized: "(No Title)") : window.title)
+                                .font(LauncherTypography.rowTitle)
+                                .foregroundStyle(colors.textPrimary)
+                                .lineLimit(1)
 
-                    Text(window.ownerName)
-                        .font(.callout)
-                        .foregroundColor(colors.textSecondary)
-                        .lineLimit(1)
+                            LauncherTrailingLabel(window.ownerName, color: colors.textSecondary)
+                        }
+
+                        Spacer(minLength: 0)
+                    }
                 }
 
-                Spacer(minLength: 0)
-            }
-            .padding(.horizontal, 16)
-            .padding(.vertical, 14)
+                LauncherSubmenuSeparator()
 
-            Divider()
-                .opacity(0.5)
-
-            let actionItems = actions.enumerated().map { index, action in
-                ActionMenuItem(index: index, action: action)
-            }
-            LazyVStack(spacing: 2) {
-                ForEach(actionItems) { item in
-                    CommandKActionRowView(
-                        action: item.action,
-                        isSelected: viewModel.commandKSelectedIndex == item.index,
-                        showCommandNumbers: viewModel.showCommandNumbers,
-                        idx: item.index,
-                        colors: colors,
-                        viewModel: viewModel
-                    )
+                let actionItems = actions.enumerated().map { index, action in
+                    ActionMenuItem(index: index, action: action)
+                }
+                LazyVStack(spacing: LauncherLayout.submenuRowSpacing) {
+                    ForEach(actionItems) { item in
+                        CommandKActionRowView(
+                            action: item.action,
+                            isSelected: viewModel.commandKSelectedIndex == item.index,
+                            showCommandNumbers: viewModel.showCommandNumbers,
+                            idx: item.index,
+                            colors: colors,
+                            viewModel: viewModel
+                        )
+                    }
                 }
             }
         }
-        .padding(6)
-        .frame(width: 380)
-        .launcherFrosted(in: RoundedRectangle(cornerRadius: 16, style: .continuous))
     }
 }
 
@@ -165,67 +158,73 @@ struct LauncherSpaceMenuView: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            Text(title)
-                .font(.callout)
-                .foregroundColor(colors.textSecondary)
-                .lineLimit(1)
-                .padding(.horizontal, 16)
-                .padding(.top, 12)
-                .padding(.bottom, 8)
+        LauncherSubmenuPanel {
+            VStack(alignment: .leading, spacing: 0) {
+                LauncherSubmenuHeader {
+                    Text(title)
+                        .font(LauncherTypography.submenuHeader)
+                        .foregroundStyle(colors.textSecondary)
+                        .lineLimit(1)
+                }
 
-            Divider()
-                .opacity(0.5)
+                LauncherSubmenuSeparator()
 
-            if spaces.isEmpty {
-                Text(String(localized: "No spaces available"))
-                    .font(.body)
-                    .foregroundColor(colors.textSecondary)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(16)
-            } else {
-                ScrollViewReader { proxy in
-                    ScrollView {
-                        LazyVStack(spacing: 2) {
-                            ForEach(Array(spaces.enumerated()), id: \.element.id) { index, space in
-                                LauncherSpaceMenuRow(
-                                    space: space,
-                                    isSelected: viewModel.spaceMenuSelectedIndex == index,
-                                    isCurrent: SpaceHelper.getCurrentSpaceID(for: space.displayID) == space.id,
-                                    shortcutNumber: index + 1,
-                                    showShortcut: viewModel.showCommandNumbers && index < 9,
-                                    colors: colors
-                                ) {
-                                    viewModel.isKeyboardSelection = true
-                                    viewModel.spaceMenuSelectedIndex = index
-                                    viewModel.executeSpaceMenuSelection()
+                if spaces.isEmpty {
+                    Text(String(localized: "No spaces available"))
+                        .font(LauncherTypography.submenuRow)
+                        .foregroundStyle(colors.textSecondary)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(LauncherLayout.submenuRowHorizontalPadding)
+                } else {
+                    ScrollViewReader { proxy in
+                        ScrollView {
+                            LazyVStack(spacing: LauncherLayout.submenuRowSpacing) {
+                                ForEach(Array(spaces.enumerated()), id: \.element.id) { index, space in
+                                    LauncherSpaceMenuRow(
+                                        space: space,
+                                        isSelected: viewModel.spaceMenuSelectedIndex == index,
+                                        isCurrent: SpaceHelper.getCurrentSpaceID(for: space.displayID) == space.id,
+                                        shortcutNumber: index + 1,
+                                        showShortcut: viewModel.showCommandNumbers && index < 9,
+                                        colors: colors
+                                    ) {
+                                        viewModel.isKeyboardSelection = true
+                                        viewModel.spaceMenuSelectedIndex = index
+                                        viewModel.executeSpaceMenuSelection()
+                                    }
+                                    .id(space.id)
                                 }
-                                .id(space.id)
                             }
                         }
-                    }
-                    .frame(height: min(max(CGFloat(spaces.count) * 42, 42), 300))
-                    .scrollIndicators(.hidden)
-                    .onAppear {
-                        guard spaces.indices.contains(viewModel.spaceMenuSelectedIndex) else { return }
-                        proxy.scrollTo(spaces[viewModel.spaceMenuSelectedIndex].id, anchor: .center)
-                    }
-                    .onChange(of: viewModel.spaceMenuSelectedIndex) { index in
-                        guard spaces.indices.contains(index) else { return }
-                        withAnimation(.easeInOut(duration: 0.12)) {
-                            proxy.scrollTo(spaces[index].id, anchor: .center)
+                        .frame(
+                            height: min(
+                                max(
+                                    CGFloat(spaces.count)
+                                        * (LauncherLayout.submenuRowHeight + LauncherLayout.submenuRowSpacing),
+                                    LauncherLayout.submenuRowHeight
+                                ),
+                                300
+                            )
+                        )
+                        .scrollIndicators(.hidden)
+                        .onAppear {
+                            guard spaces.indices.contains(viewModel.spaceMenuSelectedIndex) else { return }
+                            proxy.scrollTo(spaces[viewModel.spaceMenuSelectedIndex].id, anchor: .center)
                         }
-                    }
-                    .onChange(of: spaces.count) { count in
-                        guard count > 0, viewModel.spaceMenuSelectedIndex >= count else { return }
-                        viewModel.spaceMenuSelectedIndex = count - 1
+                        .onChange(of: viewModel.spaceMenuSelectedIndex) { index in
+                            guard spaces.indices.contains(index) else { return }
+                            withAnimation(.easeInOut(duration: 0.12)) {
+                                proxy.scrollTo(spaces[index].id, anchor: .center)
+                            }
+                        }
+                        .onChange(of: spaces.count) { count in
+                            guard count > 0, viewModel.spaceMenuSelectedIndex >= count else { return }
+                            viewModel.spaceMenuSelectedIndex = count - 1
+                        }
                     }
                 }
             }
         }
-        .padding(6)
-        .frame(width: 380)
-        .launcherFrosted(in: RoundedRectangle(cornerRadius: 16, style: .continuous))
     }
 }
 
@@ -238,49 +237,35 @@ private struct LauncherSpaceMenuRow: View {
     let colors: ThemeColors
     let action: () -> Void
 
-    @State private var isHovered = false
-
     var body: some View {
-        Button(action: action) {
-            HStack(spacing: 10) {
+        LauncherSubmenuRow(isSelected: isSelected, action: action) {
+            HStack(spacing: LauncherLayout.rowSpacing) {
                 if isCurrent {
                     Circle()
                         .stroke(Color.blue, lineWidth: 2)
                         .frame(width: 18, height: 18)
-                        .frame(width: 24, height: 24)
+                        .frame(width: LauncherLayout.rowIconSlot, height: LauncherLayout.rowIconSlot)
                 } else {
-                    Image(systemName: "desktopcomputer")
-                        .font(.system(size: 17, weight: .medium))
-                        .foregroundColor(colors.textSecondary)
-                        .frame(width: 24, height: 24)
+                    LauncherIconSlot(systemName: "desktopcomputer", tint: colors.textSecondary)
                 }
 
                 Text(space.name)
-                    .font(.body)
-                    .foregroundColor(colors.textPrimary)
+                    .font(LauncherTypography.submenuRow)
+                    .foregroundStyle(colors.textPrimary)
                     .lineLimit(1)
+
+                LauncherTrailingLabel(
+                    String(format: String(localized: "%@ · Space %lld"), space.displayName, space.num),
+                    color: colors.textSecondary
+                )
 
                 Spacer(minLength: 0)
-
-                Text(String(format: String(localized: "%@ · Space %lld"), space.displayName, space.num))
-                    .font(.callout)
-                    .foregroundColor(colors.textSecondary)
-                    .lineLimit(1)
 
                 if showShortcut {
                     KeycapView(text: "⌘\(shortcutNumber)", isSelected: isSelected)
                 }
             }
-            .padding(.horizontal, 12)
-            .padding(.vertical, 8)
-            .background {
-                RoundedRectangle(cornerRadius: 10, style: .continuous)
-                    .fill(isSelected ? colors.rowSelection : (isHovered ? colors.rowHover : .clear))
-            }
-            .contentShape(Rectangle())
         }
-        .buttonStyle(.plain)
-        .onHover { isHovered = $0 }
     }
 }
 
@@ -301,22 +286,24 @@ struct CommandKActionRowView: View {
     let colors: ThemeColors
     @ObservedObject var viewModel: LauncherViewModel
     
-    @State private var isHovered = false
-    
     var body: some View {
-        Button(action: {
-            viewModel.commandKSelectedIndex = idx
-            viewModel.executeCommandKAction()
-        }) {
-            HStack(spacing: 10) {
-                Image(systemName: getIconName(for: action))
-                    .font(.body.weight(.medium))
-                    .frame(width: 20)
-                    .foregroundColor(isSelected ? colors.textPrimary : colors.textSecondary)
+        LauncherSubmenuRow(
+            isSelected: isSelected,
+            action: {
+                viewModel.commandKSelectedIndex = idx
+                viewModel.executeCommandKAction()
+            }
+        ) {
+            HStack(spacing: LauncherLayout.rowSpacing) {
+                LauncherIconSlot(
+                    systemName: getIconName(for: action),
+                    tint: isSelected ? colors.textPrimary : colors.textSecondary
+                )
 
                 Text(getActionLabel(for: action))
-                    .font(.body)
-                    .foregroundColor(colors.textPrimary)
+                    .font(LauncherTypography.submenuRow)
+                    .foregroundStyle(colors.textPrimary)
+                    .lineLimit(1)
 
                 Spacer(minLength: 0)
 
@@ -324,19 +311,6 @@ struct CommandKActionRowView: View {
                     .opacity(showCommandNumbers ? 1 : 0)
                     .animation(LauncherAnimation.fade, value: showCommandNumbers)
             }
-            .padding(.horizontal, 12)
-            .padding(.vertical, 8)
-            .background {
-                RoundedRectangle(cornerRadius: 10, style: .continuous)
-                    .fill(isSelected ? colors.rowSelection : (isHovered ? colors.rowHover : .clear))
-            }
-            .contentShape(Rectangle())
-            .animation(LauncherAnimation.fade, value: isSelected)
-            .animation(LauncherAnimation.fade, value: isHovered)
-        }
-        .buttonStyle(.plain)
-        .onHover { hovering in
-            isHovered = hovering
         }
     }
     

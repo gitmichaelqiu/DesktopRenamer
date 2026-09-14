@@ -39,7 +39,7 @@ struct CommandBottomBar: View {
                         .modifier(BottomBarCapsule(isSelected: false, isActive: false, colorScheme: colorScheme))
                     }
                 }
-                .padding(4)
+                .padding(LauncherLayout.bottomBarCapsulePadding)
                 .launcherFrosted(in: Capsule())
             }
             
@@ -155,13 +155,13 @@ struct CommandBottomBar: View {
                     EmptyView()
                     }
                 }
-                .padding(4)
+                .padding(LauncherLayout.bottomBarCapsulePadding)
                 .launcherFrosted(in: Capsule())
             }
         }
-        .padding(.horizontal, 8)
-        .padding(.vertical, 6)
-        .frame(height: 52)
+        .padding(.horizontal, LauncherLayout.bottomBarHorizontalPadding)
+        .padding(.vertical, LauncherLayout.bottomBarVerticalPadding)
+        .frame(height: LauncherLayout.bottomBarHeight)
         .animation(LauncherAnimation.capsule, value: viewModel.stagingWindow?.id ?? 0)
     }
 }

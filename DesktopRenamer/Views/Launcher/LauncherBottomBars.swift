@@ -37,7 +37,7 @@ struct BatchMoveBottomBar: View {
                     .modifier(BottomBarCapsule(isSelected: false, isActive: false, colorScheme: colorScheme))
                 }
             }
-            .padding(4)
+            .padding(LauncherLayout.bottomBarCapsulePadding)
             .launcherFrosted(in: Capsule())
             
             Spacer()
@@ -120,12 +120,12 @@ struct BatchMoveBottomBar: View {
                     }
                 }
             }
-            .padding(4)
+            .padding(LauncherLayout.bottomBarCapsulePadding)
             .launcherFrosted(in: Capsule())
         }
-        .padding(.horizontal, 8)
-        .padding(.vertical, 6)
-        .frame(height: 52)
+        .padding(.horizontal, LauncherLayout.bottomBarHorizontalPadding)
+        .padding(.vertical, LauncherLayout.bottomBarVerticalPadding)
+        .frame(height: LauncherLayout.bottomBarHeight)
         .animation(LauncherAnimation.capsule, value: viewModel.stagingWindow?.id ?? 0)
         .animation(LauncherAnimation.capsule, value: viewModel.stagedMoves.count)
     }
@@ -349,14 +349,14 @@ struct SpacesBottomBar: View {
                         .transition(.launcherCapsule)
                     }
                 }
-                .padding(4)
+                .padding(LauncherLayout.bottomBarCapsulePadding)
             .launcherFrosted(in: Capsule())
             }
             .padding(.leading, 12)
         }
-        .padding(.horizontal, 8)
-        .padding(.vertical, 6)
-        .frame(height: 52)
+        .padding(.horizontal, LauncherLayout.bottomBarHorizontalPadding)
+        .padding(.vertical, LauncherLayout.bottomBarVerticalPadding)
+        .frame(height: LauncherLayout.bottomBarHeight)
         .animation(LauncherAnimation.capsule, value: viewModel.isBottomBarFocused)
     }
 }

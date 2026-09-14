@@ -287,9 +287,9 @@ struct ListAreaView: View {
                                         .id(cmd.id)
                                 }
                             }
-                            .padding(.horizontal, 8)
-                            .padding(.top, 4)
-                            .padding(.bottom, 8)
+                            .padding(.horizontal, LauncherLayout.listHorizontalPadding)
+                            .padding(.top, LauncherLayout.listTopPadding)
+                            .padding(.bottom, LauncherLayout.listBottomPadding)
                         }
                         .scrollIndicators(.hidden)
                         .onChange(of: viewModel.selectedRowIndex) { index in
@@ -325,9 +325,9 @@ struct ListAreaView: View {
                                             .id(space.id)
                                     }
                                 }
-                                .padding(.horizontal, 8)
-                                .padding(.top, 4)
-                                .padding(.bottom, 8)
+                                .padding(.horizontal, LauncherLayout.listHorizontalPadding)
+                                .padding(.top, LauncherLayout.listTopPadding)
+                                .padding(.bottom, LauncherLayout.listBottomPadding)
                             }
                             .scrollIndicators(.hidden)
                             .onChange(of: viewModel.selectedRowIndex) { index in
@@ -370,9 +370,9 @@ struct ListAreaView: View {
                                                 .id(space.id)
                                         }
                                     }
-                                    .padding(.horizontal, 8)
-                                    .padding(.top, 4)
-                                    .padding(.bottom, 8)
+                                    .padding(.horizontal, LauncherLayout.listHorizontalPadding)
+                                    .padding(.top, LauncherLayout.listTopPadding)
+                                    .padding(.bottom, LauncherLayout.listBottomPadding)
                                 }
                                 .scrollIndicators(.hidden)
                                 .onChange(of: viewModel.selectedRowIndex) { index in
@@ -420,9 +420,9 @@ struct ListAreaView: View {
                                             }
                                         }
                                     }
-                                    .padding(.horizontal, 8)
-                                    .padding(.top, 4)
-                                    .padding(.bottom, 8)
+                                    .padding(.horizontal, LauncherLayout.listHorizontalPadding)
+                                    .padding(.top, LauncherLayout.listTopPadding)
+                                    .padding(.bottom, LauncherLayout.listBottomPadding)
                                 }
                                 .scrollIndicators(.hidden)
                                 .onChange(of: viewModel.selectedRowIndex) { index in
@@ -477,9 +477,9 @@ struct ListAreaView: View {
                                             }
                                         }
                                     }
-                                    .padding(.horizontal, 8)
-                                    .padding(.top, 4)
-                                    .padding(.bottom, 8)
+                                    .padding(.horizontal, LauncherLayout.listHorizontalPadding)
+                                    .padding(.top, LauncherLayout.listTopPadding)
+                                    .padding(.bottom, LauncherLayout.listBottomPadding)
                                 }
                                 .scrollIndicators(.hidden)
                                 .onChange(of: viewModel.selectedRowIndex) { index in

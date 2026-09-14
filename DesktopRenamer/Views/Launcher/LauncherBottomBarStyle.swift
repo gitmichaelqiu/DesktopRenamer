@@ -36,9 +36,9 @@ struct BottomBarCapsule: ViewModifier {
         let neutralText = Color.primary.opacity(0.60)
 
         content
-            .font(.callout.weight(.medium))
-            .padding(.horizontal, 8)
-            .frame(height: 28)
+            .font(LauncherTypography.bar)
+            .padding(.horizontal, LauncherLayout.bottomBarControlHorizontalPadding)
+            .frame(height: LauncherLayout.bottomBarControlHeight)
             .background(Capsule().fill(isHovered && !isSelected ? Color.primary.opacity(0.05) : selectionFill))
             .foregroundColor(
                 isGreen ? (isSelected ? .white : (isActive ? greenBgColor : (isHovered ? greenBgColor : .secondary)))
