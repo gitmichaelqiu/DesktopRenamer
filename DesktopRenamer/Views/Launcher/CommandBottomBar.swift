@@ -23,7 +23,7 @@ struct CommandBottomBar: View {
                     }
                     .modifier(BottomBarCapsule(isSelected: false, isActive: false, colorScheme: colorScheme))
 
-                    if let staging = viewModel.stagingWindow {
+                    if let staging = viewModel.stagingWindow, !viewModel.isSpaceMenuOpen {
                         Image(systemName: "chevron.right")
                             .font(.system(size: 9, weight: .semibold))
                             .foregroundColor(colors.textQuaternary)

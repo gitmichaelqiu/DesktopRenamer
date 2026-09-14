@@ -15,9 +15,12 @@ extension LauncherViewModel {
             let command = commands[index]
             
             if command.hasSubpage {
+                let opensSpaceMenu = command.type == .switchToDesktop || command.type == .moveWindow
                 activeCommand = command
-                isSpaceMenuOpen = command.type == .switchToDesktop || command.type == .moveWindow
-                selectedRowIndex = 0
+                isSpaceMenuOpen = opensSpaceMenu
+                // Keep the command row selected behind the target-space
+                // overlay. The overlay has its own selection index.
+                selectedRowIndex = opensSpaceMenu ? index : 0
                 spaceMenuSelectedIndex = 0
             } else {
                 executeSimpleCommand(command.type)
@@ -75,12 +78,13 @@ extension LauncherViewModel {
                         selectedRowIndex = max(0, batchMoveSelectableItems.count - 1)
                     }
                 case .unstaged(let window, _):
-                    batchMoveLastSelectedIndex = selectedRowIndex
+                    let previousRowIndex = selectedRowIndex
+                    batchMoveLastSelectedIndex = previousRowIndex
                     isStagingForRestoreTo = false
                     stagingWindow = window
                     isSpaceMenuOpen = true
                     spaceMenuSelectedIndex = 0
-                    selectedRowIndex = 0
+                    selectedRowIndex = previousRowIndex
                 }
                 
             case .renameCurrentSpace:

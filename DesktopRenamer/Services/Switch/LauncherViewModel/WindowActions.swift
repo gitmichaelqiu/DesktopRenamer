@@ -41,12 +41,13 @@ extension LauncherViewModel {
             return
         }
 
-        batchMoveLastSelectedIndex = selectedRowIndex
+        let previousRowIndex = selectedRowIndex
+        batchMoveLastSelectedIndex = previousRowIndex
         stagingWindow = window
         isSpaceMenuOpen = true
         spaceMenuSelectedIndex = 0
         isExecutingRestoreToImmediately = true
-        selectedRowIndex = 0
+        selectedRowIndex = previousRowIndex
     }
 
     /// Matches Raycast's Move to Current Desktop action. The target must be
