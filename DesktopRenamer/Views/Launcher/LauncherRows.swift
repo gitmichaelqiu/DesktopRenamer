@@ -12,8 +12,6 @@ private struct LauncherRowSurface: ViewModifier {
                 RoundedRectangle(cornerRadius: 10, style: .continuous)
                     .fill(isSelected ? colors.rowSelection : (isHovered ? colors.rowHover : .clear))
             }
-            .animation(.easeOut(duration: 0.14), value: isSelected)
-            .animation(.easeOut(duration: 0.14), value: isHovered)
     }
 }
 

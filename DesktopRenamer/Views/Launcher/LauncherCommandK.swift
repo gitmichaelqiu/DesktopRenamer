@@ -278,8 +278,6 @@ private struct LauncherSpaceMenuRow: View {
                     .fill(isSelected ? colors.rowSelection : (isHovered ? colors.rowHover : .clear))
             }
             .contentShape(Rectangle())
-            .animation(LauncherAnimation.fade, value: isSelected)
-            .animation(LauncherAnimation.fade, value: isHovered)
         }
         .buttonStyle(.plain)
         .onHover { isHovered = $0 }
