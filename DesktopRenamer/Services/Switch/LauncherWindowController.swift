@@ -73,7 +73,7 @@ class LauncherWindowController: NSWindowController, NSWindowDelegate {
             guard let self = self else { return event }
             let hasCommand = event.modifierFlags.contains(.command)
 
-            self.viewModel.showCommandNumbers = hasCommand
+            self.viewModel.updateCommandModifier(isPressed: hasCommand)
             return event
         }
 
@@ -158,7 +158,7 @@ class LauncherWindowController: NSWindowController, NSWindowDelegate {
         )
         window?.orderOut(nil)
         viewModel.resetForPresentation()
-        viewModel.showCommandNumbers = false
+        viewModel.updateCommandModifier(isPressed: false)
         viewModel.previouslyActiveWindow = nil
         SpaceHelper.debugTrace(
             traceID,

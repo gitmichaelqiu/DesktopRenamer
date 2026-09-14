@@ -103,6 +103,28 @@ enum DesktopRearrangementDirection {
     @Published var showCommandNumbers: Bool = false
     @Published var isBottomBarFocused: Bool = false
     @Published var selectedSpaceIndex: Int = 0
+    private var commandNumberRevealTask: Task<Void, Never>?
+
+    private static let commandNumberRevealDelay: UInt64 = 400_000_000
+
+    func updateCommandModifier(isPressed: Bool) {
+        commandNumberRevealTask?.cancel()
+        commandNumberRevealTask = nil
+
+        guard isPressed else {
+            showCommandNumbers = false
+            return
+        }
+
+        guard !showCommandNumbers else { return }
+
+        commandNumberRevealTask = Task { [weak self] in
+            try? await Task.sleep(nanoseconds: Self.commandNumberRevealDelay)
+            guard !Task.isCancelled else { return }
+            self?.showCommandNumbers = true
+            self?.commandNumberRevealTask = nil
+        }
+    }
     
     // For batch window moves
     @Published var stagedMoves: [Int: BatchStagedAction] = [:]
