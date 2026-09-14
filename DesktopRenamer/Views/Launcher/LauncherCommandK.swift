@@ -134,6 +134,10 @@ struct LauncherSpaceMenuView: View {
 
     private var spaces: [SpaceGroup] { viewModel.spaceMenuSpaces }
 
+    private var showsDisplayName: Bool {
+        Set(viewModel.currentSpaces.map(\.displayID)).count > 1
+    }
+
     private var title: String {
         viewModel.activeCommand?.title ?? String(localized: "Select Space")
     }
@@ -168,6 +172,7 @@ struct LauncherSpaceMenuView: View {
                                         isCurrent: SpaceHelper.getCurrentSpaceID(for: space.displayID) == space.id,
                                         shortcutNumber: index + 1,
                                         showShortcut: viewModel.showCommandNumbers && index < 9,
+                                        showDisplayName: showsDisplayName,
                                         colors: colors
                                     ) {
                                         viewModel.isKeyboardSelection = true
@@ -214,8 +219,21 @@ private struct LauncherSpaceMenuRow: View {
     let isCurrent: Bool
     let shortcutNumber: Int
     let showShortcut: Bool
+    let showDisplayName: Bool
     let colors: ThemeColors
     let action: () -> Void
+
+    private var metadata: String {
+        if space.isFullscreen {
+            return showDisplayName
+                ? String(format: String(localized: "%@ · Fullscreen"), space.displayName)
+                : String(localized: "Fullscreen")
+        }
+
+        return showDisplayName
+            ? String(format: String(localized: "%@ · Space %lld"), space.displayName, space.num)
+            : String(format: String(localized: "Space %lld"), space.num)
+    }
 
     var body: some View {
         LauncherSubmenuRow(isSelected: isSelected, action: action) {
@@ -244,7 +262,7 @@ private struct LauncherSpaceMenuRow: View {
                 Spacer(minLength: LauncherLayout.submenuRowContentSpacing)
 
                 LauncherTrailingLabel(
-                    String(format: String(localized: "%@ · Space %lld"), space.displayName, space.num),
+                    metadata,
                     color: colors.textSecondary
                 )
 
