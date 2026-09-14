@@ -11,12 +11,16 @@ enum LauncherLayout {
     static let submenuWidth: CGFloat = 380
     static let submenuPanelPadding: CGFloat = 6
     static let submenuCornerRadius: CGFloat = 16
+    static let submenuIconSlot: CGFloat = 20
+    static let submenuHeaderIconSlot: CGFloat = 28
+    static let submenuHeaderSpacing: CGFloat = 10
+    static let submenuRowContentSpacing: CGFloat = 6
     static let submenuHeaderHorizontalPadding: CGFloat = 16
     static let submenuHeaderVerticalPadding: CGFloat = 14
-    static let submenuSeparatorSpacing: CGFloat = 4
-    static let submenuRowHorizontalPadding: CGFloat = 12
-    static let submenuRowHeight: CGFloat = 40
-    static let submenuRowSpacing: CGFloat = 2
+    static let submenuSeparatorSpacing: CGFloat = 6
+    static let submenuRowHorizontalPadding: CGFloat = 8
+    static let submenuRowHeight: CGFloat = 36
+    static let submenuRowSpacing: CGFloat = 1
 
     static let listTopPadding: CGFloat = 4
     static let listBottomPadding: CGFloat = 8
@@ -56,17 +60,25 @@ struct LauncherIconSlot: View {
     private let source: Source
     private let tint: Color
     private let symbolSize: CGFloat
+    private let slot: CGFloat
 
-    init(systemName: String, tint: Color = .primary, symbolSize: CGFloat = 17) {
+    init(
+        systemName: String,
+        tint: Color = .primary,
+        symbolSize: CGFloat = 17,
+        slot: CGFloat = LauncherLayout.rowIconSlot
+    ) {
         source = .symbol(systemName)
         self.tint = tint
         self.symbolSize = symbolSize
+        self.slot = slot
     }
 
-    init(image: NSImage) {
+    init(image: NSImage, slot: CGFloat = LauncherLayout.rowIconSlot) {
         source = .image(image)
         tint = .primary
         symbolSize = 17
+        self.slot = slot
     }
 
     var body: some View {
@@ -82,7 +94,7 @@ struct LauncherIconSlot: View {
                     .aspectRatio(contentMode: .fit)
             }
         }
-        .frame(width: LauncherLayout.rowIconSlot, height: LauncherLayout.rowIconSlot)
+        .frame(width: slot, height: slot)
     }
 }
 
@@ -121,6 +133,8 @@ struct LauncherStatusLabel: View {
         Text(text)
             .font(LauncherTypography.rowTrailing)
             .foregroundStyle(color)
+            .lineLimit(1)
+            .truncationMode(.tail)
             .padding(.horizontal, 10)
             .padding(.vertical, 4)
             .background(
@@ -214,6 +228,50 @@ struct LauncherSubmenuHeader<Content: View>: View {
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(.horizontal, LauncherLayout.submenuHeaderHorizontalPadding)
             .padding(.vertical, LauncherLayout.submenuHeaderVerticalPadding)
+    }
+}
+
+/// The canonical window heading shared by Cmd+K actions and move-to-space menus.
+struct LauncherSubmenuWindowHeader: View {
+    let window: WindowEntry
+    @Environment(\.colorScheme) private var colorScheme
+
+    private var colors: ThemeColors {
+        ThemeColors(isDark: colorScheme == .dark)
+    }
+
+    var body: some View {
+        HStack(spacing: LauncherLayout.submenuHeaderSpacing) {
+            LauncherIconSlot(
+                image: NSWorkspace.shared.icon(forFile: window.appPath),
+                slot: LauncherLayout.submenuHeaderIconSlot
+            )
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text(window.title.isEmpty ? String(localized: "(No Title)") : window.title)
+                    .font(LauncherTypography.rowTitle)
+                    .foregroundStyle(colors.textPrimary)
+                    .lineLimit(1)
+
+                LauncherTrailingLabel(window.ownerName, color: colors.textSecondary)
+            }
+
+            Spacer(minLength: 0)
+        }
+    }
+}
+
+/// A text-only submenu heading for space selection modes without a source window.
+struct LauncherSubmenuTitleHeader: View {
+    let title: String
+    let color: Color
+
+    var body: some View {
+        Text(title)
+            .font(LauncherTypography.submenuHeader)
+            .foregroundStyle(color)
+            .lineLimit(1)
+            .truncationMode(.tail)
     }
 }
 

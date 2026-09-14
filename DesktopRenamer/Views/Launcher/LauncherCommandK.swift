@@ -99,22 +99,7 @@ struct LauncherActionMenuView: View {
         LauncherSubmenuPanel {
             VStack(spacing: 0) {
                 LauncherSubmenuHeader {
-                    HStack(spacing: LauncherLayout.rowSpacing) {
-                        LauncherIconSlot(
-                            image: NSWorkspace.shared.icon(forFile: window.appPath)
-                        )
-
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text(window.title.isEmpty ? String(localized: "(No Title)") : window.title)
-                                .font(LauncherTypography.rowTitle)
-                                .foregroundStyle(colors.textPrimary)
-                                .lineLimit(1)
-
-                            LauncherTrailingLabel(window.ownerName, color: colors.textSecondary)
-                        }
-
-                        Spacer(minLength: 0)
-                    }
+                    LauncherSubmenuWindowHeader(window: window)
                 }
 
                 LauncherSubmenuSeparator()
@@ -150,21 +135,18 @@ struct LauncherSpaceMenuView: View {
     private var spaces: [SpaceGroup] { viewModel.spaceMenuSpaces }
 
     private var title: String {
-        if let stagingWindow = viewModel.stagingWindow {
-            return String(format: String(localized: "Move %@ to"), stagingWindow.ownerName)
-        }
-
-        return viewModel.activeCommand?.title ?? String(localized: "Select Space")
+        viewModel.activeCommand?.title ?? String(localized: "Select Space")
     }
 
     var body: some View {
         LauncherSubmenuPanel {
             VStack(alignment: .leading, spacing: 0) {
                 LauncherSubmenuHeader {
-                    Text(title)
-                        .font(LauncherTypography.submenuHeader)
-                        .foregroundStyle(colors.textSecondary)
-                        .lineLimit(1)
+                    if let stagingWindow = viewModel.stagingWindow {
+                        LauncherSubmenuWindowHeader(window: stagingWindow)
+                    } else {
+                        LauncherSubmenuTitleHeader(title: title, color: colors.textSecondary)
+                    }
                 }
 
                 LauncherSubmenuSeparator()
@@ -196,16 +178,7 @@ struct LauncherSpaceMenuView: View {
                                 }
                             }
                         }
-                        .frame(
-                            height: min(
-                                max(
-                                    CGFloat(spaces.count)
-                                        * (LauncherLayout.submenuRowHeight + LauncherLayout.submenuRowSpacing),
-                                    LauncherLayout.submenuRowHeight
-                                ),
-                                300
-                            )
-                        )
+                        .frame(height: spaceMenuHeight)
                         .scrollIndicators(.hidden)
                         .onAppear {
                             guard spaces.indices.contains(viewModel.spaceMenuSelectedIndex) else { return }
@@ -226,6 +199,13 @@ struct LauncherSpaceMenuView: View {
             }
         }
     }
+
+    private var spaceMenuHeight: CGFloat {
+        let rowCount = CGFloat(spaces.count)
+        let contentHeight = rowCount * LauncherLayout.submenuRowHeight
+            + max(rowCount - 1, 0) * LauncherLayout.submenuRowSpacing
+        return min(max(contentHeight, LauncherLayout.submenuRowHeight), 300)
+    }
 }
 
 private struct LauncherSpaceMenuRow: View {
@@ -239,14 +219,21 @@ private struct LauncherSpaceMenuRow: View {
 
     var body: some View {
         LauncherSubmenuRow(isSelected: isSelected, action: action) {
-            HStack(spacing: LauncherLayout.rowSpacing) {
+            HStack(spacing: LauncherLayout.submenuRowContentSpacing) {
                 if isCurrent {
                     Circle()
                         .stroke(Color.blue, lineWidth: 2)
                         .frame(width: 18, height: 18)
-                        .frame(width: LauncherLayout.rowIconSlot, height: LauncherLayout.rowIconSlot)
+                        .frame(
+                            width: LauncherLayout.submenuIconSlot,
+                            height: LauncherLayout.submenuIconSlot
+                        )
                 } else {
-                    LauncherIconSlot(systemName: "desktopcomputer", tint: colors.textSecondary)
+                    LauncherIconSlot(
+                        systemName: "desktopcomputer",
+                        tint: colors.textSecondary,
+                        slot: LauncherLayout.submenuIconSlot
+                    )
                 }
 
                 Text(space.name)
@@ -254,12 +241,12 @@ private struct LauncherSpaceMenuRow: View {
                     .foregroundStyle(colors.textPrimary)
                     .lineLimit(1)
 
+                Spacer(minLength: LauncherLayout.submenuRowContentSpacing)
+
                 LauncherTrailingLabel(
                     String(format: String(localized: "%@ · Space %lld"), space.displayName, space.num),
                     color: colors.textSecondary
                 )
-
-                Spacer(minLength: 0)
 
                 if showShortcut {
                     KeycapView(text: "⌘\(shortcutNumber)", isSelected: isSelected)
@@ -294,10 +281,11 @@ struct CommandKActionRowView: View {
                 viewModel.executeCommandKAction()
             }
         ) {
-            HStack(spacing: LauncherLayout.rowSpacing) {
+            HStack(spacing: LauncherLayout.submenuRowContentSpacing) {
                 LauncherIconSlot(
                     systemName: getIconName(for: action),
-                    tint: isSelected ? colors.textPrimary : colors.textSecondary
+                    tint: isSelected ? colors.textPrimary : colors.textSecondary,
+                    slot: LauncherLayout.submenuIconSlot
                 )
 
                 Text(getActionLabel(for: action))
