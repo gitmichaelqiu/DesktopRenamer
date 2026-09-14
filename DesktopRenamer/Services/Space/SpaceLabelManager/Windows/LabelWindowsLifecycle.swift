@@ -145,6 +145,8 @@ extension SpaceLabelManager {
     /// Existing windows can retain stale CGS assignments after sleep/wake, so
     /// they must be recreated after the layout has been reconciled.
     func resetForSystemTransition() {
+        let preserveSettingsPresentation = shouldPreservePreviewWindowOrderingForSettings
+
         delayedRestoreWorkItem?.cancel()
         delayedRestoreWorkItem = nil
         applicationActivationTransitionCheckWorkItem?.cancel()
@@ -161,14 +163,24 @@ extension SpaceLabelManager {
         previewLabelsSuppressedUntil = nil
         settingsPreviewRestoreWorkItem?.cancel()
         settingsPreviewRestoreWorkItem = nil
-        arePreviewLabelsSuppressedForSettings = false
-        isSettingsWindowOpen = false
+        if !preserveSettingsPresentation {
+            arePreviewLabelsSuppressedForSettings = false
+            isSettingsWindowOpen = false
+        }
         activeSyncWorkItems.forEach { $0.cancel() }
         activeSyncWorkItems.removeAll()
         reloadWorkItem?.cancel()
         reloadWorkItem = nil
         reloadGeneration += 1
         removeAllWindows()
+
+        if preserveSettingsPresentation {
+            DiagnosticEventLog.shared.record(
+                subsystem: "Labels",
+                level: "info",
+                "Preserved Settings presentation guard during system transition reset"
+            )
+        }
     }
 
     func removeAllWindows() {

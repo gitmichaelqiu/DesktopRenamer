@@ -131,8 +131,8 @@ extension StatusBarController: NSWindowDelegate {
     func windowWillClose(_ notification: Notification) {
         if notification.object as? NSWindow == settingsWindowController?.window {
             DispatchQueue.main.async { [weak self] in
-                NSApp.setActivationPolicy(.accessory)
                 self?.labelManager.endSettingsWindowPresentation()
+                self?.spaceManager.resumeDeferredScreenParameterRefreshIfNeeded()
             }
             settingsWindowController = nil
         }

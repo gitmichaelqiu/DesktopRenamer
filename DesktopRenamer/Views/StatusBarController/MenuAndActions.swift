@@ -333,10 +333,12 @@ extension StatusBarController {
             if let window = windowController.window {
                 configureSettingsWindow(window)
             }
-            NSApp.setActivationPolicy(.regular)
-            NSApp.activate(ignoringOtherApps: true)
             windowController.showWindow(nil)
             let window = windowController.window
+            // Put the all-Spaces Settings window on screen before activating
+            // the application. Activating a menu-bar app first can make
+            // WindowServer choose one of the label windows' Spaces.
+            NSApp.activate(ignoringOtherApps: true)
             window?.makeKeyAndOrderFront(nil)
             completeSettingsWindowActivationWhenReady(for: window)
             return
@@ -376,10 +378,13 @@ extension StatusBarController {
         settingsWindowController = windowController
         
         NotificationCenter.default.addObserver(self, selector: #selector(settingsWindowWillClose), name: NSWindow.willCloseNotification, object: window)
-        
-        NSApp.setActivationPolicy(.regular)
-        NSApp.activate(ignoringOtherApps: true)
+
+        // Keep the menu-bar app accessory-only while presenting Settings. The
+        // activation-policy transition itself changes screen parameters and
+        // can make WindowServer select a Space before this all-Spaces window
+        // is visible.
         windowController.showWindow(nil)
+        NSApp.activate(ignoringOtherApps: true)
         window.makeKeyAndOrderFront(nil)
         completeSettingsWindowActivationWhenReady(for: window)
     }
@@ -407,8 +412,8 @@ extension StatusBarController {
     
     @objc private func settingsWindowWillClose(_ notification: Notification) {
         DispatchQueue.main.async { [weak self] in
-            NSApp.setActivationPolicy(.accessory)
             self?.labelManager.endSettingsWindowPresentation()
+            self?.spaceManager.resumeDeferredScreenParameterRefreshIfNeeded()
         }
         settingsWindowController = nil
     }

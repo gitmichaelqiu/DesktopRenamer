@@ -74,6 +74,7 @@ class SpaceManager: ObservableObject {
     var monitorSpaceChangeWorkItem: DispatchWorkItem?
     var monitorSpaceChangeGeneration = 0
     var screenParametersWorkItem: DispatchWorkItem?
+    var screenParameterRefreshPendingAfterSettings = false
     
     // Display Cache
     var connectedDisplayUUIDs: Set<String> = []
@@ -328,14 +329,35 @@ class SpaceManager: ObservableObject {
     
     @objc private func screenParametersDidChange() {
         guard !isSystemSleeping else { return }
+
+        if isSettingsWindowPresentationActive {
+            screenParameterRefreshPendingAfterSettings = true
+            DiagnosticEventLog.shared.record(
+                subsystem: "SpaceManager",
+                level: "info",
+                "Deferring screen-parameter refresh while Settings is activating"
+            )
+            return
+        }
+
         print("SpaceManager: Screen parameters changed. Waiting for display topology to settle...")
         screenParametersWorkItem?.cancel()
         DispatchQueue.main.async {
+            guard !self.isSystemSleeping else { return }
+            if self.isSettingsWindowPresentationActive {
+                self.screenParameterRefreshPendingAfterSettings = true
+                return
+            }
             AppDelegate.shared.statusBarController?.labelManager.resetForSystemTransition()
         }
 
         let workItem = DispatchWorkItem { [weak self] in
             guard let self = self, !self.isSystemSleeping else { return }
+            guard !self.isSettingsWindowPresentationActive else {
+                self.screenParameterRefreshPendingAfterSettings = true
+                self.screenParametersWorkItem = nil
+                return
+            }
             self.refreshConnectedDisplays()
             self.refreshSpaceState()
 
@@ -348,5 +370,22 @@ class SpaceManager: ObservableObject {
         }
         screenParametersWorkItem = workItem
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.8, execute: workItem)
+    }
+
+    /// Applies a display refresh that arrived while Settings was being
+    /// activated. The refresh is intentionally delayed until the Settings
+    /// window has closed so label-window rebuilding cannot participate in the
+    /// activation handoff.
+    func resumeDeferredScreenParameterRefreshIfNeeded() {
+        guard screenParameterRefreshPendingAfterSettings else { return }
+        screenParameterRefreshPendingAfterSettings = false
+        screenParametersDidChange()
+    }
+
+    private var isSettingsWindowPresentationActive: Bool {
+        MainActor.assumeIsolated {
+            AppDelegate.shared.statusBarController?.labelManager
+                .shouldPreservePreviewWindowOrderingForSettings == true
+        }
     }
 }
