@@ -152,7 +152,6 @@ extension LauncherViewModel {
         
         DiagnosticEventLog.shared.record(subsystem: "Launcher", level: "info", "executeCommandKAction: window=\(window.title) (id=\(window.id)), action=\(action.description)")
         let isListWindows = activeCommand?.type == .listWindows
-        commandKTargetWindow = nil
         switch action {
         case .moveWindow:
             guard isListWindows else { return }
