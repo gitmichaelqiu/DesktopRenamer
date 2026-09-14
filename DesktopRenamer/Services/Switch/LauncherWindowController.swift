@@ -156,8 +156,11 @@ class LauncherWindowController: NSWindowController, NSWindowDelegate {
         )
         
         // Post a notification to force focus
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
-            NotificationCenter.default.post(name: NSNotification.Name("FocusLauncherTextField"), object: nil)
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) { [weak self] in
+            guard let self,
+                  self.window?.isVisible == true,
+                  !self.viewModel.isBottomBarFocused else { return }
+            self.viewModel.requestLauncherFieldFocus()
         }
     }
     

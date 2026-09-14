@@ -51,28 +51,14 @@ extension LauncherViewModel {
     private func leaveSpaceBarFocus() {
         isBottomBarFocused = false
         spaceBarQuery = ""
-
-        DispatchQueue.main.async {
-            guard !self.isBottomBarFocused else { return }
-            NotificationCenter.default.post(
-                name: NSNotification.Name("FocusLauncherTextField"),
-                object: nil
-            )
-        }
+        requestFocusNotification(named: "FocusLauncherTextField")
     }
 
     func focusSpaceBar(movingBy offset: Int = 0) {
         spaceBarQuery = ""
         isBottomBarFocused = true
         isKeyboardSelection = true
-
-        DispatchQueue.main.async {
-            guard self.isBottomBarFocused else { return }
-            NotificationCenter.default.post(
-                name: NSNotification.Name("FocusSpaceBarTextField"),
-                object: nil
-            )
-        }
+        requestFocusNotification(named: "FocusSpaceBarTextField")
 
         guard let manager = AppDelegate.shared.spaceManager else { return }
         let spaces = manager.currentDisplaySpaces
@@ -112,6 +98,7 @@ extension LauncherViewModel {
     }
     
     func closeLauncher() {
+        cancelPendingFocusRequest()
         batchExecutionTask?.cancel()
         searchQuery = ""
         spaceBarQuery = ""
@@ -125,6 +112,7 @@ extension LauncherViewModel {
     }
 
     func resetForPresentation() {
+        cancelPendingFocusRequest()
         searchQuery = ""
         spaceBarQuery = ""
         selectedRowIndex = 0
@@ -138,5 +126,29 @@ extension LauncherViewModel {
         isExecutingRestoreToImmediately = false
         commandKTargetWindow = nil
         commandKSelectedIndex = 0
+    }
+
+    func requestLauncherFieldFocus() {
+        requestFocusNotification(named: "FocusLauncherTextField")
+    }
+
+    private func requestFocusNotification(named name: String) {
+        focusRequestID &+= 1
+        let requestID = focusRequestID
+        focusRequestWorkItem?.cancel()
+
+        let workItem = DispatchWorkItem { [weak self] in
+            guard let self, self.focusRequestID == requestID else { return }
+            NotificationCenter.default.post(name: NSNotification.Name(name), object: nil)
+            self.focusRequestWorkItem = nil
+        }
+        focusRequestWorkItem = workItem
+        DispatchQueue.main.async(execute: workItem)
+    }
+
+    private func cancelPendingFocusRequest() {
+        focusRequestID &+= 1
+        focusRequestWorkItem?.cancel()
+        focusRequestWorkItem = nil
     }
 }

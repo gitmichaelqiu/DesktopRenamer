@@ -89,6 +89,15 @@ class FocusTextField: NSTextField {
         super.keyDown(with: event)
     }
 
+    override func viewWillMove(toWindow newWindow: NSWindow?) {
+        if newWindow == nil,
+           let panel = window as? LauncherNSPanel,
+           panel.focusedTextField === self {
+            panel.focusedTextField = nil
+        }
+        super.viewWillMove(toWindow: newWindow)
+    }
+
     override func viewDidMoveToWindow() {
         super.viewDidMoveToWindow()
         if window != nil {
@@ -113,7 +122,7 @@ class FocusTextField: NSTextField {
     
     @objc private func forceFocus() {
         guard let window = self.window else { return }
-        window.makeFirstResponder(self)
+        guard window.makeFirstResponder(self) else { return }
         (window as? LauncherNSPanel)?.focusedTextField = self
         self.currentEditor()?.selectAll(nil)
     }

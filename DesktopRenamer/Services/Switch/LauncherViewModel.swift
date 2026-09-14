@@ -104,6 +104,8 @@ enum DesktopRearrangementDirection {
     @Published var isBottomBarFocused: Bool = false
     @Published var selectedSpaceIndex: Int = 0
     private var commandNumberRevealTask: Task<Void, Never>?
+    var focusRequestWorkItem: DispatchWorkItem?
+    var focusRequestID = 0
 
     private static let commandNumberRevealDelay: UInt64 = 400_000_000
 
