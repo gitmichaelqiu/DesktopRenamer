@@ -416,8 +416,8 @@ struct CommandKActionRowView: View {
                 LauncherIconSlot(
                     systemName: getIconName(for: action),
                     tint: isSelected ? colors.textPrimary : colors.textSecondary,
-                    symbolSize: LauncherLayout.submenuIconSymbolSize,
-                    slot: LauncherLayout.submenuIconSlot
+                    symbolSize: LauncherLayout.submenuActionIconSymbolSize,
+                    slot: LauncherLayout.submenuActionIconSlot
                 )
 
                 Text(viewModel.commandKActionLabel(action))
