@@ -239,7 +239,7 @@ struct LauncherCommandNumberIndicator: View {
         ZStack {
             Text(verbatim: "\(number)")
                 .font(.system(size: 13, weight: .medium))
-                .foregroundStyle(Color.primary)
+                .foregroundStyle(colors.textPrimary)
         }
         .frame(
             width: LauncherLayout.commandNumberIndicatorWidth,
