@@ -43,7 +43,8 @@ enum LauncherLayout {
 
     static let keycapSide: CGFloat = 18
     static let keycapCornerRadius: CGFloat = 6
-    static let commandNumberIndicatorSide: CGFloat = 18
+    static let commandNumberIndicatorWidth: CGFloat = 20
+    static let commandNumberIndicatorHeight: CGFloat = 18
 }
 
 /// Shared typography for the launcher surface, following Raycast's title/trailing-label hierarchy.
@@ -240,15 +241,12 @@ struct LauncherCommandNumberIndicator: View {
                 .foregroundStyle(Color.primary)
         }
         .frame(
-            width: LauncherLayout.commandNumberIndicatorSide,
-            height: LauncherLayout.commandNumberIndicatorSide
+            width: LauncherLayout.commandNumberIndicatorWidth,
+            height: LauncherLayout.commandNumberIndicatorHeight
         )
         .background {
             shape
                 .fill(colors.controlSurface)
-                .overlay {
-                    shape.stroke(colors.controlSurfaceEdge, lineWidth: 0.5)
-                }
                 .shadow(
                     color: Color.black.opacity(colors.isDark ? 0.20 : 0.14),
                     radius: 1.25,
