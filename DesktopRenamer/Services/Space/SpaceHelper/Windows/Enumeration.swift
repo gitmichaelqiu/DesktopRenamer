@@ -161,7 +161,7 @@ extension SpaceHelper {
         if let displays = CGSCopyManagedDisplaySpaces(conn) as? [NSDictionary] {
             for display in displays {
                 if let currentDict = display["Current Space"] as? [String: Any],
-                   let currentID = currentDict["ManagedSpaceID"] as? Int {
+                   let currentID = managedIntegerValue(currentDict["ManagedSpaceID"]) {
                     activeSpaceIDs.insert(currentID)
                 }
             }
@@ -224,8 +224,7 @@ extension SpaceHelper {
                     minimizedAXWindowIDs: minimizedAXWindowIDs
                 )
             }
-            let screenUUIDs = getAllDisplayUUIDs()
-            let mainUUID = screenUUIDs.first
+            let mainUUID = getMainDisplayUUID()
             var currentSpaceForDisplay: [String: String] = [:]
             var fullscreenPIDToSpace: [Int32: String] = [:]
 
@@ -241,7 +240,7 @@ extension SpaceHelper {
                 }
 
                 for space in spaces {
-                    guard let managedID = space["ManagedSpaceID"] as? Int else { continue }
+                    guard let managedID = managedIntegerValue(space["ManagedSpaceID"]) else { continue }
                     if space["TileLayoutManager"] != nil {
                         let sid = String(managedID)
                         if let pid = getOwnerPID(for: sid) {
