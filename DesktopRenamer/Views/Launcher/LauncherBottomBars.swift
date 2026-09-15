@@ -274,11 +274,11 @@ struct SpacesBottomBar: View {
                     }
                 )
                 .onAppear {
-                    scrollProxy.scrollTo(spaceManager.currentSpaceUUID, anchor: UnitPoint(x: 0.31, y: 0.5))
+                    scrollProxy.scrollTo(spaceManager.currentSpaceUUID, anchor: .center)
                 }
                 .onChange(of: spaceManager.currentSpaceUUID) { currentSpaceID in
                     withAnimation(.easeInOut(duration: 0.15)) {
-                        scrollProxy.scrollTo(currentSpaceID, anchor: UnitPoint(x: 0.31, y: 0.5))
+                        scrollProxy.scrollTo(currentSpaceID, anchor: .center)
                     }
                 }
                 .onChange(of: viewModel.selectedSpaceIndex) { selectedIndex in
@@ -287,7 +287,7 @@ struct SpacesBottomBar: View {
                         if selectedIndex >= 0 && selectedIndex < spaces.count {
                             let spaceID = spaces[selectedIndex].id
                             withAnimation(.easeInOut(duration: 0.15)) {
-                                scrollProxy.scrollTo(spaceID, anchor: UnitPoint(x: 0.31, y: 0.5))
+                                scrollProxy.scrollTo(spaceID, anchor: .center)
                             }
                         }
                     }
@@ -298,12 +298,12 @@ struct SpacesBottomBar: View {
                         if viewModel.selectedSpaceIndex >= 0 && viewModel.selectedSpaceIndex < spaces.count {
                             let spaceID = spaces[viewModel.selectedSpaceIndex].id
                             withAnimation(.easeInOut(duration: 0.15)) {
-                                scrollProxy.scrollTo(spaceID, anchor: UnitPoint(x: 0.31, y: 0.5))
+                                scrollProxy.scrollTo(spaceID, anchor: .center)
                             }
                         }
                     } else {
                         withAnimation(.easeInOut(duration: 0.15)) {
-                            scrollProxy.scrollTo(spaceManager.currentSpaceUUID, anchor: UnitPoint(x: 0.31, y: 0.5))
+                            scrollProxy.scrollTo(spaceManager.currentSpaceUUID, anchor: .center)
                         }
                     }
                 }
