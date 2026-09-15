@@ -232,24 +232,31 @@ struct LauncherCommandNumberIndicator: View {
     }
 
     var body: some View {
+        let shape = RoundedRectangle(cornerRadius: LauncherLayout.keycapCornerRadius, style: .continuous)
+
         ZStack {
-            RoundedRectangle(cornerRadius: LauncherLayout.keycapCornerRadius, style: .continuous)
-                .fill(Color.black.opacity(colors.isDark ? 0.18 : 0.10))
-                .blur(radius: 1.25)
-                .offset(y: 1)
-
-            RoundedRectangle(cornerRadius: LauncherLayout.keycapCornerRadius, style: .continuous)
-                .fill(colors.badgeBg)
-
             Text(verbatim: "\(number)")
                 .font(.system(size: 13, weight: .medium))
                 .foregroundStyle(Color.primary)
         }
-            .frame(
-                width: LauncherLayout.commandNumberIndicatorSide,
-                height: LauncherLayout.commandNumberIndicatorSide
-            )
-            .accessibilityLabel(Text("Command \(number)"))
+        .frame(
+            width: LauncherLayout.commandNumberIndicatorSide,
+            height: LauncherLayout.commandNumberIndicatorSide
+        )
+        .background {
+            shape
+                .fill(colors.controlSurface)
+                .overlay {
+                    shape.stroke(colors.controlSurfaceEdge, lineWidth: 0.5)
+                }
+                .shadow(
+                    color: Color.black.opacity(colors.isDark ? 0.20 : 0.14),
+                    radius: 1.25,
+                    x: 0,
+                    y: 0.75
+                )
+        }
+        .accessibilityLabel(Text("Command \(number)"))
     }
 }
 
