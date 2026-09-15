@@ -17,7 +17,9 @@ struct LauncherSubmenuOverlay: View {
         fallbackStagingWindow: nil,
         fallbackTitle: ""
     )
+    @State private var displayedSubmenuKey = "none"
     @State private var isPresented = false
+    @State private var presentationGeneration = 0
 
     private var requestedSubmenu: LauncherSubmenu? {
         if let targetWindow = viewModel.commandKTargetWindow {
@@ -97,23 +99,53 @@ struct LauncherSubmenuOverlay: View {
 
     private func synchronizeSubmenu() {
         guard let requestedSubmenu else {
-            guard isPresented else { return }
+            presentationGeneration &+= 1
             viewModel.requestLauncherFieldFocus()
-            withAnimation(LauncherAnimation.submenuExit) {
-                isPresented = false
+            if isPresented {
+                withAnimation(LauncherAnimation.submenuExit) {
+                    isPresented = false
+                }
             }
             return
         }
 
-        displayedSubmenu = requestedSubmenu
-        if isPresented {
+        let requestedKey = requestedSubmenuKey
+        guard isPresented else {
+            displayedSubmenu = requestedSubmenu
+            displayedSubmenuKey = requestedKey
+            withAnimation(LauncherAnimation.submenu) {
+                isPresented = true
+            }
             viewModel.requestSubmenuFieldFocus()
             return
         }
-        withAnimation(LauncherAnimation.submenu) {
-            isPresented = true
+
+        guard displayedSubmenuKey != requestedKey else {
+            viewModel.requestSubmenuFieldFocus()
+            return
         }
-        viewModel.requestSubmenuFieldFocus()
+
+        presentationGeneration &+= 1
+        let generation = presentationGeneration
+        var transaction = Transaction()
+        transaction.disablesAnimations = true
+        withTransaction(transaction) {
+            isPresented = false
+            displayedSubmenu = requestedSubmenu
+            displayedSubmenuKey = requestedKey
+        }
+
+        DispatchQueue.main.async { [viewModel] in
+            guard generation == presentationGeneration,
+                  viewModel.isSubmenuOpen,
+                  displayedSubmenuKey == requestedKey else {
+                return
+            }
+            withAnimation(LauncherAnimation.submenuSwap) {
+                isPresented = true
+            }
+            viewModel.requestSubmenuFieldFocus()
+        }
     }
 }
 

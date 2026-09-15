@@ -4,6 +4,7 @@ enum LauncherAnimation {
     static let capsule = Animation.spring(response: 0.28, dampingFraction: 0.85)
     static let submenu = Animation.easeOut(duration: 0.10)
     static let submenuExit = Animation.easeIn(duration: 0.10)
+    static let submenuSwap = Animation.spring(response: 0.14, dampingFraction: 0.80, blendDuration: 0.01)
     static let fade = Animation.easeOut(duration: 0.14)
 }
 
