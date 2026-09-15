@@ -22,7 +22,7 @@ struct BatchMoveBottomBar: View {
                 HStack(spacing: 6) {
                     Image(systemName: viewModel.activeCommand?.iconName ?? "macwindow.badge.plus")
                         .font(.callout.weight(.medium))
-                        .foregroundColor(Color.accentColor)
+                        .foregroundColor(colors.textPrimary)
                     Text(viewModel.activeCommand?.title ?? String(localized: "Batch Move Windows"))
                         .font(.callout.weight(.medium))
                         .foregroundColor(colors.textSecondary)

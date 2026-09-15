@@ -16,7 +16,7 @@ struct CommandBottomBar: View {
                     HStack(spacing: 6) {
                         Image(systemName: active.iconName)
                             .font(.callout.weight(.medium))
-                            .foregroundColor(Color.accentColor)
+                            .foregroundColor(colors.textPrimary)
                         Text(active.title)
                             .font(.callout.weight(.medium))
                             .foregroundColor(colors.textSecondary)
