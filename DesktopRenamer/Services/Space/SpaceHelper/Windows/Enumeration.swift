@@ -69,6 +69,7 @@ extension SpaceHelper {
         // accessory applications as well as regular applications because an
         // accessory app can still own user-facing windows.
         var pidToAppPath: [Int32: String] = [:]
+        var pidToAppName: [Int32: String] = [:]
         var pidToActivationPolicy: [Int32: NSApplication.ActivationPolicy] = [:]
         var axWindowIDs = Set<Int>()
         var minimizedAXWindowIDs = Set<Int>()
@@ -76,6 +77,9 @@ extension SpaceHelper {
         for app in NSWorkspace.shared.runningApplications {
             if app.activationPolicy != .prohibited, let path = app.bundleURL?.path {
                 pidToAppPath[app.processIdentifier] = path
+                if let name = app.localizedName, !name.isEmpty {
+                    pidToAppName[app.processIdentifier] = name
+                }
                 pidToActivationPolicy[app.processIdentifier] = app.activationPolicy
 
                 // Get window IDs directly from the app's Accessibility hierarchy
@@ -221,6 +225,7 @@ extension SpaceHelper {
                     spaces: spaces,
                     windowsBySpaceID: windowsBySpaceID,
                     pidToAppPath: pidToAppPath,
+                    pidToAppName: pidToAppName,
                     minimizedAXWindowIDs: minimizedAXWindowIDs
                 )
             }
@@ -286,6 +291,7 @@ extension SpaceHelper {
             spaces: spaces,
             windowsBySpaceID: windowsBySpaceID,
             pidToAppPath: pidToAppPath,
+            pidToAppName: pidToAppName,
             minimizedAXWindowIDs: minimizedAXWindowIDs
         )
     }
@@ -294,6 +300,7 @@ extension SpaceHelper {
         spaces: [DesktopSpace],
         windowsBySpaceID: [String: [EnumeratedWindow]],
         pidToAppPath: [Int32: String],
+        pidToAppName: [Int32: String],
         minimizedAXWindowIDs: Set<Int>
     ) -> [SpaceAPIWindow] {
         spaces
@@ -305,12 +312,25 @@ extension SpaceHelper {
                 (windowsBySpaceID[space.id] ?? []).compactMap { window -> SpaceAPIWindow? in
                     guard let appPath = pidToAppPath[window.pid] else { return nil }
 
+                    let rawOwnerName = window.dictionary[kCGWindowOwnerName as String] as? String
+                    let ownerName: String
+                    if let rawOwnerName,
+                       !rawOwnerName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                        ownerName = rawOwnerName
+                    } else {
+                        ownerName = pidToAppName[window.pid] ?? ""
+                    }
+                    let rawTitle = window.dictionary[kCGWindowName as String] as? String
+                    let title = rawTitle?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty == false
+                        ? rawTitle
+                        : (ownerName.isEmpty ? nil : ownerName)
+
                     return SpaceAPIWindow(
                         id: window.id,
                         pid: window.pid,
-                        ownerName: window.dictionary[kCGWindowOwnerName as String] as? String ?? "",
+                        ownerName: ownerName,
                         appPath: appPath,
-                        title: window.dictionary[kCGWindowName as String] as? String,
+                        title: title,
                         spaceID: space.id,
                         spaceIDs: window.spaceIDs,
                         isMinimized: minimizedAXWindowIDs.contains(window.id),
