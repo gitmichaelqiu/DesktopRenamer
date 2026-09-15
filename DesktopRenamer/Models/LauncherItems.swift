@@ -128,6 +128,20 @@ enum BatchMoveItem: Identifiable, Equatable {
         }
     }
 
+    var windowID: Int {
+        switch self {
+        case .staged(let action, _): return action.window.id
+        case .unstaged(let window, _): return window.id
+        }
+    }
+
+    var isStaged: Bool {
+        switch self {
+        case .staged: return true
+        case .unstaged: return false
+        }
+    }
+
     static func == (lhs: BatchMoveItem, rhs: BatchMoveItem) -> Bool {
         lhs.id == rhs.id
     }

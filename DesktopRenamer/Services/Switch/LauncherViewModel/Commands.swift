@@ -101,7 +101,12 @@ extension LauncherViewModel {
     }
     
     var filteredStagedActions: [BatchStagedAction] {
-        let allStaged = stagedMoves.values.sorted { $0.window.title < $1.window.title }
+        let allStaged = stagedMoves.values.sorted {
+            if $0.window.title != $1.window.title {
+                return $0.window.title < $1.window.title
+            }
+            return $0.window.id < $1.window.id
+        }
         if searchQuery.isEmpty {
             return allStaged
         } else {
@@ -150,6 +155,24 @@ extension LauncherViewModel {
         }
         
         return items
+    }
+
+    func restoreBatchMoveSelection(
+        forWindowID windowID: Int,
+        staged: Bool,
+        preferredIndex: Int
+    ) {
+        let items = batchMoveSelectableItems
+        if let index = items.firstIndex(where: { $0.windowID == windowID && $0.isStaged == staged }) {
+            selectedRowIndex = index
+            return
+        }
+
+        guard !items.isEmpty else {
+            selectedRowIndex = 0
+            return
+        }
+        selectedRowIndex = min(max(preferredIndex, 0), items.count - 1)
     }
     
     var batchMoveSections: [BatchMoveSection] {

@@ -22,18 +22,37 @@ extension LauncherViewModel {
             spaceMenuSelectedIndex = 0
             submenuSearchQuery = ""
             if stagingWindow != nil {
+                let stagedWindowID = stagingWindow?.id
                 stagingWindow = nil
                 isStagingForRestoreTo = false
                 isExecutingRestoreToImmediately = false
-                selectedRowIndex = batchMoveLastSelectedIndex
+                if activeCommand?.type == .batchMoveWindows, let stagedWindowID {
+                    restoreBatchMoveSelection(
+                        forWindowID: stagedWindowID,
+                        staged: false,
+                        preferredIndex: batchMoveLastSelectedIndex
+                    )
+                } else {
+                    selectedRowIndex = batchMoveLastSelectedIndex
+                }
             } else {
                 returnToRootCommandList()
             }
         } else if stagingWindow != nil {
+            let stagedWindowID = stagingWindow?.id
             stagingWindow = nil
             isStagingForRestoreTo = false
             isExecutingRestoreToImmediately = false
-            selectedRowIndex = batchMoveLastSelectedIndex
+            submenuSearchQuery = ""
+            if activeCommand?.type == .batchMoveWindows, let stagedWindowID {
+                restoreBatchMoveSelection(
+                    forWindowID: stagedWindowID,
+                    staged: false,
+                    preferredIndex: batchMoveLastSelectedIndex
+                )
+            } else {
+                selectedRowIndex = batchMoveLastSelectedIndex
+            }
         } else if activeCommand != nil {
             returnToRootCommandList()
         } else if !searchQuery.isEmpty {

@@ -37,8 +37,10 @@ extension LauncherViewModel {
                 
                 let (minimized, hidden) = isWindowMinimizedOrAppHidden(staging)
                 let actionType: BatchStagedActionType = (minimized || hidden) ? .restoreTo(targetSpace: space) : .move(targetSpace: space)
+                let stagedWindowID = staging.id
+                let wasImmediateMove = isExecutingRestoreToImmediately
                 
-                if isExecutingRestoreToImmediately {
+                if wasImmediateMove {
                     isExecutingRestoreToImmediately = false
                     executeActionImmediately(window: staging, actionType: actionType)
                 } else {
@@ -48,7 +50,16 @@ extension LauncherViewModel {
                 stagingWindow = nil
                 isSpaceMenuOpen = false
                 spaceMenuSelectedIndex = 0
-                selectedRowIndex = batchMoveLastSelectedIndex
+                submenuSearchQuery = ""
+                if wasImmediateMove {
+                    selectedRowIndex = batchMoveLastSelectedIndex
+                } else {
+                    restoreBatchMoveSelection(
+                        forWindowID: stagedWindowID,
+                        staged: true,
+                        preferredIndex: batchMoveLastSelectedIndex
+                    )
+                }
                 return
             }
             
@@ -75,14 +86,19 @@ extension LauncherViewModel {
                 
                 switch selectedItem {
                 case .staged(let action, _):
-                    stagedMoves.removeValue(forKey: action.window.id)
-                    if selectedRowIndex >= batchMoveSelectableItems.count {
-                        selectedRowIndex = max(0, batchMoveSelectableItems.count - 1)
-                    }
+                    let previousRowIndex = selectedRowIndex
+                    let windowID = action.window.id
+                    stagedMoves.removeValue(forKey: windowID)
+                    restoreBatchMoveSelection(
+                        forWindowID: windowID,
+                        staged: false,
+                        preferredIndex: previousRowIndex
+                    )
                 case .unstaged(let window, _):
                     let previousRowIndex = selectedRowIndex
                     batchMoveLastSelectedIndex = previousRowIndex
                     isStagingForRestoreTo = false
+                    submenuSearchQuery = ""
                     stagingWindow = window
                     isSpaceMenuOpen = true
                     spaceMenuSelectedIndex = 0

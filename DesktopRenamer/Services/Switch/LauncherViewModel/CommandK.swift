@@ -187,7 +187,11 @@ extension LauncherViewModel {
         let item = batchMoveSelectableItems[selectedRowIndex]
         guard case .unstaged(let window, _) = item else { return }
         stagedMoves[window.id] = BatchStagedAction(window: window, actionType: actionType)
-        selectedRowIndex = min(selectedRowIndex, max(batchMoveSelectableItems.count - 1, 0))
+        restoreBatchMoveSelection(
+            forWindowID: window.id,
+            staged: true,
+            preferredIndex: selectedRowIndex
+        )
     }
     
     func executeActionImmediately(window: WindowEntry, actionType: BatchStagedActionType) {

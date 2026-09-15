@@ -141,15 +141,7 @@ enum DesktopRearrangementDirection {
     
     // For batch window moves
     @Published var stagedMoves: [Int: BatchStagedAction] = [:]
-    @Published var stagingWindow: WindowEntry? = nil {
-        didSet {
-            searchQuery = ""
-            submenuSearchQuery = ""
-            selectedRowIndex = 0
-            isKeyboardSelection = true
-            isBottomBarFocused = false
-        }
-    }
+    @Published var stagingWindow: WindowEntry? = nil
     @Published var isExecutingBatchMove: Bool = false
     var batchExecutionTask: Task<Void, Never>?
     

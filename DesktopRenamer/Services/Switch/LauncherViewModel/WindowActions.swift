@@ -44,6 +44,7 @@ extension LauncherViewModel {
 
         let previousRowIndex = selectedRowIndex
         batchMoveLastSelectedIndex = previousRowIndex
+        submenuSearchQuery = ""
         stagingWindow = window
         isSpaceMenuOpen = true
         spaceMenuSelectedIndex = 0

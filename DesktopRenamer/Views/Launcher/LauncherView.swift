@@ -401,9 +401,9 @@ struct ListAreaView: View {
                             ScrollViewReader { proxy in
                                 ScrollView {
                                     LazyVStack(alignment: .leading, spacing: 0) {
-                                        ForEach(0..<sections.count, id: \.self) { sIdx in
-                                            let section = sections[sIdx]
-                                            ListSectionHeader(title: section.title, subtitle: section.subtitle, isFirst: sIdx == 0)
+                                        ForEach(sections) { section in
+                                            let isFirst = section.id == sections.first?.id
+                                            ListSectionHeader(title: section.title, subtitle: section.subtitle, isFirst: isFirst)
                                             
                                             ForEach(section.items) { item in
                                                 let isSelected = !viewModel.isBottomBarFocused && viewModel.selectedRowIndex == item.index
@@ -418,7 +418,7 @@ struct ListAreaView: View {
                                                     viewModel.selectedRowIndex = item.index
                                                     viewModel.executeRowAction()
                                                 }
-                                                .id(item.index)
+                                                .id(item.id)
                                             }
                                         }
                                     }
@@ -429,13 +429,20 @@ struct ListAreaView: View {
                                 .scrollIndicators(.hidden)
                                 .onChange(of: viewModel.selectedRowIndex) { index in
                                     if viewModel.isKeyboardSelection {
+                                        guard let itemID = sections
+                                            .flatMap(\.items)
+                                            .first(where: { $0.index == index })?.id else { return }
                                         withAnimation(.easeInOut(duration: 0.12)) {
-                                            proxy.scrollTo(index, anchor: .center)
+                                            proxy.scrollTo(itemID, anchor: .center)
                                         }
                                     }
                                 }
                                 .onAppear {
-                                    proxy.scrollTo(viewModel.selectedRowIndex, anchor: .center)
+                                    if let itemID = sections
+                                        .flatMap(\.items)
+                                        .first(where: { $0.index == viewModel.selectedRowIndex })?.id {
+                                        proxy.scrollTo(itemID, anchor: .center)
+                                    }
                                 }
                             }
                         }
@@ -448,9 +455,9 @@ struct ListAreaView: View {
                             ScrollViewReader { proxy in
                                 ScrollView {
                                     LazyVStack(alignment: .leading, spacing: 0) {
-                                        ForEach(0..<sections.count, id: \.self) { sIdx in
-                                            let section = sections[sIdx]
-                                            ListSectionHeader(title: section.title, subtitle: section.subtitle, isFirst: sIdx == 0)
+                                        ForEach(sections) { section in
+                                            let isFirst = section.id == sections.first?.id
+                                            ListSectionHeader(title: section.title, subtitle: section.subtitle, isFirst: isFirst)
                                             
                                             ForEach(section.items) { item in
                                                 let isSelected = !viewModel.isBottomBarFocused && viewModel.selectedRowIndex == item.index
@@ -464,7 +471,7 @@ struct ListAreaView: View {
                                                             viewModel.selectedRowIndex = item.index
                                                             viewModel.executeRowAction()
                                                         }
-                                                        .id(item.index)
+                                                        .id(item.id)
                                                         
                                                 case .unstaged(let window, _):
                                                     WindowBatchRowView(window: window, isSelected: isSelected, isStaged: false, stagedActionText: "", shortcutText: viewModel.showCommandNumbers && viewModel.commandKTargetWindow == nil && item.index < 9 ? "⌘\(item.index + 1)" : nil)
@@ -474,7 +481,7 @@ struct ListAreaView: View {
                                                             viewModel.selectedRowIndex = item.index
                                                             viewModel.executeRowAction()
                                                         }
-                                                        .id(item.index)
+                                                        .id(item.id)
                                                 }
                                             }
                                         }
@@ -486,14 +493,18 @@ struct ListAreaView: View {
                                 .scrollIndicators(.hidden)
                                 .onChange(of: viewModel.selectedRowIndex) { index in
                                     if viewModel.isKeyboardSelection {
+                                        guard viewModel.batchMoveSelectableItems.indices.contains(index) else { return }
                                         withAnimation(.easeInOut(duration: 0.12)) {
-                                            proxy.scrollTo(index, anchor: .center)
+                                            proxy.scrollTo(viewModel.batchMoveSelectableItems[index].id, anchor: .center)
                                         }
                                     }
                                 }
                                 .onAppear {
                                     DispatchQueue.main.async {
-                                        proxy.scrollTo(viewModel.selectedRowIndex, anchor: .center)
+                                        let items = viewModel.batchMoveSelectableItems
+                                        if items.indices.contains(viewModel.selectedRowIndex) {
+                                            proxy.scrollTo(items[viewModel.selectedRowIndex].id, anchor: .center)
+                                        }
                                     }
                                 }
                             }
