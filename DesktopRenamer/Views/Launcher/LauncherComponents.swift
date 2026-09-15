@@ -45,6 +45,7 @@ enum LauncherLayout {
     static let keycapCornerRadius: CGFloat = 6
     static let commandNumberIndicatorWidth: CGFloat = 20
     static let commandNumberIndicatorHeight: CGFloat = 18
+    static let commandNumberIndicatorTrailingGap: CGFloat = 4
 }
 
 /// Shared typography for the launcher surface, following Raycast's title/trailing-label hierarchy.

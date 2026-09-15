@@ -71,7 +71,14 @@ struct CommandRowView: View {
                     text: statusText == "Enabled" ? String(localized: "Enabled") : String(localized: "Disabled"),
                     color: statusText == "Enabled" ? colors.greenText : colors.textSecondary,
                     background: statusText == "Enabled" ? colors.greenText.opacity(0.12) : colors.badgeBg
-                    )
+                )
+                .padding(
+                    .trailing,
+                    shortcutNumber == nil
+                        ? 0
+                        : LauncherLayout.commandNumberIndicatorWidth
+                            + LauncherLayout.commandNumberIndicatorTrailingGap
+                )
             } else if command.hasSubpage || command.type == .reloadLabels {
                 if shortcutNumber == nil {
                     Image(systemName: "chevron.right")
@@ -218,6 +225,13 @@ struct WindowRowView: View {
                 }
 
             }
+            .padding(
+                .trailing,
+                shortcutNumber == nil
+                    ? 0
+                    : LauncherLayout.commandNumberIndicatorWidth
+                        + LauncherLayout.commandNumberIndicatorTrailingGap
+            )
         }
         .padding(.horizontal, LauncherLayout.rowHorizontalPadding)
         .padding(.vertical, LauncherLayout.rowVerticalPadding)
@@ -319,9 +333,16 @@ struct WindowBatchRowView: View {
                         text: stagedActionText,
                         color: colors.greenText,
                         background: colors.greenText.opacity(0.12)
-                        )
+                    )
                 }
             }
+            .padding(
+                .trailing,
+                shortcutNumber == nil
+                    ? 0
+                    : LauncherLayout.commandNumberIndicatorWidth
+                        + LauncherLayout.commandNumberIndicatorTrailingGap
+            )
         }
         .padding(.horizontal, LauncherLayout.rowHorizontalPadding)
         .padding(.vertical, LauncherLayout.rowVerticalPadding)
