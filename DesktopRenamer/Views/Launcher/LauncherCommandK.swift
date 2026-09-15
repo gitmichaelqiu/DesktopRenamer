@@ -351,17 +351,16 @@ private struct LauncherSpaceMenuRow: View {
                 if isCurrent {
                     Circle()
                         .stroke(Color.blue, lineWidth: 2)
-                        .frame(width: 18, height: 18)
                         .frame(
-                            width: LauncherLayout.submenuIconSlot,
-                            height: LauncherLayout.submenuIconSlot
+                            width: LauncherLayout.submenuActionIconSlot,
+                            height: LauncherLayout.submenuActionIconSlot
                         )
                 } else {
                     LauncherIconSlot(
                         systemName: "desktopcomputer",
                         tint: colors.textSecondary,
-                        symbolSize: LauncherLayout.submenuIconSymbolSize,
-                        slot: LauncherLayout.submenuIconSlot
+                        symbolSize: LauncherLayout.submenuActionIconSymbolSize,
+                        slot: LauncherLayout.submenuActionIconSlot
                     )
                 }
 
