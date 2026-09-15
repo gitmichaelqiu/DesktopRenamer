@@ -42,8 +42,9 @@
             <property name="app path" code="WiPt" type="text" description="Application path when available"><cocoa key="appPath"/></property>
             <property name="title" code="WiTl" type="text" description="Window title when available"><cocoa key="title"/></property>
             <property name="space ID" code="WiSp" type="text"><cocoa key="spaceID"/></property>
+            <property name="space IDs" code="WiSs" type="list of text" description="All Spaces currently assigned to the window"><cocoa key="spaceIDs"/></property>
             <property name="minimized" code="MiWd" type="boolean"><cocoa key="isMinimized"/></property>
-            <property name="hidden" code="HiWd" type="boolean"><cocoa key="isHidden"/></property>
+            <property name="hidden" code="HiWd" type="boolean" description="Whether the owning application is hidden"><cocoa key="isHidden"/></property>
         </record-type>
 
         <record-type name="window snapshot" code="DkWs" description="A versioned snapshot of spaces and application windows">

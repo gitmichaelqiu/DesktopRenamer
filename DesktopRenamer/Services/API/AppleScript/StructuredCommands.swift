@@ -28,6 +28,7 @@ private func scriptWindowRecord(_ window: SpaceAPIWindow) -> [String: Any] {
         "pid": window.pid,
         "ownerName": window.ownerName,
         "spaceID": window.spaceID,
+        "spaceIDs": window.spaceIDs,
         "isMinimized": window.isMinimized,
         "isHidden": window.isHidden
     ]

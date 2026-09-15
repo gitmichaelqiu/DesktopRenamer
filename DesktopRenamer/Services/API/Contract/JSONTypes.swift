@@ -269,7 +269,12 @@ struct SpaceAPIWindow: Codable, Equatable {
     let appPath: String?
     let title: String?
     let spaceID: String
+    /// All Spaces currently assigned to the window. `spaceID` remains the
+    /// primary Space for compatibility with clients that only support one.
+    let spaceIDs: [String]
     let isMinimized: Bool
+    /// Hidden state of the owning application, which is the state macOS exposes
+    /// through the Accessibility API.
     let isHidden: Bool
 
     init(
@@ -279,6 +284,7 @@ struct SpaceAPIWindow: Codable, Equatable {
         appPath: String?,
         title: String?,
         spaceID: String,
+        spaceIDs: [String] = [],
         isMinimized: Bool,
         isHidden: Bool
     ) {
@@ -288,6 +294,7 @@ struct SpaceAPIWindow: Codable, Equatable {
         self.appPath = appPath
         self.title = title
         self.spaceID = spaceID
+        self.spaceIDs = spaceIDs.isEmpty ? [spaceID] : spaceIDs
         self.isMinimized = isMinimized
         self.isHidden = isHidden
     }
@@ -300,6 +307,8 @@ struct SpaceAPIWindow: Codable, Equatable {
         appPath = try container.decodeIfPresent(String.self, forKey: .appPath)
         title = try container.decodeIfPresent(String.self, forKey: .title)
         spaceID = try container.decode(String.self, forKey: .spaceID)
+        let decodedSpaceIDs = try container.decodeIfPresent([String].self, forKey: .spaceIDs) ?? []
+        spaceIDs = decodedSpaceIDs.isEmpty ? [spaceID] : decodedSpaceIDs
         isMinimized = try container.decode(Bool.self, forKey: .isMinimized)
         isHidden = try container.decode(Bool.self, forKey: .isHidden)
     }
@@ -312,6 +321,7 @@ struct SpaceAPIWindow: Codable, Equatable {
         try container.encode(appPath, forKey: .appPath)
         try container.encode(title, forKey: .title)
         try container.encode(spaceID, forKey: .spaceID)
+        try container.encode(spaceIDs, forKey: .spaceIDs)
         try container.encode(isMinimized, forKey: .isMinimized)
         try container.encode(isHidden, forKey: .isHidden)
     }
@@ -323,6 +333,7 @@ struct SpaceAPIWindow: Codable, Equatable {
         case appPath
         case title
         case spaceID
+        case spaceIDs
         case isMinimized
         case isHidden
     }

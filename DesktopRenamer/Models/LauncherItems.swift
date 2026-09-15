@@ -50,6 +50,7 @@ struct WindowEntry: Identifiable, Equatable {
     let appPath: String
     let title: String
     let space: SpaceGroup
+    let spaceIDs: [String]
     let isMinimized: Bool
     let isHidden: Bool
 
@@ -57,13 +58,24 @@ struct WindowEntry: Identifiable, Equatable {
     let pinyinTitle: String
     let pinyinOwnerName: String
 
-    init(id: Int, pid: Int32, ownerName: String, appPath: String, title: String, space: SpaceGroup, isMinimized: Bool = false, isHidden: Bool = false) {
+    init(
+        id: Int,
+        pid: Int32,
+        ownerName: String,
+        appPath: String,
+        title: String,
+        space: SpaceGroup,
+        spaceIDs: [String] = [],
+        isMinimized: Bool = false,
+        isHidden: Bool = false
+    ) {
         self.id = id
         self.pid = pid
         self.ownerName = ownerName
         self.appPath = appPath
         self.title = title
         self.space = space
+        self.spaceIDs = spaceIDs.isEmpty ? [space.id] : spaceIDs
         self.isMinimized = isMinimized
         self.isHidden = isHidden
 
