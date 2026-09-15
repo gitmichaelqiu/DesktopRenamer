@@ -64,11 +64,6 @@ struct CommandRowView: View {
                 .lineLimit(1)
                 .layoutPriority(1)
             
-            LauncherTrailingLabel(
-                command.subtitle,
-                color: isSelected ? colors.textSecondary : colors.textTertiary
-            )
-
             Spacer()
             
             if let shortcut = shortcutText {
