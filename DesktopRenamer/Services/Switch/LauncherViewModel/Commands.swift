@@ -190,6 +190,7 @@ extension LauncherViewModel {
         }
         if !stagedItems.isEmpty {
             sections.append(BatchMoveSection(
+                id: "staged",
                 title: String(localized: "Staged Moves (Pending)"),
                 subtitle: String(format: String(localized: "%lld items"), stagedItems.count),
                 items: stagedItems
@@ -211,6 +212,7 @@ extension LauncherViewModel {
             }
             if !spaceItems.isEmpty {
                 sections.append(BatchMoveSection(
+                    id: "space-\(space.id)",
                     title: space.name,
                     subtitle: String(format: String(localized: "%lld windows"), spaceItems.count),
                     items: spaceItems

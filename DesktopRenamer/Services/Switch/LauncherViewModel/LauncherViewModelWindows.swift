@@ -43,6 +43,7 @@ extension LauncherViewModel {
             }
             
             sections.append(ListWindowsSection(
+                id: "space-\(space.id)",
                 title: space.name,
                 subtitle: String(format: space.isFullscreen ? String(localized: "Fullscreen") : String(localized: "%lld windows"), items.count),
                 items: items
