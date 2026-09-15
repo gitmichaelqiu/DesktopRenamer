@@ -2,6 +2,14 @@ import SwiftUI
 struct BatchMoveBottomBar: View {
     @ObservedObject var viewModel: LauncherViewModel
     @Environment(\.colorScheme) var colorScheme
+
+    private var selectedBatchItemID: String {
+        let items = viewModel.batchMoveSelectableItems
+        guard items.indices.contains(viewModel.selectedRowIndex) else {
+            return "empty"
+        }
+        return items[viewModel.selectedRowIndex].id
+    }
     
     var colors: ThemeColors {
         ThemeColors(isDark: colorScheme == .dark)
@@ -128,6 +136,7 @@ struct BatchMoveBottomBar: View {
         .frame(height: LauncherLayout.bottomBarHeight)
         .animation(LauncherAnimation.capsule, value: viewModel.stagingWindow?.id ?? 0)
         .animation(LauncherAnimation.capsule, value: viewModel.stagedMoves.count)
+        .animation(LauncherAnimation.capsule, value: selectedBatchItemID)
     }
 }
 
