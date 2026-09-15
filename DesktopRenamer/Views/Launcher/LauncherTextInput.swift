@@ -123,9 +123,13 @@ class FocusTextField: NSTextField {
     
     @objc private func forceFocus() {
         guard let window = self.window else { return }
+        let currentEditor = self.currentEditor()
+        let wasAlreadyFocused = window.firstResponder === self || window.firstResponder === currentEditor
         guard window.makeFirstResponder(self) else { return }
         (window as? LauncherNSPanel)?.focusedTextField = self
-        self.currentEditor()?.selectAll(nil)
+        if !wasAlreadyFocused {
+            self.currentEditor()?.selectAll(nil)
+        }
     }
     
     deinit {
