@@ -238,12 +238,13 @@ struct LauncherCommandNumberIndicator: View {
 
         ZStack {
             shape
-                .fill(Color.black.opacity(colors.isDark ? 0.24 : 0.14))
-                .blur(radius: 1.5)
-                .offset(y: 1)
-
-            shape
                 .fill(colors.controlSurface)
+                .overlay {
+                    shape.stroke(
+                        Color.black.opacity(colors.isDark ? 0.16 : 0.10),
+                        lineWidth: 0.5
+                    )
+                }
 
             Text(verbatim: "\(number)")
                 .font(.system(size: 13, weight: .medium))
@@ -255,16 +256,10 @@ struct LauncherCommandNumberIndicator: View {
         )
         .compositingGroup()
         .shadow(
-            color: Color.black.opacity(colors.isDark ? 0.34 : 0.22),
+            color: Color.black.opacity(colors.isDark ? 0.55 : 0.32),
             radius: 3,
             x: 0,
-            y: 1.5
-        )
-        .shadow(
-            color: Color.black.opacity(colors.isDark ? 0.18 : 0.12),
-            radius: 0.75,
-            x: 0,
-            y: 0.5
+            y: 2
         )
         .accessibilityLabel(Text("Command \(number)"))
     }
