@@ -142,14 +142,9 @@ struct LauncherSettingsView: View {
                         .foregroundColor(.secondary)
                         .frame(width: 20)
 
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text(command.title)
-                            .font(.body)
-                            .fontWeight(.medium)
-                        Text(command.subtitle)
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                    }
+                    Text(command.title)
+                        .font(.body)
+                        .fontWeight(.medium)
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
             }
@@ -175,14 +170,9 @@ struct LauncherSettingsView: View {
                     .foregroundColor(.secondary)
                     .frame(width: 20)
 
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(command.title)
-                        .font(.body)
-                        .fontWeight(.medium)
-                    Text(command.subtitle)
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                }
+                Text(command.title)
+                    .font(.body)
+                    .fontWeight(.medium)
             }
         }
         .padding(.horizontal, 12)
