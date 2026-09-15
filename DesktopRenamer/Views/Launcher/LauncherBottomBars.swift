@@ -70,48 +70,52 @@ struct BatchMoveBottomBar: View {
                     
                     if index >= 0 && index < items.count {
                         let selectedItem = items[index]
-                        switch selectedItem {
-                        case .staged(let action, _):
-                            let isMove = {
-                                if case .move = action.actionType { return true }
-                                return false
-                            }()
+                        Group {
+                            switch selectedItem {
+                            case .staged(let action, _):
+                                let isMove = {
+                                    if case .move = action.actionType { return true }
+                                    return false
+                                }()
 
-                            HStack(spacing: 8) {
-                                HStack(spacing: 4) {
-                                    Text(verbatim: String(localized: isMove ? "Unstage Move" : "Unstage Action"))
-                                    KeycapView(text: "↵", isSelected: false)
+                                HStack(spacing: 8) {
+                                    HStack(spacing: 4) {
+                                        Text(verbatim: String(localized: isMove ? "Unstage Move" : "Unstage Action"))
+                                        KeycapView(text: "↵", isSelected: false)
+                                    }
+                                    .modifier(BottomBarCapsule(isSelected: false, isActive: false, colorScheme: colorScheme))
+                                    .contentShape(Rectangle())
+                                    .onTapGesture {
+                                        viewModel.executeRowAction()
+                                    }
                                 }
-                                .modifier(BottomBarCapsule(isSelected: false, isActive: false, colorScheme: colorScheme))
-                                .contentShape(Rectangle())
-                                .onTapGesture {
-                                    viewModel.executeRowAction()
-                                }
-                            }
-                            
-                        case .unstaged:
-                            HStack(spacing: 8) {
-                                HStack(spacing: 4) {
-                                    Text(verbatim: String(localized: "Move to..."))
-                                    KeycapView(text: "↵", isSelected: false)
-                                }
-                                .modifier(BottomBarCapsule(isSelected: false, isActive: false, colorScheme: colorScheme))
-                                .contentShape(Rectangle())
-                                .onTapGesture {
-                                    viewModel.executeRowAction()
-                                }
-                                
-                                HStack(spacing: 4) {
-                                    Text(verbatim: String(localized: "Actions"))
-                                    KeycapView(text: "⌘K", isSelected: false)
-                                }
-                                .modifier(BottomBarCapsule(isSelected: false, isActive: false, colorScheme: colorScheme))
-                                .contentShape(Rectangle())
-                                .onTapGesture {
-                                    viewModel.showCommandKPanel()
+
+                            case .unstaged:
+                                HStack(spacing: 8) {
+                                    HStack(spacing: 4) {
+                                        Text(verbatim: String(localized: "Move to..."))
+                                        KeycapView(text: "↵", isSelected: false)
+                                    }
+                                    .modifier(BottomBarCapsule(isSelected: false, isActive: false, colorScheme: colorScheme))
+                                    .contentShape(Rectangle())
+                                    .onTapGesture {
+                                        viewModel.executeRowAction()
+                                    }
+
+                                    HStack(spacing: 4) {
+                                        Text(verbatim: String(localized: "Actions"))
+                                        KeycapView(text: "⌘K", isSelected: false)
+                                    }
+                                    .modifier(BottomBarCapsule(isSelected: false, isActive: false, colorScheme: colorScheme))
+                                    .contentShape(Rectangle())
+                                    .onTapGesture {
+                                        viewModel.showCommandKPanel()
+                                    }
                                 }
                             }
                         }
+                        .id(selectedBatchItemID)
+                        .transition(.launcherCapsule)
                     }
                     
                     // If there are staged moves, show run batch action
@@ -125,6 +129,7 @@ struct BatchMoveBottomBar: View {
                         .onTapGesture {
                             viewModel.executeBatchMove()
                         }
+                        .transition(.launcherCapsule)
                     }
                 }
             }
