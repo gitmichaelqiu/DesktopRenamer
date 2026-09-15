@@ -194,7 +194,7 @@ struct LauncherSpaceMenuView: View {
     }
 
     private var showsDisplayName: Bool {
-        Set(viewModel.currentSpaces.map(\.displayID)).count > 1
+        viewModel.shouldShowDisplayNameForSpaces
     }
 
     private var title: String {

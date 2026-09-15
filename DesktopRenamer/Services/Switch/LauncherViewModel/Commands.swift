@@ -87,6 +87,10 @@ extension LauncherViewModel {
         filterSpaceGroups(unfilteredSwitchSpaces, query: searchQuery)
     }
 
+    var shouldShowDisplayNameForSpaces: Bool {
+        Set(currentSpaces.map(\.displayID)).count > 1
+    }
+
     /// Targets for moving a window must be ordinary desktops. Fullscreen
     /// Spaces belong to the app that owns them and cannot receive an
     /// arbitrary window through the launcher move commands.

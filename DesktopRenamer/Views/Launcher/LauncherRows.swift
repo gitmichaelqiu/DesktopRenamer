@@ -102,6 +102,7 @@ struct SpaceRowView: View {
     let space: SpaceGroup
     let isSelected: Bool
     let isCurrent: Bool
+    var showDisplayName: Bool = true
     var shortcutText: String? = nil
     @Environment(\.colorScheme) var colorScheme
     @State private var isHovered = false
@@ -129,12 +130,16 @@ struct SpaceRowView: View {
 
             if space.isFullscreen {
                 LauncherTrailingLabel(
-                    String(format: String(localized: "%@ · Fullscreen"), space.displayName),
+                    showDisplayName
+                        ? String(format: String(localized: "%@ · Fullscreen"), space.displayName)
+                        : String(localized: "Fullscreen"),
                     color: isSelected ? colors.textSecondary : colors.textTertiary
                 )
             } else {
                 LauncherTrailingLabel(
-                    String(format: String(localized: "%@ · Space %lld"), space.displayName, space.num),
+                    showDisplayName
+                        ? String(format: String(localized: "%@ · Space %lld"), space.displayName, space.num)
+                        : String(format: String(localized: "Space %lld"), space.num),
                     color: isSelected ? colors.textSecondary : colors.textTertiary
                 )
             }
