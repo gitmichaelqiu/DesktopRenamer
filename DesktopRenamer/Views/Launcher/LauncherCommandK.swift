@@ -5,7 +5,8 @@ private enum LauncherSubmenu {
     case spaces(
         fallbackSpaces: [SpaceGroup],
         fallbackStagingWindow: WindowEntry?,
-        fallbackTitle: String
+        fallbackTitle: String,
+        isTargetSpaceSelection: Bool
     )
 }
 
@@ -15,7 +16,8 @@ struct LauncherSubmenuOverlay: View {
     @State private var displayedSubmenu: LauncherSubmenu = .spaces(
         fallbackSpaces: [],
         fallbackStagingWindow: nil,
-        fallbackTitle: ""
+        fallbackTitle: "",
+        isTargetSpaceSelection: false
     )
     @State private var displayedSubmenuKey = "none"
     @State private var isPresented = false
@@ -32,7 +34,8 @@ struct LauncherSubmenuOverlay: View {
             return .spaces(
                 fallbackSpaces: viewModel.spaceMenuSpaces,
                 fallbackStagingWindow: viewModel.stagingWindow,
-                fallbackTitle: viewModel.activeCommand?.title ?? String(localized: "Select Space")
+                fallbackTitle: viewModel.activeCommand?.title ?? String(localized: "Select Space"),
+                isTargetSpaceSelection: viewModel.stagingWindow != nil
             )
         }
         return nil
@@ -87,12 +90,13 @@ struct LauncherSubmenuOverlay: View {
                 window: window,
                 fallbackActions: fallbackActions
             )
-        case .spaces(let fallbackSpaces, let fallbackStagingWindow, let fallbackTitle):
+        case .spaces(let fallbackSpaces, let fallbackStagingWindow, let fallbackTitle, let isTargetSpaceSelection):
             LauncherSpaceMenuView(
                 viewModel: viewModel,
                 fallbackSpaces: fallbackSpaces,
                 fallbackStagingWindow: fallbackStagingWindow,
-                fallbackTitle: fallbackTitle
+                fallbackTitle: fallbackTitle,
+                fallbackIsTargetSpaceSelection: isTargetSpaceSelection
             )
         }
     }
@@ -215,6 +219,7 @@ struct LauncherSpaceMenuView: View {
     let fallbackSpaces: [SpaceGroup]
     let fallbackStagingWindow: WindowEntry?
     let fallbackTitle: String
+    let fallbackIsTargetSpaceSelection: Bool
     @Environment(\.colorScheme) var colorScheme
 
     var colors: ThemeColors {
@@ -235,6 +240,10 @@ struct LauncherSpaceMenuView: View {
 
     private var stagingWindow: WindowEntry? {
         viewModel.stagingWindow ?? fallbackStagingWindow
+    }
+
+    private var isTargetSpaceSelection: Bool {
+        fallbackIsTargetSpaceSelection || stagingWindow != nil
     }
 
     var body: some View {
@@ -302,7 +311,7 @@ struct LauncherSpaceMenuView: View {
                 LauncherSubmenuSearchField(
                     viewModel: viewModel,
                     kind: .spaces,
-                    placeholder: stagingWindow != nil
+                    placeholder: isTargetSpaceSelection
                         ? String(localized: "Search target space...")
                         : String(localized: "Search spaces...")
                 )
