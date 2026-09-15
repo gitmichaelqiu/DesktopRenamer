@@ -248,10 +248,16 @@ struct LauncherCommandNumberIndicator: View {
             shape
                 .fill(colors.controlSurface)
                 .shadow(
-                    color: Color.black.opacity(colors.isDark ? 0.20 : 0.14),
-                    radius: 1.25,
+                    color: Color.black.opacity(colors.isDark ? 0.34 : 0.24),
+                    radius: 3,
                     x: 0,
-                    y: 0.75
+                    y: 1.5
+                )
+                .shadow(
+                    color: Color.black.opacity(colors.isDark ? 0.18 : 0.12),
+                    radius: 0.75,
+                    x: 0,
+                    y: 0.5
                 )
         }
         .accessibilityLabel(Text("Command \(number)"))
