@@ -105,6 +105,13 @@ class LauncherWindowController: NSWindowController, NSWindowDelegate {
                 (panel.firstResponder === focusedTextField || panel.firstResponder === focusedTextField?.currentEditor())
             let submenuFieldIsFocused = focusedFieldIsActive && focusedTextField?.isSubmenuField == true
 
+            if self.viewModel.isSubmenuOpen,
+               !submenuFieldIsFocused,
+               event.keyCode == 48 {
+                self.viewModel.requestSubmenuFieldFocus()
+                return nil
+            }
+
             if !focusedFieldIsActive, event.keyCode == 48 {
                 if self.viewModel.isSubmenuOpen {
                     self.viewModel.requestSubmenuFieldFocus()
