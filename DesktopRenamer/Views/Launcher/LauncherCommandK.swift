@@ -270,7 +270,7 @@ struct LauncherSpaceMenuView: View {
                 LauncherSubmenuSearchField(
                     viewModel: viewModel,
                     kind: .spaces,
-                    placeholder: viewModel.stagingWindow != nil
+                    placeholder: stagingWindow != nil
                         ? String(localized: "Search target space...")
                         : String(localized: "Search spaces...")
                 )
