@@ -150,7 +150,7 @@ struct LauncherSettingsView: View {
             }
             .padding(.horizontal, 12)
             .padding(.vertical, 6)
-            .frame(minHeight: 44)
+            .frame(minHeight: 36)
 
             if !isLast {
                 Divider().padding(.leading, 12)
@@ -178,7 +178,7 @@ struct LauncherSettingsView: View {
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 6)
-        .frame(minWidth: 320, minHeight: 44, alignment: .leading)
+        .frame(minWidth: 320, minHeight: 36, alignment: .leading)
         .contentShape(.dragPreview, Rectangle())
     }
 
