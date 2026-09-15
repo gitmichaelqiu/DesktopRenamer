@@ -170,6 +170,7 @@ struct SpaceAPIContractTests {
             appPath: nil,
             title: nil,
             spaceID: space.id,
+            spaceIDs: [space.id, "space-2"],
             isMinimized: false,
             isHidden: true
         )
@@ -210,6 +211,10 @@ struct SpaceAPIContractTests {
         let encodedWindow = try checkJSONObject(encodedWindows.first)
         check(encodedWindow["appPath"] is NSNull, "nullable window appPath is encoded as null")
         check(encodedWindow["title"] is NSNull, "nullable window title is encoded as null")
+        check(
+            encodedWindow["spaceIDs"] as? [String] == [space.id, "space-2"],
+            "all window Space memberships are encoded"
+        )
 
         let payloadObject = try JSONSerialization.jsonObject(with: Data(payload.utf8), options: [.fragmentsAllowed])
         var jsonObject = try checkJSONObject(payloadObject)
@@ -347,6 +352,7 @@ struct SpaceAPIContractTests {
         """
         let window = try JSONDecoder().decode(SpaceAPIWindow.self, from: Data(windowPayload.utf8))
         check(window.appPath == nil && window.title == nil, "missing nullable window fields decode as nil")
+        check(window.spaceIDs == ["space-1"], "missing window Space memberships fall back to primary Space")
     }
 
     private static func testLegacyFixtures() throws {
