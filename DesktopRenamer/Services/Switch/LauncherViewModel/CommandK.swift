@@ -17,6 +17,25 @@ enum LauncherCommandKAction: Equatable {
             return action.description
         }
     }
+
+    var shortcutText: String {
+        switch self {
+        case .moveWindow:
+            return "⌘T"
+        case .moveWindowTo:
+            return "⌘⇧T"
+        case .window(let action):
+            switch action {
+            case .close: return "⌃⇧W"
+            case .minimize: return "⌃⇧M"
+            case .hide: return "⌃⇧H"
+            case .enterFullScreen, .exitFullScreen: return "⌃⇧F"
+            case .quit: return "⌃⇧Q"
+            case .restore: return "⌃⇧R"
+            case .move, .restoreTo: return ""
+            }
+        }
+    }
 }
 
 @MainActor
@@ -128,6 +147,48 @@ extension LauncherViewModel {
                 commandKSelectedIndex = 0
             }
         }
+    }
+
+    @discardableResult
+    func handleCommandKActionShortcut(_ event: NSEvent) -> Bool {
+        guard commandKTargetWindow != nil,
+              event.type == .keyDown else {
+            return false
+        }
+
+        let modifiers = event.modifierFlags.intersection(.deviceIndependentFlagsMask)
+        let characters = event.charactersIgnoringModifiers?.lowercased() ?? ""
+        let action: LauncherCommandKAction?
+
+        if modifiers.subtracting([.command, .shift, .numericPad, .function]).isEmpty,
+           modifiers.contains(.command),
+           characters == "t" {
+            action = modifiers.contains(.shift) ? .moveWindowTo : .moveWindow
+        } else if modifiers.subtracting([.control, .shift, .numericPad, .function]).isEmpty,
+                  modifiers.contains(.control),
+                  modifiers.contains(.shift) {
+            guard let window = commandKTargetWindow else { return false }
+            switch characters {
+            case "w": action = .window(.close)
+            case "m": action = .window(.minimize)
+            case "r": action = .window(.restore)
+            case "f":
+                action = .window(window.space.isFullscreen ? .exitFullScreen : .enterFullScreen)
+            case "h": action = .window(.hide)
+            case "q": action = .window(.quit)
+            default: return false
+            }
+        } else {
+            return false
+        }
+
+        guard let action,
+              let index = commandKActions.firstIndex(of: action) else {
+            return false
+        }
+        commandKSelectedIndex = index
+        executeCommandKAction()
+        return true
     }
     
     func selectPreviousCommandKAction() {

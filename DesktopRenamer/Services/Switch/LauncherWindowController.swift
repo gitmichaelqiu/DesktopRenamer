@@ -100,6 +100,10 @@ class LauncherWindowController: NSWindowController, NSWindowDelegate {
                 return nil
             }
 
+            if self.viewModel.handleCommandKActionShortcut(event) {
+                return nil
+            }
+
             let focusedTextField = panel.focusedTextField
             let focusedFieldIsActive = focusedTextField?.window === panel &&
                 (panel.firstResponder === focusedTextField || panel.firstResponder === focusedTextField?.currentEditor())

@@ -194,7 +194,6 @@ struct LauncherActionMenuView: View {
                             CommandKActionRowView(
                                 action: item.action,
                                 isSelected: viewModel.commandKSelectedIndex == item.index,
-                                showCommandNumbers: viewModel.showCommandNumbers,
                                 idx: item.index,
                                 colors: colors,
                                 viewModel: viewModel
@@ -401,7 +400,6 @@ private struct ActionMenuItem: Identifiable {
 struct CommandKActionRowView: View {
     let action: LauncherCommandKAction
     let isSelected: Bool
-    let showCommandNumbers: Bool
     let idx: Int
     let colors: ThemeColors
     @ObservedObject var viewModel: LauncherViewModel
@@ -429,9 +427,9 @@ struct CommandKActionRowView: View {
 
                 Spacer(minLength: 0)
 
-                KeycapView(text: "⌘\(idx + 1)", isSelected: isSelected)
-                    .opacity(showCommandNumbers ? 1 : 0)
-                    .animation(LauncherAnimation.fade, value: showCommandNumbers)
+                if !action.shortcutText.isEmpty {
+                    KeycapView(text: action.shortcutText, isSelected: isSelected)
+                }
             }
         }
     }
