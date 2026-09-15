@@ -237,6 +237,14 @@ struct LauncherCommandNumberIndicator: View {
         let shape = RoundedRectangle(cornerRadius: LauncherLayout.keycapCornerRadius, style: .continuous)
 
         ZStack {
+            shape
+                .fill(Color.black.opacity(colors.isDark ? 0.24 : 0.14))
+                .blur(radius: 1.5)
+                .offset(y: 1)
+
+            shape
+                .fill(colors.controlSurface)
+
             Text(verbatim: "\(number)")
                 .font(.system(size: 13, weight: .medium))
                 .foregroundStyle(colors.textPrimary)
@@ -245,22 +253,19 @@ struct LauncherCommandNumberIndicator: View {
             width: LauncherLayout.commandNumberIndicatorWidth,
             height: LauncherLayout.commandNumberIndicatorHeight
         )
-        .background {
-            shape
-                .fill(colors.controlSurface)
-                .shadow(
-                    color: Color.black.opacity(colors.isDark ? 0.34 : 0.24),
-                    radius: 3,
-                    x: 0,
-                    y: 1.5
-                )
-                .shadow(
-                    color: Color.black.opacity(colors.isDark ? 0.18 : 0.12),
-                    radius: 0.75,
-                    x: 0,
-                    y: 0.5
-                )
-        }
+        .compositingGroup()
+        .shadow(
+            color: Color.black.opacity(colors.isDark ? 0.34 : 0.22),
+            radius: 3,
+            x: 0,
+            y: 1.5
+        )
+        .shadow(
+            color: Color.black.opacity(colors.isDark ? 0.18 : 0.12),
+            radius: 0.75,
+            x: 0,
+            y: 0.5
+        )
         .accessibilityLabel(Text("Command \(number)"))
     }
 }
