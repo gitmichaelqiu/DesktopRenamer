@@ -12,7 +12,7 @@ enum LauncherCommandKAction: Equatable {
         case .moveWindow:
             return "Move Window"
         case .moveWindowTo:
-            return "Move window to..."
+            return "Move to..."
         case .window(let action):
             return action.description
         }
@@ -84,7 +84,7 @@ extension LauncherViewModel {
         case .moveWindow:
             return NSLocalizedString("Move Window", comment: "")
         case .moveWindowTo:
-            return NSLocalizedString("Move window to...", comment: "")
+            return NSLocalizedString("Move to...", comment: "")
         case .window(let action):
             switch action {
             case .close: return NSLocalizedString("Close", comment: "")
