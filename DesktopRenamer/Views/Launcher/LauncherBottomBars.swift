@@ -204,6 +204,7 @@ struct SpacesBottomBar: View {
                     )
                     .opacity(viewModel.spaceBarQuery.isEmpty ? 0.001 : 1)
                 }
+                .padding(.leading, LauncherLayout.bottomBarControlHorizontalPadding)
                 .frame(width: labelWidth, height: 28, alignment: .leading)
                 .padding(.trailing, 8)
                 .transition(.launcherCapsule)
@@ -211,6 +212,7 @@ struct SpacesBottomBar: View {
                 Text(verbatim: String(localized: "Spaces:"))
                     .font(.subheadline)
                     .foregroundColor(colors.textTertiary)
+                    .padding(.leading, LauncherLayout.bottomBarControlHorizontalPadding)
                     .frame(width: labelWidth, alignment: .leading)
                     .padding(.trailing, 8)
                     .layoutPriority(1)
