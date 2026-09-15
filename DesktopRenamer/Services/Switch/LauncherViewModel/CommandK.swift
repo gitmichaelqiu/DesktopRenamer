@@ -168,7 +168,13 @@ extension LauncherViewModel {
             if isListWindows {
                 executeActionImmediately(window: window, actionType: actionType)
             } else {
+                let previousRowIndex = selectedRowIndex
                 stagedMoves[window.id] = BatchStagedAction(window: window, actionType: actionType)
+                restoreBatchMoveSelection(
+                    forWindowID: window.id,
+                    staged: true,
+                    preferredIndex: previousRowIndex
+                )
             }
         }
     }
