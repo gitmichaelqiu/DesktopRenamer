@@ -224,8 +224,6 @@ struct WindowRowView: View {
 
                 if let shortcut = shortcutText {
                     KeycapView(text: shortcut, isSelected: isSelected)
-                } else {
-                    KeycapView(text: String(localized: "Focus ↵"), isSelected: isSelected)
                 }
             }
         }
