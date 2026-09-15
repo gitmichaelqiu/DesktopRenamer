@@ -3,12 +3,12 @@ struct BatchMoveBottomBar: View {
     @ObservedObject var viewModel: LauncherViewModel
     @Environment(\.colorScheme) var colorScheme
 
-    private var selectedBatchItemID: String {
+    private var selectedBatchItemPresentationKey: String {
         let items = viewModel.batchMoveSelectableItems
         guard items.indices.contains(viewModel.selectedRowIndex) else {
             return "empty"
         }
-        return items[viewModel.selectedRowIndex].id
+        return items[viewModel.selectedRowIndex].isStaged ? "staged" : "unstaged"
     }
     
     var colors: ThemeColors {
@@ -114,7 +114,7 @@ struct BatchMoveBottomBar: View {
                                 }
                             }
                         }
-                        .id(selectedBatchItemID)
+                        .id(selectedBatchItemPresentationKey)
                         .transition(.launcherCapsule)
                     }
                     
@@ -141,7 +141,7 @@ struct BatchMoveBottomBar: View {
         .frame(height: LauncherLayout.bottomBarHeight)
         .animation(LauncherAnimation.capsule, value: viewModel.stagingWindow?.id ?? 0)
         .animation(LauncherAnimation.capsule, value: viewModel.stagedMoves.count)
-        .animation(LauncherAnimation.capsule, value: selectedBatchItemID)
+        .animation(LauncherAnimation.capsule, value: selectedBatchItemPresentationKey)
     }
 }
 
