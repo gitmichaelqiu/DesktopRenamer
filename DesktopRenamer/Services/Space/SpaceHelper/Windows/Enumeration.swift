@@ -6,11 +6,16 @@ extension SpaceHelper {
 
     // MARK: - Window Enumeration
 
-    /// Filters a CGWindowList dictionary to top-level application windows.
-    /// The window list is intentionally broad: minimized, hidden, untitled,
-    /// and accessory-application windows are still useful to the launcher.
+    /// Filters a CGWindowList dictionary to user-facing top-level windows.
+    /// Accessibility-confirmed windows are trusted even when their title is
+    /// empty. CG-only records need stronger evidence so helper windows do not
+    /// leak into the launcher.
     private static func isValidWindow(
-        _ window: [String: Any], ourPID: Int32, minSize: CGFloat = 1
+        _ window: [String: Any],
+        ourPID: Int32,
+        activationPolicy: NSApplication.ActivationPolicy,
+        isAXWindow: Bool,
+        minSize: CGFloat = 50
     ) -> Bool {
         guard let layer = window[kCGWindowLayer as String] as? Int, layer == 0,
               let pid = window[kCGWindowOwnerPID as String] as? Int, pid != Int(ourPID),
@@ -18,12 +23,32 @@ extension SpaceHelper {
               let w = bounds["Width"] as? CGFloat, let h = bounds["Height"] as? CGFloat,
               w >= minSize, h >= minSize
         else { return false }
-        // Core Graphics documents alpha as 0.0...1.0. Fully transparent
-        // windows are not user-manageable windows, but alpha 0 must not be
-        // confused with a minimized or hidden application window.
-        if let alpha = window[kCGWindowAlpha as String] as? Double, alpha <= 0 { return false }
+        // Core Graphics documents alpha as 0.0...1.0. Nearly transparent
+        // records are generally overlays or helper surfaces.
+        if let alpha = window[kCGWindowAlpha as String] as? Double, alpha <= 0.1 { return false }
+
+        // Accessibility gives us the strongest signal for accessory apps and
+        // for untitled/minimized windows. Without it, only regular apps with
+        // a meaningful title are safe to expose as launcher targets.
+        if !isAXWindow {
+            guard activationPolicy == .regular,
+                  let title = window[kCGWindowName as String] as? String,
+                  !title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            else { return false }
+
+            // A non-shared CG surface is commonly a private helper window.
+            // Keep AX-confirmed windows above, since secure user windows can
+            // legitimately opt out of screen sharing.
+            if let sharing = window[kCGWindowSharingState as String] as? Int, sharing == 0 {
+                return false
+            }
+        }
         return true
     }
+
+    private static let userWindowAXRoles: Set<String> = [
+        "AXWindow", "AXDialog", "AXSheet", "AXDrawer", "AXPopover"
+    ]
 
     private struct EnumeratedWindow {
         let id: Int
@@ -44,18 +69,31 @@ extension SpaceHelper {
         // accessory applications as well as regular applications because an
         // accessory app can still own user-facing windows.
         var pidToAppPath: [Int32: String] = [:]
+        var pidToActivationPolicy: [Int32: NSApplication.ActivationPolicy] = [:]
         var axWindowIDs = Set<Int>()
         var minimizedAXWindowIDs = Set<Int>()
         var axWindowEnumerationSucceededPIDs = Set<Int32>()
         for app in NSWorkspace.shared.runningApplications {
             if app.activationPolicy != .prohibited, let path = app.bundleURL?.path {
                 pidToAppPath[app.processIdentifier] = path
+                pidToActivationPolicy[app.processIdentifier] = app.activationPolicy
 
                 // Get window IDs directly from the app's Accessibility hierarchy
                 // for validation and per-window minimized state.
                 let appElement = AXUIElementCreateApplication(app.processIdentifier)
 
-                let extractWID = { (element: AXUIElement) in
+                let extractWID = { (element: AXUIElement, requireWindowRole: Bool) in
+                    if requireWindowRole {
+                        var roleRef: CFTypeRef?
+                        guard AXUIElementCopyAttributeValue(
+                            element,
+                            kAXRoleAttribute as CFString,
+                            &roleRef
+                        ) == .success,
+                        let role = roleRef as? String,
+                        userWindowAXRoles.contains(role) else { return }
+                    }
+
                     var cgWID: CGWindowID = 0
                     if _AXUIElementGetWindow(element, &cgWID) == 0, cgWID != 0 {
                         let wid = Int(cgWID)
@@ -75,7 +113,7 @@ extension SpaceHelper {
                 if AXUIElementCopyAttributeValue(appElement, kAXWindowsAttribute as CFString, &windowsRef) == .success,
                    let axWindows = windowsRef as? [AXUIElement] {
                     axWindowEnumerationSucceededPIDs.insert(app.processIdentifier)
-                    axWindows.forEach(extractWID)
+                    axWindows.forEach { extractWID($0, false) }
                     didEnumerateWindows = true
                 }
 
@@ -87,7 +125,7 @@ extension SpaceHelper {
                     if AXUIElementCopyAttributeValue(appElement, kAXChildrenAttribute as CFString, &childrenRef) == .success,
                        let axChildren = childrenRef as? [AXUIElement] {
                         axWindowEnumerationSucceededPIDs.insert(app.processIdentifier)
-                        axChildren.forEach(extractWID)
+                        axChildren.forEach { extractWID($0, true) }
                     }
                 }
             }
@@ -102,10 +140,15 @@ extension SpaceHelper {
         // Collect valid windows with their IDs.
         var validWindows: [(wid: Int, pid: Int32, dict: [String: Any])] = []
         for window in allWindows {
-            guard isValidWindow(window, ourPID: ourPID),
-                  let wid = window[kCGWindowNumber as String] as? Int,
+            guard let wid = window[kCGWindowNumber as String] as? Int,
                   let pid = window[kCGWindowOwnerPID as String] as? Int,
-                  pidToAppPath[Int32(pid)] != nil
+                  let activationPolicy = pidToActivationPolicy[Int32(pid)],
+                  isValidWindow(
+                      window,
+                      ourPID: ourPID,
+                      activationPolicy: activationPolicy,
+                      isAXWindow: axWindowIDs.contains(wid)
+                  )
             else { continue }
             validWindows.append((wid: wid, pid: Int32(pid), dict: window))
         }
