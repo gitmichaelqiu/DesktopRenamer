@@ -76,9 +76,6 @@ struct LauncherSubmenuOverlay: View {
         .onChange(of: requestedSubmenuKey) { _ in
             synchronizeSubmenu()
         }
-        .onChange(of: viewModel.submenuSearchQuery) { _ in
-            synchronizeSubmenu()
-        }
     }
 
     @ViewBuilder
