@@ -43,7 +43,7 @@ enum LauncherLayout {
 
     static let keycapSide: CGFloat = 18
     static let keycapCornerRadius: CGFloat = 6
-    static let commandNumberIndicatorSide: CGFloat = 22
+    static let commandNumberIndicatorSide: CGFloat = 20
 }
 
 /// Shared typography for the launcher surface, following Raycast's title/trailing-label hierarchy.
@@ -233,6 +233,11 @@ struct LauncherCommandNumberIndicator: View {
 
     var body: some View {
         ZStack {
+            RoundedRectangle(cornerRadius: LauncherLayout.keycapCornerRadius, style: .continuous)
+                .fill(Color.black.opacity(isDark ? 0.42 : 0.22))
+                .blur(radius: 2.5)
+                .offset(y: 2)
+
             RoundedRectangle(cornerRadius: LauncherLayout.keycapCornerRadius, style: .continuous)
                 .fill(Color.primary.opacity(isDark ? 0.22 : 0.12))
 
