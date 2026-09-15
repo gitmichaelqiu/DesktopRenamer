@@ -79,7 +79,7 @@ struct CommandRowView: View {
                     color: statusText == "Enabled" ? colors.greenText : colors.textSecondary,
                     background: statusText == "Enabled" ? colors.greenText.opacity(0.12) : colors.badgeBg
                     )
-            } else if command.hasSubpage {
+            } else if command.hasSubpage || command.type == .reloadLabels {
                 Image(systemName: "chevron.right")
                     .font(.caption.weight(.semibold))
                     .foregroundColor(isSelected ? colors.textSecondary : colors.textTertiary)
