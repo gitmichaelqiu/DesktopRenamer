@@ -232,22 +232,24 @@ struct LauncherCommandNumberIndicator: View {
     }
 
     var body: some View {
-        Text(verbatim: "\(number)")
-            .font(.system(size: 13, weight: .medium))
-            .foregroundStyle(Color.primary)
+        ZStack {
+            RoundedRectangle(cornerRadius: LauncherLayout.keycapCornerRadius, style: .continuous)
+                .fill(Color.primary.opacity(isDark ? 0.22 : 0.12))
+
+            Text(verbatim: "\(number)")
+                .font(.system(size: 13, weight: .medium))
+                .foregroundStyle(Color.primary)
+        }
             .frame(
                 width: LauncherLayout.commandNumberIndicatorSide,
                 height: LauncherLayout.commandNumberIndicatorSide
             )
-            .background {
-                RoundedRectangle(cornerRadius: LauncherLayout.keycapCornerRadius, style: .continuous)
-                    .fill(Color.primary.opacity(isDark ? 0.22 : 0.12))
-            }
+            .compositingGroup()
             .shadow(
-                color: Color.black.opacity(isDark ? 0.38 : 0.20),
-                radius: 3,
+                color: Color.black.opacity(isDark ? 0.55 : 0.28),
+                radius: 4,
                 x: 0,
-                y: 1
+                y: 2
             )
             .accessibilityLabel(Text("Command \(number)"))
     }
