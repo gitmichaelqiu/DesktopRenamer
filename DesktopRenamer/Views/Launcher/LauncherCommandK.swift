@@ -346,7 +346,11 @@ private struct LauncherSpaceMenuRow: View {
     }
 
     var body: some View {
-        LauncherSubmenuRow(isSelected: isSelected, action: action) {
+        LauncherSubmenuRow(
+            isSelected: isSelected,
+            commandNumber: showShortcut ? shortcutNumber : nil,
+            action: action
+        ) {
             HStack(spacing: LauncherLayout.submenuRowContentSpacing) {
                 if isCurrent {
                     Circle()
@@ -375,10 +379,6 @@ private struct LauncherSpaceMenuRow: View {
                     metadata,
                     color: colors.textSecondary
                 )
-
-                if showShortcut {
-                    KeycapView(text: "⌘\(shortcutNumber)", isSelected: isSelected)
-                }
             }
         }
     }

@@ -28,7 +28,7 @@ struct EmptyResultsView: View {
 struct CommandRowView: View {
     let command: LauncherCommand
     let isSelected: Bool
-    var shortcutText: String? = nil
+    var shortcutNumber: Int? = nil
     @Environment(\.colorScheme) var colorScheme
     @State private var isHovered = false
     
@@ -66,9 +66,7 @@ struct CommandRowView: View {
             
             Spacer()
             
-            if let shortcut = shortcutText {
-                KeycapView(text: shortcut, isSelected: isSelected)
-            } else if let statusText = toggleStatus {
+            if let statusText = toggleStatus {
                 LauncherStatusLabel(
                     text: statusText == "Enabled" ? String(localized: "Enabled") : String(localized: "Disabled"),
                     color: statusText == "Enabled" ? colors.greenText : colors.textSecondary,
@@ -86,6 +84,7 @@ struct CommandRowView: View {
         .padding(.horizontal, LauncherLayout.rowHorizontalPadding)
         .padding(.vertical, LauncherLayout.rowVerticalPadding)
         .launcherRowSurface(isSelected: isSelected, isHovered: isHovered)
+        .launcherCommandNumberOverlay(shortcutNumber)
         .onHover { hovering in
             isHovered = hovering
         }
@@ -98,7 +97,7 @@ struct SpaceRowView: View {
     let isSelected: Bool
     let isCurrent: Bool
     var showDisplayName: Bool = true
-    var shortcutText: String? = nil
+    var shortcutNumber: Int? = nil
     @Environment(\.colorScheme) var colorScheme
     @State private var isHovered = false
     
@@ -141,15 +140,12 @@ struct SpaceRowView: View {
 
             Spacer()
 
-            if let shortcut = shortcutText {
-                KeycapView(text: shortcut, isSelected: isSelected)
-            } else {
-                KeycapView(text: String(localized: "Switch ↵"), isSelected: isSelected)
-            }
+            KeycapView(text: String(localized: "Switch ↵"), isSelected: isSelected)
         }
         .padding(.horizontal, LauncherLayout.rowHorizontalPadding)
         .padding(.vertical, LauncherLayout.rowVerticalPadding)
         .launcherRowSurface(isSelected: isSelected, isHovered: isHovered)
+        .launcherCommandNumberOverlay(shortcutNumber)
         .onHover { hovering in
             isHovered = hovering
         }
@@ -180,7 +176,7 @@ struct WindowStateBadge: View {
 struct WindowRowView: View {
     let window: WindowEntry
     let isSelected: Bool
-    var shortcutText: String? = nil
+    var shortcutNumber: Int? = nil
     @Environment(\.colorScheme) var colorScheme
     @State private var isHovered = false
     
@@ -217,14 +213,12 @@ struct WindowRowView: View {
                     WindowStateBadge(label: String(localized: "Full Screen"), color: .blue)
                 }
 
-                if let shortcut = shortcutText {
-                    KeycapView(text: shortcut, isSelected: isSelected)
-                }
             }
         }
         .padding(.horizontal, LauncherLayout.rowHorizontalPadding)
         .padding(.vertical, LauncherLayout.rowVerticalPadding)
         .launcherRowSurface(isSelected: isSelected, isHovered: isHovered)
+        .launcherCommandNumberOverlay(shortcutNumber)
         .onHover { hovering in
             isHovered = hovering
         }
@@ -277,7 +271,7 @@ struct WindowBatchRowView: View {
     let isSelected: Bool
     let isStaged: Bool
     let stagedActionText: String
-    var shortcutText: String? = nil
+    var shortcutNumber: Int? = nil
     @Environment(\.colorScheme) var colorScheme
     @State private var isHovered = false
     
@@ -316,9 +310,7 @@ struct WindowBatchRowView: View {
                     }
                 }
 
-                if let shortcut = shortcutText {
-                    KeycapView(text: shortcut, isSelected: isSelected)
-                } else if isStaged {
+                if isStaged {
                     LauncherStatusLabel(
                         text: stagedActionText,
                         color: colors.greenText,
@@ -330,6 +322,7 @@ struct WindowBatchRowView: View {
         .padding(.horizontal, LauncherLayout.rowHorizontalPadding)
         .padding(.vertical, LauncherLayout.rowVerticalPadding)
         .launcherRowSurface(isSelected: isSelected, isHovered: isHovered)
+        .launcherCommandNumberOverlay(shortcutNumber)
         .onHover { hovering in
             isHovered = hovering
         }

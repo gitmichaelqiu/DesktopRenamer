@@ -43,6 +43,7 @@ enum LauncherLayout {
 
     static let keycapSide: CGFloat = 18
     static let keycapCornerRadius: CGFloat = 6
+    static let commandNumberIndicatorSide: CGFloat = 22
 }
 
 /// Shared typography for the launcher surface, following Raycast's title/trailing-label hierarchy.
@@ -218,6 +219,68 @@ struct KeycapView: View {
                     }
             }
         }
+    }
+}
+
+/// A compact Raycast-style command number that floats over the row's trailing content.
+struct LauncherCommandNumberIndicator: View {
+    let number: Int
+    @Environment(\.colorScheme) private var colorScheme
+
+    private var isDark: Bool {
+        colorScheme == .dark
+    }
+
+    var body: some View {
+        Text(verbatim: "\(number)")
+            .font(.system(size: 13, weight: .medium))
+            .foregroundStyle(Color.primary)
+            .frame(
+                width: LauncherLayout.commandNumberIndicatorSide,
+                height: LauncherLayout.commandNumberIndicatorSide
+            )
+            .background {
+                RoundedRectangle(cornerRadius: LauncherLayout.keycapCornerRadius, style: .continuous)
+                    .fill(Color.primary.opacity(isDark ? 0.22 : 0.12))
+            }
+            .shadow(
+                color: Color.black.opacity(isDark ? 0.38 : 0.20),
+                radius: 3,
+                x: 0,
+                y: 1
+            )
+            .accessibilityLabel(Text("Command \(number)"))
+    }
+}
+
+/// Positions command numbers over the existing trailing labels without changing row layout.
+struct LauncherCommandNumberOverlay: ViewModifier {
+    let number: Int?
+    let trailingPadding: CGFloat
+
+    func body(content: Content) -> some View {
+        content
+            .overlay(alignment: .trailing) {
+                if let number {
+                    LauncherCommandNumberIndicator(number: number)
+                        .padding(.trailing, trailingPadding)
+                        .allowsHitTesting(false)
+                }
+            }
+    }
+}
+
+extension View {
+    func launcherCommandNumberOverlay(
+        _ number: Int?,
+        trailingPadding: CGFloat = LauncherLayout.rowHorizontalPadding
+    ) -> some View {
+        modifier(
+            LauncherCommandNumberOverlay(
+                number: number,
+                trailingPadding: trailingPadding
+            )
+        )
     }
 }
 
@@ -416,6 +479,7 @@ struct LauncherSubmenuPanel<Content: View>: View {
 /// Shared selectable row chrome for submenu items.
 struct LauncherSubmenuRow<Content: View>: View {
     let isSelected: Bool
+    let commandNumber: Int?
     let action: () -> Void
     private let content: Content
     @Environment(\.colorScheme) private var colorScheme
@@ -423,10 +487,12 @@ struct LauncherSubmenuRow<Content: View>: View {
 
     init(
         isSelected: Bool,
+        commandNumber: Int? = nil,
         action: @escaping () -> Void,
         @ViewBuilder content: () -> Content
     ) {
         self.isSelected = isSelected
+        self.commandNumber = commandNumber
         self.action = action
         self.content = content()
     }
@@ -445,6 +511,10 @@ struct LauncherSubmenuRow<Content: View>: View {
                 .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
+        .launcherCommandNumberOverlay(
+            commandNumber,
+            trailingPadding: LauncherLayout.submenuRowHorizontalPadding
+        )
         .onHover { isHovered = $0 }
     }
 }
