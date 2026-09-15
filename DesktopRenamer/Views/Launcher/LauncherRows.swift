@@ -73,10 +73,12 @@ struct CommandRowView: View {
                     background: statusText == "Enabled" ? colors.greenText.opacity(0.12) : colors.badgeBg
                     )
             } else if command.hasSubpage || command.type == .reloadLabels {
-                Image(systemName: "chevron.right")
-                    .font(.caption.weight(.semibold))
-                    .foregroundColor(isSelected ? colors.textSecondary : colors.textTertiary)
-                    .padding(.trailing, 4)
+                if shortcutNumber == nil {
+                    Image(systemName: "chevron.right")
+                        .font(.caption.weight(.semibold))
+                        .foregroundColor(isSelected ? colors.textSecondary : colors.textTertiary)
+                        .padding(.trailing, 4)
+                }
             } else {
                 KeycapView(text: String(localized: "Action"), isSelected: isSelected)
             }
@@ -140,7 +142,9 @@ struct SpaceRowView: View {
 
             Spacer()
 
-            KeycapView(text: String(localized: "Switch ↵"), isSelected: isSelected)
+            if shortcutNumber == nil {
+                KeycapView(text: String(localized: "Switch ↵"), isSelected: isSelected)
+            }
         }
         .padding(.horizontal, LauncherLayout.rowHorizontalPadding)
         .padding(.vertical, LauncherLayout.rowVerticalPadding)

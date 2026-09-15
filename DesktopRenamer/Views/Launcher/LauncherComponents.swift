@@ -43,7 +43,7 @@ enum LauncherLayout {
 
     static let keycapSide: CGFloat = 18
     static let keycapCornerRadius: CGFloat = 6
-    static let commandNumberIndicatorSide: CGFloat = 20
+    static let commandNumberIndicatorSide: CGFloat = 18
 }
 
 /// Shared typography for the launcher surface, following Raycast's title/trailing-label hierarchy.
@@ -227,19 +227,19 @@ struct LauncherCommandNumberIndicator: View {
     let number: Int
     @Environment(\.colorScheme) private var colorScheme
 
-    private var isDark: Bool {
-        colorScheme == .dark
+    private var colors: ThemeColors {
+        ThemeColors(isDark: colorScheme == .dark)
     }
 
     var body: some View {
         ZStack {
             RoundedRectangle(cornerRadius: LauncherLayout.keycapCornerRadius, style: .continuous)
-                .fill(Color.black.opacity(isDark ? 0.42 : 0.22))
-                .blur(radius: 2.5)
-                .offset(y: 2)
+                .fill(Color.black.opacity(colors.isDark ? 0.18 : 0.10))
+                .blur(radius: 1.25)
+                .offset(y: 1)
 
             RoundedRectangle(cornerRadius: LauncherLayout.keycapCornerRadius, style: .continuous)
-                .fill(Color.primary.opacity(isDark ? 0.22 : 0.12))
+                .fill(colors.badgeBg)
 
             Text(verbatim: "\(number)")
                 .font(.system(size: 13, weight: .medium))
@@ -248,13 +248,6 @@ struct LauncherCommandNumberIndicator: View {
             .frame(
                 width: LauncherLayout.commandNumberIndicatorSide,
                 height: LauncherLayout.commandNumberIndicatorSide
-            )
-            .compositingGroup()
-            .shadow(
-                color: Color.black.opacity(isDark ? 0.55 : 0.28),
-                radius: 4,
-                x: 0,
-                y: 2
             )
             .accessibilityLabel(Text("Command \(number)"))
     }
