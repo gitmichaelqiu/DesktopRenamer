@@ -101,17 +101,16 @@ class FocusTextField: NSTextField {
 
     override func viewDidMoveToWindow() {
         super.viewDidMoveToWindow()
-        if window != nil {
+        NotificationCenter.default.removeObserver(self)
+
+        if let window {
             NotificationCenter.default.addObserver(self, selector: #selector(windowDidBecomeKey), name: NSWindow.didBecomeKeyNotification, object: window)
             NotificationCenter.default.addObserver(self, selector: #selector(forceFocus), name: focusNotificationName, object: nil)
-            if window?.isKeyWindow == true, !isSubmenuField {
+            if window.isKeyWindow, !isSubmenuField {
                 DispatchQueue.main.async { [weak self] in
                     self?.forceFocus()
                 }
             }
-        } else {
-            NotificationCenter.default.removeObserver(self, name: NSWindow.didBecomeKeyNotification, object: nil)
-            NotificationCenter.default.removeObserver(self, name: focusNotificationName, object: nil)
         }
     }
     

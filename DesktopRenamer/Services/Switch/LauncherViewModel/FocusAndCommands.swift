@@ -74,7 +74,9 @@ extension LauncherViewModel {
     }
     
     func handleTabKey() {
-        if isBottomBarFocused {
+        if isSubmenuOpen {
+            requestSubmenuFieldFocus()
+        } else if isBottomBarFocused {
             leaveSpaceBarFocus()
         } else if activeCommand == nil {
             focusSpaceBar()
@@ -177,12 +179,26 @@ extension LauncherViewModel {
         focusRequestWorkItem?.cancel()
 
         let workItem = DispatchWorkItem { [weak self] in
-            guard let self, self.focusRequestID == requestID else { return }
-            NotificationCenter.default.post(name: NSNotification.Name(name), object: nil)
-            self.focusRequestWorkItem = nil
+            self?.postFocusNotification(named: name, requestID: requestID, attempt: 0)
         }
         focusRequestWorkItem = workItem
         DispatchQueue.main.async(execute: workItem)
+    }
+
+    private func postFocusNotification(named name: String, requestID: Int, attempt: Int) {
+        guard focusRequestID == requestID else { return }
+        NotificationCenter.default.post(name: NSNotification.Name(name), object: nil)
+
+        guard attempt < 3 else {
+            focusRequestWorkItem = nil
+            return
+        }
+
+        let retry = DispatchWorkItem { [weak self] in
+            self?.postFocusNotification(named: name, requestID: requestID, attempt: attempt + 1)
+        }
+        focusRequestWorkItem = retry
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.016, execute: retry)
     }
 
     private func cancelPendingFocusRequest() {

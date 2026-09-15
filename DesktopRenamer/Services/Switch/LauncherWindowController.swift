@@ -105,6 +105,15 @@ class LauncherWindowController: NSWindowController, NSWindowDelegate {
                 (panel.firstResponder === focusedTextField || panel.firstResponder === focusedTextField?.currentEditor())
             let submenuFieldIsFocused = focusedFieldIsActive && focusedTextField?.isSubmenuField == true
 
+            if !focusedFieldIsActive, event.keyCode == 48 {
+                if self.viewModel.isSubmenuOpen {
+                    self.viewModel.requestSubmenuFieldFocus()
+                } else if self.viewModel.activeCommand == nil {
+                    self.viewModel.handleTabKey()
+                }
+                return nil
+            }
+
             if self.viewModel.isSubmenuOpen,
                !submenuFieldIsFocused,
                !Self.submenuNavigationKeyCodes.contains(event.keyCode) {
