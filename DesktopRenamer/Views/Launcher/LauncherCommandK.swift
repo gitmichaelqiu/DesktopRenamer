@@ -434,17 +434,6 @@ struct CommandKActionRowView: View {
                     .lineLimit(1)
 
                 Spacer(minLength: 0)
-
-                if !action.shortcutText.isEmpty {
-                    KeycapView(text: action.shortcutText, isSelected: isSelected)
-                        .padding(
-                            .trailing,
-                            shortcutNumber == nil
-                                ? 0
-                                : LauncherLayout.commandNumberIndicatorWidth
-                                    + LauncherLayout.commandNumberIndicatorTrailingGap
-                        )
-                }
             }
         }
     }

@@ -86,8 +86,6 @@ struct CommandRowView: View {
                         .foregroundColor(isSelected ? colors.textSecondary : colors.textTertiary)
                         .padding(.trailing, 4)
                 }
-            } else {
-                KeycapView(text: String(localized: "Action"), isSelected: isSelected)
             }
         }
         .padding(.horizontal, LauncherLayout.rowHorizontalPadding)
