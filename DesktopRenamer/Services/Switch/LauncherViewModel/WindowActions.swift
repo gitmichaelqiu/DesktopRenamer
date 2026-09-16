@@ -99,7 +99,9 @@ extension LauncherViewModel {
                 windowID: window.id,
                 pid: window.pid,
                 fromSpaceID: window.space.id,
-                targetSpaceID: targetSpace.id
+                targetSpaceID: targetSpace.id,
+                wasMinimized: window.isMinimized,
+                wasHidden: window.isHidden
             )
 
             guard moved, manager.returnToOriginalAfterBatchMove else { return }

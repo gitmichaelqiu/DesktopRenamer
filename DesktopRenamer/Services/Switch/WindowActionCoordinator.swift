@@ -5,7 +5,11 @@ enum WindowActionCoordinator {
     private struct WindowPresentationState {
         let pid: Int32
         let wasHidden: Bool
-        let wasMinimized: Bool?
+        var wasMinimized: Bool?
+
+        var requiresPresentationTransition: Bool {
+            wasHidden || wasMinimized != false
+        }
     }
 
     /// Selects the window's desktop before raising it. Focusing a window while
@@ -33,7 +37,9 @@ enum WindowActionCoordinator {
         windowID: Int,
         pid: Int32,
         fromSpaceID: String,
-        targetSpaceID: String
+        targetSpaceID: String,
+        wasMinimized: Bool? = nil,
+        wasHidden: Bool? = nil
     ) async -> Bool {
         guard let manager = AppDelegate.shared.spaceManager,
               let resolvedFromSpaceID = resolveSourceSpaceID(
@@ -57,10 +63,13 @@ enum WindowActionCoordinator {
 
         guard resolvedFromSpaceID != targetSpaceID else { return true }
 
-        let presentationState = captureWindowPresentationState(windowID: windowID, pid: pid)
-        let needsSourceSpacePreparation = presentationState.map {
-            $0.wasHidden || $0.wasMinimized != false
-        } ?? false
+        var presentationState = captureWindowPresentationState(
+            windowID: windowID,
+            pid: pid,
+            minimizedHint: wasMinimized,
+            hiddenHint: wasHidden
+        )
+        let needsSourceSpacePreparation = presentationState?.requiresPresentationTransition ?? false
         if needsSourceSpacePreparation,
            SpaceHelper.getCurrentSpaceID(for: sourceSpace.displayID) != sourceSpace.id {
             // Restore a minimized/hidden window while its source Space is
@@ -76,24 +85,16 @@ enum WindowActionCoordinator {
         // the move primitive until unhide/unminimize has been observed by AX;
         // otherwise macOS can restore the window into the current Space and
         // the later move becomes a no-op.
-        if let presentationState {
-            guard await prepareWindowForMove(
-                presentationState,
+        if let capturedState = presentationState {
+            guard let preparedState = await prepareWindowForMove(
+                capturedState,
                 windowID: windowID,
                 sourceSpaceID: resolvedFromSpaceID
             ) else {
-                await restoreWindowPresentationState(presentationState, windowID: windowID)
+                await restoreWindowPresentationState(capturedState, windowID: windowID)
                 return false
             }
-        }
-
-        // The source membership must still be present after AX finishes
-        // restoring the window. If it is not, the requested source is stale;
-        // proceeding would allow a successful-looking no-op in the current
-        // Space.
-        guard await waitForWindow(windowID: windowID, inSpace: resolvedFromSpaceID) else {
-            await restoreWindowPresentationState(presentationState, windowID: windowID)
-            return false
+            presentationState = preparedState
         }
 
         let requiresFullscreenHandling = sourceSpace.isFullscreen || targetSpace.isFullscreen
@@ -130,9 +131,7 @@ enum WindowActionCoordinator {
         // them into the current Space before the assignment runs.
         let destinationMustBeCurrent = sourceSpace.displayID != targetSpace.displayID
         let destinationIsCurrent = SpaceHelper.getCurrentSpaceID(for: targetSpace.displayID) == targetSpace.id
-        let requiresDirectMove = presentationState.map {
-            $0.wasHidden || $0.wasMinimized != false
-        } ?? false
+        let requiresDirectMove = presentationState?.requiresPresentationTransition ?? false
         if destinationMustBeCurrent, !destinationIsCurrent {
             manager.switchToSpace(targetSpace, forceInstant: true, isManual: false)
             guard await waitForSpace(targetSpace.id, on: targetSpace.displayID) else {
@@ -209,6 +208,11 @@ enum WindowActionCoordinator {
         // complete. It never raises or activates the application. This is the
         // existing move module; presentation restoration stays in this
         // coordinator so it cannot race the move's completion.
+        DiagnosticEventLog.shared.record(
+            subsystem: "WindowActionCoordinator",
+            level: "info",
+            "Calling moveWindowToSpace: window=\(windowID), source=\(resolvedFromSpaceID), target=\(targetSpaceID), minimized=\(presentationState?.wasMinimized.map(String.init) ?? "unknown"), hidden=\(presentationState?.wasHidden ?? false)"
+        )
         let wasImmediatelyObserved = SpaceHelper.moveWindowToSpace(
             windowID: windowID,
             fromSpaceID: resolvedFromSpaceID,
@@ -330,15 +334,31 @@ enum WindowActionCoordinator {
         return false
     }
 
-    private static func captureWindowPresentationState(windowID: Int, pid: Int32) -> WindowPresentationState? {
-        guard NSRunningApplication(processIdentifier: pid) != nil else {
+    private static func captureWindowPresentationState(
+        windowID: Int,
+        pid: Int32,
+        minimizedHint: Bool?,
+        hiddenHint: Bool?
+    ) -> WindowPresentationState? {
+        guard let app = NSRunningApplication(processIdentifier: pid) else {
             return nil
+        }
+
+        let observedMinimized = readWindowMinimizedState(windowID: windowID, pid: pid)
+        // A true observation or hint is authoritative. A false hint remains a
+        // useful fallback when AX cannot expose a background/minimized window,
+        // while a fresh true AX observation must always win over a stale hint.
+        var wasMinimized: Bool?
+        if observedMinimized == true || minimizedHint == true {
+            wasMinimized = true
+        } else {
+            wasMinimized = observedMinimized ?? minimizedHint
         }
 
         return WindowPresentationState(
             pid: pid,
-            wasHidden: NSRunningApplication(processIdentifier: pid)?.isHidden == true,
-            wasMinimized: readWindowMinimizedState(windowID: windowID, pid: pid)
+            wasHidden: app.isHidden || hiddenHint == true,
+            wasMinimized: wasMinimized
         )
     }
 
@@ -346,33 +366,36 @@ enum WindowActionCoordinator {
         _ state: WindowPresentationState,
         windowID: Int,
         sourceSpaceID: String
-    ) async -> Bool {
-        let needsPresentationReadiness = state.wasHidden || state.wasMinimized != false
+    ) async -> WindowPresentationState? {
+        var preparedState = state
 
         // Keep the source Space active while unhiding. macOS may otherwise
         // attach the restored window to whichever Space is currently shown.
         if state.wasHidden {
             NSRunningApplication(processIdentifier: state.pid)?.unhide()
             guard await waitForAppHidden(state.pid, isHidden: false) else {
-                return false
+                return nil
             }
         }
 
-        // A missing AX value is not proof that the window is minimized. If AX
-        // becomes available after unhide, however, honor the value and wait
-        // for the requested transition before calling the move module.
-        let minimizedState = state.wasMinimized ?? readWindowMinimizedState(windowID: windowID, pid: state.pid)
-        if minimizedState == true {
+        // Unhiding can make the exact AX window appear after the initial
+        // snapshot. Re-check it and preserve that newly observed state so a
+        // hidden + minimized window is minimized again after the move.
+        if readWindowMinimizedState(windowID: windowID, pid: state.pid) == true {
+            preparedState.wasMinimized = true
+        }
+
+        if preparedState.wasMinimized == true {
             guard await setWindowMinimized(
                 windowID: windowID,
                 pid: state.pid,
                 minimized: false
             ) else {
-                return false
+                return nil
             }
         }
 
-        guard needsPresentationReadiness else { return true }
+        guard preparedState.requiresPresentationTransition else { return preparedState }
 
         // AX changes are observable before WindowServer has finished updating
         // the restored window. Require several stable reads and source-space
@@ -380,11 +403,15 @@ enum WindowActionCoordinator {
         // kCGWindowIsOnscreen here: it describes compositor visibility, not
         // whether the AX unminimize operation has completed, and is commonly
         // false while a Space transition is settling.
-        return await waitForWindowReadyForMove(
+        guard await waitForWindowReadyForMove(
             windowID: windowID,
             pid: state.pid,
-            sourceSpaceID: sourceSpaceID
-        )
+            sourceSpaceID: sourceSpaceID,
+            allowUnknownMinimizedState: preparedState.wasMinimized != nil
+        ) else {
+            return nil
+        }
+        return preparedState
     }
 
     private static func restoreWindowPresentationState(
@@ -427,6 +454,10 @@ enum WindowActionCoordinator {
             return nil
         }
 
+        return readWindowMinimizedState(of: axWindow)
+    }
+
+    private static func readWindowMinimizedState(of axWindow: AXUIElement) -> Bool? {
         var minimizedRef: CFTypeRef?
         guard AXUIElementCopyAttributeValue(
             axWindow,
@@ -444,24 +475,40 @@ enum WindowActionCoordinator {
         pid: Int32,
         minimized: Bool
     ) async -> Bool {
-        guard let axWindow = await waitForAXWindow(windowID: windowID, pid: pid),
-              AXUIElementSetAttributeValue(
-                  axWindow,
-                  kAXMinimizedAttribute as CFString,
-                  minimized as CFTypeRef
-              ) == .success else {
+        guard let axWindow = await waitForAXWindow(windowID: windowID, pid: pid) else {
             return false
         }
 
-        for attempt in 0..<12 {
-            if readWindowMinimizedState(windowID: windowID, pid: pid) == minimized {
-                return true
+        guard AXUIElementSetAttributeValue(
+            axWindow,
+            kAXMinimizedAttribute as CFString,
+            minimized as CFTypeRef
+        ) == .success else {
+            return false
+        }
+
+        // Keep polling the same AX element that received the request. A
+        // minimized window can temporarily disappear from AXWindows while it
+        // is being restored; immediately looking it up again turns a
+        // completed unminimize into a false failure and causes the caller to
+        // minimize it back in the source Space.
+        var consecutiveMatches = 0
+        for attempt in 0..<20 {
+            let currentState = readWindowMinimizedState(of: axWindow)
+                ?? readWindowMinimizedState(windowID: windowID, pid: pid)
+            if currentState == minimized {
+                consecutiveMatches += 1
+                if consecutiveMatches >= 3 {
+                    return true
+                }
+            } else {
+                consecutiveMatches = 0
             }
-            if attempt < 11 {
+            if attempt < 19 {
                 try? await Task.sleep(nanoseconds: 100_000_000)
             }
         }
-        return readWindowMinimizedState(windowID: windowID, pid: pid) == minimized
+        return false
     }
 
     private static func waitForAppHidden(_ pid: Int32, isHidden: Bool) async -> Bool {
@@ -479,7 +526,8 @@ enum WindowActionCoordinator {
     private static func waitForWindowReadyForMove(
         windowID: Int,
         pid: Int32,
-        sourceSpaceID: String
+        sourceSpaceID: String,
+        allowUnknownMinimizedState: Bool
     ) async -> Bool {
         var consecutiveReadyReads = 0
 
@@ -487,10 +535,10 @@ enum WindowActionCoordinator {
             let appIsHidden = NSRunningApplication(processIdentifier: pid)?.isHidden == true
             let isMinimized = readWindowMinimizedState(windowID: windowID, pid: pid)
             let hasWindowServerRecord = hasWindowServerWindow(windowID: windowID, pid: pid)
-            let isInSourceSpace = SpaceHelper.getWindowCurrentSpaces(windowID: windowID)
-                .contains(sourceSpaceID)
+            let minimizedStateReady = isMinimized == false
+                || (isMinimized == nil && allowUnknownMinimizedState)
 
-            if !appIsHidden, isMinimized == false, hasWindowServerRecord, isInSourceSpace {
+            if !appIsHidden, minimizedStateReady, hasWindowServerRecord {
                 consecutiveReadyReads += 1
                 if consecutiveReadyReads >= 4 {
                     return true

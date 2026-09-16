@@ -72,7 +72,9 @@ extension LauncherViewModel {
                         windowID: action.window.id,
                         pid: action.window.pid,
                         fromSpaceID: action.window.space.id,
-                        targetSpaceID: targetSpaceID
+                        targetSpaceID: targetSpaceID,
+                        wasMinimized: action.window.isMinimized,
+                        wasHidden: action.window.isHidden
                     )
                     if !moved {
                         DiagnosticEventLog.shared.record(

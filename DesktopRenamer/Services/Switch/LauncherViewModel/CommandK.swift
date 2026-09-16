@@ -407,7 +407,9 @@ extension LauncherViewModel {
                     windowID: window.id,
                     pid: window.pid,
                     fromSpaceID: window.space.id,
-                    targetSpaceID: space.id
+                    targetSpaceID: space.id,
+                    wasMinimized: window.isMinimized,
+                    wasHidden: window.isHidden
                 )
             case .move(let space):
                 if window.space.id != space.id {
@@ -415,7 +417,9 @@ extension LauncherViewModel {
                         windowID: window.id,
                         pid: window.pid,
                         fromSpaceID: window.space.id,
-                        targetSpaceID: space.id
+                        targetSpaceID: space.id,
+                        wasMinimized: window.isMinimized,
+                        wasHidden: window.isHidden
                     )
                 }            
             }
