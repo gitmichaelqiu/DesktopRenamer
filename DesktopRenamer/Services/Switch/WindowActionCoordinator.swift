@@ -113,9 +113,13 @@ enum WindowActionCoordinator {
                     return false
                 }
                 return (minimizedRef as? Bool) == true
-            } ?? false
+            }
 
-            if !isMinimized, let windowInfo = SpaceHelper.getWindowInfo(id: windowID) {
+            // An unavailable AX state is not evidence that the window is
+            // usable. Minimized windows can temporarily disappear from the
+            // AX hierarchy, so send them through the direct move path instead
+            // of starting a drag that can never succeed.
+            if isMinimized == false, let windowInfo = SpaceHelper.getWindowInfo(id: windowID) {
                 SpaceHelper.dragWindow(
                     (id: windowID, pid: pid, frame: windowInfo.frame),
                     to: targetSpaceID,

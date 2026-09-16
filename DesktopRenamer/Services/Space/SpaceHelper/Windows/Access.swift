@@ -187,23 +187,37 @@ extension SpaceHelper {
             return nil
         }
 
-        var wasMinimized = false
-        if let axWindow = getAXWindow(id: windowID, pid: info.pid) {
-            var minimizedRef: CFTypeRef?
-            if AXUIElementCopyAttributeValue(
-                axWindow,
-                kAXMinimizedAttribute as CFString,
-                &minimizedRef
-            ) == .success {
-                wasMinimized = (minimizedRef as? Bool) == true
-            }
+        let wasHidden = app.isHidden
+        if wasHidden {
+            app.unhide()
+            Thread.sleep(forTimeInterval: 0.15)
         }
 
         return WindowPresentationState(
             pid: info.pid,
-            wasHidden: app.isHidden,
-            wasMinimized: wasMinimized
+            wasHidden: wasHidden,
+            wasMinimized: readWindowMinimizedState(windowID: windowID, pid: info.pid) == true
         )
+    }
+
+    private static func readWindowMinimizedState(windowID: Int, pid: Int32) -> Bool? {
+        for attempt in 0..<4 {
+            if let axWindow = getAXWindow(id: windowID, pid: pid) {
+                var minimizedRef: CFTypeRef?
+                if AXUIElementCopyAttributeValue(
+                    axWindow,
+                    kAXMinimizedAttribute as CFString,
+                    &minimizedRef
+                ) == .success {
+                    return minimizedRef as? Bool
+                }
+            }
+
+            if attempt < 3 {
+                Thread.sleep(forTimeInterval: 0.1)
+            }
+        }
+        return nil
     }
 
     private static func prepareWindowForMove(_ state: WindowPresentationState?, windowID: Int) {
@@ -225,7 +239,7 @@ extension SpaceHelper {
         if state.wasHidden || state.wasMinimized {
             // WindowServer needs a short settling period after AX visibility
             // changes before it can reliably reassign the window to a Space.
-            Thread.sleep(forTimeInterval: 0.15)
+            Thread.sleep(forTimeInterval: 0.3)
         }
     }
 
