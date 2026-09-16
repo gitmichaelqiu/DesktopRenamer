@@ -114,6 +114,21 @@ struct SpaceAPIContractTests {
         )
         check(numeric["windowID"] == "123" && numeric["pid"] == "456", "numeric IDs are normalized")
 
+        let presentationHints = try SpaceAPIArgumentValidator.stringArguments(
+            from: .object([
+                "windowID": .number(123),
+                "fromSpaceID": .string("4"),
+                "targetSpaceID": .string("5"),
+                "isMinimized": .bool(true),
+                "isHidden": .bool(false)
+            ]),
+            method: "moveSpecificWindow"
+        )
+        check(
+            presentationHints["isMinimized"] == "true" && presentationHints["isHidden"] == "false",
+            "window presentation hints are normalized"
+        )
+
         let withoutOptionalPID = try SpaceAPIArgumentValidator.stringArguments(
             from: .object([
                 "windowID": .string("123"),

@@ -3,6 +3,7 @@ import Foundation
 enum SpaceAPIParameterKind: Equatable {
     case string
     case positiveInteger
+    case boolean
     case direction
     case windowAction
 
@@ -12,6 +13,8 @@ enum SpaceAPIParameterKind: Equatable {
             return "string"
         case .positiveInteger:
             return "positive integer"
+        case .boolean:
+            return "Boolean"
         case .direction:
             return "one of: up, down"
         case .windowAction:
@@ -131,7 +134,12 @@ enum DesktopRenamerAPIContract {
                 "windowID": .positiveInteger,
                 "pid": .positiveInteger,
                 "fromSpaceID": .string,
-                "targetSpaceID": .string
+                "targetSpaceID": .string,
+                // Optional presentation metadata lets clients that already
+                // enumerated the window avoid losing a true minimized/hidden
+                // state when Accessibility is temporarily unavailable.
+                "isMinimized": .boolean,
+                "isHidden": .boolean
             ],
             requiredParameters: ["windowID", "fromSpaceID", "targetSpaceID"]
         )

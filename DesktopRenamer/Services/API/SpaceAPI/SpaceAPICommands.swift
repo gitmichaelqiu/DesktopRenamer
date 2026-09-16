@@ -128,11 +128,28 @@ extension SpaceAPI {
                 throw SpaceAPIError.operationFailed("Could not resolve the window's process ID.")
             }
 
+            let minimizedHint = arguments["isMinimized"].flatMap { value -> Bool? in
+                switch value.lowercased() {
+                case "true": return true
+                case "false": return false
+                default: return nil
+                }
+            }
+            let hiddenHint = arguments["isHidden"].flatMap { value -> Bool? in
+                switch value.lowercased() {
+                case "true": return true
+                case "false": return false
+                default: return nil
+                }
+            }
+
             let moved = await WindowActionCoordinator.moveWindow(
                 windowID: windowID,
                 pid: pid,
                 fromSpaceID: fromSpaceID,
-                targetSpaceID: targetSpaceID
+                targetSpaceID: targetSpaceID,
+                wasMinimized: minimizedHint,
+                wasHidden: hiddenHint
             )
             guard moved else { throw SpaceAPIError.operationFailed("Window move failed.") }
             return ""
