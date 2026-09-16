@@ -192,6 +192,9 @@ struct LauncherActionMenuView: View {
                                 action: item.action,
                                 isSelected: viewModel.commandKSelectedIndex == item.index,
                                 idx: item.index,
+                                shortcutNumber: viewModel.showCommandNumbers && item.index < 9
+                                    ? item.index + 1
+                                    : nil,
                                 colors: colors,
                                 viewModel: viewModel
                             )
@@ -404,12 +407,14 @@ struct CommandKActionRowView: View {
     let action: LauncherCommandKAction
     let isSelected: Bool
     let idx: Int
+    let shortcutNumber: Int?
     let colors: ThemeColors
     @ObservedObject var viewModel: LauncherViewModel
     
     var body: some View {
         LauncherSubmenuRow(
             isSelected: isSelected,
+            commandNumber: shortcutNumber,
             action: {
                 viewModel.commandKSelectedIndex = idx
                 viewModel.executeCommandKAction()
@@ -432,6 +437,13 @@ struct CommandKActionRowView: View {
 
                 if !action.shortcutText.isEmpty {
                     KeycapView(text: action.shortcutText, isSelected: isSelected)
+                        .padding(
+                            .trailing,
+                            shortcutNumber == nil
+                                ? 0
+                                : LauncherLayout.commandNumberIndicatorWidth
+                                    + LauncherLayout.commandNumberIndicatorTrailingGap
+                        )
                 }
             }
         }

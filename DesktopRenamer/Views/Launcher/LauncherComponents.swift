@@ -43,7 +43,7 @@ enum LauncherLayout {
 
     static let keycapSide: CGFloat = 18
     static let keycapCornerRadius: CGFloat = 6
-    static let commandNumberIndicatorWidth: CGFloat = 20
+    static let commandNumberIndicatorWidth: CGFloat = 18
     static let commandNumberIndicatorHeight: CGFloat = 18
     static let commandNumberIndicatorTrailingGap: CGFloat = 4
 }
@@ -255,12 +255,6 @@ struct LauncherCommandNumberIndicator: View {
             height: LauncherLayout.commandNumberIndicatorHeight
         )
         .compositingGroup()
-        .shadow(
-            color: Color.black.opacity(colors.isDark ? 0.55 : 0.32),
-            radius: 3,
-            x: 0,
-            y: 2
-        )
         .accessibilityLabel(Text("Command \(number)"))
     }
 }
