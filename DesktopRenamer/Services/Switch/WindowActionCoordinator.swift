@@ -2,11 +2,28 @@ import AppKit
 
 @MainActor
 enum WindowActionCoordinator {
+    private static let operationGate = WindowOperationGate()
+
+    /// Raycast waits for the synthetic drag and WindowServer's presentation
+    /// transition before restoring the launcher's original Spaces. Native
+    /// launcher callers use the same boundary so both clients serialize the
+    /// same move transaction.
+    static func waitForMoveToSettle(isFullscreen: Bool, batch: Bool = false) async {
+        let nanoseconds: UInt64
+        if isFullscreen {
+            nanoseconds = batch ? 1_700_000_000 : 1_750_000_000
+        } else {
+            nanoseconds = batch ? 500_000_000 : 600_000_000
+        }
+        try? await Task.sleep(nanoseconds: nanoseconds)
+    }
+
     private struct WindowPresentationState {
         let pid: Int32
         let wasHidden: Bool
         var wasMinimized: Bool?
         var isUnminimizedForMove = false
+        var isRaisedForMove = false
 
         var requiresPresentationTransition: Bool {
             wasHidden || wasMinimized != false
@@ -41,6 +58,32 @@ enum WindowActionCoordinator {
         targetSpaceID: String,
         wasMinimized: Bool? = nil,
         wasHidden: Bool? = nil
+    ) async -> Bool {
+        guard await operationGate.acquire() else { return false }
+        guard !Task.isCancelled else {
+            await operationGate.release()
+            return false
+        }
+
+        let result = await performMoveWindow(
+            windowID: windowID,
+            pid: pid,
+            fromSpaceID: fromSpaceID,
+            targetSpaceID: targetSpaceID,
+            wasMinimized: wasMinimized,
+            wasHidden: wasHidden
+        )
+        await operationGate.release()
+        return result
+    }
+
+    private static func performMoveWindow(
+        windowID: Int,
+        pid: Int32,
+        fromSpaceID: String,
+        targetSpaceID: String,
+        wasMinimized: Bool?,
+        wasHidden: Bool?
     ) async -> Bool {
         guard let manager = AppDelegate.shared.spaceManager,
               let resolvedFromSpaceID = resolveSourceSpaceID(
@@ -174,20 +217,42 @@ enum WindowActionCoordinator {
             let isUnminimizedForMove = isMinimized == false
                 || (isMinimized == nil && presentationState?.isUnminimizedForMove == true)
 
-            if isUnminimizedForMove,
-               let windowInfo = await waitForWindowInfo(windowID: windowID, pid: pid) {
-                SpaceHelper.dragWindow(
-                    (id: windowID, pid: pid, frame: windowInfo.frame),
-                    to: targetSpaceID,
-                    forceInstant: true
-                )
-                if await waitForWindow(
-                    windowID: windowID,
-                    inSpace: targetSpaceID,
-                    excluding: resolvedFromSpaceID
-                ) {
-                    await restoreWindowPresentationState(presentationState, windowID: windowID)
-                    return true
+            if isUnminimizedForMove {
+                var isRaisedForMove = presentationState?.isRaisedForMove == true
+                if !isRaisedForMove {
+                    isRaisedForMove = await raiseWindowForMove(windowID: windowID, pid: pid)
+                    if isRaisedForMove {
+                        presentationState?.isRaisedForMove = true
+                    }
+                }
+
+                if isRaisedForMove,
+                   let windowInfo = await waitForWindowInfo(windowID: windowID, pid: pid) {
+                    SpaceHelper.dragWindow(
+                        (id: windowID, pid: pid, frame: windowInfo.frame),
+                        to: targetSpaceID,
+                        forceInstant: true
+                    )
+                    let reachedDestination = await waitForWindow(
+                        windowID: windowID,
+                        inSpace: targetSpaceID,
+                        excluding: resolvedFromSpaceID
+                    )
+                    guard await waitForSyntheticDragToFinish() else {
+                        DiagnosticEventLog.shared.record(
+                            subsystem: "WindowActionCoordinator",
+                            level: "warning",
+                            "Synthetic drag for window \(windowID) did not release before presentation restoration; refusing to minimize or hide it again."
+                        )
+                        return false
+                    }
+                    if reachedDestination {
+                        if presentationState?.requiresPresentationTransition == true {
+                            await waitForMoveToSettle(isFullscreen: sourceSpace.isFullscreen)
+                        }
+                        await restoreWindowPresentationState(presentationState, windowID: windowID)
+                        return true
+                    }
                 }
             }
         }
@@ -249,6 +314,9 @@ enum WindowActionCoordinator {
                 await restoreWindowPresentationState(presentationState, windowID: windowID)
                 return false
             }
+        }
+        if moved, presentationState?.requiresPresentationTransition == true {
+            await waitForMoveToSettle(isFullscreen: sourceSpace.isFullscreen)
         }
         await restoreWindowPresentationState(presentationState, windowID: windowID)
         return moved
@@ -399,6 +467,7 @@ enum WindowActionCoordinator {
             guard await raiseWindowForMove(windowID: windowID, pid: state.pid) else {
                 return nil
             }
+            preparedState.isRaisedForMove = true
         }
 
         // The AX transition above is the completion boundary for
@@ -416,7 +485,7 @@ enum WindowActionCoordinator {
             return false
         }
 
-        let raiseSucceeded = AXUIElementPerformAction(
+        let initialRaiseSucceeded = AXUIElementPerformAction(
             axWindow,
             kAXRaiseAction as CFString
         ) == .success
@@ -434,16 +503,18 @@ enum WindowActionCoordinator {
             return false
         }
 
-        // Some applications do not expose AXRaise until they are frontmost.
-        // Retry it after activation so the exact window, rather than another
-        // window belonging to the same app, remains the drag target.
-        if !raiseSucceeded {
-            return AXUIElementPerformAction(
-                axWindow,
-                kAXRaiseAction as CFString
-            ) == .success
+        // Some applications report AXRaise as successful while hidden. Fetch
+        // the now-visible AX element again and always raise it after
+        // activation so the exact window, rather than another window
+        // belonging to the same app, remains the drag target.
+        guard let activeAXWindow = await waitForAXWindow(windowID: windowID, pid: pid) else {
+            return initialRaiseSucceeded
         }
-        return true
+        let finalRaiseSucceeded = AXUIElementPerformAction(
+            activeAXWindow,
+            kAXRaiseAction as CFString
+        ) == .success
+        return finalRaiseSucceeded || initialRaiseSucceeded
     }
 
     private static func restoreWindowPresentationState(
@@ -583,6 +654,19 @@ enum WindowActionCoordinator {
         return NSWorkspace.shared.frontmostApplication?.processIdentifier == pid
     }
 
+    private static func waitForSyntheticDragToFinish() async -> Bool {
+        for attempt in 0..<30 {
+            if !SpaceHelper.isDragging {
+                return true
+            }
+            if attempt < 29 {
+                try? await Task.sleep(nanoseconds: 100_000_000)
+            }
+        }
+
+        return !SpaceHelper.isDragging
+    }
+
     private static func waitForWindow(
         windowID: Int,
         inSpace spaceID: String,
@@ -630,5 +714,50 @@ enum WindowActionCoordinator {
             }
         }
         return false
+    }
+}
+
+private actor WindowOperationGate {
+    private var isOccupied = false
+    private var nextWaiterID = 0
+    private var waiters: [(id: Int, continuation: CheckedContinuation<Bool, Never>)] = []
+
+    func acquire() async -> Bool {
+        guard !Task.isCancelled else { return false }
+
+        if !isOccupied {
+            isOccupied = true
+            return true
+        }
+
+        let waiterID = nextWaiterID
+        nextWaiterID += 1
+
+        return await withTaskCancellationHandler(operation: {
+            await withCheckedContinuation { (continuation: CheckedContinuation<Bool, Never>) in
+                if Task.isCancelled {
+                    continuation.resume(returning: false)
+                } else {
+                    waiters.append((id: waiterID, continuation: continuation))
+                }
+            }
+        }, onCancel: {
+            Task { await self.cancel(waiterID: waiterID) }
+        })
+    }
+
+    func release() {
+        if let next = waiters.first {
+            waiters.removeFirst()
+            next.continuation.resume(returning: true)
+        } else {
+            isOccupied = false
+        }
+    }
+
+    private func cancel(waiterID: Int) {
+        guard let index = waiters.firstIndex(where: { $0.id == waiterID }) else { return }
+        let waiter = waiters.remove(at: index)
+        waiter.continuation.resume(returning: false)
     }
 }
