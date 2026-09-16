@@ -52,6 +52,17 @@ enum WindowActionCoordinator {
         guard resolvedFromSpaceID != targetSpaceID else { return true }
 
         let presentationState = SpaceHelper.captureWindowPresentationState(windowID: windowID, pid: pid)
+        if let presentationState,
+           presentationState.wasHidden || presentationState.wasMinimized != false,
+           SpaceHelper.getCurrentSpaceID(for: sourceSpace.displayID) != sourceSpace.id {
+            // Restore a minimized/hidden window while its source Space is
+            // active. Otherwise macOS can restore it into the current Space,
+            // making the later move appear to succeed without moving it.
+            manager.switchToSpace(sourceSpace, forceInstant: true, isManual: false)
+            guard await waitForSpace(sourceSpace.id, on: sourceSpace.displayID) else {
+                return false
+            }
+        }
         SpaceHelper.prepareWindowForMove(presentationState, windowID: windowID)
         defer {
             // Restoration must happen only after the move path has finished
@@ -84,11 +95,15 @@ enum WindowActionCoordinator {
             try? await Task.sleep(nanoseconds: 1_200_000_000)
         }
 
-        // Cross-display moves need the destination display's Space active so
-        // WindowServer can place and reposition the window on that display.
+        // Cross-display moves, and direct moves of temporarily restored
+        // windows, need the destination Space active so WindowServer can
+        // place the window before it is minimized/hidden again.
         let destinationMustBeCurrent = sourceSpace.displayID != targetSpace.displayID
         let destinationIsCurrent = SpaceHelper.getCurrentSpaceID(for: targetSpace.displayID) == targetSpace.id
-        if destinationMustBeCurrent, !destinationIsCurrent {
+        let requiresDirectMove = presentationState.map {
+            $0.wasHidden || $0.wasMinimized != false
+        } ?? false
+        if (destinationMustBeCurrent || requiresDirectMove), !destinationIsCurrent {
             manager.switchToSpace(targetSpace, forceInstant: true, isManual: false)
             guard await waitForSpace(targetSpace.id, on: targetSpace.displayID) else {
                 return false
@@ -104,7 +119,7 @@ enum WindowActionCoordinator {
         if !destinationMustBeCurrent,
            !sourceSpace.isFullscreen,
            presentationState?.wasHidden != true,
-           presentationState?.wasMinimized != true,
+           presentationState?.wasMinimized == false,
            NSRunningApplication(processIdentifier: pid)?.isHidden != true {
             if SpaceHelper.getCurrentSpaceID(for: sourceSpace.displayID) != sourceSpace.id {
                 manager.switchToSpace(sourceSpace, forceInstant: true, isManual: false)
