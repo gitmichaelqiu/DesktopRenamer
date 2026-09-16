@@ -4,6 +4,12 @@ import AppKit
 
 extension SpaceHelper {
 
+    private struct WindowPresentationState {
+        let pid: Int32
+        let wasHidden: Bool
+        let wasMinimized: Bool
+    }
+
     static func getAXWindow(id windowID: Int, pid: Int32) -> AXUIElement? {
         let appElement = AXUIElementCreateApplication(pid)
         var windowsRef: CFTypeRef?
@@ -76,6 +82,26 @@ extension SpaceHelper {
     static func moveWindowToSpace(windowID: Int, fromSpaceID: Int, targetSpaceID: Int) -> Bool {
         guard fromSpaceID != targetSpaceID else { return true }
 
+        let presentationState = captureWindowPresentationState(windowID: windowID)
+        prepareWindowForMove(presentationState, windowID: windowID)
+
+        return moveWindowToSpace(
+            windowID: windowID,
+            fromSpaceID: fromSpaceID,
+            targetSpaceID: targetSpaceID,
+            presentationState: presentationState
+        )
+    }
+
+    @discardableResult
+    private static func moveWindowToSpace(
+        windowID: Int,
+        fromSpaceID: Int,
+        targetSpaceID: Int,
+        presentationState: WindowPresentationState?
+    ) -> Bool {
+        guard fromSpaceID != targetSpaceID else { return true }
+
         markWindowMoveIntent(to: String(targetSpaceID))
         let targetSpaceIDString = String(targetSpaceID)
         let conn = _CGSDefaultConnection()
@@ -105,9 +131,15 @@ extension SpaceHelper {
                             level: "error",
                             "Could not activate destination space \(targetSpaceIDString) before moving window \(windowID)."
                         )
+                        restoreWindowPresentationState(presentationState, windowID: windowID)
                         return
                     }
-                    moveWindowToSpace(windowID: windowID, fromSpaceID: fromSpaceID, targetSpaceID: targetSpaceID)
+                    _ = moveWindowToSpace(
+                        windowID: windowID,
+                        fromSpaceID: fromSpaceID,
+                        targetSpaceID: targetSpaceID,
+                        presentationState: presentationState
+                    )
                 }
                 return true
             }
@@ -145,7 +177,73 @@ extension SpaceHelper {
             level: finalSpaces.contains(targetSpaceIDString) ? "info" : "warning",
             "moveWindowToSpace: window=\(windowID), requestedSource=\(fromSpaceID), target=\(targetSpaceID), before=\(currentSpaces.sorted()), removed=\(spacesToRemove.sorted()), after=\(finalSpaces.sorted())"
         )
+        restoreWindowPresentationState(presentationState, windowID: windowID)
         return finalSpaces.contains(targetSpaceIDString)
+    }
+
+    private static func captureWindowPresentationState(windowID: Int) -> WindowPresentationState? {
+        guard let info = getWindowInfo(id: windowID),
+              let app = NSRunningApplication(processIdentifier: info.pid) else {
+            return nil
+        }
+
+        var wasMinimized = false
+        if let axWindow = getAXWindow(id: windowID, pid: info.pid) {
+            var minimizedRef: CFTypeRef?
+            if AXUIElementCopyAttributeValue(
+                axWindow,
+                kAXMinimizedAttribute as CFString,
+                &minimizedRef
+            ) == .success {
+                wasMinimized = (minimizedRef as? Bool) == true
+            }
+        }
+
+        return WindowPresentationState(
+            pid: info.pid,
+            wasHidden: app.isHidden,
+            wasMinimized: wasMinimized
+        )
+    }
+
+    private static func prepareWindowForMove(_ state: WindowPresentationState?, windowID: Int) {
+        guard let state else { return }
+
+        if state.wasHidden {
+            NSRunningApplication(processIdentifier: state.pid)?.unhide()
+        }
+
+        if state.wasMinimized,
+           let axWindow = getAXWindow(id: windowID, pid: state.pid) {
+            AXUIElementSetAttributeValue(
+                axWindow,
+                kAXMinimizedAttribute as CFString,
+                false as CFTypeRef
+            )
+        }
+
+        if state.wasHidden || state.wasMinimized {
+            // WindowServer needs a short settling period after AX visibility
+            // changes before it can reliably reassign the window to a Space.
+            Thread.sleep(forTimeInterval: 0.15)
+        }
+    }
+
+    private static func restoreWindowPresentationState(_ state: WindowPresentationState?, windowID: Int) {
+        guard let state else { return }
+
+        if state.wasMinimized,
+           let axWindow = getAXWindow(id: windowID, pid: state.pid) {
+            AXUIElementSetAttributeValue(
+                axWindow,
+                kAXMinimizedAttribute as CFString,
+                true as CFTypeRef
+            )
+        }
+
+        if state.wasHidden {
+            NSRunningApplication(processIdentifier: state.pid)?.hide()
+        }
     }
 
     private static func repositionWindowToDisplay(windowID: Int, pid: Int32, frame: CGRect, sourceDisplayID: String, targetDisplayID: String) {

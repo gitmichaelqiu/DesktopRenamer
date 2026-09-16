@@ -90,8 +90,9 @@ enum WindowActionCoordinator {
         // Ordinary same-display visible windows follow the same established
         // Option-drag primitive as a user move. A background window must have
         // its source Space current before its frame can be hit-tested; focus is
-        // not required as a separate step. Hidden and minimized windows stay
-        // on direct WindowServer assignment because they cannot be dragged.
+        // not required as a separate step. Hidden and minimized windows use
+        // direct WindowServer assignment; that primitive temporarily restores
+        // their presentation state and restores it after the move.
         if !destinationMustBeCurrent,
            !sourceSpace.isFullscreen,
            NSRunningApplication(processIdentifier: pid)?.isHidden != true {
