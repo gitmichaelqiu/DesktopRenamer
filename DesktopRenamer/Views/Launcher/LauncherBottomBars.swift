@@ -309,8 +309,8 @@ struct SpacesBottomBar: View {
                         }
                     }
                 }
-                .frame(maxWidth: .infinity, alignment: .leading)
             }
+            .frame(maxWidth: .infinity, alignment: .leading)
             
             // Actions Overlay (No longer overlapping, placed in-line)
             HStack(spacing: 8) {
@@ -370,6 +370,7 @@ struct SpacesBottomBar: View {
             .launcherFrosted(in: Capsule())
             }
             .padding(.leading, 12)
+            .fixedSize(horizontal: true, vertical: false)
         }
         .padding(.horizontal, LauncherLayout.bottomBarHorizontalPadding)
         .padding(.vertical, LauncherLayout.bottomBarVerticalPadding)
