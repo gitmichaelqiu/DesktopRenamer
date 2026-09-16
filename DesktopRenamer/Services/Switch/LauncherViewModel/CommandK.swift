@@ -291,8 +291,27 @@ extension LauncherViewModel {
         if actionType == .quit {
             removeApplicationWindowsFromList(pid: window.pid)
         }
+
+        let movesWindow = switch actionType {
+        case .move, .restoreTo:
+            true
+        default:
+            false
+        }
+        if movesWindow {
+            // The native launcher is still ordered above the selected window
+            // when this action comes from the list-window submenu. Order it
+            // out before the synthetic drag, otherwise the drag can start on
+            // the launcher panel instead of the target window.
+            closeLauncher()
+        }
         
-        Task {
+        Task { @MainActor in
+            if movesWindow {
+                // Let WindowServer finish removing the panel from the hit-test
+                // stack before the move coordinator captures the drag point.
+                try? await Task.sleep(nanoseconds: 200_000_000)
+            }
             let windowSpaceID = window.space.id
             let isFullscreenWindow = window.space.isFullscreen
             let requiresAX = (actionType == .close || actionType == .minimize || actionType == .enterFullScreen || actionType == .exitFullScreen || actionType == .restore || (actionType == .hide && isFullscreenWindow))
