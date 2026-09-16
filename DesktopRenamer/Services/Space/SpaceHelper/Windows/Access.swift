@@ -4,12 +4,6 @@ import AppKit
 
 extension SpaceHelper {
 
-    struct WindowPresentationState {
-        let pid: Int32
-        let wasHidden: Bool
-        let wasMinimized: Bool?
-    }
-
     static func getAXWindow(id windowID: Int, pid: Int32) -> AXUIElement? {
         let appElement = AXUIElementCreateApplication(pid)
         var windowsRef: CFTypeRef?
@@ -79,112 +73,7 @@ extension SpaceHelper {
     }
 
     @discardableResult
-    static func moveWindowToSpace(
-        windowID: Int,
-        pid: Int32,
-        fromSpaceID: String,
-        targetSpaceID: String
-    ) -> Bool {
-        guard let fromID = Int(fromSpaceID), let targetID = Int(targetSpaceID) else {
-            DiagnosticEventLog.shared.record(
-                subsystem: "SpaceHelper",
-                level: "warning",
-                "Cannot move window \(windowID): non-numeric Space IDs"
-            )
-            return false
-        }
-
-        return moveWindowToSpace(
-            windowID: windowID,
-            pid: pid,
-            fromSpaceID: fromID,
-            targetSpaceID: targetID,
-            presentationState: nil,
-            restorePresentationState: true
-        )
-    }
-
-    @discardableResult
-    static func moveWindowToSpace(
-        windowID: Int,
-        pid: Int32,
-        fromSpaceID: String,
-        targetSpaceID: String,
-        presentationState: WindowPresentationState?,
-        restorePresentationState: Bool
-    ) -> Bool {
-        guard let fromID = Int(fromSpaceID), let targetID = Int(targetSpaceID) else {
-            DiagnosticEventLog.shared.record(
-                subsystem: "SpaceHelper",
-                level: "warning",
-                "Cannot move window \(windowID): non-numeric Space IDs"
-            )
-            return false
-        }
-
-        let state = presentationState ?? captureWindowPresentationState(windowID: windowID, pid: pid)
-        if presentationState == nil {
-            prepareWindowForMove(state, windowID: windowID)
-        }
-
-        return moveWindowToSpace(
-            windowID: windowID,
-            fromSpaceID: fromID,
-            targetSpaceID: targetID,
-            presentationState: state,
-            restorePresentationState: restorePresentationState
-        )
-    }
-
-    @discardableResult
     static func moveWindowToSpace(windowID: Int, fromSpaceID: Int, targetSpaceID: Int) -> Bool {
-        guard fromSpaceID != targetSpaceID else { return true }
-
-        let state = captureWindowPresentationState(windowID: windowID, pid: getWindowInfo(id: windowID)?.pid)
-        prepareWindowForMove(state, windowID: windowID)
-
-        return moveWindowToSpace(
-            windowID: windowID,
-            fromSpaceID: fromSpaceID,
-            targetSpaceID: targetSpaceID,
-            presentationState: state,
-            restorePresentationState: true
-        )
-    }
-
-    @discardableResult
-    private static func moveWindowToSpace(
-        windowID: Int,
-        pid: Int32?,
-        fromSpaceID: Int,
-        targetSpaceID: Int,
-        presentationState: WindowPresentationState?,
-        restorePresentationState: Bool
-    ) -> Bool {
-        guard fromSpaceID != targetSpaceID else { return true }
-
-        let state = presentationState ?? captureWindowPresentationState(windowID: windowID, pid: pid)
-        if presentationState == nil {
-            prepareWindowForMove(state, windowID: windowID)
-        }
-
-        return moveWindowToSpace(
-            windowID: windowID,
-            fromSpaceID: fromSpaceID,
-            targetSpaceID: targetSpaceID,
-            presentationState: state,
-            restorePresentationState: restorePresentationState
-        )
-    }
-
-    @discardableResult
-    private static func moveWindowToSpace(
-        windowID: Int,
-        fromSpaceID: Int,
-        targetSpaceID: Int,
-        presentationState: WindowPresentationState?,
-        restorePresentationState: Bool
-    ) -> Bool {
         guard fromSpaceID != targetSpaceID else { return true }
 
         markWindowMoveIntent(to: String(targetSpaceID))
@@ -216,18 +105,9 @@ extension SpaceHelper {
                             level: "error",
                             "Could not activate destination space \(targetSpaceIDString) before moving window \(windowID)."
                         )
-                        if restorePresentationState {
-                            restoreWindowPresentationState(presentationState, windowID: windowID)
-                        }
                         return
                     }
-                    _ = moveWindowToSpace(
-                        windowID: windowID,
-                        fromSpaceID: fromSpaceID,
-                        targetSpaceID: targetSpaceID,
-                        presentationState: presentationState,
-                        restorePresentationState: restorePresentationState
-                    )
+                    _ = moveWindowToSpace(windowID: windowID, fromSpaceID: fromSpaceID, targetSpaceID: targetSpaceID)
                 }
                 return true
             }
@@ -265,85 +145,7 @@ extension SpaceHelper {
             level: finalSpaces.contains(targetSpaceIDString) ? "info" : "warning",
             "moveWindowToSpace: window=\(windowID), requestedSource=\(fromSpaceID), target=\(targetSpaceID), before=\(currentSpaces.sorted()), removed=\(spacesToRemove.sorted()), after=\(finalSpaces.sorted())"
         )
-        if restorePresentationState {
-            restoreWindowPresentationState(presentationState, windowID: windowID)
-        }
         return finalSpaces.contains(targetSpaceIDString)
-    }
-
-    static func captureWindowPresentationState(windowID: Int, pid: Int32?) -> WindowPresentationState? {
-        guard let pid = pid ?? getWindowInfo(id: windowID)?.pid,
-              let app = NSRunningApplication(processIdentifier: pid) else {
-            return nil
-        }
-
-        let wasHidden = app.isHidden
-
-        return WindowPresentationState(
-            pid: pid,
-            wasHidden: wasHidden,
-            wasMinimized: readWindowMinimizedState(windowID: windowID, pid: pid)
-        )
-    }
-
-    private static func readWindowMinimizedState(windowID: Int, pid: Int32) -> Bool? {
-        for attempt in 0..<4 {
-            if let axWindow = getAXWindow(id: windowID, pid: pid) {
-                var minimizedRef: CFTypeRef?
-                if AXUIElementCopyAttributeValue(
-                    axWindow,
-                    kAXMinimizedAttribute as CFString,
-                    &minimizedRef
-                ) == .success {
-                    return minimizedRef as? Bool
-                }
-            }
-
-            if attempt < 3 {
-                Thread.sleep(forTimeInterval: 0.1)
-            }
-        }
-        return nil
-    }
-
-    static func prepareWindowForMove(_ state: WindowPresentationState?, windowID: Int) {
-        guard let state else { return }
-
-        if state.wasHidden {
-            NSRunningApplication(processIdentifier: state.pid)?.unhide()
-        }
-
-        if state.wasMinimized == true,
-           let axWindow = getAXWindow(id: windowID, pid: state.pid) {
-            AXUIElementSetAttributeValue(
-                axWindow,
-                kAXMinimizedAttribute as CFString,
-                false as CFTypeRef
-            )
-        }
-
-        if state.wasHidden || state.wasMinimized == true {
-            // WindowServer needs a short settling period after AX visibility
-            // changes before it can reliably reassign the window to a Space.
-            Thread.sleep(forTimeInterval: 0.3)
-        }
-    }
-
-    static func restoreWindowPresentationState(_ state: WindowPresentationState?, windowID: Int) {
-        guard let state else { return }
-
-        if state.wasMinimized == true,
-           let axWindow = getAXWindow(id: windowID, pid: state.pid) {
-            AXUIElementSetAttributeValue(
-                axWindow,
-                kAXMinimizedAttribute as CFString,
-                true as CFTypeRef
-            )
-        }
-
-        if state.wasHidden {
-            NSRunningApplication(processIdentifier: state.pid)?.hide()
-        }
     }
 
     private static func repositionWindowToDisplay(windowID: Int, pid: Int32, frame: CGRect, sourceDisplayID: String, targetDisplayID: String) {

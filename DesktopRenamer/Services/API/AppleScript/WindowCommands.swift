@@ -136,13 +136,20 @@ class MoveSpecificWindowToSpaceCommand: NSScriptCommand {
                     targetSpaceID: targetSpaceStr
                 )
             }
-        } else if let fromSpaceID = Int(fromSpaceStr),
-                  let targetSpaceID = Int(targetSpaceStr) {
-            DispatchQueue.main.async {
-                SpaceHelper.moveWindowToSpace(windowID: windowID, fromSpaceID: fromSpaceID, targetSpaceID: targetSpaceID)
+        } else if let windowInfo = SpaceHelper.getWindowInfo(id: windowID) {
+            // Older clients may omit ownerPID, but the window record still
+            // gives us enough information to use the same presentation-aware
+            // transaction as native launcher and current Raycast clients.
+            Task { @MainActor in
+                _ = await WindowActionCoordinator.moveWindow(
+                    windowID: windowID,
+                    pid: windowInfo.pid,
+                    fromSpaceID: fromSpaceStr,
+                    targetSpaceID: targetSpaceStr
+                )
             }
         } else {
-            failInvalidArgument("Space IDs must be integer values when owner PID is omitted.")
+            failInvalidArgument("Could not resolve the window's process ID.")
             return nil
         }
         return nil
