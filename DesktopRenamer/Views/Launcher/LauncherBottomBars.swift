@@ -249,13 +249,20 @@ struct SpacesBottomBar: View {
                             .id(space.id)
                         }
                     }
-                    .padding(.leading, 6)
+                    .padding(.leading, LauncherLayout.spaceBarFadeWidth)
                     .padding(.trailing, 6)
                 }
                 .mask(
                     HStack(spacing: 0) {
-                        // Keep the leading edge opaque so the first Space's
-                        // selected capsule is never washed out by the mask.
+                        // Keep the leading fade, but place the first Space
+                        // beyond it so its selected capsule stays fully clear.
+                        LinearGradient(
+                            gradient: Gradient(colors: [.clear, .black]),
+                            startPoint: .leading,
+                            endPoint: .trailing
+                        )
+                        .frame(width: LauncherLayout.spaceBarFadeWidth)
+
                         Rectangle()
                             .fill(Color.black)
                         
@@ -265,7 +272,7 @@ struct SpacesBottomBar: View {
                             startPoint: .leading,
                             endPoint: .trailing
                         )
-                        .frame(width: 32)
+                        .frame(width: LauncherLayout.spaceBarFadeWidth)
                     }
                 )
                 .onAppear {

@@ -27,6 +27,7 @@ enum LauncherLayout {
     static let submenuSearchFieldHeight: CGFloat = 24
     static let submenuSearchHorizontalPadding: CGFloat = 8
     static let submenuSearchVerticalPadding: CGFloat = 6
+    static let spaceBarFadeWidth: CGFloat = 32
 
     static let listTopPadding: CGFloat = 4
     static let listBottomPadding: CGFloat = 8
