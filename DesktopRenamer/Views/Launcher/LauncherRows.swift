@@ -147,9 +147,6 @@ struct SpaceRowView: View {
 
             Spacer()
 
-            if shortcutNumber == nil {
-                KeycapView(text: String(localized: "Switch ↵"), isSelected: isSelected)
-            }
         }
         .padding(.horizontal, LauncherLayout.rowHorizontalPadding)
         .padding(.vertical, LauncherLayout.rowVerticalPadding)
