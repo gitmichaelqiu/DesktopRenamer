@@ -309,6 +309,7 @@ struct SpacesBottomBar: View {
                         }
                     }
                 }
+                .frame(maxWidth: .infinity, alignment: .leading)
             }
             
             // Actions Overlay (No longer overlapping, placed in-line)
