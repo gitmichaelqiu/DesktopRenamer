@@ -103,16 +103,14 @@ enum WindowActionCoordinator {
                 }
             }
 
-            let isMinimized = SpaceHelper.getAXWindow(id: windowID, pid: pid).map { axWindow in
+            let isMinimized: Bool? = SpaceHelper.getAXWindow(id: windowID, pid: pid).flatMap { axWindow in
                 var minimizedRef: CFTypeRef?
                 guard AXUIElementCopyAttributeValue(
                     axWindow,
                     kAXMinimizedAttribute as CFString,
                     &minimizedRef
-                ) == .success else {
-                    return false
-                }
-                return (minimizedRef as? Bool) == true
+                ) == .success else { return nil }
+                return minimizedRef as? Bool
             }
 
             // An unavailable AX state is not evidence that the window is
