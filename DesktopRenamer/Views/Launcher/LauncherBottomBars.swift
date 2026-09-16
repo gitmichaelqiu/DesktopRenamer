@@ -254,15 +254,8 @@ struct SpacesBottomBar: View {
                 }
                 .mask(
                     HStack(spacing: 0) {
-                        // Left fade edge
-                        LinearGradient(
-                            gradient: Gradient(colors: [.clear, .black]),
-                            startPoint: .leading,
-                            endPoint: .trailing
-                        )
-                        .frame(width: 32)
-                        
-                        // Middle opaque region
+                        // Keep the leading edge opaque so the first Space's
+                        // selected capsule is never washed out by the mask.
                         Rectangle()
                             .fill(Color.black)
                         
