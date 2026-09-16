@@ -1,6 +1,10 @@
 import Foundation
 import AppKit
 
+private final class WindowMoveResult {
+    var moved = false
+}
+
 class MoveWindowNextCommand: NSScriptCommand {
     override func performDefaultImplementation() -> Any? {
         DiagnosticEventLog.shared.record(subsystem: "AppleScript", level: "info", "Command performed: MoveWindowNextCommand")
@@ -125,34 +129,61 @@ class MoveSpecificWindowToSpaceCommand: NSScriptCommand {
         let arguments = evaluatedArguments ?? [:]
         DiagnosticEventLog.shared.record(subsystem: "AppleScript", level: "info", "Command performed: MoveSpecificWindowToSpaceCommand (windowID: \(windowIDStr), fromSpace: \(fromSpaceStr), targetSpace: \(targetSpaceStr))")
 
+        let pid: Int32
         if let pidValue = arguments["ownerPID"] {
             guard let pidStr = requiredProcessIDString(pidValue, parameter: "owner PID"),
-                  let pid = Int32(pidStr) else { return nil }
+                  let resolvedPID = Int32(pidStr) else { return nil }
+            pid = resolvedPID
+        } else if let windowInfo = SpaceHelper.getWindowInfo(id: windowID) {
+            // Older clients may omit ownerPID, but the window record still
+            // gives us enough information to use the same presentation-aware
+            // transaction as native launcher and current Raycast clients.
+            pid = windowInfo.pid
+        } else {
+            failInvalidArgument("Could not resolve the window's process ID.")
+            return nil
+        }
+
+        // NSScriptCommand normally executes off the main thread. Keep the
+        // AppleScript request open there until the async coordinator has
+        // completed; otherwise a caller can switch Spaces or restore its
+        // original Spaces while the unminimize → move → re-minimize sequence
+        // is still running. A main-thread invocation cannot wait without
+        // deadlocking MainActor, so retain the legacy fire-and-forget fallback
+        // for that unusual case.
+        if Thread.isMainThread {
             Task { @MainActor in
-                await WindowActionCoordinator.moveWindow(
+                _ = await WindowActionCoordinator.moveWindow(
                     windowID: windowID,
                     pid: pid,
                     fromSpaceID: fromSpaceStr,
                     targetSpaceID: targetSpaceStr
                 )
             }
-        } else if let windowInfo = SpaceHelper.getWindowInfo(id: windowID) {
-            // Older clients may omit ownerPID, but the window record still
-            // gives us enough information to use the same presentation-aware
-            // transaction as native launcher and current Raycast clients.
-            Task { @MainActor in
-                _ = await WindowActionCoordinator.moveWindow(
-                    windowID: windowID,
-                    pid: windowInfo.pid,
-                    fromSpaceID: fromSpaceStr,
-                    targetSpaceID: targetSpaceStr
-                )
-            }
-        } else {
-            failInvalidArgument("Could not resolve the window's process ID.")
             return nil
         }
-        return nil
+
+        let result = WindowMoveResult()
+        let completion = DispatchSemaphore(value: 0)
+        Task { @MainActor in
+            result.moved = await WindowActionCoordinator.moveWindow(
+                windowID: windowID,
+                pid: pid,
+                fromSpaceID: fromSpaceStr,
+                targetSpaceID: targetSpaceStr
+            )
+            completion.signal()
+        }
+
+        guard completion.wait(timeout: .now() + 15) == .success else {
+            failAppUnavailable("Timed out while moving the window.")
+            return nil
+        }
+        guard result.moved else {
+            failInvalidArgument("Window move failed.")
+            return nil
+        }
+        return true
     }
 }
 
