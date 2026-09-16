@@ -379,6 +379,13 @@ private struct LauncherSpaceMenuRow: View {
                     metadata,
                     color: colors.textSecondary
                 )
+                .padding(
+                    .trailing,
+                    showShortcut
+                        ? LauncherLayout.commandNumberIndicatorWidth
+                            + LauncherLayout.commandNumberIndicatorTrailingGap
+                        : 0
+                )
             }
         }
     }
