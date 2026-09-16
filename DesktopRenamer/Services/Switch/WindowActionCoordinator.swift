@@ -136,6 +136,7 @@ enum WindowActionCoordinator {
         // complete. It never raises or activates the application.
         let wasImmediatelyObserved = SpaceHelper.moveWindowToSpace(
             windowID: windowID,
+            pid: pid,
             fromSpaceID: resolvedFromSpaceID,
             targetSpaceID: targetSpaceID
         )

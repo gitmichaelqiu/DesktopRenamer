@@ -79,10 +79,51 @@ extension SpaceHelper {
     }
 
     @discardableResult
+    static func moveWindowToSpace(
+        windowID: Int,
+        pid: Int32,
+        fromSpaceID: String,
+        targetSpaceID: String
+    ) -> Bool {
+        guard let fromID = Int(fromSpaceID), let targetID = Int(targetSpaceID) else {
+            DiagnosticEventLog.shared.record(
+                subsystem: "SpaceHelper",
+                level: "warning",
+                "Cannot move window \(windowID): non-numeric Space IDs"
+            )
+            return false
+        }
+
+        return moveWindowToSpace(
+            windowID: windowID,
+            pid: pid,
+            fromSpaceID: fromID,
+            targetSpaceID: targetID
+        )
+    }
+
+    @discardableResult
     static func moveWindowToSpace(windowID: Int, fromSpaceID: Int, targetSpaceID: Int) -> Bool {
         guard fromSpaceID != targetSpaceID else { return true }
 
-        let presentationState = captureWindowPresentationState(windowID: windowID)
+        return moveWindowToSpace(
+            windowID: windowID,
+            pid: getWindowInfo(id: windowID)?.pid,
+            fromSpaceID: fromSpaceID,
+            targetSpaceID: targetSpaceID
+        )
+    }
+
+    @discardableResult
+    private static func moveWindowToSpace(
+        windowID: Int,
+        pid: Int32?,
+        fromSpaceID: Int,
+        targetSpaceID: Int
+    ) -> Bool {
+        guard fromSpaceID != targetSpaceID else { return true }
+
+        let presentationState = captureWindowPresentationState(windowID: windowID, pid: pid)
         prepareWindowForMove(presentationState, windowID: windowID)
 
         return moveWindowToSpace(
@@ -181,9 +222,9 @@ extension SpaceHelper {
         return finalSpaces.contains(targetSpaceIDString)
     }
 
-    private static func captureWindowPresentationState(windowID: Int) -> WindowPresentationState? {
-        guard let info = getWindowInfo(id: windowID),
-              let app = NSRunningApplication(processIdentifier: info.pid) else {
+    private static func captureWindowPresentationState(windowID: Int, pid: Int32?) -> WindowPresentationState? {
+        guard let pid = pid ?? getWindowInfo(id: windowID)?.pid,
+              let app = NSRunningApplication(processIdentifier: pid) else {
             return nil
         }
 
@@ -194,9 +235,9 @@ extension SpaceHelper {
         }
 
         return WindowPresentationState(
-            pid: info.pid,
+            pid: pid,
             wasHidden: wasHidden,
-            wasMinimized: readWindowMinimizedState(windowID: windowID, pid: info.pid) == true
+            wasMinimized: readWindowMinimizedState(windowID: windowID, pid: pid) == true
         )
     }
 
