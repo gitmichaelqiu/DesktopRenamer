@@ -4,7 +4,7 @@ import AppKit
 
 extension SpaceHelper {
 
-    private struct WindowPresentationState {
+    struct WindowPresentationState {
         let pid: Int32
         let wasHidden: Bool
         let wasMinimized: Bool
@@ -98,7 +98,41 @@ extension SpaceHelper {
             windowID: windowID,
             pid: pid,
             fromSpaceID: fromID,
-            targetSpaceID: targetID
+            targetSpaceID: targetID,
+            presentationState: nil,
+            restorePresentationState: true
+        )
+    }
+
+    @discardableResult
+    static func moveWindowToSpace(
+        windowID: Int,
+        pid: Int32,
+        fromSpaceID: String,
+        targetSpaceID: String,
+        presentationState: WindowPresentationState?,
+        restorePresentationState: Bool
+    ) -> Bool {
+        guard let fromID = Int(fromSpaceID), let targetID = Int(targetSpaceID) else {
+            DiagnosticEventLog.shared.record(
+                subsystem: "SpaceHelper",
+                level: "warning",
+                "Cannot move window \(windowID): non-numeric Space IDs"
+            )
+            return false
+        }
+
+        let state = presentationState ?? captureWindowPresentationState(windowID: windowID, pid: pid)
+        if presentationState == nil {
+            prepareWindowForMove(state, windowID: windowID)
+        }
+
+        return moveWindowToSpace(
+            windowID: windowID,
+            fromSpaceID: fromID,
+            targetSpaceID: targetID,
+            presentationState: state,
+            restorePresentationState: restorePresentationState
         )
     }
 
@@ -106,11 +140,15 @@ extension SpaceHelper {
     static func moveWindowToSpace(windowID: Int, fromSpaceID: Int, targetSpaceID: Int) -> Bool {
         guard fromSpaceID != targetSpaceID else { return true }
 
+        let state = captureWindowPresentationState(windowID: windowID, pid: getWindowInfo(id: windowID)?.pid)
+        prepareWindowForMove(state, windowID: windowID)
+
         return moveWindowToSpace(
             windowID: windowID,
-            pid: getWindowInfo(id: windowID)?.pid,
             fromSpaceID: fromSpaceID,
-            targetSpaceID: targetSpaceID
+            targetSpaceID: targetSpaceID,
+            presentationState: state,
+            restorePresentationState: true
         )
     }
 
@@ -119,18 +157,23 @@ extension SpaceHelper {
         windowID: Int,
         pid: Int32?,
         fromSpaceID: Int,
-        targetSpaceID: Int
+        targetSpaceID: Int,
+        presentationState: WindowPresentationState?,
+        restorePresentationState: Bool
     ) -> Bool {
         guard fromSpaceID != targetSpaceID else { return true }
 
-        let presentationState = captureWindowPresentationState(windowID: windowID, pid: pid)
-        prepareWindowForMove(presentationState, windowID: windowID)
+        let state = presentationState ?? captureWindowPresentationState(windowID: windowID, pid: pid)
+        if presentationState == nil {
+            prepareWindowForMove(state, windowID: windowID)
+        }
 
         return moveWindowToSpace(
             windowID: windowID,
             fromSpaceID: fromSpaceID,
             targetSpaceID: targetSpaceID,
-            presentationState: presentationState
+            presentationState: state,
+            restorePresentationState: restorePresentationState
         )
     }
 
@@ -139,7 +182,8 @@ extension SpaceHelper {
         windowID: Int,
         fromSpaceID: Int,
         targetSpaceID: Int,
-        presentationState: WindowPresentationState?
+        presentationState: WindowPresentationState?,
+        restorePresentationState: Bool
     ) -> Bool {
         guard fromSpaceID != targetSpaceID else { return true }
 
@@ -172,14 +216,17 @@ extension SpaceHelper {
                             level: "error",
                             "Could not activate destination space \(targetSpaceIDString) before moving window \(windowID)."
                         )
-                        restoreWindowPresentationState(presentationState, windowID: windowID)
+                        if restorePresentationState {
+                            restoreWindowPresentationState(presentationState, windowID: windowID)
+                        }
                         return
                     }
                     _ = moveWindowToSpace(
                         windowID: windowID,
                         fromSpaceID: fromSpaceID,
                         targetSpaceID: targetSpaceID,
-                        presentationState: presentationState
+                        presentationState: presentationState,
+                        restorePresentationState: restorePresentationState
                     )
                 }
                 return true
@@ -218,11 +265,13 @@ extension SpaceHelper {
             level: finalSpaces.contains(targetSpaceIDString) ? "info" : "warning",
             "moveWindowToSpace: window=\(windowID), requestedSource=\(fromSpaceID), target=\(targetSpaceID), before=\(currentSpaces.sorted()), removed=\(spacesToRemove.sorted()), after=\(finalSpaces.sorted())"
         )
-        restoreWindowPresentationState(presentationState, windowID: windowID)
+        if restorePresentationState {
+            restoreWindowPresentationState(presentationState, windowID: windowID)
+        }
         return finalSpaces.contains(targetSpaceIDString)
     }
 
-    private static func captureWindowPresentationState(windowID: Int, pid: Int32?) -> WindowPresentationState? {
+    static func captureWindowPresentationState(windowID: Int, pid: Int32?) -> WindowPresentationState? {
         guard let pid = pid ?? getWindowInfo(id: windowID)?.pid,
               let app = NSRunningApplication(processIdentifier: pid) else {
             return nil
@@ -261,7 +310,7 @@ extension SpaceHelper {
         return nil
     }
 
-    private static func prepareWindowForMove(_ state: WindowPresentationState?, windowID: Int) {
+    static func prepareWindowForMove(_ state: WindowPresentationState?, windowID: Int) {
         guard let state else { return }
 
         if state.wasHidden {
@@ -284,7 +333,7 @@ extension SpaceHelper {
         }
     }
 
-    private static func restoreWindowPresentationState(_ state: WindowPresentationState?, windowID: Int) {
+    static func restoreWindowPresentationState(_ state: WindowPresentationState?, windowID: Int) {
         guard let state else { return }
 
         if state.wasMinimized,

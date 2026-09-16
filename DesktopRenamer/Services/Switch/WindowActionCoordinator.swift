@@ -51,6 +51,14 @@ enum WindowActionCoordinator {
 
         guard resolvedFromSpaceID != targetSpaceID else { return true }
 
+        let presentationState = SpaceHelper.captureWindowPresentationState(windowID: windowID, pid: pid)
+        SpaceHelper.prepareWindowForMove(presentationState, windowID: windowID)
+        defer {
+            // Restoration must happen only after the move path has finished
+            // waiting for WindowServer to report the destination Space.
+            SpaceHelper.restoreWindowPresentationState(presentationState, windowID: windowID)
+        }
+
         let requiresFullscreenHandling = sourceSpace.isFullscreen || targetSpace.isFullscreen
 
         // AX cannot reliably access a window in a background fullscreen
@@ -95,6 +103,8 @@ enum WindowActionCoordinator {
         // their presentation state and restores it after the move.
         if !destinationMustBeCurrent,
            !sourceSpace.isFullscreen,
+           presentationState?.wasHidden != true,
+           presentationState?.wasMinimized != true,
            NSRunningApplication(processIdentifier: pid)?.isHidden != true {
             if SpaceHelper.getCurrentSpaceID(for: sourceSpace.displayID) != sourceSpace.id {
                 manager.switchToSpace(sourceSpace, forceInstant: true, isManual: false)
@@ -136,7 +146,9 @@ enum WindowActionCoordinator {
             windowID: windowID,
             pid: pid,
             fromSpaceID: resolvedFromSpaceID,
-            targetSpaceID: targetSpaceID
+            targetSpaceID: targetSpaceID,
+            presentationState: presentationState,
+            restorePresentationState: false
         )
         if !wasImmediatelyObserved {
             DiagnosticEventLog.shared.record(
