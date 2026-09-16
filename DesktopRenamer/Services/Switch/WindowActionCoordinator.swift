@@ -390,6 +390,17 @@ enum WindowActionCoordinator {
             preparedState.isUnminimizedForMove = true
         }
 
+        if state.wasHidden {
+            // Unhiding an application does not necessarily raise the target
+            // window. If another window is in front of it, the synthetic
+            // drag will hit that window (or the desktop) and the request can
+            // be reported as a no-op. Raise the exact window only after any
+            // unminimization has completed so it is a usable drag target.
+            guard await raiseWindowForMove(windowID: windowID, pid: state.pid) else {
+                return nil
+            }
+        }
+
         // The AX transition above is the completion boundary for
         // unminimization. A CGWindow record or Space assignment can lag behind
         // AX (and can briefly disappear during the restore animation), so it
@@ -398,6 +409,41 @@ enum WindowActionCoordinator {
         // destination assignment; presentation restoration happens only after
         // that verification completes.
         return preparedState
+    }
+
+    private static func raiseWindowForMove(windowID: Int, pid: Int32) async -> Bool {
+        guard let axWindow = await waitForAXWindow(windowID: windowID, pid: pid) else {
+            return false
+        }
+
+        let raiseSucceeded = AXUIElementPerformAction(
+            axWindow,
+            kAXRaiseAction as CFString
+        ) == .success
+
+        // AXRaise can succeed without making a hidden application's window
+        // the frontmost hit-test target. Activate the owning application and
+        // wait for WindowServer to acknowledge it before starting the
+        // synthetic drag. The presentation state is restored after the
+        // destination Space has been confirmed.
+        guard let app = NSRunningApplication(processIdentifier: pid) else {
+            return false
+        }
+        app.activate(options: .activateIgnoringOtherApps)
+        guard await waitForApplicationFrontmost(pid) else {
+            return false
+        }
+
+        // Some applications do not expose AXRaise until they are frontmost.
+        // Retry it after activation so the exact window, rather than another
+        // window belonging to the same app, remains the drag target.
+        if !raiseSucceeded {
+            return AXUIElementPerformAction(
+                axWindow,
+                kAXRaiseAction as CFString
+            ) == .success
+        }
+        return true
     }
 
     private static func restoreWindowPresentationState(
@@ -523,6 +569,18 @@ enum WindowActionCoordinator {
             }
         }
         return NSRunningApplication(processIdentifier: pid)?.isHidden == isHidden
+    }
+
+    private static func waitForApplicationFrontmost(_ pid: Int32) async -> Bool {
+        for attempt in 0..<12 {
+            if NSWorkspace.shared.frontmostApplication?.processIdentifier == pid {
+                return true
+            }
+            if attempt < 11 {
+                try? await Task.sleep(nanoseconds: 100_000_000)
+            }
+        }
+        return NSWorkspace.shared.frontmostApplication?.processIdentifier == pid
     }
 
     private static func waitForWindow(
