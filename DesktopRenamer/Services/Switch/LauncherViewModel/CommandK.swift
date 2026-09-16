@@ -314,6 +314,7 @@ extension LauncherViewModel {
             }
             let windowSpaceID = window.space.id
             let isFullscreenWindow = window.space.isFullscreen
+            var moveSucceeded = true
             let requiresAX = (actionType == .close || actionType == .minimize || actionType == .enterFullScreen || actionType == .exitFullScreen || actionType == .restore || (actionType == .hide && isFullscreenWindow))
             DiagnosticEventLog.shared.record(subsystem: "Launcher", level: "info", "executeActionImmediately: Task started. requiresAX=\(requiresAX), isFullscreenWindow=\(isFullscreenWindow)")
             
@@ -422,7 +423,7 @@ extension LauncherViewModel {
                     AXUIElementSetAttributeValue(targetAXWindow, kAXMinimizedAttribute as CFString, false as CFTypeRef)
                 }
             case .restoreTo(let space):
-                await WindowActionCoordinator.moveWindow(
+                moveSucceeded = await WindowActionCoordinator.moveWindow(
                     windowID: window.id,
                     pid: window.pid,
                     fromSpaceID: window.space.id,
@@ -430,9 +431,14 @@ extension LauncherViewModel {
                     wasMinimized: window.isMinimized,
                     wasHidden: window.isHidden
                 )
+                if moveSucceeded {
+                    await WindowActionCoordinator.waitForMoveToSettle(
+                        isFullscreen: isFullscreenWindow
+                    )
+                }
             case .move(let space):
                 if window.space.id != space.id {
-                    _ = await WindowActionCoordinator.moveWindow(
+                    moveSucceeded = await WindowActionCoordinator.moveWindow(
                         windowID: window.id,
                         pid: window.pid,
                         fromSpaceID: window.space.id,
@@ -440,7 +446,21 @@ extension LauncherViewModel {
                         wasMinimized: window.isMinimized,
                         wasHidden: window.isHidden
                     )
-                }            
+                    if moveSucceeded {
+                        await WindowActionCoordinator.waitForMoveToSettle(
+                            isFullscreen: isFullscreenWindow
+                        )
+                    }
+                }
+            }
+
+            guard moveSucceeded else {
+                DiagnosticEventLog.shared.record(
+                    subsystem: "Launcher",
+                    level: "warning",
+                    "executeActionImmediately: move failed; leaving original Spaces untouched for window \(window.id)"
+                )
+                return
             }
             
             // Return to original space after actions that needed a temporary switch.

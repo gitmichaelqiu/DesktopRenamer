@@ -21,6 +21,11 @@ extension LauncherViewModel {
             }
         )
         DiagnosticEventLog.shared.record(subsystem: "Launcher", level: "info", "executeBatchMove: Starting batch move. Actions count=\(actions.count), originalSpaces=\(originalSpaceByDisplay)")
+
+        // Raycast dismisses its action panel before beginning the batch. Keep
+        // the native panel out of WindowServer's hit-test stack while the
+        // shared synthetic drag module captures each window.
+        closeLauncher()
         
         batchExecutionTask = Task { [weak self] in
             guard let self else { return }
@@ -31,6 +36,11 @@ extension LauncherViewModel {
             }
 
             do {
+            // Raycast awaits dismissal before it begins the first source-space
+            // switch. Give WindowServer the same brief handoff after the
+            // native panel is ordered out.
+            try await Task.sleep(nanoseconds: 200_000_000)
+
             // 1. Filter space-move actions
             let spaceMoveActions = actions.filter {
                 switch $0.actionType {
@@ -47,41 +57,75 @@ extension LauncherViewModel {
                 }
             }
             
-            // 3. Execute space moves one at a time. The window list is a
-            // snapshot, so the coordinator re-resolves each window's source
-            // Space against WindowServer immediately before moving it.
+            // 3. Execute space moves one source Space at a time, matching
+            // Raycast's batch flow. The window list is a snapshot, so the
+            // coordinator still re-resolves each window's source Space
+            // against WindowServer immediately before moving it.
             if !spaceMoveActions.isEmpty {
+                var sourceOrder: [String] = []
+                var actionsBySource: [String: [BatchStagedAction]] = [:]
                 for action in spaceMoveActions {
-                    let targetSpaceID: String
+                    let sourceID = action.window.space.id
+                    if actionsBySource[sourceID] == nil {
+                        sourceOrder.append(sourceID)
+                    }
+                    actionsBySource[sourceID, default: []].append(action)
+                }
 
-                    switch action.actionType {
-                    case .move(let space):
-                        targetSpaceID = space.id
-                    case .restoreTo(let space):
-                        targetSpaceID = space.id
-                    default:
-                        continue
+                for sourceID in sourceOrder {
+                    guard let sourceActions = actionsBySource[sourceID] else { continue }
+
+                    // Give Mission Control the same source-space settle time
+                    // as Raycast before the first drag in this group. The
+                    // coordinator performs its own authoritative source
+                    // resolution for stale window-list entries.
+                    if let manager = AppDelegate.shared.spaceManager,
+                       let sourceSpace = manager.spaceNameDict.first(where: { $0.id == sourceID }) {
+                        if SpaceHelper.getCurrentSpaceID(for: sourceSpace.displayID) != sourceID {
+                            manager.switchToSpace(sourceSpace, forceInstant: true, isManual: false)
+                        }
+                        try await Task.sleep(nanoseconds: 600_000_000)
                     }
 
-                    DiagnosticEventLog.shared.record(
-                        subsystem: "Launcher",
-                        level: "info",
-                        "executeBatchMove: Move window id=\(action.window.id) from cached space=\(action.window.space.id) to space=\(targetSpaceID)"
-                    )
-                    let moved = await WindowActionCoordinator.moveWindow(
-                        windowID: action.window.id,
-                        pid: action.window.pid,
-                        fromSpaceID: action.window.space.id,
-                        targetSpaceID: targetSpaceID,
-                        wasMinimized: action.window.isMinimized,
-                        wasHidden: action.window.isHidden
-                    )
-                    if !moved {
+                    for action in sourceActions {
+                        let targetSpaceID: String
+
+                        switch action.actionType {
+                        case .move(let space):
+                            targetSpaceID = space.id
+                        case .restoreTo(let space):
+                            targetSpaceID = space.id
+                        default:
+                            continue
+                        }
+
                         DiagnosticEventLog.shared.record(
                             subsystem: "Launcher",
-                            level: "warning",
-                            "executeBatchMove: Failed to move window id=\(action.window.id) to space=\(targetSpaceID)"
+                            level: "info",
+                            "executeBatchMove: Move window id=\(action.window.id) from cached space=\(action.window.space.id) to space=\(targetSpaceID)"
                         )
+                        let moved = await WindowActionCoordinator.moveWindow(
+                            windowID: action.window.id,
+                            pid: action.window.pid,
+                            fromSpaceID: action.window.space.id,
+                            targetSpaceID: targetSpaceID,
+                            wasMinimized: action.window.isMinimized,
+                            wasHidden: action.window.isHidden
+                        )
+                        if moved {
+                            // Match Raycast's delay between move completion and
+                            // the next operation/original-Space restoration.
+                            await WindowActionCoordinator.waitForMoveToSettle(
+                                isFullscreen: action.window.space.isFullscreen,
+                                batch: true
+                            )
+                        } else {
+                            DiagnosticEventLog.shared.record(
+                                subsystem: "Launcher",
+                                level: "warning",
+                                "executeBatchMove: Failed to move window id=\(action.window.id) to space=\(targetSpaceID)"
+                            )
+                        }
                     }
                 }
             }

@@ -104,7 +104,11 @@ extension LauncherViewModel {
                 wasHidden: window.isHidden
             )
 
-            guard moved, manager.returnToOriginalAfterBatchMove else { return }
+            guard moved else { return }
+            guard manager.returnToOriginalAfterBatchMove else { return }
+            await WindowActionCoordinator.waitForMoveToSettle(
+                isFullscreen: window.space.isFullscreen
+            )
             await WindowActionCoordinator.restoreOriginalSpaces(originalSpaces, using: manager)
         }
     }
@@ -152,6 +156,10 @@ extension LauncherViewModel {
 
         DiagnosticEventLog.shared.record(subsystem: "Launcher", level: "info", "movePreviouslyActiveWindow: moving window \(prevWindow.id) from space \(fromSpaceIDStr) to space \(spaceID)")
 
+        let sourceSpaceIsFullscreen = manager.spaceNameDict.first {
+            $0.id == fromSpaceIDStr
+        }?.isFullscreen ?? false
+
         closeLauncher()
 
         Task { @MainActor in
@@ -163,9 +171,13 @@ extension LauncherViewModel {
                 targetSpaceID: spaceID
             )
 
-            guard moved, manager.returnToOriginalAfterBatchMove else {
+            guard moved else {
                 return
             }
+            guard manager.returnToOriginalAfterBatchMove else { return }
+            await WindowActionCoordinator.waitForMoveToSettle(
+                isFullscreen: sourceSpaceIsFullscreen
+            )
             await WindowActionCoordinator.restoreOriginalSpaces(originalSpaces, using: manager)
         }
         return true
