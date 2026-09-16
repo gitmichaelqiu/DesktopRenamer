@@ -7,7 +7,7 @@ extension SpaceHelper {
     struct WindowPresentationState {
         let pid: Int32
         let wasHidden: Bool
-        let wasMinimized: Bool
+        let wasMinimized: Bool?
     }
 
     static func getAXWindow(id windowID: Int, pid: Int32) -> AXUIElement? {
@@ -278,15 +278,11 @@ extension SpaceHelper {
         }
 
         let wasHidden = app.isHidden
-        if wasHidden {
-            app.unhide()
-            Thread.sleep(forTimeInterval: 0.15)
-        }
 
         return WindowPresentationState(
             pid: pid,
             wasHidden: wasHidden,
-            wasMinimized: readWindowMinimizedState(windowID: windowID, pid: pid) == true
+            wasMinimized: readWindowMinimizedState(windowID: windowID, pid: pid)
         )
     }
 
@@ -317,7 +313,7 @@ extension SpaceHelper {
             NSRunningApplication(processIdentifier: state.pid)?.unhide()
         }
 
-        if state.wasMinimized,
+        if state.wasMinimized == true,
            let axWindow = getAXWindow(id: windowID, pid: state.pid) {
             AXUIElementSetAttributeValue(
                 axWindow,
@@ -326,7 +322,7 @@ extension SpaceHelper {
             )
         }
 
-        if state.wasHidden || state.wasMinimized {
+        if state.wasHidden || state.wasMinimized == true {
             // WindowServer needs a short settling period after AX visibility
             // changes before it can reliably reassign the window to a Space.
             Thread.sleep(forTimeInterval: 0.3)
@@ -336,7 +332,7 @@ extension SpaceHelper {
     static func restoreWindowPresentationState(_ state: WindowPresentationState?, windowID: Int) {
         guard let state else { return }
 
-        if state.wasMinimized,
+        if state.wasMinimized == true,
            let axWindow = getAXWindow(id: windowID, pid: state.pid) {
             AXUIElementSetAttributeValue(
                 axWindow,
