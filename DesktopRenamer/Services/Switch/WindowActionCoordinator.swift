@@ -77,7 +77,11 @@ enum WindowActionCoordinator {
         // otherwise macOS can restore the window into the current Space and
         // the later move becomes a no-op.
         if let presentationState {
-            guard await prepareWindowForMove(presentationState, windowID: windowID) else {
+            guard await prepareWindowForMove(
+                presentationState,
+                windowID: windowID,
+                sourceSpaceID: resolvedFromSpaceID
+            ) else {
                 await restoreWindowPresentationState(presentationState, windowID: windowID)
                 return false
             }
@@ -223,10 +227,11 @@ enum WindowActionCoordinator {
             excluding: resolvedFromSpaceID
         )
 
-        // WindowServer can reject the first assignment while a restored
-        // window is settling. Retry the already-completed preparation/move
-        // boundary once before restoring presentation state.
-        if !moved {
+        // WindowServer can reject an assignment while a restored window is
+        // settling. Retry the direct move while the window is still
+        // unminimized; restoring presentation state is the final phase and
+        // must never race one of these attempts.
+        for _ in 0..<2 where !moved {
             try? await Task.sleep(nanoseconds: 300_000_000)
             _ = SpaceHelper.moveWindowToSpace(
                 windowID: windowID,
@@ -307,11 +312,20 @@ enum WindowActionCoordinator {
     }
 
     private static func waitForSpace(_ spaceID: String, on displayID: String) async -> Bool {
-        for _ in 0..<8 {
+        var consecutiveMatches = 0
+
+        for attempt in 0..<30 {
             if SpaceHelper.getCurrentSpaceID(for: displayID) == spaceID {
-                return true
+                consecutiveMatches += 1
+                if consecutiveMatches >= 3 {
+                    return true
+                }
+            } else {
+                consecutiveMatches = 0
             }
-            try? await Task.sleep(nanoseconds: 100_000_000)
+            if attempt < 29 {
+                try? await Task.sleep(nanoseconds: 100_000_000)
+            }
         }
         return false
     }
@@ -330,7 +344,8 @@ enum WindowActionCoordinator {
 
     private static func prepareWindowForMove(
         _ state: WindowPresentationState,
-        windowID: Int
+        windowID: Int,
+        sourceSpaceID: String
     ) async -> Bool {
         let needsPresentationReadiness = state.wasHidden || state.wasMinimized != false
 
@@ -359,12 +374,17 @@ enum WindowActionCoordinator {
 
         guard needsPresentationReadiness else { return true }
 
-        // AX changes are observable before WindowServer has finished putting
-        // the restored window back on screen. The move module must not run in
-        // that gap: an immediate CGS assignment can be discarded, after which
-        // restoring the original minimized state makes the failed move look
-        // like a successful round trip in the source Space.
-        return await waitForWindowReadyForMove(windowID: windowID, pid: state.pid)
+        // AX changes are observable before WindowServer has finished updating
+        // the restored window. Require several stable reads and source-space
+        // membership before calling the move module. Do not use
+        // kCGWindowIsOnscreen here: it describes compositor visibility, not
+        // whether the AX unminimize operation has completed, and is commonly
+        // false while a Space transition is settling.
+        return await waitForWindowReadyForMove(
+            windowID: windowID,
+            pid: state.pid,
+            sourceSpaceID: sourceSpaceID
+        )
     }
 
     private static func restoreWindowPresentationState(
@@ -456,24 +476,30 @@ enum WindowActionCoordinator {
         return NSRunningApplication(processIdentifier: pid)?.isHidden == isHidden
     }
 
-    private static func waitForWindowReadyForMove(windowID: Int, pid: Int32) async -> Bool {
+    private static func waitForWindowReadyForMove(
+        windowID: Int,
+        pid: Int32,
+        sourceSpaceID: String
+    ) async -> Bool {
         var consecutiveReadyReads = 0
 
-        for attempt in 0..<24 {
+        for attempt in 0..<40 {
             let appIsHidden = NSRunningApplication(processIdentifier: pid)?.isHidden == true
             let isMinimized = readWindowMinimizedState(windowID: windowID, pid: pid)
-            let isOnScreen = isWindowOnScreen(windowID: windowID, pid: pid)
+            let hasWindowServerRecord = hasWindowServerWindow(windowID: windowID, pid: pid)
+            let isInSourceSpace = SpaceHelper.getWindowCurrentSpaces(windowID: windowID)
+                .contains(sourceSpaceID)
 
-            if !appIsHidden, isMinimized == false, isOnScreen {
+            if !appIsHidden, isMinimized == false, hasWindowServerRecord, isInSourceSpace {
                 consecutiveReadyReads += 1
-                if consecutiveReadyReads >= 2 {
+                if consecutiveReadyReads >= 4 {
                     return true
                 }
             } else {
                 consecutiveReadyReads = 0
             }
 
-            if attempt < 23 {
+            if attempt < 39 {
                 try? await Task.sleep(nanoseconds: 100_000_000)
             }
         }
@@ -481,12 +507,12 @@ enum WindowActionCoordinator {
         DiagnosticEventLog.shared.record(
             subsystem: "WindowActionCoordinator",
             level: "warning",
-            "Window \(windowID) did not reach a visible, unminimized state before move."
+            "Window \(windowID) did not reach a stable, unminimized state in source Space \(sourceSpaceID) before move."
         )
         return false
     }
 
-    private static func isWindowOnScreen(windowID: Int, pid: Int32) -> Bool {
+    private static func hasWindowServerWindow(windowID: Int, pid: Int32) -> Bool {
         let options: CGWindowListOption = [.optionIncludingWindow, .excludeDesktopElements]
         let windows = CGWindowListCopyWindowInfo(options, CGWindowID(windowID)) as? [[String: Any]] ?? []
         guard let window = windows.first,
@@ -497,7 +523,7 @@ enum WindowActionCoordinator {
             return false
         }
 
-        return (window[kCGWindowIsOnscreen as String] as? Bool) == true
+        return true
     }
 
     private static func waitForWindow(
@@ -507,17 +533,17 @@ enum WindowActionCoordinator {
     ) async -> Bool {
         var consecutiveDestinationReads = 0
 
-        for attempt in 0..<24 {
+        for attempt in 0..<40 {
             let assignedSpaceIDs = SpaceHelper.getWindowCurrentSpaces(windowID: windowID)
             if assignedSpaceIDs.contains(spaceID), !assignedSpaceIDs.contains(sourceSpaceID) {
                 consecutiveDestinationReads += 1
-                if consecutiveDestinationReads >= 2 {
+                if consecutiveDestinationReads >= 3 {
                     return true
                 }
             } else {
                 consecutiveDestinationReads = 0
             }
-            if attempt < 23 {
+            if attempt < 39 {
                 try? await Task.sleep(nanoseconds: 100_000_000)
             }
         }
@@ -531,11 +557,18 @@ enum WindowActionCoordinator {
     }
 
     private static func waitForWindow(windowID: Int, inSpace spaceID: String) async -> Bool {
-        for attempt in 0..<24 {
+        var consecutiveMatches = 0
+
+        for attempt in 0..<40 {
             if SpaceHelper.getWindowCurrentSpaces(windowID: windowID).contains(spaceID) {
-                return true
+                consecutiveMatches += 1
+                if consecutiveMatches >= 3 {
+                    return true
+                }
+            } else {
+                consecutiveMatches = 0
             }
-            if attempt < 23 {
+            if attempt < 39 {
                 try? await Task.sleep(nanoseconds: 100_000_000)
             }
         }
