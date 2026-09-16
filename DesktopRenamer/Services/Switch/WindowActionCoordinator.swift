@@ -6,6 +6,7 @@ enum WindowActionCoordinator {
         let pid: Int32
         let wasHidden: Bool
         var wasMinimized: Bool?
+        var isUnminimizedForMove = false
 
         var requiresPresentationTransition: Bool {
             wasHidden || wasMinimized != false
@@ -88,8 +89,7 @@ enum WindowActionCoordinator {
         if let capturedState = presentationState {
             guard let preparedState = await prepareWindowForMove(
                 capturedState,
-                windowID: windowID,
-                sourceSpaceID: resolvedFromSpaceID
+                windowID: windowID
             ) else {
                 await restoreWindowPresentationState(capturedState, windowID: windowID)
                 return false
@@ -153,16 +153,14 @@ enum WindowActionCoordinator {
             }
         }
 
-        // Ordinary same-display visible windows follow the same established
-        // Option-drag primitive as a user move. A background window must have
-        // its source Space current before its frame can be hit-tested; focus is
-        // not required as a separate step. Hidden and minimized windows use
-        // direct WindowServer assignment after the explicit presentation
-        // transaction above.
+        // Use the established Option-drag move module for every window that
+        // is usable after preparation, including windows that were just
+        // unhidden or unminimized. CGS assignment is not a reliable move
+        // primitive for a restored user window; it can leave the window in
+        // the source Space while the later presentation restore makes the
+        // operation look like a completed no-op.
         if !destinationMustBeCurrent,
            !sourceSpace.isFullscreen,
-           presentationState?.wasHidden != true,
-           presentationState?.wasMinimized == false,
            NSRunningApplication(processIdentifier: pid)?.isHidden != true {
             if SpaceHelper.getCurrentSpaceID(for: sourceSpace.displayID) != sourceSpace.id {
                 manager.switchToSpace(sourceSpace, forceInstant: true, isManual: false)
@@ -172,21 +170,12 @@ enum WindowActionCoordinator {
                 }
             }
 
-            let isMinimized: Bool? = SpaceHelper.getAXWindow(id: windowID, pid: pid).flatMap { axWindow in
-                var minimizedRef: CFTypeRef?
-                guard AXUIElementCopyAttributeValue(
-                    axWindow,
-                    kAXMinimizedAttribute as CFString,
-                    &minimizedRef
-                ) == .success else { return nil }
-                return minimizedRef as? Bool
-            }
+            let isMinimized = readWindowMinimizedState(windowID: windowID, pid: pid)
+            let isUnminimizedForMove = isMinimized == false
+                || (isMinimized == nil && presentationState?.isUnminimizedForMove == true)
 
-            // An unavailable AX state is not evidence that the window is
-            // usable. Minimized windows can temporarily disappear from the
-            // AX hierarchy, so send them through the direct move path instead
-            // of starting a drag that can never succeed.
-            if isMinimized == false, let windowInfo = SpaceHelper.getWindowInfo(id: windowID) {
+            if isUnminimizedForMove,
+               let windowInfo = await waitForWindowInfo(windowID: windowID, pid: pid) {
                 SpaceHelper.dragWindow(
                     (id: windowID, pid: pid, frame: windowInfo.frame),
                     to: targetSpaceID,
@@ -364,8 +353,7 @@ enum WindowActionCoordinator {
 
     private static func prepareWindowForMove(
         _ state: WindowPresentationState,
-        windowID: Int,
-        sourceSpaceID: String
+        windowID: Int
     ) async -> WindowPresentationState? {
         var preparedState = state
 
@@ -376,6 +364,10 @@ enum WindowActionCoordinator {
             guard await waitForAppHidden(state.pid, isHidden: false) else {
                 return nil
             }
+        }
+
+        if preparedState.wasMinimized == false {
+            preparedState.isUnminimizedForMove = true
         }
 
         // Unhiding can make the exact AX window appear after the initial
@@ -393,24 +385,18 @@ enum WindowActionCoordinator {
             ) else {
                 return nil
             }
+            preparedState.isUnminimizedForMove = true
+        } else if readWindowMinimizedState(windowID: windowID, pid: state.pid) == false {
+            preparedState.isUnminimizedForMove = true
         }
 
-        guard preparedState.requiresPresentationTransition else { return preparedState }
-
-        // AX changes are observable before WindowServer has finished updating
-        // the restored window. Require several stable reads and source-space
-        // membership before calling the move module. Do not use
-        // kCGWindowIsOnscreen here: it describes compositor visibility, not
-        // whether the AX unminimize operation has completed, and is commonly
-        // false while a Space transition is settling.
-        guard await waitForWindowReadyForMove(
-            windowID: windowID,
-            pid: state.pid,
-            sourceSpaceID: sourceSpaceID,
-            allowUnknownMinimizedState: preparedState.wasMinimized != nil
-        ) else {
-            return nil
-        }
+        // The AX transition above is the completion boundary for
+        // unminimization. A CGWindow record or Space assignment can lag behind
+        // AX (and can briefly disappear during the restore animation), so it
+        // must not be allowed to roll the window back into its original Space.
+        // The move primitive below is responsible for waiting for the
+        // destination assignment; presentation restoration happens only after
+        // that verification completes.
         return preparedState
     }
 
@@ -443,6 +429,22 @@ enum WindowActionCoordinator {
                 return axWindow
             }
             if attempt < 11 {
+                try? await Task.sleep(nanoseconds: 100_000_000)
+            }
+        }
+        return nil
+    }
+
+    private static func waitForWindowInfo(
+        windowID: Int,
+        pid: Int32
+    ) async -> (pid: Int32, frame: CGRect)? {
+        for attempt in 0..<20 {
+            if let windowInfo = SpaceHelper.getWindowInfo(id: windowID),
+               windowInfo.pid == pid {
+                return windowInfo
+            }
+            if attempt < 19 {
                 try? await Task.sleep(nanoseconds: 100_000_000)
             }
         }
@@ -521,57 +523,6 @@ enum WindowActionCoordinator {
             }
         }
         return NSRunningApplication(processIdentifier: pid)?.isHidden == isHidden
-    }
-
-    private static func waitForWindowReadyForMove(
-        windowID: Int,
-        pid: Int32,
-        sourceSpaceID: String,
-        allowUnknownMinimizedState: Bool
-    ) async -> Bool {
-        var consecutiveReadyReads = 0
-
-        for attempt in 0..<40 {
-            let appIsHidden = NSRunningApplication(processIdentifier: pid)?.isHidden == true
-            let isMinimized = readWindowMinimizedState(windowID: windowID, pid: pid)
-            let hasWindowServerRecord = hasWindowServerWindow(windowID: windowID, pid: pid)
-            let minimizedStateReady = isMinimized == false
-                || (isMinimized == nil && allowUnknownMinimizedState)
-
-            if !appIsHidden, minimizedStateReady, hasWindowServerRecord {
-                consecutiveReadyReads += 1
-                if consecutiveReadyReads >= 4 {
-                    return true
-                }
-            } else {
-                consecutiveReadyReads = 0
-            }
-
-            if attempt < 39 {
-                try? await Task.sleep(nanoseconds: 100_000_000)
-            }
-        }
-
-        DiagnosticEventLog.shared.record(
-            subsystem: "WindowActionCoordinator",
-            level: "warning",
-            "Window \(windowID) did not reach a stable, unminimized state in source Space \(sourceSpaceID) before move."
-        )
-        return false
-    }
-
-    private static func hasWindowServerWindow(windowID: Int, pid: Int32) -> Bool {
-        let options: CGWindowListOption = [.optionIncludingWindow, .excludeDesktopElements]
-        let windows = CGWindowListCopyWindowInfo(options, CGWindowID(windowID)) as? [[String: Any]] ?? []
-        guard let window = windows.first,
-              let ownerPID = window[kCGWindowOwnerPID as String] as? Int,
-              ownerPID == Int(pid),
-              let layer = window[kCGWindowLayer as String] as? Int,
-              layer == 0 else {
-            return false
-        }
-
-        return true
     }
 
     private static func waitForWindow(
