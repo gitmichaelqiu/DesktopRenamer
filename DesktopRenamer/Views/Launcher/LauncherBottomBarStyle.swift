@@ -35,7 +35,7 @@ struct BottomBarCapsule: ViewModifier {
     func body(content: Content) -> some View {
         let selectionFill = isGreen
             ? greenBgColor.opacity(isSelected ? 1 : (isActive ? 0.15 : 0))
-            : Color.primary.opacity(isSelected ? (isActive ? 0.10 : 0.09) : (isActive ? 0.08 : 0))
+            : Color.primary.opacity(isSelected ? 0.18 : (isActive ? 0.08 : 0))
         let neutralText = Color.primary.opacity(0.60)
         let showsHover = isHovered && isHoverEnabled
 
