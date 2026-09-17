@@ -29,6 +29,7 @@ struct CommandRowView: View {
     let command: LauncherCommand
     let isSelected: Bool
     var shortcutNumber: Int? = nil
+    var ignoresHover: Bool = false
     @Environment(\.colorScheme) var colorScheme
     @State private var isHovered = false
     
@@ -90,7 +91,7 @@ struct CommandRowView: View {
         }
         .padding(.horizontal, LauncherLayout.rowHorizontalPadding)
         .padding(.vertical, LauncherLayout.rowVerticalPadding)
-        .launcherRowSurface(isSelected: isSelected, isHovered: isHovered)
+        .launcherRowSurface(isSelected: isSelected, isHovered: isHovered && !ignoresHover)
         .launcherCommandNumberOverlay(shortcutNumber)
         .onHover { hovering in
             isHovered = hovering
@@ -105,6 +106,7 @@ struct SpaceRowView: View {
     let isCurrent: Bool
     var showDisplayName: Bool = true
     var shortcutNumber: Int? = nil
+    var ignoresHover: Bool = false
     @Environment(\.colorScheme) var colorScheme
     @State private var isHovered = false
     
@@ -150,7 +152,7 @@ struct SpaceRowView: View {
         }
         .padding(.horizontal, LauncherLayout.rowHorizontalPadding)
         .padding(.vertical, LauncherLayout.rowVerticalPadding)
-        .launcherRowSurface(isSelected: isSelected, isHovered: isHovered)
+        .launcherRowSurface(isSelected: isSelected, isHovered: isHovered && !ignoresHover)
         .launcherCommandNumberOverlay(shortcutNumber)
         .onHover { hovering in
             isHovered = hovering
@@ -183,6 +185,7 @@ struct WindowRowView: View {
     let window: WindowEntry
     let isSelected: Bool
     var shortcutNumber: Int? = nil
+    var ignoresHover: Bool = false
     @Environment(\.colorScheme) var colorScheme
     @State private var isHovered = false
     
@@ -230,7 +233,7 @@ struct WindowRowView: View {
         }
         .padding(.horizontal, LauncherLayout.rowHorizontalPadding)
         .padding(.vertical, LauncherLayout.rowVerticalPadding)
-        .launcherRowSurface(isSelected: isSelected, isHovered: isHovered)
+        .launcherRowSurface(isSelected: isSelected, isHovered: isHovered && !ignoresHover)
         .launcherCommandNumberOverlay(shortcutNumber)
         .onHover { hovering in
             isHovered = hovering
@@ -285,6 +288,7 @@ struct WindowBatchRowView: View {
     let isStaged: Bool
     let stagedActionText: String
     var shortcutNumber: Int? = nil
+    var ignoresHover: Bool = false
     @Environment(\.colorScheme) var colorScheme
     @State private var isHovered = false
     
@@ -341,7 +345,7 @@ struct WindowBatchRowView: View {
         }
         .padding(.horizontal, LauncherLayout.rowHorizontalPadding)
         .padding(.vertical, LauncherLayout.rowVerticalPadding)
-        .launcherRowSurface(isSelected: isSelected, isHovered: isHovered)
+        .launcherRowSurface(isSelected: isSelected, isHovered: isHovered && !ignoresHover)
         .launcherCommandNumberOverlay(shortcutNumber)
         .onHover { hovering in
             isHovered = hovering

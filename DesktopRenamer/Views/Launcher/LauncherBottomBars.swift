@@ -109,7 +109,7 @@ struct BatchMoveBottomBar: View {
                                     .modifier(BottomBarCapsule(isSelected: false, isActive: false, colorScheme: colorScheme))
                                     .contentShape(Rectangle())
                                     .onTapGesture {
-                                        viewModel.showCommandKPanel()
+                                        viewModel.showCommandKPanel(isKeyboardInitiated: false)
                                     }
                                 }
                             }
@@ -241,7 +241,19 @@ struct SpacesBottomBar: View {
                                 }
                             }) {
                                 Text(name)
-                                    .modifier(BottomBarCapsule(isSelected: isSpaceSelected, isActive: isCurrent, colorScheme: colorScheme))
+                                    .modifier(
+                                        BottomBarCapsule(
+                                            isSelected: isSpaceSelected,
+                                            isActive: isCurrent,
+                                            colorScheme: colorScheme,
+                                            isHoverEnabled: !viewModel.isKeyboardSelection,
+                                            onHoverChange: { hovering in
+                                                if hovering {
+                                                    viewModel.isKeyboardSelection = false
+                                                }
+                                            }
+                                        )
+                                    )
                             }
                             .buttonStyle(PlainButtonStyle())
                             .focusable(false)
@@ -318,7 +330,7 @@ struct SpacesBottomBar: View {
                 HStack(spacing: 2) {
                     if !viewModel.isBottomBarFocused {
                         Button(action: {
-                            viewModel.focusSpaceBar()
+                            viewModel.focusSpaceBar(isKeyboardInitiated: false)
                         }) {
                             HStack(spacing: 4) {
                                 Text(LocalizedStringKey("Switch Space"))

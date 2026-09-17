@@ -5,6 +5,16 @@ import SwiftUI
 @MainActor
 extension LauncherViewModel {
 
+    func selectPointerRow(_ index: Int) {
+        guard !isBottomBarFocused,
+              index >= 0,
+              index < visibleRowsCount else {
+            return
+        }
+        isKeyboardSelection = false
+        selectedRowIndex = index
+    }
+
     func executeNthRowAction(_ index: Int) {
         guard index >= 0 && index < visibleRowsCount else { return }
         isKeyboardSelection = true
@@ -89,10 +99,10 @@ extension LauncherViewModel {
         requestFocusNotification(named: "FocusLauncherTextField")
     }
 
-    func focusSpaceBar(movingBy offset: Int = 0) {
+    func focusSpaceBar(movingBy offset: Int = 0, isKeyboardInitiated: Bool = true) {
         spaceBarQuery = ""
         isBottomBarFocused = true
-        isKeyboardSelection = true
+        isKeyboardSelection = isKeyboardInitiated
         requestFocusNotification(named: "FocusSpaceBarTextField")
 
         guard let manager = AppDelegate.shared.spaceManager else { return }

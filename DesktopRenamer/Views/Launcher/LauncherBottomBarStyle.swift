@@ -23,6 +23,8 @@ struct BottomBarCapsule: ViewModifier {
     let isActive: Bool
     var isGreen: Bool = false
     let colorScheme: ColorScheme
+    var isHoverEnabled: Bool = true
+    var onHoverChange: ((Bool) -> Void)? = nil
 
     @State private var isHovered: Bool = false
 
@@ -35,22 +37,24 @@ struct BottomBarCapsule: ViewModifier {
             ? greenBgColor.opacity(isSelected ? 1 : (isActive ? 0.15 : 0))
             : Color.primary.opacity(isSelected ? (isActive ? 0.10 : 0.09) : (isActive ? 0.08 : 0))
         let neutralText = Color.primary.opacity(0.60)
+        let showsHover = isHovered && isHoverEnabled
 
         content
             .font(LauncherTypography.bar)
             .padding(.horizontal, LauncherLayout.bottomBarControlHorizontalPadding)
             .frame(height: LauncherLayout.bottomBarControlHeight)
-            .background(Capsule().fill(isHovered && !isSelected ? Color.primary.opacity(0.05) : selectionFill))
+            .background(Capsule().fill(showsHover && !isSelected ? Color.primary.opacity(0.05) : selectionFill))
             .foregroundColor(
-                isGreen ? (isSelected ? .white : (isActive ? greenBgColor : (isHovered ? greenBgColor : .secondary)))
-                        : (isActive || isSelected || isHovered ? .primary : neutralText)
+                isGreen ? (isSelected ? .white : (isActive ? greenBgColor : (showsHover ? greenBgColor : .secondary)))
+                        : (isActive || isSelected || showsHover ? .primary : neutralText)
             )
             .clipShape(Capsule())
             .animation(LauncherAnimation.capsule, value: isSelected)
             .animation(LauncherAnimation.fade, value: isActive)
-            .animation(LauncherAnimation.fade, value: isHovered)
+            .animation(LauncherAnimation.fade, value: showsHover)
             .onHover { hovering in
                 isHovered = hovering
+                onHoverChange?(hovering)
             }
     }
 }

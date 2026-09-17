@@ -487,7 +487,9 @@ struct LauncherSubmenuPanel<Content: View>: View {
 struct LauncherSubmenuRow<Content: View>: View {
     let isSelected: Bool
     let commandNumber: Int?
+    let ignoresHover: Bool
     let action: () -> Void
+    let onHover: (Bool) -> Void
     private let content: Content
     @Environment(\.colorScheme) private var colorScheme
     @State private var isHovered = false
@@ -495,12 +497,16 @@ struct LauncherSubmenuRow<Content: View>: View {
     init(
         isSelected: Bool,
         commandNumber: Int? = nil,
+        ignoresHover: Bool = false,
         action: @escaping () -> Void,
+        onHover: @escaping (Bool) -> Void = { _ in },
         @ViewBuilder content: () -> Content
     ) {
         self.isSelected = isSelected
         self.commandNumber = commandNumber
+        self.ignoresHover = ignoresHover
         self.action = action
+        self.onHover = onHover
         self.content = content()
     }
 
@@ -513,7 +519,7 @@ struct LauncherSubmenuRow<Content: View>: View {
                 .frame(height: LauncherLayout.submenuRowHeight, alignment: .leading)
                 .background {
                     RoundedRectangle(cornerRadius: 10, style: .continuous)
-                        .fill(isSelected ? colors.rowSelection : (isHovered ? colors.rowHover : .clear))
+                        .fill(isSelected ? colors.rowSelection : (isHovered && !ignoresHover ? colors.rowHover : .clear))
                 }
                 .contentShape(Rectangle())
         }
@@ -522,6 +528,9 @@ struct LauncherSubmenuRow<Content: View>: View {
             commandNumber,
             trailingPadding: LauncherLayout.submenuRowHorizontalPadding
         )
-        .onHover { isHovered = $0 }
+        .onHover {
+            isHovered = $0
+            onHover($0)
+        }
     }
 }

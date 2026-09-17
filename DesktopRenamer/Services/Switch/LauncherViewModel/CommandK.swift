@@ -125,8 +125,9 @@ extension LauncherViewModel {
         }
     }
     
-    func showCommandKPanel() {
+    func showCommandKPanel(isKeyboardInitiated: Bool = true) {
         submenuSearchQuery = ""
+        isKeyboardSelection = isKeyboardInitiated
         if activeCommand?.type == .listWindows {
             let windows = filteredWindows
             let index = selectedRowIndex
