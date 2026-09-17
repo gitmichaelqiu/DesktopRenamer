@@ -192,7 +192,7 @@ struct LauncherActionMenuView: View {
                                 action: item.action,
                                 isSelected: viewModel.commandKSelectedIndex == item.index,
                                 idx: item.index,
-                                shortcutNumber: viewModel.showCommandNumbers && item.index < 9
+                                shortcutNumber: viewModel.shouldShowCommandNumbersInSubmenu && item.index < 9
                                     ? item.index + 1
                                     : nil,
                                 colors: colors,
@@ -275,14 +275,17 @@ struct LauncherSpaceMenuView: View {
                                         isSelected: viewModel.spaceMenuSelectedIndex == index,
                                         isCurrent: SpaceHelper.getCurrentSpaceID(for: space.displayID) == space.id,
                                         shortcutNumber: index + 1,
-                                        showShortcut: viewModel.showCommandNumbers && index < 9,
+                                        showShortcut: viewModel.shouldShowCommandNumbersInSubmenu && index < 9,
                                         showDisplayName: showsDisplayName,
-                                        colors: colors
-                                    ) {
-                                        viewModel.isKeyboardSelection = true
-                                        viewModel.spaceMenuSelectedIndex = index
-                                        viewModel.executeSpaceMenuSelection()
-                                    }
+                                        colors: colors,
+                                        ignoresHover: viewModel.isKeyboardSelection,
+                                        action: {
+                                            viewModel.isKeyboardSelection = true
+                                            viewModel.spaceMenuSelectedIndex = index
+                                            viewModel.executeSpaceMenuSelection()
+                                            viewModel.finishPointerAction()
+                                        }
+                                    )
                                     .id(space.id)
                                 }
                             }
@@ -334,6 +337,7 @@ private struct LauncherSpaceMenuRow: View {
     let showShortcut: Bool
     let showDisplayName: Bool
     let colors: ThemeColors
+    let ignoresHover: Bool
     let action: () -> Void
 
     private var metadata: String {
@@ -352,6 +356,7 @@ private struct LauncherSpaceMenuRow: View {
         LauncherSubmenuRow(
             isSelected: isSelected,
             commandNumber: showShortcut ? shortcutNumber : nil,
+            ignoresHover: ignoresHover,
             action: action
         ) {
             HStack(spacing: LauncherLayout.submenuRowContentSpacing) {
@@ -415,9 +420,11 @@ struct CommandKActionRowView: View {
         LauncherSubmenuRow(
             isSelected: isSelected,
             commandNumber: shortcutNumber,
+            ignoresHover: viewModel.isKeyboardSelection,
             action: {
                 viewModel.commandKSelectedIndex = idx
                 viewModel.executeCommandKAction()
+                viewModel.finishPointerAction()
             }
         ) {
             HStack(spacing: LauncherLayout.submenuRowContentSpacing) {

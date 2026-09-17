@@ -115,7 +115,7 @@ struct CommandBottomBar: View {
                             .modifier(BottomBarCapsule(isSelected: false, isActive: false, colorScheme: colorScheme))
                             .contentShape(Rectangle())
                             .onTapGesture {
-                                viewModel.showCommandKPanel()
+                                viewModel.showCommandKPanel(isKeyboardInitiated: false)
                             }
                         }
                     }

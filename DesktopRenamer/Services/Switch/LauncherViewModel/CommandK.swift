@@ -125,8 +125,9 @@ extension LauncherViewModel {
         }
     }
     
-    func showCommandKPanel() {
+    func showCommandKPanel(isKeyboardInitiated: Bool = true) {
         submenuSearchQuery = ""
+        isKeyboardSelection = isKeyboardInitiated
         if activeCommand?.type == .listWindows {
             let windows = filteredWindows
             let index = selectedRowIndex
@@ -186,6 +187,7 @@ extension LauncherViewModel {
               let index = commandKActions.firstIndex(of: action) else {
             return false
         }
+        isKeyboardSelection = true
         commandKSelectedIndex = index
         executeCommandKAction()
         return true
@@ -194,6 +196,7 @@ extension LauncherViewModel {
     func selectPreviousCommandKAction() {
         let count = commandKActions.count
         if count > 0 {
+            isKeyboardSelection = true
             commandKSelectedIndex = (commandKSelectedIndex - 1 + count) % count
         }
     }
@@ -201,6 +204,7 @@ extension LauncherViewModel {
     func selectNextCommandKAction() {
         let count = commandKActions.count
         if count > 0 {
+            isKeyboardSelection = true
             commandKSelectedIndex = (commandKSelectedIndex + 1) % count
         }
     }

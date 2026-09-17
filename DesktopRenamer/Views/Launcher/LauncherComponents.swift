@@ -431,6 +431,7 @@ struct LauncherSubmenuSearchField: View {
     }
 
     private func executeSelection() {
+        viewModel.isKeyboardSelection = true
         switch kind {
         case .actions:
             viewModel.executeCommandKAction()
@@ -441,6 +442,7 @@ struct LauncherSubmenuSearchField: View {
 
     private func executeNumberedSelection(_ number: Int) {
         let index = number - 1
+        viewModel.isKeyboardSelection = true
         switch kind {
         case .actions:
             guard viewModel.commandKActions.indices.contains(index) else { return }
@@ -487,6 +489,7 @@ struct LauncherSubmenuPanel<Content: View>: View {
 struct LauncherSubmenuRow<Content: View>: View {
     let isSelected: Bool
     let commandNumber: Int?
+    let ignoresHover: Bool
     let action: () -> Void
     private let content: Content
     @Environment(\.colorScheme) private var colorScheme
@@ -495,11 +498,13 @@ struct LauncherSubmenuRow<Content: View>: View {
     init(
         isSelected: Bool,
         commandNumber: Int? = nil,
+        ignoresHover: Bool = false,
         action: @escaping () -> Void,
         @ViewBuilder content: () -> Content
     ) {
         self.isSelected = isSelected
         self.commandNumber = commandNumber
+        self.ignoresHover = ignoresHover
         self.action = action
         self.content = content()
     }
@@ -513,7 +518,7 @@ struct LauncherSubmenuRow<Content: View>: View {
                 .frame(height: LauncherLayout.submenuRowHeight, alignment: .leading)
                 .background {
                     RoundedRectangle(cornerRadius: 10, style: .continuous)
-                        .fill(isSelected ? colors.rowSelection : (isHovered ? colors.rowHover : .clear))
+                        .fill(isSelected ? colors.rowSelection : (isHovered && !ignoresHover ? colors.rowHover : .clear))
                 }
                 .contentShape(Rectangle())
         }
@@ -522,6 +527,8 @@ struct LauncherSubmenuRow<Content: View>: View {
             commandNumber,
             trailingPadding: LauncherLayout.submenuRowHorizontalPadding
         )
-        .onHover { isHovered = $0 }
+        .onHover {
+            isHovered = $0
+        }
     }
 }
