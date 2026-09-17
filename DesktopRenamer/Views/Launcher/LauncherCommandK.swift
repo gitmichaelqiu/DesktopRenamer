@@ -280,11 +280,10 @@ struct LauncherSpaceMenuView: View {
                                         colors: colors,
                                         ignoresHover: viewModel.isKeyboardSelection,
                                         onHover: {
-                                            viewModel.isKeyboardSelection = false
-                                            viewModel.spaceMenuSelectedIndex = index
+                                            viewModel.handlePointerHover()
                                         },
                                         action: {
-                                            viewModel.isKeyboardSelection = false
+                                            viewModel.isKeyboardSelection = true
                                             viewModel.spaceMenuSelectedIndex = index
                                             viewModel.executeSpaceMenuSelection()
                                         }
@@ -431,14 +430,12 @@ struct CommandKActionRowView: View {
             commandNumber: shortcutNumber,
             ignoresHover: viewModel.isKeyboardSelection,
             action: {
-                viewModel.isKeyboardSelection = false
                 viewModel.commandKSelectedIndex = idx
                 viewModel.executeCommandKAction()
             },
             onHover: { hovering in
                 if hovering {
-                    viewModel.isKeyboardSelection = false
-                    viewModel.commandKSelectedIndex = idx
+                    viewModel.handlePointerHover()
                 }
             }
         ) {

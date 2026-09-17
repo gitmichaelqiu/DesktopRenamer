@@ -5,14 +5,8 @@ import SwiftUI
 @MainActor
 extension LauncherViewModel {
 
-    func selectPointerRow(_ index: Int) {
-        guard !isBottomBarFocused,
-              index >= 0,
-              index < visibleRowsCount else {
-            return
-        }
+    func handlePointerHover() {
         isKeyboardSelection = false
-        selectedRowIndex = index
     }
 
     func executeNthRowAction(_ index: Int) {

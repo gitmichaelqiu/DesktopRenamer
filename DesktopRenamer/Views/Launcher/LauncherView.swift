@@ -287,12 +287,13 @@ struct ListAreaView: View {
                                     )
                                         .contentShape(Rectangle())
                                         .onTapGesture {
-                                            viewModel.selectPointerRow(i)
+                                            viewModel.isKeyboardSelection = true
+                                            viewModel.selectedRowIndex = i
                                             viewModel.executeRowAction()
                                         }
                                         .onHover { hovering in
                                             if hovering {
-                                                viewModel.selectPointerRow(i)
+                                                viewModel.handlePointerHover()
                                             }
                                         }
                                         .id(cmd.id)
@@ -336,12 +337,13 @@ struct ListAreaView: View {
                                         )
                                             .contentShape(Rectangle())
                                             .onTapGesture {
-                                                viewModel.selectPointerRow(i)
+                                                viewModel.isKeyboardSelection = true
+                                                viewModel.selectedRowIndex = i
                                                 viewModel.executeRowAction()
                                             }
                                             .onHover { hovering in
                                                 if hovering {
-                                                    viewModel.selectPointerRow(i)
+                                                    viewModel.handlePointerHover()
                                                 }
                                             }
                                             .id(space.id)
@@ -392,12 +394,13 @@ struct ListAreaView: View {
                                             )
                                                 .contentShape(Rectangle())
                                                 .onTapGesture {
-                                                    viewModel.selectPointerRow(i)
+                                                    viewModel.isKeyboardSelection = true
+                                                    viewModel.selectedRowIndex = i
                                                     viewModel.executeRowAction()
                                                 }
                                                 .onHover { hovering in
                                                     if hovering {
-                                                        viewModel.selectPointerRow(i)
+                                                        viewModel.handlePointerHover()
                                                     }
                                                 }
                                                 .id(space.id)
@@ -446,12 +449,13 @@ struct ListAreaView: View {
                                                 )
                                                 .contentShape(Rectangle())
                                                 .onTapGesture {
-                                                    viewModel.selectPointerRow(item.index)
+                                                    viewModel.isKeyboardSelection = true
+                                                    viewModel.selectedRowIndex = item.index
                                                     viewModel.executeRowAction()
                                                 }
                                                 .onHover { hovering in
                                                     if hovering {
-                                                        viewModel.selectPointerRow(item.index)
+                                                        viewModel.handlePointerHover()
                                                     }
                                                 }
                                                 .id(item.id)
@@ -503,12 +507,13 @@ struct ListAreaView: View {
                                                     WindowBatchRowView(window: move.window, isSelected: isSelected, isStaged: true, stagedActionText: move.actionType.description, shortcutNumber: viewModel.showCommandNumbers && viewModel.commandKTargetWindow == nil && item.index < 9 ? item.index + 1 : nil, ignoresHover: viewModel.isKeyboardSelection)
                                                         .contentShape(Rectangle())
                                                         .onTapGesture {
-                                                            viewModel.selectPointerRow(item.index)
+                                                            viewModel.isKeyboardSelection = true
+                                                            viewModel.selectedRowIndex = item.index
                                                             viewModel.executeRowAction()
                                                         }
                                                         .onHover { hovering in
                                                             if hovering {
-                                                                viewModel.selectPointerRow(item.index)
+                                                                viewModel.handlePointerHover()
                                                             }
                                                         }
                                                         .id(item.id)
@@ -517,12 +522,13 @@ struct ListAreaView: View {
                                                     WindowBatchRowView(window: window, isSelected: isSelected, isStaged: false, stagedActionText: "", shortcutNumber: viewModel.showCommandNumbers && viewModel.commandKTargetWindow == nil && item.index < 9 ? item.index + 1 : nil, ignoresHover: viewModel.isKeyboardSelection)
                                                         .contentShape(Rectangle())
                                                         .onTapGesture {
-                                                            viewModel.selectPointerRow(item.index)
+                                                            viewModel.isKeyboardSelection = true
+                                                            viewModel.selectedRowIndex = item.index
                                                             viewModel.executeRowAction()
                                                         }
                                                         .onHover { hovering in
                                                             if hovering {
-                                                                viewModel.selectPointerRow(item.index)
+                                                                viewModel.handlePointerHover()
                                                             }
                                                         }
                                                         .id(item.id)
