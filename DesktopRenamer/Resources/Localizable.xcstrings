@@ -3537,6 +3537,196 @@
           }
         }
       }
+    },
+    "Adjust where the pointer grabs a window when moving it between spaces." : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "调整指针抓取窗口的位置，用于在桌面之间移动窗口。"
+          }
+        }
+      }
+    },
+    "Capture a report to help diagnose issues." : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "收集报告以帮助诊断问题。"
+          }
+        }
+      }
+    },
+    "Choose modifier keys followed by a number." : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "选择修饰键并按下数字键。"
+          }
+        }
+      }
+    },
+    "Commands are ranked by usage. Turn this off to reorder them manually." : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "按使用频率排列指令。关闭后可手动调整顺序。"
+          }
+        }
+      }
+    },
+    "Hide the menu bar icon while DesktopRenamer continues running." : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "隐藏菜单栏图标，但 DesktopRenamer 仍会继续运行。"
+          }
+        }
+      }
+    },
+    "Hide the target space label before switching instead of after." : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "在切换前隐藏目标桌面标签，而不是在切换后隐藏。"
+          }
+        }
+      }
+    },
+    "If you use Control + Arrow shortcuts, disable the matching Mission Control shortcuts in System Settings." : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "如果使用 Control + 箭头快捷键，请在系统设置中关闭对应的调度中心快捷键。"
+          }
+        }
+      }
+    },
+    "Keep the label visible on the desktop outside Mission Control." : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "让标签在调度中心之外也显示在桌面上。"
+          }
+        }
+      }
+    },
+    "Let other apps access your space names." : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "允许其他应用访问桌面名称。"
+          }
+        }
+      }
+    },
+    "Required for keyboard shortcuts and moving windows between spaces." : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "键盘快捷键和在桌面之间移动窗口所需。"
+          }
+        }
+      }
+    },
+    "Required to identify the active window when moving it between spaces." : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "在桌面之间移动窗口时识别当前窗口所需。"
+          }
+        }
+      }
+    },
+    "Restart DesktopRenamer after changing permissions." : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "更改权限后请重新启动 DesktopRenamer。"
+          }
+        }
+      }
+    },
+    "Set to 0 to switch instantly without the macOS animation." : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "设为 0 可跳过 macOS 动画并即时切换。"
+          }
+        }
+      }
+    },
+    "Sets how far you need to move your fingers before switching." : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "设置切换前手指需要移动的距离。"
+          }
+        }
+      }
+    },
+    "Use a blurred background instead of Liquid Glass." : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "使用模糊背景代替 Liquid Glass。"
+          }
+        }
+      }
+    },
+    "Use instant space switching for trackpad gestures. Disable ‘Swipe between full-screen apps’ in System Settings → Trackpad → More Gestures to avoid conflicts." : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "使用触控板手势即时切换桌面。请在系统设置 → 触控板 → 更多手势中关闭“在全屏应用之间轻扫”以避免冲突。"
+          }
+        }
+      }
+    },
+    "Use this for apps whose windows need a small drag before they can be moved, such as WeChat." : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "适用于窗口需要轻微拖动后才能移动的应用，例如微信。"
+          }
+        }
+      }
+    },
+    "When opening an app switches spaces, return its window to the original space." : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "打开应用导致切换桌面时，将其窗口移回原桌面。"
+          }
+        }
+      }
+    },
+    "With 3 fingers selected, 4 fingers can still trigger the native swipe." : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "选择 3 指后，仍可用 4 指触发系统手势。"
+          }
+        }
+      }
     }
   },
   "version" : "1.1"
