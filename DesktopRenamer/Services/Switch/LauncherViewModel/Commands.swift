@@ -161,8 +161,54 @@ extension LauncherViewModel {
         return items
     }
 
+    /// Restores selection after a batch item changes sections or disappears.
+    ///
+    /// `batchMoveSelectableItems` puts staged windows before unstaged windows,
+    /// so the selected row's numeric index is not stable across a mutation.
+    /// Follow the next window from the pre-mutation order instead. If the
+    /// acted-on window was last, walk backwards to the last surviving window.
     func restoreBatchMoveSelection(
-        forWindowID windowID: Int,
+        afterActingOn index: Int,
+        in originalItems: [BatchMoveItem]
+    ) {
+        let items = batchMoveSelectableItems
+        guard !items.isEmpty else {
+            selectedRowIndex = 0
+            return
+        }
+
+        guard originalItems.indices.contains(index) else {
+            selectedRowIndex = min(max(index, 0), items.count - 1)
+            return
+        }
+
+        let actedOnWindowID = originalItems[index].windowID
+        let followingWindowIDs = originalItems.indices
+            .dropFirst(index + 1)
+            .map { originalItems[$0].windowID }
+        let precedingWindowIDs = originalItems.indices
+            .prefix(index)
+            .reversed()
+            .map { originalItems[$0].windowID }
+
+        for windowID in followingWindowIDs + precedingWindowIDs {
+            guard windowID != actedOnWindowID,
+                  let nextIndex = items.firstIndex(where: { $0.windowID == windowID }) else {
+                continue
+            }
+            selectedRowIndex = nextIndex
+            return
+        }
+
+        // The acted-on item is the only surviving item. Keeping the clamped
+        // row is the only meaningful selection in that case.
+        selectedRowIndex = min(max(index, 0), items.count - 1)
+    }
+
+    /// Restores the selected window when leaving a target-space submenu without
+    /// changing the batch list.
+    func restoreBatchMoveSelection(
+        toWindowID windowID: Int,
         staged: Bool,
         preferredIndex: Int
     ) {
@@ -172,11 +218,9 @@ extension LauncherViewModel {
             return
         }
 
-        guard !items.isEmpty else {
-            selectedRowIndex = 0
-            return
-        }
-        selectedRowIndex = min(max(preferredIndex, 0), items.count - 1)
+        selectedRowIndex = items.isEmpty
+            ? 0
+            : min(max(preferredIndex, 0), items.count - 1)
     }
     
     var batchMoveSections: [BatchMoveSection] {

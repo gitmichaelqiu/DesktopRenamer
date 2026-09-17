@@ -37,7 +37,7 @@ extension LauncherViewModel {
                 
                 let (minimized, hidden) = isWindowMinimizedOrAppHidden(staging)
                 let actionType: BatchStagedActionType = (minimized || hidden) ? .restoreTo(targetSpace: space) : .move(targetSpace: space)
-                let stagedWindowID = staging.id
+                let originalItems = batchMoveSelectableItems
                 let wasImmediateMove = isExecutingRestoreToImmediately
                 
                 if wasImmediateMove {
@@ -55,9 +55,8 @@ extension LauncherViewModel {
                     selectedRowIndex = batchMoveLastSelectedIndex
                 } else {
                     restoreBatchMoveSelection(
-                        forWindowID: stagedWindowID,
-                        staged: true,
-                        preferredIndex: batchMoveLastSelectedIndex
+                        afterActingOn: batchMoveLastSelectedIndex,
+                        in: originalItems
                     )
                 }
                 return
@@ -86,13 +85,11 @@ extension LauncherViewModel {
                 
                 switch selectedItem {
                 case .staged(let action, _):
-                    let previousRowIndex = selectedRowIndex
-                    let windowID = action.window.id
-                    stagedMoves.removeValue(forKey: windowID)
+                    let originalItems = items
+                    stagedMoves.removeValue(forKey: action.window.id)
                     restoreBatchMoveSelection(
-                        forWindowID: windowID,
-                        staged: false,
-                        preferredIndex: previousRowIndex
+                        afterActingOn: index,
+                        in: originalItems
                     )
                 case .unstaged(let window, _):
                     let previousRowIndex = selectedRowIndex
