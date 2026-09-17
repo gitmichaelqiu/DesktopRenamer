@@ -146,6 +146,16 @@ extension LauncherViewModel {
             DispatchQueue.main.async {
                 let terminatingPIDs = self.terminatingApplicationPIDs
                 self.currentWindows = windows.filter { !terminatingPIDs.contains($0.pid) }
+                if self.activeCommand?.type == .listWindows {
+                    // A close or quit can remove the selected window while a
+                    // refresh is in flight. Keeping the old index naturally
+                    // selects the next window, while clamping selects the
+                    // final remaining window when the old one was last.
+                    self.selectedRowIndex = min(
+                        max(self.selectedRowIndex, 0),
+                        max(self.filteredWindows.count - 1, 0)
+                    )
+                }
                 self.terminatingApplicationPIDs = terminatingPIDs.filter {
                     NSRunningApplication(processIdentifier: $0) != nil
                 }

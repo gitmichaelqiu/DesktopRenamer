@@ -229,12 +229,12 @@ extension LauncherViewModel {
             if isListWindows {
                 executeActionImmediately(window: window, actionType: actionType)
             } else {
-                let previousRowIndex = selectedRowIndex
+                let originalItems = batchMoveSelectableItems
+                let originalIndex = selectedRowIndex
                 stagedMoves[window.id] = BatchStagedAction(window: window, actionType: actionType)
                 restoreBatchMoveSelection(
-                    forWindowID: window.id,
-                    staged: true,
-                    preferredIndex: previousRowIndex
+                    afterActingOn: originalIndex,
+                    in: originalItems
                 )
             }
         }
@@ -253,11 +253,12 @@ extension LauncherViewModel {
 
         let item = batchMoveSelectableItems[selectedRowIndex]
         guard case .unstaged(let window, _) = item else { return }
+        let originalItems = batchMoveSelectableItems
+        let originalIndex = selectedRowIndex
         stagedMoves[window.id] = BatchStagedAction(window: window, actionType: actionType)
         restoreBatchMoveSelection(
-            forWindowID: window.id,
-            staged: true,
-            preferredIndex: selectedRowIndex
+            afterActingOn: originalIndex,
+            in: originalItems
         )
     }
     

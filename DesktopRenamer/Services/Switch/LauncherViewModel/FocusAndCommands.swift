@@ -28,7 +28,7 @@ extension LauncherViewModel {
                 isExecutingRestoreToImmediately = false
                 if activeCommand?.type == .batchMoveWindows, let stagedWindowID {
                     restoreBatchMoveSelection(
-                        forWindowID: stagedWindowID,
+                        toWindowID: stagedWindowID,
                         staged: false,
                         preferredIndex: batchMoveLastSelectedIndex
                     )
@@ -46,7 +46,7 @@ extension LauncherViewModel {
             submenuSearchQuery = ""
             if activeCommand?.type == .batchMoveWindows, let stagedWindowID {
                 restoreBatchMoveSelection(
-                    forWindowID: stagedWindowID,
+                    toWindowID: stagedWindowID,
                     staged: false,
                     preferredIndex: batchMoveLastSelectedIndex
                 )
