@@ -489,7 +489,6 @@ struct LauncherSubmenuRow<Content: View>: View {
     let commandNumber: Int?
     let ignoresHover: Bool
     let action: () -> Void
-    let onHover: (Bool) -> Void
     private let content: Content
     @Environment(\.colorScheme) private var colorScheme
     @State private var isHovered = false
@@ -499,14 +498,12 @@ struct LauncherSubmenuRow<Content: View>: View {
         commandNumber: Int? = nil,
         ignoresHover: Bool = false,
         action: @escaping () -> Void,
-        onHover: @escaping (Bool) -> Void = { _ in },
         @ViewBuilder content: () -> Content
     ) {
         self.isSelected = isSelected
         self.commandNumber = commandNumber
         self.ignoresHover = ignoresHover
         self.action = action
-        self.onHover = onHover
         self.content = content()
     }
 
@@ -530,7 +527,6 @@ struct LauncherSubmenuRow<Content: View>: View {
         )
         .onHover {
             isHovered = $0
-            onHover($0)
         }
     }
 }

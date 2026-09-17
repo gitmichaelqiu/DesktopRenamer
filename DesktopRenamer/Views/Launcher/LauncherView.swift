@@ -291,11 +291,6 @@ struct ListAreaView: View {
                                             viewModel.selectedRowIndex = i
                                             viewModel.executeRowAction()
                                         }
-                                        .onHover { hovering in
-                                            if hovering {
-                                                viewModel.handlePointerHover()
-                                            }
-                                        }
                                         .id(cmd.id)
                                 }
                             }
@@ -340,11 +335,6 @@ struct ListAreaView: View {
                                                 viewModel.isKeyboardSelection = true
                                                 viewModel.selectedRowIndex = i
                                                 viewModel.executeRowAction()
-                                            }
-                                            .onHover { hovering in
-                                                if hovering {
-                                                    viewModel.handlePointerHover()
-                                                }
                                             }
                                             .id(space.id)
                                     }
@@ -398,11 +388,6 @@ struct ListAreaView: View {
                                                     viewModel.selectedRowIndex = i
                                                     viewModel.executeRowAction()
                                                 }
-                                                .onHover { hovering in
-                                                    if hovering {
-                                                        viewModel.handlePointerHover()
-                                                    }
-                                                }
                                                 .id(space.id)
                                         }
                                     }
@@ -452,11 +437,6 @@ struct ListAreaView: View {
                                                     viewModel.isKeyboardSelection = true
                                                     viewModel.selectedRowIndex = item.index
                                                     viewModel.executeRowAction()
-                                                }
-                                                .onHover { hovering in
-                                                    if hovering {
-                                                        viewModel.handlePointerHover()
-                                                    }
                                                 }
                                                 .id(item.id)
                                             }
@@ -511,11 +491,6 @@ struct ListAreaView: View {
                                                             viewModel.selectedRowIndex = item.index
                                                             viewModel.executeRowAction()
                                                         }
-                                                        .onHover { hovering in
-                                                            if hovering {
-                                                                viewModel.handlePointerHover()
-                                                            }
-                                                        }
                                                         .id(item.id)
                                                         
                                                 case .unstaged(let window, _):
@@ -525,11 +500,6 @@ struct ListAreaView: View {
                                                             viewModel.isKeyboardSelection = true
                                                             viewModel.selectedRowIndex = item.index
                                                             viewModel.executeRowAction()
-                                                        }
-                                                        .onHover { hovering in
-                                                            if hovering {
-                                                                viewModel.handlePointerHover()
-                                                            }
                                                         }
                                                         .id(item.id)
                                                 }

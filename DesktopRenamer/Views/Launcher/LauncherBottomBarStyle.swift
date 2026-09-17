@@ -24,7 +24,6 @@ struct BottomBarCapsule: ViewModifier {
     var isGreen: Bool = false
     let colorScheme: ColorScheme
     var isHoverEnabled: Bool = true
-    var onHoverChange: ((Bool) -> Void)? = nil
 
     @State private var isHovered: Bool = false
 
@@ -54,7 +53,6 @@ struct BottomBarCapsule: ViewModifier {
             .animation(LauncherAnimation.fade, value: showsHover)
             .onHover { hovering in
                 isHovered = hovering
-                onHoverChange?(hovering)
             }
     }
 }

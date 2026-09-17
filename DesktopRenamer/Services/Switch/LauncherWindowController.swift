@@ -32,6 +32,8 @@ class LauncherWindowController: NSWindowController, NSWindowDelegate {
     
     private var flagsChangedMonitor: Any?
     private var keyDownMonitor: Any?
+    private var mouseMovedMonitor: Any?
+    private var lastMouseLocation: NSPoint?
     private var isHiding = false
     
     init() {
@@ -50,6 +52,7 @@ class LauncherWindowController: NSWindowController, NSWindowDelegate {
         panel.level = .floating
         panel.hidesOnDeactivate = false
         panel.becomesKeyOnlyIfNeeded = false
+        panel.acceptsMouseMovedEvents = true
         // The launcher follows the Space that is active when it is presented.
         // It must not remain attached to the Space where the panel was first
         // created, because activating it there can switch the user's Space.
@@ -139,6 +142,23 @@ class LauncherWindowController: NSWindowController, NSWindowDelegate {
 
             return focusedTextField.handleKeyEquivalent(event) ? nil : event
         }
+
+        mouseMovedMonitor = NSEvent.addLocalMonitorForEvents(matching: .mouseMoved) { [weak self] event in
+            guard let self,
+                  let panel = self.window as? LauncherNSPanel,
+                  panel.isKeyWindow else {
+                return event
+            }
+
+            let mouseLocation = NSEvent.mouseLocation
+            guard self.lastMouseLocation != mouseLocation else {
+                return event
+            }
+
+            self.lastMouseLocation = mouseLocation
+            self.viewModel.handlePointerMovement()
+            return event
+        }
     }
     
     required init?(coder: NSCoder) {
@@ -150,6 +170,9 @@ class LauncherWindowController: NSWindowController, NSWindowDelegate {
             NSEvent.removeMonitor(monitor)
         }
         if let monitor = keyDownMonitor {
+            NSEvent.removeMonitor(monitor)
+        }
+        if let monitor = mouseMovedMonitor {
             NSEvent.removeMonitor(monitor)
         }
     }
@@ -167,6 +190,7 @@ class LauncherWindowController: NSWindowController, NSWindowDelegate {
         
         // Center on screen with cursor
         centerOnActiveScreen()
+        lastMouseLocation = NSEvent.mouseLocation
         
         // Reset state
         viewModel.resetForPresentation()
@@ -202,6 +226,7 @@ class LauncherWindowController: NSWindowController, NSWindowDelegate {
             "launcher hide begin visible=\(panel?.isVisible ?? false), key=\(panel?.isKeyWindow ?? false), windowSpaces=\(panel.map { SpaceHelper.getWindowCurrentSpaces(windowID: $0.windowNumber).sorted() } ?? []), live=\(SpaceHelper.debugFormatSpaceMap(SpaceHelper.getCurrentSpaceIDsByDisplay()))"
         )
         window?.orderOut(nil)
+        lastMouseLocation = nil
         viewModel.resetForPresentation()
         viewModel.updateCommandModifier(isPressed: false)
         viewModel.previouslyActiveWindow = nil

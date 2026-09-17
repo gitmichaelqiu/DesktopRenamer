@@ -246,12 +246,7 @@ struct SpacesBottomBar: View {
                                             isSelected: isSpaceSelected,
                                             isActive: isCurrent,
                                             colorScheme: colorScheme,
-                                            isHoverEnabled: !viewModel.isKeyboardSelection,
-                                            onHoverChange: { hovering in
-                                                if hovering {
-                                                    viewModel.isKeyboardSelection = false
-                                                }
-                                            }
+                                            isHoverEnabled: !viewModel.isKeyboardSelection
                                         )
                                     )
                             }

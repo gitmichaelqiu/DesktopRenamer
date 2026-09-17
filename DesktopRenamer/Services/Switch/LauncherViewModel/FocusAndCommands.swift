@@ -5,7 +5,7 @@ import SwiftUI
 @MainActor
 extension LauncherViewModel {
 
-    func handlePointerHover() {
+    func handlePointerMovement() {
         isKeyboardSelection = false
     }
 
