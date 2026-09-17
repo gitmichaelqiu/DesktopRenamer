@@ -192,7 +192,7 @@ struct LauncherActionMenuView: View {
                                 action: item.action,
                                 isSelected: viewModel.commandKSelectedIndex == item.index,
                                 idx: item.index,
-                                shortcutNumber: viewModel.showCommandNumbers && item.index < 9
+                                shortcutNumber: viewModel.shouldShowCommandNumbersInSubmenu && item.index < 9
                                     ? item.index + 1
                                     : nil,
                                 colors: colors,
@@ -275,7 +275,7 @@ struct LauncherSpaceMenuView: View {
                                         isSelected: viewModel.spaceMenuSelectedIndex == index,
                                         isCurrent: SpaceHelper.getCurrentSpaceID(for: space.displayID) == space.id,
                                         shortcutNumber: index + 1,
-                                        showShortcut: viewModel.showCommandNumbers && index < 9,
+                                        showShortcut: viewModel.shouldShowCommandNumbersInSubmenu && index < 9,
                                         showDisplayName: showsDisplayName,
                                         colors: colors,
                                         ignoresHover: viewModel.isKeyboardSelection,

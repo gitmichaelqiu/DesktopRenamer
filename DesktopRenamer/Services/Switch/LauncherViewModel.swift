@@ -170,6 +170,14 @@ enum DesktopRearrangementDirection {
     var isSubmenuOpen: Bool {
         commandKTargetWindow != nil || isSpaceMenuOpen
     }
+
+    var shouldShowCommandNumbersInMainList: Bool {
+        showCommandNumbers && !isSubmenuOpen && !isBottomBarFocused
+    }
+
+    var shouldShowCommandNumbersInSubmenu: Bool {
+        showCommandNumbers && isSubmenuOpen
+    }
     
     // Captured active window before launcher gains focus
     @Published var previouslyActiveWindow: (id: Int, pid: Int32, frame: CGRect)? = nil
