@@ -415,7 +415,7 @@ struct AppExceptionRow: View {
                 .help("Delete Exception")
             }
         }
-        .padding(.vertical, 8)
+        .padding(.vertical, 6)
         .padding(.horizontal, 12)
     }
 }
