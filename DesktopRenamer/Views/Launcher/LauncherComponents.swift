@@ -431,6 +431,7 @@ struct LauncherSubmenuSearchField: View {
     }
 
     private func executeSelection() {
+        viewModel.isKeyboardSelection = true
         switch kind {
         case .actions:
             viewModel.executeCommandKAction()
@@ -441,6 +442,7 @@ struct LauncherSubmenuSearchField: View {
 
     private func executeNumberedSelection(_ number: Int) {
         let index = number - 1
+        viewModel.isKeyboardSelection = true
         switch kind {
         case .actions:
             guard viewModel.commandKActions.indices.contains(index) else { return }
