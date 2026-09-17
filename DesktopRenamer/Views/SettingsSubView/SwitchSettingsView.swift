@@ -379,7 +379,6 @@ struct SwitchSettingsView: View {
                         }
                         .buttonStyle(.bordered)
                         .controlSize(.regular)
-                        .padding(.vertical, 2)
                     }
                     
                     if spaceManager.appGrabExceptions.isEmpty {

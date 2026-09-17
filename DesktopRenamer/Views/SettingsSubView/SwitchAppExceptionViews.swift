@@ -417,6 +417,7 @@ struct AppExceptionRow: View {
         }
         .padding(.vertical, 6)
         .padding(.horizontal, 12)
+        .frame(minHeight: 36)
     }
 }
 
