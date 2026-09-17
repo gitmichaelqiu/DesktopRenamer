@@ -45,7 +45,7 @@ struct LauncherSettingsView: View {
                 SettingsSection("Launcher Commands Ranking") {
                     SettingsRow(
                         "Automatically rank commands",
-                        helperText: "Automatically rank commands based on their execution frequency. Turn off to manually reorder commands."
+                        helperText: "Commands are ranked by usage. Turn this off to reorder them manually."
                     ) {
                         Toggle("", isOn: $viewModel.automaticallyRankCommands)
                             .toggleStyle(.switch)

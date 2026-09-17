@@ -188,7 +188,7 @@ struct EditAppExceptionView: View {
                 
                 SettingsRow(
                     "Drag window slightly before switching",
-                    helperText: "For custom-drawn windows (like WeChat) that require mouse movement to start dragging. Enabling this may resolve some window movement failures."
+                    helperText: "Use this for apps whose windows need a small drag before they can be moved, such as WeChat."
                 ) {
                     Toggle("", isOn: Binding(
                         get: { exception.dragBeforeSwitch ?? false },

@@ -6,8 +6,8 @@ struct PermissionsSettingsView: View {
     var body: some View {
         SettingsContainer(.permissions) {
             VStack(alignment: .leading, spacing: 20) {
-                SettingsSection("Permissions", helperText: "Status is read from macOS for this copy of DesktopRenamer and refreshes automatically while System Settings is open. Accessibility covers both window control and the event input needed for switching. If a permission remains off, remove the old DesktopRenamer entry and add the copy currently running.") {
-                    SettingsRow("Accessibility", helperText: "Required for injecting shortcuts, reading active window information, and moving windows with Option + swipe. This also includes the event control needed to switch Spaces and move windows.") {
+                SettingsSection("Permissions") {
+                    SettingsRow("Accessibility", helperText: "Required for keyboard shortcuts and moving windows between spaces.") {
                         HStack {
                             if permissionManager.hasAccessibilityPermission {
                                 Image(systemName: "checkmark.circle.fill")
@@ -25,7 +25,7 @@ struct PermissionsSettingsView: View {
 
                     Divider()
 
-                    SettingsRow("Screen Recording", helperText: "Required for reading the active window before moving it with Option + swipe.") {
+                    SettingsRow("Screen Recording", helperText: "Required to identify the active window when moving it between spaces.") {
                         HStack {
                             if permissionManager.isScreenCaptureGranted {
                                 Image(systemName: "checkmark.circle.fill")
@@ -46,7 +46,7 @@ struct PermissionsSettingsView: View {
 
                         SettingsRow(
                             "Restart DesktopRenamer",
-                            helperText: "Restart after changing permissions so macOS applies the updated access to a fresh DesktopRenamer process."
+                            helperText: "Restart DesktopRenamer after changing permissions."
                         ) {
                             Button {
                                 permissionManager.restartApplication()
