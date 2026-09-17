@@ -283,6 +283,7 @@ struct LauncherSpaceMenuView: View {
                                             viewModel.isKeyboardSelection = true
                                             viewModel.spaceMenuSelectedIndex = index
                                             viewModel.executeSpaceMenuSelection()
+                                            viewModel.finishPointerAction()
                                         }
                                     )
                                     .id(space.id)
@@ -423,6 +424,7 @@ struct CommandKActionRowView: View {
             action: {
                 viewModel.commandKSelectedIndex = idx
                 viewModel.executeCommandKAction()
+                viewModel.finishPointerAction()
             }
         ) {
             HStack(spacing: LauncherLayout.submenuRowContentSpacing) {

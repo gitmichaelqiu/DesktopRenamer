@@ -9,6 +9,10 @@ extension LauncherViewModel {
         isKeyboardSelection = false
     }
 
+    func finishPointerAction() {
+        isKeyboardSelection = false
+    }
+
     func executeNthRowAction(_ index: Int) {
         guard index >= 0 && index < visibleRowsCount else { return }
         isKeyboardSelection = true

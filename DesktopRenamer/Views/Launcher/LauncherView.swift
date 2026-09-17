@@ -290,6 +290,7 @@ struct ListAreaView: View {
                                             viewModel.isKeyboardSelection = true
                                             viewModel.selectedRowIndex = i
                                             viewModel.executeRowAction()
+                                            viewModel.finishPointerAction()
                                         }
                                         .id(cmd.id)
                                 }
@@ -335,6 +336,7 @@ struct ListAreaView: View {
                                                 viewModel.isKeyboardSelection = true
                                                 viewModel.selectedRowIndex = i
                                                 viewModel.executeRowAction()
+                                                viewModel.finishPointerAction()
                                             }
                                             .id(space.id)
                                     }
@@ -387,6 +389,7 @@ struct ListAreaView: View {
                                                     viewModel.isKeyboardSelection = true
                                                     viewModel.selectedRowIndex = i
                                                     viewModel.executeRowAction()
+                                                    viewModel.finishPointerAction()
                                                 }
                                                 .id(space.id)
                                         }
@@ -437,6 +440,7 @@ struct ListAreaView: View {
                                                     viewModel.isKeyboardSelection = true
                                                     viewModel.selectedRowIndex = item.index
                                                     viewModel.executeRowAction()
+                                                    viewModel.finishPointerAction()
                                                 }
                                                 .id(item.id)
                                             }
@@ -490,6 +494,7 @@ struct ListAreaView: View {
                                                             viewModel.isKeyboardSelection = true
                                                             viewModel.selectedRowIndex = item.index
                                                             viewModel.executeRowAction()
+                                                            viewModel.finishPointerAction()
                                                         }
                                                         .id(item.id)
                                                         
@@ -500,6 +505,7 @@ struct ListAreaView: View {
                                                             viewModel.isKeyboardSelection = true
                                                             viewModel.selectedRowIndex = item.index
                                                             viewModel.executeRowAction()
+                                                            viewModel.finishPointerAction()
                                                         }
                                                         .id(item.id)
                                                 }
