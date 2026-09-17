@@ -200,12 +200,12 @@ struct WindowRowView: View {
                 .foregroundColor(colors.textPrimary)
                 .lineLimit(1)
                 .truncationMode(.middle)
-                .layoutPriority(1)
 
             LauncherTrailingLabel(
                 window.ownerName,
                 color: isSelected ? colors.textSecondary : colors.textTertiary
             )
+            .layoutPriority(1)
 
             Spacer()
 
@@ -302,12 +302,12 @@ struct WindowBatchRowView: View {
                 .foregroundColor(colors.textPrimary)
                 .lineLimit(1)
                 .truncationMode(.middle)
-                .layoutPriority(1)
 
             LauncherTrailingLabel(
                 window.ownerName,
                 color: isSelected ? colors.textSecondary : colors.textTertiary
             )
+            .layoutPriority(1)
 
             Spacer()
 
