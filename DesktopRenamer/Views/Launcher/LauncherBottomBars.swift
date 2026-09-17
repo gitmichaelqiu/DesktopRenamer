@@ -58,7 +58,7 @@ struct BatchMoveBottomBar: View {
                         Text(verbatim: String(localized: "Stage"))
                         KeycapView(text: "↵", isSelected: false)
                     }
-                    .modifier(BottomBarCapsule(isSelected: false, isActive: false, colorScheme: colorScheme))
+                    .modifier(BottomBarCapsule(isSelected: false, isActive: false, colorScheme: colorScheme, isPrimaryAction: true))
                     .contentShape(Rectangle())
                     .onTapGesture {
                         viewModel.executeRowAction()
@@ -83,7 +83,7 @@ struct BatchMoveBottomBar: View {
                                         Text(verbatim: String(localized: isMove ? "Unstage Move" : "Unstage Action"))
                                         KeycapView(text: "↵", isSelected: false)
                                     }
-                                    .modifier(BottomBarCapsule(isSelected: false, isActive: false, colorScheme: colorScheme))
+                                    .modifier(BottomBarCapsule(isSelected: false, isActive: false, colorScheme: colorScheme, isPrimaryAction: true))
                                     .contentShape(Rectangle())
                                     .onTapGesture {
                                         viewModel.executeRowAction()
@@ -96,7 +96,7 @@ struct BatchMoveBottomBar: View {
                                         Text(verbatim: String(localized: "Move to..."))
                                         KeycapView(text: "↵", isSelected: false)
                                     }
-                                    .modifier(BottomBarCapsule(isSelected: false, isActive: false, colorScheme: colorScheme))
+                                    .modifier(BottomBarCapsule(isSelected: false, isActive: false, colorScheme: colorScheme, isPrimaryAction: true))
                                     .contentShape(Rectangle())
                                     .onTapGesture {
                                         viewModel.executeRowAction()
@@ -343,7 +343,7 @@ struct SpacesBottomBar: View {
                                 Text(LocalizedStringKey("Switch Space"))
                                 KeycapView(text: "↵", isSelected: false)
                             }
-                            .modifier(BottomBarCapsule(isSelected: false, isActive: false, colorScheme: colorScheme))
+                            .modifier(BottomBarCapsule(isSelected: false, isActive: false, colorScheme: colorScheme, isPrimaryAction: true))
                             .contentShape(Rectangle())
                             .onTapGesture {
                                 viewModel.executeBottomBarSpaceAction(isOption: false, isCommand: false)
@@ -365,7 +365,7 @@ struct SpacesBottomBar: View {
                             Text(LocalizedStringKey("Action"))
                             KeycapView(text: "↵", isSelected: false)
                         }
-                        .modifier(BottomBarCapsule(isSelected: false, isActive: false, colorScheme: colorScheme))
+                        .modifier(BottomBarCapsule(isSelected: false, isActive: false, colorScheme: colorScheme, isPrimaryAction: true))
                         .contentShape(Rectangle())
                         .onTapGesture {
                             viewModel.executeRowAction()

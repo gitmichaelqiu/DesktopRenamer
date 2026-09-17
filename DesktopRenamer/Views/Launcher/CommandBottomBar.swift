@@ -67,7 +67,7 @@ struct CommandBottomBar: View {
                             Text(verbatim: String(localized: "Switch Space"))
                             KeycapView(text: "↵", isSelected: false)
                         }
-                        .modifier(BottomBarCapsule(isSelected: false, isActive: false, colorScheme: colorScheme))
+                        .modifier(BottomBarCapsule(isSelected: false, isActive: false, colorScheme: colorScheme, isPrimaryAction: true))
                         .contentShape(Rectangle())
                         .onTapGesture {
                             viewModel.executeRowAction()
@@ -79,7 +79,7 @@ struct CommandBottomBar: View {
                         Text(verbatim: String(localized: "Move Window"))
                         KeycapView(text: "↵", isSelected: false)
                     }
-                    .modifier(BottomBarCapsule(isSelected: false, isActive: false, colorScheme: colorScheme))
+                    .modifier(BottomBarCapsule(isSelected: false, isActive: false, colorScheme: colorScheme, isPrimaryAction: true))
                     .contentShape(Rectangle())
                     .onTapGesture {
                         viewModel.executeRowAction()
@@ -91,7 +91,7 @@ struct CommandBottomBar: View {
                             Text(verbatim: String(localized: "Move"))
                             KeycapView(text: "↵", isSelected: false)
                         }
-                        .modifier(BottomBarCapsule(isSelected: false, isActive: false, colorScheme: colorScheme))
+                        .modifier(BottomBarCapsule(isSelected: false, isActive: false, colorScheme: colorScheme, isPrimaryAction: true))
                         .contentShape(Rectangle())
                         .onTapGesture {
                             viewModel.executeRowAction()
@@ -102,7 +102,7 @@ struct CommandBottomBar: View {
                                 Text(verbatim: String(localized: "Focus"))
                                 KeycapView(text: "↵", isSelected: false)
                             }
-                            .modifier(BottomBarCapsule(isSelected: false, isActive: false, colorScheme: colorScheme))
+                            .modifier(BottomBarCapsule(isSelected: false, isActive: false, colorScheme: colorScheme, isPrimaryAction: true))
                             .contentShape(Rectangle())
                             .onTapGesture {
                                 viewModel.executeRowAction()
@@ -125,7 +125,7 @@ struct CommandBottomBar: View {
                         Text(verbatim: String(localized: "Rename Space"))
                         KeycapView(text: "↵", isSelected: false)
                     }
-                    .modifier(BottomBarCapsule(isSelected: false, isActive: false, colorScheme: colorScheme))
+                    .modifier(BottomBarCapsule(isSelected: false, isActive: false, colorScheme: colorScheme, isPrimaryAction: true))
                     .contentShape(Rectangle())
                     .onTapGesture {
                         viewModel.executeRowAction()
