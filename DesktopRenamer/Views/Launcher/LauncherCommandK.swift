@@ -370,7 +370,7 @@ private struct LauncherSpaceMenuRow: View {
                 } else {
                     LauncherIconSlot(
                         systemName: "desktopcomputer",
-                        tint: colors.textSecondary,
+                        tint: colors.textPrimary,
                         symbolSize: LauncherLayout.submenuActionIconSymbolSize,
                         slot: LauncherLayout.submenuActionIconSlot
                     )
