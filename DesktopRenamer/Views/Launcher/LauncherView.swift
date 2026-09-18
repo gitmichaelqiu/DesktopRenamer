@@ -283,7 +283,7 @@ struct ListAreaView: View {
                                         command: cmd,
                                         isSelected: isSelected,
                                         shortcutNumber: viewModel.shouldShowCommandNumbersInMainList && i < 9 ? i + 1 : nil,
-                                        ignoresHover: viewModel.isKeyboardSelection
+                                        ignoresHover: viewModel.shouldIgnoreMainListHover
                                     )
                                         .contentShape(Rectangle())
                                         .onTapGesture {
@@ -329,7 +329,7 @@ struct ListAreaView: View {
                                             isCurrent: isCurrent,
                                             showDisplayName: viewModel.shouldShowDisplayNameForSpaces,
                                             shortcutNumber: viewModel.shouldShowCommandNumbersInMainList && i < 9 ? i + 1 : nil,
-                                            ignoresHover: viewModel.isKeyboardSelection
+                                            ignoresHover: viewModel.shouldIgnoreMainListHover
                                         )
                                             .contentShape(Rectangle())
                                             .onTapGesture {
@@ -382,7 +382,7 @@ struct ListAreaView: View {
                                                 isCurrent: isCurrent,
                                                 showDisplayName: viewModel.shouldShowDisplayNameForSpaces,
                                                 shortcutNumber: viewModel.shouldShowCommandNumbersInMainList && i < 9 ? i + 1 : nil,
-                                                ignoresHover: viewModel.isKeyboardSelection
+                                                ignoresHover: viewModel.shouldIgnoreMainListHover
                                             )
                                                 .contentShape(Rectangle())
                                                 .onTapGesture {
@@ -437,7 +437,7 @@ struct ListAreaView: View {
                                                         window: item.window,
                                                         isSelected: isSelected,
                                                         shortcutNumber: viewModel.shouldShowCommandNumbersInMainList && item.index < 9 ? item.index + 1 : nil,
-                                                        ignoresHover: viewModel.isKeyboardSelection
+                                                        ignoresHover: viewModel.shouldIgnoreMainListHover
                                                     )
                                                     .contentShape(Rectangle())
                                                     .onTapGesture {
@@ -493,7 +493,7 @@ struct ListAreaView: View {
                                                 
                                                 switch item {
                                                 case .staged(let move, _):
-                                                    WindowBatchRowView(window: move.window, isSelected: isSelected, isStaged: true, stagedActionText: move.actionType.description, shortcutNumber: viewModel.shouldShowCommandNumbersInMainList && item.index < 9 ? item.index + 1 : nil, ignoresHover: viewModel.isKeyboardSelection)
+                                                    WindowBatchRowView(window: move.window, isSelected: isSelected, isStaged: true, stagedActionText: move.actionType.description, shortcutNumber: viewModel.shouldShowCommandNumbersInMainList && item.index < 9 ? item.index + 1 : nil, ignoresHover: viewModel.shouldIgnoreMainListHover)
                                                         .contentShape(Rectangle())
                                                         .onTapGesture {
                                                             viewModel.isKeyboardSelection = true
@@ -508,7 +508,7 @@ struct ListAreaView: View {
                                                         viewModel.selectedRowIndex = item.index
                                                         viewModel.showCommandKPanel(isKeyboardInitiated: false)
                                                     }) {
-                                                        WindowBatchRowView(window: window, isSelected: isSelected, isStaged: false, stagedActionText: "", shortcutNumber: viewModel.shouldShowCommandNumbersInMainList && item.index < 9 ? item.index + 1 : nil, ignoresHover: viewModel.isKeyboardSelection)
+                                                        WindowBatchRowView(window: window, isSelected: isSelected, isStaged: false, stagedActionText: "", shortcutNumber: viewModel.shouldShowCommandNumbersInMainList && item.index < 9 ? item.index + 1 : nil, ignoresHover: viewModel.shouldIgnoreMainListHover)
                                                             .contentShape(Rectangle())
                                                             .onTapGesture {
                                                                 viewModel.isKeyboardSelection = true
