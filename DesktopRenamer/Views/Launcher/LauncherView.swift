@@ -429,18 +429,23 @@ struct ListAreaView: View {
                                             
                                             ForEach(section.items) { item in
                                                 let isSelected = !viewModel.isBottomBarFocused && viewModel.selectedRowIndex == item.index
-                                                WindowRowView(
-                                                    window: item.window,
-                                                    isSelected: isSelected,
-                                                    shortcutNumber: viewModel.shouldShowCommandNumbersInMainList && item.index < 9 ? item.index + 1 : nil,
-                                                    ignoresHover: viewModel.isKeyboardSelection
-                                                )
-                                                .contentShape(Rectangle())
-                                                .onTapGesture {
-                                                    viewModel.isKeyboardSelection = true
+                                                LauncherRightClickContainer(onRightClick: {
                                                     viewModel.selectedRowIndex = item.index
-                                                    viewModel.executeRowAction()
-                                                    viewModel.finishPointerAction()
+                                                    viewModel.showCommandKPanel(isKeyboardInitiated: false)
+                                                }) {
+                                                    WindowRowView(
+                                                        window: item.window,
+                                                        isSelected: isSelected,
+                                                        shortcutNumber: viewModel.shouldShowCommandNumbersInMainList && item.index < 9 ? item.index + 1 : nil,
+                                                        ignoresHover: viewModel.isKeyboardSelection
+                                                    )
+                                                    .contentShape(Rectangle())
+                                                    .onTapGesture {
+                                                        viewModel.isKeyboardSelection = true
+                                                        viewModel.selectedRowIndex = item.index
+                                                        viewModel.executeRowAction()
+                                                        viewModel.finishPointerAction()
+                                                    }
                                                 }
                                                 .id(item.id)
                                             }
@@ -499,14 +504,19 @@ struct ListAreaView: View {
                                                         .id(item.id)
                                                         
                                                 case .unstaged(let window, _):
-                                                    WindowBatchRowView(window: window, isSelected: isSelected, isStaged: false, stagedActionText: "", shortcutNumber: viewModel.shouldShowCommandNumbersInMainList && item.index < 9 ? item.index + 1 : nil, ignoresHover: viewModel.isKeyboardSelection)
-                                                        .contentShape(Rectangle())
-                                                        .onTapGesture {
-                                                            viewModel.isKeyboardSelection = true
-                                                            viewModel.selectedRowIndex = item.index
-                                                            viewModel.executeRowAction()
-                                                            viewModel.finishPointerAction()
-                                                        }
+                                                    LauncherRightClickContainer(onRightClick: {
+                                                        viewModel.selectedRowIndex = item.index
+                                                        viewModel.showCommandKPanel(isKeyboardInitiated: false)
+                                                    }) {
+                                                        WindowBatchRowView(window: window, isSelected: isSelected, isStaged: false, stagedActionText: "", shortcutNumber: viewModel.shouldShowCommandNumbersInMainList && item.index < 9 ? item.index + 1 : nil, ignoresHover: viewModel.isKeyboardSelection)
+                                                            .contentShape(Rectangle())
+                                                            .onTapGesture {
+                                                                viewModel.isKeyboardSelection = true
+                                                                viewModel.selectedRowIndex = item.index
+                                                                viewModel.executeRowAction()
+                                                                viewModel.finishPointerAction()
+                                                            }
+                                                    }
                                                         .id(item.id)
                                                 }
                                             }
