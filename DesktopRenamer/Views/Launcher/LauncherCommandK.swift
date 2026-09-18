@@ -430,7 +430,7 @@ struct CommandKActionRowView: View {
             HStack(spacing: LauncherLayout.submenuRowContentSpacing) {
                 LauncherIconSlot(
                     systemName: getIconName(for: action),
-                    tint: isSelected ? colors.textPrimary : colors.textSecondary,
+                    tint: colors.textPrimary,
                     symbolSize: LauncherLayout.submenuActionIconSymbolSize,
                     slot: LauncherLayout.submenuActionIconSlot
                 )
