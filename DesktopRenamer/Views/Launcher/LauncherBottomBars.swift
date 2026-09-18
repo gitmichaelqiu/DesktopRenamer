@@ -324,6 +324,17 @@ struct SpacesBottomBar: View {
                 // Right side action indicators
                 HStack(spacing: 2) {
                     if !viewModel.isBottomBarFocused {
+                        HStack(spacing: 4) {
+                            Text(LocalizedStringKey("Action"))
+                            KeycapView(text: "↵", isSelected: false)
+                        }
+                        .modifier(BottomBarCapsule(isSelected: false, isActive: false, colorScheme: colorScheme, isPrimaryAction: true))
+                        .contentShape(Rectangle())
+                        .onTapGesture {
+                            viewModel.executeRowAction()
+                        }
+                        .transition(.launcherCapsule)
+
                         Button(action: {
                             viewModel.focusSpaceBar(isKeyboardInitiated: false)
                         }) {
@@ -358,17 +369,6 @@ struct SpacesBottomBar: View {
                             .onTapGesture {
                                 viewModel.executeBottomBarSpaceAction(isOption: true, isCommand: false)
                             }
-                        }
-                        .transition(.launcherCapsule)
-                    } else {
-                        HStack(spacing: 4) {
-                            Text(LocalizedStringKey("Action"))
-                            KeycapView(text: "↵", isSelected: false)
-                        }
-                        .modifier(BottomBarCapsule(isSelected: false, isActive: false, colorScheme: colorScheme, isPrimaryAction: true))
-                        .contentShape(Rectangle())
-                        .onTapGesture {
-                            viewModel.executeRowAction()
                         }
                         .transition(.launcherCapsule)
                     }
