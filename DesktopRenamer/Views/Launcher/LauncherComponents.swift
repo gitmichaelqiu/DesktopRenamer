@@ -291,6 +291,55 @@ extension View {
     }
 }
 
+/// Hosts an eligible launcher row in a small AppKit bridge so a right mouse
+/// click can open the existing Cmd+K submenu without adding a second menu.
+struct LauncherRightClickContainer<Content: View>: NSViewRepresentable {
+    private let content: Content
+    private let onRightClick: () -> Void
+
+    init(
+        onRightClick: @escaping () -> Void,
+        @ViewBuilder content: () -> Content
+    ) {
+        self.content = content()
+        self.onRightClick = onRightClick
+    }
+
+    func makeNSView(context: Context) -> LauncherRightClickHostingView {
+        LauncherRightClickHostingView(
+            rootView: AnyView(content),
+            onRightClick: onRightClick
+        )
+    }
+
+    func updateNSView(_ nsView: LauncherRightClickHostingView, context: Context) {
+        nsView.onRightClick = onRightClick
+        nsView.rootView = AnyView(content)
+    }
+}
+
+final class LauncherRightClickHostingView: NSHostingView<AnyView> {
+    var onRightClick: () -> Void
+
+    required init(rootView: AnyView) {
+        onRightClick = {}
+        super.init(rootView: rootView)
+    }
+
+    init(rootView: AnyView, onRightClick: @escaping () -> Void) {
+        self.onRightClick = onRightClick
+        super.init(rootView: rootView)
+    }
+
+    required init?(coder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
+    }
+
+    override func rightMouseDown(with event: NSEvent) {
+        onRightClick()
+    }
+}
+
 /// Shared header layout for the Cmd+K actions menu and all space-selection submenus.
 struct LauncherSubmenuHeader<Content: View>: View {
     private let content: Content
