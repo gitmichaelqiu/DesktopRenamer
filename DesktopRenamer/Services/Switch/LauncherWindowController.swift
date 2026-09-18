@@ -4,6 +4,9 @@ import SwiftUI
 
 class LauncherNSPanel: NSPanel {
     weak var focusedTextField: FocusTextField?
+    weak var launcherTextField: FocusTextField?
+    weak var submenuTextField: FocusTextField?
+    weak var spaceBarTextField: FocusTextField?
 
     override var canBecomeKey: Bool {
         return true
@@ -137,6 +140,12 @@ class LauncherWindowController: NSWindowController, NSWindowDelegate {
             guard let focusedTextField,
                   focusedFieldIsActive
             else {
+                if let preferredTextField = self.preferredTextField(for: panel) {
+                    if preferredTextField.makeFirstResponderAndHandleKeyEvent(event, in: panel) {
+                        return nil
+                    }
+                }
+                self.viewModel.requestCurrentFieldFocus()
                 return event
             }
 
@@ -159,6 +168,20 @@ class LauncherWindowController: NSWindowController, NSWindowDelegate {
             self.viewModel.handlePointerMovement()
             return event
         }
+    }
+
+    private func preferredTextField(for panel: LauncherNSPanel) -> FocusTextField? {
+        let textField: FocusTextField?
+        if viewModel.isSubmenuOpen {
+            textField = panel.submenuTextField
+        } else if viewModel.isBottomBarFocused {
+            textField = panel.spaceBarTextField
+        } else {
+            textField = panel.launcherTextField
+        }
+
+        guard let textField, textField.window === panel else { return nil }
+        return textField
     }
     
     required init?(coder: NSCoder) {

@@ -191,6 +191,20 @@ extension LauncherViewModel {
         requestFocusNotification(named: "FocusLauncherSubmenuTextField")
     }
 
+    func requestSpaceBarFocus() {
+        requestFocusNotification(named: "FocusSpaceBarTextField")
+    }
+
+    func requestCurrentFieldFocus() {
+        if isSubmenuOpen {
+            requestSubmenuFieldFocus()
+        } else if isBottomBarFocused {
+            requestSpaceBarFocus()
+        } else {
+            requestLauncherFieldFocus()
+        }
+    }
+
     private func requestFocusNotification(named name: String) {
         focusRequestID &+= 1
         let requestID = focusRequestID

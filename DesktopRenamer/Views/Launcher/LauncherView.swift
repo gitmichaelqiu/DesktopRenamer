@@ -26,6 +26,8 @@ struct LauncherView: View {
                         SearchTextField(
                             text: $viewModel.renameInputText,
                             isDark: colors.isDark,
+                            isTypingDisabled: viewModel.isLauncherBusy,
+                            isInteractionDisabled: viewModel.isLauncherBusy,
                             onUpArrow: {},
                             onDownArrow: {},
                             onEnter: {
@@ -46,7 +48,8 @@ struct LauncherView: View {
                         SearchTextField(
                             text: $viewModel.searchQuery,
                             isDark: colors.isDark,
-                            isTypingDisabled: viewModel.isSubmenuOpen,
+                            isTypingDisabled: viewModel.isSubmenuOpen || viewModel.isLauncherBusy,
+                            isInteractionDisabled: viewModel.isLauncherBusy,
                             onUpArrow: {
                                 if viewModel.commandKTargetWindow != nil {
                                     viewModel.selectPreviousCommandKAction()
@@ -267,7 +270,6 @@ struct LauncherView: View {
         }
         .frame(width: 750, height: 475)
         .launcherBackground(cornerRadius: 26)
-        .disabled(viewModel.isLauncherBusy)
     }
 }
 

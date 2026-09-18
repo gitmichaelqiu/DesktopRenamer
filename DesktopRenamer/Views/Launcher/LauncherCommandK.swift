@@ -288,6 +288,7 @@ struct LauncherSpaceMenuView: View {
                                         colors: colors,
                                         ignoresHover: viewModel.isKeyboardSelection,
                                         action: {
+                                            guard !viewModel.isLauncherBusy else { return }
                                             viewModel.isKeyboardSelection = true
                                             viewModel.spaceMenuSelectedIndex = index
                                             viewModel.executeSpaceMenuSelection()
@@ -430,6 +431,7 @@ struct CommandKActionRowView: View {
             commandNumber: shortcutNumber,
             ignoresHover: viewModel.isKeyboardSelection,
             action: {
+                guard !viewModel.isLauncherBusy else { return }
                 viewModel.commandKSelectedIndex = idx
                 viewModel.executeCommandKAction()
                 viewModel.finishPointerAction()

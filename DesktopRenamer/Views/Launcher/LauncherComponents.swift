@@ -433,6 +433,8 @@ struct LauncherSubmenuSearchField: View {
         SearchTextField(
             text: $viewModel.submenuSearchQuery,
             isDark: colors.isDark,
+            isTypingDisabled: viewModel.isLauncherBusy,
+            isInteractionDisabled: viewModel.isLauncherBusy,
             isSubmenuField: true,
             onUpArrow: selectPrevious,
             onDownArrow: selectNext,
@@ -457,6 +459,8 @@ struct LauncherSubmenuSearchField: View {
     }
 
     private func selectPrevious() {
+        guard !viewModel.isLauncherBusy else { return }
+
         switch kind {
         case .actions:
             viewModel.selectPreviousCommandKAction()
@@ -467,6 +471,8 @@ struct LauncherSubmenuSearchField: View {
     }
 
     private func selectNext() {
+        guard !viewModel.isLauncherBusy else { return }
+
         switch kind {
         case .actions:
             viewModel.selectNextCommandKAction()
@@ -480,6 +486,8 @@ struct LauncherSubmenuSearchField: View {
     }
 
     private func executeSelection() {
+        guard !viewModel.isLauncherBusy else { return }
+
         viewModel.isKeyboardSelection = true
         switch kind {
         case .actions:
@@ -490,6 +498,8 @@ struct LauncherSubmenuSearchField: View {
     }
 
     private func executeNumberedSelection(_ number: Int) {
+        guard !viewModel.isLauncherBusy else { return }
+
         let index = number - 1
         viewModel.isKeyboardSelection = true
         switch kind {
