@@ -109,6 +109,7 @@ enum DesktopRearrangementDirection {
     @Published var isLoadingData: Bool = false
     @Published var isKeyboardSelection: Bool = false
     @Published var isRearrangingSpace: Bool = false
+    @Published var isExecutingAction: Bool = false
     var rearrangementRecoveryWorkItem: DispatchWorkItem?
     
     @Published var showCommandNumbers: Bool = false
@@ -169,6 +170,10 @@ enum DesktopRearrangementDirection {
 
     var isSubmenuOpen: Bool {
         commandKTargetWindow != nil || isSpaceMenuOpen
+    }
+
+    var isLauncherBusy: Bool {
+        isRearrangingSpace || isExecutingBatchMove || isExecutingAction
     }
 
     var shouldShowCommandNumbersInMainList: Bool {

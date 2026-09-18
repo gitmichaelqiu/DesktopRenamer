@@ -6,6 +6,8 @@ import SwiftUI
 extension LauncherViewModel {
 
     func executeRowAction() {
+        guard !isLauncherBusy else { return }
+
         let index = selectedRowIndex
         
         if activeCommand == nil {

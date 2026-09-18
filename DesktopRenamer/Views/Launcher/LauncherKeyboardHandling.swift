@@ -3,7 +3,7 @@ import AppKit
 extension LauncherView {
     func handleTextFieldKeyEquivalent(_ event: NSEvent) -> Bool {
         guard event.type == .keyDown else { return false }
-        guard !viewModel.isRearrangingSpace, !viewModel.isExecutingBatchMove else { return true }
+        guard !viewModel.isLauncherBusy else { return true }
 
         let modifiers = event.modifierFlags.intersection(.deviceIndependentFlagsMask)
         let hasCommand = modifiers.contains(.command)

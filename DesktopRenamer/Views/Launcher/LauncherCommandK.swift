@@ -101,11 +101,19 @@ struct LauncherSubmenuOverlay: View {
     private func synchronizeSubmenu() {
         guard let requestedSubmenu else {
             presentationGeneration &+= 1
-            viewModel.requestLauncherFieldFocus()
+            let generation = presentationGeneration
+            let focusDelay: TimeInterval = isPresented ? 0.12 : 0
             if isPresented {
                 withAnimation(LauncherAnimation.submenuExit) {
                     isPresented = false
                 }
+            }
+            DispatchQueue.main.asyncAfter(deadline: .now() + focusDelay) { [viewModel] in
+                guard generation == presentationGeneration,
+                      !viewModel.isSubmenuOpen else {
+                    return
+                }
+                viewModel.requestLauncherFieldFocus()
             }
             return
         }

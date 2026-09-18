@@ -91,9 +91,15 @@ extension LauncherViewModel {
             ? SpaceHelper.getCurrentSpaceIDsByDisplay()
             : [:]
 
+        isExecutingAction = true
         closeLauncher()
 
         Task { @MainActor in
+            defer {
+                self.isExecutingAction = false
+                self.requestLauncherFieldFocus()
+            }
+
             try? await Task.sleep(nanoseconds: 200_000_000)
             let moved = await WindowActionCoordinator.moveWindow(
                 windowID: window.id,
@@ -160,9 +166,15 @@ extension LauncherViewModel {
             $0.id == fromSpaceIDStr
         }?.isFullscreen ?? false
 
+        isExecutingAction = true
         closeLauncher()
 
         Task { @MainActor in
+            defer {
+                self.isExecutingAction = false
+                self.requestLauncherFieldFocus()
+            }
+
             try? await Task.sleep(nanoseconds: 200_000_000)
             let moved = await WindowActionCoordinator.moveWindow(
                 windowID: prevWindow.id,
@@ -186,9 +198,15 @@ extension LauncherViewModel {
     func executeFocusWindow(_ window: WindowEntry) {
         DiagnosticEventLog.shared.record(subsystem: "Launcher", level: "info", "executeFocusWindow: window=\(window.title) (id=\(window.id), pid=\(window.pid))")
         incrementCommandFrequency(LauncherCommandType.listWindows.rawValue)
+        isExecutingAction = true
         closeLauncher()
 
         Task { @MainActor in
+            defer {
+                self.isExecutingAction = false
+                self.requestLauncherFieldFocus()
+            }
+
             _ = await WindowActionCoordinator.focusWindow(
                 windowID: window.id,
                 pid: window.pid,

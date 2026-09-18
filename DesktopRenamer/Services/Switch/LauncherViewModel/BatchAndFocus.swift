@@ -33,6 +33,7 @@ extension LauncherViewModel {
                 self.isExecutingBatchMove = false
                 self.stagedMoves.removeAll()
                 self.batchExecutionTask = nil
+                self.requestLauncherFieldFocus()
             }
 
             do {

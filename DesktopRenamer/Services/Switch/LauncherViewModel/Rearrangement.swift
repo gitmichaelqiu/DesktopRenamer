@@ -8,7 +8,7 @@ extension LauncherViewModel {
     func rearrangeSelectedDesktop(direction: DesktopRearrangementDirection) {
         guard activeCommand?.type == .switchToDesktop,
               stagingWindow == nil,
-              !isRearrangingSpace else { return }
+              !isLauncherBusy else { return }
 
         let spaces = filteredSpaces
         guard selectedRowIndex >= 0,
@@ -29,6 +29,7 @@ extension LauncherViewModel {
             self.rearrangementRecoveryWorkItem?.cancel()
             self.rearrangementRecoveryWorkItem = nil
             self.isRearrangingSpace = false
+            self.requestLauncherFieldFocus()
             guard case .success = result else { return }
 
             self.applyLocalSpaceOrder(orderedIDs: self.expectedOrder(
@@ -89,6 +90,7 @@ extension LauncherViewModel {
                 "Rearrangement verification timed out; unlocking launcher"
             )
             self.isRearrangingSpace = false
+            self.requestLauncherFieldFocus()
             manager?.refreshSpaceState()
         }
         rearrangementRecoveryWorkItem = workItem
@@ -99,6 +101,7 @@ extension LauncherViewModel {
         rearrangementRecoveryWorkItem?.cancel()
         rearrangementRecoveryWorkItem = nil
         isRearrangingSpace = false
+        requestLauncherFieldFocus()
     }
 
     private func expectedOrder(

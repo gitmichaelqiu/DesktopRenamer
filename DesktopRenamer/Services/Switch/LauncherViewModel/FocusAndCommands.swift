@@ -14,13 +14,16 @@ extension LauncherViewModel {
     }
 
     func executeNthRowAction(_ index: Int) {
-        guard index >= 0 && index < visibleRowsCount else { return }
+        guard !isLauncherBusy,
+              index >= 0 && index < visibleRowsCount else { return }
         isKeyboardSelection = true
         selectedRowIndex = index
         executeRowAction()
     }
     
     func handleEscapeKey() {
+        guard !isLauncherBusy else { return }
+
         if commandKTargetWindow != nil {
             commandKTargetWindow = nil
         } else if isBottomBarFocused {
@@ -82,6 +85,8 @@ extension LauncherViewModel {
     }
     
     func handleTabKey() {
+        guard !isLauncherBusy else { return }
+
         if isSubmenuOpen {
             requestSubmenuFieldFocus()
         } else if isBottomBarFocused {
@@ -98,6 +103,8 @@ extension LauncherViewModel {
     }
 
     func focusSpaceBar(movingBy offset: Int = 0, isKeyboardInitiated: Bool = true) {
+        guard !isLauncherBusy else { return }
+
         spaceBarQuery = ""
         isBottomBarFocused = true
         isKeyboardSelection = isKeyboardInitiated
@@ -115,6 +122,8 @@ extension LauncherViewModel {
     }
 
     func moveSpaceSelection(by offset: Int) {
+        guard !isLauncherBusy else { return }
+
         let spaces = filteredDisplaySpaces
         guard !spaces.isEmpty else {
             selectedSpaceIndex = 0
@@ -125,7 +134,8 @@ extension LauncherViewModel {
     }
     
     func executeBottomBarSpaceAction(isOption: Bool, isCommand: Bool) {
-        guard AppDelegate.shared.spaceManager != nil else { return }
+        guard !isLauncherBusy,
+              AppDelegate.shared.spaceManager != nil else { return }
         let spaces = filteredDisplaySpaces
         guard selectedSpaceIndex >= 0 && selectedSpaceIndex < spaces.count else { return }
         let space = spaces[selectedSpaceIndex]

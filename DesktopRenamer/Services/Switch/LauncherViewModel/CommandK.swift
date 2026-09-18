@@ -152,7 +152,8 @@ extension LauncherViewModel {
 
     @discardableResult
     func handleCommandKActionShortcut(_ event: NSEvent) -> Bool {
-        guard commandKTargetWindow != nil,
+        guard !isLauncherBusy,
+              commandKTargetWindow != nil,
               event.type == .keyDown else {
             return false
         }
@@ -194,6 +195,8 @@ extension LauncherViewModel {
     }
     
     func selectPreviousCommandKAction() {
+        guard !isLauncherBusy else { return }
+
         let count = commandKActions.count
         if count > 0 {
             isKeyboardSelection = true
@@ -202,6 +205,8 @@ extension LauncherViewModel {
     }
     
     func selectNextCommandKAction() {
+        guard !isLauncherBusy else { return }
+
         let count = commandKActions.count
         if count > 0 {
             isKeyboardSelection = true
@@ -210,7 +215,8 @@ extension LauncherViewModel {
     }
     
     func executeCommandKAction() {
-        guard let window = commandKTargetWindow else { return }
+        guard !isLauncherBusy,
+              let window = commandKTargetWindow else { return }
         let available = commandKActions
         guard commandKSelectedIndex >= 0 && commandKSelectedIndex < available.count else { return }
         let action = available[commandKSelectedIndex]
@@ -267,6 +273,8 @@ extension LauncherViewModel {
     }
     
     func executeActionImmediately(window: WindowEntry, actionType: BatchStagedActionType) {
+        guard !isLauncherBusy else { return }
+
         switch actionType {
         case .move(let space), .restoreTo(let space):
             guard !space.isFullscreen else {
@@ -303,6 +311,9 @@ extension LauncherViewModel {
         default:
             false
         }
+
+        isExecutingAction = true
+
         if movesWindow {
             // The native launcher is still ordered above the selected window
             // when this action comes from the list-window submenu. Order it
@@ -312,6 +323,11 @@ extension LauncherViewModel {
         }
         
         Task { @MainActor in
+            defer {
+                self.isExecutingAction = false
+                self.requestLauncherFieldFocus()
+            }
+
             if movesWindow {
                 // Let WindowServer finish removing the panel from the hit-test
                 // stack before the move coordinator captures the drag point.

@@ -238,6 +238,7 @@ class LauncherWindowController: NSWindowController, NSWindowDelegate {
 
     private func handleLauncherShortcut(_ event: NSEvent) -> Bool {
         guard event.type == .keyDown else { return false }
+        guard !viewModel.isLauncherBusy else { return true }
 
         let modifiers = event.modifierFlags.intersection(.deviceIndependentFlagsMask)
         guard modifiers.contains(.command),

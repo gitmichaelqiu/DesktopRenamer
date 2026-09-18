@@ -236,6 +236,16 @@ struct LauncherView: View {
                     }
                     .frame(maxHeight: .infinity)
                     .frame(maxWidth: .infinity)
+                } else if viewModel.isExecutingAction {
+                    VStack(spacing: 16) {
+                        ProgressView()
+                            .scaleEffect(1.2)
+                        Text(verbatim: String(localized: "Executing action..."))
+                            .font(.body)
+                            .foregroundColor(.secondary)
+                    }
+                    .frame(maxHeight: .infinity)
+                    .frame(maxWidth: .infinity)
                 } else {
                     ListAreaView(viewModel: viewModel)
                         .frame(maxHeight: .infinity)
@@ -257,7 +267,7 @@ struct LauncherView: View {
         }
         .frame(width: 750, height: 475)
         .launcherBackground(cornerRadius: 26)
-        .disabled(viewModel.isRearrangingSpace || viewModel.isExecutingBatchMove)
+        .disabled(viewModel.isLauncherBusy)
     }
 }
 

@@ -99,6 +99,8 @@ extension LauncherViewModel {
     }
 
     func executeSpaceMenuSelection() {
+        guard !isLauncherBusy else { return }
+
         let spaces = spaceMenuSpaces
         guard spaces.indices.contains(spaceMenuSelectedIndex) else { return }
         selectedRowIndex = spaceMenuSelectedIndex
