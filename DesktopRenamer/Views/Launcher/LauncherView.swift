@@ -226,6 +226,16 @@ struct LauncherView: View {
                     }
                     .frame(maxHeight: .infinity)
                     .frame(maxWidth: .infinity)
+                } else if viewModel.isRearrangingSpace {
+                    VStack(spacing: 16) {
+                        ProgressView()
+                            .scaleEffect(1.2)
+                        Text(verbatim: String(localized: "Rearranging spaces..."))
+                            .font(.body)
+                            .foregroundColor(.secondary)
+                    }
+                    .frame(maxHeight: .infinity)
+                    .frame(maxWidth: .infinity)
                 } else {
                     ListAreaView(viewModel: viewModel)
                         .frame(maxHeight: .infinity)
@@ -247,7 +257,7 @@ struct LauncherView: View {
         }
         .frame(width: 750, height: 475)
         .launcherBackground(cornerRadius: 26)
-        .disabled(viewModel.isRearrangingSpace)
+        .disabled(viewModel.isRearrangingSpace || viewModel.isExecutingBatchMove)
     }
 }
 
