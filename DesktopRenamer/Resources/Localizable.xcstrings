@@ -69,26 +69,6 @@
         }
       }
     },
-    "%@ completed" : {
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%@已完成"
-          }
-        }
-      }
-    },
-    "%@ failed" : {
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%@失败"
-          }
-        }
-      }
-    },
     "%@ moved down" : {
       "localizations" : {
         "zh-Hans" : {
@@ -657,26 +637,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "无法初始化原生桌面重排操作。"
-          }
-        }
-      }
-    },
-    "Could not move the window." : {
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "无法移动窗口。"
-          }
-        }
-      }
-    },
-    "Could not move %@" : {
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "无法移动%@"
           }
         }
       }
@@ -1775,16 +1735,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "将窗口移至…"
-          }
-        }
-      }
-    },
-    "Moved window to %@" : {
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "窗口已移动到%@"
           }
         }
       }
@@ -3782,6 +3732,176 @@
         }
       },
       "shouldTranslate" : false
+    },
+    "Closed %@" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已关闭%@"
+          }
+        }
+      }
+    },
+    "Could not close %@" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "无法关闭%@"
+          }
+        }
+      }
+    },
+    "Could not enter Full Screen for %@" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "无法为%@进入全屏"
+          }
+        }
+      }
+    },
+    "Could not exit Full Screen for %@" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "无法为%@退出全屏"
+          }
+        }
+      }
+    },
+    "Could not hide %@" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "无法隐藏%@"
+          }
+        }
+      }
+    },
+    "Could not minimize %@" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "无法最小化%@"
+          }
+        }
+      }
+    },
+    "Could not move %@ to %@" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "无法将%@移动到%@"
+          }
+        }
+      }
+    },
+    "Could not quit %@" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "无法退出%@"
+          }
+        }
+      }
+    },
+    "Could not restore %@" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "无法恢复%@"
+          }
+        }
+      }
+    },
+    "Entered Full Screen for %@" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已为%@进入全屏"
+          }
+        }
+      }
+    },
+    "Exited Full Screen for %@" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已为%@退出全屏"
+          }
+        }
+      }
+    },
+    "Hidden %@" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已隐藏%@"
+          }
+        }
+      }
+    },
+    "Minimized %@" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已最小化%@"
+          }
+        }
+      }
+    },
+    "Moved %@ to %@" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已将%@移动到%@"
+          }
+        }
+      }
+    },
+    "Quit %@" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已退出%@"
+          }
+        }
+      }
+    },
+    "Restored %@" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已恢复%@"
+          }
+        }
+      }
+    },
+    "Window" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "窗口"
+          }
+        }
+      }
     },
     "Your diagnostic report has been saved." : {
       "localizations" : {

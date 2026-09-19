@@ -112,6 +112,8 @@ extension LauncherViewModel {
         let originalSpaces = manager.returnToOriginalAfterBatchMove
             ? SpaceHelper.getCurrentSpaceIDsByDisplay()
             : [:]
+        let appName = window.ownerName.isEmpty ? window.title : window.ownerName
+        let targetSpaceName = launcherSpaceName(for: targetSpace)
 
         isExecutingAction = true
         closeLauncher()
@@ -134,7 +136,7 @@ extension LauncherViewModel {
 
             guard moved else {
                 HUDWindowController.shared.show(
-                    message: String(format: String(localized: "Could not move %@"), window.title),
+                    message: String(format: String(localized: "Could not move %@ to %@"), appName, targetSpaceName),
                     style: .failure
                 )
                 return
@@ -146,7 +148,7 @@ extension LauncherViewModel {
                 await WindowActionCoordinator.restoreOriginalSpaces(originalSpaces, using: manager)
             }
             HUDWindowController.shared.show(
-                message: String(format: String(localized: "Moved window to %@"), launcherSpaceName(for: targetSpace)),
+                message: String(format: String(localized: "Moved %@ to %@"), appName, targetSpaceName),
                 style: .success
             )
         }
@@ -198,6 +200,9 @@ extension LauncherViewModel {
         let sourceSpaceIsFullscreen = manager.spaceNameDict.first {
             $0.id == fromSpaceIDStr
         }?.isFullscreen ?? false
+        let appName = NSRunningApplication(processIdentifier: prevWindow.pid)?.localizedName
+            ?? String(localized: "Window")
+        let targetSpaceName = launcherSpaceName(for: targetSpace)
 
         isExecutingAction = true
         closeLauncher()
@@ -218,7 +223,7 @@ extension LauncherViewModel {
 
             guard moved else {
                 HUDWindowController.shared.show(
-                    message: String(localized: "Could not move the window."),
+                    message: String(format: String(localized: "Could not move %@ to %@"), appName, targetSpaceName),
                     style: .failure
                 )
                 return
@@ -230,7 +235,7 @@ extension LauncherViewModel {
                 await WindowActionCoordinator.restoreOriginalSpaces(originalSpaces, using: manager)
             }
             HUDWindowController.shared.show(
-                message: String(format: String(localized: "Moved window to %@"), launcherSpaceName(for: targetSpace)),
+                message: String(format: String(localized: "Moved %@ to %@"), appName, targetSpaceName),
                 style: .success
             )
         }
