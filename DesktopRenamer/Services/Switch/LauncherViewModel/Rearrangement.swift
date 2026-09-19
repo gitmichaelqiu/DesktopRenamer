@@ -57,7 +57,7 @@ extension LauncherViewModel {
         switch direction {
         case .up:
             guard sourceIndex > 0 else {
-                finishRearrangementRecovery()
+                finishBoundaryRearrangement()
                 return
             }
             SpaceRearrangementService.shared.rearrange(
@@ -69,7 +69,7 @@ extension LauncherViewModel {
             )
         case .down:
             guard sourceIndex < orderedIDs.count - 1 else {
-                finishRearrangementRecovery()
+                finishBoundaryRearrangement()
                 return
             }
             if sourceIndex + 2 < orderedIDs.count {
@@ -127,6 +127,14 @@ extension LauncherViewModel {
         isRearrangingSpace = false
         pendingRearrangementDirections.removeAll()
         requestLauncherFieldFocus()
+    }
+
+    private func finishBoundaryRearrangement() {
+        rearrangementRecoveryWorkItem?.cancel()
+        rearrangementRecoveryWorkItem = nil
+        isRearrangingSpace = false
+        requestLauncherFieldFocus()
+        startNextQueuedRearrangement()
     }
 
     private func expectedOrder(
