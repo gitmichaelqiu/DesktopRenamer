@@ -125,14 +125,29 @@ class HUDWindowController: NSWindowController {
         style: HUDPresentationStyle,
         systemImage: String? = nil,
         buttonTitle: String? = nil,
-        buttonAction: (() -> Void)? = nil
+        buttonAction: (() -> Void)? = nil,
+        autoHide: Bool = true
     ) {
         show(
             message: message,
             systemImage: systemImage ?? style.systemImage,
             iconColor: style.iconColor,
             buttonTitle: buttonTitle,
-            buttonAction: buttonAction
+            buttonAction: buttonAction,
+            autoHide: autoHide
+        )
+    }
+
+    func showProgress(
+        message: String,
+        style: HUDPresentationStyle = .info,
+        systemImage: String? = nil
+    ) {
+        show(
+            message: message,
+            style: style,
+            systemImage: systemImage ?? "arrow.triangle.2.circlepath",
+            autoHide: false
         )
     }
 
@@ -159,7 +174,8 @@ class HUDWindowController: NSWindowController {
         systemImage: String,
         iconColor: Color,
         buttonTitle: String? = nil,
-        buttonAction: (() -> Void)? = nil
+        buttonAction: (() -> Void)? = nil,
+        autoHide: Bool = true
     ) {
         guard let panel = window as? HUDNSPanel else { return }
 
@@ -210,9 +226,11 @@ class HUDWindowController: NSWindowController {
         panel.alphaValue = 1.0
         panel.orderFrontRegardless()
 
-        let duration = (buttonTitle != nil) ? 5.0 : 1.8
-        hideTimer = Timer.scheduledTimer(withTimeInterval: duration, repeats: false) { [weak self] _ in
-            self?.hideWithAnimation()
+        if autoHide {
+            let duration = (buttonTitle != nil) ? 5.0 : 1.8
+            hideTimer = Timer.scheduledTimer(withTimeInterval: duration, repeats: false) { [weak self] _ in
+                self?.hideWithAnimation()
+            }
         }
     }
 

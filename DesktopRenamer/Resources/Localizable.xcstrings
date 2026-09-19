@@ -983,6 +983,16 @@
         }
       }
     },
+    "Executing %@..." : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "正在执行%@..."
+          }
+        }
+      }
+    },
     "Executing batch window moves..." : {
       "localizations" : {
         "zh-Hans" : {
