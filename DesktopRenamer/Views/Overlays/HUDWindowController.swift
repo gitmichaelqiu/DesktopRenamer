@@ -112,6 +112,9 @@ class HUDWindowController: NSWindowController {
         panel.level = .statusBar
         panel.hidesOnDeactivate = false
         panel.becomesKeyOnlyIfNeeded = false
+        // HUD feedback must survive a command that temporarily switches the
+        // active Space while moving or operating on a window.
+        panel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .ignoresCycle]
 
         super.init(window: panel)
     }
