@@ -667,12 +667,12 @@
     "DesktopRenamer" : {
       "shouldTranslate" : false
     },
-    "DesktopRenamer requires Accessibility and Screen Recording permissions for hotkeys, trackpad overrides, and window movement to function correctly." : {
+    "DesktopRenamer needs these permissions to manage windows and Spaces." : {
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "DesktopRenamer需要辅助权限以及桌面录制权限以设置快捷键，触控板覆盖，以及移动窗口。"
+            "value" : "DesktopRenamer需要这些权限来管理窗口和桌面空间。"
           }
         }
       }
