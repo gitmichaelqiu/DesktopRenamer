@@ -117,12 +117,22 @@ extension LauncherViewModel {
             names[s.id] = manager.getSpaceName(s.id)
         }
         
+        var displaySpaceNumbers: [String: Int] = [:]
         self.currentSpaces = spaces.map { space in
-            SpaceGroup(
+            let number: Int
+            if space.isFullscreen {
+                number = space.num
+            } else {
+                let nextNumber = displaySpaceNumbers[space.displayID, default: 0] + 1
+                displaySpaceNumbers[space.displayID] = nextNumber
+                number = nextNumber
+            }
+
+            return SpaceGroup(
                 id: space.id,
                 name: names[space.id] ?? "",
                 displayName: getDisplayName(for: space.displayID),
-                num: space.num,
+                num: number,
                 isFullscreen: space.isFullscreen,
                 appPath: space.appPath,
                 displayID: space.displayID

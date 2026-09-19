@@ -5,6 +5,9 @@ import Foundation
 final class SpaceRearrangementService {
     static let shared = SpaceRearrangementService()
 
+    private static let requiredStableVerificationPasses = 2
+    private static let maximumVerificationAttempts = 16
+
     enum Result {
         case success
         case failure(String)
@@ -102,6 +105,7 @@ final class SpaceRearrangementService {
                     expectedOrder: expectedOrder,
                     displayID: displayID,
                     attempt: 0,
+                    stablePasses: 0,
                     completion: completion
                 )
             }
@@ -165,6 +169,7 @@ final class SpaceRearrangementService {
         expectedOrder: [String],
         displayID: String?,
         attempt: Int,
+        stablePasses: Int,
         completion: @escaping (Result) -> Void
     ) {
         guard let state = SpaceHelper.getSystemState(onDisplayID: displayID) else {
@@ -172,6 +177,7 @@ final class SpaceRearrangementService {
                 expectedOrder: expectedOrder,
                 displayID: displayID,
                 attempt: attempt,
+                stablePasses: 0,
                 completion: completion
             )
             return
@@ -187,7 +193,17 @@ final class SpaceRearrangementService {
             ? spacesOnDisplay.map(\.id)
             : spacesOnDisplay.filter { !$0.isFullscreen }.map(\.id)
         if actualOrder == expectedOrder {
-            finish(.success, completion: completion)
+            if stablePasses + 1 >= Self.requiredStableVerificationPasses {
+                finish(.success, completion: completion)
+            } else {
+                retryVerification(
+                    expectedOrder: expectedOrder,
+                    displayID: displayID,
+                    attempt: attempt,
+                    stablePasses: stablePasses + 1,
+                    completion: completion
+                )
+            }
             return
         }
 
@@ -195,6 +211,7 @@ final class SpaceRearrangementService {
             expectedOrder: expectedOrder,
             displayID: displayID,
             attempt: attempt,
+            stablePasses: 0,
             completion: completion
         )
     }
@@ -203,9 +220,10 @@ final class SpaceRearrangementService {
         expectedOrder: [String],
         displayID: String?,
         attempt: Int,
+        stablePasses: Int,
         completion: @escaping (Result) -> Void
     ) {
-        guard attempt < 8 else {
+        guard attempt < Self.maximumVerificationAttempts else {
             finish(.failure(String(localized: "The backend completed without producing the requested space order.")), completion: completion)
             return
         }
@@ -215,6 +233,7 @@ final class SpaceRearrangementService {
                 expectedOrder: expectedOrder,
                 displayID: displayID,
                 attempt: attempt + 1,
+                stablePasses: stablePasses,
                 completion: completion
             )
         }

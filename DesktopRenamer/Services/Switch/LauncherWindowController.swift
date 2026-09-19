@@ -261,9 +261,21 @@ class LauncherWindowController: NSWindowController, NSWindowDelegate {
 
     private func handleLauncherShortcut(_ event: NSEvent) -> Bool {
         guard event.type == .keyDown else { return false }
-        guard !viewModel.isLauncherBusy else { return true }
 
         let modifiers = event.modifierFlags.intersection(.deviceIndependentFlagsMask)
+        let isSpaceRearrangementShortcut = viewModel.activeCommand?.type == .switchToDesktop &&
+            viewModel.commandKTargetWindow == nil &&
+            !modifiers.contains(.option) && !modifiers.contains(.control) &&
+            modifiers.contains(.command) && modifiers.contains(.shift) &&
+            (event.keyCode == 126 || event.keyCode == 125)
+
+        if isSpaceRearrangementShortcut {
+            viewModel.rearrangeSelectedDesktop(direction: event.keyCode == 126 ? .up : .down)
+            return true
+        }
+
+        guard !viewModel.isLauncherBusy else { return true }
+
         guard modifiers.contains(.command),
               modifiers.subtracting([.command, .numericPad, .function]).isEmpty else {
             return false
