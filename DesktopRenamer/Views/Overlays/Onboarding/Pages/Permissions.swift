@@ -30,7 +30,7 @@ struct PermissionsPage: View {
                 Text("Require Permissions")
                     .font(.system(size: 30, weight: .bold, design: .rounded))
                 
-                Text("DesktopRenamer requires Accessibility and Screen Recording permissions for hotkeys, trackpad overrides, and window movement to function correctly. Accessibility also covers the event control needed to switch Spaces and move windows.")
+                Text("DesktopRenamer requires Accessibility and Screen Recording permissions for hotkeys, trackpad overrides, and window movement to function correctly.")
                     .font(.body)
                     .foregroundColor(.secondary)
                     .multilineTextAlignment(.center)
