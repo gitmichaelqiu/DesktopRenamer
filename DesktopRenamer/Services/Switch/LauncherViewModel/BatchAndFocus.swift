@@ -95,7 +95,7 @@ extension LauncherViewModel {
                     for action in sourceActions {
                         let targetSpaceID: String
 
-                        self.showBatchActionProgress(for: action.actionType)
+                        self.showBatchActionProgress(for: action)
 
                         switch action.actionType {
                         case .move(let space):
@@ -140,7 +140,7 @@ extension LauncherViewModel {
             
             // 4. Execute other actions (Close, Minimize, Hide, Fullscreen, Quit, Restore)
             for action in staticActions {
-                self.showBatchActionProgress(for: action.actionType)
+                self.showBatchActionProgress(for: action)
                 let windowSpaceID = action.window.space.id
                 let isFullscreenWindow = action.window.space.isFullscreen
                 let requiresAX = (action.actionType == .close || action.actionType == .minimize || action.actionType == .enterFullScreen || action.actionType == .exitFullScreen || action.actionType == .restore || (action.actionType == .hide && isFullscreenWindow))
@@ -312,10 +312,31 @@ extension LauncherViewModel {
         }
     }
 
-    private func showBatchActionProgress(for actionType: BatchStagedActionType) {
-        let actionLabel = commandKActionLabel(.window(actionType))
+    private func showBatchActionProgress(for action: BatchStagedAction) {
+        let appName = action.window.ownerName.isEmpty ? action.window.title : action.window.ownerName
+        let message: String
+
+        switch action.actionType {
+        case .move(let targetSpace), .restoreTo(let targetSpace):
+            message = String(format: String(localized: "Moving %@ to %@"), appName, targetSpace.name)
+        case .close:
+            message = String(format: String(localized: "Closing %@"), appName)
+        case .minimize:
+            message = String(format: String(localized: "Minimizing %@"), appName)
+        case .hide:
+            message = String(format: String(localized: "Hiding %@"), appName)
+        case .enterFullScreen:
+            message = String(format: String(localized: "Entering Full Screen for %@"), appName)
+        case .exitFullScreen:
+            message = String(format: String(localized: "Exiting Full Screen for %@"), appName)
+        case .quit:
+            message = String(format: String(localized: "Quitting %@"), appName)
+        case .restore:
+            message = String(format: String(localized: "Restoring %@"), appName)
+        }
+
         HUDWindowController.shared.showProgress(
-            message: String(format: String(localized: "Executing %@..."), actionLabel)
+            message: message
         )
     }
 

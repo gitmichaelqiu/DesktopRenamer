@@ -983,12 +983,22 @@
         }
       }
     },
-    "Executing %@..." : {
+    "Closing %@" : {
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "正在执行%@..."
+            "value" : "正在关闭%@"
+          }
+        }
+      }
+    },
+    "Entering Full Screen for %@" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "正在为%@进入全屏"
           }
         }
       }
@@ -999,6 +1009,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "执行批量窗口移动..."
+          }
+        }
+      }
+    },
+    "Exiting Full Screen for %@" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "正在为%@退出全屏"
           }
         }
       }
@@ -1191,6 +1211,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "隐藏"
+          }
+        }
+      }
+    },
+    "Hiding %@" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "正在隐藏%@"
           }
         }
       }
@@ -1589,6 +1619,16 @@
         }
       }
     },
+    "Minimizing %@" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "正在最小化%@"
+          }
+        }
+      }
+    },
     "More Apps" : {
       "localizations" : {
         "zh-Hans" : {
@@ -1745,6 +1785,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "窗口已移动到%@"
+          }
+        }
+      }
+    },
+    "Moving %@ to %@" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "正在将%@移动到%@"
           }
         }
       }
@@ -2057,6 +2107,16 @@
         }
       }
     },
+    "Quitting %@" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "正在退出%@"
+          }
+        }
+      }
+    },
     "Real-time video enhancing player." : {
       "localizations" : {
         "zh-Hans" : {
@@ -2114,6 +2174,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "重命名"
+          }
+        }
+      }
+    },
+    "Restoring %@" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "正在恢复%@"
           }
         }
       }
