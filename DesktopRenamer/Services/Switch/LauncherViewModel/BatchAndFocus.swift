@@ -29,6 +29,7 @@ extension LauncherViewModel {
         
         batchExecutionTask = Task { [weak self] in
             guard let self else { return }
+            var failedOperationCount = 0
             defer {
                 self.isExecutingBatchMove = false
                 self.stagedMoves.removeAll()
@@ -121,6 +122,7 @@ extension LauncherViewModel {
                                 batch: true
                             )
                         } else {
+                            failedOperationCount += 1
                             DiagnosticEventLog.shared.record(
                                 subsystem: "Launcher",
                                 level: "warning",
@@ -274,6 +276,18 @@ extension LauncherViewModel {
                 }
             }
             
+            let completedOperationCount = actions.count - failedOperationCount
+            if failedOperationCount == 0 {
+                HUDWindowController.shared.show(
+                    message: String(format: String(localized: "Completed %lld operation(s)"), completedOperationCount),
+                    style: .success
+                )
+            } else {
+                HUDWindowController.shared.show(
+                    message: String(format: String(localized: "Completed %lld operation(s), skipped %lld"), completedOperationCount, failedOperationCount),
+                    style: .warning
+                )
+            }
             self.closeLauncher()
             } catch {
                 DiagnosticEventLog.shared.record(
@@ -284,6 +298,10 @@ extension LauncherViewModel {
                 if let manager = AppDelegate.shared.spaceManager {
                     await WindowActionCoordinator.restoreOriginalSpaces(originalSpaceByDisplay, using: manager)
                 }
+                HUDWindowController.shared.show(
+                    message: String(localized: "Batch operations cancelled."),
+                    style: .failure
+                )
             }
         }
     }

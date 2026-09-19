@@ -69,6 +69,46 @@
         }
       }
     },
+    "%@ completed" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@已完成"
+          }
+        }
+      }
+    },
+    "%@ failed" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@失败"
+          }
+        }
+      }
+    },
+    "%@ moved down" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@已下移"
+          }
+        }
+      }
+    },
+    "%@ moved up" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@已上移"
+          }
+        }
+      }
+    },
     "%lld" : {
       "shouldTranslate" : false
     },
@@ -339,6 +379,16 @@
         }
       }
     },
+    "Batch operations cancelled." : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "批量操作已取消。"
+          }
+        }
+      }
+    },
     "Button.Cancel" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -591,12 +641,72 @@
         }
       }
     },
+    "Could not focus %@" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "无法聚焦到%@"
+          }
+        }
+      }
+    },
     "Could not initialize the native space rearrangement operation." : {
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "无法初始化原生桌面重排操作。"
+          }
+        }
+      }
+    },
+    "Could not move the window." : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "无法移动窗口。"
+          }
+        }
+      }
+    },
+    "Could not move %@" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "无法移动%@"
+          }
+        }
+      }
+    },
+    "Could not switch to the selected space." : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "无法切换到所选桌面。"
+          }
+        }
+      }
+    },
+    "Completed %lld operation(s)" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已完成%lld项操作"
+          }
+        }
+      }
+    },
+    "Completed %lld operation(s), skipped %lld" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已完成%1$lld项操作，跳过%2$lld项"
           }
         }
       }
@@ -1619,6 +1729,16 @@
         }
       }
     },
+    "Moved window to %@" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "窗口已移动到%@"
+          }
+        }
+      }
+    },
     "Move window when holding Option" : {
       "localizations" : {
         "zh-Hans" : {
@@ -2024,6 +2144,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "重命名当前桌面空间的标签名称"
+          }
+        }
+      }
+    },
+    "Renamed space to \"%@\"" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已将桌面重命名为“%@”"
           }
         }
       }
@@ -3073,6 +3203,16 @@
         }
       }
     },
+    "Space rearrangement timed out." : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "桌面重排超时。"
+          }
+        }
+      }
+    },
     "Space.DefaultName" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -3235,6 +3375,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "切换桌面"
+          }
+        }
+      }
+    },
+    "Switched to %@" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已切换到%@"
           }
         }
       }

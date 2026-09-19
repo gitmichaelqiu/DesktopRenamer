@@ -8,21 +8,43 @@ extension LauncherViewModel {
     func executeSwitchToDesktop(_ space: SpaceGroup) {
         DiagnosticEventLog.shared.record(subsystem: "Launcher", level: "info", "executeSwitchToDesktop: space=\(space.name) (id=\(space.id))")
         incrementCommandFrequency(LauncherCommandType.switchToDesktop.rawValue)
-        if let manager = AppDelegate.shared.spaceManager,
-           let desktopSpace = manager.spaceNameDict.first(where: { $0.id == space.id }) {
-            manager.switchToSpace(desktopSpace, forceInstant: true)
+        guard let manager = AppDelegate.shared.spaceManager,
+              let desktopSpace = manager.spaceNameDict.first(where: { $0.id == space.id }) else {
+            closeLauncher()
+            HUDWindowController.shared.show(
+                message: String(localized: "Could not switch to the selected space."),
+                style: .failure
+            )
+            return
         }
+
+        manager.switchToSpace(desktopSpace, forceInstant: true)
         closeLauncher()
+        HUDWindowController.shared.showAfterLauncherDismissal(
+            message: String(format: String(localized: "Switched to %@"), launcherSpaceName(for: desktopSpace)),
+            style: .success
+        )
     }
     
     func executeSwitchToSpaceID(_ spaceID: String) {
         DiagnosticEventLog.shared.record(subsystem: "Launcher", level: "info", "executeSwitchToSpaceID: spaceID=\(spaceID)")
         incrementCommandFrequency(LauncherCommandType.switchToDesktop.rawValue)
-        if let manager = AppDelegate.shared.spaceManager,
-           let desktopSpace = manager.spaceNameDict.first(where: { $0.id == spaceID }) {
-            manager.switchToSpace(desktopSpace, forceInstant: true)
+        guard let manager = AppDelegate.shared.spaceManager,
+              let desktopSpace = manager.spaceNameDict.first(where: { $0.id == spaceID }) else {
+            closeLauncher()
+            HUDWindowController.shared.show(
+                message: String(localized: "Could not switch to the selected space."),
+                style: .failure
+            )
+            return
         }
+
+        manager.switchToSpace(desktopSpace, forceInstant: true)
         closeLauncher()
+        HUDWindowController.shared.showAfterLauncherDismissal(
+            message: String(format: String(localized: "Switched to %@"), launcherSpaceName(for: desktopSpace)),
+            style: .success
+        )
     }
     
     func executeMoveWindow(_ space: SpaceGroup) {
@@ -110,12 +132,23 @@ extension LauncherViewModel {
                 wasHidden: window.isHidden
             )
 
-            guard moved else { return }
-            guard manager.returnToOriginalAfterBatchMove else { return }
-            await WindowActionCoordinator.waitForMoveToSettle(
-                isFullscreen: window.space.isFullscreen
+            guard moved else {
+                HUDWindowController.shared.show(
+                    message: String(format: String(localized: "Could not move %@"), window.title),
+                    style: .failure
+                )
+                return
+            }
+            if manager.returnToOriginalAfterBatchMove {
+                await WindowActionCoordinator.waitForMoveToSettle(
+                    isFullscreen: window.space.isFullscreen
+                )
+                await WindowActionCoordinator.restoreOriginalSpaces(originalSpaces, using: manager)
+            }
+            HUDWindowController.shared.show(
+                message: String(format: String(localized: "Moved window to %@"), launcherSpaceName(for: targetSpace)),
+                style: .success
             )
-            await WindowActionCoordinator.restoreOriginalSpaces(originalSpaces, using: manager)
         }
     }
     
@@ -184,13 +217,22 @@ extension LauncherViewModel {
             )
 
             guard moved else {
+                HUDWindowController.shared.show(
+                    message: String(localized: "Could not move the window."),
+                    style: .failure
+                )
                 return
             }
-            guard manager.returnToOriginalAfterBatchMove else { return }
-            await WindowActionCoordinator.waitForMoveToSettle(
-                isFullscreen: sourceSpaceIsFullscreen
+            if manager.returnToOriginalAfterBatchMove {
+                await WindowActionCoordinator.waitForMoveToSettle(
+                    isFullscreen: sourceSpaceIsFullscreen
+                )
+                await WindowActionCoordinator.restoreOriginalSpaces(originalSpaces, using: manager)
+            }
+            HUDWindowController.shared.show(
+                message: String(format: String(localized: "Moved window to %@"), launcherSpaceName(for: targetSpace)),
+                style: .success
             )
-            await WindowActionCoordinator.restoreOriginalSpaces(originalSpaces, using: manager)
         }
         return true
     }
@@ -207,10 +249,20 @@ extension LauncherViewModel {
                 self.requestLauncherFieldFocus()
             }
 
-            _ = await WindowActionCoordinator.focusWindow(
+            let focused = await WindowActionCoordinator.focusWindow(
                 windowID: window.id,
                 pid: window.pid,
                 spaceID: window.space.id
+            )
+            let message: String
+            if focused {
+                message = String(format: String(localized: "Switched to %@"), window.title)
+            } else {
+                message = String(format: String(localized: "Could not focus %@"), window.title)
+            }
+            HUDWindowController.shared.show(
+                message: message,
+                style: focused ? .success : .failure
             )
         }
     }
@@ -222,6 +274,17 @@ extension LauncherViewModel {
             manager.renameSpace(manager.currentSpaceUUID, to: newName)
         }
         closeLauncher()
+        HUDWindowController.shared.showAfterLauncherDismissal(
+            message: String(format: String(localized: "Renamed space to \"%@\""), newName),
+            style: .success
+        )
+    }
+
+    private func launcherSpaceName(for space: DesktopSpace) -> String {
+        guard !space.customName.isEmpty else {
+            return String(format: String(localized: "Space %lld"), space.num)
+        }
+        return space.customName
     }
 
     func showRenameDialog(for space: SpaceGroup) {

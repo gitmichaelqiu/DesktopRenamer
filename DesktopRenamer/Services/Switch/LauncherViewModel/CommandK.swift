@@ -311,6 +311,7 @@ extension LauncherViewModel {
         default:
             false
         }
+        let actionLabel = commandKActionLabel(.window(actionType))
 
         isExecutingAction = true
 
@@ -481,6 +482,10 @@ extension LauncherViewModel {
                     level: "warning",
                     "executeActionImmediately: move failed; leaving original Spaces untouched for window \(window.id)"
                 )
+                HUDWindowController.shared.show(
+                    message: String(format: String(localized: "%@ failed"), actionLabel),
+                    style: .failure
+                )
                 return
             }
             
@@ -500,6 +505,11 @@ extension LauncherViewModel {
                     manager.switchToSpace(targetSpace, forceInstant: true, isManual: false)
                 }
             }
+
+            HUDWindowController.shared.show(
+                message: String(format: String(localized: "%@ completed"), actionLabel),
+                style: .success
+            )
             
             await MainActor.run {
                 self.loadData()

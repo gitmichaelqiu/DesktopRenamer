@@ -36,6 +36,9 @@ extension LauncherViewModel {
             self.isRearrangingSpace = false
             self.requestLauncherFieldFocus()
             guard case .success = result else {
+                if case .failure(let message) = result {
+                    HUDWindowController.shared.show(message: message, style: .failure)
+                }
                 self.pendingRearrangementDirections.removeAll()
                 return
             }
@@ -49,6 +52,14 @@ extension LauncherViewModel {
                 self.selectedRowIndex = self.filteredSpaces.firstIndex { $0.id == sourceID } ?? self.selectedRowIndex
             }
             manager.refreshSpaceState()
+            let message: String
+            switch direction {
+            case .up:
+                message = String(format: String(localized: "%@ moved up"), sourceSpace.name)
+            case .down:
+                message = String(format: String(localized: "%@ moved down"), sourceSpace.name)
+            }
+            HUDWindowController.shared.show(message: message, style: .success)
             self.startNextQueuedRearrangement()
         }
 
@@ -116,6 +127,10 @@ extension LauncherViewModel {
             self.pendingRearrangementDirections.removeAll()
             self.requestLauncherFieldFocus()
             manager?.refreshSpaceState()
+            HUDWindowController.shared.show(
+                message: String(localized: "Space rearrangement timed out."),
+                style: .failure
+            )
         }
         rearrangementRecoveryWorkItem = workItem
         DispatchQueue.main.asyncAfter(deadline: .now() + 8, execute: workItem)
