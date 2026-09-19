@@ -8,6 +8,7 @@ class FocusTextField: NSTextField {
     var onCommandK: (() -> Void)?
     var onKeyEquivalent: ((NSEvent) -> Bool)?
     var isTypingDisabled: Bool = false
+    var isInteractionDisabled: Bool = false
     var isSubmenuField: Bool = false
     var focusNotificationName = NSNotification.Name("FocusLauncherTextField")
 
@@ -16,6 +17,8 @@ class FocusTextField: NSTextField {
     }
 
     func handleModifiedEnter(_ event: NSEvent) -> Bool {
+        guard !isInteractionDisabled else { return true }
+
         guard event.type == .keyDown,
               event.keyCode == 36 || event.keyCode == 76 else {
             return false
@@ -38,6 +41,8 @@ class FocusTextField: NSTextField {
     }
 
     func handleKeyEquivalent(_ event: NSEvent) -> Bool {
+        guard !isInteractionDisabled else { return true }
+
         if let handled = onKeyEquivalent?(event), handled {
             return true
         }
@@ -72,6 +77,18 @@ class FocusTextField: NSTextField {
         return false
     }
 
+    func makeFirstResponderAndHandleKeyEvent(_ event: NSEvent, in window: NSWindow) -> Bool {
+        guard window.makeFirstResponder(self) else { return false }
+        (window as? LauncherNSPanel)?.focusedTextField = self
+
+        if handleKeyEquivalent(event) {
+            return true
+        }
+
+        keyDown(with: event)
+        return true
+    }
+
     override func performKeyEquivalent(with event: NSEvent) -> Bool {
         if handleKeyEquivalent(event) {
             return true
@@ -80,6 +97,8 @@ class FocusTextField: NSTextField {
     }
 
     override func keyDown(with event: NSEvent) {
+        guard !isInteractionDisabled else { return }
+
         // Some AppKit text-field configurations deliver Option+Return through
         // keyDown instead of performKeyEquivalent. Handle the actual event
         // flags here so the space-bar move command cannot degrade into a plain
@@ -91,10 +110,11 @@ class FocusTextField: NSTextField {
     }
 
     override func viewWillMove(toWindow newWindow: NSWindow?) {
-        if newWindow == nil,
-           let panel = window as? LauncherNSPanel,
-           panel.focusedTextField === self {
-            panel.focusedTextField = nil
+        if let panel = window as? LauncherNSPanel {
+            if panel.focusedTextField === self {
+                panel.focusedTextField = nil
+            }
+            setPanelRegistration(panel, enabled: false)
         }
         super.viewWillMove(toWindow: newWindow)
     }
@@ -104,6 +124,9 @@ class FocusTextField: NSTextField {
         NotificationCenter.default.removeObserver(self)
 
         if let window {
+            if let panel = window as? LauncherNSPanel {
+                setPanelRegistration(panel, enabled: true)
+            }
             NotificationCenter.default.addObserver(self, selector: #selector(windowDidBecomeKey), name: NSWindow.didBecomeKeyNotification, object: window)
             NotificationCenter.default.addObserver(self, selector: #selector(forceFocus), name: focusNotificationName, object: nil)
             if window.isKeyWindow, !isSubmenuField {
@@ -134,6 +157,20 @@ class FocusTextField: NSTextField {
     
     deinit {
         NotificationCenter.default.removeObserver(self)
+    }
+
+    private func setPanelRegistration(_ panel: LauncherNSPanel, enabled: Bool) {
+        let field: FocusTextField? = enabled ? self : nil
+        switch focusNotificationName.rawValue {
+        case "FocusLauncherTextField":
+            panel.launcherTextField = field
+        case "FocusLauncherSubmenuTextField":
+            panel.submenuTextField = field
+        case "FocusSpaceBarTextField":
+            panel.spaceBarTextField = field
+        default:
+            break
+        }
     }
 }
 
@@ -170,6 +207,7 @@ struct SearchTextField: NSViewRepresentable {
     @Binding var text: String
     var isDark: Bool
     var isTypingDisabled: Bool = false
+    var isInteractionDisabled: Bool = false
     var isSubmenuField: Bool = false
     var onUpArrow: () -> Void
     var onDownArrow: () -> Void
@@ -295,6 +333,7 @@ struct SearchTextField: NSViewRepresentable {
         }
         textField.onKeyEquivalent = onKeyEquivalent
         textField.isTypingDisabled = isTypingDisabled
+        textField.isInteractionDisabled = isInteractionDisabled
         textField.isSubmenuField = isSubmenuField
         
         textField.isBordered = false
@@ -329,6 +368,7 @@ struct SearchTextField: NSViewRepresentable {
         
         if let focusField = nsView as? FocusTextField {
             focusField.isTypingDisabled = isTypingDisabled
+            focusField.isInteractionDisabled = isInteractionDisabled
             focusField.isSubmenuField = isSubmenuField
             focusField.onKeyEquivalent = onKeyEquivalent
         }

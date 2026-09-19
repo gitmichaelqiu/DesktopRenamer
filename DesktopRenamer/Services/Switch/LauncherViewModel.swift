@@ -98,6 +98,9 @@ enum DesktopRearrangementDirection {
             selectedRowIndex = 0
             isKeyboardSelection = true
             isBottomBarFocused = false
+            if activeCommand?.type != .switchToDesktop {
+                pendingRearrangementDirections.removeAll()
+            }
             if activeCommand != nil {
                 loadData()
             }
@@ -109,7 +112,9 @@ enum DesktopRearrangementDirection {
     @Published var isLoadingData: Bool = false
     @Published var isKeyboardSelection: Bool = false
     @Published var isRearrangingSpace: Bool = false
+    @Published var isExecutingAction: Bool = false
     var rearrangementRecoveryWorkItem: DispatchWorkItem?
+    var pendingRearrangementDirections: [DesktopRearrangementDirection] = []
     
     @Published var showCommandNumbers: Bool = false
     @Published var isBottomBarFocused: Bool = false
@@ -169,6 +174,10 @@ enum DesktopRearrangementDirection {
 
     var isSubmenuOpen: Bool {
         commandKTargetWindow != nil || isSpaceMenuOpen
+    }
+
+    var isLauncherBusy: Bool {
+        isRearrangingSpace || isExecutingBatchMove || isExecutingAction
     }
 
     var shouldShowCommandNumbersInMainList: Bool {

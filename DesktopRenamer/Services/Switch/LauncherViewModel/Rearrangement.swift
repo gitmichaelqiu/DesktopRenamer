@@ -7,19 +7,24 @@ extension LauncherViewModel {
 
     func rearrangeSelectedDesktop(direction: DesktopRearrangementDirection) {
         guard activeCommand?.type == .switchToDesktop,
-              stagingWindow == nil,
-              !isRearrangingSpace else { return }
+              stagingWindow == nil else { return }
+
+        if isRearrangingSpace {
+            pendingRearrangementDirections.append(direction)
+            return
+        }
+
+        guard !isLauncherBusy else { return }
 
         let spaces = filteredSpaces
         guard selectedRowIndex >= 0,
               selectedRowIndex < spaces.count,
               let manager = AppDelegate.shared.spaceManager,
-              let sourceSpace = manager.spaceNameDict.first(where: { $0.id == spaces[selectedRowIndex].id }),
+              let sourceSpace = currentSpaces.first(where: { $0.id == spaces[selectedRowIndex].id }),
               !sourceSpace.isFullscreen else { return }
 
-        let orderedSpaces = manager.spaceNameDict
+        let orderedSpaces = currentSpaces
             .filter { $0.displayID == sourceSpace.displayID && !$0.isFullscreen }
-            .sorted { $0.num < $1.num }
         guard let sourceIndex = orderedSpaces.firstIndex(where: { $0.id == sourceSpace.id }) else { return }
 
         let sourceID = sourceSpace.id
@@ -29,15 +34,22 @@ extension LauncherViewModel {
             self.rearrangementRecoveryWorkItem?.cancel()
             self.rearrangementRecoveryWorkItem = nil
             self.isRearrangingSpace = false
-            guard case .success = result else { return }
+            self.requestLauncherFieldFocus()
+            guard case .success = result else {
+                self.pendingRearrangementDirections.removeAll()
+                return
+            }
 
-            self.applyLocalSpaceOrder(orderedIDs: self.expectedOrder(
-                from: orderedIDs,
-                sourceIndex: sourceIndex,
-                direction: direction
-            ), displayID: sourceSpace.displayID)
-            self.selectedRowIndex = self.filteredSpaces.firstIndex { $0.id == sourceID } ?? self.selectedRowIndex
+            withAnimation(.easeInOut(duration: 0.2)) {
+                self.applyLocalSpaceOrder(orderedIDs: self.expectedOrder(
+                    from: orderedIDs,
+                    sourceIndex: sourceIndex,
+                    direction: direction
+                ), displayID: sourceSpace.displayID)
+                self.selectedRowIndex = self.filteredSpaces.firstIndex { $0.id == sourceID } ?? self.selectedRowIndex
+            }
             manager.refreshSpaceState()
+            self.startNextQueuedRearrangement()
         }
 
         isRearrangingSpace = true
@@ -45,7 +57,7 @@ extension LauncherViewModel {
         switch direction {
         case .up:
             guard sourceIndex > 0 else {
-                finishRearrangementRecovery()
+                finishBoundaryRearrangement()
                 return
             }
             SpaceRearrangementService.shared.rearrange(
@@ -57,7 +69,7 @@ extension LauncherViewModel {
             )
         case .down:
             guard sourceIndex < orderedIDs.count - 1 else {
-                finishRearrangementRecovery()
+                finishBoundaryRearrangement()
                 return
             }
             if sourceIndex + 2 < orderedIDs.count {
@@ -79,6 +91,18 @@ extension LauncherViewModel {
         }
     }
 
+    private func startNextQueuedRearrangement() {
+        guard activeCommand?.type == .switchToDesktop,
+              let nextDirection = pendingRearrangementDirections.first else { return }
+
+        pendingRearrangementDirections.removeFirst()
+        DispatchQueue.main.async { [weak self] in
+            guard let self,
+                  self.activeCommand?.type == .switchToDesktop else { return }
+            self.rearrangeSelectedDesktop(direction: nextDirection)
+        }
+    }
+
     private func scheduleRearrangementRecovery(for manager: SpaceManager) {
         rearrangementRecoveryWorkItem?.cancel()
         let workItem = DispatchWorkItem { [weak self, weak manager] in
@@ -89,16 +113,28 @@ extension LauncherViewModel {
                 "Rearrangement verification timed out; unlocking launcher"
             )
             self.isRearrangingSpace = false
+            self.pendingRearrangementDirections.removeAll()
+            self.requestLauncherFieldFocus()
             manager?.refreshSpaceState()
         }
         rearrangementRecoveryWorkItem = workItem
-        DispatchQueue.main.asyncAfter(deadline: .now() + 5, execute: workItem)
+        DispatchQueue.main.asyncAfter(deadline: .now() + 8, execute: workItem)
     }
 
     private func finishRearrangementRecovery() {
         rearrangementRecoveryWorkItem?.cancel()
         rearrangementRecoveryWorkItem = nil
         isRearrangingSpace = false
+        pendingRearrangementDirections.removeAll()
+        requestLauncherFieldFocus()
+    }
+
+    private func finishBoundaryRearrangement() {
+        rearrangementRecoveryWorkItem?.cancel()
+        rearrangementRecoveryWorkItem = nil
+        isRearrangingSpace = false
+        requestLauncherFieldFocus()
+        startNextQueuedRearrangement()
     }
 
     private func expectedOrder(
@@ -123,11 +159,22 @@ extension LauncherViewModel {
         let spaceByID = Dictionary(uniqueKeysWithValues: currentSpaces.map { ($0.id, $0) })
         let displayIndices = currentSpaces.indices
             .filter { currentSpaces[$0].displayID == displayID && !currentSpaces[$0].isFullscreen }
-            .sorted { currentSpaces[$0].num < currentSpaces[$1].num }
+        let positionNumbers = displayIndices.indices.map { $0 + 1 }
 
         for (index, spaceID) in orderedIDs.enumerated() {
-            guard index < displayIndices.count, let space = spaceByID[spaceID] else { continue }
-            currentSpaces[displayIndices[index]] = space
+            guard index < displayIndices.count,
+                  index < positionNumbers.count,
+                  let space = spaceByID[spaceID] else { continue }
+
+            currentSpaces[displayIndices[index]] = SpaceGroup(
+                id: space.id,
+                name: space.name,
+                displayName: space.displayName,
+                num: positionNumbers[index],
+                isFullscreen: space.isFullscreen,
+                appPath: space.appPath,
+                displayID: space.displayID
+            )
         }
     }
     

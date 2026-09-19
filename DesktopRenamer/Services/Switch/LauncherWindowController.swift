@@ -4,6 +4,9 @@ import SwiftUI
 
 class LauncherNSPanel: NSPanel {
     weak var focusedTextField: FocusTextField?
+    weak var launcherTextField: FocusTextField?
+    weak var submenuTextField: FocusTextField?
+    weak var spaceBarTextField: FocusTextField?
 
     override var canBecomeKey: Bool {
         return true
@@ -137,6 +140,12 @@ class LauncherWindowController: NSWindowController, NSWindowDelegate {
             guard let focusedTextField,
                   focusedFieldIsActive
             else {
+                if let preferredTextField = self.preferredTextField(for: panel) {
+                    if preferredTextField.makeFirstResponderAndHandleKeyEvent(event, in: panel) {
+                        return nil
+                    }
+                }
+                self.viewModel.requestCurrentFieldFocus()
                 return event
             }
 
@@ -159,6 +168,20 @@ class LauncherWindowController: NSWindowController, NSWindowDelegate {
             self.viewModel.handlePointerMovement()
             return event
         }
+    }
+
+    private func preferredTextField(for panel: LauncherNSPanel) -> FocusTextField? {
+        let textField: FocusTextField?
+        if viewModel.isSubmenuOpen {
+            textField = panel.submenuTextField
+        } else if viewModel.isBottomBarFocused {
+            textField = panel.spaceBarTextField
+        } else {
+            textField = panel.launcherTextField
+        }
+
+        guard let textField, textField.window === panel else { return nil }
+        return textField
     }
     
     required init?(coder: NSCoder) {
@@ -240,6 +263,19 @@ class LauncherWindowController: NSWindowController, NSWindowDelegate {
         guard event.type == .keyDown else { return false }
 
         let modifiers = event.modifierFlags.intersection(.deviceIndependentFlagsMask)
+        let isSpaceRearrangementShortcut = viewModel.activeCommand?.type == .switchToDesktop &&
+            viewModel.commandKTargetWindow == nil &&
+            !modifiers.contains(.option) && !modifiers.contains(.control) &&
+            modifiers.contains(.command) && modifiers.contains(.shift) &&
+            (event.keyCode == 126 || event.keyCode == 125)
+
+        if isSpaceRearrangementShortcut {
+            viewModel.rearrangeSelectedDesktop(direction: event.keyCode == 126 ? .up : .down)
+            return true
+        }
+
+        guard !viewModel.isLauncherBusy else { return true }
+
         guard modifiers.contains(.command),
               modifiers.subtracting([.command, .numericPad, .function]).isEmpty else {
             return false

@@ -26,6 +26,8 @@ struct LauncherView: View {
                         SearchTextField(
                             text: $viewModel.renameInputText,
                             isDark: colors.isDark,
+                            isTypingDisabled: viewModel.isLauncherBusy,
+                            isInteractionDisabled: viewModel.isLauncherBusy,
                             onUpArrow: {},
                             onDownArrow: {},
                             onEnter: {
@@ -46,7 +48,8 @@ struct LauncherView: View {
                         SearchTextField(
                             text: $viewModel.searchQuery,
                             isDark: colors.isDark,
-                            isTypingDisabled: viewModel.isSubmenuOpen,
+                            isTypingDisabled: viewModel.isSubmenuOpen || viewModel.isLauncherBusy,
+                            isInteractionDisabled: viewModel.isLauncherBusy,
                             onUpArrow: {
                                 if viewModel.commandKTargetWindow != nil {
                                     viewModel.selectPreviousCommandKAction()
@@ -186,15 +189,17 @@ struct LauncherView: View {
                         .frame(height: 36)
                     }
                     
-                    if viewModel.isLoadingData {
+                    if viewModel.isLoadingData || viewModel.isRearrangingSpace {
                         ProgressView()
                             .scaleEffect(0.6)
                             .frame(width: 20, height: 20)
+                            .transition(.opacity)
                     }
                 }
                 .frame(height: 44)
                 .padding(.horizontal, 16)
                 .padding(.top, 10)
+                .animation(LauncherAnimation.fade, value: viewModel.isRearrangingSpace)
 
                 // Keep the footer as a sibling of the list so the scroll view reserves its height.
                 Group {
@@ -226,9 +231,20 @@ struct LauncherView: View {
                     }
                     .frame(maxHeight: .infinity)
                     .frame(maxWidth: .infinity)
+                } else if viewModel.isExecutingAction {
+                    VStack(spacing: 16) {
+                        ProgressView()
+                            .scaleEffect(1.2)
+                        Text(verbatim: String(localized: "Executing action..."))
+                            .font(.body)
+                            .foregroundColor(.secondary)
+                    }
+                    .frame(maxHeight: .infinity)
+                    .frame(maxWidth: .infinity)
                 } else {
                     ListAreaView(viewModel: viewModel)
                         .frame(maxHeight: .infinity)
+                        .allowsHitTesting(!viewModel.isRearrangingSpace)
                 }
                 
                 }
@@ -247,7 +263,6 @@ struct LauncherView: View {
         }
         .frame(width: 750, height: 475)
         .launcherBackground(cornerRadius: 26)
-        .disabled(viewModel.isRearrangingSpace)
     }
 }
 
