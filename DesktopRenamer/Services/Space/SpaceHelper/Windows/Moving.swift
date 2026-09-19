@@ -319,8 +319,7 @@ extension SpaceHelper {
         
         HUDWindowController.shared.show(
             message: message,
-            systemImage: "exclamationmark.triangle.fill",
-            iconColor: .orange,
+            style: .warning,
             buttonTitle: buttonTitle
         ) {
             DispatchQueue.main.async {

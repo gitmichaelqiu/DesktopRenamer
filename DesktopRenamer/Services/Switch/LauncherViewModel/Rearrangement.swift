@@ -36,6 +36,9 @@ extension LauncherViewModel {
             self.isRearrangingSpace = false
             self.requestLauncherFieldFocus()
             guard case .success = result else {
+                if case .failure(let message) = result {
+                    HUDWindowController.shared.show(message: message, style: .failure)
+                }
                 self.pendingRearrangementDirections.removeAll()
                 return
             }
@@ -49,6 +52,14 @@ extension LauncherViewModel {
                 self.selectedRowIndex = self.filteredSpaces.firstIndex { $0.id == sourceID } ?? self.selectedRowIndex
             }
             manager.refreshSpaceState()
+            let message: String
+            switch direction {
+            case .up:
+                message = String(format: String(localized: "%@ moved up"), sourceSpace.name)
+            case .down:
+                message = String(format: String(localized: "%@ moved down"), sourceSpace.name)
+            }
+            HUDWindowController.shared.show(message: message, style: .success)
             self.startNextQueuedRearrangement()
         }
 
@@ -116,6 +127,10 @@ extension LauncherViewModel {
             self.pendingRearrangementDirections.removeAll()
             self.requestLauncherFieldFocus()
             manager?.refreshSpaceState()
+            HUDWindowController.shared.show(
+                message: String(localized: "Space rearrangement timed out."),
+                style: .failure
+            )
         }
         rearrangementRecoveryWorkItem = workItem
         DispatchQueue.main.asyncAfter(deadline: .now() + 8, execute: workItem)
@@ -187,13 +202,11 @@ extension LauncherViewModel {
                 labelManager.reloadAllWindows()
             }
             closeLauncher()
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
-                HUDWindowController.shared.show(
-                    message: NSLocalizedString("Space Labels Reloaded", comment: ""),
-                    systemImage: "arrow.clockwise.circle.fill",
-                    iconColor: .blue
-                )
-            }
+            HUDWindowController.shared.showAfterLauncherDismissal(
+                message: NSLocalizedString("Space Labels Reloaded", comment: ""),
+                style: .info,
+                systemImage: "arrow.clockwise.circle.fill"
+            )
 
         case .toggleActiveLabel:
             incrementCommandFrequency(type.rawValue)
@@ -203,11 +216,12 @@ extension LauncherViewModel {
                 let status = isEnabled ? String(localized: "Enabled") : String(localized: "Disabled")
                 let msg = String(format: String(localized: "Active Space Label: %@"), status)
                 let icon = isEnabled ? "checkmark.circle.fill" : "xmark.circle.fill"
-                let color: Color = isEnabled ? .green : .red
                 closeLauncher()
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
-                    HUDWindowController.shared.show(message: msg, systemImage: icon, iconColor: color)
-                }
+                HUDWindowController.shared.showAfterLauncherDismissal(
+                    message: msg,
+                    style: isEnabled ? .success : .failure,
+                    systemImage: icon
+                )
             } else {
                 closeLauncher()
             }
@@ -220,11 +234,12 @@ extension LauncherViewModel {
                 let status = isEnabled ? String(localized: "Enabled") : String(localized: "Disabled")
                 let msg = String(format: String(localized: "Preview Space Labels: %@"), status)
                 let icon = isEnabled ? "checkmark.circle.fill" : "xmark.circle.fill"
-                let color: Color = isEnabled ? .green : .red
                 closeLauncher()
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
-                    HUDWindowController.shared.show(message: msg, systemImage: icon, iconColor: color)
-                }
+                HUDWindowController.shared.showAfterLauncherDismissal(
+                    message: msg,
+                    style: isEnabled ? .success : .failure,
+                    systemImage: icon
+                )
             } else {
                 closeLauncher()
             }
@@ -237,11 +252,12 @@ extension LauncherViewModel {
                 let status = isEnabled ? String(localized: "Enabled") : String(localized: "Disabled")
                 let msg = String(format: String(localized: "Keep visible on desktop: %@"), status)
                 let icon = isEnabled ? "checkmark.circle.fill" : "xmark.circle.fill"
-                let color: Color = isEnabled ? .green : .red
                 closeLauncher()
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
-                    HUDWindowController.shared.show(message: msg, systemImage: icon, iconColor: color)
-                }
+                HUDWindowController.shared.showAfterLauncherDismissal(
+                    message: msg,
+                    style: isEnabled ? .success : .failure,
+                    systemImage: icon
+                )
             } else {
                 closeLauncher()
             }

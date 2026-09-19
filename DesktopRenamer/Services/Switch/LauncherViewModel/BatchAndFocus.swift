@@ -26,9 +26,13 @@ extension LauncherViewModel {
         // the native panel out of WindowServer's hit-test stack while the
         // shared synthetic drag module captures each window.
         closeLauncher()
+        HUDWindowController.shared.showProgress(
+            message: String(localized: "Executing batch window moves...")
+        )
         
         batchExecutionTask = Task { [weak self] in
             guard let self else { return }
+            var failedOperationCount = 0
             defer {
                 self.isExecutingBatchMove = false
                 self.stagedMoves.removeAll()
@@ -91,6 +95,8 @@ extension LauncherViewModel {
                     for action in sourceActions {
                         let targetSpaceID: String
 
+                        self.showBatchActionProgress(for: action)
+
                         switch action.actionType {
                         case .move(let space):
                             targetSpaceID = space.id
@@ -121,6 +127,7 @@ extension LauncherViewModel {
                                 batch: true
                             )
                         } else {
+                            failedOperationCount += 1
                             DiagnosticEventLog.shared.record(
                                 subsystem: "Launcher",
                                 level: "warning",
@@ -133,6 +140,7 @@ extension LauncherViewModel {
             
             // 4. Execute other actions (Close, Minimize, Hide, Fullscreen, Quit, Restore)
             for action in staticActions {
+                self.showBatchActionProgress(for: action)
                 let windowSpaceID = action.window.space.id
                 let isFullscreenWindow = action.window.space.isFullscreen
                 let requiresAX = (action.actionType == .close || action.actionType == .minimize || action.actionType == .enterFullScreen || action.actionType == .exitFullScreen || action.actionType == .restore || (action.actionType == .hide && isFullscreenWindow))
@@ -274,6 +282,18 @@ extension LauncherViewModel {
                 }
             }
             
+            let completedOperationCount = actions.count - failedOperationCount
+            if failedOperationCount == 0 {
+                HUDWindowController.shared.show(
+                    message: String(format: String(localized: "Completed %lld operation(s)"), completedOperationCount),
+                    style: .success
+                )
+            } else {
+                HUDWindowController.shared.show(
+                    message: String(format: String(localized: "Completed %lld operation(s), skipped %lld"), completedOperationCount, failedOperationCount),
+                    style: .warning
+                )
+            }
             self.closeLauncher()
             } catch {
                 DiagnosticEventLog.shared.record(
@@ -284,8 +304,40 @@ extension LauncherViewModel {
                 if let manager = AppDelegate.shared.spaceManager {
                     await WindowActionCoordinator.restoreOriginalSpaces(originalSpaceByDisplay, using: manager)
                 }
+                HUDWindowController.shared.show(
+                    message: String(localized: "Batch operations cancelled."),
+                    style: .failure
+                )
             }
         }
+    }
+
+    private func showBatchActionProgress(for action: BatchStagedAction) {
+        let appName = action.window.ownerName.isEmpty ? action.window.title : action.window.ownerName
+        let message: String
+
+        switch action.actionType {
+        case .move(let targetSpace), .restoreTo(let targetSpace):
+            message = String(format: String(localized: "Moving %@ to %@"), appName, targetSpace.name)
+        case .close:
+            message = String(format: String(localized: "Closing %@"), appName)
+        case .minimize:
+            message = String(format: String(localized: "Minimizing %@"), appName)
+        case .hide:
+            message = String(format: String(localized: "Hiding %@"), appName)
+        case .enterFullScreen:
+            message = String(format: String(localized: "Entering Full Screen for %@"), appName)
+        case .exitFullScreen:
+            message = String(format: String(localized: "Exiting Full Screen for %@"), appName)
+        case .quit:
+            message = String(format: String(localized: "Quitting %@"), appName)
+        case .restore:
+            message = String(format: String(localized: "Restoring %@"), appName)
+        }
+
+        HUDWindowController.shared.showProgress(
+            message: message
+        )
     }
 
 }

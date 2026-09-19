@@ -69,6 +69,26 @@
         }
       }
     },
+    "%@ moved down" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@已下移"
+          }
+        }
+      }
+    },
+    "%@ moved up" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@已上移"
+          }
+        }
+      }
+    },
     "%lld" : {
       "shouldTranslate" : false
     },
@@ -339,6 +359,16 @@
         }
       }
     },
+    "Batch operations cancelled." : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "批量操作已取消。"
+          }
+        }
+      }
+    },
     "Button.Cancel" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -591,12 +621,52 @@
         }
       }
     },
+    "Could not focus %@" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "无法聚焦到%@"
+          }
+        }
+      }
+    },
     "Could not initialize the native space rearrangement operation." : {
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "无法初始化原生桌面重排操作。"
+          }
+        }
+      }
+    },
+    "Could not switch to the selected space." : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "无法切换到所选桌面。"
+          }
+        }
+      }
+    },
+    "Completed %lld operation(s)" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已完成%lld项操作"
+          }
+        }
+      }
+    },
+    "Completed %lld operation(s), skipped %lld" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已完成%1$lld项操作，跳过%2$lld项"
           }
         }
       }
@@ -873,12 +943,42 @@
         }
       }
     },
+    "Closing %@" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "正在关闭%@"
+          }
+        }
+      }
+    },
+    "Entering Full Screen for %@" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "正在为%@进入全屏"
+          }
+        }
+      }
+    },
     "Executing batch window moves..." : {
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "执行批量窗口移动..."
+          }
+        }
+      }
+    },
+    "Exiting Full Screen for %@" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "正在为%@退出全屏"
           }
         }
       }
@@ -1071,6 +1171,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "隐藏"
+          }
+        }
+      }
+    },
+    "Hiding %@" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "正在隐藏%@"
           }
         }
       }
@@ -1469,6 +1579,16 @@
         }
       }
     },
+    "Minimizing %@" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "正在最小化%@"
+          }
+        }
+      }
+    },
     "More Apps" : {
       "localizations" : {
         "zh-Hans" : {
@@ -1615,6 +1735,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "将窗口移至…"
+          }
+        }
+      }
+    },
+    "Moving %@ to %@" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "正在将%@移动到%@"
           }
         }
       }
@@ -1927,6 +2057,16 @@
         }
       }
     },
+    "Quitting %@" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "正在退出%@"
+          }
+        }
+      }
+    },
     "Real-time video enhancing player." : {
       "localizations" : {
         "zh-Hans" : {
@@ -1988,6 +2128,16 @@
         }
       }
     },
+    "Restoring %@" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "正在恢复%@"
+          }
+        }
+      }
+    },
     "Rename at Menu Bar" : {
       "localizations" : {
         "zh-Hans" : {
@@ -2024,6 +2174,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "重命名当前桌面空间的标签名称"
+          }
+        }
+      }
+    },
+    "Renamed space to \"%@\"" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已将桌面重命名为“%@”"
           }
         }
       }
@@ -3073,6 +3233,16 @@
         }
       }
     },
+    "Space rearrangement timed out." : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "桌面重排超时。"
+          }
+        }
+      }
+    },
     "Space.DefaultName" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -3235,6 +3405,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "切换桌面"
+          }
+        }
+      }
+    },
+    "Switched to %@" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已切换到%@"
           }
         }
       }
@@ -3552,6 +3732,176 @@
         }
       },
       "shouldTranslate" : false
+    },
+    "Closed %@" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已关闭%@"
+          }
+        }
+      }
+    },
+    "Could not close %@" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "无法关闭%@"
+          }
+        }
+      }
+    },
+    "Could not enter Full Screen for %@" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "无法为%@进入全屏"
+          }
+        }
+      }
+    },
+    "Could not exit Full Screen for %@" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "无法为%@退出全屏"
+          }
+        }
+      }
+    },
+    "Could not hide %@" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "无法隐藏%@"
+          }
+        }
+      }
+    },
+    "Could not minimize %@" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "无法最小化%@"
+          }
+        }
+      }
+    },
+    "Could not move %@ to %@" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "无法将%@移动到%@"
+          }
+        }
+      }
+    },
+    "Could not quit %@" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "无法退出%@"
+          }
+        }
+      }
+    },
+    "Could not restore %@" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "无法恢复%@"
+          }
+        }
+      }
+    },
+    "Entered Full Screen for %@" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已为%@进入全屏"
+          }
+        }
+      }
+    },
+    "Exited Full Screen for %@" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已为%@退出全屏"
+          }
+        }
+      }
+    },
+    "Hidden %@" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已隐藏%@"
+          }
+        }
+      }
+    },
+    "Minimized %@" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已最小化%@"
+          }
+        }
+      }
+    },
+    "Moved %@ to %@" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已将%@移动到%@"
+          }
+        }
+      }
+    },
+    "Quit %@" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已退出%@"
+          }
+        }
+      }
+    },
+    "Restored %@" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已恢复%@"
+          }
+        }
+      }
+    },
+    "Window" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "窗口"
+          }
+        }
+      }
     },
     "Your diagnostic report has been saved." : {
       "localizations" : {
