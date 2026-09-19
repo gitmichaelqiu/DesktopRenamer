@@ -162,8 +162,9 @@ struct SpacesBottomBar: View {
                 ZStack(alignment: .leading) {
                     HStack(spacing: 2) {
                         if viewModel.spaceBarQuery.isEmpty {
-                            Text("Search", comment: "Label shown before the space search input when the space bar is focused.")
-                            Text(verbatim: ":")
+                            (Text("Search", comment: "Label shown before the space search input when the space bar is focused.")
+                                + Text(verbatim: ":"))
+                                .fixedSize(horizontal: true, vertical: false)
                         }
 
                         SearchTextField(
@@ -205,7 +206,7 @@ struct SpacesBottomBar: View {
                             textFieldLineBreakMode: .byTruncatingHead,
                             focusNotificationName: NSNotification.Name("FocusSpaceBarTextField")
                         )
-                        .frame(width: viewModel.spaceBarQuery.isEmpty ? 8 : labelWidth)
+                        .frame(width: viewModel.spaceBarQuery.isEmpty ? 4 : labelWidth)
                     }
                     .font(.subheadline)
                     .foregroundColor(colors.textTertiary)
