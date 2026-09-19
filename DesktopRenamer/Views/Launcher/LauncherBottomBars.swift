@@ -161,55 +161,54 @@ struct SpacesBottomBar: View {
             if viewModel.isBottomBarFocused {
                 ZStack(alignment: .leading) {
                     HStack(spacing: 2) {
-                        Text("Search", comment: "Label shown before the space search input when the space bar is focused.")
-                        Text(verbatim: ":")
-                        Rectangle()
-                            .fill(Color.accentColor)
-                            .frame(width: 1, height: 16)
-                            .accessibilityHidden(true)
-                    }
-                        .font(.subheadline)
-                        .foregroundColor(colors.textTertiary)
-                        .opacity(viewModel.spaceBarQuery.isEmpty ? 1 : 0)
+                        if viewModel.spaceBarQuery.isEmpty {
+                            Text("Search", comment: "Label shown before the space search input when the space bar is focused.")
+                            Text(verbatim: ":")
+                        }
 
-                    SearchTextField(
-                        text: $viewModel.spaceBarQuery,
-                        isDark: colors.isDark,
-                        onUpArrow: {},
-                        onDownArrow: {},
-                        onLeftArrow: {
-                            viewModel.moveSpaceSelection(by: -1)
-                            return true
-                        },
-                        onRightArrow: {
-                            viewModel.moveSpaceSelection(by: 1)
-                            return true
-                        },
-                        onEnter: {
-                            viewModel.executeBottomBarSpaceAction(isOption: false, isCommand: false)
-                        },
-                        onCommandEnter: {
-                            viewModel.executeBottomBarSpaceAction(isOption: false, isCommand: true)
-                        },
-                        onOptionEnter: {
-                            viewModel.executeBottomBarSpaceAction(isOption: true, isCommand: false)
-                        },
-                        onTab: {
-                            viewModel.handleTabKey()
-                        },
-                        onEscape: {
-                            viewModel.handleEscapeKey()
-                        },
-                        onKeyEquivalent: { _ in false },
-                        placeholder: "",
-                        textFieldFont: NSFont.systemFont(ofSize: 13, weight: .regular),
-                        textFieldColor: NSColor.secondaryLabelColor.withAlphaComponent(0.65),
-                        placeholderColor: NSColor.clear,
-                        usesSingleLineMode: true,
-                        textFieldLineBreakMode: .byTruncatingHead,
-                        focusNotificationName: NSNotification.Name("FocusSpaceBarTextField")
-                    )
-                    .opacity(viewModel.spaceBarQuery.isEmpty ? 0.001 : 1)
+                        SearchTextField(
+                            text: $viewModel.spaceBarQuery,
+                            isDark: colors.isDark,
+                            onUpArrow: {},
+                            onDownArrow: {},
+                            onLeftArrow: {
+                                viewModel.moveSpaceSelection(by: -1)
+                                return true
+                            },
+                            onRightArrow: {
+                                viewModel.moveSpaceSelection(by: 1)
+                                return true
+                            },
+                            onEnter: {
+                                viewModel.executeBottomBarSpaceAction(isOption: false, isCommand: false)
+                            },
+                            onCommandEnter: {
+                                viewModel.executeBottomBarSpaceAction(isOption: false, isCommand: true)
+                            },
+                            onOptionEnter: {
+                                viewModel.executeBottomBarSpaceAction(isOption: true, isCommand: false)
+                            },
+                            onTab: {
+                                viewModel.handleTabKey()
+                            },
+                            onEscape: {
+                                viewModel.handleEscapeKey()
+                            },
+                            onKeyEquivalent: { _ in false },
+                            placeholder: "",
+                            textFieldFont: NSFont.systemFont(ofSize: 13, weight: .regular),
+                            textFieldColor: viewModel.spaceBarQuery.isEmpty
+                                ? NSColor.clear
+                                : NSColor.secondaryLabelColor.withAlphaComponent(0.65),
+                            placeholderColor: NSColor.clear,
+                            usesSingleLineMode: true,
+                            textFieldLineBreakMode: .byTruncatingHead,
+                            focusNotificationName: NSNotification.Name("FocusSpaceBarTextField")
+                        )
+                        .frame(width: viewModel.spaceBarQuery.isEmpty ? 8 : labelWidth)
+                    }
+                    .font(.subheadline)
+                    .foregroundColor(colors.textTertiary)
                 }
                 .padding(.leading, LauncherLayout.bottomBarControlHorizontalPadding)
                 .frame(width: labelWidth, height: 28, alignment: .leading)
