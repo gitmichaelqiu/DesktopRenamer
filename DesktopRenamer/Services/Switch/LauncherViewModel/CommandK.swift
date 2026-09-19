@@ -311,7 +311,7 @@ extension LauncherViewModel {
         default:
             false
         }
-        let actionLabel = commandKActionLabel(.window(actionType))
+        let appName = window.ownerName.isEmpty ? window.title : window.ownerName
 
         isExecutingAction = true
 
@@ -483,7 +483,11 @@ extension LauncherViewModel {
                     "executeActionImmediately: move failed; leaving original Spaces untouched for window \(window.id)"
                 )
                 HUDWindowController.shared.show(
-                    message: String(format: String(localized: "%@ failed"), actionLabel),
+                    message: commandKActionMessage(
+                        for: actionType,
+                        appName: appName,
+                        succeeded: false
+                    ),
                     style: .failure
                 )
                 return
@@ -507,13 +511,66 @@ extension LauncherViewModel {
             }
 
             HUDWindowController.shared.show(
-                message: String(format: String(localized: "%@ completed"), actionLabel),
+                message: commandKActionMessage(
+                    for: actionType,
+                    appName: appName,
+                    succeeded: true
+                ),
                 style: .success
             )
             
             await MainActor.run {
                 self.loadData()
             }
+        }
+    }
+
+    private func commandKActionMessage(
+        for actionType: BatchStagedActionType,
+        appName: String,
+        succeeded: Bool
+    ) -> String {
+        switch actionType {
+        case .move(let space), .restoreTo(let space):
+            if succeeded {
+                return String(format: String(localized: "Moved %@ to %@"), appName, space.name)
+            }
+            return String(format: String(localized: "Could not move %@ to %@"), appName, space.name)
+        case .close:
+            if succeeded {
+                return String(format: String(localized: "Closed %@"), appName)
+            }
+            return String(format: String(localized: "Could not close %@"), appName)
+        case .minimize:
+            if succeeded {
+                return String(format: String(localized: "Minimized %@"), appName)
+            }
+            return String(format: String(localized: "Could not minimize %@"), appName)
+        case .hide:
+            if succeeded {
+                return String(format: String(localized: "Hidden %@"), appName)
+            }
+            return String(format: String(localized: "Could not hide %@"), appName)
+        case .enterFullScreen:
+            if succeeded {
+                return String(format: String(localized: "Entered Full Screen for %@"), appName)
+            }
+            return String(format: String(localized: "Could not enter Full Screen for %@"), appName)
+        case .exitFullScreen:
+            if succeeded {
+                return String(format: String(localized: "Exited Full Screen for %@"), appName)
+            }
+            return String(format: String(localized: "Could not exit Full Screen for %@"), appName)
+        case .quit:
+            if succeeded {
+                return String(format: String(localized: "Quit %@"), appName)
+            }
+            return String(format: String(localized: "Could not quit %@"), appName)
+        case .restore:
+            if succeeded {
+                return String(format: String(localized: "Restored %@"), appName)
+            }
+            return String(format: String(localized: "Could not restore %@"), appName)
         }
     }
 }
