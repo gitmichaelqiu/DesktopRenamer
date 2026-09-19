@@ -341,6 +341,11 @@ extension StatusBarController {
             NSApp.activate(ignoringOtherApps: true)
             window?.makeKeyAndOrderFront(nil)
             completeSettingsWindowActivationWhenReady(for: window)
+            if let tab {
+                DispatchQueue.main.async {
+                    NotificationCenter.default.post(name: .settingsTabRequested, object: tab)
+                }
+            }
             return
         }
         
