@@ -58,6 +58,39 @@ class HUDNSPanel: NSPanel {
     override var canBecomeMain: Bool { isInteractive }
 }
 
+enum HUDPresentationStyle {
+    case success
+    case info
+    case warning
+    case failure
+
+    var systemImage: String {
+        switch self {
+        case .success:
+            return "checkmark.circle.fill"
+        case .info:
+            return "info.circle.fill"
+        case .warning:
+            return "exclamationmark.triangle.fill"
+        case .failure:
+            return "xmark.circle.fill"
+        }
+    }
+
+    var iconColor: Color {
+        switch self {
+        case .success:
+            return .green
+        case .info:
+            return .blue
+        case .warning:
+            return .orange
+        case .failure:
+            return .red
+        }
+    }
+}
+
 class HUDWindowController: NSWindowController {
     static let shared = HUDWindowController()
 
@@ -85,6 +118,40 @@ class HUDWindowController: NSWindowController {
 
     required init?(coder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
+    }
+
+    func show(
+        message: String,
+        style: HUDPresentationStyle,
+        systemImage: String? = nil,
+        buttonTitle: String? = nil,
+        buttonAction: (() -> Void)? = nil
+    ) {
+        show(
+            message: message,
+            systemImage: systemImage ?? style.systemImage,
+            iconColor: style.iconColor,
+            buttonTitle: buttonTitle,
+            buttonAction: buttonAction
+        )
+    }
+
+    func showAfterLauncherDismissal(
+        message: String,
+        style: HUDPresentationStyle,
+        systemImage: String? = nil,
+        buttonTitle: String? = nil,
+        buttonAction: (() -> Void)? = nil
+    ) {
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) { [weak self] in
+            self?.show(
+                message: message,
+                style: style,
+                systemImage: systemImage,
+                buttonTitle: buttonTitle,
+                buttonAction: buttonAction
+            )
+        }
     }
 
     func show(
