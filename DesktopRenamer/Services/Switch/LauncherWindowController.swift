@@ -263,6 +263,17 @@ class LauncherWindowController: NSWindowController, NSWindowDelegate {
         guard event.type == .keyDown else { return false }
 
         let modifiers = event.modifierFlags.intersection(.deviceIndependentFlagsMask)
+        if event.keyCode == 43,
+           modifiers.contains(.command),
+           !modifiers.contains(.option),
+           !modifiers.contains(.control) {
+            hide()
+            AppDelegate.shared.statusBarController?.openSettingsWindow(
+                tab: modifiers.contains(.shift) ? .launcher : .general
+            )
+            return true
+        }
+
         let isSpaceRearrangementShortcut = viewModel.activeCommand?.type == .switchToDesktop &&
             viewModel.commandKTargetWindow == nil &&
             !modifiers.contains(.option) && !modifiers.contains(.control) &&
