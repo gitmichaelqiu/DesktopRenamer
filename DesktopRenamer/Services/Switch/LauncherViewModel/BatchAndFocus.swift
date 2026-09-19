@@ -26,6 +26,9 @@ extension LauncherViewModel {
         // the native panel out of WindowServer's hit-test stack while the
         // shared synthetic drag module captures each window.
         closeLauncher()
+        HUDWindowController.shared.showProgress(
+            message: String(localized: "Executing batch window moves...")
+        )
         
         batchExecutionTask = Task { [weak self] in
             guard let self else { return }
@@ -92,6 +95,8 @@ extension LauncherViewModel {
                     for action in sourceActions {
                         let targetSpaceID: String
 
+                        self.showBatchActionProgress(for: action.actionType)
+
                         switch action.actionType {
                         case .move(let space):
                             targetSpaceID = space.id
@@ -135,6 +140,7 @@ extension LauncherViewModel {
             
             // 4. Execute other actions (Close, Minimize, Hide, Fullscreen, Quit, Restore)
             for action in staticActions {
+                self.showBatchActionProgress(for: action.actionType)
                 let windowSpaceID = action.window.space.id
                 let isFullscreenWindow = action.window.space.isFullscreen
                 let requiresAX = (action.actionType == .close || action.actionType == .minimize || action.actionType == .enterFullScreen || action.actionType == .exitFullScreen || action.actionType == .restore || (action.actionType == .hide && isFullscreenWindow))
@@ -304,6 +310,13 @@ extension LauncherViewModel {
                 )
             }
         }
+    }
+
+    private func showBatchActionProgress(for actionType: BatchStagedActionType) {
+        let actionLabel = commandKActionLabel(.window(actionType))
+        HUDWindowController.shared.showProgress(
+            message: String(format: String(localized: "Executing %@..."), actionLabel)
+        )
     }
 
 }
