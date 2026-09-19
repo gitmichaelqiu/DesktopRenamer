@@ -160,7 +160,14 @@ struct SpacesBottomBar: View {
         HStack(spacing: 0) {
             if viewModel.isBottomBarFocused {
                 ZStack(alignment: .leading) {
-                    Text(verbatim: String(localized: "Spaces:"))
+                    HStack(spacing: 2) {
+                        Text("Search", comment: "Label shown before the space search input when the space bar is focused.")
+                        Text(verbatim: ":")
+                        Rectangle()
+                            .fill(Color.accentColor)
+                            .frame(width: 1, height: 16)
+                            .accessibilityHidden(true)
+                    }
                         .font(.subheadline)
                         .foregroundColor(colors.textTertiary)
                         .opacity(viewModel.spaceBarQuery.isEmpty ? 1 : 0)
@@ -194,7 +201,7 @@ struct SpacesBottomBar: View {
                             viewModel.handleEscapeKey()
                         },
                         onKeyEquivalent: { _ in false },
-                        placeholder: String(localized: "Spaces:"),
+                        placeholder: "",
                         textFieldFont: NSFont.systemFont(ofSize: 13, weight: .regular),
                         textFieldColor: NSColor.secondaryLabelColor.withAlphaComponent(0.65),
                         placeholderColor: NSColor.clear,
