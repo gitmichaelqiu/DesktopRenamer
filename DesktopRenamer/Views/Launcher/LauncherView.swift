@@ -189,15 +189,17 @@ struct LauncherView: View {
                         .frame(height: 36)
                     }
                     
-                    if viewModel.isLoadingData {
+                    if viewModel.isLoadingData || viewModel.isRearrangingSpace {
                         ProgressView()
                             .scaleEffect(0.6)
                             .frame(width: 20, height: 20)
+                            .transition(.opacity)
                     }
                 }
                 .frame(height: 44)
                 .padding(.horizontal, 16)
                 .padding(.top, 10)
+                .animation(LauncherAnimation.fade, value: viewModel.isRearrangingSpace)
 
                 // Keep the footer as a sibling of the list so the scroll view reserves its height.
                 Group {
@@ -229,16 +231,6 @@ struct LauncherView: View {
                     }
                     .frame(maxHeight: .infinity)
                     .frame(maxWidth: .infinity)
-                } else if viewModel.isRearrangingSpace {
-                    VStack(spacing: 16) {
-                        ProgressView()
-                            .scaleEffect(1.2)
-                        Text(verbatim: String(localized: "Rearranging spaces..."))
-                            .font(.body)
-                            .foregroundColor(.secondary)
-                    }
-                    .frame(maxHeight: .infinity)
-                    .frame(maxWidth: .infinity)
                 } else if viewModel.isExecutingAction {
                     VStack(spacing: 16) {
                         ProgressView()
@@ -252,6 +244,7 @@ struct LauncherView: View {
                 } else {
                     ListAreaView(viewModel: viewModel)
                         .frame(maxHeight: .infinity)
+                        .allowsHitTesting(!viewModel.isRearrangingSpace)
                 }
                 
                 }

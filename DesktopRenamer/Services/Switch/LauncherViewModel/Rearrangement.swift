@@ -40,12 +40,14 @@ extension LauncherViewModel {
                 return
             }
 
-            self.applyLocalSpaceOrder(orderedIDs: self.expectedOrder(
-                from: orderedIDs,
-                sourceIndex: sourceIndex,
-                direction: direction
-            ), displayID: sourceSpace.displayID)
-            self.selectedRowIndex = self.filteredSpaces.firstIndex { $0.id == sourceID } ?? self.selectedRowIndex
+            withAnimation(.easeInOut(duration: 0.2)) {
+                self.applyLocalSpaceOrder(orderedIDs: self.expectedOrder(
+                    from: orderedIDs,
+                    sourceIndex: sourceIndex,
+                    direction: direction
+                ), displayID: sourceSpace.displayID)
+                self.selectedRowIndex = self.filteredSpaces.firstIndex { $0.id == sourceID } ?? self.selectedRowIndex
+            }
             manager.refreshSpaceState()
             self.startNextQueuedRearrangement()
         }
