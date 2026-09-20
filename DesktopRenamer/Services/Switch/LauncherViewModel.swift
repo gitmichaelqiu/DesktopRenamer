@@ -160,6 +160,15 @@ enum DesktopRearrangementDirection {
             }
         }
     }
+    @Published var commandKTargetSpace: SpaceGroup? = nil {
+        didSet {
+            if commandKTargetSpace != nil {
+                commandKSelectedIndex = 0
+            } else if oldValue != nil {
+                submenuSearchQuery = ""
+            }
+        }
+    }
     @Published var isSpaceMenuOpen: Bool = false {
         didSet {
             if !isSpaceMenuOpen, oldValue {
@@ -172,8 +181,12 @@ enum DesktopRearrangementDirection {
     @Published var isStagingForRestoreTo: Bool = false
     @Published var isExecutingRestoreToImmediately: Bool = false
 
+    var isCommandKPanelOpen: Bool {
+        commandKTargetWindow != nil || commandKTargetSpace != nil
+    }
+
     var isSubmenuOpen: Bool {
-        commandKTargetWindow != nil || isSpaceMenuOpen
+        isCommandKPanelOpen || isSpaceMenuOpen
     }
 
     var isLauncherBusy: Bool {

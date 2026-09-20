@@ -102,6 +102,7 @@ struct CommandRowView: View {
 
 struct SpaceRowView: View {
     let space: SpaceGroup
+    let isLocked: Bool
     let isSelected: Bool
     let isCurrent: Bool
     var showDisplayName: Bool = true
@@ -125,11 +126,19 @@ struct SpaceRowView: View {
                 LauncherIconSlot(systemName: "desktopcomputer", tint: colors.textPrimary)
             }
             
-            Text(space.name)
-                .font(LauncherTypography.rowTitle)
-                .foregroundColor(colors.textPrimary)
-                .lineLimit(1)
-                .layoutPriority(1)
+            HStack(spacing: 4) {
+                Text(space.name)
+                    .font(LauncherTypography.rowTitle)
+                    .foregroundColor(colors.textPrimary)
+                    .lineLimit(1)
+
+                if isLocked && !space.isFullscreen {
+                    Image(systemName: "lock.fill")
+                        .font(.caption2.weight(.semibold))
+                        .foregroundStyle(colors.textPrimary)
+                }
+            }
+            .layoutPriority(1)
 
             if space.isFullscreen {
                 LauncherTrailingLabel(

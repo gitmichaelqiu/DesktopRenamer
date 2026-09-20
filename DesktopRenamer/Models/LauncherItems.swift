@@ -117,6 +117,20 @@ enum BatchStagedActionType: Equatable {
     }
 }
 
+enum LauncherSpaceAction: Equatable {
+    case toggleLock(isLocked: Bool)
+    case restoreMovedWindows
+
+    var description: String {
+        switch self {
+        case .toggleLock(let isLocked):
+            return isLocked ? "Unlock Space" : "Lock Space"
+        case .restoreMovedWindows:
+            return "Restore Windows Moved by Space Lock"
+        }
+    }
+}
+
 struct BatchStagedAction: Equatable {
     let window: WindowEntry
     let actionType: BatchStagedActionType

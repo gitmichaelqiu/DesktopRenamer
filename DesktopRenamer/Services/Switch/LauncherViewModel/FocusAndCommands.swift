@@ -26,6 +26,8 @@ extension LauncherViewModel {
 
         if commandKTargetWindow != nil {
             commandKTargetWindow = nil
+        } else if commandKTargetSpace != nil {
+            commandKTargetSpace = nil
         } else if isBottomBarFocused {
             leaveSpaceBarFocus()
         } else if isSpaceMenuOpen {
@@ -159,6 +161,8 @@ extension LauncherViewModel {
         selectedRowIndex = 0
         activeCommand = nil
         stagingWindow = nil
+        commandKTargetWindow = nil
+        commandKTargetSpace = nil
         isSpaceMenuOpen = false
         spaceMenuSelectedIndex = 0
         isBottomBarFocused = false
@@ -180,6 +184,7 @@ extension LauncherViewModel {
         isStagingForRestoreTo = false
         isExecutingRestoreToImmediately = false
         commandKTargetWindow = nil
+        commandKTargetSpace = nil
         commandKSelectedIndex = 0
     }
 

@@ -72,6 +72,19 @@ struct CommandBottomBar: View {
                         .onTapGesture {
                             viewModel.executeRowAction()
                         }
+
+                        if let selectedSpace = viewModel.selectedSwitchDesktopSpace,
+                           !selectedSpace.isFullscreen {
+                            HStack(spacing: 4) {
+                                Text(verbatim: String(localized: "Actions"))
+                                KeycapView(text: "⌘K", isSelected: false)
+                            }
+                            .modifier(BottomBarCapsule(isSelected: false, isActive: false, colorScheme: colorScheme))
+                            .contentShape(Rectangle())
+                            .onTapGesture {
+                                viewModel.showCommandKPanel(isKeyboardInitiated: false)
+                            }
+                        }
                     }
 
                 case .moveWindow:

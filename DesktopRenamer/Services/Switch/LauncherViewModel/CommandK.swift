@@ -6,6 +6,7 @@ enum LauncherCommandKAction: Equatable {
     case moveWindow
     case moveWindowTo
     case window(BatchStagedActionType)
+    case space(LauncherSpaceAction)
 
     var description: String {
         switch self {
@@ -14,6 +15,8 @@ enum LauncherCommandKAction: Equatable {
         case .moveWindowTo:
             return "Move to..."
         case .window(let action):
+            return action.description
+        case .space(let action):
             return action.description
         }
     }
@@ -34,6 +37,8 @@ enum LauncherCommandKAction: Equatable {
             case .restore: return "⌃⇧R"
             case .move, .restoreTo: return ""
             }
+        case .space:
+            return ""
         }
     }
 }
@@ -83,6 +88,22 @@ extension LauncherViewModel {
     }
     
     var commandKActions: [LauncherCommandKAction] {
+        if let space = commandKTargetSpace {
+            guard !space.isFullscreen else { return [] }
+
+            let isLocked = AppDelegate.shared.spaceManager?.lockedSpaceIDs.contains(space.id) == true
+            var available: [LauncherCommandKAction] = [
+                .space(.toggleLock(isLocked: isLocked))
+            ]
+            available.append(.space(.restoreMovedWindows))
+            guard !submenuSearchQuery.isEmpty else { return available }
+
+            return available.filter {
+                commandKActionLabel($0).localizedCaseInsensitiveContains(submenuSearchQuery) ||
+                $0.description.localizedCaseInsensitiveContains(submenuSearchQuery)
+            }
+        }
+
         guard let window = commandKTargetWindow else { return [] }
         var available: [LauncherCommandKAction] = []
         if activeCommand?.type == .listWindows {
@@ -96,6 +117,13 @@ extension LauncherViewModel {
             commandKActionLabel($0).localizedCaseInsensitiveContains(submenuSearchQuery) ||
             $0.description.localizedCaseInsensitiveContains(submenuSearchQuery)
         }
+    }
+
+    var selectedSwitchDesktopSpace: SpaceGroup? {
+        guard activeCommand?.type == .switchToDesktop else { return nil }
+        let spaces = filteredSpaces
+        guard spaces.indices.contains(selectedRowIndex) else { return nil }
+        return spaces[selectedRowIndex]
     }
 
     func commandKActionLabel(_ action: LauncherCommandKAction) -> String {
@@ -122,17 +150,35 @@ extension LauncherViewModel {
                     ? NSLocalizedString("Move to...", comment: "")
                     : String(format: NSLocalizedString("Move to %@", comment: ""), space.name)
             }
+        case .space(let action):
+            switch action {
+            case .toggleLock(let isLocked):
+                return isLocked
+                    ? NSLocalizedString("Unlock Space", comment: "")
+                    : NSLocalizedString("Lock Space", comment: "")
+            case .restoreMovedWindows:
+                return NSLocalizedString("Restore Windows Moved by Space Lock", comment: "")
+            }
         }
     }
     
     func showCommandKPanel(isKeyboardInitiated: Bool = true) {
         submenuSearchQuery = ""
         isKeyboardSelection = isKeyboardInitiated
+        commandKTargetWindow = nil
+        commandKTargetSpace = nil
         if activeCommand?.type == .listWindows {
             let windows = filteredWindows
             let index = selectedRowIndex
             guard index >= 0 && index < windows.count else { return }
             commandKTargetWindow = windows[index]
+            commandKSelectedIndex = 0
+        } else if activeCommand?.type == .switchToDesktop {
+            let spaces = filteredSpaces
+            let index = selectedRowIndex
+            guard spaces.indices.contains(index),
+                  !spaces[index].isFullscreen else { return }
+            commandKTargetSpace = spaces[index]
             commandKSelectedIndex = 0
         } else {
             let items = batchMoveSelectableItems
@@ -215,11 +261,32 @@ extension LauncherViewModel {
     }
     
     func executeCommandKAction() {
-        guard !isLauncherBusy,
-              let window = commandKTargetWindow else { return }
+        guard !isLauncherBusy else { return }
         let available = commandKActions
         guard commandKSelectedIndex >= 0 && commandKSelectedIndex < available.count else { return }
         let action = available[commandKSelectedIndex]
+
+        if let space = commandKTargetSpace {
+            commandKTargetSpace = nil
+            submenuSearchQuery = ""
+
+            guard let manager = AppDelegate.shared.spaceManager else { return }
+            switch action {
+            case .space(.toggleLock):
+                guard !space.isFullscreen else { return }
+                _ = manager.toggleLockSpace(space.id)
+                loadData()
+                requestLauncherFieldFocus()
+            case .space(.restoreMovedWindows):
+                manager.restoreAllMovedWindows()
+                closeLauncher()
+            default:
+                break
+            }
+            return
+        }
+
+        guard let window = commandKTargetWindow else { return }
         
         DiagnosticEventLog.shared.record(subsystem: "Launcher", level: "info", "executeCommandKAction: window=\(window.title) (id=\(window.id)), action=\(action.description)")
         let isListWindows = activeCommand?.type == .listWindows
@@ -247,6 +314,8 @@ extension LauncherViewModel {
                     in: originalItems
                 )
             }
+        case .space:
+            break
         }
     }
 
