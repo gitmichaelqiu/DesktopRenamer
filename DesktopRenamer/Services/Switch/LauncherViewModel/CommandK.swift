@@ -100,7 +100,7 @@ extension LauncherViewModel {
 
             let isLocked = AppDelegate.shared.spaceManager?.lockedSpaceIDs.contains(space.id) == true
             let movedWindowsCount = AppDelegate.shared.spaceManager?.movedWindowsOriginalSpaces.count ?? 0
-            var available: [LauncherCommandKAction] = [
+            let available: [LauncherCommandKAction] = [
                 .space(.toggleLock(isLocked: isLocked)),
                 .space(.restoreMovedWindows(count: movedWindowsCount)),
                 .space(.moveUp),
@@ -167,10 +167,8 @@ extension LauncherViewModel {
                     ? NSLocalizedString("Unlock Space", comment: "")
                     : NSLocalizedString("Lock Space", comment: "")
             case .restoreMovedWindows(let count):
-                return String(
-                    format: NSLocalizedString("Restore Windows Moved by Lock (%d)", comment: ""),
-                    count
-                )
+                let title = NSLocalizedString("Restore Windows Moved by Space Lock", comment: "")
+                return "\(title) (\(count))"
             case .moveUp:
                 return NSLocalizedString("Move Space Up", comment: "")
             case .moveDown:
