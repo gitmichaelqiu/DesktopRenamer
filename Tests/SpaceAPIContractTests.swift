@@ -209,6 +209,7 @@ struct SpaceAPIContractTests {
             currentSpaceID: space.id,
             currentDisplayID: space.displayID,
             currentSpaceName: space.name,
+            movedWindowsCount: 3,
             spaces: [space]
         )
         let response = SpaceAPIJSONRPCResponse(
@@ -230,6 +231,7 @@ struct SpaceAPIContractTests {
         )
         let encodedResult = try checkJSONObject(encodedResponse["result"])
         let encodedSnapshot = try checkJSONObject(encodedResult["snapshot"])
+        check(encodedSnapshot["movedWindowsCount"] as? Int == 3, "moved window count is encoded")
         let encodedSpace = try checkJSONObject(try checkArray(encodedSnapshot["spaces"]).first)
         check(encodedSpace["appName"] is NSNull, "nullable space appName is encoded as null")
         check(encodedSpace["appPath"] is NSNull, "nullable space appPath is encoded as null")
@@ -254,6 +256,12 @@ struct SpaceAPIContractTests {
         let unknownResult = try checkValue(unknownFieldResponse.result, "unknown-field result")
         let compatibleSnapshot = try unknownResult.objectValue?["snapshot"]?.decode(SpaceAPISnapshot.self)
         check(compatibleSnapshot == snapshot, "unknown result fields are ignored")
+
+        var snapshotWithoutMovedWindowsCount = encodedSnapshot
+        snapshotWithoutMovedWindowsCount.removeValue(forKey: "movedWindowsCount")
+        let legacySnapshotData = try JSONSerialization.data(withJSONObject: snapshotWithoutMovedWindowsCount)
+        let decodedLegacySnapshot = try JSONDecoder().decode(SpaceAPISnapshot.self, from: legacySnapshotData)
+        check(decodedLegacySnapshot.movedWindowsCount == 0, "missing moved window count defaults to zero")
 
         let error = SpaceAPIJSONRPCCodec.errorResponse(
             id: "request-3",

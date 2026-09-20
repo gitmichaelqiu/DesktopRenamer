@@ -11,6 +11,7 @@ extension SpaceAPI {
             currentSpaceID: manager.currentSpaceUUID,
             currentDisplayID: manager.currentDisplayID,
             currentSpaceName: manager.getSpaceName(manager.currentSpaceUUID),
+            movedWindowsCount: manager.movedWindowsOriginalSpaces.count,
             spaces: makeSpaceRecords(manager)
         )
     }
@@ -47,6 +48,7 @@ extension SpaceAPI {
             "currentSpaceID": manager.currentSpaceUUID,
             "currentDisplayID": manager.currentDisplayID,
             "currentSpaceName": manager.getSpaceName(manager.currentSpaceUUID),
+            "movedWindowsCount": manager.movedWindowsOriginalSpaces.count,
             "spaces": spaces
         ]
         guard JSONSerialization.isValidJSONObject(snapshot) else {

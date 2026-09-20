@@ -353,7 +353,68 @@ struct SpaceAPISnapshot: Codable, Equatable {
     let currentSpaceID: String
     let currentDisplayID: String
     let currentSpaceName: String
+    let movedWindowsCount: Int
     let spaces: [SpaceAPISpace]
+
+    init(
+        apiVersion: String,
+        revision: UInt64,
+        timestamp: String,
+        currentSpaceIDs: [String],
+        currentSpaceID: String,
+        currentDisplayID: String,
+        currentSpaceName: String,
+        movedWindowsCount: Int = 0,
+        spaces: [SpaceAPISpace]
+    ) {
+        self.apiVersion = apiVersion
+        self.revision = revision
+        self.timestamp = timestamp
+        self.currentSpaceIDs = currentSpaceIDs
+        self.currentSpaceID = currentSpaceID
+        self.currentDisplayID = currentDisplayID
+        self.currentSpaceName = currentSpaceName
+        self.movedWindowsCount = movedWindowsCount
+        self.spaces = spaces
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        apiVersion = try container.decode(String.self, forKey: .apiVersion)
+        revision = try container.decode(UInt64.self, forKey: .revision)
+        timestamp = try container.decode(String.self, forKey: .timestamp)
+        currentSpaceIDs = try container.decode([String].self, forKey: .currentSpaceIDs)
+        currentSpaceID = try container.decode(String.self, forKey: .currentSpaceID)
+        currentDisplayID = try container.decode(String.self, forKey: .currentDisplayID)
+        currentSpaceName = try container.decode(String.self, forKey: .currentSpaceName)
+        movedWindowsCount = try container.decodeIfPresent(Int.self, forKey: .movedWindowsCount) ?? 0
+        spaces = try container.decode([SpaceAPISpace].self, forKey: .spaces)
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(apiVersion, forKey: .apiVersion)
+        try container.encode(revision, forKey: .revision)
+        try container.encode(timestamp, forKey: .timestamp)
+        try container.encode(currentSpaceIDs, forKey: .currentSpaceIDs)
+        try container.encode(currentSpaceID, forKey: .currentSpaceID)
+        try container.encode(currentDisplayID, forKey: .currentDisplayID)
+        try container.encode(currentSpaceName, forKey: .currentSpaceName)
+        try container.encode(movedWindowsCount, forKey: .movedWindowsCount)
+        try container.encode(spaces, forKey: .spaces)
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case apiVersion
+        case revision
+        case timestamp
+        case currentSpaceIDs
+        case currentSpaceID
+        case currentDisplayID
+        case currentSpaceName
+        case movedWindowsCount
+        case spaces
+    }
 }
 
 struct SpaceAPIWindowsSnapshot: Codable, Equatable {
