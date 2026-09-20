@@ -120,6 +120,7 @@ enum BatchStagedActionType: Equatable {
 enum LauncherSpaceAction: Equatable {
     case toggleLock(isLocked: Bool)
     case restoreMovedWindows(count: Int)
+    case rename
     case moveUp
     case moveDown
 
@@ -128,7 +129,9 @@ enum LauncherSpaceAction: Equatable {
         case .toggleLock(let isLocked):
             return isLocked ? "Unlock Space" : "Lock Space"
         case .restoreMovedWindows(let count):
-            return "Restore Windows Moved by Space Lock (\(count))"
+            return "Restore Moved Windows (\(count))"
+        case .rename:
+            return "Rename Space"
         case .moveUp:
             return "Move Space Up"
         case .moveDown:

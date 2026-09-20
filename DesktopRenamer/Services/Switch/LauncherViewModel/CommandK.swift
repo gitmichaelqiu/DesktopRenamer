@@ -41,6 +41,8 @@ enum LauncherCommandKAction: Equatable {
             switch action {
             case .toggleLock, .restoreMovedWindows:
                 return ""
+            case .rename:
+                return "⌘R"
             case .moveUp:
                 return "⌘⇧↑"
             case .moveDown:
@@ -103,6 +105,7 @@ extension LauncherViewModel {
             let available: [LauncherCommandKAction] = [
                 .space(.toggleLock(isLocked: isLocked)),
                 .space(.restoreMovedWindows(count: movedWindowsCount)),
+                .space(.rename),
                 .space(.moveUp),
                 .space(.moveDown)
             ]
@@ -167,8 +170,10 @@ extension LauncherViewModel {
                     ? NSLocalizedString("Unlock Space", comment: "")
                     : NSLocalizedString("Lock Space", comment: "")
             case .restoreMovedWindows(let count):
-                let title = NSLocalizedString("Restore Windows Moved by Space Lock", comment: "")
+                let title = NSLocalizedString("Restore Moved Windows", comment: "")
                 return "\(title) (\(count))"
+            case .rename:
+                return NSLocalizedString("Rename Space", comment: "")
             case .moveUp:
                 return NSLocalizedString("Move Space Up", comment: "")
             case .moveDown:
@@ -295,6 +300,8 @@ extension LauncherViewModel {
             case .space(.restoreMovedWindows):
                 manager.restoreAllMovedWindows()
                 closeLauncher()
+            case .space(.rename):
+                showRenameDialog(for: space)
             case .space(.moveUp):
                 rearrangeSelectedDesktop(direction: .up)
             case .space(.moveDown):
