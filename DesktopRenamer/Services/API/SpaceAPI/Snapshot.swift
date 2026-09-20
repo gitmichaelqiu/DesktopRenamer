@@ -33,7 +33,8 @@ extension SpaceAPI {
                     "displayID": space.displayID,
                     "displayName": displayName(for: space.displayID, using: displayNames),
                     "number": space.num,
-                    "isFullscreen": space.isFullscreen
+                    "isFullscreen": space.isFullscreen,
+                    "isLocked": manager.lockedSpaceIDs.contains(space.id)
                 ]
                 if let appPath = space.appPath {
                     record["appPath"] = appPath
@@ -122,7 +123,8 @@ extension SpaceAPI {
                     isFullscreen: space.isFullscreen,
                     appName: space.appName,
                     appPath: space.appPath,
-                    globalShortcutNumber: space.globalShortcutNum
+                    globalShortcutNumber: space.globalShortcutNum,
+                    isLocked: manager.lockedSpaceIDs.contains(space.id)
                 )
             }
     }

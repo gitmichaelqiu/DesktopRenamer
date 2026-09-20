@@ -24,7 +24,7 @@ extension SpaceAPI {
                 return $0.num < $1.num
             }.map { space in
                 let name = manager.getSpaceName(space.id)
-                return "\(space.id)~\(name)~\(space.displayID)~\(space.num)~\(space.isFullscreen ? "1" : "0")~\(space.appPath ?? "")"
+                return "\(space.id)~\(name)~\(space.displayID)~\(space.num)~\(space.isFullscreen ? "1" : "0")~\(space.appPath ?? "")~\(manager.lockedSpaceIDs.contains(space.id) ? "1" : "0")"
             }.joined(separator: "\n")
         case "switchToSpace":
             guard let spaceID = arguments["spaceID"],
@@ -32,6 +32,19 @@ extension SpaceAPI {
                 throw SpaceAPIError.invalidArgument("Invalid space ID.")
             }
             manager.switchToSpace(space, forceInstant: true)
+            return ""
+        case "toggleLockSpace":
+            guard let spaceID = arguments["spaceID"],
+                  let space = manager.spaceNameDict.first(where: { $0.id == spaceID }) else {
+                throw SpaceAPIError.invalidArgument("Invalid space ID.")
+            }
+            guard !space.isFullscreen else {
+                throw SpaceAPIError.operationFailed("Fullscreen Spaces cannot be locked.")
+            }
+            manager.toggleLockSpace(spaceID)
+            return ""
+        case "restoreMovedWindows":
+            manager.restoreAllMovedWindows()
             return ""
         case "renameCurrentSpace":
             guard let name = arguments["name"] else { throw SpaceAPIError.invalidArgument("Missing space name.") }

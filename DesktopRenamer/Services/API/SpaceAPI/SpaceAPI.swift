@@ -72,6 +72,22 @@ final class SpaceAPI {
                 self?.broadcastRPCEvent(reason: "spaceListChanged")
             }
             .store(in: &cancellables)
+
+        spaceManager.$lockedSpaceIDs
+            .dropFirst()
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] _ in
+                self?.broadcastRPCEvent(reason: "lockStateChanged")
+            }
+            .store(in: &cancellables)
+
+        spaceManager.$movedWindowsOriginalSpaces
+            .dropFirst()
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] _ in
+                self?.broadcastRPCEvent(reason: "movedWindowsChanged")
+            }
+            .store(in: &cancellables)
             
         print("SpaceAPI: Listener Started")
     }

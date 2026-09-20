@@ -198,6 +198,39 @@ class GetCurrentSpaceNameCommand: NSScriptCommand {
     }
 }
 
+class ToggleLockSpaceCommand: NSScriptCommand {
+    override func performDefaultImplementation() -> Any? {
+        guard isAPIEnabled() else { return false }
+        guard let spaceID = requiredDirectString(parameter: "spaceID") else { return false }
+        return runOnMain {
+            guard let manager = AppDelegate.shared.spaceManager else {
+                return failAppUnavailable()
+            }
+            guard let space = manager.spaceNameDict.first(where: { $0.id == spaceID }) else {
+                return failInvalidArgument("Invalid space ID.")
+            }
+            guard !space.isFullscreen else {
+                return failInvalidArgument("Fullscreen Spaces cannot be locked.")
+            }
+            manager.toggleLockSpace(spaceID)
+            return true
+        }
+    }
+}
+
+class RestoreMovedWindowsCommand: NSScriptCommand {
+    override func performDefaultImplementation() -> Any? {
+        guard isAPIEnabled() else { return false }
+        return runOnMain {
+            guard let manager = AppDelegate.shared.spaceManager else {
+                return failAppUnavailable()
+            }
+            manager.restoreAllMovedWindows()
+            return true
+        }
+    }
+}
+
 class GetAPIVersionCommand: NSScriptCommand {
     override func performDefaultImplementation() -> Any? {
         DiagnosticEventLog.shared.record(subsystem: "AppleScript", level: "info", "Command performed: GetAPIVersionCommand")
@@ -222,13 +255,13 @@ class GetAllSpacesCommand: NSScriptCommand {
                 return $0.num < $1.num
             }
             
-            // Format: "UUID~Name~DisplayID~Num~IsFullscreen~AppPath"
+            // Format: "UUID~Name~DisplayID~Num~IsFullscreen~AppPath~IsLocked"
             let lines = sortedSpaces.map { space in
                 let name = manager.getSpaceName(space.id)
                 let displayName = getDisplayName(for: space.displayID)
 
                 // Keep the historical delimiter format for existing clients.
-                return "\(space.id)~\(name)~\(displayName)~\(space.num)~\(space.isFullscreen ? "1" : "0")~\(space.appPath ?? "")"
+                return "\(space.id)~\(name)~\(displayName)~\(space.num)~\(space.isFullscreen ? "1" : "0")~\(space.appPath ?? "")~\(manager.lockedSpaceIDs.contains(space.id) ? "1" : "0")"
             }
             return lines.joined(separator: "\n")
         }

@@ -200,6 +200,7 @@ struct SpaceAPISpace: Codable, Equatable {
     let appName: String?
     let appPath: String?
     let globalShortcutNumber: Int?
+    let isLocked: Bool
 
     init(
         id: String,
@@ -210,7 +211,8 @@ struct SpaceAPISpace: Codable, Equatable {
         isFullscreen: Bool,
         appName: String?,
         appPath: String?,
-        globalShortcutNumber: Int?
+        globalShortcutNumber: Int?,
+        isLocked: Bool = false
     ) {
         self.id = id
         self.name = name
@@ -221,6 +223,7 @@ struct SpaceAPISpace: Codable, Equatable {
         self.appName = appName
         self.appPath = appPath
         self.globalShortcutNumber = globalShortcutNumber
+        self.isLocked = isLocked
     }
 
     init(from decoder: Decoder) throws {
@@ -234,6 +237,7 @@ struct SpaceAPISpace: Codable, Equatable {
         appName = try container.decodeIfPresent(String.self, forKey: .appName)
         appPath = try container.decodeIfPresent(String.self, forKey: .appPath)
         globalShortcutNumber = try container.decodeIfPresent(Int.self, forKey: .globalShortcutNumber)
+        isLocked = try container.decodeIfPresent(Bool.self, forKey: .isLocked) ?? false
     }
 
     func encode(to encoder: Encoder) throws {
@@ -247,6 +251,7 @@ struct SpaceAPISpace: Codable, Equatable {
         try container.encode(appName, forKey: .appName)
         try container.encode(appPath, forKey: .appPath)
         try container.encode(globalShortcutNumber, forKey: .globalShortcutNumber)
+        try container.encode(isLocked, forKey: .isLocked)
     }
 
     private enum CodingKeys: String, CodingKey {
@@ -259,6 +264,7 @@ struct SpaceAPISpace: Codable, Equatable {
         case appName
         case appPath
         case globalShortcutNumber
+        case isLocked
     }
 }
 

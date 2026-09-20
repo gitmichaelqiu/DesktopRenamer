@@ -203,7 +203,12 @@ class SpaceManager: ObservableObject {
         startPeriodicSpaceLayoutCheck()
     }
     
-    func toggleLockSpace(_ spaceID: String) {
+    @discardableResult
+    func toggleLockSpace(_ spaceID: String) -> Bool {
+        guard let space = spaceNameDict.first(where: { $0.id == spaceID }), !space.isFullscreen else {
+            return false
+        }
+
         if lockedSpaceIDs.contains(spaceID) {
             lockedSpaceIDs.remove(spaceID)
         } else {
@@ -211,6 +216,7 @@ class SpaceManager: ObservableObject {
         }
         UserDefaults.standard.set(Array(lockedSpaceIDs), forKey: SpaceManager.lockedSpaceIDsKey)
         objectWillChange.send()
+        return lockedSpaceIDs.contains(spaceID)
     }
 
     func toggleLockAllSpaces() {
