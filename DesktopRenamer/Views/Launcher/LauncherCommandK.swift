@@ -587,6 +587,10 @@ struct CommandKActionRowView: View {
                 return "lock"
             case .restoreMovedWindows:
                 return "arrow.uturn.backward"
+            case .moveUp:
+                return "arrow.up"
+            case .moveDown:
+                return "arrow.down"
             }
         }
     }

@@ -37,8 +37,15 @@ enum LauncherCommandKAction: Equatable {
             case .restore: return "⌃⇧R"
             case .move, .restoreTo: return ""
             }
-        case .space:
-            return ""
+        case .space(let action):
+            switch action {
+            case .toggleLock, .restoreMovedWindows:
+                return ""
+            case .moveUp:
+                return "⌘⇧↑"
+            case .moveDown:
+                return "⌘⇧↓"
+            }
         }
     }
 }
@@ -92,10 +99,13 @@ extension LauncherViewModel {
             guard !space.isFullscreen else { return [] }
 
             let isLocked = AppDelegate.shared.spaceManager?.lockedSpaceIDs.contains(space.id) == true
+            let movedWindowsCount = AppDelegate.shared.spaceManager?.movedWindowsOriginalSpaces.count ?? 0
             var available: [LauncherCommandKAction] = [
-                .space(.toggleLock(isLocked: isLocked))
+                .space(.toggleLock(isLocked: isLocked)),
+                .space(.restoreMovedWindows(count: movedWindowsCount)),
+                .space(.moveUp),
+                .space(.moveDown)
             ]
-            available.append(.space(.restoreMovedWindows))
             guard !submenuSearchQuery.isEmpty else { return available }
 
             return available.filter {
@@ -156,8 +166,15 @@ extension LauncherViewModel {
                 return isLocked
                     ? NSLocalizedString("Unlock Space", comment: "")
                     : NSLocalizedString("Lock Space", comment: "")
-            case .restoreMovedWindows:
-                return NSLocalizedString("Restore Windows Moved by Space Lock", comment: "")
+            case .restoreMovedWindows(let count):
+                return String(
+                    format: NSLocalizedString("Restore Windows Moved by Lock (%d)", comment: ""),
+                    count
+                )
+            case .moveUp:
+                return NSLocalizedString("Move Space Up", comment: "")
+            case .moveDown:
+                return NSLocalizedString("Move Space Down", comment: "")
             }
         }
     }
@@ -280,6 +297,10 @@ extension LauncherViewModel {
             case .space(.restoreMovedWindows):
                 manager.restoreAllMovedWindows()
                 closeLauncher()
+            case .space(.moveUp):
+                rearrangeSelectedDesktop(direction: .up)
+            case .space(.moveDown):
+                rearrangeSelectedDesktop(direction: .down)
             default:
                 break
             }

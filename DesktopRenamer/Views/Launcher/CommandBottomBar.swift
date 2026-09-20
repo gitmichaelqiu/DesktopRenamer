@@ -52,18 +52,6 @@ struct CommandBottomBar: View {
                 case .switchToDesktop:
                     HStack(spacing: 8) {
                         HStack(spacing: 4) {
-                            Text(verbatim: String(localized: "Move Space Up"))
-                            KeycapView(text: "⌘⇧↑", isSelected: false)
-                        }
-                        .modifier(BottomBarCapsule(isSelected: false, isActive: false, colorScheme: colorScheme))
-
-                        HStack(spacing: 4) {
-                            Text(verbatim: String(localized: "Move Space Down"))
-                            KeycapView(text: "⌘⇧↓", isSelected: false)
-                        }
-                        .modifier(BottomBarCapsule(isSelected: false, isActive: false, colorScheme: colorScheme))
-
-                        HStack(spacing: 4) {
                             Text(verbatim: String(localized: "Switch Space"))
                             KeycapView(text: "↵", isSelected: false)
                         }
