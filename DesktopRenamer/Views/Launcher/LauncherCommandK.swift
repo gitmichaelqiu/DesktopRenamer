@@ -579,8 +579,8 @@ private struct LauncherSpaceMenuRow: View {
                     Circle()
                         .stroke(Color.blue, lineWidth: 2)
                         .frame(
-                            width: LauncherLayout.submenuActionIconSlot,
-                            height: LauncherLayout.submenuActionIconSlot
+                            width: LauncherLayout.submenuActionIconSymbolSize,
+                            height: LauncherLayout.submenuActionIconSymbolSize
                         )
                 } else {
                     LauncherIconSlot(
