@@ -8,9 +8,6 @@ class StatusBarController: NSObject {
     var popover: NSPopover
     var cancellables = Set<AnyCancellable>()
     var settingsWindowController: NSWindowController?
-    private var launcherMenuKeyMonitor: Any?
-    private weak var openStatusMenu: NSMenu?
-    private(set) var isStatusMenuOpen = false
     
     var renameItem: NSMenuItem?
     var showActiveLabelsMenuItem: NSMenuItem?
@@ -43,47 +40,10 @@ class StatusBarController: NSObject {
         StatusBarController.statusItem.isVisible = !StatusBarController.isStatusBarHidden
         
         setupObservers()
-        setupLauncherMenuKeyMonitor()
     }
     
     deinit {
-        if let monitor = launcherMenuKeyMonitor {
-            NSEvent.removeMonitor(monitor)
-        }
         NSApp.setActivationPolicy(.accessory)
-    }
-
-    private func setupLauncherMenuKeyMonitor() {
-        launcherMenuKeyMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
-            guard let self,
-                  self.isStatusMenuOpen,
-                  self.matchesLauncherShortcut(event) else {
-                return event
-            }
-
-            self.handleLauncherHotkey()
-            return nil
-        }
-    }
-
-    private func matchesLauncherShortcut(_ event: NSEvent) -> Bool {
-        let shortcut = hotkeyManager.launcherShortcut
-        guard let key = shortcut.key,
-              Shortcut.keyFromEvent(event) == key else {
-            return false
-        }
-
-        let eventModifiers = event.modifierFlags.intersection([.command, .option, .control, .shift])
-        let shortcutModifiers = shortcut.modifiers.intersection([.command, .option, .control, .shift])
-        return eventModifiers == shortcutModifiers
-    }
-
-    func handleLauncherHotkey() {
-        if isStatusMenuOpen {
-            LauncherWindowController.shared.showAfterStatusMenuDismissal()
-        } else {
-            LauncherWindowController.shared.toggle()
-        }
     }
     
     private func setupObservers() {
@@ -183,19 +143,5 @@ extension StatusBarController: NSWindowDelegate {
             }
             settingsWindowController = nil
         }
-    }
-}
-
-extension StatusBarController: NSMenuDelegate {
-    func menuWillOpen(_ menu: NSMenu) {
-        guard menu.delegate === self else { return }
-        openStatusMenu = menu
-        isStatusMenuOpen = true
-    }
-
-    func menuDidClose(_ menu: NSMenu) {
-        guard openStatusMenu === menu else { return }
-        openStatusMenu = nil
-        isStatusMenuOpen = false
     }
 }

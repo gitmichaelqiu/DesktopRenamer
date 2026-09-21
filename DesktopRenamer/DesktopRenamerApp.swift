@@ -134,12 +134,8 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
         hotkeyManager.launcherTriggered
             .receive(on: DispatchQueue.main)
-            .sink { [weak self] in
-                if let statusBarController = self?.statusBarController {
-                    statusBarController.handleLauncherHotkey()
-                } else {
-                    LauncherWindowController.shared.toggleAfterStatusMenuDismissal()
-                }
+            .sink {
+                LauncherWindowController.shared.toggle()
             }
             .store(in: &cancellables)
     }
