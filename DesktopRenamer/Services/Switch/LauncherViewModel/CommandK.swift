@@ -187,6 +187,7 @@ extension LauncherViewModel {
     func showCommandKPanel(isKeyboardInitiated: Bool = true) {
         submenuSearchQuery = ""
         isKeyboardSelection = isKeyboardInitiated
+        renameTargetSpace = nil
         commandKTargetWindow = nil
         commandKTargetSpace = nil
         if activeCommand?.type == .listWindows {
@@ -341,7 +342,7 @@ extension LauncherViewModel {
                 manager.restoreAllMovedWindows()
                 closeLauncher()
             case .space(.rename):
-                showRenameDialog(for: space)
+                showRenameSubmenu(for: space)
             case .space(.moveUp):
                 rearrangeSelectedDesktop(direction: .up)
             case .space(.moveDown):

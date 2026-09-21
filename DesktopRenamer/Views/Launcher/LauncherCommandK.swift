@@ -3,6 +3,7 @@ import SwiftUI
 private enum LauncherSubmenu {
     case actions(window: WindowEntry, fallbackActions: [LauncherCommandKAction])
     case spaceActions(space: SpaceGroup, fallbackActions: [LauncherCommandKAction])
+    case renameSpace(space: SpaceGroup)
     case spaces(
         fallbackSpaces: [SpaceGroup],
         fallbackStagingWindow: WindowEntry?,
@@ -26,6 +27,9 @@ struct LauncherSubmenuOverlay: View {
     @State private var presentationGeneration = 0
 
     private var requestedSubmenu: LauncherSubmenu? {
+        if let renameTargetSpace = viewModel.renameTargetSpace {
+            return .renameSpace(space: renameTargetSpace)
+        }
         if let targetWindow = viewModel.commandKTargetWindow {
             return .actions(
                 window: targetWindow,
@@ -50,6 +54,9 @@ struct LauncherSubmenuOverlay: View {
     }
 
     private var requestedSubmenuKey: String {
+        if let renameTargetSpace = viewModel.renameTargetSpace {
+            return "rename-space-\(renameTargetSpace.id)"
+        }
         if let targetWindow = viewModel.commandKTargetWindow {
             return "actions-\(targetWindow.id)"
         }
@@ -106,6 +113,8 @@ struct LauncherSubmenuOverlay: View {
                 space: space,
                 fallbackActions: fallbackActions
             )
+        case .renameSpace(let space):
+            LauncherRenameSpaceMenuView(viewModel: viewModel, space: space)
         case .spaces(let fallbackSpaces, let fallbackStagingWindow, let fallbackTitle, let isTargetSpaceSelection):
             LauncherSpaceMenuView(
                 viewModel: viewModel,
@@ -252,6 +261,85 @@ struct LauncherSpaceActionMenuView: View {
                     kind: .spaceActions,
                     placeholder: String(localized: "Search for actions...")
                 )
+            }
+        }
+    }
+}
+
+struct LauncherRenameSpaceMenuView: View {
+    @ObservedObject var viewModel: LauncherViewModel
+    let space: SpaceGroup
+    @Environment(\.colorScheme) var colorScheme
+
+    var colors: ThemeColors {
+        ThemeColors(isDark: colorScheme == .dark)
+    }
+
+    var body: some View {
+        LauncherSubmenuPanel {
+            VStack(spacing: 0) {
+                LauncherSubmenuHeader {
+                    HStack(spacing: LauncherLayout.submenuHeaderSpacing) {
+                        LauncherIconSlot(
+                            systemName: "pencil",
+                            tint: colors.textPrimary,
+                            symbolSize: LauncherLayout.submenuActionIconSymbolSize,
+                            slot: LauncherLayout.submenuHeaderIconSlot
+                        )
+
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(String(localized: "Rename Space"))
+                                .font(LauncherTypography.submenuHeader)
+                                .foregroundStyle(colors.textSecondary)
+                            Text(space.name)
+                                .font(LauncherTypography.rowTitle)
+                                .foregroundStyle(colors.textPrimary)
+                                .lineLimit(1)
+                        }
+
+                        Spacer(minLength: 0)
+                    }
+                }
+
+                LauncherSubmenuSeparator()
+
+                SearchTextField(
+                    text: $viewModel.renameInputText,
+                    isDark: colors.isDark,
+                    isTypingDisabled: viewModel.isLauncherBusy,
+                    isInteractionDisabled: viewModel.isLauncherBusy,
+                    isSubmenuField: true,
+                    onUpArrow: {},
+                    onDownArrow: {},
+                    onLeftArrow: { false },
+                    onRightArrow: { false },
+                    onEnter: viewModel.executeRenameSubmenu,
+                    onCommandEnter: viewModel.executeRenameSubmenu,
+                    onTab: {},
+                    onEscape: viewModel.handleEscapeKey,
+                    onKeyEquivalent: { _ in false },
+                    placeholder: String(localized: "New Space Name..."),
+                    textFieldFont: NSFont.systemFont(ofSize: 16, weight: .regular),
+                    textFieldColor: .labelColor,
+                    placeholderColor: .secondaryLabelColor,
+                    usesSingleLineMode: true,
+                    focusNotificationName: NSNotification.Name("FocusLauncherSubmenuTextField")
+                )
+                .frame(height: LauncherLayout.submenuSearchFieldHeight)
+                .padding(.horizontal, LauncherLayout.submenuSearchHorizontalPadding)
+                .padding(.vertical, LauncherLayout.submenuSearchVerticalPadding)
+
+                LauncherSubmenuSeparator()
+
+                HStack(spacing: 4) {
+                    Text(String(localized: "Rename"))
+                        .font(LauncherTypography.submenuRow)
+                        .foregroundStyle(colors.textSecondary)
+                    KeycapView(text: "↵", isSelected: false)
+                }
+                .frame(maxWidth: .infinity, alignment: .trailing)
+                .padding(.horizontal, LauncherLayout.submenuRowHorizontalPadding)
+                .padding(.vertical, LauncherLayout.submenuSearchVerticalPadding)
             }
         }
     }
@@ -496,7 +584,7 @@ private struct LauncherSpaceMenuRow: View {
                         )
                 } else {
                     LauncherIconSlot(
-                        systemName: "desktopcomputer",
+                        systemName: "rectangle.dock",
                         tint: colors.textPrimary,
                         symbolSize: LauncherLayout.submenuActionIconSymbolSize,
                         slot: LauncherLayout.submenuActionIconSlot

@@ -292,23 +292,51 @@ extension LauncherViewModel {
         return space.customName
     }
 
-    func showRenameDialog(for space: SpaceGroup) {
-        let alert = NSAlert()
-        alert.messageText = String(localized: "Rename Space")
-        alert.informativeText = String(localized: "Enter a new name for \"\(space.name)\":")
-        alert.addButton(withTitle: String(localized: "Rename"))
-        alert.addButton(withTitle: String(localized: "Cancel"))
+    func showRenameSubmenu(for space: SpaceGroup) {
+        guard !space.isFullscreen else { return }
+        renameInputText = space.name
+        submenuSearchQuery = ""
+        isKeyboardSelection = true
+        renameTargetSpace = space
+    }
 
-        let textField = NSTextField(frame: NSRect(x: 0, y: 0, width: 200, height: 24))
-        textField.stringValue = space.name
-        alert.accessoryView = textField
+    func dismissRenameSubmenu() {
+        renameTargetSpace = nil
+        renameInputText = ""
+        submenuSearchQuery = ""
+    }
 
-        let response = alert.runModal()
-        if response == .alertFirstButtonReturn {
-            let newName = textField.stringValue.trimmingCharacters(in: .whitespacesAndNewlines)
-            if !newName.isEmpty, let manager = AppDelegate.shared.spaceManager {
-                manager.renameSpace(space.id, to: newName)
-            }
+    func executeRenameSubmenu() {
+        guard !isLauncherBusy,
+              let space = renameTargetSpace,
+              let manager = AppDelegate.shared.spaceManager else {
+            return
         }
+
+        let newName = renameInputText.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !newName.isEmpty else { return }
+
+        manager.renameSpace(space.id, to: newName)
+        dismissRenameSubmenu()
+        loadData()
+        requestLauncherFieldFocus()
+    }
+
+    func toggleSelectedSwitchDesktopSpaceLock() {
+        guard !isLauncherBusy,
+              activeCommand?.type == .switchToDesktop,
+              !isSubmenuOpen,
+              let manager = AppDelegate.shared.spaceManager else {
+            return
+        }
+
+        let spaces = filteredSpaces
+        guard spaces.indices.contains(selectedRowIndex) else { return }
+        let space = spaces[selectedRowIndex]
+        guard !space.isFullscreen else { return }
+
+        _ = manager.toggleLockSpace(space.id)
+        loadData()
+        requestLauncherFieldFocus()
     }
 }

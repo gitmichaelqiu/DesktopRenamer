@@ -275,7 +275,7 @@ class LauncherWindowController: NSWindowController, NSWindowDelegate {
         }
 
         let isSpaceRearrangementShortcut = viewModel.activeCommand?.type == .switchToDesktop &&
-            !viewModel.isCommandKPanelOpen &&
+            !viewModel.isSubmenuOpen &&
             !modifiers.contains(.option) && !modifiers.contains(.control) &&
             modifiers.contains(.command) && modifiers.contains(.shift) &&
             (event.keyCode == 126 || event.keyCode == 125)
@@ -303,7 +303,8 @@ class LauncherWindowController: NSWindowController, NSWindowDelegate {
             guard (viewModel.activeCommand?.type == .batchMoveWindows ||
                    viewModel.activeCommand?.type == .listWindows ||
                    viewModel.activeCommand?.type == .switchToDesktop),
-                  viewModel.stagingWindow == nil else {
+                  viewModel.stagingWindow == nil,
+                  !viewModel.isSubmenuOpen else {
                 return false
             }
             viewModel.showCommandKPanel()

@@ -123,7 +123,7 @@ struct SpaceRowView: View {
                 let appIcon = NSWorkspace.shared.icon(forFile: appPath)
                 LauncherIconSlot(image: appIcon)
             } else {
-                LauncherIconSlot(systemName: "desktopcomputer", tint: colors.textPrimary)
+                LauncherIconSlot(systemName: "rectangle.dock", tint: colors.textPrimary)
             }
             
             HStack(spacing: 4) {

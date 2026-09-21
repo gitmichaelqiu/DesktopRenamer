@@ -169,6 +169,7 @@ enum DesktopRearrangementDirection {
             }
         }
     }
+    @Published var renameTargetSpace: SpaceGroup? = nil
     @Published var isSpaceMenuOpen: Bool = false {
         didSet {
             if !isSpaceMenuOpen, oldValue {
@@ -186,7 +187,7 @@ enum DesktopRearrangementDirection {
     }
 
     var isSubmenuOpen: Bool {
-        isCommandKPanelOpen || isSpaceMenuOpen
+        isCommandKPanelOpen || isSpaceMenuOpen || renameTargetSpace != nil
     }
 
     var isLauncherBusy: Bool {
@@ -226,7 +227,7 @@ enum DesktopRearrangementDirection {
     var terminatingApplicationPIDs = Set<Int32>()
     
     let allCommands: [LauncherCommand] = [
-        LauncherCommand(type: .switchToDesktop, title: NSLocalizedString("Switch Desktop", comment: ""), subtitle: NSLocalizedString("Select a desktop to switch to", comment: ""), iconName: "desktopcomputer", hasSubpage: true),
+        LauncherCommand(type: .switchToDesktop, title: NSLocalizedString("Switch Desktop", comment: ""), subtitle: NSLocalizedString("Select a desktop to switch to", comment: ""), iconName: "rectangle.dock", hasSubpage: true),
         LauncherCommand(type: .moveWindow, title: NSLocalizedString("Move Window", comment: ""), subtitle: NSLocalizedString("Move the active window to a selected space", comment: ""), iconName: "macwindow.and.cursorarrow", hasSubpage: true),
         LauncherCommand(type: .listWindows, title: NSLocalizedString("List Windows", comment: ""), subtitle: NSLocalizedString("Search and manage open application windows", comment: ""), iconName: "macwindow", hasSubpage: true),
         LauncherCommand(type: .batchMoveWindows, title: NSLocalizedString("Manage Windows", comment: ""), subtitle: NSLocalizedString("Stage and execute window operations across desktops", comment: ""), iconName: "macwindow.on.rectangle", hasSubpage: true),

@@ -26,6 +26,14 @@ extension LauncherView {
             }
         }
 
+        if viewModel.activeCommand?.type == .switchToDesktop,
+           !viewModel.isSubmenuOpen,
+           hasCommand && !hasShift && !hasOption && !hasControl,
+           let chars = event.charactersIgnoringModifiers?.lowercased(), chars == "l" {
+            viewModel.toggleSelectedSwitchDesktopSpaceLock()
+            return true
+        }
+
         if viewModel.activeCommand?.type == .listWindows,
            !viewModel.isCommandKPanelOpen,
            viewModel.stagingWindow == nil {
@@ -111,6 +119,7 @@ extension LauncherView {
         }
 
         if viewModel.activeCommand?.type == .switchToDesktop,
+           !viewModel.isSubmenuOpen,
            hasCommand && !hasShift && !hasOption && !hasControl,
            let chars = event.charactersIgnoringModifiers?.lowercased(), chars == "r" {
             let spaces = viewModel.filteredSpaces
@@ -118,7 +127,7 @@ extension LauncherView {
             if index >= 0 && index < spaces.count {
                 let space = spaces[index]
                 if !space.isFullscreen {
-                    viewModel.showRenameDialog(for: space)
+                    viewModel.showRenameSubmenu(for: space)
                 }
             }
             return true
