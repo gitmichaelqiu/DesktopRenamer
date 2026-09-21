@@ -40,7 +40,7 @@ enum LauncherCommandKAction: Equatable {
         case .space(let action):
             switch action {
             case .toggleLock:
-                return ""
+                return "⌘L"
             case .restoreMovedWindows:
                 return "⌘Z"
             case .rename:
@@ -231,14 +231,30 @@ extension LauncherViewModel {
 
         if commandKTargetSpace != nil {
             guard modifiers.subtracting([.command, .numericPad, .function]).isEmpty,
-                  modifiers.contains(.command),
-                  characters == "z",
-                  let action = commandKActions.first(where: {
-                      if case .space(.restoreMovedWindows) = $0 {
-                          return true
-                      }
-                      return false
-                  }),
+                  modifiers.contains(.command) else {
+                return false
+            }
+
+            let action: LauncherCommandKAction?
+            if characters == "l" {
+                action = commandKActions.first(where: {
+                    if case .space(.toggleLock) = $0 {
+                        return true
+                    }
+                    return false
+                })
+            } else if characters == "z" {
+                action = commandKActions.first(where: {
+                    if case .space(.restoreMovedWindows) = $0 {
+                        return true
+                    }
+                    return false
+                })
+            } else {
+                return false
+            }
+
+            guard let action,
                   let index = commandKActions.firstIndex(of: action) else {
                 return false
             }
