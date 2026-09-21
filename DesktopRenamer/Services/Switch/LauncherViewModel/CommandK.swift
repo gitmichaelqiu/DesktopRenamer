@@ -231,22 +231,45 @@ extension LauncherViewModel {
         let characters = event.charactersIgnoringModifiers?.lowercased() ?? ""
 
         if commandKTargetSpace != nil {
-            guard modifiers.subtracting([.command, .numericPad, .function]).isEmpty,
-                  modifiers.contains(.command) else {
+            let hasCommand = modifiers.contains(.command)
+            let hasShift = modifiers.contains(.shift)
+            guard modifiers.subtracting([.command, .shift, .numericPad, .function]).isEmpty,
+                  hasCommand else {
                 return false
             }
 
             let action: LauncherCommandKAction?
-            if characters == "l" {
+            if characters == "l" && !hasShift {
                 action = commandKActions.first(where: {
                     if case .space(.toggleLock) = $0 {
                         return true
                     }
                     return false
                 })
-            } else if characters == "z" {
+            } else if characters == "z" && !hasShift {
                 action = commandKActions.first(where: {
                     if case .space(.restoreMovedWindows) = $0 {
+                        return true
+                    }
+                    return false
+                })
+            } else if characters == "r" && !hasShift {
+                action = commandKActions.first(where: {
+                    if case .space(.rename) = $0 {
+                        return true
+                    }
+                    return false
+                })
+            } else if hasShift && event.keyCode == 126 {
+                action = commandKActions.first(where: {
+                    if case .space(.moveUp) = $0 {
+                        return true
+                    }
+                    return false
+                })
+            } else if hasShift && event.keyCode == 125 {
+                action = commandKActions.first(where: {
+                    if case .space(.moveDown) = $0 {
                         return true
                     }
                     return false
