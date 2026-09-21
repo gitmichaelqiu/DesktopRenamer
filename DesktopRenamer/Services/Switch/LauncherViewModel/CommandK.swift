@@ -39,8 +39,10 @@ enum LauncherCommandKAction: Equatable {
             }
         case .space(let action):
             switch action {
-            case .toggleLock, .restoreMovedWindows:
+            case .toggleLock:
                 return ""
+            case .restoreMovedWindows:
+                return "⌘Z"
             case .rename:
                 return "⌘R"
             case .moveUp:
@@ -219,13 +221,35 @@ extension LauncherViewModel {
     @discardableResult
     func handleCommandKActionShortcut(_ event: NSEvent) -> Bool {
         guard !isLauncherBusy,
-              commandKTargetWindow != nil,
+              (commandKTargetWindow != nil || commandKTargetSpace != nil),
               event.type == .keyDown else {
             return false
         }
 
         let modifiers = event.modifierFlags.intersection(.deviceIndependentFlagsMask)
         let characters = event.charactersIgnoringModifiers?.lowercased() ?? ""
+
+        if commandKTargetSpace != nil {
+            guard modifiers.subtracting([.command, .numericPad, .function]).isEmpty,
+                  modifiers.contains(.command),
+                  characters == "z",
+                  let action = commandKActions.first(where: {
+                      if case .space(.restoreMovedWindows) = $0 {
+                          return true
+                      }
+                      return false
+                  }),
+                  let index = commandKActions.firstIndex(of: action) else {
+                return false
+            }
+
+            isKeyboardSelection = true
+            commandKSelectedIndex = index
+            executeCommandKAction()
+            return true
+        }
+
+        guard commandKTargetWindow != nil else { return false }
         let action: LauncherCommandKAction?
 
         if modifiers.subtracting([.command, .shift, .numericPad, .function]).isEmpty,

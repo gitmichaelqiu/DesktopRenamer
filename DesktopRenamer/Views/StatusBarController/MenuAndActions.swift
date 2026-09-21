@@ -181,22 +181,23 @@ extension StatusBarController {
         let restoreItem = NSMenuItem(
             title: String(format: NSLocalizedString("Restore Windows Moved by Lock (%d)", comment: ""), movedCount),
             action: #selector(restoreAllMovedWindows),
-            keyEquivalent: ""
+            keyEquivalent: "z"
         )
         restoreItem.target = self
         restoreItem.image = NSImage(systemSymbolName: "arrow.uturn.backward", accessibilityDescription: nil)
+        restoreItem.keyEquivalentModifierMask = .command
         restoreItem.isEnabled = movedCount > 0
         menu.addItem(restoreItem)
 
         let cleanItem = NSMenuItem(
             title: String(format: NSLocalizedString("Clean Restoration Queues (%d)", comment: ""), movedCount),
             action: #selector(cleanQueues),
-            keyEquivalent: ""
+            keyEquivalent: "z"
         )
         cleanItem.target = self
         cleanItem.image = NSImage(systemSymbolName: "trash", accessibilityDescription: nil)
         cleanItem.isAlternate = true
-        cleanItem.keyEquivalentModifierMask = .option
+        cleanItem.keyEquivalentModifierMask = [.command, .option]
         cleanItem.isEnabled = movedCount > 0
         menu.addItem(cleanItem)
 
