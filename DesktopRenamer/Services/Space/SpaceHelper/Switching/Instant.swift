@@ -110,14 +110,26 @@ extension SpaceHelper {
         return true
     }
     
-    static func performSpaceSwitchGesture(steps: Int, targetDisplayID: String, forceInstant: Bool = false) {
-        DiagnosticEventLog.shared.record(subsystem: "SpaceHelper", level: "info", "gesture steps=\(steps) display=\(targetDisplayID)")
+    static func performSpaceSwitchGesture(
+        steps: Int,
+        targetDisplayID: String,
+        forceInstant: Bool = false,
+        reverseDirection: Bool = false
+    ) {
+        DiagnosticEventLog.shared.record(
+            subsystem: "SpaceHelper",
+            level: "info",
+            "gesture steps=\(steps) display=\(targetDisplayID) reverseDirection=\(reverseDirection)"
+        )
         if steps == 0 { return }
 
-        // macOS 27 interprets swipe directions opposite of the expected behavior,
-        // so we invert the step direction to compensate.
+        // The direction changed during macOS 27 beta testing, but the release
+        // build is not consistent across every WindowServer session. Keep the
+        // current OS-based compensation for the first attempt and let the
+        // watchdog reverse it only after observing a failed or opposite move.
         let os = ProcessInfo.processInfo.operatingSystemVersion
-        let adjustedSteps = os.majorVersion >= 27 ? -steps : steps
+        let shouldInvertDirection = (os.majorVersion >= 27) != reverseDirection
+        let adjustedSteps = shouldInvertDirection ? -steps : steps
         let directionRight = adjustedSteps > 0
         let absSteps = abs(adjustedSteps)
 

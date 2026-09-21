@@ -332,11 +332,12 @@ extension SpaceHelper {
                 scheduleSyntheticGestureRetry(
                     spaceID: spaceID,
                     displayID: displayID,
+                    sourceSpaceID: context.liveCurrentSpaceID,
                     generation: generation,
                     attempt: 1,
                     scheduledDelay: retryDelay,
                     retryInterval: retryDelay,
-                    maxAttempts: involvesFullscreen ? 2 : 1,
+                    maxAttempts: involvesFullscreen ? 3 : 2,
                     snapshotProbeAttempt: 0
                 )
             }

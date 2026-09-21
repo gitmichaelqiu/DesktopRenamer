@@ -67,6 +67,7 @@ extension SpaceHelper {
     static func scheduleSyntheticGestureRetry(
         spaceID: String,
         displayID: String,
+        sourceSpaceID: String?,
         generation: UInt64,
         attempt: Int,
         scheduledDelay: TimeInterval,
@@ -88,6 +89,7 @@ extension SpaceHelper {
                 scheduleSyntheticGestureSnapshotProbe(
                     spaceID: spaceID,
                     displayID: displayID,
+                    sourceSpaceID: sourceSpaceID,
                     generation: generation,
                     attempt: attempt,
                     retryInterval: retryInterval,
@@ -113,6 +115,7 @@ extension SpaceHelper {
                     scheduleSyntheticGestureSnapshotProbe(
                         spaceID: spaceID,
                         displayID: displayID,
+                        sourceSpaceID: sourceSpaceID,
                         generation: generation,
                         attempt: attempt,
                         retryInterval: retryInterval,
@@ -127,6 +130,7 @@ extension SpaceHelper {
                 scheduleSyntheticGestureSnapshotProbe(
                     spaceID: spaceID,
                     displayID: displayID,
+                    sourceSpaceID: sourceSpaceID,
                     generation: generation,
                     attempt: attempt,
                     retryInterval: retryInterval,
@@ -144,6 +148,7 @@ extension SpaceHelper {
                 scheduleSyntheticGestureSnapshotProbe(
                     spaceID: spaceID,
                     displayID: displayID,
+                    sourceSpaceID: sourceSpaceID,
                     generation: generation,
                     attempt: attempt,
                     retryInterval: retryInterval,
@@ -157,6 +162,31 @@ extension SpaceHelper {
             guard steps != 0 else { return }
             guard attempt <= maxAttempts else { return }
 
+            let directionFromSource: Int? = sourceSpaceID.flatMap { sourceID in
+                guard let sourceIndex = displaySpaces.firstIndex(where: { $0.id == sourceID }) else {
+                    return nil
+                }
+                return currentIndex - sourceIndex
+            }
+            let requestedDirectionFromSource: Int? = sourceSpaceID.flatMap { sourceID in
+                guard let sourceIndex = displaySpaces.firstIndex(where: { $0.id == sourceID }) else {
+                    return nil
+                }
+                return targetIndex - sourceIndex
+            }
+            let movedInOppositeDirection: Bool
+            if let directionFromSource,
+               let requestedDirectionFromSource,
+               directionFromSource != 0,
+               requestedDirectionFromSource != 0 {
+                movedInOppositeDirection =
+                    (directionFromSource > 0) != (requestedDirectionFromSource > 0)
+            } else {
+                movedInOppositeDirection = false
+            }
+            let isStillAtSource = directionFromSource == 0
+            let reverseDirection = movedInOppositeDirection || (attempt > 1 && isStillAtSource)
+
             DiagnosticEventLog.shared.record(
                 subsystem: "SpaceHelper",
                 level: "warning",
@@ -166,19 +196,23 @@ extension SpaceHelper {
                     + String(generation)
                     + "; retrying synthetic gesture (attempt "
                     + String(attempt)
-                    + ")"
+                    + "), reverseDirection="
+                    + String(reverseDirection)
             )
             print(
                 "SpaceHelper: Retrying dropped synthetic gesture to "
                     + spaceID
                     + " (attempt "
                     + String(attempt)
+                    + ", reverseDirection="
+                    + String(reverseDirection)
                     + ")"
             )
             performSpaceSwitchGesture(
                 steps: steps,
                 targetDisplayID: displayID,
-                forceInstant: false
+                forceInstant: false,
+                reverseDirection: reverseDirection
             )
 
             // Always schedule one verification after the last allowed repost.
@@ -189,6 +223,7 @@ extension SpaceHelper {
             scheduleSyntheticGestureRetry(
                 spaceID: spaceID,
                 displayID: displayID,
+                sourceSpaceID: sourceSpaceID,
                 generation: generation,
                 attempt: attempt + 1,
                 scheduledDelay: followUpDelay,
@@ -204,6 +239,7 @@ extension SpaceHelper {
     private static func scheduleSyntheticGestureSnapshotProbe(
         spaceID: String,
         displayID: String,
+        sourceSpaceID: String?,
         generation: UInt64,
         attempt: Int,
         retryInterval: TimeInterval,
@@ -232,6 +268,7 @@ extension SpaceHelper {
         scheduleSyntheticGestureRetry(
             spaceID: spaceID,
             displayID: displayID,
+            sourceSpaceID: sourceSpaceID,
             generation: generation,
             attempt: attempt,
             scheduledDelay: 0.12,
