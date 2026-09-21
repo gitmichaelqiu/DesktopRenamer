@@ -242,8 +242,13 @@ enum WindowActionCoordinator {
                         DiagnosticEventLog.shared.record(
                             subsystem: "WindowActionCoordinator",
                             level: "warning",
-                            "Synthetic drag for window \(windowID) did not release before presentation restoration; refusing to minimize or hide it again."
+                            "Synthetic drag for window \(windowID) did not release before presentation restoration; restoring the captured state anyway."
                         )
+                        // The window may already have been unhidden and
+                        // unminimized for the drag. Do not leave it exposed
+                        // just because the synthetic gesture exceeded its
+                        // timeout.
+                        await restoreWindowPresentationState(presentationState, windowID: windowID)
                         return false
                     }
                     if reachedDestination {
