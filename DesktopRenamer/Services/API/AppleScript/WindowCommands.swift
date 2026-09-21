@@ -144,44 +144,42 @@ class MoveSpecificWindowToSpaceCommand: NSScriptCommand {
             return nil
         }
 
-        // NSScriptCommand normally executes off the main thread. Keep the
-        // AppleScript request open there until the async coordinator has
-        // completed; otherwise a caller can switch Spaces or restore its
-        // original Spaces while the unminimize → move → re-minimize sequence
-        // is still running. A main-thread invocation cannot wait without
-        // deadlocking MainActor, so retain the legacy fire-and-forget fallback
-        // for that unusual case.
-        if Thread.isMainThread {
-            Task { @MainActor in
-                _ = await WindowActionCoordinator.moveWindow(
-                    windowID: windowID,
-                    pid: pid,
-                    fromSpaceID: fromSpaceStr,
-                    targetSpaceID: targetSpaceStr
-                )
-            }
-            return nil
-        }
-
         let result = WindowMoveResult()
         let completion = DispatchSemaphore(value: 0)
         Task { @MainActor in
+            defer { completion.signal() }
             result.moved = await WindowActionCoordinator.moveWindow(
                 windowID: windowID,
                 pid: pid,
                 fromSpaceID: fromSpaceStr,
                 targetSpaceID: targetSpaceStr
             )
-            completion.signal()
         }
 
-        guard completion.wait(timeout: .now() + 15) == .success else {
+        guard waitForCompletion(completion, timeout: 15) else {
             failAppUnavailable("Timed out while moving the window.")
             return nil
         }
         guard result.moved else {
             failInvalidArgument("Window move failed.")
             return nil
+        }
+        return true
+    }
+
+    private func waitForCompletion(_ completion: DispatchSemaphore, timeout: TimeInterval) -> Bool {
+        guard Thread.isMainThread else {
+            return completion.wait(timeout: .now() + timeout) == .success
+        }
+
+        let deadline = Date(timeIntervalSinceNow: timeout)
+        while completion.wait(timeout: .now()) == .timedOut {
+            let remaining = deadline.timeIntervalSinceNow
+            guard remaining > 0 else { return false }
+            RunLoop.current.run(
+                mode: .default,
+                before: Date(timeIntervalSinceNow: min(0.01, remaining))
+            )
         }
         return true
     }
