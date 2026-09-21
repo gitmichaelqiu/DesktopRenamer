@@ -416,6 +416,7 @@ struct LauncherSubmenuSeparator: View {
 /// The filter field belongs to the open submenu, leaving the root query untouched.
 enum LauncherSubmenuSearchKind {
     case actions
+    case spaceActions
     case spaces
 }
 
@@ -462,7 +463,7 @@ struct LauncherSubmenuSearchField: View {
         guard !viewModel.isLauncherBusy else { return }
 
         switch kind {
-        case .actions:
+        case .actions, .spaceActions:
             viewModel.selectPreviousCommandKAction()
         case .spaces:
             viewModel.isKeyboardSelection = true
@@ -474,7 +475,7 @@ struct LauncherSubmenuSearchField: View {
         guard !viewModel.isLauncherBusy else { return }
 
         switch kind {
-        case .actions:
+        case .actions, .spaceActions:
             viewModel.selectNextCommandKAction()
         case .spaces:
             viewModel.isKeyboardSelection = true
@@ -490,7 +491,7 @@ struct LauncherSubmenuSearchField: View {
 
         viewModel.isKeyboardSelection = true
         switch kind {
-        case .actions:
+        case .actions, .spaceActions:
             viewModel.executeCommandKAction()
         case .spaces:
             viewModel.executeSpaceMenuSelection()
@@ -503,7 +504,7 @@ struct LauncherSubmenuSearchField: View {
         let index = number - 1
         viewModel.isKeyboardSelection = true
         switch kind {
-        case .actions:
+        case .actions, .spaceActions:
             guard viewModel.commandKActions.indices.contains(index) else { return }
             viewModel.commandKSelectedIndex = index
             viewModel.executeCommandKAction()
@@ -518,6 +519,8 @@ struct LauncherSubmenuSearchField: View {
         switch kind {
         case .actions:
             viewModel.commandKTargetWindow = nil
+        case .spaceActions:
+            viewModel.commandKTargetSpace = nil
         case .spaces:
             viewModel.handleEscapeKey()
         }

@@ -275,7 +275,7 @@ class LauncherWindowController: NSWindowController, NSWindowDelegate {
         }
 
         let isSpaceRearrangementShortcut = viewModel.activeCommand?.type == .switchToDesktop &&
-            viewModel.commandKTargetWindow == nil &&
+            !viewModel.isSubmenuOpen &&
             !modifiers.contains(.option) && !modifiers.contains(.control) &&
             modifiers.contains(.command) && modifiers.contains(.shift) &&
             (event.keyCode == 126 || event.keyCode == 125)
@@ -294,13 +294,17 @@ class LauncherWindowController: NSWindowController, NSWindowDelegate {
         let characters = event.charactersIgnoringModifiers?.lowercased() ?? ""
 
         if event.keyCode == 40 || characters == "k" {
-            if viewModel.commandKTargetWindow != nil {
+            if viewModel.isCommandKPanelOpen {
                 viewModel.commandKTargetWindow = nil
+                viewModel.commandKTargetSpace = nil
                 return true
             }
 
-            guard (viewModel.activeCommand?.type == .batchMoveWindows || viewModel.activeCommand?.type == .listWindows),
-                  viewModel.stagingWindow == nil else {
+            guard (viewModel.activeCommand?.type == .batchMoveWindows ||
+                   viewModel.activeCommand?.type == .listWindows ||
+                   viewModel.activeCommand?.type == .switchToDesktop),
+                  viewModel.stagingWindow == nil,
+                  !viewModel.isSubmenuOpen else {
                 return false
             }
             viewModel.showCommandKPanel()
@@ -317,7 +321,7 @@ class LauncherWindowController: NSWindowController, NSWindowDelegate {
             return false
         }
 
-        if viewModel.commandKTargetWindow != nil {
+        if viewModel.isCommandKPanelOpen {
             let index = number - 1
             guard viewModel.commandKActions.indices.contains(index) else { return true }
             viewModel.commandKSelectedIndex = index

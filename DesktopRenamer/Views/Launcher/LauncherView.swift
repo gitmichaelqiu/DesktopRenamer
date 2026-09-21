@@ -51,7 +51,7 @@ struct LauncherView: View {
                             isTypingDisabled: viewModel.isSubmenuOpen || viewModel.isLauncherBusy,
                             isInteractionDisabled: viewModel.isLauncherBusy,
                             onUpArrow: {
-                                if viewModel.commandKTargetWindow != nil {
+                                if viewModel.isCommandKPanelOpen {
                                     viewModel.selectPreviousCommandKAction()
                                 } else if viewModel.isSpaceMenuOpen {
                                     viewModel.isKeyboardSelection = true
@@ -64,7 +64,7 @@ struct LauncherView: View {
                                 }
                             },
                             onDownArrow: {
-                                if viewModel.commandKTargetWindow != nil {
+                                if viewModel.isCommandKPanelOpen {
                                     viewModel.selectNextCommandKAction()
                                 } else if viewModel.isSpaceMenuOpen {
                                     viewModel.isKeyboardSelection = true
@@ -80,7 +80,7 @@ struct LauncherView: View {
                                 }
                             },
                             onLeftArrow: {
-                                if viewModel.commandKTargetWindow != nil || viewModel.isSpaceMenuOpen {
+                                if viewModel.isCommandKPanelOpen || viewModel.isSpaceMenuOpen {
                                     return true
                                 }
                                 if viewModel.isBottomBarFocused {
@@ -94,7 +94,7 @@ struct LauncherView: View {
                                 return false
                             },
                             onRightArrow: {
-                                if viewModel.commandKTargetWindow != nil || viewModel.isSpaceMenuOpen {
+                                if viewModel.isCommandKPanelOpen || viewModel.isSpaceMenuOpen {
                                     return true
                                 }
                                 if viewModel.isBottomBarFocused {
@@ -108,7 +108,7 @@ struct LauncherView: View {
                                 return false
                             },
                             onEnter: {
-                                if viewModel.commandKTargetWindow != nil {
+                                if viewModel.isCommandKPanelOpen {
                                     viewModel.executeCommandKAction()
                                 } else if viewModel.isSpaceMenuOpen {
                                     viewModel.executeSpaceMenuSelection()
@@ -119,7 +119,7 @@ struct LauncherView: View {
                                 }
                             },
                             onCommandEnter: {
-                                if viewModel.commandKTargetWindow != nil {
+                                if viewModel.isCommandKPanelOpen {
                                     viewModel.executeCommandKAction()
                                 } else if viewModel.isSpaceMenuOpen {
                                     viewModel.executeSpaceMenuSelection()
@@ -132,13 +132,13 @@ struct LauncherView: View {
                                 }
                             },
                             onOptionEnter: {
-                                if viewModel.commandKTargetWindow != nil || viewModel.isSpaceMenuOpen { return }
+                                if viewModel.isCommandKPanelOpen || viewModel.isSpaceMenuOpen { return }
                                 if viewModel.isBottomBarFocused {
                                     viewModel.executeBottomBarSpaceAction(isOption: true, isCommand: false)
                                 }
                             },
                             onCommandNumber: { num in
-                                if viewModel.commandKTargetWindow != nil {
+                                if viewModel.isCommandKPanelOpen {
                                     let actions = viewModel.commandKActions
                                     let index = num - 1
                                     if index >= 0 && index < actions.count {
@@ -156,12 +156,13 @@ struct LauncherView: View {
                                 }
                             },
                             onTab: {
-                                if viewModel.commandKTargetWindow != nil || viewModel.isSpaceMenuOpen { return }
+                                if viewModel.isCommandKPanelOpen || viewModel.isSpaceMenuOpen { return }
                                 viewModel.handleTabKey()
                             },
                             onEscape: {
-                                if viewModel.commandKTargetWindow != nil {
+                                if viewModel.isCommandKPanelOpen {
                                     viewModel.commandKTargetWindow = nil
+                                    viewModel.commandKTargetSpace = nil
                                 } else if viewModel.isSpaceMenuOpen {
                                     viewModel.handleEscapeKey()
                                 } else {
@@ -169,9 +170,13 @@ struct LauncherView: View {
                                 }
                             },
                             onCommandK: {
-                                if viewModel.commandKTargetWindow != nil {
+                                if viewModel.isCommandKPanelOpen {
                                     viewModel.commandKTargetWindow = nil
-                                } else if (viewModel.activeCommand?.type == .batchMoveWindows || viewModel.activeCommand?.type == .listWindows) && viewModel.stagingWindow == nil {
+                                    viewModel.commandKTargetSpace = nil
+                                } else if (viewModel.activeCommand?.type == .batchMoveWindows ||
+                                           viewModel.activeCommand?.type == .listWindows ||
+                                           viewModel.activeCommand?.type == .switchToDesktop) &&
+                                          viewModel.stagingWindow == nil {
                                     viewModel.showCommandKPanel()
                                 }
                             },
@@ -242,7 +247,7 @@ struct LauncherView: View {
                     .frame(maxHeight: .infinity)
                     .frame(maxWidth: .infinity)
                 } else {
-                    ListAreaView(viewModel: viewModel)
+                    ListAreaView(viewModel: viewModel, spaceManager: spaceManager)
                         .frame(maxHeight: .infinity)
                         .allowsHitTesting(!viewModel.isRearrangingSpace)
                 }
@@ -259,7 +264,7 @@ struct LauncherView: View {
                 }
             }
 
-            LauncherSubmenuOverlay(viewModel: viewModel)
+            LauncherSubmenuOverlay(viewModel: viewModel, spaceManager: spaceManager)
         }
         .frame(width: 750, height: 475)
         .launcherBackground(cornerRadius: 26)
@@ -268,6 +273,7 @@ struct LauncherView: View {
 
 struct ListAreaView: View {
     @ObservedObject var viewModel: LauncherViewModel
+    @ObservedObject var spaceManager: SpaceManager
     @Environment(\.colorScheme) var colorScheme
     
     var colors: ThemeColors {
@@ -340,6 +346,7 @@ struct ListAreaView: View {
                                         let isCurrent = currentSpaceIDsByDisplay[space.displayID] == space.id
                                         SpaceRowView(
                                             space: space,
+                                            isLocked: spaceManager.lockedSpaceIDs.contains(space.id),
                                             isSelected: isSelected,
                                             isCurrent: isCurrent,
                                             showDisplayName: viewModel.shouldShowDisplayNameForSpaces,
@@ -393,6 +400,7 @@ struct ListAreaView: View {
                                             let isCurrent = currentSpaceIDsByDisplay[space.displayID] == space.id
                                             SpaceRowView(
                                                 space: space,
+                                                isLocked: spaceManager.lockedSpaceIDs.contains(space.id),
                                                 isSelected: isSelected,
                                                 isCurrent: isCurrent,
                                                 showDisplayName: viewModel.shouldShowDisplayNameForSpaces,

@@ -85,6 +85,12 @@ enum DesktopRenamerAPIContract {
             requiredParameters: ["spaceID"]
         ),
         SpaceAPIMethodDefinition(
+            name: "toggleLockSpace",
+            parameters: ["spaceID": .string],
+            requiredParameters: ["spaceID"]
+        ),
+        SpaceAPIMethodDefinition(name: "restoreMovedWindows"),
+        SpaceAPIMethodDefinition(
             name: "renameCurrentSpace",
             parameters: ["name": .string],
             requiredParameters: ["name"]

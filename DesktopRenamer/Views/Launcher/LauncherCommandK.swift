@@ -2,6 +2,8 @@ import SwiftUI
 
 private enum LauncherSubmenu {
     case actions(window: WindowEntry, fallbackActions: [LauncherCommandKAction])
+    case spaceActions(space: SpaceGroup, fallbackActions: [LauncherCommandKAction])
+    case renameSpace(space: SpaceGroup)
     case spaces(
         fallbackSpaces: [SpaceGroup],
         fallbackStagingWindow: WindowEntry?,
@@ -12,6 +14,7 @@ private enum LauncherSubmenu {
 
 struct LauncherSubmenuOverlay: View {
     @ObservedObject var viewModel: LauncherViewModel
+    @ObservedObject var spaceManager: SpaceManager
 
     @State private var displayedSubmenu: LauncherSubmenu = .spaces(
         fallbackSpaces: [],
@@ -24,9 +27,18 @@ struct LauncherSubmenuOverlay: View {
     @State private var presentationGeneration = 0
 
     private var requestedSubmenu: LauncherSubmenu? {
+        if let renameTargetSpace = viewModel.renameTargetSpace {
+            return .renameSpace(space: renameTargetSpace)
+        }
         if let targetWindow = viewModel.commandKTargetWindow {
             return .actions(
                 window: targetWindow,
+                fallbackActions: viewModel.commandKActions
+            )
+        }
+        if let targetSpace = viewModel.commandKTargetSpace {
+            return .spaceActions(
+                space: targetSpace,
                 fallbackActions: viewModel.commandKActions
             )
         }
@@ -42,8 +54,14 @@ struct LauncherSubmenuOverlay: View {
     }
 
     private var requestedSubmenuKey: String {
+        if let renameTargetSpace = viewModel.renameTargetSpace {
+            return "rename-space-\(renameTargetSpace.id)"
+        }
         if let targetWindow = viewModel.commandKTargetWindow {
             return "actions-\(targetWindow.id)"
+        }
+        if let targetSpace = viewModel.commandKTargetSpace {
+            return "space-actions-\(targetSpace.id)"
         }
         return viewModel.isSpaceMenuOpen ? "spaces" : "none"
     }
@@ -57,6 +75,8 @@ struct LauncherSubmenuOverlay: View {
                 .onTapGesture {
                     if viewModel.commandKTargetWindow != nil {
                         viewModel.commandKTargetWindow = nil
+                    } else if viewModel.commandKTargetSpace != nil {
+                        viewModel.commandKTargetSpace = nil
                     } else {
                         viewModel.handleEscapeKey()
                     }
@@ -87,9 +107,18 @@ struct LauncherSubmenuOverlay: View {
                 window: window,
                 fallbackActions: fallbackActions
             )
+        case .spaceActions(let space, let fallbackActions):
+            LauncherSpaceActionMenuView(
+                viewModel: viewModel,
+                space: space,
+                fallbackActions: fallbackActions
+            )
+        case .renameSpace(let space):
+            LauncherRenameSpaceMenuView(viewModel: viewModel, space: space)
         case .spaces(let fallbackSpaces, let fallbackStagingWindow, let fallbackTitle, let isTargetSpaceSelection):
             LauncherSpaceMenuView(
                 viewModel: viewModel,
+                spaceManager: spaceManager,
                 fallbackSpaces: fallbackSpaces,
                 fallbackStagingWindow: fallbackStagingWindow,
                 fallbackTitle: fallbackTitle,
@@ -158,6 +187,164 @@ struct LauncherSubmenuOverlay: View {
     }
 }
 
+struct LauncherSpaceActionMenuView: View {
+    @ObservedObject var viewModel: LauncherViewModel
+    let space: SpaceGroup
+    let fallbackActions: [LauncherCommandKAction]
+    @Environment(\.colorScheme) var colorScheme
+
+    var colors: ThemeColors {
+        ThemeColors(isDark: colorScheme == .dark)
+    }
+
+    private var actionItems: [ActionMenuItem] {
+        let actions = viewModel.commandKTargetSpace == nil
+            ? fallbackActions
+            : viewModel.commandKActions
+        return actions.enumerated().map { index, action in
+            ActionMenuItem(index: index, action: action)
+        }
+    }
+
+    private func showsDivider(before item: ActionMenuItem) -> Bool {
+        guard item.index > 0,
+              case .space(.rename) = item.action else {
+            return false
+        }
+        return true
+    }
+
+    private var title: String {
+        let isLocked = AppDelegate.shared.spaceManager?.lockedSpaceIDs.contains(space.id) == true
+        return space.name + (isLocked ? " 🔒" : "")
+    }
+
+    var body: some View {
+        LauncherSubmenuPanel {
+            VStack(spacing: 0) {
+                LauncherSubmenuHeader {
+                    LauncherSubmenuTitleHeader(title: title, color: colors.textSecondary)
+                }
+
+                LauncherSubmenuSeparator()
+
+                if actionItems.isEmpty {
+                    Text(String(localized: "No actions found"))
+                        .font(LauncherTypography.submenuRow)
+                        .foregroundStyle(colors.textSecondary)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(.horizontal, LauncherLayout.submenuRowHorizontalPadding)
+                        .frame(height: LauncherLayout.submenuRowHeight)
+                } else {
+                    LazyVStack(spacing: LauncherLayout.submenuRowSpacing) {
+                        ForEach(actionItems) { item in
+                            if showsDivider(before: item) {
+                                LauncherSubmenuSeparator()
+                            }
+                            CommandKActionRowView(
+                                action: item.action,
+                                isSelected: viewModel.commandKSelectedIndex == item.index,
+                                idx: item.index,
+                                shortcutNumber: viewModel.shouldShowCommandNumbersInSubmenu && item.index < 9
+                                    ? item.index + 1
+                                    : nil,
+                                colors: colors,
+                                viewModel: viewModel
+                            )
+                        }
+                    }
+                }
+
+                LauncherSubmenuSeparator()
+                LauncherSubmenuSearchField(
+                    viewModel: viewModel,
+                    kind: .spaceActions,
+                    placeholder: String(localized: "Search for actions...")
+                )
+            }
+        }
+    }
+}
+
+struct LauncherRenameSpaceMenuView: View {
+    @ObservedObject var viewModel: LauncherViewModel
+    let space: SpaceGroup
+    @Environment(\.colorScheme) var colorScheme
+
+    var colors: ThemeColors {
+        ThemeColors(isDark: colorScheme == .dark)
+    }
+
+    var body: some View {
+        LauncherSubmenuPanel {
+            VStack(spacing: 0) {
+                LauncherSubmenuHeader {
+                    HStack(spacing: LauncherLayout.submenuHeaderSpacing) {
+                        LauncherIconSlot(
+                            systemName: "pencil",
+                            tint: colors.textPrimary,
+                            symbolSize: LauncherLayout.submenuActionIconSymbolSize,
+                            slot: LauncherLayout.submenuHeaderIconSlot
+                        )
+
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(String(localized: "Rename Space"))
+                                .font(LauncherTypography.submenuHeader)
+                                .foregroundStyle(colors.textSecondary)
+                            Text(space.name)
+                                .font(LauncherTypography.rowTitle)
+                                .foregroundStyle(colors.textPrimary)
+                                .lineLimit(1)
+                        }
+
+                        Spacer(minLength: 0)
+                    }
+                }
+
+                LauncherSubmenuSeparator()
+
+                SearchTextField(
+                    text: $viewModel.renameInputText,
+                    isDark: colors.isDark,
+                    isTypingDisabled: viewModel.isLauncherBusy,
+                    isInteractionDisabled: viewModel.isLauncherBusy,
+                    isSubmenuField: true,
+                    onUpArrow: {},
+                    onDownArrow: {},
+                    onLeftArrow: { false },
+                    onRightArrow: { false },
+                    onEnter: viewModel.executeRenameSubmenu,
+                    onCommandEnter: viewModel.executeRenameSubmenu,
+                    onTab: {},
+                    onEscape: viewModel.handleEscapeKey,
+                    onKeyEquivalent: { _ in false },
+                    placeholder: String(localized: "New Space Name..."),
+                    textFieldFont: NSFont.systemFont(ofSize: 16, weight: .regular),
+                    textFieldColor: .labelColor,
+                    placeholderColor: .secondaryLabelColor,
+                    usesSingleLineMode: true,
+                    focusNotificationName: NSNotification.Name("FocusLauncherSubmenuTextField")
+                )
+                .frame(height: LauncherLayout.submenuSearchFieldHeight)
+                .padding(.horizontal, LauncherLayout.submenuSearchHorizontalPadding)
+                .padding(.vertical, LauncherLayout.submenuSearchVerticalPadding)
+
+                LauncherSubmenuSeparator()
+
+                HStack(spacing: 4) {
+                    Text(String(localized: "Rename"))
+                        .font(LauncherTypography.submenuRow)
+                        .foregroundStyle(colors.textSecondary)
+                    KeycapView(text: "↵", isSelected: false)
+                }
+                .frame(maxWidth: .infinity, alignment: .trailing)
+                .padding(.horizontal, LauncherLayout.submenuRowHorizontalPadding)
+                .padding(.vertical, LauncherLayout.submenuSearchVerticalPadding)
+            }
+        }
+    }
+}
+
 struct LauncherActionMenuView: View {
     @ObservedObject var viewModel: LauncherViewModel
     let window: WindowEntry
@@ -175,6 +362,19 @@ struct LauncherActionMenuView: View {
         return actions.enumerated().map { index, action in
             ActionMenuItem(index: index, action: action)
         }
+    }
+
+    private func showsDivider(before item: ActionMenuItem) -> Bool {
+        guard item.index > 0,
+              case .window = item.action else {
+            return false
+        }
+
+        let previousAction = actionItems[item.index - 1].action
+        if case .window = previousAction {
+            return false
+        }
+        return true
     }
     
     var body: some View {
@@ -196,6 +396,9 @@ struct LauncherActionMenuView: View {
                 } else {
                     LazyVStack(spacing: LauncherLayout.submenuRowSpacing) {
                         ForEach(actionItems) { item in
+                            if showsDivider(before: item) {
+                                LauncherSubmenuSeparator()
+                            }
                             CommandKActionRowView(
                                 action: item.action,
                                 isSelected: viewModel.commandKSelectedIndex == item.index,
@@ -223,6 +426,7 @@ struct LauncherActionMenuView: View {
 
 struct LauncherSpaceMenuView: View {
     @ObservedObject var viewModel: LauncherViewModel
+    @ObservedObject var spaceManager: SpaceManager
     let fallbackSpaces: [SpaceGroup]
     let fallbackStagingWindow: WindowEntry?
     let fallbackTitle: String
@@ -280,6 +484,7 @@ struct LauncherSpaceMenuView: View {
                                 ForEach(Array(spaces.enumerated()), id: \.element.id) { index, space in
                                     LauncherSpaceMenuRow(
                                         space: space,
+                                        isLocked: spaceManager.lockedSpaceIDs.contains(space.id),
                                         isSelected: viewModel.spaceMenuSelectedIndex == index,
                                         isCurrent: SpaceHelper.getCurrentSpaceID(for: space.displayID) == space.id,
                                         shortcutNumber: index + 1,
@@ -340,6 +545,7 @@ struct LauncherSpaceMenuView: View {
 
 private struct LauncherSpaceMenuRow: View {
     let space: SpaceGroup
+    let isLocked: Bool
     let isSelected: Bool
     let isCurrent: Bool
     let shortcutNumber: Int
@@ -373,22 +579,30 @@ private struct LauncherSpaceMenuRow: View {
                     Circle()
                         .stroke(Color.blue, lineWidth: 2)
                         .frame(
-                            width: LauncherLayout.submenuActionIconSlot,
-                            height: LauncherLayout.submenuActionIconSlot
+                            width: LauncherLayout.submenuActionIconSymbolSize,
+                            height: LauncherLayout.submenuActionIconSymbolSize
                         )
                 } else {
                     LauncherIconSlot(
-                        systemName: "desktopcomputer",
+                        systemName: "rectangle.dock",
                         tint: colors.textPrimary,
                         symbolSize: LauncherLayout.submenuActionIconSymbolSize,
                         slot: LauncherLayout.submenuActionIconSlot
                     )
                 }
 
-                Text(space.name)
-                    .font(LauncherTypography.submenuRow)
-                    .foregroundStyle(colors.textPrimary)
-                    .lineLimit(1)
+                HStack(spacing: 4) {
+                    Text(space.name)
+                        .font(LauncherTypography.submenuRow)
+                        .foregroundStyle(colors.textPrimary)
+                        .lineLimit(1)
+
+                    if isLocked && !space.isFullscreen {
+                        Image(systemName: "lock.fill")
+                            .font(.caption2.weight(.semibold))
+                            .foregroundStyle(colors.textPrimary)
+                    }
+                }
 
                 Spacer(minLength: LauncherLayout.submenuRowContentSpacing)
 
@@ -481,6 +695,19 @@ struct CommandKActionRowView: View {
             case .restore: return "arrow.uturn.backward"
             case .restoreTo: return "arrow.forward.square"
             case .move: return "arrow.right.square"
+            }
+        case .space(let action):
+            switch action {
+            case .toggleLock:
+                return "lock"
+            case .restoreMovedWindows:
+                return "arrow.uturn.backward"
+            case .rename:
+                return "pencil"
+            case .moveUp:
+                return "arrow.up"
+            case .moveDown:
+                return "arrow.down"
             }
         }
     }

@@ -24,8 +24,12 @@ extension LauncherViewModel {
     func handleEscapeKey() {
         guard !isLauncherBusy else { return }
 
-        if commandKTargetWindow != nil {
+        if renameTargetSpace != nil {
+            dismissRenameSubmenu()
+        } else if commandKTargetWindow != nil {
             commandKTargetWindow = nil
+        } else if commandKTargetSpace != nil {
+            commandKTargetSpace = nil
         } else if isBottomBarFocused {
             leaveSpaceBarFocus()
         } else if isSpaceMenuOpen {
@@ -159,6 +163,10 @@ extension LauncherViewModel {
         selectedRowIndex = 0
         activeCommand = nil
         stagingWindow = nil
+        commandKTargetWindow = nil
+        commandKTargetSpace = nil
+        renameTargetSpace = nil
+        renameInputText = ""
         isSpaceMenuOpen = false
         spaceMenuSelectedIndex = 0
         isBottomBarFocused = false
@@ -180,6 +188,9 @@ extension LauncherViewModel {
         isStagingForRestoreTo = false
         isExecutingRestoreToImmediately = false
         commandKTargetWindow = nil
+        commandKTargetSpace = nil
+        renameTargetSpace = nil
+        renameInputText = ""
         commandKSelectedIndex = 0
     }
 
