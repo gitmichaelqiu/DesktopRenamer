@@ -10,6 +10,52 @@ struct Shortcut: Equatable, Codable {
     var keyString: String {
         key?.description ?? ""
     }
+
+    /// The character representation expected by `NSMenuItem.keyEquivalent`.
+    /// HotKey uses human-readable names for function and navigation keys, while
+    /// AppKit expects their private-use Unicode characters.
+    var menuKeyEquivalent: String {
+        guard let key else { return "" }
+
+        switch key {
+        case .upArrow: return "\u{F700}"
+        case .downArrow: return "\u{F701}"
+        case .leftArrow: return "\u{F702}"
+        case .rightArrow: return "\u{F703}"
+        case .f1: return "\u{F704}"
+        case .f2: return "\u{F705}"
+        case .f3: return "\u{F706}"
+        case .f4: return "\u{F707}"
+        case .f5: return "\u{F708}"
+        case .f6: return "\u{F709}"
+        case .f7: return "\u{F70A}"
+        case .f8: return "\u{F70B}"
+        case .f9: return "\u{F70C}"
+        case .f10: return "\u{F70D}"
+        case .f11: return "\u{F70E}"
+        case .f12: return "\u{F70F}"
+        case .f13: return "\u{F710}"
+        case .f14: return "\u{F711}"
+        case .f15: return "\u{F712}"
+        case .f16: return "\u{F713}"
+        case .f17: return "\u{F714}"
+        case .f18: return "\u{F715}"
+        case .f19: return "\u{F716}"
+        case .f20: return "\u{F717}"
+        case .forwardDelete: return "\u{F728}"
+        case .home: return "\u{F729}"
+        case .end: return "\u{F72B}"
+        case .pageUp: return "\u{F72C}"
+        case .pageDown: return "\u{F72D}"
+        case .help: return "\u{F746}"
+        case .escape: return "\u{1B}"
+        case .delete: return "\u{08}"
+        case .return, .keypadEnter: return "\r"
+        case .tab: return "\t"
+        case .space: return " "
+        default: return key.description.lowercased()
+        }
+    }
     
     enum CodingKeys: String, CodingKey {
         case key
@@ -246,4 +292,3 @@ struct Shortcut: Equatable, Codable {
 extension Notification.Name {
     static let hotkeyTriggered = Notification.Name("HotkeyTriggered")
 }
-
