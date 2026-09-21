@@ -160,6 +160,17 @@ struct SpaceAPIContractTests {
             "window presentation hints are normalized"
         )
 
+        expectParameterError(
+            parameter: "isHidden",
+            params: .object([
+                "windowID": .number(123),
+                "fromSpaceID": .string("4"),
+                "targetSpaceID": .string("5"),
+                "isHidden": .string("yes")
+            ]),
+            method: "moveSpecificWindow"
+        )
+
         let withoutOptionalPID = try SpaceAPIArgumentValidator.stringArguments(
             from: .object([
                 "windowID": .string("123"),
