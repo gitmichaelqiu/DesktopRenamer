@@ -20,7 +20,7 @@
             <sparkle:minimumSystemVersion>13.0</sparkle:minimumSystemVersion>
             <sparkle:channel>dev-mqiu</sparkle:channel>
             <desktoprenamer:targetBundleIdentifier>dev.mqiu.DesktopRenamer</desktoprenamer:targetBundleIdentifier>
-            <enclosure url="https://github.com/gitmichaelqiu/DesktopRenamer/releases/download/v1.15.0/DesktopRenamer%201.15.0.dmg" length="58439960" type="application/octet-stream" sparkle:edSignature="vFgmJjytEiJkHuRzwJ+yyHUEB7u+FcDMzlgbuzSX4kROF+eoxuVtdD2gdgWqglb6MMujMd6Hegw688hTAMlMAA=="/>
+            <enclosure url="https://github.com/gitmichaelqiu/DesktopRenamer/releases/download/v1.15.0/DesktopRenamer.1.15.0.dmg" length="58439960" type="application/octet-stream" sparkle:edSignature="vFgmJjytEiJkHuRzwJ+yyHUEB7u+FcDMzlgbuzSX4kROF+eoxuVtdD2gdgWqglb6MMujMd6Hegw688hTAMlMAA=="/>
             <sparkle:deltas>
                 <enclosure url="https://raw.githubusercontent.com/gitmichaelqiu/DesktopRenamer/main/DesktopRenamer/Resources/Sparkle/DesktopRenamer40-38.delta" sparkle:deltaFrom="38" length="3213014" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="977824" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,uk" sparkle:edSignature="+kp+TPk9sD/aSsDuH/X8Vv5XKGOmTc6SxULSmBvzzV9wso/8iFQU5JqKZJNVODgIz5zg5XqJPEIS9fdb8AxZAg=="/>
             </sparkle:deltas>
