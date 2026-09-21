@@ -10,15 +10,14 @@ extension SpaceHelper {
             return nil
         }
         
-        let screenUUIDs = getAllDisplayUUIDs()
-        let mainScreenUUID = screenUUIDs.first
+        let mainScreenUUID = getMainDisplayUUID()
 
         for display in displays {
             if let rawID = display["Display Identifier"] as? String,
                let spaces = display["Spaces"] as? [[String: Any]] {
                 let displayID = normalizeDisplayID(rawID, mainUUID: mainScreenUUID)
                 for space in spaces {
-                    if let managedID = space["ManagedSpaceID"] as? Int, String(managedID) == spaceID {
+                    if let managedID = managedIntegerValue(space["ManagedSpaceID"]), String(managedID) == spaceID {
                         return displayID
                     }
                 }
@@ -61,16 +60,16 @@ extension SpaceHelper {
             let displayID = display["Display Identifier"] as? String ?? "Unknown"
             s += "  Display [\(idx)] ID=\(displayID):\n"
             if let currentSpace = display["Current Space"] as? [String: Any],
-               let currentID = currentSpace["ManagedSpaceID"] as? Int {
+               let currentID = managedIntegerValue(currentSpace["ManagedSpaceID"]) {
                 s += "    Current Space ManagedSpaceID: \(currentID)\n"
             }
             if let spaces = display["Spaces"] as? [[String: Any]] {
                 s += "    Spaces:\n"
                 for space in spaces {
-                    if let spaceID = space["ManagedSpaceID"] as? Int {
+                    if let spaceID = managedIntegerValue(space["ManagedSpaceID"]) {
                         let isFS = space["TileLayoutManager"] != nil
-                        let spaceType = space["Space Type"] as? Int ?? -1
-                        let pid = space["pid"] as? Int32 ?? space["owner pid"] as? Int32 ?? 0
+                        let spaceType = managedIntegerValue(space["Space Type"]) ?? -1
+                        let pid = managedIntegerValue(space["pid"] ?? space["owner pid"]) ?? 0
                         s += "      - ManagedSpaceID: \(spaceID) (Type: \(spaceType), isFullscreen: \(isFS ? 1 : 0), PID: \(pid))\n"
                     }
                 }
@@ -160,7 +159,11 @@ extension SpaceHelper {
     }
 
     static func getCurrentSpaceID(for displayID: String) -> String? {
-        getCurrentSpaceIDsByDisplay()[displayID]
+        let normalizedDisplayID = normalizeDisplayID(
+            displayID,
+            mainUUID: getMainDisplayUUID()
+        )
+        return getCurrentSpaceIDsByDisplay()[normalizedDisplayID]
     }
 
     /// Returns one current managed-space ID per display from one WindowServer
@@ -172,15 +175,14 @@ extension SpaceHelper {
             return [:]
         }
 
-        let screenUUIDs = getAllDisplayUUIDs()
-        let mainScreenUUID = screenUUIDs.first
+        let mainScreenUUID = getMainDisplayUUID()
         var currentSpaceIDs: [String: String] = [:]
 
         for display in displays {
             if let rawID = display["Display Identifier"] as? String {
                 let currentID = normalizeDisplayID(rawID, mainUUID: mainScreenUUID)
                 if let currentDict = display["Current Space"] as? [String: Any],
-                   let managedID = currentDict["ManagedSpaceID"] as? Int
+                   let managedID = managedIntegerValue(currentDict["ManagedSpaceID"])
                 {
                     currentSpaceIDs[currentID] = String(managedID)
                 }

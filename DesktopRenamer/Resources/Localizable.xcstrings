@@ -1,23 +1,6 @@
 {
   "sourceLanguage" : "en",
   "strings" : {
-    "Migrate" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Migrate"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "迁移"
-          }
-        }
-      }
-    },
     "" : {
       "localizations" : {
         "zh-Hans" : {
@@ -86,6 +69,26 @@
         }
       }
     },
+    "%@ moved down" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@已下移"
+          }
+        }
+      }
+    },
+    "%@ moved up" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@已上移"
+          }
+        }
+      }
+    },
     "%lld" : {
       "shouldTranslate" : false
     },
@@ -130,37 +133,7 @@
       },
       "shouldTranslate" : false
     },
-    "↵" : {
-      "shouldTranslate" : false
-    },
     "↺" : {
-      "shouldTranslate" : false
-    },
-    "⇥" : {
-      "shouldTranslate" : false
-    },
-    "⌘%lld" : {
-      "shouldTranslate" : false
-    },
-    "⌘↵" : {
-      "shouldTranslate" : false
-    },
-    "⌘⇧↑" : {
-      "shouldTranslate" : false
-    },
-    "⌘⇧↓" : {
-      "shouldTranslate" : false
-    },
-    "⌘⇧T" : {
-      "shouldTranslate" : false
-    },
-    "⌘K" : {
-      "shouldTranslate" : false
-    },
-    "⌘T" : {
-      "shouldTranslate" : false
-    },
-    "⌥↵" : {
       "shouldTranslate" : false
     },
     "◉" : {
@@ -316,22 +289,12 @@
         }
       }
     },
-    "Adjust the position where the mouse grabs the window to move across spaces." : {
+    "Adjust where the pointer grabs a window when moving it between spaces." : {
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "调整鼠标抓窗口的位置，用于将窗口移动到不同桌面。"
-          }
-        }
-      }
-    },
-    "Allow other apps to get space names." : {
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "允许其他应用访问桌面名称。"
+            "value" : "调整指针抓取窗口的位置，用于在桌面之间移动窗口。"
           }
         }
       }
@@ -366,22 +329,6 @@
         }
       }
     },
-    "Automatically rank commands based on their execution frequency. Turn off to manually reorder commands." : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Automatically rank commands based on their execution frequency. Turn off to manually reorder commands."
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "根据执行频率自动对指令进行排序。关闭以手动调整指令顺序。"
-          }
-        }
-      }
-    },
     "Automatically return to original space" : {
       "localizations" : {
         "zh-Hans" : {
@@ -408,6 +355,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "批量移动窗口"
+          }
+        }
+      }
+    },
+    "Batch operations cancelled." : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "批量操作已取消。"
           }
         }
       }
@@ -446,16 +403,6 @@
         }
       }
     },
-    "By doing so, you can turn DesktopRenamer into a completely silent API app." : {
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "你可以将 DesktopRenamer 设置为纯 API 后台。"
-          }
-        }
-      }
-    },
     "Bypass native macOS animation lag. Enable trackpad overrides or hotkeys for instant, zero-delay switching." : {
       "localizations" : {
         "zh-Hans" : {
@@ -472,6 +419,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "取消"
+          }
+        }
+      }
+    },
+    "Capture a report to help diagnose issues." : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "收集报告以帮助诊断问题。"
           }
         }
       }
@@ -502,6 +459,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "选择App…"
+          }
+        }
+      }
+    },
+    "Choose modifier keys followed by a number." : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "选择修饰键并按下数字键。"
           }
         }
       }
@@ -586,6 +553,66 @@
         }
       }
     },
+    "Closed %@" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已关闭%@"
+          }
+        }
+      }
+    },
+    "Closing %@" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "正在关闭%@"
+          }
+        }
+      }
+    },
+    "Command %lld" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "指令 %lld"
+          }
+        }
+      }
+    },
+    "Commands are ranked by usage. Turn this off to reorder them manually." : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "按使用频率排列指令。关闭后可手动调整顺序。"
+          }
+        }
+      }
+    },
+    "Completed %lld operation(s)" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已完成%lld项操作"
+          }
+        }
+      }
+    },
+    "Completed %lld operation(s), skipped %lld" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已完成%1$lld项操作，跳过%2$lld项"
+          }
+        }
+      }
+    },
     "Confirm & Execute Batch Move (%lld windows)" : {
       "localizations" : {
         "en" : {
@@ -624,12 +651,12 @@
         }
       }
     },
-    "Controls how much distance the fingers have to move before switching the desktop." : {
+    "Could not close %@" : {
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "控制触发切换的手指移动距离。"
+            "value" : "无法关闭%@"
           }
         }
       }
@@ -644,12 +671,102 @@
         }
       }
     },
+    "Could not enter Full Screen for %@" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "无法为%@进入全屏"
+          }
+        }
+      }
+    },
+    "Could not exit Full Screen for %@" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "无法为%@退出全屏"
+          }
+        }
+      }
+    },
+    "Could not focus %@" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "无法聚焦到%@"
+          }
+        }
+      }
+    },
+    "Could not hide %@" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "无法隐藏%@"
+          }
+        }
+      }
+    },
     "Could not initialize the native space rearrangement operation." : {
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "无法初始化原生桌面重排操作。"
+          }
+        }
+      }
+    },
+    "Could not minimize %@" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "无法最小化%@"
+          }
+        }
+      }
+    },
+    "Could not move %@ to %@" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "无法将%@移动到%@"
+          }
+        }
+      }
+    },
+    "Could not quit %@" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "无法退出%@"
+          }
+        }
+      }
+    },
+    "Could not restore %@" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "无法恢复%@"
+          }
+        }
+      }
+    },
+    "Could not switch to the selected space." : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "无法切换到所选桌面。"
           }
         }
       }
@@ -720,12 +837,12 @@
     "DesktopRenamer" : {
       "shouldTranslate" : false
     },
-    "DesktopRenamer requires Accessibility and Screen Recording permissions for hotkeys, trackpad overrides, and window movement to function correctly." : {
+    "DesktopRenamer needs these permissions to manage windows and Spaces." : {
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "DesktopRenamer需要辅助权限以及屏幕录制权限以运行快捷键，触控板，以及移动窗口。"
+            "value" : "DesktopRenamer需要这些权限来管理窗口和桌面空间。"
           }
         }
       }
@@ -860,22 +977,32 @@
         }
       }
     },
-    "Enter a new name for \"%@\":" : {
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "为%@输入新名字："
-          }
-        }
-      }
-    },
     "Enter Full Screen" : {
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "进入全屏"
+          }
+        }
+      }
+    },
+    "Entered Full Screen for %@" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已为%@进入全屏"
+          }
+        }
+      }
+    },
+    "Entering Full Screen for %@" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "正在为%@进入全屏"
           }
         }
       }
@@ -916,6 +1043,16 @@
         }
       }
     },
+    "Executing action..." : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "执行指令..."
+          }
+        }
+      }
+    },
     "Executing batch window moves..." : {
       "localizations" : {
         "zh-Hans" : {
@@ -932,6 +1069,26 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "退出全屏"
+          }
+        }
+      }
+    },
+    "Exited Full Screen for %@" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已为%@退出全屏"
+          }
+        }
+      }
+    },
+    "Exiting Full Screen for %@" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "正在为%@退出全屏"
           }
         }
       }
@@ -982,32 +1139,12 @@
         }
       }
     },
-    "Focus ↵" : {
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "聚焦 ↵"
-          }
-        }
-      }
-    },
     "Font size" : {
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "字体大小"
-          }
-        }
-      }
-    },
-    "For custom-drawn windows (like WeChat) that require mouse movement to start dragging. Enabling this may resolve some window movement failures." : {
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "对于自建套件的窗口（如微信），需要轻微拖动窗口才能跨桌面移动。启用可以解决部分失败。"
           }
         }
       }
@@ -1076,14 +1213,7 @@
     "GitHub Issues" : {
       "comment" : "A button that opens a GitHub issue page.",
       "isCommentAutoGenerated" : true,
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "GitHub Issues"
-          }
-        }
-      }
+      "shouldTranslate" : false
     },
     "Grab offset X" : {
       "localizations" : {
@@ -1135,6 +1265,16 @@
         }
       }
     },
+    "Hidden %@" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已隐藏%@"
+          }
+        }
+      }
+    },
     "Hide" : {
       "localizations" : {
         "zh-Hans" : {
@@ -1155,12 +1295,22 @@
         }
       }
     },
-    "Hide the space label window of the space that is being switched to immediately instead of hiding it after the space is switched." : {
+    "Hide the menu bar icon while DesktopRenamer continues running." : {
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "在切换桌面时，立即隐藏桌面标签窗口，而非切换结束后隐藏。"
+            "value" : "隐藏菜单栏图标，但 DesktopRenamer 仍会继续运行。"
+          }
+        }
+      }
+    },
+    "Hide the target space label before switching instead of after." : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "在切换前隐藏目标桌面标签，而不是在切换后隐藏。"
           }
         }
       }
@@ -1175,32 +1325,22 @@
         }
       }
     },
-    "If enabled, the label stays on the desktop instead of hiding.\n\nIf disabled, the label will only be visible in Mission Control.\n\nTip: You can drag the window to the screen edge to shrink it into a 'Picture-in-Picture' mode." : {
+    "Hiding %@" : {
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "如果启用，标签将会在桌面可见区域显示。\n\n如果禁用，标签会在调度中心的角落显示。\n\n提示：你可以将标签拖至桌面边缘以最小化。"
+            "value" : "正在隐藏%@"
           }
         }
       }
     },
-    "If the Settings show that the permission is granted but the app still does not have the permission, remove the app row in Settings and re-grant." : {
+    "If you use Control + Arrow shortcuts, disable the matching Mission Control shortcuts in System Settings." : {
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "如果设置显示权限已获取但是 App 显示未获取，在设置权限中移除 App 并重新获取权限。"
-          }
-        }
-      }
-    },
-    "If you want to use Control + Arrow, disable the system's one in Settings → Keyboard → Keyboard Shortcuts... → Mission Control." : {
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "如果使用 Control + 箭头切换，需要在系统设置 → 键盘 → 键盘快捷键 → 调度中心中关闭系统快捷键。"
+            "value" : "如果使用 Control + 箭头快捷键，请在系统设置中关闭对应的调度中心快捷键。"
           }
         }
       }
@@ -1221,6 +1361,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "将全屏桌面放在源桌面旁边"
+          }
+        }
+      }
+    },
+    "Keep the label visible on the desktop outside Mission Control." : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "让标签在调度中心之外也显示在桌面上。"
           }
         }
       }
@@ -1317,6 +1467,16 @@
         }
       }
     },
+    "Let other apps access your space names." : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "允许其他应用访问桌面名称。"
+          }
+        }
+      }
+    },
     "Let you right-click with the Option key." : {
       "localizations" : {
         "zh-Hans" : {
@@ -1383,6 +1543,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "锁定当前桌面"
+          }
+        }
+      }
+    },
+    "Lock Space" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "锁定桌面"
           }
         }
       }
@@ -1492,6 +1662,23 @@
         }
       }
     },
+    "Migrate" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Migrate"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "迁移"
+          }
+        }
+      }
+    },
     "Minimize" : {
       "localizations" : {
         "zh-Hans" : {
@@ -1508,6 +1695,26 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "最小化"
+          }
+        }
+      }
+    },
+    "Minimized %@" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已最小化%@"
+          }
+        }
+      }
+    },
+    "Minimizing %@" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "正在最小化%@"
           }
         }
       }
@@ -1682,6 +1889,26 @@
         }
       }
     },
+    "Moved %@ to %@" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已将%@移动到%@"
+          }
+        }
+      }
+    },
+    "Moving %@ to %@" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "正在将%@移动到%@"
+          }
+        }
+      }
+    },
     "Moving window failed for %@" : {
       "localizations" : {
         "zh-Hans" : {
@@ -1744,6 +1971,16 @@
         }
       }
     },
+    "No actions found" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "未找到指令"
+          }
+        }
+      }
+    },
     "No commands found" : {
       "localizations" : {
         "zh-Hans" : {
@@ -1796,6 +2033,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "无结果"
+          }
+        }
+      }
+    },
+    "No spaces found" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "未找到桌面"
           }
         }
       }
@@ -1880,16 +2127,6 @@
         }
       }
     },
-    "Press modifiers and a number to set the shortcut." : {
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "按下修饰键及一个数字键来设置该快捷键。"
-          }
-        }
-      }
-    },
     "Prevent applications or macOS from automatically switching spaces. Keep your workspace focused by locking important desktops." : {
       "localizations" : {
         "zh-Hans" : {
@@ -1956,6 +2193,26 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "退出"
+          }
+        }
+      }
+    },
+    "Quit %@" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已退出%@"
+          }
+        }
+      }
+    },
+    "Quitting %@" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "正在退出%@"
           }
         }
       }
@@ -2095,18 +2352,18 @@
         }
       }
     },
-    "Renamer" : {
-      "shouldTranslate" : false
-    },
-    "Replaces system switch gestures with instant space switching.\n\nRequired: You must disable 'Swipe between full screen apps' in System Settings → Trackpad → More Gestures or change to different number of fingers to prevent conflicts.\n\nNotice, you must click at the fullscreen app to make it active to avoid issues when leaving the app." : {
+    "Renamed space to \"%@\"" : {
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "替换缓慢的系统切换手势，使用 DesktopRenamer 的更快切换方法。\n\n要求：必须在系统设置 → 触控板 → 更多手势中取消默认的切换手势或选择不同数量的手指。\n\n在你切换到全屏App时，请点击App以保证切出App时不会出现问题。"
+            "value" : "已将桌面重命名为“%@”"
           }
         }
       }
+    },
+    "Renamer" : {
+      "shouldTranslate" : false
     },
     "Report an issue" : {
       "localizations" : {
@@ -2148,22 +2405,22 @@
         }
       }
     },
-    "Required for injecting shortcuts, reading active window information, and moving windows with Option + swipe." : {
+    "Required for keyboard shortcuts and moving windows between spaces." : {
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "用于添加快捷键，获取当前窗口，以及移动窗口。"
+            "value" : "键盘快捷键和在桌面之间移动窗口所需。"
           }
         }
       }
     },
-    "Required for reading the active window before moving it with Option + swipe." : {
+    "Required to identify the active window when moving it between spaces." : {
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "用于在一定窗口前获取当前窗口。"
+            "value" : "在桌面之间移动窗口时识别当前窗口所需。"
           }
         }
       }
@@ -2208,12 +2465,62 @@
         }
       }
     },
+    "Restart" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "重启"
+          }
+        }
+      }
+    },
+    "Restart DesktopRenamer" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "重启DesktopRenamer"
+          }
+        }
+      }
+    },
+    "Restart DesktopRenamer after changing permissions." : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "更改权限后请重新启动 DesktopRenamer。"
+          }
+        }
+      }
+    },
+    "Restarting…" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "重启中..."
+          }
+        }
+      }
+    },
     "Restore" : {
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "恢复"
+          }
+        }
+      }
+    },
+    "Restore Moved Windows" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "恢复锁定窗口"
           }
         }
       }
@@ -2254,6 +2561,26 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "恢复被锁定移动的窗口 (%d)"
+          }
+        }
+      }
+    },
+    "Restored %@" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已恢复%@"
+          }
+        }
+      }
+    },
+    "Restoring %@" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "正在恢复%@"
           }
         }
       }
@@ -2319,6 +2646,7 @@
       }
     },
     "Search" : {
+      "comment" : "Label shown before the space search input when the space bar is focused.",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -2354,12 +2682,32 @@
         }
       }
     },
+    "Search for actions..." : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "搜索指令..."
+          }
+        }
+      }
+    },
     "Search items..." : {
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "搜索项目..."
+          }
+        }
+      }
+    },
+    "Search spaces..." : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "搜索桌面..."
           }
         }
       }
@@ -2404,12 +2752,32 @@
         }
       }
     },
-    "Set to 0 for instant switching (bypasses the macOS sliding animation). Otherwise the velocity is calibrated per display (cached across restarts) so the actual switch time converges to this value." : {
+    "Select Space" : {
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "设为0以跳过切换动画。否则切换速度会反复调整直到达到目标时长，可能需要多次切换。"
+            "value" : "选择桌面"
+          }
+        }
+      }
+    },
+    "Set to 0 to switch instantly without the macOS animation." : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "设为 0 可跳过 macOS 动画并即时切换。"
+          }
+        }
+      }
+    },
+    "Sets how far you need to move your fingers before switching." : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "设置切换前手指需要移动的距离。"
           }
         }
       }
@@ -2995,6 +3363,16 @@
         }
       }
     },
+    "Space %lld" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "桌面 %lld"
+          }
+        }
+      }
+    },
     "Space Arrangement" : {
       "localizations" : {
         "zh-Hans" : {
@@ -3011,6 +3389,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "桌面标签已重新加载"
+          }
+        }
+      }
+    },
+    "Space rearrangement timed out." : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "桌面重排超时。"
           }
         }
       }
@@ -3043,14 +3431,7 @@
       }
     },
     "SpaceAPI v%@" : {
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "SpaceAPI v%@"
-          }
-        }
-      }
+      "shouldTranslate" : false
     },
     "Spaces:" : {
       "localizations" : {
@@ -3102,16 +3483,6 @@
         }
       }
     },
-    "Start collection, reproduce the bug, then stop and save the full diagnostic report." : {
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "开始收集事件，重现bug，并保存完整的诊断报告。"
-          }
-        }
-      }
-    },
     "Start Recording" : {
       "localizations" : {
         "zh-Hans" : {
@@ -3148,16 +3519,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "切换 & 移动"
-          }
-        }
-      }
-    },
-    "Switch ↵" : {
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "切换 ↵"
           }
         }
       }
@@ -3264,12 +3625,22 @@
         }
       }
     },
+    "Switched to %@" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已切换到%@"
+          }
+        }
+      }
+    },
     "Take back control of your macOS spaces." : {
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "优雅地使用mac桌面。"
+            "value" : "优雅地使用Mac桌面。"
           }
         }
       }
@@ -3424,6 +3795,16 @@
         }
       }
     },
+    "Unlock Space" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "解锁桌面"
+          }
+        }
+      }
+    },
     "Use ← → ↑ ↓ to fine-tune, Esc to exit" : {
       "localizations" : {
         "zh-Hans" : {
@@ -3434,12 +3815,32 @@
         }
       }
     },
-    "Use the Gaussian blur background for better contrast." : {
+    "Use a blurred background instead of Liquid Glass." : {
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "使用高斯模糊以增加对比度。"
+            "value" : "使用模糊背景代替 Liquid Glass。"
+          }
+        }
+      }
+    },
+    "Use instant space switching for trackpad gestures. Disable ‘Swipe between full-screen apps’ in System Settings → Trackpad → More Gestures to avoid conflicts." : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "使用触控板手势即时切换桌面。请在系统设置 → 触控板 → 更多手势中关闭“在全屏应用之间轻扫”以避免冲突。"
+          }
+        }
+      }
+    },
+    "Use this for apps whose windows need a small drag before they can be moved, such as WeChat." : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "适用于窗口需要轻微拖动后才能移动的应用，例如微信。"
           }
         }
       }
@@ -3465,38 +3866,22 @@
         }
       }
     },
-    "When a space switch is triggered by opening the window of an app, move that window back to the original space. This way, you are always focused in the locked space." : {
+    "When opening an app switches spaces, return its window to the original space." : {
       "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "When a space switch is triggered by opening the window of an app, move that window back to the original space. This way, you are always focused in the locked space."
-          }
-        },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "当打开某个应用程序的窗口触发桌面切换时，将该窗口移回原桌面。这样，您将始终专注于锁定的桌面。"
+            "value" : "打开应用导致切换桌面时，将其窗口移回原桌面。"
           }
         }
       }
     },
-    "When macOS automatically rearranges Spaces is disabled, move a newly created full-screen space immediately after the desktop that opened it." : {
+    "Window" : {
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "关闭 macOS 自动重新排列桌面后，将新建的全屏桌面紧邻创建它的桌面放置。"
-          }
-        }
-      }
-    },
-    "When set to 3 fingers, you can still use 4 fingers to trigger native swipe." : {
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "设置为3指时，仍可以4指使用系统原生切换。"
+            "value" : "窗口"
           }
         }
       }
@@ -3507,6 +3892,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "窗口大小"
+          }
+        }
+      }
+    },
+    "With 3 fingers selected, 4 fingers can still trigger the native swipe." : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "选择 3 指后，仍可用 4 指触发系统手势。"
           }
         }
       }

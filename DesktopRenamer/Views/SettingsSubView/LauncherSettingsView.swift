@@ -45,7 +45,7 @@ struct LauncherSettingsView: View {
                 SettingsSection("Launcher Commands Ranking") {
                     SettingsRow(
                         "Automatically rank commands",
-                        helperText: "Automatically rank commands based on their execution frequency. Turn off to manually reorder commands."
+                        helperText: "Commands are ranked by usage. Turn this off to reorder them manually."
                     ) {
                         Toggle("", isOn: $viewModel.automaticallyRankCommands)
                             .toggleStyle(.switch)
@@ -142,19 +142,15 @@ struct LauncherSettingsView: View {
                         .foregroundColor(.secondary)
                         .frame(width: 20)
 
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text(command.title)
-                            .font(.body)
-                            .fontWeight(.medium)
-                        Text(command.subtitle)
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                    }
+                    Text(command.title)
+                        .font(.body)
+                        .fontWeight(.medium)
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
             }
             .padding(.horizontal, 12)
             .padding(.vertical, 6)
+            .frame(minHeight: 36)
 
             if !isLast {
                 Divider().padding(.leading, 12)
@@ -175,19 +171,14 @@ struct LauncherSettingsView: View {
                     .foregroundColor(.secondary)
                     .frame(width: 20)
 
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(command.title)
-                        .font(.body)
-                        .fontWeight(.medium)
-                    Text(command.subtitle)
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                }
+                Text(command.title)
+                    .font(.body)
+                    .fontWeight(.medium)
             }
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 6)
-        .frame(minWidth: 320, alignment: .leading)
+        .frame(minWidth: 320, minHeight: 36, alignment: .leading)
         .contentShape(.dragPreview, Rectangle())
     }
 

@@ -4,6 +4,9 @@ import SwiftUI
 
 class LauncherNSPanel: NSPanel {
     weak var focusedTextField: FocusTextField?
+    weak var launcherTextField: FocusTextField?
+    weak var submenuTextField: FocusTextField?
+    weak var spaceBarTextField: FocusTextField?
 
     override var canBecomeKey: Bool {
         return true
@@ -16,19 +19,30 @@ class LauncherNSPanel: NSPanel {
 
 class LauncherWindowController: NSWindowController, NSWindowDelegate {
     static let shared = LauncherWindowController()
+
+    private static let submenuNavigationKeyCodes: Set<UInt16> = [
+        36,  // Return
+        48,  // Tab
+        53,  // Escape
+        76,  // Keypad Enter
+        123, // Left arrow
+        124, // Right arrow
+        125, // Down arrow
+        126, // Up arrow
+    ]
     
     let viewModel = LauncherViewModel()
     
-    private var isCommandKeyPressed = false
-    private var cmdLongPressWorkItem: DispatchWorkItem?
     private var flagsChangedMonitor: Any?
     private var keyDownMonitor: Any?
+    private var mouseMovedMonitor: Any?
+    private var lastMouseLocation: NSPoint?
     private var isHiding = false
     
     init() {
         let panel = LauncherNSPanel(
-            contentRect: NSRect(x: 0, y: 0, width: 840, height: 570),
-            styleMask: [.borderless, .nonactivatingPanel],
+            contentRect: NSRect(x: 0, y: 0, width: 750, height: 475),
+            styleMask: [.borderless, .fullSizeContentView, .nonactivatingPanel],
             backing: .buffered,
             defer: false
         )
@@ -37,10 +51,11 @@ class LauncherWindowController: NSWindowController, NSWindowDelegate {
         panel.isReleasedWhenClosed = false
         panel.backgroundColor = .clear
         panel.isOpaque = false
-        panel.hasShadow = false
-        panel.level = .statusBar
+        panel.hasShadow = true
+        panel.level = .floating
         panel.hidesOnDeactivate = false
         panel.becomesKeyOnlyIfNeeded = false
+        panel.acceptsMouseMovedEvents = true
         // The launcher follows the Space that is active when it is presented.
         // It must not remain attached to the Space where the panel was first
         // created, because activating it there can switch the user's Space.
@@ -60,55 +75,113 @@ class LauncherWindowController: NSWindowController, NSWindowDelegate {
         
         let launcherView = LauncherView(viewModel: self.viewModel)
         let hostingView = NSHostingView(rootView: launcherView)
-        hostingView.frame = NSRect(x: 0, y: 0, width: 840, height: 570)
+        hostingView.frame = NSRect(x: 0, y: 0, width: 750, height: 475)
+        hostingView.wantsLayer = true
+        hostingView.layer?.cornerRadius = 26
+        hostingView.layer?.masksToBounds = true
+        hostingView.layer?.backgroundColor = NSColor.clear.cgColor
+        hostingView.sizingOptions = []
         
         panel.contentView = hostingView
+        panel.contentView?.wantsLayer = true
+        panel.contentView?.layer?.backgroundColor = NSColor.clear.cgColor
         
         flagsChangedMonitor = NSEvent.addLocalMonitorForEvents(matching: .flagsChanged) { [weak self] event in
             guard let self = self else { return event }
             let hasCommand = event.modifierFlags.contains(.command)
-            
-            if hasCommand {
-                if !self.isCommandKeyPressed {
-                    self.isCommandKeyPressed = true
-                    self.cmdLongPressWorkItem?.cancel()
-                    let workItem = DispatchWorkItem { [weak self] in
-                        guard let self = self else { return }
-                        if self.isCommandKeyPressed {
-                            withAnimation(.easeInOut(duration: 0.12)) {
-                                self.viewModel.showCommandNumbers = true
-                            }
-                        }
-                    }
-                    self.cmdLongPressWorkItem = workItem
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.35, execute: workItem)
-                }
-            } else {
-                if self.isCommandKeyPressed {
-                    self.isCommandKeyPressed = false
-                    self.cmdLongPressWorkItem?.cancel()
-                    self.cmdLongPressWorkItem = nil
-                    withAnimation(.easeInOut(duration: 0.12)) {
-                        self.viewModel.showCommandNumbers = false
-                    }
-                }
-            }
+
+            self.viewModel.updateCommandModifier(isPressed: hasCommand)
             return event
         }
 
         keyDownMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
             guard let self,
                   let panel = self.window as? LauncherNSPanel,
-                  panel.isKeyWindow,
-                  let focusedTextField = panel.focusedTextField,
-                  focusedTextField.window === panel,
-                  panel.firstResponder === focusedTextField || panel.firstResponder === focusedTextField.currentEditor()
+                  panel.isKeyWindow
             else {
+                return event
+            }
+
+            if self.handleLauncherShortcut(event) {
+                return nil
+            }
+
+            if self.viewModel.handleCommandKActionShortcut(event) {
+                return nil
+            }
+
+            let focusedTextField = panel.focusedTextField
+            let focusedFieldIsActive = focusedTextField?.window === panel &&
+                (panel.firstResponder === focusedTextField || panel.firstResponder === focusedTextField?.currentEditor())
+            let submenuFieldIsFocused = focusedFieldIsActive && focusedTextField?.isSubmenuField == true
+
+            if self.viewModel.isSubmenuOpen,
+               !submenuFieldIsFocused,
+               event.keyCode == 48 {
+                self.viewModel.requestSubmenuFieldFocus()
+                return nil
+            }
+
+            if !focusedFieldIsActive, event.keyCode == 48 {
+                if self.viewModel.isSubmenuOpen {
+                    self.viewModel.requestSubmenuFieldFocus()
+                } else if self.viewModel.activeCommand == nil {
+                    self.viewModel.handleTabKey()
+                }
+                return nil
+            }
+
+            if self.viewModel.isSubmenuOpen,
+               !submenuFieldIsFocused,
+               !Self.submenuNavigationKeyCodes.contains(event.keyCode) {
+                return nil
+            }
+
+            guard let focusedTextField,
+                  focusedFieldIsActive
+            else {
+                if let preferredTextField = self.preferredTextField(for: panel) {
+                    if preferredTextField.makeFirstResponderAndHandleKeyEvent(event, in: panel) {
+                        return nil
+                    }
+                }
+                self.viewModel.requestCurrentFieldFocus()
                 return event
             }
 
             return focusedTextField.handleKeyEquivalent(event) ? nil : event
         }
+
+        mouseMovedMonitor = NSEvent.addLocalMonitorForEvents(matching: .mouseMoved) { [weak self] event in
+            guard let self,
+                  let panel = self.window as? LauncherNSPanel,
+                  panel.isKeyWindow else {
+                return event
+            }
+
+            let mouseLocation = NSEvent.mouseLocation
+            guard self.lastMouseLocation != mouseLocation else {
+                return event
+            }
+
+            self.lastMouseLocation = mouseLocation
+            self.viewModel.handlePointerMovement()
+            return event
+        }
+    }
+
+    private func preferredTextField(for panel: LauncherNSPanel) -> FocusTextField? {
+        let textField: FocusTextField?
+        if viewModel.isSubmenuOpen {
+            textField = panel.submenuTextField
+        } else if viewModel.isBottomBarFocused {
+            textField = panel.spaceBarTextField
+        } else {
+            textField = panel.launcherTextField
+        }
+
+        guard let textField, textField.window === panel else { return nil }
+        return textField
     }
     
     required init?(coder: NSCoder) {
@@ -120,6 +193,9 @@ class LauncherWindowController: NSWindowController, NSWindowDelegate {
             NSEvent.removeMonitor(monitor)
         }
         if let monitor = keyDownMonitor {
+            NSEvent.removeMonitor(monitor)
+        }
+        if let monitor = mouseMovedMonitor {
             NSEvent.removeMonitor(monitor)
         }
     }
@@ -137,6 +213,7 @@ class LauncherWindowController: NSWindowController, NSWindowDelegate {
         
         // Center on screen with cursor
         centerOnActiveScreen()
+        lastMouseLocation = NSEvent.mouseLocation
         
         // Reset state
         viewModel.resetForPresentation()
@@ -151,8 +228,12 @@ class LauncherWindowController: NSWindowController, NSWindowDelegate {
         )
         
         // Post a notification to force focus
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
-            NotificationCenter.default.post(name: NSNotification.Name("FocusLauncherTextField"), object: nil)
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) { [weak self] in
+            guard let self,
+                  self.window?.isVisible == true,
+                  !self.viewModel.isBottomBarFocused,
+                  !self.viewModel.isSubmenuOpen else { return }
+            self.viewModel.requestLauncherFieldFocus()
         }
     }
     
@@ -168,16 +249,92 @@ class LauncherWindowController: NSWindowController, NSWindowDelegate {
             "launcher hide begin visible=\(panel?.isVisible ?? false), key=\(panel?.isKeyWindow ?? false), windowSpaces=\(panel.map { SpaceHelper.getWindowCurrentSpaces(windowID: $0.windowNumber).sorted() } ?? []), live=\(SpaceHelper.debugFormatSpaceMap(SpaceHelper.getCurrentSpaceIDsByDisplay()))"
         )
         window?.orderOut(nil)
-        isCommandKeyPressed = false
-        cmdLongPressWorkItem?.cancel()
-        cmdLongPressWorkItem = nil
+        lastMouseLocation = nil
         viewModel.resetForPresentation()
-        viewModel.showCommandNumbers = false
+        viewModel.updateCommandModifier(isPressed: false)
         viewModel.previouslyActiveWindow = nil
         SpaceHelper.debugTrace(
             traceID,
             "launcher hide end visible=\(panel?.isVisible ?? false), key=\(panel?.isKeyWindow ?? false), windowSpaces=\(panel.map { SpaceHelper.getWindowCurrentSpaces(windowID: $0.windowNumber).sorted() } ?? []), live=\(SpaceHelper.debugFormatSpaceMap(SpaceHelper.getCurrentSpaceIDsByDisplay()))"
         )
+    }
+
+    private func handleLauncherShortcut(_ event: NSEvent) -> Bool {
+        guard event.type == .keyDown else { return false }
+
+        let modifiers = event.modifierFlags.intersection(.deviceIndependentFlagsMask)
+        if event.keyCode == 43,
+           modifiers.contains(.command),
+           !modifiers.contains(.option),
+           !modifiers.contains(.control) {
+            hide()
+            AppDelegate.shared.statusBarController?.openSettingsWindow(
+                tab: modifiers.contains(.shift) ? .launcher : .general
+            )
+            return true
+        }
+
+        let isSpaceRearrangementShortcut = viewModel.activeCommand?.type == .switchToDesktop &&
+            !viewModel.isSubmenuOpen &&
+            !modifiers.contains(.option) && !modifiers.contains(.control) &&
+            modifiers.contains(.command) && modifiers.contains(.shift) &&
+            (event.keyCode == 126 || event.keyCode == 125)
+
+        if isSpaceRearrangementShortcut {
+            viewModel.rearrangeSelectedDesktop(direction: event.keyCode == 126 ? .up : .down)
+            return true
+        }
+
+        guard !viewModel.isLauncherBusy else { return true }
+
+        guard modifiers.contains(.command),
+              modifiers.subtracting([.command, .numericPad, .function]).isEmpty else {
+            return false
+        }
+        let characters = event.charactersIgnoringModifiers?.lowercased() ?? ""
+
+        if event.keyCode == 40 || characters == "k" {
+            if viewModel.isCommandKPanelOpen {
+                viewModel.commandKTargetWindow = nil
+                viewModel.commandKTargetSpace = nil
+                return true
+            }
+
+            guard (viewModel.activeCommand?.type == .batchMoveWindows ||
+                   viewModel.activeCommand?.type == .listWindows ||
+                   viewModel.activeCommand?.type == .switchToDesktop),
+                  viewModel.stagingWindow == nil,
+                  !viewModel.isSubmenuOpen else {
+                return false
+            }
+            viewModel.showCommandKPanel()
+            return true
+        }
+
+        let numberByKeyCode: [UInt16: Int] = [
+            18: 1, 19: 2, 20: 3, 21: 4, 23: 5,
+            22: 6, 26: 7, 28: 8, 25: 9,
+        ]
+        guard let number = numberByKeyCode[event.keyCode]
+                ?? (characters.count == 1 ? Int(characters) : nil),
+              (1...9).contains(number) else {
+            return false
+        }
+
+        if viewModel.isCommandKPanelOpen {
+            let index = number - 1
+            guard viewModel.commandKActions.indices.contains(index) else { return true }
+            viewModel.commandKSelectedIndex = index
+            viewModel.executeCommandKAction()
+        } else if viewModel.isSpaceMenuOpen {
+            let index = number - 1
+            guard viewModel.spaceMenuSpaces.indices.contains(index) else { return true }
+            viewModel.spaceMenuSelectedIndex = index
+            viewModel.executeSpaceMenuSelection()
+        } else {
+            viewModel.executeNthRowAction(number - 1)
+        }
+        return true
     }
     
     func toggle() {

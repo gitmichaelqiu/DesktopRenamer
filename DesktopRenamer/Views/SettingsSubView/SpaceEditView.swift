@@ -11,8 +11,7 @@ struct SpaceEditView: View {
                 VStack(alignment: .leading, spacing: 20) {
                     SettingsSection("Space Arrangement") {
                         SettingsRow(
-                            "Keep full-screen spaces next to source desktop",
-                            helperText: "When macOS automatically rearranges Spaces is disabled, move a newly created full-screen space immediately after the desktop that opened it."
+                            "Keep full-screen spaces next to source desktop"
                         ) {
                             Toggle("", isOn: $spaceManager.autoRearrangeFullscreenSpaces)
                                 .toggleStyle(.switch)
@@ -186,6 +185,7 @@ struct SpaceEditView: View {
                 .foregroundColor(isLocked ? .accentColor : .secondary)
                 .frame(width: 16, height: 16)
         }
+        .disabled(space.isFullscreen)
         .help(isLocked ? "Unlock space" : "Lock current space")
     }
     

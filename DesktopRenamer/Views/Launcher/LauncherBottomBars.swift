@@ -2,6 +2,14 @@ import SwiftUI
 struct BatchMoveBottomBar: View {
     @ObservedObject var viewModel: LauncherViewModel
     @Environment(\.colorScheme) var colorScheme
+
+    private var selectedBatchItemPresentationKey: String {
+        let items = viewModel.batchMoveSelectableItems
+        guard items.indices.contains(viewModel.selectedRowIndex) else {
+            return "empty"
+        }
+        return items[viewModel.selectedRowIndex].isStaged ? "staged" : "unstaged"
+    }
     
     var colors: ThemeColors {
         ThemeColors(isDark: colorScheme == .dark)
@@ -10,19 +18,18 @@ struct BatchMoveBottomBar: View {
     var body: some View {
         HStack(spacing: 8) {
             // Left side: Active command hierarchy matching Raycast look
-            HStack(spacing: 6) {
+            HStack(spacing: 2) {
                 HStack(spacing: 6) {
                     Image(systemName: viewModel.activeCommand?.iconName ?? "macwindow.badge.plus")
-                        .font(.subheadline.weight(.semibold))
-                        .foregroundColor(Color.accentColor)
-                    Text(viewModel.activeCommand?.title ?? String(localized: "Batch Move Windows"))
-                        .font(.subheadline)
-                        .fontWeight(.semibold)
+                        .font(.callout.weight(.medium))
                         .foregroundColor(colors.textPrimary)
+                    Text(viewModel.activeCommand?.title ?? String(localized: "Batch Move Windows"))
+                        .font(.callout.weight(.medium))
+                        .foregroundColor(colors.textSecondary)
                 }
-                .modifier(BottomBarCapsule(isSelected: false, isActive: true, colorScheme: colorScheme))
+                .modifier(BottomBarCapsule(isSelected: false, isActive: false, colorScheme: colorScheme))
                 
-                if let staging = viewModel.stagingWindow {
+                if let staging = viewModel.stagingWindow, !viewModel.isSpaceMenuOpen {
                     Image(systemName: "chevron.right")
                         .font(.system(size: 9, weight: .semibold))
                         .foregroundColor(colors.textQuaternary)
@@ -33,26 +40,25 @@ struct BatchMoveBottomBar: View {
                             .foregroundColor(colors.greenText)
                         Text(String(format: NSLocalizedString("Stage: %@", comment: ""), staging.ownerName))
                             .font(.subheadline)
-                            .fontWeight(.semibold)
                             .foregroundColor(colors.textPrimary)
                     }
                     .modifier(BottomBarCapsule(isSelected: false, isActive: false, colorScheme: colorScheme))
                 }
             }
+            .padding(LauncherLayout.bottomBarCapsulePadding)
+            .launcherFrosted(in: Capsule())
             
             Spacer()
             
             // Right side: Context-sensitive actions
             HStack(spacing: 8) {
-                if viewModel.stagingWindow != nil {
+                if viewModel.stagingWindow != nil && !viewModel.isSpaceMenuOpen {
                     // Staging target space selection
                     HStack(spacing: 4) {
                         Text(verbatim: String(localized: "Stage"))
-                        Text("↵")
-                            .font(.system(.caption2))
-                            .fontWeight(.bold)
+                        KeycapView(text: "↵", isSelected: false)
                     }
-                    .modifier(BottomBarCapsule(isSelected: false, isActive: false, colorScheme: colorScheme))
+                    .modifier(BottomBarCapsule(isSelected: false, isActive: false, colorScheme: colorScheme, isPrimaryAction: true))
                     .contentShape(Rectangle())
                     .onTapGesture {
                         viewModel.executeRowAction()
@@ -64,76 +70,78 @@ struct BatchMoveBottomBar: View {
                     
                     if index >= 0 && index < items.count {
                         let selectedItem = items[index]
-                        switch selectedItem {
-                        case .staged(let action, _):
-                            let isMove = {
-                                if case .move = action.actionType { return true }
-                                return false
-                            }()
-                            
-                            HStack(spacing: 8) {
-                                HStack(spacing: 4) {
-                                    Text(verbatim: String(localized: isMove ? "Unstage Move" : "Unstage Action"))
-                                    Text("↵")
-                                        .font(.system(.subheadline))
-                                        .fontWeight(.bold)
+                        Group {
+                            switch selectedItem {
+                            case .staged(let action, _):
+                                let isMove = {
+                                    if case .move = action.actionType { return true }
+                                    return false
+                                }()
+
+                                HStack(spacing: 8) {
+                                    HStack(spacing: 4) {
+                                        Text(verbatim: String(localized: isMove ? "Unstage Move" : "Unstage Action"))
+                                        KeycapView(text: "↵", isSelected: false)
+                                    }
+                                    .modifier(BottomBarCapsule(isSelected: false, isActive: false, colorScheme: colorScheme, isPrimaryAction: true))
+                                    .contentShape(Rectangle())
+                                    .onTapGesture {
+                                        viewModel.executeRowAction()
+                                    }
                                 }
-                                .modifier(BottomBarCapsule(isSelected: false, isActive: false, colorScheme: colorScheme))
-                                .contentShape(Rectangle())
-                                .onTapGesture {
-                                    viewModel.executeRowAction()
-                                }
-                            }
-                            
-                        case .unstaged:
-                            HStack(spacing: 8) {
-                                HStack(spacing: 4) {
-                                    Text(verbatim: String(localized: "Move to..."))
-                                    Text("↵")
-                                        .font(.system(.subheadline))
-                                        .fontWeight(.bold)
-                                }
-                                .modifier(BottomBarCapsule(isSelected: false, isActive: false, colorScheme: colorScheme))
-                                .contentShape(Rectangle())
-                                .onTapGesture {
-                                    viewModel.executeRowAction()
-                                }
-                                
-                                HStack(spacing: 4) {
-                                    Text(verbatim: String(localized: "Actions"))
-                                    Text("⌘K")
-                                        .font(.system(.subheadline))
-                                        .fontWeight(.bold)
-                                }
-                                .modifier(BottomBarCapsule(isSelected: false, isActive: false, colorScheme: colorScheme))
-                                .contentShape(Rectangle())
-                                .onTapGesture {
-                                    viewModel.showCommandKPanel()
+
+                            case .unstaged:
+                                HStack(spacing: 8) {
+                                    HStack(spacing: 4) {
+                                        Text(verbatim: String(localized: "Move to..."))
+                                        KeycapView(text: "↵", isSelected: false)
+                                    }
+                                    .modifier(BottomBarCapsule(isSelected: false, isActive: false, colorScheme: colorScheme, isPrimaryAction: true))
+                                    .contentShape(Rectangle())
+                                    .onTapGesture {
+                                        viewModel.executeRowAction()
+                                    }
+
+                                    HStack(spacing: 4) {
+                                        Text(verbatim: String(localized: "Actions"))
+                                        KeycapView(text: "⌘K", isSelected: false)
+                                    }
+                                    .modifier(BottomBarCapsule(isSelected: false, isActive: false, colorScheme: colorScheme))
+                                    .contentShape(Rectangle())
+                                    .onTapGesture {
+                                        viewModel.showCommandKPanel(isKeyboardInitiated: false)
+                                    }
                                 }
                             }
                         }
+                        .id(selectedBatchItemPresentationKey)
+                        .transition(.launcherCapsule)
                     }
                     
                     // If there are staged moves, show run batch action
                     if !viewModel.stagedMoves.isEmpty {
                         HStack(spacing: 4) {
                             Text(verbatim: String(localized: "Run Batch Actions"))
-                            Text("⌘↵")
-                                .font(.system(.subheadline))
-                                .fontWeight(.bold)
+                            KeycapView(text: "⌘↵", isSelected: true, isGreenRow: true)
                         }
                         .modifier(BottomBarCapsule(isSelected: true, isActive: false, isGreen: true, colorScheme: colorScheme))
                         .contentShape(Rectangle())
                         .onTapGesture {
                             viewModel.executeBatchMove()
                         }
+                        .transition(.launcherCapsule)
                     }
                 }
             }
+            .padding(LauncherLayout.bottomBarCapsulePadding)
+            .launcherFrosted(in: Capsule())
         }
-        .padding(.horizontal, 18)
-        .padding(.vertical, 10)
-        .background(colors.bottomBarBg)
+        .padding(.horizontal, LauncherLayout.bottomBarHorizontalPadding)
+        .padding(.vertical, LauncherLayout.bottomBarVerticalPadding)
+        .frame(height: LauncherLayout.bottomBarHeight)
+        .animation(LauncherAnimation.capsule, value: viewModel.stagingWindow?.id ?? 0)
+        .animation(LauncherAnimation.capsule, value: viewModel.stagedMoves.count)
+        .animation(LauncherAnimation.capsule, value: selectedBatchItemPresentationKey)
     }
 }
 
@@ -152,61 +160,70 @@ struct SpacesBottomBar: View {
         HStack(spacing: 0) {
             if viewModel.isBottomBarFocused {
                 ZStack(alignment: .leading) {
-                    Text(verbatim: String(localized: "Spaces:"))
-                        .font(.subheadline)
-                        .fontWeight(.semibold)
-                        .foregroundColor(colors.textTertiary)
-                        .opacity(viewModel.spaceBarQuery.isEmpty ? 1 : 0)
+                    HStack(spacing: 2) {
+                        if viewModel.spaceBarQuery.isEmpty {
+                            (Text("Search", comment: "Label shown before the space search input when the space bar is focused.")
+                                + Text(verbatim: ":"))
+                                .fixedSize(horizontal: true, vertical: false)
+                        }
 
-                    SearchTextField(
-                        text: $viewModel.spaceBarQuery,
-                        isDark: colors.isDark,
-                        onUpArrow: {},
-                        onDownArrow: {},
-                        onLeftArrow: {
-                            viewModel.moveSpaceSelection(by: -1)
-                            return true
-                        },
-                        onRightArrow: {
-                            viewModel.moveSpaceSelection(by: 1)
-                            return true
-                        },
-                        onEnter: {
-                            viewModel.executeBottomBarSpaceAction(isOption: false, isCommand: false)
-                        },
-                        onCommandEnter: {
-                            viewModel.executeBottomBarSpaceAction(isOption: false, isCommand: true)
-                        },
-                        onOptionEnter: {
-                            viewModel.executeBottomBarSpaceAction(isOption: true, isCommand: false)
-                        },
-                        onTab: {
-                            viewModel.handleTabKey()
-                        },
-                        onEscape: {
-                            viewModel.handleEscapeKey()
-                        },
-                        onKeyEquivalent: { _ in false },
-                        placeholder: String(localized: "Spaces:"),
-                        textFieldFont: NSFont.systemFont(ofSize: 13, weight: .semibold),
-                        textFieldColor: NSColor.secondaryLabelColor.withAlphaComponent(0.65),
-                        placeholderColor: NSColor.clear,
-                        usesSingleLineMode: true,
-                        textFieldLineBreakMode: .byTruncatingHead,
-                        focusNotificationName: NSNotification.Name("FocusSpaceBarTextField")
-                    )
-                    .opacity(viewModel.spaceBarQuery.isEmpty ? 0.001 : 1)
+                        SearchTextField(
+                            text: $viewModel.spaceBarQuery,
+                            isDark: colors.isDark,
+                            onUpArrow: {},
+                            onDownArrow: {},
+                            onLeftArrow: {
+                                viewModel.moveSpaceSelection(by: -1)
+                                return true
+                            },
+                            onRightArrow: {
+                                viewModel.moveSpaceSelection(by: 1)
+                                return true
+                            },
+                            onEnter: {
+                                viewModel.executeBottomBarSpaceAction(isOption: false, isCommand: false)
+                            },
+                            onCommandEnter: {
+                                viewModel.executeBottomBarSpaceAction(isOption: false, isCommand: true)
+                            },
+                            onOptionEnter: {
+                                viewModel.executeBottomBarSpaceAction(isOption: true, isCommand: false)
+                            },
+                            onTab: {
+                                viewModel.handleTabKey()
+                            },
+                            onEscape: {
+                                viewModel.handleEscapeKey()
+                            },
+                            onKeyEquivalent: { _ in false },
+                            placeholder: "",
+                            textFieldFont: NSFont.systemFont(ofSize: 13, weight: .regular),
+                            textFieldColor: viewModel.spaceBarQuery.isEmpty
+                                ? NSColor.clear
+                                : NSColor.secondaryLabelColor.withAlphaComponent(0.65),
+                            placeholderColor: NSColor.clear,
+                            usesSingleLineMode: true,
+                            textFieldLineBreakMode: .byTruncatingHead,
+                            focusNotificationName: NSNotification.Name("FocusSpaceBarTextField")
+                        )
+                        .frame(width: viewModel.spaceBarQuery.isEmpty ? 4 : labelWidth)
+                    }
+                    .font(.subheadline)
+                    .foregroundColor(colors.textTertiary)
                 }
+                .padding(.leading, LauncherLayout.bottomBarControlHorizontalPadding)
                 .frame(width: labelWidth, height: 28, alignment: .leading)
                 .padding(.trailing, 8)
+                .transition(.launcherCapsule)
             } else {
                 Text(verbatim: String(localized: "Spaces:"))
                     .font(.subheadline)
-                    .fontWeight(.semibold)
                     .foregroundColor(colors.textTertiary)
+                    .padding(.leading, LauncherLayout.bottomBarControlHorizontalPadding)
                     .frame(width: labelWidth, alignment: .leading)
                     .padding(.trailing, 8)
                     .layoutPriority(1)
+                    .transition(.launcherCapsule)
             }
             
             // Scrollable spaces list
@@ -231,7 +248,14 @@ struct SpacesBottomBar: View {
                                 }
                             }) {
                                 Text(name)
-                                    .modifier(BottomBarCapsule(isSelected: isSpaceSelected, isActive: isCurrent, colorScheme: colorScheme))
+                                    .modifier(
+                                        BottomBarCapsule(
+                                            isSelected: isSpaceSelected,
+                                            isActive: isCurrent,
+                                            colorScheme: colorScheme,
+                                            isHoverEnabled: !viewModel.isKeyboardSelection
+                                        )
+                                    )
                             }
                             .buttonStyle(PlainButtonStyle())
                             .focusable(false)
@@ -239,20 +263,20 @@ struct SpacesBottomBar: View {
                             .id(space.id)
                         }
                     }
-                    .padding(.leading, 32)
-                    .padding(.trailing, 32)
+                    .padding(.leading, LauncherLayout.spaceBarFadeWidth)
+                    .padding(.trailing, 6)
                 }
                 .mask(
                     HStack(spacing: 0) {
-                        // Left fade edge
+                        // Keep the leading fade, but place the first Space
+                        // beyond it so its selected capsule stays fully clear.
                         LinearGradient(
                             gradient: Gradient(colors: [.clear, .black]),
                             startPoint: .leading,
                             endPoint: .trailing
                         )
-                        .frame(width: 32)
-                        
-                        // Middle opaque region
+                        .frame(width: LauncherLayout.spaceBarFadeWidth)
+
                         Rectangle()
                             .fill(Color.black)
                         
@@ -262,15 +286,15 @@ struct SpacesBottomBar: View {
                             startPoint: .leading,
                             endPoint: .trailing
                         )
-                        .frame(width: 32)
+                        .frame(width: LauncherLayout.spaceBarFadeWidth)
                     }
                 )
                 .onAppear {
-                    scrollProxy.scrollTo(spaceManager.currentSpaceUUID, anchor: UnitPoint(x: 0.31, y: 0.5))
+                    scrollProxy.scrollTo(spaceManager.currentSpaceUUID, anchor: .center)
                 }
                 .onChange(of: spaceManager.currentSpaceUUID) { currentSpaceID in
                     withAnimation(.easeInOut(duration: 0.15)) {
-                        scrollProxy.scrollTo(currentSpaceID, anchor: UnitPoint(x: 0.31, y: 0.5))
+                        scrollProxy.scrollTo(currentSpaceID, anchor: .center)
                     }
                 }
                 .onChange(of: viewModel.selectedSpaceIndex) { selectedIndex in
@@ -279,7 +303,7 @@ struct SpacesBottomBar: View {
                         if selectedIndex >= 0 && selectedIndex < spaces.count {
                             let spaceID = spaces[selectedIndex].id
                             withAnimation(.easeInOut(duration: 0.15)) {
-                                scrollProxy.scrollTo(spaceID, anchor: UnitPoint(x: 0.31, y: 0.5))
+                                scrollProxy.scrollTo(spaceID, anchor: .center)
                             }
                         }
                     }
@@ -290,85 +314,81 @@ struct SpacesBottomBar: View {
                         if viewModel.selectedSpaceIndex >= 0 && viewModel.selectedSpaceIndex < spaces.count {
                             let spaceID = spaces[viewModel.selectedSpaceIndex].id
                             withAnimation(.easeInOut(duration: 0.15)) {
-                                scrollProxy.scrollTo(spaceID, anchor: UnitPoint(x: 0.31, y: 0.5))
+                                scrollProxy.scrollTo(spaceID, anchor: .center)
                             }
                         }
                     } else {
                         withAnimation(.easeInOut(duration: 0.15)) {
-                            scrollProxy.scrollTo(spaceManager.currentSpaceUUID, anchor: UnitPoint(x: 0.31, y: 0.5))
+                            scrollProxy.scrollTo(spaceManager.currentSpaceUUID, anchor: .center)
                         }
                     }
                 }
             }
+            .frame(maxWidth: .infinity, alignment: .leading)
             
             // Actions Overlay (No longer overlapping, placed in-line)
-            HStack(spacing: 12) {
-                // Separator divider
-                Rectangle()
-                    .fill(colors.border)
-                    .frame(width: 1, height: 16)
-                
+            HStack(spacing: 8) {
                 // Right side action indicators
-                HStack(spacing: 8) {
+                HStack(spacing: 2) {
                     if !viewModel.isBottomBarFocused {
-                        Button(action: {
-                            viewModel.focusSpaceBar()
-                        }) {
-                            HStack(spacing: 4) {
-                                Text(LocalizedStringKey("Switch Space"))
-                                Text("⇥")
-                                    .font(.system(.subheadline))
-                                    .fontWeight(.bold)
-                            }
-                            .modifier(BottomBarCapsule(isSelected: false, isActive: false, colorScheme: colorScheme))
-                        }
-                        .buttonStyle(PlainButtonStyle())
-                    }
-                    
-                    if viewModel.isBottomBarFocused {
-                        HStack(spacing: 4) {
-                            Text(LocalizedStringKey("Switch Space"))
-                            Text("↵")
-                                .font(.system(.subheadline))
-                                .fontWeight(.bold)
-                        }
-                        .modifier(BottomBarCapsule(isSelected: false, isActive: false, colorScheme: colorScheme))
-                        .contentShape(Rectangle())
-                        .onTapGesture {
-                            viewModel.executeBottomBarSpaceAction(isOption: false, isCommand: false)
-                        }
-                        
-                        HStack(spacing: 4) {
-                            Text(LocalizedStringKey("Move Window"))
-                            Text("⌥↵")
-                                .font(.system(.subheadline))
-                                .fontWeight(.bold)
-                        }
-                        .modifier(BottomBarCapsule(isSelected: false, isActive: false, colorScheme: colorScheme))
-                        .contentShape(Rectangle())
-                        .onTapGesture {
-                            viewModel.executeBottomBarSpaceAction(isOption: true, isCommand: false)
-                        }
-                    } else {
                         HStack(spacing: 4) {
                             Text(LocalizedStringKey("Action"))
-                            Text("↵")
-                                .font(.system(.subheadline))
-                                .fontWeight(.bold)
+                            KeycapView(text: "↵", isSelected: false)
                         }
-                        .modifier(BottomBarCapsule(isSelected: false, isActive: false, colorScheme: colorScheme))
+                        .modifier(BottomBarCapsule(isSelected: false, isActive: false, colorScheme: colorScheme, isPrimaryAction: true))
                         .contentShape(Rectangle())
                         .onTapGesture {
                             viewModel.executeRowAction()
                         }
+                        .transition(.launcherCapsule)
+
+                        Button(action: {
+                            viewModel.focusSpaceBar(isKeyboardInitiated: false)
+                        }) {
+                            HStack(spacing: 4) {
+                                Text(LocalizedStringKey("Switch Space"))
+                                KeycapView(text: "⇥", isSelected: false)
+                            }
+                            .modifier(BottomBarCapsule(isSelected: false, isActive: false, colorScheme: colorScheme))
+                        }
+                        .buttonStyle(PlainButtonStyle())
+                        .transition(.launcherCapsule)
+                    }
+                    
+                    if viewModel.isBottomBarFocused {
+                        Group {
+                            HStack(spacing: 4) {
+                                Text(LocalizedStringKey("Switch Space"))
+                                KeycapView(text: "↵", isSelected: false)
+                            }
+                            .modifier(BottomBarCapsule(isSelected: false, isActive: false, colorScheme: colorScheme, isPrimaryAction: true))
+                            .contentShape(Rectangle())
+                            .onTapGesture {
+                                viewModel.executeBottomBarSpaceAction(isOption: false, isCommand: false)
+                            }
+
+                            HStack(spacing: 4) {
+                                Text(LocalizedStringKey("Move Window"))
+                                KeycapView(text: "⌥↵", isSelected: false)
+                            }
+                            .modifier(BottomBarCapsule(isSelected: false, isActive: false, colorScheme: colorScheme))
+                            .contentShape(Rectangle())
+                            .onTapGesture {
+                                viewModel.executeBottomBarSpaceAction(isOption: true, isCommand: false)
+                            }
+                        }
+                        .transition(.launcherCapsule)
                     }
                 }
+                .padding(LauncherLayout.bottomBarCapsulePadding)
+            .launcherFrosted(in: Capsule())
             }
             .padding(.leading, 12)
+            .fixedSize(horizontal: true, vertical: false)
         }
-        .padding(.horizontal, 18)
-        .frame(height: 46)
-        .background(colors.bottomBarBg)
-        .animation(.spring(response: 0.35, dampingFraction: 0.85), value: viewModel.isBottomBarFocused)
+        .padding(.horizontal, LauncherLayout.bottomBarHorizontalPadding)
+        .padding(.vertical, LauncherLayout.bottomBarVerticalPadding)
+        .frame(height: LauncherLayout.bottomBarHeight)
+        .animation(LauncherAnimation.capsule, value: viewModel.isBottomBarFocused)
     }
 }

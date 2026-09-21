@@ -30,7 +30,7 @@ struct LabelSettingsView: View {
                         SettingsRow(
                             "Hide when switching spaces",
                             helperText:
-                                "Hide the space label window of the space that is being switched to immediately instead of hiding it after the space is switched."
+                                "Hide the target space label before switching instead of after."
                         ) {
                             Toggle("", isOn: $labelManager.hideWhenSwitching)
                                 .toggleStyle(.switch)
@@ -42,7 +42,7 @@ struct LabelSettingsView: View {
                         if isLiquidGlassAvailable {
                             SettingsRow(
                                 "Disable Liquid Glass effects",
-                                helperText: "Use the Gaussian blur background for better contrast."
+                                helperText: "Use a blurred background instead of Liquid Glass."
                             ) {
                                 Toggle("", isOn: $labelManager.disablePreviewLiquidGlass)
                                     .toggleStyle(.switch)
@@ -91,7 +91,7 @@ struct LabelSettingsView: View {
                         SettingsRow(
                             "Keep visible on space",
                             helperText:
-                                "If enabled, the label stays on the desktop instead of hiding.\n\nIf disabled, the label will only be visible in Mission Control.\n\nTip: You can drag the window to the screen edge to shrink it into a 'Picture-in-Picture' mode."
+                                "Keep the label visible on the desktop outside Mission Control."
                         ) {
                             Toggle("", isOn: $labelManager.showOnDesktop)
                                 .toggleStyle(.switch)
@@ -103,7 +103,7 @@ struct LabelSettingsView: View {
                         if isLiquidGlassAvailable {
                             SettingsRow(
                                 "Disable Liquid Glass effects",
-                                helperText: "Use the Gaussian blur background for better contrast."
+                                helperText: "Use a blurred background instead of Liquid Glass."
                             ) {
                                 Toggle("", isOn: $labelManager.disableActiveLiquidGlass)
                                     .toggleStyle(.switch)

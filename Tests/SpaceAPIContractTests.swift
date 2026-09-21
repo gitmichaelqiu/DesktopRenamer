@@ -14,6 +14,26 @@ struct SpaceAPIContractTests {
     }
 
     private static func testMethodDefinitions() throws {
+        check(DesktopRenamerAPIContract.version == "1.1.0", "structured API contract version is current")
+        check(
+            DesktopRenamerAPIContract.preferredAPIPrefix == "dev.mqiu.DesktopRenamer",
+            "current API notification namespace is preferred"
+        )
+        check(
+            DesktopRenamerAPIContract.legacyAPIPrefix == "com.michaelqiu.DesktopRenamer",
+            "legacy API notification namespace remains identifiable"
+        )
+        check(
+            DesktopRenamerAPIContract.rpcRequestNotifications.count == 2 &&
+                DesktopRenamerAPIContract.rpcResponseNotifications.count == 2 &&
+                DesktopRenamerAPIContract.rpcEventNotifications.count == 2,
+            "structured API exposes preferred and legacy notification channels"
+        )
+        check(
+            DesktopRenamerAPIContract.rpcRequest.rawValue == "dev.mqiu.DesktopRenamer.RPCRequest" &&
+                DesktopRenamerAPIContract.legacyRPCRequest.rawValue == "com.michaelqiu.DesktopRenamer.RPCRequest",
+            "structured RPC request channels use the preferred and compatibility namespaces"
+        )
         let definitions = DesktopRenamerAPIContract.methodDefinitions
         let names = definitions.map(\.name)
         check(Set(names).count == names.count, "method names are unique")
@@ -37,6 +57,17 @@ struct SpaceAPIContractTests {
                 "toggleDesktopVisibility"
             ],
             "toggle methods expose Boolean results"
+        )
+
+        let toggleLock = definitions.first { $0.name == "toggleLockSpace" }
+        check(
+            toggleLock?.parameters == ["spaceID": .string] && toggleLock?.requiredParameters == ["spaceID"],
+            "toggleLockSpace declares its required Space ID"
+        )
+        let restoreMovedWindows = definitions.first { $0.name == "restoreMovedWindows" }
+        check(
+            restoreMovedWindows?.parameters.isEmpty == true && restoreMovedWindows?.requiredParameters.isEmpty == true,
+            "restoreMovedWindows has no parameters"
         )
     }
 
@@ -114,6 +145,32 @@ struct SpaceAPIContractTests {
         )
         check(numeric["windowID"] == "123" && numeric["pid"] == "456", "numeric IDs are normalized")
 
+        let presentationHints = try SpaceAPIArgumentValidator.stringArguments(
+            from: .object([
+                "windowID": .number(123),
+                "fromSpaceID": .string("4"),
+                "targetSpaceID": .string("5"),
+                "isMinimized": .bool(true),
+                "isHidden": .bool(false)
+            ]),
+            method: "moveSpecificWindow"
+        )
+        check(
+            presentationHints["isMinimized"] == "true" && presentationHints["isHidden"] == "false",
+            "window presentation hints are normalized"
+        )
+
+        expectParameterError(
+            parameter: "isHidden",
+            params: .object([
+                "windowID": .number(123),
+                "fromSpaceID": .string("4"),
+                "targetSpaceID": .string("5"),
+                "isHidden": .string("yes")
+            ]),
+            method: "moveSpecificWindow"
+        )
+
         let withoutOptionalPID = try SpaceAPIArgumentValidator.stringArguments(
             from: .object([
                 "windowID": .string("123"),
@@ -161,7 +218,8 @@ struct SpaceAPIContractTests {
             isFullscreen: false,
             appName: nil,
             appPath: nil,
-            globalShortcutNumber: 4
+            globalShortcutNumber: 4,
+            isLocked: true
         )
         let window = SpaceAPIWindow(
             id: 123,
@@ -170,6 +228,7 @@ struct SpaceAPIContractTests {
             appPath: nil,
             title: nil,
             spaceID: space.id,
+            spaceIDs: [space.id, "space-2"],
             isMinimized: false,
             isHidden: true
         )
@@ -181,6 +240,7 @@ struct SpaceAPIContractTests {
             currentSpaceID: space.id,
             currentDisplayID: space.displayID,
             currentSpaceName: space.name,
+            movedWindowsCount: 3,
             spaces: [space]
         )
         let response = SpaceAPIJSONRPCResponse(
@@ -202,14 +262,20 @@ struct SpaceAPIContractTests {
         )
         let encodedResult = try checkJSONObject(encodedResponse["result"])
         let encodedSnapshot = try checkJSONObject(encodedResult["snapshot"])
+        check(encodedSnapshot["movedWindowsCount"] as? Int == 3, "moved window count is encoded")
         let encodedSpace = try checkJSONObject(try checkArray(encodedSnapshot["spaces"]).first)
         check(encodedSpace["appName"] is NSNull, "nullable space appName is encoded as null")
         check(encodedSpace["appPath"] is NSNull, "nullable space appPath is encoded as null")
+        check(encodedSpace["isLocked"] as? Bool == true, "space lock state is encoded")
 
         let encodedWindows = try checkArray(encodedResult["windows"])
         let encodedWindow = try checkJSONObject(encodedWindows.first)
         check(encodedWindow["appPath"] is NSNull, "nullable window appPath is encoded as null")
         check(encodedWindow["title"] is NSNull, "nullable window title is encoded as null")
+        check(
+            encodedWindow["spaceIDs"] as? [String] == [space.id, "space-2"],
+            "all window Space memberships are encoded"
+        )
 
         let payloadObject = try JSONSerialization.jsonObject(with: Data(payload.utf8), options: [.fragmentsAllowed])
         var jsonObject = try checkJSONObject(payloadObject)
@@ -221,6 +287,12 @@ struct SpaceAPIContractTests {
         let unknownResult = try checkValue(unknownFieldResponse.result, "unknown-field result")
         let compatibleSnapshot = try unknownResult.objectValue?["snapshot"]?.decode(SpaceAPISnapshot.self)
         check(compatibleSnapshot == snapshot, "unknown result fields are ignored")
+
+        var snapshotWithoutMovedWindowsCount = encodedSnapshot
+        snapshotWithoutMovedWindowsCount.removeValue(forKey: "movedWindowsCount")
+        let legacySnapshotData = try JSONSerialization.data(withJSONObject: snapshotWithoutMovedWindowsCount)
+        let decodedLegacySnapshot = try JSONDecoder().decode(SpaceAPISnapshot.self, from: legacySnapshotData)
+        check(decodedLegacySnapshot.movedWindowsCount == 0, "missing moved window count defaults to zero")
 
         let error = SpaceAPIJSONRPCCodec.errorResponse(
             id: "request-3",
@@ -332,7 +404,7 @@ struct SpaceAPIContractTests {
         }
         """
         let space = try JSONDecoder().decode(SpaceAPISpace.self, from: Data(spacePayload.utf8))
-        check(space.appName == nil && space.appPath == nil && space.globalShortcutNumber == nil,
+        check(space.appName == nil && space.appPath == nil && space.globalShortcutNumber == nil && !space.isLocked,
               "missing nullable space fields decode as nil")
 
         let windowPayload = """
@@ -347,6 +419,7 @@ struct SpaceAPIContractTests {
         """
         let window = try JSONDecoder().decode(SpaceAPIWindow.self, from: Data(windowPayload.utf8))
         check(window.appPath == nil && window.title == nil, "missing nullable window fields decode as nil")
+        check(window.spaceIDs == ["space-1"], "missing window Space memberships fall back to primary Space")
     }
 
     private static func testLegacyFixtures() throws {

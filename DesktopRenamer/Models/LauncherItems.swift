@@ -50,6 +50,7 @@ struct WindowEntry: Identifiable, Equatable {
     let appPath: String
     let title: String
     let space: SpaceGroup
+    let spaceIDs: [String]
     let isMinimized: Bool
     let isHidden: Bool
 
@@ -57,13 +58,24 @@ struct WindowEntry: Identifiable, Equatable {
     let pinyinTitle: String
     let pinyinOwnerName: String
 
-    init(id: Int, pid: Int32, ownerName: String, appPath: String, title: String, space: SpaceGroup, isMinimized: Bool = false, isHidden: Bool = false) {
+    init(
+        id: Int,
+        pid: Int32,
+        ownerName: String,
+        appPath: String,
+        title: String,
+        space: SpaceGroup,
+        spaceIDs: [String] = [],
+        isMinimized: Bool = false,
+        isHidden: Bool = false
+    ) {
         self.id = id
         self.pid = pid
         self.ownerName = ownerName
         self.appPath = appPath
         self.title = title
         self.space = space
+        self.spaceIDs = spaceIDs.isEmpty ? [space.id] : spaceIDs
         self.isMinimized = isMinimized
         self.isHidden = isHidden
 
@@ -105,6 +117,29 @@ enum BatchStagedActionType: Equatable {
     }
 }
 
+enum LauncherSpaceAction: Equatable {
+    case toggleLock(isLocked: Bool)
+    case restoreMovedWindows(count: Int)
+    case rename
+    case moveUp
+    case moveDown
+
+    var description: String {
+        switch self {
+        case .toggleLock(let isLocked):
+            return isLocked ? "Unlock Space" : "Lock Space"
+        case .restoreMovedWindows(let count):
+            return "Restore Moved Windows (\(count))"
+        case .rename:
+            return "Rename Space"
+        case .moveUp:
+            return "Move Space Up"
+        case .moveDown:
+            return "Move Space Down"
+        }
+    }
+}
+
 struct BatchStagedAction: Equatable {
     let window: WindowEntry
     let actionType: BatchStagedActionType
@@ -128,13 +163,27 @@ enum BatchMoveItem: Identifiable, Equatable {
         }
     }
 
+    var windowID: Int {
+        switch self {
+        case .staged(let action, _): return action.window.id
+        case .unstaged(let window, _): return window.id
+        }
+    }
+
+    var isStaged: Bool {
+        switch self {
+        case .staged: return true
+        case .unstaged: return false
+        }
+    }
+
     static func == (lhs: BatchMoveItem, rhs: BatchMoveItem) -> Bool {
         lhs.id == rhs.id
     }
 }
 
 struct BatchMoveSection: Identifiable {
-    var id: String { title }
+    let id: String
     let title: String
     let subtitle: String
     let items: [BatchMoveItem]
@@ -152,7 +201,7 @@ struct ListWindowsItem: Identifiable, Equatable {
 }
 
 struct ListWindowsSection: Identifiable {
-    var id: String { title }
+    let id: String
     let title: String
     let subtitle: String
     let items: [ListWindowsItem]

@@ -1,6 +1,10 @@
 import Foundation
 import AppKit
 
+private final class WindowMoveResult {
+    var moved = false
+}
+
 class MoveWindowNextCommand: NSScriptCommand {
     override func performDefaultImplementation() -> Any? {
         DiagnosticEventLog.shared.record(subsystem: "AppleScript", level: "info", "Command performed: MoveWindowNextCommand")
@@ -125,27 +129,59 @@ class MoveSpecificWindowToSpaceCommand: NSScriptCommand {
         let arguments = evaluatedArguments ?? [:]
         DiagnosticEventLog.shared.record(subsystem: "AppleScript", level: "info", "Command performed: MoveSpecificWindowToSpaceCommand (windowID: \(windowIDStr), fromSpace: \(fromSpaceStr), targetSpace: \(targetSpaceStr))")
 
+        let pid: Int32
         if let pidValue = arguments["ownerPID"] {
             guard let pidStr = requiredProcessIDString(pidValue, parameter: "owner PID"),
-                  let pid = Int32(pidStr) else { return nil }
-            Task { @MainActor in
-                await WindowActionCoordinator.moveWindow(
-                    windowID: windowID,
-                    pid: pid,
-                    fromSpaceID: fromSpaceStr,
-                    targetSpaceID: targetSpaceStr
-                )
-            }
-        } else if let fromSpaceID = Int(fromSpaceStr),
-                  let targetSpaceID = Int(targetSpaceStr) {
-            DispatchQueue.main.async {
-                SpaceHelper.moveWindowToSpace(windowID: windowID, fromSpaceID: fromSpaceID, targetSpaceID: targetSpaceID)
-            }
+                  let resolvedPID = Int32(pidStr) else { return nil }
+            pid = resolvedPID
+        } else if let windowInfo = SpaceHelper.getWindowInfo(id: windowID) {
+            // Older clients may omit ownerPID, but the window record still
+            // gives us enough information to use the same presentation-aware
+            // transaction as native launcher and current Raycast clients.
+            pid = windowInfo.pid
         } else {
-            failInvalidArgument("Space IDs must be integer values when owner PID is omitted.")
+            failInvalidArgument("Could not resolve the window's process ID.")
             return nil
         }
-        return nil
+
+        let result = WindowMoveResult()
+        let completion = DispatchSemaphore(value: 0)
+        Task { @MainActor in
+            defer { completion.signal() }
+            result.moved = await WindowActionCoordinator.moveWindow(
+                windowID: windowID,
+                pid: pid,
+                fromSpaceID: fromSpaceStr,
+                targetSpaceID: targetSpaceStr
+            )
+        }
+
+        guard waitForCompletion(completion, timeout: 15) else {
+            failAppUnavailable("Timed out while moving the window.")
+            return nil
+        }
+        guard result.moved else {
+            failInvalidArgument("Window move failed.")
+            return nil
+        }
+        return true
+    }
+
+    private func waitForCompletion(_ completion: DispatchSemaphore, timeout: TimeInterval) -> Bool {
+        guard Thread.isMainThread else {
+            return completion.wait(timeout: .now() + timeout) == .success
+        }
+
+        let deadline = Date(timeIntervalSinceNow: timeout)
+        while completion.wait(timeout: .now()) == .timedOut {
+            let remaining = deadline.timeIntervalSinceNow
+            guard remaining > 0 else { return false }
+            RunLoop.current.run(
+                mode: .default,
+                before: Date(timeIntervalSinceNow: min(0.01, remaining))
+            )
+        }
+        return true
     }
 }
 

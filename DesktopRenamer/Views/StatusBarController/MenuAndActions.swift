@@ -181,22 +181,23 @@ extension StatusBarController {
         let restoreItem = NSMenuItem(
             title: String(format: NSLocalizedString("Restore Windows Moved by Lock (%d)", comment: ""), movedCount),
             action: #selector(restoreAllMovedWindows),
-            keyEquivalent: ""
+            keyEquivalent: "z"
         )
         restoreItem.target = self
         restoreItem.image = NSImage(systemSymbolName: "arrow.uturn.backward", accessibilityDescription: nil)
+        restoreItem.keyEquivalentModifierMask = .command
         restoreItem.isEnabled = movedCount > 0
         menu.addItem(restoreItem)
 
         let cleanItem = NSMenuItem(
             title: String(format: NSLocalizedString("Clean Restoration Queues (%d)", comment: ""), movedCount),
             action: #selector(cleanQueues),
-            keyEquivalent: ""
+            keyEquivalent: "z"
         )
         cleanItem.target = self
         cleanItem.image = NSImage(systemSymbolName: "trash", accessibilityDescription: nil)
         cleanItem.isAlternate = true
-        cleanItem.keyEquivalentModifierMask = .option
+        cleanItem.keyEquivalentModifierMask = [.command, .option]
         cleanItem.isEnabled = movedCount > 0
         menu.addItem(cleanItem)
 
@@ -333,12 +334,19 @@ extension StatusBarController {
             if let window = windowController.window {
                 configureSettingsWindow(window)
             }
-            NSApp.setActivationPolicy(.regular)
-            NSApp.activate(ignoringOtherApps: true)
             windowController.showWindow(nil)
             let window = windowController.window
+            // Put the all-Spaces Settings window on screen before activating
+            // the application. Activating a menu-bar app first can make
+            // WindowServer choose one of the label windows' Spaces.
+            NSApp.activate(ignoringOtherApps: true)
             window?.makeKeyAndOrderFront(nil)
             completeSettingsWindowActivationWhenReady(for: window)
+            if let tab {
+                DispatchQueue.main.async {
+                    NotificationCenter.default.post(name: .settingsTabRequested, object: tab)
+                }
+            }
             return
         }
         
@@ -376,10 +384,13 @@ extension StatusBarController {
         settingsWindowController = windowController
         
         NotificationCenter.default.addObserver(self, selector: #selector(settingsWindowWillClose), name: NSWindow.willCloseNotification, object: window)
-        
-        NSApp.setActivationPolicy(.regular)
-        NSApp.activate(ignoringOtherApps: true)
+
+        // Keep the menu-bar app accessory-only while presenting Settings. The
+        // activation-policy transition itself changes screen parameters and
+        // can make WindowServer select a Space before this all-Spaces window
+        // is visible.
         windowController.showWindow(nil)
+        NSApp.activate(ignoringOtherApps: true)
         window.makeKeyAndOrderFront(nil)
         completeSettingsWindowActivationWhenReady(for: window)
     }
@@ -407,8 +418,8 @@ extension StatusBarController {
     
     @objc private func settingsWindowWillClose(_ notification: Notification) {
         DispatchQueue.main.async { [weak self] in
-            NSApp.setActivationPolicy(.accessory)
             self?.labelManager.endSettingsWindowPresentation()
+            self?.spaceManager.resumeDeferredScreenParameterRefreshIfNeeded()
         }
         settingsWindowController = nil
     }

@@ -6,8 +6,8 @@ struct PermissionsSettingsView: View {
     var body: some View {
         SettingsContainer(.permissions) {
             VStack(alignment: .leading, spacing: 20) {
-                SettingsSection("Permissions", helperText: "If the Settings show that the permission is granted but the app still does not have the permission, remove the app row in Settings and re-grant.") {
-                    SettingsRow("Accessibility", helperText: "Required for injecting shortcuts, reading active window information, and moving windows with Option + swipe.") {
+                SettingsSection("Permissions") {
+                    SettingsRow("Accessibility", helperText: "Required for keyboard shortcuts and moving windows between spaces.") {
                         HStack {
                             if permissionManager.hasAccessibilityPermission {
                                 Image(systemName: "checkmark.circle.fill")
@@ -25,7 +25,7 @@ struct PermissionsSettingsView: View {
 
                     Divider()
 
-                    SettingsRow("Screen Recording", helperText: "Required for reading the active window before moving it with Option + swipe.") {
+                    SettingsRow("Screen Recording", helperText: "Required to identify the active window when moving it between spaces.") {
                         HStack {
                             if permissionManager.isScreenCaptureGranted {
                                 Image(systemName: "checkmark.circle.fill")
@@ -40,12 +40,31 @@ struct PermissionsSettingsView: View {
                             }
                         }
                     }
+
+                    if !permissionManager.hasAllRequiredPermissions {
+                        Divider()
+
+                        SettingsRow(
+                            "Restart DesktopRenamer",
+                            helperText: "Restart DesktopRenamer after changing permissions."
+                        ) {
+                            Button {
+                                permissionManager.restartApplication()
+                            } label: {
+                                Text(permissionManager.isRestarting ? "Restarting…" : "Restart")
+                            }
+                            .disabled(permissionManager.isRestarting)
+                        }
+                    }
                 }
                 
                 Spacer()
             }
             .frame(maxWidth: .infinity, alignment: .topLeading)
             .environment(\.settingsTab, .permissions)
+            .onAppear {
+                permissionManager.refresh()
+            }
         }
     }
 }

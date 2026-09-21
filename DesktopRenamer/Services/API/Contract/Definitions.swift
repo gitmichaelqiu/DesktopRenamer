@@ -3,6 +3,7 @@ import Foundation
 enum SpaceAPIParameterKind: Equatable {
     case string
     case positiveInteger
+    case boolean
     case direction
     case windowAction
 
@@ -12,6 +13,8 @@ enum SpaceAPIParameterKind: Equatable {
             return "string"
         case .positiveInteger:
             return "positive integer"
+        case .boolean:
+            return "Boolean"
         case .direction:
             return "one of: up, down"
         case .windowAction:
@@ -57,14 +60,27 @@ struct SpaceAPIMethodDefinition: Equatable {
 }
 
 enum DesktopRenamerAPIContract {
-    static let version = "1.0.0"
+    static let version = "1.1.0"
     static let jsonRPCVersion = "2.0"
     static let payloadKey = "payload"
     static let maxPayloadBytes = 1_048_576
 
-    static let rpcRequest = Notification.Name("com.michaelqiu.DesktopRenamer.RPCRequest")
-    static let rpcResponse = Notification.Name("com.michaelqiu.DesktopRenamer.RPCResponse")
-    static let rpcEvent = Notification.Name("com.michaelqiu.DesktopRenamer.RPCEvent")
+    // The current bundle identifier is the preferred notification namespace.
+    // The legacy namespace remains available so existing integrations continue
+    // to work after the bundle-identifier migration.
+    static let preferredAPIPrefix = "dev.mqiu.DesktopRenamer"
+    static let legacyAPIPrefix = "com.michaelqiu.DesktopRenamer"
+
+    static let rpcRequest = Notification.Name(preferredAPIPrefix + ".RPCRequest")
+    static let rpcResponse = Notification.Name(preferredAPIPrefix + ".RPCResponse")
+    static let rpcEvent = Notification.Name(preferredAPIPrefix + ".RPCEvent")
+    static let legacyRPCRequest = Notification.Name(legacyAPIPrefix + ".RPCRequest")
+    static let legacyRPCResponse = Notification.Name(legacyAPIPrefix + ".RPCResponse")
+    static let legacyRPCEvent = Notification.Name(legacyAPIPrefix + ".RPCEvent")
+
+    static let rpcRequestNotifications = [rpcRequest, legacyRPCRequest]
+    static let rpcResponseNotifications = [rpcResponse, legacyRPCResponse]
+    static let rpcEventNotifications = [rpcEvent, legacyRPCEvent]
     static let windowActionNames = [
         "close", "minimize", "hide", "enterFullScreen", "exitFullScreen", "quit", "restore"
     ]
@@ -81,6 +97,12 @@ enum DesktopRenamerAPIContract {
             parameters: ["spaceID": .string],
             requiredParameters: ["spaceID"]
         ),
+        SpaceAPIMethodDefinition(
+            name: "toggleLockSpace",
+            parameters: ["spaceID": .string],
+            requiredParameters: ["spaceID"]
+        ),
+        SpaceAPIMethodDefinition(name: "restoreMovedWindows"),
         SpaceAPIMethodDefinition(
             name: "renameCurrentSpace",
             parameters: ["name": .string],
@@ -131,7 +153,12 @@ enum DesktopRenamerAPIContract {
                 "windowID": .positiveInteger,
                 "pid": .positiveInteger,
                 "fromSpaceID": .string,
-                "targetSpaceID": .string
+                "targetSpaceID": .string,
+                // Optional presentation metadata lets clients that already
+                // enumerated the window avoid losing a true minimized/hidden
+                // state when Accessibility is temporarily unavailable.
+                "isMinimized": .boolean,
+                "isHidden": .boolean
             ],
             requiredParameters: ["windowID", "fromSpaceID", "targetSpaceID"]
         )

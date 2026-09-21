@@ -43,6 +43,7 @@ extension LauncherViewModel {
             }
             
             sections.append(ListWindowsSection(
+                id: "space-\(space.id)",
                 title: space.name,
                 subtitle: String(format: space.isFullscreen ? String(localized: "Fullscreen") : String(localized: "%lld windows"), items.count),
                 items: items
@@ -52,6 +53,10 @@ extension LauncherViewModel {
     }
     
     var visibleRowsCount: Int {
+        if isSpaceMenuOpen {
+            return spaceMenuSpaces.count
+        }
+
         if activeCommand == nil {
             return filteredCommands.count
         } else {
@@ -74,6 +79,33 @@ extension LauncherViewModel {
             }
         }
     }
+
+    var spaceMenuSpaces: [SpaceGroup] {
+        let candidates: [SpaceGroup]
+        if stagingWindow != nil {
+            candidates = unfilteredMoveWindowSpaces
+        } else {
+            switch activeCommand?.type {
+            case .moveWindow:
+                candidates = unfilteredActiveWindowMoveSpaces
+            case .switchToDesktop:
+                candidates = unfilteredSwitchSpaces
+            default:
+                candidates = []
+            }
+        }
+
+        return filterSpaceGroups(candidates, query: submenuSearchQuery)
+    }
+
+    func executeSpaceMenuSelection() {
+        guard !isLauncherBusy else { return }
+
+        let spaces = spaceMenuSpaces
+        guard spaces.indices.contains(spaceMenuSelectedIndex) else { return }
+        selectedRowIndex = spaceMenuSelectedIndex
+        executeRowAction()
+    }
     
     func loadData() {
         guard let manager = AppDelegate.shared.spaceManager else { return }
@@ -85,17 +117,29 @@ extension LauncherViewModel {
             names[s.id] = manager.getSpaceName(s.id)
         }
         
+        var displaySpaceNumbers: [String: Int] = [:]
         self.currentSpaces = spaces.map { space in
-            SpaceGroup(
+            let number: Int
+            if space.isFullscreen {
+                number = space.num
+            } else {
+                let nextNumber = displaySpaceNumbers[space.displayID, default: 0] + 1
+                displaySpaceNumbers[space.displayID] = nextNumber
+                number = nextNumber
+            }
+
+            return SpaceGroup(
                 id: space.id,
                 name: names[space.id] ?? "",
                 displayName: getDisplayName(for: space.displayID),
-                num: space.num,
+                num: number,
                 isFullscreen: space.isFullscreen,
                 appPath: space.appPath,
                 displayID: space.displayID
             )
         }
+
+        let spaceGroupsByID = Dictionary(uniqueKeysWithValues: currentSpaces.map { ($0.id, $0) })
         
         // If we are renaming space, pre-fill text
         if activeCommand?.type == .renameCurrentSpace {
@@ -108,13 +152,22 @@ extension LauncherViewModel {
         DispatchQueue.global(qos: .userInitiated).async { [weak self] in
             guard let self = self else { return }
             
-            let raw = SpaceHelper.getWindowsForAllSpaces(spaces: spaces, spaceNames: names)
-            let displayIDs = Dictionary(uniqueKeysWithValues: spaces.map { ($0.id, $0.displayID) })
-            let parsed = Self.parseWindowData(raw, displayIDs: displayIDs)
+            let records = SpaceHelper.getWindowRecordsForAllSpaces(spaces: spaces)
+            let windows = Self.makeWindowEntries(records, spacesByID: spaceGroupsByID)
             
             DispatchQueue.main.async {
                 let terminatingPIDs = self.terminatingApplicationPIDs
-                self.currentWindows = parsed.windows.filter { !terminatingPIDs.contains($0.pid) }
+                self.currentWindows = windows.filter { !terminatingPIDs.contains($0.pid) }
+                if self.activeCommand?.type == .listWindows {
+                    // A close or quit can remove the selected window while a
+                    // refresh is in flight. Keeping the old index naturally
+                    // selects the next window, while clamping selects the
+                    // final remaining window when the old one was last.
+                    self.selectedRowIndex = min(
+                        max(self.selectedRowIndex, 0),
+                        max(self.filteredWindows.count - 1, 0)
+                    )
+                }
                 self.terminatingApplicationPIDs = terminatingPIDs.filter {
                     NSRunningApplication(processIdentifier: $0) != nil
                 }
@@ -141,69 +194,23 @@ extension LauncherViewModel {
         return "Display"
     }
     
-    private nonisolated static func parseWindowData(
-        _ raw: String,
-        displayIDs: [String: String] = [:]
-    ) -> (spaces: [SpaceGroup], windows: [WindowEntry]) {
-        var spaces: [SpaceGroup] = []
-        var windows: [WindowEntry] = []
-        var currentSpace: SpaceGroup? = nil
-        
-        let lines = raw.components(separatedBy: "\n")
-        for line in lines {
-            if line.hasPrefix(">") {
-                let parts = line.dropFirst().components(separatedBy: "~")
-                if parts.count >= 4 {
-                    let isFS = parts.count >= 5 ? (parts[4] == "1") : false
-                    let appPath = (parts.count >= 6 && !parts[5].isEmpty) ? parts[5] : nil
-                    let space = SpaceGroup(
-                        id: parts[0],
-                        name: parts[1].isEmpty ? "Space \(parts[3])" : parts[1],
-                        displayName: parts[2],
-                        num: Int(parts[3]) ?? 0,
-                        isFullscreen: isFS,
-                        appPath: appPath,
-                        displayID: displayIDs[parts[0]] ?? ""
-                    )
-                    currentSpace = space
-                    spaces.append(space)
-                }
-            } else if line.hasPrefix("  "), let space = currentSpace {
-                let content = line.trimmingCharacters(in: .whitespaces)
-                let parts = content.components(separatedBy: "|")
-                if parts.count >= 5 {
-                    if let wid = Int(parts[0]), let pid = Int32(parts[1]) {
-                        let ownerName = parts[2]
-                        let appPath = parts[3]
-                        // New 7-field format: wid|pid|owner|appPath|title...|isMinimized|isHidden
-                        // Legacy 5-field format: wid|pid|owner|appPath|title
-                        let title: String
-                        let isMinimized: Bool
-                        let isHidden: Bool
-                        if parts.count >= 7 {
-                            title = parts[4..<(parts.count - 2)].joined(separator: "|")
-                            isMinimized = parts[parts.count - 2] == "1"
-                            isHidden = parts[parts.count - 1] == "1"
-                        } else {
-                            title = parts[4...].joined(separator: "|")
-                            isMinimized = false
-                            isHidden = false
-                        }
-                        let entry = WindowEntry(
-                            id: wid,
-                            pid: pid,
-                            ownerName: ownerName,
-                            appPath: appPath,
-                            title: title,
-                            space: space,
-                            isMinimized: isMinimized,
-                            isHidden: isHidden
-                        )
-                        windows.append(entry)
-                    }
-                }
-            }
+    private nonisolated static func makeWindowEntries(
+        _ records: [SpaceAPIWindow],
+        spacesByID: [String: SpaceGroup]
+    ) -> [WindowEntry] {
+        records.compactMap { record in
+            guard let space = spacesByID[record.spaceID] else { return nil }
+            return WindowEntry(
+                id: record.id,
+                pid: record.pid,
+                ownerName: record.ownerName,
+                appPath: record.appPath ?? "",
+                title: record.title ?? "",
+                space: space,
+                spaceIDs: record.spaceIDs,
+                isMinimized: record.isMinimized,
+                isHidden: record.isHidden
+            )
         }
-        return (spaces, windows)
     }
 }

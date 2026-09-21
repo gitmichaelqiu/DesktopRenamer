@@ -3,7 +3,7 @@ import AppKit
 extension LauncherView {
     func handleTextFieldKeyEquivalent(_ event: NSEvent) -> Bool {
         guard event.type == .keyDown else { return false }
-        guard !viewModel.isRearrangingSpace else { return true }
+        guard !viewModel.isLauncherBusy else { return true }
 
         let modifiers = event.modifierFlags.intersection(.deviceIndependentFlagsMask)
         let hasCommand = modifiers.contains(.command)
@@ -12,7 +12,7 @@ extension LauncherView {
         let hasControl = modifiers.contains(.control)
 
         if viewModel.activeCommand?.type == .switchToDesktop,
-           viewModel.commandKTargetWindow == nil,
+           !viewModel.isCommandKPanelOpen,
            !hasOption && !hasControl && hasCommand && hasShift {
             switch event.keyCode {
             case 126:
@@ -26,8 +26,16 @@ extension LauncherView {
             }
         }
 
+        if viewModel.activeCommand?.type == .switchToDesktop,
+           !viewModel.isSubmenuOpen,
+           hasCommand && !hasShift && !hasOption && !hasControl,
+           let chars = event.charactersIgnoringModifiers?.lowercased(), chars == "l" {
+            viewModel.toggleSelectedSwitchDesktopSpaceLock()
+            return true
+        }
+
         if viewModel.activeCommand?.type == .listWindows,
-           viewModel.commandKTargetWindow == nil,
+           !viewModel.isCommandKPanelOpen,
            viewModel.stagingWindow == nil {
             let windows = viewModel.filteredWindows
             let index = viewModel.selectedRowIndex
@@ -72,7 +80,7 @@ extension LauncherView {
         }
 
         if viewModel.activeCommand?.type == .batchMoveWindows,
-           viewModel.commandKTargetWindow == nil,
+           !viewModel.isCommandKPanelOpen,
            viewModel.stagingWindow == nil,
            hasControl && hasShift && !hasCommand && !hasOption,
            let chars = event.charactersIgnoringModifiers?.lowercased(),
@@ -111,6 +119,7 @@ extension LauncherView {
         }
 
         if viewModel.activeCommand?.type == .switchToDesktop,
+           !viewModel.isSubmenuOpen,
            hasCommand && !hasShift && !hasOption && !hasControl,
            let chars = event.charactersIgnoringModifiers?.lowercased(), chars == "r" {
             let spaces = viewModel.filteredSpaces
@@ -118,7 +127,7 @@ extension LauncherView {
             if index >= 0 && index < spaces.count {
                 let space = spaces[index]
                 if !space.isFullscreen {
-                    viewModel.showRenameDialog(for: space)
+                    viewModel.showRenameSubmenu(for: space)
                 }
             }
             return true

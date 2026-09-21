@@ -111,6 +111,7 @@ extension SpaceHelper {
         let primaryScreenMaxY: CGFloat
         let frontmostProcessID: Int32?
         let mouseLocation: CGPoint
+        let focusedDisplayID: String?
     }
 
     private struct RawSpaceScanResult {
@@ -147,11 +148,16 @@ extension SpaceHelper {
             frontmostProcessID = frontmostApplication?.processIdentifier
         }
 
+        let focusedDisplayID = getActiveWindowInfo().flatMap {
+            getWindowDisplayID(for: $0.frame)
+        }
+
         return RawSpaceScanContext(
             screens: screens,
             primaryScreenMaxY: primaryScreenMaxY,
             frontmostProcessID: frontmostProcessID,
-            mouseLocation: NSEvent.mouseLocation
+            mouseLocation: NSEvent.mouseLocation,
+            focusedDisplayID: focusedDisplayID
         )
     }
 
@@ -169,8 +175,12 @@ extension SpaceHelper {
         let windowList = CGWindowListCopyWindowInfo(options, kCGNullWindowID)
             as? [[String: Any]] ?? []
 
-        var activeScreen: RawSpaceScreen?
-        if let frontmostProcessID = context.frontmostProcessID {
+        var activeScreen = context.focusedDisplayID.flatMap { displayID in
+            context.screens.first { screen in
+                displayUUID(for: screen.screenID) == displayID
+            }
+        }
+        if activeScreen == nil, let frontmostProcessID = context.frontmostProcessID {
             for window in windowList {
                 guard let pid = window[kCGWindowOwnerPID as String] as? Int,
                       pid == Int(frontmostProcessID),
@@ -180,7 +190,12 @@ extension SpaceHelper {
                       let x = bounds["X"] as? CGFloat,
                       let y = bounds["Y"] as? CGFloat,
                       let width = bounds["Width"] as? CGFloat,
-                      let height = bounds["Height"] as? CGFloat else {
+                      let height = bounds["Height"] as? CGFloat,
+                      width >= minActiveWindowWidth,
+                      height >= minActiveWindowHeight,
+                      (window[kCGWindowIsOnscreen as String] as? Bool) == true,
+                      (window[kCGWindowAlpha as String] as? Double ?? 1) > 0.1,
+                      (window[kCGWindowSharingState as String] as? Int ?? 1) != 0 else {
                     continue
                 }
 
@@ -204,6 +219,12 @@ extension SpaceHelper {
                     primaryScreenMaxY: context.primaryScreenMaxY
                 )
             })
+        }
+
+        if activeScreen == nil {
+            activeScreen = context.screens.first(where: {
+                $0.frame.origin.x == 0 && $0.frame.origin.y == 0
+            }) ?? context.screens.first
         }
 
         guard let activeScreen else {
@@ -259,6 +280,13 @@ extension SpaceHelper {
                layer < 0 {
                 hasFinderDesktop = true
             }
+        }
+
+        // ManagedSpaceID is the authoritative identifier used by switching
+        // and reconciliation. Keep the wallpaper title only as a fallback
+        // for systems where the managed display-space snapshot is unavailable.
+        if let currentSpaceID = currentManagedSpaceID(for: activeScreen.screenID) {
+            uuid = currentSpaceID
         }
 
         return RawSpaceScanResult(
@@ -359,9 +387,46 @@ extension SpaceHelper {
     static func getAllDisplayUUIDs() -> [String] {
         return NSScreen.screens.compactMap { screen -> String? in
             guard let id = screen.deviceDescription[NSDeviceDescriptionKey("NSScreenNumber")] as? CGDirectDisplayID else { return nil }
-            guard let uuid = CGDisplayCreateUUIDFromDisplayID(id)?.takeRetainedValue() else { return nil }
-            return CFUUIDCreateString(nil, uuid) as String
+            return displayUUID(for: id)
         }
+    }
+
+    static func displayUUID(for screenID: CGDirectDisplayID) -> String? {
+        guard let uuid = CGDisplayCreateUUIDFromDisplayID(screenID)?.takeRetainedValue() else {
+            return nil
+        }
+        return (CFUUIDCreateString(nil, uuid) as String).uppercased()
+    }
+
+    static func getMainDisplayUUID() -> String? {
+        let mainScreen = NSScreen.screens.first(where: {
+            $0.frame.origin.x == 0 && $0.frame.origin.y == 0
+        }) ?? NSScreen.screens.first
+        guard let screenID = mainScreen?.deviceDescription[
+            NSDeviceDescriptionKey("NSScreenNumber")
+        ] as? CGDirectDisplayID else {
+            return nil
+        }
+        return displayUUID(for: screenID)
+    }
+
+    private static func currentManagedSpaceID(for screenID: CGDirectDisplayID) -> String? {
+        let mainUUID = getMainDisplayUUID()
+        let targetDisplayID = normalizeDisplayID(String(screenID), mainUUID: mainUUID)
+        guard let displays = CGSCopyManagedDisplaySpaces(_CGSDefaultConnection()) as? [NSDictionary] else {
+            return nil
+        }
+
+        for display in displays {
+            guard let rawDisplayID = display["Display Identifier"] as? String,
+                  normalizeDisplayID(rawDisplayID, mainUUID: mainUUID) == targetDisplayID,
+                  let currentSpace = display["Current Space"] as? [String: Any],
+                  let managedID = managedIntegerValue(currentSpace["ManagedSpaceID"]) else {
+                continue
+            }
+            return String(managedID)
+        }
+        return nil
     }
 
     static func normalizeDisplayID(_ id: String, mainUUID: String?) -> String {
@@ -384,6 +449,19 @@ extension SpaceHelper {
         return cleanId.uppercased()
     }
 
+    static func managedIntegerValue(_ value: Any?) -> Int? {
+        if let value = value as? Int {
+            return value
+        }
+        if let value = value as? Int32 {
+            return Int(value)
+        }
+        if let value = value as? NSNumber {
+            return value.intValue
+        }
+        return nil
+    }
+
     static func getSystemState(
         onDisplayID specificDisplayID: String? = nil,
         includeFullscreenAppMetadata: Bool = true
@@ -391,29 +469,39 @@ extension SpaceHelper {
         spaces: [DesktopSpace], currentUUID: String, displayID: String
     )? {
         let conn = _CGSDefaultConnection()
-        guard let displays = CGSCopyManagedDisplaySpaces(conn) as? [NSDictionary],
-            let activeDisplayRaw = CGSCopyActiveMenuBarDisplayIdentifier(conn) as? String
-        else {
+        guard let displays = CGSCopyManagedDisplaySpaces(conn) as? [NSDictionary] else {
             return nil
         }
 
         let screenUUIDs = getAllDisplayUUIDs()
-        let mainScreenUUID = screenUUIDs.first
+        let mainScreenUUID = getMainDisplayUUID()
         
-        let activeDisplay = normalizeDisplayID(activeDisplayRaw, mainUUID: mainScreenUUID)
-        var targetDisplayID = specificDisplayID ?? activeDisplay
+        let activeDisplay = (CGSCopyActiveMenuBarDisplayIdentifier(conn) as String?)
+            .map { normalizeDisplayID($0, mainUUID: mainScreenUUID) }
+            ?? mainScreenUUID
+            ?? "MAIN"
+        let requestedDisplayID = specificDisplayID.map {
+            normalizeDisplayID($0, mainUUID: mainScreenUUID)
+        }
+        var targetDisplayID = requestedDisplayID ?? activeDisplay
         var detectedSpaces: [DesktopSpace] = []
-        var currentSpaceID = "FULLSCREEN"
+        var currentSpaceID: String?
         
-        // Find if target display is actually present in CGS displays (handling normalization)
+        // Find if the requested display is actually present in CGS displays.
+        // An explicit display request must never silently fall back to Main.
         let foundDisplay = displays.first { d in
             let dID = d["Display Identifier"] as? String ?? ""
-            return normalizeDisplayID(dID, mainUUID: mainScreenUUID) == activeDisplay
+            return normalizeDisplayID(dID, mainUUID: mainScreenUUID) == targetDisplayID
         }
         
-        if foundDisplay == nil {
-            // If active display not found, fallback to Main
+        if foundDisplay == nil, requestedDisplayID == nil {
+            // If no active display was reported, fall back to the primary
+            // display rather than publishing a state for an unknown display.
             targetDisplayID = mainScreenUUID ?? activeDisplay
+        }
+
+        guard foundDisplay != nil || requestedDisplayID == nil else {
+            return nil
         }
 
         var globalDesktopCounter = 0
@@ -441,7 +529,7 @@ extension SpaceHelper {
 
             var regularIndex = 0
             for space in spaces {
-                guard let managedID = space["ManagedSpaceID"] as? Int else { continue }
+                guard let managedID = managedIntegerValue(space["ManagedSpaceID"]) else { continue }
                 let idString = String(managedID)
                 let isFullscreen = space["TileLayoutManager"] != nil
                 let rawPersistentID = space["uuid"] as? String
@@ -456,8 +544,8 @@ extension SpaceHelper {
                 var globalShortcutNum: Int? = nil
 
                 if isFullscreen, includeFullscreenAppMetadata {
-                    if let p = space["pid"] as? Int32 ?? space["owner pid"] as? Int32 {
-                        if let runningApp = NSRunningApplication(processIdentifier: p) {
+                    if let p = managedIntegerValue(space["pid"] ?? space["owner pid"]) {
+                        if let runningApp = NSRunningApplication(processIdentifier: Int32(p)) {
                             appName = runningApp.localizedName
                             appPath = runningApp.bundleURL?.path
                         }
@@ -482,13 +570,16 @@ extension SpaceHelper {
                     ))
 
                 if let currentDict = display["Current Space"] as? [String: Any],
-                    let currentID = currentDict["ManagedSpaceID"] as? Int, currentID == managedID
+                    let currentID = managedIntegerValue(currentDict["ManagedSpaceID"]), currentID == managedID
                 {
                     if displayID == targetDisplayID {
                         currentSpaceID = idString
                     }
                 }
             }
+        }
+        guard let currentSpaceID else {
+            return nil
         }
         return (detectedSpaces, currentSpaceID, targetDisplayID)
     }

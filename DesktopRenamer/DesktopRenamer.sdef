@@ -24,6 +24,7 @@
             <property name="app name" code="ApNm" type="text" description="Full-screen app name when available"><cocoa key="appName"/></property>
             <property name="app path" code="ApPt" type="text" description="Full-screen app path when available"><cocoa key="appPath"/></property>
             <property name="global shortcut number" code="GsNo" type="integer" description="Configured shortcut number when available"><cocoa key="globalShortcutNumber"/></property>
+            <property name="locked" code="LkSp" type="boolean" description="Whether this space is protected by Space Lock"><cocoa key="isLocked"/></property>
         </record-type>
 
         <record-type name="space snapshot" code="DkSn" description="A versioned snapshot of Mission Control spaces">
@@ -42,8 +43,9 @@
             <property name="app path" code="WiPt" type="text" description="Application path when available"><cocoa key="appPath"/></property>
             <property name="title" code="WiTl" type="text" description="Window title when available"><cocoa key="title"/></property>
             <property name="space ID" code="WiSp" type="text"><cocoa key="spaceID"/></property>
+            <property name="space IDs" code="WiSs" type="list of text" description="All Spaces currently assigned to the window"><cocoa key="spaceIDs"/></property>
             <property name="minimized" code="MiWd" type="boolean"><cocoa key="isMinimized"/></property>
-            <property name="hidden" code="HiWd" type="boolean"><cocoa key="isHidden"/></property>
+            <property name="hidden" code="HiWd" type="boolean" description="Whether the owning application is hidden"><cocoa key="isHidden"/></property>
         </record-type>
 
         <record-type name="window snapshot" code="DkWs" description="A versioned snapshot of spaces and application windows">
@@ -135,6 +137,15 @@
         <command name="switch to space" code="DskRSwSp" description="Switch to a space by ID">
             <cocoa class="DesktopRenamer.SwitchToSpaceCommand"/>
             <direct-parameter description="The ID of the space to switch to" type="text"/>
+        </command>
+
+        <command name="toggle lock space" code="DskRTLkS" description="Toggle Space Lock for a regular space by ID">
+            <cocoa class="DesktopRenamer.ToggleLockSpaceCommand"/>
+            <direct-parameter description="The ID of the space to lock or unlock" type="text"/>
+        </command>
+
+        <command name="restore moved windows" code="DskRStMv" description="Restore windows moved by Space Lock">
+            <cocoa class="DesktopRenamer.RestoreMovedWindowsCommand"/>
         </command>
 
         <command name="rearrange space" code="DskRRrSp" description="Move a space one position up or down">

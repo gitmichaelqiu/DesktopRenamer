@@ -6,6 +6,8 @@ import SwiftUI
 extension LauncherViewModel {
 
     func executeRowAction() {
+        guard !isLauncherBusy else { return }
+
         let index = selectedRowIndex
         
         if activeCommand == nil {
@@ -15,7 +17,15 @@ extension LauncherViewModel {
             let command = commands[index]
             
             if command.hasSubpage {
+                rootCommandSelectionID = command.id
                 activeCommand = command
+                submenuSearchQuery = ""
+                // Space selection commands use the same full-page layout as
+                // the other launcher commands. The overlay is reserved for
+                // nested target selection, such as staging a window move.
+                isSpaceMenuOpen = false
+                selectedRowIndex = 0
+                spaceMenuSelectedIndex = 0
             } else {
                 executeSimpleCommand(command.type)
             }
@@ -23,14 +33,16 @@ extension LauncherViewModel {
             // Subpage selection
             if let staging = stagingWindow {
                 // Staging a window to target space
-                let spaces = filteredMoveWindowSpaces
+                let spaces = isSpaceMenuOpen ? spaceMenuSpaces : filteredMoveWindowSpaces
                 guard index >= 0 && index < spaces.count else { return }
                 let space = spaces[index]
                 
                 let (minimized, hidden) = isWindowMinimizedOrAppHidden(staging)
                 let actionType: BatchStagedActionType = (minimized || hidden) ? .restoreTo(targetSpace: space) : .move(targetSpace: space)
+                let originalItems = batchMoveSelectableItems
+                let wasImmediateMove = isExecutingRestoreToImmediately
                 
-                if isExecutingRestoreToImmediately {
+                if wasImmediateMove {
                     isExecutingRestoreToImmediately = false
                     executeActionImmediately(window: staging, actionType: actionType)
                 } else {
@@ -38,18 +50,28 @@ extension LauncherViewModel {
                 }
                 
                 stagingWindow = nil
-                selectedRowIndex = batchMoveLastSelectedIndex
+                isSpaceMenuOpen = false
+                spaceMenuSelectedIndex = 0
+                submenuSearchQuery = ""
+                if wasImmediateMove {
+                    selectedRowIndex = batchMoveLastSelectedIndex
+                } else {
+                    restoreBatchMoveSelection(
+                        afterActingOn: batchMoveLastSelectedIndex,
+                        in: originalItems
+                    )
+                }
                 return
             }
             
             switch activeCommand?.type {
             case .switchToDesktop:
-                let spaces = filteredSpaces
+                let spaces = isSpaceMenuOpen ? spaceMenuSpaces : filteredSpaces
                 guard index >= 0 && index < spaces.count else { return }
                 executeSwitchToDesktop(spaces[index])
                 
             case .moveWindow:
-                let spaces = filteredActiveWindowMoveSpaces
+                let spaces = isSpaceMenuOpen ? spaceMenuSpaces : filteredActiveWindowMoveSpaces
                 guard index >= 0 && index < spaces.count else { return }
                 executeMoveWindow(spaces[index])
                 
@@ -65,15 +87,21 @@ extension LauncherViewModel {
                 
                 switch selectedItem {
                 case .staged(let action, _):
+                    let originalItems = items
                     stagedMoves.removeValue(forKey: action.window.id)
-                    if selectedRowIndex >= batchMoveSelectableItems.count {
-                        selectedRowIndex = max(0, batchMoveSelectableItems.count - 1)
-                    }
+                    restoreBatchMoveSelection(
+                        afterActingOn: index,
+                        in: originalItems
+                    )
                 case .unstaged(let window, _):
-                    batchMoveLastSelectedIndex = selectedRowIndex
+                    let previousRowIndex = selectedRowIndex
+                    batchMoveLastSelectedIndex = previousRowIndex
                     isStagingForRestoreTo = false
+                    submenuSearchQuery = ""
                     stagingWindow = window
-                    selectedRowIndex = 0
+                    isSpaceMenuOpen = true
+                    spaceMenuSelectedIndex = 0
+                    selectedRowIndex = previousRowIndex
                 }
                 
             case .renameCurrentSpace:

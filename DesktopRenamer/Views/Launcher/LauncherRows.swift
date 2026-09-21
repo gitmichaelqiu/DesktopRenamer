@@ -1,41 +1,4 @@
 import SwiftUI
-struct KeycapView: View {
-    let text: LocalizedStringKey
-    let isSelected: Bool
-    var isGreenRow: Bool = false
-    var verticalPadding: CGFloat = 3
-    var horizontalPadding: CGFloat = 6
-    @Environment(\.colorScheme) var colorScheme
-    
-    var colors: ThemeColors {
-        ThemeColors(isDark: colorScheme == .dark)
-    }
-    
-    var body: some View {
-        let isSelectedWhiteStyle = isSelected && (colorScheme == .dark || isGreenRow)
-        
-        Text(text)
-            .font(.system(size: 11, weight: .semibold))
-            .foregroundColor(isSelected ? (isSelectedWhiteStyle ? .white : colors.textPrimary) : colors.textSecondary)
-            .padding(.horizontal, horizontalPadding)
-            .padding(.vertical, verticalPadding)
-            .background(
-                isSelected
-                    ? (isSelectedWhiteStyle ? Color.white.opacity(0.20) : Color.primary.opacity(0.12))
-                    : colors.badgeBg
-            )
-            .cornerRadius(5)
-            .overlay(
-                RoundedRectangle(cornerRadius: 5)
-                    .stroke(
-                        isSelected
-                            ? (isSelectedWhiteStyle ? Color.white.opacity(0.30) : Color.primary.opacity(0.18))
-                            : colors.badgeBorder,
-                        lineWidth: 1
-                    )
-            )
-    }
-}
 
 struct EmptyResultsView: View {
     @Environment(\.colorScheme) var colorScheme
@@ -52,7 +15,6 @@ struct EmptyResultsView: View {
                 .foregroundColor(colors.textQuaternary)
             Text(verbatim: String(localized: "No results"))
                 .font(.body)
-                .fontWeight(.medium)
                 .foregroundColor(colors.textTertiary)
             Text(verbatim: String(localized: "No commands matched your search query."))
                 .font(.subheadline)
@@ -66,7 +28,8 @@ struct EmptyResultsView: View {
 struct CommandRowView: View {
     let command: LauncherCommand
     let isSelected: Bool
-    var shortcutText: String? = nil
+    var shortcutNumber: Int? = nil
+    var ignoresHover: Bool = false
     @Environment(\.colorScheme) var colorScheme
     @State private var isHovered = false
     
@@ -93,82 +56,58 @@ struct CommandRowView: View {
     }
     
     var body: some View {
-        HStack(spacing: 12) {
-            Image(systemName: command.iconName)
-                .font(.system(size: 17, weight: .medium))
-                .foregroundColor(colors.textPrimary)
-                .frame(width: 32, height: 32)
+        HStack(spacing: LauncherLayout.rowSpacing) {
+            LauncherIconSlot(systemName: command.iconName, tint: colors.textPrimary)
             
-            VStack(alignment: .leading, spacing: 2) {
-                Text(command.title)
-                    .font(.body)
-                    .fontWeight(.semibold)
-                    .foregroundColor(colors.textPrimary)
-                    .lineLimit(1)
-                
-                Text(command.subtitle)
-                    .font(.subheadline)
-                    .foregroundColor(isSelected ? colors.textSecondary : colors.textTertiary)
-                    .lineLimit(1)
-            }
+            Text(command.title)
+                .font(LauncherTypography.rowTitle)
+                .foregroundColor(colors.textPrimary)
+                .lineLimit(1)
+                .layoutPriority(1)
             
             Spacer()
             
-            if let shortcut = shortcutText {
-                KeycapView(text: LocalStringKey_compat(shortcut), isSelected: isSelected)
-            } else if let statusText = toggleStatus {
-                Text(LocalizedStringKey(statusText))
-                    .font(.subheadline)
-                    .fontWeight(.semibold)
-                    .foregroundColor(statusText == "Enabled" ? colors.greenText : colors.textSecondary)
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 3)
-                    .background(statusText == "Enabled" ? colors.greenText.opacity(0.12) : colors.badgeBg)
-                    .cornerRadius(6)
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 6)
-                            .stroke(statusText == "Enabled" ? colors.greenText.opacity(0.35) : colors.badgeBorder, lineWidth: 1)
-                    )
-            } else if command.hasSubpage {
-                Image(systemName: "chevron.right")
-                    .font(.caption.weight(.semibold))
-                    .foregroundColor(isSelected ? colors.textSecondary : colors.textTertiary)
-                    .padding(.trailing, 4)
-            } else {
-                KeycapView(text: "Action", isSelected: isSelected)
-            }
-        }
-        .padding(.horizontal, 8)
-        .padding(.vertical, 8)
-        .background(
-            ZStack {
-                if isSelected {
-                    RoundedRectangle(cornerRadius: 8, style: .continuous)
-                        .fill(Color.primary.opacity(0.08))
-                    RoundedRectangle(cornerRadius: 8, style: .continuous)
-                        .stroke(Color.primary.opacity(0.15), lineWidth: 1)
-                } else if isHovered {
-                    RoundedRectangle(cornerRadius: 8, style: .continuous)
-                        .fill(Color.primary.opacity(0.05))
+            if let statusText = toggleStatus {
+                LauncherStatusLabel(
+                    text: statusText == "Enabled" ? String(localized: "Enabled") : String(localized: "Disabled"),
+                    color: statusText == "Enabled" ? colors.greenText : colors.textSecondary,
+                    background: statusText == "Enabled" ? colors.greenText.opacity(0.12) : colors.badgeBg
+                )
+                .padding(
+                    .trailing,
+                    shortcutNumber == nil
+                        ? 0
+                        : LauncherLayout.commandNumberIndicatorWidth
+                            + LauncherLayout.commandNumberIndicatorTrailingGap
+                )
+            } else if command.hasSubpage || command.type == .reloadLabels {
+                if shortcutNumber == nil {
+                    Image(systemName: "chevron.right")
+                        .font(.caption.weight(.semibold))
+                        .foregroundColor(isSelected ? colors.textSecondary : colors.textTertiary)
+                        .padding(.trailing, 4)
                 }
             }
-        )
+        }
+        .padding(.horizontal, LauncherLayout.rowHorizontalPadding)
+        .padding(.vertical, LauncherLayout.rowVerticalPadding)
+        .launcherRowSurface(isSelected: isSelected, isHovered: isHovered && !ignoresHover)
+        .launcherCommandNumberOverlay(shortcutNumber)
         .onHover { hovering in
             isHovered = hovering
         }
     }
     
-    // Helper to safely wrap dynamic String to LocalizedStringKey
-    private func LocalStringKey_compat(_ str: String) -> LocalizedStringKey {
-        return LocalizedStringKey(str)
-    }
 }
 
 struct SpaceRowView: View {
     let space: SpaceGroup
+    let isLocked: Bool
     let isSelected: Bool
     let isCurrent: Bool
-    var shortcutText: String? = nil
+    var showDisplayName: Bool = true
+    var shortcutNumber: Int? = nil
+    var ignoresHover: Bool = false
     @Environment(\.colorScheme) var colorScheme
     @State private var isHovered = false
     
@@ -177,65 +116,53 @@ struct SpaceRowView: View {
     }
     
     var body: some View {
-        HStack(spacing: 12) {
+        HStack(spacing: LauncherLayout.rowSpacing) {
             if isCurrent {
                 CurrentSpaceIndicator()
             } else if space.isFullscreen, let appPath = space.appPath {
                 let appIcon = NSWorkspace.shared.icon(forFile: appPath)
-                Image(nsImage: appIcon)
-                    .resizable()
-                    .aspectRatio(contentMode: .fit)
-                    .frame(width: 32, height: 32)
+                LauncherIconSlot(image: appIcon)
             } else {
-                Image(systemName: "desktopcomputer")
-                    .font(.system(size: 17, weight: .medium))
-                    .foregroundColor(colors.textPrimary)
-                    .frame(width: 32, height: 32)
+                LauncherIconSlot(systemName: "rectangle.dock", tint: colors.textPrimary)
             }
             
-            VStack(alignment: .leading, spacing: 2) {
+            HStack(spacing: 4) {
                 Text(space.name)
-                    .font(.body)
-                    .fontWeight(.semibold)
+                    .font(LauncherTypography.rowTitle)
                     .foregroundColor(colors.textPrimary)
                     .lineLimit(1)
-                
-                if space.isFullscreen {
-                    Text(verbatim: String(format: String(localized: "%@ · Fullscreen"), space.displayName))
-                        .font(.subheadline)
-                        .foregroundColor(isSelected ? colors.textSecondary : colors.textTertiary)
-                        .lineLimit(1)
-                } else {
-                    Text(verbatim: String(format: String(localized: "%@ · Space %lld"), space.displayName, space.num))
-                        .font(.subheadline)
-                        .foregroundColor(isSelected ? colors.textSecondary : colors.textTertiary)
-                        .lineLimit(1)
+
+                if isLocked && !space.isFullscreen {
+                    Image(systemName: "lock.fill")
+                        .font(.caption2.weight(.semibold))
+                        .foregroundStyle(colors.textPrimary)
                 }
+            }
+            .layoutPriority(1)
+
+            if space.isFullscreen {
+                LauncherTrailingLabel(
+                    showDisplayName
+                        ? String(format: String(localized: "%@ · Fullscreen"), space.displayName)
+                        : String(localized: "Fullscreen"),
+                    color: isSelected ? colors.textSecondary : colors.textTertiary
+                )
+            } else {
+                LauncherTrailingLabel(
+                    showDisplayName
+                        ? String(format: String(localized: "%@ · Space %lld"), space.displayName, space.num)
+                        : String(format: String(localized: "Space %lld"), space.num),
+                    color: isSelected ? colors.textSecondary : colors.textTertiary
+                )
             }
 
             Spacer()
 
-            if let shortcut = shortcutText {
-                KeycapView(text: LocalizedStringKey(shortcut), isSelected: isSelected)
-            } else {
-                KeycapView(text: "Switch ↵", isSelected: isSelected)
-            }
         }
-        .padding(.horizontal, 8)
-        .padding(.vertical, 8)
-        .background(
-            ZStack {
-                if isSelected {
-                    RoundedRectangle(cornerRadius: 8, style: .continuous)
-                        .fill(Color.primary.opacity(0.08))
-                    RoundedRectangle(cornerRadius: 8, style: .continuous)
-                        .stroke(Color.primary.opacity(0.15), lineWidth: 1)
-                } else if isHovered {
-                    RoundedRectangle(cornerRadius: 8, style: .continuous)
-                        .fill(Color.primary.opacity(0.05))
-                }
-            }
-        )
+        .padding(.horizontal, LauncherLayout.rowHorizontalPadding)
+        .padding(.vertical, LauncherLayout.rowVerticalPadding)
+        .launcherRowSurface(isSelected: isSelected, isHovered: isHovered && !ignoresHover)
+        .launcherCommandNumberOverlay(shortcutNumber)
         .onHover { hovering in
             isHovered = hovering
         }
@@ -243,11 +170,13 @@ struct SpaceRowView: View {
 }
 
 private struct CurrentSpaceIndicator: View {
+    @Environment(\.colorScheme) private var colorScheme
+
     var body: some View {
         Circle()
             .stroke(Color.blue, lineWidth: 2)
-            .frame(width: 20, height: 20)
-            .frame(width: 32, height: 32)
+            .frame(width: 18, height: 18)
+            .frame(width: LauncherLayout.rowIconSlot, height: LauncherLayout.rowIconSlot)
             .accessibilityLabel(Text("Current space"))
     }
 }
@@ -257,21 +186,15 @@ struct WindowStateBadge: View {
     let color: Color
 
     var body: some View {
-        Text(label)
-            .font(.footnote)
-            .fontWeight(.semibold)
-            .foregroundColor(color)
-            .padding(.horizontal, 10)
-            .padding(.vertical, 4)
-            .background(color.opacity(0.15))
-            .cornerRadius(4)
+        LauncherStatusLabel(text: label, color: color)
     }
 }
 
 struct WindowRowView: View {
     let window: WindowEntry
     let isSelected: Bool
-    var shortcutText: String? = nil
+    var shortcutNumber: Int? = nil
+    var ignoresHover: Bool = false
     @Environment(\.colorScheme) var colorScheme
     @State private var isHovered = false
     
@@ -280,25 +203,21 @@ struct WindowRowView: View {
     }
     
     var body: some View {
-        HStack(spacing: 12) {
+        HStack(spacing: LauncherLayout.rowSpacing) {
             let appIcon = NSWorkspace.shared.icon(forFile: window.appPath)
-            Image(nsImage: appIcon)
-                .resizable()
-                .aspectRatio(contentMode: .fit)
-                .frame(width: 32, height: 32)
+            LauncherIconSlot(image: appIcon)
 
-            VStack(alignment: .leading, spacing: 2) {
-                Text(window.title.isEmpty ? String(localized: "(No Title)") : window.title)
-                    .font(.body)
-                    .fontWeight(.semibold)
-                    .foregroundColor(colors.textPrimary)
-                    .lineLimit(1)
+            Text(window.title.isEmpty ? String(localized: "(No Title)") : window.title)
+                .font(LauncherTypography.rowTitle)
+                .foregroundColor(colors.textPrimary)
+                .lineLimit(1)
+                .truncationMode(.middle)
 
-                Text(window.ownerName)
-                    .font(.subheadline)
-                    .foregroundColor(isSelected ? colors.textSecondary : colors.textTertiary)
-                    .lineLimit(1)
-            }
+            LauncherTrailingLabel(
+                window.ownerName,
+                color: isSelected ? colors.textSecondary : colors.textTertiary
+            )
+            .layoutPriority(1)
 
             Spacer()
 
@@ -312,28 +231,19 @@ struct WindowRowView: View {
                     WindowStateBadge(label: String(localized: "Full Screen"), color: .blue)
                 }
 
-                if let shortcut = shortcutText {
-                    KeycapView(text: LocalizedStringKey(shortcut), isSelected: isSelected)
-                } else {
-                    KeycapView(text: "Focus ↵", isSelected: isSelected)
-                }
             }
+            .padding(
+                .trailing,
+                shortcutNumber == nil
+                    ? 0
+                    : LauncherLayout.commandNumberIndicatorWidth
+                        + LauncherLayout.commandNumberIndicatorTrailingGap
+            )
         }
-        .padding(.horizontal, 8)
-        .padding(.vertical, 8)
-        .background(
-            ZStack {
-                if isSelected {
-                    RoundedRectangle(cornerRadius: 8, style: .continuous)
-                        .fill(Color.primary.opacity(0.08))
-                    RoundedRectangle(cornerRadius: 8, style: .continuous)
-                        .stroke(Color.primary.opacity(0.15), lineWidth: 1)
-                } else if isHovered {
-                    RoundedRectangle(cornerRadius: 8, style: .continuous)
-                        .fill(Color.primary.opacity(0.05))
-                }
-            }
-        )
+        .padding(.horizontal, LauncherLayout.rowHorizontalPadding)
+        .padding(.vertical, LauncherLayout.rowVerticalPadding)
+        .launcherRowSurface(isSelected: isSelected, isHovered: isHovered && !ignoresHover)
+        .launcherCommandNumberOverlay(shortcutNumber)
         .onHover { hovering in
             isHovered = hovering
         }
@@ -351,7 +261,7 @@ struct ConfirmBatchRowView: View {
     }
     
     var body: some View {
-        HStack(spacing: 12) {
+        HStack(spacing: 8) {
             Image(systemName: "checkmark.circle.fill")
                 .font(.body.weight(.semibold))
                 .foregroundColor(isSelected ? colors.greenText : .white)
@@ -360,16 +270,15 @@ struct ConfirmBatchRowView: View {
                 .cornerRadius(6)
             
             Text(verbatim: String(format: String(localized: "Confirm & Execute Batch Move (%lld windows)"), count))
-                .font(.body)
-                .fontWeight(.semibold)
+                .font(LauncherTypography.rowTitle)
                 .foregroundColor(isSelected ? .white : colors.greenText)
             
             Spacer()
             
-            KeycapView(text: "Run ↵", isSelected: isSelected, isGreenRow: true)
+            KeycapView(text: String(localized: "Run ↵"), isSelected: isSelected, isGreenRow: true)
         }
-        .padding(.horizontal, 8)
-        .padding(.vertical, 8)
+        .padding(.horizontal, LauncherLayout.rowHorizontalPadding)
+        .padding(.vertical, LauncherLayout.rowVerticalPadding + 1)
         .background(isSelected ? colors.greenText : (isHovered ? colors.greenText.opacity(0.5) : colors.greenText.opacity(0.06)))
         .cornerRadius(8)
         .overlay(
@@ -387,7 +296,8 @@ struct WindowBatchRowView: View {
     let isSelected: Bool
     let isStaged: Bool
     let stagedActionText: String
-    var shortcutText: String? = nil
+    var shortcutNumber: Int? = nil
+    var ignoresHover: Bool = false
     @Environment(\.colorScheme) var colorScheme
     @State private var isHovered = false
     
@@ -396,25 +306,21 @@ struct WindowBatchRowView: View {
     }
     
     var body: some View {
-        HStack(spacing: 12) {
+        HStack(spacing: LauncherLayout.rowSpacing) {
             let appIcon = NSWorkspace.shared.icon(forFile: window.appPath)
-            Image(nsImage: appIcon)
-                .resizable()
-                .aspectRatio(contentMode: .fit)
-                .frame(width: 32, height: 32)
+            LauncherIconSlot(image: appIcon)
 
-            VStack(alignment: .leading, spacing: 2) {
-                Text(window.title.isEmpty ? String(localized: "(No Title)") : window.title)
-                    .font(.body)
-                    .fontWeight(.semibold)
-                    .foregroundColor(colors.textPrimary)
-                    .lineLimit(1)
+            Text(window.title.isEmpty ? String(localized: "(No Title)") : window.title)
+                .font(LauncherTypography.rowTitle)
+                .foregroundColor(colors.textPrimary)
+                .lineLimit(1)
+                .truncationMode(.middle)
 
-                Text(window.ownerName)
-                    .font(.subheadline)
-                    .foregroundColor(isSelected ? colors.textSecondary : colors.textTertiary)
-                    .lineLimit(1)
-            }
+            LauncherTrailingLabel(
+                window.ownerName,
+                color: isSelected ? colors.textSecondary : colors.textTertiary
+            )
+            .layoutPriority(1)
 
             Spacer()
 
@@ -430,39 +336,26 @@ struct WindowBatchRowView: View {
                     }
                 }
 
-                if let shortcut = shortcutText {
-                    KeycapView(text: LocalizedStringKey(shortcut), isSelected: isSelected)
-                } else if isStaged {
-                    Text(stagedActionText)
-                        .font(.subheadline)
-                        .fontWeight(.semibold)
-                        .foregroundColor(colors.greenText)
-                        .padding(.horizontal, 8)
-                        .padding(.vertical, 3)
-                        .background(colors.greenText.opacity(0.12))
-                        .cornerRadius(6)
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 6)
-                                .stroke(colors.greenText.opacity(0.35), lineWidth: 1)
-                        )
+                if isStaged {
+                    LauncherStatusLabel(
+                        text: stagedActionText,
+                        color: colors.greenText,
+                        background: colors.greenText.opacity(0.12)
+                    )
                 }
             }
+            .padding(
+                .trailing,
+                shortcutNumber == nil
+                    ? 0
+                    : LauncherLayout.commandNumberIndicatorWidth
+                        + LauncherLayout.commandNumberIndicatorTrailingGap
+            )
         }
-        .padding(.horizontal, 8)
-        .padding(.vertical, 8)
-        .background(
-            ZStack {
-                if isSelected {
-                    RoundedRectangle(cornerRadius: 8, style: .continuous)
-                        .fill(Color.primary.opacity(0.08))
-                    RoundedRectangle(cornerRadius: 8, style: .continuous)
-                        .stroke(Color.primary.opacity(0.15), lineWidth: 1)
-                } else if isHovered {
-                    RoundedRectangle(cornerRadius: 8, style: .continuous)
-                        .fill(Color.primary.opacity(0.05))
-                }
-            }
-        )
+        .padding(.horizontal, LauncherLayout.rowHorizontalPadding)
+        .padding(.vertical, LauncherLayout.rowVerticalPadding)
+        .launcherRowSurface(isSelected: isSelected, isHovered: isHovered && !ignoresHover)
+        .launcherCommandNumberOverlay(shortcutNumber)
         .onHover { hovering in
             isHovered = hovering
         }
@@ -482,17 +375,15 @@ struct ListSectionHeader: View {
     var body: some View {
         HStack(spacing: 8) {
             Text(title)
-                .font(.system(size: 11, weight: .semibold))
+                .font(LauncherTypography.sectionHeader)
                 .foregroundColor(colors.textSecondary)
             
-            Text(subtitle)
-                .font(.system(size: 11))
-                .foregroundColor(colors.textSecondary)
+            LauncherTrailingLabel(subtitle, color: colors.textSecondary)
             
             Spacer()
         }
-        .padding(.horizontal, 8)
-        .padding(.top, isFirst ? 0 : 10)
-        .padding(.bottom, 4)
+        .padding(.horizontal, LauncherLayout.listHorizontalPadding)
+        .padding(.top, isFirst ? 0 : LauncherLayout.sectionHeaderSpacing)
+        .padding(.bottom, LauncherLayout.sectionHeaderBottomPadding)
     }
 }

@@ -66,6 +66,13 @@ enum DesktopRearrangementDirection {
             isBottomBarFocused = false
         }
     }
+    @Published var submenuSearchQuery: String = "" {
+        didSet {
+            spaceMenuSelectedIndex = 0
+            commandKSelectedIndex = 0
+            isKeyboardSelection = true
+        }
+    }
     @Published var spaceBarQuery: String = "" {
         didSet {
             selectedSpaceIndex = 0
@@ -73,6 +80,10 @@ enum DesktopRearrangementDirection {
         }
     }
     @Published var selectedRowIndex: Int = 0
+    // Keep the root command identity while a command page is open. The
+    // visible root order can change when command ranking is updated, so an
+    // index alone cannot reliably restore the selected command.
+    var rootCommandSelectionID: String?
     @Published var activeCommand: LauncherCommand? = nil {
         willSet {
             if activeCommand?.type == .batchMoveWindows && newValue?.type != .batchMoveWindows {
@@ -87,6 +98,9 @@ enum DesktopRearrangementDirection {
             selectedRowIndex = 0
             isKeyboardSelection = true
             isBottomBarFocused = false
+            if activeCommand?.type != .switchToDesktop {
+                pendingRearrangementDirections.removeAll()
+            }
             if activeCommand != nil {
                 loadData()
             }
@@ -98,22 +112,41 @@ enum DesktopRearrangementDirection {
     @Published var isLoadingData: Bool = false
     @Published var isKeyboardSelection: Bool = false
     @Published var isRearrangingSpace: Bool = false
+    @Published var isExecutingAction: Bool = false
     var rearrangementRecoveryWorkItem: DispatchWorkItem?
+    var pendingRearrangementDirections: [DesktopRearrangementDirection] = []
     
     @Published var showCommandNumbers: Bool = false
     @Published var isBottomBarFocused: Bool = false
     @Published var selectedSpaceIndex: Int = 0
+    private var commandNumberRevealTask: Task<Void, Never>?
+    var focusRequestWorkItem: DispatchWorkItem?
+    var focusRequestID = 0
+
+    private static let commandNumberRevealDelay: UInt64 = 400_000_000
+
+    func updateCommandModifier(isPressed: Bool) {
+        commandNumberRevealTask?.cancel()
+        commandNumberRevealTask = nil
+
+        guard isPressed else {
+            showCommandNumbers = false
+            return
+        }
+
+        guard !showCommandNumbers else { return }
+
+        commandNumberRevealTask = Task { [weak self] in
+            try? await Task.sleep(nanoseconds: Self.commandNumberRevealDelay)
+            guard !Task.isCancelled else { return }
+            self?.showCommandNumbers = true
+            self?.commandNumberRevealTask = nil
+        }
+    }
     
     // For batch window moves
     @Published var stagedMoves: [Int: BatchStagedAction] = [:]
-    @Published var stagingWindow: WindowEntry? = nil {
-        didSet {
-            searchQuery = ""
-            selectedRowIndex = 0
-            isKeyboardSelection = true
-            isBottomBarFocused = false
-        }
-    }
+    @Published var stagingWindow: WindowEntry? = nil
     @Published var isExecutingBatchMove: Bool = false
     var batchExecutionTask: Task<Void, Never>?
     
@@ -122,12 +155,56 @@ enum DesktopRearrangementDirection {
         didSet {
             if commandKTargetWindow != nil {
                 commandKSelectedIndex = 0
+            } else if oldValue != nil {
+                submenuSearchQuery = ""
             }
         }
     }
+    @Published var commandKTargetSpace: SpaceGroup? = nil {
+        didSet {
+            if commandKTargetSpace != nil {
+                commandKSelectedIndex = 0
+            } else if oldValue != nil {
+                submenuSearchQuery = ""
+            }
+        }
+    }
+    @Published var renameTargetSpace: SpaceGroup? = nil
+    @Published var isSpaceMenuOpen: Bool = false {
+        didSet {
+            if !isSpaceMenuOpen, oldValue {
+                submenuSearchQuery = ""
+            }
+        }
+    }
+    @Published var spaceMenuSelectedIndex: Int = 0
     @Published var commandKSelectedIndex: Int = 0
     @Published var isStagingForRestoreTo: Bool = false
     @Published var isExecutingRestoreToImmediately: Bool = false
+
+    var isCommandKPanelOpen: Bool {
+        commandKTargetWindow != nil || commandKTargetSpace != nil
+    }
+
+    var isSubmenuOpen: Bool {
+        isCommandKPanelOpen || isSpaceMenuOpen || renameTargetSpace != nil
+    }
+
+    var isLauncherBusy: Bool {
+        isRearrangingSpace || isExecutingBatchMove || isExecutingAction
+    }
+
+    var shouldShowCommandNumbersInMainList: Bool {
+        showCommandNumbers && !isSubmenuOpen && !isBottomBarFocused
+    }
+
+    var shouldShowCommandNumbersInSubmenu: Bool {
+        showCommandNumbers && isSubmenuOpen
+    }
+
+    var shouldIgnoreMainListHover: Bool {
+        isKeyboardSelection || isSubmenuOpen
+    }
     
     // Captured active window before launcher gains focus
     @Published var previouslyActiveWindow: (id: Int, pid: Int32, frame: CGRect)? = nil
@@ -150,7 +227,7 @@ enum DesktopRearrangementDirection {
     var terminatingApplicationPIDs = Set<Int32>()
     
     let allCommands: [LauncherCommand] = [
-        LauncherCommand(type: .switchToDesktop, title: NSLocalizedString("Switch Desktop", comment: ""), subtitle: NSLocalizedString("Select a desktop to switch to", comment: ""), iconName: "desktopcomputer", hasSubpage: true),
+        LauncherCommand(type: .switchToDesktop, title: NSLocalizedString("Switch Desktop", comment: ""), subtitle: NSLocalizedString("Select a desktop to switch to", comment: ""), iconName: "rectangle.dock", hasSubpage: true),
         LauncherCommand(type: .moveWindow, title: NSLocalizedString("Move Window", comment: ""), subtitle: NSLocalizedString("Move the active window to a selected space", comment: ""), iconName: "macwindow.and.cursorarrow", hasSubpage: true),
         LauncherCommand(type: .listWindows, title: NSLocalizedString("List Windows", comment: ""), subtitle: NSLocalizedString("Search and manage open application windows", comment: ""), iconName: "macwindow", hasSubpage: true),
         LauncherCommand(type: .batchMoveWindows, title: NSLocalizedString("Manage Windows", comment: ""), subtitle: NSLocalizedString("Stage and execute window operations across desktops", comment: ""), iconName: "macwindow.on.rectangle", hasSubpage: true),

@@ -53,7 +53,17 @@ enum SpaceAPIArgumentValidator {
             guard let kind = definition.parameters[item.key] else { return }
             let expected = kind.description
             switch item.value {
+            case .bool(let value) where kind == .boolean:
+                result[item.key] = value ? "true" : "false"
             case .string(let value):
+                if kind == .boolean {
+                    throw invalidParameter(
+                        method: method,
+                        name: item.key,
+                        expected: expected,
+                        message: "Parameter '\(item.key)' must be a Boolean."
+                    )
+                }
                 if kind == .positiveInteger, !isPositiveInteger(value, parameter: item.key) {
                     throw invalidParameter(
                         method: method,

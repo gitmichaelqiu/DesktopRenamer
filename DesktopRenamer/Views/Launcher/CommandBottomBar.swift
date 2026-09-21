@@ -12,19 +12,18 @@ struct CommandBottomBar: View {
         HStack(spacing: 8) {
             // Left side: Active command pill matching Raycast look
             if let active = viewModel.activeCommand {
-                HStack(spacing: 6) {
+                HStack(spacing: 2) {
                     HStack(spacing: 6) {
                         Image(systemName: active.iconName)
-                            .font(.subheadline.weight(.semibold))
-                            .foregroundColor(Color.accentColor)
-                        Text(active.title)
-                            .font(.subheadline)
-                            .fontWeight(.semibold)
+                            .font(.callout.weight(.medium))
                             .foregroundColor(colors.textPrimary)
+                        Text(active.title)
+                            .font(.callout.weight(.medium))
+                            .foregroundColor(colors.textSecondary)
                     }
-                    .modifier(BottomBarCapsule(isSelected: false, isActive: true, colorScheme: colorScheme))
-                    
-                    if let staging = viewModel.stagingWindow {
+                    .modifier(BottomBarCapsule(isSelected: false, isActive: false, colorScheme: colorScheme))
+
+                    if let staging = viewModel.stagingWindow, !viewModel.isSpaceMenuOpen {
                         Image(systemName: "chevron.right")
                             .font(.system(size: 9, weight: .semibold))
                             .foregroundColor(colors.textQuaternary)
@@ -35,72 +34,65 @@ struct CommandBottomBar: View {
                                 .foregroundColor(colors.greenText)
                             Text(String(format: NSLocalizedString("Move: %@", comment: ""), staging.ownerName))
                                 .font(.subheadline)
-                                .fontWeight(.semibold)
                                 .foregroundColor(colors.textPrimary)
                         }
                         .modifier(BottomBarCapsule(isSelected: false, isActive: false, colorScheme: colorScheme))
                     }
                 }
+                .padding(LauncherLayout.bottomBarCapsulePadding)
+                .launcherFrosted(in: Capsule())
             }
             
             Spacer()
             
             // Right side: Context-sensitive actions
             if let type = viewModel.activeCommand?.type {
-                switch type {
+                HStack(spacing: 2) {
+                    switch type {
                 case .switchToDesktop:
                     HStack(spacing: 8) {
                         HStack(spacing: 4) {
-                            Text(verbatim: String(localized: "Move Space Up"))
-                            Text("⌘⇧↑")
-                                .font(.system(.subheadline))
-                                .fontWeight(.bold)
-                        }
-                        .modifier(BottomBarCapsule(isSelected: false, isActive: false, colorScheme: colorScheme))
-
-                        HStack(spacing: 4) {
-                            Text(verbatim: String(localized: "Move Space Down"))
-                            Text("⌘⇧↓")
-                                .font(.system(.subheadline))
-                                .fontWeight(.bold)
-                        }
-                        .modifier(BottomBarCapsule(isSelected: false, isActive: false, colorScheme: colorScheme))
-
-                        HStack(spacing: 4) {
                             Text(verbatim: String(localized: "Switch Space"))
-                            Text("↵")
-                                .font(.system(.subheadline))
-                                .fontWeight(.bold)
+                            KeycapView(text: "↵", isSelected: false)
                         }
-                        .modifier(BottomBarCapsule(isSelected: false, isActive: false, colorScheme: colorScheme))
+                        .modifier(BottomBarCapsule(isSelected: false, isActive: false, colorScheme: colorScheme, isPrimaryAction: true))
                         .contentShape(Rectangle())
                         .onTapGesture {
                             viewModel.executeRowAction()
+                        }
+
+                        if let selectedSpace = viewModel.selectedSwitchDesktopSpace,
+                           !selectedSpace.isFullscreen {
+                            HStack(spacing: 4) {
+                                Text(verbatim: String(localized: "Actions"))
+                                KeycapView(text: "⌘K", isSelected: false)
+                            }
+                            .modifier(BottomBarCapsule(isSelected: false, isActive: false, colorScheme: colorScheme))
+                            .contentShape(Rectangle())
+                            .onTapGesture {
+                                viewModel.showCommandKPanel(isKeyboardInitiated: false)
+                            }
                         }
                     }
 
                 case .moveWindow:
                     HStack(spacing: 4) {
                         Text(verbatim: String(localized: "Move Window"))
-                        Text("↵")
-                            .font(.system(.subheadline))
-                            .fontWeight(.bold)
+                        KeycapView(text: "↵", isSelected: false)
                     }
-                    .modifier(BottomBarCapsule(isSelected: false, isActive: false, colorScheme: colorScheme))
+                    .modifier(BottomBarCapsule(isSelected: false, isActive: false, colorScheme: colorScheme, isPrimaryAction: true))
                     .contentShape(Rectangle())
                     .onTapGesture {
                         viewModel.executeRowAction()
                     }
 
                 case .listWindows:
-                    if viewModel.stagingWindow != nil {
+                    if viewModel.stagingWindow != nil && !viewModel.isSpaceMenuOpen {
                         HStack(spacing: 4) {
                             Text(verbatim: String(localized: "Move"))
-                            Text("↵")
-                                .font(.system(.subheadline))
-                                .fontWeight(.bold)
+                            KeycapView(text: "↵", isSelected: false)
                         }
-                        .modifier(BottomBarCapsule(isSelected: false, isActive: false, colorScheme: colorScheme))
+                        .modifier(BottomBarCapsule(isSelected: false, isActive: false, colorScheme: colorScheme, isPrimaryAction: true))
                         .contentShape(Rectangle())
                         .onTapGesture {
                             viewModel.executeRowAction()
@@ -109,50 +101,22 @@ struct CommandBottomBar: View {
                         HStack(spacing: 8) {
                             HStack(spacing: 4) {
                                 Text(verbatim: String(localized: "Focus"))
-                                Text("↵")
-                                    .font(.system(.subheadline))
-                                    .fontWeight(.bold)
+                                KeycapView(text: "↵", isSelected: false)
                             }
-                            .modifier(BottomBarCapsule(isSelected: false, isActive: false, colorScheme: colorScheme))
+                            .modifier(BottomBarCapsule(isSelected: false, isActive: false, colorScheme: colorScheme, isPrimaryAction: true))
                             .contentShape(Rectangle())
                             .onTapGesture {
                                 viewModel.executeRowAction()
                             }
                             
                             HStack(spacing: 4) {
-                                Text(verbatim: String(localized: "Move"))
-                                Text("⌘T")
-                                    .font(.system(.subheadline))
-                                    .fontWeight(.bold)
-                            }
-                            .modifier(BottomBarCapsule(isSelected: false, isActive: false, colorScheme: colorScheme))
-                            .contentShape(Rectangle())
-                            .onTapGesture {
-                                viewModel.moveSelectedListWindowToCurrentDesktop()
-                            }
-
-                            HStack(spacing: 4) {
-                                Text(verbatim: String(localized: "Move to..."))
-                                Text("⌘⇧T")
-                                    .font(.system(.subheadline))
-                                    .fontWeight(.bold)
-                            }
-                            .modifier(BottomBarCapsule(isSelected: false, isActive: false, colorScheme: colorScheme))
-                            .contentShape(Rectangle())
-                            .onTapGesture {
-                                viewModel.stageSelectedListWindowForMove()
-                            }
-                            
-                            HStack(spacing: 4) {
                                 Text(verbatim: String(localized: "Actions"))
-                                Text("⌘K")
-                                    .font(.system(.subheadline))
-                                    .fontWeight(.bold)
+                                KeycapView(text: "⌘K", isSelected: false)
                             }
                             .modifier(BottomBarCapsule(isSelected: false, isActive: false, colorScheme: colorScheme))
                             .contentShape(Rectangle())
                             .onTapGesture {
-                                viewModel.showCommandKPanel()
+                                viewModel.showCommandKPanel(isKeyboardInitiated: false)
                             }
                         }
                     }
@@ -160,11 +124,9 @@ struct CommandBottomBar: View {
                 case .renameCurrentSpace:
                     HStack(spacing: 4) {
                         Text(verbatim: String(localized: "Rename Space"))
-                        Text("↵")
-                            .font(.system(.subheadline))
-                            .fontWeight(.bold)
+                        KeycapView(text: "↵", isSelected: false)
                     }
-                    .modifier(BottomBarCapsule(isSelected: false, isActive: false, colorScheme: colorScheme))
+                    .modifier(BottomBarCapsule(isSelected: false, isActive: false, colorScheme: colorScheme, isPrimaryAction: true))
                     .contentShape(Rectangle())
                     .onTapGesture {
                         viewModel.executeRowAction()
@@ -172,11 +134,15 @@ struct CommandBottomBar: View {
                     
                 default:
                     EmptyView()
+                    }
                 }
+                .padding(LauncherLayout.bottomBarCapsulePadding)
+                .launcherFrosted(in: Capsule())
             }
         }
-        .padding(.horizontal, 18)
-        .padding(.vertical, 10)
-        .background(colors.bottomBarBg)
+        .padding(.horizontal, LauncherLayout.bottomBarHorizontalPadding)
+        .padding(.vertical, LauncherLayout.bottomBarVerticalPadding)
+        .frame(height: LauncherLayout.bottomBarHeight)
+        .animation(LauncherAnimation.capsule, value: viewModel.stagingWindow?.id ?? 0)
     }
 }

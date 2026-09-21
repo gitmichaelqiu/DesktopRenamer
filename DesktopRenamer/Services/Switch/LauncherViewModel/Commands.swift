@@ -49,49 +49,68 @@ extension LauncherViewModel {
         }
     }
     
-    var filteredSpaces: [SpaceGroup] {
-        var spaces = currentSpaces
-        if let staging = stagingWindow {
-            spaces = spaces.filter { $0.id != staging.space.id }
-        }
-
-        if searchQuery.isEmpty {
-            return spaces
-        } else {
-            let query = searchQuery.lowercased()
-            return spaces.filter {
-                matchesQuery(query, target: $0.name, pinyin: $0.pinyinName) ||
-                matchesQuery(query, target: $0.displayName, pinyin: $0.pinyinDisplayName) ||
-                "\($0.num)".contains(query)
-            }
-        }
+    var unfilteredSwitchSpaces: [SpaceGroup] {
+        guard let staging = stagingWindow else { return currentSpaces }
+        return currentSpaces.filter { $0.id != staging.space.id }
     }
 
-    /// Targets for moving a window must be ordinary desktops. Fullscreen
-    /// Spaces belong to the app that owns them and cannot receive an
-    /// arbitrary window through the launcher move commands.
-    var filteredMoveWindowSpaces: [SpaceGroup] {
-        filteredSpaces.filter { !$0.isFullscreen }
+    var unfilteredMoveWindowSpaces: [SpaceGroup] {
+        unfilteredSwitchSpaces.filter { !$0.isFullscreen }
     }
 
-    /// The top-level Move Window command operates on the window captured when
-    /// the launcher opened, so do not offer its source desktop as a target.
-    var filteredActiveWindowMoveSpaces: [SpaceGroup] {
+    var unfilteredActiveWindowMoveSpaces: [SpaceGroup] {
         guard let previousWindow = previouslyActiveWindow else {
-            return filteredMoveWindowSpaces
+            return unfilteredMoveWindowSpaces
         }
 
         let displayID = SpaceHelper.getWindowDisplayID(for: previousWindow.frame)
         let sourceSpaceID = displayID.flatMap { SpaceHelper.getCurrentSpaceID(for: $0) }
 
         guard let sourceSpaceID else {
-            return filteredMoveWindowSpaces
+            return unfilteredMoveWindowSpaces
         }
-        return filteredMoveWindowSpaces.filter { $0.id != sourceSpaceID }
+        return unfilteredMoveWindowSpaces.filter { $0.id != sourceSpaceID }
+    }
+
+    func filterSpaceGroups(_ spaces: [SpaceGroup], query: String) -> [SpaceGroup] {
+        guard !query.isEmpty else { return spaces }
+
+        let lowerQuery = query.lowercased()
+        return spaces.filter {
+            matchesQuery(lowerQuery, target: $0.name, pinyin: $0.pinyinName) ||
+            matchesQuery(lowerQuery, target: $0.displayName, pinyin: $0.pinyinDisplayName) ||
+            "\($0.num)".contains(lowerQuery)
+        }
+    }
+
+    var filteredSpaces: [SpaceGroup] {
+        filterSpaceGroups(unfilteredSwitchSpaces, query: searchQuery)
+    }
+
+    var shouldShowDisplayNameForSpaces: Bool {
+        Set(currentSpaces.map(\.displayID)).count > 1
+    }
+
+    /// Targets for moving a window must be ordinary desktops. Fullscreen
+    /// Spaces belong to the app that owns them and cannot receive an
+    /// arbitrary window through the launcher move commands.
+    var filteredMoveWindowSpaces: [SpaceGroup] {
+        filterSpaceGroups(unfilteredMoveWindowSpaces, query: searchQuery)
+    }
+
+    /// The top-level Move Window command operates on the window captured when
+    /// the launcher opened, so do not offer its source desktop as a target.
+    var filteredActiveWindowMoveSpaces: [SpaceGroup] {
+        filterSpaceGroups(unfilteredActiveWindowMoveSpaces, query: searchQuery)
     }
     
     var filteredStagedActions: [BatchStagedAction] {
-        let allStaged = stagedMoves.values.sorted { $0.window.title < $1.window.title }
+        let allStaged = stagedMoves.values.sorted {
+            if $0.window.title != $1.window.title {
+                return $0.window.title < $1.window.title
+            }
+            return $0.window.id < $1.window.id
+        }
         if searchQuery.isEmpty {
             return allStaged
         } else {
@@ -141,6 +160,68 @@ extension LauncherViewModel {
         
         return items
     }
+
+    /// Restores selection after a batch item changes sections or disappears.
+    ///
+    /// `batchMoveSelectableItems` puts staged windows before unstaged windows,
+    /// so the selected row's numeric index is not stable across a mutation.
+    /// Follow the next window from the pre-mutation order instead. If the
+    /// acted-on window was last, walk backwards to the last surviving window.
+    func restoreBatchMoveSelection(
+        afterActingOn index: Int,
+        in originalItems: [BatchMoveItem]
+    ) {
+        let items = batchMoveSelectableItems
+        guard !items.isEmpty else {
+            selectedRowIndex = 0
+            return
+        }
+
+        guard originalItems.indices.contains(index) else {
+            selectedRowIndex = min(max(index, 0), items.count - 1)
+            return
+        }
+
+        let actedOnWindowID = originalItems[index].windowID
+        let followingWindowIDs = originalItems.indices
+            .dropFirst(index + 1)
+            .map { originalItems[$0].windowID }
+        let precedingWindowIDs = originalItems.indices
+            .prefix(index)
+            .reversed()
+            .map { originalItems[$0].windowID }
+
+        for windowID in followingWindowIDs + precedingWindowIDs {
+            guard windowID != actedOnWindowID,
+                  let nextIndex = items.firstIndex(where: { $0.windowID == windowID }) else {
+                continue
+            }
+            selectedRowIndex = nextIndex
+            return
+        }
+
+        // The acted-on item is the only surviving item. Keeping the clamped
+        // row is the only meaningful selection in that case.
+        selectedRowIndex = min(max(index, 0), items.count - 1)
+    }
+
+    /// Restores the selected window when leaving a target-space submenu without
+    /// changing the batch list.
+    func restoreBatchMoveSelection(
+        toWindowID windowID: Int,
+        staged: Bool,
+        preferredIndex: Int
+    ) {
+        let items = batchMoveSelectableItems
+        if let index = items.firstIndex(where: { $0.windowID == windowID && $0.isStaged == staged }) {
+            selectedRowIndex = index
+            return
+        }
+
+        selectedRowIndex = items.isEmpty
+            ? 0
+            : min(max(preferredIndex, 0), items.count - 1)
+    }
     
     var batchMoveSections: [BatchMoveSection] {
         var sections: [BatchMoveSection] = []
@@ -153,6 +234,7 @@ extension LauncherViewModel {
         }
         if !stagedItems.isEmpty {
             sections.append(BatchMoveSection(
+                id: "staged",
                 title: String(localized: "Staged Moves (Pending)"),
                 subtitle: String(format: String(localized: "%lld items"), stagedItems.count),
                 items: stagedItems
@@ -174,6 +256,7 @@ extension LauncherViewModel {
             }
             if !spaceItems.isEmpty {
                 sections.append(BatchMoveSection(
+                    id: "space-\(space.id)",
                     title: space.name,
                     subtitle: String(format: String(localized: "%lld windows"), spaceItems.count),
                     items: spaceItems

@@ -133,15 +133,9 @@ struct EditAppExceptionView: View {
                     .frame(width: 40, height: 40)
                     .cornerRadius(8)
                 
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(exception.appName)
-                        .font(.title2)
-                        .fontWeight(.bold)
-                    Text(exception.bundleIdentifier)
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                        .monospaced()
-                }
+                Text(exception.appName)
+                    .font(.title2)
+                    .fontWeight(.bold)
                 Spacer()
             }
             .padding(.bottom, 5)
@@ -188,7 +182,7 @@ struct EditAppExceptionView: View {
                 
                 SettingsRow(
                     "Drag window slightly before switching",
-                    helperText: "For custom-drawn windows (like WeChat) that require mouse movement to start dragging. Enabling this may resolve some window movement failures."
+                    helperText: "Use this for apps whose windows need a small drag before they can be moved, such as WeChat."
                 ) {
                     Toggle("", isOn: Binding(
                         get: { exception.dragBeforeSwitch ?? false },
@@ -391,14 +385,8 @@ struct AppExceptionRow: View {
                 .frame(width: 20, height: 20)
                 .cornerRadius(4)
             
-            VStack(alignment: .leading, spacing: 2) {
-                Text(exception.appName)
-                    .font(.system(size: 13, weight: .medium))
-                Text(exception.bundleIdentifier)
-                    .font(.system(size: 10))
-                    .foregroundColor(.secondary)
-                    .lineLimit(1)
-            }
+            Text(exception.appName)
+                .font(.system(size: 13, weight: .medium))
             
             Spacer()
             
@@ -427,8 +415,9 @@ struct AppExceptionRow: View {
                 .help("Delete Exception")
             }
         }
-        .padding(.vertical, 8)
+        .padding(.vertical, 6)
         .padding(.horizontal, 12)
+        .frame(minHeight: 36)
     }
 }
 

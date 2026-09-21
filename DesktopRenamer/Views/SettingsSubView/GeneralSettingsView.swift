@@ -43,7 +43,7 @@ struct GeneralSettingsView: View {
                     SettingsRow(
                         "Hide menubar icon",
                         helperText:
-                            "By doing so, you can turn DesktopRenamer into a completely silent API app."
+                            "Hide the menu bar icon while DesktopRenamer continues running."
                     ) {
                         Toggle("", isOn: $isStatusBarHidden)
                             .labelsHidden()
@@ -98,7 +98,7 @@ struct GeneralSettingsView: View {
                 SettingsSection("Settings.General.Advanced") {
                     SettingsRow(
                         "Settings.General.Advanced.EnableAPI",
-                        helperText: "Allow other apps to get space names.",
+                        helperText: "Let other apps access your space names.",
                         requirements: [
                             .spaceAPI(isAvailable: spaceManager.spaceAPI != nil)
                         ]
@@ -113,7 +113,7 @@ struct GeneralSettingsView: View {
 
                     SettingsRow(
                         "Diagnostic report",
-                        helperText: "Start collection, reproduce the bug, then stop and save the full diagnostic report."
+                        helperText: "Capture a report to help diagnose issues."
                     ) {
                         Button("Open") {
                             showDiagnosticSheet = true

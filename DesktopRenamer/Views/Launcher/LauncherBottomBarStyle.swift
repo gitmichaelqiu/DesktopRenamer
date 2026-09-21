@@ -1,10 +1,30 @@
 import SwiftUI
 
+enum LauncherAnimation {
+    static let capsule = Animation.spring(response: 0.28, dampingFraction: 0.85)
+    static let submenu = Animation.easeOut(duration: 0.10)
+    static let submenuExit = Animation.easeIn(duration: 0.10)
+    static let submenuSwap = Animation.spring(response: 0.14, dampingFraction: 0.80, blendDuration: 0.01)
+    static let fade = Animation.easeOut(duration: 0.14)
+}
+
+extension AnyTransition {
+    static var launcherCapsule: AnyTransition {
+        .asymmetric(
+            insertion: .scale(scale: 0.92, anchor: .center).combined(with: .opacity),
+            removal: .scale(scale: 0.96, anchor: .center).combined(with: .opacity)
+        )
+    }
+
+}
+
 struct BottomBarCapsule: ViewModifier {
     let isSelected: Bool
     let isActive: Bool
     var isGreen: Bool = false
     let colorScheme: ColorScheme
+    var isHoverEnabled: Bool = true
+    var isPrimaryAction: Bool = false
 
     @State private var isHovered: Bool = false
 
@@ -13,46 +33,25 @@ struct BottomBarCapsule: ViewModifier {
     }
 
     func body(content: Content) -> some View {
+        let selectionFill = isGreen
+            ? greenBgColor.opacity(isSelected ? 1 : (isActive ? 0.15 : 0))
+            : Color.primary.opacity(isSelected ? 0.18 : (isActive ? 0.08 : 0))
+        let neutralText = Color.primary.opacity(0.60)
+        let showsHover = isHovered && isHoverEnabled
+
         content
-            .font(.subheadline)
-            .fontWeight(isSelected || isActive ? .semibold : .medium)
-            .padding(.horizontal, 12)
-            .frame(height: 26)
-            .background(
-                ZStack {
-                    if isGreen {
-                        if isSelected {
-                            greenBgColor.opacity(isHovered ? 0.9 : 1.0)
-                        } else if isActive {
-                            greenBgColor.opacity(isHovered ? 0.25 : 0.15)
-                        } else {
-                            Color.primary.opacity(isHovered ? 0.12 : 0.06)
-                        }
-                    } else {
-                        if isSelected {
-                            isActive ? Color.primary.opacity(0.24) : Color.primary.opacity(0.16)
-                        } else if isActive {
-                            Color.primary.opacity(isHovered ? 0.22 : 0.14)
-                        } else {
-                            Color.primary.opacity(isHovered ? 0.12 : 0.06)
-                        }
-                    }
-                }
-            )
+            .font(LauncherTypography.bar)
+            .padding(.horizontal, LauncherLayout.bottomBarControlHorizontalPadding)
+            .frame(height: LauncherLayout.bottomBarControlHeight)
+            .background(Capsule().fill(showsHover && !isSelected ? Color.primary.opacity(0.05) : selectionFill))
             .foregroundColor(
-                isGreen ? (isSelected ? .white : (isActive ? greenBgColor : (isHovered ? greenBgColor : .secondary)))
-                        : (isActive ? .primary : (isSelected || isHovered ? .primary : .secondary))
+                isGreen ? (isSelected ? .white : (isActive ? greenBgColor : (showsHover ? greenBgColor : .secondary)))
+                        : (isActive || isSelected || showsHover || isPrimaryAction ? .primary : neutralText)
             )
             .clipShape(Capsule())
-            .overlay(
-                Capsule()
-                    .strokeBorder(
-                        isGreen ? (isSelected ? Color.primary.opacity(0.15) : (isActive ? greenBgColor.opacity(isHovered ? 0.4 : 0.2) : Color.primary.opacity(isHovered ? 0.25 : 0.08)))
-                                : (isSelected ? (isActive ? Color.primary.opacity(0.48) : Color.primary.opacity(0.40)) : (isActive ? Color.primary.opacity(isHovered ? 0.35 : 0.22) : Color.primary.opacity(isHovered ? 0.25 : 0.08))),
-                        lineWidth: (isSelected && !isGreen) ? 1.5 : 1
-                    )
-            )
-            .shadow(color: isSelected ? (isGreen ? greenBgColor.opacity(0.25) : Color.primary.opacity(0.1)) : Color.clear, radius: 3, x: 0, y: 1)
+            .animation(LauncherAnimation.capsule, value: isSelected)
+            .animation(LauncherAnimation.fade, value: isActive)
+            .animation(LauncherAnimation.fade, value: showsHover)
             .onHover { hovering in
                 isHovered = hovering
             }

@@ -16,12 +16,12 @@ struct SwitchSettingsView: View {
     var body: some View {
         SettingsContainer(.sswitch) {
             VStack(alignment: .leading, spacing: 20) {
-                SettingsSection("Keyboard Shortcuts", helperText: "If you want to use Control + Arrow, disable the system's one in Settings → Keyboard → Keyboard Shortcuts... → Mission Control.") {
+                SettingsSection("Keyboard Shortcuts", helperText: "If you use Control + Arrow shortcuts, disable the matching Mission Control shortcuts in System Settings.") {
                     
                     SettingsRow(
                         "Switch to previous space",
                         requirements: [
-                            .accessibility(isGranted: permissionManager.isAccessibilityGranted)
+                            .accessibility(isGranted: permissionManager.hasEventInjectionPermission)
                         ]
                     ) {
                         HStack {
@@ -46,7 +46,7 @@ struct SwitchSettingsView: View {
                     SettingsRow(
                         "Switch to next space",
                         requirements: [
-                            .accessibility(isGranted: permissionManager.isAccessibilityGranted)
+                            .accessibility(isGranted: permissionManager.hasEventInjectionPermission)
                         ]
                     ) {
                         HStack {
@@ -70,9 +70,9 @@ struct SwitchSettingsView: View {
                     
                     SettingsRow(
                         "Switch to space number",
-                        helperText: "Press modifiers and a number to set the shortcut.",
+                        helperText: "Choose modifier keys followed by a number.",
                         requirements: [
-                            .accessibility(isGranted: permissionManager.isAccessibilityGranted)
+                            .accessibility(isGranted: permissionManager.hasEventInjectionPermission)
                         ]
                     ) {
                         HStack {
@@ -97,7 +97,7 @@ struct SwitchSettingsView: View {
                     SettingsRow(
                         "Move window to previous space",
                         requirements: [
-                            .accessibility(isGranted: permissionManager.isAccessibilityGranted)
+                            .accessibility(isGranted: permissionManager.hasEventInjectionPermission)
                         ]
                     ) {
                         HStack {
@@ -122,7 +122,7 @@ struct SwitchSettingsView: View {
                     SettingsRow(
                         "Move window to next space",
                         requirements: [
-                            .accessibility(isGranted: permissionManager.isAccessibilityGranted)
+                            .accessibility(isGranted: permissionManager.hasEventInjectionPermission)
                         ]
                     ) {
                         HStack {
@@ -146,9 +146,9 @@ struct SwitchSettingsView: View {
                     
                     SettingsRow(
                         "Move window to space number",
-                        helperText: "Press modifiers and a number to set the shortcut.",
+                        helperText: "Choose modifier keys followed by a number.",
                         requirements: [
-                            .accessibility(isGranted: permissionManager.isAccessibilityGranted)
+                            .accessibility(isGranted: permissionManager.hasEventInjectionPermission)
                         ]
                     ) {
                         HStack {
@@ -173,7 +173,7 @@ struct SwitchSettingsView: View {
                     SettingsRow(
                         "Move window to previous display",
                         requirements: [
-                            .accessibility(isGranted: permissionManager.isAccessibilityGranted)
+                            .accessibility(isGranted: permissionManager.hasEventInjectionPermission)
                         ]
                     ) {
                         HStack {
@@ -198,7 +198,7 @@ struct SwitchSettingsView: View {
                     SettingsRow(
                         "Move window to next display",
                         requirements: [
-                            .accessibility(isGranted: permissionManager.isAccessibilityGranted)
+                            .accessibility(isGranted: permissionManager.hasEventInjectionPermission)
                         ]
                     ) {
                         HStack {
@@ -221,9 +221,9 @@ struct SwitchSettingsView: View {
 
                 SettingsSection(nil) {
                     SettingsRow("Toggle lock for current space",
-                        helperText: "When a space switch is triggered by opening the window of an app, move that window back to the original space. This way, you are always focused in the locked space.",
+                        helperText: "When opening an app switches spaces, return its window to the original space.",
                         requirements: [
-                            .accessibility(isGranted: permissionManager.isAccessibilityGranted)
+                            .accessibility(isGranted: permissionManager.hasEventInjectionPermission)
                         ],
                         demoVideoName: "LockSpace"
                     ) {
@@ -249,7 +249,7 @@ struct SwitchSettingsView: View {
                     SettingsRow(
                         "Restore windows moved by lock",
                         requirements: [
-                            .accessibility(isGranted: permissionManager.isAccessibilityGranted)
+                            .accessibility(isGranted: permissionManager.hasEventInjectionPermission)
                         ]
                     ) {
                         HStack {
@@ -275,9 +275,9 @@ struct SwitchSettingsView: View {
                     SettingsRow(
                         "Enable switch gesture override",
                         helperText:
-                            "Replaces system switch gestures with instant space switching.\n\nRequired: You must disable 'Swipe between full screen apps' in System Settings → Trackpad → More Gestures or change to different number of fingers to prevent conflicts.\n\nNotice, you must click at the fullscreen app to make it active to avoid issues when leaving the app.",
+                            "Use instant space switching for trackpad gestures. Disable ‘Swipe between full-screen apps’ in System Settings → Trackpad → More Gestures to avoid conflicts.",
                         requirements: [
-                            .accessibility(isGranted: permissionManager.isAccessibilityGranted)
+                            .accessibility(isGranted: permissionManager.hasEventInjectionPermission)
                         ],
                         demoVideoName: "SwitchOverride"
                     ) {
@@ -289,7 +289,7 @@ struct SwitchSettingsView: View {
                     if gestureManager.isEnabled {
                         Divider()
 
-                        SettingsRow("Gesture type", helperText: "When set to 3 fingers, you can still use 4 fingers to trigger native swipe.") {
+                        SettingsRow("Gesture type", helperText: "With 3 fingers selected, 4 fingers can still trigger the native swipe.") {
                             Picker("", selection: $gestureManager.fingerCount) {
                                 Text("3 Fingers").tag(3)
                                 Text("4 Fingers").tag(4)
@@ -313,8 +313,7 @@ struct SwitchSettingsView: View {
                         SettingsRow(
                             "Move window when holding Option",
                             requirements: [
-                                .accessibility(isGranted: permissionManager.isAccessibilityGranted),
-                                .accessibilityEventPosting(isGranted: permissionManager.isEventSynthesisGranted),
+                                .accessibility(isGranted: permissionManager.hasEventInjectionPermission),
                                 .screenRecording(isGranted: permissionManager.isScreenCaptureGranted)
                             ]
                         ) {
@@ -327,7 +326,7 @@ struct SwitchSettingsView: View {
 
                         SliderSettingsRow(
                             "Switch duration",
-                            helperText: "Set to 0 for instant switching (bypasses the macOS sliding animation). Otherwise the velocity is calibrated per display (cached across restarts) so the actual switch time converges to this value.",
+                            helperText: "Set to 0 to switch instantly without the macOS animation.",
                             value: $gestureManager.switchDuration,
                             range: 0...1.0,
                             defaultValue: 0.30,
@@ -339,7 +338,7 @@ struct SwitchSettingsView: View {
                         
                         SliderSettingsRow(
                             "Switch override threshold",
-                            helperText: "Controls how much distance the fingers have to move before switching the desktop.",
+                            helperText: "Sets how far you need to move your fingers before switching.",
                             value: $gestureManager.swipeThreshold,
                             range: 0.05...0.50,
                             defaultValue: 0.10,
@@ -353,7 +352,7 @@ struct SwitchSettingsView: View {
                 SettingsSection("Grabbing") {
                     SliderSettingsRow(
                         "Grab offset X",
-                        helperText: "Adjust the position where the mouse grabs the window to move across spaces.",
+                        helperText: "Adjust where the pointer grabs a window when moving it between spaces.",
                         value: $spaceManager.grabOffsetX,
                         range: 0...100,
                         defaultValue: 6.0,
@@ -380,7 +379,6 @@ struct SwitchSettingsView: View {
                         }
                         .buttonStyle(.bordered)
                         .controlSize(.regular)
-                        .padding(.vertical, 2)
                     }
                     
                     if spaceManager.appGrabExceptions.isEmpty {

@@ -31,6 +31,10 @@ enum SettingsTab: String, CaseIterable, Identifiable {
     }
 }
 
+extension Notification.Name {
+    static let settingsTabRequested = Notification.Name("DesktopRenamer.settingsTabRequested")
+}
+
 // UI layout constants for consistent sizing.
 let sidebarWidth: CGFloat = 180
 let defaultSettingsWindowWidth = 750
@@ -108,6 +112,11 @@ struct SettingsView: View {
                     selectedTab = tabs.first
                 }
             }
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .settingsTabRequested)) { notification in
+            guard let tab = notification.object as? SettingsTab else { return }
+            searchText = ""
+            selectedTab = tab
         }
         .onAppear {
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {

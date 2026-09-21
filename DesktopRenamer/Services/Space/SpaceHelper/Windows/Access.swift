@@ -107,7 +107,7 @@ extension SpaceHelper {
                         )
                         return
                     }
-                    moveWindowToSpace(windowID: windowID, fromSpaceID: fromSpaceID, targetSpaceID: targetSpaceID)
+                    _ = moveWindowToSpace(windowID: windowID, fromSpaceID: fromSpaceID, targetSpaceID: targetSpaceID)
                 }
                 return true
             }

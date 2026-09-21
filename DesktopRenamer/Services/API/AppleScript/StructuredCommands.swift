@@ -8,7 +8,8 @@ private func scriptSpaceRecord(_ space: SpaceAPISpace) -> [String: Any] {
         "displayID": space.displayID,
         "displayName": space.displayName,
         "number": space.number,
-        "isFullscreen": space.isFullscreen
+        "isFullscreen": space.isFullscreen,
+        "isLocked": space.isLocked
     ]
     if let appName = space.appName {
         record["appName"] = appName
@@ -28,6 +29,7 @@ private func scriptWindowRecord(_ window: SpaceAPIWindow) -> [String: Any] {
         "pid": window.pid,
         "ownerName": window.ownerName,
         "spaceID": window.spaceID,
+        "spaceIDs": window.spaceIDs,
         "isMinimized": window.isMinimized,
         "isHidden": window.isHidden
     ]
@@ -47,6 +49,7 @@ private func scriptSnapshotRecord(_ snapshot: SpaceAPISnapshot) -> [String: Any]
         "timestamp": snapshot.timestamp,
         "currentSpaceIDs": snapshot.currentSpaceIDs,
         "currentSpaceName": snapshot.currentSpaceName,
+        "movedWindowsCount": snapshot.movedWindowsCount,
         "spaces": snapshot.spaces.map(scriptSpaceRecord)
     ]
 }
