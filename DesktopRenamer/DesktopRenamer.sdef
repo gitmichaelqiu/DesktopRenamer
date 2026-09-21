@@ -123,7 +123,7 @@
         
         <command name="get all spaces" code="DskRGAll" description="Get a list of all spaces in the legacy delimiter format">
             <cocoa class="DesktopRenamer.GetAllSpacesCommand"/>
-            <result type="text" description="List of spaces separated by newlines, format: ID~Name~DisplayName~Num~IsFullscreen~AppPath~IsLocked"/>
+            <result type="text" description="List of spaces separated by newlines, format: ID~Name~DisplayName~Num~IsFullscreen~AppPath"/>
         </command>
         
         <command name="rename space" code="DskRRnSp" description="Rename a specific space by ID">

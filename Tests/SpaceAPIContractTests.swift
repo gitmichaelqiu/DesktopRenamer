@@ -14,6 +14,7 @@ struct SpaceAPIContractTests {
     }
 
     private static func testMethodDefinitions() throws {
+        check(DesktopRenamerAPIContract.version == "1.1.0", "structured API contract version is current")
         let definitions = DesktopRenamerAPIContract.methodDefinitions
         let names = definitions.map(\.name)
         check(Set(names).count == names.count, "method names are unique")
