@@ -202,6 +202,12 @@ class LauncherWindowController: NSWindowController, NSWindowDelegate {
     
     func show() {
         guard let panel = window as? LauncherNSPanel else { return }
+
+        // A launcher shortcut can be pressed while the status-bar menu is
+        // tracking. End that menu session before presenting the launcher so
+        // the menu does not remain above the newly shown panel.
+        StatusBarController.statusItem.menu?.cancelTracking()
+
         let traceID = SpaceHelper.debugTraceID()
         SpaceHelper.debugTrace(
             traceID,
