@@ -21,8 +21,9 @@ extension SpaceManager {
 
         // Every explicit request invalidates observations from the previous
         // destination before WindowServer can deliver another delayed read.
-        // This also covers force-instant requests, which do not have a
-        // transaction completion notification of their own.
+        // This also covers instant requests. Instant synthetic gestures now
+        // retain a SpaceHelper transaction for direction verification, while
+        // non-gesture instant primitives still complete at this boundary.
         let observationGeneration = beginSpaceObservation(
             spaceID: space.id,
             displayID: space.displayID
@@ -61,10 +62,10 @@ extension SpaceManager {
                 )
             }
 
-            // Force-instant switches do not emit a completion notification.
-            // The switching primitive has been emitted by this point, so
-            // protect its destination immediately while WindowServer drains
-            // older monitor and retry snapshots.
+            // Protect the requested destination immediately while WindowServer
+            // drains older monitor snapshots. A synthetic gesture may still
+            // emit a later SpaceHelper completion after its authoritative
+            // direction check; that completion remains generation-fenced.
             if forceInstant {
                 confirmSpaceObservation(
                     displayID: space.displayID,
