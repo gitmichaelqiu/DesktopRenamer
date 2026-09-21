@@ -87,6 +87,7 @@ extension StatusBarController {
 
     func rebuildMenu() {
         let menu = NSMenu()
+        menu.delegate = self
         
         // Display-scoped space list for the menu.
         let currentDisplaySpaces = spaceManager.currentDisplaySpaces
@@ -263,7 +264,7 @@ extension StatusBarController {
     }
     
     @objc private func openLauncher() {
-        LauncherWindowController.shared.show()
+        LauncherWindowController.shared.showAfterStatusMenuDismissal()
     }
     
     @objc func selectSpace(_ sender: NSMenuItem) {
