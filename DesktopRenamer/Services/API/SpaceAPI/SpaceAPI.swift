@@ -4,20 +4,42 @@ import Combine
 
 @MainActor
 final class SpaceAPI {
-    nonisolated static let apiPrefix = "com.michaelqiu.DesktopRenamer"
+    nonisolated static let apiPrefix = DesktopRenamerAPIContract.preferredAPIPrefix
+    nonisolated static let legacyAPIPrefix = DesktopRenamerAPIContract.legacyAPIPrefix
     
     nonisolated static let getActiveSpace = Notification.Name("\(apiPrefix).GetActiveSpace")
+    nonisolated static let legacyGetActiveSpace = Notification.Name("\(legacyAPIPrefix).GetActiveSpace")
+    nonisolated static let getActiveSpaceNotifications = [getActiveSpace, legacyGetActiveSpace]
     nonisolated static let returnActiveSpace = Notification.Name("\(apiPrefix).ReturnActiveSpace")
+    nonisolated static let legacyReturnActiveSpace = Notification.Name("\(legacyAPIPrefix).ReturnActiveSpace")
+    nonisolated static let returnActiveSpaceNotifications = [returnActiveSpace, legacyReturnActiveSpace]
     nonisolated static let getSpaceList = Notification.Name("\(apiPrefix).GetSpaceList")
+    nonisolated static let legacyGetSpaceList = Notification.Name("\(legacyAPIPrefix).GetSpaceList")
+    nonisolated static let getSpaceListNotifications = [getSpaceList, legacyGetSpaceList]
     nonisolated static let returnSpaceList = Notification.Name("\(apiPrefix).ReturnSpaceList")
+    nonisolated static let legacyReturnSpaceList = Notification.Name("\(legacyAPIPrefix).ReturnSpaceList")
+    nonisolated static let returnSpaceListNotifications = [returnSpaceList, legacyReturnSpaceList]
     nonisolated static let getAPIVersion = Notification.Name("\(apiPrefix).GetAPIVersion")
+    nonisolated static let legacyGetAPIVersion = Notification.Name("\(legacyAPIPrefix).GetAPIVersion")
+    nonisolated static let getAPIVersionNotifications = [getAPIVersion, legacyGetAPIVersion]
     nonisolated static let returnAPIVersion = Notification.Name("\(apiPrefix).ReturnAPIVersion")
+    nonisolated static let legacyReturnAPIVersion = Notification.Name("\(legacyAPIPrefix).ReturnAPIVersion")
+    nonisolated static let returnAPIVersionNotifications = [returnAPIVersion, legacyReturnAPIVersion]
     nonisolated static let apiToggleNotification = Notification.Name("\(apiPrefix).ReturnAPIState")
+    nonisolated static let legacyAPIToggleNotification = Notification.Name("\(legacyAPIPrefix).ReturnAPIState")
+    nonisolated static let apiToggleNotifications = [apiToggleNotification, legacyAPIToggleNotification]
     nonisolated static let performCommand = Notification.Name("\(apiPrefix).PerformCommand")
+    nonisolated static let legacyPerformCommand = Notification.Name("\(legacyAPIPrefix).PerformCommand")
+    nonisolated static let performCommandNotifications = [performCommand, legacyPerformCommand]
     nonisolated static let commandResult = Notification.Name("\(apiPrefix).CommandResult")
+    nonisolated static let legacyCommandResult = Notification.Name("\(legacyAPIPrefix).CommandResult")
+    nonisolated static let commandResultNotifications = [commandResult, legacyCommandResult]
     nonisolated static let rpcRequest = DesktopRenamerAPIContract.rpcRequest
     nonisolated static let rpcResponse = DesktopRenamerAPIContract.rpcResponse
     nonisolated static let rpcEvent = DesktopRenamerAPIContract.rpcEvent
+    nonisolated static let rpcRequestNotifications = DesktopRenamerAPIContract.rpcRequestNotifications
+    nonisolated static let rpcResponseNotifications = DesktopRenamerAPIContract.rpcResponseNotifications
+    nonisolated static let rpcEventNotifications = DesktopRenamerAPIContract.rpcEventNotifications
     
     // Use weak to avoid retain cycle (SpaceManager owns API, API shouldn't strongly own SpaceManager)
     weak var spaceManager: SpaceManager?
@@ -48,10 +70,18 @@ final class SpaceAPI {
         let dnc = DistributedNotificationCenter.default()
         
         // Register observers for external requests.
-        dnc.addObserver(self, selector: #selector(handleActiveSpaceRequest), name: SpaceAPI.getActiveSpace, object: nil, suspensionBehavior: .deliverImmediately)
-        dnc.addObserver(self, selector: #selector(handleSpaceListRequest), name: SpaceAPI.getSpaceList, object: nil, suspensionBehavior: .deliverImmediately)
-        dnc.addObserver(self, selector: #selector(handleAPIVersionRequest), name: SpaceAPI.getAPIVersion, object: nil, suspensionBehavior: .deliverImmediately)
-        dnc.addObserver(self, selector: #selector(handleCommandRequest), name: SpaceAPI.performCommand, object: nil, suspensionBehavior: .deliverImmediately)
+        for name in SpaceAPI.getActiveSpaceNotifications {
+            dnc.addObserver(self, selector: #selector(handleActiveSpaceRequest), name: name, object: nil, suspensionBehavior: .deliverImmediately)
+        }
+        for name in SpaceAPI.getSpaceListNotifications {
+            dnc.addObserver(self, selector: #selector(handleSpaceListRequest), name: name, object: nil, suspensionBehavior: .deliverImmediately)
+        }
+        for name in SpaceAPI.getAPIVersionNotifications {
+            dnc.addObserver(self, selector: #selector(handleAPIVersionRequest), name: name, object: nil, suspensionBehavior: .deliverImmediately)
+        }
+        for name in SpaceAPI.performCommandNotifications {
+            dnc.addObserver(self, selector: #selector(handleCommandRequest), name: name, object: nil, suspensionBehavior: .deliverImmediately)
+        }
         
         // Broadcast space state changes to observers.
         spaceManager.$currentSpaceUUID
@@ -105,13 +135,16 @@ final class SpaceAPI {
 
     private func installRPCListener() {
         guard !rpcListenerInstalled else { return }
-        DistributedNotificationCenter.default().addObserver(
-            self,
-            selector: #selector(handleRPCRequest),
-            name: SpaceAPI.rpcRequest,
-            object: nil,
-            suspensionBehavior: .deliverImmediately
-        )
+        let dnc = DistributedNotificationCenter.default()
+        for name in SpaceAPI.rpcRequestNotifications {
+            dnc.addObserver(
+                self,
+                selector: #selector(handleRPCRequest),
+                name: name,
+                object: nil,
+                suspensionBehavior: .deliverImmediately
+            )
+        }
         rpcListenerInstalled = true
     }
     
@@ -128,11 +161,9 @@ final class SpaceAPI {
         }
         
         // Broadcast API availability updates.
-        DistributedNotificationCenter.default().postNotificationName(
-            SpaceAPI.apiToggleNotification,
-            object: nil,
-            userInfo: ["isEnabled": SpaceManager.isAPIEnabled],
-            deliverImmediately: true
+        postToChannels(
+            SpaceAPI.apiToggleNotifications,
+            userInfo: ["isEnabled": SpaceManager.isAPIEnabled]
         )
         print("SpaceAPI: Sent Toggle Notification -> \(SpaceManager.isAPIEnabled)")
     }
@@ -151,9 +182,7 @@ final class SpaceAPI {
             "spaceNumber": NSNumber(value: sm.getSpaceNum(spaceUUID))
         ]
         
-        DistributedNotificationCenter.default().postNotificationName(
-            SpaceAPI.returnActiveSpace, object: nil, userInfo: userInfo, deliverImmediately: true
-        )
+        postToChannels(SpaceAPI.returnActiveSpaceNotifications, userInfo: userInfo)
     }
     
     func broadcastSpaceList() {
@@ -174,22 +203,18 @@ final class SpaceAPI {
         }
         DiagnosticEventLog.shared.record(subsystem: "SpaceAPI", level: "info", "broadcastSpaceList: count=\(list.count)")
         
-        DistributedNotificationCenter.default().postNotificationName(
-            SpaceAPI.returnSpaceList,
-            object: nil,
-            userInfo: ["apiVersion": DesktopRenamerAPIVersion.current, "spaces": list],
-            deliverImmediately: true
+        postToChannels(
+            SpaceAPI.returnSpaceListNotifications,
+            userInfo: ["apiVersion": DesktopRenamerAPIVersion.current, "spaces": list]
         )
     }
 
     func broadcastAPIVersion() {
         guard SpaceManager.isAPIEnabled else { return }
 
-        DistributedNotificationCenter.default().postNotificationName(
-            SpaceAPI.returnAPIVersion,
-            object: nil,
-            userInfo: ["apiVersion": DesktopRenamerAPIVersion.current],
-            deliverImmediately: true
+        postToChannels(
+            SpaceAPI.returnAPIVersionNotifications,
+            userInfo: ["apiVersion": DesktopRenamerAPIVersion.current]
         )
     }
 
@@ -232,11 +257,9 @@ final class SpaceAPI {
     }
 
     private func postRPCPayload(_ payload: String) {
-        DistributedNotificationCenter.default().postNotificationName(
-            SpaceAPI.rpcEvent,
-            object: nil,
-            userInfo: [DesktopRenamerAPIContract.payloadKey: payload],
-            deliverImmediately: true
+        postToChannels(
+            SpaceAPI.rpcEventNotifications,
+            userInfo: [DesktopRenamerAPIContract.payloadKey: payload]
         )
     }
 
@@ -269,11 +292,9 @@ final class SpaceAPI {
             return
         }
 
-        DistributedNotificationCenter.default().postNotificationName(
-            SpaceAPI.rpcResponse,
-            object: nil,
-            userInfo: [DesktopRenamerAPIContract.payloadKey: payload],
-            deliverImmediately: true
+        postToChannels(
+            SpaceAPI.rpcResponseNotifications,
+            userInfo: [DesktopRenamerAPIContract.payloadKey: payload]
         )
     }
 
@@ -285,12 +306,14 @@ final class SpaceAPI {
         ]
         if let result { userInfo["result"] = result }
         if let error { userInfo["error"] = error }
-        DistributedNotificationCenter.default().postNotificationName(
-            SpaceAPI.commandResult,
-            object: nil,
-            userInfo: userInfo,
-            deliverImmediately: true
-        )
+        postToChannels(SpaceAPI.commandResultNotifications, userInfo: userInfo)
+    }
+
+    private func postToChannels(_ names: [Notification.Name], userInfo: [String: Any]) {
+        let dnc = DistributedNotificationCenter.default()
+        for name in names {
+            dnc.postNotificationName(name, object: nil, userInfo: userInfo, deliverImmediately: true)
+        }
     }
 
     func executeRPCMethod(_ request: SpaceAPIJSONRPCRequest) async throws -> SpaceAPIJSONValue {

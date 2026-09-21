@@ -65,9 +65,22 @@ enum DesktopRenamerAPIContract {
     static let payloadKey = "payload"
     static let maxPayloadBytes = 1_048_576
 
-    static let rpcRequest = Notification.Name("com.michaelqiu.DesktopRenamer.RPCRequest")
-    static let rpcResponse = Notification.Name("com.michaelqiu.DesktopRenamer.RPCResponse")
-    static let rpcEvent = Notification.Name("com.michaelqiu.DesktopRenamer.RPCEvent")
+    // The current bundle identifier is the preferred notification namespace.
+    // The legacy namespace remains available so existing integrations continue
+    // to work after the bundle-identifier migration.
+    static let preferredAPIPrefix = "dev.mqiu.DesktopRenamer"
+    static let legacyAPIPrefix = "com.michaelqiu.DesktopRenamer"
+
+    static let rpcRequest = Notification.Name(preferredAPIPrefix + ".RPCRequest")
+    static let rpcResponse = Notification.Name(preferredAPIPrefix + ".RPCResponse")
+    static let rpcEvent = Notification.Name(preferredAPIPrefix + ".RPCEvent")
+    static let legacyRPCRequest = Notification.Name(legacyAPIPrefix + ".RPCRequest")
+    static let legacyRPCResponse = Notification.Name(legacyAPIPrefix + ".RPCResponse")
+    static let legacyRPCEvent = Notification.Name(legacyAPIPrefix + ".RPCEvent")
+
+    static let rpcRequestNotifications = [rpcRequest, legacyRPCRequest]
+    static let rpcResponseNotifications = [rpcResponse, legacyRPCResponse]
+    static let rpcEventNotifications = [rpcEvent, legacyRPCEvent]
     static let windowActionNames = [
         "close", "minimize", "hide", "enterFullScreen", "exitFullScreen", "quit", "restore"
     ]

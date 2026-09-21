@@ -15,6 +15,25 @@ struct SpaceAPIContractTests {
 
     private static func testMethodDefinitions() throws {
         check(DesktopRenamerAPIContract.version == "1.1.0", "structured API contract version is current")
+        check(
+            DesktopRenamerAPIContract.preferredAPIPrefix == "dev.mqiu.DesktopRenamer",
+            "current API notification namespace is preferred"
+        )
+        check(
+            DesktopRenamerAPIContract.legacyAPIPrefix == "com.michaelqiu.DesktopRenamer",
+            "legacy API notification namespace remains identifiable"
+        )
+        check(
+            DesktopRenamerAPIContract.rpcRequestNotifications.count == 2 &&
+                DesktopRenamerAPIContract.rpcResponseNotifications.count == 2 &&
+                DesktopRenamerAPIContract.rpcEventNotifications.count == 2,
+            "structured API exposes preferred and legacy notification channels"
+        )
+        check(
+            DesktopRenamerAPIContract.rpcRequest.rawValue == "dev.mqiu.DesktopRenamer.RPCRequest" &&
+                DesktopRenamerAPIContract.legacyRPCRequest.rawValue == "com.michaelqiu.DesktopRenamer.RPCRequest",
+            "structured RPC request channels use the preferred and compatibility namespaces"
+        )
         let definitions = DesktopRenamerAPIContract.methodDefinitions
         let names = definitions.map(\.name)
         check(Set(names).count == names.count, "method names are unique")
