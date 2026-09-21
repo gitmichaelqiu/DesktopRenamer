@@ -236,15 +236,9 @@ extension StatusBarController {
         
         menu.addItem(NSMenuItem.separator())
         
-        let launcherShortcut = hotkeyManager.launcherShortcut
-        let launcherItem = NSMenuItem(
-            title: NSLocalizedString("Launcher...", comment: ""),
-            action: #selector(openLauncher),
-            keyEquivalent: launcherShortcut.menuKeyEquivalent
-        )
+        let launcherItem = NSMenuItem(title: NSLocalizedString("Launcher...", comment: ""), action: #selector(openLauncher), keyEquivalent: "")
         launcherItem.image = NSImage(systemSymbolName: "command", accessibilityDescription: nil)
         launcherItem.target = self
-        launcherItem.keyEquivalentModifierMask = launcherShortcut.modifiers
         menu.addItem(launcherItem)
         
         let settingsItem = NSMenuItem(title: NSLocalizedString("Menu.Settings", comment: ""), action: #selector(openSettingsWindow), keyEquivalent: ",")
