@@ -24,7 +24,7 @@ extension SpaceAPI {
                 return $0.num < $1.num
             }.map { space in
                 let name = manager.getSpaceName(space.id)
-                return "\(space.id)~\(name)~\(space.displayID)~\(space.num)~\(space.isFullscreen ? "1" : "0")~\(space.appPath ?? "")~\(manager.lockedSpaceIDs.contains(space.id) ? "1" : "0")"
+                return "\(space.id)~\(name)~\(space.displayID)~\(space.num)~\(space.isFullscreen ? "1" : "0")~\(space.appPath ?? "")"
             }.joined(separator: "\n")
         case "switchToSpace":
             guard let spaceID = arguments["spaceID"],

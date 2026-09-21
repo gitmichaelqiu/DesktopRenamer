@@ -255,13 +255,13 @@ class GetAllSpacesCommand: NSScriptCommand {
                 return $0.num < $1.num
             }
             
-            // Format: "UUID~Name~DisplayID~Num~IsFullscreen~AppPath~IsLocked"
+            // Format: "UUID~Name~DisplayID~Num~IsFullscreen~AppPath"
             let lines = sortedSpaces.map { space in
                 let name = manager.getSpaceName(space.id)
                 let displayName = getDisplayName(for: space.displayID)
 
                 // Keep the historical delimiter format for existing clients.
-                return "\(space.id)~\(name)~\(displayName)~\(space.num)~\(space.isFullscreen ? "1" : "0")~\(space.appPath ?? "")~\(manager.lockedSpaceIDs.contains(space.id) ? "1" : "0")"
+                return "\(space.id)~\(name)~\(displayName)~\(space.num)~\(space.isFullscreen ? "1" : "0")~\(space.appPath ?? "")"
             }
             return lines.joined(separator: "\n")
         }
