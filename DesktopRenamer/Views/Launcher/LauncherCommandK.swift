@@ -197,6 +197,14 @@ struct LauncherSpaceActionMenuView: View {
         }
     }
 
+    private func showsDivider(before item: ActionMenuItem) -> Bool {
+        guard item.index > 0,
+              case .space(.rename) = item.action else {
+            return false
+        }
+        return true
+    }
+
     private var title: String {
         let isLocked = AppDelegate.shared.spaceManager?.lockedSpaceIDs.contains(space.id) == true
         return space.name + (isLocked ? " 🔒" : "")
@@ -221,6 +229,9 @@ struct LauncherSpaceActionMenuView: View {
                 } else {
                     LazyVStack(spacing: LauncherLayout.submenuRowSpacing) {
                         ForEach(actionItems) { item in
+                            if showsDivider(before: item) {
+                                LauncherSubmenuSeparator()
+                            }
                             CommandKActionRowView(
                                 action: item.action,
                                 isSelected: viewModel.commandKSelectedIndex == item.index,
@@ -264,6 +275,19 @@ struct LauncherActionMenuView: View {
             ActionMenuItem(index: index, action: action)
         }
     }
+
+    private func showsDivider(before item: ActionMenuItem) -> Bool {
+        guard item.index > 0,
+              case .window = item.action else {
+            return false
+        }
+
+        let previousAction = actionItems[item.index - 1].action
+        if case .window = previousAction {
+            return false
+        }
+        return true
+    }
     
     var body: some View {
         LauncherSubmenuPanel {
@@ -284,6 +308,9 @@ struct LauncherActionMenuView: View {
                 } else {
                     LazyVStack(spacing: LauncherLayout.submenuRowSpacing) {
                         ForEach(actionItems) { item in
+                            if showsDivider(before: item) {
+                                LauncherSubmenuSeparator()
+                            }
                             CommandKActionRowView(
                                 action: item.action,
                                 isSelected: viewModel.commandKSelectedIndex == item.index,
