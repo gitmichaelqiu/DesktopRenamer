@@ -110,6 +110,7 @@ extension SpaceHelper {
                             + " after a missed monitor completion"
                     )
                 }
+                confirmGestureDirection(for: displayID)
                 markProgrammaticSwitchComplete(at: spaceID)
                 if !programmaticSwitchDestinationObserved {
                     scheduleSyntheticGestureSnapshotProbe(
@@ -184,40 +185,53 @@ extension SpaceHelper {
             } else {
                 movedInOppositeDirection = false
             }
-            let isStillAtSource = directionFromSource == 0
-            let reverseDirection = movedInOppositeDirection || (attempt > 1 && isStillAtSource)
+            let isStillAtSource = directionFromSource.map { $0 == 0 } ?? true
+            let directionAnomaly = movedInOppositeDirection || isStillAtSource
+            if directionAnomaly {
+                flipGestureDirection(for: displayID)
+            }
+            let inverted = gestureDirectionIsInverted(for: displayID)
 
-            DiagnosticEventLog.shared.record(
-                subsystem: "SpaceHelper",
-                level: "warning",
-                "Synthetic gesture has not reached "
-                    + spaceID
-                    + " for generation "
-                    + String(generation)
-                    + "; retrying synthetic gesture (attempt "
-                    + String(attempt)
-                    + "), reverseDirection="
-                    + String(reverseDirection)
-            )
-            print(
-                "SpaceHelper: Retrying dropped synthetic gesture to "
-                    + spaceID
-                    + " (attempt "
-                    + String(attempt)
-                    + ", reverseDirection="
-                    + String(reverseDirection)
-                    + ")"
-            )
-            performSpaceSwitchGesture(
-                steps: steps,
-                targetDisplayID: displayID,
-                forceInstant: false,
-                reverseDirection: reverseDirection
-            )
+            if directionAnomaly {
+                DiagnosticEventLog.shared.record(
+                    subsystem: "SpaceHelper",
+                    level: "warning",
+                    "Synthetic gesture direction anomaly for "
+                        + spaceID
+                        + " in generation "
+                        + String(generation)
+                        + "; retrying with flipped direction (attempt "
+                        + String(attempt)
+                        + "), inverted="
+                        + String(inverted)
+                )
+                print(
+                    "SpaceHelper: Retrying synthetic gesture to "
+                        + spaceID
+                        + " with flipped direction (attempt "
+                        + String(attempt)
+                        + ", inverted="
+                        + String(inverted)
+                        + ")"
+                )
+                performSpaceSwitchGesture(
+                    steps: steps,
+                    targetDisplayID: displayID,
+                    forceInstant: false
+                )
+            } else {
+                DiagnosticEventLog.shared.record(
+                    subsystem: "SpaceHelper",
+                    level: "info",
+                    "Synthetic gesture is moving toward "
+                        + spaceID
+                        + "; waiting for target confirmation"
+                )
+            }
 
-            // Always schedule one verification after the last allowed repost.
-            // It closes the transaction even if the normal monitor callback
-            // is lost during an extreme run.
+            // Continue verification even when the normal monitor callback is
+            // unavailable. No additional gesture is emitted unless the
+            // authoritative read identifies a direction anomaly.
             let followUpDelay =
                 attempt == maxAttempts ? min(retryInterval, 0.5) : retryInterval
             scheduleSyntheticGestureRetry(
