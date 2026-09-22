@@ -1,7 +1,14 @@
+import Darwin
 import Foundation
 import ServiceManagement
 
 enum DesktopRenamerIdentityMigration {
+    private enum StagedApplicationCleanupResult {
+        case completed
+        case retryable
+        case permissionDenied
+    }
+
     static func prepareLegacyBridgeLaunch() {
         guard DesktopRenamerIdentity.isLegacyBridge else { return }
 
@@ -67,7 +74,7 @@ enum DesktopRenamerIdentityMigration {
         let hasPendingCleanup = UserDefaults.standard.string(
             forKey: DesktopRenamerIdentity.migrationCleanupStagedPathKey
         ) != nil
-        let cleanupCompleted = cleanupStagedApplicationIfNeeded()
+        let cleanupResult = cleanupStagedApplicationIfNeeded()
 
         if hasPendingCleanup {
             UserDefaults.standard.set(
@@ -79,7 +86,7 @@ enum DesktopRenamerIdentityMigration {
             // The staged process is still alive when the canonical process
             // first launches. It will terminate after seeing the
             // acknowledgement; retry cleanup until that process has exited.
-            if !cleanupCompleted {
+            if case .retryable = cleanupResult {
                 retryPendingCleanup()
             }
         }
@@ -123,18 +130,18 @@ enum DesktopRenamerIdentityMigration {
                 return
             }
 
-            if !cleanupStagedApplicationIfNeeded() {
+            if case .retryable = cleanupStagedApplicationIfNeeded() {
                 retryPendingCleanup(attemptsRemaining: attemptsRemaining - 1)
             }
         }
     }
 
     @discardableResult
-    private static func cleanupStagedApplicationIfNeeded() -> Bool {
+    private static func cleanupStagedApplicationIfNeeded() -> StagedApplicationCleanupResult {
         guard let stagedPath = UserDefaults.standard.string(
             forKey: DesktopRenamerIdentity.migrationCleanupStagedPathKey
         ) else {
-            return true
+            return .completed
         }
 
         let stagedURL = URL(fileURLWithPath: stagedPath, isDirectory: true).standardizedFileURL
@@ -144,7 +151,7 @@ enum DesktopRenamerIdentityMigration {
             UserDefaults.standard.removeObject(
                 forKey: DesktopRenamerIdentity.migrationCleanupStagedPathKey
             )
-            return true
+            return .completed
         }
 
         do {
@@ -176,11 +183,29 @@ enum DesktopRenamerIdentityMigration {
             UserDefaults.standard.removeObject(
                 forKey: DesktopRenamerIdentity.migrationCleanupBackupPathKey
             )
-            return true
+            return .completed
         } catch {
+            if isPermissionDenied(error) {
+                // The staged app is in a protected location such as
+                // /Applications. Keep the durable cleanup marker so a later
+                // launch can retry after the user has resolved the
+                // permission, but do not spin and repeat the same warning.
+                return .permissionDenied
+            }
             print("IdentityMigration: staged application cleanup deferred: \(error)")
-            return false
+            return .retryable
         }
+    }
+
+    private static func isPermissionDenied(_ error: Error) -> Bool {
+        let nsError = error as NSError
+        if nsError.domain == NSCocoaErrorDomain,
+           nsError.code == CocoaError.Code.fileWriteNoPermission.rawValue {
+            return true
+        }
+
+        return nsError.domain == NSPOSIXErrorDomain
+            && (nsError.code == EPERM || nsError.code == EACCES)
     }
 
     private static func isSparkleKey(_ key: String) -> Bool {

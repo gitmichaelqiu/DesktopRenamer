@@ -258,9 +258,16 @@ extension SpaceHelper {
             traceID,
             "startSpaceSwitch target=\(spaceID), display=\(displayID), from=\(context.liveCurrentSpaceID ?? "nil"), steps=\(context.steps.map(String.init) ?? "nil"), forceInstant=\(forceInstant), fullscreen=\(context.targetIsFullscreen)"
         )
+        let usesSyntheticGesture = !isDragging
+            && (context.steps.map { $0 != 0 } ?? false)
         let generation: UInt64?
 
-        if forceInstant {
+        // `forceInstant` controls gesture velocity. A synthetic gesture still
+        // needs a transaction so the authoritative WindowServer read can
+        // detect a dropped or opposite-direction event and retry it. Without
+        // this, instant launcher, AppleScript, SpaceAPI, and status-bar
+        // requests could never recover from the macOS 27 direction variant.
+        if forceInstant && !usesSyntheticGesture {
             generation = nil
             isSwitching = false
             programmaticSwitchDestinationObserved = false
@@ -302,7 +309,8 @@ extension SpaceHelper {
         // gesture as the primary path for fullscreen transitions too; the
         // WindowServer accepts it in the normal case and preserves the
         // native animation.
-        if !isDragging, let steps = context.steps, steps != 0 {
+        if usesSyntheticGesture, let steps = context.steps, steps != 0 {
+            let gestureLayout = gestureDirectionLayout()
             if let generation {
                 DiagnosticEventLog.shared.record(
                     subsystem: "SpaceHelper",
@@ -321,7 +329,8 @@ extension SpaceHelper {
             performSpaceSwitchGesture(
                 steps: steps,
                 targetDisplayID: displayID,
-                forceInstant: forceInstant
+                forceInstant: forceInstant,
+                gestureLayout: gestureLayout
             )
             if let generation {
                 let involvesFullscreen =
@@ -332,11 +341,14 @@ extension SpaceHelper {
                 scheduleSyntheticGestureRetry(
                     spaceID: spaceID,
                     displayID: displayID,
+                    sourceSpaceID: context.liveCurrentSpaceID,
                     generation: generation,
+                    forceInstant: forceInstant,
+                    gestureLayout: gestureLayout,
                     attempt: 1,
                     scheduledDelay: retryDelay,
                     retryInterval: retryDelay,
-                    maxAttempts: involvesFullscreen ? 2 : 1,
+                    maxAttempts: involvesFullscreen ? 3 : 2,
                     snapshotProbeAttempt: 0
                 )
             }

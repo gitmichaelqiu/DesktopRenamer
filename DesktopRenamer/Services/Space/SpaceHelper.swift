@@ -78,10 +78,11 @@ class SpaceHelper {
     static var lastProgrammaticSwitchTime: TimeInterval = 0
     static var lastProgrammaticTargetSpaceID: String? = nil
     static var programmaticSwitchDisplayID: String?
-    // Unlike the transaction generation, this identity also covers
-    // force-instant switches, which do not enter the serialized transaction
-    // coordinator. It lets SpaceManager discard delayed start notifications
-    // from an older request after a rapid sequence of selections.
+    // Unlike the transaction generation, this identity also covers requests
+    // that use an instant primitive without entering the serialized
+    // transaction coordinator. It lets SpaceManager discard delayed start
+    // notifications from an older request after a rapid sequence of
+    // selections.
     static var nextProgrammaticSwitchRequestID: UInt64 = 0
     static var lastProgrammaticSwitchRequestID: UInt64?
     // Window moves intentionally change the active space. Keep this separate
