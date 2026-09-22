@@ -69,6 +69,8 @@ extension SpaceHelper {
         displayID: String,
         sourceSpaceID: String?,
         generation: UInt64,
+        forceInstant: Bool,
+        gestureLayout: String,
         attempt: Int,
         scheduledDelay: TimeInterval,
         retryInterval: TimeInterval,
@@ -91,6 +93,8 @@ extension SpaceHelper {
                     displayID: displayID,
                     sourceSpaceID: sourceSpaceID,
                     generation: generation,
+                    forceInstant: forceInstant,
+                    gestureLayout: gestureLayout,
                     attempt: attempt,
                     retryInterval: retryInterval,
                     maxAttempts: maxAttempts,
@@ -110,7 +114,7 @@ extension SpaceHelper {
                             + " after a missed monitor completion"
                     )
                 }
-                confirmGestureDirection(for: displayID)
+                confirmGestureDirection(for: displayID, layout: gestureLayout)
                 markProgrammaticSwitchComplete(at: spaceID)
                 if !programmaticSwitchDestinationObserved {
                     scheduleSyntheticGestureSnapshotProbe(
@@ -118,6 +122,8 @@ extension SpaceHelper {
                         displayID: displayID,
                         sourceSpaceID: sourceSpaceID,
                         generation: generation,
+                        forceInstant: forceInstant,
+                        gestureLayout: gestureLayout,
                         attempt: attempt,
                         retryInterval: retryInterval,
                         maxAttempts: maxAttempts,
@@ -133,6 +139,8 @@ extension SpaceHelper {
                     displayID: displayID,
                     sourceSpaceID: sourceSpaceID,
                     generation: generation,
+                    forceInstant: forceInstant,
+                    gestureLayout: gestureLayout,
                     attempt: attempt,
                     retryInterval: retryInterval,
                     maxAttempts: maxAttempts,
@@ -151,6 +159,8 @@ extension SpaceHelper {
                     displayID: displayID,
                     sourceSpaceID: sourceSpaceID,
                     generation: generation,
+                    forceInstant: forceInstant,
+                    gestureLayout: gestureLayout,
                     attempt: attempt,
                     retryInterval: retryInterval,
                     maxAttempts: maxAttempts,
@@ -188,9 +198,9 @@ extension SpaceHelper {
             let isStillAtSource = directionFromSource.map { $0 == 0 } ?? true
             let directionAnomaly = movedInOppositeDirection || isStillAtSource
             if directionAnomaly {
-                flipGestureDirection(for: displayID)
+                flipGestureDirection(for: displayID, layout: gestureLayout)
             }
-            let inverted = gestureDirectionIsInverted(for: displayID)
+            let inverted = gestureDirectionIsInverted(for: displayID, layout: gestureLayout)
 
             if directionAnomaly {
                 DiagnosticEventLog.shared.record(
@@ -217,7 +227,8 @@ extension SpaceHelper {
                 performSpaceSwitchGesture(
                     steps: steps,
                     targetDisplayID: displayID,
-                    forceInstant: false
+                    forceInstant: forceInstant,
+                    gestureLayout: gestureLayout
                 )
             } else {
                 DiagnosticEventLog.shared.record(
@@ -239,6 +250,8 @@ extension SpaceHelper {
                 displayID: displayID,
                 sourceSpaceID: sourceSpaceID,
                 generation: generation,
+                forceInstant: forceInstant,
+                gestureLayout: gestureLayout,
                 attempt: attempt + 1,
                 scheduledDelay: followUpDelay,
                 retryInterval: retryInterval,
@@ -255,6 +268,8 @@ extension SpaceHelper {
         displayID: String,
         sourceSpaceID: String?,
         generation: UInt64,
+        forceInstant: Bool,
+        gestureLayout: String,
         attempt: Int,
         retryInterval: TimeInterval,
         maxAttempts: Int,
@@ -284,6 +299,8 @@ extension SpaceHelper {
             displayID: displayID,
             sourceSpaceID: sourceSpaceID,
             generation: generation,
+            forceInstant: forceInstant,
+            gestureLayout: gestureLayout,
             attempt: attempt,
             scheduledDelay: 0.12,
             retryInterval: retryInterval,

@@ -310,6 +310,7 @@ extension SpaceHelper {
         // WindowServer accepts it in the normal case and preserves the
         // native animation.
         if usesSyntheticGesture, let steps = context.steps, steps != 0 {
+            let gestureLayout = gestureDirectionLayout()
             if let generation {
                 DiagnosticEventLog.shared.record(
                     subsystem: "SpaceHelper",
@@ -328,7 +329,8 @@ extension SpaceHelper {
             performSpaceSwitchGesture(
                 steps: steps,
                 targetDisplayID: displayID,
-                forceInstant: forceInstant
+                forceInstant: forceInstant,
+                gestureLayout: gestureLayout
             )
             if let generation {
                 let involvesFullscreen =
@@ -341,6 +343,8 @@ extension SpaceHelper {
                     displayID: displayID,
                     sourceSpaceID: context.liveCurrentSpaceID,
                     generation: generation,
+                    forceInstant: forceInstant,
+                    gestureLayout: gestureLayout,
                     attempt: 1,
                     scheduledDelay: retryDelay,
                     retryInterval: retryDelay,

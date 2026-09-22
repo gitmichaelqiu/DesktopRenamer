@@ -94,31 +94,42 @@ extension SpaceHelper {
         return getCurrentSpaceIDsByDisplay().count == 1
     }
 
-    private static func gestureDirectionPreferenceKey(for displayID: String) -> String {
+    static func gestureDirectionLayout() -> String {
+        usesSharedDisplaySpaces() ? "shared" : "separate"
+    }
+
+    private static func gestureDirectionPreferenceKey(
+        for displayID: String,
+        layout: String
+    ) -> String {
         let os = ProcessInfo.processInfo.operatingSystemVersionString
-        let layout = usesSharedDisplaySpaces() ? "shared" : "separate"
         return "\(gestureDirectionPreferencePrefix).\(os).\(layout).\(displayID)"
     }
 
-    private static func defaultGestureDirectionInversion() -> Bool {
+    private static func defaultGestureDirectionInversion(layout: String) -> Bool {
         let os = ProcessInfo.processInfo.operatingSystemVersion
-        return os.majorVersion >= 27 && !usesSharedDisplaySpaces()
+        return os.majorVersion >= 27 && layout != "shared"
     }
 
-    static func gestureDirectionIsInverted(for displayID: String) -> Bool {
-        let key = gestureDirectionPreferenceKey(for: displayID)
+    static func gestureDirectionIsInverted(
+        for displayID: String,
+        layout: String? = nil
+    ) -> Bool {
+        let layout = layout ?? gestureDirectionLayout()
+        let key = gestureDirectionPreferenceKey(for: displayID, layout: layout)
         if let stored = UserDefaults.standard.object(forKey: key) as? Bool {
             return stored
         }
-        return defaultGestureDirectionInversion()
+        return defaultGestureDirectionInversion(layout: layout)
     }
 
     /// Records a direction anomaly. The next gesture uses the other
     /// convention, and the preference remains there until a later anomaly
     /// proves that it is no longer valid.
-    static func flipGestureDirection(for displayID: String) {
-        let key = gestureDirectionPreferenceKey(for: displayID)
-        let oldValue = gestureDirectionIsInverted(for: displayID)
+    static func flipGestureDirection(for displayID: String, layout: String? = nil) {
+        let layout = layout ?? gestureDirectionLayout()
+        let key = gestureDirectionPreferenceKey(for: displayID, layout: layout)
+        let oldValue = gestureDirectionIsInverted(for: displayID, layout: layout)
         let newValue = !oldValue
         UserDefaults.standard.set(newValue, forKey: key)
         DiagnosticEventLog.shared.record(
@@ -128,9 +139,10 @@ extension SpaceHelper {
         )
     }
 
-    static func confirmGestureDirection(for displayID: String) {
-        let key = gestureDirectionPreferenceKey(for: displayID)
-        let value = gestureDirectionIsInverted(for: displayID)
+    static func confirmGestureDirection(for displayID: String, layout: String? = nil) {
+        let layout = layout ?? gestureDirectionLayout()
+        let key = gestureDirectionPreferenceKey(for: displayID, layout: layout)
+        let value = gestureDirectionIsInverted(for: displayID, layout: layout)
         UserDefaults.standard.set(value, forKey: key)
     }
 
@@ -166,13 +178,18 @@ extension SpaceHelper {
     static func performSpaceSwitchGesture(
         steps: Int,
         targetDisplayID: String,
-        forceInstant: Bool = false
+        forceInstant: Bool = false,
+        gestureLayout: String? = nil
     ) {
-        let invertDirection = gestureDirectionIsInverted(for: targetDisplayID)
+        let gestureLayout = gestureLayout ?? gestureDirectionLayout()
+        let invertDirection = gestureDirectionIsInverted(
+            for: targetDisplayID,
+            layout: gestureLayout
+        )
         DiagnosticEventLog.shared.record(
             subsystem: "SpaceHelper",
             level: "info",
-            "gesture steps=\(steps) display=\(targetDisplayID) sharedSpaces=\(usesSharedDisplaySpaces()) inverted=\(invertDirection)"
+            "gesture steps=\(steps) display=\(targetDisplayID) layout=\(gestureLayout) inverted=\(invertDirection)"
         )
         if steps == 0 { return }
 
