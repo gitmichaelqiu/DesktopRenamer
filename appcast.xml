@@ -13,6 +13,20 @@
             <sparkle:releaseNotesLink>https://github.com/gitmichaelqiu/DesktopRenamer/releases/tag/v1.14.0-bridge</sparkle:releaseNotesLink>
         </item>
         <item>
+            <title>1.15.1</title>
+            <pubDate>Tue, 22 Sep 2026 22:49:06 +0800</pubDate>
+            <sparkle:version>41</sparkle:version>
+            <sparkle:shortVersionString>1.15.1</sparkle:shortVersionString>
+            <sparkle:minimumSystemVersion>13.0</sparkle:minimumSystemVersion>
+            <sparkle:channel>dev-mqiu</sparkle:channel>
+            <desktoprenamer:targetBundleIdentifier>dev.mqiu.DesktopRenamer</desktoprenamer:targetBundleIdentifier>
+            <enclosure url="https://github.com/gitmichaelqiu/DesktopRenamer/releases/download/v1.15.1/DesktopRenamer.1.15.1.dmg" length="58445156" type="application/octet-stream" sparkle:edSignature="VIakcrvUmJNtOkilHfYzkEj9U3cmPItbmK5Igz8TQ6Ean6UQDobcZyXRlCegwDIK1690QkorI59yzKH0GCVRCA=="/>
+            <sparkle:deltas>
+                <enclosure url="https://raw.githubusercontent.com/gitmichaelqiu/DesktopRenamer/main/DesktopRenamer/Resources/Sparkle/DesktopRenamer41-40.delta" sparkle:deltaFrom="40" length="346710" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="977824" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,uk" sparkle:edSignature="01nANag+Sd8IOAw/slhN3vkA+g4eXPpdEiBGEUCxuIgMCJ/CI14hTju/TfdYIi9xHK68vyD0iO2UzeHvXHTBBQ=="/>
+            </sparkle:deltas>
+            <sparkle:releaseNotesLink>https://github.com/gitmichaelqiu/DesktopRenamer/releases/tag/v1.15.1</sparkle:releaseNotesLink>
+        </item>
+        <item>
             <title>1.15.0</title>
             <pubDate>Mon, 21 Sep 2026 11:58:12 +0800</pubDate>
             <sparkle:version>40</sparkle:version>
