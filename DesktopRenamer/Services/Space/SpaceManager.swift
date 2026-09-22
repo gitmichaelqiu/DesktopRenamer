@@ -96,9 +96,9 @@ class SpaceManager: ObservableObject {
     var lastManualSwitchTargetUUID: String? = nil
     var activeProgrammaticSwitchGeneration: UInt64?
     // A confirmed destination is protected from older monitor/retry reads on
-    // the same display. The pending request is separate while a non-instant
-    // transaction is settling; force-instant switches confirm at the request
-    // boundary because they do not emit a completion notification.
+    // the same display. The pending request is separate while a transaction
+    // is settling; non-gesture instant primitives still confirm at the
+    // request boundary because they do not emit a completion notification.
     var confirmedSpaceObservationFence = SpaceObservationFence()
     var nextSpaceObservationGeneration: UInt64 = 0
     var pendingProgrammaticSpaceSwitches: [String: (spaceID: String, generation: UInt64)] = [:]

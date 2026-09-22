@@ -81,6 +81,71 @@ extension SpaceHelper {
         return false
     }
     
+    private static let gestureDirectionPreferencePrefix =
+        "dev.mqiu.DesktopRenamer.spaceGestureDirectionInverted"
+
+    /// Shared Spaces expose one managed display to CGS even when multiple
+    /// physical displays are connected. macOS 27 release builds use the
+    /// pre-beta gesture direction in that layout, while the existing
+    /// augmented-event compensation remains the correct default for the
+    /// separate-Space layout.
+    static func usesSharedDisplaySpaces() -> Bool {
+        guard NSScreen.screens.count > 1 else { return false }
+        return getCurrentSpaceIDsByDisplay().count == 1
+    }
+
+    static func gestureDirectionLayout() -> String {
+        usesSharedDisplaySpaces() ? "shared" : "separate"
+    }
+
+    private static func gestureDirectionPreferenceKey(
+        for displayID: String,
+        layout: String
+    ) -> String {
+        let os = ProcessInfo.processInfo.operatingSystemVersionString
+        return "\(gestureDirectionPreferencePrefix).\(os).\(layout).\(displayID)"
+    }
+
+    private static func defaultGestureDirectionInversion(layout: String) -> Bool {
+        let os = ProcessInfo.processInfo.operatingSystemVersion
+        return os.majorVersion >= 27 && layout != "shared"
+    }
+
+    static func gestureDirectionIsInverted(
+        for displayID: String,
+        layout: String? = nil
+    ) -> Bool {
+        let layout = layout ?? gestureDirectionLayout()
+        let key = gestureDirectionPreferenceKey(for: displayID, layout: layout)
+        if let stored = UserDefaults.standard.object(forKey: key) as? Bool {
+            return stored
+        }
+        return defaultGestureDirectionInversion(layout: layout)
+    }
+
+    /// Records a direction anomaly. The next gesture uses the other
+    /// convention, and the preference remains there until a later anomaly
+    /// proves that it is no longer valid.
+    static func flipGestureDirection(for displayID: String, layout: String? = nil) {
+        let layout = layout ?? gestureDirectionLayout()
+        let key = gestureDirectionPreferenceKey(for: displayID, layout: layout)
+        let oldValue = gestureDirectionIsInverted(for: displayID, layout: layout)
+        let newValue = !oldValue
+        UserDefaults.standard.set(newValue, forKey: key)
+        DiagnosticEventLog.shared.record(
+            subsystem: "SpaceHelper",
+            level: "warning",
+            "gesture direction preference flipped: display=\(displayID), inverted=\(oldValue) -> \(newValue)"
+        )
+    }
+
+    static func confirmGestureDirection(for displayID: String, layout: String? = nil) {
+        let layout = layout ?? gestureDirectionLayout()
+        let key = gestureDirectionPreferenceKey(for: displayID, layout: layout)
+        let value = gestureDirectionIsInverted(for: displayID, layout: layout)
+        UserDefaults.standard.set(value, forKey: key)
+    }
+
     private static func postDockSwipe(phase: Int, directionRight: Bool, velocity: Double) -> Bool {
         // Use Float.leastNonzeroMagnitude to precisely match FLT_TRUE_MIN used in ISS.c
         // Double.leastNonzeroMagnitude is too small (e-324) and gets truncated to 0.0 by the OS when positive.
@@ -110,14 +175,25 @@ extension SpaceHelper {
         return true
     }
     
-    static func performSpaceSwitchGesture(steps: Int, targetDisplayID: String, forceInstant: Bool = false) {
-        DiagnosticEventLog.shared.record(subsystem: "SpaceHelper", level: "info", "gesture steps=\(steps) display=\(targetDisplayID)")
+    static func performSpaceSwitchGesture(
+        steps: Int,
+        targetDisplayID: String,
+        forceInstant: Bool = false,
+        gestureLayout: String? = nil
+    ) {
+        let gestureLayout = gestureLayout ?? gestureDirectionLayout()
+        let invertDirection = gestureDirectionIsInverted(
+            for: targetDisplayID,
+            layout: gestureLayout
+        )
+        DiagnosticEventLog.shared.record(
+            subsystem: "SpaceHelper",
+            level: "info",
+            "gesture steps=\(steps) display=\(targetDisplayID) layout=\(gestureLayout) inverted=\(invertDirection)"
+        )
         if steps == 0 { return }
 
-        // macOS 27 interprets swipe directions opposite of the expected behavior,
-        // so we invert the step direction to compensate.
-        let os = ProcessInfo.processInfo.operatingSystemVersion
-        let adjustedSteps = os.majorVersion >= 27 ? -steps : steps
+        let adjustedSteps = invertDirection ? -steps : steps
         let directionRight = adjustedSteps > 0
         let absSteps = abs(adjustedSteps)
 
