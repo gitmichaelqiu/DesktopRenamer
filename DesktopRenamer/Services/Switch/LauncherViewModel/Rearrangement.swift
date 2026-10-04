@@ -20,11 +20,10 @@ extension LauncherViewModel {
         guard selectedRowIndex >= 0,
               selectedRowIndex < spaces.count,
               let manager = AppDelegate.shared.spaceManager,
-              let sourceSpace = currentSpaces.first(where: { $0.id == spaces[selectedRowIndex].id }),
-              !sourceSpace.isFullscreen else { return }
+              let sourceSpace = currentSpaces.first(where: { $0.id == spaces[selectedRowIndex].id }) else { return }
 
         let orderedSpaces = currentSpaces
-            .filter { $0.displayID == sourceSpace.displayID && !$0.isFullscreen }
+            .filter { $0.displayID == sourceSpace.displayID && (sourceSpace.isFullscreen || !$0.isFullscreen) }
         guard let sourceIndex = orderedSpaces.firstIndex(where: { $0.id == sourceSpace.id }) else { return }
 
         let sourceID = sourceSpace.id
@@ -172,20 +171,31 @@ extension LauncherViewModel {
 
     private func applyLocalSpaceOrder(orderedIDs: [String], displayID: String) {
         let spaceByID = Dictionary(uniqueKeysWithValues: currentSpaces.map { ($0.id, $0) })
+        let includesFullscreenSpaces = orderedIDs.contains { spaceByID[$0]?.isFullscreen == true }
         let displayIndices = currentSpaces.indices
-            .filter { currentSpaces[$0].displayID == displayID && !currentSpaces[$0].isFullscreen }
-        let positionNumbers = displayIndices.indices.map { $0 + 1 }
+            .filter {
+                currentSpaces[$0].displayID == displayID
+                    && (includesFullscreenSpaces || !currentSpaces[$0].isFullscreen)
+            }
+        var desktopNumber = 0
 
         for (index, spaceID) in orderedIDs.enumerated() {
             guard index < displayIndices.count,
-                  index < positionNumbers.count,
                   let space = spaceByID[spaceID] else { continue }
+
+            let number: Int
+            if space.isFullscreen {
+                number = space.num
+            } else {
+                desktopNumber += 1
+                number = desktopNumber
+            }
 
             currentSpaces[displayIndices[index]] = SpaceGroup(
                 id: space.id,
                 name: space.name,
                 displayName: space.displayName,
-                num: positionNumbers[index],
+                num: number,
                 isFullscreen: space.isFullscreen,
                 appPath: space.appPath,
                 displayID: space.displayID
