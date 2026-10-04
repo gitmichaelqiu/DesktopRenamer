@@ -8,3 +8,6 @@ AGENTS.md
 .claude/
 .derivedData/
 Tests/
+!Tests/
+Tests/*
+!Tests/SpaceAPIIdentityTests.swift

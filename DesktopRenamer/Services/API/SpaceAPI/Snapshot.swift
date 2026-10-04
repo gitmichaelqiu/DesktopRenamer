@@ -3,12 +3,14 @@ import Foundation
 
 extension SpaceAPI {
     func makeSpaceSnapshotPayload(_ manager: SpaceManager, revision: UInt64) -> SpaceAPISnapshot {
-        SpaceAPISnapshot(
+        let spaces = manager.spaceNameDict
+        let apiIDsByManagedID = Dictionary(uniqueKeysWithValues: spaces.map { ($0.id, $0.spaceAPIID) })
+        return SpaceAPISnapshot(
             apiVersion: DesktopRenamerAPIVersion.current,
             revision: revision,
             timestamp: Self.apiTimestamp(),
-            currentSpaceIDs: SpaceHelper.getCurrentSpaceIDs(),
-            currentSpaceID: manager.currentSpaceUUID,
+            currentSpaceIDs: SpaceHelper.getCurrentSpaceIDs().compactMap { apiIDsByManagedID[$0] },
+            currentSpaceID: apiIDsByManagedID[manager.currentSpaceUUID],
             currentDisplayID: manager.currentDisplayID,
             currentSpaceName: manager.getSpaceName(manager.currentSpaceUUID),
             movedWindowsCount: manager.movedWindowsOriginalSpaces.count,
@@ -63,12 +65,16 @@ extension SpaceAPI {
     }
 
     func makeWindowsSnapshotPayload(_ manager: SpaceManager, revision: UInt64) -> SpaceAPIWindowsSnapshot {
-        SpaceAPIWindowsSnapshot(
+        let spaces = manager.spaceNameDict
+        return SpaceAPIWindowsSnapshot(
             apiVersion: DesktopRenamerAPIVersion.current,
             revision: revision,
             timestamp: Self.apiTimestamp(),
             spaces: makeSpaceRecords(manager),
-            windows: SpaceHelper.getWindowRecordsForAllSpaces(spaces: manager.spaceNameDict)
+            windows: makeSpaceAPIWindowRecords(
+                SpaceHelper.getWindowRecordsForAllSpaces(spaces: spaces),
+                spaces: spaces
+            )
         )
     }
 
@@ -85,7 +91,7 @@ extension SpaceAPI {
             revision: revision,
             timestamp: timestamp,
             spaces: spaceRecords,
-            windows: windows
+            windows: makeSpaceAPIWindowRecords(windows, spaces: spaces)
         )
     }
 
@@ -117,7 +123,7 @@ extension SpaceAPI {
             }
             .map { space in
                 SpaceAPISpace(
-                    id: space.id,
+                    id: space.spaceAPIID,
                     name: manager.getSpaceName(space.id),
                     displayID: space.displayID,
                     displayName: displayName(for: space.displayID, using: displayNames),
@@ -129,6 +135,34 @@ extension SpaceAPI {
                     isLocked: manager.lockedSpaceIDs.contains(space.id)
                 )
             }
+    }
+
+    func makeSpaceAPIWindowRecords(_ windows: [SpaceAPIWindow], spaces: [DesktopSpace]) -> [SpaceAPIWindow] {
+        let apiIDsByManagedID = Dictionary(uniqueKeysWithValues: spaces.map { ($0.id, $0.spaceAPIID) })
+        return windows.compactMap { window in
+            guard let spaceID = apiIDsByManagedID[window.spaceID] else { return nil }
+            return SpaceAPIWindow(
+                id: window.id,
+                pid: window.pid,
+                ownerName: window.ownerName,
+                appPath: window.appPath,
+                title: window.title,
+                spaceID: spaceID,
+                spaceIDs: window.spaceIDs.compactMap { apiIDsByManagedID[$0] },
+                isMinimized: window.isMinimized,
+                isHidden: window.isHidden
+            )
+        }
+    }
+
+    func managedSpaceID(forSpaceAPIID spaceAPIID: String, manager: SpaceManager) -> String? {
+        manager.spaceNameDict.first(where: { $0.spaceAPIID == spaceAPIID })?.id
+            ?? manager.spaceNameDict.first(where: { $0.id == spaceAPIID })?.id
+    }
+
+    func spaceAPIIDs(forManagedSpaceIDs managedSpaceIDs: [String], manager: SpaceManager) -> [String] {
+        let apiIDsByManagedID = Dictionary(uniqueKeysWithValues: manager.spaceNameDict.map { ($0.id, $0.spaceAPIID) })
+        return managedSpaceIDs.compactMap { apiIDsByManagedID[$0] }
     }
 
     private func displayNamesByID() -> [String: String] {
