@@ -95,7 +95,7 @@ To resolve this, go to System Settings → the bottom of Privacy & Security → 
 
 DesktopRenamer provides multiple ways to interact with it:
 
-- [SpaceAPI Guide](https://docs.desktoprenamer.mqiu.dev/) official developer documentation of SpaceAPI.
+- [Structured SpaceAPI Guide](https://docs.desktoprenamer.mqiu.dev/api/spaceapi/structured/) documents persistent DesktopRenamer space IDs and ManagedSpaceID migration compatibility; see the [API changelog](https://docs.desktoprenamer.mqiu.dev/api/changelog/) for contract changes.
 - The SpaceAPI version is available through AppleScript (`get api version`) and SpaceAPI responses, independently of the app version.
 
 You can switch on/off the API in Settings → Advanced.
