@@ -10,7 +10,7 @@ extension SpaceAPI {
             revision: revision,
             timestamp: Self.apiTimestamp(),
             currentSpaceIDs: SpaceHelper.getCurrentSpaceIDs().compactMap { apiIDsByManagedID[$0] },
-            currentSpaceID: apiIDsByManagedID[manager.currentSpaceUUID],
+            currentSpaceID: apiIDsByManagedID[manager.currentSpaceUUID] ?? "",
             currentDisplayID: manager.currentDisplayID,
             currentSpaceName: manager.getSpaceName(manager.currentSpaceUUID),
             movedWindowsCount: manager.movedWindowsOriginalSpaces.count,
@@ -155,9 +155,9 @@ extension SpaceAPI {
         }
     }
 
-    func managedSpaceID(forSpaceAPIID spaceAPIID: String, manager: SpaceManager) -> String? {
-        manager.spaceNameDict.first(where: { $0.spaceAPIID == spaceAPIID })?.id
-            ?? manager.spaceNameDict.first(where: { $0.id == spaceAPIID })?.id
+    func managedSpaceID(forSpaceIdentifier identifier: String, manager: SpaceManager) -> String? {
+        manager.spaceNameDict.first(where: { $0.spaceAPIID == identifier })?.id
+            ?? manager.spaceNameDict.first(where: { $0.id == identifier })?.id
     }
 
     func spaceAPIIDs(forManagedSpaceIDs managedSpaceIDs: [String], manager: SpaceManager) -> [String] {

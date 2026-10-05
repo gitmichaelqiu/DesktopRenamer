@@ -350,7 +350,7 @@ struct SpaceAPISnapshot: Codable, Equatable {
     let revision: UInt64
     let timestamp: String
     let currentSpaceIDs: [String]
-    let currentSpaceID: String?
+    let currentSpaceID: String
     let currentDisplayID: String
     let currentSpaceName: String
     let movedWindowsCount: Int
@@ -361,7 +361,7 @@ struct SpaceAPISnapshot: Codable, Equatable {
         revision: UInt64,
         timestamp: String,
         currentSpaceIDs: [String],
-        currentSpaceID: String?,
+        currentSpaceID: String,
         currentDisplayID: String,
         currentSpaceName: String,
         movedWindowsCount: Int = 0,
@@ -384,7 +384,7 @@ struct SpaceAPISnapshot: Codable, Equatable {
         revision = try container.decode(UInt64.self, forKey: .revision)
         timestamp = try container.decode(String.self, forKey: .timestamp)
         currentSpaceIDs = try container.decode([String].self, forKey: .currentSpaceIDs)
-        currentSpaceID = try container.decodeIfPresent(String.self, forKey: .currentSpaceID)
+        currentSpaceID = try container.decode(String.self, forKey: .currentSpaceID)
         currentDisplayID = try container.decode(String.self, forKey: .currentDisplayID)
         currentSpaceName = try container.decode(String.self, forKey: .currentSpaceName)
         movedWindowsCount = try container.decodeIfPresent(Int.self, forKey: .movedWindowsCount) ?? 0

@@ -14,7 +14,7 @@ struct SpaceAPIContractTests {
     }
 
     private static func testMethodDefinitions() throws {
-        check(DesktopRenamerAPIContract.version == "2.0.0", "structured API contract version is current")
+        check(DesktopRenamerAPIContract.version == "1.2.0", "structured API contract version is current")
         check(
             DesktopRenamerAPIContract.preferredAPIPrefix == "dev.mqiu.DesktopRenamer",
             "current API notification namespace is preferred"
@@ -290,12 +290,12 @@ struct SpaceAPIContractTests {
         check(compatibleSnapshot == snapshot, "unknown result fields are ignored")
 
         var snapshotWithoutCurrentID = encodedSnapshot
-        snapshotWithoutCurrentID["currentSpaceID"] = NSNull()
-        let nullableCurrentSpaceSnapshot = try JSONDecoder().decode(
+        snapshotWithoutCurrentID["currentSpaceID"] = ""
+        let emptyCurrentSpaceSnapshot = try JSONDecoder().decode(
             SpaceAPISnapshot.self,
             from: try JSONSerialization.data(withJSONObject: snapshotWithoutCurrentID)
         )
-        check(nullableCurrentSpaceSnapshot.currentSpaceID == nil, "unreconciled current space is nullable")
+        check(emptyCurrentSpaceSnapshot.currentSpaceID.isEmpty, "unreconciled current space uses an empty ID")
 
         var snapshotWithoutMovedWindowsCount = encodedSnapshot
         snapshotWithoutMovedWindowsCount.removeValue(forKey: "movedWindowsCount")

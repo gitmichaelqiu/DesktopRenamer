@@ -43,20 +43,17 @@ private func scriptWindowRecord(_ window: SpaceAPIWindow) -> [String: Any] {
 }
 
 private func scriptSnapshotRecord(_ snapshot: SpaceAPISnapshot) -> [String: Any] {
-    var record: [String: Any] = [
+    [
         "apiVersion": snapshot.apiVersion,
         "revision": snapshot.revision,
         "timestamp": snapshot.timestamp,
         "currentSpaceIDs": snapshot.currentSpaceIDs,
+        "currentSpaceID": snapshot.currentSpaceID,
         "currentDisplayID": snapshot.currentDisplayID,
         "currentSpaceName": snapshot.currentSpaceName,
         "movedWindowsCount": snapshot.movedWindowsCount,
         "spaces": snapshot.spaces.map(scriptSpaceRecord)
     ]
-    if let currentSpaceID = snapshot.currentSpaceID {
-        record["currentSpaceID"] = currentSpaceID
-    }
-    return record
 }
 
 private func scriptWindowsSnapshotRecord(_ snapshot: SpaceAPIWindowsSnapshot) -> [String: Any] {

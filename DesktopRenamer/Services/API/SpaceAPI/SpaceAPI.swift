@@ -380,11 +380,11 @@ final class SpaceAPI {
 
         var managedArguments = arguments
         for parameter in identifierParameters {
-            guard let spaceAPIID = arguments[parameter],
-                  let space = manager.spaceNameDict.first(where: { $0.spaceAPIID == spaceAPIID }) else {
-                throw SpaceAPIError.invalidArgument("Unknown or stale DesktopRenamer space ID.")
+            guard let identifier = arguments[parameter],
+                  let spaceID = managedSpaceID(forSpaceIdentifier: identifier, manager: manager) else {
+                throw SpaceAPIError.invalidArgument("Unknown or stale space identifier.")
             }
-            managedArguments[parameter] = space.id
+            managedArguments[parameter] = spaceID
         }
         return managedArguments
     }
