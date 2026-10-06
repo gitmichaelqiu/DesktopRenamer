@@ -50,8 +50,8 @@ extension LauncherViewModel {
     }
     
     var unfilteredSwitchSpaces: [SpaceGroup] {
-        guard let staging = stagingWindow else { return currentSpaces }
-        return currentSpaces.filter { $0.id != staging.space.id }
+        guard let staging = stagingWindow else { return spacesGroupedByDisplay }
+        return spacesGroupedByDisplay.filter { $0.id != staging.space.id }
     }
 
     var unfilteredMoveWindowSpaces: [SpaceGroup] {
@@ -149,7 +149,7 @@ extension LauncherViewModel {
         // 2. Unstaged items grouped by space
         let unstaged = filteredUnstagedWindows
         var itemIndex = staged.count
-        for space in currentSpaces {
+        for space in spacesGroupedByDisplay {
             let spaceWindows = unstaged.filter { $0.space.id == space.id }
             if spaceWindows.isEmpty { continue }
             for window in spaceWindows {
@@ -247,7 +247,7 @@ extension LauncherViewModel {
             return false
         }
         
-        for space in currentSpaces {
+        for space in spacesGroupedByDisplay {
             let spaceItems = unstagedItems.filter {
                 if case .unstaged(let window, _) = $0, window.space.id == space.id {
                     return true
@@ -257,7 +257,9 @@ extension LauncherViewModel {
             if !spaceItems.isEmpty {
                 sections.append(BatchMoveSection(
                     id: "space-\(space.id)",
-                    title: space.name,
+                    title: shouldShowDisplayNameForSpaces
+                        ? "\(space.displayName) · \(space.name)"
+                        : space.name,
                     subtitle: String(format: String(localized: "%lld windows"), spaceItems.count),
                     items: spaceItems
                 ))

@@ -20,6 +20,7 @@ enum LauncherLayout {
     static let submenuRowContentSpacing: CGFloat = 6
     static let submenuHeaderHorizontalPadding: CGFloat = submenuRowHorizontalPadding
     static let submenuHeaderVerticalPadding: CGFloat = 8
+    static let submenuSectionHeaderHeight: CGFloat = 24
     static let submenuSeparatorSpacing: CGFloat = 6
     static let submenuRowHorizontalPadding: CGFloat = 8
     static let submenuRowHeight: CGFloat = 36
