@@ -57,11 +57,12 @@ struct DesktopSpace: Identifiable, Codable, Equatable {
             return
         }
 
-        // A known persistent-ID mismatch means macOS has identified a new
-        // Space, even if it reused the previous ManagedSpaceID.
-        guard persistentID == nil, !afterBoot,
+        // Only fall back to ManagedSpaceID when either observation lacks a
+        // persistent ID. If both are known and differ, macOS identified a new
+        // Space even if it reused the previous ManagedSpaceID.
+        guard !afterBoot,
               let previousSpace = previousSpaces.first(where: {
-                  $0.id == id && $0.persistentID == nil
+                  $0.id == id && ($0.persistentID == nil || persistentID == nil)
               }) else {
             return
         }

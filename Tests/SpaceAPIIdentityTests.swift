@@ -86,6 +86,20 @@ private func testSpaceAPIIdentityReconciliation() {
         "managed ID preserves identity for an unidentifiable space within one boot"
     )
 
+    var persistentIDAppeared = DesktopSpace(
+        id: "73",
+        customName: "",
+        num: 3,
+        displayID: "DISPLAY-UUID",
+        persistentID: "LATE-PERSISTENT-SPACE-UUID",
+        spaceAPIID: "REGENERATED-SPACE-ID"
+    )
+    persistentIDAppeared.preserveSpaceAPIIdentity(from: [previousWithoutPersistentID], afterBoot: false)
+    check(
+        persistentIDAppeared.spaceAPIID == previousWithoutPersistentID.spaceAPIID,
+        "a newly reported persistent ID does not replace the existing same-boot app ID"
+    )
+
     var restoredAfterBoot = DesktopSpace(
         id: "73",
         customName: "",
