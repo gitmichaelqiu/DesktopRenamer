@@ -3,6 +3,7 @@ tmp/
 *.xcuserstate
 *.xcworkspace
 *.xcuserdata
+**/xcuserdata/
 CLAUDE.md
 AGENTS.md
 .claude/
