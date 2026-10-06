@@ -338,29 +338,42 @@ struct ListAreaView: View {
                     if spaces.isEmpty {
                         EmptyResultsView()
                     } else {
+                        let displaySections = viewModel.spaceDisplaySections(for: spaces)
                         ScrollViewReader { proxy in
                             ScrollView {
                                 LazyVStack(spacing: 0) {
-                                    ForEach(Array(spaces.enumerated()), id: \.element.id) { i, space in
-                                        let isSelected = !viewModel.isBottomBarFocused && viewModel.selectedRowIndex == i
-                                        let isCurrent = currentSpaceIDsByDisplay[space.displayID] == space.id
-                                        SpaceRowView(
-                                            space: space,
-                                            isLocked: spaceManager.lockedSpaceIDs.contains(space.id),
-                                            isSelected: isSelected,
-                                            isCurrent: isCurrent,
-                                            showDisplayName: viewModel.shouldShowDisplayNameForSpaces,
-                                            shortcutNumber: viewModel.shouldShowCommandNumbersInMainList && i < 9 ? i + 1 : nil,
-                                            ignoresHover: viewModel.shouldIgnoreMainListHover
-                                        )
-                                            .contentShape(Rectangle())
-                                            .onTapGesture {
-                                                viewModel.isKeyboardSelection = true
-                                                viewModel.selectedRowIndex = i
-                                                viewModel.executeRowAction()
-                                                viewModel.finishPointerAction()
-                                            }
-                                            .id(space.id)
+                                    ForEach(Array(displaySections.enumerated()), id: \.element.id) { sectionIndex, section in
+                                        if viewModel.shouldShowDisplayNameForSpaces {
+                                            ListSectionHeader(
+                                                title: section.displayName,
+                                                subtitle: "",
+                                                isFirst: sectionIndex == 0
+                                            )
+                                        }
+
+                                        ForEach(section.rows) { row in
+                                            let i = row.index
+                                            let space = row.space
+                                            let isSelected = !viewModel.isBottomBarFocused && viewModel.selectedRowIndex == i
+                                            let isCurrent = currentSpaceIDsByDisplay[space.displayID] == space.id
+                                            SpaceRowView(
+                                                space: space,
+                                                isLocked: spaceManager.lockedSpaceIDs.contains(space.id),
+                                                isSelected: isSelected,
+                                                isCurrent: isCurrent,
+                                                showDisplayName: false,
+                                                shortcutNumber: viewModel.shouldShowCommandNumbersInMainList && i < 9 ? i + 1 : nil,
+                                                ignoresHover: viewModel.shouldIgnoreMainListHover
+                                            )
+                                                .contentShape(Rectangle())
+                                                .onTapGesture {
+                                                    viewModel.isKeyboardSelection = true
+                                                    viewModel.selectedRowIndex = i
+                                                    viewModel.executeRowAction()
+                                                    viewModel.finishPointerAction()
+                                                }
+                                                .id(space.id)
+                                        }
                                     }
                                 }
                                 .padding(.horizontal, LauncherLayout.listHorizontalPadding)
@@ -392,29 +405,42 @@ struct ListAreaView: View {
                         if spaces.isEmpty {
                             EmptyResultsView()
                         } else {
+                            let displaySections = viewModel.spaceDisplaySections(for: spaces)
                             ScrollViewReader { proxy in
                                 ScrollView {
                                     LazyVStack(spacing: 0) {
-                                        ForEach(Array(spaces.enumerated()), id: \.element.id) { i, space in
-                                            let isSelected = !viewModel.isBottomBarFocused && viewModel.selectedRowIndex == i
-                                            let isCurrent = currentSpaceIDsByDisplay[space.displayID] == space.id
-                                            SpaceRowView(
-                                                space: space,
-                                                isLocked: spaceManager.lockedSpaceIDs.contains(space.id),
-                                                isSelected: isSelected,
-                                                isCurrent: isCurrent,
-                                                showDisplayName: viewModel.shouldShowDisplayNameForSpaces,
-                                                shortcutNumber: viewModel.shouldShowCommandNumbersInMainList && i < 9 ? i + 1 : nil,
-                                                ignoresHover: viewModel.shouldIgnoreMainListHover
-                                            )
-                                                .contentShape(Rectangle())
-                                                .onTapGesture {
-                                                    viewModel.isKeyboardSelection = true
-                                                    viewModel.selectedRowIndex = i
-                                                    viewModel.executeRowAction()
-                                                    viewModel.finishPointerAction()
-                                                }
-                                                .id(space.id)
+                                        ForEach(Array(displaySections.enumerated()), id: \.element.id) { sectionIndex, section in
+                                            if viewModel.shouldShowDisplayNameForSpaces {
+                                                ListSectionHeader(
+                                                    title: section.displayName,
+                                                    subtitle: "",
+                                                    isFirst: sectionIndex == 0
+                                                )
+                                            }
+
+                                            ForEach(section.rows) { row in
+                                                let i = row.index
+                                                let space = row.space
+                                                let isSelected = !viewModel.isBottomBarFocused && viewModel.selectedRowIndex == i
+                                                let isCurrent = currentSpaceIDsByDisplay[space.displayID] == space.id
+                                                SpaceRowView(
+                                                    space: space,
+                                                    isLocked: spaceManager.lockedSpaceIDs.contains(space.id),
+                                                    isSelected: isSelected,
+                                                    isCurrent: isCurrent,
+                                                    showDisplayName: false,
+                                                    shortcutNumber: viewModel.shouldShowCommandNumbersInMainList && i < 9 ? i + 1 : nil,
+                                                    ignoresHover: viewModel.shouldIgnoreMainListHover
+                                                )
+                                                    .contentShape(Rectangle())
+                                                    .onTapGesture {
+                                                        viewModel.isKeyboardSelection = true
+                                                        viewModel.selectedRowIndex = i
+                                                        viewModel.executeRowAction()
+                                                        viewModel.finishPointerAction()
+                                                    }
+                                                    .id(space.id)
+                                            }
                                         }
                                     }
                                     .padding(.horizontal, LauncherLayout.listHorizontalPadding)

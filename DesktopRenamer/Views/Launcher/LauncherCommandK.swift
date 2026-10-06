@@ -481,26 +481,34 @@ struct LauncherSpaceMenuView: View {
                     ScrollViewReader { proxy in
                         ScrollView {
                             LazyVStack(spacing: LauncherLayout.submenuRowSpacing) {
-                                ForEach(Array(spaces.enumerated()), id: \.element.id) { index, space in
-                                    LauncherSpaceMenuRow(
-                                        space: space,
-                                        isLocked: spaceManager.lockedSpaceIDs.contains(space.id),
-                                        isSelected: viewModel.spaceMenuSelectedIndex == index,
-                                        isCurrent: SpaceHelper.getCurrentSpaceID(for: space.displayID) == space.id,
-                                        shortcutNumber: index + 1,
-                                        showShortcut: viewModel.shouldShowCommandNumbersInSubmenu && index < 9,
-                                        showDisplayName: showsDisplayName,
-                                        colors: colors,
-                                        ignoresHover: viewModel.isKeyboardSelection,
-                                        action: {
-                                            guard !viewModel.isLauncherBusy else { return }
-                                            viewModel.isKeyboardSelection = true
-                                            viewModel.spaceMenuSelectedIndex = index
-                                            viewModel.executeSpaceMenuSelection()
-                                            viewModel.finishPointerAction()
-                                        }
-                                    )
-                                    .id(space.id)
+                                ForEach(viewModel.spaceDisplaySections(for: spaces)) { section in
+                                    if showsDisplayName {
+                                        LauncherSubmenuSectionHeader(title: section.displayName, colors: colors)
+                                    }
+
+                                    ForEach(section.rows) { row in
+                                        let space = row.space
+                                        let index = row.index
+                                        LauncherSpaceMenuRow(
+                                            space: space,
+                                            isLocked: spaceManager.lockedSpaceIDs.contains(space.id),
+                                            isSelected: viewModel.spaceMenuSelectedIndex == index,
+                                            isCurrent: SpaceHelper.getCurrentSpaceID(for: space.displayID) == space.id,
+                                            shortcutNumber: index + 1,
+                                            showShortcut: viewModel.shouldShowCommandNumbersInSubmenu && index < 9,
+                                            showDisplayName: false,
+                                            colors: colors,
+                                            ignoresHover: viewModel.isKeyboardSelection,
+                                            action: {
+                                                guard !viewModel.isLauncherBusy else { return }
+                                                viewModel.isKeyboardSelection = true
+                                                viewModel.spaceMenuSelectedIndex = index
+                                                viewModel.executeSpaceMenuSelection()
+                                                viewModel.finishPointerAction()
+                                            }
+                                        )
+                                        .id(space.id)
+                                    }
                                 }
                             }
                         }
@@ -537,8 +545,13 @@ struct LauncherSpaceMenuView: View {
 
     private var spaceMenuHeight: CGFloat {
         let rowCount = CGFloat(spaces.count)
+        let headerCount = showsDisplayName
+            ? CGFloat(viewModel.spaceDisplaySections(for: spaces).count)
+            : 0
+        let itemCount = rowCount + headerCount
         let contentHeight = rowCount * LauncherLayout.submenuRowHeight
-            + max(rowCount - 1, 0) * LauncherLayout.submenuRowSpacing
+            + headerCount * LauncherLayout.submenuSectionHeaderHeight
+            + max(itemCount - 1, 0) * LauncherLayout.submenuRowSpacing
         return min(max(contentHeight, LauncherLayout.submenuRowHeight), 300)
     }
 }
