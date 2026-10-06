@@ -339,7 +339,7 @@
         }
       }
     },
-    "Automatically restore windows when unlocking a space" : {
+    "Automatically restore windows when unlocking" : {
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
