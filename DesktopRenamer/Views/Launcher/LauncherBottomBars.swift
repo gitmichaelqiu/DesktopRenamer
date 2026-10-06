@@ -232,7 +232,7 @@ struct SpacesBottomBar: View {
                     HStack(spacing: 8) {
                         let spaces = viewModel.filteredDisplaySpaces
                         ForEach(Array(spaces.enumerated()), id: \.element.id) { i, space in
-                            let isCurrent = space.id == spaceManager.currentSpaceUUID
+                            let isCurrent = space.id == viewModel.launcherCurrentSpaceID
                             let isSpaceSelected = viewModel.isBottomBarFocused && i == viewModel.selectedSpaceIndex
                             let name = spaceManager.getSpaceName(space.id)
                             
@@ -290,11 +290,23 @@ struct SpacesBottomBar: View {
                     }
                 )
                 .onAppear {
-                    scrollProxy.scrollTo(spaceManager.currentSpaceUUID, anchor: .center)
-                }
-                .onChange(of: spaceManager.currentSpaceUUID) { currentSpaceID in
-                    withAnimation(.easeInOut(duration: 0.15)) {
+                    if let currentSpaceID = viewModel.launcherCurrentSpaceID {
                         scrollProxy.scrollTo(currentSpaceID, anchor: .center)
+                    }
+                }
+                .onChange(of: viewModel.launcherDisplayID) { _ in
+                    if let currentSpaceID = viewModel.launcherCurrentSpaceID {
+                        withAnimation(.easeInOut(duration: 0.15)) {
+                            scrollProxy.scrollTo(currentSpaceID, anchor: .center)
+                        }
+                    }
+                }
+                .onChange(of: spaceManager.currentSpaceUUID) { _ in
+                    viewModel.refreshLauncherCurrentSpace()
+                    if let currentSpaceID = viewModel.launcherCurrentSpaceID {
+                        withAnimation(.easeInOut(duration: 0.15)) {
+                            scrollProxy.scrollTo(currentSpaceID, anchor: .center)
+                        }
                     }
                 }
                 .onChange(of: viewModel.selectedSpaceIndex) { selectedIndex in
@@ -318,8 +330,10 @@ struct SpacesBottomBar: View {
                             }
                         }
                     } else {
-                        withAnimation(.easeInOut(duration: 0.15)) {
-                            scrollProxy.scrollTo(spaceManager.currentSpaceUUID, anchor: .center)
+                        if let currentSpaceID = viewModel.launcherCurrentSpaceID {
+                            withAnimation(.easeInOut(duration: 0.15)) {
+                                scrollProxy.scrollTo(currentSpaceID, anchor: .center)
+                            }
                         }
                     }
                 }
