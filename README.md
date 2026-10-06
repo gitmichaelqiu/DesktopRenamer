@@ -100,6 +100,10 @@ DesktopRenamer provides multiple ways to interact with it:
 
 You can switch on/off the API in Settings → Advanced.
 
+## Space Locking
+
+When enabled in Settings → Switch, unlocking a space automatically restores the windows moved away by its lock. The existing “Restore windows moved by lock” action remains available to restore the full queue manually.
+
 ## 🤝 Companion Apps
 
 <img src="https://github.com/gitmichaelqiu/SpaceSwitcher/blob/main/SpaceSwitcher/Resources/SpaceSwitcherIcon_Default.png?raw=true" width="120"/>

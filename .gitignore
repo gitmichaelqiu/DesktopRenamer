@@ -11,3 +11,4 @@ Tests/
 !Tests/
 Tests/*
 !Tests/SpaceAPIIdentityTests.swift
+!Tests/MovedWindowRestoreQueueTests.swift
