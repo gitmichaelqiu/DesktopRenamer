@@ -197,6 +197,10 @@ extension SpaceManager {
             // Build updated space list and attempt to load names from cache; fullscreen names are not cached.
             for sysSpace in cgsState.spaces {
                 var finalSpace = sysSpace
+                finalSpace.preserveSpaceAPIIdentity(
+                    from: spaceNameDict,
+                    afterBoot: shouldRestoreNamesByPositionAfterBoot
+                )
                 
                 if finalSpace.isFullscreen {
                      // For fullscreen spaces, we do NOT load custom names.

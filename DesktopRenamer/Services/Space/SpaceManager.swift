@@ -16,6 +16,7 @@ class SpaceManager: ObservableObject {
     static let grabOffsetYKey = "com.michaelqiu.desktoprenamer.grabOffsetY"
     static let lockedSpaceIDsKey = "com.michaelqiu.desktoprenamer.lockedSpaceIDs"
     static let movedWindowsOriginalSpacesKey = "com.michaelqiu.desktoprenamer.movedWindowsOriginalSpaces"
+    static let autoRestoreWindowsOnUnlockKey = "com.michaelqiu.desktoprenamer.autoRestoreWindowsOnUnlock"
     static let returnToOriginalAfterBatchMoveKey = "com.michaelqiu.desktoprenamer.returnToOriginalAfterBatchMove"
     static let appGrabExceptionsKey = "com.michaelqiu.desktoprenamer.appGrabExceptions"
     static let autoRearrangeFullscreenSpacesKey = "com.michaelqiu.desktoprenamer.autoRearrangeFullscreenSpaces"
@@ -92,6 +93,8 @@ class SpaceManager: ObservableObject {
 
     @Published var lockedSpaceIDs: Set<String> = []
     @Published var movedWindowsOriginalSpaces: [Int: (originalSpaceUUID: String, currentSpaceUUID: String, pid: Int32)] = [:]
+    var movedWindowRestoreQueue = MovedWindowRestoreQueueCoordinator()
+    var movedWindowRestoreInitialSpaceUUID: String?
     var lastManualSwitchTime: TimeInterval = 0
     var lastManualSwitchTargetUUID: String? = nil
     var activeProgrammaticSwitchGeneration: UInt64?
@@ -113,6 +116,12 @@ class SpaceManager: ObservableObject {
     @Published var autoRearrangeFullscreenSpaces: Bool {
         didSet {
             UserDefaults.standard.set(autoRearrangeFullscreenSpaces, forKey: SpaceManager.autoRearrangeFullscreenSpacesKey)
+        }
+    }
+
+    @Published var autoRestoreWindowsOnUnlock: Bool {
+        didSet {
+            UserDefaults.standard.set(autoRestoreWindowsOnUnlock, forKey: SpaceManager.autoRestoreWindowsOnUnlockKey)
         }
     }
     
@@ -146,6 +155,7 @@ class SpaceManager: ObservableObject {
     init() {
         self.returnToOriginalAfterBatchMove = UserDefaults.standard.object(forKey: SpaceManager.returnToOriginalAfterBatchMoveKey) == nil ? true : UserDefaults.standard.bool(forKey: SpaceManager.returnToOriginalAfterBatchMoveKey)
         self.autoRearrangeFullscreenSpaces = UserDefaults.standard.bool(forKey: SpaceManager.autoRearrangeFullscreenSpacesKey)
+        self.autoRestoreWindowsOnUnlock = UserDefaults.standard.bool(forKey: SpaceManager.autoRestoreWindowsOnUnlockKey)
 
         if let savedLocked = UserDefaults.standard.stringArray(forKey: SpaceManager.lockedSpaceIDsKey) {
             self.lockedSpaceIDs = Set(savedLocked)
@@ -209,19 +219,25 @@ class SpaceManager: ObservableObject {
             return false
         }
 
-        if lockedSpaceIDs.contains(spaceID) {
+        let wasLocked = lockedSpaceIDs.contains(spaceID)
+        if wasLocked {
             lockedSpaceIDs.remove(spaceID)
         } else {
             lockedSpaceIDs.insert(spaceID)
         }
         UserDefaults.standard.set(Array(lockedSpaceIDs), forKey: SpaceManager.lockedSpaceIDsKey)
         objectWillChange.send()
-        return lockedSpaceIDs.contains(spaceID)
+
+        let isNowLocked = lockedSpaceIDs.contains(spaceID)
+        if wasLocked && !isNowLocked && autoRestoreWindowsOnUnlock {
+            restoreMovedWindows(fromOriginalSpaceUUID: spaceID)
+        }
+        return isNowLocked
     }
 
     func toggleLockAllSpaces() {
         let allNonFullscreen = spaceNameDict.filter { !$0.isFullscreen }.map { $0.id }
-        let allLocked = allNonFullscreen.allSatisfy { lockedSpaceIDs.contains($0) }
+        let allLocked = !allNonFullscreen.isEmpty && allNonFullscreen.allSatisfy { lockedSpaceIDs.contains($0) }
         if allLocked {
             for id in allNonFullscreen { lockedSpaceIDs.remove(id) }
         } else {
@@ -229,10 +245,15 @@ class SpaceManager: ObservableObject {
         }
         UserDefaults.standard.set(Array(lockedSpaceIDs), forKey: SpaceManager.lockedSpaceIDsKey)
         objectWillChange.send()
+
+        if allLocked && autoRestoreWindowsOnUnlock {
+            restoreAllMovedWindows()
+        }
     }
 
     func cleanMovedWindows() {
         movedWindowsOriginalSpaces.removeAll()
+        movedWindowRestoreQueue.clearPending()
     }
     
     deinit {

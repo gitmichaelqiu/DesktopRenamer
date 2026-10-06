@@ -342,9 +342,17 @@ final class SpaceAPI {
             guard let manager = spaceManager else { throw SpaceAPIError.appUnavailable }
             return .string(manager.getSpaceName(manager.currentSpaceUUID))
         case "getCurrentSpaceID":
-            return .array(SpaceHelper.getCurrentSpaceIDs().map(SpaceAPIJSONValue.string))
+            guard let manager = spaceManager else { throw SpaceAPIError.appUnavailable }
+            let spaceIDs = spaceAPIIDs(forManagedSpaceIDs: SpaceHelper.getCurrentSpaceIDs(), manager: manager)
+            return .array(spaceIDs.map(SpaceAPIJSONValue.string))
         default:
-            let result = try await executeCommand(request.method, arguments: arguments)
+            guard let manager = spaceManager else { throw SpaceAPIError.appUnavailable }
+            let managedArguments = try managedSpaceArguments(
+                for: request.method,
+                arguments: arguments,
+                manager: manager
+            )
+            let result = try await executeCommand(request.method, arguments: managedArguments)
             if definition.resultKind == .boolean {
                 guard result == "true" || result == "false" else {
                     throw SpaceAPIError.operationFailed("The command returned an invalid Boolean result.")
@@ -353,6 +361,32 @@ final class SpaceAPI {
             }
             return try SpaceAPIJSONValue.from(SpaceAPIOperationResult(accepted: true))
         }
+    }
+
+    private func managedSpaceArguments(
+        for method: String,
+        arguments: [String: String],
+        manager: SpaceManager
+    ) throws -> [String: String] {
+        let identifierParameters: [String]
+        switch method {
+        case "switchToSpace", "toggleLockSpace", "renameSpace", "rearrangeSpace", "moveWindowToSpace":
+            identifierParameters = ["spaceID"]
+        case "moveSpecificWindow":
+            identifierParameters = ["fromSpaceID", "targetSpaceID"]
+        default:
+            return arguments
+        }
+
+        var managedArguments = arguments
+        for parameter in identifierParameters {
+            guard let identifier = arguments[parameter],
+                  let spaceID = managedSpaceID(forSpaceIdentifier: identifier, manager: manager) else {
+                throw SpaceAPIError.invalidArgument("Unknown or stale space identifier.")
+            }
+            managedArguments[parameter] = spaceID
+        }
+        return managedArguments
     }
 
 }

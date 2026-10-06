@@ -14,7 +14,7 @@ struct SpaceAPIContractTests {
     }
 
     private static func testMethodDefinitions() throws {
-        check(DesktopRenamerAPIContract.version == "1.1.0", "structured API contract version is current")
+        check(DesktopRenamerAPIContract.version == "1.2.0", "structured API contract version is current")
         check(
             DesktopRenamerAPIContract.preferredAPIPrefix == "dev.mqiu.DesktopRenamer",
             "current API notification namespace is preferred"
@@ -263,6 +263,7 @@ struct SpaceAPIContractTests {
         let encodedResult = try checkJSONObject(encodedResponse["result"])
         let encodedSnapshot = try checkJSONObject(encodedResult["snapshot"])
         check(encodedSnapshot["movedWindowsCount"] as? Int == 3, "moved window count is encoded")
+        check(encodedSnapshot["currentSpaceID"] as? String == space.id, "current space uses the structured space ID")
         let encodedSpace = try checkJSONObject(try checkArray(encodedSnapshot["spaces"]).first)
         check(encodedSpace["appName"] is NSNull, "nullable space appName is encoded as null")
         check(encodedSpace["appPath"] is NSNull, "nullable space appPath is encoded as null")
@@ -287,6 +288,14 @@ struct SpaceAPIContractTests {
         let unknownResult = try checkValue(unknownFieldResponse.result, "unknown-field result")
         let compatibleSnapshot = try unknownResult.objectValue?["snapshot"]?.decode(SpaceAPISnapshot.self)
         check(compatibleSnapshot == snapshot, "unknown result fields are ignored")
+
+        var snapshotWithoutCurrentID = encodedSnapshot
+        snapshotWithoutCurrentID["currentSpaceID"] = ""
+        let emptyCurrentSpaceSnapshot = try JSONDecoder().decode(
+            SpaceAPISnapshot.self,
+            from: try JSONSerialization.data(withJSONObject: snapshotWithoutCurrentID)
+        )
+        check(emptyCurrentSpaceSnapshot.currentSpaceID.isEmpty, "unreconciled current space uses an empty ID")
 
         var snapshotWithoutMovedWindowsCount = encodedSnapshot
         snapshotWithoutMovedWindowsCount.removeValue(forKey: "movedWindowsCount")
