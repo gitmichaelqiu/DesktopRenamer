@@ -119,8 +119,6 @@ enum DesktopRearrangementDirection {
     @Published var showCommandNumbers: Bool = false
     @Published var isBottomBarFocused: Bool = false
     @Published var selectedSpaceIndex: Int = 0
-    @Published private(set) var launcherDisplayID: String?
-    @Published private(set) var launcherCurrentSpaceID: String?
     private var commandNumberRevealTask: Task<Void, Never>?
     var focusRequestWorkItem: DispatchWorkItem?
     var focusRequestID = 0
@@ -217,48 +215,11 @@ enum DesktopRearrangementDirection {
 
     var filteredDisplaySpaces: [DesktopSpace] {
         guard let manager = AppDelegate.shared.spaceManager else { return [] }
-        let spaces = launcherDisplaySpaces(using: manager)
-        guard !spaceBarQuery.isEmpty else { return spaces }
+        guard !spaceBarQuery.isEmpty else { return manager.currentDisplaySpaces }
 
-        return spaces.filter { space in
+        return manager.currentDisplaySpaces.filter { space in
             manager.getSpaceName(space.id).localizedCaseInsensitiveContains(spaceBarQuery)
         }
-    }
-
-    func prepareDisplayContextForPresentation(cursorDisplayID: String?) {
-        guard let manager = AppDelegate.shared.spaceManager else { return }
-        let cursorDisplayHasSpaces = cursorDisplayID.map { displayID in
-            manager.spaceNameDict.contains { $0.displayID == displayID }
-        } ?? false
-        if cursorDisplayHasSpaces {
-            launcherDisplayID = cursorDisplayID
-        } else {
-            launcherDisplayID = manager.currentDisplayID
-        }
-        refreshLauncherCurrentSpace()
-    }
-
-    func refreshLauncherCurrentSpace() {
-        guard let manager = AppDelegate.shared.spaceManager else { return }
-        guard let launcherDisplayID else {
-            launcherCurrentSpaceID = manager.currentSpaceUUID
-            return
-        }
-
-        let displaySpaceIDs = Set(manager.spaceNameDict.filter { $0.displayID == launcherDisplayID }.map(\.id))
-        launcherCurrentSpaceID = SpaceHelper.getCurrentSpaceID(for: launcherDisplayID)
-            .flatMap { displaySpaceIDs.contains($0) ? $0 : nil }
-            ?? manager.currentSpaceByDisplay[launcherDisplayID].flatMap {
-                displaySpaceIDs.contains($0) ? $0 : nil
-            }
-            ?? (displaySpaceIDs.contains(manager.currentSpaceUUID) ? manager.currentSpaceUUID : nil)
-    }
-
-    private func launcherDisplaySpaces(using manager: SpaceManager) -> [DesktopSpace] {
-        let displayID = launcherDisplayID ?? manager.currentDisplayID
-        return manager.spaceNameDict
-            .filter { $0.displayID == displayID }
-            .sorted { $0.num < $1.num }
     }
     
     var onClose: (() -> Void)?

@@ -114,14 +114,14 @@ extension LauncherViewModel {
         isKeyboardSelection = isKeyboardInitiated
         requestFocusNotification(named: "FocusSpaceBarTextField")
 
-        guard AppDelegate.shared.spaceManager != nil else { return }
-        let spaces = filteredDisplaySpaces
+        guard let manager = AppDelegate.shared.spaceManager else { return }
+        let spaces = manager.currentDisplaySpaces
         guard !spaces.isEmpty else {
             selectedSpaceIndex = 0
             return
         }
 
-        let currentIndex = spaces.firstIndex(where: { $0.id == launcherCurrentSpaceID }) ?? 0
+        let currentIndex = spaces.firstIndex(where: { $0.id == manager.currentSpaceUUID }) ?? 0
         selectedSpaceIndex = min(max(currentIndex + offset, 0), spaces.count - 1)
     }
 

@@ -76,12 +76,6 @@ extension SpaceHelper {
             let activeWindowInfo = windowInfo
             draggedWindowID = activeWindowInfo.id
             draggedWindowPID = activeWindowInfo.pid
-            if let displayID = getWindowDisplayID(for: activeWindowInfo.frame) {
-                draggedWindowOriginalSpaceID = getCurrentSpaceID(for: displayID)
-            } else {
-                let assignedSpaces = getWindowCurrentSpaces(windowID: activeWindowInfo.id)
-                draggedWindowOriginalSpaceID = assignedSpaces.count == 1 ? assignedSpaces.first : nil
-            }
             if let runningApp = NSRunningApplication(processIdentifier: activeWindowInfo.pid) {
                 draggedWindowBundleID = runningApp.bundleIdentifier
                 draggedWindowAppName = runningApp.localizedName
@@ -222,7 +216,6 @@ extension SpaceHelper {
                 originalMousePoint = nil
                 restorationTask = nil
                 pendingMoveCount = 0
-                draggedWindowOriginalSpaceID = nil
                 return 
             }
             
@@ -256,16 +249,9 @@ extension SpaceHelper {
             let bundleID = draggedWindowBundleID
             let appName = draggedWindowAppName
             let expectedSpaceID = targetSpaceID
-            let originalSpaceID = draggedWindowOriginalSpaceID
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
                 if let winID = winID, let bundleID = bundleID, let appName = appName {
-                    verifyMoveSuccess(
-                        windowID: winID,
-                        expectedSpaceID: expectedSpaceID,
-                        originalSpaceID: originalSpaceID,
-                        bundleID: bundleID,
-                        appName: appName
-                    )
+                    verifyMoveSuccess(windowID: winID, expectedSpaceID: expectedSpaceID, bundleID: bundleID, appName: appName)
                 }
             }
             
@@ -286,20 +272,13 @@ extension SpaceHelper {
             draggedWindowBundleID = nil
             draggedWindowAppName = nil
             draggedWindowOriginalFrame = nil
-            draggedWindowOriginalSpaceID = nil
         }
         
         restorationTask = task
         DispatchQueue.main.asyncAfter(deadline: .now() + delay, execute: task)
     }
     
-    private static func verifyMoveSuccess(
-        windowID: Int,
-        expectedSpaceID: String?,
-        originalSpaceID: String?,
-        bundleID: String,
-        appName: String
-    ) {
+    private static func verifyMoveSuccess(windowID: Int, expectedSpaceID: String?, bundleID: String, appName: String) {
         // Query visible windows on the screen
         let options = CGWindowListOption(arrayLiteral: .optionOnScreenOnly, .excludeDesktopElements)
         let windowList = CGWindowListCopyWindowInfo(options, kCGNullWindowID) as? [[String: Any]] ?? []
@@ -323,24 +302,14 @@ extension SpaceHelper {
             
             // Trigger failure HUD notification
             DispatchQueue.main.async {
-                handleMoveFailure(
-                    windowID: windowID,
-                    originalSpaceID: originalSpaceID,
-                    bundleID: bundleID,
-                    appName: appName
-                )
+                handleMoveFailure(bundleID: bundleID, appName: appName)
             }
         } else {
             print("SpaceHelper: Window move succeeded for \(appName) (ID: \(windowID))")
         }
     }
     
-    private static func handleMoveFailure(
-        windowID: Int,
-        originalSpaceID: String?,
-        bundleID: String,
-        appName: String
-    ) {
+    private static func handleMoveFailure(bundleID: String, appName: String) {
         guard let sm = AppDelegate.shared.spaceManager else { return }
         
         let hasException = sm.appGrabExceptions.contains(where: { $0.bundleIdentifier == bundleID })
@@ -367,78 +336,12 @@ extension SpaceHelper {
                     }
                 }
                 
-                let sourceSpace = spaceForFailedWindow(
-                    windowID: windowID,
-                    preferredSpaceID: originalSpaceID,
-                    spaceManager: sm
-                )
-                guard let sourceSpace else {
-                    openExceptionSettings(bundleID: bundleID)
-                    return
-                }
-
-                let disposition = sm.switchToSpace(sourceSpace, forceInstant: true, isManual: false)
-                switch disposition {
-                case .alreadyCurrent, .unavailable:
-                    openExceptionSettings(bundleID: bundleID)
-                case .started, .queued:
-                    waitForSpaceThenOpenExceptionSettings(
-                        sourceSpace,
-                        bundleID: bundleID,
-                        deadline: Date().addingTimeInterval(5)
-                    )
-                }
+                // Set autoEditBundleID to open the editor sheet
+                sm.autoEditBundleID = bundleID
+                
+                // Open Settings settings switch tab
+                AppDelegate.shared.statusBarController?.openSettingsWindow(tab: .sswitch)
             }
         }
-    }
-
-    private static func spaceForFailedWindow(
-        windowID: Int,
-        preferredSpaceID: String?,
-        spaceManager: SpaceManager
-    ) -> DesktopSpace? {
-        if let preferredSpaceID,
-           let originalSpace = spaceManager.spaceNameDict.first(where: { $0.id == preferredSpaceID }) {
-            return originalSpace
-        }
-
-        let assignedSpaceIDs = getWindowCurrentSpaces(windowID: windowID)
-        let candidates = spaceManager.spaceNameDict.filter { assignedSpaceIDs.contains($0.id) }
-        guard !candidates.isEmpty else { return nil }
-
-        if let windowInfo = getWindowInfo(id: windowID),
-           let displayID = getWindowDisplayID(for: windowInfo.frame) {
-            let displayCandidates = candidates.filter { $0.displayID == displayID }
-            if displayCandidates.count == 1 {
-                return displayCandidates[0]
-            }
-            if let currentSpaceID = getCurrentSpaceID(for: displayID),
-               let currentCandidate = displayCandidates.first(where: { $0.id == currentSpaceID }) {
-                return currentCandidate
-            }
-        }
-
-        return candidates.count == 1 ? candidates[0] : nil
-    }
-
-    private static func waitForSpaceThenOpenExceptionSettings(
-        _ space: DesktopSpace,
-        bundleID: String,
-        deadline: Date
-    ) {
-        guard Date() < deadline,
-              getCurrentSpaceID(for: space.displayID) != space.id else {
-            openExceptionSettings(bundleID: bundleID)
-            return
-        }
-
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-            waitForSpaceThenOpenExceptionSettings(space, bundleID: bundleID, deadline: deadline)
-        }
-    }
-
-    private static func openExceptionSettings(bundleID: String) {
-        AppDelegate.shared.spaceManager?.autoEditBundleID = bundleID
-        AppDelegate.shared.statusBarController?.openSettingsWindow(tab: .sswitch)
     }
 }

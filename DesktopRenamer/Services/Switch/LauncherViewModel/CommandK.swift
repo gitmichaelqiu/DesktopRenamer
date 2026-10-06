@@ -100,20 +100,17 @@ extension LauncherViewModel {
     
     var commandKActions: [LauncherCommandKAction] {
         if let space = commandKTargetSpace {
-            let available: [LauncherCommandKAction]
-            if space.isFullscreen {
-                available = [.space(.moveUp), .space(.moveDown)]
-            } else {
-                let isLocked = AppDelegate.shared.spaceManager?.lockedSpaceIDs.contains(space.id) == true
-                let movedWindowsCount = AppDelegate.shared.spaceManager?.movedWindowsOriginalSpaces.count ?? 0
-                available = [
-                    .space(.toggleLock(isLocked: isLocked)),
-                    .space(.restoreMovedWindows(count: movedWindowsCount)),
-                    .space(.rename),
-                    .space(.moveUp),
-                    .space(.moveDown)
-                ]
-            }
+            guard !space.isFullscreen else { return [] }
+
+            let isLocked = AppDelegate.shared.spaceManager?.lockedSpaceIDs.contains(space.id) == true
+            let movedWindowsCount = AppDelegate.shared.spaceManager?.movedWindowsOriginalSpaces.count ?? 0
+            let available: [LauncherCommandKAction] = [
+                .space(.toggleLock(isLocked: isLocked)),
+                .space(.restoreMovedWindows(count: movedWindowsCount)),
+                .space(.rename),
+                .space(.moveUp),
+                .space(.moveDown)
+            ]
             guard !submenuSearchQuery.isEmpty else { return available }
 
             return available.filter {
@@ -202,7 +199,8 @@ extension LauncherViewModel {
         } else if activeCommand?.type == .switchToDesktop {
             let spaces = filteredSpaces
             let index = selectedRowIndex
-            guard spaces.indices.contains(index) else { return }
+            guard spaces.indices.contains(index),
+                  !spaces[index].isFullscreen else { return }
             commandKTargetSpace = spaces[index]
             commandKSelectedIndex = 0
         } else {

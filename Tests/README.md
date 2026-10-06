@@ -14,13 +14,3 @@ swiftc -swift-version 5 \
     -o /tmp/DesktopRenamerSpaceAPIContractTests
 /tmp/DesktopRenamerSpaceAPIContractTests
 ```
-
-The Foundation-only space identity behavior tests can be compiled and run with:
-
-```sh
-swiftc -swift-version 5 \
-    DesktopRenamer/Models/DesktopSpace.swift \
-    Tests/SpaceAPIIdentityTests.swift \
-    -o /tmp/DesktopRenamerSpaceAPIIdentityTests
-/tmp/DesktopRenamerSpaceAPIIdentityTests
-```
