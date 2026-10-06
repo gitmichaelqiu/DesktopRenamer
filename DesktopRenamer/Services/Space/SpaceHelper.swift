@@ -168,6 +168,7 @@ class SpaceHelper {
     static var draggedWindowBundleID: String? = nil
     static var draggedWindowAppName: String? = nil
     static var draggedWindowOriginalFrame: CGRect? = nil
+    static var draggedWindowOriginalSpaceID: String? = nil
     static var isDragging: Bool { originalMousePoint != nil }
 
     static func markWindowMoveIntent(to spaceID: String) {
