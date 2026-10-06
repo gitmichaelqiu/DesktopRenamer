@@ -57,52 +57,89 @@ extension SpaceManager {
     }
 
     func restoreAllMovedWindows() {
-        pruneStaleMovedWindows()
-        let list = movedWindowsOriginalSpaces.map { (windowID: $0.key, originalSpaceUUID: $0.value.originalSpaceUUID, currentSpaceUUID: $0.value.currentSpaceUUID, pid: $0.value.pid) }
-        guard !list.isEmpty else { return }
-        
-        let initialSpaceUUID = self.currentSpaceUUID
-        restoreNextWindow(index: 0, list: list, initialSpaceUUID: initialSpaceUUID)
+        restoreMovedWindows(fromOriginalSpaceUUID: nil)
     }
-    
-    private func restoreNextWindow(index: Int, list: [(windowID: Int, originalSpaceUUID: String, currentSpaceUUID: String, pid: Int32)], initialSpaceUUID: String) {
-        if index >= list.count {
-            // All windows restored! Switch back to the user's initial space instantly after a short delay
-            // to allow the last programmatic drag and OS space change state to fully settle.
-            if let initialSpaceObj = self.spaceNameDict.first(where: { $0.id == initialSpaceUUID }) {
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [weak self] in
-                    print("SpaceManager: All restorations complete. Switching back to initial space \(initialSpaceUUID)")
-                    self?.switchToSpace(initialSpaceObj, forceInstant: true, isManual: false)
-                }
+
+    func restoreMovedWindows(fromOriginalSpaceUUID spaceUUID: String?) {
+        pruneStaleMovedWindows()
+        let windowIDs = movedWindowsOriginalSpaces.compactMap { windowID, entry in
+            spaceUUID == nil || entry.originalSpaceUUID == spaceUUID ? windowID : nil
+        }
+        let startedNewRun = movedWindowRestoreQueue.enqueue(windowIDs)
+        guard startedNewRun else { return }
+
+        movedWindowRestoreInitialSpaceUUID = currentSpaceUUID
+        restoreNextMovedWindow(generation: movedWindowRestoreQueue.generation)
+    }
+
+    private func restoreNextMovedWindow(generation: UInt64) {
+        guard movedWindowRestoreQueue.isRunning,
+              movedWindowRestoreQueue.generation == generation else {
+            return
+        }
+
+        guard let windowID = movedWindowRestoreQueue.takeNext(generation: generation) else {
+            finishMovedWindowRestoration(generation: generation)
+            return
+        }
+
+        guard let entry = movedWindowsOriginalSpaces[windowID] else {
+            _ = movedWindowRestoreQueue.completeActive(windowID: windowID, generation: generation)
+            DispatchQueue.main.async { [weak self] in
+                self?.restoreNextMovedWindow(generation: generation)
             }
             return
         }
-        
-        let item = list[index]
-        print("SpaceManager: Restoring window \(item.windowID) from \(item.currentSpaceUUID) back to \(item.originalSpaceUUID)")
-        
-        // 1. Switch to the window's current space instantly to grab it
-        if let currentSpaceObj = self.spaceNameDict.first(where: { $0.id == item.currentSpaceUUID }) {
-            self.switchToSpace(currentSpaceObj, forceInstant: true, isManual: false)
-            
-            // 2. Wait 600ms for the space switch to finish, focus the window, and drag it to originalSpaceUUID
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.60) { [weak self] in
-                SpaceHelper.focusWindow(id: item.windowID, pid: item.pid)
-                
-                // Wait 250ms for the window to raise/focus
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) {
-                    SpaceHelper.dragActiveWindow(to: item.originalSpaceUUID, forceInstant: true)
-                    self?.movedWindowsOriginalSpaces.removeValue(forKey: item.windowID)
-                    
-                    // 3. Wait 500ms for the drag-move operation to fully complete before starting the next one!
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.50) {
-                        self?.restoreNextWindow(index: index + 1, list: list, initialSpaceUUID: initialSpaceUUID)
-                    }
+
+        guard let currentSpace = spaceNameDict.first(where: { $0.id == entry.currentSpaceUUID }) else {
+            _ = movedWindowRestoreQueue.completeActive(windowID: windowID, generation: generation)
+            DispatchQueue.main.async { [weak self] in
+                self?.restoreNextMovedWindow(generation: generation)
+            }
+            return
+        }
+
+        print("SpaceManager: Restoring window \(windowID) from \(entry.currentSpaceUUID) back to \(entry.originalSpaceUUID)")
+        switchToSpace(currentSpace, forceInstant: true, isManual: false)
+
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.60) { [weak self] in
+            guard let self,
+                  self.movedWindowRestoreQueue.generation == generation,
+                  self.movedWindowRestoreQueue.activeWindowID == windowID else {
+                return
+            }
+
+            SpaceHelper.focusWindow(id: windowID, pid: entry.pid)
+
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) { [weak self] in
+                guard let self,
+                      self.movedWindowRestoreQueue.generation == generation,
+                      self.movedWindowRestoreQueue.activeWindowID == windowID else {
+                    return
+                }
+
+                SpaceHelper.dragActiveWindow(to: entry.originalSpaceUUID, forceInstant: true)
+                self.movedWindowsOriginalSpaces.removeValue(forKey: windowID)
+                guard self.movedWindowRestoreQueue.completeActive(windowID: windowID, generation: generation) else {
+                    return
+                }
+
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.50) { [weak self] in
+                    self?.restoreNextMovedWindow(generation: generation)
                 }
             }
-        } else {
-            // Space not found, skip this one
-            self.restoreNextWindow(index: index + 1, list: list, initialSpaceUUID: initialSpaceUUID)
+        }
+    }
+
+    private func finishMovedWindowRestoration(generation: UInt64) {
+        guard movedWindowRestoreQueue.finishIfDrained(generation: generation) else { return }
+
+        let initialSpaceUUID = movedWindowRestoreInitialSpaceUUID
+        movedWindowRestoreInitialSpaceUUID = nil
+        if let initialSpaceUUID,
+           let initialSpace = spaceNameDict.first(where: { $0.id == initialSpaceUUID }) {
+            print("SpaceManager: All restorations complete. Switching back to initial space \(initialSpaceUUID)")
+            switchToSpace(initialSpace, forceInstant: true, isManual: false)
         }
     }
 }

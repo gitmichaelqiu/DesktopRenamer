@@ -245,6 +245,14 @@ struct SwitchSettingsView: View {
                     }
                     
                     Divider()
+
+                    SettingsRow("Automatically restore windows when unlocking a space") {
+                        Toggle("", isOn: $spaceManager.autoRestoreWindowsOnUnlock)
+                            .toggleStyle(.switch)
+                            .labelsHidden()
+                    }
+
+                    Divider()
                     
                     SettingsRow(
                         "Restore windows moved by lock",
