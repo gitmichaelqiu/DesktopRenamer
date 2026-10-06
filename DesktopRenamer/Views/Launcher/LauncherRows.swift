@@ -387,3 +387,18 @@ struct ListSectionHeader: View {
         .padding(.bottom, LauncherLayout.sectionHeaderBottomPadding)
     }
 }
+
+struct LauncherSubmenuSectionHeader: View {
+    let title: String
+    let colors: ThemeColors
+
+    var body: some View {
+        Text(title)
+            .font(LauncherTypography.sectionHeader)
+            .foregroundColor(colors.textSecondary)
+            .lineLimit(1)
+            .padding(.horizontal, LauncherLayout.submenuRowHorizontalPadding)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .frame(height: LauncherLayout.submenuSectionHeaderHeight)
+    }
+}

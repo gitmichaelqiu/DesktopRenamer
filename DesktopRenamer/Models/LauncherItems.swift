@@ -43,6 +43,21 @@ struct SpaceGroup: Identifiable, Equatable {
     }
 }
 
+struct LauncherSpaceDisplayRow: Identifiable {
+    let space: SpaceGroup
+    let index: Int
+
+    var id: String { space.id }
+}
+
+struct LauncherSpaceDisplaySection: Identifiable {
+    let displayID: String
+    let displayName: String
+    let rows: [LauncherSpaceDisplayRow]
+
+    var id: String { displayID }
+}
+
 struct WindowEntry: Identifiable, Equatable {
     let id: Int // WindowID
     let pid: Int32

@@ -5,17 +5,64 @@ import SwiftUI
 @MainActor
 extension LauncherViewModel {
 
+    func spaceDisplaySections(for spaces: [SpaceGroup]) -> [LauncherSpaceDisplaySection] {
+        var displayOrder: [String] = []
+        var displayNames: [String: String] = [:]
+        var rowsByDisplay: [String: [LauncherSpaceDisplayRow]] = [:]
+
+        for (index, space) in spaces.enumerated() {
+            let displayID = space.displayID.isEmpty ? "display-name:\(space.displayName)" : space.displayID
+            if displayNames[displayID] == nil {
+                displayOrder.append(displayID)
+                displayNames[displayID] = space.displayName
+            }
+            rowsByDisplay[displayID, default: []].append(LauncherSpaceDisplayRow(space: space, index: index))
+        }
+
+        return displayOrder.compactMap { displayID in
+            guard let displayName = displayNames[displayID],
+                  let rows = rowsByDisplay[displayID] else {
+                return nil
+            }
+            return LauncherSpaceDisplaySection(
+                displayID: displayID,
+                displayName: displayName,
+                rows: rows
+            )
+        }
+    }
+
+    var spacesGroupedByDisplay: [SpaceGroup] {
+        spaceDisplaySections(for: currentSpaces).flatMap { $0.rows.map(\.space) }
+    }
+
     var filteredWindows: [WindowEntry] {
+        let matchingWindows: [WindowEntry]
         if searchQuery.isEmpty {
-            return currentWindows
+            matchingWindows = currentWindows
         } else {
             let query = searchQuery.lowercased()
-            return currentWindows.filter {
+            matchingWindows = currentWindows.filter {
                 matchesQuery(query, target: $0.title, pinyin: $0.pinyinTitle) ||
                 matchesQuery(query, target: $0.ownerName, pinyin: $0.pinyinOwnerName) ||
                 matchesQuery(query, target: $0.space.name, pinyin: $0.space.pinyinName)
             }
         }
+
+        guard shouldShowDisplayNameForSpaces else { return matchingWindows }
+
+        let spaceOrder = Dictionary(uniqueKeysWithValues: spacesGroupedByDisplay.enumerated().map {
+            ($0.element.id, $0.offset)
+        })
+        return matchingWindows.enumerated()
+            .sorted { left, right in
+                let leftSpaceOrder = spaceOrder[left.element.space.id] ?? Int.max
+                let rightSpaceOrder = spaceOrder[right.element.space.id] ?? Int.max
+                return leftSpaceOrder == rightSpaceOrder
+                    ? left.offset < right.offset
+                    : leftSpaceOrder < rightSpaceOrder
+            }
+            .map(\.element)
     }
     
     var selectedWindowForListWindows: WindowEntry? {
@@ -34,7 +81,7 @@ extension LauncherViewModel {
             windowToGlobalIndex[w.id] = idx
         }
         
-        for space in currentSpaces {
+        for space in spacesGroupedByDisplay {
             let spaceWindows = windows.filter { $0.space.id == space.id }
             if spaceWindows.isEmpty { continue }
             
@@ -44,7 +91,9 @@ extension LauncherViewModel {
             
             sections.append(ListWindowsSection(
                 id: "space-\(space.id)",
-                title: space.name,
+                title: shouldShowDisplayNameForSpaces
+                    ? "\(space.displayName) · \(space.name)"
+                    : space.name,
                 subtitle: String(format: space.isFullscreen ? String(localized: "Fullscreen") : String(localized: "%lld windows"), items.count),
                 items: items
             ))

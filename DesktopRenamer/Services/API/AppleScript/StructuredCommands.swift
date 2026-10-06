@@ -48,6 +48,8 @@ private func scriptSnapshotRecord(_ snapshot: SpaceAPISnapshot) -> [String: Any]
         "revision": snapshot.revision,
         "timestamp": snapshot.timestamp,
         "currentSpaceIDs": snapshot.currentSpaceIDs,
+        "currentSpaceID": snapshot.currentSpaceID,
+        "currentDisplayID": snapshot.currentDisplayID,
         "currentSpaceName": snapshot.currentSpaceName,
         "movedWindowsCount": snapshot.movedWindowsCount,
         "spaces": snapshot.spaces.map(scriptSpaceRecord)
@@ -119,19 +121,23 @@ class GetStructuredWindowsCommand: NSScriptCommand {
         }
         let context = runOnMain {
             let api = manager.spaceAPI ?? SpaceAPI(spaceManager: manager)
-            return (manager.spaceNameDict, api.makeSpaceRecords(manager), api.currentSnapshotRevision)
+            return (manager.spaceNameDict, api.makeSpaceRecords(manager), api.currentSnapshotRevision, api)
         }
-        let (spaces, spaceRecords, revision) = context
+        let (spaces, spaceRecords, revision, api) = context
 
         // Window enumeration uses CoreGraphics and Accessibility APIs. Keep it
         // outside the main-actor capture so a structured AppleScript read does
         // not hold up the app while it walks other applications' windows.
+        let rawWindowRecords = SpaceHelper.getWindowRecordsForAllSpaces(spaces: spaces)
+        let windows = runOnMain {
+            api.makeSpaceAPIWindowRecords(rawWindowRecords, spaces: spaces)
+        }
         let snapshot = SpaceAPIWindowsSnapshot(
             apiVersion: DesktopRenamerAPIVersion.current,
             revision: revision,
             timestamp: ISO8601DateFormatter().string(from: Date()),
             spaces: spaceRecords,
-            windows: SpaceHelper.getWindowRecordsForAllSpaces(spaces: spaces)
+            windows: windows
         )
         return scriptWindowsSnapshotRecord(snapshot)
     }
