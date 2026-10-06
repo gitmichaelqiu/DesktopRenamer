@@ -110,15 +110,8 @@ extension SpaceManager {
         shouldRestoreNamesByPositionAfterBoot = currentBootSessionID != nil
             && currentBootSessionID != savedBootSessionID?.uppercased()
 
-        var needsSpaceAPIIdentityMigration = false
         if let data = UserDefaults.standard.data(forKey: SpaceManager.spacesKey),
            let spaces = try? JSONDecoder().decode([DesktopSpace].self, from: data) {
-            if let rawSpaces = try? JSONSerialization.jsonObject(with: data) as? [[String: Any]] {
-                needsSpaceAPIIdentityMigration = rawSpaces.contains { record in
-                    guard let spaceAPIID = record["spaceAPIID"] as? String else { return true }
-                    return spaceAPIID.isEmpty
-                }
-            }
             spaceNameDict = spaces.map {
                 var s = $0
                 s.customName = s.customName.replacingOccurrences(of: "~", with: "")
@@ -163,10 +156,6 @@ extension SpaceManager {
                     indexCache[indexKey] = space.customName
                 }
             }
-            saveData()
-        }
-
-        if needsSpaceAPIIdentityMigration {
             saveData()
         }
     }

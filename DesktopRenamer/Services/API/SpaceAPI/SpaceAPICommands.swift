@@ -27,16 +27,14 @@ extension SpaceAPI {
                 return "\(space.id)~\(name)~\(space.displayID)~\(space.num)~\(space.isFullscreen ? "1" : "0")~\(space.appPath ?? "")"
             }.joined(separator: "\n")
         case "switchToSpace":
-            guard let requestedSpaceID = arguments["spaceID"],
-                  let spaceID = managedSpaceID(forSpaceIdentifier: requestedSpaceID, manager: manager),
+            guard let spaceID = arguments["spaceID"],
                   let space = manager.spaceNameDict.first(where: { $0.id == spaceID }) else {
                 throw SpaceAPIError.invalidArgument("Invalid space ID.")
             }
             manager.switchToSpace(space, forceInstant: true)
             return ""
         case "toggleLockSpace":
-            guard let requestedSpaceID = arguments["spaceID"],
-                  let spaceID = managedSpaceID(forSpaceIdentifier: requestedSpaceID, manager: manager),
+            guard let spaceID = arguments["spaceID"],
                   let space = manager.spaceNameDict.first(where: { $0.id == spaceID }) else {
                 throw SpaceAPIError.invalidArgument("Invalid space ID.")
             }
@@ -53,15 +51,13 @@ extension SpaceAPI {
             manager.renameSpace(manager.currentSpaceUUID, to: name)
             return ""
         case "renameSpace":
-            guard let requestedSpaceID = arguments["spaceID"], let name = arguments["name"],
-                  let spaceID = managedSpaceID(forSpaceIdentifier: requestedSpaceID, manager: manager) else {
+            guard let spaceID = arguments["spaceID"], let name = arguments["name"] else {
                 throw SpaceAPIError.invalidArgument("Missing space ID or name.")
             }
             manager.renameSpace(spaceID, to: name)
             return ""
         case "rearrangeSpace":
-            guard let requestedSpaceID = arguments["spaceID"], let direction = arguments["direction"],
-                  let spaceID = managedSpaceID(forSpaceIdentifier: requestedSpaceID, manager: manager) else {
+            guard let spaceID = arguments["spaceID"], let direction = arguments["direction"] else {
                 throw SpaceAPIError.invalidArgument("Missing space ID or direction.")
             }
             return try await rearrangeSpace(spaceID: spaceID, direction: direction, manager: manager)
@@ -72,10 +68,7 @@ extension SpaceAPI {
             manager.moveActiveWindowToPreviousSpace()
             return ""
         case "moveWindowToSpace":
-            guard let requestedSpaceID = arguments["spaceID"],
-                  let spaceID = managedSpaceID(forSpaceIdentifier: requestedSpaceID, manager: manager) else {
-                throw SpaceAPIError.invalidArgument("Missing or invalid space ID.")
-            }
+            guard let spaceID = arguments["spaceID"] else { throw SpaceAPIError.invalidArgument("Missing space ID.") }
             try await moveActiveWindow(toSpaceID: spaceID, manager: manager)
             return ""
         case "reloadSpaceLabels":
@@ -135,10 +128,8 @@ extension SpaceAPI {
             return ""
         case "moveSpecificWindow":
             guard let windowID = Int(arguments["windowID"] ?? ""),
-                  let requestedFromSpaceID = arguments["fromSpaceID"],
-                  let requestedTargetSpaceID = arguments["targetSpaceID"],
-                  let fromSpaceID = managedSpaceID(forSpaceIdentifier: requestedFromSpaceID, manager: manager),
-                  let targetSpaceID = managedSpaceID(forSpaceIdentifier: requestedTargetSpaceID, manager: manager) else {
+                  let fromSpaceID = arguments["fromSpaceID"],
+                  let targetSpaceID = arguments["targetSpaceID"] else {
                 throw SpaceAPIError.invalidArgument("Missing window move arguments.")
             }
             let pid: Int32

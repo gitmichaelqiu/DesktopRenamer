@@ -243,7 +243,7 @@ struct SwitchSettingsView: View {
                             .disabled(hotkeyManager.isDefault(for: .toggleLock))
                         }
                     }
-
+                    
                     Divider()
                     
                     SettingsRow(
@@ -267,14 +267,6 @@ struct SwitchSettingsView: View {
                             }
                             .disabled(hotkeyManager.isDefault(for: .restoreWindows))
                         }
-                    }
-
-                    Divider()
-
-                    SettingsRow("Automatically restore windows when unlocking") {
-                        Toggle("", isOn: $spaceManager.autoRestoreWindowsOnUnlock)
-                            .toggleStyle(.switch)
-                            .labelsHidden()
                     }
                 }
                 

@@ -339,16 +339,6 @@
         }
       }
     },
-    "Automatically restore windows when unlocking" : {
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "解锁桌面时自动恢复窗口"
-          }
-        }
-      }
-    },
     "Back" : {
       "localizations" : {
         "zh-Hans" : {

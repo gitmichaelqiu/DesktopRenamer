@@ -217,7 +217,6 @@ class LauncherWindowController: NSWindowController, NSWindowDelegate {
         
         // Reset state
         viewModel.resetForPresentation()
-        viewModel.prepareDisplayContextForPresentation(cursorDisplayID: SpaceHelper.getCursorDisplayID())
         
         // A nonactivating panel can become key for text input without making
         // DesktopRenamer the active application. Activating the app here can
