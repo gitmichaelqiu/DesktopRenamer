@@ -229,8 +229,13 @@ extension StatusBarController {
             menu.addItem(showOnDesktop)
         }
 
-        let reloadLabels = NSMenuItem(title: NSLocalizedString("Reload Space Labels", comment: "Reload Space Label Windows to fix glitches"), action: #selector(reloadLabelsFromMenu), keyEquivalent: "")
+        let reloadLabels = NSMenuItem(
+            title: NSLocalizedString("Reload Space Labels", comment: "Reload Space Label Windows to fix glitches"),
+            action: #selector(reloadLabelsFromMenu),
+            keyEquivalent: "r"
+        )
         reloadLabels.target = self
+        reloadLabels.keyEquivalentModifierMask = [.command, .shift]
         reloadLabels.image = NSImage(systemSymbolName: "arrow.clockwise", accessibilityDescription: nil)
         menu.addItem(reloadLabels)
         
