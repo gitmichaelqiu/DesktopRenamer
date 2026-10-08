@@ -15,6 +15,7 @@ struct GeneralSettingsView: View {
     @State private var isAPIEnabled: Bool = SpaceManager.isAPIEnabled
     @State private var isStatusBarHidden: Bool = StatusBarController.isStatusBarHidden
     @State private var showDiagnosticSheet: Bool = false
+    @State private var showSpaceAPIAccessSettings: Bool = false
 
 
     var body: some View {
@@ -109,6 +110,31 @@ struct GeneralSettingsView: View {
                             }
                     }
 
+                    if let accessController = spaceManager.spaceAPI?.accessController {
+                        Divider()
+
+                        SettingsRow(
+                            "Settings.General.Advanced.RestrictSpaceAPI",
+                            helperText: "Only approved apps can use SpaceAPI."
+                        ) {
+                            Toggle(
+                                "",
+                                isOn: Binding(
+                                    get: { accessController.isRestrictedForSettings },
+                                    set: { accessController.setRestricted($0) }
+                                )
+                            )
+                            .labelsHidden()
+                            .toggleStyle(.switch)
+                        }
+
+                        Divider()
+
+                        SettingsRow("Settings.General.Advanced.ApprovedApps") {
+                            Button("Manage…") { showSpaceAPIAccessSettings = true }
+                        }
+                    }
+
                     Divider()
 
                     SettingsRow(
@@ -145,6 +171,11 @@ struct GeneralSettingsView: View {
         .onAppear { launchAtLogin = getLaunchAtLoginState() }
         .sheet(isPresented: $showDiagnosticSheet) {
             DiagnosticSheetView()
+        }
+        .sheet(isPresented: $showSpaceAPIAccessSettings) {
+            if let accessController = spaceManager.spaceAPI?.accessController {
+                SpaceAPIAccessSettingsView(accessController: accessController)
+            }
         }
     }
 

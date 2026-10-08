@@ -14,7 +14,7 @@ struct SpaceAPIContractTests {
     }
 
     private static func testMethodDefinitions() throws {
-        check(DesktopRenamerAPIContract.version == "1.2.0", "structured API contract version is current")
+        check(DesktopRenamerAPIContract.version == "1.3.0", "structured API contract version is current")
         check(
             DesktopRenamerAPIContract.preferredAPIPrefix == "dev.mqiu.DesktopRenamer",
             "current API notification namespace is preferred"

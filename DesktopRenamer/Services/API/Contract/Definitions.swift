@@ -36,6 +36,7 @@ enum SpaceAPIJSONRPCCode {
     static let internalError = -32603
     static let apiDisabled = -32001
     static let appUnavailable = -32002
+    static let permissionDenied = -32003
     static let operationFailed = -32004
     static let payloadTooLarge = -32006
 }
@@ -60,7 +61,7 @@ struct SpaceAPIMethodDefinition: Equatable {
 }
 
 enum DesktopRenamerAPIContract {
-    static let version = "1.2.0"
+    static let version = "1.3.0"
     static let jsonRPCVersion = "2.0"
     static let payloadKey = "payload"
     static let maxPayloadBytes = 1_048_576

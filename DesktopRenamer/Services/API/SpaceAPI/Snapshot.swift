@@ -100,15 +100,22 @@ extension SpaceAPI {
     }
 
     func makeAPIInfo() -> SpaceAPIInfo {
-        SpaceAPIInfo(
+        let accessRestricted = accessController.isRestricted
+        let transports: [String] = socketServer.isRunning
+            ? (accessRestricted ? ["unixDomainSocket"] : ["unixDomainSocket", "distributedNotificationCenter"])
+            : (accessRestricted ? [] : ["distributedNotificationCenter"])
+        return SpaceAPIInfo(
             contractVersion: DesktopRenamerAPIVersion.current,
             jsonRPCVersion: DesktopRenamerAPIContract.jsonRPCVersion,
             supportedMethods: DesktopRenamerAPIContract.supportedMethods,
-            legacyNotifications: true,
-            legacyCompatibility: "supported",
+            legacyNotifications: !accessRestricted,
+            legacyCompatibility: accessRestricted ? "disabledByAccessPolicy" : "supported",
             eventNotifications: true,
             eventCapabilities: ["stateChanged"],
-            maxPayloadBytes: DesktopRenamerAPIContract.maxPayloadBytes
+            maxPayloadBytes: DesktopRenamerAPIContract.maxPayloadBytes,
+            transports: transports,
+            socketEndpoint: socketServer.isRunning ? SpaceAPISocketServer.endpoint.path : nil,
+            accessRestricted: accessRestricted
         )
     }
 

@@ -181,7 +181,9 @@ class SpaceManager: ObservableObject {
             self.spaceAPI?.setupListener()
         }
         if SpaceManager.isAPIEnabled {
-            DistributedNotificationCenter.default().postNotificationName(SpaceAPI.apiToggleNotification, object: nil, userInfo: ["isEnabled": true], deliverImmediately: true)
+            MainActor.assumeIsolated {
+                self.spaceAPI?.broadcastAPIState(isEnabled: true)
+            }
         }
         
         SpaceHelper.startMonitoring { [weak self] rawUUID, isDesktop, ncCnt, displayID in
