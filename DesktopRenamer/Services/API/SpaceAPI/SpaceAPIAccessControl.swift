@@ -406,10 +406,11 @@ final class SpaceAPIAccessController: ObservableObject {
         var hasAccessControlChange = false
         for (index, acl) in aclList.enumerated() {
             let authorizations = try aclAuthorizationNames(for: acl)
-            if authorizations == [kSecACLAuthorizationEncrypt as String] {
-                // Encryption is the non-sensitive "safe" operation in the default
-                // Keychain ACL. Only decrypt/data-access and ACL-change entries need
-                // to be restricted to this app.
+            if authorizations == [kSecACLAuthorizationEncrypt as String]
+                || authorizations == ["ACLAuthorizationIntegrity"] {
+                // Keychain adds an integrity-only ACL when saving this item. Like the
+                // default encryption ACL, it does not grant access to the stored data
+                // or permission to change the item's access controls.
                 continue
             }
             var applications: CFArray?
