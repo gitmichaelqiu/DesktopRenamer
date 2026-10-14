@@ -6,88 +6,128 @@ struct SpaceAPIAccessSettingsView: View {
     @ObservedObject var accessController: SpaceAPIAccessController
     @Environment(\.dismiss) private var dismiss
 
+    @State private var showPolicyRepairConfirmation = false
+
     var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            Text("SpaceAPI Access")
-                .font(.title2.weight(.semibold))
-
-            Toggle(
-                "Allow only approved apps",
-                isOn: Binding(
-                    get: { accessController.isRestrictedForSettings },
-                    set: { accessController.setRestricted($0) }
-                )
-            )
-            Text("When enabled, unapproved apps cannot read or change spaces through SpaceAPI.")
-                .font(.callout)
-                .foregroundStyle(.secondary)
-
-            if let errorMessage = accessController.errorMessage {
-                Label(errorMessage, systemImage: "exclamationmark.triangle.fill")
-                    .font(.callout)
-                    .foregroundStyle(.red)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
-
+        VStack(spacing: 12) {
             HStack {
-                Text("Approved Apps")
-                    .font(.headline)
-                Spacer()
-                Button("Add App…", action: chooseApplication)
-            }
-
-            if accessController.approvedClients.isEmpty {
-                VStack(spacing: 8) {
-                    Image(systemName: "lock.shield")
-                        .font(.system(size: 26))
-                        .foregroundStyle(.secondary)
-                    Text("No Approved Apps")
-                        .font(.headline)
-                    Text("An empty list blocks every app while access restriction is enabled.")
-                        .font(.callout)
-                        .foregroundStyle(.secondary)
-                        .multilineTextAlignment(.center)
-                }
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-            } else {
-                List(accessController.approvedClients) { client in
-                    HStack(spacing: 12) {
-                        Image(nsImage: NSWorkspace.shared.icon(forFile: client.applicationPath))
-                            .resizable()
-                            .frame(width: 32, height: 32)
-                        VStack(alignment: .leading, spacing: 3) {
-                            Text(client.name)
-                                .lineLimit(1)
-                            Text(client.identityDescription)
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
-                        }
-                        Spacer()
-                        Button {
-                            accessController.revokeClient(id: client.id)
-                        } label: {
-                            Image(systemName: "minus.circle")
-                        }
-                        .buttonStyle(.borderless)
-                        .help("Revoke access")
-                    }
-                    .padding(.vertical, 3)
-                }
-                .listStyle(.inset)
-            }
-
-            Text("Ad-hoc development builds must be approved again after the app is rebuilt.")
-                .font(.caption)
-                .foregroundStyle(.secondary)
-
-            HStack {
+                Text("SpaceAPI Access")
+                    .font(.title2.weight(.semibold))
                 Spacer()
                 Button("Done") { dismiss() }
                     .keyboardShortcut(.defaultAction)
             }
+
+            ScrollView {
+                VStack(alignment: .leading, spacing: 20) {
+                    SettingsSection("Access policy") {
+                        SettingsRow("Allow only approved apps") {
+                            Toggle(
+                                "",
+                                isOn: Binding(
+                                    get: { accessController.isRestrictedForSettings },
+                                    set: { accessController.setRestricted($0) }
+                                )
+                            )
+                            .labelsHidden()
+                            .toggleStyle(.switch)
+                        }
+
+                        if let errorMessage = accessController.errorMessage {
+                            Divider()
+
+                            SettingsRow("Policy status") {
+                                HStack(spacing: 8) {
+                                    Text(errorMessage)
+                                        .font(.footnote)
+                                        .foregroundStyle(.red)
+                                        .multilineTextAlignment(.trailing)
+                                        .fixedSize(horizontal: false, vertical: true)
+
+                                    if accessController.canRepairPolicy {
+                                        Button("Reset") {
+                                            showPolicyRepairConfirmation = true
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    SettingsSection("App permissions") {
+                        SettingsRow("Add an app") {
+                            Button("Add App…", action: chooseApplication)
+                        }
+
+                        if accessController.approvedClients.isEmpty {
+                            Divider()
+
+                            SettingsRow("No apps added") {
+                                Text("All apps are blocked while access restriction is enabled.")
+                                    .foregroundStyle(.secondary)
+                                    .multilineTextAlignment(.trailing)
+                                    .fixedSize(horizontal: false, vertical: true)
+                            }
+                        } else {
+                            ForEach(accessController.approvedClients) { client in
+                                Divider()
+
+                                SettingsRow(LocalizedStringResource(stringLiteral: client.name)) {
+                                    HStack(spacing: 8) {
+                                        Picker(
+                                            "Access for \(client.name)",
+                                            selection: Binding(
+                                                get: { client.accessLevel },
+                                                set: { accessController.setAccessLevel(forClientID: client.id, to: $0) }
+                                            )
+                                        ) {
+                                            Text("No Access").tag(SpaceAPIClientAccessLevel.noAccess)
+                                            Text("Read Only").tag(SpaceAPIClientAccessLevel.readOnly)
+                                            Text("Read & Write").tag(SpaceAPIClientAccessLevel.fullAccess)
+                                        }
+                                        .labelsHidden()
+                                        .pickerStyle(.menu)
+                                        .frame(width: 128)
+                                        .disabled(!accessController.isRestrictedForSettings)
+
+                                        Button {
+                                            accessController.revokeClient(id: client.id)
+                                        } label: {
+                                            Image(systemName: "trash")
+                                        }
+                                        .buttonStyle(.borderless)
+                                        .help("Remove app")
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    Text("Per-app access levels are enforced when access restriction is on.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+
+                    Text("Reapprove a development build after rebuilding it.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+            }
         }
-        .padding(20)
-        .frame(width: 520, height: 520)
+        .padding(16)
+        .frame(width: 560, height: 540)
+        .environment(\.settingsTab, .general)
+        .confirmationDialog(
+            "Reset SpaceAPI access?",
+            isPresented: $showPolicyRepairConfirmation,
+            titleVisibility: .visible
+        ) {
+            Button("Reset", role: .destructive) {
+                accessController.repairUnreadablePolicy()
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("Resetting the unreadable policy clears the app permissions. SpaceAPI stays restricted until permissions are set again.")
+        }
     }
 
     private func chooseApplication() {
