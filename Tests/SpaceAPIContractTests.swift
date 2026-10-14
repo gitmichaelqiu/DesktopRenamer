@@ -39,6 +39,24 @@ struct SpaceAPIContractTests {
         check(Set(names).count == names.count, "method names are unique")
         check(names == DesktopRenamerAPIContract.supportedMethods, "supported methods follow definitions")
 
+        check(
+            definitions.filter { $0.access == .read }.map(\.name) == [
+                "getAPIInfo",
+                "getAPIVersion",
+                "getSpaceSnapshot",
+                "getCurrentSpaceName",
+                "getCurrentSpaceID",
+                "getAllSpaces",
+                "getWindows"
+            ],
+            "only non-mutating SpaceAPI methods are available to read-only clients"
+        )
+        check(
+            definitions.filter { $0.access == .write }.contains { $0.name == "focusWindow" } &&
+                definitions.filter { $0.access == .write }.contains { $0.name == "executeWindowAction" },
+            "window focus and actions require full access"
+        )
+
         for definition in definitions {
             check(
                 definition.requiredParameters.isSubset(of: Set(definition.parameters.keys)),

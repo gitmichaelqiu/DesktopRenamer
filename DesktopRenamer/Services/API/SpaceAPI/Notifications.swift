@@ -176,6 +176,18 @@ extension SpaceAPI {
             )
         }
 
+        let requiredAccess = DesktopRenamerAPIContract.definition(for: request.method)?.access ?? .write
+        let clientAccess = isSocket
+            ? accessController.accessLevel(for: peerIdentity)
+            : .fullAccess
+        guard clientAccess.allows(requiredAccess) else {
+            return SpaceAPIJSONRPCCodec.errorResponse(
+                id: request.id,
+                code: SpaceAPIJSONRPCCode.permissionDenied,
+                message: "This app has read-only access to SpaceAPI."
+            )
+        }
+
         do {
             let result = try await executeRPCMethod(request)
             DiagnosticEventLog.shared.record(

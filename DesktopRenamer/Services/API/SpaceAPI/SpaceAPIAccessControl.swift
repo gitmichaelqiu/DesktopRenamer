@@ -56,6 +56,16 @@ final class SpaceAPIAccessController: ObservableObject {
                                                    storeAvailable: snapshot.storeAvailable)
     }
 
+    func accessLevel(for identity: SpaceAPIPeerIdentity?) -> SpaceAPIClientAccessLevel {
+        let snapshot = policySnapshot()
+        return SpaceAPIAuthorization.accessLevel(
+            for: identity,
+            restricted: snapshot.policy.isRestricted,
+            approvedClients: snapshot.policy.approvedClients,
+            storeAvailable: snapshot.storeAvailable
+        )
+    }
+
     func authorizedRecipients<Client>(
         from clients: [Client],
         identity: (Client) -> SpaceAPIPeerIdentity?
@@ -80,8 +90,11 @@ final class SpaceAPIAccessController: ObservableObject {
     @MainActor
     func approveApplication(at url: URL) {
         do {
-            let client = try Self.approvedClient(at: url)
+            var client = try Self.approvedClient(at: url)
             var updated = currentPolicy()
+            if let existing = updated.approvedClients.first(where: { $0.id == client.id }) {
+                client.accessLevel = existing.accessLevel
+            }
             updated.approvedClients.removeAll { $0.id == client.id }
             updated.approvedClients.append(client)
             updated.approvedClients.sort { $0.name.localizedStandardCompare($1.name) == .orderedAscending }
@@ -95,6 +108,14 @@ final class SpaceAPIAccessController: ObservableObject {
     func revokeClient(id: String) {
         var updated = currentPolicy()
         updated.approvedClients.removeAll { $0.id == id }
+        persistAndApply(updated)
+    }
+
+    @MainActor
+    func setAccessLevel(forClientID id: String, to accessLevel: SpaceAPIClientAccessLevel) {
+        var updated = currentPolicy()
+        guard let index = updated.approvedClients.firstIndex(where: { $0.id == id }) else { return }
+        updated.approvedClients[index].accessLevel = accessLevel
         persistAndApply(updated)
     }
 
@@ -208,7 +229,8 @@ final class SpaceAPIAccessController: ObservableObject {
                 bundleIdentifier: bundleIdentifier,
                 applicationPath: path,
                 designatedRequirement: nil,
-                codeHash: encodedHash
+                codeHash: encodedHash,
+                accessLevel: .readOnly
             )
         }
 
@@ -221,7 +243,8 @@ final class SpaceAPIAccessController: ObservableObject {
             bundleIdentifier: bundleIdentifier,
             applicationPath: path,
             designatedRequirement: requirementText,
-            codeHash: nil
+            codeHash: nil,
+            accessLevel: .readOnly
         )
     }
 

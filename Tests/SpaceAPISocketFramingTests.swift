@@ -78,6 +78,24 @@ private func testAuthorizationIdentities() {
         designatedRequirement: nil,
         codeHash: "YWJj"
     )
+    let readOnlyClient = SpaceAPIApprovedClient(
+        id: "requirement:read-only",
+        name: "Read Only App",
+        bundleIdentifier: "com.example.read-only",
+        applicationPath: "/Applications/Read Only.app",
+        designatedRequirement: "requirement:read-only",
+        codeHash: nil,
+        accessLevel: .readOnly
+    )
+    let deniedClient = SpaceAPIApprovedClient(
+        id: "requirement:denied",
+        name: "Denied App",
+        bundleIdentifier: "com.example.denied",
+        applicationPath: "/Applications/Denied.app",
+        designatedRequirement: "requirement:denied",
+        codeHash: nil,
+        accessLevel: .noAccess
+    )
 
     check(
         SpaceAPIAuthorization.isAuthorized(
@@ -105,6 +123,45 @@ private func testAuthorizationIdentities() {
             storeAvailable: true
         ),
         "a signed client is approved by designated requirement"
+    )
+    let readOnlyIdentity = SpaceAPIPeerIdentity(
+        designatedRequirement: readOnlyClient.designatedRequirement,
+        codeHash: nil
+    )
+    let readOnlyAccess = SpaceAPIAuthorization.accessLevel(
+        for: readOnlyIdentity,
+        restricted: true,
+        approvedClients: [readOnlyClient],
+        storeAvailable: true
+    )
+    check(readOnlyAccess.allows(.read), "read-only app may issue read requests")
+    check(!readOnlyAccess.allows(.write), "read-only app cannot issue write requests")
+    check(
+        SpaceAPIAuthorization.accessLevel(
+            for: readOnlyIdentity,
+            restricted: false,
+            approvedClients: [readOnlyClient],
+            storeAvailable: true
+        ) == .fullAccess,
+        "disabling the restriction restores full access regardless of saved per-app level"
+    )
+    check(
+        SpaceAPIAuthorization.isAuthorized(
+            readOnlyIdentity,
+            restricted: true,
+            approvedClients: [readOnlyClient],
+            storeAvailable: true
+        ),
+        "read-only app may connect to the socket and receive read events"
+    )
+    check(
+        !SpaceAPIAuthorization.isAuthorized(
+            SpaceAPIPeerIdentity(designatedRequirement: deniedClient.designatedRequirement, codeHash: nil),
+            restricted: true,
+            approvedClients: [deniedClient],
+            storeAvailable: true
+        ),
+        "no-access app is denied at connection authorization"
     )
     check(
         !SpaceAPIAuthorization.isAuthorized(
@@ -152,18 +209,34 @@ private func testAuthorizationIdentities() {
         "unavailable protected policy fails closed"
     )
 
+    let legacyClientData = Data(
+        #"{"id":"legacy","name":"Legacy","applicationPath":"/Applications/Legacy.app","designatedRequirement":"requirement:legacy"}"#.utf8
+    )
+    let decodedLegacyClient = try? JSONDecoder().decode(SpaceAPIApprovedClient.self, from: legacyClientData)
+    check(decodedLegacyClient?.accessLevel == .fullAccess, "existing app approvals preserve full access after policy migration")
+    let encodedReadOnlyClient = try? JSONEncoder().encode(readOnlyClient)
+    let decodedReadOnlyClient = encodedReadOnlyClient.flatMap {
+        try? JSONDecoder().decode(SpaceAPIApprovedClient.self, from: $0)
+    }
+    check(decodedReadOnlyClient?.accessLevel == .readOnly, "per-app access level survives policy serialization")
+
     let recipients = SpaceAPIAuthorization.authorizedRecipients(
-        from: ["approved", "unapproved"],
+        from: ["approved", "read-only", "denied", "unapproved"],
         identity: { client in
-            client == "approved"
-                ? SpaceAPIPeerIdentity(designatedRequirement: signedClient.designatedRequirement, codeHash: nil)
-                : SpaceAPIPeerIdentity(designatedRequirement: "other", codeHash: nil)
+            switch client {
+            case "approved":
+                return SpaceAPIPeerIdentity(designatedRequirement: signedClient.designatedRequirement, codeHash: nil)
+            case "read-only":
+                return readOnlyIdentity
+            default:
+                return SpaceAPIPeerIdentity(designatedRequirement: "other", codeHash: nil)
+            }
         },
         restricted: true,
-        approvedClients: [signedClient],
+        approvedClients: [signedClient, readOnlyClient, deniedClient],
         storeAvailable: true
     )
-    check(recipients == ["approved"], "restricted socket events are delivered only to approved recipients")
+    check(recipients == ["approved", "read-only"], "restricted socket events reach full and read-only apps, but not denied clients")
 }
 
 private func testKernelAuditTokenIdentity() {

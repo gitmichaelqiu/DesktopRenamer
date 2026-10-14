@@ -28,6 +28,11 @@ enum SpaceAPIResultKind: Equatable {
     case boolean
 }
 
+enum SpaceAPIRequestAccess: Equatable {
+    case read
+    case write
+}
+
 enum SpaceAPIJSONRPCCode {
     static let parseError = -32700
     static let invalidRequest = -32600
@@ -46,17 +51,20 @@ struct SpaceAPIMethodDefinition: Equatable {
     let parameters: [String: SpaceAPIParameterKind]
     let requiredParameters: Set<String>
     let resultKind: SpaceAPIResultKind
+    let access: SpaceAPIRequestAccess
 
     init(
         name: String,
         parameters: [String: SpaceAPIParameterKind] = [:],
         requiredParameters: Set<String> = [],
-        resultKind: SpaceAPIResultKind = .operation
+        resultKind: SpaceAPIResultKind = .operation,
+        access: SpaceAPIRequestAccess = .write
     ) {
         self.name = name
         self.parameters = parameters
         self.requiredParameters = requiredParameters
         self.resultKind = resultKind
+        self.access = access
     }
 }
 
@@ -87,12 +95,12 @@ enum DesktopRenamerAPIContract {
     ]
 
     static let methodDefinitions = [
-        SpaceAPIMethodDefinition(name: "getAPIInfo"),
-        SpaceAPIMethodDefinition(name: "getAPIVersion"),
-        SpaceAPIMethodDefinition(name: "getSpaceSnapshot"),
-        SpaceAPIMethodDefinition(name: "getCurrentSpaceName"),
-        SpaceAPIMethodDefinition(name: "getCurrentSpaceID"),
-        SpaceAPIMethodDefinition(name: "getAllSpaces"),
+        SpaceAPIMethodDefinition(name: "getAPIInfo", access: .read),
+        SpaceAPIMethodDefinition(name: "getAPIVersion", access: .read),
+        SpaceAPIMethodDefinition(name: "getSpaceSnapshot", access: .read),
+        SpaceAPIMethodDefinition(name: "getCurrentSpaceName", access: .read),
+        SpaceAPIMethodDefinition(name: "getCurrentSpaceID", access: .read),
+        SpaceAPIMethodDefinition(name: "getAllSpaces", access: .read),
         SpaceAPIMethodDefinition(
             name: "switchToSpace",
             parameters: ["spaceID": .string],
@@ -133,7 +141,7 @@ enum DesktopRenamerAPIContract {
         SpaceAPIMethodDefinition(name: "toggleActiveLabel", resultKind: .boolean),
         SpaceAPIMethodDefinition(name: "togglePreviewLabel", resultKind: .boolean),
         SpaceAPIMethodDefinition(name: "toggleDesktopVisibility", resultKind: .boolean),
-        SpaceAPIMethodDefinition(name: "getWindows"),
+        SpaceAPIMethodDefinition(name: "getWindows", access: .read),
         SpaceAPIMethodDefinition(
             name: "focusWindow",
             parameters: ["windowID": .positiveInteger, "pid": .positiveInteger],
