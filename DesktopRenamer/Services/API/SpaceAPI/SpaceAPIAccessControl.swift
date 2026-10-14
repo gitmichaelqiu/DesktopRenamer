@@ -120,6 +120,12 @@ final class SpaceAPIAccessController: ObservableObject {
             errorMessage = nil
             policyDidChange?()
         } catch {
+            let underlyingError = error as NSError
+            DiagnosticEventLog.shared.record(
+                subsystem: "SpaceAPI",
+                level: "error",
+                "Could not save access policy (\(underlyingError.domain), \(underlyingError.code)): \(error.localizedDescription)"
+            )
             errorMessage = error.localizedDescription
         }
     }
@@ -227,15 +233,37 @@ final class SpaceAPIAccessController: ObservableObject {
         }
         try checkStatus(addStatus, "Could not save the SpaceAPI access policy in Keychain.")
 
-        var savedResult: CFTypeRef?
-        try checkStatus(
-            SecItemCopyMatching(itemQuery(returnData: false, returnReference: true) as CFDictionary, &savedResult),
-            "Could not verify the SpaceAPI access policy in Keychain."
-        )
-        guard let item = keychainItem(from: savedResult) else {
-            throw SpaceAPIAccessError.invalidKeychainItem
+        var createdItem: SecKeychainItem?
+        do {
+            var savedResult: CFTypeRef?
+            try checkStatus(
+                SecItemCopyMatching(itemQuery(returnData: false, returnReference: true) as CFDictionary, &savedResult),
+                "Could not verify the SpaceAPI access policy in Keychain."
+            )
+            guard let item = keychainItem(from: savedResult) else {
+                throw SpaceAPIAccessError.invalidKeychainItem
+            }
+            createdItem = item
+            try validateKeychainAccess(for: item)
+        } catch {
+            // Do not leave a newly-created but unverifiable policy item behind. It would
+            // be found on the next attempt and prevent the user from correcting the policy.
+            let cleanupStatus = createdItem.map(SecKeychainItemDelete) ?? errSecItemNotFound
+            if cleanupStatus != errSecSuccess && cleanupStatus != errSecItemNotFound {
+                DiagnosticEventLog.shared.record(
+                    subsystem: "SpaceAPI",
+                    level: "error",
+                    "Could not remove an unverifiable newly-created access policy (OSStatus \(cleanupStatus))."
+                )
+            } else if createdItem == nil {
+                DiagnosticEventLog.shared.record(
+                    subsystem: "SpaceAPI",
+                    level: "error",
+                    "Could not identify the newly-created access policy to remove after verification failed."
+                )
+            }
+            throw error
         }
-        try validateKeychainAccess(for: item)
     }
 
     private static func baseQuery() -> [String: Any] {

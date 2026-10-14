@@ -128,6 +128,15 @@ struct GeneralSettingsView: View {
                             .toggleStyle(.switch)
                         }
 
+                        if let errorMessage = accessController.errorMessage {
+                            Text(errorMessage)
+                                .font(.footnote)
+                                .foregroundStyle(.red)
+                                .fixedSize(horizontal: false, vertical: true)
+                                .padding(.horizontal, 20)
+                                .padding(.vertical, 4)
+                        }
+
                         Divider()
 
                         SettingsRow("Settings.General.Advanced.ApprovedApps") {
