@@ -418,10 +418,13 @@ final class SpaceAPIAccessController: ObservableObject {
             )
             guard let applications = applications as? [SecTrustedApplication],
                   applications.count == 1,
-                  try trustedApplicationData(applications[0]) == selfData,
-                  promptSelector == restrictedPromptSelector else {
+                  try trustedApplicationData(applications[0]) == selfData else {
                 throw SpaceAPIAccessError.invalidKeychainItem
             }
+            // This legacy selector only controls prompts and is ignored by macOS 10.13.1+
+            // when asking to add an app to the trusted list. The app list is the access
+            // grant, so Keychain normalizing the selector must not invalidate an app-only ACL.
+            _ = promptSelector
         }
     }
 
