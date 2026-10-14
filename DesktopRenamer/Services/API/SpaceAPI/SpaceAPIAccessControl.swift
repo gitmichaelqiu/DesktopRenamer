@@ -169,10 +169,12 @@ final class SpaceAPIAccessController: ObservableObject {
 
     private static func recordPolicyFailure(_ error: Error, operation: String) {
         let underlyingError = error as NSError
+        let verificationDetail = (error as? SpaceAPIAccessError)?.diagnosticDetail
+            .map { "; detail: \($0)" } ?? ""
         DiagnosticEventLog.shared.record(
             subsystem: "SpaceAPI",
             level: "error",
-            "Could not \(operation) access policy (\(underlyingError.domain), \(underlyingError.code)): \(error.localizedDescription)"
+            "Could not \(operation) access policy (\(underlyingError.domain), \(underlyingError.code)): \(error.localizedDescription)\(verificationDetail)"
         )
     }
 
@@ -236,13 +238,17 @@ final class SpaceAPIAccessController: ObservableObject {
         guard let values = result as? [String: Any],
               let data = values[kSecValueData as String] as? Data,
               let item = keychainItem(from: values[kSecValueRef as String]) else {
-            throw SpaceAPIAccessError.invalidKeychainItem
+            throw SpaceAPIAccessError.invalidKeychainItem(
+                "Reading the saved policy did not return its data and a Keychain item reference."
+            )
         }
         try validateKeychainAccess(for: item)
         do {
             return try JSONDecoder().decode(SpaceAPIAccessPolicy.self, from: data)
         } catch {
-            throw SpaceAPIAccessError.invalidKeychainItem
+            throw SpaceAPIAccessError.invalidKeychainItem(
+                "The saved policy data does not match the expected format."
+            )
         }
     }
 
@@ -261,7 +267,9 @@ final class SpaceAPIAccessController: ObservableObject {
 
         if status == errSecSuccess {
             guard let item = keychainItem(from: existingResult) else {
-                throw SpaceAPIAccessError.invalidKeychainItem
+                throw SpaceAPIAccessError.invalidKeychainItem(
+                    "Finding the saved policy did not return a Keychain item reference."
+                )
             }
             try validateKeychainAccess(for: item)
             let update = [kSecValueData as String: data]
@@ -295,7 +303,9 @@ final class SpaceAPIAccessController: ObservableObject {
                 "Could not verify the SpaceAPI access policy in Keychain."
             )
             guard let item = keychainItem(from: savedResult) else {
-                throw SpaceAPIAccessError.invalidKeychainItem
+                throw SpaceAPIAccessError.invalidKeychainItem(
+                    "The newly saved policy did not return a Keychain item reference."
+                )
             }
             createdItem = item
             try validateKeychainAccess(for: item)
@@ -399,16 +409,22 @@ final class SpaceAPIAccessController: ObservableObject {
     private static func validateKeychainAccess(for item: SecKeychainItem) throws {
         var access: SecAccess?
         try checkStatus(SecKeychainItemCopyAccess(item, &access), "Could not verify Keychain access controls.")
-        guard let access else { throw SpaceAPIAccessError.invalidKeychainItem }
+        guard let access else {
+            throw SpaceAPIAccessError.invalidKeychainItem(
+                "Keychain returned no access-control object for the saved policy."
+            )
+        }
         var aclList: CFArray?
         try checkStatus(SecAccessCopyACLList(access, &aclList), "Could not verify Keychain access controls.")
         guard let aclList = aclList as? [SecACL], !aclList.isEmpty else {
-            throw SpaceAPIAccessError.invalidKeychainItem
+            throw SpaceAPIAccessError.invalidKeychainItem(
+                "Keychain returned no readable access-control entries for the saved policy."
+            )
         }
 
         let selfApplication = try makeTrustedApplicationForSelf()
         let selfData = try trustedApplicationData(selfApplication)
-        for acl in aclList {
+        for (index, acl) in aclList.enumerated() {
             var applications: CFArray?
             var description: CFString?
             var promptSelector = SecKeychainPromptSelector()
@@ -416,10 +432,20 @@ final class SpaceAPIAccessController: ObservableObject {
                 SecACLCopyContents(acl, &applications, &description, &promptSelector),
                 "Could not verify Keychain access controls."
             )
-            guard let applications = applications as? [SecTrustedApplication],
-                  applications.count == 1,
-                  try trustedApplicationData(applications[0]) == selfData else {
-                throw SpaceAPIAccessError.invalidKeychainItem
+            guard let applications = applications as? [SecTrustedApplication] else {
+                throw SpaceAPIAccessError.invalidKeychainItem(
+                    "Access-control entry \(index) did not return a trusted-application list."
+                )
+            }
+            guard applications.count == 1 else {
+                throw SpaceAPIAccessError.invalidKeychainItem(
+                    "Access-control entry \(index) contains \(applications.count) trusted apps; expected exactly one."
+                )
+            }
+            guard try trustedApplicationData(applications[0]) == selfData else {
+                throw SpaceAPIAccessError.invalidKeychainItem(
+                    "Access-control entry \(index) does not identify this DesktopRenamer executable."
+                )
             }
             // This legacy selector only controls prompts and is ignored by macOS 10.13.1+
             // when asking to add an app to the trusted list. The app list is the access
@@ -447,7 +473,11 @@ final class SpaceAPIAccessController: ObservableObject {
             SecTrustedApplicationCopyData(application, &data),
             "Could not verify Keychain access controls."
         )
-        guard let data else { throw SpaceAPIAccessError.invalidKeychainItem }
+        guard let data else {
+            throw SpaceAPIAccessError.invalidKeychainItem(
+                "A trusted-app entry did not contain identity data."
+            )
+        }
         return data as Data
     }
 
@@ -464,8 +494,13 @@ final class SpaceAPIAccessController: ObservableObject {
 
 private enum SpaceAPIAccessError: LocalizedError {
     case invalidApplication
-    case invalidKeychainItem
+    case invalidKeychainItem(String)
     case keychainAccessUnavailable
+
+    var diagnosticDetail: String? {
+        guard case let .invalidKeychainItem(detail) = self else { return nil }
+        return detail
+    }
 
     var errorDescription: String? {
         switch self {
