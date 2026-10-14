@@ -387,6 +387,13 @@ final class SpaceAPIAccessController: ObservableObject {
             throw SpaceAPIAccessError.keychainAccessUnavailable
         }
         for acl in aclList {
+            let authorizations = try aclAuthorizationNames(for: acl)
+            if authorizations == [kSecACLAuthorizationEncrypt as String] {
+                // SecAccessCreate's safe entry only authorizes encryption. Keychain
+                // intentionally stores this entry with a nil app list (all apps); it
+                // does not grant access to read or change the protected policy.
+                continue
+            }
             try checkStatus(
                 SecACLSetContents(
                     acl,
@@ -424,7 +431,21 @@ final class SpaceAPIAccessController: ObservableObject {
 
         let selfApplication = try makeTrustedApplicationForSelf()
         let selfData = try trustedApplicationData(selfApplication)
+        var hasRestrictedDataAccess = false
+        var hasAccessControlChange = false
         for (index, acl) in aclList.enumerated() {
+            let authorizations = try aclAuthorizationNames(for: acl)
+            if authorizations == [kSecACLAuthorizationEncrypt as String] {
+                // Encryption is the non-sensitive "safe" operation in the default
+                // Keychain ACL. Only decrypt/data-access and ACL-change entries need
+                // to be restricted to this app.
+                continue
+            }
+            hasRestrictedDataAccess = hasRestrictedDataAccess
+                || authorizations.contains(kSecACLAuthorizationDecrypt as String)
+            hasAccessControlChange = hasAccessControlChange
+                || authorizations.contains(kSecACLAuthorizationChangeACL as String)
+
             var applications: CFArray?
             var description: CFString?
             var promptSelector = SecKeychainPromptSelector()
@@ -452,6 +473,26 @@ final class SpaceAPIAccessController: ObservableObject {
             // grant, so Keychain normalizing the selector must not invalidate an app-only ACL.
             _ = promptSelector
         }
+
+        guard hasRestrictedDataAccess else {
+            throw SpaceAPIAccessError.invalidKeychainItem(
+                "The saved policy has no restricted data-access entry."
+            )
+        }
+        guard hasAccessControlChange else {
+            throw SpaceAPIAccessError.invalidKeychainItem(
+                "The saved policy has no access-control change entry."
+            )
+        }
+    }
+
+    private static func aclAuthorizationNames(for acl: SecACL) throws -> [String] {
+        guard let authorizations = SecACLCopyAuthorizations(acl) as? [String], !authorizations.isEmpty else {
+            throw SpaceAPIAccessError.invalidKeychainItem(
+                "A Keychain access-control entry did not return its authorization list."
+            )
+        }
+        return authorizations
     }
 
     private static func makeTrustedApplicationForSelf() throws -> SecTrustedApplication {
