@@ -761,6 +761,16 @@
         }
       }
     },
+    "Could not replace the unreadable SpaceAPI access policy in Keychain." : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "无法替换钥匙串中无法读取的 SpaceAPI 访问策略。"
+          }
+        }
+      }
+    },
     "Could not restore %@" : {
       "localizations" : {
         "zh-Hans" : {
@@ -2455,6 +2465,16 @@
         }
       }
     },
+    "Reset SpaceAPI access?" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "要重置 SpaceAPI 访问权限吗？"
+          }
+        }
+      }
+    },
     "Reset & Quit" : {
       "localizations" : {
         "zh-Hans" : {
@@ -2471,6 +2491,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "重置默认"
+          }
+        }
+      }
+    },
+    "Resetting the unreadable policy clears the approved app list. SpaceAPI stays restricted until you approve apps again." : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "重置后将清除无法读取的已批准应用列表。重新批准应用前，SpaceAPI 将继续受到限制。"
           }
         }
       }

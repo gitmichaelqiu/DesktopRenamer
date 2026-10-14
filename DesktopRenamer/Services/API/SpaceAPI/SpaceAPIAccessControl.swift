@@ -15,6 +15,7 @@ final class SpaceAPIAccessController: ObservableObject {
     @Published private(set) var isRestrictedForSettings = false
     @Published private(set) var approvedClients: [SpaceAPIApprovedClient] = []
     @Published private(set) var errorMessage: String?
+    @Published private(set) var canRepairPolicy = false
 
     @MainActor var policyDidChange: (@MainActor () -> Void)?
 
@@ -36,7 +37,9 @@ final class SpaceAPIAccessController: ObservableObject {
             isStoreUsable = false
             policy = SpaceAPIAccessPolicy(isRestricted: true, approvedClients: [])
             isRestrictedForSettings = true
+            canRepairPolicy = true
             errorMessage = error.localizedDescription
+            Self.recordPolicyFailure(error, operation: "read")
         }
     }
 
@@ -95,6 +98,31 @@ final class SpaceAPIAccessController: ObservableObject {
         persistAndApply(updated)
     }
 
+    @MainActor
+    func repairUnreadablePolicy() {
+        let replacement = SpaceAPIAccessPolicy(isRestricted: true, approvedClients: [])
+        do {
+            try Self.deleteStoredPolicy()
+            try Self.writePolicy(replacement)
+            lock.lock()
+            policy = replacement
+            isStoreUsable = true
+            lock.unlock()
+            isRestrictedForSettings = true
+            approvedClients = []
+            canRepairPolicy = false
+            errorMessage = nil
+            policyDidChange?()
+            DiagnosticEventLog.shared.record(
+                subsystem: "SpaceAPI",
+                level: "warning",
+                "Replaced an unreadable access policy with a restricted policy and no approved clients."
+            )
+        } catch {
+            failClosed(after: error)
+        }
+    }
+
     private func currentPolicy() -> SpaceAPIAccessPolicy {
         lock.lock()
         defer { lock.unlock() }
@@ -117,17 +145,35 @@ final class SpaceAPIAccessController: ObservableObject {
             lock.unlock()
             isRestrictedForSettings = updated.isRestricted
             approvedClients = updated.approvedClients
+            canRepairPolicy = false
             errorMessage = nil
             policyDidChange?()
         } catch {
-            let underlyingError = error as NSError
-            DiagnosticEventLog.shared.record(
-                subsystem: "SpaceAPI",
-                level: "error",
-                "Could not save access policy (\(underlyingError.domain), \(underlyingError.code)): \(error.localizedDescription)"
-            )
-            errorMessage = error.localizedDescription
+            failClosed(after: error)
         }
+    }
+
+    @MainActor
+    private func failClosed(after error: Error) {
+        lock.lock()
+        policy = SpaceAPIAccessPolicy(isRestricted: true, approvedClients: [])
+        isStoreUsable = false
+        lock.unlock()
+        isRestrictedForSettings = true
+        approvedClients = []
+        canRepairPolicy = true
+        errorMessage = error.localizedDescription
+        Self.recordPolicyFailure(error, operation: "write")
+        policyDidChange?()
+    }
+
+    private static func recordPolicyFailure(_ error: Error, operation: String) {
+        let underlyingError = error as NSError
+        DiagnosticEventLog.shared.record(
+            subsystem: "SpaceAPI",
+            level: "error",
+            "Could not \(operation) access policy (\(underlyingError.domain), \(underlyingError.code)): \(error.localizedDescription)"
+        )
     }
 
     private static func approvedClient(at url: URL) throws -> SpaceAPIApprovedClient {
@@ -197,6 +243,14 @@ final class SpaceAPIAccessController: ObservableObject {
             return try JSONDecoder().decode(SpaceAPIAccessPolicy.self, from: data)
         } catch {
             throw SpaceAPIAccessError.invalidKeychainItem
+        }
+    }
+
+    private static func deleteStoredPolicy() throws {
+        let status = SecItemDelete(baseQuery() as CFDictionary)
+        guard status == errSecSuccess || status == errSecItemNotFound else {
+            try checkStatus(status, "Could not replace the unreadable SpaceAPI access policy in Keychain.")
+            return
         }
     }
 

@@ -16,6 +16,7 @@ struct GeneralSettingsView: View {
     @State private var isStatusBarHidden: Bool = StatusBarController.isStatusBarHidden
     @State private var showDiagnosticSheet: Bool = false
     @State private var showSpaceAPIAccessSettings: Bool = false
+    @State private var showSpaceAPIPolicyRepairConfirmation: Bool = false
 
 
     var body: some View {
@@ -129,12 +130,32 @@ struct GeneralSettingsView: View {
                         }
 
                         if let errorMessage = accessController.errorMessage {
-                            Text(errorMessage)
-                                .font(.footnote)
-                                .foregroundStyle(.red)
-                                .fixedSize(horizontal: false, vertical: true)
-                                .padding(.horizontal, 20)
-                                .padding(.vertical, 4)
+                            HStack(alignment: .center, spacing: 12) {
+                                Text(errorMessage)
+                                    .font(.footnote)
+                                    .foregroundStyle(.red)
+                                    .fixedSize(horizontal: false, vertical: true)
+
+                                if accessController.canRepairPolicy {
+                                    Button("Reset") {
+                                        showSpaceAPIPolicyRepairConfirmation = true
+                                    }
+                                }
+                            }
+                            .padding(.horizontal, 20)
+                            .padding(.vertical, 4)
+                            .confirmationDialog(
+                                "Reset SpaceAPI access?",
+                                isPresented: $showSpaceAPIPolicyRepairConfirmation,
+                                titleVisibility: .visible
+                            ) {
+                                Button("Reset", role: .destructive) {
+                                    accessController.repairUnreadablePolicy()
+                                }
+                                Button("Cancel", role: .cancel) {}
+                            } message: {
+                                Text("Resetting the unreadable policy clears the approved app list. SpaceAPI stays restricted until you approve apps again.")
+                            }
                         }
 
                         Divider()
