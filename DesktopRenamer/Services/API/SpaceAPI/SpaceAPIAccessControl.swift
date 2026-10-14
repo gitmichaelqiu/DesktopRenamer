@@ -378,39 +378,10 @@ final class SpaceAPIAccessController: ObservableObject {
         )
         guard let access else { throw SpaceAPIAccessError.keychainAccessUnavailable }
 
-        // SecAccessCreate's application list is a starting point, not a guarantee that
-        // every ACL (especially the ACL-change entry) is restricted to this app.
-        // Rewrite each ACL before the item is created and verify it again after saving.
-        var aclList: CFArray?
-        try checkStatus(SecAccessCopyACLList(access, &aclList), "Could not protect the SpaceAPI access policy in Keychain.")
-        guard let aclList = aclList as? [SecACL], !aclList.isEmpty else {
-            throw SpaceAPIAccessError.keychainAccessUnavailable
-        }
-        for acl in aclList {
-            let authorizations = try aclAuthorizationNames(for: acl)
-            if authorizations == [kSecACLAuthorizationEncrypt as String] {
-                // SecAccessCreate's safe entry only authorizes encryption. Keychain
-                // intentionally stores this entry with a nil app list (all apps); it
-                // does not grant access to read or change the protected policy.
-                continue
-            }
-            try checkStatus(
-                SecACLSetContents(
-                    acl,
-                    [trustedApplication] as CFArray,
-                    "DesktopRenamer SpaceAPI access policy" as CFString,
-                    restrictedPromptSelector
-                ),
-                "Could not protect the SpaceAPI access policy in Keychain."
-            )
-        }
+        // SecAccessCreate applies this app list to the restricted data-access ACL.
+        // Preserve its other defaults: the owner ACL has no trusted apps (so changing
+        // access prompts the user), and the safe encryption ACL may trust any app.
         return access
-    }
-
-    private static var restrictedPromptSelector: SecKeychainPromptSelector {
-        // Override the default prompt policy for unsigned and invalidly signed callers.
-        // The application list remains the access grant for every ACL, including ACL changes.
-        SecKeychainPromptSelector(rawValue: 0x00A0)
     }
 
     private static func validateKeychainAccess(for item: SecKeychainItem) throws {
@@ -441,11 +412,6 @@ final class SpaceAPIAccessController: ObservableObject {
                 // to be restricted to this app.
                 continue
             }
-            hasRestrictedDataAccess = hasRestrictedDataAccess
-                || authorizations.contains(kSecACLAuthorizationDecrypt as String)
-            hasAccessControlChange = hasAccessControlChange
-                || authorizations.contains(kSecACLAuthorizationChangeACL as String)
-
             var applications: CFArray?
             var description: CFString?
             var promptSelector = SecKeychainPromptSelector()
@@ -455,9 +421,33 @@ final class SpaceAPIAccessController: ObservableObject {
             )
             guard let applications = applications as? [SecTrustedApplication] else {
                 throw SpaceAPIAccessError.invalidKeychainItem(
-                    "Access-control entry \(index) did not return a trusted-application list."
+                    "Access-control entry \(index) [\(authorizations.joined(separator: ", "))] did not return a trusted-application list."
                 )
             }
+
+            if authorizations == [kSecACLAuthorizationChangeACL as String] {
+                hasAccessControlChange = true
+                let ownerIsRestricted: Bool
+                switch applications.count {
+                case 0:
+                    ownerIsRestricted = true
+                case 1:
+                    ownerIsRestricted = try trustedApplicationData(applications[0]) == selfData
+                default:
+                    ownerIsRestricted = false
+                }
+                guard ownerIsRestricted else {
+                    throw SpaceAPIAccessError.invalidKeychainItem(
+                        "The access-control owner entry is not restricted to DesktopRenamer or the default user prompt."
+                    )
+                }
+                continue
+            }
+
+            hasRestrictedDataAccess = hasRestrictedDataAccess
+                || authorizations.contains(kSecACLAuthorizationDecrypt as String)
+            hasAccessControlChange = hasAccessControlChange
+                || authorizations.contains(kSecACLAuthorizationChangeACL as String)
             guard applications.count == 1 else {
                 throw SpaceAPIAccessError.invalidKeychainItem(
                     "Access-control entry \(index) contains \(applications.count) trusted apps; expected exactly one."
