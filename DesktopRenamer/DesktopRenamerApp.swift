@@ -223,7 +223,10 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             return
         }
 
-        let hostingController = NSHostingController(rootView: GeneralSettingsView.DiagnosticSheetView())
+        guard let spaceManager else { return }
+        let hostingController = NSHostingController(
+            rootView: GeneralSettingsView.DiagnosticSheetView(spaceManager: spaceManager)
+        )
         let sheetWindow = NSWindow(
             contentRect: NSRect(x: 0, y: 0, width: 480, height: 400),
             styleMask: [.titled, .closable, .fullSizeContentView],

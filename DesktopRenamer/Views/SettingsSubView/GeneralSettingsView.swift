@@ -200,7 +200,7 @@ struct GeneralSettingsView: View {
         }
         .onAppear { launchAtLogin = getLaunchAtLoginState() }
         .sheet(isPresented: $showDiagnosticSheet) {
-            DiagnosticSheetView()
+            DiagnosticSheetView(spaceManager: spaceManager)
         }
         .sheet(isPresented: $showSpaceAPIAccessSettings) {
             if let accessController = spaceManager.spaceAPI?.accessController {
@@ -276,10 +276,12 @@ struct GeneralSettingsView: View {
     /// Diagnostic collection sheet — start/stop recording and save the report.
     struct DiagnosticSheetView: View {
         @Environment(\.dismiss) var dismiss
+        @ObservedObject var spaceManager: SpaceManager
         @State private var phase: Phase = .idle
         @State private var refreshCounter = 0
         @State private var timer: Timer? = nil
         @State private var savedURL: URL? = nil
+        @State private var showPolicyRepairConfirmation = false
 
         enum Phase {
             case idle       // Show "Start" button
@@ -295,6 +297,38 @@ struct GeneralSettingsView: View {
                     Text("Diagnostic Report")
                         .font(.title2).fontWeight(.bold)
                     Spacer()
+                }
+
+                if let accessController = spaceManager.spaceAPI?.accessController,
+                   accessController.canRepairPolicy {
+                    HStack(spacing: 12) {
+                        Label(
+                            "SpaceAPI access policy could not be verified. Access remains restricted.",
+                            systemImage: "exclamationmark.triangle.fill"
+                        )
+                        .font(.footnote)
+                        .foregroundStyle(.red)
+                        .fixedSize(horizontal: false, vertical: true)
+
+                        Spacer(minLength: 0)
+
+                        Button("Reset…") {
+                            showPolicyRepairConfirmation = true
+                        }
+                    }
+                    .confirmationDialog(
+                        "Reset SpaceAPI access?",
+                        isPresented: $showPolicyRepairConfirmation,
+                        titleVisibility: .visible
+                    ) {
+                        Button("Reset", role: .destructive) {
+                            accessController.repairUnreadablePolicy()
+                            refreshCounter += 1
+                        }
+                        Button("Cancel", role: .cancel) {}
+                    } message: {
+                        Text("Resetting the unreadable policy clears the approved app list. SpaceAPI stays restricted until you approve apps again.")
+                    }
                 }
 
                 // Phase-specific content
