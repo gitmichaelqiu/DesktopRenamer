@@ -7,12 +7,6 @@ struct SpaceAPIAccessSettingsView: View {
     @Environment(\.dismiss) private var dismiss
 
     @State private var showPolicyRepairConfirmation = false
-    @State private var isAppPermissionsExpanded: Bool
-
-    init(accessController: SpaceAPIAccessController) {
-        self.accessController = accessController
-        _isAppPermissionsExpanded = State(initialValue: accessController.isRestrictedForSettings)
-    }
 
     var body: some View {
         VStack(spacing: 12) {
@@ -20,8 +14,6 @@ struct SpaceAPIAccessSettingsView: View {
                 Text("SpaceAPI Access")
                     .font(.title2.weight(.semibold))
                 Spacer()
-                Button("Done") { dismiss() }
-                    .keyboardShortcut(.defaultAction)
             }
 
             ScrollView {
@@ -42,7 +34,7 @@ struct SpaceAPIAccessSettingsView: View {
                         if let errorMessage = accessController.errorMessage {
                             Divider()
 
-                            SettingsRow("Policy Status") {
+                            SettingsRow("Policy status") {
                                 HStack(spacing: 8) {
                                     Text(errorMessage)
                                         .font(.footnote)
@@ -60,10 +52,13 @@ struct SpaceAPIAccessSettingsView: View {
                         }
                     }
 
-                    DisclosureGroup(isExpanded: $isAppPermissionsExpanded) {
-                        SettingsSection(nil) {
+                    if accessController.isRestrictedForSettings {
+                        SettingsSection(
+                            "App Permissions",
+                            helperText: "Set the access level for each approved app."
+                        ) {
                             SettingsRow(
-                                "Add an App",
+                                "Add an app",
                                 helperText: "Development builds must be approved again after rebuilding."
                             ) {
                                 Button("Choose…", action: chooseApplication)
@@ -72,7 +67,7 @@ struct SpaceAPIAccessSettingsView: View {
                             if accessController.approvedClients.isEmpty {
                                 Divider()
 
-                                SettingsRow("No Apps Added") {
+                                SettingsRow("No apps added") {
                                     Text("All apps are blocked while access restriction is enabled.")
                                         .foregroundStyle(.secondary)
                                         .multilineTextAlignment(.trailing)
@@ -115,21 +110,16 @@ struct SpaceAPIAccessSettingsView: View {
                                 }
                             }
                         }
-                    } label: {
-                        HStack(spacing: 4) {
-                            Text("App Permissions")
-                                .font(.headline)
-                            HelperInfoButton(text: "Set the access level for each approved app.")
-                        }
-                        .padding(.leading, 4)
                     }
-                    .onChange(of: accessController.isRestrictedForSettings) { isRestricted in
-                        withAnimation {
-                            isAppPermissionsExpanded = isRestricted
-                        }
-                    }
-
                 }
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+
+            HStack {
+                Spacer()
+                Button("Done") { dismiss() }
+                    .buttonStyle(.borderedProminent)
+                    .keyboardShortcut(.defaultAction)
             }
         }
         .padding(16)

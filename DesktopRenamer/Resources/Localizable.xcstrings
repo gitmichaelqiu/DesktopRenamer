@@ -282,6 +282,16 @@
         }
       }
     },
+    "Add an app" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "添加应用"
+          }
+        }
+      }
+    },
     "Add App Exception" : {
       "localizations" : {
         "zh-Hans" : {
@@ -2104,6 +2114,16 @@
         }
       }
     },
+    "No apps added" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "未添加应用"
+          }
+        }
+      }
+    },
     "No commands found" : {
       "localizations" : {
         "zh-Hans" : {
@@ -2260,7 +2280,7 @@
         }
       }
     },
-    "Policy Status" : {
+    "Policy status" : {
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
@@ -3039,7 +3059,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Manage SpaceAPI Access"
+            "value" : "Manage SpaceAPI access"
           }
         },
         "zh-Hans" : {
