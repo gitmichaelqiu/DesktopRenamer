@@ -8,7 +8,7 @@ private struct SpaceAPIAccessPolicy: Codable {
     var approvedClients: [SpaceAPIApprovedClient]
 }
 
-/// Keeps the allowlist in a Keychain item whose access list is restricted to this app.
+/// Keeps the allowlist in the app's private Data Protection Keychain access group.
 /// Authentication reads a lock-protected in-memory snapshot and never trusts peer-supplied
 /// process IDs, bundle identifiers, or paths.
 final class SpaceAPIAccessController: ObservableObject {
@@ -254,25 +254,27 @@ final class SpaceAPIAccessController: ObservableObject {
 
     private static func readPolicy() throws -> SpaceAPIAccessPolicy? {
         var result: CFTypeRef?
-        let status = SecItemCopyMatching(itemQuery(returnData: true, returnReference: true) as CFDictionary, &result)
-        guard status != errSecItemNotFound else { return nil }
-        try checkStatus(status, "Could not read the SpaceAPI access policy from Keychain.")
+        let status = SecItemCopyMatching(itemQuery(returnData: true) as CFDictionary, &result)
+        if status == errSecSuccess {
+            return try decodePolicy(from: result)
+        }
+        guard status == errSecItemNotFound else {
+            try checkStatus(status, "Could not read the SpaceAPI access policy from Keychain.")
+            return nil
+        }
 
-        guard let values = result as? [String: Any],
-              let data = values[kSecValueData as String] as? Data,
-              let item = keychainItem(from: values[kSecValueRef as String]) else {
-            throw SpaceAPIAccessError.invalidKeychainItem(
-                "Reading the saved policy did not return its data and a Keychain item reference."
-            )
-        }
-        try validateKeychainAccess(for: item)
-        do {
-            return try JSONDecoder().decode(SpaceAPIAccessPolicy.self, from: data)
-        } catch {
-            throw SpaceAPIAccessError.invalidKeychainItem(
-                "The saved policy data does not match the expected format."
-            )
-        }
+        // Policies written by earlier versions live in the file-based login keychain.
+        // Read them through its existing ACL, then move them into this app's private
+        // Data Protection Keychain group before removing the legacy item.
+        var legacyResult: CFTypeRef?
+        let legacyStatus = SecItemCopyMatching(legacyItemQuery(returnData: true) as CFDictionary, &legacyResult)
+        guard legacyStatus != errSecItemNotFound else { return nil }
+        try checkStatus(legacyStatus, "Could not read the previous SpaceAPI access policy from Keychain.")
+
+        let legacyPolicy = try decodePolicy(from: legacyResult)
+        try writePolicy(legacyPolicy)
+        removeLegacyPolicyIfPresent()
+        return legacyPolicy
     }
 
     private static func deleteStoredPolicy() throws {
@@ -281,36 +283,24 @@ final class SpaceAPIAccessController: ObservableObject {
             try checkStatus(status, "Could not replace the unreadable SpaceAPI access policy in Keychain.")
             return
         }
+        removeLegacyPolicyIfPresent()
     }
 
     private static func writePolicy(_ policy: SpaceAPIAccessPolicy) throws {
         let data = try JSONEncoder().encode(policy)
-        var existingResult: CFTypeRef?
-        let status = SecItemCopyMatching(itemQuery(returnData: false, returnReference: true) as CFDictionary, &existingResult)
-
-        if status == errSecSuccess {
-            guard let item = keychainItem(from: existingResult) else {
-                throw SpaceAPIAccessError.invalidKeychainItem(
-                    "Finding the saved policy did not return a Keychain item reference."
-                )
-            }
-            try validateKeychainAccess(for: item)
-            let update = [kSecValueData as String: data]
-            try checkStatus(
-                SecItemUpdate(baseQuery() as CFDictionary, update as CFDictionary),
-                "Could not update the SpaceAPI access policy in Keychain."
-            )
+        let update = [kSecValueData as String: data]
+        let updateStatus = SecItemUpdate(baseQuery() as CFDictionary, update as CFDictionary)
+        if updateStatus == errSecSuccess {
             return
         }
-        guard status == errSecItemNotFound else {
-            try checkStatus(status, "Could not find the SpaceAPI access policy in Keychain.")
+        guard updateStatus == errSecItemNotFound else {
+            try checkStatus(updateStatus, "Could not update the SpaceAPI access policy in Keychain.")
             return
         }
 
-        let access = try makeAppOnlyAccess()
         var attributes = baseQuery()
         attributes[kSecValueData as String] = data
-        attributes[kSecAttrAccess as String] = access
+        attributes[kSecAttrAccessible as String] = kSecAttrAccessibleWhenUnlocked
         let addStatus = SecItemAdd(attributes as CFDictionary, nil)
         if addStatus == errSecDuplicateItem {
             try writePolicy(policy)
@@ -318,35 +308,26 @@ final class SpaceAPIAccessController: ObservableObject {
         }
         try checkStatus(addStatus, "Could not save the SpaceAPI access policy in Keychain.")
 
-        var createdItem: SecKeychainItem?
         do {
             var savedResult: CFTypeRef?
             try checkStatus(
-                SecItemCopyMatching(itemQuery(returnData: false, returnReference: true) as CFDictionary, &savedResult),
+                SecItemCopyMatching(itemQuery(returnData: true) as CFDictionary, &savedResult),
                 "Could not verify the SpaceAPI access policy in Keychain."
             )
-            guard let item = keychainItem(from: savedResult) else {
+            guard let savedData = savedResult as? Data, savedData == data else {
                 throw SpaceAPIAccessError.invalidKeychainItem(
-                    "The newly saved policy did not return a Keychain item reference."
+                    "The newly saved policy data could not be verified."
                 )
             }
-            createdItem = item
-            try validateKeychainAccess(for: item)
         } catch {
             // Do not leave a newly-created but unverifiable policy item behind. It would
             // be found on the next attempt and prevent the user from correcting the policy.
-            let cleanupStatus = createdItem.map(SecKeychainItemDelete) ?? errSecItemNotFound
+            let cleanupStatus = SecItemDelete(baseQuery() as CFDictionary)
             if cleanupStatus != errSecSuccess && cleanupStatus != errSecItemNotFound {
                 DiagnosticEventLog.shared.record(
                     subsystem: "SpaceAPI",
                     level: "error",
                     "Could not remove an unverifiable newly-created access policy (OSStatus \(cleanupStatus))."
-                )
-            } else if createdItem == nil {
-                DiagnosticEventLog.shared.record(
-                    subsystem: "SpaceAPI",
-                    level: "error",
-                    "Could not identify the newly-created access policy to remove after verification failed."
                 )
             }
             throw error
@@ -357,185 +338,56 @@ final class SpaceAPIAccessController: ObservableObject {
         [
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrService as String: keychainService,
-            kSecAttrAccount as String: keychainAccount
+            kSecAttrAccount as String: keychainAccount,
+            // With no explicit shared access group, the Data Protection Keychain
+            // uses the signed app's private default access group.
+            kSecUseDataProtectionKeychain as String: true
         ]
     }
 
-    private static func itemQuery(returnData: Bool, returnReference: Bool) -> [String: Any] {
+    private static func legacyBaseQuery() -> [String: Any] {
         var query = baseQuery()
-        query[kSecMatchLimit as String] = kSecMatchLimitOne
-        if returnData { query[kSecReturnData as String] = true }
-        if returnReference { query[kSecReturnRef as String] = true }
+        query[kSecUseDataProtectionKeychain as String] = false
         return query
     }
 
-    private static func keychainItem(from value: Any?) -> SecKeychainItem? {
-        guard let value else { return nil }
-        if let values = value as? [String: Any], let reference = values[kSecValueRef as String] {
-            return keychainItem(from: reference)
-        }
-        let reference = value as CFTypeRef
-        guard CFGetTypeID(reference) == SecKeychainItemGetTypeID() else { return nil }
-        return unsafeBitCast(reference, to: SecKeychainItem.self)
+    private static func itemQuery(returnData: Bool) -> [String: Any] {
+        var query = baseQuery()
+        query[kSecMatchLimit as String] = kSecMatchLimitOne
+        if returnData { query[kSecReturnData as String] = true }
+        return query
     }
 
-    private static func makeAppOnlyAccess() throws -> SecAccess {
-        guard let executableURL = Bundle.main.executableURL else {
-            throw SpaceAPIAccessError.keychainAccessUnavailable
-        }
-        var trustedApplication: SecTrustedApplication?
-        let trustedStatus = executableURL.path.withCString {
-            SecTrustedApplicationCreateFromPath($0, &trustedApplication)
-        }
-        try checkStatus(trustedStatus, "Could not identify DesktopRenamer for Keychain access.")
-        guard let trustedApplication else { throw SpaceAPIAccessError.keychainAccessUnavailable }
+    private static func legacyItemQuery(returnData: Bool) -> [String: Any] {
+        var query = legacyBaseQuery()
+        query[kSecMatchLimit as String] = kSecMatchLimitOne
+        if returnData { query[kSecReturnData as String] = true }
+        return query
+    }
 
-        var access: SecAccess?
-        try checkStatus(
-            SecAccessCreate(
-                "DesktopRenamer SpaceAPI access policy" as CFString,
-                [trustedApplication] as CFArray,
-                &access
-            ),
-            "Could not protect the SpaceAPI access policy in Keychain."
+    private static func decodePolicy(from value: CFTypeRef?) throws -> SpaceAPIAccessPolicy {
+        guard let data = value as? Data else {
+            throw SpaceAPIAccessError.invalidKeychainItem(
+                "Reading the saved policy did not return its data."
+            )
+        }
+        do {
+            return try JSONDecoder().decode(SpaceAPIAccessPolicy.self, from: data)
+        } catch {
+            throw SpaceAPIAccessError.invalidKeychainItem(
+                "The saved policy data does not match the expected format."
+            )
+        }
+    }
+
+    private static func removeLegacyPolicyIfPresent() {
+        let status = SecItemDelete(legacyBaseQuery() as CFDictionary)
+        guard status != errSecSuccess && status != errSecItemNotFound else { return }
+        DiagnosticEventLog.shared.record(
+            subsystem: "SpaceAPI",
+            level: "warning",
+            "Could not remove the previous file-keychain access policy after migration (OSStatus \(status))."
         )
-        guard let access else { throw SpaceAPIAccessError.keychainAccessUnavailable }
-
-        // SecAccessCreate applies this app list to the restricted data-access ACL.
-        // Preserve its other defaults: the owner ACL has no trusted apps (so changing
-        // access prompts the user), and the safe encryption ACL may trust any app.
-        return access
-    }
-
-    private static func validateKeychainAccess(for item: SecKeychainItem) throws {
-        var access: SecAccess?
-        try checkStatus(SecKeychainItemCopyAccess(item, &access), "Could not verify Keychain access controls.")
-        guard let access else {
-            throw SpaceAPIAccessError.invalidKeychainItem(
-                "Keychain returned no access-control object for the saved policy."
-            )
-        }
-        var aclList: CFArray?
-        try checkStatus(SecAccessCopyACLList(access, &aclList), "Could not verify Keychain access controls.")
-        guard let aclList = aclList as? [SecACL], !aclList.isEmpty else {
-            throw SpaceAPIAccessError.invalidKeychainItem(
-                "Keychain returned no readable access-control entries for the saved policy."
-            )
-        }
-
-        let selfApplication = try makeTrustedApplicationForSelf()
-        let selfData = try trustedApplicationData(selfApplication)
-        var hasRestrictedDataAccess = false
-        var hasAccessControlChange = false
-        for (index, acl) in aclList.enumerated() {
-            let authorizations = try aclAuthorizationNames(for: acl)
-            if authorizations == [kSecACLAuthorizationEncrypt as String]
-                || authorizations == [kSecACLAuthorizationIntegrity as String]
-                || authorizations == [kSecACLAuthorizationPartitionID as String] {
-                // Keychain adds OS-managed ACLs when saving this item. Their
-                // authorization metadata is not a trusted-application list; they do
-                // not grant data access or permission to change the item's ACL. Keep
-                // validating the data-access and ACL-change entries below.
-                continue
-            }
-            var applications: CFArray?
-            var description: CFString?
-            var promptSelector = SecKeychainPromptSelector()
-            try checkStatus(
-                SecACLCopyContents(acl, &applications, &description, &promptSelector),
-                "Could not verify Keychain access controls."
-            )
-            guard let applications = applications as? [SecTrustedApplication] else {
-                throw SpaceAPIAccessError.invalidKeychainItem(
-                    "Access-control entry \(index) [\(authorizations.joined(separator: ", "))] did not return a trusted-application list."
-                )
-            }
-
-            if authorizations == [kSecACLAuthorizationChangeACL as String] {
-                hasAccessControlChange = true
-                let ownerIsRestricted: Bool
-                switch applications.count {
-                case 0:
-                    ownerIsRestricted = true
-                case 1:
-                    ownerIsRestricted = try trustedApplicationData(applications[0]) == selfData
-                default:
-                    ownerIsRestricted = false
-                }
-                guard ownerIsRestricted else {
-                    throw SpaceAPIAccessError.invalidKeychainItem(
-                        "The access-control owner entry is not restricted to DesktopRenamer or the default user prompt."
-                    )
-                }
-                continue
-            }
-
-            hasRestrictedDataAccess = hasRestrictedDataAccess
-                || authorizations.contains(kSecACLAuthorizationDecrypt as String)
-            hasAccessControlChange = hasAccessControlChange
-                || authorizations.contains(kSecACLAuthorizationChangeACL as String)
-            guard applications.count == 1 else {
-                throw SpaceAPIAccessError.invalidKeychainItem(
-                    "Access-control entry \(index) contains \(applications.count) trusted apps; expected exactly one."
-                )
-            }
-            guard try trustedApplicationData(applications[0]) == selfData else {
-                throw SpaceAPIAccessError.invalidKeychainItem(
-                    "Access-control entry \(index) does not identify this DesktopRenamer executable."
-                )
-            }
-            // This legacy selector only controls prompts and is ignored by macOS 10.13.1+
-            // when asking to add an app to the trusted list. The app list is the access
-            // grant, so Keychain normalizing the selector must not invalidate an app-only ACL.
-            _ = promptSelector
-        }
-
-        guard hasRestrictedDataAccess else {
-            throw SpaceAPIAccessError.invalidKeychainItem(
-                "The saved policy has no restricted data-access entry."
-            )
-        }
-        guard hasAccessControlChange else {
-            throw SpaceAPIAccessError.invalidKeychainItem(
-                "The saved policy has no access-control change entry."
-            )
-        }
-    }
-
-    private static func aclAuthorizationNames(for acl: SecACL) throws -> [String] {
-        guard let authorizations = SecACLCopyAuthorizations(acl) as? [String], !authorizations.isEmpty else {
-            throw SpaceAPIAccessError.invalidKeychainItem(
-                "A Keychain access-control entry did not return its authorization list."
-            )
-        }
-        return authorizations
-    }
-
-    private static func makeTrustedApplicationForSelf() throws -> SecTrustedApplication {
-        guard let path = Bundle.main.executableURL?.path else {
-            throw SpaceAPIAccessError.keychainAccessUnavailable
-        }
-        var application: SecTrustedApplication?
-        try checkStatus(
-            path.withCString { SecTrustedApplicationCreateFromPath($0, &application) },
-            "Could not identify DesktopRenamer for Keychain access."
-        )
-        guard let application else { throw SpaceAPIAccessError.keychainAccessUnavailable }
-        return application
-    }
-
-    private static func trustedApplicationData(_ application: SecTrustedApplication) throws -> Data {
-        var data: CFData?
-        try checkStatus(
-            SecTrustedApplicationCopyData(application, &data),
-            "Could not verify Keychain access controls."
-        )
-        guard let data else {
-            throw SpaceAPIAccessError.invalidKeychainItem(
-                "A trusted-app entry did not contain identity data."
-            )
-        }
-        return data as Data
     }
 
     private static func checkStatus(_ status: OSStatus, _ message: String) throws {
@@ -552,7 +404,6 @@ final class SpaceAPIAccessController: ObservableObject {
 private enum SpaceAPIAccessError: LocalizedError {
     case invalidApplication
     case invalidKeychainItem(String)
-    case keychainAccessUnavailable
 
     var diagnosticDetail: String? {
         guard case let .invalidKeychainItem(detail) = self else { return nil }
@@ -565,8 +416,6 @@ private enum SpaceAPIAccessError: LocalizedError {
             return NSLocalizedString("Choose a valid signed app or ad-hoc development app.", comment: "")
         case .invalidKeychainItem:
             return NSLocalizedString("The SpaceAPI access policy could not be verified. Access remains restricted.", comment: "")
-        case .keychainAccessUnavailable:
-            return NSLocalizedString("Secure storage for the SpaceAPI access policy is unavailable.", comment: "")
         }
     }
 }
