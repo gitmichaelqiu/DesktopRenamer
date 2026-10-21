@@ -7,6 +7,12 @@ struct SpaceAPIAccessSettingsView: View {
     @Environment(\.dismiss) private var dismiss
 
     @State private var showPolicyRepairConfirmation = false
+    @State private var isAppPermissionsExpanded: Bool
+
+    init(accessController: SpaceAPIAccessController) {
+        self.accessController = accessController
+        _isAppPermissionsExpanded = State(initialValue: accessController.isRestrictedForSettings)
+    }
 
     var body: some View {
         VStack(spacing: 12) {
@@ -20,7 +26,7 @@ struct SpaceAPIAccessSettingsView: View {
 
             ScrollView {
                 VStack(alignment: .leading, spacing: 20) {
-                    SettingsSection("Access policy") {
+                    SettingsSection("Access Policy") {
                         SettingsRow("Allow only approved apps") {
                             Toggle(
                                 "",
@@ -36,7 +42,7 @@ struct SpaceAPIAccessSettingsView: View {
                         if let errorMessage = accessController.errorMessage {
                             Divider()
 
-                            SettingsRow("Policy status") {
+                            SettingsRow("Policy Status") {
                                 HStack(spacing: 8) {
                                     Text(errorMessage)
                                         .font(.footnote)
@@ -54,62 +60,75 @@ struct SpaceAPIAccessSettingsView: View {
                         }
                     }
 
-                    SettingsSection("App permissions") {
-                        SettingsRow("Add an app") {
-                            Button("Add App…", action: chooseApplication)
-                        }
-
-                        if accessController.approvedClients.isEmpty {
-                            Divider()
-
-                            SettingsRow("No apps added") {
-                                Text("All apps are blocked while access restriction is enabled.")
-                                    .foregroundStyle(.secondary)
-                                    .multilineTextAlignment(.trailing)
-                                    .fixedSize(horizontal: false, vertical: true)
+                    DisclosureGroup(isExpanded: $isAppPermissionsExpanded) {
+                        SettingsSection(nil) {
+                            SettingsRow(
+                                "Add an App",
+                                helperText: "Development builds must be approved again after rebuilding."
+                            ) {
+                                Button("Choose…", action: chooseApplication)
                             }
-                        } else {
-                            ForEach(accessController.approvedClients) { client in
+
+                            if accessController.approvedClients.isEmpty {
                                 Divider()
 
-                                SettingsRow(LocalizedStringResource(stringLiteral: client.name)) {
-                                    HStack(spacing: 8) {
-                                        Picker(
-                                            "Access for \(client.name)",
-                                            selection: Binding(
-                                                get: { client.accessLevel },
-                                                set: { accessController.setAccessLevel(forClientID: client.id, to: $0) }
-                                            )
-                                        ) {
-                                            Text("No Access").tag(SpaceAPIClientAccessLevel.noAccess)
-                                            Text("Read Only").tag(SpaceAPIClientAccessLevel.readOnly)
-                                            Text("Read & Write").tag(SpaceAPIClientAccessLevel.fullAccess)
-                                        }
-                                        .labelsHidden()
-                                        .pickerStyle(.menu)
-                                        .frame(width: 128)
-                                        .disabled(!accessController.isRestrictedForSettings)
+                                SettingsRow("No Apps Added") {
+                                    Text("All apps are blocked while access restriction is enabled.")
+                                        .foregroundStyle(.secondary)
+                                        .multilineTextAlignment(.trailing)
+                                        .fixedSize(horizontal: false, vertical: true)
+                                }
+                            } else {
+                                ForEach(accessController.approvedClients) { client in
+                                    Divider()
 
-                                        Button {
-                                            accessController.revokeClient(id: client.id)
-                                        } label: {
-                                            Image(systemName: "trash")
+                                    SettingsRow(
+                                        LocalizedStringResource(stringLiteral: client.name),
+                                        leadingIcon: NSWorkspace.shared.icon(forFile: client.applicationPath)
+                                    ) {
+                                        HStack(spacing: 8) {
+                                            Picker(
+                                                "Access for \(client.name)",
+                                                selection: Binding(
+                                                    get: { client.accessLevel },
+                                                    set: { accessController.setAccessLevel(forClientID: client.id, to: $0) }
+                                                )
+                                            ) {
+                                                Text("No Access").tag(SpaceAPIClientAccessLevel.noAccess)
+                                                Text("Read Only").tag(SpaceAPIClientAccessLevel.readOnly)
+                                                Text("Read & Write").tag(SpaceAPIClientAccessLevel.fullAccess)
+                                            }
+                                            .labelsHidden()
+                                            .pickerStyle(.menu)
+                                            .frame(width: 128)
+                                            .disabled(!accessController.isRestrictedForSettings)
+
+                                            Button {
+                                                accessController.revokeClient(id: client.id)
+                                            } label: {
+                                                Image(systemName: "trash")
+                                            }
+                                            .buttonStyle(.borderless)
+                                            .help("Remove app")
                                         }
-                                        .buttonStyle(.borderless)
-                                        .help("Remove app")
                                     }
                                 }
                             }
                         }
+                    } label: {
+                        HStack(spacing: 4) {
+                            Text("App Permissions")
+                                .font(.headline)
+                            HelperInfoButton(text: "Set the access level for each approved app.")
+                        }
+                        .padding(.leading, 4)
+                    }
+                    .onChange(of: accessController.isRestrictedForSettings) { isRestricted in
+                        withAnimation {
+                            isAppPermissionsExpanded = isRestricted
+                        }
                     }
 
-                    Text("Per-app access levels are enforced when access restriction is on.")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-
-                    Text("Reapprove a development build after rebuilding it.")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
                 }
             }
         }
