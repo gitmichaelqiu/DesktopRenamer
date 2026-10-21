@@ -148,7 +148,8 @@ struct SpaceAPIAccessSettingsView: View {
         panel.canChooseDirectories = false
         panel.allowsMultipleSelection = false
         panel.allowedContentTypes = [.application]
-        panel.begin { response in
+        guard let window = NSApp.suitableSheetWindow else { return }
+        panel.beginSheetModal(for: window) { response in
             guard response == .OK, let url = panel.url else { return }
             Task { @MainActor in
                 accessController.approveApplication(at: url)
