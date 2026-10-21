@@ -254,27 +254,24 @@ final class SpaceAPIAccessController: ObservableObject {
 
     private static func readPolicy() throws -> SpaceAPIAccessPolicy? {
         var result: CFTypeRef?
-        let status = SecItemCopyMatching(itemQuery(returnData: true) as CFDictionary, &result)
-        if status == errSecSuccess {
-            return try decodePolicy(from: result)
-        }
-        guard status == errSecItemNotFound else {
-            try checkStatus(status, "Could not read the SpaceAPI access policy from Keychain.")
-            return nil
-        }
+        let status = SecItemCopyMatching(itemQuery(returnData: true, returnReference: true) as CFDictionary, &result)
+        guard status != errSecItemNotFound else { return nil }
+        try checkStatus(status, "Could not read the SpaceAPI access policy from Keychain.")
 
-        // Policies written by earlier versions live in the file-based login keychain.
-        // Read them through its existing ACL, then move them into this app's private
-        // Data Protection Keychain group before removing the legacy item.
-        var legacyResult: CFTypeRef?
-        let legacyStatus = SecItemCopyMatching(legacyItemQuery(returnData: true) as CFDictionary, &legacyResult)
-        guard legacyStatus != errSecItemNotFound else { return nil }
-        try checkStatus(legacyStatus, "Could not read the previous SpaceAPI access policy from Keychain.")
-
-        let legacyPolicy = try decodePolicy(from: legacyResult)
-        try writePolicy(legacyPolicy)
-        removeLegacyPolicyIfPresent()
-        return legacyPolicy
+        guard let values = result as? [String: Any],
+              let data = values[kSecValueData as String] as? Data else {
+            throw SpaceAPIAccessError.invalidKeychainItem(
+                "Reading the saved policy did not return its data and Keychain item reference."
+            )
+        }
+        try validateKeychainAccess(for: result)
+        do {
+            return try JSONDecoder().decode(SpaceAPIAccessPolicy.self, from: data)
+        } catch {
+            throw SpaceAPIAccessError.invalidKeychainItem(
+                "The saved policy data does not match the expected format."
+            )
+        }
     }
 
     private static func deleteStoredPolicy() throws {
@@ -283,24 +280,32 @@ final class SpaceAPIAccessController: ObservableObject {
             try checkStatus(status, "Could not replace the unreadable SpaceAPI access policy in Keychain.")
             return
         }
-        removeLegacyPolicyIfPresent()
     }
 
     private static func writePolicy(_ policy: SpaceAPIAccessPolicy) throws {
         let data = try JSONEncoder().encode(policy)
-        let update = [kSecValueData as String: data]
-        let updateStatus = SecItemUpdate(baseQuery() as CFDictionary, update as CFDictionary)
-        if updateStatus == errSecSuccess {
+        var existingResult: CFTypeRef?
+        let status = SecItemCopyMatching(itemQuery(returnData: false, returnReference: true) as CFDictionary,
+                                         &existingResult)
+
+        if status == errSecSuccess {
+            try validateKeychainAccess(for: existingResult)
+            let update = [kSecValueData as String: data]
+            try checkStatus(
+                SecItemUpdate(baseQuery() as CFDictionary, update as CFDictionary),
+                "Could not update the SpaceAPI access policy in Keychain."
+            )
             return
         }
-        guard updateStatus == errSecItemNotFound else {
-            try checkStatus(updateStatus, "Could not update the SpaceAPI access policy in Keychain.")
+        guard status == errSecItemNotFound else {
+            try checkStatus(status, "Could not find the SpaceAPI access policy in Keychain.")
             return
         }
 
+        let access = try makeAppOnlyAccess()
         var attributes = baseQuery()
         attributes[kSecValueData as String] = data
-        attributes[kSecAttrAccessible as String] = kSecAttrAccessibleWhenUnlocked
+        attributes[kSecAttrAccess as String] = access
         let addStatus = SecItemAdd(attributes as CFDictionary, nil)
         if addStatus == errSecDuplicateItem {
             try writePolicy(policy)
@@ -311,14 +316,11 @@ final class SpaceAPIAccessController: ObservableObject {
         do {
             var savedResult: CFTypeRef?
             try checkStatus(
-                SecItemCopyMatching(itemQuery(returnData: true) as CFDictionary, &savedResult),
+                SecItemCopyMatching(itemQuery(returnData: false, returnReference: true) as CFDictionary,
+                                    &savedResult),
                 "Could not verify the SpaceAPI access policy in Keychain."
             )
-            guard let savedData = savedResult as? Data, savedData == data else {
-                throw SpaceAPIAccessError.invalidKeychainItem(
-                    "The newly saved policy data could not be verified."
-                )
-            }
+            try validateKeychainAccess(for: savedResult)
         } catch {
             // Do not leave a newly-created but unverifiable policy item behind. It would
             // be found on the next attempt and prevent the user from correcting the policy.
@@ -335,59 +337,46 @@ final class SpaceAPIAccessController: ObservableObject {
     }
 
     private static func baseQuery() -> [String: Any] {
+        // This non-sandboxed app has no Data Protection Keychain access-group
+        // entitlement. Keep the policy in the file-based keychain, whose ACL can
+        // restrict it to DesktopRenamer's code identity.
         [
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrService as String: keychainService,
-            kSecAttrAccount as String: keychainAccount,
-            // With no explicit shared access group, the Data Protection Keychain
-            // uses the signed app's private default access group.
-            kSecUseDataProtectionKeychain as String: true
+            kSecAttrAccount as String: keychainAccount
         ]
     }
 
-    private static func legacyBaseQuery() -> [String: Any] {
-        var query = baseQuery()
-        query[kSecUseDataProtectionKeychain as String] = false
-        return query
-    }
-
-    private static func itemQuery(returnData: Bool) -> [String: Any] {
+    private static func itemQuery(returnData: Bool, returnReference: Bool) -> [String: Any] {
         var query = baseQuery()
         query[kSecMatchLimit as String] = kSecMatchLimitOne
         if returnData { query[kSecReturnData as String] = true }
+        if returnReference { query[kSecReturnRef as String] = true }
         return query
     }
 
-    private static func legacyItemQuery(returnData: Bool) -> [String: Any] {
-        var query = legacyBaseQuery()
-        query[kSecMatchLimit as String] = kSecMatchLimitOne
-        if returnData { query[kSecReturnData as String] = true }
-        return query
+    private static func makeAppOnlyAccess() throws -> SecAccess {
+        guard let executablePath = Bundle.main.executableURL?.path else {
+            throw SpaceAPIAccessError.keychainAccessUnavailable
+        }
+        var status = errSecSuccess
+        guard let access = DRCreateSpaceAPIKeychainAccess(executablePath, &status) else {
+            try checkStatus(status, "Could not protect the SpaceAPI access policy in Keychain.")
+            throw SpaceAPIAccessError.keychainAccessUnavailable
+        }
+        return access
     }
 
-    private static func decodePolicy(from value: CFTypeRef?) throws -> SpaceAPIAccessPolicy {
-        guard let data = value as? Data else {
+    private static func validateKeychainAccess(for value: CFTypeRef?) throws {
+        guard let executablePath = Bundle.main.executableURL?.path else {
+            throw SpaceAPIAccessError.keychainAccessUnavailable
+        }
+        var failureReason: NSString?
+        guard DRValidateSpaceAPIKeychainAccess(value, executablePath, &failureReason) else {
             throw SpaceAPIAccessError.invalidKeychainItem(
-                "Reading the saved policy did not return its data."
+                failureReason as String? ?? "Could not verify the SpaceAPI access policy's Keychain access controls."
             )
         }
-        do {
-            return try JSONDecoder().decode(SpaceAPIAccessPolicy.self, from: data)
-        } catch {
-            throw SpaceAPIAccessError.invalidKeychainItem(
-                "The saved policy data does not match the expected format."
-            )
-        }
-    }
-
-    private static func removeLegacyPolicyIfPresent() {
-        let status = SecItemDelete(legacyBaseQuery() as CFDictionary)
-        guard status != errSecSuccess && status != errSecItemNotFound else { return }
-        DiagnosticEventLog.shared.record(
-            subsystem: "SpaceAPI",
-            level: "warning",
-            "Could not remove the previous file-keychain access policy after migration (OSStatus \(status))."
-        )
     }
 
     private static func checkStatus(_ status: OSStatus, _ message: String) throws {
@@ -404,6 +393,7 @@ final class SpaceAPIAccessController: ObservableObject {
 private enum SpaceAPIAccessError: LocalizedError {
     case invalidApplication
     case invalidKeychainItem(String)
+    case keychainAccessUnavailable
 
     var diagnosticDetail: String? {
         guard case let .invalidKeychainItem(detail) = self else { return nil }
@@ -416,6 +406,8 @@ private enum SpaceAPIAccessError: LocalizedError {
             return NSLocalizedString("Choose a valid signed app or ad-hoc development app.", comment: "")
         case .invalidKeychainItem:
             return NSLocalizedString("The SpaceAPI access policy could not be verified. Access remains restricted.", comment: "")
+        case .keychainAccessUnavailable:
+            return NSLocalizedString("Secure storage for the SpaceAPI access policy is unavailable.", comment: "")
         }
     }
 }
