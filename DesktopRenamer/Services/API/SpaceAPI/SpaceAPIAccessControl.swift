@@ -12,16 +12,33 @@ private struct SpaceAPIAccessPolicy: Codable {
 /// Authentication reads a lock-protected in-memory snapshot and never trusts peer-supplied
 /// process IDs, bundle identifiers, or paths.
 final class SpaceAPIAccessController: ObservableObject {
+    private struct PendingApproval {
+        let client: SpaceAPIApprovedClient
+        var completions: [() -> Void]
+    }
+
     @Published private(set) var isRestrictedForSettings = false
     @Published private(set) var approvedClients: [SpaceAPIApprovedClient] = []
+    @Published private(set) var pendingApprovalRequest: SpaceAPIApprovedClient?
     @Published private(set) var errorMessage: String?
     @Published private(set) var canRepairPolicy = false
 
     @MainActor var policyDidChange: (@MainActor () -> Void)?
+    var accessRequestDidArrive: (() -> Void)?
 
     private let lock = NSLock()
     private var policy = SpaceAPIAccessPolicy(isRestricted: false, approvedClients: [])
     private var isStoreUsable = true
+    private var pendingApprovals: [String: PendingApproval] = [:]
+    private var pendingApprovalOrder: [String] = []
+    private var pendingApprovalIDs = Set<String>()
+    private var pendingApprovalTimeout: Task<Void, Never>?
+    private var deniedRequestUntil: [String: Date] = [:]
+
+    private let maximumPendingApplications = 2
+    private let maximumPendingRequestsPerApp = 8
+    private let accessRequestTimeout: TimeInterval = 45
+    private let deniedRequestCooldown: TimeInterval = 300
 
     private static let keychainService = "dev.mqiu.DesktopRenamer.SpaceAPI"
     private static let keychainAccount = "access-policy-v1"
@@ -84,7 +101,10 @@ final class SpaceAPIAccessController: ObservableObject {
     func setRestricted(_ isRestricted: Bool) {
         var updated = currentPolicy()
         updated.isRestricted = isRestricted
-        persistAndApply(updated)
+        guard persistAndApply(updated) else { return }
+        if !isRestricted {
+            finishPendingApprovalsForUnrestrictedMode()
+        }
     }
 
     @MainActor
@@ -98,7 +118,9 @@ final class SpaceAPIAccessController: ObservableObject {
             updated.approvedClients.removeAll { $0.id == client.id }
             updated.approvedClients.append(client)
             updated.approvedClients.sort { $0.name.localizedStandardCompare($1.name) == .orderedAscending }
-            persistAndApply(updated)
+            if persistAndApply(updated), pendingApprovalRequest?.id == client.id {
+                finishPendingApproval(with: client.accessLevel, persistApproval: false)
+            }
         } catch {
             errorMessage = error.localizedDescription
         }
@@ -117,6 +139,75 @@ final class SpaceAPIAccessController: ObservableObject {
         guard let index = updated.approvedClients.firstIndex(where: { $0.id == id }) else { return }
         updated.approvedClients[index].accessLevel = accessLevel
         persistAndApply(updated)
+    }
+
+    @MainActor
+    func requestApproval(for client: SpaceAPIApprovedClient, completion: @escaping () -> Void) {
+        guard isRestrictedForSettings else {
+            completion()
+            return
+        }
+
+        if currentPolicy().approvedClients.contains(where: { $0.id == client.id && $0.accessLevel == .noAccess }) {
+            completion()
+            return
+        }
+
+        let now = Date()
+        deniedRequestUntil = deniedRequestUntil.filter { $0.value > now }
+        if deniedRequestUntil[client.id] != nil {
+            completion()
+            return
+        }
+
+        if var pending = pendingApprovals[client.id] {
+            guard pending.completions.count < maximumPendingRequestsPerApp else {
+                completion()
+                return
+            }
+            pending.completions.append(completion)
+            pendingApprovals[client.id] = pending
+            return
+        }
+
+        guard pendingApprovals.count < maximumPendingApplications else {
+            completion()
+            return
+        }
+
+        pendingApprovals[client.id] = PendingApproval(client: client, completions: [completion])
+        pendingApprovalOrder.append(client.id)
+        lock.lock()
+        pendingApprovalIDs.insert(client.id)
+        lock.unlock()
+        showNextPendingApproval()
+    }
+
+    @MainActor
+    func resolvePendingApproval(with accessLevel: SpaceAPIClientAccessLevel?) {
+        finishPendingApproval(with: accessLevel)
+    }
+
+    @MainActor
+    func cancelPendingApprovals() {
+        guard !pendingApprovals.isEmpty else { return }
+        pendingApprovalTimeout?.cancel()
+        pendingApprovalTimeout = nil
+        pendingApprovalRequest = nil
+        let completions = pendingApprovals.values.flatMap(\.completions)
+        pendingApprovals.removeAll()
+        pendingApprovalOrder.removeAll()
+        lock.lock()
+        pendingApprovalIDs.removeAll()
+        lock.unlock()
+        completions.forEach { $0() }
+    }
+
+    func isPendingApproval(for identity: SpaceAPIPeerIdentity?) -> Bool {
+        guard let identity, let id = Self.clientIdentifier(for: identity) else { return false }
+        lock.lock()
+        defer { lock.unlock() }
+        return pendingApprovalIDs.contains(id)
     }
 
     @MainActor
@@ -157,7 +248,8 @@ final class SpaceAPIAccessController: ObservableObject {
     }
 
     @MainActor
-    private func persistAndApply(_ updated: SpaceAPIAccessPolicy) {
+    @discardableResult
+    private func persistAndApply(_ updated: SpaceAPIAccessPolicy) -> Bool {
         do {
             try Self.writePolicy(updated)
             lock.lock()
@@ -169,9 +261,107 @@ final class SpaceAPIAccessController: ObservableObject {
             canRepairPolicy = false
             errorMessage = nil
             policyDidChange?()
+            return true
         } catch {
             failClosed(after: error)
+            return false
         }
+    }
+
+    @MainActor
+    private func finishPendingApproval(
+        with accessLevel: SpaceAPIClientAccessLevel?,
+        persistApproval: Bool = true,
+        applyCooldown: Bool = true
+    ) {
+        guard let client = pendingApprovalRequest,
+              let pending = pendingApprovals.removeValue(forKey: client.id) else { return }
+        pendingApprovalTimeout?.cancel()
+        pendingApprovalTimeout = nil
+        pendingApprovalRequest = nil
+        pendingApprovalOrder.removeAll { $0 == client.id }
+        lock.lock()
+        pendingApprovalIDs.remove(client.id)
+        lock.unlock()
+
+        var accessWasGranted = false
+        if let accessLevel, accessLevel != .noAccess, persistApproval {
+            var approvedClient = client
+            approvedClient.accessLevel = accessLevel
+            var updated = currentPolicy()
+            updated.approvedClients.removeAll { $0.id == client.id }
+            updated.approvedClients.append(approvedClient)
+            updated.approvedClients.sort { $0.name.localizedStandardCompare($1.name) == .orderedAscending }
+            accessWasGranted = persistAndApply(updated)
+        } else if let accessLevel, accessLevel != .noAccess {
+            accessWasGranted = self.accessLevel(for: Self.peerIdentity(for: client)) == accessLevel
+        }
+
+        if !accessWasGranted, applyCooldown {
+            deniedRequestUntil[client.id] = Date().addingTimeInterval(deniedRequestCooldown)
+        }
+
+        pending.completions.forEach { $0() }
+        showNextPendingApproval()
+    }
+
+    @MainActor
+    private func showNextPendingApproval() {
+        guard pendingApprovalRequest == nil else { return }
+
+        while let id = pendingApprovalOrder.first, let pending = pendingApprovals[id] {
+            if isAuthorized(Self.peerIdentity(for: pending.client)) {
+                pendingApprovalOrder.removeFirst()
+                pendingApprovals.removeValue(forKey: id)
+                lock.lock()
+                pendingApprovalIDs.remove(id)
+                lock.unlock()
+                pending.completions.forEach { $0() }
+                continue
+            }
+
+            pendingApprovalRequest = pending.client
+            accessRequestDidArrive?()
+            let timeout = accessRequestTimeout
+            pendingApprovalTimeout = Task { @MainActor [weak self] in
+                try? await Task.sleep(for: .seconds(timeout))
+                guard !Task.isCancelled else { return }
+                self?.finishPendingApproval(with: nil)
+            }
+            return
+        }
+    }
+
+    @MainActor
+    private func finishPendingApprovalsForUnrestrictedMode() {
+        pendingApprovalTimeout?.cancel()
+        pendingApprovalTimeout = nil
+        pendingApprovalRequest = nil
+        let completions = pendingApprovals.values.flatMap(\.completions)
+        pendingApprovals.removeAll()
+        pendingApprovalOrder.removeAll()
+        lock.lock()
+        pendingApprovalIDs.removeAll()
+        lock.unlock()
+        completions.forEach { $0() }
+    }
+
+    private func accessLevel(for identity: SpaceAPIPeerIdentity) -> SpaceAPIClientAccessLevel {
+        accessLevel(for: Optional(identity))
+    }
+
+    private static func peerIdentity(for client: SpaceAPIApprovedClient) -> SpaceAPIPeerIdentity {
+        SpaceAPIPeerIdentity(designatedRequirement: client.designatedRequirement, codeHash: client.codeHash)
+    }
+
+    private static func clientIdentifier(for identity: SpaceAPIPeerIdentity) -> String? {
+        if let requirement = identity.designatedRequirement {
+            return "requirement:\(requirement)"
+        }
+        if let codeHash = identity.codeHash {
+            return "hash:\(codeHash)"
+        }
+        return nil
     }
 
     @MainActor
@@ -185,6 +375,7 @@ final class SpaceAPIAccessController: ObservableObject {
         canRepairPolicy = true
         errorMessage = error.localizedDescription
         Self.recordPolicyFailure(error, operation: "write")
+        cancelPendingApprovals()
         policyDidChange?()
     }
 

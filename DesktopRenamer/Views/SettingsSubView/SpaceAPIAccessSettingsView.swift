@@ -18,6 +18,32 @@ struct SpaceAPIAccessSettingsView: View {
 
             ScrollView {
                 VStack(alignment: .leading, spacing: 20) {
+                    if let request = accessController.pendingApprovalRequest {
+                        SettingsSection(
+                            "Access Request",
+                            helperText: "Choose what this app can do with SpaceAPI."
+                        ) {
+                            SettingsRow(
+                                LocalizedStringResource(stringLiteral: request.name),
+                                leadingIcon: NSWorkspace.shared.icon(forFile: request.applicationPath)
+                            ) {
+                                HStack(spacing: 6) {
+                                    Button("Don't Allow") {
+                                        accessController.resolvePendingApproval(with: .noAccess)
+                                    }
+                                    Button("Read Only") {
+                                        accessController.resolvePendingApproval(with: .readOnly)
+                                    }
+                                    Button("Read & Write") {
+                                        accessController.resolvePendingApproval(with: .fullAccess)
+                                    }
+                                }
+                            }
+                        }
+                        .transition(.opacity.combined(with: .move(edge: .top)))
+                        .animation(.easeInOut(duration: 0.2), value: request.id)
+                    }
+
                     SettingsSection("Access Policy") {
                         SettingsRow("Allow only approved apps") {
                             Toggle(

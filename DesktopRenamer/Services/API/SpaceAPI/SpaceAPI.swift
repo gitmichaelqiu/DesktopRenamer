@@ -69,17 +69,25 @@ final class SpaceAPI {
     
     func setupListener() {
         DiagnosticEventLog.shared.record(subsystem: "SpaceAPI", level: "info", "setupListener")
-        removeListener()
 
         guard SpaceManager.isAPIEnabled, let spaceManager = spaceManager else {
+            removeListener()
             print("SpaceAPI: Listener not started (API disabled)")
             return
         }
 
-        let started = socketServer.start(accessController: accessController) { [weak self] payload, identity, completion in
+        DistributedNotificationCenter.default().removeObserver(self)
+        rpcListenerInstalled = false
+
+        let started = socketServer.start(accessController: accessController) { [weak self] payload, identity, requestingApplication, completion in
             Task { @MainActor [weak self] in
                 guard let self else { return }
-                self.processSocketRequest(payload, peerIdentity: identity, completion: completion)
+                self.processSocketRequest(
+                    payload,
+                    peerIdentity: identity,
+                    requestingApplication: requestingApplication,
+                    completion: completion
+                )
             }
         }
         if !started {
@@ -109,47 +117,50 @@ final class SpaceAPI {
             installRPCListener()
         }
         
-        // Broadcast space state changes to observers.
-        spaceManager.$currentSpaceUUID
-            .dropFirst()
-            .receive(on: DispatchQueue.main)
-            .sink { [weak self] _ in
-                self?.broadcastCurrentSpace()
-                self?.broadcastRPCEvent(reason: "activeSpaceChanged")
-            }
-            .store(in: &cancellables)
+        if cancellables.isEmpty {
+            // Broadcast space state changes to observers.
+            spaceManager.$currentSpaceUUID
+                .dropFirst()
+                .receive(on: DispatchQueue.main)
+                .sink { [weak self] _ in
+                    self?.broadcastCurrentSpace()
+                    self?.broadcastRPCEvent(reason: "activeSpaceChanged")
+                }
+                .store(in: &cancellables)
             
-        spaceManager.$spaceNameDict
-            .dropFirst()
-            .receive(on: DispatchQueue.main)
-            .sink { [weak self] _ in
-                self?.broadcastCurrentSpace()
-                self?.broadcastSpaceList()
-                self?.broadcastRPCEvent(reason: "spaceListChanged")
-            }
-            .store(in: &cancellables)
+            spaceManager.$spaceNameDict
+                .dropFirst()
+                .receive(on: DispatchQueue.main)
+                .sink { [weak self] _ in
+                    self?.broadcastCurrentSpace()
+                    self?.broadcastSpaceList()
+                    self?.broadcastRPCEvent(reason: "spaceListChanged")
+                }
+                .store(in: &cancellables)
 
-        spaceManager.$lockedSpaceIDs
-            .dropFirst()
-            .receive(on: DispatchQueue.main)
-            .sink { [weak self] _ in
-                self?.broadcastRPCEvent(reason: "lockStateChanged")
-            }
-            .store(in: &cancellables)
+            spaceManager.$lockedSpaceIDs
+                .dropFirst()
+                .receive(on: DispatchQueue.main)
+                .sink { [weak self] _ in
+                    self?.broadcastRPCEvent(reason: "lockStateChanged")
+                }
+                .store(in: &cancellables)
 
-        spaceManager.$movedWindowsOriginalSpaces
-            .dropFirst()
-            .receive(on: DispatchQueue.main)
-            .sink { [weak self] _ in
-                self?.broadcastRPCEvent(reason: "movedWindowsChanged")
-            }
-            .store(in: &cancellables)
+            spaceManager.$movedWindowsOriginalSpaces
+                .dropFirst()
+                .receive(on: DispatchQueue.main)
+                .sink { [weak self] _ in
+                    self?.broadcastRPCEvent(reason: "movedWindowsChanged")
+                }
+                .store(in: &cancellables)
+        }
             
         print("SpaceAPI: Listener Started (restricted: \(accessController.isRestricted))")
     }
     
     func removeListener() {
         DiagnosticEventLog.shared.record(subsystem: "SpaceAPI", level: "info", "removeListener")
+        accessController.cancelPendingApprovals()
         DistributedNotificationCenter.default().removeObserver(self)
         rpcListenerInstalled = false
         cancellables.removeAll()

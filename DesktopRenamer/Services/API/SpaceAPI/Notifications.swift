@@ -88,6 +88,7 @@ extension SpaceAPI {
     func processSocketRequest(
         _ payload: String,
         peerIdentity: SpaceAPIPeerIdentity?,
+        requestingApplication: SpaceAPIApprovedClient?,
         completion: @escaping (String) -> Void
     ) {
         Task { @MainActor [weak self] in
@@ -100,12 +101,16 @@ extension SpaceAPI {
                 )))
                 return
             }
-            guard self.accessController.isAuthorized(peerIdentity) else {
-                completion(self.encodeResponse(SpaceAPIJSONRPCCodec.errorResponse(
-                    id: Self.recoverableRequestID(from: payload),
-                    code: SpaceAPIJSONRPCCode.permissionDenied,
-                    message: "This app is not approved to use SpaceAPI."
-                )))
+            if !self.accessController.isAuthorized(peerIdentity),
+               let requestingApplication,
+               (try? SpaceAPIJSONRPCCodec.decodeRequest(payload)) != nil {
+                self.accessController.requestApproval(for: requestingApplication) { [weak self] in
+                    Task { @MainActor [weak self] in
+                        guard let self else { return }
+                        let response = await self.makeRPCResponse(payload, peerIdentity: peerIdentity, isSocket: true)
+                        completion(self.encodeResponse(response))
+                    }
+                }
                 return
             }
 

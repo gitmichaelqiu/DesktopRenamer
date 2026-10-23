@@ -17,7 +17,7 @@ final class SpaceAPISocketServer {
     private var listenerSource: DispatchSourceRead?
     private var clients: [ObjectIdentifier: SpaceAPISocketClient] = [:]
     private var accessController: SpaceAPIAccessController?
-    private var requestHandler: ((String, SpaceAPIPeerIdentity?, @escaping (String) -> Void) -> Void)?
+    private var requestHandler: ((String, SpaceAPIPeerIdentity?, SpaceAPIApprovedClient?, @escaping (String) -> Void) -> Void)?
 
     var isRunning: Bool {
         stateLock.lock()
@@ -28,7 +28,7 @@ final class SpaceAPISocketServer {
     @discardableResult
     func start(
         accessController: SpaceAPIAccessController,
-        requestHandler: @escaping (String, SpaceAPIPeerIdentity?, @escaping (String) -> Void) -> Void
+        requestHandler: @escaping (String, SpaceAPIPeerIdentity?, SpaceAPIApprovedClient?, @escaping (String) -> Void) -> Void
     ) -> Bool {
         stateLock.lock()
         guard listenerDescriptor < 0 else {
@@ -140,9 +140,15 @@ final class SpaceAPISocketServer {
     func closeUnauthorizedConnections() {
         stateLock.lock()
         let activeClients = Array(clients.values)
+        let controller = accessController
         stateLock.unlock()
 
-        for client in activeClients where !isAuthorized(client.auditToken) {
+        guard let controller else { return }
+        for client in activeClients {
+            guard !isAuthorized(client.auditToken),
+                  !controller.isPendingApproval(for: SpaceAPIAccessController.identity(forAuditToken: client.auditToken)) else {
+                continue
+            }
             client.close()
             remove(client)
         }
@@ -161,23 +167,6 @@ final class SpaceAPISocketServer {
             _ = setsockopt(descriptor, SOL_SOCKET, SO_NOSIGPIPE, &noSignal, socklen_t(MemoryLayout<Int32>.size))
 
             let client = SpaceAPISocketClient(descriptor: descriptor)
-            stateLock.lock()
-            let controller = accessController
-            stateLock.unlock()
-            if controller?.isRestricted == true, !isAuthorized(client.auditToken) {
-                let denial = SpaceAPIJSONRPCCodec.errorResponse(
-                    id: nil,
-                    code: SpaceAPIJSONRPCCode.permissionDenied,
-                    message: "This app is not approved to use SpaceAPI."
-                )
-                if let payload = try? SpaceAPIJSONRPCCodec.encode(denial) {
-                    client.enqueue(Data(payload.utf8), authorization: { true }) { client.close() }
-                } else {
-                    client.close()
-                }
-                continue
-            }
-
             stateLock.lock()
             let count = clients.count
             if count < Self.maximumConnectedClients {
@@ -216,31 +205,29 @@ final class SpaceAPISocketServer {
                 continue
             }
 
-            guard isAuthorized(client.auditToken) else {
-                sendError(
-                    to: client,
-                    id: Self.recoverableRequestID(from: text),
-                    code: SpaceAPIJSONRPCCode.permissionDenied,
-                    message: "This app is not approved to use SpaceAPI."
-                )
-                return
-            }
-
             stateLock.lock()
             let handler = requestHandler
             stateLock.unlock()
             guard let handler else { return }
 
             let semaphore = DispatchSemaphore(value: 0)
-            handler(text, SpaceAPIAccessController.identity(forAuditToken: client.auditToken)) { [weak self, weak client] response in
+            let identity = SpaceAPIAccessController.identity(forAuditToken: client.auditToken)
+            let requestingApplication = isAuthorized(client.auditToken)
+                ? nil
+                : SpaceAPICodeIdentity.approvedClient(forAuditToken: client.auditToken)
+            handler(text, identity, requestingApplication) { [weak self, weak client] response in
                 guard let self, let client else {
                     semaphore.signal()
                     return
                 }
+                let isPermissionDenied = Self.isPermissionDeniedResponse(response)
                 client.enqueue(Data(response.utf8), authorization: { [weak self, weak client] in
                     guard let self, let client else { return false }
-                    return self.isAuthorized(client.auditToken)
+                    return self.isAuthorized(client.auditToken) || isPermissionDenied
                 }) {
+                    if !self.isAuthorized(client.auditToken) {
+                        client.close()
+                    }
                     semaphore.signal()
                 }
             }
@@ -300,6 +287,16 @@ final class SpaceAPISocketServer {
             return nil
         }
         return id
+    }
+
+    private static func isPermissionDeniedResponse(_ payload: String) -> Bool {
+        guard let data = payload.data(using: .utf8),
+              let object = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+              let error = object["error"] as? [String: Any],
+              let code = (error["code"] as? NSNumber)?.intValue else {
+            return false
+        }
+        return code == SpaceAPIJSONRPCCode.permissionDenied
     }
 }
 

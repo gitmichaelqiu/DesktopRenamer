@@ -40,6 +40,7 @@ class StatusBarController: NSObject {
         StatusBarController.statusItem.isVisible = !StatusBarController.isStatusBarHidden
         
         setupObservers()
+        observeSpaceAPIAccessRequests()
     }
     
     deinit {
@@ -101,6 +102,26 @@ class StatusBarController: NSObject {
                 self?.rebuildMenu()
             }
             .store(in: &cancellables)
+    }
+
+    private func observeSpaceAPIAccessRequests() {
+        guard let accessController = spaceManager.spaceAPI?.accessController else { return }
+        accessController.accessRequestDidArrive = { [weak self] in
+            Task { @MainActor [weak self] in
+                self?.presentSpaceAPIAccessRequest()
+            }
+        }
+        if accessController.pendingApprovalRequest != nil {
+            presentSpaceAPIAccessRequest()
+        }
+    }
+
+    @MainActor
+    private func presentSpaceAPIAccessRequest() {
+        openSettingsWindow(tab: .general)
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+            NotificationCenter.default.post(name: .spaceAPIAccessRequestPresented, object: nil)
+        }
     }
 }
 
