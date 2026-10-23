@@ -73,40 +73,46 @@ struct SpaceAPIAccessSettingsView: View {
                                         .multilineTextAlignment(.trailing)
                                         .fixedSize(horizontal: false, vertical: true)
                                 }
+                                .transition(.opacity.combined(with: .move(edge: .top)))
                             } else {
                                 ForEach(accessController.approvedClients) { client in
-                                    Divider()
+                                    VStack(spacing: 0) {
+                                        Divider()
 
-                                    SettingsRow(
-                                        LocalizedStringResource(stringLiteral: client.name),
-                                        leadingIcon: NSWorkspace.shared.icon(forFile: client.applicationPath)
-                                    ) {
-                                        HStack(spacing: 8) {
-                                            Picker(
-                                                "Access for \(client.name)",
-                                                selection: Binding(
-                                                    get: { client.accessLevel },
-                                                    set: { accessController.setAccessLevel(forClientID: client.id, to: $0) }
-                                                )
-                                            ) {
-                                                Text("No Access").tag(SpaceAPIClientAccessLevel.noAccess)
-                                                Text("Read Only").tag(SpaceAPIClientAccessLevel.readOnly)
-                                                Text("Read & Write").tag(SpaceAPIClientAccessLevel.fullAccess)
-                                            }
-                                            .labelsHidden()
-                                            .pickerStyle(.menu)
-                                            .frame(width: 128)
-                                            .disabled(!accessController.isRestrictedForSettings)
+                                        SettingsRow(
+                                            LocalizedStringResource(stringLiteral: client.name),
+                                            leadingIcon: NSWorkspace.shared.icon(forFile: client.applicationPath)
+                                        ) {
+                                            HStack(spacing: 8) {
+                                                Picker(
+                                                    "Access for \(client.name)",
+                                                    selection: Binding(
+                                                        get: { client.accessLevel },
+                                                        set: { accessController.setAccessLevel(forClientID: client.id, to: $0) }
+                                                    )
+                                                ) {
+                                                    Text("No Access").tag(SpaceAPIClientAccessLevel.noAccess)
+                                                    Text("Read Only").tag(SpaceAPIClientAccessLevel.readOnly)
+                                                    Text("Read & Write").tag(SpaceAPIClientAccessLevel.fullAccess)
+                                                }
+                                                .labelsHidden()
+                                                .pickerStyle(.menu)
+                                                .frame(width: 128)
+                                                .disabled(!accessController.isRestrictedForSettings)
 
-                                            Button {
-                                                accessController.revokeClient(id: client.id)
-                                            } label: {
-                                                Image(systemName: "trash")
+                                                Button {
+                                                    withAnimation(.easeInOut(duration: 0.2)) {
+                                                        accessController.revokeClient(id: client.id)
+                                                    }
+                                                } label: {
+                                                    Image(systemName: "trash")
+                                                }
+                                                .buttonStyle(.borderless)
+                                                .help("Remove app")
                                             }
-                                            .buttonStyle(.borderless)
-                                            .help("Remove app")
                                         }
                                     }
+                                    .transition(.opacity.combined(with: .move(edge: .top)))
                                 }
                             }
                         }
@@ -152,7 +158,9 @@ struct SpaceAPIAccessSettingsView: View {
         panel.beginSheetModal(for: window) { response in
             guard response == .OK, let url = panel.url else { return }
             Task { @MainActor in
-                accessController.approveApplication(at: url)
+                withAnimation(.easeInOut(duration: 0.2)) {
+                    accessController.approveApplication(at: url)
+                }
             }
         }
     }
