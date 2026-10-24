@@ -10,8 +10,47 @@ struct SpaceAPIAccessSettingsView: View {
     @State private var showPolicyRepairConfirmation = false
     @State private var selectedUsage: SpaceAPIUsageStatistics.AppUsage?
     @State private var usageRange = SpaceAPIUsageRange.last7Days
+    @State private var showClearUsageConfirmation = false
 
     var body: some View {
+        VStack(spacing: 12) {
+            if let selectedUsage {
+                SpaceAPIUsageReportView(
+                    usage: selectedUsage,
+                    usageStatistics: usageStatistics
+                ) {
+                    self.selectedUsage = nil
+                }
+            } else {
+                accessSettingsContent
+            }
+        }
+        .padding(16)
+        .frame(width: 560, height: 540)
+        .environment(\.settingsTab, .general)
+        .confirmationDialog(
+            "Reset SpaceAPI access?",
+            isPresented: $showPolicyRepairConfirmation,
+            titleVisibility: .visible
+        ) {
+            Button("Reset", role: .destructive) {
+                accessController.repairUnreadablePolicy()
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("Resetting the unreadable policy clears the app permissions. SpaceAPI stays restricted until permissions are set again.")
+        }
+        .alert("Clear SpaceAPI usage history?", isPresented: $showClearUsageConfirmation) {
+            Button("Clear", role: .destructive) {
+                usageStatistics.clearHistory()
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("This removes all recorded SpaceAPI usage counts and history.")
+        }
+    }
+
+    private var accessSettingsContent: some View {
         VStack(spacing: 12) {
             HStack {
                 Text("SpaceAPI Access")
@@ -191,20 +230,23 @@ struct SpaceAPIAccessSettingsView: View {
                                     Button {
                                         selectedUsage = usage
                                     } label: {
-                                        HStack(spacing: 8) {
-                                            VStack(alignment: .trailing, spacing: 1) {
-                                                Text(displayedRequestCount(for: usage), format: .number)
-                                                    .monospacedDigit()
-                                                Text(usage.hasDetailedHistory ? usageRange.title : "Total Requests")
-                                                    .font(.caption)
-                                                    .foregroundStyle(.secondary)
+                                        HStack(spacing: 6) {
+                                            Text(displayedRequestCount(for: usage), format: .number)
+                                                .monospacedDigit()
+                                            if usage.hasDetailedHistory {
+                                                Text("Requests")
+                                                Text("·")
+                                                Text(usageRange.title)
+                                            } else {
+                                                Text("Total Requests")
                                             }
-
                                             Image(systemName: "chevron.right")
                                                 .font(.caption2.weight(.semibold))
                                                 .foregroundStyle(.secondary)
                                         }
-                                        .frame(minHeight: 34)
+                                        .font(.subheadline)
+                                        .foregroundStyle(.secondary)
+                                        .lineLimit(1)
                                     }
                                     .buttonStyle(.plain)
                                     .help("View usage activity")
@@ -214,7 +256,7 @@ struct SpaceAPIAccessSettingsView: View {
                             Divider()
                             SettingsRow("Usage history") {
                                 Button("Clear", role: .destructive) {
-                                    usageStatistics.clearHistory()
+                                    showClearUsageConfirmation = true
                                 }
                             }
                         }
@@ -229,24 +271,6 @@ struct SpaceAPIAccessSettingsView: View {
                     .buttonStyle(.borderedProminent)
                     .keyboardShortcut(.defaultAction)
             }
-        }
-        .padding(16)
-        .frame(width: 560, height: 540)
-        .environment(\.settingsTab, .general)
-        .sheet(item: $selectedUsage) { usage in
-            SpaceAPIUsageReportView(usage: usage, usageStatistics: usageStatistics)
-        }
-        .confirmationDialog(
-            "Reset SpaceAPI access?",
-            isPresented: $showPolicyRepairConfirmation,
-            titleVisibility: .visible
-        ) {
-            Button("Reset", role: .destructive) {
-                accessController.repairUnreadablePolicy()
-            }
-            Button("Cancel", role: .cancel) {}
-        } message: {
-            Text("Resetting the unreadable policy clears the app permissions. SpaceAPI stays restricted until permissions are set again.")
         }
     }
 

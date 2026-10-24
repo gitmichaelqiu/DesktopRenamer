@@ -26,7 +26,7 @@ enum SpaceAPIUsageRange: String, CaseIterable, Identifiable {
 struct SpaceAPIUsageReportView: View {
     let usage: SpaceAPIUsageStatistics.AppUsage
     @ObservedObject var usageStatistics: SpaceAPIUsageStatistics
-    @Environment(\.dismiss) private var dismiss
+    let onDone: () -> Void
 
     @State private var selectedRange = SpaceAPIUsageRange.last7Days
 
@@ -52,94 +52,108 @@ struct SpaceAPIUsageReportView: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            HStack(spacing: 12) {
-                Image(nsImage: NSWorkspace.shared.icon(forFile: usage.applicationPath))
-                    .resizable()
-                    .aspectRatio(contentMode: .fit)
-                    .frame(width: 40, height: 40)
-                    .clipShape(RoundedRectangle(cornerRadius: 9, style: .continuous))
+        VStack(spacing: 12) {
+            ScrollView {
+                VStack(alignment: .leading, spacing: 14) {
+                    HStack(spacing: 10) {
+                        Button(action: onDone) {
+                            Image(systemName: "chevron.left")
+                        }
+                        .buttonStyle(.plain)
+                        .help("Back")
 
-                Text(usage.name)
-                    .font(.title2.weight(.semibold))
-                    .lineLimit(1)
+                        Image(nsImage: NSWorkspace.shared.icon(forFile: usage.applicationPath))
+                            .resizable()
+                            .aspectRatio(contentMode: .fit)
+                            .frame(width: 40, height: 40)
+                            .clipShape(RoundedRectangle(cornerRadius: 9, style: .continuous))
 
-                Spacer(minLength: 0)
-            }
+                        Text(usage.name)
+                            .font(.title2.weight(.semibold))
+                            .lineLimit(1)
 
-            Picker("Activity Period", selection: $selectedRange) {
-                ForEach(SpaceAPIUsageRange.allCases) { range in
-                    Text(range.title).tag(range)
+                        Spacer(minLength: 0)
+                    }
+
+                    Picker("Activity Period", selection: $selectedRange) {
+                        ForEach(SpaceAPIUsageRange.allCases) { range in
+                            Text(range.title).tag(range)
+                        }
+                    }
+                    .pickerStyle(.segmented)
+
+                    HStack(alignment: .firstTextBaseline, spacing: 8) {
+                        Text(displayedRequestCount, format: .number)
+                            .font(.system(size: 32, weight: .semibold, design: .rounded))
+                            .monospacedDigit()
+
+                        VStack(alignment: .leading, spacing: 2) {
+                            if currentUsage?.hasDetailedHistory == true {
+                                Text("Requests")
+                                    .font(.headline)
+                                Text(selectedRange.title)
+                                    .font(.subheadline)
+                                    .foregroundStyle(.secondary)
+                            } else {
+                                Text("Total Requests")
+                                    .font(.headline)
+                            }
+                        }
+
+                        Spacer()
+                    }
+
+                    if currentUsage?.hasDetailedHistory == true {
+                        activityChart
+                            .frame(height: 160)
+
+                        if periodRequestCount == 0 {
+                            Text("No requests in this period.")
+                                .font(.footnote)
+                                .foregroundStyle(.secondary)
+                        }
+                    } else {
+                        VStack(spacing: 8) {
+                            Image(systemName: "chart.bar.xaxis")
+                                .font(.title2)
+                                .foregroundStyle(.secondary)
+                            Text("Detailed activity will appear after the next request.")
+                                .font(.subheadline)
+                                .foregroundStyle(.secondary)
+                                .multilineTextAlignment(.center)
+                        }
+                        .frame(maxWidth: .infinity, minHeight: 120)
+                    }
+
+                    Divider()
+
+                    HStack {
+                        Text("Total Requests")
+                        Spacer()
+                        Text(currentUsage?.requestCount ?? 0, format: .number)
+                            .monospacedDigit()
+                            .foregroundStyle(.secondary)
+                    }
+
+                    HStack {
+                        Text("Last Request")
+                        Spacer()
+                        Text((currentUsage?.lastUsed ?? usage.lastUsed).formatted(date: .abbreviated, time: .shortened))
+                            .foregroundStyle(.secondary)
+                    }
                 }
+                .padding(.horizontal, 4)
+                .padding(.vertical, 2)
             }
-            .pickerStyle(.segmented)
-
-            HStack(alignment: .firstTextBaseline, spacing: 8) {
-                Text(displayedRequestCount, format: .number)
-                    .font(.system(size: 32, weight: .semibold, design: .rounded))
-                    .monospacedDigit()
-
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("Requests")
-                        .font(.headline)
-                    Text(currentUsage?.hasDetailedHistory == true ? selectedRange.title : "Total Requests")
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
-                }
-
-                Spacer()
-            }
-
-            if currentUsage?.hasDetailedHistory == true {
-                activityChart
-                    .frame(height: 190)
-
-                if periodRequestCount == 0 {
-                    Text("No requests in this period.")
-                        .font(.footnote)
-                        .foregroundStyle(.secondary)
-                }
-            } else {
-                VStack(spacing: 8) {
-                    Image(systemName: "chart.bar.xaxis")
-                        .font(.title2)
-                        .foregroundStyle(.secondary)
-                    Text("Detailed activity will appear after the next request.")
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
-                        .multilineTextAlignment(.center)
-                }
-                .frame(maxWidth: .infinity, minHeight: 150)
-            }
-
-            Divider()
 
             HStack {
-                Text("Total Requests")
                 Spacer()
-                Text(currentUsage?.requestCount ?? 0, format: .number)
-                    .monospacedDigit()
-                    .foregroundStyle(.secondary)
-            }
-
-            HStack {
-                Text("Last Request")
-                Spacer()
-                Text((currentUsage?.lastUsed ?? usage.lastUsed).formatted(date: .abbreviated, time: .shortened))
-                    .foregroundStyle(.secondary)
-            }
-
-            Spacer(minLength: 0)
-
-            HStack {
-                Spacer()
-                Button("Done") { dismiss() }
+                Button("Done", action: onDone)
                     .buttonStyle(.borderedProminent)
                     .keyboardShortcut(.defaultAction)
             }
         }
-        .padding(20)
-        .frame(width: 500, height: 460)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
     private var activityChart: some View {

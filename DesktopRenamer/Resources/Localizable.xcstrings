@@ -4662,6 +4662,26 @@
           }
         }
       }
+    },
+    "Clear SpaceAPI usage history?" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "清除 SpaceAPI 使用记录？"
+          }
+        }
+      }
+    },
+    "This removes all recorded SpaceAPI usage counts and history." : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "这会删除所有已记录的 SpaceAPI 请求次数和历史记录。"
+          }
+        }
+      }
     }
   },
   "version" : "1.1"
