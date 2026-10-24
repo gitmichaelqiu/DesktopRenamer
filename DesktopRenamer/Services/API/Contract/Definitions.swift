@@ -69,7 +69,7 @@ struct SpaceAPIMethodDefinition: Equatable {
 }
 
 enum DesktopRenamerAPIContract {
-    static let version = "1.3.0"
+    static let version = "1.4.0"
     static let jsonRPCVersion = "2.0"
     static let payloadKey = "payload"
     static let maxPayloadBytes = 1_048_576
@@ -152,7 +152,8 @@ enum DesktopRenamerAPIContract {
             parameters: [
                 "windowID": .positiveInteger,
                 "pid": .positiveInteger,
-                "action": .windowAction
+                "action": .windowAction,
+                "deferAutomaticReturn": .boolean
             ],
             requiredParameters: ["windowID", "pid", "action"]
         ),
@@ -167,7 +168,8 @@ enum DesktopRenamerAPIContract {
                 // enumerated the window avoid losing a true minimized/hidden
                 // state when Accessibility is temporarily unavailable.
                 "isMinimized": .boolean,
-                "isHidden": .boolean
+                "isHidden": .boolean,
+                "deferAutomaticReturn": .boolean
             ],
             requiredParameters: ["windowID", "fromSpaceID", "targetSpaceID"]
         )

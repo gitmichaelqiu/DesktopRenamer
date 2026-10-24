@@ -66,18 +66,36 @@ extension SpaceAPI {
             }
             return try await rearrangeSpace(spaceID: spaceID, direction: direction, manager: manager)
         case "moveWindowNext":
-            manager.moveActiveWindowToNextSpace()
-            return ""
+            return try await performWithAutomaticSpaceReturn(
+                command: command,
+                arguments: arguments,
+                manager: manager
+            ) {
+                manager.moveActiveWindowToNextSpace()
+                return ""
+            }
         case "moveWindowPrevious":
-            manager.moveActiveWindowToPreviousSpace()
-            return ""
+            return try await performWithAutomaticSpaceReturn(
+                command: command,
+                arguments: arguments,
+                manager: manager
+            ) {
+                manager.moveActiveWindowToPreviousSpace()
+                return ""
+            }
         case "moveWindowToSpace":
             guard let requestedSpaceID = arguments["spaceID"],
                   let spaceID = managedSpaceID(forSpaceIdentifier: requestedSpaceID, manager: manager) else {
                 throw SpaceAPIError.invalidArgument("Missing or invalid space ID.")
             }
-            try await moveActiveWindow(toSpaceID: spaceID, manager: manager)
-            return ""
+            return try await performWithAutomaticSpaceReturn(
+                command: command,
+                arguments: arguments,
+                manager: manager
+            ) {
+                try await moveActiveWindow(toSpaceID: spaceID, manager: manager)
+                return ""
+            }
         case "reloadSpaceLabels":
             guard let labelManager = AppDelegate.shared.statusBarController?.labelManager else {
                 throw SpaceAPIError.appUnavailable
@@ -131,8 +149,14 @@ extension SpaceAPI {
                   let action = arguments["action"] else {
                 throw SpaceAPIError.invalidArgument("Missing window action arguments.")
             }
-            try await executeWindowAction(windowID: windowID, pid: pid, action: action, manager: manager)
-            return ""
+            return try await performWithAutomaticSpaceReturn(
+                command: command,
+                arguments: arguments,
+                manager: manager
+            ) {
+                try await executeWindowAction(windowID: windowID, pid: pid, action: action, manager: manager)
+                return ""
+            }
         case "moveSpecificWindow":
             guard let windowID = Int(arguments["windowID"] ?? ""),
                   let requestedFromSpaceID = arguments["fromSpaceID"],
@@ -165,19 +189,78 @@ extension SpaceAPI {
                 }
             }
 
-            let moved = await WindowActionCoordinator.moveWindow(
-                windowID: windowID,
-                pid: pid,
-                fromSpaceID: fromSpaceID,
-                targetSpaceID: targetSpaceID,
-                wasMinimized: minimizedHint,
-                wasHidden: hiddenHint
-            )
-            guard moved else { throw SpaceAPIError.operationFailed("Window move failed.") }
-            return ""
+            return try await performWithAutomaticSpaceReturn(
+                command: command,
+                arguments: arguments,
+                manager: manager
+            ) {
+                let moved = await WindowActionCoordinator.moveWindow(
+                    windowID: windowID,
+                    pid: pid,
+                    fromSpaceID: fromSpaceID,
+                    targetSpaceID: targetSpaceID,
+                    wasMinimized: minimizedHint,
+                    wasHidden: hiddenHint
+                )
+                guard moved else { throw SpaceAPIError.operationFailed("Window move failed.") }
+                return ""
+            }
         default:
             throw SpaceAPIError.unsupportedCommand(command)
         }
+    }
+
+    private func performWithAutomaticSpaceReturn(
+        command: String,
+        arguments: [String: String],
+        manager: SpaceManager,
+        operation: () async throws -> String
+    ) async throws -> String {
+        let isWindowOperation = command == "moveWindowNext"
+            || command == "moveWindowPrevious"
+            || command == "moveWindowToSpace"
+            || command == "moveSpecificWindow"
+            || (command == "executeWindowAction" && arguments["action"] != "quit")
+        guard manager.returnToOriginalAfterBatchMove,
+              arguments["deferAutomaticReturn"]?.lowercased() != "true",
+              isWindowOperation else {
+            return try await operation()
+        }
+
+        let originalSpaces = SpaceHelper.getCurrentSpaceIDsByDisplay()
+        let sourceSpace = automaticReturnSourceSpace(command: command, arguments: arguments, manager: manager)
+        do {
+            let result = try await operation()
+            await WindowActionCoordinator.waitForMoveToSettle(isFullscreen: sourceSpace?.isFullscreen ?? false)
+            await WindowActionCoordinator.restoreOriginalSpaces(originalSpaces, using: manager)
+            return result
+        } catch {
+            await WindowActionCoordinator.waitForMoveToSettle(isFullscreen: sourceSpace?.isFullscreen ?? false)
+            await WindowActionCoordinator.restoreOriginalSpaces(originalSpaces, using: manager)
+            throw error
+        }
+    }
+
+    private func automaticReturnSourceSpace(
+        command: String,
+        arguments: [String: String],
+        manager: SpaceManager
+    ) -> DesktopSpace? {
+        let spaceID: String?
+        switch command {
+        case "moveSpecificWindow":
+            spaceID = arguments["fromSpaceID"].flatMap {
+                managedSpaceID(forSpaceIdentifier: $0, manager: manager)
+            }
+        case "executeWindowAction":
+            spaceID = Int(arguments["windowID"] ?? "").flatMap { SpaceHelper.getWindowSpaceID(id: $0) }
+        case "moveWindowNext", "moveWindowPrevious", "moveWindowToSpace":
+            spaceID = SpaceHelper.getActiveWindowInfo().flatMap { SpaceHelper.getWindowSpaceID(id: $0.id) }
+                ?? manager.currentSpaceUUID
+        default:
+            spaceID = nil
+        }
+        return manager.spaceNameDict.first(where: { $0.id == spaceID })
     }
 
     private func moveActiveWindow(toSpaceID targetSpaceID: String, manager: SpaceManager) async throws {

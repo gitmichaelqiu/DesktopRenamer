@@ -441,4 +441,5 @@ struct SpaceAPIInfo: Codable, Equatable {
     let transports: [String]
     let socketEndpoint: String?
     let accessRestricted: Bool
+    let returnToOriginalSpace: Bool
 }

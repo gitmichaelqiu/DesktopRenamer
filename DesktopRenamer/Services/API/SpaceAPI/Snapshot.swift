@@ -97,7 +97,8 @@ extension SpaceAPI {
             maxPayloadBytes: DesktopRenamerAPIContract.maxPayloadBytes,
             transports: transports,
             socketEndpoint: socketServer.isRunning ? SpaceAPISocketServer.endpoint.path : nil,
-            accessRestricted: accessRestricted
+            accessRestricted: accessRestricted,
+            returnToOriginalSpace: spaceManager?.returnToOriginalAfterBatchMove ?? true
         )
     }
 
