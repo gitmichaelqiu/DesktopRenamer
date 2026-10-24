@@ -5,16 +5,96 @@ import Foundation
 final class SpaceAPIUsageStatistics: ObservableObject {
     struct HourlyUsage: Codable, Equatable, Identifiable {
         let hourStart: Date
-        var requestCount: Int
+        var readRequestCount: Int
+        var writeRequestCount: Int
+        var unclassifiedRequestCount: Int
+
+        var requestCount: Int {
+            readRequestCount + writeRequestCount + unclassifiedRequestCount
+        }
 
         var id: Date { hourStart }
+
+        private enum CodingKeys: String, CodingKey {
+            case hourStart
+            case readRequestCount
+            case writeRequestCount
+            case unclassifiedRequestCount
+            case requestCount
+        }
+
+        init(hourStart: Date, access: SpaceAPIRequestAccess) {
+            self.hourStart = hourStart
+            readRequestCount = access == .read ? 1 : 0
+            writeRequestCount = access == .write ? 1 : 0
+            unclassifiedRequestCount = 0
+        }
+
+        private init(
+            hourStart: Date,
+            readRequestCount: Int,
+            writeRequestCount: Int,
+            unclassifiedRequestCount: Int
+        ) {
+            self.hourStart = hourStart
+            self.readRequestCount = readRequestCount
+            self.writeRequestCount = writeRequestCount
+            self.unclassifiedRequestCount = unclassifiedRequestCount
+        }
+
+        init(from decoder: Decoder) throws {
+            let values = try decoder.container(keyedBy: CodingKeys.self)
+            hourStart = try values.decode(Date.self, forKey: .hourStart)
+            let readCount = try values.decodeIfPresent(Int.self, forKey: .readRequestCount)
+            let writeCount = try values.decodeIfPresent(Int.self, forKey: .writeRequestCount)
+            readRequestCount = readCount ?? 0
+            writeRequestCount = writeCount ?? 0
+            if readCount == nil && writeCount == nil {
+                unclassifiedRequestCount = try values.decodeIfPresent(Int.self, forKey: .requestCount) ?? 0
+            } else {
+                unclassifiedRequestCount = try values.decodeIfPresent(Int.self, forKey: .unclassifiedRequestCount) ?? 0
+            }
+        }
+
+        func encode(to encoder: Encoder) throws {
+            var values = encoder.container(keyedBy: CodingKeys.self)
+            try values.encode(hourStart, forKey: .hourStart)
+            try values.encode(readRequestCount, forKey: .readRequestCount)
+            try values.encode(writeRequestCount, forKey: .writeRequestCount)
+            try values.encode(unclassifiedRequestCount, forKey: .unclassifiedRequestCount)
+        }
     }
 
     struct ActivityBucket: Equatable, Identifiable {
         let date: Date
-        let requestCount: Int
+        let readRequestCount: Int
+        let writeRequestCount: Int
+        let unclassifiedRequestCount: Int
+
+        var requestCount: Int {
+            readRequestCount + writeRequestCount + unclassifiedRequestCount
+        }
 
         var id: Date { date }
+
+        fileprivate init(date: Date, counts: RequestCounts) {
+            self.date = date
+            readRequestCount = counts.readRequestCount
+            writeRequestCount = counts.writeRequestCount
+            unclassifiedRequestCount = counts.unclassifiedRequestCount
+        }
+    }
+
+    fileprivate struct RequestCounts {
+        var readRequestCount = 0
+        var writeRequestCount = 0
+        var unclassifiedRequestCount = 0
+
+        mutating func add(_ usage: HourlyUsage) {
+            readRequestCount += usage.readRequestCount
+            writeRequestCount += usage.writeRequestCount
+            unclassifiedRequestCount += usage.unclassifiedRequestCount
+        }
     }
 
     struct AppUsage: Codable, Equatable, Identifiable {
@@ -98,7 +178,7 @@ final class SpaceAPIUsageStatistics: ObservableObject {
         }
     }
 
-    func record(requestingApplication application: SpaceAPIApprovedClient) {
+    func record(requestingApplication application: SpaceAPIApprovedClient, access: SpaceAPIRequestAccess) {
         guard isEnabled else { return }
         let now = Date()
         let calendar = Calendar.current
@@ -117,9 +197,14 @@ final class SpaceAPIUsageStatistics: ObservableObject {
             usage.lastUsed = now
             usage.hasDetailedHistory = true
             if let bucketIndex = usage.hourlyUsage.firstIndex(where: { $0.hourStart == hourStart }) {
-                usage.hourlyUsage[bucketIndex].requestCount += 1
+                switch access {
+                case .read:
+                    usage.hourlyUsage[bucketIndex].readRequestCount += 1
+                case .write:
+                    usage.hourlyUsage[bucketIndex].writeRequestCount += 1
+                }
             } else {
-                usage.hourlyUsage.append(HourlyUsage(hourStart: hourStart, requestCount: 1))
+                usage.hourlyUsage.append(HourlyUsage(hourStart: hourStart, access: access))
             }
             appUsages[index] = usage
         } else {
@@ -129,7 +214,7 @@ final class SpaceAPIUsageStatistics: ObservableObject {
                 applicationPath: application.applicationPath,
                 requestCount: 1,
                 lastUsed: now,
-                hourlyUsage: [HourlyUsage(hourStart: hourStart, requestCount: 1)],
+                hourlyUsage: [HourlyUsage(hourStart: hourStart, access: access)],
                 hasDetailedHistory: true
             ))
         }
@@ -150,13 +235,13 @@ final class SpaceAPIUsageStatistics: ObservableObject {
         let calendar = Calendar.current
         guard let currentHour = calendar.dateInterval(of: .hour, for: now)?.start else { return [] }
         let usage = appUsages.first { $0.id == applicationID }
-        let hourlyCounts = usage?.hourlyUsage.reduce(into: [Date: Int]()) { counts, bucket in
-            counts[bucket.hourStart, default: 0] += bucket.requestCount
+        let hourlyCounts = usage?.hourlyUsage.reduce(into: [Date: RequestCounts]()) { counts, bucket in
+            counts[bucket.hourStart, default: RequestCounts()].add(bucket)
         } ?? [:]
 
         return (-23...0).compactMap { offset in
             guard let date = calendar.date(byAdding: .hour, value: offset, to: currentHour) else { return nil }
-            return ActivityBucket(date: date, requestCount: hourlyCounts[date, default: 0])
+            return ActivityBucket(date: date, counts: hourlyCounts[date, default: RequestCounts()])
         }
     }
 
@@ -164,14 +249,14 @@ final class SpaceAPIUsageStatistics: ObservableObject {
         let calendar = Calendar.current
         let today = calendar.startOfDay(for: now)
         let usage = appUsages.first { $0.id == applicationID }
-        let dailyCounts = usage?.hourlyUsage.reduce(into: [Date: Int]()) { counts, bucket in
+        let dailyCounts = usage?.hourlyUsage.reduce(into: [Date: RequestCounts]()) { counts, bucket in
             let day = calendar.startOfDay(for: bucket.hourStart)
-            counts[day, default: 0] += bucket.requestCount
+            counts[day, default: RequestCounts()].add(bucket)
         } ?? [:]
 
         return (-6...0).compactMap { offset in
             guard let date = calendar.date(byAdding: .day, value: offset, to: today) else { return nil }
-            return ActivityBucket(date: date, requestCount: dailyCounts[date, default: 0])
+            return ActivityBucket(date: date, counts: dailyCounts[date, default: RequestCounts()])
         }
     }
 

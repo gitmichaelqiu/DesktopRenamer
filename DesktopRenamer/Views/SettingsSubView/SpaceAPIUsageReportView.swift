@@ -23,6 +23,46 @@ enum SpaceAPIUsageRange: String, CaseIterable, Identifiable {
     }
 }
 
+private enum SpaceAPIUsageRequestType: String, CaseIterable, Identifiable {
+    case read
+    case write
+    case unclassified
+
+    var id: String { rawValue }
+
+    var title: LocalizedStringKey {
+        switch self {
+        case .read: "Read"
+        case .write: "Write"
+        case .unclassified: "Unclassified"
+        }
+    }
+
+    var localizedTitle: String {
+        switch self {
+        case .read: String(localized: "Read")
+        case .write: String(localized: "Write")
+        case .unclassified: String(localized: "Unclassified")
+        }
+    }
+
+    var color: Color {
+        switch self {
+        case .read: .blue
+        case .write: .orange
+        case .unclassified: .gray
+        }
+    }
+
+    func requestCount(in bucket: SpaceAPIUsageStatistics.ActivityBucket) -> Int {
+        switch self {
+        case .read: bucket.readRequestCount
+        case .write: bucket.writeRequestCount
+        case .unclassified: bucket.unclassifiedRequestCount
+        }
+    }
+}
+
 struct SpaceAPIUsageReportView: View {
     let usage: SpaceAPIUsageStatistics.AppUsage
     @ObservedObject var usageStatistics: SpaceAPIUsageStatistics
@@ -49,6 +89,12 @@ struct SpaceAPIUsageReportView: View {
 
     private var displayedRequestCount: Int {
         currentUsage?.hasDetailedHistory == true ? periodRequestCount : currentUsage?.requestCount ?? 0
+    }
+
+    private var visibleRequestTypes: [SpaceAPIUsageRequestType] {
+        SpaceAPIUsageRequestType.allCases.filter { type in
+            type != .unclassified || activity.contains { $0.unclassifiedRequestCount > 0 }
+        }
     }
 
     var body: some View {
@@ -101,6 +147,23 @@ struct SpaceAPIUsageReportView: View {
                         }
 
                         Spacer()
+                    }
+
+                    if currentUsage?.hasDetailedHistory == true {
+                        HStack(spacing: 16) {
+                            ForEach(visibleRequestTypes) { type in
+                                HStack(spacing: 5) {
+                                    Circle()
+                                        .fill(type.color)
+                                        .frame(width: 7, height: 7)
+                                    Text(type.title)
+                                    Text(activity.reduce(0) { $0 + type.requestCount(in: $1) }, format: .number)
+                                        .monospacedDigit()
+                                        .fontWeight(.medium)
+                                }
+                            }
+                        }
+                        .font(.caption)
                     }
 
                     if currentUsage?.hasDetailedHistory == true {
@@ -157,12 +220,17 @@ struct SpaceAPIUsageReportView: View {
     }
 
     private var activityChart: some View {
-        Chart(activity) { bucket in
-            BarMark(
-                x: .value("Time", bucket.date),
-                y: .value("Requests", bucket.requestCount)
-            )
-            .foregroundStyle(Color.accentColor.gradient)
+        Chart {
+            ForEach(activity) { bucket in
+                ForEach(visibleRequestTypes) { type in
+                    BarMark(
+                        x: .value("Time", bucket.date),
+                        y: .value("Requests", type.requestCount(in: bucket))
+                    )
+                    .foregroundStyle(type.color)
+                    .position(by: .value("Request Type", type.localizedTitle))
+                }
+            }
         }
         .chartXAxis {
             if selectedRange == .last24Hours {

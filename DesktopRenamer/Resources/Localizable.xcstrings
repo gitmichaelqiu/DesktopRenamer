@@ -4682,6 +4682,36 @@
           }
         }
       }
+    },
+    "Read" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "读取"
+          }
+        }
+      }
+    },
+    "Write" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "写入"
+          }
+        }
+      }
+    },
+    "Unclassified" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "未分类"
+          }
+        }
+      }
     }
   },
   "version" : "1.1"

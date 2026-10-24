@@ -205,7 +205,7 @@ extension SpaceAPI {
         }
 
         if isSocket, let clientApplication {
-            usageStatistics.record(requestingApplication: clientApplication)
+            usageStatistics.record(requestingApplication: clientApplication, access: requiredAccess)
         }
 
         do {

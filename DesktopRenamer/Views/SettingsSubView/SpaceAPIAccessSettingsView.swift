@@ -219,6 +219,7 @@ struct SpaceAPIAccessSettingsView: View {
                                 .labelsHidden()
                                 .pickerStyle(.segmented)
                                 .frame(width: 190)
+                                .padding(.trailing, 10)
                             }
 
                             ForEach(usageStatistics.appUsages) { usage in
@@ -247,6 +248,7 @@ struct SpaceAPIAccessSettingsView: View {
                                         .font(.subheadline)
                                         .foregroundStyle(.secondary)
                                         .lineLimit(1)
+                                        .frame(minHeight: 24)
                                     }
                                     .buttonStyle(.plain)
                                     .help("View usage activity")
