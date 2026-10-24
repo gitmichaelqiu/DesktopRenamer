@@ -43,6 +43,7 @@ struct SpaceAPIUsageRangePicker: View {
     var body: some View {
         if #available(macOS 26.0, *) {
             SpaceAPIUsageRangeNativeControl(selection: $selection)
+                .fixedSize(horizontal: true, vertical: false)
                 .accessibilityLabel("Activity period")
         } else {
             picker.pickerStyle(.segmented)
