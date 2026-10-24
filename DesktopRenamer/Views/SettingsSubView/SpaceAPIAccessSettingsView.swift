@@ -4,6 +4,7 @@ import UniformTypeIdentifiers
 
 struct SpaceAPIAccessSettingsView: View {
     @ObservedObject var accessController: SpaceAPIAccessController
+    @ObservedObject var usageStatistics: SpaceAPIUsageStatistics
     @Environment(\.dismiss) private var dismiss
 
     @State private var showPolicyRepairConfirmation = false
@@ -139,6 +140,53 @@ struct SpaceAPIAccessSettingsView: View {
                                         }
                                     }
                                     .transition(.opacity.combined(with: .move(edge: .top)))
+                                }
+                            }
+                        }
+                    }
+
+                    SettingsSection(
+                        "Usage Statistics",
+                        helperText: "Counts app names and API calls locally. Request contents aren’t saved; legacy notification calls can’t be attributed."
+                    ) {
+                        SettingsRow("Record SpaceAPI usage") {
+                            Toggle(
+                                "",
+                                isOn: Binding(
+                                    get: { usageStatistics.isEnabled },
+                                    set: { usageStatistics.isEnabled = $0 }
+                                )
+                            )
+                            .labelsHidden()
+                            .toggleStyle(.switch)
+                        }
+
+                        if usageStatistics.appUsages.isEmpty {
+                            Divider()
+                            SettingsRow("No app usage recorded") {
+                                Text("—")
+                                    .foregroundStyle(.secondary)
+                            }
+                        } else {
+                            ForEach(usageStatistics.appUsages) { usage in
+                                Divider()
+                                SettingsRow(
+                                    LocalizedStringResource(stringLiteral: usage.name),
+                                    leadingIcon: NSWorkspace.shared.icon(forFile: usage.applicationPath)
+                                ) {
+                                    HStack(spacing: 4) {
+                                        Text(usage.requestCount, format: .number)
+                                            .monospacedDigit()
+                                        Text("requests")
+                                    }
+                                    .foregroundStyle(.secondary)
+                                }
+                            }
+
+                            Divider()
+                            SettingsRow("Usage history") {
+                                Button("Clear", role: .destructive) {
+                                    usageStatistics.clearHistory()
                                 }
                             }
                         }

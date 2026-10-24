@@ -197,6 +197,7 @@ final class SpaceAPISocketServer {
             remove(client)
         }
 
+        let authenticatedClient = SpaceAPICodeIdentity.authenticatedClient(forAuditToken: client.auditToken)
         var hasCompletedAuthorizedRequest = initialRequestDeadline == nil
         while !client.isClosed {
             let deadline = hasCompletedAuthorizedRequest ? nil : initialRequestDeadline
@@ -219,11 +220,7 @@ final class SpaceAPISocketServer {
             guard let handler else { return }
 
             let semaphore = DispatchSemaphore(value: 0)
-            let identity = SpaceAPIAccessController.identity(forAuditToken: client.auditToken)
-            let requestingApplication = isAuthorized(client.auditToken)
-                ? nil
-                : SpaceAPICodeIdentity.approvedClient(forAuditToken: client.auditToken)
-            handler(text, identity, requestingApplication) { [weak self, weak client] response in
+            handler(text, authenticatedClient?.peerIdentity, authenticatedClient?.application) { [weak self, weak client] response in
                 guard let self, let client else {
                     semaphore.signal()
                     return

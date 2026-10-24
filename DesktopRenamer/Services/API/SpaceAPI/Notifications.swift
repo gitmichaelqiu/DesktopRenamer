@@ -107,14 +107,24 @@ extension SpaceAPI {
                 self.accessController.requestApproval(for: requestingApplication) { [weak self] in
                     Task { @MainActor [weak self] in
                         guard let self else { return }
-                        let response = await self.makeRPCResponse(payload, peerIdentity: peerIdentity, isSocket: true)
+                        let response = await self.makeRPCResponse(
+                            payload,
+                            peerIdentity: peerIdentity,
+                            isSocket: true,
+                            clientApplication: requestingApplication
+                        )
                         completion(self.encodeResponse(response))
                     }
                 }
                 return
             }
 
-            let response = await self.makeRPCResponse(payload, peerIdentity: peerIdentity, isSocket: true)
+            let response = await self.makeRPCResponse(
+                payload,
+                peerIdentity: peerIdentity,
+                isSocket: true,
+                clientApplication: requestingApplication
+            )
             guard self.accessController.isAuthorized(peerIdentity) else {
                 completion(self.encodeResponse(SpaceAPIJSONRPCCodec.errorResponse(
                     id: response.id,
@@ -130,7 +140,8 @@ extension SpaceAPI {
     private func makeRPCResponse(
         _ payload: String?,
         peerIdentity: SpaceAPIPeerIdentity?,
-        isSocket: Bool
+        isSocket: Bool,
+        clientApplication: SpaceAPIApprovedClient? = nil
     ) async -> SpaceAPIJSONRPCResponse {
         guard let payload else {
             return SpaceAPIJSONRPCCodec.errorResponse(
@@ -191,6 +202,10 @@ extension SpaceAPI {
                 code: SpaceAPIJSONRPCCode.permissionDenied,
                 message: "This app has read-only access to SpaceAPI."
             )
+        }
+
+        if isSocket, let clientApplication {
+            usageStatistics.record(requestingApplication: clientApplication)
         }
 
         do {

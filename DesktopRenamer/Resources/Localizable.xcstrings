@@ -4452,6 +4452,76 @@
           }
         }
       }
+    },
+    "Usage Statistics" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "使用统计"
+          }
+        }
+      }
+    },
+    "Record SpaceAPI usage" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "记录 SpaceAPI 使用情况"
+          }
+        }
+      }
+    },
+    "Counts app names and API calls locally. Request contents aren’t saved; legacy notification calls can’t be attributed." : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "在本机统计应用名称和 API 调用次数。不保存请求内容；无法识别通过旧版通知发送的调用来源。"
+          }
+        }
+      }
+    },
+    "No app usage recorded" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "暂无应用使用记录"
+          }
+        }
+      }
+    },
+    "requests" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "次请求"
+          }
+        }
+      }
+    },
+    "Usage history" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "使用记录"
+          }
+        }
+      }
+    },
+    "Clear" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "清除"
+          }
+        }
+      }
     }
   },
   "version" : "1.1"

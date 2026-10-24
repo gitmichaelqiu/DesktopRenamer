@@ -2,6 +2,11 @@ import Darwin
 import Foundation
 import Security
 
+struct SpaceAPIAuthenticatedClient {
+    let peerIdentity: SpaceAPIPeerIdentity
+    let application: SpaceAPIApprovedClient?
+}
+
 enum SpaceAPICodeIdentity {
     private static let adHocSignatureFlag = SecCodeSignatureFlags.adhoc.rawValue
 
@@ -10,12 +15,19 @@ enum SpaceAPICodeIdentity {
         return identity(for: staticCode)
     }
 
-    static func approvedClient(forAuditToken tokenData: Data) -> SpaceAPIApprovedClient? {
+    static func authenticatedClient(forAuditToken tokenData: Data) -> SpaceAPIAuthenticatedClient? {
         guard let staticCode = staticCode(forAuditToken: tokenData),
-              let identity = identity(for: staticCode) else {
-            return nil
-        }
+              let identity = identity(for: staticCode) else { return nil }
+        return SpaceAPIAuthenticatedClient(
+            peerIdentity: identity,
+            application: approvedClient(for: staticCode, identity: identity)
+        )
+    }
 
+    private static func approvedClient(
+        for staticCode: SecStaticCode,
+        identity: SpaceAPIPeerIdentity
+    ) -> SpaceAPIApprovedClient? {
         var codePath: CFURL?
         guard SecCodeCopyPath(staticCode, SecCSFlags(), &codePath) == errSecSuccess,
               let codePath else {

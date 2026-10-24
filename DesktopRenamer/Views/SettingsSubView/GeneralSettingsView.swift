@@ -164,8 +164,11 @@ struct GeneralSettingsView: View {
             DiagnosticSheetView(spaceManager: spaceManager)
         }
         .sheet(isPresented: $showSpaceAPIAccessSettings) {
-            if let accessController = spaceManager.spaceAPI?.accessController {
-                SpaceAPIAccessSettingsView(accessController: accessController)
+            if let spaceAPI = spaceManager.spaceAPI {
+                SpaceAPIAccessSettingsView(
+                    accessController: spaceAPI.accessController,
+                    usageStatistics: spaceAPI.usageStatistics
+                )
             }
         }
     }

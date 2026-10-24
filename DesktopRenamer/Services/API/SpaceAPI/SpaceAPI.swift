@@ -44,6 +44,7 @@ final class SpaceAPI {
     // Use weak to avoid retain cycle (SpaceManager owns API, API shouldn't strongly own SpaceManager)
     weak var spaceManager: SpaceManager?
     let accessController = SpaceAPIAccessController()
+    let usageStatistics = SpaceAPIUsageStatistics()
     let socketServer = SpaceAPISocketServer()
     private var cancellables = Set<AnyCancellable>()
     private var snapshotRevision: UInt64 = 0
