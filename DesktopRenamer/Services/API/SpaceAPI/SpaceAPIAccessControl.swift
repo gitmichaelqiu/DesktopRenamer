@@ -245,7 +245,10 @@ final class SpaceAPIAccessController: ObservableObject {
 
     @MainActor
     @discardableResult
-    private func persistAndApply(_ updated: SpaceAPIAccessPolicy) -> Bool {
+    private func persistAndApply(
+        _ updated: SpaceAPIAccessPolicy,
+        notifyPolicyChange: Bool = true
+    ) -> Bool {
         do {
             try Self.writePolicy(updated)
             lock.lock()
@@ -256,10 +259,12 @@ final class SpaceAPIAccessController: ObservableObject {
             approvedClients = updated.approvedClients
             canRepairPolicy = false
             errorMessage = nil
-            policyDidChange?()
+            if notifyPolicyChange {
+                policyDidChange?()
+            }
             return true
         } catch {
-            failClosed(after: error)
+            failClosed(after: error, notifyPolicyChange: notifyPolicyChange)
             return false
         }
     }
@@ -286,7 +291,11 @@ final class SpaceAPIAccessController: ObservableObject {
             updated.approvedClients.removeAll { $0.id == client.id }
             updated.approvedClients.append(approvedClient)
             updated.approvedClients.sort { $0.name.localizedStandardCompare($1.name) == .orderedAscending }
-            selectionWasPersisted = persistAndApply(updated)
+            // Let the denied request send its permission error before the server closes its socket.
+            selectionWasPersisted = persistAndApply(
+                updated,
+                notifyPolicyChange: accessLevel != .noAccess
+            )
         } else if let accessLevel {
             selectionWasPersisted = self.accessLevel(for: Self.peerIdentity(for: client)) == accessLevel
         }
@@ -351,7 +360,7 @@ final class SpaceAPIAccessController: ObservableObject {
     }
 
     @MainActor
-    private func failClosed(after error: Error) {
+    private func failClosed(after error: Error, notifyPolicyChange: Bool = true) {
         lock.lock()
         policy = SpaceAPIAccessPolicy(isRestricted: true, approvedClients: [])
         isStoreUsable = false
@@ -362,7 +371,9 @@ final class SpaceAPIAccessController: ObservableObject {
         errorMessage = error.localizedDescription
         Self.recordPolicyFailure(error, operation: "write")
         cancelPendingApprovals()
-        policyDidChange?()
+        if notifyPolicyChange {
+            policyDidChange?()
+        }
     }
 
     private static func recordPolicyFailure(_ error: Error, operation: String) {
