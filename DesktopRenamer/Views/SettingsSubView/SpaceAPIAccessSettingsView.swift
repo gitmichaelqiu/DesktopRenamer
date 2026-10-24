@@ -9,7 +9,7 @@ struct SpaceAPIAccessSettingsView: View {
 
     @State private var showPolicyRepairConfirmation = false
     @State private var selectedUsage: SpaceAPIUsageStatistics.AppUsage?
-    @State private var usageRange = SpaceAPIUsageRange.last7Days
+    @AppStorage("spaceAPIUsageRange") private var usageRange = SpaceAPIUsageRange.last7Days
     @State private var showClearUsageConfirmation = false
 
     var body: some View {
@@ -17,6 +17,7 @@ struct SpaceAPIAccessSettingsView: View {
             if let selectedUsage {
                 SpaceAPIUsageReportView(
                     usage: selectedUsage,
+                    selectedRange: $usageRange,
                     usageStatistics: usageStatistics
                 ) {
                     self.selectedUsage = nil

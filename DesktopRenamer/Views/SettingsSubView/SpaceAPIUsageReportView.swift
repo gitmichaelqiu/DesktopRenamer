@@ -37,11 +37,11 @@ struct SpaceAPIUsageRangePicker: View {
         if #available(macOS 27.0, *) {
             picker
                 .pickerStyle(.tabs)
-                .controlSize(.large)
+                .controlSize(.regular)
         } else if #available(macOS 26.0, *) {
             picker
                 .pickerStyle(.segmented)
-                .controlSize(.large)
+                .controlSize(.regular)
         } else {
             picker.pickerStyle(.segmented)
         }
@@ -99,10 +99,9 @@ private enum SpaceAPIUsageRequestType: String, CaseIterable, Identifiable {
 
 struct SpaceAPIUsageReportView: View {
     let usage: SpaceAPIUsageStatistics.AppUsage
+    @Binding var selectedRange: SpaceAPIUsageRange
     @ObservedObject var usageStatistics: SpaceAPIUsageStatistics
     let onDone: () -> Void
-
-    @State private var selectedRange = SpaceAPIUsageRange.last7Days
 
     private var currentUsage: SpaceAPIUsageStatistics.AppUsage? {
         usageStatistics.appUsages.first { $0.id == usage.id }
@@ -138,8 +137,11 @@ struct SpaceAPIUsageReportView: View {
                     HStack(spacing: 10) {
                         Button(action: onDone) {
                             Image(systemName: "chevron.left")
+                                .frame(width: 40, height: 40)
+                                .contentShape(Rectangle())
                         }
                         .buttonStyle(.plain)
+                        .accessibilityLabel("Back")
                         .help("Back")
 
                         Image(nsImage: NSWorkspace.shared.icon(forFile: usage.applicationPath))
