@@ -30,6 +30,33 @@ enum SpaceAPIUsageRange: String, CaseIterable, Identifiable {
     }
 }
 
+struct SpaceAPIUsageRangePicker: View {
+    @Binding var selection: SpaceAPIUsageRange
+
+    var body: some View {
+        if #available(macOS 27.0, *) {
+            picker
+                .pickerStyle(.tabs)
+                .controlSize(.large)
+        } else if #available(macOS 26.0, *) {
+            picker
+                .pickerStyle(.segmented)
+                .controlSize(.large)
+        } else {
+            picker.pickerStyle(.segmented)
+        }
+    }
+
+    private var picker: some View {
+        Picker("Activity Period", selection: $selection) {
+            ForEach(SpaceAPIUsageRange.allCases) { range in
+                Text(range.title).tag(range)
+            }
+        }
+        .labelsHidden()
+    }
+}
+
 private enum SpaceAPIUsageRequestType: String, CaseIterable, Identifiable {
     case read
     case write
@@ -128,12 +155,7 @@ struct SpaceAPIUsageReportView: View {
                         Spacer(minLength: 0)
                     }
 
-                    Picker("Activity Period", selection: $selectedRange) {
-                        ForEach(SpaceAPIUsageRange.allCases) { range in
-                            Text(range.title).tag(range)
-                        }
-                    }
-                    .pickerStyle(.segmented)
+                    SpaceAPIUsageRangePicker(selection: $selectedRange)
 
                     HStack(alignment: .firstTextBaseline, spacing: 8) {
                         Text(displayedRequestCount, format: .number)
@@ -207,6 +229,7 @@ struct SpaceAPIUsageReportView: View {
                     }
                 }
                 .padding(.horizontal, 4)
+                .padding(.trailing, 16)
                 .padding(.vertical, 2)
             }
 

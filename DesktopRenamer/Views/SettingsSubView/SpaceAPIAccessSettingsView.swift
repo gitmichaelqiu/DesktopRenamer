@@ -211,15 +211,7 @@ struct SpaceAPIAccessSettingsView: View {
                         } else {
                             Divider()
                             SettingsRow("Activity period") {
-                                Picker("Activity period", selection: $usageRange) {
-                                    ForEach(SpaceAPIUsageRange.allCases) { range in
-                                        Text(range.title).tag(range)
-                                    }
-                                }
-                                .labelsHidden()
-                                .pickerStyle(.segmented)
-                                .frame(width: 190)
-                                .padding(.trailing, 10)
+                                SpaceAPIUsageRangePicker(selection: $usageRange)
                             }
 
                             ForEach(usageStatistics.appUsages) { usage in
