@@ -188,6 +188,23 @@ struct SpaceAPIUsageReportView: View {
         }
     }
 
+    private var chartDateDomain: ClosedRange<Date> {
+        guard let firstDate = activity.first?.date,
+              let lastDate = activity.last?.date else {
+            let now = Date()
+            return now.addingTimeInterval(-3_600)...now.addingTimeInterval(3_600)
+        }
+
+        let component: Calendar.Component = selectedRange == .last24Hours ? .hour : .day
+        let calendar = Calendar.current
+        let precedingDate = calendar.date(byAdding: component, value: -1, to: firstDate) ?? firstDate
+        let followingDate = calendar.date(byAdding: component, value: 1, to: lastDate) ?? lastDate
+        let leadingPadding = firstDate.timeIntervalSince(precedingDate) / 2
+        let trailingPadding = followingDate.timeIntervalSince(lastDate) / 2
+
+        return firstDate.addingTimeInterval(-leadingPadding)...lastDate.addingTimeInterval(trailingPadding)
+    }
+
     var body: some View {
         VStack(spacing: 12) {
             ScrollView {
@@ -227,7 +244,7 @@ struct SpaceAPIUsageReportView: View {
 
                     if currentUsage?.hasDetailedHistory == true {
                         activityChart
-                            .frame(height: 160)
+                            .frame(height: 176)
 
                         if periodRequestCount == 0 {
                             Text("No requests in this period.")
@@ -303,24 +320,33 @@ struct SpaceAPIUsageReportView: View {
                 ForEach(visibleRequestTypes) { type in
                     BarMark(
                         x: .value("Time", bucket.date),
-                        y: .value("Requests", type.requestCount(in: bucket))
+                        y: .value("Requests", type.requestCount(in: bucket)),
+                        width: .ratio(0.8)
                     )
                     .foregroundStyle(type.color)
                     .position(by: .value("Request Type", type.localizedTitle))
                 }
             }
         }
+        .chartXScale(domain: chartDateDomain)
+        .chartPlotStyle { plot in
+            plot.padding(.horizontal, 8)
+        }
         .chartXAxis {
             if selectedRange == .last24Hours {
-                AxisMarks(values: .stride(by: .hour, count: 4)) {
+                AxisMarks(values: .stride(by: .hour, count: 4)) { _ in
+                    AxisGridLine(stroke: StrokeStyle(lineWidth: 1, dash: [2, 3]))
                     AxisValueLabel(format: .dateTime.hour(.defaultDigits(amPM: .omitted)))
                 }
             } else {
-                AxisMarks(values: .stride(by: .day))
+                AxisMarks(values: .stride(by: .day)) { _ in
+                    AxisGridLine(stroke: StrokeStyle(lineWidth: 1, dash: [2, 3]))
+                    AxisValueLabel(format: .dateTime.month(.abbreviated).day())
+                }
             }
         }
         .chartYAxis {
-            AxisMarks(position: .leading)
+            AxisMarks(position: .leading, values: .automatic(desiredCount: 4))
         }
         .accessibilityLabel(selectedRange.chartDescription)
     }
