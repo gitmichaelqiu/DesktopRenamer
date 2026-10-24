@@ -8,6 +8,8 @@ struct SpaceAPIAccessSettingsView: View {
     @Environment(\.dismiss) private var dismiss
 
     @State private var showPolicyRepairConfirmation = false
+    @State private var selectedUsage: SpaceAPIUsageStatistics.AppUsage?
+    @State private var usageRange = SpaceAPIUsageRange.last7Days
 
     var body: some View {
         VStack(spacing: 12) {
@@ -147,7 +149,7 @@ struct SpaceAPIAccessSettingsView: View {
 
                     SettingsSection(
                         "Usage Statistics",
-                        helperText: "Counts app names and API calls locally. Request contents aren’t saved; legacy notification calls can’t be attributed."
+                        helperText: "Keeps hourly request history for 7 days and a lifetime total. Request contents aren’t saved; legacy notification calls can’t be attributed."
                     ) {
                         SettingsRow("Record SpaceAPI usage") {
                             Toggle(
@@ -168,18 +170,44 @@ struct SpaceAPIAccessSettingsView: View {
                                     .foregroundStyle(.secondary)
                             }
                         } else {
+                            Divider()
+                            SettingsRow("Activity Period") {
+                                Picker("Activity Period", selection: $usageRange) {
+                                    ForEach(SpaceAPIUsageRange.allCases) { range in
+                                        Text(range.title).tag(range)
+                                    }
+                                }
+                                .labelsHidden()
+                                .pickerStyle(.segmented)
+                                .frame(width: 190)
+                            }
+
                             ForEach(usageStatistics.appUsages) { usage in
                                 Divider()
                                 SettingsRow(
                                     LocalizedStringResource(stringLiteral: usage.name),
                                     leadingIcon: NSWorkspace.shared.icon(forFile: usage.applicationPath)
                                 ) {
-                                    HStack(spacing: 4) {
-                                        Text(usage.requestCount, format: .number)
-                                            .monospacedDigit()
-                                        Text("requests")
+                                    Button {
+                                        selectedUsage = usage
+                                    } label: {
+                                        HStack(spacing: 8) {
+                                            VStack(alignment: .trailing, spacing: 1) {
+                                                Text(displayedRequestCount(for: usage), format: .number)
+                                                    .monospacedDigit()
+                                                Text(usage.hasDetailedHistory ? usageRange.title : "Total Requests")
+                                                    .font(.caption)
+                                                    .foregroundStyle(.secondary)
+                                            }
+
+                                            Image(systemName: "chevron.right")
+                                                .font(.caption2.weight(.semibold))
+                                                .foregroundStyle(.secondary)
+                                        }
+                                        .frame(minHeight: 34)
                                     }
-                                    .foregroundStyle(.secondary)
+                                    .buttonStyle(.plain)
+                                    .help("View usage activity")
                                 }
                             }
 
@@ -205,6 +233,9 @@ struct SpaceAPIAccessSettingsView: View {
         .padding(16)
         .frame(width: 560, height: 540)
         .environment(\.settingsTab, .general)
+        .sheet(item: $selectedUsage) { usage in
+            SpaceAPIUsageReportView(usage: usage, usageStatistics: usageStatistics)
+        }
         .confirmationDialog(
             "Reset SpaceAPI access?",
             isPresented: $showPolicyRepairConfirmation,
@@ -217,6 +248,14 @@ struct SpaceAPIAccessSettingsView: View {
         } message: {
             Text("Resetting the unreadable policy clears the app permissions. SpaceAPI stays restricted until permissions are set again.")
         }
+    }
+
+    private func displayedRequestCount(for usage: SpaceAPIUsageStatistics.AppUsage) -> Int {
+        guard usage.hasDetailedHistory else { return usage.requestCount }
+        let buckets = usageRange == .last24Hours
+            ? usageStatistics.hourlyActivity(for: usage.id)
+            : usageStatistics.dailyActivity(for: usage.id)
+        return buckets.reduce(0) { $0 + $1.requestCount }
     }
 
     private func chooseApplication() {
