@@ -152,6 +152,7 @@ private func scriptAPIInfoRecord(_ info: SpaceAPIInfo) -> [String: Any] {
         "legacyCompatibility": info.legacyCompatibility,
         "eventNotifications": info.eventNotifications,
         "eventCapabilities": info.eventCapabilities,
-        "maxPayloadBytes": info.maxPayloadBytes
+        "maxPayloadBytes": info.maxPayloadBytes,
+        "returnToOriginalSpace": info.returnToOriginalSpace
     ]
 }
