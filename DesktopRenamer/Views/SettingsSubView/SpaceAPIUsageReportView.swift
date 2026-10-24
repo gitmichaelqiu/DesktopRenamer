@@ -286,7 +286,7 @@ struct SpaceAPIUsageReportView: View {
 
             HStack {
                 Button("Back", action: onDone)
-                    .buttonStyle(.borderedProminent)
+                    .buttonStyle(.bordered)
 
                 Spacer()
                 Button("Done", action: onDone)
