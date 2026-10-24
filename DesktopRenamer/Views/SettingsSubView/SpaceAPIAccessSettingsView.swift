@@ -18,10 +18,10 @@ struct SpaceAPIAccessSettingsView: View {
                 SpaceAPIUsageReportView(
                     usage: selectedUsage,
                     selectedRange: $usageRange,
-                    usageStatistics: usageStatistics
-                ) {
-                    self.selectedUsage = nil
-                }
+                    usageStatistics: usageStatistics,
+                    onBack: { self.selectedUsage = nil },
+                    onDone: { dismiss() }
+                )
             } else {
                 accessSettingsContent
             }

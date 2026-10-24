@@ -159,6 +159,7 @@ struct SpaceAPIUsageReportView: View {
     let usage: SpaceAPIUsageStatistics.AppUsage
     @Binding var selectedRange: SpaceAPIUsageRange
     @ObservedObject var usageStatistics: SpaceAPIUsageStatistics
+    let onBack: () -> Void
     let onDone: () -> Void
 
     private var currentUsage: SpaceAPIUsageStatistics.AppUsage? {
@@ -302,7 +303,7 @@ struct SpaceAPIUsageReportView: View {
             }
 
             HStack {
-                Button("Back", action: onDone)
+                Button("Back", action: onBack)
                     .buttonStyle(.bordered)
 
                 Spacer()
