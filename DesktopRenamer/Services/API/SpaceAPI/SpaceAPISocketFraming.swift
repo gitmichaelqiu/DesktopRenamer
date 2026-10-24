@@ -1,3 +1,4 @@
+import Darwin
 import Foundation
 
 enum SpaceAPISocketFrameError: Error, Equatable {
@@ -7,6 +8,52 @@ enum SpaceAPISocketFrameError: Error, Equatable {
 
 enum SpaceAPISocketFraming {
     static let headerLength = 4
+
+    static func readExactly(_ count: Int, from descriptor: Int32, deadline: DispatchTime? = nil) -> Data? {
+        guard count >= 0 else { return nil }
+
+        var data = Data(count: count)
+        var offset = 0
+
+        while offset < count {
+            if let deadline {
+                let now = DispatchTime.now().uptimeNanoseconds
+                guard now < deadline.uptimeNanoseconds else { return nil }
+
+                let remainingNanoseconds = deadline.uptimeNanoseconds - now
+                let remainingMilliseconds = min(
+                    (remainingNanoseconds + 999_999) / 1_000_000,
+                    UInt64(Int32.max)
+                )
+                var pollDescriptor = pollfd()
+                pollDescriptor.fd = descriptor
+                pollDescriptor.events = Int16(POLLIN)
+
+                let pollResult = Darwin.poll(&pollDescriptor, 1, Int32(remainingMilliseconds))
+                if pollResult < 0 {
+                    if errno == EINTR { continue }
+                    return nil
+                }
+                guard pollResult > 0,
+                      pollDescriptor.revents & Int16(POLLIN) != 0 else {
+                    return nil
+                }
+            }
+
+            let result = data.withUnsafeMutableBytes { bytes in
+                guard let baseAddress = bytes.baseAddress else { return -1 }
+                return recv(descriptor, baseAddress.advanced(by: offset), count - offset, 0)
+            }
+            if result == 0 { return nil }
+            if result < 0 {
+                if errno == EINTR { continue }
+                return nil
+            }
+            offset += result
+        }
+
+        return data
+    }
 
     static func encode(_ payload: Data, maximumPayloadBytes: Int) throws -> Data {
         guard !payload.isEmpty else { throw SpaceAPISocketFrameError.emptyPayload }

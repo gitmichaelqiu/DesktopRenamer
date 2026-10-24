@@ -10,6 +10,8 @@ final class SpaceAPISocketServer {
     private static let maximumConnectedClients = 32
     fileprivate static let maximumQueuedBytes = 4 * 1024 * 1024
     private static let clientTimeoutSeconds: TimeInterval = 120
+    // Bound incomplete frames from unapproved peers without expiring authorized event-only connections.
+    private static let initialRequestTimeoutSeconds = 30
 
     private let stateLock = NSLock()
     private let acceptQueue = DispatchQueue(label: "dev.mqiu.DesktopRenamer.SpaceAPI.socket.accept")
@@ -179,29 +181,35 @@ final class SpaceAPISocketServer {
                 continue
             }
 
+            let initialRequestDeadline = isAuthorized(client.auditToken)
+                ? nil
+                : DispatchTime.now() + .seconds(Self.initialRequestTimeoutSeconds)
             DispatchQueue.global(qos: .userInitiated).async { [weak self, weak client] in
                 guard let self, let client else { return }
-                self.run(client)
+                self.run(client, initialRequestDeadline: initialRequestDeadline)
             }
         }
     }
 
-    private func run(_ client: SpaceAPISocketClient) {
+    private func run(_ client: SpaceAPISocketClient, initialRequestDeadline: DispatchTime?) {
         defer {
             client.close()
             remove(client)
         }
 
+        var hasCompletedAuthorizedRequest = initialRequestDeadline == nil
         while !client.isClosed {
-            guard let header = client.readExactly(SpaceAPISocketFraming.headerLength) else { return }
+            let deadline = hasCompletedAuthorizedRequest ? nil : initialRequestDeadline
+            guard let header = client.readExactly(SpaceAPISocketFraming.headerLength, deadline: deadline) else { return }
             let length = header.reduce(UInt32(0)) { ($0 << 8) | UInt32($1) }
             guard length > 0, length <= DesktopRenamerAPIContract.maxPayloadBytes else {
                 client.close()
                 return
             }
-            guard let payload = client.readExactly(Int(length)) else { return }
+            guard let payload = client.readExactly(Int(length), deadline: deadline) else { return }
             guard let text = String(data: payload, encoding: .utf8) else {
                 sendError(to: client, id: nil, code: SpaceAPIJSONRPCCode.parseError, message: "Request is not valid UTF-8.")
+                hasCompletedAuthorizedRequest = isAuthorized(client.auditToken)
                 continue
             }
 
@@ -234,6 +242,7 @@ final class SpaceAPISocketServer {
             if semaphore.wait(timeout: .now() + Self.clientTimeoutSeconds) == .timedOut {
                 return
             }
+            hasCompletedAuthorizedRequest = isAuthorized(client.auditToken)
         }
     }
 
@@ -324,22 +333,8 @@ private final class SpaceAPISocketClient {
         return closed
     }
 
-    func readExactly(_ count: Int) -> Data? {
-        var data = Data(count: count)
-        var offset = 0
-        while offset < count {
-            let result = data.withUnsafeMutableBytes { bytes in
-                guard let baseAddress = bytes.baseAddress else { return -1 }
-                return recv(descriptor, baseAddress.advanced(by: offset), count - offset, 0)
-            }
-            if result == 0 { return nil }
-            if result < 0 {
-                if errno == EINTR { continue }
-                return nil
-            }
-            offset += result
-        }
-        return data
+    func readExactly(_ count: Int, deadline: DispatchTime? = nil) -> Data? {
+        SpaceAPISocketFraming.readExactly(count, from: descriptor, deadline: deadline)
     }
 
     func enqueue(_ payload: Data, authorization: @escaping () -> Bool, completion: (() -> Void)? = nil) {

@@ -61,6 +61,140 @@ private func testFrameLimits() throws {
     }
 }
 
+private func testSocketReadDeadline() throws {
+    func makeSocketPair() throws -> [Int32] {
+        var descriptors: [Int32] = [-1, -1]
+        guard socketpair(AF_UNIX, SOCK_STREAM, 0, &descriptors) == 0 else {
+            throw NSError(domain: NSPOSIXErrorDomain, code: Int(errno))
+        }
+        return descriptors
+    }
+
+    func setSafetyReadTimeout(_ descriptor: Int32) {
+        var timeout = timeval(tv_sec: 1, tv_usec: 0)
+        _ = setsockopt(
+            descriptor,
+            SOL_SOCKET,
+            SO_RCVTIMEO,
+            &timeout,
+            socklen_t(MemoryLayout<timeval>.size)
+        )
+    }
+
+    let idlePair = try makeSocketPair()
+    defer {
+        Darwin.close(idlePair[0])
+        Darwin.close(idlePair[1])
+    }
+    setSafetyReadTimeout(idlePair[0])
+    let idleStart = DispatchTime.now().uptimeNanoseconds
+    let idleRead = SpaceAPISocketFraming.readExactly(
+        SpaceAPISocketFraming.headerLength,
+        from: idlePair[0],
+        deadline: .now() + .milliseconds(100)
+    )
+    let idleDuration = DispatchTime.now().uptimeNanoseconds - idleStart
+    check(idleRead == nil, "an idle peer is closed by the first-frame deadline")
+    check(idleDuration < 700_000_000, "an idle peer does not hold its read until the fallback socket timeout")
+
+    let partialPair = try makeSocketPair()
+    defer {
+        Darwin.close(partialPair[0])
+        Darwin.close(partialPair[1])
+    }
+    setSafetyReadTimeout(partialPair[0])
+    let partialHeader = Data([0, 0])
+    _ = partialHeader.withUnsafeBytes { bytes in
+        Darwin.write(partialPair[1], bytes.baseAddress!, bytes.count)
+    }
+    let partialHeaderStart = DispatchTime.now().uptimeNanoseconds
+    let partialRead = SpaceAPISocketFraming.readExactly(
+        SpaceAPISocketFraming.headerLength,
+        from: partialPair[0],
+        deadline: .now() + .milliseconds(100)
+    )
+    let partialHeaderDuration = DispatchTime.now().uptimeNanoseconds - partialHeaderStart
+    check(partialRead == nil, "a peer that stalls mid-header is closed by the same deadline")
+    check(partialHeaderDuration < 700_000_000, "a partial header does not hold its read until the fallback socket timeout")
+
+    let partialPayloadPair = try makeSocketPair()
+    defer {
+        Darwin.close(partialPayloadPair[0])
+        Darwin.close(partialPayloadPair[1])
+    }
+    setSafetyReadTimeout(partialPayloadPair[0])
+    let completeHeader = Data([0, 0, 0, 5])
+    _ = completeHeader.withUnsafeBytes { bytes in
+        Darwin.write(partialPayloadPair[1], bytes.baseAddress!, bytes.count)
+    }
+    let payloadDeadline = DispatchTime.now() + .milliseconds(100)
+    let headerRead = SpaceAPISocketFraming.readExactly(
+        SpaceAPISocketFraming.headerLength,
+        from: partialPayloadPair[0],
+        deadline: payloadDeadline
+    )
+    let partialPayloadStart = DispatchTime.now().uptimeNanoseconds
+    let payloadRead = SpaceAPISocketFraming.readExactly(5, from: partialPayloadPair[0], deadline: payloadDeadline)
+    let partialPayloadDuration = DispatchTime.now().uptimeNanoseconds - partialPayloadStart
+    check(headerRead == completeHeader, "a complete header is read before the payload deadline")
+    check(payloadRead == nil, "a peer that stalls mid-payload is closed by the original frame deadline")
+    check(partialPayloadDuration < 700_000_000, "a partial payload does not hold its read until the fallback socket timeout")
+
+    let slowDripPair = try makeSocketPair()
+    defer {
+        Darwin.close(slowDripPair[0])
+        Darwin.close(slowDripPair[1])
+    }
+    setSafetyReadTimeout(slowDripPair[0])
+    let writerGroup = DispatchGroup()
+    writerGroup.enter()
+    DispatchQueue.global().async {
+        defer { writerGroup.leave() }
+        for byte: UInt8 in [0, 0, 0, 5] {
+            var byte = byte
+            _ = withUnsafePointer(to: &byte) { Darwin.write(slowDripPair[1], $0, 1) }
+            usleep(80_000)
+        }
+    }
+    let slowDripStart = DispatchTime.now().uptimeNanoseconds
+    let slowDripRead = SpaceAPISocketFraming.readExactly(
+        SpaceAPISocketFraming.headerLength,
+        from: slowDripPair[0],
+        deadline: .now() + .milliseconds(200)
+    )
+    let slowDripDuration = DispatchTime.now().uptimeNanoseconds - slowDripStart
+    _ = writerGroup.wait(timeout: .now() + .seconds(1))
+    check(slowDripRead == nil, "a slow-drip peer cannot extend the original absolute frame deadline")
+    check(slowDripDuration < 700_000_000, "a slow-drip peer is closed before the fallback socket timeout")
+
+    let completePair = try makeSocketPair()
+    defer {
+        Darwin.close(completePair[0])
+        Darwin.close(completePair[1])
+    }
+    let expected = Data([0, 0, 0, 5])
+    _ = expected.withUnsafeBytes { bytes in
+        Darwin.write(completePair[1], bytes.baseAddress!, bytes.count)
+    }
+    let completeRead = SpaceAPISocketFraming.readExactly(
+        expected.count,
+        from: completePair[0],
+        deadline: .now() + .seconds(1)
+    )
+    check(completeRead == expected, "a complete first request frame is read normally")
+
+    let persistentPair = try makeSocketPair()
+    defer {
+        Darwin.close(persistentPair[0])
+        Darwin.close(persistentPair[1])
+    }
+    _ = expected.withUnsafeBytes { bytes in
+        Darwin.write(persistentPair[1], bytes.baseAddress!, bytes.count)
+    }
+    let persistentRead = SpaceAPISocketFraming.readExactly(expected.count, from: persistentPair[0])
+    check(persistentRead == expected, "reads without an initial-frame deadline preserve the persistent socket path")
+}
+
 private func testAuthorizationIdentities() {
     let signedClient = SpaceAPIApprovedClient(
         id: "requirement:anchor apple generic and identifier \"com.example.signed\"",
@@ -306,6 +440,7 @@ struct SpaceAPISocketTests {
         do {
             try testFrameRoundTripAndPartialReads()
             try testFrameLimits()
+            try testSocketReadDeadline()
             testAuthorizationIdentities()
             testKernelAuditTokenIdentity()
             testSignedApplicationRequirement()
