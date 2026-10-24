@@ -33,6 +33,7 @@ enum SettingsTab: String, CaseIterable, Identifiable {
 
 extension Notification.Name {
     static let settingsTabRequested = Notification.Name("DesktopRenamer.settingsTabRequested")
+    static let spaceAPIAccessRequestPresented = Notification.Name("DesktopRenamer.spaceAPIAccessRequestPresented")
 }
 
 // UI layout constants for consistent sizing.

@@ -169,6 +169,19 @@
         }
       }
     },
+    "Access for %@" : {
+
+    },
+    "Access Policy" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "访问策略"
+          }
+        }
+      }
+    },
     "Accessibility" : {
       "localizations" : {
         "zh-Hans" : {
@@ -259,6 +272,26 @@
         }
       }
     },
+    "Add an App" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "添加应用"
+          }
+        }
+      }
+    },
+    "Add an app" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "添加应用"
+          }
+        }
+      }
+    },
     "Add App Exception" : {
       "localizations" : {
         "zh-Hans" : {
@@ -295,6 +328,66 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "调整指针抓取窗口的位置，用于在桌面之间移动窗口。"
+          }
+        }
+      }
+    },
+    "All apps are blocked while access restriction is enabled." : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "启用访问限制时，所有应用都会被阻止。"
+          }
+        }
+      }
+    },
+    "Allow only approved apps" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "仅允许已批准的应用"
+          }
+        }
+      }
+    },
+    "App Permissions" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "应用权限"
+          }
+        }
+      }
+    },
+    "Approve apps and choose what they can do with SpaceAPI." : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "批准应用并设置其对 SpaceAPI 的访问权限。"
+          }
+        }
+      }
+    },
+    "Approve" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "批准"
+          }
+        }
+      }
+    },
+    "Approve an App for SpaceAPI" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "批准应用使用 SpaceAPI"
           }
         }
       }
@@ -469,6 +562,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "选择App…"
+          }
+        }
+      }
+    },
+    "Choose…" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "选择…"
           }
         }
       }
@@ -757,6 +860,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "无法退出%@"
+          }
+        }
+      }
+    },
+    "Could not replace the unreadable SpaceAPI access policy in Keychain." : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "无法替换钥匙串中无法读取的 SpaceAPI 访问策略。"
           }
         }
       }
@@ -1991,6 +2104,26 @@
         }
       }
     },
+    "No Apps Added" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "未添加应用"
+          }
+        }
+      }
+    },
+    "No apps added" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "未添加应用"
+          }
+        }
+      }
+    },
     "No commands found" : {
       "localizations" : {
         "zh-Hans" : {
@@ -2117,6 +2250,16 @@
         }
       }
     },
+    "Set the access level for each approved app." : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "为每个已批准的应用设置访问级别。"
+          }
+        }
+      }
+    },
     "Permissions" : {
       "localizations" : {
         "zh-Hans" : {
@@ -2133,6 +2276,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "将桌面标签固定在桌面上，或在打开应用时隐藏"
+          }
+        }
+      }
+    },
+    "Policy status" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "策略状态"
           }
         }
       }
@@ -2233,6 +2386,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "实时视频增强播放器。"
+          }
+        }
+      }
+    },
+    "Development builds must be approved again after rebuilding." : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "开发版本每次重新构建后都必须再次批准。"
           }
         }
       }
@@ -2455,6 +2618,16 @@
         }
       }
     },
+    "Reset SpaceAPI access?" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "要重置 SpaceAPI 访问权限吗？"
+          }
+        }
+      }
+    },
     "Reset & Quit" : {
       "localizations" : {
         "zh-Hans" : {
@@ -2471,6 +2644,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "重置默认"
+          }
+        }
+      }
+    },
+    "Resetting the unreadable policy clears the approved app list. SpaceAPI stays restricted until you approve apps again." : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "重置后将清除无法读取的已批准应用列表。重新批准应用前，SpaceAPI 将继续受到限制。"
           }
         }
       }
@@ -2866,6 +3049,23 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "启用桌面 API"
+          }
+        }
+      }
+    },
+    "Settings.General.Advanced.ManageSpaceAPIAccess" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Manage SpaceAPI access"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "管理 SpaceAPI 访问权限"
           }
         }
       }
@@ -3932,6 +4132,316 @@
         }
       },
       "shouldTranslate" : false
+    },
+    "Only approved apps can use SpaceAPI." : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "仅已批准的应用可使用 SpaceAPI。"
+          }
+        }
+      }
+    },
+    "Manage…" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "管理…"
+          }
+        }
+      }
+    },
+    "SpaceAPI Access" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "SpaceAPI 访问权限"
+          }
+        }
+      }
+    },
+    "Allow only approved apps" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "仅允许已批准的应用"
+          }
+        }
+      }
+    },
+    "When enabled, unapproved apps cannot read or change spaces through SpaceAPI." : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "启用后，未批准的应用无法通过 SpaceAPI 读取或更改桌面。"
+          }
+        }
+      }
+    },
+    "Approved Apps" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已批准的应用"
+          }
+        }
+      }
+    },
+    "Add App…" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "添加应用…"
+          }
+        }
+      }
+    },
+    "No Approved Apps" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "没有已批准的应用"
+          }
+        }
+      }
+    },
+    "An empty list blocks every app while access restriction is enabled." : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "启用访问限制时，空列表会阻止所有应用。"
+          }
+        }
+      }
+    },
+    "Development build" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "开发版本"
+          }
+        }
+      }
+    },
+    "Signed app" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已签名应用"
+          }
+        }
+      }
+    },
+    "Revoke access" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "撤销访问权限"
+          }
+        }
+      }
+    },
+    "Ad-hoc development builds must be approved again after the app is rebuilt." : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "应用重新构建后，必须再次批准临时签名的开发版本。"
+          }
+        }
+      }
+    },
+    "Approve an App for SpaceAPI" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "批准应用使用 SpaceAPI"
+          }
+        }
+      }
+    },
+    "Choose the app that may use SpaceAPI." : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "选择允许使用 SpaceAPI 的应用。"
+          }
+        }
+      }
+    },
+    "Approve" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "批准"
+          }
+        }
+      }
+    },
+    "Choose a valid signed app or ad-hoc development app." : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "请选择有效的已签名应用或临时签名开发应用。"
+          }
+        }
+      }
+    },
+    "The SpaceAPI access policy could not be verified. Access remains restricted." : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "无法验证 SpaceAPI 访问策略，访问限制仍保持启用。"
+          }
+        }
+      }
+    },
+    "Secure storage for the SpaceAPI access policy is unavailable." : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "无法使用 SpaceAPI 访问策略的安全存储。"
+          }
+        }
+      }
+    },
+    "Could not inspect the selected application." : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "无法检查所选应用。"
+          }
+        }
+      }
+    },
+    "The selected app does not have a valid code signature." : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "所选应用的代码签名无效。"
+          }
+        }
+      }
+    },
+    "Could not read the selected app's signing identity." : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "无法读取所选应用的签名身份。"
+          }
+        }
+      }
+    },
+    "Could not read the selected app's designated requirement." : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "无法读取所选应用的指定代码要求。"
+          }
+        }
+      }
+    },
+    "Could not identify DesktopRenamer for Keychain access." : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "无法验证 DesktopRenamer 的钥匙串访问身份。"
+          }
+        }
+      }
+    },
+    "Could not protect the SpaceAPI access policy in Keychain." : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "无法保护钥匙串中的 SpaceAPI 访问策略。"
+          }
+        }
+      }
+    },
+    "Could not verify Keychain access controls." : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "无法验证钥匙串访问控制。"
+          }
+        }
+      }
+    },
+    "Could not read the SpaceAPI access policy from Keychain." : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "无法从钥匙串读取 SpaceAPI 访问策略。"
+          }
+        }
+      }
+    },
+    "Could not find the SpaceAPI access policy in Keychain." : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "无法找到钥匙串中的 SpaceAPI 访问策略。"
+          }
+        }
+      }
+    },
+    "Could not update the SpaceAPI access policy in Keychain." : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "无法更新钥匙串中的 SpaceAPI 访问策略。"
+          }
+        }
+      }
+    },
+    "Could not save the SpaceAPI access policy in Keychain." : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "无法保存钥匙串中的 SpaceAPI 访问策略。"
+          }
+        }
+      }
+    },
+    "Could not verify the SpaceAPI access policy in Keychain." : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "无法验证钥匙串中的 SpaceAPI 访问策略。"
+          }
+        }
+      }
     },
     "Your diagnostic report has been saved." : {
       "localizations" : {

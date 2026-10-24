@@ -43,6 +43,8 @@ final class SpaceAPI {
     
     // Use weak to avoid retain cycle (SpaceManager owns API, API shouldn't strongly own SpaceManager)
     weak var spaceManager: SpaceManager?
+    let accessController = SpaceAPIAccessController()
+    let socketServer = SpaceAPISocketServer()
     private var cancellables = Set<AnyCancellable>()
     private var snapshotRevision: UInt64 = 0
     private var rpcListenerInstalled = false
@@ -55,81 +57,114 @@ final class SpaceAPI {
     
     init(spaceManager: SpaceManager) {
         self.spaceManager = spaceManager
+        accessController.policyDidChange = { [weak self] in
+            guard let self else { return }
+            if SpaceManager.isAPIEnabled {
+                self.setupListener()
+            } else {
+                self.removeListener()
+            }
+        }
     }
     
     func setupListener() {
         DiagnosticEventLog.shared.record(subsystem: "SpaceAPI", level: "info", "setupListener")
-        removeListener()
-        installRPCListener()
 
         guard SpaceManager.isAPIEnabled, let spaceManager = spaceManager else {
-            print("SpaceAPI: Structured listener Started (API disabled)")
+            removeListener()
+            print("SpaceAPI: Listener not started (API disabled)")
             return
         }
-        
-        let dnc = DistributedNotificationCenter.default()
-        
-        // Register observers for external requests.
-        for name in SpaceAPI.getActiveSpaceNotifications {
-            dnc.addObserver(self, selector: #selector(handleActiveSpaceRequest), name: name, object: nil, suspensionBehavior: .deliverImmediately)
-        }
-        for name in SpaceAPI.getSpaceListNotifications {
-            dnc.addObserver(self, selector: #selector(handleSpaceListRequest), name: name, object: nil, suspensionBehavior: .deliverImmediately)
-        }
-        for name in SpaceAPI.getAPIVersionNotifications {
-            dnc.addObserver(self, selector: #selector(handleAPIVersionRequest), name: name, object: nil, suspensionBehavior: .deliverImmediately)
-        }
-        for name in SpaceAPI.performCommandNotifications {
-            dnc.addObserver(self, selector: #selector(handleCommandRequest), name: name, object: nil, suspensionBehavior: .deliverImmediately)
-        }
-        
-        // Broadcast space state changes to observers.
-        spaceManager.$currentSpaceUUID
-            .dropFirst()
-            .receive(on: DispatchQueue.main)
-            .sink { [weak self] _ in
-                self?.broadcastCurrentSpace()
-                self?.broadcastRPCEvent(reason: "activeSpaceChanged")
-            }
-            .store(in: &cancellables)
-            
-        spaceManager.$spaceNameDict
-            .dropFirst()
-            .receive(on: DispatchQueue.main)
-            .sink { [weak self] _ in
-                self?.broadcastCurrentSpace()
-                self?.broadcastSpaceList()
-                self?.broadcastRPCEvent(reason: "spaceListChanged")
-            }
-            .store(in: &cancellables)
 
-        spaceManager.$lockedSpaceIDs
-            .dropFirst()
-            .receive(on: DispatchQueue.main)
-            .sink { [weak self] _ in
-                self?.broadcastRPCEvent(reason: "lockStateChanged")
-            }
-            .store(in: &cancellables)
+        DistributedNotificationCenter.default().removeObserver(self)
+        rpcListenerInstalled = false
 
-        spaceManager.$movedWindowsOriginalSpaces
-            .dropFirst()
-            .receive(on: DispatchQueue.main)
-            .sink { [weak self] _ in
-                self?.broadcastRPCEvent(reason: "movedWindowsChanged")
+        let started = socketServer.start(accessController: accessController) { [weak self] payload, identity, requestingApplication, completion in
+            Task { @MainActor [weak self] in
+                guard let self else { return }
+                self.processSocketRequest(
+                    payload,
+                    peerIdentity: identity,
+                    requestingApplication: requestingApplication,
+                    completion: completion
+                )
             }
-            .store(in: &cancellables)
+        }
+        if !started {
+            DiagnosticEventLog.shared.record(
+                subsystem: "SpaceAPI",
+                level: "error",
+                "Could not start authenticated socket transport at \(SpaceAPISocketServer.endpoint.path)"
+            )
+        }
+
+        if !accessController.isRestricted {
+            let dnc = DistributedNotificationCenter.default()
+
+            // DNC remains for compatibility only while access restriction is disabled.
+            for name in SpaceAPI.getActiveSpaceNotifications {
+                dnc.addObserver(self, selector: #selector(handleActiveSpaceRequest), name: name, object: nil, suspensionBehavior: .deliverImmediately)
+            }
+            for name in SpaceAPI.getSpaceListNotifications {
+                dnc.addObserver(self, selector: #selector(handleSpaceListRequest), name: name, object: nil, suspensionBehavior: .deliverImmediately)
+            }
+            for name in SpaceAPI.getAPIVersionNotifications {
+                dnc.addObserver(self, selector: #selector(handleAPIVersionRequest), name: name, object: nil, suspensionBehavior: .deliverImmediately)
+            }
+            for name in SpaceAPI.performCommandNotifications {
+                dnc.addObserver(self, selector: #selector(handleCommandRequest), name: name, object: nil, suspensionBehavior: .deliverImmediately)
+            }
+            installRPCListener()
+        }
+        
+        if cancellables.isEmpty {
+            // Broadcast space state changes to observers.
+            spaceManager.$currentSpaceUUID
+                .dropFirst()
+                .receive(on: DispatchQueue.main)
+                .sink { [weak self] _ in
+                    self?.broadcastCurrentSpace()
+                    self?.broadcastRPCEvent(reason: "activeSpaceChanged")
+                }
+                .store(in: &cancellables)
             
-        print("SpaceAPI: Listener Started")
+            spaceManager.$spaceNameDict
+                .dropFirst()
+                .receive(on: DispatchQueue.main)
+                .sink { [weak self] _ in
+                    self?.broadcastCurrentSpace()
+                    self?.broadcastSpaceList()
+                    self?.broadcastRPCEvent(reason: "spaceListChanged")
+                }
+                .store(in: &cancellables)
+
+            spaceManager.$lockedSpaceIDs
+                .dropFirst()
+                .receive(on: DispatchQueue.main)
+                .sink { [weak self] _ in
+                    self?.broadcastRPCEvent(reason: "lockStateChanged")
+                }
+                .store(in: &cancellables)
+
+            spaceManager.$movedWindowsOriginalSpaces
+                .dropFirst()
+                .receive(on: DispatchQueue.main)
+                .sink { [weak self] _ in
+                    self?.broadcastRPCEvent(reason: "movedWindowsChanged")
+                }
+                .store(in: &cancellables)
+        }
+            
+        print("SpaceAPI: Listener Started (restricted: \(accessController.isRestricted))")
     }
     
     func removeListener() {
         DiagnosticEventLog.shared.record(subsystem: "SpaceAPI", level: "info", "removeListener")
+        accessController.cancelPendingApprovals()
         DistributedNotificationCenter.default().removeObserver(self)
         rpcListenerInstalled = false
         cancellables.removeAll()
-        if !SpaceManager.isAPIEnabled {
-            installRPCListener()
-        }
+        socketServer.stop()
         print("SpaceAPI: Listener Stopped")
     }
 
@@ -161,11 +196,17 @@ final class SpaceAPI {
         }
         
         // Broadcast API availability updates.
-        postToChannels(
-            SpaceAPI.apiToggleNotifications,
-            userInfo: ["isEnabled": SpaceManager.isAPIEnabled]
-        )
+        broadcastAPIState(isEnabled: SpaceManager.isAPIEnabled)
         print("SpaceAPI: Sent Toggle Notification -> \(SpaceManager.isAPIEnabled)")
+    }
+
+    func broadcastAPIState(isEnabled: Bool) {
+        guard !accessController.isRestricted else { return }
+        let userInfo: [String: Any] = ["isEnabled": isEnabled]
+        let dnc = DistributedNotificationCenter.default()
+        for name in SpaceAPI.apiToggleNotifications {
+            dnc.postNotificationName(name, object: nil, userInfo: userInfo, deliverImmediately: true)
+        }
     }
     
     // Broadcast updates to observers.
@@ -257,6 +298,7 @@ final class SpaceAPI {
     }
 
     private func postRPCPayload(_ payload: String) {
+        socketServer.broadcast(payload)
         postToChannels(
             SpaceAPI.rpcEventNotifications,
             userInfo: [DesktopRenamerAPIContract.payloadKey: payload]
@@ -310,6 +352,7 @@ final class SpaceAPI {
     }
 
     private func postToChannels(_ names: [Notification.Name], userInfo: [String: Any]) {
+        guard SpaceManager.isAPIEnabled, !accessController.isRestricted else { return }
         let dnc = DistributedNotificationCenter.default()
         for name in names {
             dnc.postNotificationName(name, object: nil, userInfo: userInfo, deliverImmediately: true)

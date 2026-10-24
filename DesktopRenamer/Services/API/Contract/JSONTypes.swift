@@ -438,4 +438,7 @@ struct SpaceAPIInfo: Codable, Equatable {
     let eventNotifications: Bool
     let eventCapabilities: [String]
     let maxPayloadBytes: Int
+    let transports: [String]
+    let socketEndpoint: String?
+    let accessRestricted: Bool
 }
