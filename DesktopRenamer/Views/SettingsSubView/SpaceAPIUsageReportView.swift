@@ -208,7 +208,7 @@ struct SpaceAPIUsageReportView: View {
 
                     SpaceAPIUsageRangePicker(selection: $selectedRange)
 
-                    HStack(alignment: .firstTextBaseline, spacing: 8) {
+                    HStack(alignment: .firstTextBaseline, spacing: 4) {
                         Text(displayedRequestCount, format: .number)
                             .font(.system(size: 32, weight: .semibold, design: .rounded))
                             .monospacedDigit()

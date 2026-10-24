@@ -224,7 +224,7 @@ struct SpaceAPIAccessSettingsView: View {
                                     Button {
                                         selectedUsage = usage
                                     } label: {
-                                        HStack(spacing: 6) {
+                                        HStack(spacing: 4) {
                                             Text(displayedRequestCount(for: usage), format: .number)
                                                 .monospacedDigit()
                                             if usage.hasDetailedHistory {
