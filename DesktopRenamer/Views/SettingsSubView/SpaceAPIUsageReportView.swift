@@ -193,15 +193,6 @@ struct SpaceAPIUsageReportView: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 14) {
                     HStack(spacing: 10) {
-                        Button(action: onDone) {
-                            Image(systemName: "chevron.left")
-                                .frame(width: 40, height: 40)
-                                .contentShape(Rectangle())
-                        }
-                        .buttonStyle(.plain)
-                        .accessibilityLabel("Back")
-                        .help("Back")
-
                         Image(nsImage: NSWorkspace.shared.icon(forFile: usage.applicationPath))
                             .resizable()
                             .aspectRatio(contentMode: .fit)
@@ -294,6 +285,9 @@ struct SpaceAPIUsageReportView: View {
             }
 
             HStack {
+                Button("Back", action: onDone)
+                    .buttonStyle(.borderedProminent)
+
                 Spacer()
                 Button("Done", action: onDone)
                     .buttonStyle(.borderedProminent)
