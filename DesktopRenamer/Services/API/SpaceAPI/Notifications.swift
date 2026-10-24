@@ -200,7 +200,7 @@ extension SpaceAPI {
             return SpaceAPIJSONRPCCodec.errorResponse(
                 id: request.id,
                 code: SpaceAPIJSONRPCCode.permissionDenied,
-                message: "This app has read-only access to SpaceAPI."
+                message: "This app is approved for read-only SpaceAPI access and cannot perform write operations."
             )
         }
 

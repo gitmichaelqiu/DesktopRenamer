@@ -132,7 +132,7 @@ class StatusBarController: NSObject {
             requestingApplication.name
         )
         alert.informativeText = NSLocalizedString("Choose the access level to grant.", comment: "")
-        alert.icon = NSWorkspace.shared.icon(forFile: requestingApplication.applicationPath)
+        alert.icon = spaceAPIAccessRequestIcon(for: requestingApplication.applicationPath)
         alert.addButton(withTitle: NSLocalizedString("Read Only", comment: ""))
         alert.addButton(withTitle: NSLocalizedString("Read & Write", comment: ""))
         alert.addButton(withTitle: NSLocalizedString("Don't Allow", comment: ""))
@@ -154,6 +154,34 @@ class StatusBarController: NSObject {
             accessLevel = nil
         }
         accessController.resolvePendingApproval(with: accessLevel)
+    }
+
+    private func spaceAPIAccessRequestIcon(for applicationPath: String) -> NSImage {
+        let size = NSSize(width: 64, height: 64)
+        let icon = NSWorkspace.shared.icon(forFile: applicationPath)
+        let image = NSImage(size: size)
+        image.lockFocus()
+        icon.draw(in: NSRect(origin: .zero, size: size), from: .zero, operation: .sourceOver, fraction: 1)
+
+        if let desktopRenamerIcon = NSApp.applicationIconImage {
+            let badgeSize: CGFloat = 24
+            let badgeFrame = NSRect(x: size.width - badgeSize - 1, y: 1, width: badgeSize, height: badgeSize)
+            let badgeBackground = NSBezierPath(ovalIn: badgeFrame.insetBy(dx: -2, dy: -2))
+            NSColor.windowBackgroundColor.setFill()
+            badgeBackground.fill()
+            NSColor.separatorColor.setStroke()
+            badgeBackground.lineWidth = 0.75
+            badgeBackground.stroke()
+            desktopRenamerIcon.draw(
+                in: badgeFrame.insetBy(dx: 4, dy: 4),
+                from: .zero,
+                operation: .sourceOver,
+                fraction: 1
+            )
+        }
+
+        image.unlockFocus()
+        return image
     }
 }
 
