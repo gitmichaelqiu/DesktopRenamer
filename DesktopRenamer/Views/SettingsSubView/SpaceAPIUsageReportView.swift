@@ -15,6 +15,13 @@ enum SpaceAPIUsageRange: String, CaseIterable, Identifiable {
         }
     }
 
+    var localizedTitle: String {
+        switch self {
+        case .last24Hours: String(localized: "Last 24 hours")
+        case .last7Days: String(localized: "Last 7 days")
+        }
+    }
+
     var compactTitle: LocalizedStringKey {
         switch self {
         case .last24Hours: "24 hours"
@@ -34,14 +41,9 @@ struct SpaceAPIUsageRangePicker: View {
     @Binding var selection: SpaceAPIUsageRange
 
     var body: some View {
-        if #available(macOS 27.0, *) {
-            picker
-                .pickerStyle(.tabs)
-                .controlSize(.regular)
-        } else if #available(macOS 26.0, *) {
-            picker
-                .pickerStyle(.segmented)
-                .controlSize(.regular)
+        if #available(macOS 26.0, *) {
+            SpaceAPIUsageRangeNativeControl(selection: $selection)
+                .accessibilityLabel("Activity period")
         } else {
             picker.pickerStyle(.segmented)
         }
@@ -54,6 +56,61 @@ struct SpaceAPIUsageRangePicker: View {
             }
         }
         .labelsHidden()
+    }
+}
+
+@available(macOS 26.0, *)
+private struct SpaceAPIUsageRangeNativeControl: NSViewRepresentable {
+    @Binding var selection: SpaceAPIUsageRange
+
+    func makeCoordinator() -> Coordinator {
+        Coordinator(selection: $selection)
+    }
+
+    func makeNSView(context: Context) -> NSSegmentedControl {
+        let control = NSSegmentedControl()
+        control.segmentCount = SpaceAPIUsageRange.allCases.count
+        control.trackingMode = .selectOne
+        control.segmentStyle = .automatic
+        control.controlSize = .regular
+        control.borderShape = .capsule
+        control.segmentDistribution = .fit
+
+        if #available(macOS 27.0, *) {
+            control.role = .tabs
+        }
+
+        for (index, range) in SpaceAPIUsageRange.allCases.enumerated() {
+            control.setLabel(range.localizedTitle, forSegment: index)
+            control.setTag(index, forSegment: index)
+        }
+
+        control.target = context.coordinator
+        control.action = #selector(Coordinator.selectionChanged(_:))
+        control.selectedSegment = selectedIndex
+        return control
+    }
+
+    func updateNSView(_ control: NSSegmentedControl, context: Context) {
+        context.coordinator.selection = $selection
+        control.selectedSegment = selectedIndex
+    }
+
+    private var selectedIndex: Int {
+        SpaceAPIUsageRange.allCases.firstIndex(of: selection) ?? 0
+    }
+
+    final class Coordinator: NSObject {
+        var selection: Binding<SpaceAPIUsageRange>
+
+        init(selection: Binding<SpaceAPIUsageRange>) {
+            self.selection = selection
+        }
+
+        @objc func selectionChanged(_ sender: NSSegmentedControl) {
+            guard SpaceAPIUsageRange.allCases.indices.contains(sender.selectedSegment) else { return }
+            selection.wrappedValue = SpaceAPIUsageRange.allCases[sender.selectedSegment]
+        }
     }
 }
 
