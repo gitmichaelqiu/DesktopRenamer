@@ -210,8 +210,8 @@ struct SpaceAPIAccessSettingsView: View {
                             }
                         } else {
                             Divider()
-                            SettingsRow("Activity Period") {
-                                Picker("Activity Period", selection: $usageRange) {
+                            SettingsRow("Activity period") {
+                                Picker("Activity period", selection: $usageRange) {
                                     ForEach(SpaceAPIUsageRange.allCases) { range in
                                         Text(range.title).tag(range)
                                     }
@@ -235,11 +235,10 @@ struct SpaceAPIAccessSettingsView: View {
                                             Text(displayedRequestCount(for: usage), format: .number)
                                                 .monospacedDigit()
                                             if usage.hasDetailedHistory {
-                                                Text("Requests")
-                                                Text("·")
-                                                Text(usageRange.title)
+                                                Text("requests /")
+                                                Text(usageRange.compactTitle)
                                             } else {
-                                                Text("Total Requests")
+                                                Text("total requests")
                                             }
                                             Image(systemName: "chevron.right")
                                                 .font(.caption2.weight(.semibold))

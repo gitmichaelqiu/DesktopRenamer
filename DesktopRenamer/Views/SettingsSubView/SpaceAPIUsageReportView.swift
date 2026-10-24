@@ -10,8 +10,15 @@ enum SpaceAPIUsageRange: String, CaseIterable, Identifiable {
 
     var title: LocalizedStringKey {
         switch self {
-        case .last24Hours: "Last 24 Hours"
-        case .last7Days: "Last 7 Days"
+        case .last24Hours: "Last 24 hours"
+        case .last7Days: "Last 7 days"
+        }
+    }
+
+    var compactTitle: LocalizedStringKey {
+        switch self {
+        case .last24Hours: "24 hours"
+        case .last7Days: "7 days"
         }
     }
 
@@ -133,37 +140,16 @@ struct SpaceAPIUsageReportView: View {
                             .font(.system(size: 32, weight: .semibold, design: .rounded))
                             .monospacedDigit()
 
-                        VStack(alignment: .leading, spacing: 2) {
-                            if currentUsage?.hasDetailedHistory == true {
-                                Text("Requests")
-                                    .font(.headline)
-                                Text(selectedRange.title)
-                                    .font(.subheadline)
-                                    .foregroundStyle(.secondary)
-                            } else {
-                                Text("Total Requests")
-                                    .font(.headline)
-                            }
+                        Text(currentUsage?.hasDetailedHistory == true ? "requests /" : "total requests")
+                            .font(.headline)
+
+                        if currentUsage?.hasDetailedHistory == true {
+                            Text(selectedRange.compactTitle)
+                                .font(.headline)
+                                .foregroundStyle(.secondary)
                         }
 
                         Spacer()
-                    }
-
-                    if currentUsage?.hasDetailedHistory == true {
-                        HStack(spacing: 16) {
-                            ForEach(visibleRequestTypes) { type in
-                                HStack(spacing: 5) {
-                                    Circle()
-                                        .fill(type.color)
-                                        .frame(width: 7, height: 7)
-                                    Text(type.title)
-                                    Text(activity.reduce(0) { $0 + type.requestCount(in: $1) }, format: .number)
-                                        .monospacedDigit()
-                                        .fontWeight(.medium)
-                                }
-                            }
-                        }
-                        .font(.caption)
                     }
 
                     if currentUsage?.hasDetailedHistory == true {
@@ -174,6 +160,21 @@ struct SpaceAPIUsageReportView: View {
                             Text("No requests in this period.")
                                 .font(.footnote)
                                 .foregroundStyle(.secondary)
+                        }
+
+                        ForEach(visibleRequestTypes) { type in
+                            HStack(spacing: 8) {
+                                Circle()
+                                    .fill(type.color)
+                                    .frame(width: 7, height: 7)
+                                Text(type.title)
+                                Text("requests")
+                                    .foregroundStyle(.secondary)
+                                Spacer()
+                                Text(activity.reduce(0) { $0 + type.requestCount(in: $1) }, format: .number)
+                                    .monospacedDigit()
+                                    .foregroundStyle(.secondary)
+                            }
                         }
                     } else {
                         VStack(spacing: 8) {
@@ -191,7 +192,7 @@ struct SpaceAPIUsageReportView: View {
                     Divider()
 
                     HStack {
-                        Text("Total Requests")
+                        Text("Lifetime requests")
                         Spacer()
                         Text(currentUsage?.requestCount ?? 0, format: .number)
                             .monospacedDigit()
@@ -199,7 +200,7 @@ struct SpaceAPIUsageReportView: View {
                     }
 
                     HStack {
-                        Text("Last Request")
+                        Text("Last request")
                         Spacer()
                         Text((currentUsage?.lastUsed ?? usage.lastUsed).formatted(date: .abbreviated, time: .shortened))
                             .foregroundStyle(.secondary)
@@ -234,7 +235,9 @@ struct SpaceAPIUsageReportView: View {
         }
         .chartXAxis {
             if selectedRange == .last24Hours {
-                AxisMarks(values: .stride(by: .hour, count: 4))
+                AxisMarks(values: .stride(by: .hour, count: 4)) {
+                    AxisValueLabel(format: .dateTime.hour(.defaultDigits(amPM: .omitted)))
+                }
             } else {
                 AxisMarks(values: .stride(by: .day))
             }
