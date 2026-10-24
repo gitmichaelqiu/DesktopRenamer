@@ -157,23 +157,27 @@ class StatusBarController: NSObject {
     }
 
     private func spaceAPIAccessRequestIcon(for applicationPath: String) -> NSImage {
-        let size = NSSize(width: 64, height: 64)
+        let canvasSize = NSSize(width: 64, height: 64)
+        let clientIconSize: CGFloat = 56
         let icon = NSWorkspace.shared.icon(forFile: applicationPath)
-        let image = NSImage(size: size)
+        let image = NSImage(size: canvasSize)
         image.lockFocus()
-        icon.draw(in: NSRect(origin: .zero, size: size), from: .zero, operation: .sourceOver, fraction: 1)
+        icon.draw(
+            in: NSRect(x: 0, y: canvasSize.height - clientIconSize, width: clientIconSize, height: clientIconSize),
+            from: .zero,
+            operation: .sourceOver,
+            fraction: 1
+        )
 
         if let desktopRenamerIcon = NSApp.applicationIconImage {
-            let badgeSize: CGFloat = 24
-            let badgeFrame = NSRect(x: size.width - badgeSize - 1, y: 1, width: badgeSize, height: badgeSize)
-            let badgeBackground = NSBezierPath(ovalIn: badgeFrame.insetBy(dx: -2, dy: -2))
-            NSColor.windowBackgroundColor.setFill()
-            badgeBackground.fill()
-            NSColor.separatorColor.setStroke()
-            badgeBackground.lineWidth = 0.75
-            badgeBackground.stroke()
+            let badgeSize = clientIconSize / 2
             desktopRenamerIcon.draw(
-                in: badgeFrame.insetBy(dx: 4, dy: 4),
+                in: NSRect(
+                    x: canvasSize.width - badgeSize,
+                    y: 0,
+                    width: badgeSize,
+                    height: badgeSize
+                ),
                 from: .zero,
                 operation: .sourceOver,
                 fraction: 1
