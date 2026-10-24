@@ -173,8 +173,8 @@ class StatusBarController: NSObject {
             let badgeSize = clientIconSize / 2
             desktopRenamerIcon.draw(
                 in: NSRect(
-                    x: canvasSize.width - badgeSize,
-                    y: 0,
+                    x: canvasSize.width - badgeSize - 4,
+                    y: 7,
                     width: badgeSize,
                     height: badgeSize
                 ),
