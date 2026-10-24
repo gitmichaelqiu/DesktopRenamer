@@ -5,7 +5,6 @@ import SwiftUI
 struct GeneralSettingsView: View {
     @ObservedObject var spaceManager: SpaceManager
     @ObservedObject var labelManager: SpaceLabelManager
-    @Environment(\.isSettingsPreRendering) private var isSettingsPreRendering
 
     @StateObject private var apiTester = APITester()
 
@@ -156,10 +155,6 @@ struct GeneralSettingsView: View {
             .environment(\.settingsTab, .general)
         }
         .onAppear { launchAtLogin = getLaunchAtLoginState() }
-        .onReceive(NotificationCenter.default.publisher(for: .spaceAPIAccessRequestPresented)) { _ in
-            guard !isSettingsPreRendering else { return }
-            showSpaceAPIAccessSettings = true
-        }
         .sheet(isPresented: $showDiagnosticSheet) {
             DiagnosticSheetView(spaceManager: spaceManager)
         }

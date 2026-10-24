@@ -8,6 +8,7 @@ class StatusBarController: NSObject {
     var popover: NSPopover
     var cancellables = Set<AnyCancellable>()
     var settingsWindowController: NSWindowController?
+    private var isPresentingSpaceAPIAccessRequest = false
     
     var renameItem: NSMenuItem?
     var showActiveLabelsMenuItem: NSMenuItem?
@@ -118,10 +119,41 @@ class StatusBarController: NSObject {
 
     @MainActor
     private func presentSpaceAPIAccessRequest() {
-        openSettingsWindow(tab: .general)
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-            NotificationCenter.default.post(name: .spaceAPIAccessRequestPresented, object: nil)
+        guard !isPresentingSpaceAPIAccessRequest else { return }
+        guard let accessController = spaceManager.spaceAPI?.accessController,
+              let requestingApplication = accessController.pendingApprovalRequest else { return }
+        isPresentingSpaceAPIAccessRequest = true
+        defer { isPresentingSpaceAPIAccessRequest = false }
+
+        let alert = NSAlert()
+        alert.alertStyle = .informational
+        alert.messageText = String(
+            format: NSLocalizedString("%@ would like to use SpaceAPI.", comment: ""),
+            requestingApplication.name
+        )
+        alert.informativeText = NSLocalizedString("Choose the access level to grant.", comment: "")
+        alert.icon = NSWorkspace.shared.icon(forFile: requestingApplication.applicationPath)
+        alert.addButton(withTitle: NSLocalizedString("Read Only", comment: ""))
+        alert.addButton(withTitle: NSLocalizedString("Read & Write", comment: ""))
+        alert.addButton(withTitle: NSLocalizedString("Don't Allow", comment: ""))
+        alert.buttons.first?.keyEquivalent = "\r"
+        alert.buttons.last?.keyEquivalent = "\u{1b}"
+        alert.window.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
+
+        NSApp.activate(ignoringOtherApps: true)
+        let response = alert.runModal()
+        let accessLevel: SpaceAPIClientAccessLevel?
+        switch response {
+        case .alertFirstButtonReturn:
+            accessLevel = .readOnly
+        case .alertSecondButtonReturn:
+            accessLevel = .fullAccess
+        case .alertThirdButtonReturn:
+            accessLevel = .noAccess
+        default:
+            accessLevel = nil
         }
+        accessController.resolvePendingApproval(with: accessLevel)
     }
 }
 

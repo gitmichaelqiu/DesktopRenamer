@@ -616,6 +616,16 @@
         }
       }
     },
+    "Choose the access level to grant." : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "请选择要授予的访问权限。"
+          }
+        }
+      }
+    },
     "Clean Restoration Queues (%d)" : {
       "localizations" : {
         "zh-Hans" : {
@@ -4169,16 +4179,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "SpaceAPI 访问权限"
-          }
-        }
-      }
-    },
-    "SpaceAPI Access Request" : {
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "SpaceAPI 访问请求"
           }
         }
       }

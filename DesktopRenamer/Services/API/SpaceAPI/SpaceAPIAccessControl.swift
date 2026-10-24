@@ -32,12 +32,10 @@ final class SpaceAPIAccessController: ObservableObject {
     private var pendingApprovals: [String: PendingApproval] = [:]
     private var pendingApprovalOrder: [String] = []
     private var pendingApprovalIDs = Set<String>()
-    private var pendingApprovalTimeout: Task<Void, Never>?
     private var deniedRequestUntil: [String: Date] = [:]
 
     private let maximumPendingApplications = 2
     private let maximumPendingRequestsPerApp = 8
-    private let accessRequestTimeout: TimeInterval = 45
     private let deniedRequestCooldown: TimeInterval = 300
 
     private static let keychainService = "dev.mqiu.DesktopRenamer.SpaceAPI"
@@ -191,8 +189,6 @@ final class SpaceAPIAccessController: ObservableObject {
     @MainActor
     func cancelPendingApprovals() {
         guard !pendingApprovals.isEmpty else { return }
-        pendingApprovalTimeout?.cancel()
-        pendingApprovalTimeout = nil
         pendingApprovalRequest = nil
         let completions = pendingApprovals.values.flatMap(\.completions)
         pendingApprovals.removeAll()
@@ -276,28 +272,26 @@ final class SpaceAPIAccessController: ObservableObject {
     ) {
         guard let client = pendingApprovalRequest,
               let pending = pendingApprovals.removeValue(forKey: client.id) else { return }
-        pendingApprovalTimeout?.cancel()
-        pendingApprovalTimeout = nil
         pendingApprovalRequest = nil
         pendingApprovalOrder.removeAll { $0 == client.id }
         lock.lock()
         pendingApprovalIDs.remove(client.id)
         lock.unlock()
 
-        var accessWasGranted = false
-        if let accessLevel, accessLevel != .noAccess, persistApproval {
+        var selectionWasPersisted = false
+        if let accessLevel, persistApproval {
             var approvedClient = client
             approvedClient.accessLevel = accessLevel
             var updated = currentPolicy()
             updated.approvedClients.removeAll { $0.id == client.id }
             updated.approvedClients.append(approvedClient)
             updated.approvedClients.sort { $0.name.localizedStandardCompare($1.name) == .orderedAscending }
-            accessWasGranted = persistAndApply(updated)
-        } else if let accessLevel, accessLevel != .noAccess {
-            accessWasGranted = self.accessLevel(for: Self.peerIdentity(for: client)) == accessLevel
+            selectionWasPersisted = persistAndApply(updated)
+        } else if let accessLevel {
+            selectionWasPersisted = self.accessLevel(for: Self.peerIdentity(for: client)) == accessLevel
         }
 
-        if !accessWasGranted, applyCooldown {
+        if !selectionWasPersisted, applyCooldown {
             deniedRequestUntil[client.id] = Date().addingTimeInterval(deniedRequestCooldown)
         }
 
@@ -322,20 +316,12 @@ final class SpaceAPIAccessController: ObservableObject {
 
             pendingApprovalRequest = pending.client
             accessRequestDidArrive?()
-            let timeout = accessRequestTimeout
-            pendingApprovalTimeout = Task { @MainActor [weak self] in
-                try? await Task.sleep(for: .seconds(timeout))
-                guard !Task.isCancelled else { return }
-                self?.finishPendingApproval(with: nil, applyCooldown: false)
-            }
             return
         }
     }
 
     @MainActor
     private func finishPendingApprovalsForUnrestrictedMode() {
-        pendingApprovalTimeout?.cancel()
-        pendingApprovalTimeout = nil
         pendingApprovalRequest = nil
         let completions = pendingApprovals.values.flatMap(\.completions)
         pendingApprovals.removeAll()
