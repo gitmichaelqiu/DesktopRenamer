@@ -64,20 +64,6 @@ extension SpaceAPI {
         return String(decoding: data, as: UTF8.self)
     }
 
-    func makeWindowsSnapshotPayload(_ manager: SpaceManager, revision: UInt64) -> SpaceAPIWindowsSnapshot {
-        let spaces = manager.spaceNameDict
-        return SpaceAPIWindowsSnapshot(
-            apiVersion: DesktopRenamerAPIVersion.current,
-            revision: revision,
-            timestamp: Self.apiTimestamp(),
-            spaces: makeSpaceRecords(manager),
-            windows: makeSpaceAPIWindowRecords(
-                SpaceHelper.getWindowRecordsForAllSpaces(spaces: spaces),
-                spaces: spaces
-            )
-        )
-    }
-
     func makeWindowsSnapshotPayloadAsync(_ manager: SpaceManager, revision: UInt64) async -> SpaceAPIWindowsSnapshot {
         let spaces = manager.spaceNameDict
         let spaceRecords = makeSpaceRecords(manager)
@@ -93,10 +79,6 @@ extension SpaceAPI {
             spaces: spaceRecords,
             windows: makeSpaceAPIWindowRecords(windows, spaces: spaces)
         )
-    }
-
-    func makeWindowsSnapshot(_ manager: SpaceManager, revision: UInt64) throws -> String {
-        try encodeJSON(makeWindowsSnapshotPayload(manager, revision: revision))
     }
 
     func makeAPIInfo() -> SpaceAPIInfo {
@@ -191,16 +173,6 @@ extension SpaceAPI {
             return "Main Display"
         }
         return "Display"
-    }
-
-    private func encodeJSON<T: Encodable>(_ value: T) throws -> String {
-        let encoder = JSONEncoder()
-        encoder.outputFormatting = [.sortedKeys]
-        let data = try encoder.encode(value)
-        guard data.count <= DesktopRenamerAPIContract.maxPayloadBytes else {
-            throw SpaceAPIContractError.payloadTooLarge
-        }
-        return String(decoding: data, as: UTF8.self)
     }
 
     private static func apiTimestamp() -> String {

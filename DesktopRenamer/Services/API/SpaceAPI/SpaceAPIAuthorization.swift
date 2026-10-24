@@ -64,10 +64,6 @@ struct SpaceAPIApprovedClient: Codable, Equatable, Identifiable {
         codeHash = try values.decodeIfPresent(String.self, forKey: .codeHash)
         accessLevel = try values.decodeIfPresent(SpaceAPIClientAccessLevel.self, forKey: .accessLevel) ?? .fullAccess
     }
-
-    var identityDescription: String {
-        NSLocalizedString(designatedRequirement == nil ? "Development build" : "Signed app", comment: "")
-    }
 }
 
 struct SpaceAPIPeerIdentity: Equatable {
