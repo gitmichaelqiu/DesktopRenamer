@@ -326,7 +326,7 @@ final class SpaceAPIAccessController: ObservableObject {
             pendingApprovalTimeout = Task { @MainActor [weak self] in
                 try? await Task.sleep(for: .seconds(timeout))
                 guard !Task.isCancelled else { return }
-                self?.finishPendingApproval(with: nil)
+                self?.finishPendingApproval(with: nil, applyCooldown: false)
             }
             return
         }

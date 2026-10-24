@@ -8,6 +8,8 @@ struct SpaceAPIAccessSettingsView: View {
     @Environment(\.dismiss) private var dismiss
 
     @State private var showPolicyRepairConfirmation = false
+    @State private var isShowingAccessRequest = false
+    @State private var presentedAccessRequest: SpaceAPIApprovedClient?
 
     var body: some View {
         VStack(spacing: 12) {
@@ -205,6 +207,40 @@ struct SpaceAPIAccessSettingsView: View {
         .padding(16)
         .frame(width: 560, height: 540)
         .environment(\.settingsTab, .general)
+        .onAppear(perform: updateAccessRequestPrompt)
+        .onChange(of: accessController.pendingApprovalRequest?.id) { _ in
+            updateAccessRequestPrompt()
+        }
+        .alert(
+            "SpaceAPI Access Request",
+            isPresented: Binding(
+                get: { isShowingAccessRequest },
+                set: { isPresented in
+                    isShowingAccessRequest = isPresented
+                    if !isPresented, let request = presentedAccessRequest {
+                        DispatchQueue.main.async {
+                            resolveAccessRequest(request, with: nil)
+                        }
+                    }
+                }
+            ),
+            presenting: presentedAccessRequest
+        ) { request in
+            Button("Don't Allow", role: .cancel) {
+                resolveAccessRequest(request, with: .noAccess)
+            }
+            Button("Read Only") {
+                resolveAccessRequest(request, with: .readOnly)
+            }
+            Button("Read & Write") {
+                resolveAccessRequest(request, with: .fullAccess)
+            }
+        } message: { request in
+            Text(String(
+                format: NSLocalizedString("%@ would like to use SpaceAPI.", comment: ""),
+                request.name
+            ))
+        }
         .confirmationDialog(
             "Reset SpaceAPI access?",
             isPresented: $showPolicyRepairConfirmation,
@@ -217,6 +253,19 @@ struct SpaceAPIAccessSettingsView: View {
         } message: {
             Text("Resetting the unreadable policy clears the app permissions. SpaceAPI stays restricted until permissions are set again.")
         }
+    }
+
+    private func updateAccessRequestPrompt() {
+        presentedAccessRequest = accessController.pendingApprovalRequest
+        isShowingAccessRequest = presentedAccessRequest != nil
+    }
+
+    private func resolveAccessRequest(
+        _ request: SpaceAPIApprovedClient,
+        with accessLevel: SpaceAPIClientAccessLevel?
+    ) {
+        guard accessController.pendingApprovalRequest?.id == request.id else { return }
+        accessController.resolvePendingApproval(with: accessLevel)
     }
 
     private func chooseApplication() {

@@ -53,6 +53,16 @@
         }
       }
     },
+    "%@ would like to use SpaceAPI." : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ 想要使用 SpaceAPI。"
+          }
+        }
+      }
+    },
     "%@ · Space %lld" : {
       "localizations" : {
         "en" : {
@@ -4159,6 +4169,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "SpaceAPI 访问权限"
+          }
+        }
+      }
+    },
+    "SpaceAPI Access Request" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "SpaceAPI 访问请求"
           }
         }
       }
