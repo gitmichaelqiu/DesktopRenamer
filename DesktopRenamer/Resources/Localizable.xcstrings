@@ -22,6 +22,9 @@
         }
       }
     },
+    "—" : {
+      "shouldTranslate" : false
+    },
     "(No Title)" : {
       "localizations" : {
         "zh-Hans" : {
@@ -53,21 +56,11 @@
         }
       }
     },
-    "%@ would like to use SpaceAPI." : {
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%@ 想要使用 SpaceAPI。"
-          }
-        }
-      }
-    },
     "%@ · Space %lld" : {
       "localizations" : {
         "en" : {
           "stringUnit" : {
-            "state" : "new",
+            "state" : "translated",
             "value" : "%1$@ · Space %2$lld"
           }
         },
@@ -95,6 +88,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "%@已上移"
+          }
+        }
+      }
+    },
+    "%@ would like to use SpaceAPI." : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ 想要使用 SpaceAPI。"
           }
         }
       }
@@ -169,6 +172,26 @@
         }
       }
     },
+    "7 days" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "7 天"
+          }
+        }
+      }
+    },
+    "24 hours" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "24 小时"
+          }
+        }
+      }
+    },
     "A space rearrangement is already in progress." : {
       "localizations" : {
         "zh-Hans" : {
@@ -180,7 +203,14 @@
       }
     },
     "Access for %@" : {
-
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ 的访问权限"
+          }
+        }
+      }
     },
     "Access Policy" : {
       "localizations" : {
@@ -188,6 +218,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "访问策略"
+          }
+        }
+      }
+    },
+    "Access Request" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "访问请求"
           }
         }
       }
@@ -282,12 +322,22 @@
         }
       }
     },
-    "Add an App" : {
+    "Activity period" : {
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "添加应用"
+            "value" : "活动时间范围"
+          }
+        }
+      }
+    },
+    "Activity Period" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "活动时间范围"
           }
         }
       }
@@ -372,16 +422,6 @@
         }
       }
     },
-    "Approve apps and choose what they can do with SpaceAPI." : {
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "批准应用并设置其对 SpaceAPI 的访问权限。"
-          }
-        }
-      }
-    },
     "Approve" : {
       "localizations" : {
         "zh-Hans" : {
@@ -432,22 +472,22 @@
         }
       }
     },
-    "Automatically return to original space" : {
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "自动返回原桌面"
-          }
-        }
-      }
-    },
     "Automatically restore windows when unlocking" : {
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "解锁桌面时自动恢复窗口"
+          }
+        }
+      }
+    },
+    "Automatically return to original space" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "自动返回原桌面"
           }
         }
       }
@@ -536,22 +576,22 @@
         }
       }
     },
-    "Capture a report to help diagnose issues." : {
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "收集报告以帮助诊断问题。"
-          }
-        }
-      }
-    },
     "Check out these other productivity tools we've built." : {
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "看看我们所开发的其他效率工具。"
+          }
+        }
+      }
+    },
+    "Choose a valid signed app or ad-hoc development app." : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "请选择有效的已签名应用或临时签名开发应用。"
           }
         }
       }
@@ -576,42 +616,12 @@
         }
       }
     },
-    "Choose…" : {
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "选择…"
-          }
-        }
-      }
-    },
-    "Choose modifier keys followed by a number." : {
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "选择修饰键并按下数字键。"
-          }
-        }
-      }
-    },
     "Choose Raycast or the built-in launcher to manage your Spaces and windows." : {
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "选择 Raycast 或内置启动器来管理桌面和窗口。"
-          }
-        }
-      }
-    },
-    "Choose two different spaces." : {
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "请选择两个不同的桌面。"
           }
         }
       }
@@ -626,12 +636,62 @@
         }
       }
     },
+    "Choose the app that may use SpaceAPI." : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "选择允许使用 SpaceAPI 的应用。"
+          }
+        }
+      }
+    },
+    "Choose two different spaces." : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "请选择两个不同的桌面。"
+          }
+        }
+      }
+    },
+    "Choose…" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "选择…"
+          }
+        }
+      }
+    },
     "Clean Restoration Queues (%d)" : {
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "清除恢复队列 (%d)"
+          }
+        }
+      }
+    },
+    "Clear" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "清除"
+          }
+        }
+      }
+    },
+    "Clear SpaceAPI usage history?" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "清除 SpaceAPI 使用记录？"
           }
         }
       }
@@ -824,6 +884,16 @@
         }
       }
     },
+    "Could not find the SpaceAPI access policy in Keychain." : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "无法找到钥匙串中的 SpaceAPI 访问策略。"
+          }
+        }
+      }
+    },
     "Could not focus %@" : {
       "localizations" : {
         "zh-Hans" : {
@@ -854,6 +924,16 @@
         }
       }
     },
+    "Could not inspect the selected application." : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "无法检查所选应用。"
+          }
+        }
+      }
+    },
     "Could not minimize %@" : {
       "localizations" : {
         "zh-Hans" : {
@@ -874,12 +954,32 @@
         }
       }
     },
+    "Could not protect the SpaceAPI access policy in Keychain." : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "无法保护钥匙串中的 SpaceAPI 访问策略。"
+          }
+        }
+      }
+    },
     "Could not quit %@" : {
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "无法退出%@"
+          }
+        }
+      }
+    },
+    "Could not read the SpaceAPI access policy from Keychain." : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "无法从钥匙串读取 SpaceAPI 访问策略。"
           }
         }
       }
@@ -904,12 +1004,42 @@
         }
       }
     },
+    "Could not save the SpaceAPI access policy in Keychain." : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "无法保存钥匙串中的 SpaceAPI 访问策略。"
+          }
+        }
+      }
+    },
     "Could not switch to the selected space." : {
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "无法切换到所选桌面。"
+          }
+        }
+      }
+    },
+    "Could not update the SpaceAPI access policy in Keychain." : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "无法更新钥匙串中的 SpaceAPI 访问策略。"
+          }
+        }
+      }
+    },
+    "Could not verify the SpaceAPI access policy in Keychain." : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "无法验证钥匙串中的 SpaceAPI 访问策略。"
           }
         }
       }
@@ -1010,6 +1140,36 @@
         }
       }
     },
+    "Detailed activity will appear after the next request." : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "记录下一次请求后，将显示详细活动。"
+          }
+        }
+      }
+    },
+    "Development build" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "开发版本"
+          }
+        }
+      }
+    },
+    "Development builds must be approved again after rebuilding." : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "开发版本每次重新构建后都必须再次批准。"
+          }
+        }
+      }
+    },
     "Diagnostic report" : {
       "localizations" : {
         "zh-Hans" : {
@@ -1056,6 +1216,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "更多 App"
+          }
+        }
+      }
+    },
+    "Don't Allow" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "不允许"
           }
         }
       }
@@ -1164,7 +1334,7 @@
       "localizations" : {
         "en" : {
           "stringUnit" : {
-            "state" : "new",
+            "state" : "translated",
             "value" : "Event Log (%1$lld recorded, ring buffer: %2$lld lines)"
           }
         },
@@ -1558,6 +1728,36 @@
         }
       }
     },
+    "Last 7 days" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "最近 7 天"
+          }
+        }
+      }
+    },
+    "Last 24 hours" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "最近 24 小时"
+          }
+        }
+      }
+    },
+    "Last request" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "上次请求"
+          }
+        }
+      }
+    },
     "Launcher Commands Ranking" : {
       "localizations" : {
         "en" : {
@@ -1626,6 +1826,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "用 Option 键模拟右键。"
+          }
+        }
+      }
+    },
+    "Lifetime requests" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "累计请求数"
           }
         }
       }
@@ -1716,6 +1926,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "管理窗口"
+          }
+        }
+      }
+    },
+    "Manage…" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "管理…"
           }
         }
       }
@@ -2114,6 +2334,16 @@
         }
       }
     },
+    "No Access" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "无权访问"
+          }
+        }
+      }
+    },
     "No actions found" : {
       "localizations" : {
         "zh-Hans" : {
@@ -2124,12 +2354,12 @@
         }
       }
     },
-    "No Apps Added" : {
+    "No app usage recorded" : {
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "未添加应用"
+            "value" : "暂无应用使用记录"
           }
         }
       }
@@ -2184,6 +2414,16 @@
         }
       }
     },
+    "No requests in this period." : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "此时间段内没有请求。"
+          }
+        }
+      }
+    },
     "No results" : {
       "localizations" : {
         "en" : {
@@ -2230,6 +2470,16 @@
         }
       }
     },
+    "OK" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "确定"
+          }
+        }
+      }
+    },
     "Open" : {
       "localizations" : {
         "zh-Hans" : {
@@ -2266,16 +2516,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Option + 点击以移动窗口"
-          }
-        }
-      }
-    },
-    "Set the access level for each approved app." : {
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "为每个已批准的应用设置访问级别。"
           }
         }
       }
@@ -2400,6 +2640,36 @@
         }
       }
     },
+    "Read" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "读取"
+          }
+        }
+      }
+    },
+    "Read & Write" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "读写"
+          }
+        }
+      }
+    },
+    "Read Only" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "只读"
+          }
+        }
+      }
+    },
     "Real-time video enhancing player." : {
       "localizations" : {
         "zh-Hans" : {
@@ -2410,12 +2680,12 @@
         }
       }
     },
-    "Development builds must be approved again after rebuilding." : {
+    "Record SpaceAPI usage" : {
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "开发版本每次重新构建后都必须再次批准。"
+            "value" : "记录 SpaceAPI 使用情况"
           }
         }
       }
@@ -2457,6 +2727,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "重新加载桌面标签"
+          }
+        }
+      }
+    },
+    "Remove app" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "移除应用"
           }
         }
       }
@@ -2588,6 +2868,66 @@
         }
       }
     },
+    "Request Type" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "请求类型"
+          }
+        }
+      }
+    },
+    "requests" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "次请求"
+          }
+        }
+      }
+    },
+    "Requests" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "请求次数"
+          }
+        }
+      }
+    },
+    "requests /" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "请求 /"
+          }
+        }
+      }
+    },
+    "Requests per day" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "每日请求数"
+          }
+        }
+      }
+    },
+    "Requests per hour" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "每小时请求数"
+          }
+        }
+      }
+    },
     "Require Permissions" : {
       "localizations" : {
         "zh-Hans" : {
@@ -2638,16 +2978,6 @@
         }
       }
     },
-    "Reset SpaceAPI access?" : {
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "要重置 SpaceAPI 访问权限吗？"
-          }
-        }
-      }
-    },
     "Reset & Quit" : {
       "localizations" : {
         "zh-Hans" : {
@@ -2658,12 +2988,42 @@
         }
       }
     },
+    "Reset SpaceAPI access?" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "要重置 SpaceAPI 访问权限吗？"
+          }
+        }
+      }
+    },
     "Reset to default" : {
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "重置默认"
+          }
+        }
+      }
+    },
+    "Reset…" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "重置…"
+          }
+        }
+      }
+    },
+    "Resetting the unreadable policy clears the app permissions. SpaceAPI stays restricted until permissions are set again." : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "重置无法读取的策略会清除应用权限。SpaceAPI 将继续限制访问，直到重新设置权限。"
           }
         }
       }
@@ -2694,16 +3054,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "重启DesktopRenamer"
-          }
-        }
-      }
-    },
-    "Restart DesktopRenamer after changing permissions." : {
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "更改权限后请重新启动 DesktopRenamer。"
           }
         }
       }
@@ -2931,6 +3281,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "搜索目标桌面..."
+          }
+        }
+      }
+    },
+    "Secure storage for the SpaceAPI access policy is unavailable." : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "无法使用 SpaceAPI 访问策略的安全存储。"
           }
         }
       }
@@ -3192,6 +3552,40 @@
         }
       }
     },
+    "Settings.General.General" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "General"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "通用"
+          }
+        }
+      }
+    },
+    "Settings.General.General.LaunchAtLogin" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Launch at login"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "登录时启动"
+          }
+        }
+      }
+    },
     "Settings.General.Import.Button" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -3396,57 +3790,6 @@
         }
       }
     },
-    "Settings.General.Transfer" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Settings Transfer"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "设置传输"
-          }
-        }
-      }
-    },
-    "Settings.General.General" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "General"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "通用"
-          }
-        }
-      }
-    },
-    "Settings.General.General.LaunchAtLogin" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Launch at login"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "登录时启动"
-          }
-        }
-      }
-    },
     "Settings.General.Reset" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -3545,6 +3888,23 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "重置成功"
+          }
+        }
+      }
+    },
+    "Settings.General.Transfer" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Settings Transfer"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "设置传输"
           }
         }
       }
@@ -3712,6 +4072,23 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "未分配"
+          }
+        }
+      }
+    },
+    "Settings.SpaceAPI.UsageStatistics.Helper" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Stores request counts for 7 days and a lifetime total. Request contents are never saved."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "保存最近 7 天的请求数量和累计总数，不会记录请求内容。"
           }
         }
       }
@@ -3983,6 +4360,26 @@
         }
       }
     },
+    "SpaceAPI Access" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "SpaceAPI 访问权限"
+          }
+        }
+      }
+    },
+    "SpaceAPI access policy could not be verified. Access remains restricted." : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "无法验证 SpaceAPI 访问策略。访问仍受到限制。"
+          }
+        }
+      }
+    },
     "SpaceAPI v%@" : {
       "shouldTranslate" : false
     },
@@ -4238,6 +4635,26 @@
         }
       }
     },
+    "The selected app does not have a valid code signature." : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "所选应用的代码签名无效。"
+          }
+        }
+      }
+    },
+    "The SpaceAPI access policy could not be verified. Access remains restricted." : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "无法验证 SpaceAPI 访问策略，访问限制仍保持启用。"
+          }
+        }
+      }
+    },
     "Then reproduce the bug you encountered." : {
       "localizations" : {
         "zh-Hans" : {
@@ -4254,6 +4671,26 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "此 macOS 版本未提供原生桌面重排操作。"
+          }
+        }
+      }
+    },
+    "This removes all recorded SpaceAPI usage counts and history." : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "这会删除所有已记录的 SpaceAPI 请求次数和历史记录。"
+          }
+        }
+      }
+    },
+    "Time" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "时间"
           }
         }
       }
@@ -4298,6 +4735,16 @@
         }
       }
     },
+    "total requests" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "请求总数"
+          }
+        }
+      }
+    },
     "Trackpad Switch Gesture Override" : {
       "localizations" : {
         "zh-Hans" : {
@@ -4314,6 +4761,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "输入新名称并回车"
+          }
+        }
+      }
+    },
+    "Unclassified" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "未分类"
           }
         }
       }
@@ -4354,6 +4811,26 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "解锁桌面"
+          }
+        }
+      }
+    },
+    "Usage history" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "使用记录"
+          }
+        }
+      }
+    },
+    "Usage Statistics" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "使用统计"
           }
         }
       }
@@ -4409,6 +4886,16 @@
       },
       "shouldTranslate" : false
     },
+    "View usage activity" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "查看使用活动"
+          }
+        }
+      }
+    },
     "Welcome to" : {
       "localizations" : {
         "zh-Hans" : {
@@ -4459,563 +4946,6 @@
         }
       }
     },
-    "X: %lld px, Y: %lld px" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "X: %1$lld px, Y: %2$lld px"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "X：%lld 像素，Y：%lld 像素"
-          }
-        }
-      },
-      "shouldTranslate" : false
-    },
-    "Only approved apps can use SpaceAPI." : {
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "仅已批准的应用可使用 SpaceAPI。"
-          }
-        }
-      }
-    },
-    "Manage…" : {
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "管理…"
-          }
-        }
-      }
-    },
-    "SpaceAPI Access" : {
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "SpaceAPI 访问权限"
-          }
-        }
-      }
-    },
-    "Allow only approved apps" : {
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "仅允许已批准的应用"
-          }
-        }
-      }
-    },
-    "When enabled, unapproved apps cannot read or change spaces through SpaceAPI." : {
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "启用后，未批准的应用无法通过 SpaceAPI 读取或更改桌面。"
-          }
-        }
-      }
-    },
-    "Approved Apps" : {
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "已批准的应用"
-          }
-        }
-      }
-    },
-    "Add App…" : {
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "添加应用…"
-          }
-        }
-      }
-    },
-    "No Approved Apps" : {
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "没有已批准的应用"
-          }
-        }
-      }
-    },
-    "An empty list blocks every app while access restriction is enabled." : {
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "启用访问限制时，空列表会阻止所有应用。"
-          }
-        }
-      }
-    },
-    "Development build" : {
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "开发版本"
-          }
-        }
-      }
-    },
-    "Signed app" : {
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "已签名应用"
-          }
-        }
-      }
-    },
-    "Revoke access" : {
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "撤销访问权限"
-          }
-        }
-      }
-    },
-    "Ad-hoc development builds must be approved again after the app is rebuilt." : {
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "应用重新构建后，必须再次批准临时签名的开发版本。"
-          }
-        }
-      }
-    },
-    "Approve an App for SpaceAPI" : {
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "批准应用使用 SpaceAPI"
-          }
-        }
-      }
-    },
-    "Choose the app that may use SpaceAPI." : {
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "选择允许使用 SpaceAPI 的应用。"
-          }
-        }
-      }
-    },
-    "Approve" : {
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "批准"
-          }
-        }
-      }
-    },
-    "Choose a valid signed app or ad-hoc development app." : {
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "请选择有效的已签名应用或临时签名开发应用。"
-          }
-        }
-      }
-    },
-    "The SpaceAPI access policy could not be verified. Access remains restricted." : {
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "无法验证 SpaceAPI 访问策略，访问限制仍保持启用。"
-          }
-        }
-      }
-    },
-    "Secure storage for the SpaceAPI access policy is unavailable." : {
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "无法使用 SpaceAPI 访问策略的安全存储。"
-          }
-        }
-      }
-    },
-    "Could not inspect the selected application." : {
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "无法检查所选应用。"
-          }
-        }
-      }
-    },
-    "The selected app does not have a valid code signature." : {
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "所选应用的代码签名无效。"
-          }
-        }
-      }
-    },
-    "Could not read the selected app's signing identity." : {
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "无法读取所选应用的签名身份。"
-          }
-        }
-      }
-    },
-    "Could not read the selected app's designated requirement." : {
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "无法读取所选应用的指定代码要求。"
-          }
-        }
-      }
-    },
-    "Could not identify DesktopRenamer for Keychain access." : {
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "无法验证 DesktopRenamer 的钥匙串访问身份。"
-          }
-        }
-      }
-    },
-    "Could not protect the SpaceAPI access policy in Keychain." : {
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "无法保护钥匙串中的 SpaceAPI 访问策略。"
-          }
-        }
-      }
-    },
-    "Could not verify Keychain access controls." : {
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "无法验证钥匙串访问控制。"
-          }
-        }
-      }
-    },
-    "Could not read the SpaceAPI access policy from Keychain." : {
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "无法从钥匙串读取 SpaceAPI 访问策略。"
-          }
-        }
-      }
-    },
-    "Could not find the SpaceAPI access policy in Keychain." : {
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "无法找到钥匙串中的 SpaceAPI 访问策略。"
-          }
-        }
-      }
-    },
-    "Could not update the SpaceAPI access policy in Keychain." : {
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "无法更新钥匙串中的 SpaceAPI 访问策略。"
-          }
-        }
-      }
-    },
-    "Could not save the SpaceAPI access policy in Keychain." : {
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "无法保存钥匙串中的 SpaceAPI 访问策略。"
-          }
-        }
-      }
-    },
-    "Could not verify the SpaceAPI access policy in Keychain." : {
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "无法验证钥匙串中的 SpaceAPI 访问策略。"
-          }
-        }
-      }
-    },
-    "Your diagnostic report has been saved." : {
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "诊断报告已保存。"
-          }
-        }
-      }
-    },
-    "Usage Statistics" : {
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "使用统计"
-          }
-        }
-      }
-    },
-    "Record SpaceAPI usage" : {
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "记录 SpaceAPI 使用情况"
-          }
-        }
-      }
-    },
-    "Counts app names and API calls locally. Request contents aren’t saved; legacy notification calls can’t be attributed." : {
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "在本机统计应用名称和 API 调用次数。不保存请求内容；无法识别通过旧版通知发送的调用来源。"
-          }
-        }
-      }
-    },
-    "No app usage recorded" : {
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "暂无应用使用记录"
-          }
-        }
-      }
-    },
-    "requests" : {
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "次请求"
-          }
-        }
-      }
-    },
-    "Usage history" : {
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "使用记录"
-          }
-        }
-      }
-    },
-    "Clear" : {
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "清除"
-          }
-        }
-      }
-    },
-    "Activity Period" : {
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "活动时间范围"
-          }
-        }
-      }
-    },
-    "Last 24 Hours" : {
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "最近 24 小时"
-          }
-        }
-      }
-    },
-    "Last 7 Days" : {
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "最近 7 天"
-          }
-        }
-      }
-    },
-    "Requests" : {
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "请求次数"
-          }
-        }
-      }
-    },
-    "Total Requests" : {
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "请求总数"
-          }
-        }
-      }
-    },
-    "Detailed activity will appear after the next request." : {
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "记录下一次请求后，将显示详细活动。"
-          }
-        }
-      }
-    },
-    "Requests per hour" : {
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "每小时请求数"
-          }
-        }
-      }
-    },
-    "Requests per day" : {
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "每日请求数"
-          }
-        }
-      }
-    },
-    "No requests in this period." : {
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "此时间段内没有请求。"
-          }
-        }
-      }
-    },
-    "Last Request" : {
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "上次请求"
-          }
-        }
-      }
-    },
-    "View usage activity" : {
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "查看使用活动"
-          }
-        }
-      }
-    },
-    "Keeps hourly request history for 7 days and a lifetime total. Request contents aren’t saved; legacy notification calls can’t be attributed." : {
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "保留最近 7 天的每小时请求记录和累计总数。不会保存请求内容；无法统计旧版通知调用。"
-          }
-        }
-      }
-    },
-    "Clear SpaceAPI usage history?" : {
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "清除 SpaceAPI 使用记录？"
-          }
-        }
-      }
-    },
-    "This removes all recorded SpaceAPI usage counts and history." : {
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "这会删除所有已记录的 SpaceAPI 请求次数和历史记录。"
-          }
-        }
-      }
-    },
-    "Read" : {
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "读取"
-          }
-        }
-      }
-    },
     "Write" : {
       "localizations" : {
         "zh-Hans" : {
@@ -5026,119 +4956,29 @@
         }
       }
     },
-    "Unclassified" : {
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "未分类"
-          }
-        }
-      }
-    },
-    "Activity period" : {
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "活动时间范围"
-          }
-        }
-      }
-    },
-    "Last 24 hours" : {
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "最近 24 小时"
-          }
-        }
-      }
-    },
-    "Last 7 days" : {
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "最近 7 天"
-          }
-        }
-      }
-    },
-    "24 hours" : {
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "24 小时"
-          }
-        }
-      }
-    },
-    "7 days" : {
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "7 天"
-          }
-        }
-      }
-    },
-    "requests /" : {
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "请求 /"
-          }
-        }
-      }
-    },
-    "total requests" : {
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "请求总数"
-          }
-        }
-      }
-    },
-    "Lifetime requests" : {
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "累计请求数"
-          }
-        }
-      }
-    },
-    "Last request" : {
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "上次请求"
-          }
-        }
-      }
-    },
-    "Settings.SpaceAPI.UsageStatistics.Helper" : {
-      "extractionState" : "manual",
+    "X: %lld px, Y: %lld px" : {
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Stores request counts for 7 days and a lifetime total. Request contents are never saved."
+            "value" : "X: %1$lld px, Y: %2$lld px"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "保存最近 7 天的请求数量和累计总数，不会记录请求内容。"
+            "value" : "X：%1$lld 像素，Y：%2$lld 像素"
+          }
+        }
+      },
+      "shouldTranslate" : false
+    },
+    "Your diagnostic report has been saved." : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "诊断报告已保存。"
           }
         }
       }
