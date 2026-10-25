@@ -208,6 +208,7 @@ struct SpaceAPIAccessSettingsView: View {
                             SettingsRow("No app usage recorded") {
                                 Text("—")
                                     .foregroundStyle(.secondary)
+                                    .frame(minHeight: 36)
                             }
                         } else {
                             Divider()
