@@ -412,16 +412,6 @@
         }
       }
     },
-    "Some older clients only work when access is unrestricted." : {
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "某些较旧的客户端只有在不限制 SpaceAPI 访问时才能使用。"
-          }
-        }
-      }
-    },
     "App Permissions" : {
       "localizations" : {
         "zh-Hans" : {
@@ -894,16 +884,6 @@
         }
       }
     },
-    "Could not find the SpaceAPI access policy in Keychain." : {
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "无法找到钥匙串中的 SpaceAPI 访问策略。"
-          }
-        }
-      }
-    },
     "Could not focus %@" : {
       "localizations" : {
         "zh-Hans" : {
@@ -934,16 +914,6 @@
         }
       }
     },
-    "Could not inspect the selected application." : {
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "无法检查所选应用。"
-          }
-        }
-      }
-    },
     "Could not minimize %@" : {
       "localizations" : {
         "zh-Hans" : {
@@ -964,42 +934,12 @@
         }
       }
     },
-    "Could not protect the SpaceAPI access policy in Keychain." : {
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "无法保护钥匙串中的 SpaceAPI 访问策略。"
-          }
-        }
-      }
-    },
     "Could not quit %@" : {
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "无法退出%@"
-          }
-        }
-      }
-    },
-    "Could not read the SpaceAPI access policy from Keychain." : {
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "无法从钥匙串读取 SpaceAPI 访问策略。"
-          }
-        }
-      }
-    },
-    "Could not replace the unreadable SpaceAPI access policy in Keychain." : {
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "无法替换钥匙串中无法读取的 SpaceAPI 访问策略。"
           }
         }
       }
@@ -1014,42 +954,12 @@
         }
       }
     },
-    "Could not save the SpaceAPI access policy in Keychain." : {
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "无法保存钥匙串中的 SpaceAPI 访问策略。"
-          }
-        }
-      }
-    },
     "Could not switch to the selected space." : {
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "无法切换到所选桌面。"
-          }
-        }
-      }
-    },
-    "Could not update the SpaceAPI access policy in Keychain." : {
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "无法更新钥匙串中的 SpaceAPI 访问策略。"
-          }
-        }
-      }
-    },
-    "Could not verify the SpaceAPI access policy in Keychain." : {
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "无法验证钥匙串中的 SpaceAPI 访问策略。"
           }
         }
       }
@@ -1156,16 +1066,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "记录下一次请求后，将显示详细活动。"
-          }
-        }
-      }
-    },
-    "Development build" : {
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "开发版本"
           }
         }
       }
@@ -4303,6 +4203,16 @@
         }
       }
     },
+    "Some older clients only work when access is unrestricted." : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "某些较旧的客户端只有在不限制 SpaceAPI 访问时才能使用。"
+          }
+        }
+      }
+    },
     "Space %lld" : {
       "localizations" : {
         "zh-Hans" : {
@@ -4641,16 +4551,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "此 macOS 版本不支持原生桌面重排操作。"
-          }
-        }
-      }
-    },
-    "The selected app does not have a valid code signature." : {
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "所选应用的代码签名无效。"
           }
         }
       }
