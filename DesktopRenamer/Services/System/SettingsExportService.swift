@@ -427,8 +427,8 @@ enum SettingsImportService {
               Set(switching.appGrabExceptions.map(\.bundleIdentifier)).count == switching.appGrabExceptions.count,
               switching.appGrabExceptions.allSatisfy({
                   !$0.bundleIdentifier.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-                      && $0.grabOffsetX.isFinite && (0...100).contains($0.grabOffsetX)
-                      && $0.grabOffsetY.isFinite && (0...100).contains($0.grabOffsetY)
+                      && $0.grabOffsetX.isFinite && (0...300).contains($0.grabOffsetX)
+                      && $0.grabOffsetY.isFinite && (0...300).contains($0.grabOffsetY)
               }) else {
             throw ImportError.invalidDocument
         }

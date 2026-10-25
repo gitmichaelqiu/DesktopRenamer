@@ -53,8 +53,10 @@ struct GeneralSettingsView: View {
                         Toggle("", isOn: $isStatusBarHidden)
                             .labelsHidden()
                             .toggleStyle(.switch)
-                            .onChange(of: isStatusBarHidden) { _ in
-                                StatusBarController.toggleStatusBar()
+                            .onChange(of: isStatusBarHidden) { isHidden in
+                                if StatusBarController.isStatusBarHidden != isHidden {
+                                    StatusBarController.toggleStatusBar()
+                                }
                             }
                     }
 
@@ -347,6 +349,7 @@ struct GeneralSettingsView: View {
                 hotkeyManager: hotkeyManager,
                 launcherViewModel: LauncherWindowController.shared.viewModel
             )
+            isStatusBarHidden = plan.settings.general.isStatusBarHidden
         }
     }
 
