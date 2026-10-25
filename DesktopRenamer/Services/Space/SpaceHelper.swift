@@ -37,12 +37,20 @@ class SpaceHelper {
 
     static func debugTrace(_ id: UInt64, _ message: @autoclosure () -> String) {
         let queue = Thread.isMainThread ? "main" : "background"
-        print("SpaceTrace[\(id)][\(queue)] \(message())")
+        let trace = "SpaceTrace[\(id)][\(queue)] \(message())"
+        DiagnosticEventLog.shared.recordDuringCollection(subsystem: "SpaceTrace", trace)
+        print(trace)
     }
     #else
     static func debugTraceID() -> UInt64 { 0 }
 
-    static func debugTrace(_ id: UInt64, _ message: @autoclosure () -> String) {}
+    static func debugTrace(_ id: UInt64, _ message: @autoclosure () -> String) {
+        let queue = Thread.isMainThread ? "main" : "background"
+        DiagnosticEventLog.shared.recordDuringCollection(
+            subsystem: "SpaceTrace",
+            "SpaceTrace[\(id)][\(queue)] \(message())"
+        )
+    }
     #endif
 
     static func debugFormatSpaceMap(_ spacesByDisplay: [String: String]) -> String {

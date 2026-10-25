@@ -17,6 +17,7 @@ final class SpaceAPISocketServer {
     private let acceptQueue = DispatchQueue(label: "dev.mqiu.DesktopRenamer.SpaceAPI.socket.accept")
     private var listenerDescriptor: Int32 = -1
     private var listenerSource: DispatchSourceRead?
+    private var startupFailure: String?
     private var clients: [ObjectIdentifier: SpaceAPISocketClient] = [:]
     private var accessController: SpaceAPIAccessController?
     private var requestHandler: ((String, SpaceAPIPeerIdentity?, SpaceAPIApprovedClient?, @escaping (String) -> Void) -> Void)?
@@ -25,6 +26,12 @@ final class SpaceAPISocketServer {
         stateLock.lock()
         defer { stateLock.unlock() }
         return listenerDescriptor >= 0
+    }
+
+    var lastStartupFailure: String? {
+        stateLock.lock()
+        defer { stateLock.unlock() }
+        return startupFailure
     }
 
     @discardableResult
@@ -36,22 +43,28 @@ final class SpaceAPISocketServer {
         guard listenerDescriptor < 0 else {
             self.accessController = accessController
             self.requestHandler = requestHandler
+            startupFailure = nil
             stateLock.unlock()
             closeUnauthorizedConnections()
             return true
         }
+        startupFailure = nil
         stateLock.unlock()
 
         let path = Self.endpoint.path
         var address = sockaddr_un()
         let pathBufferCapacity = MemoryLayout.size(ofValue: address.sun_path)
         guard path.utf8.count + 1 <= pathBufferCapacity else {
-            return false
+            return failStart("The socket path exceeds the platform limit.")
         }
-        guard prepareSocketPath(path) else { return false }
+        if let failure = prepareSocketPath(path) {
+            return failStart(failure)
+        }
 
         let descriptor = Darwin.socket(AF_UNIX, SOCK_STREAM, 0)
-        guard descriptor >= 0 else { return false }
+        guard descriptor >= 0 else {
+            return failStart("Could not create the Unix socket: \(posixErrorDescription()).")
+        }
         address.sun_family = sa_family_t(AF_UNIX)
         address.sun_len = UInt8(MemoryLayout<sockaddr_un>.size)
         let pathCString = path.utf8CString
@@ -68,21 +81,37 @@ final class SpaceAPISocketServer {
                 Darwin.bind(descriptor, $0, socklen_t(MemoryLayout<sockaddr_un>.size))
             }
         }
-        guard bindStatus == 0,
-              chmod(path, mode_t(S_IRUSR | S_IWUSR)) == 0,
-              fcntl(descriptor, F_SETFL, O_NONBLOCK) == 0,
-              listen(descriptor, Int32(Self.maximumConnectedClients)) == 0 else {
+        guard bindStatus == 0 else {
+            let failure = "Could not bind the Unix socket: \(posixErrorDescription())."
+            Darwin.close(descriptor)
+            return failStart(failure)
+        }
+        guard chmod(path, mode_t(S_IRUSR | S_IWUSR)) == 0 else {
+            let failure = "Could not set socket permissions: \(posixErrorDescription())."
             Darwin.close(descriptor)
             unlink(path)
-            return false
+            return failStart(failure)
+        }
+        guard fcntl(descriptor, F_SETFL, O_NONBLOCK) == 0 else {
+            let failure = "Could not configure the socket listener: \(posixErrorDescription())."
+            Darwin.close(descriptor)
+            unlink(path)
+            return failStart(failure)
+        }
+        guard listen(descriptor, Int32(Self.maximumConnectedClients)) == 0 else {
+            let failure = "Could not listen on the Unix socket: \(posixErrorDescription())."
+            Darwin.close(descriptor)
+            unlink(path)
+            return failStart(failure)
         }
 
         let source = DispatchSource.makeReadSource(fileDescriptor: descriptor, queue: acceptQueue)
         var socketInfo = stat()
         guard lstat(path, &socketInfo) == 0 else {
+            let failure = "Could not inspect the socket after binding: \(posixErrorDescription())."
             Darwin.close(descriptor)
             unlink(path)
-            return false
+            return failStart(failure)
         }
         source.setEventHandler { [weak self] in self?.acceptConnections(from: descriptor) }
         source.setCancelHandler {
@@ -98,6 +127,7 @@ final class SpaceAPISocketServer {
         stateLock.lock()
         listenerDescriptor = descriptor
         listenerSource = source
+        startupFailure = nil
         self.accessController = accessController
         self.requestHandler = requestHandler
         stateLock.unlock()
@@ -112,6 +142,7 @@ final class SpaceAPISocketServer {
         listenerDescriptor = -1
         requestHandler = nil
         accessController = nil
+        startupFailure = nil
         let currentClients = Array(clients.values)
         clients.removeAll()
         stateLock.unlock()
@@ -270,18 +301,35 @@ final class SpaceAPISocketServer {
         stateLock.unlock()
     }
 
-    private func prepareSocketPath(_ path: String) -> Bool {
+    private func prepareSocketPath(_ path: String) -> String? {
         var info = stat()
         if lstat(path, &info) == 0 {
-            guard (info.st_mode & S_IFMT) == S_IFSOCK,
-                  info.st_uid == getuid(),
-                  unlink(path) == 0 else {
-                return false
+            guard (info.st_mode & S_IFMT) == S_IFSOCK else {
+                return "The socket endpoint already exists and is not a socket."
+            }
+            guard info.st_uid == getuid() else {
+                return "The existing socket endpoint belongs to another user."
+            }
+            guard unlink(path) == 0 else {
+                return "Could not remove the stale socket endpoint: \(posixErrorDescription())."
             }
         } else if errno != ENOENT {
-            return false
+            return "Could not inspect the socket endpoint: \(posixErrorDescription())."
         }
-        return true
+        return nil
+    }
+
+    private func failStart(_ reason: String) -> Bool {
+        stateLock.lock()
+        startupFailure = reason
+        stateLock.unlock()
+        DiagnosticEventLog.shared.record(subsystem: "SpaceAPI.Socket", level: "error", "Listener startup failed: \(reason)")
+        return false
+    }
+
+    private func posixErrorDescription() -> String {
+        let code = errno
+        return "\(String(cString: strerror(code))) (errno \(code))"
     }
 
     private static func recoverableRequestID(from payload: String) -> String? {
@@ -319,10 +367,40 @@ private final class SpaceAPISocketClient {
         var token = audit_token_t()
         var tokenLength = socklen_t(MemoryLayout<audit_token_t>.size)
         let status = getsockopt(descriptor, SOL_LOCAL, LOCAL_PEERTOKEN, &token, &tokenLength)
-        let peerToken = status == 0 && tokenLength == MemoryLayout<audit_token_t>.size
-            ? Data(bytes: &token, count: MemoryLayout<audit_token_t>.size)
-            : Data()
+        let socketError = status == 0 ? nil : errno
+        guard status == 0, tokenLength == MemoryLayout<audit_token_t>.size else {
+            authenticatedClient = nil
+            let reason = status == 0
+                ? "Unexpected local peer audit-token size \(tokenLength)."
+                : "Could not read local peer audit token (errno \(socketError ?? 0))."
+            DiagnosticEventLog.shared.recordDuringCollection(
+                subsystem: "SpaceAPI.Socket",
+                level: "warning",
+                "Socket peer authentication could not start: \(reason)"
+            )
+            return
+        }
+
+        let peerToken = Data(bytes: &token, count: MemoryLayout<audit_token_t>.size)
         authenticatedClient = SpaceAPICodeIdentity.authenticatedClient(forAuditToken: peerToken)
+        let processID = token.val.5
+        if let authenticatedClient {
+            let app = authenticatedClient.application
+            let identityType = authenticatedClient.peerIdentity.codeHash == nil
+                ? "signedRequirement"
+                : "adHocCodeHash"
+            DiagnosticEventLog.shared.recordDuringCollection(
+                subsystem: "SpaceAPI.Socket",
+                level: "debug",
+                "Authenticated socket peer pid=\(processID) name=\(app?.name ?? "unknown") bundleID=\(app?.bundleIdentifier ?? "unknown") identityType=\(identityType)."
+            )
+        } else {
+            DiagnosticEventLog.shared.recordDuringCollection(
+                subsystem: "SpaceAPI.Socket",
+                level: "warning",
+                "Could not resolve code identity for socket peer pid=\(processID)."
+            )
+        }
     }
 
     var isClosed: Bool {

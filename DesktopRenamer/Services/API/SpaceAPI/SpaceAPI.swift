@@ -53,6 +53,14 @@ final class SpaceAPI {
     /// Whether the DNC listener is active (Combine pipeline has subscriptions).
     var hasActiveListeners: Bool { rpcListenerInstalled || !cancellables.isEmpty }
 
+    var isRPCListenerInstalled: Bool { rpcListenerInstalled }
+
+    var broadcastSubscriptionCount: Int { cancellables.count }
+
+    var isLegacyDNCActive: Bool {
+        SpaceManager.isAPIEnabled && !accessController.isRestricted && spaceManager != nil
+    }
+
     /// The revision clients should use when comparing structured snapshots.
     var currentSnapshotRevision: UInt64 { snapshotRevision }
     

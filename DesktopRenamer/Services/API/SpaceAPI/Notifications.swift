@@ -155,6 +155,17 @@ extension SpaceAPI {
         isSocket: Bool,
         clientApplication: SpaceAPIApprovedClient? = nil
     ) async -> SpaceAPIJSONRPCResponse {
+        let requesterName = clientApplication?.name ?? (isSocket ? "unidentified peer" : "legacy DNC client")
+        let requesterBundleID = clientApplication?.bundleIdentifier.map(DiagnosticText.singleLine) ?? "unknown"
+        let identityType: String
+        if peerIdentity?.designatedRequirement != nil {
+            identityType = "signedRequirement"
+        } else if peerIdentity?.codeHash != nil {
+            identityType = "adHocCodeHash"
+        } else {
+            identityType = isSocket ? "unavailable" : "legacyDNC"
+        }
+        let requesterContext = "\(DiagnosticText.singleLine(requesterName)) bundleID=\(requesterBundleID) identityType=\(identityType)"
         guard let payload else {
             return SpaceAPIJSONRPCCodec.errorResponse(
                 id: nil,
@@ -181,6 +192,12 @@ extension SpaceAPI {
                 data: error.jsonRPCData
             )
         } catch {
+            let nsError = error as NSError
+            DiagnosticEventLog.shared.record(
+                subsystem: "SpaceAPI",
+                level: "warning",
+                "Rejected structured request from \(requesterContext) that could not be decoded: \(nsError.domain):\(nsError.code) \(error.localizedDescription)"
+            )
             return SpaceAPIJSONRPCCodec.errorResponse(
                 id: recoverableRequestID,
                 code: SpaceAPIJSONRPCCode.invalidRequest,
@@ -197,6 +214,11 @@ extension SpaceAPI {
         }
         guard isSocket || !accessController.isRestricted,
               !isSocket || accessController.isAuthorized(peerIdentity) else {
+            DiagnosticEventLog.shared.record(
+                subsystem: "SpaceAPI",
+                level: "warning",
+                "Denied request from \(requesterContext) method=\(request.method): client is not approved."
+            )
             return SpaceAPIJSONRPCCodec.errorResponse(
                 id: request.id,
                 code: SpaceAPIJSONRPCCode.permissionDenied,
@@ -209,6 +231,11 @@ extension SpaceAPI {
             ? accessController.accessLevel(for: peerIdentity)
             : .fullAccess
         guard clientAccess.allows(requiredAccess) else {
+            DiagnosticEventLog.shared.record(
+                subsystem: "SpaceAPI",
+                level: "warning",
+                "Denied request from \(requesterContext) method=\(request.method): required=\(requiredAccess.rawValue), granted=\(clientAccess.rawValue)."
+            )
             return SpaceAPIJSONRPCCodec.errorResponse(
                 id: request.id,
                 code: SpaceAPIJSONRPCCode.permissionDenied,
@@ -229,6 +256,11 @@ extension SpaceAPI {
             )
             return SpaceAPIJSONRPCResponse(id: request.id, result: result)
         } catch let error as SpaceAPIContractError {
+            DiagnosticEventLog.shared.record(
+                subsystem: "SpaceAPI",
+                level: "error",
+                "Structured request failed method=\(request.method): \(error.localizedDescription)"
+            )
             return SpaceAPIJSONRPCCodec.errorResponse(
                 id: request.id,
                 code: error.jsonRPCCode,
@@ -236,6 +268,12 @@ extension SpaceAPI {
                 data: error.jsonRPCData(command: request.method)
             )
         } catch let error as SpaceAPIError {
+            let nsError = error as NSError
+            DiagnosticEventLog.shared.record(
+                subsystem: "SpaceAPI",
+                level: "error",
+                "Structured request failed method=\(request.method) error=\(nsError.domain):\(nsError.code) \(error.localizedDescription)"
+            )
             return SpaceAPIJSONRPCCodec.errorResponse(
                 id: request.id,
                 code: error.jsonRPCCode,
@@ -243,6 +281,12 @@ extension SpaceAPI {
                 data: error.jsonRPCData(command: request.method)
             )
         } catch {
+            let nsError = error as NSError
+            DiagnosticEventLog.shared.record(
+                subsystem: "SpaceAPI",
+                level: "error",
+                "Structured request failed method=\(request.method) error=\(nsError.domain):\(nsError.code) \(error.localizedDescription)"
+            )
             return SpaceAPIJSONRPCCodec.errorResponse(
                 id: request.id,
                 code: SpaceAPIJSONRPCCode.internalError,

@@ -65,6 +65,36 @@ final class SpaceAPIAccessController: ObservableObject {
         return policy.isRestricted
     }
 
+    @MainActor
+    var diagnosticSummary: String {
+        let snapshot = policySnapshot()
+        var summary = "policyStoreUsable: \(snapshot.storeAvailable)\n"
+        summary += "accessRestricted: \(snapshot.policy.isRestricted)\n"
+        summary += "approvedClientCount: \(snapshot.policy.approvedClients.count)\n"
+        for client in snapshot.policy.approvedClients {
+            let name = DiagnosticText.singleLine(client.name)
+            let bundleID = client.bundleIdentifier.map(DiagnosticText.singleLine) ?? "unknown"
+            let identityType: String
+            if client.designatedRequirement != nil {
+                identityType = "signedRequirement"
+            } else if client.codeHash != nil {
+                identityType = "adHocCodeHash"
+            } else {
+                identityType = "unavailable"
+            }
+            summary += "  approvedClient: \(name) bundleID=\(bundleID) identityType=\(identityType) access=\(client.accessLevel.rawValue)\n"
+        }
+        summary += "pendingApprovalCount: \(pendingApprovals.count)\n"
+        if let request = pendingApprovalRequest {
+            summary += "currentApprovalRequest: \(DiagnosticText.singleLine(request.client.name)) requestedAccess=\(request.requestedAccess?.rawValue ?? "unspecified")\n"
+        } else {
+            summary += "currentApprovalRequest: nil\n"
+        }
+        summary += "canRepairPolicy: \(canRepairPolicy)\n"
+        summary += "policyError: \(errorMessage.map(DiagnosticText.singleLine) ?? "nil")\n"
+        return summary
+    }
+
     func isAuthorized(_ identity: SpaceAPIPeerIdentity?) -> Bool {
         let snapshot = policySnapshot()
         return SpaceAPIAuthorization.isAuthorized(identity, restricted: snapshot.policy.isRestricted,
@@ -101,6 +131,11 @@ final class SpaceAPIAccessController: ObservableObject {
         var updated = currentPolicy()
         updated.isRestricted = isRestricted
         guard persistAndApply(updated) else { return }
+        DiagnosticEventLog.shared.record(
+            subsystem: "SpaceAPI.Access",
+            level: "info",
+            "Access restriction set to \(isRestricted)."
+        )
         if !isRestricted {
             finishPendingApprovalsForUnrestrictedMode()
         }
@@ -117,19 +152,38 @@ final class SpaceAPIAccessController: ObservableObject {
             updated.approvedClients.removeAll { $0.id == client.id }
             updated.approvedClients.append(client)
             updated.approvedClients.sort { $0.name.localizedStandardCompare($1.name) == .orderedAscending }
-            if persistAndApply(updated), pendingApprovalRequest?.client.id == client.id {
-                finishPendingApproval(with: client.accessLevel, persistApproval: false)
+            if persistAndApply(updated) {
+                DiagnosticEventLog.shared.record(
+                    subsystem: "SpaceAPI.Access",
+                    level: "info",
+                    "Approved application \(client.name) with access=\(client.accessLevel.rawValue)."
+                )
+                if pendingApprovalRequest?.client.id == client.id {
+                    finishPendingApproval(with: client.accessLevel, persistApproval: false)
+                }
             }
         } catch {
             errorMessage = error.localizedDescription
+            DiagnosticEventLog.shared.record(
+                subsystem: "SpaceAPI.Access",
+                level: "error",
+                "Could not approve selected application: \(error.localizedDescription)"
+            )
         }
     }
 
     @MainActor
     func revokeClient(id: String) {
         var updated = currentPolicy()
+        let clientName = updated.approvedClients.first(where: { $0.id == id })?.name ?? "unknown"
         updated.approvedClients.removeAll { $0.id == id }
-        persistAndApply(updated)
+        if persistAndApply(updated) {
+            DiagnosticEventLog.shared.record(
+                subsystem: "SpaceAPI.Access",
+                level: "info",
+                "Revoked application \(clientName)."
+            )
+        }
     }
 
     @MainActor
@@ -137,7 +191,13 @@ final class SpaceAPIAccessController: ObservableObject {
         var updated = currentPolicy()
         guard let index = updated.approvedClients.firstIndex(where: { $0.id == id }) else { return }
         updated.approvedClients[index].accessLevel = accessLevel
-        persistAndApply(updated)
+        if persistAndApply(updated) {
+            DiagnosticEventLog.shared.record(
+                subsystem: "SpaceAPI.Access",
+                level: "info",
+                "Changed access for \(updated.approvedClients[index].name) to \(accessLevel.rawValue)."
+            )
+        }
     }
 
     @MainActor
@@ -146,12 +206,22 @@ final class SpaceAPIAccessController: ObservableObject {
         requestedAccess: SpaceAPIRequestAccess?,
         completion: @escaping () -> Void
     ) {
+        DiagnosticEventLog.shared.record(
+            subsystem: "SpaceAPI.Access",
+            level: "info",
+            "Access requested by \(client.name); requestedAccess=\(requestedAccess?.rawValue ?? "unspecified")."
+        )
         guard isRestrictedForSettings else {
             completion()
             return
         }
 
         if currentPolicy().approvedClients.contains(where: { $0.id == client.id && $0.accessLevel == .noAccess }) {
+            DiagnosticEventLog.shared.record(
+                subsystem: "SpaceAPI.Access",
+                level: "warning",
+                "Ignored access request from \(client.name): access is explicitly denied."
+            )
             completion()
             return
         }
@@ -159,12 +229,22 @@ final class SpaceAPIAccessController: ObservableObject {
         let now = Date()
         deniedRequestUntil = deniedRequestUntil.filter { $0.value > now }
         if deniedRequestUntil[client.id] != nil {
+            DiagnosticEventLog.shared.record(
+                subsystem: "SpaceAPI.Access",
+                level: "warning",
+                "Ignored access request from \(client.name): denial cooldown is active."
+            )
             completion()
             return
         }
 
         if var pending = pendingApprovals[client.id] {
             guard pending.completions.count < maximumPendingRequestsPerApp else {
+                DiagnosticEventLog.shared.record(
+                    subsystem: "SpaceAPI.Access",
+                    level: "warning",
+                    "Ignored access request from \(client.name): per-app pending request limit reached."
+                )
                 completion()
                 return
             }
@@ -181,6 +261,11 @@ final class SpaceAPIAccessController: ObservableObject {
         }
 
         guard pendingApprovals.count < maximumPendingApplications else {
+            DiagnosticEventLog.shared.record(
+                subsystem: "SpaceAPI.Access",
+                level: "warning",
+                "Ignored access request from \(client.name): pending application limit reached."
+            )
             completion()
             return
         }
@@ -320,6 +405,12 @@ final class SpaceAPIAccessController: ObservableObject {
         if !selectionWasPersisted, applyCooldown {
             deniedRequestUntil[client.id] = Date().addingTimeInterval(deniedRequestCooldown)
         }
+
+        DiagnosticEventLog.shared.record(
+            subsystem: "SpaceAPI.Access",
+            level: selectionWasPersisted ? "info" : "warning",
+            "Access request for \(client.name) resolved as \(accessLevel?.rawValue ?? "denied"); persisted=\(selectionWasPersisted)."
+        )
 
         pending.completions.forEach { $0() }
         showNextPendingApproval()
