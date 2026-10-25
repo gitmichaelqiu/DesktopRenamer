@@ -91,9 +91,9 @@ To resolve this, go to System Settings → the bottom of Privacy & Security → 
 >
 > Thanks [@timttate](https://github.com/timttate) for finding this [thread](https://github.com/luanti-org/luanti/issues/12033) with the solution by [@animaux](https://github.com/animaux).
 
-## Settings Export
+## Settings Transfer
 
-Use Settings → General → Settings Export to save a versioned JSON file containing custom space names and app preferences, including shortcuts, gesture behavior, launcher ordering, and label appearance. SpaceAPI settings, usage history, operating-system permissions, and display-specific label positions are excluded.
+Use Settings → General → Settings Transfer to export preferences and custom space names to a versioned JSON file, or import a file to restore them. The import previews how many custom space names can be matched and asks for confirmation before applying settings. SpaceAPI settings, usage history, operating-system permissions, and display-specific label positions are excluded. Space names match by their persistent SpaceAPI ID when possible, with display and desktop position used when importing onto another Mac.
 
 ## 🛜 API & Apple Script
 

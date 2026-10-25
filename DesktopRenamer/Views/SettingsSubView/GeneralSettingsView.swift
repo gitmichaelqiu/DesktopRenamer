@@ -17,8 +17,9 @@ struct GeneralSettingsView: View {
     @State private var isStatusBarHidden: Bool = StatusBarController.isStatusBarHidden
     @State private var showDiagnosticSheet: Bool = false
     @State private var showSpaceAPIAccessSettings: Bool = false
-    @State private var showExportError: Bool = false
-    @State private var exportError: String = ""
+    @State private var showSettingsFileError: Bool = false
+    @State private var settingsFileErrorTitle: String = ""
+    @State private var settingsFileError: String = ""
 
 
     var body: some View {
@@ -99,13 +100,24 @@ struct GeneralSettingsView: View {
                     }
                 }
 
-                SettingsSection("Settings.General.Export") {
+                SettingsSection("Settings.General.Transfer") {
                     SettingsRow(
                         "Settings.General.Export.Settings",
                         helperText: "Settings.General.Export.Helper"
                     ) {
                         Button("Settings.General.Export.Button") {
                             exportSettings()
+                        }
+                    }
+
+                    Divider()
+
+                    SettingsRow(
+                        "Settings.General.Import.Settings",
+                        helperText: "Settings.General.Import.Helper"
+                    ) {
+                        Button("Settings.General.Import.Button") {
+                            importSettings()
                         }
                     }
                 }
@@ -180,10 +192,10 @@ struct GeneralSettingsView: View {
                 )
             }
         }
-        .alert("Settings.General.Export.Error.Title", isPresented: $showExportError) {
+        .alert(Text(settingsFileErrorTitle), isPresented: $showSettingsFileError) {
             Button("OK", role: .cancel) {}
         } message: {
-            Text(exportError)
+            Text(settingsFileError)
         }
     }
 
@@ -257,9 +269,101 @@ struct GeneralSettingsView: View {
         }
     }
 
+    private func importSettings() {
+        guard AppDelegate.shared?.gestureManager != nil,
+              AppDelegate.shared?.hotkeyManager != nil else {
+            presentSettingsFileError(
+                title: "Settings.General.Import.Error.Title",
+                message: NSLocalizedString("Settings.General.Import.Error.Unavailable", comment: "")
+            )
+            return
+        }
+
+        let panel = NSOpenPanel()
+        panel.canChooseDirectories = false
+        panel.canChooseFiles = true
+        panel.resolvesAliases = true
+        panel.allowedContentTypes = [.json]
+
+        guard let window = NSApp.suitableSheetWindow else {
+            presentSettingsFileError(
+                title: "Settings.General.Import.Error.Title",
+                message: NSLocalizedString("Settings.General.Import.Error.Unavailable", comment: "")
+            )
+            return
+        }
+
+        panel.beginSheetModal(for: window) { response in
+            guard response == .OK, let url = panel.url else { return }
+            let didStartAccessing = url.startAccessingSecurityScopedResource()
+            defer {
+                if didStartAccessing {
+                    url.stopAccessingSecurityScopedResource()
+                }
+            }
+
+            do {
+                let data = try Data(contentsOf: url)
+                let plan = try SettingsImportService.makePlan(from: data, spaceManager: spaceManager)
+                confirmSettingsImport(plan)
+            } catch let error as SettingsImportService.ImportError {
+                presentSettingsFileError(
+                    title: "Settings.General.Import.Error.Title",
+                    message: error.localizedDescription
+                )
+            } catch {
+                presentSettingsFileError(
+                    title: "Settings.General.Import.Error.Title",
+                    message: NSLocalizedString("Settings.General.Import.Error.Read", comment: "")
+                )
+            }
+        }
+    }
+
+    private func confirmSettingsImport(_ plan: SettingsImportService.Plan) {
+        guard let appDelegate = AppDelegate.shared,
+              let gestureManager = appDelegate.gestureManager,
+              let hotkeyManager = appDelegate.hotkeyManager,
+              let window = NSApp.suitableSheetWindow else {
+            presentSettingsFileError(
+                title: "Settings.General.Import.Error.Title",
+                message: NSLocalizedString("Settings.General.Import.Error.Unavailable", comment: "")
+            )
+            return
+        }
+
+        let alert = NSAlert()
+        alert.messageText = NSLocalizedString("Settings.General.Import.Confirm.Title", comment: "")
+        alert.informativeText = String(
+            format: NSLocalizedString("Settings.General.Import.Confirm.Message", comment: ""),
+            Int64(plan.spaceNameAssignments.count),
+            Int64(plan.unmatchedSpaceNameCount)
+        )
+        alert.alertStyle = .warning
+        alert.addButton(withTitle: NSLocalizedString("Settings.General.Import.Confirm.Button", comment: ""))
+        alert.addButton(withTitle: NSLocalizedString("Button.Cancel", comment: ""))
+
+        alert.beginSheetModal(for: window) { response in
+            guard response == .alertFirstButtonReturn else { return }
+            SettingsImportService.apply(
+                plan,
+                spaceManager: spaceManager,
+                labelManager: labelManager,
+                gestureManager: gestureManager,
+                hotkeyManager: hotkeyManager,
+                launcherViewModel: LauncherWindowController.shared.viewModel
+            )
+        }
+    }
+
     private func presentExportError(_ message: String) {
-        exportError = message
-        showExportError = true
+        presentSettingsFileError(title: "Settings.General.Export.Error.Title", message: message)
+    }
+
+    private func presentSettingsFileError(title: String, message: String) {
+        settingsFileErrorTitle = NSLocalizedString(title, comment: "")
+        settingsFileError = message
+        showSettingsFileError = true
     }
 
     private func resetNames() {
