@@ -37,7 +37,7 @@ struct HUDView: View {
                     Image(nsImage: appIcon)
                         .resizable()
                         .aspectRatio(contentMode: .fit)
-                        .frame(width: 22, height: 22)
+                        .frame(width: 24, height: 24)
                         .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
                 } else if let systemImage {
                     Image(systemName: systemImage)
@@ -252,6 +252,7 @@ class HUDWindowController: NSWindowController {
             if #available(macOS 26.0, *) {
                 let glassView = NSGlassEffectView(frame: .zero)
                 glassView.cornerRadius = 26
+                glassView.tintColor = NSColor.white.withAlphaComponent(0.06)
                 glassView.contentView = container
                 surfaceView = glassView
             } else {
