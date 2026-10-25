@@ -1,6 +1,7 @@
 import AppKit
 import ServiceManagement
 import SwiftUI
+import UniformTypeIdentifiers
 
 struct GeneralSettingsView: View {
     @ObservedObject var spaceManager: SpaceManager
@@ -16,6 +17,8 @@ struct GeneralSettingsView: View {
     @State private var isStatusBarHidden: Bool = StatusBarController.isStatusBarHidden
     @State private var showDiagnosticSheet: Bool = false
     @State private var showSpaceAPIAccessSettings: Bool = false
+    @State private var showExportError: Bool = false
+    @State private var exportError: String = ""
 
 
     var body: some View {
@@ -96,6 +99,17 @@ struct GeneralSettingsView: View {
                     }
                 }
 
+                SettingsSection("Settings.General.Export") {
+                    SettingsRow(
+                        "Settings.General.Export.Settings",
+                        helperText: "Settings.General.Export.Helper"
+                    ) {
+                        Button("Settings.General.Export.Button") {
+                            exportSettings()
+                        }
+                    }
+                }
+
                 SettingsSection("Settings.General.Advanced") {
                     SettingsRow(
                         "Settings.General.Advanced.EnableAPI",
@@ -166,6 +180,11 @@ struct GeneralSettingsView: View {
                 )
             }
         }
+        .alert("Settings.General.Export.Error.Title", isPresented: $showExportError) {
+            Button("OK", role: .cancel) {}
+        } message: {
+            Text(exportError)
+        }
     }
 
     private func getLaunchAtLoginState() -> Bool {
@@ -193,6 +212,54 @@ struct GeneralSettingsView: View {
         }
 
         UpdateManager.shared.updaterController.checkForUpdates(nil)
+    }
+
+    private func exportSettings() {
+        guard let appDelegate = AppDelegate.shared,
+              let gestureManager = appDelegate.gestureManager,
+              let hotkeyManager = appDelegate.hotkeyManager else {
+            presentExportError(NSLocalizedString("Settings.General.Export.Error.Unavailable", comment: ""))
+            return
+        }
+
+        do {
+            let data = try SettingsExportService.makeExport(
+                spaceManager: spaceManager,
+                labelManager: labelManager,
+                gestureManager: gestureManager,
+                hotkeyManager: hotkeyManager,
+                launcherViewModel: LauncherWindowController.shared.viewModel
+            )
+
+            let panel = NSSavePanel()
+            panel.canCreateDirectories = true
+            panel.showsTagField = false
+            panel.allowedContentTypes = [.json]
+            let formatter = DateFormatter()
+            formatter.dateFormat = "yyyyMMdd_HHmmss"
+            panel.nameFieldStringValue = "DesktopRenamer_Settings_\(formatter.string(from: Date())).json"
+
+            guard let window = NSApp.suitableSheetWindow else {
+                presentExportError(NSLocalizedString("Settings.General.Export.Error.Unavailable", comment: ""))
+                return
+            }
+
+            panel.beginSheetModal(for: window) { response in
+                guard response == .OK, let url = panel.url else { return }
+                do {
+                    try data.write(to: url, options: .atomic)
+                } catch {
+                    presentExportError(error.localizedDescription)
+                }
+            }
+        } catch {
+            presentExportError(error.localizedDescription)
+        }
+    }
+
+    private func presentExportError(_ message: String) {
+        exportError = message
+        showExportError = true
     }
 
     private func resetNames() {
