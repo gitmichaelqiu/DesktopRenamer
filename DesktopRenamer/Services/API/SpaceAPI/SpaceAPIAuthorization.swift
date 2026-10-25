@@ -78,6 +78,35 @@ struct SpaceAPIPeerIdentity: Equatable {
     let codeHash: String?
 }
 
+struct SpaceAPIAccessPolicy: Codable, Equatable {
+    var isRestricted: Bool
+    var isAppleScriptRestricted: Bool
+    var approvedClients: [SpaceAPIApprovedClient]
+
+    init(
+        isRestricted: Bool = true,
+        isAppleScriptRestricted: Bool = false,
+        approvedClients: [SpaceAPIApprovedClient] = []
+    ) {
+        self.isRestricted = isRestricted
+        self.isAppleScriptRestricted = isAppleScriptRestricted
+        self.approvedClients = approvedClients
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case isRestricted
+        case isAppleScriptRestricted
+        case approvedClients
+    }
+
+    init(from decoder: Decoder) throws {
+        let values = try decoder.container(keyedBy: CodingKeys.self)
+        isRestricted = try values.decodeIfPresent(Bool.self, forKey: .isRestricted) ?? true
+        isAppleScriptRestricted = try values.decodeIfPresent(Bool.self, forKey: .isAppleScriptRestricted) ?? false
+        approvedClients = try values.decodeIfPresent([SpaceAPIApprovedClient].self, forKey: .approvedClients) ?? []
+    }
+}
+
 enum SpaceAPIAuthorization {
     static func authorizedRecipients<Client>(
         from clients: [Client],
@@ -120,13 +149,20 @@ enum SpaceAPIAuthorization {
         guard restricted else { return .fullAccess }
         guard let identity else { return .noAccess }
 
-        return approvedClients.first { approved in
+        return approvedClient(for: identity, in: approvedClients)?.accessLevel ?? .noAccess
+    }
+
+    static func approvedClient(
+        for identity: SpaceAPIPeerIdentity,
+        in approvedClients: [SpaceAPIApprovedClient]
+    ) -> SpaceAPIApprovedClient? {
+        approvedClients.first { approved in
             if let requirement = approved.designatedRequirement,
                let peerRequirement = identity.designatedRequirement,
                requirement == peerRequirement {
                 return true
             }
             return approved.codeHash != nil && approved.codeHash == identity.codeHash
-        }?.accessLevel ?? .noAccess
+        }
     }
 }

@@ -412,12 +412,72 @@
         }
       }
     },
+    "All apps are blocked while either access restriction is enabled." : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "启用任一访问限制时，所有未添加的应用都会被阻止。"
+          }
+        }
+      }
+    },
     "App Permissions" : {
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "应用权限"
+          }
+        }
+      }
+    },
+    "App access levels apply to both restricted APIs." : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "应用访问级别同时适用于受限的 API。"
+          }
+        }
+      }
+    },
+    "AppleScript Access" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "AppleScript 访问权限"
+          }
+        }
+      }
+    },
+    "Restrict AppleScript access" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "限制 AppleScript 访问"
+          }
+        }
+      }
+    },
+    "macOS Automation permission is still required separately." : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "仍需单独授予 macOS 自动化权限。"
+          }
+        }
+      }
+    },
+    "%@ would like to use AppleScript with DesktopRenamer." : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ 想要通过 AppleScript 控制 DesktopRenamer。"
           }
         }
       }
@@ -2938,22 +2998,12 @@
         }
       }
     },
-    "Resetting the unreadable policy clears the app permissions. SpaceAPI stays restricted until permissions are set again." : {
+    "Resetting the unreadable policy clears app permissions. SpaceAPI and AppleScript stay restricted until access is configured again." : {
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "重置无法读取的策略会清除应用权限。SpaceAPI 将继续限制访问，直到重新设置权限。"
-          }
-        }
-      }
-    },
-    "Resetting the unreadable policy clears the approved app list. SpaceAPI stays restricted until you approve apps again." : {
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "重置后将清除无法读取的已批准应用列表。重新批准应用前，SpaceAPI 将继续受到限制。"
+            "value" : "重置无法读取的策略会清除应用权限。在重新配置访问权限前，SpaceAPI 和 AppleScript 仍会受到限制。"
           }
         }
       }
@@ -4571,6 +4621,76 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "无法验证 SpaceAPI 访问策略，访问限制仍保持启用。"
+          }
+        }
+      }
+    },
+    "The AppleScript access policy could not be verified. Access remains restricted." : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "无法验证 AppleScript 访问策略。访问仍受限制。"
+          }
+        }
+      }
+    },
+    "The calling app could not be verified. AppleScript access remains restricted." : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "无法验证调用应用。AppleScript 访问仍受限制。"
+          }
+        }
+      }
+    },
+    "The calling app could not be identified. AppleScript access remains restricted." : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "无法识别调用应用。AppleScript 访问仍受限制。"
+          }
+        }
+      }
+    },
+    "AppleScript access was not approved." : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "AppleScript 访问未获批准。"
+          }
+        }
+      }
+    },
+    "The AppleScript access decision could not be saved. Access remains restricted." : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "无法保存 AppleScript 访问决定。访问仍受限制。"
+          }
+        }
+      }
+    },
+    "This app is not allowed to use AppleScript with DesktopRenamer." : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "此应用无权通过 AppleScript 使用 DesktopRenamer。"
+          }
+        }
+      }
+    },
+    "This app is not allowed to make changes using AppleScript." : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "此应用无权通过 AppleScript 更改内容。"
           }
         }
       }

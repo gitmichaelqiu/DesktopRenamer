@@ -39,7 +39,7 @@ struct SpaceAPIAccessSettingsView: View {
             }
             Button("Cancel", role: .cancel) {}
         } message: {
-            Text("Resetting the unreadable policy clears the app permissions. SpaceAPI stays restricted until permissions are set again.")
+            Text("Resetting the unreadable policy clears app permissions. SpaceAPI and AppleScript stay restricted until access is configured again.")
         }
         .alert("Clear SpaceAPI usage history?", isPresented: $showClearUsageConfirmation) {
             Button("Clear", role: .destructive) {
@@ -123,8 +123,28 @@ struct SpaceAPIAccessSettingsView: View {
                         }
                     }
 
-                    if accessController.isRestrictedForSettings {
-                        SettingsSection("App Permissions") {
+                    SettingsSection("AppleScript Access") {
+                        SettingsRow(
+                            "Restrict AppleScript access",
+                            helperText: "macOS Automation permission is still required separately."
+                        ) {
+                            Toggle(
+                                "",
+                                isOn: Binding(
+                                    get: { accessController.isAppleScriptRestrictedForSettings },
+                                    set: { accessController.setAppleScriptRestricted($0) }
+                                )
+                            )
+                            .labelsHidden()
+                            .toggleStyle(.switch)
+                        }
+                    }
+
+                    if isAnyAccessRestrictionEnabled {
+                        SettingsSection(
+                            "App Permissions",
+                            helperText: "App access levels apply to both restricted APIs."
+                        ) {
                             SettingsRow(
                                 "Add an app",
                                 helperText: "Development builds must be approved again after rebuilding."
@@ -136,7 +156,7 @@ struct SpaceAPIAccessSettingsView: View {
                                 Divider()
 
                                 SettingsRow("No apps added") {
-                                    Text("All apps are blocked while access restriction is enabled.")
+                                    Text("All apps are blocked while either access restriction is enabled.")
                                         .foregroundStyle(.secondary)
                                         .multilineTextAlignment(.trailing)
                                         .fixedSize(horizontal: false, vertical: true)
@@ -166,7 +186,7 @@ struct SpaceAPIAccessSettingsView: View {
                                                 .labelsHidden()
                                                 .pickerStyle(.menu)
                                                 .frame(width: 128)
-                                                .disabled(!accessController.isRestrictedForSettings)
+                                                .disabled(!isAnyAccessRestrictionEnabled)
 
                                                 Button {
                                                     withAnimation(.easeInOut(duration: 0.2)) {
@@ -274,6 +294,10 @@ struct SpaceAPIAccessSettingsView: View {
             ? usageStatistics.hourlyActivity(for: usage.id)
             : usageStatistics.dailyActivity(for: usage.id)
         return buckets.reduce(0) { $0 + $1.requestCount }
+    }
+
+    private var isAnyAccessRestrictionEnabled: Bool {
+        accessController.isRestrictedForSettings || accessController.isAppleScriptRestrictedForSettings
     }
 
     private func chooseApplication() {

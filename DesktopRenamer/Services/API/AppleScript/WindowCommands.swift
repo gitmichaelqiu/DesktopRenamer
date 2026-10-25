@@ -78,7 +78,7 @@ class ReloadSpaceLabelsCommand: NSScriptCommand {
 class GetWindowsCommand: NSScriptCommand {
     override func performDefaultImplementation() -> Any? {
         DiagnosticEventLog.shared.record(subsystem: "AppleScript", level: "info", "Command performed: GetWindowsCommand")
-        guard isAPIEnabled() else { return "API Disabled" }
+        guard isAPIEnabled(access: .read) else { return scriptErrorString ?? "API Disabled" }
         
         // Fetch necessary space data on the main thread.
         let data: ([DesktopSpace], [String: String])? = runOnMain {
@@ -188,7 +188,7 @@ class MoveSpecificWindowToSpaceCommand: NSScriptCommand {
 class GetCurrentSpaceIDCommand: NSScriptCommand {
     override func performDefaultImplementation() -> Any? {
         DiagnosticEventLog.shared.record(subsystem: "AppleScript", level: "info", "Command performed: GetCurrentSpaceIDCommand")
-        guard isAPIEnabled() else { return "API Disabled" }
+        guard isAPIEnabled(access: .read) else { return scriptErrorString ?? "API Disabled" }
         return runOnMain {
             let ids = SpaceHelper.getCurrentSpaceIDs()
             return ids.joined(separator: ",")

@@ -1,10 +1,12 @@
 import Foundation
 import AppKit
+import Carbon
 
 enum DesktopRenamerScriptErrorCode {
     static let apiDisabled = -1
     static let invalidArgument = -2
     static let appUnavailable = -3
+    static let accessDenied = -4
 }
 
 // Resolves MainActor isolation for NSScriptCommand implementation.
@@ -20,13 +22,46 @@ func runOnMain<T>(_ block: @MainActor () -> T) -> T {
 }
 
 extension NSScriptCommand {
-    func isAPIEnabled() -> Bool {
+    func isAPIEnabled(access requiredAccess: SpaceAPIRequestAccess = .write) -> Bool {
         if !SpaceManager.isAPIEnabled {
             self.scriptErrorNumber = DesktopRenamerScriptErrorCode.apiDisabled
             self.scriptErrorString = "API Disabled"
             return false
         }
-        return true
+
+        let accessController: SpaceAPIAccessController? = runOnMain {
+            guard let appDelegate = AppDelegate.shared else { return nil }
+            return appDelegate.spaceManager.spaceAPI?.accessController
+        }
+        guard let accessController else { return failAppUnavailable() }
+        guard accessController.isAppleScriptRestricted else { return true }
+
+        let authenticatedClient = Self.authenticatedAppleScriptClient(for: appleEvent)
+        let denialReason = runOnMain {
+            accessController.appleScriptDenialReason(
+                for: authenticatedClient,
+                requiredAccess: requiredAccess
+            ) { client in
+                AppDelegate.shared.statusBarController?.presentAppleScriptAccessRequest(for: client)
+            }
+        }
+        guard let denialReason else { return true }
+        self.scriptErrorNumber = DesktopRenamerScriptErrorCode.accessDenied
+        self.scriptErrorString = denialReason
+        return false
+    }
+
+    private static func authenticatedAppleScriptClient(
+        for event: NSAppleEventDescriptor?
+    ) -> SpaceAPIAuthenticatedClient? {
+        guard let event else { return nil }
+        let auditTokenDescriptor = event.attributeDescriptor(forKeyword: keyActualSenderAuditToken)
+            ?? event.attributeDescriptor(forKeyword: keySenderAuditTokenAttr)
+        guard let auditTokenDescriptor,
+              auditTokenDescriptor.descriptorType == typeAuditToken else {
+            return nil
+        }
+        return SpaceAPICodeIdentity.authenticatedClient(forAuditToken: auditTokenDescriptor.data)
     }
 
     @discardableResult
@@ -187,7 +222,7 @@ class RenameCurrentSpaceCommand: NSScriptCommand {
 class GetCurrentSpaceNameCommand: NSScriptCommand {
     override func performDefaultImplementation() -> Any? {
         DiagnosticEventLog.shared.record(subsystem: "AppleScript", level: "info", "Command performed: GetCurrentSpaceNameCommand")
-        guard isAPIEnabled() else { return "API Disabled" }
+        guard isAPIEnabled(access: .read) else { return scriptErrorString ?? "API Disabled" }
         return runOnMain {
             if let manager = AppDelegate.shared.spaceManager {
                 return manager.getSpaceName(manager.currentSpaceUUID)
@@ -234,7 +269,7 @@ class RestoreMovedWindowsCommand: NSScriptCommand {
 class GetAPIVersionCommand: NSScriptCommand {
     override func performDefaultImplementation() -> Any? {
         DiagnosticEventLog.shared.record(subsystem: "AppleScript", level: "info", "Command performed: GetAPIVersionCommand")
-        guard isAPIEnabled() else { return "API Disabled" }
+        guard isAPIEnabled(access: .read) else { return scriptErrorString ?? "API Disabled" }
         return DesktopRenamerAPIVersion.current
     }
 }
@@ -242,7 +277,7 @@ class GetAPIVersionCommand: NSScriptCommand {
 class GetAllSpacesCommand: NSScriptCommand {
     override func performDefaultImplementation() -> Any? {
         DiagnosticEventLog.shared.record(subsystem: "AppleScript", level: "info", "Command performed: GetAllSpacesCommand")
-        guard isAPIEnabled() else { return "API Disabled" }
+        guard isAPIEnabled(access: .read) else { return scriptErrorString ?? "API Disabled" }
         return runOnMain {
             guard let manager = AppDelegate.shared.spaceManager else {
                 failAppUnavailable()
