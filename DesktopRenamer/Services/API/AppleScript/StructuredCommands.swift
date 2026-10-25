@@ -11,6 +11,9 @@ private func scriptSpaceRecord(_ space: SpaceAPISpace) -> [String: Any] {
         "isFullscreen": space.isFullscreen,
         "isLocked": space.isLocked
     ]
+    if let managedSpaceID = space.managedSpaceID {
+        record["managedSpaceID"] = managedSpaceID
+    }
     if let appName = space.appName {
         record["appName"] = appName
     }

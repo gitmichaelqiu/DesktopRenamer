@@ -202,6 +202,8 @@ struct SpaceAPIErrorData: Codable, Equatable {
 
 struct SpaceAPISpace: Codable, Equatable {
     let id: String
+    /// Current macOS ManagedSpaceID; older SpaceAPI responses omit this field.
+    let managedSpaceID: String?
     let name: String
     let displayID: String
     let displayName: String
@@ -214,6 +216,7 @@ struct SpaceAPISpace: Codable, Equatable {
 
     init(
         id: String,
+        managedSpaceID: String? = nil,
         name: String,
         displayID: String,
         displayName: String,
@@ -225,6 +228,7 @@ struct SpaceAPISpace: Codable, Equatable {
         isLocked: Bool = false
     ) {
         self.id = id
+        self.managedSpaceID = managedSpaceID
         self.name = name
         self.displayID = displayID
         self.displayName = displayName
@@ -239,6 +243,7 @@ struct SpaceAPISpace: Codable, Equatable {
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         id = try container.decode(String.self, forKey: .id)
+        managedSpaceID = try container.decodeIfPresent(String.self, forKey: .managedSpaceID)
         name = try container.decode(String.self, forKey: .name)
         displayID = try container.decode(String.self, forKey: .displayID)
         displayName = try container.decode(String.self, forKey: .displayName)
@@ -253,6 +258,7 @@ struct SpaceAPISpace: Codable, Equatable {
     func encode(to encoder: Encoder) throws {
         var container = encoder.container(keyedBy: CodingKeys.self)
         try container.encode(id, forKey: .id)
+        try container.encode(managedSpaceID, forKey: .managedSpaceID)
         try container.encode(name, forKey: .name)
         try container.encode(displayID, forKey: .displayID)
         try container.encode(displayName, forKey: .displayName)
@@ -266,6 +272,7 @@ struct SpaceAPISpace: Codable, Equatable {
 
     private enum CodingKeys: String, CodingKey {
         case id
+        case managedSpaceID
         case name
         case displayID
         case displayName
