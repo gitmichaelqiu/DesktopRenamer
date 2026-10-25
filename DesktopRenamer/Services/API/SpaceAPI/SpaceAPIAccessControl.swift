@@ -32,12 +32,10 @@ final class SpaceAPIAccessController: ObservableObject {
     private var pendingApprovals: [String: PendingApproval] = [:]
     private var pendingApprovalOrder: [String] = []
     private var pendingApprovalIDs = Set<String>()
-    private var pendingApprovalTimeout: Task<Void, Never>?
     private var deniedRequestUntil: [String: Date] = [:]
 
     private let maximumPendingApplications = 2
     private let maximumPendingRequestsPerApp = 8
-    private let accessRequestTimeout: TimeInterval = 45
     private let deniedRequestCooldown: TimeInterval = 300
 
     private static let keychainService = "dev.mqiu.DesktopRenamer.SpaceAPI"
@@ -191,8 +189,6 @@ final class SpaceAPIAccessController: ObservableObject {
     @MainActor
     func cancelPendingApprovals() {
         guard !pendingApprovals.isEmpty else { return }
-        pendingApprovalTimeout?.cancel()
-        pendingApprovalTimeout = nil
         pendingApprovalRequest = nil
         let completions = pendingApprovals.values.flatMap(\.completions)
         pendingApprovals.removeAll()
@@ -249,7 +245,10 @@ final class SpaceAPIAccessController: ObservableObject {
 
     @MainActor
     @discardableResult
-    private func persistAndApply(_ updated: SpaceAPIAccessPolicy) -> Bool {
+    private func persistAndApply(
+        _ updated: SpaceAPIAccessPolicy,
+        notifyPolicyChange: Bool = true
+    ) -> Bool {
         do {
             try Self.writePolicy(updated)
             lock.lock()
@@ -260,10 +259,12 @@ final class SpaceAPIAccessController: ObservableObject {
             approvedClients = updated.approvedClients
             canRepairPolicy = false
             errorMessage = nil
-            policyDidChange?()
+            if notifyPolicyChange {
+                policyDidChange?()
+            }
             return true
         } catch {
-            failClosed(after: error)
+            failClosed(after: error, notifyPolicyChange: notifyPolicyChange)
             return false
         }
     }
@@ -276,28 +277,30 @@ final class SpaceAPIAccessController: ObservableObject {
     ) {
         guard let client = pendingApprovalRequest,
               let pending = pendingApprovals.removeValue(forKey: client.id) else { return }
-        pendingApprovalTimeout?.cancel()
-        pendingApprovalTimeout = nil
         pendingApprovalRequest = nil
         pendingApprovalOrder.removeAll { $0 == client.id }
         lock.lock()
         pendingApprovalIDs.remove(client.id)
         lock.unlock()
 
-        var accessWasGranted = false
-        if let accessLevel, accessLevel != .noAccess, persistApproval {
+        var selectionWasPersisted = false
+        if let accessLevel, persistApproval {
             var approvedClient = client
             approvedClient.accessLevel = accessLevel
             var updated = currentPolicy()
             updated.approvedClients.removeAll { $0.id == client.id }
             updated.approvedClients.append(approvedClient)
             updated.approvedClients.sort { $0.name.localizedStandardCompare($1.name) == .orderedAscending }
-            accessWasGranted = persistAndApply(updated)
-        } else if let accessLevel, accessLevel != .noAccess {
-            accessWasGranted = self.accessLevel(for: Self.peerIdentity(for: client)) == accessLevel
+            // Let the denied request send its permission error before the server closes its socket.
+            selectionWasPersisted = persistAndApply(
+                updated,
+                notifyPolicyChange: accessLevel != .noAccess
+            )
+        } else if let accessLevel {
+            selectionWasPersisted = self.accessLevel(for: Self.peerIdentity(for: client)) == accessLevel
         }
 
-        if !accessWasGranted, applyCooldown {
+        if !selectionWasPersisted, applyCooldown {
             deniedRequestUntil[client.id] = Date().addingTimeInterval(deniedRequestCooldown)
         }
 
@@ -322,20 +325,12 @@ final class SpaceAPIAccessController: ObservableObject {
 
             pendingApprovalRequest = pending.client
             accessRequestDidArrive?()
-            let timeout = accessRequestTimeout
-            pendingApprovalTimeout = Task { @MainActor [weak self] in
-                try? await Task.sleep(for: .seconds(timeout))
-                guard !Task.isCancelled else { return }
-                self?.finishPendingApproval(with: nil)
-            }
             return
         }
     }
 
     @MainActor
     private func finishPendingApprovalsForUnrestrictedMode() {
-        pendingApprovalTimeout?.cancel()
-        pendingApprovalTimeout = nil
         pendingApprovalRequest = nil
         let completions = pendingApprovals.values.flatMap(\.completions)
         pendingApprovals.removeAll()
@@ -365,7 +360,7 @@ final class SpaceAPIAccessController: ObservableObject {
     }
 
     @MainActor
-    private func failClosed(after error: Error) {
+    private func failClosed(after error: Error, notifyPolicyChange: Bool = true) {
         lock.lock()
         policy = SpaceAPIAccessPolicy(isRestricted: true, approvedClients: [])
         isStoreUsable = false
@@ -376,7 +371,9 @@ final class SpaceAPIAccessController: ObservableObject {
         errorMessage = error.localizedDescription
         Self.recordPolicyFailure(error, operation: "write")
         cancelPendingApprovals()
-        policyDidChange?()
+        if notifyPolicyChange {
+            policyDidChange?()
+        }
     }
 
     private static func recordPolicyFailure(_ error: Error, operation: String) {

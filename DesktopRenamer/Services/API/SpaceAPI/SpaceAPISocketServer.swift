@@ -129,12 +129,12 @@ final class SpaceAPISocketServer {
         guard let controller else { return }
         let data = Data(payload.utf8)
         let authorizedClients = controller.authorizedRecipients(from: activeClients) { client in
-            SpaceAPIAccessController.identity(forAuditToken: client.auditToken)
+            client.authenticatedClient?.peerIdentity
         }
         for client in authorizedClients {
             client.enqueue(data, authorization: { [weak self, weak client] in
                 guard let self, let client else { return false }
-                return self.isAuthorized(client.auditToken)
+                return self.isAuthorized(client)
             })
         }
     }
@@ -147,8 +147,8 @@ final class SpaceAPISocketServer {
 
         guard let controller else { return }
         for client in activeClients {
-            guard !isAuthorized(client.auditToken),
-                  !controller.isPendingApproval(for: SpaceAPIAccessController.identity(forAuditToken: client.auditToken)) else {
+            guard !isAuthorized(client),
+                  !controller.isPendingApproval(for: client.authenticatedClient?.peerIdentity) else {
                 continue
             }
             client.close()
@@ -181,7 +181,7 @@ final class SpaceAPISocketServer {
                 continue
             }
 
-            let initialRequestDeadline = isAuthorized(client.auditToken)
+            let initialRequestDeadline = isAuthorized(client)
                 ? nil
                 : DispatchTime.now() + .seconds(Self.initialRequestTimeoutSeconds)
             DispatchQueue.global(qos: .userInitiated).async { [weak self, weak client] in
@@ -197,6 +197,7 @@ final class SpaceAPISocketServer {
             remove(client)
         }
 
+        let authenticatedClient = client.authenticatedClient
         var hasCompletedAuthorizedRequest = initialRequestDeadline == nil
         while !client.isClosed {
             let deadline = hasCompletedAuthorizedRequest ? nil : initialRequestDeadline
@@ -209,7 +210,7 @@ final class SpaceAPISocketServer {
             guard let payload = client.readExactly(Int(length), deadline: deadline) else { return }
             guard let text = String(data: payload, encoding: .utf8) else {
                 sendError(to: client, id: nil, code: SpaceAPIJSONRPCCode.parseError, message: "Request is not valid UTF-8.")
-                hasCompletedAuthorizedRequest = isAuthorized(client.auditToken)
+                hasCompletedAuthorizedRequest = isAuthorized(client)
                 continue
             }
 
@@ -219,11 +220,7 @@ final class SpaceAPISocketServer {
             guard let handler else { return }
 
             let semaphore = DispatchSemaphore(value: 0)
-            let identity = SpaceAPIAccessController.identity(forAuditToken: client.auditToken)
-            let requestingApplication = isAuthorized(client.auditToken)
-                ? nil
-                : SpaceAPICodeIdentity.approvedClient(forAuditToken: client.auditToken)
-            handler(text, identity, requestingApplication) { [weak self, weak client] response in
+            handler(text, authenticatedClient?.peerIdentity, authenticatedClient?.application) { [weak self, weak client] response in
                 guard let self, let client else {
                     semaphore.signal()
                     return
@@ -231,9 +228,9 @@ final class SpaceAPISocketServer {
                 let isPermissionDenied = Self.isPermissionDeniedResponse(response)
                 client.enqueue(Data(response.utf8), authorization: { [weak self, weak client] in
                     guard let self, let client else { return false }
-                    return self.isAuthorized(client.auditToken) || isPermissionDenied
+                    return self.isAuthorized(client) || isPermissionDenied
                 }) {
-                    if !self.isAuthorized(client.auditToken) {
+                    if !self.isAuthorized(client) {
                         client.close()
                     }
                     semaphore.signal()
@@ -242,7 +239,7 @@ final class SpaceAPISocketServer {
             if semaphore.wait(timeout: .now() + Self.clientTimeoutSeconds) == .timedOut {
                 return
             }
-            hasCompletedAuthorizedRequest = isAuthorized(client.auditToken)
+            hasCompletedAuthorizedRequest = isAuthorized(client)
         }
     }
 
@@ -252,19 +249,19 @@ final class SpaceAPISocketServer {
         let semaphore = DispatchSemaphore(value: 0)
         client.enqueue(Data(payload.utf8), authorization: { [weak self, weak client] in
             guard let self, let client else { return false }
-            return self.isAuthorized(client.auditToken)
+            return self.isAuthorized(client)
         }) {
             semaphore.signal()
         }
         _ = semaphore.wait(timeout: .now() + 2)
     }
 
-    private func isAuthorized(_ auditToken: Data) -> Bool {
+    private func isAuthorized(_ client: SpaceAPISocketClient) -> Bool {
         stateLock.lock()
         let controller = accessController
         stateLock.unlock()
         guard let controller else { return false }
-        return controller.isAuthorized(SpaceAPIAccessController.identity(forAuditToken: auditToken))
+        return controller.isAuthorized(client.authenticatedClient?.peerIdentity)
     }
 
     private func remove(_ client: SpaceAPISocketClient) {
@@ -310,7 +307,7 @@ final class SpaceAPISocketServer {
 }
 
 private final class SpaceAPISocketClient {
-    let auditToken: Data
+    let authenticatedClient: SpaceAPIAuthenticatedClient?
     private let descriptor: Int32
     private let stateLock = NSLock()
     private let outputQueue = DispatchQueue(label: "dev.mqiu.DesktopRenamer.SpaceAPI.socket.output")
@@ -322,9 +319,10 @@ private final class SpaceAPISocketClient {
         var token = audit_token_t()
         var tokenLength = socklen_t(MemoryLayout<audit_token_t>.size)
         let status = getsockopt(descriptor, SOL_LOCAL, LOCAL_PEERTOKEN, &token, &tokenLength)
-        auditToken = status == 0 && tokenLength == MemoryLayout<audit_token_t>.size
+        let peerToken = status == 0 && tokenLength == MemoryLayout<audit_token_t>.size
             ? Data(bytes: &token, count: MemoryLayout<audit_token_t>.size)
             : Data()
+        authenticatedClient = SpaceAPICodeIdentity.authenticatedClient(forAuditToken: peerToken)
     }
 
     var isClosed: Bool {
