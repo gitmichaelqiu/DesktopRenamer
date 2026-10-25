@@ -70,7 +70,6 @@ struct SwitchSettingsView: View {
                     
                     SettingsRow(
                         "Switch to space number",
-                        helperText: "Choose modifier keys followed by a number.",
                         requirements: [
                             .accessibility(isGranted: permissionManager.hasEventInjectionPermission)
                         ]
@@ -146,7 +145,6 @@ struct SwitchSettingsView: View {
                     
                     SettingsRow(
                         "Move window to space number",
-                        helperText: "Choose modifier keys followed by a number.",
                         requirements: [
                             .accessibility(isGranted: permissionManager.hasEventInjectionPermission)
                         ]

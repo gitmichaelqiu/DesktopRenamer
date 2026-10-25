@@ -1,6 +1,7 @@
 import AppKit
 import ServiceManagement
 import SwiftUI
+import UniformTypeIdentifiers
 
 struct GeneralSettingsView: View {
     @ObservedObject var spaceManager: SpaceManager
@@ -15,6 +16,10 @@ struct GeneralSettingsView: View {
     @State private var isAPIEnabled: Bool = SpaceManager.isAPIEnabled
     @State private var isStatusBarHidden: Bool = StatusBarController.isStatusBarHidden
     @State private var showDiagnosticSheet: Bool = false
+    @State private var showSpaceAPIAccessSettings: Bool = false
+    @State private var showSettingsFileError: Bool = false
+    @State private var settingsFileErrorTitle: String = ""
+    @State private var settingsFileError: String = ""
 
 
     var body: some View {
@@ -48,8 +53,10 @@ struct GeneralSettingsView: View {
                         Toggle("", isOn: $isStatusBarHidden)
                             .labelsHidden()
                             .toggleStyle(.switch)
-                            .onChange(of: isStatusBarHidden) { _ in
-                                StatusBarController.toggleStatusBar()
+                            .onChange(of: isStatusBarHidden) { isHidden in
+                                if StatusBarController.isStatusBarHidden != isHidden {
+                                    StatusBarController.toggleStatusBar()
+                                }
                             }
                     }
 
@@ -109,12 +116,17 @@ struct GeneralSettingsView: View {
                             }
                     }
 
+                    if spaceManager.spaceAPI?.accessController != nil {
+                        Divider()
+
+                        SettingsRow("Settings.General.Advanced.ManageSpaceAPIAccess") {
+                            Button("Manage…") { showSpaceAPIAccessSettings = true }
+                        }
+                    }
+
                     Divider()
 
-                    SettingsRow(
-                        "Diagnostic report",
-                        helperText: "Capture a report to help diagnose issues."
-                    ) {
+                    SettingsRow("Diagnostic report") {
                         Button("Open") {
                             showDiagnosticSheet = true
                         }
@@ -137,6 +149,28 @@ struct GeneralSettingsView: View {
                         .foregroundStyle(.red)
                     }
                 }
+
+                SettingsSection("Settings.General.Transfer") {
+                    SettingsRow(
+                        "Settings.General.Export.Settings",
+                        helperText: "Settings.General.Export.Helper"
+                    ) {
+                        Button("Settings.General.Export.Button") {
+                            exportSettings()
+                        }
+                    }
+
+                    Divider()
+
+                    SettingsRow(
+                        "Settings.General.Import.Settings",
+                        helperText: "Settings.General.Import.Helper"
+                    ) {
+                        Button("Settings.General.Import.Button") {
+                            importSettings()
+                        }
+                    }
+                }
                 Spacer()
             }
             .frame(maxWidth: .infinity, alignment: .topLeading)
@@ -144,7 +178,20 @@ struct GeneralSettingsView: View {
         }
         .onAppear { launchAtLogin = getLaunchAtLoginState() }
         .sheet(isPresented: $showDiagnosticSheet) {
-            DiagnosticSheetView()
+            DiagnosticSheetView(spaceManager: spaceManager)
+        }
+        .sheet(isPresented: $showSpaceAPIAccessSettings) {
+            if let spaceAPI = spaceManager.spaceAPI {
+                SpaceAPIAccessSettingsView(
+                    accessController: spaceAPI.accessController,
+                    usageStatistics: spaceAPI.usageStatistics
+                )
+            }
+        }
+        .alert(Text(settingsFileErrorTitle), isPresented: $showSettingsFileError) {
+            Button("OK", role: .cancel) {}
+        } message: {
+            Text(settingsFileError)
         }
     }
 
@@ -173,6 +220,147 @@ struct GeneralSettingsView: View {
         }
 
         UpdateManager.shared.updaterController.checkForUpdates(nil)
+    }
+
+    private func exportSettings() {
+        guard let appDelegate = AppDelegate.shared,
+              let gestureManager = appDelegate.gestureManager,
+              let hotkeyManager = appDelegate.hotkeyManager else {
+            presentExportError(NSLocalizedString("Settings.General.Export.Error.Unavailable", comment: ""))
+            return
+        }
+
+        do {
+            let data = try SettingsExportService.makeExport(
+                spaceManager: spaceManager,
+                labelManager: labelManager,
+                gestureManager: gestureManager,
+                hotkeyManager: hotkeyManager,
+                launcherViewModel: LauncherWindowController.shared.viewModel
+            )
+
+            let panel = NSSavePanel()
+            panel.canCreateDirectories = true
+            panel.showsTagField = false
+            panel.allowedContentTypes = [.json]
+            let formatter = DateFormatter()
+            formatter.dateFormat = "yyyyMMdd_HHmmss"
+            panel.nameFieldStringValue = "DesktopRenamer_Settings_\(formatter.string(from: Date())).json"
+
+            guard let window = NSApp.suitableSheetWindow else {
+                presentExportError(NSLocalizedString("Settings.General.Export.Error.Unavailable", comment: ""))
+                return
+            }
+
+            panel.beginSheetModal(for: window) { response in
+                guard response == .OK, let url = panel.url else { return }
+                do {
+                    try data.write(to: url, options: .atomic)
+                } catch {
+                    presentExportError(error.localizedDescription)
+                }
+            }
+        } catch {
+            presentExportError(error.localizedDescription)
+        }
+    }
+
+    private func importSettings() {
+        guard AppDelegate.shared?.gestureManager != nil,
+              AppDelegate.shared?.hotkeyManager != nil else {
+            presentSettingsFileError(
+                title: "Settings.General.Import.Error.Title",
+                message: NSLocalizedString("Settings.General.Import.Error.Unavailable", comment: "")
+            )
+            return
+        }
+
+        let panel = NSOpenPanel()
+        panel.canChooseDirectories = false
+        panel.canChooseFiles = true
+        panel.resolvesAliases = true
+        panel.allowedContentTypes = [.json]
+
+        guard let window = NSApp.suitableSheetWindow else {
+            presentSettingsFileError(
+                title: "Settings.General.Import.Error.Title",
+                message: NSLocalizedString("Settings.General.Import.Error.Unavailable", comment: "")
+            )
+            return
+        }
+
+        panel.beginSheetModal(for: window) { response in
+            guard response == .OK, let url = panel.url else { return }
+            let didStartAccessing = url.startAccessingSecurityScopedResource()
+            defer {
+                if didStartAccessing {
+                    url.stopAccessingSecurityScopedResource()
+                }
+            }
+
+            do {
+                let data = try SettingsImportService.readDocument(at: url)
+                let plan = try SettingsImportService.makePlan(from: data, spaceManager: spaceManager)
+                confirmSettingsImport(plan)
+            } catch let error as SettingsImportService.ImportError {
+                presentSettingsFileError(
+                    title: "Settings.General.Import.Error.Title",
+                    message: error.localizedDescription
+                )
+            } catch {
+                presentSettingsFileError(
+                    title: "Settings.General.Import.Error.Title",
+                    message: NSLocalizedString("Settings.General.Import.Error.Read", comment: "")
+                )
+            }
+        }
+    }
+
+    private func confirmSettingsImport(_ plan: SettingsImportService.Plan) {
+        guard let appDelegate = AppDelegate.shared,
+              let gestureManager = appDelegate.gestureManager,
+              let hotkeyManager = appDelegate.hotkeyManager,
+              let window = NSApp.suitableSheetWindow else {
+            presentSettingsFileError(
+                title: "Settings.General.Import.Error.Title",
+                message: NSLocalizedString("Settings.General.Import.Error.Unavailable", comment: "")
+            )
+            return
+        }
+
+        let alert = NSAlert()
+        alert.messageText = NSLocalizedString("Settings.General.Import.Confirm.Title", comment: "")
+        alert.informativeText = String(
+            format: NSLocalizedString("Settings.General.Import.Confirm.Message", comment: ""),
+            Int64(plan.spaceNameAssignments.count),
+            Int64(plan.unmatchedSpaceNameCount)
+        )
+        alert.alertStyle = .warning
+        alert.addButton(withTitle: NSLocalizedString("Settings.General.Import.Confirm.Button", comment: ""))
+        alert.addButton(withTitle: NSLocalizedString("Button.Cancel", comment: ""))
+
+        alert.beginSheetModal(for: window) { response in
+            guard response == .alertFirstButtonReturn else { return }
+            SettingsImportService.apply(
+                plan,
+                spaceManager: spaceManager,
+                labelManager: labelManager,
+                gestureManager: gestureManager,
+                hotkeyManager: hotkeyManager,
+                launcherViewModel: LauncherWindowController.shared.viewModel
+            )
+            isStatusBarHidden = plan.settings.general.isStatusBarHidden
+        }
+    }
+
+    private func presentExportError(_ message: String) {
+        presentSettingsFileError(title: "Settings.General.Export.Error.Title", message: message)
+    }
+
+    private func presentSettingsFileError(title: String, message: String) {
+        settingsFileErrorTitle = NSLocalizedString(title, comment: "")
+        settingsFileError = message
+        showSettingsFileError = true
     }
 
     private func resetNames() {
@@ -215,10 +403,12 @@ struct GeneralSettingsView: View {
     /// Diagnostic collection sheet — start/stop recording and save the report.
     struct DiagnosticSheetView: View {
         @Environment(\.dismiss) var dismiss
+        @ObservedObject var spaceManager: SpaceManager
         @State private var phase: Phase = .idle
         @State private var refreshCounter = 0
         @State private var timer: Timer? = nil
         @State private var savedURL: URL? = nil
+        @State private var showPolicyRepairConfirmation = false
 
         enum Phase {
             case idle       // Show "Start" button
@@ -234,6 +424,38 @@ struct GeneralSettingsView: View {
                     Text("Diagnostic Report")
                         .font(.title2).fontWeight(.bold)
                     Spacer()
+                }
+
+                if let accessController = spaceManager.spaceAPI?.accessController,
+                   accessController.canRepairPolicy {
+                    HStack(spacing: 12) {
+                        Label(
+                            "SpaceAPI access policy could not be verified. Access remains restricted.",
+                            systemImage: "exclamationmark.triangle.fill"
+                        )
+                        .font(.footnote)
+                        .foregroundStyle(.red)
+                        .fixedSize(horizontal: false, vertical: true)
+
+                        Spacer(minLength: 0)
+
+                        Button("Reset…") {
+                            showPolicyRepairConfirmation = true
+                        }
+                    }
+                    .confirmationDialog(
+                        "Reset SpaceAPI access?",
+                        isPresented: $showPolicyRepairConfirmation,
+                        titleVisibility: .visible
+                    ) {
+                        Button("Reset", role: .destructive) {
+                            accessController.repairUnreadablePolicy()
+                            refreshCounter += 1
+                        }
+                        Button("Cancel", role: .cancel) {}
+                    } message: {
+                        Text("Resetting the unreadable policy clears the approved app list. SpaceAPI stays restricted until you approve apps again.")
+                    }
                 }
 
                 // Phase-specific content

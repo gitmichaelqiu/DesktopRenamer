@@ -28,6 +28,7 @@ struct DiagnosticReportBuilder {
         sections.append(makeSpaceManagerInternals())
         sections.append(makeLauncherState())
         sections.append(makeSpaceAPIState())
+        sections.append(makeIdentityMigrationState())
         sections.append(makeUpdaterState())
         sections.append(makeEventLog())
         sections.append(makeWindowList())
@@ -54,12 +55,27 @@ struct DiagnosticReportBuilder {
         if let info = Bundle.main.infoDictionary {
             let version = info["CFBundleShortVersionString"] as? String ?? "?"
             let build = info["CFBundleVersion"] as? String ?? "?"
-            s += "DesktopRenamer: \(version) (build \(build))\n"
+            s += "DesktopRenamer: \(version) (build \(build), bundleID=\(Bundle.main.bundleIdentifier ?? "?"))\n"
         }
         let os = ProcessInfo.processInfo.operatingSystemVersion
-        s += "macOS: \(os.majorVersion).\(os.minorVersion).\(os.patchVersion)\n"
+        s += "macOS: \(os.majorVersion).\(os.minorVersion).\(os.patchVersion) [\(ProcessInfo.processInfo.operatingSystemVersionString)]\n"
+        s += "Application Path: \(Bundle.main.bundleURL.path)\n"
+        s += "Process ID: \(ProcessInfo.processInfo.processIdentifier)\n"
+        s += "Process Launch Date: \(NSRunningApplication.current.launchDate?.description ?? "unknown")\n"
         let uptime = ProcessInfo.processInfo.systemUptime
         s += "Uptime: \(String(format: "%.1f", uptime))s\n"
+        s += "Locale: \(Locale.current.identifier)\n"
+        s += "Time Zone: \(TimeZone.current.identifier)\n"
+        let spacesPreferences = UserDefaults(suiteName: "com.apple.spaces")
+        if let separateSpaces = spacesPreferences?.object(forKey: "spans-displays") as? Bool {
+            s += "Displays Have Separate Spaces: \(separateSpaces)\n"
+        } else {
+            s += "Displays Have Separate Spaces: unknown\n"
+        }
+        var translated: Int32 = 0
+        var translatedSize = MemoryLayout<Int32>.size
+        let translationStatus = sysctlbyname("sysctl.proc_translated", &translated, &translatedSize, nil, 0)
+        s += "Running Under Translation: \(translationStatus == 0 ? translated == 1 : false) (queryAvailable=\(translationStatus == 0))\n"
         if let frontmost = NSWorkspace.shared.frontmostApplication {
             let bundleID = frontmost.bundleIdentifier ?? "?"
             s += "Frontmost Application: \(frontmost.localizedName ?? "?") (bundleID=\(bundleID), pid=\(frontmost.processIdentifier))\n"
@@ -112,6 +128,7 @@ struct DiagnosticReportBuilder {
         s += "Accessibility: \(pm.isAccessibilityGranted ? "Granted" : "Not Granted")\n"
         s += "Event synthesis: \(pm.isEventSynthesisGranted ? "Granted" : "Not Granted")\n"
         s += "Screen capture: \(pm.isScreenCaptureGranted ? "Granted" : "Not Granted")\n"
+        s += "Permission refresh in progress: \(pm.isRestarting)\n"
         return s
     }
 
@@ -341,9 +358,55 @@ struct DiagnosticReportBuilder {
         s += "isAPIEnabled: \(SpaceManager.isAPIEnabled)\n"
         if let api = AppDelegate.shared.spaceManager?.spaceAPI {
             s += "hasActiveListeners: \(api.hasActiveListeners)\n"
+            s += "socketListenerRunning: \(api.socketServer.isRunning)\n"
+            s += "socketEndpoint: \(api.socketServer.isRunning ? SpaceAPISocketServer.endpoint.path : "inactive")\n"
+            s += "socketListenerLastStartupFailure: \(api.socketServer.lastStartupFailure ?? "none")\n"
+            s += "legacyDNCActive: \(api.isLegacyDNCActive)\n"
+            s += "structuredRPCListenerInstalled: \(api.isRPCListenerInstalled)\n"
+            s += "stateBroadcastSubscriptionCount: \(api.broadcastSubscriptionCount)\n"
             s += "currentSnapshotRevision: \(api.currentSnapshotRevision)\n"
+            s += "APIContractVersion: \(DesktopRenamerAPIVersion.current)\n"
+            s += "Access Policy:\n\(api.accessController.diagnosticSummary)"
+            let usages = api.usageStatistics.appUsages
+            s += "usageStatisticsEnabled: \(api.usageStatistics.isEnabled)\n"
+            s += "trackedUsageApplications: \(usages.count)\n"
+            for usage in usages {
+                let readCount = usage.hourlyUsage.reduce(0) { $0 + $1.readRequestCount }
+                let writeCount = usage.hourlyUsage.reduce(0) { $0 + $1.writeRequestCount }
+                let unclassifiedCount = usage.hourlyUsage.reduce(0) { $0 + $1.unclassifiedRequestCount }
+                s += "  usage: \(DiagnosticText.singleLine(usage.name)) lifetime=\(usage.requestCount) last7DaysRead=\(readCount) last7DaysWrite=\(writeCount) last7DaysUnclassified=\(unclassifiedCount) lastUsed=\(usage.lastUsed) detailedHistory=\(usage.hasDetailedHistory)\n"
+            }
         } else {
             s += "spaceAPI: nil\n"
+        }
+        return s
+    }
+
+    private static func makeIdentityMigrationState() -> String {
+        let defaults = UserDefaults.standard
+        var s = "─── Application Identity Migration ───\n"
+        s += "isLegacyBridge: \(DesktopRenamerIdentity.isLegacyBridge)\n"
+        s += "isCurrentApplication: \(DesktopRenamerIdentity.isCurrentApplication)\n"
+        s += "migrationCompleted: \(defaults.bool(forKey: DesktopRenamerIdentity.migrationCompletedKey))\n"
+
+        let stagedPath = defaults.string(forKey: DesktopRenamerIdentity.migrationCleanupStagedPathKey)
+        let backupPath = defaults.string(forKey: DesktopRenamerIdentity.migrationCleanupBackupPathKey)
+        s += "stagedCleanupPending: \(stagedPath != nil) stagedApplicationExists: \(stagedPath.map { FileManager.default.fileExists(atPath: $0) } ?? false)\n"
+        s += "backupCleanupPending: \(backupPath != nil) backupApplicationExists: \(backupPath.map { FileManager.default.fileExists(atPath: $0) } ?? false)\n"
+        s += "launchAtLoginRestorePending: \(defaults.object(forKey: DesktopRenamerIdentity.migrationLaunchAtLoginPendingKey) != nil)\n"
+        s += "launchAcknowledged: \(defaults.bool(forKey: DesktopRenamerIdentity.migrationLaunchAcknowledgedKey))\n"
+
+        let manifestURL = DesktopRenamerMigrationStorage.manifestURL
+        guard FileManager.default.fileExists(atPath: manifestURL.path) else {
+            s += "manifest: absent\n"
+            return s
+        }
+        if let manifest = try? DesktopRenamerMigrationStorage.readManifest(from: manifestURL) {
+            let targetBundleID = DiagnosticText.singleLine(manifest.targetBundleIdentifier)
+            let expectedVersion = DiagnosticText.singleLine(manifest.expectedVersion)
+            s += "manifest: valid schema=\(manifest.schemaVersion) targetBundleID=\(targetBundleID) expectedVersion=\(expectedVersion) launchAtLoginEnabled=\(manifest.launchAtLoginEnabled) ageSeconds=\(Int(Date().timeIntervalSince(manifest.createdAt)))\n"
+        } else {
+            s += "manifest: present but unreadable or invalid\n"
         }
         return s
     }
@@ -360,9 +423,14 @@ struct DiagnosticReportBuilder {
         let log = DiagnosticEventLog.shared
         var s = "─── Event Log ───\n"
         s += "isCollecting: \(log.isCollecting)\n"
+        let ringStatus = log.ringBufferStatus
+        s += "ringBufferEvents: \(ringStatus.eventCount)/\(ringStatus.capacity)\n"
+        s += "ringBufferOverwrittenEvents: \(ringStatus.overwrittenEventCount)\n"
+        s += "sessionEvents: \(log.sessionEventCount)\n"
+        s += "sessionDroppedEvents: \(log.sessionDroppedEventCountSnapshot) (session limit: 20000)\n"
         if let startTime = log.collectionStartTime {
             let df = DateFormatter()
-            df.dateFormat = "yyyy-MM-dd HH:mm:ss"
+            df.dateFormat = "yyyy-MM-dd HH:mm:ss Z"
             s += "collectionStartTime: \(df.string(from: startTime))\n"
         }
         s += "\n─── Event Log (Ring Buffer) ───\n"
@@ -382,14 +450,28 @@ struct DiagnosticReportBuilder {
             return "─── Window List ───\nSpaceManager: nil\n"
         }
         var s = "─── Window List ───\n"
-        var names: [String: String] = [:]
-        for space in sm.spaceNameDict {
-            names[space.id] = sm.getSpaceName(space.id)
+        let spaces = sm.spaceNameDict.sorted {
+            if $0.displayID != $1.displayID { return $0.displayID < $1.displayID }
+            return $0.num < $1.num
         }
-        let raw = SpaceHelper.getWindowsForAllSpaces(spaces: sm.spaceNameDict, spaceNames: names)
-        let lines = raw.components(separatedBy: "\n")
-        for line in lines where !line.isEmpty {
-            s += "  \(line)\n"
+        let windowsBySpaceID = Dictionary(
+            grouping: SpaceHelper.getWindowRecordsForAllSpaces(spaces: spaces),
+            by: \.spaceID
+        )
+
+        for space in spaces {
+            let spaceID = DiagnosticText.delimitedField(space.id)
+            let spaceName = DiagnosticText.delimitedField(sm.getSpaceName(space.id))
+            let displayID = DiagnosticText.delimitedField(space.displayID)
+            let appPath = DiagnosticText.delimitedField(space.appPath ?? "")
+            s += ">\(spaceID)~\(spaceName)~\(displayID)~\(space.num)~\(space.isFullscreen ? 1 : 0)~\(appPath)\n"
+
+            for window in windowsBySpaceID[space.id] ?? [] {
+                let ownerName = DiagnosticText.delimitedField(window.ownerName)
+                let appPath = DiagnosticText.delimitedField(window.appPath ?? "")
+                let title = DiagnosticText.delimitedField(window.title ?? "")
+                s += "  \(window.id)|\(window.pid)|\(ownerName)|\(appPath)|\(title)|\(window.isMinimized ? 1 : 0)|\(window.isHidden ? 1 : 0)\n"
+            }
         }
         return s
     }

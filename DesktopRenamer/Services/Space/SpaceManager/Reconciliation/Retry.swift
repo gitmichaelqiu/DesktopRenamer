@@ -305,6 +305,8 @@ extension SpaceManager {
         spaceChangeRetryWorkItem?.cancel()
         stopPeriodicSpaceLayoutCheck()
         SpaceHelper.stopMonitoring()
-        DistributedNotificationCenter.default().postNotificationName(SpaceAPI.apiToggleNotification, object: nil, userInfo: ["isEnabled": false], deliverImmediately: true)
+        MainActor.assumeIsolated {
+            spaceAPI?.broadcastAPIState(isEnabled: false)
+        }
     }
 }

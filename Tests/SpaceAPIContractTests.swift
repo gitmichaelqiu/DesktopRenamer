@@ -14,7 +14,7 @@ struct SpaceAPIContractTests {
     }
 
     private static func testMethodDefinitions() throws {
-        check(DesktopRenamerAPIContract.version == "1.2.0", "structured API contract version is current")
+        check(DesktopRenamerAPIContract.version == "1.3.0", "structured API contract version is current")
         check(
             DesktopRenamerAPIContract.preferredAPIPrefix == "dev.mqiu.DesktopRenamer",
             "current API notification namespace is preferred"
@@ -38,6 +38,24 @@ struct SpaceAPIContractTests {
         let names = definitions.map(\.name)
         check(Set(names).count == names.count, "method names are unique")
         check(names == DesktopRenamerAPIContract.supportedMethods, "supported methods follow definitions")
+
+        check(
+            definitions.filter { $0.access == .read }.map(\.name) == [
+                "getAPIInfo",
+                "getAPIVersion",
+                "getSpaceSnapshot",
+                "getCurrentSpaceName",
+                "getCurrentSpaceID",
+                "getAllSpaces",
+                "getWindows"
+            ],
+            "only non-mutating SpaceAPI methods are available to read-only clients"
+        )
+        check(
+            definitions.filter { $0.access == .write }.contains { $0.name == "focusWindow" } &&
+                definitions.filter { $0.access == .write }.contains { $0.name == "executeWindowAction" },
+            "window focus and actions require full access"
+        )
 
         for definition in definitions {
             check(

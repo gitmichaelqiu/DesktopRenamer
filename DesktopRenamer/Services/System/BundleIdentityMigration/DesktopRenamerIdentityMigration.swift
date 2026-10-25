@@ -107,6 +107,11 @@ enum DesktopRenamerIdentityMigration {
                 forKey: DesktopRenamerIdentity.migrationLaunchAtLoginPendingKey
             )
         } catch {
+            DiagnosticEventLog.shared.record(
+                subsystem: "IdentityMigration",
+                level: "error",
+                "Failed to restore launch-at-login state: \(error.localizedDescription)"
+            )
             print("IdentityMigration: failed to restore launch at login: \(error)")
         }
     }
@@ -119,6 +124,11 @@ enum DesktopRenamerIdentityMigration {
         }
 
         guard attemptsRemaining > 0 else {
+            DiagnosticEventLog.shared.record(
+                subsystem: "IdentityMigration",
+                level: "error",
+                "Staged application cleanup remains pending after the retry limit."
+            )
             print("IdentityMigration: staged application cleanup still pending after retry limit")
             return
         }
@@ -190,8 +200,18 @@ enum DesktopRenamerIdentityMigration {
                 // /Applications. Keep the durable cleanup marker so a later
                 // launch can retry after the user has resolved the
                 // permission, but do not spin and repeat the same warning.
+                DiagnosticEventLog.shared.record(
+                    subsystem: "IdentityMigration",
+                    level: "warning",
+                    "Staged application cleanup is pending because macOS denied removal permission."
+                )
                 return .permissionDenied
             }
+            DiagnosticEventLog.shared.record(
+                subsystem: "IdentityMigration",
+                level: "error",
+                "Staged application cleanup failed and will be retried: \(error.localizedDescription)"
+            )
             print("IdentityMigration: staged application cleanup deferred: \(error)")
             return .retryable
         }

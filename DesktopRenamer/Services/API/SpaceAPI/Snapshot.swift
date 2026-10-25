@@ -64,20 +64,6 @@ extension SpaceAPI {
         return String(decoding: data, as: UTF8.self)
     }
 
-    func makeWindowsSnapshotPayload(_ manager: SpaceManager, revision: UInt64) -> SpaceAPIWindowsSnapshot {
-        let spaces = manager.spaceNameDict
-        return SpaceAPIWindowsSnapshot(
-            apiVersion: DesktopRenamerAPIVersion.current,
-            revision: revision,
-            timestamp: Self.apiTimestamp(),
-            spaces: makeSpaceRecords(manager),
-            windows: makeSpaceAPIWindowRecords(
-                SpaceHelper.getWindowRecordsForAllSpaces(spaces: spaces),
-                spaces: spaces
-            )
-        )
-    }
-
     func makeWindowsSnapshotPayloadAsync(_ manager: SpaceManager, revision: UInt64) async -> SpaceAPIWindowsSnapshot {
         let spaces = manager.spaceNameDict
         let spaceRecords = makeSpaceRecords(manager)
@@ -95,20 +81,24 @@ extension SpaceAPI {
         )
     }
 
-    func makeWindowsSnapshot(_ manager: SpaceManager, revision: UInt64) throws -> String {
-        try encodeJSON(makeWindowsSnapshotPayload(manager, revision: revision))
-    }
-
     func makeAPIInfo() -> SpaceAPIInfo {
-        SpaceAPIInfo(
+        let accessRestricted = accessController.isRestricted
+        let transports: [String] = socketServer.isRunning
+            ? (accessRestricted ? ["unixDomainSocket"] : ["unixDomainSocket", "distributedNotificationCenter"])
+            : (accessRestricted ? [] : ["distributedNotificationCenter"])
+        return SpaceAPIInfo(
             contractVersion: DesktopRenamerAPIVersion.current,
             jsonRPCVersion: DesktopRenamerAPIContract.jsonRPCVersion,
             supportedMethods: DesktopRenamerAPIContract.supportedMethods,
-            legacyNotifications: true,
-            legacyCompatibility: "supported",
+            legacyNotifications: !accessRestricted,
+            legacyCompatibility: accessRestricted ? "disabledByAccessPolicy" : "supported",
             eventNotifications: true,
             eventCapabilities: ["stateChanged"],
-            maxPayloadBytes: DesktopRenamerAPIContract.maxPayloadBytes
+            maxPayloadBytes: DesktopRenamerAPIContract.maxPayloadBytes,
+            transports: transports,
+            socketEndpoint: socketServer.isRunning ? SpaceAPISocketServer.endpoint.path : nil,
+            accessRestricted: accessRestricted,
+            returnToOriginalSpace: spaceManager?.returnToOriginalAfterBatchMove ?? true
         )
     }
 
@@ -184,16 +174,6 @@ extension SpaceAPI {
             return "Main Display"
         }
         return "Display"
-    }
-
-    private func encodeJSON<T: Encodable>(_ value: T) throws -> String {
-        let encoder = JSONEncoder()
-        encoder.outputFormatting = [.sortedKeys]
-        let data = try encoder.encode(value)
-        guard data.count <= DesktopRenamerAPIContract.maxPayloadBytes else {
-            throw SpaceAPIContractError.payloadTooLarge
-        }
-        return String(decoding: data, as: UTF8.self)
     }
 
     private static func apiTimestamp() -> String {

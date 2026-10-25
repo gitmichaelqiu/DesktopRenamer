@@ -44,10 +44,7 @@ struct PermissionsSettingsView: View {
                     if !permissionManager.hasAllRequiredPermissions {
                         Divider()
 
-                        SettingsRow(
-                            "Restart DesktopRenamer",
-                            helperText: "Restart DesktopRenamer after changing permissions."
-                        ) {
+                        SettingsRow("Restart DesktopRenamer") {
                             Button {
                                 permissionManager.restartApplication()
                             } label: {

@@ -8,6 +8,7 @@ class StatusBarController: NSObject {
     var popover: NSPopover
     var cancellables = Set<AnyCancellable>()
     var settingsWindowController: NSWindowController?
+    private var isPresentingSpaceAPIAccessRequest = false
     
     var renameItem: NSMenuItem?
     var showActiveLabelsMenuItem: NSMenuItem?
@@ -40,6 +41,7 @@ class StatusBarController: NSObject {
         StatusBarController.statusItem.isVisible = !StatusBarController.isStatusBarHidden
         
         setupObservers()
+        observeSpaceAPIAccessRequests()
     }
     
     deinit {
@@ -101,6 +103,92 @@ class StatusBarController: NSObject {
                 self?.rebuildMenu()
             }
             .store(in: &cancellables)
+    }
+
+    private func observeSpaceAPIAccessRequests() {
+        guard let accessController = spaceManager.spaceAPI?.accessController else { return }
+        accessController.accessRequestDidArrive = { [weak self] in
+            Task { @MainActor [weak self] in
+                self?.presentSpaceAPIAccessRequest()
+            }
+        }
+        if accessController.pendingApprovalRequest != nil {
+            presentSpaceAPIAccessRequest()
+        }
+    }
+
+    @MainActor
+    private func presentSpaceAPIAccessRequest() {
+        guard !isPresentingSpaceAPIAccessRequest else { return }
+        guard let accessController = spaceManager.spaceAPI?.accessController,
+              let request = accessController.pendingApprovalRequest else { return }
+        let requestingApplication = request.client
+        isPresentingSpaceAPIAccessRequest = true
+        defer { isPresentingSpaceAPIAccessRequest = false }
+
+        let alert = NSAlert()
+        alert.alertStyle = .informational
+        alert.messageText = String(
+            format: NSLocalizedString("%@ would like to use SpaceAPI.", comment: ""),
+            requestingApplication.name
+        )
+        alert.informativeText = NSLocalizedString("Choose the access level to grant.", comment: "")
+        alert.icon = spaceAPIAccessRequestIcon(for: requestingApplication.applicationPath)
+        alert.addButton(withTitle: NSLocalizedString("Read Only", comment: ""))
+        if request.requestedAccess != .read {
+            alert.addButton(withTitle: NSLocalizedString("Read & Write", comment: ""))
+        }
+        alert.addButton(withTitle: NSLocalizedString("Don't Allow", comment: ""))
+        alert.buttons.first?.keyEquivalent = "\r"
+        alert.buttons.last?.keyEquivalent = "\u{1b}"
+        alert.window.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
+
+        NSApp.activate(ignoringOtherApps: true)
+        let response = alert.runModal()
+        let accessLevel: SpaceAPIClientAccessLevel?
+        switch response {
+        case .alertFirstButtonReturn:
+            accessLevel = .readOnly
+        case .alertSecondButtonReturn:
+            accessLevel = request.requestedAccess == .read ? .noAccess : .fullAccess
+        case .alertThirdButtonReturn:
+            accessLevel = .noAccess
+        default:
+            accessLevel = nil
+        }
+        accessController.resolvePendingApproval(with: accessLevel)
+    }
+
+    private func spaceAPIAccessRequestIcon(for applicationPath: String) -> NSImage {
+        let canvasSize = NSSize(width: 64, height: 64)
+        let clientIconSize: CGFloat = 56
+        let icon = NSWorkspace.shared.icon(forFile: applicationPath)
+        let image = NSImage(size: canvasSize)
+        image.lockFocus()
+        icon.draw(
+            in: NSRect(x: 0, y: canvasSize.height - clientIconSize, width: clientIconSize, height: clientIconSize),
+            from: .zero,
+            operation: .sourceOver,
+            fraction: 1
+        )
+
+        if let desktopRenamerIcon = NSApp.applicationIconImage {
+            let badgeSize = clientIconSize / 2
+            desktopRenamerIcon.draw(
+                in: NSRect(
+                    x: canvasSize.width - badgeSize - 4,
+                    y: 7,
+                    width: badgeSize,
+                    height: badgeSize
+                ),
+                from: .zero,
+                operation: .sourceOver,
+                fraction: 1
+            )
+        }
+
+        image.unlockFocus()
+        return image
     }
 }
 

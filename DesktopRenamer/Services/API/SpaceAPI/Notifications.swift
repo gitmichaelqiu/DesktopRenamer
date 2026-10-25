@@ -7,6 +7,7 @@ extension SpaceAPI {
     @objc nonisolated func handleActiveSpaceRequest() {
         Task { @MainActor [weak self] in
             guard let self else { return }
+            guard SpaceManager.isAPIEnabled, !self.accessController.isRestricted else { return }
             DiagnosticEventLog.shared.record(subsystem: "SpaceAPI", level: "info", "handleActiveSpaceRequest")
             self.broadcastCurrentSpace()
         }
@@ -14,6 +15,7 @@ extension SpaceAPI {
     @objc nonisolated func handleSpaceListRequest() {
         Task { @MainActor [weak self] in
             guard let self else { return }
+            guard SpaceManager.isAPIEnabled, !self.accessController.isRestricted else { return }
             DiagnosticEventLog.shared.record(subsystem: "SpaceAPI", level: "info", "handleSpaceListRequest")
             self.broadcastSpaceList()
         }
@@ -22,6 +24,7 @@ extension SpaceAPI {
     @objc nonisolated func handleAPIVersionRequest() {
         Task { @MainActor [weak self] in
             guard let self else { return }
+            guard SpaceManager.isAPIEnabled, !self.accessController.isRestricted else { return }
             DiagnosticEventLog.shared.record(subsystem: "SpaceAPI", level: "info", "handleAPIVersionRequest")
             self.broadcastAPIVersion()
         }
@@ -50,10 +53,7 @@ extension SpaceAPI {
 
         Task { @MainActor [weak self] in
             guard let self else { return }
-            guard SpaceManager.isAPIEnabled else {
-                self.postCommandResult(requestID: requestID, error: SpaceAPIError.apiDisabled.localizedDescription)
-                return
-            }
+            guard SpaceManager.isAPIEnabled, !self.accessController.isRestricted else { return }
             if let argumentError {
                 self.postCommandResult(requestID: requestID, error: argumentError)
                 return
@@ -75,18 +75,103 @@ extension SpaceAPI {
         let payload = notification.userInfo?[DesktopRenamerAPIContract.payloadKey] as? String
         Task { @MainActor [weak self] in
             guard let self else { return }
+            guard SpaceManager.isAPIEnabled, !self.accessController.isRestricted else { return }
             await self.processRPCRequest(payload)
         }
     }
 
     private func processRPCRequest(_ payload: String?) async {
+        guard SpaceManager.isAPIEnabled, !accessController.isRestricted else { return }
+        postRPCResponse(await makeRPCResponse(payload, peerIdentity: nil, isSocket: false))
+    }
+
+    func processSocketRequest(
+        _ payload: String,
+        peerIdentity: SpaceAPIPeerIdentity?,
+        requestingApplication: SpaceAPIApprovedClient?,
+        completion: @escaping (String) -> Void
+    ) {
+        Task { @MainActor [weak self] in
+            guard let self else { return }
+            guard SpaceManager.isAPIEnabled else {
+                completion(self.encodeResponse(SpaceAPIJSONRPCCodec.errorResponse(
+                    id: Self.recoverableRequestID(from: payload),
+                    code: SpaceAPIJSONRPCCode.apiDisabled,
+                    message: SpaceAPIError.apiDisabled.localizedDescription
+                )))
+                return
+            }
+            if !self.accessController.isAuthorized(peerIdentity),
+               let requestingApplication,
+               let request = try? SpaceAPIJSONRPCCodec.decodeRequest(payload) {
+                let requiredAccess = DesktopRenamerAPIContract.definition(for: request.method)?.access
+                if request.requestedAccess == .read, requiredAccess == .write {
+                    completion(self.encodeResponse(SpaceAPIJSONRPCCodec.errorResponse(
+                        id: request.id,
+                        code: SpaceAPIJSONRPCCode.permissionDenied,
+                        message: "This request declares read-only access, but the method requires write access."
+                    )))
+                    return
+                }
+                self.accessController.requestApproval(
+                    for: requestingApplication,
+                    requestedAccess: request.requestedAccess
+                ) { [weak self] in
+                    Task { @MainActor [weak self] in
+                        guard let self else { return }
+                        let response = await self.makeRPCResponse(
+                            payload,
+                            peerIdentity: peerIdentity,
+                            isSocket: true,
+                            clientApplication: requestingApplication
+                        )
+                        completion(self.encodeResponse(response))
+                    }
+                }
+                return
+            }
+
+            let response = await self.makeRPCResponse(
+                payload,
+                peerIdentity: peerIdentity,
+                isSocket: true,
+                clientApplication: requestingApplication
+            )
+            guard self.accessController.isAuthorized(peerIdentity) else {
+                completion(self.encodeResponse(SpaceAPIJSONRPCCodec.errorResponse(
+                    id: response.id,
+                    code: SpaceAPIJSONRPCCode.permissionDenied,
+                    message: "SpaceAPI access was revoked."
+                )))
+                return
+            }
+            completion(self.encodeResponse(response))
+        }
+    }
+
+    private func makeRPCResponse(
+        _ payload: String?,
+        peerIdentity: SpaceAPIPeerIdentity?,
+        isSocket: Bool,
+        clientApplication: SpaceAPIApprovedClient? = nil
+    ) async -> SpaceAPIJSONRPCResponse {
+        let requesterName = clientApplication?.name ?? (isSocket ? "unidentified peer" : "legacy DNC client")
+        let requesterBundleID = clientApplication?.bundleIdentifier.map(DiagnosticText.singleLine) ?? "unknown"
+        let identityType: String
+        if peerIdentity?.designatedRequirement != nil {
+            identityType = "signedRequirement"
+        } else if peerIdentity?.codeHash != nil {
+            identityType = "adHocCodeHash"
+        } else {
+            identityType = isSocket ? "unavailable" : "legacyDNC"
+        }
+        let requesterContext = "\(DiagnosticText.singleLine(requesterName)) bundleID=\(requesterBundleID) identityType=\(identityType)"
         guard let payload else {
-            postRPCResponse(SpaceAPIJSONRPCCodec.errorResponse(
+            return SpaceAPIJSONRPCCodec.errorResponse(
                 id: nil,
                 code: SpaceAPIJSONRPCCode.invalidRequest,
                 message: "A JSON-RPC payload is required."
-            ))
-            return
+            )
         }
 
         let recoverableRequestID = Self.recoverableRequestID(from: payload)
@@ -95,65 +180,129 @@ extension SpaceAPI {
         do {
             request = try SpaceAPIJSONRPCCodec.decodeRequest(payload)
         } catch let error as SpaceAPIContractError {
-            postRPCResponse(SpaceAPIJSONRPCCodec.errorResponse(
-                id: recoverableRequestID,
-                code: error.jsonRPCCode,
-                message: error.localizedDescription,
-                data: error.jsonRPCData
-            ))
             DiagnosticEventLog.shared.record(
                 subsystem: "SpaceAPI",
                 level: "warning",
                 "Rejected structured request: \(error.localizedDescription)"
             )
-            return
+            return SpaceAPIJSONRPCCodec.errorResponse(
+                id: recoverableRequestID,
+                code: error.jsonRPCCode,
+                message: error.localizedDescription,
+                data: error.jsonRPCData
+            )
         } catch {
-            postRPCResponse(SpaceAPIJSONRPCCodec.errorResponse(
+            let nsError = error as NSError
+            DiagnosticEventLog.shared.record(
+                subsystem: "SpaceAPI",
+                level: "warning",
+                "Rejected structured request from \(requesterContext) that could not be decoded: \(nsError.domain):\(nsError.code) \(error.localizedDescription)"
+            )
+            return SpaceAPIJSONRPCCodec.errorResponse(
                 id: recoverableRequestID,
                 code: SpaceAPIJSONRPCCode.invalidRequest,
                 message: "Request could not be validated."
-            ))
-            return
+            )
         }
 
         guard SpaceManager.isAPIEnabled else {
-            postRPCResponse(SpaceAPIJSONRPCCodec.errorResponse(
+            return SpaceAPIJSONRPCCodec.errorResponse(
                 id: request.id,
                 code: SpaceAPIError.apiDisabled.jsonRPCCode,
                 message: SpaceAPIError.apiDisabled.localizedDescription
-            ))
-            return
+            )
+        }
+        guard isSocket || !accessController.isRestricted,
+              !isSocket || accessController.isAuthorized(peerIdentity) else {
+            DiagnosticEventLog.shared.record(
+                subsystem: "SpaceAPI",
+                level: "warning",
+                "Denied request from \(requesterContext) method=\(request.method): client is not approved."
+            )
+            return SpaceAPIJSONRPCCodec.errorResponse(
+                id: request.id,
+                code: SpaceAPIJSONRPCCode.permissionDenied,
+                message: "This app is not approved to use SpaceAPI."
+            )
+        }
+
+        let requiredAccess = DesktopRenamerAPIContract.definition(for: request.method)?.access ?? .write
+        let clientAccess = isSocket
+            ? accessController.accessLevel(for: peerIdentity)
+            : .fullAccess
+        guard clientAccess.allows(requiredAccess) else {
+            DiagnosticEventLog.shared.record(
+                subsystem: "SpaceAPI",
+                level: "warning",
+                "Denied request from \(requesterContext) method=\(request.method): required=\(requiredAccess.rawValue), granted=\(clientAccess.rawValue)."
+            )
+            return SpaceAPIJSONRPCCodec.errorResponse(
+                id: request.id,
+                code: SpaceAPIJSONRPCCode.permissionDenied,
+                message: "This app is approved for read-only SpaceAPI access and cannot perform write operations."
+            )
+        }
+
+        if isSocket, let clientApplication {
+            usageStatistics.record(requestingApplication: clientApplication, access: requiredAccess)
         }
 
         do {
             let result = try await executeRPCMethod(request)
-            postRPCResponse(SpaceAPIJSONRPCResponse(id: request.id, result: result))
             DiagnosticEventLog.shared.record(
                 subsystem: "SpaceAPI",
                 level: "info",
                 "Completed structured request method=\(request.method) id=\(request.id)"
             )
+            return SpaceAPIJSONRPCResponse(id: request.id, result: result)
         } catch let error as SpaceAPIContractError {
-            postRPCResponse(SpaceAPIJSONRPCCodec.errorResponse(
+            DiagnosticEventLog.shared.record(
+                subsystem: "SpaceAPI",
+                level: "error",
+                "Structured request failed method=\(request.method): \(error.localizedDescription)"
+            )
+            return SpaceAPIJSONRPCCodec.errorResponse(
                 id: request.id,
                 code: error.jsonRPCCode,
                 message: error.localizedDescription,
                 data: error.jsonRPCData(command: request.method)
-            ))
+            )
         } catch let error as SpaceAPIError {
-            postRPCResponse(SpaceAPIJSONRPCCodec.errorResponse(
+            let nsError = error as NSError
+            DiagnosticEventLog.shared.record(
+                subsystem: "SpaceAPI",
+                level: "error",
+                "Structured request failed method=\(request.method) error=\(nsError.domain):\(nsError.code) \(error.localizedDescription)"
+            )
+            return SpaceAPIJSONRPCCodec.errorResponse(
                 id: request.id,
                 code: error.jsonRPCCode,
                 message: error.localizedDescription,
                 data: error.jsonRPCData(command: request.method)
-            ))
+            )
         } catch {
-            postRPCResponse(SpaceAPIJSONRPCCodec.errorResponse(
+            let nsError = error as NSError
+            DiagnosticEventLog.shared.record(
+                subsystem: "SpaceAPI",
+                level: "error",
+                "Structured request failed method=\(request.method) error=\(nsError.domain):\(nsError.code) \(error.localizedDescription)"
+            )
+            return SpaceAPIJSONRPCCodec.errorResponse(
                 id: request.id,
                 code: SpaceAPIJSONRPCCode.internalError,
                 message: "DesktopRenamer could not complete the request."
-            ))
+            )
         }
+    }
+
+    private func encodeResponse(_ response: SpaceAPIJSONRPCResponse) -> String {
+        if let payload = try? SpaceAPIJSONRPCCodec.encode(response) { return payload }
+        let fallback = SpaceAPIJSONRPCCodec.errorResponse(
+            id: response.id,
+            code: SpaceAPIJSONRPCCode.internalError,
+            message: "DesktopRenamer could not encode the response."
+        )
+        return (try? SpaceAPIJSONRPCCodec.encode(fallback)) ?? ""
     }
 
     private static func recoverableRequestID(from payload: String) -> String? {

@@ -1,3 +1,4 @@
+import AppKit
 import SwiftUI
 import AVKit
 import AVFoundation
@@ -138,6 +139,7 @@ struct SettingsContainer<Content: View>: View {
 struct SettingsRow<Content: View>: View {
     let title: LocalizedStringResource
     let content: Content
+    let leadingIcon: NSImage?
     let helperText: LocalizedStringKey?
     let warningText: LocalizedStringKey?
     let requirements: [SettingsRequirement]
@@ -150,6 +152,7 @@ struct SettingsRow<Content: View>: View {
 
     init(
         _ title: LocalizedStringResource,
+        leadingIcon: NSImage? = nil,
         helperText: LocalizedStringKey? = nil,
         warningText: LocalizedStringKey? = nil,
         requirements: [SettingsRequirement] = [],
@@ -157,6 +160,7 @@ struct SettingsRow<Content: View>: View {
         @ViewBuilder content: () -> Content
     ) {
         self.title = title
+        self.leadingIcon = leadingIcon
         self.helperText = helperText
         self.warningText = warningText
         self.requirements = requirements
@@ -168,6 +172,14 @@ struct SettingsRow<Content: View>: View {
         VStack(alignment: .leading, spacing: 8) {
             HStack {
                 HStack(spacing: 4) {
+                    if let leadingIcon {
+                        Image(nsImage: leadingIcon)
+                            .resizable()
+                            .aspectRatio(contentMode: .fit)
+                            .frame(width: 18, height: 18)
+                            .clipShape(RoundedRectangle(cornerRadius: 4, style: .continuous))
+                    }
+
                     Text(highlightedText(text: String(localized: title), query: navigationState.searchText))
                         .frame(alignment: .leading)
 
