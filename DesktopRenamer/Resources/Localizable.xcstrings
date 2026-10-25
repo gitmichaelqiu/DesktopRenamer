@@ -5125,6 +5125,23 @@
           }
         }
       }
+    },
+    "Settings.SpaceAPI.UsageStatistics.Helper" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Stores request counts for 7 days and a lifetime total. Request contents are never saved."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "保存最近 7 天的请求数量和累计总数，不会记录请求内容。"
+          }
+        }
+      }
     }
   },
   "version" : "1.1"

@@ -100,28 +100,6 @@ struct GeneralSettingsView: View {
                     }
                 }
 
-                SettingsSection("Settings.General.Transfer") {
-                    SettingsRow(
-                        "Settings.General.Export.Settings",
-                        helperText: "Settings.General.Export.Helper"
-                    ) {
-                        Button("Settings.General.Export.Button") {
-                            exportSettings()
-                        }
-                    }
-
-                    Divider()
-
-                    SettingsRow(
-                        "Settings.General.Import.Settings",
-                        helperText: "Settings.General.Import.Helper"
-                    ) {
-                        Button("Settings.General.Import.Button") {
-                            importSettings()
-                        }
-                    }
-                }
-
                 SettingsSection("Settings.General.Advanced") {
                     SettingsRow(
                         "Settings.General.Advanced.EnableAPI",
@@ -139,20 +117,14 @@ struct GeneralSettingsView: View {
                     if spaceManager.spaceAPI?.accessController != nil {
                         Divider()
 
-                        SettingsRow(
-                            "Settings.General.Advanced.ManageSpaceAPIAccess",
-                            helperText: "Approve apps and choose what they can do with SpaceAPI."
-                        ) {
+                        SettingsRow("Settings.General.Advanced.ManageSpaceAPIAccess") {
                             Button("Manage…") { showSpaceAPIAccessSettings = true }
                         }
                     }
 
                     Divider()
 
-                    SettingsRow(
-                        "Diagnostic report",
-                        helperText: "Capture a report to help diagnose issues."
-                    ) {
+                    SettingsRow("Diagnostic report") {
                         Button("Open") {
                             showDiagnosticSheet = true
                         }
@@ -173,6 +145,28 @@ struct GeneralSettingsView: View {
                             performFactoryReset()
                         }
                         .foregroundStyle(.red)
+                    }
+                }
+
+                SettingsSection("Settings.General.Transfer") {
+                    SettingsRow(
+                        "Settings.General.Export.Settings",
+                        helperText: "Settings.General.Export.Helper"
+                    ) {
+                        Button("Settings.General.Export.Button") {
+                            exportSettings()
+                        }
+                    }
+
+                    Divider()
+
+                    SettingsRow(
+                        "Settings.General.Import.Settings",
+                        helperText: "Settings.General.Import.Helper"
+                    ) {
+                        Button("Settings.General.Import.Button") {
+                            importSettings()
+                        }
                     }
                 }
                 Spacer()

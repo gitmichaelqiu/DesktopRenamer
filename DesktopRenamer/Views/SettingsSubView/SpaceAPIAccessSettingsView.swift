@@ -62,10 +62,7 @@ struct SpaceAPIAccessSettingsView: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 20) {
                     if let request = accessController.pendingApprovalRequest {
-                        SettingsSection(
-                            "Access Request",
-                            helperText: "Choose what this app can do with SpaceAPI."
-                        ) {
+                        SettingsSection("Access Request") {
                             SettingsRow(
                                 LocalizedStringResource(stringLiteral: request.client.name),
                                 leadingIcon: NSWorkspace.shared.icon(forFile: request.client.applicationPath)
@@ -124,10 +121,7 @@ struct SpaceAPIAccessSettingsView: View {
                     }
 
                     if accessController.isRestrictedForSettings {
-                        SettingsSection(
-                            "App Permissions",
-                            helperText: "Set the access level for each approved app."
-                        ) {
+                        SettingsSection("App Permissions") {
                             SettingsRow(
                                 "Add an app",
                                 helperText: "Development builds must be approved again after rebuilding."
@@ -191,7 +185,7 @@ struct SpaceAPIAccessSettingsView: View {
 
                     SettingsSection(
                         "Usage Statistics",
-                        helperText: "Keeps hourly request history for 7 days and a lifetime total. Request contents aren’t saved; legacy notification calls can’t be attributed."
+                        helperText: "Settings.SpaceAPI.UsageStatistics.Helper"
                     ) {
                         SettingsRow("Record SpaceAPI usage") {
                             Toggle(
