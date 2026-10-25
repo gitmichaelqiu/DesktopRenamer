@@ -91,12 +91,18 @@ To resolve this, go to System Settings → the bottom of Privacy & Security → 
 >
 > Thanks [@timttate](https://github.com/timttate) for finding this [thread](https://github.com/luanti-org/luanti/issues/12033) with the solution by [@animaux](https://github.com/animaux).
 
+## Settings Transfer
+
+Use Settings → General → Settings Transfer to export preferences and custom space names to a versioned JSON file, or import a file to restore them. The import previews how many custom space names can be matched and asks for confirmation before applying settings. SpaceAPI settings, usage history, operating-system permissions, and display-specific label positions are excluded. Space names match by their persistent SpaceAPI ID when possible, with display and desktop position used when importing onto another Mac.
+
 ## 🛜 API & Apple Script
 
 DesktopRenamer provides multiple ways to interact with it:
 
 - [Structured SpaceAPI Guide](https://docs.desktoprenamer.mqiu.dev/api/spaceapi/structured/) documents persistent DesktopRenamer space IDs and ManagedSpaceID migration compatibility; see the [API changelog](https://docs.desktoprenamer.mqiu.dev/api/changelog/) for contract changes.
 - The SpaceAPI version is available through AppleScript (`get api version`) and SpaceAPI responses, independently of the app version.
+
+Clients that only need read access can add `"requestedAccess": "read"` to their JSON-RPC request. The first-approval prompt then offers **Read Only** and **Don’t Allow**, without a **Read & Write** option. Omit the field or use `"write"` when the client may need write operations. SpaceAPI still checks each method’s required access.
 
 You can switch on/off the API in Settings → Advanced.
 

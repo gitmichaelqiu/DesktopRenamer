@@ -87,12 +87,20 @@ struct SpaceAPIJSONRPCRequest: Codable, Equatable {
     let id: String
     let method: String
     let params: SpaceAPIJSONValue?
+    /// Optional client-declared access scope, used to tailor first-approval UI.
+    let requestedAccess: SpaceAPIRequestAccess?
 
-    init(id: String, method: String, params: [String: SpaceAPIJSONValue] = [:]) {
+    init(
+        id: String,
+        method: String,
+        params: [String: SpaceAPIJSONValue] = [:],
+        requestedAccess: SpaceAPIRequestAccess? = nil
+    ) {
         self.jsonrpc = DesktopRenamerAPIContract.jsonRPCVersion
         self.id = id
         self.method = method
         self.params = params.isEmpty ? nil : .object(params)
+        self.requestedAccess = requestedAccess
     }
 
     init(from decoder: Decoder) throws {
@@ -101,6 +109,7 @@ struct SpaceAPIJSONRPCRequest: Codable, Equatable {
         id = try container.decode(String.self, forKey: .id)
         method = try container.decode(String.self, forKey: .method)
         params = container.contains(.params) ? try container.decode(SpaceAPIJSONValue.self, forKey: .params) : nil
+        requestedAccess = try container.decodeIfPresent(SpaceAPIRequestAccess.self, forKey: .requestedAccess)
     }
 
     private enum CodingKeys: String, CodingKey {
@@ -108,6 +117,7 @@ struct SpaceAPIJSONRPCRequest: Codable, Equatable {
         case id
         case method
         case params
+        case requestedAccess
     }
 }
 

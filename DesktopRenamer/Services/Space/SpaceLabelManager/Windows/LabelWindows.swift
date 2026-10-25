@@ -31,6 +31,14 @@ extension SpaceLabelManager {
         }
     }
 
+    func updateDockingSettings(isDocked: Bool, edge: NSRectEdge) {
+        globalIsDocked = isDocked
+        globalDockEdge = edge
+        UserDefaults.standard.set(isDocked, forKey: kGlobalIsDocked)
+        UserDefaults.standard.set(Int(edge.rawValue), forKey: kGlobalDockEdge)
+        synchronizeActiveWindows(excluding: nil)
+    }
+
     /// Applies shared label geometry to every display immediately. A drag on
     /// one active label changes global state without changing the current
     /// Space, so the normal SpaceManager visibility reconciliation does not

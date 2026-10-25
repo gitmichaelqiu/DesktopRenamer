@@ -40,96 +40,97 @@ class HotkeyManager: ObservableObject {
     @Published var mainShortcut: Shortcut {
         didSet {
             saveShortcut(mainShortcut, key: mainShortcutKey)
-            registerShortcuts()
+            if !isApplyingShortcutBatch { registerShortcuts() }
         }
     }
     
     @Published var switchLeftShortcut: Shortcut {
         didSet {
             saveShortcut(switchLeftShortcut, key: switchLeftKey)
-            registerShortcuts()
+            if !isApplyingShortcutBatch { registerShortcuts() }
         }
     }
     
     @Published var switchRightShortcut: Shortcut {
         didSet {
             saveShortcut(switchRightShortcut, key: switchRightKey)
-            registerShortcuts()
+            if !isApplyingShortcutBatch { registerShortcuts() }
         }
     }
     
     @Published var moveWindowNextShortcut: Shortcut {
         didSet {
             saveShortcut(moveWindowNextShortcut, key: moveWindowNextKey)
-            registerShortcuts()
+            if !isApplyingShortcutBatch { registerShortcuts() }
         }
     }
     
     @Published var moveWindowPreviousShortcut: Shortcut {
         didSet {
             saveShortcut(moveWindowPreviousShortcut, key: moveWindowPreviousKey)
-            registerShortcuts()
+            if !isApplyingShortcutBatch { registerShortcuts() }
         }
     }
     
     @Published var moveWindowNumberShortcut: Shortcut { // Stores modifiers only for number-based space switching.
         didSet {
             saveShortcut(moveWindowNumberShortcut, key: moveWindowNumberKey)
-            registerShortcuts()
+            if !isApplyingShortcutBatch { registerShortcuts() }
         }
     }
     
     @Published var switchSpaceNumberShortcut: Shortcut {
         didSet {
             saveShortcut(switchSpaceNumberShortcut, key: switchSpaceNumberKey)
-            registerShortcuts()
+            if !isApplyingShortcutBatch { registerShortcuts() }
         }
     }
     
     @Published var reloadLabelsShortcut: Shortcut {
         didSet {
             saveShortcut(reloadLabelsShortcut, key: reloadLabelsKey)
-            registerShortcuts()
+            if !isApplyingShortcutBatch { registerShortcuts() }
         }
     }
     
     @Published var moveWindowNextDisplayShortcut: Shortcut {
         didSet {
             saveShortcut(moveWindowNextDisplayShortcut, key: moveWindowNextDisplayKey)
-            registerShortcuts()
+            if !isApplyingShortcutBatch { registerShortcuts() }
         }
     }
     
     @Published var moveWindowPreviousDisplayShortcut: Shortcut {
         didSet {
             saveShortcut(moveWindowPreviousDisplayShortcut, key: moveWindowPreviousDisplayKey)
-            registerShortcuts()
+            if !isApplyingShortcutBatch { registerShortcuts() }
         }
     }
     
     @Published var toggleLockShortcut: Shortcut {
         didSet {
             saveShortcut(toggleLockShortcut, key: toggleLockKey)
-            registerShortcuts()
+            if !isApplyingShortcutBatch { registerShortcuts() }
         }
     }
     
     @Published var restoreWindowsShortcut: Shortcut {
         didSet {
             saveShortcut(restoreWindowsShortcut, key: restoreWindowsKey)
-            registerShortcuts()
+            if !isApplyingShortcutBatch { registerShortcuts() }
         }
     }
     
     @Published var launcherShortcut: Shortcut {
         didSet {
             saveShortcut(launcherShortcut, key: launcherKey)
-            registerShortcuts()
+            if !isApplyingShortcutBatch { registerShortcuts() }
         }
     }
 
     @Published var isListening: Bool = false
     @Published var listeningType: HotkeyType? = nil
+    private var isApplyingShortcutBatch = false
 
     // Internal hotkey objects from the library
     var mainHotKey: HotKey?
@@ -189,6 +190,15 @@ class HotkeyManager: ObservableObject {
         self.launcherShortcut = Self.loadShortcut(key: launcherKey) ?? Shortcut(key: nil, modifiers: [])
         
         registerShortcuts()
+    }
+
+    func updateShortcuts(_ updates: () -> Void) {
+        isApplyingShortcutBatch = true
+        defer {
+            isApplyingShortcutBatch = false
+            registerShortcuts()
+        }
+        updates()
     }
     
     // Helpers for the settings UI

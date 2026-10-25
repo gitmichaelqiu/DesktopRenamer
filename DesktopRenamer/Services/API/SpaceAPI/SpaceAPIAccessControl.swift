@@ -14,12 +14,13 @@ private struct SpaceAPIAccessPolicy: Codable {
 final class SpaceAPIAccessController: ObservableObject {
     private struct PendingApproval {
         let client: SpaceAPIApprovedClient
+        var requestedAccess: SpaceAPIRequestAccess?
         var completions: [() -> Void]
     }
 
     @Published private(set) var isRestrictedForSettings = false
     @Published private(set) var approvedClients: [SpaceAPIApprovedClient] = []
-    @Published private(set) var pendingApprovalRequest: SpaceAPIApprovedClient?
+    @Published private(set) var pendingApprovalRequest: SpaceAPIApprovalPrompt?
     @Published private(set) var errorMessage: String?
     @Published private(set) var canRepairPolicy = false
 
@@ -116,7 +117,7 @@ final class SpaceAPIAccessController: ObservableObject {
             updated.approvedClients.removeAll { $0.id == client.id }
             updated.approvedClients.append(client)
             updated.approvedClients.sort { $0.name.localizedStandardCompare($1.name) == .orderedAscending }
-            if persistAndApply(updated), pendingApprovalRequest?.id == client.id {
+            if persistAndApply(updated), pendingApprovalRequest?.client.id == client.id {
                 finishPendingApproval(with: client.accessLevel, persistApproval: false)
             }
         } catch {
@@ -140,7 +141,11 @@ final class SpaceAPIAccessController: ObservableObject {
     }
 
     @MainActor
-    func requestApproval(for client: SpaceAPIApprovedClient, completion: @escaping () -> Void) {
+    func requestApproval(
+        for client: SpaceAPIApprovedClient,
+        requestedAccess: SpaceAPIRequestAccess?,
+        completion: @escaping () -> Void
+    ) {
         guard isRestrictedForSettings else {
             completion()
             return
@@ -163,8 +168,15 @@ final class SpaceAPIAccessController: ObservableObject {
                 completion()
                 return
             }
+            pending.requestedAccess = Self.combinedRequestedAccess(pending.requestedAccess, requestedAccess)
             pending.completions.append(completion)
             pendingApprovals[client.id] = pending
+            if pendingApprovalRequest?.id == client.id {
+                pendingApprovalRequest = SpaceAPIApprovalPrompt(
+                    client: client,
+                    requestedAccess: pending.requestedAccess
+                )
+            }
             return
         }
 
@@ -173,7 +185,11 @@ final class SpaceAPIAccessController: ObservableObject {
             return
         }
 
-        pendingApprovals[client.id] = PendingApproval(client: client, completions: [completion])
+        pendingApprovals[client.id] = PendingApproval(
+            client: client,
+            requestedAccess: requestedAccess,
+            completions: [completion]
+        )
         pendingApprovalOrder.append(client.id)
         lock.lock()
         pendingApprovalIDs.insert(client.id)
@@ -275,8 +291,9 @@ final class SpaceAPIAccessController: ObservableObject {
         persistApproval: Bool = true,
         applyCooldown: Bool = true
     ) {
-        guard let client = pendingApprovalRequest,
-              let pending = pendingApprovals.removeValue(forKey: client.id) else { return }
+        guard let prompt = pendingApprovalRequest,
+              let pending = pendingApprovals.removeValue(forKey: prompt.id) else { return }
+        let client = prompt.client
         pendingApprovalRequest = nil
         pendingApprovalOrder.removeAll { $0 == client.id }
         lock.lock()
@@ -323,7 +340,10 @@ final class SpaceAPIAccessController: ObservableObject {
                 continue
             }
 
-            pendingApprovalRequest = pending.client
+            pendingApprovalRequest = SpaceAPIApprovalPrompt(
+                client: pending.client,
+                requestedAccess: pending.requestedAccess
+            )
             accessRequestDidArrive?()
             return
         }
@@ -347,6 +367,14 @@ final class SpaceAPIAccessController: ObservableObject {
 
     private static func peerIdentity(for client: SpaceAPIApprovedClient) -> SpaceAPIPeerIdentity {
         SpaceAPIPeerIdentity(designatedRequirement: client.designatedRequirement, codeHash: client.codeHash)
+    }
+
+    private static func combinedRequestedAccess(
+        _ current: SpaceAPIRequestAccess?,
+        _ incoming: SpaceAPIRequestAccess?
+    ) -> SpaceAPIRequestAccess? {
+        guard let current, let incoming else { return nil }
+        return current == .write || incoming == .write ? .write : .read
     }
 
     private static func clientIdentifier(for identity: SpaceAPIPeerIdentity) -> String? {
