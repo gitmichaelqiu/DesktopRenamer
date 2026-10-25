@@ -250,6 +250,23 @@ extension StatusBarController {
         settingsItem.image = NSImage(systemSymbolName: "gear", accessibilityDescription: nil)
         settingsItem.target = self
         menu.addItem(settingsItem)
+
+        #if DEBUG
+        let debugHUDItem = NSMenuItem(title: "Debug HUD", action: nil, keyEquivalent: "")
+        let debugHUDMenu = NSMenu()
+        let previewItem = NSMenuItem(title: "Show HUD preview", action: #selector(showHUDPreview), keyEquivalent: "")
+        previewItem.target = self
+        debugHUDMenu.addItem(previewItem)
+        let hoverPreviewItem = NSMenuItem(title: "Show hovered HUD preview", action: #selector(showHoveredHUDPreview), keyEquivalent: "")
+        hoverPreviewItem.target = self
+        debugHUDMenu.addItem(hoverPreviewItem)
+        debugHUDMenu.addItem(NSMenuItem.separator())
+        let dismissHUDItem = NSMenuItem(title: "Hide HUD", action: #selector(hideHUDPreview), keyEquivalent: "")
+        dismissHUDItem.target = self
+        debugHUDMenu.addItem(dismissHUDItem)
+        debugHUDItem.submenu = debugHUDMenu
+        menu.addItem(debugHUDItem)
+        #endif
         
         menu.addItem(NSMenuItem.separator())
         
@@ -264,6 +281,20 @@ extension StatusBarController {
     @objc private func openLauncher() {
         LauncherWindowController.shared.show()
     }
+
+    #if DEBUG
+    @objc private func showHUDPreview() {
+        HUDWindowController.shared.showDebugPreview()
+    }
+
+    @objc private func showHoveredHUDPreview() {
+        HUDWindowController.shared.showDebugPreview(hovered: true)
+    }
+
+    @objc private func hideHUDPreview() {
+        HUDWindowController.shared.hideDebugPreview()
+    }
+    #endif
     
     @objc func selectSpace(_ sender: NSMenuItem) {
         guard let spaceID = sender.representedObject as? String else { return }

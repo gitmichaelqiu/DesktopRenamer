@@ -347,10 +347,13 @@ extension SpaceHelper {
         
         let message = String(format: String(localized: "Moving window failed for %@"), appName)
         let buttonTitle = hasException ? String(localized: "Edit Exception") : String(localized: "Add Exception")
+        let appIcon = NSWorkspace.shared.urlForApplication(withBundleIdentifier: bundleID)
+            .map { NSWorkspace.shared.icon(forFile: $0.path) }
         
         HUDWindowController.shared.show(
             message: message,
             style: .warning,
+            appIcon: appIcon,
             buttonTitle: buttonTitle
         ) {
             DispatchQueue.main.async {

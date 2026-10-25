@@ -27,7 +27,8 @@ extension LauncherViewModel {
         // shared synthetic drag module captures each window.
         closeLauncher()
         HUDWindowController.shared.showProgress(
-            message: String(localized: "Executing batch window moves...")
+            message: String(localized: "Executing batch window moves..."),
+            appIcon: actions.first.flatMap { NSRunningApplication(processIdentifier: $0.window.pid)?.icon }
         )
         
         batchExecutionTask = Task { [weak self] in
@@ -336,7 +337,8 @@ extension LauncherViewModel {
         }
 
         HUDWindowController.shared.showProgress(
-            message: message
+            message: message,
+            appIcon: NSRunningApplication(processIdentifier: action.window.pid)?.icon
         )
     }
 

@@ -4,21 +4,56 @@ import SwiftUI
 
 struct HUDView: View {
     let message: String
-    let systemImage: String
+    let appIcon: NSImage?
+    let systemImage: String?
     let iconColor: Color
     let buttonTitle: String?
     let buttonAction: (() -> Void)?
+    let onDismiss: () -> Void
+    let onHoverChanged: (Bool) -> Void
+    let forceHover: Bool
+
+    @State private var isHovered = false
+
+    private var showsDismissButton: Bool {
+        isHovered || forceHover
+    }
 
     var body: some View {
-        HStack(spacing: 10) {
-            Image(systemName: systemImage)
-                .font(.system(size: 15, weight: .semibold))
-                .foregroundColor(iconColor)
+        HStack(spacing: 12) {
+            ZStack {
+                if showsDismissButton {
+                    Button(action: onDismiss) {
+                        Image(systemName: "xmark")
+                            .font(.system(size: 13, weight: .medium))
+                            .foregroundStyle(.white)
+                            .frame(width: 28, height: 28)
+                            .background(.white.opacity(0.14), in: Circle())
+                    }
+                    .buttonStyle(.plain)
+                    .help(String(localized: "Dismiss"))
+                    .accessibilityLabel(String(localized: "Dismiss"))
+                } else if let appIcon {
+                    Image(nsImage: appIcon)
+                        .resizable()
+                        .aspectRatio(contentMode: .fit)
+                        .frame(width: 22, height: 22)
+                        .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
+                } else if let systemImage {
+                    Image(systemName: systemImage)
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundStyle(iconColor)
+                        .frame(width: 28, height: 28)
+                }
+            }
+            .frame(width: 28, height: 28)
 
             Text(message)
-                .font(.system(size: 13, weight: .semibold))
-                .foregroundColor(.primary)
+                .font(.system(size: 15, weight: .medium))
+                .foregroundStyle(.white)
                 .lineLimit(1)
+                .truncationMode(.tail)
+                .frame(maxWidth: 420, alignment: .leading)
             
             if let buttonTitle = buttonTitle, let buttonAction = buttonAction {
                 Button(buttonTitle) {
@@ -28,26 +63,14 @@ struct HUDView: View {
                 .controlSize(.small)
             }
         }
-        .padding(.horizontal, 18)
-        .padding(.vertical, 10)
-        .hudBackground()
-    }
-}
-
-extension View {
-    @ViewBuilder
-    fileprivate func hudBackground() -> some View {
-        if #available(macOS 26.0, *) {
-            self.glassEffect(.regular, in: Capsule())
-        } else {
-            self.background(
-                VisualEffectView(material: .hudWindow, blendingMode: .withinWindow, state: .active)
-            )
-            .clipShape(Capsule())
-            .overlay(
-                Capsule()
-                    .stroke(Color.primary.opacity(0.09), lineWidth: 1)
-            )
+        .padding(.horizontal, 14)
+        .padding(.vertical, 12)
+        .background(Color(nsColor: NSColor(calibratedWhite: 0.38, alpha: 0.96)), in: Capsule())
+        .overlay(Capsule().stroke(.white.opacity(0.08), lineWidth: 1))
+        .contentShape(Capsule())
+        .onHover { hovering in
+            isHovered = hovering
+            onHoverChanged(hovering)
         }
     }
 }
@@ -63,19 +86,6 @@ enum HUDPresentationStyle {
     case info
     case warning
     case failure
-
-    var systemImage: String {
-        switch self {
-        case .success:
-            return "checkmark.circle.fill"
-        case .info:
-            return "info.circle.fill"
-        case .warning:
-            return "exclamationmark.triangle.fill"
-        case .failure:
-            return "xmark.circle.fill"
-        }
-    }
 
     var iconColor: Color {
         switch self {
@@ -96,6 +106,11 @@ class HUDWindowController: NSWindowController {
 
     private var hideTimer: Timer?
     private var hostingView: NSHostingView<HUDView>?
+    private var hideDuration: TimeInterval?
+    private var isHoveringHUD = false
+    #if DEBUG
+    private var forceHoverPreview = false
+    #endif
 
     init() {
         let panel = HUDNSPanel(
@@ -110,6 +125,7 @@ class HUDWindowController: NSWindowController {
         panel.isOpaque = false
         panel.hasShadow = true
         panel.level = .statusBar
+        panel.acceptsMouseMovedEvents = true
         panel.hidesOnDeactivate = false
         panel.becomesKeyOnlyIfNeeded = false
         // HUD feedback must survive a command that temporarily switches the
@@ -126,6 +142,7 @@ class HUDWindowController: NSWindowController {
     func show(
         message: String,
         style: HUDPresentationStyle,
+        appIcon: NSImage? = nil,
         systemImage: String? = nil,
         buttonTitle: String? = nil,
         buttonAction: (() -> Void)? = nil,
@@ -133,8 +150,9 @@ class HUDWindowController: NSWindowController {
     ) {
         show(
             message: message,
-            systemImage: systemImage ?? style.systemImage,
+            systemImage: systemImage,
             iconColor: style.iconColor,
+            appIcon: appIcon ?? (systemImage == nil ? NSApp.applicationIconImage : nil),
             buttonTitle: buttonTitle,
             buttonAction: buttonAction,
             autoHide: autoHide
@@ -144,12 +162,14 @@ class HUDWindowController: NSWindowController {
     func showProgress(
         message: String,
         style: HUDPresentationStyle = .info,
+        appIcon: NSImage? = nil,
         systemImage: String? = nil
     ) {
         show(
             message: message,
             style: style,
-            systemImage: systemImage ?? "arrow.triangle.2.circlepath",
+            appIcon: appIcon,
+            systemImage: systemImage,
             autoHide: false
         )
     }
@@ -157,6 +177,7 @@ class HUDWindowController: NSWindowController {
     func showAfterLauncherDismissal(
         message: String,
         style: HUDPresentationStyle,
+        appIcon: NSImage? = nil,
         systemImage: String? = nil,
         buttonTitle: String? = nil,
         buttonAction: (() -> Void)? = nil
@@ -165,6 +186,7 @@ class HUDWindowController: NSWindowController {
             self?.show(
                 message: message,
                 style: style,
+                appIcon: appIcon,
                 systemImage: systemImage,
                 buttonTitle: buttonTitle,
                 buttonAction: buttonAction
@@ -174,8 +196,9 @@ class HUDWindowController: NSWindowController {
 
     func show(
         message: String,
-        systemImage: String,
+        systemImage: String? = nil,
         iconColor: Color,
+        appIcon: NSImage? = nil,
         buttonTitle: String? = nil,
         buttonAction: (() -> Void)? = nil,
         autoHide: Bool = true
@@ -184,19 +207,32 @@ class HUDWindowController: NSWindowController {
 
         panel.appearance = NSApp.effectiveAppearance
         hideTimer?.invalidate()
+        hideTimer = nil
+        hideDuration = nil
+        isHoveringHUD = false
         
         panel.isInteractive = (buttonTitle != nil)
         panel.becomesKeyOnlyIfNeeded = (buttonTitle != nil)
 
         let hudView = HUDView(
             message: message,
+            appIcon: appIcon ?? (systemImage == nil ? NSApp.applicationIconImage : nil),
             systemImage: systemImage,
             iconColor: iconColor,
             buttonTitle: buttonTitle,
             buttonAction: {
                 buttonAction?()
                 self.hideWithAnimation()
-            }
+            },
+            onDismiss: { [weak self] in self?.hideWithAnimation() },
+            onHoverChanged: { [weak self] hovering in self?.handleHoverChange(hovering) },
+            forceHover: {
+                #if DEBUG
+                self.forceHoverPreview
+                #else
+                false
+                #endif
+            }()
         )
 
         if let existing = hostingView {
@@ -231,9 +267,28 @@ class HUDWindowController: NSWindowController {
 
         if autoHide {
             let duration = (buttonTitle != nil) ? 5.0 : 1.8
-            hideTimer = Timer.scheduledTimer(withTimeInterval: duration, repeats: false) { [weak self] _ in
-                self?.hideWithAnimation()
-            }
+            hideDuration = duration
+            scheduleHide(after: duration)
+        }
+    }
+
+    private func handleHoverChange(_ hovering: Bool) {
+        isHoveringHUD = hovering
+        guard let hideDuration else { return }
+
+        if hovering {
+            hideTimer?.invalidate()
+            hideTimer = nil
+        } else {
+            scheduleHide(after: hideDuration)
+        }
+    }
+
+    private func scheduleHide(after duration: TimeInterval) {
+        hideTimer?.invalidate()
+        guard !isHoveringHUD else { return }
+        hideTimer = Timer.scheduledTimer(withTimeInterval: duration, repeats: false) { [weak self] _ in
+            self?.hideWithAnimation()
         }
     }
 
@@ -255,6 +310,9 @@ class HUDWindowController: NSWindowController {
 
     private func hideWithAnimation() {
         guard let panel = window else { return }
+        hideTimer?.invalidate()
+        hideTimer = nil
+        hideDuration = nil
 
         NSAnimationContext.runAnimationGroup { ctx in
             ctx.duration = 0.2
@@ -264,4 +322,21 @@ class HUDWindowController: NSWindowController {
             panel.orderOut(nil)
         }
     }
+
+    #if DEBUG
+    func showDebugPreview(hovered: Bool = false) {
+        forceHoverPreview = hovered
+        show(
+            message: "Klack enabled",
+            style: .success,
+            appIcon: NSApp.applicationIconImage,
+            autoHide: false
+        )
+    }
+
+    func hideDebugPreview() {
+        forceHoverPreview = false
+        hideWithAnimation()
+    }
+    #endif
 }
