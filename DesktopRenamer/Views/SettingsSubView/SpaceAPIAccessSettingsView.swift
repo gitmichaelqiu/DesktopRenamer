@@ -87,7 +87,10 @@ struct SpaceAPIAccessSettingsView: View {
                     }
 
                     SettingsSection("Access Policy") {
-                        SettingsRow("Allow only approved apps") {
+                        SettingsRow(
+                            "Allow only approved apps",
+                            helperText: "Some older clients only work when access is unrestricted."
+                        ) {
                             Toggle(
                                 "",
                                 isOn: Binding(

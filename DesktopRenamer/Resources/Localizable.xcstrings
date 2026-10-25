@@ -412,6 +412,16 @@
         }
       }
     },
+    "Some older clients only work when access is unrestricted." : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "某些较旧的客户端只有在不限制 SpaceAPI 访问时才能使用。"
+          }
+        }
+      }
+    },
     "App Permissions" : {
       "localizations" : {
         "zh-Hans" : {
