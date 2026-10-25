@@ -37,7 +37,7 @@ struct HUDView: View {
                     Image(nsImage: appIcon)
                         .resizable()
                         .aspectRatio(contentMode: .fit)
-                        .frame(width: 24, height: 24)
+                        .frame(width: 26, height: 26)
                         .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
                 } else if let systemImage {
                     Image(systemName: systemImage)
