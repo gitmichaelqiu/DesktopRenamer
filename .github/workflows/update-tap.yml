@@ -17,23 +17,32 @@ jobs:
         id: info
         env:
           GH_TOKEN: ${{ github.token }}
+          INPUT_TAG: ${{ github.event.inputs.tag_name }}
+          RELEASE_TAG: ${{ github.event.release.tag_name }}
+          REPOSITORY: ${{ github.repository }}
         run: |
           # 1. Determine the Tag
           # Check manual input first, then release event
-          TAG="${{ github.event.inputs.tag_name }}${{ github.event.release.tag_name }}"
+          TAG="${INPUT_TAG:-${RELEASE_TAG:-}}"
           
           # If both are empty, fetch the latest from GitHub API
           if [ -z "$TAG" ]; then
             echo "No tag provided. Fetching latest release tag from GitHub..."
             # Added --repo flag so it doesn't need a local .git folder
-            TAG=$(gh release view --repo ${{ github.repository }} --json tagName --jq .tagName)
+            TAG=$(gh release view --repo "$REPOSITORY" --json tagName --jq .tagName)
+          fi
+
+          # Accept only version tags before using them in URLs and output values.
+          if [[ ! "$TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?(\+[0-9A-Za-z.-]+)?$ ]]; then
+            echo "Invalid release tag: $TAG"
+            exit 1
           fi
 
           echo "Using Tag: $TAG"
-          VERSION=$(echo $TAG | sed 's/^v//')
+          VERSION="${TAG#v}"
           
           # 2. Construct the URL
-          URL="https://github.com/gitmichaelqiu/desktoprenamer/releases/download/$TAG/desktoprenamer.$VERSION.dmg"
+          URL="https://github.com/$REPOSITORY/releases/download/$TAG/desktoprenamer.$VERSION.dmg"
           
           # 3. Download and Hash
           # -f makes curl fail on 404 so the workflow stops if the URL is wrong
@@ -41,9 +50,9 @@ jobs:
           SHA=$(shasum -a 256 release.dmg | awk '{print $1}')
           
           # 4. Export variables
-          echo "version=$VERSION" >> $GITHUB_OUTPUT
-          echo "sha=$SHA" >> $GITHUB_OUTPUT
-          echo "url=$URL" >> $GITHUB_OUTPUT
+          printf 'version=%s\n' "$VERSION" >> "$GITHUB_OUTPUT"
+          printf 'sha=%s\n' "$SHA" >> "$GITHUB_OUTPUT"
+          printf 'url=%s\n' "$URL" >> "$GITHUB_OUTPUT"
 
       - name: Checkout Tap Repo
         uses: actions/checkout@v4
@@ -52,12 +61,17 @@ jobs:
           token: ${{ secrets.HOMEBREW_TAP_TOKEN }}
 
       - name: Update Cask File
+        env:
+          VERSION: ${{ steps.info.outputs.version }}
+          SHA: ${{ steps.info.outputs.sha }}
         run: |
           CASK_PATH="Casks/desktoprenamer.rb"
-          sed -i "s/version \".*\"/version \"${{ steps.info.outputs.version }}\"/" $CASK_PATH
-          sed -i "s/sha256 \".*\"/sha256 \"${{ steps.info.outputs.sha }}\"/" $CASK_PATH
+          sed -i "s/^version \".*\"/version \"$VERSION\"/" "$CASK_PATH"
+          sed -i "s/^sha256 \".*\"/sha256 \"$SHA\"/" "$CASK_PATH"
 
       - name: Commit and Push to Tap
+        env:
+          VERSION: ${{ steps.info.outputs.version }}
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
@@ -65,8 +79,8 @@ jobs:
           
           # Avoid failing if the version is already up to date
           if git diff --staged --quiet; then
-            echo "No changes detected. Cask is already at version ${{ steps.info.outputs.version }}."
+            echo "No changes detected. Cask is already at version $VERSION."
           else
-            git commit -m "chore: update desktoprenamer to ${{ steps.info.outputs.version }}"
+            git commit -m "chore: update desktoprenamer to $VERSION"
             git push
           fi
