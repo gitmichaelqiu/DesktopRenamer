@@ -382,14 +382,28 @@ struct DiagnosticReportBuilder {
             return "─── Window List ───\nSpaceManager: nil\n"
         }
         var s = "─── Window List ───\n"
-        var names: [String: String] = [:]
-        for space in sm.spaceNameDict {
-            names[space.id] = sm.getSpaceName(space.id)
+        let spaces = sm.spaceNameDict.sorted {
+            if $0.displayID != $1.displayID { return $0.displayID < $1.displayID }
+            return $0.num < $1.num
         }
-        let raw = SpaceHelper.getWindowsForAllSpaces(spaces: sm.spaceNameDict, spaceNames: names)
-        let lines = raw.components(separatedBy: "\n")
-        for line in lines where !line.isEmpty {
-            s += "  \(line)\n"
+        let windowsBySpaceID = Dictionary(
+            grouping: SpaceHelper.getWindowRecordsForAllSpaces(spaces: spaces),
+            by: \.spaceID
+        )
+
+        for space in spaces {
+            let spaceID = DiagnosticText.delimitedField(space.id)
+            let spaceName = DiagnosticText.delimitedField(sm.getSpaceName(space.id))
+            let displayID = DiagnosticText.delimitedField(space.displayID)
+            let appPath = DiagnosticText.delimitedField(space.appPath ?? "")
+            s += ">\(spaceID)~\(spaceName)~\(displayID)~\(space.num)~\(space.isFullscreen ? 1 : 0)~\(appPath)\n"
+
+            for window in windowsBySpaceID[space.id] ?? [] {
+                let ownerName = DiagnosticText.delimitedField(window.ownerName)
+                let appPath = DiagnosticText.delimitedField(window.appPath ?? "")
+                let title = DiagnosticText.delimitedField(window.title ?? "")
+                s += "  \(window.id)|\(window.pid)|\(ownerName)|\(appPath)|\(title)|\(window.isMinimized ? 1 : 0)|\(window.isHidden ? 1 : 0)\n"
+            }
         }
         return s
     }

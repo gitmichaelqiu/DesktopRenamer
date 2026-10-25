@@ -4,6 +4,37 @@ import Foundation
 
 // MARK: - Diagnostic Event Log
 
+enum DiagnosticText {
+    static func singleLine(_ value: String) -> String {
+        escaped(value, delimiters: ["[", "]", "\\"])
+    }
+
+    static func delimitedField(_ value: String) -> String {
+        escaped(value, delimiters: ["|", "~", "\\"])
+    }
+
+    private static func escaped(_ value: String, delimiters: Set<String>) -> String {
+        var result = String.UnicodeScalarView()
+        result.reserveCapacity(value.unicodeScalars.count)
+
+        for scalar in value.unicodeScalars {
+            if CharacterSet.controlCharacters.contains(scalar)
+                || scalar.value == 0x2028
+                || scalar.value == 0x2029 {
+                let escape = "\\u{\(String(scalar.value, radix: 16, uppercase: true))}"
+                result.append(contentsOf: escape.unicodeScalars)
+            } else if delimiters.contains(String(scalar)) {
+                result.append(contentsOf: "\\".unicodeScalars)
+                result.append(scalar)
+            } else {
+                result.append(scalar)
+            }
+        }
+
+        return String(result)
+    }
+}
+
 /// A single event recorded by the diagnostic system.
 public struct DiagnosticEvent: Codable {
     public let timestamp: Date
@@ -34,7 +65,12 @@ public class DiagnosticEventLog {
     /// mode is active also appended to the linear session buffer.
     /// Thread-safe — can be called from any thread.
     public func record(subsystem: String, level: String = "info", _ message: String) {
-        let ev = DiagnosticEvent(timestamp: Date(), subsystem: subsystem, level: level, message: message)
+        let ev = DiagnosticEvent(
+            timestamp: Date(),
+            subsystem: DiagnosticText.singleLine(subsystem),
+            level: DiagnosticText.singleLine(level),
+            message: DiagnosticText.singleLine(message)
+        )
 
         lock.lock()
         defer { lock.unlock() }
