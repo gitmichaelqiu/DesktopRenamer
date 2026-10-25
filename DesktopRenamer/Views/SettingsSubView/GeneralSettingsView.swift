@@ -299,7 +299,7 @@ struct GeneralSettingsView: View {
             }
 
             do {
-                let data = try Data(contentsOf: url)
+                let data = try SettingsImportService.readDocument(at: url)
                 let plan = try SettingsImportService.makePlan(from: data, spaceManager: spaceManager)
                 confirmSettingsImport(plan)
             } catch let error as SettingsImportService.ImportError {

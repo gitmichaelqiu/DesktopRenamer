@@ -248,6 +248,26 @@ enum SettingsImportService {
         }
     }
 
+    static func readDocument(at url: URL) throws -> Data {
+        let fileHandle = try FileHandle(forReadingFrom: url)
+        defer { try? fileHandle.close() }
+
+        var data = Data()
+        data.reserveCapacity(64 * 1024)
+
+        while data.count <= maximumFileSize {
+            let remainingCapacity = maximumFileSize + 1 - data.count
+            let chunkSize = min(64 * 1024, remainingCapacity)
+            guard let chunk = try fileHandle.read(upToCount: chunkSize), !chunk.isEmpty else {
+                break
+            }
+            data.append(chunk)
+        }
+
+        guard data.count <= maximumFileSize else { throw ImportError.fileTooLarge }
+        return data
+    }
+
     static func makePlan(from data: Data, spaceManager: SpaceManager) throws -> Plan {
         guard data.count <= maximumFileSize else { throw ImportError.fileTooLarge }
         guard let raw = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
