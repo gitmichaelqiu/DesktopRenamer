@@ -103,8 +103,20 @@ extension SpaceAPI {
             }
             if !self.accessController.isAuthorized(peerIdentity),
                let requestingApplication,
-               (try? SpaceAPIJSONRPCCodec.decodeRequest(payload)) != nil {
-                self.accessController.requestApproval(for: requestingApplication) { [weak self] in
+               let request = try? SpaceAPIJSONRPCCodec.decodeRequest(payload) {
+                let requiredAccess = DesktopRenamerAPIContract.definition(for: request.method)?.access
+                if request.requestedAccess == .read, requiredAccess == .write {
+                    completion(self.encodeResponse(SpaceAPIJSONRPCCodec.errorResponse(
+                        id: request.id,
+                        code: SpaceAPIJSONRPCCode.permissionDenied,
+                        message: "This request declares read-only access, but the method requires write access."
+                    )))
+                    return
+                }
+                self.accessController.requestApproval(
+                    for: requestingApplication,
+                    requestedAccess: request.requestedAccess
+                ) { [weak self] in
                     Task { @MainActor [weak self] in
                         guard let self else { return }
                         let response = await self.makeRPCResponse(

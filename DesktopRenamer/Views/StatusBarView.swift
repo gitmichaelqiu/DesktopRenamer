@@ -121,7 +121,8 @@ class StatusBarController: NSObject {
     private func presentSpaceAPIAccessRequest() {
         guard !isPresentingSpaceAPIAccessRequest else { return }
         guard let accessController = spaceManager.spaceAPI?.accessController,
-              let requestingApplication = accessController.pendingApprovalRequest else { return }
+              let request = accessController.pendingApprovalRequest else { return }
+        let requestingApplication = request.client
         isPresentingSpaceAPIAccessRequest = true
         defer { isPresentingSpaceAPIAccessRequest = false }
 
@@ -134,7 +135,9 @@ class StatusBarController: NSObject {
         alert.informativeText = NSLocalizedString("Choose the access level to grant.", comment: "")
         alert.icon = spaceAPIAccessRequestIcon(for: requestingApplication.applicationPath)
         alert.addButton(withTitle: NSLocalizedString("Read Only", comment: ""))
-        alert.addButton(withTitle: NSLocalizedString("Read & Write", comment: ""))
+        if request.requestedAccess != .read {
+            alert.addButton(withTitle: NSLocalizedString("Read & Write", comment: ""))
+        }
         alert.addButton(withTitle: NSLocalizedString("Don't Allow", comment: ""))
         alert.buttons.first?.keyEquivalent = "\r"
         alert.buttons.last?.keyEquivalent = "\u{1b}"
@@ -147,7 +150,7 @@ class StatusBarController: NSObject {
         case .alertFirstButtonReturn:
             accessLevel = .readOnly
         case .alertSecondButtonReturn:
-            accessLevel = .fullAccess
+            accessLevel = request.requestedAccess == .read ? .noAccess : .fullAccess
         case .alertThirdButtonReturn:
             accessLevel = .noAccess
         default:

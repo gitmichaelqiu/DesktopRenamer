@@ -66,6 +66,13 @@ struct SpaceAPIApprovedClient: Codable, Equatable, Identifiable {
     }
 }
 
+struct SpaceAPIApprovalPrompt: Equatable, Identifiable {
+    let client: SpaceAPIApprovedClient
+    let requestedAccess: SpaceAPIRequestAccess?
+
+    var id: String { client.id }
+}
+
 struct SpaceAPIPeerIdentity: Equatable {
     let designatedRequirement: String?
     let codeHash: String?

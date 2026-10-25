@@ -67,8 +67,8 @@ struct SpaceAPIAccessSettingsView: View {
                             helperText: "Choose what this app can do with SpaceAPI."
                         ) {
                             SettingsRow(
-                                LocalizedStringResource(stringLiteral: request.name),
-                                leadingIcon: NSWorkspace.shared.icon(forFile: request.applicationPath)
+                                LocalizedStringResource(stringLiteral: request.client.name),
+                                leadingIcon: NSWorkspace.shared.icon(forFile: request.client.applicationPath)
                             ) {
                                 HStack(spacing: 6) {
                                     Button("Don't Allow") {
@@ -77,8 +77,10 @@ struct SpaceAPIAccessSettingsView: View {
                                     Button("Read Only") {
                                         accessController.resolvePendingApproval(with: .readOnly)
                                     }
-                                    Button("Read & Write") {
-                                        accessController.resolvePendingApproval(with: .fullAccess)
+                                    if request.requestedAccess != .read {
+                                        Button("Read & Write") {
+                                            accessController.resolvePendingApproval(with: .fullAccess)
+                                        }
                                     }
                                 }
                             }

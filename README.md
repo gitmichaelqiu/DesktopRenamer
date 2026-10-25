@@ -98,6 +98,8 @@ DesktopRenamer provides multiple ways to interact with it:
 - [Structured SpaceAPI Guide](https://docs.desktoprenamer.mqiu.dev/api/spaceapi/structured/) documents persistent DesktopRenamer space IDs and ManagedSpaceID migration compatibility; see the [API changelog](https://docs.desktoprenamer.mqiu.dev/api/changelog/) for contract changes.
 - The SpaceAPI version is available through AppleScript (`get api version`) and SpaceAPI responses, independently of the app version.
 
+Clients that only need read access can add `"requestedAccess": "read"` to their JSON-RPC request. The first-approval prompt then offers **Read Only** and **Don’t Allow**, without a **Read & Write** option. Omit the field or use `"write"` when the client may need write operations. SpaceAPI still checks each method’s required access.
+
 You can switch on/off the API in Settings → Advanced.
 
 ## Space Locking

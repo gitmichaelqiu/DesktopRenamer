@@ -28,7 +28,7 @@ enum SpaceAPIResultKind: Equatable {
     case boolean
 }
 
-enum SpaceAPIRequestAccess: Equatable {
+enum SpaceAPIRequestAccess: String, Codable, Equatable {
     case read
     case write
 }
