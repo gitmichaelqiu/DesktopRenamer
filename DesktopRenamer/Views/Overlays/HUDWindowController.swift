@@ -49,7 +49,7 @@ struct HUDView: View {
             .frame(width: 28, height: 28)
 
             Text(message)
-                .font(.system(size: 15, weight: .medium))
+                .font(.system(size: 13, weight: .medium))
                 .foregroundStyle(.white)
                 .lineLimit(1)
                 .truncationMode(.tail)
@@ -65,8 +65,6 @@ struct HUDView: View {
         }
         .padding(.horizontal, 14)
         .padding(.vertical, 12)
-        .background(Color(nsColor: NSColor(calibratedWhite: 0.38, alpha: 0.96)), in: Capsule())
-        .overlay(Capsule().stroke(.white.opacity(0.08), lineWidth: 1))
         .contentShape(Capsule())
         .onHover { hovering in
             isHovered = hovering
@@ -238,17 +236,43 @@ class HUDWindowController: NSWindowController {
         if let existing = hostingView {
             existing.rootView = hudView
         } else {
-            // Wrap in a container to break the autolayout feedback loop.
-            let container = NSView(frame: NSRect(x: 0, y: 0, width: 280, height: 44))
-            container.autoresizingMask = [.width, .height]
-
+            let container = NSView()
+            container.translatesAutoresizingMaskIntoConstraints = false
             let newView = NSHostingView(rootView: hudView)
-            newView.translatesAutoresizingMaskIntoConstraints = true
-            newView.autoresizingMask = [.width, .height]
-            newView.frame = container.bounds
-
+            newView.translatesAutoresizingMaskIntoConstraints = false
             container.addSubview(newView)
-            panel.contentView = container
+            NSLayoutConstraint.activate([
+                newView.leadingAnchor.constraint(equalTo: container.leadingAnchor),
+                newView.trailingAnchor.constraint(equalTo: container.trailingAnchor),
+                newView.topAnchor.constraint(equalTo: container.topAnchor),
+                newView.bottomAnchor.constraint(equalTo: container.bottomAnchor),
+            ])
+
+            let surfaceView: NSView
+            if #available(macOS 26.0, *) {
+                let glassView = NSGlassEffectView(frame: .zero)
+                glassView.cornerRadius = 26
+                glassView.contentView = container
+                surfaceView = glassView
+            } else {
+                let visualEffectView = NSVisualEffectView(frame: .zero)
+                visualEffectView.material = .hudWindow
+                visualEffectView.blendingMode = .withinWindow
+                visualEffectView.state = .active
+                visualEffectView.wantsLayer = true
+                visualEffectView.layer?.cornerRadius = 26
+                visualEffectView.layer?.masksToBounds = true
+                visualEffectView.addSubview(container)
+                NSLayoutConstraint.activate([
+                    container.leadingAnchor.constraint(equalTo: visualEffectView.leadingAnchor),
+                    container.trailingAnchor.constraint(equalTo: visualEffectView.trailingAnchor),
+                    container.topAnchor.constraint(equalTo: visualEffectView.topAnchor),
+                    container.bottomAnchor.constraint(equalTo: visualEffectView.bottomAnchor),
+                ])
+                surfaceView = visualEffectView
+            }
+
+            panel.contentView = surfaceView
             self.hostingView = newView
         }
 
@@ -259,6 +283,11 @@ class HUDWindowController: NSWindowController {
             ? idealSize
             : NSSize(width: 300, height: 44)
         panel.setContentSize(size)
+        if #available(macOS 26.0, *), let glassView = panel.contentView as? NSGlassEffectView {
+            glassView.cornerRadius = size.height / 2
+        } else if let visualEffectView = panel.contentView as? NSVisualEffectView {
+            visualEffectView.layer?.cornerRadius = size.height / 2
+        }
 
         positionPanel(panel)
 
