@@ -18,7 +18,7 @@ final class SpaceAPIAccessController: ObservableObject {
         var completions: [() -> Void]
     }
 
-    @Published private(set) var isRestrictedForSettings = false
+    @Published private(set) var isRestrictedForSettings = true
     @Published private(set) var approvedClients: [SpaceAPIApprovedClient] = []
     @Published private(set) var pendingApprovalRequest: SpaceAPIApprovalPrompt?
     @Published private(set) var errorMessage: String?
@@ -28,7 +28,7 @@ final class SpaceAPIAccessController: ObservableObject {
     var accessRequestDidArrive: (() -> Void)?
 
     private let lock = NSLock()
-    private var policy = SpaceAPIAccessPolicy(isRestricted: false, approvedClients: [])
+    private var policy = SpaceAPIAccessPolicy(isRestricted: true, approvedClients: [])
     private var isStoreUsable = true
     private var pendingApprovals: [String: PendingApproval] = [:]
     private var pendingApprovalOrder: [String] = []
