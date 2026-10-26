@@ -13,7 +13,12 @@ struct HUDView: View {
     let onHoverChanged: (Bool) -> Void
     let forceHover: Bool
 
+    @Environment(\.colorScheme) private var colorScheme
     @State private var isHovered = false
+
+    private var foregroundColor: Color {
+        colorScheme == .light ? .black : .white
+    }
 
     private var showsDismissButton: Bool {
         isHovered || forceHover
@@ -26,9 +31,12 @@ struct HUDView: View {
                     Button(action: onDismiss) {
                         Image(systemName: "xmark")
                             .font(.system(size: 13, weight: .medium))
-                            .foregroundStyle(.white)
+                            .foregroundStyle(foregroundColor)
                             .frame(width: 28, height: 28)
-                            .background(.white.opacity(0.14), in: Circle())
+                            .background(
+                                foregroundColor.opacity(0.14),
+                                in: Circle()
+                            )
                     }
                     .buttonStyle(.plain)
                     .help(String(localized: "Dismiss"))
@@ -50,7 +58,7 @@ struct HUDView: View {
 
             Text(message)
                 .font(.system(size: 13, weight: .medium))
-                .foregroundStyle(.white)
+                .foregroundStyle(foregroundColor)
                 .lineLimit(1)
                 .truncationMode(.tail)
                 .frame(maxWidth: 420, alignment: .leading)
