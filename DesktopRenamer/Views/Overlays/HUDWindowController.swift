@@ -106,6 +106,8 @@ class HUDWindowController: NSWindowController {
     private var hostingView: NSHostingView<HUDView>?
     private var hideDuration: TimeInterval?
     private var isHoveringHUD = false
+    private var presentationID = UUID()
+    private var hideAnimationID: UUID?
     #if DEBUG
     private var forceHoverPreview = false
     #endif
@@ -203,6 +205,8 @@ class HUDWindowController: NSWindowController {
     ) {
         guard let panel = window as? HUDNSPanel else { return }
 
+        presentationID = UUID()
+        hideAnimationID = nil
         panel.appearance = NSApp.effectiveAppearance
         hideTimer?.invalidate()
         hideTimer = nil
@@ -292,8 +296,8 @@ class HUDWindowController: NSWindowController {
 
         positionPanel(panel)
 
-        panel.alphaValue = 1.0
         panel.orderFrontRegardless()
+        animateAlpha(1.0, on: panel, duration: 0.08)
 
         if autoHide {
             let duration = (buttonTitle != nil) ? 5.0 : 1.8
@@ -344,12 +348,27 @@ class HUDWindowController: NSWindowController {
         hideTimer = nil
         hideDuration = nil
 
+        let currentPresentationID = presentationID
+        let currentHideAnimationID = UUID()
+        hideAnimationID = currentHideAnimationID
+
         NSAnimationContext.runAnimationGroup { ctx in
-            ctx.duration = 0.2
+            ctx.duration = 0.32
             ctx.allowsImplicitAnimation = true
             panel.animator().alphaValue = 0.0
         } completionHandler: {
+            guard self.presentationID == currentPresentationID,
+                  self.hideAnimationID == currentHideAnimationID else { return }
+            self.hideAnimationID = nil
             panel.orderOut(nil)
+        }
+    }
+
+    private func animateAlpha(_ alpha: CGFloat, on panel: NSWindow, duration: TimeInterval) {
+        NSAnimationContext.runAnimationGroup { context in
+            context.duration = duration
+            context.allowsImplicitAnimation = true
+            panel.animator().alphaValue = alpha
         }
     }
 
