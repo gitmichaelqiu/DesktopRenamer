@@ -25,7 +25,7 @@ struct GeneralSettingsView: View {
     var body: some View {
         SettingsContainer(.general) {
             VStack(alignment: .leading, spacing: 20) {
-                SettingsSection(nil) {
+                SettingsSection("Settings.General") {
                     SettingsRow(
                         "Hide menubar icon",
                         helperText:

@@ -121,9 +121,9 @@ struct SwitchSettingsView: View {
                         step: 1.0,
                         valueString: { String(format: "%.0f px", $0) }
                     )
+                }
 
-                    Divider()
-
+                SettingsSection(nil) {
                     SettingsRow("Exceptions") {
                         Button("Add app exception...") {
                             showingAddExceptionSheet = true
