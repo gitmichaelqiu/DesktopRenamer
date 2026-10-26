@@ -25,6 +25,15 @@ extension SpaceLabelWindow {
             ? (labelManager?.showActiveLabels ?? true)
             : (labelManager?.showPreviewLabels ?? true)
         guard labelsEnabled else {
+            if !isActiveMode,
+               labelManager?.shouldPreservePreviewWindowOrderingForSettings == true {
+                // Keep a preview's WindowServer ordering while Settings is
+                // presented. Ordering it out here means turning previews back
+                // on has to order it in again, which can select its Space.
+                hideForSettingsActivation()
+                return
+            }
+
             pendingVisibilityTask?.cancel()
             pendingVisibilityTask = nil
             contentView?.layer?.removeAllAnimations()
@@ -32,6 +41,17 @@ extension SpaceLabelWindow {
             alphaValue = 0.0
             contentView?.alphaValue = 0.0
             orderOut(nil)
+            return
+        }
+
+        if !isActiveMode,
+           !isVisible,
+           labelManager?.shouldPreservePreviewWindowOrderingForSettings == true {
+            // If previews were already ordered out before Settings opened,
+            // defer ordering them in until Settings closes. Settings can stay
+            // interactive without showing these panels, and the close-time
+            // reconciliation will restore them using the settled Space state.
+            hideForSettingsActivation()
             return
         }
 
