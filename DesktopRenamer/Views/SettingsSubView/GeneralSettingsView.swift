@@ -162,10 +162,7 @@ struct GeneralSettingsView: View {
 
                     Divider()
 
-                    SettingsRow(
-                        "Settings.General.Import.Settings",
-                        helperText: "Settings.General.Import.Helper"
-                    ) {
+                    SettingsRow("Settings.General.Import.Settings") {
                         Button("Settings.General.Import.Button") {
                             importSettings()
                         }

@@ -3726,23 +3726,6 @@
         }
       }
     },
-    "Settings.General.Import.Helper" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Restore preferences and custom space names from a settings file."
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "从设置文件恢复偏好设置和自定义桌面名称。"
-          }
-        }
-      }
-    },
     "Settings.General.Import.Settings" : {
       "extractionState" : "manual",
       "localizations" : {
