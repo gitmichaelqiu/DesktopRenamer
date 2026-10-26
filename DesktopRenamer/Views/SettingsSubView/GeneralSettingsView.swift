@@ -25,25 +25,6 @@ struct GeneralSettingsView: View {
     var body: some View {
         SettingsContainer(.general) {
             VStack(alignment: .leading, spacing: 20) {
-                // General configuration options.
-                SettingsSection("Settings.General.General") {
-                    SettingsRow(
-                        "Show preview labels"
-                    ) {
-                        Toggle("", isOn: $labelManager.showPreviewLabels)
-                            .toggleStyle(.switch)
-                            .labelsHidden()
-                    }
-
-                    Divider()
-                
-                    SettingsRow("Show active space labels") {
-                        Toggle("", isOn: $labelManager.showActiveLabels)
-                            .labelsHidden()
-                            .toggleStyle(.switch)
-                    }
-                }
-                
                 SettingsSection(nil) {
                     SettingsRow(
                         "Hide menubar icon",

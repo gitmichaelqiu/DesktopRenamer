@@ -3,7 +3,6 @@ import SwiftUI
 @MainActor
 struct LauncherSettingsView: View {
     @EnvironmentObject var spaceManager: SpaceManager
-    @EnvironmentObject var hotkeyManager: HotkeyManager
     @ObservedObject var viewModel = LauncherWindowController.shared.viewModel
     @StateObject private var permissionManager = PermissionManager.shared
     @EnvironmentObject var navigationState: SettingsNavigationState
@@ -13,26 +12,6 @@ struct LauncherSettingsView: View {
         SettingsContainer(.launcher) {
             VStack(alignment: .leading, spacing: 20) {
                 SettingsSection("Launcher Settings") {
-                    SettingsRow("Open launcher") {
-                        HStack {
-                            Text(hotkeyManager.description(for: .launcher))
-                                .foregroundColor(.secondary)
-                                .padding(.trailing, 8)
-                            
-                            Button("◉") {
-                                hotkeyManager.startListening(for: .launcher)
-                            }
-                            .disabled(hotkeyManager.isListening)
-                            
-                            Button("↺") {
-                                hotkeyManager.resetToDefault(for: .launcher)
-                            }
-                            .disabled(hotkeyManager.isDefault(for: .launcher))
-                        }
-                    }
-
-                    Divider()
-
                     SettingsRow(
                         "Automatically return to original space"
                     ) {

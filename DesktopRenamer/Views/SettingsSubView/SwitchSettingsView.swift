@@ -1,11 +1,8 @@
 import SwiftUI
-import UniformTypeIdentifiers
 
 struct SwitchSettingsView: View {
-    @EnvironmentObject var hotkeyManager: HotkeyManager
     @EnvironmentObject var gestureManager: GestureManager
     @EnvironmentObject var spaceManager: SpaceManager
-    @EnvironmentObject var labelManager: SpaceLabelManager
     @EnvironmentObject var navigationState: SettingsNavigationState
     @StateObject private var permissionManager = PermissionManager.shared
     
@@ -16,266 +13,14 @@ struct SwitchSettingsView: View {
     var body: some View {
         SettingsContainer(.sswitch) {
             VStack(alignment: .leading, spacing: 20) {
-                SettingsSection("Keyboard Shortcuts", helperText: "If you use Control + Arrow shortcuts, disable the matching Mission Control shortcuts in System Settings.") {
-                    
-                    SettingsRow(
-                        "Switch to previous space",
-                        requirements: [
-                            .accessibility(isGranted: permissionManager.hasEventInjectionPermission)
-                        ]
-                    ) {
-                        HStack {
-                            Text(hotkeyManager.description(for: .switchLeft))
-                                .foregroundColor(.secondary)
-                                .padding(.trailing, 8)
-                            
-                            Button("◉") {
-                                hotkeyManager.startListening(for: .switchLeft)
-                            }
-                            .disabled(hotkeyManager.isListening)
-                            
-                            Button("↺") {
-                                hotkeyManager.resetToDefault(for: .switchLeft)
-                            }
-                            .disabled(hotkeyManager.isDefault(for: .switchLeft))
-                        }
-                    }
-                    
-                    Divider()
-                    
-                    SettingsRow(
-                        "Switch to next space",
-                        requirements: [
-                            .accessibility(isGranted: permissionManager.hasEventInjectionPermission)
-                        ]
-                    ) {
-                        HStack {
-                            Text(hotkeyManager.description(for: .switchRight))
-                                .foregroundColor(.secondary)
-                                .padding(.trailing, 8)
-                            
-                            Button("◉") {
-                                hotkeyManager.startListening(for: .switchRight)
-                            }
-                            .disabled(hotkeyManager.isListening)
-                            
-                            Button("↺") {
-                                hotkeyManager.resetToDefault(for: .switchRight)
-                            }
-                            .disabled(hotkeyManager.isDefault(for: .switchRight))
-                        }
-                    }
-                    
-                    Divider()
-                    
-                    SettingsRow(
-                        "Switch to space number",
-                        requirements: [
-                            .accessibility(isGranted: permissionManager.hasEventInjectionPermission)
-                        ]
-                    ) {
-                        HStack {
-                            Text(hotkeyManager.description(for: .switchSpaceNumber))
-                                .foregroundColor(.secondary)
-                                .padding(.trailing, 8)
-                            
-                            Button("◉") {
-                                hotkeyManager.startListening(for: .switchSpaceNumber)
-                            }
-                            .disabled(hotkeyManager.isListening)
-                            
-                            Button("↺") {
-                                hotkeyManager.resetToDefault(for: .switchSpaceNumber)
-                            }
-                            .disabled(hotkeyManager.isDefault(for: .switchSpaceNumber))
-                        }
-                    }
-                }
-                
-                SettingsSection(nil) {
-                    SettingsRow(
-                        "Move window to previous space",
-                        requirements: [
-                            .accessibility(isGranted: permissionManager.hasEventInjectionPermission)
-                        ]
-                    ) {
-                        HStack {
-                            Text(hotkeyManager.description(for: .moveWindowPrevious))
-                                .foregroundColor(.secondary)
-                                .padding(.trailing, 8)
-                            
-                            Button("◉") {
-                                hotkeyManager.startListening(for: .moveWindowPrevious)
-                            }
-                            .disabled(hotkeyManager.isListening)
-                            
-                            Button("↺") {
-                                hotkeyManager.resetToDefault(for: .moveWindowPrevious)
-                            }
-                            .disabled(hotkeyManager.isDefault(for: .moveWindowPrevious))
-                        }
-                    }
-                    
-                    Divider()
-                    
-                    SettingsRow(
-                        "Move window to next space",
-                        requirements: [
-                            .accessibility(isGranted: permissionManager.hasEventInjectionPermission)
-                        ]
-                    ) {
-                        HStack {
-                            Text(hotkeyManager.description(for: .moveWindowNext))
-                                .foregroundColor(.secondary)
-                                .padding(.trailing, 8)
-                            
-                            Button("◉") {
-                                hotkeyManager.startListening(for: .moveWindowNext)
-                            }
-                            .disabled(hotkeyManager.isListening)
-                            
-                            Button("↺") {
-                                hotkeyManager.resetToDefault(for: .moveWindowNext)
-                            }
-                            .disabled(hotkeyManager.isDefault(for: .moveWindowNext))
-                        }
-                    }
-                    
-                    Divider()
-                    
-                    SettingsRow(
-                        "Move window to space number",
-                        requirements: [
-                            .accessibility(isGranted: permissionManager.hasEventInjectionPermission)
-                        ]
-                    ) {
-                        HStack {
-                            Text(hotkeyManager.description(for: .moveWindowNumber))
-                                .foregroundColor(.secondary)
-                                .padding(.trailing, 8)
-                            
-                            Button("◉") {
-                                hotkeyManager.startListening(for: .moveWindowNumber)
-                            }
-                            .disabled(hotkeyManager.isListening)
-                            
-                            Button("↺") {
-                                hotkeyManager.resetToDefault(for: .moveWindowNumber)
-                            }
-                            .disabled(hotkeyManager.isDefault(for: .moveWindowNumber))
-                        }
-                    }   
-                }
-
-                SettingsSection(nil) {
-                    SettingsRow(
-                        "Move window to previous display",
-                        requirements: [
-                            .accessibility(isGranted: permissionManager.hasEventInjectionPermission)
-                        ]
-                    ) {
-                        HStack {
-                            Text(hotkeyManager.description(for: .moveWindowPreviousDisplay))
-                                .foregroundColor(.secondary)
-                                .padding(.trailing, 8)
-                            
-                            Button("◉") {
-                                hotkeyManager.startListening(for: .moveWindowPreviousDisplay)
-                            }
-                            .disabled(hotkeyManager.isListening)
-                            
-                            Button("↺") {
-                                hotkeyManager.resetToDefault(for: .moveWindowPreviousDisplay)
-                            }
-                            .disabled(hotkeyManager.isDefault(for: .moveWindowPreviousDisplay))
-                        }
-                    }
-                    
-                    Divider()
-                    
-                    SettingsRow(
-                        "Move window to next display",
-                        requirements: [
-                            .accessibility(isGranted: permissionManager.hasEventInjectionPermission)
-                        ]
-                    ) {
-                        HStack {
-                            Text(hotkeyManager.description(for: .moveWindowNextDisplay))
-                                .foregroundColor(.secondary)
-                                .padding(.trailing, 8)
-                            
-                            Button("◉") {
-                                hotkeyManager.startListening(for: .moveWindowNextDisplay)
-                            }
-                            .disabled(hotkeyManager.isListening)
-                            
-                            Button("↺") {
-                                hotkeyManager.resetToDefault(for: .moveWindowNextDisplay)
-                            }
-                            .disabled(hotkeyManager.isDefault(for: .moveWindowNextDisplay))
-                        }
-                    }
-                }
-
-                SettingsSection(nil) {
-                    SettingsRow("Toggle lock for current space",
-                        helperText: "When opening an app switches spaces, return its window to the original space.",
-                        requirements: [
-                            .accessibility(isGranted: permissionManager.hasEventInjectionPermission)
-                        ],
-                        demoVideoName: "LockSpace"
-                    ) {
-                        HStack {
-                            Text(hotkeyManager.description(for: .toggleLock))
-                                .foregroundColor(.secondary)
-                                .padding(.trailing, 8)
-                            
-                            Button("◉") {
-                                hotkeyManager.startListening(for: .toggleLock)
-                            }
-                            .disabled(hotkeyManager.isListening)
-                            
-                            Button("↺") {
-                                hotkeyManager.resetToDefault(for: .toggleLock)
-                            }
-                            .disabled(hotkeyManager.isDefault(for: .toggleLock))
-                        }
-                    }
-
-                    Divider()
-                    
-                    SettingsRow(
-                        "Restore windows moved by lock",
-                        requirements: [
-                            .accessibility(isGranted: permissionManager.hasEventInjectionPermission)
-                        ]
-                    ) {
-                        HStack {
-                            Text(hotkeyManager.description(for: .restoreWindows))
-                                .foregroundColor(.secondary)
-                                .padding(.trailing, 8)
-                            
-                            Button("◉") {
-                                hotkeyManager.startListening(for: .restoreWindows)
-                            }
-                            .disabled(hotkeyManager.isListening)
-                            
-                            Button("↺") {
-                                hotkeyManager.resetToDefault(for: .restoreWindows)
-                            }
-                            .disabled(hotkeyManager.isDefault(for: .restoreWindows))
-                        }
-                    }
-
-                    Divider()
-
+                SettingsSection("Space Lock") {
                     SettingsRow("Automatically restore windows when unlocking") {
                         Toggle("", isOn: $spaceManager.autoRestoreWindowsOnUnlock)
                             .toggleStyle(.switch)
                             .labelsHidden()
                     }
                 }
-                
+
                 // Gesture-based switching configuration.
                 SettingsSection("Trackpad Switch Gesture Override") {
                     SettingsRow(
@@ -355,7 +100,7 @@ struct SwitchSettingsView: View {
                 }
                 
 
-                SettingsSection("Grabbing") {
+                SettingsSection("Window Movement") {
                     SliderSettingsRow(
                         "Grab offset X",
                         helperText: "Adjust where the pointer grabs a window when moving it between spaces.",
@@ -365,9 +110,9 @@ struct SwitchSettingsView: View {
                         step: 1.0,
                         valueString: { String(format: "%.0f px", $0) }
                     )
-                    
+
                     Divider()
-                    
+
                     SliderSettingsRow(
                         "Grab offset Y",
                         value: $spaceManager.grabOffsetY,
@@ -376,9 +121,9 @@ struct SwitchSettingsView: View {
                         step: 1.0,
                         valueString: { String(format: "%.0f px", $0) }
                     )
-                }
-                
-                SettingsSection(nil) {
+
+                    Divider()
+
                     SettingsRow("Exceptions") {
                         Button("Add app exception...") {
                             showingAddExceptionSheet = true
@@ -386,7 +131,7 @@ struct SwitchSettingsView: View {
                         .buttonStyle(.bordered)
                         .controlSize(.regular)
                     }
-                    
+
                     if spaceManager.appGrabExceptions.isEmpty {
                         Divider()
                         HStack {
@@ -414,7 +159,7 @@ struct SwitchSettingsView: View {
                                         }
                                     }
                                 )
-                                
+
                                 if exception.bundleIdentifier != spaceManager.appGrabExceptions.last?.bundleIdentifier {
                                     Divider().padding(.horizontal, 12)
                                 }

@@ -2,7 +2,6 @@ import SwiftUI
 
 struct LabelSettingsView: View {
     @ObservedObject var labelManager: SpaceLabelManager
-    @EnvironmentObject var hotkeyManager: HotkeyManager
 
     private var isLiquidGlassAvailable: Bool {
         if #available(macOS 26.0, *) {
@@ -135,27 +134,6 @@ struct LabelSettingsView: View {
                     }
                 }
 
-                if labelManager.showPreviewLabels || labelManager.showActiveLabels {
-                    SettingsSection("Shortcuts") {
-                        SettingsRow("Reload space labels") {
-                            HStack {
-                                Text(hotkeyManager.description(for: .reloadLabels))
-                                    .foregroundColor(.secondary)
-                                    .padding(.trailing, 8)
-                                
-                                Button("◉") {
-                                    hotkeyManager.startListening(for: .reloadLabels)
-                                }
-                                .disabled(hotkeyManager.isListening)
-                                
-                                Button("↺") {
-                                    hotkeyManager.resetToDefault(for: .reloadLabels)
-                                }
-                                .disabled(hotkeyManager.isDefault(for: .reloadLabels))
-                            }
-                        }
-                    }
-                }
             }
             .animation(.easeInOut(duration: 0.2), value: labelManager.showActiveLabels)
             .animation(.easeInOut(duration: 0.2), value: labelManager.showPreviewLabels)

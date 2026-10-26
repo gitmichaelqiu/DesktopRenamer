@@ -1528,16 +1528,6 @@
         }
       }
     },
-    "Grabbing" : {
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "抓取"
-          }
-        }
-      }
-    },
     "Grant" : {
       "localizations" : {
         "zh-Hans" : {
@@ -1694,16 +1684,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "在桌面可见"
-          }
-        }
-      }
-    },
-    "Keyboard Shortcuts" : {
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "键盘快捷键"
           }
         }
       }
@@ -3522,23 +3502,6 @@
         }
       }
     },
-    "Settings.General.General" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "General"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "通用"
-          }
-        }
-      }
-    },
     "Settings.General.General.LaunchAtLogin" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -4286,6 +4249,26 @@
         }
       }
     },
+    "Space Lock" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "桌面锁定"
+          }
+        }
+      }
+    },
+    "Space Navigation" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "桌面导航"
+          }
+        }
+      }
+    },
     "Space rearrangement timed out." : {
       "localizations" : {
         "zh-Hans" : {
@@ -4945,6 +4928,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "窗口"
+          }
+        }
+      }
+    },
+    "Window Movement" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "窗口移动"
           }
         }
       }
