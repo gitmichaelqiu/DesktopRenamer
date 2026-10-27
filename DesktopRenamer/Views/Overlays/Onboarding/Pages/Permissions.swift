@@ -13,6 +13,8 @@ struct ManageWindowsPage: View {
 
 struct PermissionsPage: View {
     @StateObject private var permissionManager = PermissionManager.shared
+    @State private var spaceAPIAccessController: SpaceAPIAccessController?
+    @State private var isSpaceAPIEnabled = false
     
     var body: some View {
         VStack(spacing: 30) {
@@ -37,6 +39,11 @@ struct PermissionsPage: View {
                     .lineSpacing(6)
                     .padding(.horizontal, 40)
             }
+
+            if isSpaceAPIEnabled, let spaceAPIAccessController {
+                SpaceAPIAccessOnboardingSection(accessController: spaceAPIAccessController)
+                    .frame(maxWidth: 460)
+            }
             
             VStack(spacing: 10) {
                 permissionButton(
@@ -54,6 +61,16 @@ struct PermissionsPage: View {
         .padding()
         .onAppear {
             permissionManager.refresh()
+        }
+        .task {
+            while !Task.isCancelled {
+                if let spaceManager = AppDelegate.shared?.spaceManager {
+                    isSpaceAPIEnabled = SpaceManager.isAPIEnabled
+                    spaceAPIAccessController = spaceManager.spaceAPI?.accessController
+                    break
+                }
+                try? await Task.sleep(nanoseconds: 100_000_000)
+            }
         }
     }
 
@@ -76,6 +93,36 @@ struct PermissionsPage: View {
             .cornerRadius(8)
         }
         .buttonStyle(PlainButtonStyle())
+    }
+}
+
+private struct SpaceAPIAccessOnboardingSection: View {
+    @ObservedObject var accessController: SpaceAPIAccessController
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("SpaceAPI Access")
+                .font(.headline)
+
+            Toggle(
+                "Allow only approved apps",
+                isOn: Binding(
+                    get: { accessController.isRestrictedForSettings },
+                    set: { value in
+                        withAnimation(.easeInOut(duration: 0.2)) {
+                            accessController.setRestricted(value)
+                        }
+                    }
+                )
+            )
+            .toggleStyle(.switch)
+
+            Text("This setting controls both SpaceAPI and AppleScript access.")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+        }
+        .padding(14)
+        .background(Color.secondary.opacity(0.08), in: RoundedRectangle(cornerRadius: 12))
     }
 }
 
