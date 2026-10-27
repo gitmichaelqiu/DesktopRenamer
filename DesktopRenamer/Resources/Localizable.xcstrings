@@ -2325,6 +2325,7 @@
       }
     },
     "No apps added" : {
+      "extractionState" : "stale",
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {

@@ -105,18 +105,13 @@ struct SpaceAPIAccessSettingsView: View {
                         if let errorMessage = accessController.errorMessage {
                             Divider()
 
-                            SettingsRow("Policy status") {
-                                HStack(spacing: 8) {
-                                    Text(errorMessage)
-                                        .font(.footnote)
-                                        .foregroundStyle(.red)
-                                        .multilineTextAlignment(.trailing)
-                                        .fixedSize(horizontal: false, vertical: true)
-
-                                    if accessController.canRepairPolicy {
-                                        Button("Reset") {
-                                            showPolicyRepairConfirmation = true
-                                        }
+                            SettingsRow(
+                                "Policy status",
+                                warningText: LocalizedStringKey(errorMessage)
+                            ) {
+                                if accessController.canRepairPolicy {
+                                    Button("Reset") {
+                                        showPolicyRepairConfirmation = true
                                     }
                                 }
                             }
@@ -152,56 +147,44 @@ struct SpaceAPIAccessSettingsView: View {
                                 Button("Choose…", action: chooseApplication)
                             }
 
-                            if accessController.approvedClients.isEmpty {
-                                Divider()
+                            ForEach(accessController.approvedClients) { client in
+                                VStack(spacing: 0) {
+                                    Divider()
 
-                                SettingsRow("No apps added") {
-                                    Text("All apps are blocked while either access restriction is enabled.")
-                                        .foregroundStyle(.secondary)
-                                        .multilineTextAlignment(.trailing)
-                                        .fixedSize(horizontal: false, vertical: true)
-                                }
-                                .transition(.opacity.combined(with: .move(edge: .top)))
-                            } else {
-                                ForEach(accessController.approvedClients) { client in
-                                    VStack(spacing: 0) {
-                                        Divider()
-
-                                        SettingsRow(
-                                            LocalizedStringResource(stringLiteral: client.name),
-                                            leadingIcon: NSWorkspace.shared.icon(forFile: client.applicationPath)
-                                        ) {
-                                            HStack(spacing: 8) {
-                                                Picker(
-                                                    "Access for \(client.name)",
-                                                    selection: Binding(
-                                                        get: { client.accessLevel },
-                                                        set: { accessController.setAccessLevel(forClientID: client.id, to: $0) }
-                                                    )
-                                                ) {
-                                                    Text("No Access").tag(SpaceAPIClientAccessLevel.noAccess)
-                                                    Text("Read Only").tag(SpaceAPIClientAccessLevel.readOnly)
-                                                    Text("Read & Write").tag(SpaceAPIClientAccessLevel.fullAccess)
-                                                }
-                                                .labelsHidden()
-                                                .pickerStyle(.menu)
-                                                .frame(width: 128)
-                                                .disabled(!isAnyAccessRestrictionEnabled)
-
-                                                Button {
-                                                    withAnimation(.easeInOut(duration: 0.2)) {
-                                                        accessController.revokeClient(id: client.id)
-                                                    }
-                                                } label: {
-                                                    Image(systemName: "trash")
-                                                }
-                                                .buttonStyle(.borderless)
-                                                .help("Remove app")
+                                    SettingsRow(
+                                        LocalizedStringResource(stringLiteral: client.name),
+                                        leadingIcon: NSWorkspace.shared.icon(forFile: client.applicationPath)
+                                    ) {
+                                        HStack(spacing: 8) {
+                                            Picker(
+                                                "Access for \(client.name)",
+                                                selection: Binding(
+                                                    get: { client.accessLevel },
+                                                    set: { accessController.setAccessLevel(forClientID: client.id, to: $0) }
+                                                )
+                                            ) {
+                                                Text("No Access").tag(SpaceAPIClientAccessLevel.noAccess)
+                                                Text("Read Only").tag(SpaceAPIClientAccessLevel.readOnly)
+                                                Text("Read & Write").tag(SpaceAPIClientAccessLevel.fullAccess)
                                             }
+                                            .labelsHidden()
+                                            .pickerStyle(.menu)
+                                            .frame(width: 128)
+                                            .disabled(!isAnyAccessRestrictionEnabled)
+
+                                            Button {
+                                                withAnimation(.easeInOut(duration: 0.2)) {
+                                                    accessController.revokeClient(id: client.id)
+                                                }
+                                            } label: {
+                                                Image(systemName: "trash")
+                                            }
+                                            .buttonStyle(.borderless)
+                                            .help("Remove app")
                                         }
                                     }
-                                    .transition(.opacity.combined(with: .move(edge: .top)))
                                 }
+                                .transition(.opacity.combined(with: .move(edge: .top)))
                             }
                         }
                     }
