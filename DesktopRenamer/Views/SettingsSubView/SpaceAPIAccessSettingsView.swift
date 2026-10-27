@@ -24,11 +24,12 @@ struct SpaceAPIAccessSettingsView: View {
                     onBack: { self.selectedUsage = nil },
                     onDone: { dismiss() }
                 )
+                .padding(.horizontal, 16)
             } else {
                 accessSettingsContent
             }
         }
-        .padding(16)
+        .padding(.vertical, 16)
         .frame(width: 560, height: 540)
         .environment(\.settingsTab, .general)
         .confirmationDialog(
