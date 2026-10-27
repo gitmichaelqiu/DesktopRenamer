@@ -246,7 +246,10 @@ struct SettingsView: View {
                         }
                     }
                     .tag(tab)
-                    .listRowBackground(Color.clear)
+                    .listRowBackground(
+                        RoundedRectangle(cornerRadius: 8, style: .continuous)
+                            .fill(selectedTab == tab ? Color.accentColor : Color.clear)
+                    )
                 }
             }
         }
@@ -325,16 +328,7 @@ struct SettingsView: View {
                     .foregroundStyle(selectedTab == tab ? Color.white : Color.accentColor)
             }
         }
-        .frame(
-            maxWidth: .infinity,
-            minHeight: sidebarRowHeight,
-            maxHeight: sidebarRowHeight,
-            alignment: .leading
-        )
-        .background {
-            RoundedRectangle(cornerRadius: 8, style: .continuous)
-                .fill(selectedTab == tab ? Color.accentColor : Color.clear)
-        }
+        .frame(height: sidebarRowHeight)
     }
 
 }
