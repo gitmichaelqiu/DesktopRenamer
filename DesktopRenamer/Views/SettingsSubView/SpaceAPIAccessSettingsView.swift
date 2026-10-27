@@ -8,6 +8,8 @@ struct SpaceAPIAccessSettingsView: View {
     @Environment(\.dismiss) private var dismiss
 
     @State private var showPolicyRepairConfirmation = false
+    @State private var isPresentingPolicyError = false
+    @State private var policyErrorAlert: NSAlert?
     @State private var selectedUsage: SpaceAPIUsageStatistics.AppUsage?
     @AppStorage("spaceAPIUsageRange") private var usageRange = SpaceAPIUsageRange.last7Days
     @State private var showClearUsageConfirmation = false
@@ -49,6 +51,16 @@ struct SpaceAPIAccessSettingsView: View {
         } message: {
             Text("This removes all recorded SpaceAPI usage counts and history.")
         }
+        .onAppear {
+            guard let errorMessage = accessController.errorMessage else { return }
+            DispatchQueue.main.async {
+                presentPolicyError(errorMessage)
+            }
+        }
+        .onChange(of: accessController.errorMessage) { _, errorMessage in
+            guard let errorMessage else { return }
+            presentPolicyError(errorMessage)
+        }
     }
 
     private var accessSettingsContent: some View {
@@ -58,6 +70,7 @@ struct SpaceAPIAccessSettingsView: View {
                     .font(.title2.weight(.semibold))
                 Spacer()
             }
+            .padding(.horizontal, 16)
 
             ScrollView {
                 VStack(alignment: .leading, spacing: 20) {
@@ -79,21 +92,6 @@ struct SpaceAPIAccessSettingsView: View {
                             )
                             .labelsHidden()
                             .toggleStyle(.switch)
-                        }
-
-                        if let errorMessage = accessController.errorMessage {
-                            Divider()
-
-                            SettingsRow(
-                                "Policy status",
-                                warningText: LocalizedStringKey(errorMessage)
-                            ) {
-                                if accessController.canRepairPolicy {
-                                    Button("Reset") {
-                                        showPolicyRepairConfirmation = true
-                                    }
-                                }
-                            }
                         }
                     }
 
@@ -244,7 +242,7 @@ struct SpaceAPIAccessSettingsView: View {
                         value: usageStatistics.appUsages.map(\.id)
                     )
                 }
-                .padding(.trailing, 16)
+                .padding(.horizontal, 16)
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
 
@@ -253,6 +251,32 @@ struct SpaceAPIAccessSettingsView: View {
                 Button("Done") { dismiss() }
                     .buttonStyle(.borderedProminent)
                     .keyboardShortcut(.defaultAction)
+            }
+            .padding(.horizontal, 16)
+        }
+    }
+
+    private func presentPolicyError(_ message: String) {
+        guard !isPresentingPolicyError,
+              let window = NSApp.suitableSheetWindow else { return }
+
+        let canRepairPolicy = accessController.canRepairPolicy
+        let alert = NSAlert()
+        alert.messageText = NSLocalizedString("SpaceAPI Access", comment: "")
+        alert.informativeText = message
+        alert.alertStyle = .warning
+        if canRepairPolicy {
+            alert.addButton(withTitle: NSLocalizedString("Reset…", comment: ""))
+        }
+        alert.addButton(withTitle: NSLocalizedString("OK", comment: ""))
+
+        isPresentingPolicyError = true
+        policyErrorAlert = alert
+        alert.beginSheetModal(for: window) { response in
+            isPresentingPolicyError = false
+            policyErrorAlert = nil
+            if canRepairPolicy, response == .alertFirstButtonReturn {
+                showPolicyRepairConfirmation = true
             }
         }
     }
