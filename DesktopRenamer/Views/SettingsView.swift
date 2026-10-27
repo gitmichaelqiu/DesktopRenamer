@@ -186,8 +186,22 @@ struct SettingsView: View {
         .padding(.trailing, 10)
     }
 
+    private var sidebarHeader: some View {
+        VStack(alignment: .leading, spacing: 2) {
+            Color.clear.frame(height: 45)
+            Text("Desktop").font(.custom("Syncopate-Bold", size: 21)).foregroundStyle(.primary)
+            Text("Renamer").font(.custom("Syncopate-Bold", size: 21)).foregroundStyle(.primary)
+                .padding(.bottom, 10)
+
+            searchField
+                .padding(.bottom, 12)
+        }
+        .padding(.leading, 15)
+        .padding(.trailing, 2)
+    }
+
     @ViewBuilder
-    private func sidebarContent(titleSize: CGFloat, spacing: CGFloat) -> some View {
+    private var sidebarContent: some View {
         Section {
             if filteredTabs.isEmpty {
                 Text("No results")
@@ -234,29 +248,20 @@ struct SettingsView: View {
                     .tag(tab)
                 }
             }
-        } header: {
-            VStack(alignment: .leading, spacing: spacing) {
-                Color.clear.frame(height: 45)
-                Text("Desktop").font(.custom("Syncopate-Bold", size: titleSize)).foregroundStyle(
-                    .primary)
-                Text("Renamer").font(.custom("Syncopate-Bold", size: titleSize)).foregroundStyle(
-                    .primary
-                ).padding(.bottom, 10)
-                
-                searchField
-                    .padding(.bottom, 12)
-            }
         }
         .collapsible(false)
     }
 
     @ViewBuilder
     private var sidebar: some View {
-        List(selection: $selectedTab) {
-            sidebarContent(titleSize: 21, spacing: 2)
+        VStack(spacing: 0) {
+            sidebarHeader
+
+            List(selection: $selectedTab) {
+                sidebarContent
+            }
+            .listStyle(.sidebar)
         }
-        .listStyle(.sidebar)
-        .scrollDisabled(searchText.isEmpty)
         .edgesIgnoringSafeArea(.top)
         .navigationSplitViewColumnWidth(min: sidebarWidth, ideal: sidebarWidth)
     }
