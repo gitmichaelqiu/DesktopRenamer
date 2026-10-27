@@ -85,7 +85,7 @@ struct SpaceAPIAccessPolicy: Codable, Equatable {
 
     init(
         isRestricted: Bool = true,
-        isAppleScriptRestricted: Bool = false,
+        isAppleScriptRestricted: Bool = true,
         approvedClients: [SpaceAPIApprovedClient] = []
     ) {
         self.isRestricted = isRestricted
@@ -102,7 +102,7 @@ struct SpaceAPIAccessPolicy: Codable, Equatable {
     init(from decoder: Decoder) throws {
         let values = try decoder.container(keyedBy: CodingKeys.self)
         isRestricted = try values.decodeIfPresent(Bool.self, forKey: .isRestricted) ?? true
-        isAppleScriptRestricted = try values.decodeIfPresent(Bool.self, forKey: .isAppleScriptRestricted) ?? false
+        isAppleScriptRestricted = try values.decodeIfPresent(Bool.self, forKey: .isAppleScriptRestricted) ?? true
         approvedClients = try values.decodeIfPresent([SpaceAPIApprovedClient].self, forKey: .approvedClients) ?? []
     }
 }

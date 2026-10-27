@@ -14,7 +14,7 @@ final class SpaceAPIAccessController: ObservableObject {
     }
 
     @Published private(set) var isRestrictedForSettings = true
-    @Published private(set) var isAppleScriptRestrictedForSettings = false
+    @Published private(set) var isAppleScriptRestrictedForSettings = true
     @Published private(set) var approvedClients: [SpaceAPIApprovedClient] = []
     @Published private(set) var pendingApprovalRequest: SpaceAPIApprovalPrompt?
     @Published private(set) var errorMessage: String?
