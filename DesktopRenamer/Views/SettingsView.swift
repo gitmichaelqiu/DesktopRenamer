@@ -249,6 +249,7 @@ struct SettingsView: View {
                     .listRowBackground(
                         RoundedRectangle(cornerRadius: 8, style: .continuous)
                             .fill(selectedTab == tab ? Color.accentColor : Color.clear)
+                            .padding(.horizontal, 10)
                     )
                 }
             }
