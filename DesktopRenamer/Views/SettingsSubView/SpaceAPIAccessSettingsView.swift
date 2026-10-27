@@ -57,7 +57,7 @@ struct SpaceAPIAccessSettingsView: View {
                 presentPolicyError(errorMessage)
             }
         }
-        .onChange(of: accessController.errorMessage) { _, errorMessage in
+        .onReceive(accessController.$errorMessage) { errorMessage in
             guard let errorMessage else { return }
             presentPolicyError(errorMessage)
         }
