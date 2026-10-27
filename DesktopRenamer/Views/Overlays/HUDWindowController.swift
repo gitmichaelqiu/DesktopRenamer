@@ -68,6 +68,7 @@ struct HUDView: View {
                     buttonAction()
                 }
                 .buttonStyle(.borderedProminent)
+                .buttonBorderShape(.capsule)
                 .controlSize(.small)
             }
         }
