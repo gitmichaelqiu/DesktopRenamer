@@ -62,8 +62,9 @@ struct ShortcutsSettingsView: View {
                         requirements: eventInjectionRequirement
                     )
 
-                    Divider()
+                }
 
+                SettingsSection(nil) {
                     shortcutRow(
                         "Move window to previous display",
                         type: .moveWindowPreviousDisplay,

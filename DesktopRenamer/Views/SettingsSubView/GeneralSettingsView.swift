@@ -105,8 +105,9 @@ struct GeneralSettingsView: View {
                         }
                     }
 
-                    Divider()
+                }
 
+                SettingsSection(nil) {
                     SettingsRow("Diagnostic report") {
                         Button("Open") {
                             showDiagnosticSheet = true
@@ -131,7 +132,7 @@ struct GeneralSettingsView: View {
                     }
                 }
 
-                SettingsSection("Settings.General.Transfer") {
+                SettingsSection(nil) {
                     SettingsRow(
                         "Settings.General.Export.Settings",
                         helperText: "Settings.General.Export.Helper"
