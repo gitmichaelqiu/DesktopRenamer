@@ -133,7 +133,7 @@ class HUDWindowController: NSWindowController {
         panel.isReleasedWhenClosed = false
         panel.backgroundColor = .clear
         panel.isOpaque = false
-        panel.hasShadow = true
+        panel.hasShadow = false
         panel.level = .statusBar
         panel.acceptsMouseMovedEvents = true
         panel.hidesOnDeactivate = false
@@ -270,7 +270,9 @@ class HUDWindowController: NSWindowController {
                 let glassView = NSGlassEffectView(frame: .zero)
                 glassView.translatesAutoresizingMaskIntoConstraints = false
                 glassView.cornerRadius = 26
-                glassView.tintColor = NSColor.white.withAlphaComponent(0.03)
+                glassView.wantsLayer = true
+                glassView.layer?.cornerRadius = 26
+                glassView.layer?.masksToBounds = true
                 glassView.contentView = container
                 surfaceRoot.addSubview(glassView)
                 NSLayoutConstraint.activate([
@@ -322,7 +324,10 @@ class HUDWindowController: NSWindowController {
             )
         )
         if #available(macOS 26.0, *) {
-            (glassEffectView as? NSGlassEffectView)?.cornerRadius = contentSize.height / 2
+            if let glassView = glassEffectView as? NSGlassEffectView {
+                glassView.cornerRadius = contentSize.height / 2
+                glassView.layer?.cornerRadius = contentSize.height / 2
+            }
         }
         legacyVisualEffectView?.layer?.cornerRadius = contentSize.height / 2
 
