@@ -112,6 +112,8 @@ class HUDWindowController: NSWindowController {
 
     private var hideTimer: Timer?
     private var hostingView: NSHostingView<HUDView>?
+    private var glassEffectView: NSView?
+    private var legacyVisualEffectView: NSVisualEffectView?
     private var hideDuration: TimeInterval?
     private var isHoveringHUD = false
     private var presentationID = UUID()
@@ -260,47 +262,69 @@ class HUDWindowController: NSWindowController {
                 newView.bottomAnchor.constraint(equalTo: container.bottomAnchor),
             ])
 
-            let surfaceView: NSView
+            let surfaceRoot = NSView()
+            surfaceRoot.translatesAutoresizingMaskIntoConstraints = false
+            let surfaceInset: CGFloat = 2
+
             if #available(macOS 26.0, *) {
                 let glassView = NSGlassEffectView(frame: .zero)
+                glassView.translatesAutoresizingMaskIntoConstraints = false
                 glassView.cornerRadius = 26
-                glassView.tintColor = NSColor.white.withAlphaComponent(0.06)
+                glassView.tintColor = NSColor.white.withAlphaComponent(0.03)
                 glassView.contentView = container
-                surfaceView = glassView
+                surfaceRoot.addSubview(glassView)
+                NSLayoutConstraint.activate([
+                    glassView.leadingAnchor.constraint(equalTo: surfaceRoot.leadingAnchor, constant: surfaceInset),
+                    glassView.trailingAnchor.constraint(equalTo: surfaceRoot.trailingAnchor, constant: -surfaceInset),
+                    glassView.topAnchor.constraint(equalTo: surfaceRoot.topAnchor, constant: surfaceInset),
+                    glassView.bottomAnchor.constraint(equalTo: surfaceRoot.bottomAnchor, constant: -surfaceInset),
+                ])
+                self.glassEffectView = glassView
             } else {
                 let visualEffectView = NSVisualEffectView(frame: .zero)
+                visualEffectView.translatesAutoresizingMaskIntoConstraints = false
                 visualEffectView.material = .hudWindow
                 visualEffectView.blendingMode = .withinWindow
                 visualEffectView.state = .active
                 visualEffectView.wantsLayer = true
                 visualEffectView.layer?.cornerRadius = 26
                 visualEffectView.layer?.masksToBounds = true
+                surfaceRoot.addSubview(visualEffectView)
                 visualEffectView.addSubview(container)
                 NSLayoutConstraint.activate([
+                    visualEffectView.leadingAnchor.constraint(equalTo: surfaceRoot.leadingAnchor, constant: surfaceInset),
+                    visualEffectView.trailingAnchor.constraint(equalTo: surfaceRoot.trailingAnchor, constant: -surfaceInset),
+                    visualEffectView.topAnchor.constraint(equalTo: surfaceRoot.topAnchor, constant: surfaceInset),
+                    visualEffectView.bottomAnchor.constraint(equalTo: surfaceRoot.bottomAnchor, constant: -surfaceInset),
                     container.leadingAnchor.constraint(equalTo: visualEffectView.leadingAnchor),
                     container.trailingAnchor.constraint(equalTo: visualEffectView.trailingAnchor),
                     container.topAnchor.constraint(equalTo: visualEffectView.topAnchor),
                     container.bottomAnchor.constraint(equalTo: visualEffectView.bottomAnchor),
                 ])
-                surfaceView = visualEffectView
+                self.legacyVisualEffectView = visualEffectView
             }
 
-            panel.contentView = surfaceView
+            panel.contentView = surfaceRoot
             self.hostingView = newView
         }
 
         // Force layout, then size panel to fit the SwiftUI content.
         hostingView?.layout()
         let idealSize = hostingView?.intrinsicContentSize ?? NSSize(width: 300, height: 44)
-        let size = idealSize.width > 0 && idealSize.height > 0
+        let contentSize = idealSize.width > 0 && idealSize.height > 0
             ? idealSize
             : NSSize(width: 300, height: 44)
-        panel.setContentSize(size)
-        if #available(macOS 26.0, *), let glassView = panel.contentView as? NSGlassEffectView {
-            glassView.cornerRadius = size.height / 2
-        } else if let visualEffectView = panel.contentView as? NSVisualEffectView {
-            visualEffectView.layer?.cornerRadius = size.height / 2
+        let surfaceInset: CGFloat = 2
+        panel.setContentSize(
+            NSSize(
+                width: contentSize.width + surfaceInset * 2,
+                height: contentSize.height + surfaceInset * 2
+            )
+        )
+        if #available(macOS 26.0, *) {
+            (glassEffectView as? NSGlassEffectView)?.cornerRadius = contentSize.height / 2
         }
+        legacyVisualEffectView?.layer?.cornerRadius = contentSize.height / 2
 
         positionPanel(panel)
 
