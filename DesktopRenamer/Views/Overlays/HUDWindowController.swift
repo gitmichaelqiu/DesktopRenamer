@@ -67,9 +67,7 @@ struct HUDView: View {
                 Button(buttonTitle) {
                     buttonAction()
                 }
-                .buttonStyle(.borderedProminent)
-                .buttonBorderShape(.capsule)
-                .controlSize(.small)
+                .buttonStyle(HUDActionButtonStyle(foregroundColor: foregroundColor))
             }
         }
         .padding(.horizontal, 14)
@@ -79,6 +77,23 @@ struct HUDView: View {
             isHovered = hovering
             onHoverChanged(hovering)
         }
+    }
+}
+
+private struct HUDActionButtonStyle: ButtonStyle {
+    let foregroundColor: Color
+
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .font(.system(size: 13, weight: .medium))
+            .foregroundStyle(foregroundColor)
+            .padding(.horizontal, 12)
+            .padding(.vertical, 6)
+            .background(
+                foregroundColor.opacity(configuration.isPressed ? 0.22 : 0.14),
+                in: Capsule()
+            )
+            .contentShape(Capsule())
     }
 }
 
