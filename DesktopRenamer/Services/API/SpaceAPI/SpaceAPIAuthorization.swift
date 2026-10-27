@@ -80,16 +80,16 @@ struct SpaceAPIPeerIdentity: Equatable {
 
 struct SpaceAPIAccessPolicy: Codable, Equatable {
     var isRestricted: Bool
-    var isAppleScriptRestricted: Bool
     var approvedClients: [SpaceAPIApprovedClient]
+
+    // Preserve source compatibility while both transports share one policy.
+    var isAppleScriptRestricted: Bool { isRestricted }
 
     init(
         isRestricted: Bool = true,
-        isAppleScriptRestricted: Bool = true,
         approvedClients: [SpaceAPIApprovedClient] = []
     ) {
         self.isRestricted = isRestricted
-        self.isAppleScriptRestricted = isAppleScriptRestricted
         self.approvedClients = approvedClients
     }
 
@@ -101,9 +101,18 @@ struct SpaceAPIAccessPolicy: Codable, Equatable {
 
     init(from decoder: Decoder) throws {
         let values = try decoder.container(keyedBy: CodingKeys.self)
-        isRestricted = try values.decodeIfPresent(Bool.self, forKey: .isRestricted) ?? true
-        isAppleScriptRestricted = try values.decodeIfPresent(Bool.self, forKey: .isAppleScriptRestricted) ?? true
+        let spaceAPIRestriction = try values.decodeIfPresent(Bool.self, forKey: .isRestricted) ?? true
+        let legacyAppleScriptRestriction = try values.decodeIfPresent(Bool.self, forKey: .isAppleScriptRestricted) ?? false
+        isRestricted = spaceAPIRestriction || legacyAppleScriptRestriction
         approvedClients = try values.decodeIfPresent([SpaceAPIApprovedClient].self, forKey: .approvedClients) ?? []
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var values = encoder.container(keyedBy: CodingKeys.self)
+        try values.encode(isRestricted, forKey: .isRestricted)
+        // Older app builds still read this field, so write the unified value there too.
+        try values.encode(isRestricted, forKey: .isAppleScriptRestricted)
+        try values.encode(approvedClients, forKey: .approvedClients)
     }
 }
 

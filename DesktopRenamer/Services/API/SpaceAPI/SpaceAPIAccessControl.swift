@@ -14,7 +14,6 @@ final class SpaceAPIAccessController: ObservableObject {
     }
 
     @Published private(set) var isRestrictedForSettings = true
-    @Published private(set) var isAppleScriptRestrictedForSettings = true
     @Published private(set) var approvedClients: [SpaceAPIApprovedClient] = []
     @Published private(set) var pendingApprovalRequest: SpaceAPIApprovalPrompt?
     @Published private(set) var errorMessage: String?
@@ -43,14 +42,12 @@ final class SpaceAPIAccessController: ObservableObject {
             if let storedPolicy = try Self.readPolicy() {
                 policy = storedPolicy
                 isRestrictedForSettings = storedPolicy.isRestricted
-                isAppleScriptRestrictedForSettings = storedPolicy.isAppleScriptRestricted
                 approvedClients = storedPolicy.approvedClients
             }
         } catch {
             isStoreUsable = false
-            policy = SpaceAPIAccessPolicy(isRestricted: true, isAppleScriptRestricted: true)
+            policy = SpaceAPIAccessPolicy(isRestricted: true)
             isRestrictedForSettings = true
-            isAppleScriptRestrictedForSettings = true
             canRepairPolicy = true
             errorMessage = error.localizedDescription
             Self.recordPolicyFailure(error, operation: "read")
@@ -66,7 +63,7 @@ final class SpaceAPIAccessController: ObservableObject {
     var isAppleScriptRestricted: Bool {
         lock.lock()
         defer { lock.unlock() }
-        return policy.isAppleScriptRestricted
+        return policy.isRestricted
     }
 
     @MainActor
@@ -74,7 +71,7 @@ final class SpaceAPIAccessController: ObservableObject {
         let snapshot = policySnapshot()
         var summary = "policyStoreUsable: \(snapshot.storeAvailable)\n"
         summary += "accessRestricted: \(snapshot.policy.isRestricted)\n"
-        summary += "appleScriptAccessRestricted: \(snapshot.policy.isAppleScriptRestricted)\n"
+        summary += "appleScriptAccessRestricted: \(snapshot.policy.isRestricted)\n"
         summary += "approvedClientCount: \(snapshot.policy.approvedClients.count)\n"
         for client in snapshot.policy.approvedClients {
             let name = DiagnosticText.singleLine(client.name)
@@ -147,18 +144,6 @@ final class SpaceAPIAccessController: ObservableObject {
     }
 
     @MainActor
-    func setAppleScriptRestricted(_ isRestricted: Bool) {
-        var updated = currentPolicy()
-        updated.isAppleScriptRestricted = isRestricted
-        guard persistAndApply(updated) else { return }
-        DiagnosticEventLog.shared.record(
-            subsystem: "SpaceAPI.Access",
-            level: "info",
-            "AppleScript access restriction set to \(isRestricted)."
-        )
-    }
-
-    @MainActor
     func appleScriptDenialReason(
         for authenticatedClient: SpaceAPIAuthenticatedClient?,
         requiredAccess: SpaceAPIRequestAccess,
@@ -171,7 +156,7 @@ final class SpaceAPIAccessController: ObservableObject {
                 comment: ""
             )
         }
-        guard snapshot.policy.isAppleScriptRestricted else { return nil }
+        guard snapshot.policy.isRestricted else { return nil }
         guard let authenticatedClient else {
             return NSLocalizedString(
                 "The calling app could not be verified. AppleScript access remains restricted.",
@@ -385,7 +370,7 @@ final class SpaceAPIAccessController: ObservableObject {
 
     @MainActor
     func repairUnreadablePolicy() {
-        let replacement = SpaceAPIAccessPolicy(isRestricted: true, isAppleScriptRestricted: true)
+        let replacement = SpaceAPIAccessPolicy(isRestricted: true)
         do {
             try Self.deleteStoredPolicy()
             try Self.writePolicy(replacement)
@@ -394,7 +379,6 @@ final class SpaceAPIAccessController: ObservableObject {
             isStoreUsable = true
             lock.unlock()
             isRestrictedForSettings = true
-            isAppleScriptRestrictedForSettings = true
             approvedClients = []
             canRepairPolicy = false
             errorMessage = nil
@@ -434,7 +418,6 @@ final class SpaceAPIAccessController: ObservableObject {
             isStoreUsable = true
             lock.unlock()
             isRestrictedForSettings = updated.isRestricted
-            isAppleScriptRestrictedForSettings = updated.isAppleScriptRestricted
             approvedClients = updated.approvedClients
             canRepairPolicy = false
             errorMessage = nil
@@ -572,11 +555,10 @@ final class SpaceAPIAccessController: ObservableObject {
     @MainActor
     private func failClosed(after error: Error, notifyPolicyChange: Bool = true) {
         lock.lock()
-        policy = SpaceAPIAccessPolicy(isRestricted: true, isAppleScriptRestricted: true)
+        policy = SpaceAPIAccessPolicy(isRestricted: true)
         isStoreUsable = false
         lock.unlock()
         isRestrictedForSettings = true
-        isAppleScriptRestrictedForSettings = true
         approvedClients = []
         canRepairPolicy = true
         errorMessage = error.localizedDescription

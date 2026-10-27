@@ -97,28 +97,7 @@ struct SpaceAPIAccessSettingsView: View {
                         }
                     }
 
-                    SettingsSection("AppleScript Access") {
-                        SettingsRow(
-                            "Restrict AppleScript access",
-                            helperText: "macOS Automation permission is still required separately."
-                        ) {
-                            Toggle(
-                                "",
-                                isOn: Binding(
-                                    get: { accessController.isAppleScriptRestrictedForSettings },
-                                    set: { value in
-                                        withAnimation(.easeInOut(duration: 0.2)) {
-                                            accessController.setAppleScriptRestricted(value)
-                                        }
-                                    }
-                                )
-                            )
-                            .labelsHidden()
-                            .toggleStyle(.switch)
-                        }
-                    }
-
-                    if isAnyAccessRestrictionEnabled {
+                    if accessController.isRestrictedForSettings {
                         SettingsSection(
                             "App Permissions",
                             helperText: "App access levels apply to both restricted APIs."
@@ -157,7 +136,7 @@ struct SpaceAPIAccessSettingsView: View {
                                             .labelsHidden()
                                             .pickerStyle(.menu)
                                             .frame(width: 128)
-                                            .disabled(!isAnyAccessRestrictionEnabled)
+                                            .disabled(!accessController.isRestrictedForSettings)
 
                                             Button {
                                                 withAnimation(.easeInOut(duration: 0.2)) {
@@ -181,7 +160,7 @@ struct SpaceAPIAccessSettingsView: View {
                         .transition(.opacity.combined(with: .move(edge: .top)))
                         .animation(
                             .easeInOut(duration: 0.2),
-                            value: isAnyAccessRestrictionEnabled
+                            value: accessController.isRestrictedForSettings
                         )
                     }
 
@@ -283,10 +262,6 @@ struct SpaceAPIAccessSettingsView: View {
             ? usageStatistics.hourlyActivity(for: usage.id)
             : usageStatistics.dailyActivity(for: usage.id)
         return buckets.reduce(0) { $0 + $1.requestCount }
-    }
-
-    private var isAnyAccessRestrictionEnabled: Bool {
-        accessController.isRestrictedForSettings || accessController.isAppleScriptRestrictedForSettings
     }
 
     private func chooseApplication() {
