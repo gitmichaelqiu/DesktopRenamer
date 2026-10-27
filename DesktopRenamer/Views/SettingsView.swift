@@ -1,7 +1,7 @@
 import SwiftUI
 
 enum SettingsTab: String, CaseIterable, Identifiable {
-    case general, space, labels, shortcuts, sswitch, launcher, permissions, about
+    case general, space, labels, sswitch, launcher, shortcuts, permissions, about
 
     var id: String { self.rawValue }
 
