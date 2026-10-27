@@ -61,31 +61,6 @@ struct SpaceAPIAccessSettingsView: View {
 
             ScrollView {
                 VStack(alignment: .leading, spacing: 20) {
-                    if let request = accessController.pendingApprovalRequest {
-                        SettingsSection("Access Request") {
-                            SettingsRow(
-                                LocalizedStringResource(stringLiteral: request.client.name),
-                                leadingIcon: NSWorkspace.shared.icon(forFile: request.client.applicationPath)
-                            ) {
-                                HStack(spacing: 6) {
-                                    Button("Don't Allow") {
-                                        accessController.resolvePendingApproval(with: .noAccess)
-                                    }
-                                    Button("Read Only") {
-                                        accessController.resolvePendingApproval(with: .readOnly)
-                                    }
-                                    if request.requestedAccess != .read {
-                                        Button("Read & Write") {
-                                            accessController.resolvePendingApproval(with: .fullAccess)
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                        .transition(.opacity.combined(with: .move(edge: .top)))
-                        .animation(.easeInOut(duration: 0.2), value: request.id)
-                    }
-
                     SettingsSection("Access Policy") {
                         SettingsRow(
                             "Allow only approved apps",
@@ -95,7 +70,11 @@ struct SpaceAPIAccessSettingsView: View {
                                 "",
                                 isOn: Binding(
                                     get: { accessController.isRestrictedForSettings },
-                                    set: { accessController.setRestricted($0) }
+                                    set: { value in
+                                        withAnimation(.easeInOut(duration: 0.2)) {
+                                            accessController.setRestricted(value)
+                                        }
+                                    }
                                 )
                             )
                             .labelsHidden()
@@ -127,7 +106,11 @@ struct SpaceAPIAccessSettingsView: View {
                                 "",
                                 isOn: Binding(
                                     get: { accessController.isAppleScriptRestrictedForSettings },
-                                    set: { accessController.setAppleScriptRestricted($0) }
+                                    set: { value in
+                                        withAnimation(.easeInOut(duration: 0.2)) {
+                                            accessController.setAppleScriptRestricted(value)
+                                        }
+                                    }
                                 )
                             )
                             .labelsHidden()
@@ -160,7 +143,11 @@ struct SpaceAPIAccessSettingsView: View {
                                                 "Access for \(client.name)",
                                                 selection: Binding(
                                                     get: { client.accessLevel },
-                                                    set: { accessController.setAccessLevel(forClientID: client.id, to: $0) }
+                                                    set: { value in
+                                                        withAnimation(.easeInOut(duration: 0.2)) {
+                                                            accessController.setAccessLevel(forClientID: client.id, to: value)
+                                                        }
+                                                    }
                                                 )
                                             ) {
                                                 Text("No Access").tag(SpaceAPIClientAccessLevel.noAccess)
@@ -187,6 +174,15 @@ struct SpaceAPIAccessSettingsView: View {
                                 .transition(.opacity.combined(with: .move(edge: .top)))
                             }
                         }
+                        .animation(
+                            .easeInOut(duration: 0.2),
+                            value: accessController.approvedClients.map(\.id)
+                        )
+                        .transition(.opacity.combined(with: .move(edge: .top)))
+                        .animation(
+                            .easeInOut(duration: 0.2),
+                            value: isAnyAccessRestrictionEnabled
+                        )
                     }
 
                     SettingsSection(
@@ -198,7 +194,11 @@ struct SpaceAPIAccessSettingsView: View {
                                 "",
                                 isOn: Binding(
                                     get: { usageStatistics.isEnabled },
-                                    set: { usageStatistics.isEnabled = $0 }
+                                    set: { value in
+                                        withAnimation(.easeInOut(duration: 0.2)) {
+                                            usageStatistics.isEnabled = value
+                                        }
+                                    }
                                 )
                             )
                             .labelsHidden()
@@ -212,6 +212,7 @@ struct SpaceAPIAccessSettingsView: View {
                                     .foregroundStyle(.secondary)
                                     .frame(minHeight: 24)
                             }
+                            .transition(.opacity.combined(with: .move(edge: .top)))
                         } else {
                             Divider()
                             SettingsRow("Activity period") {
@@ -248,6 +249,7 @@ struct SpaceAPIAccessSettingsView: View {
                                     .buttonStyle(.plain)
                                     .help("View usage activity")
                                 }
+                                .transition(.opacity.combined(with: .move(edge: .top)))
                             }
 
                             Divider()
@@ -258,6 +260,10 @@ struct SpaceAPIAccessSettingsView: View {
                             }
                         }
                     }
+                    .animation(
+                        .easeInOut(duration: 0.2),
+                        value: usageStatistics.appUsages.map(\.id)
+                    )
                 }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
