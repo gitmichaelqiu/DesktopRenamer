@@ -244,6 +244,7 @@ struct SpaceAPIAccessSettingsView: View {
                         value: usageStatistics.appUsages.map(\.id)
                     )
                 }
+                .padding(.trailing, 16)
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
 
