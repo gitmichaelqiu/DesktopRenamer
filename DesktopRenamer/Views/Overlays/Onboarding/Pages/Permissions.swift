@@ -13,8 +13,8 @@ struct ManageWindowsPage: View {
 
 struct PermissionsPage: View {
     @StateObject private var permissionManager = PermissionManager.shared
-    @State private var spaceAPIAccessController: SpaceAPIAccessController?
-    @State private var isSpaceAPIEnabled = false
+    @State private var spaceAPIAccessController = AppDelegate.shared?.spaceManager?.spaceAPI?.accessController
+    @State private var isSpaceAPIEnabled = SpaceManager.isAPIEnabled
     
     var body: some View {
         VStack(spacing: 30) {
@@ -62,16 +62,6 @@ struct PermissionsPage: View {
         .onAppear {
             permissionManager.refresh()
         }
-        .task {
-            while !Task.isCancelled {
-                if let spaceManager = AppDelegate.shared?.spaceManager {
-                    isSpaceAPIEnabled = SpaceManager.isAPIEnabled
-                    spaceAPIAccessController = spaceManager.spaceAPI?.accessController
-                    break
-                }
-                try? await Task.sleep(nanoseconds: 100_000_000)
-            }
-        }
     }
 
     private func permissionButton(
@@ -116,10 +106,6 @@ private struct SpaceAPIAccessOnboardingSection: View {
                 )
             )
             .toggleStyle(.switch)
-
-            Text("This setting controls both SpaceAPI and AppleScript access.")
-                .font(.caption)
-                .foregroundStyle(.secondary)
         }
         .padding(14)
         .background(Color.secondary.opacity(0.08), in: RoundedRectangle(cornerRadius: 12))

@@ -4317,16 +4317,6 @@
         }
       }
     },
-    "This setting controls both SpaceAPI and AppleScript access." : {
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "此设置同时控制 SpaceAPI 和 AppleScript 访问权限。"
-          }
-        }
-      }
-    },
     "SpaceAPI access policy could not be verified. Access remains restricted." : {
       "localizations" : {
         "zh-Hans" : {
