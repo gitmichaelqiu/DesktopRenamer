@@ -224,6 +224,8 @@ struct SettingsView: View {
                             }
                             
                             ForEach(matchingItems) { item in
+                                let resultColor = selectedTab == tab ? Color.white : Color.secondary
+
                                 Button {
                                     selectedTab = tab
                                     navigationState.scrollToItemID = item.title
@@ -231,12 +233,12 @@ struct SettingsView: View {
                                     HStack(spacing: 4) {
                                         Image(systemName: "arrow.turn.down.right")
                                             .font(.system(size: 9))
-                                            .foregroundColor(.secondary)
+                                            .foregroundColor(resultColor)
                                             .padding(.leading, 12)
                                         
                                         Text(highlightedText(text: item.localizedTitle, query: searchText, color: nil))
                                             .font(.system(size: 11, weight: .regular))
-                                            .foregroundColor(.secondary)
+                                            .foregroundColor(resultColor)
                                             .lineLimit(1)
                                     }
                                 }
