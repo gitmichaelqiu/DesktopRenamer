@@ -10,9 +10,9 @@ enum SettingsTab: String, CaseIterable, Identifiable {
         case .general: return "Settings.General"
         case .space: return "Settings.Spaces"
         case .labels: return "Settings.Labels"
-        case .shortcuts: return "Shortcuts"
         case .sswitch: return "Settings.Switch"
         case .launcher: return "Settings.Launcher"
+        case .shortcuts: return "Shortcuts"
         case .permissions: return "Permissions"
         case .about: return "Settings.About"
         }
@@ -24,9 +24,9 @@ enum SettingsTab: String, CaseIterable, Identifiable {
         case .general: return "gearshape"
         case .space: return "macwindow"
         case .labels: return "tag"
-        case .shortcuts: return "keyboard"
         case .sswitch: return "arrow.left.and.right.square"
         case .launcher: return "command"
+        case .shortcuts: return "keyboard"
         case .permissions: return "lock.shield"
         case .about: return "info.circle"
         }
