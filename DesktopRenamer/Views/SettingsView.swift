@@ -254,13 +254,12 @@ struct SettingsView: View {
 
     @ViewBuilder
     private var sidebar: some View {
-        VStack(spacing: 0) {
+        List(selection: $selectedTab) {
+            sidebarContent
+        }
+        .listStyle(.sidebar)
+        .safeAreaInset(edge: .top, spacing: 0) {
             sidebarHeader
-
-            List(selection: $selectedTab) {
-                sidebarContent
-            }
-            .listStyle(.sidebar)
         }
         .edgesIgnoringSafeArea(.top)
         .navigationSplitViewColumnWidth(min: sidebarWidth, ideal: sidebarWidth)
