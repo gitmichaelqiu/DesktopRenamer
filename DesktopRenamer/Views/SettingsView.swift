@@ -256,7 +256,7 @@ struct SettingsView: View {
             sidebarContent(titleSize: 21, spacing: 2)
         }
         .listStyle(.sidebar)
-        .scrollDisabled(true)
+        .scrollDisabled(searchText.isEmpty)
         .edgesIgnoringSafeArea(.top)
         .navigationSplitViewColumnWidth(min: sidebarWidth, ideal: sidebarWidth)
     }
