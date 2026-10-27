@@ -246,6 +246,7 @@ struct SettingsView: View {
                         }
                     }
                     .tag(tab)
+                    .listRowBackground(Color.clear)
                 }
             }
         }
@@ -317,12 +318,23 @@ struct SettingsView: View {
                 Text(tab.localizedName)
                     .font(.system(size: sidebarFontSize, weight: .medium))
                     .padding(.leading, 2)
+                    .foregroundStyle(selectedTab == tab ? Color.white : Color.primary)
             } icon: {
                 Image(systemName: tab.iconName).resizable().scaledToFit().frame(
                     height: sidebarRowHeight - 15)
+                    .foregroundStyle(selectedTab == tab ? Color.white : Color.accentColor)
             }
         }
-        .frame(height: sidebarRowHeight)
+        .frame(
+            maxWidth: .infinity,
+            minHeight: sidebarRowHeight,
+            maxHeight: sidebarRowHeight,
+            alignment: .leading
+        )
+        .background {
+            RoundedRectangle(cornerRadius: 8, style: .continuous)
+                .fill(selectedTab == tab ? Color.accentColor : Color.clear)
+        }
     }
 
 }
