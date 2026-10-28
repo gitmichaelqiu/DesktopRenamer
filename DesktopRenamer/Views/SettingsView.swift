@@ -57,6 +57,7 @@ struct SettingsView: View {
     @State private var selectedTab: SettingsTab?
     @State private var searchText = ""
     @State private var isIndexingSettings = true
+    @FocusState private var isSearchFieldFocused: Bool
     
     init(spaceManager: SpaceManager, labelManager: SpaceLabelManager, initialTab: SettingsTab? = .general) {
         self.spaceManager = spaceManager
@@ -118,11 +119,17 @@ struct SettingsView: View {
             }
         }
         .onReceive(NotificationCenter.default.publisher(for: .settingsTabRequested)) { notification in
+            isSearchFieldFocused = false
             guard let tab = notification.object as? SettingsTab else { return }
             searchText = ""
             selectedTab = tab
         }
         .onAppear {
+            // The sidebar search is the first text input in Settings. Keep the
+            // window from opening with an insertion caret until the user selects it.
+            DispatchQueue.main.async {
+                isSearchFieldFocused = false
+            }
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
                 isIndexingSettings = false
             }
@@ -160,6 +167,7 @@ struct SettingsView: View {
                 .textFieldStyle(.plain)
                 .font(.system(size: 13))
                 .foregroundColor(.primary)
+                .focused($isSearchFieldFocused)
             
             if !searchText.isEmpty {
                 Button {
