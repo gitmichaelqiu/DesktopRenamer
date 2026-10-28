@@ -450,6 +450,7 @@ extension StatusBarController {
 
         DispatchQueue.main.async { [weak self, weak window] in
             guard window?.isKeyWindow == true else { return }
+            window?.makeFirstResponder(nil)
             self?.labelManager.completeSettingsWindowActivation()
         }
     }

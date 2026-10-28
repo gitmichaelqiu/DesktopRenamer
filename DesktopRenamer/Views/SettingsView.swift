@@ -125,11 +125,6 @@ struct SettingsView: View {
             selectedTab = tab
         }
         .onAppear {
-            // The sidebar search is the first text input in Settings. Keep the
-            // window from opening with an insertion caret until the user selects it.
-            DispatchQueue.main.async {
-                isSearchFieldFocused = false
-            }
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
                 isIndexingSettings = false
             }
