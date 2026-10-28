@@ -29,15 +29,15 @@ struct HUDView: View {
     var body: some View {
         if #available(macOS 26.0, *) {
             hudContent.background {
-                if let statusTint {
-                    Capsule()
-                        .fill(.clear)
-                        .glassEffect(.regular.tint(statusTint.glassTintColor), in: Capsule())
-                } else {
-                    Capsule()
-                        .fill(.clear)
-                        .glassEffect(.regular, in: Capsule())
-                }
+                Capsule()
+                    .fill(.clear)
+                    .glassEffect(.regular, in: Capsule())
+                    .overlay {
+                        // Glass tint fades on non-key panels; this wash stays visible without focus.
+                        if let statusTint {
+                            Capsule().fill(statusTint.surfaceTintColor)
+                        }
+                    }
             }
         } else {
             hudContent
@@ -169,8 +169,8 @@ enum HUDStatusTint: Equatable {
         Color(nsColor: nsColor)
     }
 
-    var glassTintColor: Color {
-        Color(nsColor: nsColor).opacity(0.40)
+    var surfaceTintColor: Color {
+        Color(nsColor: nsColor).opacity(0.30)
     }
 
     var legacyOverlayColor: NSColor {
