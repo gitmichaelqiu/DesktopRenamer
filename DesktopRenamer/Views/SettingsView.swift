@@ -119,10 +119,13 @@ struct SettingsView: View {
             }
         }
         .onReceive(NotificationCenter.default.publisher(for: .settingsTabRequested)) { notification in
-            isSearchFieldFocused = false
+            clearSearchFocus()
             guard let tab = notification.object as? SettingsTab else { return }
             searchText = ""
             selectedTab = tab
+        }
+        .onChange(of: selectedTab) { _ in
+            clearSearchFocus()
         }
         .onAppear {
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
@@ -164,7 +167,7 @@ struct SettingsView: View {
                 .foregroundColor(.primary)
                 .focused($isSearchFieldFocused)
                 .onExitCommand {
-                    isSearchFieldFocused = false
+                    clearSearchFocus()
                 }
             
             if !searchText.isEmpty {
@@ -251,7 +254,7 @@ struct SettingsView: View {
                                 .buttonStyle(.plain)
                                 .frame(height: 18)
                                 .simultaneousGesture(TapGesture().onEnded {
-                                    isSearchFieldFocused = false
+                                    clearSearchFocus()
                                 })
                             }
                         }
@@ -324,8 +327,9 @@ struct SettingsView: View {
             .frame(maxHeight: .infinity, alignment: .top)
         }
         .edgesIgnoringSafeArea(.top)
+        .contentShape(Rectangle())
         .simultaneousGesture(TapGesture().onEnded {
-            isSearchFieldFocused = false
+            clearSearchFocus()
         })
     }
 
@@ -345,8 +349,14 @@ struct SettingsView: View {
         }
         .frame(height: sidebarRowHeight)
         .simultaneousGesture(TapGesture().onEnded {
-            isSearchFieldFocused = false
+            clearSearchFocus()
         })
+    }
+
+    private func clearSearchFocus() {
+        DispatchQueue.main.async {
+            isSearchFieldFocused = false
+        }
     }
 
 }
