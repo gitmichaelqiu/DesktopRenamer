@@ -25,7 +25,20 @@ struct HUDView: View {
         isHovered || forceHover
     }
 
+    @ViewBuilder
     var body: some View {
+        if #available(macOS 26.0, *) {
+            if let statusTint {
+                hudContent.glassEffect(.regular.tint(statusTint.color), in: Capsule())
+            } else {
+                hudContent.glassEffect(.regular, in: Capsule())
+            }
+        } else {
+            hudContent
+        }
+    }
+
+    private var hudContent: some View {
         HStack(spacing: 12) {
             ZStack {
                 if showsDismissButton {
@@ -150,8 +163,8 @@ enum HUDStatusTint: Equatable {
         Color(nsColor: nsColor)
     }
 
-    var glassColor: NSColor {
-        nsColor
+    var color: Color {
+        Color(nsColor: nsColor)
     }
 
     var legacyOverlayColor: NSColor {
@@ -164,7 +177,6 @@ class HUDWindowController: NSWindowController {
 
     private var hideTimer: Timer?
     private var hostingView: NSHostingView<HUDView>?
-    private var glassEffectView: NSView?
     private var legacyVisualEffectView: NSVisualEffectView?
     private var legacyTintOverlayView: NSView?
     private var hideDuration: TimeInterval?
@@ -343,19 +355,13 @@ class HUDWindowController: NSWindowController {
             let surfaceInset: CGFloat = 2
 
             if #available(macOS 26.0, *) {
-                let glassView = NSGlassEffectView(frame: .zero)
-                glassView.translatesAutoresizingMaskIntoConstraints = false
-                glassView.cornerRadius = 26
-                glassView.tintColor = NSColor.white.withAlphaComponent(0.03)
-                glassView.contentView = container
-                surfaceRoot.addSubview(glassView)
+                surfaceRoot.addSubview(container)
                 NSLayoutConstraint.activate([
-                    glassView.leadingAnchor.constraint(equalTo: surfaceRoot.leadingAnchor, constant: surfaceInset),
-                    glassView.trailingAnchor.constraint(equalTo: surfaceRoot.trailingAnchor, constant: -surfaceInset),
-                    glassView.topAnchor.constraint(equalTo: surfaceRoot.topAnchor, constant: surfaceInset),
-                    glassView.bottomAnchor.constraint(equalTo: surfaceRoot.bottomAnchor, constant: -surfaceInset),
+                    container.leadingAnchor.constraint(equalTo: surfaceRoot.leadingAnchor, constant: surfaceInset),
+                    container.trailingAnchor.constraint(equalTo: surfaceRoot.trailingAnchor, constant: -surfaceInset),
+                    container.topAnchor.constraint(equalTo: surfaceRoot.topAnchor, constant: surfaceInset),
+                    container.bottomAnchor.constraint(equalTo: surfaceRoot.bottomAnchor, constant: -surfaceInset),
                 ])
-                self.glassEffectView = glassView
             } else {
                 let visualEffectView = NSVisualEffectView(frame: .zero)
                 visualEffectView.translatesAutoresizingMaskIntoConstraints = false
@@ -409,12 +415,9 @@ class HUDWindowController: NSWindowController {
                 height: contentSize.height + surfaceInset * 2
             )
         )
-        if #available(macOS 26.0, *) {
-            (glassEffectView as? NSGlassEffectView)?.cornerRadius = contentSize.height / 2
-        }
         legacyVisualEffectView?.layer?.cornerRadius = contentSize.height / 2
         legacyTintOverlayView?.layer?.cornerRadius = contentSize.height / 2
-        applyGlassTint(statusTint)
+        applyLegacyTint(statusTint)
 
         positionPanel(panel)
 
@@ -440,14 +443,9 @@ class HUDWindowController: NSWindowController {
         }
     }
 
-    private func applyGlassTint(_ statusTint: HUDStatusTint?) {
-        if #available(macOS 26.0, *) {
-            (glassEffectView as? NSGlassEffectView)?.tintColor =
-                statusTint?.glassColor ?? NSColor.white.withAlphaComponent(0.03)
-        } else {
-            legacyTintOverlayView?.layer?.backgroundColor =
-                statusTint?.legacyOverlayColor.cgColor ?? NSColor.clear.cgColor
-        }
+    private func applyLegacyTint(_ statusTint: HUDStatusTint?) {
+        legacyTintOverlayView?.layer?.backgroundColor =
+            statusTint?.legacyOverlayColor.cgColor ?? NSColor.clear.cgColor
     }
 
     private func scheduleHide(after duration: TimeInterval) {
