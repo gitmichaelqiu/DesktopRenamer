@@ -13,7 +13,8 @@ extension LauncherViewModel {
             closeLauncher()
             HUDWindowController.shared.show(
                 message: String(localized: "Could not switch to the selected space."),
-                style: .failure
+                style: .failure,
+                statusTint: .failure
             )
             return
         }
@@ -34,7 +35,8 @@ extension LauncherViewModel {
             closeLauncher()
             HUDWindowController.shared.show(
                 message: String(localized: "Could not switch to the selected space."),
-                style: .failure
+                style: .failure,
+                statusTint: .failure
             )
             return
         }
@@ -138,7 +140,8 @@ extension LauncherViewModel {
                 HUDWindowController.shared.show(
                     message: String(format: String(localized: "Could not move %@ to %@"), appName, targetSpaceName),
                     style: .failure,
-                    appIcon: NSRunningApplication(processIdentifier: window.pid)?.icon
+                    appIcon: NSRunningApplication(processIdentifier: window.pid)?.icon,
+                    statusTint: .failure
                 )
                 return
             }
@@ -228,7 +231,8 @@ extension LauncherViewModel {
                 HUDWindowController.shared.show(
                     message: String(format: String(localized: "Could not move %@ to %@"), appName, targetSpaceName),
                     style: .failure,
-                    appIcon: appIcon
+                    appIcon: appIcon,
+                    statusTint: .failure
                 )
                 return
             }

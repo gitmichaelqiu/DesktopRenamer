@@ -177,6 +177,7 @@ extension LauncherViewModel {
                     }
                 }
                 
+                var actionSucceeded = true
                 switch action.actionType {
                 case .close:
                     var axWindow = SpaceHelper.getAXWindow(id: action.window.id, pid: action.window.pid)
@@ -187,6 +188,7 @@ extension LauncherViewModel {
                             axWindow = SpaceHelper.getAXWindow(id: action.window.id, pid: action.window.pid)
                         }
                     }
+                    actionSucceeded = false
                     if let targetAXWindow = axWindow {
                         var closeButtonRef: CFTypeRef?
                         if AXUIElementCopyAttributeValue(targetAXWindow, kAXCloseButtonAttribute as CFString, &closeButtonRef) == .success,
@@ -194,7 +196,7 @@ extension LauncherViewModel {
                            CFGetTypeID(closeButton) == AXUIElementGetTypeID() {
                             // The Core Foundation type check guarantees this bridge.
                             let closeButtonElement = closeButton as! AXUIElement
-                            AXUIElementPerformAction(closeButtonElement, kAXPressAction as CFString)
+                            actionSucceeded = AXUIElementPerformAction(closeButtonElement, kAXPressAction as CFString) == .success
                         }
                     }
                 case .minimize:
@@ -206,13 +208,12 @@ extension LauncherViewModel {
                             axWindow = SpaceHelper.getAXWindow(id: action.window.id, pid: action.window.pid)
                         }
                     }
+                    actionSucceeded = false
                     if let targetAXWindow = axWindow {
-                        AXUIElementSetAttributeValue(targetAXWindow, kAXMinimizedAttribute as CFString, true as CFTypeRef)
+                        actionSucceeded = AXUIElementSetAttributeValue(targetAXWindow, kAXMinimizedAttribute as CFString, true as CFTypeRef) == .success
                     }
                 case .hide:
-                    if let app = NSRunningApplication(processIdentifier: action.window.pid) {
-                        app.hide()
-                    }
+                    actionSucceeded = NSRunningApplication(processIdentifier: action.window.pid)?.hide() ?? false
                 case .enterFullScreen:
                     var axWindow = SpaceHelper.getAXWindow(id: action.window.id, pid: action.window.pid)
                     if axWindow == nil {
@@ -222,8 +223,9 @@ extension LauncherViewModel {
                             axWindow = SpaceHelper.getAXWindow(id: action.window.id, pid: action.window.pid)
                         }
                     }
+                    actionSucceeded = false
                     if let targetAXWindow = axWindow {
-                        AXUIElementSetAttributeValue(targetAXWindow, "AXFullScreen" as CFString, true as CFTypeRef)
+                        actionSucceeded = AXUIElementSetAttributeValue(targetAXWindow, "AXFullScreen" as CFString, true as CFTypeRef) == .success
                         try await Task.sleep(nanoseconds: 1_000_000_000)
                     }
                 case .exitFullScreen:
@@ -235,31 +237,43 @@ extension LauncherViewModel {
                             axWindow = SpaceHelper.getAXWindow(id: action.window.id, pid: action.window.pid)
                         }
                     }
+                    actionSucceeded = false
                     if let targetAXWindow = axWindow {
-                        AXUIElementSetAttributeValue(targetAXWindow, "AXFullScreen" as CFString, false as CFTypeRef)
+                        actionSucceeded = AXUIElementSetAttributeValue(targetAXWindow, "AXFullScreen" as CFString, false as CFTypeRef) == .success
                         try await Task.sleep(nanoseconds: 1_000_000_000)
                     }
                 case .quit:
-                    if let app = NSRunningApplication(processIdentifier: action.window.pid) {
-                        app.terminate()
-                    }
+                    actionSucceeded = NSRunningApplication(processIdentifier: action.window.pid)?.terminate() ?? false
                 case .restore:
-                    if let app = NSRunningApplication(processIdentifier: action.window.pid) {
-                        app.unhide()
+                    actionSucceeded = true
+                    if action.window.isHidden {
+                        actionSucceeded = NSRunningApplication(processIdentifier: action.window.pid)
+                            .map { !$0.isHidden || $0.unhide() } ?? false
                     }
-                    var axWindow = SpaceHelper.getAXWindow(id: action.window.id, pid: action.window.pid)
-                    if axWindow == nil {
-                        if let app = NSRunningApplication(processIdentifier: action.window.pid) {
-                            app.activate(options: .activateIgnoringOtherApps)
-                            try await Task.sleep(nanoseconds: 400_000_000)
-                            axWindow = SpaceHelper.getAXWindow(id: action.window.id, pid: action.window.pid)
+                    if action.window.isMinimized {
+                        var axWindow = SpaceHelper.getAXWindow(id: action.window.id, pid: action.window.pid)
+                        if axWindow == nil {
+                            if let app = NSRunningApplication(processIdentifier: action.window.pid) {
+                                app.activate(options: .activateIgnoringOtherApps)
+                                try await Task.sleep(nanoseconds: 400_000_000)
+                                axWindow = SpaceHelper.getAXWindow(id: action.window.id, pid: action.window.pid)
+                            }
                         }
-                    }
-                    if let targetAXWindow = axWindow {
-                        AXUIElementSetAttributeValue(targetAXWindow, kAXMinimizedAttribute as CFString, false as CFTypeRef)
+                        let unminimized = axWindow.map {
+                            AXUIElementSetAttributeValue($0, kAXMinimizedAttribute as CFString, false as CFTypeRef) == .success
+                        } ?? false
+                        actionSucceeded = actionSucceeded && unminimized
                     }
                 default:
                     break
+                }
+                if !actionSucceeded {
+                    failedOperationCount += 1
+                    DiagnosticEventLog.shared.record(
+                        subsystem: "Launcher",
+                        level: "warning",
+                        "executeBatchMove: Static action failed: type=\(action.actionType.description), window id=\(action.window.id)"
+                    )
                 }
                 try await Task.sleep(nanoseconds: 150_000_000) // 150ms delay between commands
             }
@@ -287,12 +301,14 @@ extension LauncherViewModel {
             if failedOperationCount == 0 {
                 HUDWindowController.shared.show(
                     message: String(format: String(localized: "Completed %lld operation(s)"), completedOperationCount),
-                    style: .success
+                    style: .success,
+                    statusTint: .success
                 )
             } else {
                 HUDWindowController.shared.show(
                     message: String(format: String(localized: "Completed %lld operation(s), skipped %lld"), completedOperationCount, failedOperationCount),
-                    style: .warning
+                    style: .warning,
+                    statusTint: .failure
                 )
             }
             self.closeLauncher()

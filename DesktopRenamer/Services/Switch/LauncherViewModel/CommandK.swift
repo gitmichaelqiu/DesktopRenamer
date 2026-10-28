@@ -649,7 +649,8 @@ extension LauncherViewModel {
                         appName: appName,
                         succeeded: false
                     ),
-                    style: .failure
+                    style: .failure,
+                    statusTint: .failure
                 )
                 return
             }

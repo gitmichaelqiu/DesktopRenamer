@@ -75,17 +75,6 @@ struct HUDView: View {
                 }
             }
             .frame(width: 28, height: 28)
-            .overlay(alignment: .bottomTrailing) {
-                if !showsDismissButton, let statusTint {
-                    Circle()
-                        .fill(statusTint.indicatorColor)
-                        .frame(width: 8, height: 8)
-                        .overlay {
-                            Circle().strokeBorder(Color.black.opacity(0.45), lineWidth: 0.75)
-                        }
-                        .offset(x: 1, y: 1)
-                }
-            }
 
             Text(message)
                 .font(.system(size: 13, weight: .medium))
@@ -165,10 +154,6 @@ enum HUDStatusTint: Equatable {
         }
     }
 
-    var indicatorColor: Color {
-        Color(nsColor: nsColor)
-    }
-
     var surfaceTintColor: Color {
         Color(nsColor: nsColor).opacity(0.30)
     }
@@ -227,16 +212,18 @@ class HUDWindowController: NSWindowController {
         systemImage: String? = nil,
         buttonTitle: String? = nil,
         buttonAction: (() -> Void)? = nil,
-        autoHide: Bool = true
+        autoHide: Bool = true,
+        statusTint: HUDStatusTint? = nil
     ) {
-        show(
+        present(
             message: message,
             systemImage: systemImage,
             iconColor: style.iconColor,
             appIcon: appIcon ?? (systemImage == nil ? NSApp.applicationIconImage : nil),
             buttonTitle: buttonTitle,
             buttonAction: buttonAction,
-            autoHide: autoHide
+            autoHide: autoHide,
+            statusTint: statusTint
         )
     }
 
@@ -261,7 +248,8 @@ class HUDWindowController: NSWindowController {
         appIcon: NSImage? = nil,
         systemImage: String? = nil,
         buttonTitle: String? = nil,
-        buttonAction: (() -> Void)? = nil
+        buttonAction: (() -> Void)? = nil,
+        statusTint: HUDStatusTint? = nil
     ) {
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) { [weak self] in
             self?.show(
@@ -270,7 +258,8 @@ class HUDWindowController: NSWindowController {
                 appIcon: appIcon,
                 systemImage: systemImage,
                 buttonTitle: buttonTitle,
-                buttonAction: buttonAction
+                buttonAction: buttonAction,
+                statusTint: statusTint
             )
         }
     }
@@ -282,9 +271,10 @@ class HUDWindowController: NSWindowController {
         appIcon: NSImage? = nil,
         buttonTitle: String? = nil,
         buttonAction: (() -> Void)? = nil,
-        autoHide: Bool = true
+        autoHide: Bool = true,
+        statusTint: HUDStatusTint? = nil
     ) {
-        show(
+        present(
             message: message,
             systemImage: systemImage,
             iconColor: iconColor,
@@ -292,11 +282,11 @@ class HUDWindowController: NSWindowController {
             buttonTitle: buttonTitle,
             buttonAction: buttonAction,
             autoHide: autoHide,
-            statusTint: nil
+            statusTint: statusTint
         )
     }
 
-    private func show(
+    private func present(
         message: String,
         systemImage: String?,
         iconColor: Color,
@@ -517,7 +507,7 @@ class HUDWindowController: NSWindowController {
                     ? "Batch actions completed"
                     : "Moving window failed for WeChat",
                 systemImage: nil,
-                iconColor: statusTint.indicatorColor,
+                iconColor: .clear,
                 appIcon: NSApp.applicationIconImage,
                 buttonTitle: nil,
                 buttonAction: nil,

@@ -36,7 +36,7 @@ extension LauncherViewModel {
             self.requestLauncherFieldFocus()
             guard case .success = result else {
                 if case .failure(let message) = result {
-                    HUDWindowController.shared.show(message: message, style: .failure)
+                    HUDWindowController.shared.show(message: message, style: .failure, statusTint: .failure)
                 }
                 self.pendingRearrangementDirections.removeAll()
                 return
@@ -128,7 +128,8 @@ extension LauncherViewModel {
             manager?.refreshSpaceState()
             HUDWindowController.shared.show(
                 message: String(localized: "Space rearrangement timed out."),
-                style: .failure
+                style: .failure,
+                statusTint: .failure
             )
         }
         rearrangementRecoveryWorkItem = workItem

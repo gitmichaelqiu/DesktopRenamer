@@ -354,45 +354,47 @@ extension SpaceHelper {
             message: message,
             style: .warning,
             appIcon: appIcon,
-            buttonTitle: buttonTitle
-        ) {
-            DispatchQueue.main.async {
-                if !hasException {
-                    // Automatically add the exception with default grab values
-                    let newException = AppGrabException(
-                        bundleIdentifier: bundleID,
-                        appName: appName,
-                        grabOffsetX: sm.grabOffsetX,
-                        grabOffsetY: sm.grabOffsetY
+            buttonTitle: buttonTitle,
+            buttonAction: {
+                DispatchQueue.main.async {
+                    if !hasException {
+                        // Automatically add the exception with default grab values
+                        let newException = AppGrabException(
+                            bundleIdentifier: bundleID,
+                            appName: appName,
+                            grabOffsetX: sm.grabOffsetX,
+                            grabOffsetY: sm.grabOffsetY
+                        )
+                        withAnimation {
+                            sm.appGrabExceptions.append(newException)
+                        }
+                    }
+
+                    let sourceSpace = spaceForFailedWindow(
+                        windowID: windowID,
+                        preferredSpaceID: originalSpaceID,
+                        spaceManager: sm
                     )
-                    withAnimation {
-                        sm.appGrabExceptions.append(newException)
+                    guard let sourceSpace else {
+                        openExceptionSettings(bundleID: bundleID)
+                        return
+                    }
+
+                    let disposition = sm.switchToSpace(sourceSpace, forceInstant: true, isManual: false)
+                    switch disposition {
+                    case .alreadyCurrent, .unavailable:
+                        openExceptionSettings(bundleID: bundleID)
+                    case .started, .queued:
+                        waitForSpaceThenOpenExceptionSettings(
+                            sourceSpace,
+                            bundleID: bundleID,
+                            deadline: Date().addingTimeInterval(5)
+                        )
                     }
                 }
-                
-                let sourceSpace = spaceForFailedWindow(
-                    windowID: windowID,
-                    preferredSpaceID: originalSpaceID,
-                    spaceManager: sm
-                )
-                guard let sourceSpace else {
-                    openExceptionSettings(bundleID: bundleID)
-                    return
-                }
-
-                let disposition = sm.switchToSpace(sourceSpace, forceInstant: true, isManual: false)
-                switch disposition {
-                case .alreadyCurrent, .unavailable:
-                    openExceptionSettings(bundleID: bundleID)
-                case .started, .queued:
-                    waitForSpaceThenOpenExceptionSettings(
-                        sourceSpace,
-                        bundleID: bundleID,
-                        deadline: Date().addingTimeInterval(5)
-                    )
-                }
-            }
-        }
+            },
+            statusTint: .failure
+        )
     }
 
     private static func spaceForFailedWindow(
