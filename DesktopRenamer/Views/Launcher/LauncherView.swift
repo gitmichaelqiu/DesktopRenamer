@@ -57,10 +57,7 @@ struct LauncherView: View {
                                     viewModel.isKeyboardSelection = true
                                     viewModel.spaceMenuSelectedIndex = max(viewModel.spaceMenuSelectedIndex - 1, 0)
                                 } else {
-                                    viewModel.isKeyboardSelection = true
-                                    if viewModel.selectedRowIndex > 0 {
-                                        viewModel.selectedRowIndex -= 1
-                                    }
+                                    viewModel.moveMainListSelection(by: -1)
                                 }
                             },
                             onDownArrow: {
@@ -73,10 +70,7 @@ struct LauncherView: View {
                                         max(viewModel.spaceMenuSpaces.count - 1, 0)
                                     )
                                 } else {
-                                    viewModel.isKeyboardSelection = true
-                                    if viewModel.selectedRowIndex < viewModel.visibleRowsCount - 1 {
-                                        viewModel.selectedRowIndex += 1
-                                    }
+                                    viewModel.moveMainListSelection(by: 1)
                                 }
                             },
                             onLeftArrow: {
