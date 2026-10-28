@@ -260,6 +260,12 @@ extension StatusBarController {
         let hoverPreviewItem = NSMenuItem(title: "Show hovered HUD preview", action: #selector(showHoveredHUDPreview), keyEquivalent: "")
         hoverPreviewItem.target = self
         debugHUDMenu.addItem(hoverPreviewItem)
+        let successPreviewItem = NSMenuItem(title: "Show green success HUD preview", action: #selector(showGreenStatusHUDPreview), keyEquivalent: "")
+        successPreviewItem.target = self
+        debugHUDMenu.addItem(successPreviewItem)
+        let failurePreviewItem = NSMenuItem(title: "Show red failure HUD preview", action: #selector(showRedStatusHUDPreview), keyEquivalent: "")
+        failurePreviewItem.target = self
+        debugHUDMenu.addItem(failurePreviewItem)
         debugHUDMenu.addItem(NSMenuItem.separator())
         let dismissHUDItem = NSMenuItem(title: "Hide HUD", action: #selector(hideHUDPreview), keyEquivalent: "")
         dismissHUDItem.target = self
@@ -289,6 +295,14 @@ extension StatusBarController {
 
     @objc private func showHoveredHUDPreview() {
         HUDWindowController.shared.showDebugPreview(hovered: true)
+    }
+
+    @objc private func showGreenStatusHUDPreview() {
+        HUDWindowController.shared.showDebugPreview(statusTint: .success)
+    }
+
+    @objc private func showRedStatusHUDPreview() {
+        HUDWindowController.shared.showDebugPreview(statusTint: .failure)
     }
 
     @objc private func hideHUDPreview() {

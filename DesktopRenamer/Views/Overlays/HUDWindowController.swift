@@ -12,6 +12,7 @@ struct HUDView: View {
     let onDismiss: () -> Void
     let onHoverChanged: (Bool) -> Void
     let forceHover: Bool
+    let statusTint: HUDStatusTint?
 
     @Environment(\.colorScheme) private var colorScheme
     @State private var isHovered = false
@@ -55,6 +56,17 @@ struct HUDView: View {
                 }
             }
             .frame(width: 28, height: 28)
+            .overlay(alignment: .bottomTrailing) {
+                if !showsDismissButton, let statusTint {
+                    Circle()
+                        .fill(statusTint.indicatorColor)
+                        .frame(width: 8, height: 8)
+                        .overlay {
+                            Circle().strokeBorder(Color.black.opacity(0.45), lineWidth: 0.75)
+                        }
+                        .offset(x: 1, y: 1)
+                }
+            }
 
             Text(message)
                 .font(.system(size: 13, weight: .medium))
@@ -123,6 +135,26 @@ enum HUDPresentationStyle {
     }
 }
 
+enum HUDStatusTint: Equatable {
+    case success
+    case failure
+
+    var nsColor: NSColor {
+        switch self {
+        case .success: return .systemGreen
+        case .failure: return .systemRed
+        }
+    }
+
+    var indicatorColor: Color {
+        Color(nsColor: nsColor)
+    }
+
+    var glassColor: NSColor {
+        nsColor.withAlphaComponent(0.12)
+    }
+}
+
 class HUDWindowController: NSWindowController {
     static let shared = HUDWindowController()
 
@@ -130,6 +162,7 @@ class HUDWindowController: NSWindowController {
     private var hostingView: NSHostingView<HUDView>?
     private var glassEffectView: NSView?
     private var legacyVisualEffectView: NSVisualEffectView?
+    private var legacyTintOverlayView: NSView?
     private var hideDuration: TimeInterval?
     private var isHoveringHUD = false
     private var presentationID = UUID()
@@ -229,6 +262,28 @@ class HUDWindowController: NSWindowController {
         buttonAction: (() -> Void)? = nil,
         autoHide: Bool = true
     ) {
+        show(
+            message: message,
+            systemImage: systemImage,
+            iconColor: iconColor,
+            appIcon: appIcon,
+            buttonTitle: buttonTitle,
+            buttonAction: buttonAction,
+            autoHide: autoHide,
+            statusTint: nil
+        )
+    }
+
+    private func show(
+        message: String,
+        systemImage: String?,
+        iconColor: Color,
+        appIcon: NSImage?,
+        buttonTitle: String?,
+        buttonAction: (() -> Void)?,
+        autoHide: Bool,
+        statusTint: HUDStatusTint?
+    ) {
         guard let panel = window as? HUDNSPanel else { return }
 
         presentationID = UUID()
@@ -254,6 +309,7 @@ class HUDWindowController: NSWindowController {
             },
             onDismiss: { [weak self] in self?.hideWithAnimation() },
             onHoverChanged: { [weak self] hovering in self?.handleHoverChange(hovering) },
+            statusTint: statusTint,
             forceHover: {
                 #if DEBUG
                 self.forceHoverPreview
@@ -305,8 +361,15 @@ class HUDWindowController: NSWindowController {
                 visualEffectView.wantsLayer = true
                 visualEffectView.layer?.cornerRadius = 26
                 visualEffectView.layer?.masksToBounds = true
+
+                let tintOverlayView = NSView(frame: .zero)
+                tintOverlayView.translatesAutoresizingMaskIntoConstraints = false
+                tintOverlayView.wantsLayer = true
+                tintOverlayView.layer?.cornerRadius = 26
+                tintOverlayView.layer?.masksToBounds = true
                 surfaceRoot.addSubview(visualEffectView)
                 visualEffectView.addSubview(container)
+                visualEffectView.addSubview(tintOverlayView, positioned: .below, relativeTo: container)
                 NSLayoutConstraint.activate([
                     visualEffectView.leadingAnchor.constraint(equalTo: surfaceRoot.leadingAnchor, constant: surfaceInset),
                     visualEffectView.trailingAnchor.constraint(equalTo: surfaceRoot.trailingAnchor, constant: -surfaceInset),
@@ -316,8 +379,13 @@ class HUDWindowController: NSWindowController {
                     container.trailingAnchor.constraint(equalTo: visualEffectView.trailingAnchor),
                     container.topAnchor.constraint(equalTo: visualEffectView.topAnchor),
                     container.bottomAnchor.constraint(equalTo: visualEffectView.bottomAnchor),
+                    tintOverlayView.leadingAnchor.constraint(equalTo: visualEffectView.leadingAnchor),
+                    tintOverlayView.trailingAnchor.constraint(equalTo: visualEffectView.trailingAnchor),
+                    tintOverlayView.topAnchor.constraint(equalTo: visualEffectView.topAnchor),
+                    tintOverlayView.bottomAnchor.constraint(equalTo: visualEffectView.bottomAnchor),
                 ])
                 self.legacyVisualEffectView = visualEffectView
+                self.legacyTintOverlayView = tintOverlayView
             }
 
             panel.contentView = surfaceRoot
@@ -341,6 +409,8 @@ class HUDWindowController: NSWindowController {
             (glassEffectView as? NSGlassEffectView)?.cornerRadius = contentSize.height / 2
         }
         legacyVisualEffectView?.layer?.cornerRadius = contentSize.height / 2
+        legacyTintOverlayView?.layer?.cornerRadius = contentSize.height / 2
+        applyGlassTint(statusTint)
 
         positionPanel(panel)
 
@@ -363,6 +433,16 @@ class HUDWindowController: NSWindowController {
             hideTimer = nil
         } else {
             scheduleHide(after: hideDuration)
+        }
+    }
+
+    private func applyGlassTint(_ statusTint: HUDStatusTint?) {
+        if #available(macOS 26.0, *) {
+            (glassEffectView as? NSGlassEffectView)?.tintColor =
+                statusTint?.glassColor ?? NSColor.white.withAlphaComponent(0.03)
+        } else {
+            legacyTintOverlayView?.layer?.backgroundColor =
+                statusTint?.glassColor.cgColor ?? NSColor.clear.cgColor
         }
     }
 
@@ -421,14 +501,29 @@ class HUDWindowController: NSWindowController {
     }
 
     #if DEBUG
-    func showDebugPreview(hovered: Bool = false) {
+    func showDebugPreview(hovered: Bool = false, statusTint: HUDStatusTint? = nil) {
         forceHoverPreview = hovered
-        show(
-            message: "Klack enabled",
-            style: .success,
-            appIcon: NSApp.applicationIconImage,
-            autoHide: false
-        )
+        if let statusTint {
+            show(
+                message: statusTint == .success
+                    ? "Batch actions completed"
+                    : "Moving window failed for WeChat",
+                systemImage: nil,
+                iconColor: statusTint.indicatorColor,
+                appIcon: NSApp.applicationIconImage,
+                buttonTitle: nil,
+                buttonAction: nil,
+                autoHide: false,
+                statusTint: statusTint
+            )
+        } else {
+            show(
+                message: "Klack enabled",
+                style: .success,
+                appIcon: NSApp.applicationIconImage,
+                autoHide: false
+            )
+        }
     }
 
     func hideDebugPreview() {
