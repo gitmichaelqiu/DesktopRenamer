@@ -151,7 +151,7 @@ enum HUDStatusTint: Equatable {
     }
 
     var glassColor: NSColor {
-        nsColor.withAlphaComponent(0.12)
+        nsColor.withAlphaComponent(0.32)
     }
 }
 
