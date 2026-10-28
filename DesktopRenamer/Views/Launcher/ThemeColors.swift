@@ -12,7 +12,7 @@ struct ThemeColors {
     var textQuaternary: Color { ink.opacity(isDark ? 0.25 : 0.28) }
     var border: Color { ink.opacity(isDark ? 0.20 : 0.18) }
     var rowHover: Color { ink.opacity(isDark ? 0.05 : 0.045) }
-    var rowSelection: Color { ink.opacity(isDark ? 0.10 : 0.09) }
+    var rowSelection: Color { ink.opacity(isDark ? 0.18 : 0.14) }
     var badgeBg: Color { ink.opacity(isDark ? 0.10 : 0.08) }
     var badgeBorder: Color { ink.opacity(isDark ? 0.20 : 0.18) }
     /// A small raised surface must use an explicit ink color so it stays lighter than a dark selected row.
