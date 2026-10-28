@@ -309,14 +309,14 @@ class HUDWindowController: NSWindowController {
             },
             onDismiss: { [weak self] in self?.hideWithAnimation() },
             onHoverChanged: { [weak self] hovering in self?.handleHoverChange(hovering) },
-            statusTint: statusTint,
             forceHover: {
                 #if DEBUG
                 self.forceHoverPreview
                 #else
                 false
                 #endif
-            }()
+            }(),
+            statusTint: statusTint
         )
 
         if let existing = hostingView {
