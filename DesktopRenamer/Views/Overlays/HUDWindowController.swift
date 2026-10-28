@@ -84,6 +84,11 @@ struct HUDView: View {
         }
         .padding(.horizontal, 14)
         .padding(.vertical, 12)
+        .background {
+            if let statusTint {
+                Capsule().fill(statusTint.capsuleOverlayColor)
+            }
+        }
         .contentShape(Capsule())
         .onHover { hovering in
             isHovered = hovering
@@ -151,7 +156,15 @@ enum HUDStatusTint: Equatable {
     }
 
     var glassColor: NSColor {
-        nsColor.withAlphaComponent(0.32)
+        nsColor
+    }
+
+    var capsuleOverlayColor: Color {
+        Color(nsColor: nsColor).opacity(0.20)
+    }
+
+    var legacyOverlayColor: NSColor {
+        nsColor.withAlphaComponent(0.20)
     }
 }
 
@@ -442,7 +455,7 @@ class HUDWindowController: NSWindowController {
                 statusTint?.glassColor ?? NSColor.white.withAlphaComponent(0.03)
         } else {
             legacyTintOverlayView?.layer?.backgroundColor =
-                statusTint?.glassColor.cgColor ?? NSColor.clear.cgColor
+                statusTint?.legacyOverlayColor.cgColor ?? NSColor.clear.cgColor
         }
     }
 
