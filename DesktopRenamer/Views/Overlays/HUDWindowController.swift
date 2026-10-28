@@ -28,10 +28,16 @@ struct HUDView: View {
     @ViewBuilder
     var body: some View {
         if #available(macOS 26.0, *) {
-            if let statusTint {
-                hudContent.glassEffect(.regular.tint(statusTint.color), in: Capsule())
-            } else {
-                hudContent.glassEffect(.regular, in: Capsule())
+            hudContent.background {
+                ZStack {
+                    Capsule()
+                        .fill(.clear)
+                        .glassEffect(.regular, in: Capsule())
+
+                    if let statusTint {
+                        Capsule().fill(statusTint.surfaceWash)
+                    }
+                }
             }
         } else {
             hudContent
@@ -163,8 +169,8 @@ enum HUDStatusTint: Equatable {
         Color(nsColor: nsColor)
     }
 
-    var color: Color {
-        Color(nsColor: nsColor)
+    var surfaceWash: Color {
+        Color(nsColor: nsColor).opacity(0.20)
     }
 
     var legacyOverlayColor: NSColor {
