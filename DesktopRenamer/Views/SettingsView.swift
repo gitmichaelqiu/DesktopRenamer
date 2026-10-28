@@ -163,6 +163,9 @@ struct SettingsView: View {
                 .font(.system(size: 13))
                 .foregroundColor(.primary)
                 .focused($isSearchFieldFocused)
+                .onExitCommand {
+                    isSearchFieldFocused = false
+                }
             
             if !searchText.isEmpty {
                 Button {
@@ -247,6 +250,9 @@ struct SettingsView: View {
                                 }
                                 .buttonStyle(.plain)
                                 .frame(height: 18)
+                                .simultaneousGesture(TapGesture().onEnded {
+                                    isSearchFieldFocused = false
+                                })
                             }
                         }
                     }
@@ -318,6 +324,9 @@ struct SettingsView: View {
             .frame(maxHeight: .infinity, alignment: .top)
         }
         .edgesIgnoringSafeArea(.top)
+        .simultaneousGesture(TapGesture().onEnded {
+            isSearchFieldFocused = false
+        })
     }
 
     @ViewBuilder
@@ -335,6 +344,9 @@ struct SettingsView: View {
             }
         }
         .frame(height: sidebarRowHeight)
+        .simultaneousGesture(TapGesture().onEnded {
+            isSearchFieldFocused = false
+        })
     }
 
 }
