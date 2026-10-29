@@ -471,7 +471,7 @@ struct ListAreaView: View {
                                             ListSectionHeader(title: section.title, subtitle: section.subtitle, isFirst: isFirst)
                                             
                                             ForEach(section.items) { item in
-                                                let isSelected = !viewModel.isBottomBarFocused && viewModel.selectedRowIndex == item.index
+                                                let isSelected = !viewModel.isBottomBarFocused && viewModel.selectedListWindowID == item.window.id
                                                 LauncherRightClickContainer(onRightClick: {
                                                     viewModel.selectedRowIndex = item.index
                                                     viewModel.showCommandKPanel(isKeyboardInitiated: false)

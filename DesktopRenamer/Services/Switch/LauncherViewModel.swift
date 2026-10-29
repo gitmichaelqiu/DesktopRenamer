@@ -82,9 +82,11 @@ enum DesktopRearrangementDirection {
     @Published var selectedRowIndex: Int = 0 {
         didSet {
             synchronizeSelectedBatchWindowID()
+            synchronizeSelectedListWindowID()
         }
     }
     var selectedBatchWindowID: Int?
+    var selectedListWindowID: Int?
     // Keep the root command identity while a command page is open. The
     // visible root order can change when command ranking is updated, so an
     // index alone cannot reliably restore the selected command.
@@ -115,6 +117,7 @@ enum DesktopRearrangementDirection {
     @Published var currentSpaces: [SpaceGroup] = []
     @Published var currentWindows: [WindowEntry] = [] {
         didSet {
+            reconcileListWindowsSelection()
             reconcileBatchMoveSelection()
         }
     }
