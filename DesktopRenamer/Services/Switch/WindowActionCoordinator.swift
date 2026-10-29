@@ -3,6 +3,7 @@ import AppKit
 @MainActor
 enum WindowActionCoordinator {
     private static let operationGate = WindowOperationGate()
+    private static let windowMoveVerificationAttempts = 20
 
     /// Raycast waits for the synthetic drag and WindowServer's presentation
     /// transition before restoring the launcher's original Spaces. Native
@@ -679,7 +680,7 @@ enum WindowActionCoordinator {
     ) async -> Bool {
         var consecutiveDestinationReads = 0
 
-        for attempt in 0..<40 {
+        for attempt in 0..<windowMoveVerificationAttempts {
             let assignedSpaceIDs = SpaceHelper.getWindowCurrentSpaces(windowID: windowID)
             if assignedSpaceIDs.contains(spaceID), !assignedSpaceIDs.contains(sourceSpaceID) {
                 consecutiveDestinationReads += 1
@@ -689,7 +690,7 @@ enum WindowActionCoordinator {
             } else {
                 consecutiveDestinationReads = 0
             }
-            if attempt < 39 {
+            if attempt < windowMoveVerificationAttempts - 1 {
                 try? await Task.sleep(nanoseconds: 100_000_000)
             }
         }
@@ -705,7 +706,7 @@ enum WindowActionCoordinator {
     private static func waitForWindow(windowID: Int, inSpace spaceID: String) async -> Bool {
         var consecutiveMatches = 0
 
-        for attempt in 0..<40 {
+        for attempt in 0..<windowMoveVerificationAttempts {
             if SpaceHelper.getWindowCurrentSpaces(windowID: windowID).contains(spaceID) {
                 consecutiveMatches += 1
                 if consecutiveMatches >= 3 {
@@ -714,7 +715,7 @@ enum WindowActionCoordinator {
             } else {
                 consecutiveMatches = 0
             }
-            if attempt < 39 {
+            if attempt < windowMoveVerificationAttempts - 1 {
                 try? await Task.sleep(nanoseconds: 100_000_000)
             }
         }
