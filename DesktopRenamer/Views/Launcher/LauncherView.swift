@@ -532,7 +532,7 @@ struct ListAreaView: View {
                                             ListSectionHeader(title: section.title, subtitle: section.subtitle, isFirst: isFirst)
                                             
                                             ForEach(section.items) { item in
-                                                let isSelected = !viewModel.isBottomBarFocused && viewModel.selectedRowIndex == item.index
+                                                let isSelected = !viewModel.isBottomBarFocused && viewModel.selectedBatchWindowID == item.windowID
                                                 
                                                 switch item {
                                                 case .staged(let move, _):
