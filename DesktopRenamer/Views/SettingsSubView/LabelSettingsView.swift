@@ -28,8 +28,6 @@ struct LabelSettingsView: View {
 
                         SettingsRow(
                             "Hide when switching spaces",
-                            helperText:
-                                "Hide the target space label before switching instead of after."
                         ) {
                             Toggle("", isOn: $labelManager.hideWhenSwitching)
                                 .toggleStyle(.switch)
@@ -41,7 +39,6 @@ struct LabelSettingsView: View {
                         if isLiquidGlassAvailable {
                             SettingsRow(
                                 "Disable Liquid Glass effects",
-                                helperText: "Use a blurred background instead of Liquid Glass."
                             ) {
                                 Toggle("", isOn: $labelManager.disablePreviewLiquidGlass)
                                     .toggleStyle(.switch)
@@ -89,8 +86,6 @@ struct LabelSettingsView: View {
 
                         SettingsRow(
                             "Keep visible on space",
-                            helperText:
-                                "Keep the label visible on the desktop outside Mission Control."
                         ) {
                             Toggle("", isOn: $labelManager.showOnDesktop)
                                 .toggleStyle(.switch)
@@ -102,7 +97,6 @@ struct LabelSettingsView: View {
                         if isLiquidGlassAvailable {
                             SettingsRow(
                                 "Disable Liquid Glass effects",
-                                helperText: "Use a blurred background instead of Liquid Glass."
                             ) {
                                 Toggle("", isOn: $labelManager.disableActiveLiquidGlass)
                                     .toggleStyle(.switch)

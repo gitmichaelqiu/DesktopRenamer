@@ -29,7 +29,7 @@ struct GeneralSettingsView: View {
                     SettingsRow(
                         "Hide menubar icon",
                         helperText:
-                            "Hide the menu bar icon while DesktopRenamer continues running."
+                            "Launch the app again to reveal settings."
                     ) {
                         Toggle("", isOn: $isStatusBarHidden)
                             .labelsHidden()
