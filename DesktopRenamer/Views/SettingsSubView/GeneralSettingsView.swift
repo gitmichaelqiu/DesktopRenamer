@@ -82,14 +82,6 @@ struct GeneralSettingsView: View {
                             checkForUpdate()
                         }
                     }
-
-                    Divider()
-
-                    SettingsRow("Show Demo Videos") {
-                        Toggle("", isOn: $showDemoVideos)
-                            .labelsHidden()
-                            .toggleStyle(.switch)
-                    }
                 }
 
                 SettingsSection("Settings.General.Advanced") {
@@ -142,6 +134,14 @@ struct GeneralSettingsView: View {
                 }
 
                 SettingsSection(nil) {
+                    SettingsRow("Show demo videos") {
+                        Toggle("", isOn: $showDemoVideos)
+                            .labelsHidden()
+                            .toggleStyle(.switch)
+                    }
+
+                    Divider()
+
                     SettingsRow(
                         "Settings.General.Export.Settings",
                         helperText: "Settings.General.Export.Helper"
