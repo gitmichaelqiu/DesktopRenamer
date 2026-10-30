@@ -42,7 +42,7 @@ jobs:
           VERSION="${TAG#v}"
           
           # 2. Construct the URL
-          URL="https://github.com/$REPOSITORY/releases/download/$TAG/desktoprenamer.$VERSION.dmg"
+          URL="https://github.com/$REPOSITORY/releases/download/$TAG/DesktopRenamer.$VERSION.dmg"
           
           # 3. Download and Hash
           # -f makes curl fail on 404 so the workflow stops if the URL is wrong

@@ -1,4 +1,44 @@
-# Bundle-identity bridge release tooling
+# DesktopRenamer release tooling
+
+## Manual current-ID app release
+
+Run **Publish DesktopRenamer Release** from GitHub Actions on the `main`
+branch. Enter the marketing version and a new `CFBundleVersion`; release notes
+are optional. This workflow is manual-only and handles the normal
+`dev.mqiu.DesktopRenamer` release. It does not build a migration package or a
+legacy bridge.
+
+Before the first run, configure the `release` GitHub Actions environment with
+these secrets and variables:
+
+- `APPLE_CERTIFICATE_P12_BASE64`: base64-encoded PKCS#12 signing certificate
+  and private key.
+- `APPLE_CERTIFICATE_PASSWORD`: password for that PKCS#12 file.
+- `SPARKLE_EDDSA_PRIVATE_KEY`: Sparkle EdDSA private key exported from the
+  signing Mac.
+- `MACOS_SIGNING_IDENTITY` environment variable: the signing identity used by
+  the existing current-ID app, such as `Apple Development` or
+  `Developer ID Application`.
+
+The workflow archives the app and widget, validates their bundle identifiers
+and release versions, creates the DMG with `create-dmg`, signs the update and
+delta with Sparkle, and verifies the uploaded release assets before committing
+the appcast update to `main`. It then dispatches the existing Homebrew tap
+workflow. The repository must allow the Actions token to publish releases and
+push the verified appcast commit to `main`; the existing tap workflow also
+requires the `HOMEBREW_TAP_TOKEN` repository secret.
+
+The workflow does not notarize the app or DMG. If the current manual release
+is notarized, add the notary credentials and `notarytool` step before using
+this workflow for a public release.
+
+The new delta is stored in `DesktopRenamer/Resources/Sparkle`, matching the
+existing raw-GitHub delta URLs. The workflow commits it with the updated
+appcast after the DMG release asset has been downloaded again and its size and
+SHA-256 hash match the local artifact. Existing appcast entries and historical
+delta URLs are preserved.
+
+## Bundle-identity bridge release tooling
 
 The bridge is a one-time Sparkle update for installations that still use
 `com.michaelqiu.DesktopRenamer`. It stages a current-ID app, then lets that
