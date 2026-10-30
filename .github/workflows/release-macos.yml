@@ -270,6 +270,7 @@ jobs:
       - name: Verify the generated delta signature
         shell: bash
         env:
+          UPDATE_DIR: ${{ steps.appcast.outputs.update_dir }}
           DELTA_NAME: ${{ steps.appcast.outputs.delta_name }}
           DELTA_SIGNATURE: ${{ steps.appcast.outputs.delta_signature }}
         run: |
