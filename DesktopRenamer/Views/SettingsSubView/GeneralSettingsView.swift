@@ -12,6 +12,7 @@ struct GeneralSettingsView: View {
     @State private var launchAtLogin: Bool = false
     @State private var autoCheckUpdate: Bool = UpdateManager.shared.updaterController.updater.automaticallyChecksForUpdates
     @State private var autoDownloadUpdate: Bool = UpdateManager.shared.updaterController.updater.automaticallyDownloadsUpdates
+    @AppStorage("ShowDemoVideos") private var showDemoVideos = true
     @State private var isResetting: Bool = false
     @State private var isAPIEnabled: Bool = SpaceManager.isAPIEnabled
     @State private var isStatusBarHidden: Bool = StatusBarController.isStatusBarHidden
@@ -133,6 +134,14 @@ struct GeneralSettingsView: View {
                 }
 
                 SettingsSection(nil) {
+                    SettingsRow("Show demo videos in settings") {
+                        Toggle("", isOn: $showDemoVideos)
+                            .labelsHidden()
+                            .toggleStyle(.switch)
+                    }
+
+                    Divider()
+
                     SettingsRow(
                         "Settings.General.Export.Settings",
                         helperText: "Settings.General.Export.Helper"

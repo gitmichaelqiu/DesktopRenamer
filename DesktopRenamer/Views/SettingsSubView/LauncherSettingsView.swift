@@ -111,13 +111,13 @@ struct LauncherSettingsView: View {
                     .accessibilityLabel("Drag to rearrange")
                 Text("\(index + 1)")
                     .font(.system(.body, design: .monospaced))
-                    .foregroundColor(.secondary)
+                    .foregroundStyle(.primary)
                     .frame(width: 30, alignment: .leading)
 
                 HStack(spacing: 8) {
                     Image(systemName: command.iconName)
                         .font(.system(size: 14))
-                        .foregroundColor(.secondary)
+                        .foregroundStyle(.primary)
                         .frame(width: 20)
 
                     Text(command.title)
@@ -146,7 +146,7 @@ struct LauncherSettingsView: View {
             HStack(spacing: 8) {
                 Image(systemName: command.iconName)
                     .font(.system(size: 14))
-                    .foregroundColor(.secondary)
+                    .foregroundStyle(.primary)
                     .frame(width: 20)
 
                 Text(command.title)
