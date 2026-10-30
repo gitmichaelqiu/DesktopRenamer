@@ -124,9 +124,6 @@ struct SettingsView: View {
             searchText = ""
             selectedTab = tab
         }
-        .onChange(of: selectedTab) { _ in
-            clearSearchFocus()
-        }
         .onAppear {
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
                 isIndexingSettings = false
