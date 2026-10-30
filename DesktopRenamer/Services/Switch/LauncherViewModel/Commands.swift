@@ -161,6 +161,43 @@ extension LauncherViewModel {
         return items
     }
 
+    /// Keeps the batch list's visual selection tied to the selected window,
+    /// even when staging moves that row into a different section.
+    func synchronizeSelectedBatchWindowID() {
+        guard activeCommand?.type == .batchMoveWindows else {
+            selectedBatchWindowID = nil
+            return
+        }
+
+        let items = batchMoveSelectableItems
+        selectedBatchWindowID = items.indices.contains(selectedRowIndex)
+            ? items[selectedRowIndex].windowID
+            : nil
+    }
+
+    /// Preserves the selected window when a data refresh or staged-action
+    /// mutation changes its index or moves it between sections.
+    func reconcileBatchMoveSelection() {
+        guard activeCommand?.type == .batchMoveWindows else {
+            selectedBatchWindowID = nil
+            return
+        }
+
+        let items = batchMoveSelectableItems
+        guard !items.isEmpty else {
+            selectedRowIndex = 0
+            selectedBatchWindowID = nil
+            return
+        }
+
+        if let selectedBatchWindowID,
+           let index = items.firstIndex(where: { $0.windowID == selectedBatchWindowID }) {
+            selectedRowIndex = index
+        } else {
+            selectedRowIndex = min(max(selectedRowIndex, 0), items.count - 1)
+        }
+    }
+
     /// Restores selection after a batch item changes sections or disappears.
     ///
     /// `batchMoveSelectableItems` puts staged windows before unstaged windows,

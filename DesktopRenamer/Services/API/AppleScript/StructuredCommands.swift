@@ -11,6 +11,9 @@ private func scriptSpaceRecord(_ space: SpaceAPISpace) -> [String: Any] {
         "isFullscreen": space.isFullscreen,
         "isLocked": space.isLocked
     ]
+    if let managedSpaceID = space.managedSpaceID {
+        record["managedSpaceID"] = managedSpaceID
+    }
     if let appName = space.appName {
         record["appName"] = appName
     }
@@ -69,7 +72,7 @@ private func scriptWindowsSnapshotRecord(_ snapshot: SpaceAPIWindowsSnapshot) ->
 class GetAPIInformationCommand: NSScriptCommand {
     override func performDefaultImplementation() -> Any? {
         DiagnosticEventLog.shared.record(subsystem: "AppleScript", level: "info", "Command performed: GetAPIInformationCommand")
-        guard isAPIEnabled() else { return nil }
+        guard isAPIEnabled(access: .read) else { return nil }
         guard let manager = runOnMain({ AppDelegate.shared.spaceManager }) else {
             _ = failAppUnavailable()
             return nil
@@ -84,7 +87,7 @@ class GetAPIInformationCommand: NSScriptCommand {
 class GetStructuredSpacesCommand: NSScriptCommand {
     override func performDefaultImplementation() -> Any? {
         DiagnosticEventLog.shared.record(subsystem: "AppleScript", level: "info", "Command performed: GetStructuredSpacesCommand")
-        guard isAPIEnabled() else { return nil }
+        guard isAPIEnabled(access: .read) else { return nil }
         guard let manager = runOnMain({ AppDelegate.shared.spaceManager }) else {
             _ = failAppUnavailable()
             return nil
@@ -99,7 +102,7 @@ class GetStructuredSpacesCommand: NSScriptCommand {
 class GetStructuredSnapshotCommand: NSScriptCommand {
     override func performDefaultImplementation() -> Any? {
         DiagnosticEventLog.shared.record(subsystem: "AppleScript", level: "info", "Command performed: GetStructuredSnapshotCommand")
-        guard isAPIEnabled() else { return nil }
+        guard isAPIEnabled(access: .read) else { return nil }
         guard let manager = runOnMain({ AppDelegate.shared.spaceManager }) else {
             _ = failAppUnavailable()
             return nil
@@ -114,7 +117,7 @@ class GetStructuredSnapshotCommand: NSScriptCommand {
 class GetStructuredWindowsCommand: NSScriptCommand {
     override func performDefaultImplementation() -> Any? {
         DiagnosticEventLog.shared.record(subsystem: "AppleScript", level: "info", "Command performed: GetStructuredWindowsCommand")
-        guard isAPIEnabled() else { return nil }
+        guard isAPIEnabled(access: .read) else { return nil }
         guard let manager = runOnMain({ AppDelegate.shared.spaceManager }) else {
             _ = failAppUnavailable()
             return nil

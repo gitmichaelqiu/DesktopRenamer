@@ -262,6 +262,10 @@ private func testAuthorizationIdentities() {
         designatedRequirement: readOnlyClient.designatedRequirement,
         codeHash: nil
     )
+    check(
+        SpaceAPIAuthorization.approvedClient(for: readOnlyIdentity, in: [readOnlyClient]) == readOnlyClient,
+        "an authenticated identity resolves to its saved per-app access decision"
+    )
     let readOnlyAccess = SpaceAPIAuthorization.accessLevel(
         for: readOnlyIdentity,
         restricted: true,
@@ -353,6 +357,22 @@ private func testAuthorizationIdentities() {
         try? JSONDecoder().decode(SpaceAPIApprovedClient.self, from: $0)
     }
     check(decodedReadOnlyClient?.accessLevel == .readOnly, "per-app access level survives policy serialization")
+
+    let legacyPolicyData = Data(
+        #"{"isRestricted":true,"approvedClients":[]}"#.utf8
+    )
+    let decodedLegacyPolicy = try? JSONDecoder().decode(SpaceAPIAccessPolicy.self, from: legacyPolicyData)
+    check(decodedLegacyPolicy?.isRestricted == true, "legacy access policies keep their SpaceAPI restriction")
+    check(decodedLegacyPolicy?.isAppleScriptRestricted == true, "AppleScript follows the existing SpaceAPI restriction")
+
+    let sharedAccessPolicy = SpaceAPIAccessPolicy(
+        isRestricted: false,
+        approvedClients: [readOnlyClient]
+    )
+    let encodedPolicy = try? JSONEncoder().encode(sharedAccessPolicy)
+    let decodedPolicy = encodedPolicy.flatMap { try? JSONDecoder().decode(SpaceAPIAccessPolicy.self, from: $0) }
+    check(decodedPolicy == sharedAccessPolicy, "shared access restriction and approvals survive policy serialization")
+    check(decodedPolicy?.isAppleScriptRestricted == false, "AppleScript follows the shared unrestricted setting")
 
     let recipients = SpaceAPIAuthorization.authorizedRecipients(
         from: ["approved", "read-only", "denied", "unapproved"],

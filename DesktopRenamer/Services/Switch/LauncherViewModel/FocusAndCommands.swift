@@ -13,6 +13,20 @@ extension LauncherViewModel {
         isKeyboardSelection = false
     }
 
+    func moveMainListSelection(by offset: Int) {
+        guard !isLauncherBusy else { return }
+
+        if isBottomBarFocused {
+            leaveSpaceBarFocus()
+        }
+
+        isKeyboardSelection = true
+        selectedRowIndex = min(
+            max(selectedRowIndex + offset, 0),
+            max(visibleRowsCount - 1, 0)
+        )
+    }
+
     func executeNthRowAction(_ index: Int) {
         guard !isLauncherBusy,
               index >= 0 && index < visibleRowsCount else { return }

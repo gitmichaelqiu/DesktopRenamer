@@ -2,7 +2,6 @@ import SwiftUI
 
 struct LabelSettingsView: View {
     @ObservedObject var labelManager: SpaceLabelManager
-    @EnvironmentObject var hotkeyManager: HotkeyManager
 
     private var isLiquidGlassAvailable: Bool {
         if #available(macOS 26.0, *) {
@@ -29,8 +28,6 @@ struct LabelSettingsView: View {
 
                         SettingsRow(
                             "Hide when switching spaces",
-                            helperText:
-                                "Hide the target space label before switching instead of after."
                         ) {
                             Toggle("", isOn: $labelManager.hideWhenSwitching)
                                 .toggleStyle(.switch)
@@ -42,7 +39,6 @@ struct LabelSettingsView: View {
                         if isLiquidGlassAvailable {
                             SettingsRow(
                                 "Disable Liquid Glass effects",
-                                helperText: "Use a blurred background instead of Liquid Glass."
                             ) {
                                 Toggle("", isOn: $labelManager.disablePreviewLiquidGlass)
                                     .toggleStyle(.switch)
@@ -90,8 +86,6 @@ struct LabelSettingsView: View {
 
                         SettingsRow(
                             "Keep visible on space",
-                            helperText:
-                                "Keep the label visible on the desktop outside Mission Control."
                         ) {
                             Toggle("", isOn: $labelManager.showOnDesktop)
                                 .toggleStyle(.switch)
@@ -103,7 +97,6 @@ struct LabelSettingsView: View {
                         if isLiquidGlassAvailable {
                             SettingsRow(
                                 "Disable Liquid Glass effects",
-                                helperText: "Use a blurred background instead of Liquid Glass."
                             ) {
                                 Toggle("", isOn: $labelManager.disableActiveLiquidGlass)
                                     .toggleStyle(.switch)
@@ -135,27 +128,6 @@ struct LabelSettingsView: View {
                     }
                 }
 
-                if labelManager.showPreviewLabels || labelManager.showActiveLabels {
-                    SettingsSection("Shortcuts") {
-                        SettingsRow("Reload space labels") {
-                            HStack {
-                                Text(hotkeyManager.description(for: .reloadLabels))
-                                    .foregroundColor(.secondary)
-                                    .padding(.trailing, 8)
-                                
-                                Button("◉") {
-                                    hotkeyManager.startListening(for: .reloadLabels)
-                                }
-                                .disabled(hotkeyManager.isListening)
-                                
-                                Button("↺") {
-                                    hotkeyManager.resetToDefault(for: .reloadLabels)
-                                }
-                                .disabled(hotkeyManager.isDefault(for: .reloadLabels))
-                            }
-                        }
-                    }
-                }
             }
             .animation(.easeInOut(duration: 0.2), value: labelManager.showActiveLabels)
             .animation(.easeInOut(duration: 0.2), value: labelManager.showPreviewLabels)

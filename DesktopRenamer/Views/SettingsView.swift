@@ -1,7 +1,7 @@
 import SwiftUI
 
 enum SettingsTab: String, CaseIterable, Identifiable {
-    case general, space, labels, sswitch, launcher, permissions, about
+    case general, space, labels, sswitch, launcher, shortcuts, permissions, about
 
     var id: String { self.rawValue }
 
@@ -12,6 +12,7 @@ enum SettingsTab: String, CaseIterable, Identifiable {
         case .labels: return "Settings.Labels"
         case .sswitch: return "Settings.Switch"
         case .launcher: return "Settings.Launcher"
+        case .shortcuts: return "Shortcuts"
         case .permissions: return "Permissions"
         case .about: return "Settings.About"
         }
@@ -25,6 +26,7 @@ enum SettingsTab: String, CaseIterable, Identifiable {
         case .labels: return "tag"
         case .sswitch: return "arrow.left.and.right.square"
         case .launcher: return "command"
+        case .shortcuts: return "keyboard"
         case .permissions: return "lock.shield"
         case .about: return "info.circle"
         }
@@ -55,6 +57,7 @@ struct SettingsView: View {
     @State private var selectedTab: SettingsTab?
     @State private var searchText = ""
     @State private var isIndexingSettings = true
+    @FocusState private var isSearchFieldFocused: Bool
     
     init(spaceManager: SpaceManager, labelManager: SpaceLabelManager, initialTab: SettingsTab? = .general) {
         self.spaceManager = spaceManager
@@ -80,6 +83,8 @@ struct SettingsView: View {
                         .environment(\.settingsTab, .space)
                     LabelSettingsView(labelManager: labelManager)
                         .environment(\.settingsTab, .labels)
+                    ShortcutsSettingsView()
+                        .environment(\.settingsTab, .shortcuts)
                     SwitchSettingsView()
                         .environment(\.settingsTab, .sswitch)
                     LauncherSettingsView()
@@ -114,6 +119,7 @@ struct SettingsView: View {
             }
         }
         .onReceive(NotificationCenter.default.publisher(for: .settingsTabRequested)) { notification in
+            clearSearchFocus()
             guard let tab = notification.object as? SettingsTab else { return }
             searchText = ""
             selectedTab = tab
@@ -156,6 +162,10 @@ struct SettingsView: View {
                 .textFieldStyle(.plain)
                 .font(.system(size: 13))
                 .foregroundColor(.primary)
+                .focused($isSearchFieldFocused)
+                .onExitCommand {
+                    clearSearchFocus()
+                }
             
             if !searchText.isEmpty {
                 Button {
@@ -182,8 +192,22 @@ struct SettingsView: View {
         .padding(.trailing, 10)
     }
 
+    private var sidebarHeader: some View {
+        VStack(alignment: .leading, spacing: 2) {
+            Color.clear.frame(height: 45)
+            Text("Desktop").font(.custom("Syncopate-Bold", size: 21)).foregroundStyle(.primary)
+            Text("Renamer").font(.custom("Syncopate-Bold", size: 21)).foregroundStyle(.primary)
+                .padding(.bottom, 10)
+
+            searchField
+                .padding(.bottom, 12)
+        }
+        .padding(.leading, 15)
+        .padding(.trailing, 2)
+    }
+
     @ViewBuilder
-    private func sidebarContent(titleSize: CGFloat, spacing: CGFloat) -> some View {
+    private var sidebarContent: some View {
         Section {
             if filteredTabs.isEmpty {
                 Text("No results")
@@ -206,6 +230,8 @@ struct SettingsView: View {
                             }
                             
                             ForEach(matchingItems) { item in
+                                let resultColor = selectedTab == tab ? Color.white : Color.secondary
+
                                 Button {
                                     selectedTab = tab
                                     navigationState.scrollToItemID = item.title
@@ -213,34 +239,30 @@ struct SettingsView: View {
                                     HStack(spacing: 4) {
                                         Image(systemName: "arrow.turn.down.right")
                                             .font(.system(size: 9))
-                                            .foregroundColor(.secondary)
+                                            .foregroundColor(resultColor)
                                             .padding(.leading, 12)
                                         
                                         Text(highlightedText(text: item.localizedTitle, query: searchText, color: nil))
                                             .font(.system(size: 11, weight: .regular))
-                                            .foregroundColor(.secondary)
+                                            .foregroundColor(resultColor)
                                             .lineLimit(1)
                                     }
                                 }
                                 .buttonStyle(.plain)
                                 .frame(height: 18)
+                                .simultaneousGesture(TapGesture().onEnded {
+                                    clearSearchFocus()
+                                })
                             }
                         }
                     }
                     .tag(tab)
+                    .listRowBackground(
+                        RoundedRectangle(cornerRadius: 8, style: .continuous)
+                            .fill(selectedTab == tab ? Color.accentColor : Color.clear)
+                            .padding(.horizontal, 10)
+                    )
                 }
-            }
-        } header: {
-            VStack(alignment: .leading, spacing: spacing) {
-                Color.clear.frame(height: 45)
-                Text("Desktop").font(.custom("Syncopate-Bold", size: titleSize)).foregroundStyle(
-                    .primary)
-                Text("Renamer").font(.custom("Syncopate-Bold", size: titleSize)).foregroundStyle(
-                    .primary
-                ).padding(.bottom, 10)
-                
-                searchField
-                    .padding(.bottom, 12)
             }
         }
         .collapsible(false)
@@ -249,10 +271,12 @@ struct SettingsView: View {
     @ViewBuilder
     private var sidebar: some View {
         List(selection: $selectedTab) {
-            sidebarContent(titleSize: 21, spacing: 2)
+            sidebarContent
         }
         .listStyle(.sidebar)
-        .scrollDisabled(true)
+        .safeAreaInset(edge: .top, spacing: 0) {
+            sidebarHeader
+        }
         .edgesIgnoringSafeArea(.top)
         .navigationSplitViewColumnWidth(min: sidebarWidth, ideal: sidebarWidth)
     }
@@ -270,6 +294,8 @@ struct SettingsView: View {
                     SpaceEditView(spaceManager: spaceManager)
                 case .labels:
                     LabelSettingsView(labelManager: labelManager)
+                case .shortcuts:
+                    ShortcutsSettingsView()
                 case .sswitch:
                     SwitchSettingsView()
                 case .launcher:
@@ -298,6 +324,10 @@ struct SettingsView: View {
             .frame(maxHeight: .infinity, alignment: .top)
         }
         .edgesIgnoringSafeArea(.top)
+        .contentShape(Rectangle())
+        .simultaneousGesture(TapGesture().onEnded {
+            clearSearchFocus()
+        })
     }
 
     @ViewBuilder
@@ -307,12 +337,23 @@ struct SettingsView: View {
                 Text(tab.localizedName)
                     .font(.system(size: sidebarFontSize, weight: .medium))
                     .padding(.leading, 2)
+                    .foregroundStyle(selectedTab == tab ? Color.white : Color.primary)
             } icon: {
                 Image(systemName: tab.iconName).resizable().scaledToFit().frame(
                     height: sidebarRowHeight - 15)
+                    .foregroundStyle(selectedTab == tab ? Color.white : Color.accentColor)
             }
         }
         .frame(height: sidebarRowHeight)
+        .simultaneousGesture(TapGesture().onEnded {
+            clearSearchFocus()
+        })
+    }
+
+    private func clearSearchFocus() {
+        DispatchQueue.main.async {
+            isSearchFieldFocused = false
+        }
     }
 
 }

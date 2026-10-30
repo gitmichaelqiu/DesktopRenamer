@@ -159,6 +159,38 @@ class StatusBarController: NSObject {
         accessController.resolvePendingApproval(with: accessLevel)
     }
 
+    @MainActor
+    func presentAppleScriptAccessRequest(
+        for requestingApplication: SpaceAPIApprovedClient
+    ) -> SpaceAPIClientAccessLevel? {
+        let alert = NSAlert()
+        alert.alertStyle = .informational
+        alert.messageText = String(
+            format: NSLocalizedString("%@ would like to use AppleScript with DesktopRenamer.", comment: ""),
+            requestingApplication.name
+        )
+        alert.informativeText = NSLocalizedString("Choose the access level to grant.", comment: "")
+        alert.icon = spaceAPIAccessRequestIcon(for: requestingApplication.applicationPath)
+        alert.addButton(withTitle: NSLocalizedString("Read Only", comment: ""))
+        alert.addButton(withTitle: NSLocalizedString("Read & Write", comment: ""))
+        alert.addButton(withTitle: NSLocalizedString("Don't Allow", comment: ""))
+        alert.buttons.first?.keyEquivalent = "\r"
+        alert.buttons.last?.keyEquivalent = "\u{1b}"
+        alert.window.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
+
+        NSApp.activate(ignoringOtherApps: true)
+        switch alert.runModal() {
+        case .alertFirstButtonReturn:
+            return .readOnly
+        case .alertSecondButtonReturn:
+            return .fullAccess
+        case .alertThirdButtonReturn:
+            return .noAccess
+        default:
+            return nil
+        }
+    }
+
     private func spaceAPIAccessRequestIcon(for applicationPath: String) -> NSImage {
         let canvasSize = NSSize(width: 64, height: 64)
         let clientIconSize: CGFloat = 56

@@ -3,11 +3,6 @@ import Combine
 import Foundation
 import Security
 
-private struct SpaceAPIAccessPolicy: Codable {
-    var isRestricted: Bool
-    var approvedClients: [SpaceAPIApprovedClient]
-}
-
 /// Keeps the allowlist in the app's private Data Protection Keychain access group.
 /// Authentication reads a lock-protected in-memory snapshot and never trusts peer-supplied
 /// process IDs, bundle identifiers, or paths.
@@ -28,7 +23,7 @@ final class SpaceAPIAccessController: ObservableObject {
     var accessRequestDidArrive: (() -> Void)?
 
     private let lock = NSLock()
-    private var policy = SpaceAPIAccessPolicy(isRestricted: true, approvedClients: [])
+    private var policy = SpaceAPIAccessPolicy()
     private var isStoreUsable = true
     private var pendingApprovals: [String: PendingApproval] = [:]
     private var pendingApprovalOrder: [String] = []
@@ -51,7 +46,7 @@ final class SpaceAPIAccessController: ObservableObject {
             }
         } catch {
             isStoreUsable = false
-            policy = SpaceAPIAccessPolicy(isRestricted: true, approvedClients: [])
+            policy = SpaceAPIAccessPolicy(isRestricted: true)
             isRestrictedForSettings = true
             canRepairPolicy = true
             errorMessage = error.localizedDescription
@@ -65,11 +60,18 @@ final class SpaceAPIAccessController: ObservableObject {
         return policy.isRestricted
     }
 
+    var isAppleScriptRestricted: Bool {
+        lock.lock()
+        defer { lock.unlock() }
+        return policy.isRestricted
+    }
+
     @MainActor
     var diagnosticSummary: String {
         let snapshot = policySnapshot()
         var summary = "policyStoreUsable: \(snapshot.storeAvailable)\n"
         summary += "accessRestricted: \(snapshot.policy.isRestricted)\n"
+        summary += "appleScriptAccessRestricted: \(snapshot.policy.isRestricted)\n"
         summary += "approvedClientCount: \(snapshot.policy.approvedClients.count)\n"
         for client in snapshot.policy.approvedClients {
             let name = DiagnosticText.singleLine(client.name)
@@ -139,6 +141,65 @@ final class SpaceAPIAccessController: ObservableObject {
         if !isRestricted {
             finishPendingApprovalsForUnrestrictedMode()
         }
+    }
+
+    @MainActor
+    func appleScriptDenialReason(
+        for authenticatedClient: SpaceAPIAuthenticatedClient?,
+        requiredAccess: SpaceAPIRequestAccess,
+        requestApproval: (SpaceAPIApprovedClient) -> SpaceAPIClientAccessLevel?
+    ) -> String? {
+        let snapshot = policySnapshot()
+        guard snapshot.storeAvailable else {
+            return NSLocalizedString(
+                "The AppleScript access policy could not be verified. Access remains restricted.",
+                comment: ""
+            )
+        }
+        guard snapshot.policy.isRestricted else { return nil }
+        guard let authenticatedClient else {
+            return NSLocalizedString(
+                "The calling app could not be verified. AppleScript access remains restricted.",
+                comment: ""
+            )
+        }
+
+        if let approvedClient = SpaceAPIAuthorization.approvedClient(
+            for: authenticatedClient.peerIdentity,
+            in: snapshot.policy.approvedClients
+        ) {
+            return Self.denialReason(for: approvedClient.accessLevel, requiredAccess: requiredAccess)
+        }
+
+        guard let requestingApplication = authenticatedClient.application else {
+            return NSLocalizedString(
+                "The calling app could not be identified. AppleScript access remains restricted.",
+                comment: ""
+            )
+        }
+        guard let chosenAccess = requestApproval(requestingApplication) else {
+            return NSLocalizedString("AppleScript access was not approved.", comment: "")
+        }
+
+        var approvedClient = requestingApplication
+        approvedClient.accessLevel = chosenAccess
+        var updated = currentPolicy()
+        updated.approvedClients.removeAll { $0.id == approvedClient.id }
+        updated.approvedClients.append(approvedClient)
+        updated.approvedClients.sort { $0.name.localizedStandardCompare($1.name) == .orderedAscending }
+        guard persistAndApply(updated) else {
+            return NSLocalizedString(
+                "The AppleScript access decision could not be saved. Access remains restricted.",
+                comment: ""
+            )
+        }
+
+        DiagnosticEventLog.shared.record(
+            subsystem: "AppleScript.Access",
+            level: chosenAccess == .noAccess ? "warning" : "info",
+            "Access request for \(approvedClient.name) resolved as \(chosenAccess.rawValue)."
+        )
+        return Self.denialReason(for: chosenAccess, requiredAccess: requiredAccess)
     }
 
     @MainActor
@@ -309,7 +370,7 @@ final class SpaceAPIAccessController: ObservableObject {
 
     @MainActor
     func repairUnreadablePolicy() {
-        let replacement = SpaceAPIAccessPolicy(isRestricted: true, approvedClients: [])
+        let replacement = SpaceAPIAccessPolicy(isRestricted: true)
         do {
             try Self.deleteStoredPolicy()
             try Self.writePolicy(replacement)
@@ -456,6 +517,19 @@ final class SpaceAPIAccessController: ObservableObject {
         accessLevel(for: Optional(identity))
     }
 
+    private static func denialReason(
+        for accessLevel: SpaceAPIClientAccessLevel,
+        requiredAccess: SpaceAPIRequestAccess
+    ) -> String? {
+        guard accessLevel != .noAccess else {
+            return NSLocalizedString("This app is not allowed to use AppleScript with DesktopRenamer.", comment: "")
+        }
+        guard accessLevel.allows(requiredAccess) else {
+            return NSLocalizedString("This app is not allowed to make changes using AppleScript.", comment: "")
+        }
+        return nil
+    }
+
     private static func peerIdentity(for client: SpaceAPIApprovedClient) -> SpaceAPIPeerIdentity {
         SpaceAPIPeerIdentity(designatedRequirement: client.designatedRequirement, codeHash: client.codeHash)
     }
@@ -481,7 +555,7 @@ final class SpaceAPIAccessController: ObservableObject {
     @MainActor
     private func failClosed(after error: Error, notifyPolicyChange: Bool = true) {
         lock.lock()
-        policy = SpaceAPIAccessPolicy(isRestricted: true, approvedClients: [])
+        policy = SpaceAPIAccessPolicy(isRestricted: true)
         isStoreUsable = false
         lock.unlock()
         isRestrictedForSettings = true

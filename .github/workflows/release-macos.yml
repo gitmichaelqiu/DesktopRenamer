@@ -1,0 +1,390 @@
+name: Publish DesktopRenamer Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Marketing version (for example 1.17.0)
+        required: true
+        type: string
+      build_number:
+        description: CFBundleVersion, greater than the latest current release
+        required: true
+        type: string
+      release_notes:
+        description: Optional release notes (GitHub generated notes are used when empty)
+        required: false
+        type: string
+
+permissions:
+  contents: write
+  actions: write
+
+concurrency:
+  group: desktoprenamer-release
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: macos-15
+    environment: release
+    timeout-minutes: 90
+    env:
+      GH_TOKEN: ${{ github.token }}
+      VERSION: ${{ inputs.version }}
+      BUILD_NUMBER: ${{ inputs.build_number }}
+      RELEASE_NOTES: ${{ inputs.release_notes }}
+      APPLE_CERTIFICATE_P12_BASE64: ${{ secrets.APPLE_CERTIFICATE_P12_BASE64 }}
+      APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+      SPARKLE_EDDSA_PRIVATE_KEY: ${{ secrets.SPARKLE_EDDSA_PRIVATE_KEY }}
+      MACOS_SIGNING_IDENTITY: ${{ vars.MACOS_SIGNING_IDENTITY }}
+
+    steps:
+      - name: Check out release source
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Validate release inputs
+        id: release
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          if [[ "$GITHUB_REF" != "refs/heads/main" ]]; then
+            echo "Run this workflow from main so the published appcast matches the release source." >&2
+            exit 1
+          fi
+          if [[ ! "$VERSION" =~ ^[0-9]{1,4}\.[0-9]{1,4}\.[0-9]{1,4}$ ]]; then
+            echo "Version must use the numeric X.Y.Z format." >&2
+            exit 1
+          fi
+          if [[ ! "$BUILD_NUMBER" =~ ^[1-9][0-9]{0,8}$ ]]; then
+            echo "Build number must be a positive integer." >&2
+            exit 1
+          fi
+
+          read -r PREVIOUS_BUILD PREVIOUS_VERSION PREVIOUS_DMG_URL < <(
+            python3 Scripts/prepare-sparkle-release.py latest appcast.xml
+          )
+          if (( BUILD_NUMBER <= PREVIOUS_BUILD )); then
+            echo "Build $BUILD_NUMBER must be greater than current build $PREVIOUS_BUILD." >&2
+            exit 1
+          fi
+          python3 - "$VERSION" "$PREVIOUS_VERSION" <<'PY'
+          import sys
+
+          requested = tuple(map(int, sys.argv[1].split(".")))
+          current = tuple(map(int, sys.argv[2].split(".")))
+          if requested <= current:
+              raise SystemExit(f"Version {sys.argv[1]} must be greater than current version {sys.argv[2]}.")
+          PY
+
+          TAG="v$VERSION"
+          if gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            echo "Release $TAG already exists; refusing to overwrite it." >&2
+            exit 1
+          fi
+          if git ls-remote --exit-code --tags origin "refs/tags/$TAG" >/dev/null 2>&1; then
+            echo "Tag $TAG already exists; refusing to overwrite it." >&2
+            exit 1
+          fi
+
+          {
+            echo "tag=$TAG"
+            echo "previous_build=$PREVIOUS_BUILD"
+            echo "previous_version=$PREVIOUS_VERSION"
+            echo "previous_dmg_url=$PREVIOUS_DMG_URL"
+            echo "dmg_name=DesktopRenamer.$VERSION.dmg"
+            echo "release_url_prefix=https://github.com/$GITHUB_REPOSITORY/releases/download/$TAG/"
+            echo "release_notes_url=https://github.com/$GITHUB_REPOSITORY/releases/tag/$TAG"
+            echo "delta_url_prefix=https://raw.githubusercontent.com/$GITHUB_REPOSITORY/main/DesktopRenamer/Resources/Sparkle/"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Set up Apple signing keychain
+        shell: bash
+        run: |
+          set -euo pipefail
+          : "${APPLE_CERTIFICATE_P12_BASE64:?Add APPLE_CERTIFICATE_P12_BASE64 to the release environment}"
+          : "${APPLE_CERTIFICATE_PASSWORD:?Add APPLE_CERTIFICATE_PASSWORD to the release environment}"
+          : "${MACOS_SIGNING_IDENTITY:?Set MACOS_SIGNING_IDENTITY in the release environment variables}"
+
+          KEYCHAIN_PATH="$RUNNER_TEMP/desktoprenamer-release.keychain-db"
+          KEYCHAIN_PASSWORD="$(openssl rand -base64 32)"
+          CERTIFICATE_PATH="$RUNNER_TEMP/apple-development.p12"
+
+          security create-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+          security set-keychain-settings -lut 21600 "$KEYCHAIN_PATH"
+          security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+          security list-keychains -d user -s "$KEYCHAIN_PATH" /Library/Keychains/System.keychain
+          security default-keychain -d user -s "$KEYCHAIN_PATH"
+
+          printf '%s' "$APPLE_CERTIFICATE_P12_BASE64" | base64 -D > "$CERTIFICATE_PATH"
+          security import "$CERTIFICATE_PATH" \
+            -k "$KEYCHAIN_PATH" \
+            -P "$APPLE_CERTIFICATE_PASSWORD" \
+            -T /usr/bin/codesign \
+            -T /usr/bin/security
+          security find-identity -v -p codesigning "$KEYCHAIN_PATH" \
+            | grep -F "$MACOS_SIGNING_IDENTITY"
+          security set-key-partition-list \
+            -S apple-tool:,apple:,codesign: \
+            -s -k "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+          rm -f "$CERTIFICATE_PATH"
+
+      - name: Archive the current-ID app and widget
+        id: archive
+        shell: bash
+        run: |
+          set -euo pipefail
+          xcodebuild \
+            -project DesktopRenamer.xcodeproj \
+            -scheme DesktopRenamer \
+            -configuration Release \
+            -destination 'generic/platform=macOS' \
+            -derivedDataPath "$RUNNER_TEMP/DerivedData" \
+            -archivePath "$RUNNER_TEMP/DesktopRenamer.xcarchive" \
+            CODE_SIGN_STYLE=Manual \
+            CODE_SIGN_IDENTITY="$MACOS_SIGNING_IDENTITY" \
+            DEVELOPMENT_TEAM=W94S87F4LJ \
+            MARKETING_VERSION="$VERSION" \
+            CURRENT_PROJECT_VERSION="$BUILD_NUMBER" \
+            archive
+
+          APP_PATH="$RUNNER_TEMP/DesktopRenamer.xcarchive/Products/Applications/DesktopRenamer.app"
+          APP_INFO="$APP_PATH/Contents/Info.plist"
+          WIDGET_INFO="$(find "$APP_PATH/Contents/PlugIns" -name Info.plist -print -quit)"
+          test -d "$APP_PATH"
+          test -n "$WIDGET_INFO"
+
+          test "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' "$APP_INFO")" = "dev.mqiu.DesktopRenamer"
+          test "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleVersion' "$APP_INFO")" = "$BUILD_NUMBER"
+          test "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$APP_INFO")" = "$VERSION"
+          test "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' "$WIDGET_INFO")" = "dev.mqiu.DesktopRenamer.DesktopRenamerWidget"
+          test "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleVersion' "$WIDGET_INFO")" = "$BUILD_NUMBER"
+          test "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$WIDGET_INFO")" = "$VERSION"
+          codesign --verify --deep --strict "$APP_PATH"
+
+          printf 'app_path=%s\n' "$APP_PATH" >> "$GITHUB_OUTPUT"
+
+      - name: Install create-dmg
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Create and verify the DMG
+        id: dmg
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm install --global create-dmg@8.1.0
+
+          OUTPUT_DIR="$RUNNER_TEMP/release-assets"
+          mkdir -p "$OUTPUT_DIR"
+          create-dmg "${{ steps.archive.outputs.app_path }}" "$OUTPUT_DIR" --no-code-sign
+
+          GENERATED_DMG="$OUTPUT_DIR/DesktopRenamer $VERSION.dmg"
+          DMG_PATH="$OUTPUT_DIR/${{ steps.release.outputs.dmg_name }}"
+          test -f "$GENERATED_DMG"
+          mv "$GENERATED_DMG" "$DMG_PATH"
+          hdiutil verify "$DMG_PATH"
+
+          printf 'dmg_path=%s\n' "$DMG_PATH" >> "$GITHUB_OUTPUT"
+
+      - name: Locate Sparkle tools and sign the DMG
+        id: sparkle
+        shell: bash
+        run: |
+          set -euo pipefail
+          : "${SPARKLE_EDDSA_PRIVATE_KEY:?Add SPARKLE_EDDSA_PRIVATE_KEY to the release environment}"
+
+          SPARKLE_BIN="$RUNNER_TEMP/DerivedData/SourcePackages/artifacts/sparkle/Sparkle/bin"
+          SIGN_UPDATE="$SPARKLE_BIN/sign_update"
+          GENERATE_APPCAST="$SPARKLE_BIN/generate_appcast"
+          test -x "$SIGN_UPDATE"
+          test -x "$GENERATE_APPCAST"
+
+          DMG_SIGNATURE_PATH="$RUNNER_TEMP/dmg-signature.txt"
+          printf '%s' "$SPARKLE_EDDSA_PRIVATE_KEY" \
+            | "$SIGN_UPDATE" --ed-key-file - -p "${{ steps.dmg.outputs.dmg_path }}" \
+            > "$DMG_SIGNATURE_PATH"
+          DMG_SIGNATURE="$(cat "$DMG_SIGNATURE_PATH")"
+          test -n "$DMG_SIGNATURE"
+          printf '%s' "$SPARKLE_EDDSA_PRIVATE_KEY" \
+            | "$SIGN_UPDATE" --ed-key-file - --verify \
+                "${{ steps.dmg.outputs.dmg_path }}" "$DMG_SIGNATURE"
+
+          printf 'sparkle_bin=%s\n' "$SPARKLE_BIN" >> "$GITHUB_OUTPUT"
+          printf 'dmg_signature=%s\n' "$DMG_SIGNATURE" >> "$GITHUB_OUTPUT"
+
+      - name: Generate the current-channel appcast and delta
+        id: appcast
+        shell: bash
+        run: |
+          set -euo pipefail
+          UPDATE_DIR="$RUNNER_TEMP/sparkle-updates"
+          BASE_APPCAST="$RUNNER_TEMP/original-appcast.xml"
+          mkdir -p "$UPDATE_DIR"
+          cp appcast.xml "$BASE_APPCAST"
+          cp appcast.xml "$UPDATE_DIR/appcast.xml"
+          cp "${{ steps.dmg.outputs.dmg_path }}" "$UPDATE_DIR/${{ steps.release.outputs.dmg_name }}"
+          curl --fail --location --retry 3 \
+            "${{ steps.release.outputs.previous_dmg_url }}" \
+            --output "$UPDATE_DIR/DesktopRenamer.${{ steps.release.outputs.previous_version }}.dmg"
+
+          printf '%s' "$SPARKLE_EDDSA_PRIVATE_KEY" \
+            | "${{ steps.sparkle.outputs.sparkle_bin }}/generate_appcast" \
+                --ed-key-file - \
+                --channel dev-mqiu \
+                --versions "$BUILD_NUMBER" \
+                --maximum-versions 0 \
+                --maximum-deltas 1 \
+                --download-url-prefix "${{ steps.release.outputs.release_url_prefix }}" \
+                --full-release-notes-url "${{ steps.release.outputs.release_notes_url }}" \
+                "$UPDATE_DIR"
+
+          DELTA_FILES=("$UPDATE_DIR"/*.delta)
+          if [[ ${#DELTA_FILES[@]} -ne 1 || ! -f "${DELTA_FILES[0]}" ]]; then
+            echo "Expected exactly one Sparkle delta from the latest release." >&2
+            exit 1
+          fi
+          DELTA_NAME="$(basename "${DELTA_FILES[0]}")"
+          DELTA_PATH="DesktopRenamer/Resources/Sparkle/$DELTA_NAME"
+          if [[ -e "$DELTA_PATH" ]]; then
+            echo "Delta $DELTA_NAME already exists; refusing to overwrite it." >&2
+            exit 1
+          fi
+          mv "${DELTA_FILES[0]}" "$DELTA_PATH"
+
+          python3 Scripts/prepare-sparkle-release.py normalize \
+            --appcast "$UPDATE_DIR/appcast.xml" \
+            --build-number "$BUILD_NUMBER" \
+            --previous-build-number "${{ steps.release.outputs.previous_build }}" \
+            --version "$VERSION" \
+            --download-url-prefix "${{ steps.release.outputs.release_url_prefix }}" \
+            --delta-url-prefix "${{ steps.release.outputs.delta_url_prefix }}" \
+            --delta-directory DesktopRenamer/Resources/Sparkle \
+            --dmg-signature "${{ steps.sparkle.outputs.dmg_signature }}" \
+            --dmg-path "${{ steps.dmg.outputs.dmg_path }}" \
+            --base-appcast "$BASE_APPCAST"
+
+          printf 'update_dir=%s\n' "$UPDATE_DIR" >> "$GITHUB_OUTPUT"
+
+      - name: Verify the generated delta signature
+        shell: bash
+        env:
+          UPDATE_DIR: ${{ steps.appcast.outputs.update_dir }}
+          DELTA_NAME: ${{ steps.appcast.outputs.delta_name }}
+          DELTA_SIGNATURE: ${{ steps.appcast.outputs.delta_signature }}
+        run: |
+          set -euo pipefail
+          DELTA_PATH="DesktopRenamer/Resources/Sparkle/$DELTA_NAME"
+          test -f "$DELTA_PATH"
+          printf '%s' "$SPARKLE_EDDSA_PRIVATE_KEY" \
+            | "${{ steps.sparkle.outputs.sparkle_bin }}/sign_update" \
+                --ed-key-file - --verify "$DELTA_PATH" "$DELTA_SIGNATURE"
+          xmllint --noout "$UPDATE_DIR/appcast.xml"
+
+      - name: Publish the release assets
+        shell: bash
+        env:
+          DMG_PATH: ${{ steps.dmg.outputs.dmg_path }}
+        run: |
+          set -euo pipefail
+          TAG="${{ steps.release.outputs.tag }}"
+          RELEASE_ARGS=(
+            "$TAG"
+            "$DMG_PATH"
+            --title "DesktopRenamer $VERSION"
+            --target "$GITHUB_SHA"
+          )
+
+          if [[ -n "$RELEASE_NOTES" ]]; then
+            NOTES_PATH="$RUNNER_TEMP/release-notes.md"
+            printf '%s\n' "$RELEASE_NOTES" > "$NOTES_PATH"
+            RELEASE_ARGS+=(--notes-file "$NOTES_PATH")
+          else
+            RELEASE_ARGS+=(--generate-notes)
+          fi
+
+          gh release create "${RELEASE_ARGS[@]}"
+
+      - name: Verify uploaded release assets
+        shell: bash
+        env:
+          DMG_PATH: ${{ steps.dmg.outputs.dmg_path }}
+        run: |
+          set -euo pipefail
+          TAG="${{ steps.release.outputs.tag }}"
+          RELEASE_JSON="$(gh api "repos/$GITHUB_REPOSITORY/releases/tags/$TAG")"
+          VERIFY_DIR="$RUNNER_TEMP/remote-assets"
+          mkdir -p "$VERIFY_DIR"
+
+          for ASSET_PATH in "$DMG_PATH"; do
+            ASSET_NAME="$(basename "$ASSET_PATH")"
+            LOCAL_SIZE="$(stat -f '%z' "$ASSET_PATH")"
+            REMOTE_SIZE="$(jq -r --arg name "$ASSET_NAME" '.assets[] | select(.name == $name) | .size' <<< "$RELEASE_JSON")"
+            if [[ -z "$REMOTE_SIZE" || "$LOCAL_SIZE" != "$REMOTE_SIZE" ]]; then
+              echo "Release asset size mismatch for $ASSET_NAME." >&2
+              exit 1
+            fi
+
+            REMOTE_PATH="$VERIFY_DIR/$ASSET_NAME"
+            curl --fail --location --retry 3 \
+              "https://github.com/$GITHUB_REPOSITORY/releases/download/$TAG/$ASSET_NAME" \
+              --output "$REMOTE_PATH"
+            LOCAL_SHA="$(shasum -a 256 "$ASSET_PATH" | awk '{print $1}')"
+            REMOTE_SHA="$(shasum -a 256 "$REMOTE_PATH" | awk '{print $1}')"
+            if [[ "$LOCAL_SHA" != "$REMOTE_SHA" ]]; then
+              echo "Release asset SHA-256 mismatch for $ASSET_NAME." >&2
+              exit 1
+            fi
+          done
+
+      - name: Commit the verified appcast update
+        shell: bash
+        env:
+          UPDATE_DIR: ${{ steps.appcast.outputs.update_dir }}
+          DELTA_NAME: ${{ steps.appcast.outputs.delta_name }}
+        run: |
+          set -euo pipefail
+          cp "$UPDATE_DIR/appcast.xml" appcast.xml
+          xmllint --noout appcast.xml
+          git diff --check
+
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add appcast.xml "DesktopRenamer/Resources/Sparkle/$DELTA_NAME"
+          git commit -m "chore: publish Sparkle update $VERSION"
+          git push origin HEAD:main
+
+      - name: Verify the published delta URL
+        shell: bash
+        env:
+          DELTA_PATH: DesktopRenamer/Resources/Sparkle/${{ steps.appcast.outputs.delta_name }}
+          DELTA_URL: ${{ steps.appcast.outputs.delta_url }}
+        run: |
+          set -euo pipefail
+          REMOTE_PATH="$RUNNER_TEMP/published-delta.delta"
+          curl --fail --location --retry 5 --retry-delay 2 "$DELTA_URL" --output "$REMOTE_PATH"
+          LOCAL_SHA="$(shasum -a 256 "$DELTA_PATH" | awk '{print $1}')"
+          REMOTE_SHA="$(shasum -a 256 "$REMOTE_PATH" | awk '{print $1}')"
+          if [[ "$LOCAL_SHA" != "$REMOTE_SHA" ]]; then
+            echo "Published delta SHA-256 mismatch." >&2
+            exit 1
+          fi
+
+      - name: Dispatch the Homebrew tap update
+        shell: bash
+        run: |
+          set -euo pipefail
+          gh workflow run update-tap.yml --ref main --field tag_name="${{ steps.release.outputs.tag }}"
+
+      - name: Remove the temporary signing keychain
+        if: always()
+        shell: bash
+        run: |
+          KEYCHAIN_PATH="$RUNNER_TEMP/desktoprenamer-release.keychain-db"
+          if [[ -e "$KEYCHAIN_PATH" ]]; then
+            security delete-keychain "$KEYCHAIN_PATH"
+          fi

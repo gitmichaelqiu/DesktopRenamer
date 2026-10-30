@@ -8,6 +8,8 @@ struct SpaceAPIAccessSettingsView: View {
     @Environment(\.dismiss) private var dismiss
 
     @State private var showPolicyRepairConfirmation = false
+    @State private var isPresentingPolicyError = false
+    @State private var policyErrorAlert: NSAlert?
     @State private var selectedUsage: SpaceAPIUsageStatistics.AppUsage?
     @AppStorage("spaceAPIUsageRange") private var usageRange = SpaceAPIUsageRange.last7Days
     @State private var showClearUsageConfirmation = false
@@ -22,11 +24,12 @@ struct SpaceAPIAccessSettingsView: View {
                     onBack: { self.selectedUsage = nil },
                     onDone: { dismiss() }
                 )
+                .padding(.horizontal, 16)
             } else {
                 accessSettingsContent
             }
         }
-        .padding(16)
+        .padding(.vertical, 16)
         .frame(width: 560, height: 540)
         .environment(\.settingsTab, .general)
         .confirmationDialog(
@@ -39,7 +42,7 @@ struct SpaceAPIAccessSettingsView: View {
             }
             Button("Cancel", role: .cancel) {}
         } message: {
-            Text("Resetting the unreadable policy clears the app permissions. SpaceAPI stays restricted until permissions are set again.")
+            Text("Resetting the unreadable policy clears app permissions. SpaceAPI and AppleScript stay restricted until access is configured again.")
         }
         .alert("Clear SpaceAPI usage history?", isPresented: $showClearUsageConfirmation) {
             Button("Clear", role: .destructive) {
@@ -48,6 +51,16 @@ struct SpaceAPIAccessSettingsView: View {
             Button("Cancel", role: .cancel) {}
         } message: {
             Text("This removes all recorded SpaceAPI usage counts and history.")
+        }
+        .onAppear {
+            guard let errorMessage = accessController.errorMessage else { return }
+            DispatchQueue.main.async {
+                presentPolicyError(errorMessage)
+            }
+        }
+        .onReceive(accessController.$errorMessage) { errorMessage in
+            guard let errorMessage else { return }
+            presentPolicyError(errorMessage)
         }
     }
 
@@ -58,34 +71,10 @@ struct SpaceAPIAccessSettingsView: View {
                     .font(.title2.weight(.semibold))
                 Spacer()
             }
+            .padding(.horizontal, 16)
 
             ScrollView {
                 VStack(alignment: .leading, spacing: 20) {
-                    if let request = accessController.pendingApprovalRequest {
-                        SettingsSection("Access Request") {
-                            SettingsRow(
-                                LocalizedStringResource(stringLiteral: request.client.name),
-                                leadingIcon: NSWorkspace.shared.icon(forFile: request.client.applicationPath)
-                            ) {
-                                HStack(spacing: 6) {
-                                    Button("Don't Allow") {
-                                        accessController.resolvePendingApproval(with: .noAccess)
-                                    }
-                                    Button("Read Only") {
-                                        accessController.resolvePendingApproval(with: .readOnly)
-                                    }
-                                    if request.requestedAccess != .read {
-                                        Button("Read & Write") {
-                                            accessController.resolvePendingApproval(with: .fullAccess)
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                        .transition(.opacity.combined(with: .move(edge: .top)))
-                        .animation(.easeInOut(duration: 0.2), value: request.id)
-                    }
-
                     SettingsSection("Access Policy") {
                         SettingsRow(
                             "Allow only approved apps",
@@ -95,36 +84,23 @@ struct SpaceAPIAccessSettingsView: View {
                                 "",
                                 isOn: Binding(
                                     get: { accessController.isRestrictedForSettings },
-                                    set: { accessController.setRestricted($0) }
+                                    set: { value in
+                                        withAnimation(.easeInOut(duration: 0.2)) {
+                                            accessController.setRestricted(value)
+                                        }
+                                    }
                                 )
                             )
                             .labelsHidden()
                             .toggleStyle(.switch)
                         }
-
-                        if let errorMessage = accessController.errorMessage {
-                            Divider()
-
-                            SettingsRow("Policy status") {
-                                HStack(spacing: 8) {
-                                    Text(errorMessage)
-                                        .font(.footnote)
-                                        .foregroundStyle(.red)
-                                        .multilineTextAlignment(.trailing)
-                                        .fixedSize(horizontal: false, vertical: true)
-
-                                    if accessController.canRepairPolicy {
-                                        Button("Reset") {
-                                            showPolicyRepairConfirmation = true
-                                        }
-                                    }
-                                }
-                            }
-                        }
                     }
 
                     if accessController.isRestrictedForSettings {
-                        SettingsSection("App Permissions") {
+                        SettingsSection(
+                            "App Permissions",
+                            helperText: "App access levels apply to both restricted APIs."
+                        ) {
                             SettingsRow(
                                 "Add an app",
                                 helperText: "Development builds must be approved again after rebuilding."
@@ -132,58 +108,59 @@ struct SpaceAPIAccessSettingsView: View {
                                 Button("Choose…", action: chooseApplication)
                             }
 
-                            if accessController.approvedClients.isEmpty {
-                                Divider()
+                            ForEach(accessController.approvedClients) { client in
+                                VStack(spacing: 0) {
+                                    Divider()
 
-                                SettingsRow("No apps added") {
-                                    Text("All apps are blocked while access restriction is enabled.")
-                                        .foregroundStyle(.secondary)
-                                        .multilineTextAlignment(.trailing)
-                                        .fixedSize(horizontal: false, vertical: true)
-                                }
-                                .transition(.opacity.combined(with: .move(edge: .top)))
-                            } else {
-                                ForEach(accessController.approvedClients) { client in
-                                    VStack(spacing: 0) {
-                                        Divider()
-
-                                        SettingsRow(
-                                            LocalizedStringResource(stringLiteral: client.name),
-                                            leadingIcon: NSWorkspace.shared.icon(forFile: client.applicationPath)
-                                        ) {
-                                            HStack(spacing: 8) {
-                                                Picker(
-                                                    "Access for \(client.name)",
-                                                    selection: Binding(
-                                                        get: { client.accessLevel },
-                                                        set: { accessController.setAccessLevel(forClientID: client.id, to: $0) }
-                                                    )
-                                                ) {
-                                                    Text("No Access").tag(SpaceAPIClientAccessLevel.noAccess)
-                                                    Text("Read Only").tag(SpaceAPIClientAccessLevel.readOnly)
-                                                    Text("Read & Write").tag(SpaceAPIClientAccessLevel.fullAccess)
-                                                }
-                                                .labelsHidden()
-                                                .pickerStyle(.menu)
-                                                .frame(width: 128)
-                                                .disabled(!accessController.isRestrictedForSettings)
-
-                                                Button {
-                                                    withAnimation(.easeInOut(duration: 0.2)) {
-                                                        accessController.revokeClient(id: client.id)
+                                    SettingsRow(
+                                        LocalizedStringResource(stringLiteral: client.name),
+                                        leadingIcon: NSWorkspace.shared.icon(forFile: client.applicationPath)
+                                    ) {
+                                        HStack(spacing: 8) {
+                                            Picker(
+                                                "Access for \(client.name)",
+                                                selection: Binding(
+                                                    get: { client.accessLevel },
+                                                    set: { value in
+                                                        withAnimation(.easeInOut(duration: 0.2)) {
+                                                            accessController.setAccessLevel(forClientID: client.id, to: value)
+                                                        }
                                                     }
-                                                } label: {
-                                                    Image(systemName: "trash")
-                                                }
-                                                .buttonStyle(.borderless)
-                                                .help("Remove app")
+                                                )
+                                            ) {
+                                                Text("No Access").tag(SpaceAPIClientAccessLevel.noAccess)
+                                                Text("Read Only").tag(SpaceAPIClientAccessLevel.readOnly)
+                                                Text("Read & Write").tag(SpaceAPIClientAccessLevel.fullAccess)
                                             }
+                                            .labelsHidden()
+                                            .pickerStyle(.menu)
+                                            .frame(width: 128)
+                                            .disabled(!accessController.isRestrictedForSettings)
+
+                                            Button {
+                                                withAnimation(.easeInOut(duration: 0.2)) {
+                                                    accessController.revokeClient(id: client.id)
+                                                }
+                                            } label: {
+                                                Image(systemName: "trash")
+                                            }
+                                            .buttonStyle(.borderless)
+                                            .help("Remove app")
                                         }
                                     }
-                                    .transition(.opacity.combined(with: .move(edge: .top)))
                                 }
+                                .transition(.opacity.combined(with: .move(edge: .top)))
                             }
                         }
+                        .animation(
+                            .easeInOut(duration: 0.2),
+                            value: accessController.approvedClients.map(\.id)
+                        )
+                        .transition(.opacity.combined(with: .move(edge: .top)))
+                        .animation(
+                            .easeInOut(duration: 0.2),
+                            value: accessController.isRestrictedForSettings
+                        )
                     }
 
                     SettingsSection(
@@ -195,7 +172,11 @@ struct SpaceAPIAccessSettingsView: View {
                                 "",
                                 isOn: Binding(
                                     get: { usageStatistics.isEnabled },
-                                    set: { usageStatistics.isEnabled = $0 }
+                                    set: { value in
+                                        withAnimation(.easeInOut(duration: 0.2)) {
+                                            usageStatistics.isEnabled = value
+                                        }
+                                    }
                                 )
                             )
                             .labelsHidden()
@@ -209,6 +190,7 @@ struct SpaceAPIAccessSettingsView: View {
                                     .foregroundStyle(.secondary)
                                     .frame(minHeight: 24)
                             }
+                            .transition(.opacity.combined(with: .move(edge: .top)))
                         } else {
                             Divider()
                             SettingsRow("Activity period") {
@@ -245,6 +227,7 @@ struct SpaceAPIAccessSettingsView: View {
                                     .buttonStyle(.plain)
                                     .help("View usage activity")
                                 }
+                                .transition(.opacity.combined(with: .move(edge: .top)))
                             }
 
                             Divider()
@@ -255,7 +238,12 @@ struct SpaceAPIAccessSettingsView: View {
                             }
                         }
                     }
+                    .animation(
+                        .easeInOut(duration: 0.2),
+                        value: usageStatistics.appUsages.map(\.id)
+                    )
                 }
+                .padding(.horizontal, 16)
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
 
@@ -264,6 +252,32 @@ struct SpaceAPIAccessSettingsView: View {
                 Button("Done") { dismiss() }
                     .buttonStyle(.borderedProminent)
                     .keyboardShortcut(.defaultAction)
+            }
+            .padding(.horizontal, 16)
+        }
+    }
+
+    private func presentPolicyError(_ message: String) {
+        guard !isPresentingPolicyError,
+              let window = NSApp.suitableSheetWindow else { return }
+
+        let canRepairPolicy = accessController.canRepairPolicy
+        let alert = NSAlert()
+        alert.messageText = NSLocalizedString("SpaceAPI Access", comment: "")
+        alert.informativeText = message
+        alert.alertStyle = .warning
+        if canRepairPolicy {
+            alert.addButton(withTitle: NSLocalizedString("Reset…", comment: ""))
+        }
+        alert.addButton(withTitle: NSLocalizedString("OK", comment: ""))
+
+        isPresentingPolicyError = true
+        policyErrorAlert = alert
+        alert.beginSheetModal(for: window) { response in
+            isPresentingPolicyError = false
+            policyErrorAlert = nil
+            if canRepairPolicy, response == .alertFirstButtonReturn {
+                showPolicyRepairConfirmation = true
             }
         }
     }

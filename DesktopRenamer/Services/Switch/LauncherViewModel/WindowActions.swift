@@ -13,7 +13,8 @@ extension LauncherViewModel {
             closeLauncher()
             HUDWindowController.shared.show(
                 message: String(localized: "Could not switch to the selected space."),
-                style: .failure
+                style: .failure,
+                statusTint: .failure
             )
             return
         }
@@ -34,7 +35,8 @@ extension LauncherViewModel {
             closeLauncher()
             HUDWindowController.shared.show(
                 message: String(localized: "Could not switch to the selected space."),
-                style: .failure
+                style: .failure,
+                statusTint: .failure
             )
             return
         }
@@ -137,7 +139,9 @@ extension LauncherViewModel {
             guard moved else {
                 HUDWindowController.shared.show(
                     message: String(format: String(localized: "Could not move %@ to %@"), appName, targetSpaceName),
-                    style: .failure
+                    style: .failure,
+                    appIcon: NSRunningApplication(processIdentifier: window.pid)?.icon,
+                    statusTint: .failure
                 )
                 return
             }
@@ -149,7 +153,8 @@ extension LauncherViewModel {
             }
             HUDWindowController.shared.show(
                 message: String(format: String(localized: "Moved %@ to %@"), appName, targetSpaceName),
-                style: .success
+                style: .success,
+                appIcon: NSRunningApplication(processIdentifier: window.pid)?.icon
             )
         }
     }
@@ -202,6 +207,7 @@ extension LauncherViewModel {
         }?.isFullscreen ?? false
         let appName = NSRunningApplication(processIdentifier: prevWindow.pid)?.localizedName
             ?? String(localized: "Window")
+        let appIcon = NSRunningApplication(processIdentifier: prevWindow.pid)?.icon
         let targetSpaceName = launcherSpaceName(for: targetSpace)
 
         isExecutingAction = true
@@ -224,7 +230,9 @@ extension LauncherViewModel {
             guard moved else {
                 HUDWindowController.shared.show(
                     message: String(format: String(localized: "Could not move %@ to %@"), appName, targetSpaceName),
-                    style: .failure
+                    style: .failure,
+                    appIcon: appIcon,
+                    statusTint: .failure
                 )
                 return
             }
@@ -236,7 +244,8 @@ extension LauncherViewModel {
             }
             HUDWindowController.shared.show(
                 message: String(format: String(localized: "Moved %@ to %@"), appName, targetSpaceName),
-                style: .success
+                style: .success,
+                appIcon: appIcon
             )
         }
         return true
@@ -267,7 +276,8 @@ extension LauncherViewModel {
             }
             HUDWindowController.shared.show(
                 message: message,
-                style: focused ? .success : .failure
+                style: focused ? .success : .failure,
+                appIcon: NSRunningApplication(processIdentifier: window.pid)?.icon
             )
         }
     }

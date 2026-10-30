@@ -78,6 +78,44 @@ struct SpaceAPIPeerIdentity: Equatable {
     let codeHash: String?
 }
 
+struct SpaceAPIAccessPolicy: Codable, Equatable {
+    var isRestricted: Bool
+    var approvedClients: [SpaceAPIApprovedClient]
+
+    // Preserve source compatibility while both transports share one policy.
+    var isAppleScriptRestricted: Bool { isRestricted }
+
+    init(
+        isRestricted: Bool = true,
+        approvedClients: [SpaceAPIApprovedClient] = []
+    ) {
+        self.isRestricted = isRestricted
+        self.approvedClients = approvedClients
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case isRestricted
+        case isAppleScriptRestricted
+        case approvedClients
+    }
+
+    init(from decoder: Decoder) throws {
+        let values = try decoder.container(keyedBy: CodingKeys.self)
+        let spaceAPIRestriction = try values.decodeIfPresent(Bool.self, forKey: .isRestricted) ?? true
+        let legacyAppleScriptRestriction = try values.decodeIfPresent(Bool.self, forKey: .isAppleScriptRestricted) ?? false
+        isRestricted = spaceAPIRestriction || legacyAppleScriptRestriction
+        approvedClients = try values.decodeIfPresent([SpaceAPIApprovedClient].self, forKey: .approvedClients) ?? []
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var values = encoder.container(keyedBy: CodingKeys.self)
+        try values.encode(isRestricted, forKey: .isRestricted)
+        // Older app builds still read this field, so write the unified value there too.
+        try values.encode(isRestricted, forKey: .isAppleScriptRestricted)
+        try values.encode(approvedClients, forKey: .approvedClients)
+    }
+}
+
 enum SpaceAPIAuthorization {
     static func authorizedRecipients<Client>(
         from clients: [Client],
@@ -120,13 +158,20 @@ enum SpaceAPIAuthorization {
         guard restricted else { return .fullAccess }
         guard let identity else { return .noAccess }
 
-        return approvedClients.first { approved in
+        return approvedClient(for: identity, in: approvedClients)?.accessLevel ?? .noAccess
+    }
+
+    static func approvedClient(
+        for identity: SpaceAPIPeerIdentity,
+        in approvedClients: [SpaceAPIApprovedClient]
+    ) -> SpaceAPIApprovedClient? {
+        approvedClients.first { approved in
             if let requirement = approved.designatedRequirement,
                let peerRequirement = identity.designatedRequirement,
                requirement == peerRequirement {
                 return true
             }
             return approved.codeHash != nil && approved.codeHash == identity.codeHash
-        }?.accessLevel ?? .noAccess
+        }
     }
 }

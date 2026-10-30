@@ -114,6 +114,7 @@ extension SpaceAPI {
             .map { space in
                 SpaceAPISpace(
                     id: space.spaceAPIID,
+                    managedSpaceID: space.id,
                     name: manager.getSpaceName(space.id),
                     displayID: space.displayID,
                     displayName: displayName(for: space.displayID, using: displayNames),

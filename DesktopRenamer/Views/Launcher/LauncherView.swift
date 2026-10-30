@@ -57,10 +57,7 @@ struct LauncherView: View {
                                     viewModel.isKeyboardSelection = true
                                     viewModel.spaceMenuSelectedIndex = max(viewModel.spaceMenuSelectedIndex - 1, 0)
                                 } else {
-                                    viewModel.isKeyboardSelection = true
-                                    if viewModel.selectedRowIndex > 0 {
-                                        viewModel.selectedRowIndex -= 1
-                                    }
+                                    viewModel.moveMainListSelection(by: -1)
                                 }
                             },
                             onDownArrow: {
@@ -73,10 +70,7 @@ struct LauncherView: View {
                                         max(viewModel.spaceMenuSpaces.count - 1, 0)
                                     )
                                 } else {
-                                    viewModel.isKeyboardSelection = true
-                                    if viewModel.selectedRowIndex < viewModel.visibleRowsCount - 1 {
-                                        viewModel.selectedRowIndex += 1
-                                    }
+                                    viewModel.moveMainListSelection(by: 1)
                                 }
                             },
                             onLeftArrow: {
@@ -477,7 +471,7 @@ struct ListAreaView: View {
                                             ListSectionHeader(title: section.title, subtitle: section.subtitle, isFirst: isFirst)
                                             
                                             ForEach(section.items) { item in
-                                                let isSelected = !viewModel.isBottomBarFocused && viewModel.selectedRowIndex == item.index
+                                                let isSelected = !viewModel.isBottomBarFocused && viewModel.selectedListWindowID == item.window.id
                                                 LauncherRightClickContainer(onRightClick: {
                                                     viewModel.selectedRowIndex = item.index
                                                     viewModel.showCommandKPanel(isKeyboardInitiated: false)
@@ -538,7 +532,7 @@ struct ListAreaView: View {
                                             ListSectionHeader(title: section.title, subtitle: section.subtitle, isFirst: isFirst)
                                             
                                             ForEach(section.items) { item in
-                                                let isSelected = !viewModel.isBottomBarFocused && viewModel.selectedRowIndex == item.index
+                                                let isSelected = !viewModel.isBottomBarFocused && viewModel.selectedBatchWindowID == item.windowID
                                                 
                                                 switch item {
                                                 case .staged(let move, _):

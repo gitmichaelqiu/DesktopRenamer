@@ -250,6 +250,29 @@ extension StatusBarController {
         settingsItem.image = NSImage(systemSymbolName: "gear", accessibilityDescription: nil)
         settingsItem.target = self
         menu.addItem(settingsItem)
+
+        #if DEBUG
+        let debugHUDItem = NSMenuItem(title: "Debug HUD", action: nil, keyEquivalent: "")
+        let debugHUDMenu = NSMenu()
+        let previewItem = NSMenuItem(title: "Show HUD preview", action: #selector(showHUDPreview), keyEquivalent: "")
+        previewItem.target = self
+        debugHUDMenu.addItem(previewItem)
+        let hoverPreviewItem = NSMenuItem(title: "Show hovered HUD preview", action: #selector(showHoveredHUDPreview), keyEquivalent: "")
+        hoverPreviewItem.target = self
+        debugHUDMenu.addItem(hoverPreviewItem)
+        let successPreviewItem = NSMenuItem(title: "Show green success HUD preview", action: #selector(showGreenStatusHUDPreview), keyEquivalent: "")
+        successPreviewItem.target = self
+        debugHUDMenu.addItem(successPreviewItem)
+        let failurePreviewItem = NSMenuItem(title: "Show red failure HUD preview", action: #selector(showRedStatusHUDPreview), keyEquivalent: "")
+        failurePreviewItem.target = self
+        debugHUDMenu.addItem(failurePreviewItem)
+        debugHUDMenu.addItem(NSMenuItem.separator())
+        let dismissHUDItem = NSMenuItem(title: "Hide HUD", action: #selector(hideHUDPreview), keyEquivalent: "")
+        dismissHUDItem.target = self
+        debugHUDMenu.addItem(dismissHUDItem)
+        debugHUDItem.submenu = debugHUDMenu
+        menu.addItem(debugHUDItem)
+        #endif
         
         menu.addItem(NSMenuItem.separator())
         
@@ -264,6 +287,28 @@ extension StatusBarController {
     @objc private func openLauncher() {
         LauncherWindowController.shared.show()
     }
+
+    #if DEBUG
+    @objc private func showHUDPreview() {
+        HUDWindowController.shared.showDebugPreview()
+    }
+
+    @objc private func showHoveredHUDPreview() {
+        HUDWindowController.shared.showDebugPreview(hovered: true)
+    }
+
+    @objc private func showGreenStatusHUDPreview() {
+        HUDWindowController.shared.showDebugPreview(statusTint: .success)
+    }
+
+    @objc private func showRedStatusHUDPreview() {
+        HUDWindowController.shared.showDebugPreview(statusTint: .failure)
+    }
+
+    @objc private func hideHUDPreview() {
+        HUDWindowController.shared.hideDebugPreview()
+    }
+    #endif
     
     @objc func selectSpace(_ sender: NSMenuItem) {
         guard let spaceID = sender.representedObject as? String else { return }
@@ -405,6 +450,7 @@ extension StatusBarController {
 
         DispatchQueue.main.async { [weak self, weak window] in
             guard window?.isKeyWindow == true else { return }
+            window?.makeFirstResponder(nil)
             self?.labelManager.completeSettingsWindowActivation()
         }
     }

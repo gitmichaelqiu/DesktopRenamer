@@ -71,6 +71,41 @@ extension LauncherViewModel {
         guard index >= 0 && index < windows.count else { return nil }
         return windows[index]
     }
+
+    /// Keeps the list's visual selection attached to the selected window as
+    /// filtering and WindowServer refreshes change the array's indices.
+    func synchronizeSelectedListWindowID() {
+        guard activeCommand?.type == .listWindows else {
+            selectedListWindowID = nil
+            return
+        }
+
+        let windows = filteredWindows
+        selectedListWindowID = windows.indices.contains(selectedRowIndex)
+            ? windows[selectedRowIndex].id
+            : nil
+    }
+
+    func reconcileListWindowsSelection() {
+        guard activeCommand?.type == .listWindows else {
+            selectedListWindowID = nil
+            return
+        }
+
+        let windows = filteredWindows
+        guard !windows.isEmpty else {
+            selectedRowIndex = 0
+            selectedListWindowID = nil
+            return
+        }
+
+        if let selectedListWindowID,
+           let index = windows.firstIndex(where: { $0.id == selectedListWindowID }) {
+            selectedRowIndex = index
+        } else {
+            selectedRowIndex = min(max(selectedRowIndex, 0), windows.count - 1)
+        }
+    }
     
     var listWindowsSections: [ListWindowsSection] {
         var sections: [ListWindowsSection] = []

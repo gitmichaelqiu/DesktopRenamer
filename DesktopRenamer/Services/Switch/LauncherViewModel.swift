@@ -79,7 +79,14 @@ enum DesktopRearrangementDirection {
             isKeyboardSelection = true
         }
     }
-    @Published var selectedRowIndex: Int = 0
+    @Published var selectedRowIndex: Int = 0 {
+        didSet {
+            synchronizeSelectedBatchWindowID()
+            synchronizeSelectedListWindowID()
+        }
+    }
+    var selectedBatchWindowID: Int?
+    var selectedListWindowID: Int?
     // Keep the root command identity while a command page is open. The
     // visible root order can change when command ranking is updated, so an
     // index alone cannot reliably restore the selected command.
@@ -108,7 +115,12 @@ enum DesktopRearrangementDirection {
     }
     
     @Published var currentSpaces: [SpaceGroup] = []
-    @Published var currentWindows: [WindowEntry] = []
+    @Published var currentWindows: [WindowEntry] = [] {
+        didSet {
+            reconcileListWindowsSelection()
+            reconcileBatchMoveSelection()
+        }
+    }
     @Published var isLoadingData: Bool = false
     @Published var isKeyboardSelection: Bool = false
     @Published var isRearrangingSpace: Bool = false
@@ -147,7 +159,11 @@ enum DesktopRearrangementDirection {
     }
     
     // For batch window moves
-    @Published var stagedMoves: [Int: BatchStagedAction] = [:]
+    @Published var stagedMoves: [Int: BatchStagedAction] = [:] {
+        didSet {
+            reconcileBatchMoveSelection()
+        }
+    }
     @Published var stagingWindow: WindowEntry? = nil
     @Published var isExecutingBatchMove: Bool = false
     var batchExecutionTask: Task<Void, Never>?

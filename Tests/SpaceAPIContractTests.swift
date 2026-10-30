@@ -14,7 +14,7 @@ struct SpaceAPIContractTests {
     }
 
     private static func testMethodDefinitions() throws {
-        check(DesktopRenamerAPIContract.version == "1.3.0", "structured API contract version is current")
+        check(DesktopRenamerAPIContract.version == "1.3.1", "structured API contract version is current")
         check(
             DesktopRenamerAPIContract.preferredAPIPrefix == "dev.mqiu.DesktopRenamer",
             "current API notification namespace is preferred"
@@ -229,6 +229,7 @@ struct SpaceAPIContractTests {
     private static func testResponseRoundTripAndUnknownFields() throws {
         let space = SpaceAPISpace(
             id: "space|~\"\n测试",
+            managedSpaceID: "managed-space-4",
             name: "名称\nwith delimiters | ~",
             displayID: "display-1",
             displayName: "主显示器",
@@ -285,6 +286,9 @@ struct SpaceAPIContractTests {
         let encodedSpace = try checkJSONObject(try checkArray(encodedSnapshot["spaces"]).first)
         check(encodedSpace["appName"] is NSNull, "nullable space appName is encoded as null")
         check(encodedSpace["appPath"] is NSNull, "nullable space appPath is encoded as null")
+        check(encodedSpace["id"] as? String == space.id, "space identity uses the stable SpaceAPI ID")
+        check(encodedSpace["managedSpaceID"] as? String == "managed-space-4",
+              "current ManagedSpaceID is exposed separately from the stable ID")
         check(encodedSpace["isLocked"] as? Bool == true, "space lock state is encoded")
 
         let encodedWindows = try checkArray(encodedResult["windows"])
@@ -433,6 +437,7 @@ struct SpaceAPIContractTests {
         let space = try JSONDecoder().decode(SpaceAPISpace.self, from: Data(spacePayload.utf8))
         check(space.appName == nil && space.appPath == nil && space.globalShortcutNumber == nil && !space.isLocked,
               "missing nullable space fields decode as nil")
+        check(space.managedSpaceID == nil, "older space records decode without ManagedSpaceID")
 
         let windowPayload = """
         {

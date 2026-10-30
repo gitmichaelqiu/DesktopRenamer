@@ -12,6 +12,7 @@ struct GeneralSettingsView: View {
     @State private var launchAtLogin: Bool = false
     @State private var autoCheckUpdate: Bool = UpdateManager.shared.updaterController.updater.automaticallyChecksForUpdates
     @State private var autoDownloadUpdate: Bool = UpdateManager.shared.updaterController.updater.automaticallyDownloadsUpdates
+    @AppStorage("ShowDemoVideos") private var showDemoVideos = true
     @State private var isResetting: Bool = false
     @State private var isAPIEnabled: Bool = SpaceManager.isAPIEnabled
     @State private var isStatusBarHidden: Bool = StatusBarController.isStatusBarHidden
@@ -25,30 +26,11 @@ struct GeneralSettingsView: View {
     var body: some View {
         SettingsContainer(.general) {
             VStack(alignment: .leading, spacing: 20) {
-                // General configuration options.
-                SettingsSection("Settings.General.General") {
-                    SettingsRow(
-                        "Show preview labels"
-                    ) {
-                        Toggle("", isOn: $labelManager.showPreviewLabels)
-                            .toggleStyle(.switch)
-                            .labelsHidden()
-                    }
-
-                    Divider()
-                
-                    SettingsRow("Show active space labels") {
-                        Toggle("", isOn: $labelManager.showActiveLabels)
-                            .labelsHidden()
-                            .toggleStyle(.switch)
-                    }
-                }
-                
-                SettingsSection(nil) {
+                SettingsSection("Settings.General") {
                     SettingsRow(
                         "Hide menubar icon",
                         helperText:
-                            "Hide the menu bar icon while DesktopRenamer continues running."
+                            "Launch the app again to reveal settings."
                     ) {
                         Toggle("", isOn: $isStatusBarHidden)
                             .labelsHidden()
@@ -124,8 +106,9 @@ struct GeneralSettingsView: View {
                         }
                     }
 
-                    Divider()
+                }
 
+                SettingsSection(nil) {
                     SettingsRow("Diagnostic report") {
                         Button("Open") {
                             showDiagnosticSheet = true
@@ -150,7 +133,15 @@ struct GeneralSettingsView: View {
                     }
                 }
 
-                SettingsSection("Settings.General.Transfer") {
+                SettingsSection(nil) {
+                    SettingsRow("Show demo videos in settings") {
+                        Toggle("", isOn: $showDemoVideos)
+                            .labelsHidden()
+                            .toggleStyle(.switch)
+                    }
+
+                    Divider()
+
                     SettingsRow(
                         "Settings.General.Export.Settings",
                         helperText: "Settings.General.Export.Helper"
@@ -162,10 +153,7 @@ struct GeneralSettingsView: View {
 
                     Divider()
 
-                    SettingsRow(
-                        "Settings.General.Import.Settings",
-                        helperText: "Settings.General.Import.Helper"
-                    ) {
+                    SettingsRow("Settings.General.Import.Settings") {
                         Button("Settings.General.Import.Button") {
                             importSettings()
                         }

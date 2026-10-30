@@ -3,7 +3,6 @@ import SwiftUI
 @MainActor
 struct LauncherSettingsView: View {
     @EnvironmentObject var spaceManager: SpaceManager
-    @EnvironmentObject var hotkeyManager: HotkeyManager
     @ObservedObject var viewModel = LauncherWindowController.shared.viewModel
     @StateObject private var permissionManager = PermissionManager.shared
     @EnvironmentObject var navigationState: SettingsNavigationState
@@ -13,26 +12,6 @@ struct LauncherSettingsView: View {
         SettingsContainer(.launcher) {
             VStack(alignment: .leading, spacing: 20) {
                 SettingsSection("Launcher Settings") {
-                    SettingsRow("Open launcher") {
-                        HStack {
-                            Text(hotkeyManager.description(for: .launcher))
-                                .foregroundColor(.secondary)
-                                .padding(.trailing, 8)
-                            
-                            Button("◉") {
-                                hotkeyManager.startListening(for: .launcher)
-                            }
-                            .disabled(hotkeyManager.isListening)
-                            
-                            Button("↺") {
-                                hotkeyManager.resetToDefault(for: .launcher)
-                            }
-                            .disabled(hotkeyManager.isDefault(for: .launcher))
-                        }
-                    }
-
-                    Divider()
-
                     SettingsRow(
                         "Automatically return to original space"
                     ) {
@@ -45,7 +24,6 @@ struct LauncherSettingsView: View {
                 SettingsSection("Launcher Commands Ranking") {
                     SettingsRow(
                         "Automatically rank commands",
-                        helperText: "Commands are ranked by usage. Turn this off to reorder them manually."
                     ) {
                         Toggle("", isOn: $viewModel.automaticallyRankCommands)
                             .toggleStyle(.switch)
@@ -133,13 +111,13 @@ struct LauncherSettingsView: View {
                     .accessibilityLabel("Drag to rearrange")
                 Text("\(index + 1)")
                     .font(.system(.body, design: .monospaced))
-                    .foregroundColor(.secondary)
+                    .foregroundStyle(.primary)
                     .frame(width: 30, alignment: .leading)
 
                 HStack(spacing: 8) {
                     Image(systemName: command.iconName)
                         .font(.system(size: 14))
-                        .foregroundColor(.secondary)
+                        .foregroundStyle(.primary)
                         .frame(width: 20)
 
                     Text(command.title)
@@ -168,7 +146,7 @@ struct LauncherSettingsView: View {
             HStack(spacing: 8) {
                 Image(systemName: command.iconName)
                     .font(.system(size: 14))
-                    .foregroundColor(.secondary)
+                    .foregroundStyle(.primary)
                     .frame(width: 20)
 
                 Text(command.title)
