@@ -168,6 +168,27 @@ def command_normalize(args):
         block = updated_block
 
     contents = contents[: blocks[0].start()] + block + contents[blocks[0].end() :]
+
+    if args.base_appcast:
+        base_path = Path(args.base_appcast)
+        base_contents = base_path.read_text(encoding="utf-8")
+        base_root = ET.fromstring(base_contents)
+        base_items = feed_items(base_root)
+        if any(child_text(entry, f"{{{SPARKLE}}}version") == args.build_number for entry in base_items):
+            raise ValueError("base appcast already contains the new build number")
+
+        base_item = re.search(r"(?m)^(?P<indent>[ \t]*)<item(?:\s[^>]*)?>", base_contents)
+        if not base_item:
+            raise ValueError("could not locate an item in the base appcast")
+        indent = base_item.group("indent")
+        contents = (
+            base_contents[: base_item.start()]
+            + indent
+            + block
+            + "\n"
+            + base_contents[base_item.start() :]
+        )
+
     feed_path.write_text(contents, encoding="utf-8")
 
     root = ET.parse(feed_path).getroot()
@@ -227,6 +248,7 @@ def main():
     normalize.add_argument("--delta-directory", required=True)
     normalize.add_argument("--dmg-signature", required=True)
     normalize.add_argument("--dmg-path", required=True)
+    normalize.add_argument("--base-appcast")
     normalize.add_argument("--output")
     normalize.set_defaults(run=command_normalize)
 

@@ -223,7 +223,9 @@ jobs:
         run: |
           set -euo pipefail
           UPDATE_DIR="$RUNNER_TEMP/sparkle-updates"
+          BASE_APPCAST="$RUNNER_TEMP/original-appcast.xml"
           mkdir -p "$UPDATE_DIR"
+          cp appcast.xml "$BASE_APPCAST"
           cp appcast.xml "$UPDATE_DIR/appcast.xml"
           cp "${{ steps.dmg.outputs.dmg_path }}" "$UPDATE_DIR/${{ steps.release.outputs.dmg_name }}"
           curl --fail --location --retry 3 \
@@ -263,7 +265,8 @@ jobs:
             --delta-url-prefix "${{ steps.release.outputs.delta_url_prefix }}" \
             --delta-directory DesktopRenamer/Resources/Sparkle \
             --dmg-signature "${{ steps.sparkle.outputs.dmg_signature }}" \
-            --dmg-path "${{ steps.dmg.outputs.dmg_path }}"
+            --dmg-path "${{ steps.dmg.outputs.dmg_path }}" \
+            --base-appcast "$BASE_APPCAST"
 
           printf 'update_dir=%s\n' "$UPDATE_DIR" >> "$GITHUB_OUTPUT"
 
