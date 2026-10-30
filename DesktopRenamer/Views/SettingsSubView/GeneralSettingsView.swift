@@ -12,6 +12,7 @@ struct GeneralSettingsView: View {
     @State private var launchAtLogin: Bool = false
     @State private var autoCheckUpdate: Bool = UpdateManager.shared.updaterController.updater.automaticallyChecksForUpdates
     @State private var autoDownloadUpdate: Bool = UpdateManager.shared.updaterController.updater.automaticallyDownloadsUpdates
+    @AppStorage("ShowDemoVideos") private var showDemoVideos = true
     @State private var isResetting: Bool = false
     @State private var isAPIEnabled: Bool = SpaceManager.isAPIEnabled
     @State private var isStatusBarHidden: Bool = StatusBarController.isStatusBarHidden
@@ -80,6 +81,14 @@ struct GeneralSettingsView: View {
                         ) {
                             checkForUpdate()
                         }
+                    }
+
+                    Divider()
+
+                    SettingsRow("Show Demo Videos") {
+                        Toggle("", isOn: $showDemoVideos)
+                            .labelsHidden()
+                            .toggleStyle(.switch)
                     }
                 }
 
