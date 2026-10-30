@@ -134,7 +134,7 @@ struct GeneralSettingsView: View {
                 }
 
                 SettingsSection(nil) {
-                    SettingsRow("Show demo videos") {
+                    SettingsRow("Show demo videos in settings") {
                         Toggle("", isOn: $showDemoVideos)
                             .labelsHidden()
                             .toggleStyle(.switch)
