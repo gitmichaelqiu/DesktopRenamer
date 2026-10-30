@@ -363,16 +363,16 @@ private func testAuthorizationIdentities() {
     )
     let decodedLegacyPolicy = try? JSONDecoder().decode(SpaceAPIAccessPolicy.self, from: legacyPolicyData)
     check(decodedLegacyPolicy?.isRestricted == true, "legacy access policies keep their SpaceAPI restriction")
-    check(decodedLegacyPolicy?.isAppleScriptRestricted == false, "AppleScript restriction defaults off for existing installs")
+    check(decodedLegacyPolicy?.isAppleScriptRestricted == true, "AppleScript follows the existing SpaceAPI restriction")
 
-    let appleScriptPolicy = SpaceAPIAccessPolicy(
+    let sharedAccessPolicy = SpaceAPIAccessPolicy(
         isRestricted: false,
-        isAppleScriptRestricted: true,
         approvedClients: [readOnlyClient]
     )
-    let encodedPolicy = try? JSONEncoder().encode(appleScriptPolicy)
+    let encodedPolicy = try? JSONEncoder().encode(sharedAccessPolicy)
     let decodedPolicy = encodedPolicy.flatMap { try? JSONDecoder().decode(SpaceAPIAccessPolicy.self, from: $0) }
-    check(decodedPolicy == appleScriptPolicy, "AppleScript restriction and shared approvals survive policy serialization")
+    check(decodedPolicy == sharedAccessPolicy, "shared access restriction and approvals survive policy serialization")
+    check(decodedPolicy?.isAppleScriptRestricted == false, "AppleScript follows the shared unrestricted setting")
 
     let recipients = SpaceAPIAuthorization.authorizedRecipients(
         from: ["approved", "read-only", "denied", "unapproved"],
