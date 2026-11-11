@@ -310,12 +310,23 @@ extension SpaceHelper {
         // WindowServer accepts it in the normal case and preserves the
         // native animation.
         if usesSyntheticGesture, let steps = context.steps, steps != 0 {
+            let involvesFullscreen =
+                context.targetIsFullscreen || context.currentSpaceIsFullscreen
+            let retryDelay = syntheticGestureRetryDelay(
+                stepCount: steps,
+                forceInstant: forceInstant,
+                involvesFullscreen: involvesFullscreen
+            )
+            let maxAttempts = involvesFullscreen ? 3 : 2
+            let timeoutDuration = forceInstant
+                ? 2.5
+                : max(2.5, retryDelay * Double(maxAttempts) + 1.0)
             let gestureLayout = gestureDirectionLayout()
             if let generation {
                 DiagnosticEventLog.shared.record(
                     subsystem: "SpaceHelper",
                     level: "info",
-                    "emit synthetic gesture: generation=\(generation), target=\(spaceID), steps=\(steps), display=\(displayID)"
+                    "emit synthetic gesture: generation=\(generation), target=\(spaceID), steps=\(steps), display=\(displayID), retryDelay=\(retryDelay), timeout=\(timeoutDuration)"
                 )
             }
             markProgrammaticSwitchStarted(
@@ -324,7 +335,8 @@ extension SpaceHelper {
                 isManual: isManual,
                 forceInstant: forceInstant,
                 displayID: displayID,
-                isFullscreen: context.targetIsFullscreen
+                isFullscreen: context.targetIsFullscreen,
+                timeoutDuration: timeoutDuration
             )
             performSpaceSwitchGesture(
                 steps: steps,
@@ -333,11 +345,6 @@ extension SpaceHelper {
                 gestureLayout: gestureLayout
             )
             if let generation {
-                let involvesFullscreen =
-                    context.targetIsFullscreen || context.currentSpaceIsFullscreen
-                let retryDelay: TimeInterval = involvesFullscreen
-                    ? 0.75
-                    : max(0.75, min(targetDuration + 0.35, 1.35))
                 scheduleSyntheticGestureRetry(
                     spaceID: spaceID,
                     displayID: displayID,
@@ -348,7 +355,7 @@ extension SpaceHelper {
                     attempt: 1,
                     scheduledDelay: retryDelay,
                     retryInterval: retryDelay,
-                    maxAttempts: involvesFullscreen ? 3 : 2,
+                    maxAttempts: maxAttempts,
                     snapshotProbeAttempt: 0
                 )
             }
@@ -434,6 +441,26 @@ extension SpaceHelper {
             "switch request unavailable after transaction start: generation=\(generation.map(String.init) ?? "instant"), target=\(spaceID)"
         )
         return .unavailable
+    }
+
+    /// Gives a native multi-space slide time to finish before the watchdog
+    /// interprets an unchanged WindowServer space as a dropped gesture.
+    private static func syntheticGestureRetryDelay(
+        stepCount: Int,
+        forceInstant: Bool,
+        involvesFullscreen: Bool
+    ) -> TimeInterval {
+        guard !forceInstant else { return 0.75 }
+
+        // Each space can add another native animation interval. Keep a small
+        // per-space allowance beyond the configured gesture duration because
+        // WindowServer may continue reporting the source until the slide ends.
+        let expectedDurationPerSpace = max(targetDuration, defaultTargetDuration) + 0.20
+        let fullscreenAllowance: TimeInterval = involvesFullscreen ? 0.5 : 0
+        return max(
+            0.75,
+            Double(abs(stepCount)) * expectedDurationPerSpace + fullscreenAllowance
+        )
     }
 
 }

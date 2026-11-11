@@ -5,7 +5,11 @@ import Foundation
 
 extension SpaceHelper {
 
-    static func scheduleProgrammaticSwitchTimeout(spaceID: String, generation: UInt64) {
+    static func scheduleProgrammaticSwitchTimeout(
+        spaceID: String,
+        generation: UInt64,
+        timeoutDuration: TimeInterval = 2.5
+    ) {
         let workItem = DispatchWorkItem {
             guard let active = switchTransactionCoordinator.active,
                   active.generation == generation,
@@ -20,7 +24,7 @@ extension SpaceHelper {
             )
         }
         programmaticSwitchTimeoutWorkItem = workItem
-        DispatchQueue.main.asyncAfter(deadline: .now() + 2.5, execute: workItem)
+        DispatchQueue.main.asyncAfter(deadline: .now() + timeoutDuration, execute: workItem)
     }
 
     /// Records that SpaceManager has read the requested destination from live

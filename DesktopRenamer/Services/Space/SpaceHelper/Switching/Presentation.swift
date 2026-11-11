@@ -73,7 +73,8 @@ extension SpaceHelper {
         isManual: Bool,
         forceInstant: Bool,
         displayID: String,
-        isFullscreen: Bool
+        isFullscreen: Bool,
+        timeoutDuration: TimeInterval = 2.5
     ) {
         lastProgrammaticSwitchTime = Date().timeIntervalSince1970
         lastProgrammaticTargetSpaceID = spaceID
@@ -105,7 +106,8 @@ extension SpaceHelper {
             startedUserInfo["generation"] = generation
             scheduleProgrammaticSwitchTimeout(
                 spaceID: spaceID,
-                generation: generation
+                generation: generation,
+                timeoutDuration: timeoutDuration
             )
         }
         NotificationCenter.default.post(
