@@ -119,18 +119,18 @@ extension SpaceHelper {
         return disposition
     }
 
-    /// Resolves one adjacent space from a single managed-space snapshot. The
-    /// gesture override uses this path so it does not first ask SpaceManager
-    /// for the current space and then ask WindowServer for the same state again
-    /// before emitting the synthetic gesture.
+    /// Resolves a relative space destination from one managed-space snapshot.
+    /// The gesture override uses this path so it does not first ask
+    /// SpaceManager for the current space and then ask WindowServer for the
+    /// same state again before emitting the synthetic gesture.
     @discardableResult
-    static func switchToAdjacentSpace(
-        direction: Int,
+    static func switchByRelativeSteps(
+        stepCount: Int,
         onDisplayID requestedDisplayID: String? = nil,
         forceInstant: Bool = false,
         isManual: Bool = false
     ) -> SpaceSwitchRequestDisposition {
-        guard direction != 0,
+        guard stepCount != 0,
               let state = getSystemState(includeFullscreenAppMetadata: false) else {
             return .unavailable
         }
@@ -158,16 +158,18 @@ extension SpaceHelper {
                     + displayID
                     + ", current="
                     + (liveCurrentSpaceID ?? "nil")
-                    + ", direction="
-                    + String(direction)
+                    + ", stepCount="
+                    + String(stepCount)
             )
             return .unavailable
         }
 
-        let targetIndex = currentIndex + direction
-        guard displaySpaces.indices.contains(targetIndex) else {
+        let maxOffset = displaySpaces.count - 1 - currentIndex
+        let clampedOffset = max(-currentIndex, min(stepCount, maxOffset))
+        guard clampedOffset != 0 else {
             return .unavailable
         }
+        let targetIndex = currentIndex + clampedOffset
         let targetSpace = displaySpaces[targetIndex]
         let context = makeSpaceSwitchContext(
             state: state,

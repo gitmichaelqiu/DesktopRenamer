@@ -134,14 +134,13 @@ class GestureManager: ObservableObject {
 
     // The multitouch callback can outpace the main queue while WindowServer
     // is reconciling a space. Keep the callback lightweight and allow only
-    // one main-queue action at a time. Preserve every recognized contact
-    // session in order and resume the queue after each SpaceHelper transaction
-    // settles; coalescing here would silently discard real user swipes.
+    // one main-queue action at a time. Accumulate queued swipes as a net step
+    // count so a burst resolves against the live space in one request.
     let gestureSwitchStateLock = NSLock()
     var isGestureSwitchActionScheduled = false
     var isGestureSwitchOperationInFlight = false
     var isGestureSwitchTransactionActive = false
-    var pendingGestureSwitchDirections: [SwitchDirection] = []
+    var pendingGestureSwitchStepCount = 0
     var gestureSwitchResumeWorkItem: DispatchWorkItem?
     var programmaticSwitchFinishedObserver: NSObjectProtocol?
 

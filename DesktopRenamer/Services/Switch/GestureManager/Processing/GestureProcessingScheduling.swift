@@ -3,6 +3,8 @@ import Combine
 import Foundation
 import IOKit
 
+private let maxPendingGestureSwitchSteps = 128
+
 extension GestureManager {
 
     enum SwitchDirection: Equatable {
@@ -164,16 +166,17 @@ extension GestureManager {
     }
 
     private func enqueueGestureSwitchRequest(_ direction: SwitchDirection) {
+        let stepCount = direction == .next ? 1 : -1
         var shouldSchedule = false
         let disposition: String
         let transactionActive: Bool
-        let pendingCount: Int
+        let pendingSteps: Int
 
         gestureSwitchStateLock.lock()
         if isGestureSwitchActionScheduled
             || isGestureSwitchOperationInFlight
             || isGestureSwitchTransactionActive {
-            pendingGestureSwitchDirections.append(direction)
+            accumulatePendingGestureSwitchSteps(stepCount)
             disposition = "queued"
             transactionActive = isGestureSwitchTransactionActive
         } else {
@@ -182,13 +185,13 @@ extension GestureManager {
             disposition = "scheduled"
             transactionActive = false
         }
-        pendingCount = pendingGestureSwitchDirections.count
+        pendingSteps = pendingGestureSwitchStepCount
         gestureSwitchStateLock.unlock()
 
         DiagnosticEventLog.shared.record(
             subsystem: "GestureManager",
             level: "info",
-            "gesture switch request \(disposition): direction=\(direction), transactionActive=\(transactionActive), pending=\(pendingCount)"
+            "gesture switch request \(disposition): direction=\(direction), transactionActive=\(transactionActive), pendingSteps=\(pendingSteps)"
         )
 
         if transactionActive {
@@ -200,13 +203,13 @@ extension GestureManager {
         guard shouldSchedule else { return }
         let execute: () -> Void = { [weak self] in
             guard let self else { return }
-            self.performScheduledGestureSwitch(initialDirection: direction)
+            self.performScheduledGestureSwitch(initialStepCount: stepCount)
         }
 
         // The multitouch callback is delivered by the private driver on a
         // worker thread. Never block that callback while the main thread is
-        // reconciling WindowServer state. The gate preserves ordering and
-        // queues any additional directions before this work item runs.
+        // reconciling WindowServer state. The gate coalesces any additional
+        // swipes received before this work item runs.
         if Thread.isMainThread {
             execute()
         } else {
@@ -214,10 +217,15 @@ extension GestureManager {
         }
     }
 
-    private func performScheduledGestureSwitch(initialDirection: SwitchDirection) {
-        guard let direction = takeScheduledGestureDirection(initialDirection) else {
+    private func performScheduledGestureSwitch(initialStepCount: Int) {
+        guard let stepCount = takeScheduledGestureStepCount(initialStepCount) else {
             return
         }
+        guard stepCount != 0 else {
+            completeGestureSwitchOperation(transactionStarted: false)
+            return
+        }
+        let direction: SwitchDirection = stepCount > 0 ? .next : .previous
 
         guard let sm = spaceManager, self.isEnabled else {
             completeGestureSwitchOperation(transactionStarted: false)
@@ -234,11 +242,13 @@ extension GestureManager {
                     await Self.exitFullscreen()
                 }
             } else {
-                switch direction {
-                case .next:
-                    sm.moveActiveWindowToNextSpace()
-                case .previous:
-                    sm.moveActiveWindowToPreviousSpace()
+                for _ in 0..<abs(stepCount) {
+                    switch direction {
+                    case .next:
+                        sm.moveActiveWindowToNextSpace()
+                    case .previous:
+                        sm.moveActiveWindowToPreviousSpace()
+                    }
                 }
             }
             completeGestureSwitchOperation(transactionStarted: false)
@@ -246,21 +256,20 @@ extension GestureManager {
         }
 
         // Avoid doing the expensive adjacent-space lookup while another
-        // transaction is settling. The direction is retained and resolved
-        // against the live space only after promotion has completed.
+        // transaction is settling. The relative step count is retained and
+        // resolved against the live space only after promotion has completed.
         if SpaceHelper.isSwitching {
-            retainGestureSwitchForActiveTransaction(direction)
+            retainGestureSwitchForActiveTransaction(stepCount)
             return
         }
 
         let targetDisplayID = (switchOverride == .cursor) ? SpaceHelper.getCursorDisplayID() : nil
-        let step = direction == .next ? 1 : -1
-        let disposition = SpaceHelper.switchToAdjacentSpace(
-            direction: step,
+        let disposition = SpaceHelper.switchByRelativeSteps(
+            stepCount: stepCount,
             onDisplayID: targetDisplayID,
             isManual: true
         )
-        print("GestureManager: Dispatched \(direction) (\(disposition))")
+        print("GestureManager: Dispatched \(direction) x\(abs(stepCount)) (\(disposition))")
 
         let transactionStarted = disposition == .started || disposition == .queued
         DiagnosticEventLog.shared.record(
@@ -271,7 +280,7 @@ extension GestureManager {
         completeGestureSwitchOperation(transactionStarted: transactionStarted)
     }
 
-    private func takeScheduledGestureDirection(_ initialDirection: SwitchDirection) -> SwitchDirection? {
+    private func takeScheduledGestureStepCount(_ initialStepCount: Int) -> Int? {
         gestureSwitchStateLock.lock()
         guard isGestureSwitchActionScheduled else {
             gestureSwitchStateLock.unlock()
@@ -280,31 +289,58 @@ extension GestureManager {
 
         isGestureSwitchActionScheduled = false
         isGestureSwitchOperationInFlight = true
+        let (combinedSteps, overflow) = initialStepCount.addingReportingOverflow(
+            pendingGestureSwitchStepCount
+        )
+        let stepCount: Int
+        if overflow {
+            stepCount = initialStepCount > 0
+                ? maxPendingGestureSwitchSteps
+                : -maxPendingGestureSwitchSteps
+        } else {
+            stepCount = min(
+                max(-maxPendingGestureSwitchSteps, combinedSteps),
+                maxPendingGestureSwitchSteps
+            )
+        }
+        pendingGestureSwitchStepCount = 0
         gestureSwitchStateLock.unlock()
-        return initialDirection
+        return stepCount
     }
 
-    private func retainGestureSwitchForActiveTransaction(_ direction: SwitchDirection) {
+    private func retainGestureSwitchForActiveTransaction(_ stepCount: Int) {
         gestureSwitchStateLock.lock()
         isGestureSwitchOperationInFlight = false
         isGestureSwitchTransactionActive = true
-        // This operation was already accepted before any directions currently
-        // in the queue, so keep it at the front when an external SpaceHelper
-        // transaction temporarily prevents it from starting.
-        pendingGestureSwitchDirections.insert(direction, at: 0)
+        accumulatePendingGestureSwitchSteps(stepCount)
+        let pendingSteps = pendingGestureSwitchStepCount
         gestureSwitchStateLock.unlock()
 
         DiagnosticEventLog.shared.record(
             subsystem: "GestureManager",
             level: "info",
-            "gesture switch deferred by active transaction: direction=\(direction)"
+            "gesture switch deferred by active transaction: steps=\(stepCount), pendingSteps=\(pendingSteps)"
         )
         SpaceHelper.requestFastFollowUpSwitch()
         scheduleGestureSwitchResumeProbe()
     }
 
+    private func accumulatePendingGestureSwitchSteps(_ stepCount: Int) {
+        let (sum, overflow) = pendingGestureSwitchStepCount.addingReportingOverflow(stepCount)
+        if overflow {
+            pendingGestureSwitchStepCount = stepCount > 0
+                ? maxPendingGestureSwitchSteps
+                : -maxPendingGestureSwitchSteps
+        } else {
+            pendingGestureSwitchStepCount = min(
+                max(-maxPendingGestureSwitchSteps, sum),
+                maxPendingGestureSwitchSteps
+            )
+        }
+    }
+
     private func completeGestureSwitchOperation(transactionStarted: Bool) {
-        var nextDirection: SwitchDirection?
+        var nextStepCount: Int?
 
         gestureSwitchStateLock.lock()
         isGestureSwitchOperationInFlight = false
@@ -312,23 +348,23 @@ extension GestureManager {
 
         if !transactionStarted,
            !isGestureSwitchActionScheduled,
-           !pendingGestureSwitchDirections.isEmpty {
-            let pendingDirection = pendingGestureSwitchDirections.removeFirst()
+           pendingGestureSwitchStepCount != 0 {
+            nextStepCount = pendingGestureSwitchStepCount
+            pendingGestureSwitchStepCount = 0
             isGestureSwitchActionScheduled = true
-            nextDirection = pendingDirection
         }
         gestureSwitchStateLock.unlock()
 
         if transactionStarted {
             scheduleGestureSwitchResumeProbe()
-        } else if let nextDirection {
+        } else if let nextStepCount {
             DiagnosticEventLog.shared.record(
                 subsystem: "GestureManager",
                 level: "info",
-                "resuming pending gesture switch after \(transactionStarted ? "transaction" : "rejected request"): direction=\(nextDirection)"
+                "resuming coalesced gesture switch after rejected request: steps=\(nextStepCount)"
             )
             DispatchQueue.main.async { [weak self] in
-                self?.performScheduledGestureSwitch(initialDirection: nextDirection)
+                self?.performScheduledGestureSwitch(initialStepCount: nextStepCount)
             }
         } else {
             gestureSwitchResumeWorkItem?.cancel()
@@ -363,7 +399,7 @@ extension GestureManager {
             return
         }
 
-        var nextDirection: SwitchDirection?
+        var nextStepCount: Int?
         gestureSwitchStateLock.lock()
         guard isGestureSwitchTransactionActive,
               !isGestureSwitchActionScheduled,
@@ -373,17 +409,17 @@ extension GestureManager {
         }
 
         isGestureSwitchTransactionActive = false
-        if !pendingGestureSwitchDirections.isEmpty {
-            let pendingDirection = pendingGestureSwitchDirections.removeFirst()
+        if pendingGestureSwitchStepCount != 0 {
+            nextStepCount = pendingGestureSwitchStepCount
+            pendingGestureSwitchStepCount = 0
             isGestureSwitchActionScheduled = true
-            nextDirection = pendingDirection
         }
         gestureSwitchStateLock.unlock()
 
         gestureSwitchResumeWorkItem?.cancel()
         gestureSwitchResumeWorkItem = nil
 
-        guard let nextDirection else {
+        guard let nextStepCount else {
             DiagnosticEventLog.shared.record(
                 subsystem: "GestureManager",
                 level: "info",
@@ -395,10 +431,10 @@ extension GestureManager {
         DiagnosticEventLog.shared.record(
             subsystem: "GestureManager",
             level: "info",
-            "promoting pending gesture direction: direction=\(nextDirection)"
+            "promoting coalesced gesture direction: steps=\(nextStepCount)"
         )
         DispatchQueue.main.async { [weak self] in
-            self?.performScheduledGestureSwitch(initialDirection: nextDirection)
+            self?.performScheduledGestureSwitch(initialStepCount: nextStepCount)
         }
     }
 
