@@ -443,8 +443,8 @@ extension SpaceHelper {
         return .unavailable
     }
 
-    /// Gives a native multi-space slide time to finish before the watchdog
-    /// interprets an unchanged WindowServer space as a dropped gesture.
+    /// Gives a native slide time to finish before the watchdog interprets an
+    /// unchanged WindowServer space as a dropped gesture.
     private static func syntheticGestureRetryDelay(
         stepCount: Int,
         forceInstant: Bool,
@@ -452,13 +452,13 @@ extension SpaceHelper {
     ) -> TimeInterval {
         guard !forceInstant else { return 0.75 }
 
-        // Each space can add another native animation interval. Keep a small
-        // per-space allowance beyond the configured gesture duration because
-        // WindowServer may continue reporting the source until the slide ends.
+        // Give non-instant slides time to finish even for a one-space move.
+        // WindowServer can continue reporting the source for several seconds,
+        // so the configured gesture duration alone is not a safe retry signal.
         let expectedDurationPerSpace = max(targetDuration, defaultTargetDuration) + 0.20
         let fullscreenAllowance: TimeInterval = involvesFullscreen ? 0.5 : 0
         return max(
-            0.75,
+            3.0,
             Double(abs(stepCount)) * expectedDurationPerSpace + fullscreenAllowance
         )
     }

@@ -17,6 +17,15 @@ extension SpaceHelper {
                 return
             }
             programmaticSwitchTimeoutWorkItem = nil
+            if isSpaceCurrentAndVisible(spaceID) {
+                DiagnosticEventLog.shared.record(
+                    subsystem: "SpaceHelper",
+                    level: "info",
+                    "programmatic switch timeout found the destination current and visible: generation=\(generation), target=\(spaceID); confirming instead of timing out"
+                )
+                markProgrammaticSwitchComplete(at: spaceID)
+                return
+            }
             finishProgrammaticSwitch(
                 at: spaceID,
                 generation: generation,
