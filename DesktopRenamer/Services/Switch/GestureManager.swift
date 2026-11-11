@@ -134,13 +134,13 @@ class GestureManager: ObservableObject {
 
     // The multitouch callback can outpace the main queue while WindowServer
     // is reconciling a space. Keep the callback lightweight and allow only
-    // one main-queue action at a time. Accumulate queued swipes as a net step
-    // count so a burst resolves against the live space in one request.
+    // one main-queue action at a time. Preserve queued swipe order, then resolve
+    // the sequence against the live space in one request.
     let gestureSwitchStateLock = NSLock()
     var isGestureSwitchActionScheduled = false
     var isGestureSwitchOperationInFlight = false
     var isGestureSwitchTransactionActive = false
-    var pendingGestureSwitchStepCount = 0
+    var pendingGestureSwitchDirections: [SwitchDirection] = []
     var gestureSwitchResumeWorkItem: DispatchWorkItem?
     var programmaticSwitchFinishedObserver: NSObjectProtocol?
 

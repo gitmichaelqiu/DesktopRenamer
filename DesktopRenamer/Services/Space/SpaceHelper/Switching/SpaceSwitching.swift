@@ -119,18 +119,19 @@ extension SpaceHelper {
         return disposition
     }
 
-    /// Resolves a relative space destination from one managed-space snapshot.
+    /// Resolves an ordered relative-step sequence from one managed-space
+    /// snapshot, applying each step's boundary behavior before switching once.
     /// The gesture override uses this path so it does not first ask
     /// SpaceManager for the current space and then ask WindowServer for the
     /// same state again before emitting the synthetic gesture.
     @discardableResult
     static func switchByRelativeSteps(
-        stepCount: Int,
+        stepSequence: [Int],
         onDisplayID requestedDisplayID: String? = nil,
         forceInstant: Bool = false,
         isManual: Bool = false
     ) -> SpaceSwitchRequestDisposition {
-        guard stepCount != 0,
+        guard !stepSequence.isEmpty,
               let state = getSystemState(includeFullscreenAppMetadata: false) else {
             return .unavailable
         }
@@ -154,22 +155,23 @@ extension SpaceHelper {
             DiagnosticEventLog.shared.record(
                 subsystem: "SpaceHelper",
                 level: "warning",
-                "adjacent switch unavailable: display="
+                "relative switch unavailable: display="
                     + displayID
                     + ", current="
                     + (liveCurrentSpaceID ?? "nil")
-                    + ", stepCount="
-                    + String(stepCount)
+                    + ", sequenceCount="
+                    + String(stepSequence.count)
             )
             return .unavailable
         }
 
-        let maxOffset = displaySpaces.count - 1 - currentIndex
-        let clampedOffset = max(-currentIndex, min(stepCount, maxOffset))
-        guard clampedOffset != 0 else {
+        var targetIndex = currentIndex
+        for step in stepSequence {
+            targetIndex = min(max(targetIndex + step, 0), displaySpaces.count - 1)
+        }
+        guard targetIndex != currentIndex else {
             return .unavailable
         }
-        let targetIndex = currentIndex + clampedOffset
         let targetSpace = displaySpaces[targetIndex]
         let context = makeSpaceSwitchContext(
             state: state,
