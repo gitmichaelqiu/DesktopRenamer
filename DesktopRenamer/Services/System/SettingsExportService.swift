@@ -371,7 +371,7 @@ enum SettingsImportService {
         gestureManager.moveWindowOnOption = settings.switching.moveWindowOnOption
         gestureManager.switchDuration = settings.switching.gestureSwitchDuration
         gestureManager.linearSwitchAnimationEnabled =
-            settings.switching.linearSwitchAnimationEnabled ?? true
+            settings.switching.linearSwitchAnimationEnabled ?? false
 
         hotkeyManager.updateShortcuts {
             hotkeyManager.mainShortcut = settings.hotkeys.main

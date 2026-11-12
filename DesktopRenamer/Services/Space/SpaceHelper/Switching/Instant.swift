@@ -690,10 +690,19 @@ extension SpaceHelper {
 
         let target = targetDuration
         let isInstant = forceInstant || !target.isFinite || target <= 0
-        let velocity = 2000.0 * Double(absSteps)
         let usesLinearAnimation = UserDefaults.standard.object(
             forKey: SpaceHelper.linearSwitchAnimationEnabledKey
-        ) as? Bool ?? true
+        ) as? Bool ?? false
+        let velocity: Double
+        if isInstant {
+            velocity = 2000.0 * Double(absSteps)
+        } else if usesLinearAnimation {
+            velocity = 0
+        } else {
+            SpaceHelper.beginGestureTiming(for: targetDisplayID)
+            velocity = SpaceHelper.velocityForPhase(displayID: targetDisplayID)
+                * Double(absSteps)
+        }
 
         // Resolve target display via NSScreen.
         var targetScreen: NSScreen?
@@ -745,7 +754,7 @@ extension SpaceHelper {
             DiagnosticEventLog.shared.record(
                 subsystem: "SpaceGestureAnimation",
                 level: "info",
-                "phase=\(isInstant ? "instant" : "system-default") id=\(gestureID) generation=\(switchGeneration.map(String.init) ?? "nil") source=\(sourceSpaceID ?? "nil") target=\(targetSpaceID ?? "nil") display=\(targetDisplayID) displayPixelSize=\(displayPixelSize) displayRefreshRate=\(displayRefreshRate) steps=\(absSteps) direction=\(directionRight ? "right" : "left") forceInstant=\(forceInstant) linearAnimationEnabled=\(usesLinearAnimation) configuredDuration=\(target)"
+                "phase=\(isInstant ? "instant" : "native-curve") id=\(gestureID) generation=\(switchGeneration.map(String.init) ?? "nil") source=\(sourceSpaceID ?? "nil") target=\(targetSpaceID ?? "nil") display=\(targetDisplayID) displayPixelSize=\(displayPixelSize) displayRefreshRate=\(displayRefreshRate) steps=\(absSteps) direction=\(directionRight ? "right" : "left") forceInstant=\(forceInstant) linearAnimationEnabled=\(usesLinearAnimation) configuredDuration=\(target) velocity=\(velocity)"
             )
             let originalLocation = CGEvent(source: nil)?.location ?? .zero
             if let warpLocation {

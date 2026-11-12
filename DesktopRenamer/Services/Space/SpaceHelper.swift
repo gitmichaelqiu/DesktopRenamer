@@ -230,6 +230,34 @@ class SpaceHelper {
     static let targetDurationKey = "GestureManager.SwitchDuration"
     static let linearSwitchAnimationEnabledKey = "GestureManager.LinearSwitchAnimationEnabled"
     static let defaultTargetDuration: TimeInterval = 0.30
+    static let calibrationKey = "GestureManager.CachedCalibrations"
+    static let minMultiplier: Double = 0.1
+    static let maxMultiplier: Double = 10.0
+
+    static var gestureTimingStart: TimeInterval = 0
+    static var gestureTimingDisplayID = ""
+
+    struct DisplayCalibration: Codable {
+        var avg52: Double
+        var avg104: Double
+    }
+
+    static var displayCalibrations: [String: DisplayCalibration] = {
+        guard let data = UserDefaults.standard.data(forKey: calibrationKey),
+              let calibrations = try? JSONDecoder().decode(
+                [String: DisplayCalibration].self,
+                from: data
+              ) else {
+            return [:]
+        }
+        return calibrations
+    }()
+
+    static var phase1Samples: [String: [TimeInterval]] = [:]
+    static var phase2Samples: [String: [TimeInterval]] = [:]
+    static let phaseSamplesNeeded = 3
+    static let phase1Velocity: Double = 52.0
+    static let phase2Velocity: Double = 104.0
 
     static func linearGestureRefreshRate(for screen: NSScreen?) -> Double {
         if let displayID = screen?.deviceDescription[
@@ -258,6 +286,103 @@ class SpaceHelper {
             return defaultTargetDuration
         }
         return UserDefaults.standard.double(forKey: targetDurationKey)
+    }
+
+    static var displayCalibrationsInfo: String {
+        guard !displayCalibrations.isEmpty else { return "  (none)\n" }
+        return displayCalibrations.keys.sorted().map { displayID in
+            guard let calibration = displayCalibrations[displayID] else { return "" }
+            let avg52 = String(format: "%.4f", calibration.avg52)
+            let avg104 = String(format: "%.4f", calibration.avg104)
+            return "  \(displayID): avg52=\(avg52) avg104=\(avg104)\n"
+        }.joined()
+    }
+
+    static var phaseSampleCountsInfo: String {
+        let displayIDs = Set(phase1Samples.keys).union(phase2Samples.keys).sorted()
+        guard !displayIDs.isEmpty else { return "  (no samples)\n" }
+        return displayIDs.map { displayID in
+            let phase1Count = phase1Samples[displayID]?.count ?? 0
+            let phase2Count = phase2Samples[displayID]?.count ?? 0
+            return "  \(displayID): phase1=\(phase1Count) phase2=\(phase2Count)\n"
+        }.joined()
+    }
+
+    /// Fits the Dock's native animation curve to the user's requested duration.
+    static func multiplierForDisplay(_ displayID: String) -> Double {
+        guard targetDuration > 0,
+              let calibration = displayCalibrations[displayID] else {
+            return 1.0
+        }
+
+        let exponent = log(calibration.avg52 / calibration.avg104) / log(0.5)
+        let clampedExponent = min(-0.1, max(-3.0, exponent))
+        let ratio = targetDuration / calibration.avg52
+        let multiplier = pow(ratio, 1.0 / clampedExponent)
+        return max(minMultiplier, min(maxMultiplier, multiplier))
+    }
+
+    static func velocityForPhase(displayID: String) -> Double {
+        if displayCalibrations[displayID] != nil {
+            return phase1Velocity * multiplierForDisplay(displayID)
+        }
+
+        if (phase1Samples[displayID]?.count ?? 0) < phaseSamplesNeeded {
+            return phase1Velocity
+        }
+        if (phase2Samples[displayID]?.count ?? 0) < phaseSamplesNeeded {
+            return phase2Velocity
+        }
+        return phase1Velocity * multiplierForDisplay(displayID)
+    }
+
+    static func beginGestureTiming(for displayID: String) {
+        gestureTimingStart = Date().timeIntervalSince1970
+        gestureTimingDisplayID = displayID
+    }
+
+    /// Records the elapsed native Dock transition for the next calibration sample.
+    static func endGestureTiming() {
+        guard gestureTimingStart > 0, !gestureTimingDisplayID.isEmpty else { return }
+
+        let duration = Date().timeIntervalSince1970 - gestureTimingStart
+        let displayID = gestureTimingDisplayID
+        gestureTimingStart = 0
+        gestureTimingDisplayID = ""
+
+        guard duration > 0.05, duration < 2.0,
+              displayCalibrations[displayID] == nil else {
+            return
+        }
+
+        let phase1Count = phase1Samples[displayID]?.count ?? 0
+        let phase2Count = phase2Samples[displayID]?.count ?? 0
+        if phase1Count < phaseSamplesNeeded {
+            phase1Samples[displayID, default: []].append(duration)
+        } else if phase2Count < phaseSamplesNeeded {
+            phase2Samples[displayID, default: []].append(duration)
+        }
+
+        tryLockCalibration(for: displayID)
+    }
+
+    private static func tryLockCalibration(for displayID: String) {
+        guard displayCalibrations[displayID] == nil else { return }
+        let phase1 = phase1Samples[displayID] ?? []
+        let phase2 = phase2Samples[displayID] ?? []
+        guard phase1.count >= phaseSamplesNeeded,
+              phase2.count >= phaseSamplesNeeded else {
+            return
+        }
+
+        let avg52 = phase1.reduce(0, +) / Double(phase1.count)
+        let avg104 = phase2.reduce(0, +) / Double(phase2.count)
+        guard avg52 > 0, avg104 > 0 else { return }
+
+        displayCalibrations[displayID] = DisplayCalibration(avg52: avg52, avg104: avg104)
+        if let data = try? JSONEncoder().encode(displayCalibrations) {
+            UserDefaults.standard.set(data, forKey: calibrationKey)
+        }
     }
 
     // Minimum width and height for a window to be considered a regular app window in getActiveWindowInfo (filtering out small system utilities/status items).

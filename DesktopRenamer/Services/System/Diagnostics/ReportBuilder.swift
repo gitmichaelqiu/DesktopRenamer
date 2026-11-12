@@ -298,6 +298,8 @@ struct DiagnosticReportBuilder {
         s += "mainDisplayRefreshRate: \(SpaceHelper.linearGestureRefreshRate(for: NSScreen.main))\n"
         s += "mainDisplayFrameInterval: \(SpaceHelper.linearGestureFrameInterval(for: NSScreen.main))\n"
         s += "settleInterval: \(SpaceHelper.linearGestureSettleInterval)\n"
+        s += "nativeCurveDisplayCalibrations:\n\(SpaceHelper.displayCalibrationsInfo)"
+        s += "nativeCurveCalibrationSamples:\n\(SpaceHelper.phaseSampleCountsInfo)"
         s += "animationState:\n\(SpaceHelper.syntheticGestureAnimationInfo)\n"
         return s
     }
@@ -498,6 +500,7 @@ struct DiagnosticReportBuilder {
             "GestureManager.MoveWindowOnOption",
             "GestureManager.SwitchDuration",
             "GestureManager.LinearSwitchAnimationEnabled",
+            "GestureManager.CachedCalibrations",
             "kShowPreviewLabels", "kShowActiveLabels", "kShowOnDesktop", "kHideWhenSwitching",
             "kActiveFontScale", "kPreviewFontScale", "kActivePaddingScale", "kPreviewPaddingScale",
             "kGlobalIsDocked", "kGlobalDockEdge", "kGlobalCenterX", "kGlobalCenterY",

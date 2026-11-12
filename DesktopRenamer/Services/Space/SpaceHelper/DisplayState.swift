@@ -93,6 +93,7 @@ extension SpaceHelper {
             level: "info",
             "detectSpaceChange gestureID=\(gestureID)"
         )
+        endGestureTiming()
         spaceDetectionGeneration += 1
         let generation = spaceDetectionGeneration
         let traceID = debugTraceID()

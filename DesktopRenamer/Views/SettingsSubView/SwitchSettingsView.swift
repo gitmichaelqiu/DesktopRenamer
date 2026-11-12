@@ -22,32 +22,6 @@ struct SwitchSettingsView: View {
                     }
                 }
 
-                SettingsSection("Space Switch Animation") {
-                    SettingsRow(
-                        "Use linear animation",
-                        helperText:
-                            "Follow the target display’s refresh rate and switch duration. Turn off to use macOS’s standard swipe animation."
-                    ) {
-                        Toggle("", isOn: $gestureManager.linearSwitchAnimationEnabled)
-                            .toggleStyle(.switch)
-                            .labelsHidden()
-                    }
-
-                    if gestureManager.linearSwitchAnimationEnabled {
-                        Divider()
-
-                        SliderSettingsRow(
-                            "Switch duration",
-                            helperText: "Set to 0 to switch instantly without the macOS animation.",
-                            value: $gestureManager.switchDuration,
-                            range: 0...1.0,
-                            defaultValue: 0.30,
-                            step: 0.05,
-                            valueString: { String(format: "%.2fs", $0) }
-                        )
-                    }
-                }
-
                 // Gesture-based switching configuration.
                 SettingsSection("Trackpad Switch Gesture Override") {
                     SettingsRow(
@@ -100,6 +74,30 @@ struct SwitchSettingsView: View {
                                 .labelsHidden()
                         }
                         
+                        Divider()
+
+                        SliderSettingsRow(
+                            "Switch duration",
+                            helperText: "Set to 0 to switch instantly without the macOS animation.",
+                            value: $gestureManager.switchDuration,
+                            range: 0...1.0,
+                            defaultValue: 0.30,
+                            step: 0.05,
+                            valueString: { String(format: "%.2fs", $0) }
+                        )
+
+                        Divider()
+
+                        SettingsRow(
+                            "Use linear animation",
+                            helperText:
+                                "Use evenly paced progress updates instead of the default macOS animation curve."
+                        ) {
+                            Toggle("", isOn: $gestureManager.linearSwitchAnimationEnabled)
+                                .toggleStyle(.switch)
+                                .labelsHidden()
+                        }
+
                         Divider()
                         
                         SliderSettingsRow(

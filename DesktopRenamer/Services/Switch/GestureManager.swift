@@ -216,7 +216,7 @@ class GestureManager: ObservableObject {
 
         self.linearSwitchAnimationEnabled =
             UserDefaults.standard.object(forKey: kLinearSwitchAnimationEnabled) == nil
-            ? true : UserDefaults.standard.bool(forKey: kLinearSwitchAnimationEnabled)
+            ? false : UserDefaults.standard.bool(forKey: kLinearSwitchAnimationEnabled)
 
         GestureManager.sharedManager = self
 
