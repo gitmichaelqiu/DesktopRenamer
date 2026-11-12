@@ -247,6 +247,8 @@ extension SpaceHelper {
                 performSpaceSwitchGesture(
                     steps: steps,
                     targetDisplayID: displayID,
+                    sourceSpaceID: sourceSpaceID,
+                    targetSpaceID: spaceID,
                     forceInstant: forceInstant,
                     gestureLayout: gestureLayout
                 )

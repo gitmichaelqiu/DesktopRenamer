@@ -87,7 +87,12 @@ extension SpaceHelper {
     }
 
     static func detectSpaceChange() {
-        DiagnosticEventLog.shared.record(subsystem: "SpaceHelper", level: "info", "detectSpaceChange")
+        let gestureID = syntheticGestureAnimationID ?? "none"
+        DiagnosticEventLog.shared.record(
+            subsystem: "SpaceHelper",
+            level: "info",
+            "detectSpaceChange gestureID=\(gestureID)"
+        )
         spaceDetectionGeneration += 1
         let generation = spaceDetectionGeneration
         let traceID = debugTraceID()
