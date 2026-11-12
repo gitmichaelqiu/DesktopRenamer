@@ -168,11 +168,19 @@ public class DiagnosticEventLog {
         sessionDroppedEventCount = 0
         appendToSession(makeEvent(subsystem: "System", level: "info", message: "Diagnostic collection started"))
         lock.unlock()
+
+#if DEBUG
+        SpaceTransitionMotionCapture.shared.start()
+#endif
     }
 
     /// Stop a diagnostic collection session.
     /// Thread-safe.
     public func stopCollection() {
+#if DEBUG
+        SpaceTransitionMotionCapture.shared.stop()
+#endif
+
         lock.lock()
         collecting = false
         appendToSession(makeEvent(subsystem: "System", level: "info", message: "Diagnostic collection stopped"))
