@@ -78,7 +78,8 @@ private enum SyntheticSpaceGestureStream {
             let id = UUID()
             let now = DispatchTime.now()
             let osVersion = ProcessInfo.processInfo.operatingSystemVersionString
-            let eventPath = ProcessInfo.processInfo.operatingSystemVersion.majorVersion >= 27
+            let usesMacOS27DirectionNormalization = ProcessInfo.processInfo.operatingSystemVersion.majorVersion >= 27
+            let eventPath = usesMacOS27DirectionNormalization
                 ? "CGEvent + GestureAugmentor (CGEvent fallback if unavailable)"
                 : "legacy CGEvent"
 
@@ -116,7 +117,7 @@ private enum SyntheticSpaceGestureStream {
             DiagnosticEventLog.shared.record(
                 subsystem: "SpaceGestureAnimation",
                 level: "info",
-                "phase=start id=\(id.uuidString) generation=\(switchGeneration.map(String.init) ?? "nil") source=\(sourceSpaceID ?? "nil") target=\(targetSpaceID ?? "nil") display=\(targetDisplayID) layout=\(gestureLayout) direction=\(directionRight ? "right" : "left") steps=\(steps) targetDurationPerSpace=\(targetDuration) frameInterval=\(SpaceHelper.linearGestureFrameInterval) progressPerSpace=\(SpaceHelper.linearGestureProgressPerSpace) settleInterval=\(SpaceHelper.linearGestureSettleInterval) framesPerSwipe=\(frameCount) progressPerFrame=\(progressPerFrame) exitVelocity=\(exitVelocity) os=\(osVersion) eventPath=\(eventPath)"
+                "phase=start id=\(id.uuidString) generation=\(switchGeneration.map(String.init) ?? "nil") source=\(sourceSpaceID ?? "nil") target=\(targetSpaceID ?? "nil") display=\(targetDisplayID) layout=\(gestureLayout) direction=\(directionRight ? "right" : "left") steps=\(steps) targetDurationPerSpace=\(targetDuration) frameInterval=\(SpaceHelper.linearGestureFrameInterval) progressPerSpace=\(SpaceHelper.linearGestureProgressPerSpace) settleInterval=\(SpaceHelper.linearGestureSettleInterval) framesPerSwipe=\(frameCount) progressPerFrame=\(progressPerFrame) exitVelocity=\(exitVelocity) os=\(osVersion) eventPath=\(eventPath) directionNormalization=\(usesMacOS27DirectionNormalization ? "paired-progress-and-exit-velocity" : "none")"
             )
 
             guard postGestureBegan(id: id) else {
@@ -554,9 +555,14 @@ extension SpaceHelper {
     ) -> Bool {
         // Use Float.leastNonzeroMagnitude to precisely match FLT_TRUE_MIN used in ISS.c
         // Double.leastNonzeroMagnitude is too small (e-324) and gets truncated to 0.0 by the OS when positive.
-        let progress = progress.map { directionRight ? $0 : -$0 }
-            ?? (directionRight ? Double(Float.leastNonzeroMagnitude) : -Double(Float.leastNonzeroMagnitude))
-        let vel: Double = directionRight ? velocity : -velocity
+        // macOS 27 applies Dock swipe direction inversion in a different coordinate space from the
+        // release velocity. Keep both values paired so the end phase cannot pull against progress.
+        let os = ProcessInfo.processInfo.operatingSystemVersion
+        let directionNormalization = os.majorVersion >= 27 ? -1.0 : 1.0
+        let directionSign = directionRight ? 1.0 : -1.0
+        let progressMagnitude = progress ?? Double(Float.leastNonzeroMagnitude)
+        let progress = progressMagnitude * directionSign * directionNormalization
+        let vel = velocity * directionSign * directionNormalization
         
         guard let ev = CGEvent(source: nil) else { return false }
         ev.setIntegerValueField(CGEventField(rawValue: 55)!, value: 30) // kCGSEventDockControl
@@ -569,7 +575,6 @@ extension SpaceHelper {
         ev.setIntegerValueField(CGEventField(rawValue: 115)!, value: directionRight ? 8 : 4) // swipe mask: right=8, left=4
         
         var eventToPost = ev
-        let os = ProcessInfo.processInfo.operatingSystemVersion
         if os.majorVersion >= 27 {
             if let augmented = GestureAugmentor.augmentEvent(ev)?.takeRetainedValue() {
                 eventToPost = augmented
@@ -577,9 +582,17 @@ extension SpaceHelper {
                 DiagnosticEventLog.shared.recordDuringCollection(
                     subsystem: "SpaceGestureAnimation",
                     level: "warning",
-                    "eventPath=fallback-to-CGEvent phase=\(phase) progress=\(progress) velocity=\(vel)"
+                    "eventPath=fallback-to-CGEvent phase=\(phase) progress=\(progress) velocity=\(vel) directionNormalization=\(directionNormalization)"
                 )
             }
+        }
+
+        if phase == 4 || phase == 8 {
+            DiagnosticEventLog.shared.recordDuringCollection(
+                subsystem: "SpaceGestureAnimation",
+                level: "debug",
+                "phase=\(phase == 4 ? "ended" : "cancelled") direction=\(directionRight ? "right" : "left") progress=\(progress) exitVelocity=\(vel) directionNormalization=\(directionNormalization) os=\(os.majorVersion).\(os.minorVersion)"
+            )
         }
         
         // Use cgSessionEventTap to match ISS.c and prevent HID acceleration/mishandling
