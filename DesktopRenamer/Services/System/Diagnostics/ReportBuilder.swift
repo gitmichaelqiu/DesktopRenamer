@@ -24,7 +24,7 @@ struct DiagnosticReportBuilder {
         sections.append(makeGestureOverride())
         sections.append(makeHotkeys())
         sections.append(makeDragState())
-        sections.append(makeCalibration())
+        sections.append(makeGestureAnimation())
         sections.append(makeSpaceManagerInternals())
         sections.append(makeLauncherState())
         sections.append(makeSpaceAPIState())
@@ -290,13 +290,11 @@ struct DiagnosticReportBuilder {
         return s
     }
 
-    private static func makeCalibration() -> String {
-        var s = "─── Calibration ───\n"
+    private static func makeGestureAnimation() -> String {
+        var s = "─── Gesture Animation ───\n"
         s += "targetDuration: \(SpaceHelper.targetDuration)\n"
-        s += "Display Calibrations:\n"
-        s += SpaceHelper.displayCalibrationsInfo
-        s += "Phase Sample Counts:\n"
-        s += SpaceHelper.phaseSampleCountsInfo
+        s += "progressPerSpace: \(SpaceHelper.linearGestureProgressPerSpace)\n"
+        s += "frameInterval: \(SpaceHelper.linearGestureFrameInterval)\n"
         return s
     }
 
@@ -495,7 +493,6 @@ struct DiagnosticReportBuilder {
             "GestureManager.SwipeThreshold",
             "GestureManager.MoveWindowOnOption",
             "GestureManager.SwitchDuration",
-            "GestureManager.CachedCalibrations",
             "kShowPreviewLabels", "kShowActiveLabels", "kShowOnDesktop", "kHideWhenSwitching",
             "kActiveFontScale", "kPreviewFontScale", "kActivePaddingScale", "kPreviewPaddingScale",
             "kGlobalIsDocked", "kGlobalDockEdge", "kGlobalCenterX", "kGlobalCenterY",
