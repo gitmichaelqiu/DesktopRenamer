@@ -74,7 +74,9 @@ private enum SyntheticSpaceGestureStream {
                 Int(ceil(durationPerStep / SpaceHelper.linearGestureFrameInterval)) + 1
             )
             let progressPerFrame = SpaceHelper.linearGestureProgressPerSpace / Double(frameCount)
-            let exitVelocity = progressPerFrame * 100
+            // Timed swipes reach their final progress before ending. Let Dock
+            // settle by position instead of carrying stale momentum into the snap.
+            let exitVelocity = 0.0
             let id = UUID()
             let now = DispatchTime.now()
             let osVersion = ProcessInfo.processInfo.operatingSystemVersionString
