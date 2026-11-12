@@ -18,7 +18,7 @@ private enum SyntheticSpaceGestureStream {
         let totalSteps: Int
         let frameCount: Int
         let progressPerFrame: Double
-        let exitVelocity: Double
+        let commitVelocity: Double
         let startedAt: DispatchTime
         var stepStartTime: DispatchTime
         var lastProgressTime: DispatchTime
@@ -72,13 +72,12 @@ private enum SyntheticSpaceGestureStream {
                 targetDuration
             )
             let frameCount = max(
-                2,
-                Int(ceil(durationPerStep / SpaceHelper.linearGestureFrameInterval)) + 1
+                1,
+                Int(ceil(durationPerStep / SpaceHelper.linearGestureFrameInterval))
             )
-            let progressPerFrame = SpaceHelper.linearGestureProgressPerSpace / Double(frameCount)
-            // Timed swipes reach their final progress before ending. Let Dock
-            // settle by position instead of carrying stale momentum into the snap.
-            let exitVelocity = 0.0
+            let progressPerFrame = SpaceHelper.linearGestureProgressPerSpace
+                * SpaceHelper.linearGestureFrameInterval / durationPerStep
+            let commitVelocity = SpaceHelper.linearGestureCommitVelocity
             let id = UUID()
             let now = DispatchTime.now()
             let osVersion = ProcessInfo.processInfo.operatingSystemVersionString
@@ -95,11 +94,11 @@ private enum SyntheticSpaceGestureStream {
                 switchGeneration: switchGeneration,
                 targetDisplayID: targetDisplayID,
                 gestureLayout: gestureLayout,
-                targetDuration: targetDuration,
+                targetDuration: durationPerStep,
                 totalSteps: steps,
                 frameCount: frameCount,
                 progressPerFrame: progressPerFrame,
-                exitVelocity: exitVelocity,
+                commitVelocity: commitVelocity,
                 startedAt: now,
                 stepStartTime: now,
                 lastProgressTime: now,
@@ -121,7 +120,7 @@ private enum SyntheticSpaceGestureStream {
             DiagnosticEventLog.shared.record(
                 subsystem: "SpaceGestureAnimation",
                 level: "info",
-                "phase=start id=\(id.uuidString) generation=\(switchGeneration.map(String.init) ?? "nil") source=\(sourceSpaceID ?? "nil") target=\(targetSpaceID ?? "nil") display=\(targetDisplayID) layout=\(gestureLayout) direction=\(directionRight ? "right" : "left") steps=\(steps) targetDurationPerSpace=\(targetDuration) frameInterval=\(SpaceHelper.linearGestureFrameInterval) progressPerSpace=\(SpaceHelper.linearGestureProgressPerSpace) settleInterval=\(SpaceHelper.linearGestureSettleInterval) framesPerSwipe=\(frameCount) progressPerFrame=\(progressPerFrame) exitVelocity=\(exitVelocity) os=\(osVersion) eventPath=\(eventPath) directionConvention=\(usesModernDockSwipeProtocol ? "natural-scroll-sign" : "legacy")"
+                "phase=start id=\(id.uuidString) generation=\(switchGeneration.map(String.init) ?? "nil") source=\(sourceSpaceID ?? "nil") target=\(targetSpaceID ?? "nil") display=\(targetDisplayID) layout=\(gestureLayout) direction=\(directionRight ? "right" : "left") steps=\(steps) targetDurationPerSpace=\(durationPerStep) frameInterval=\(SpaceHelper.linearGestureFrameInterval) progressPerSpace=\(SpaceHelper.linearGestureProgressPerSpace) settleInterval=\(SpaceHelper.linearGestureSettleInterval) framesPerSwipe=\(frameCount) progressPerFrame=\(progressPerFrame) commitVelocity=\(commitVelocity) os=\(osVersion) eventPath=\(eventPath) directionConvention=\(usesModernDockSwipeProtocol ? "natural-scroll-sign" : "legacy")"
             )
 
             guard postGestureBegan(id: id) else {
@@ -159,7 +158,7 @@ private enum SyntheticSpaceGestureStream {
             targetDurationPerSpace: \(gesture.targetDuration)
             framesPerSwipe: \(gesture.frameCount)
             progressPerFrame: \(gesture.progressPerFrame)
-            exitVelocity: \(gesture.exitVelocity)
+            commitVelocity: \(gesture.commitVelocity)
             progress: \(gesture.progress)
             currentStep: \(min(gesture.completedSteps + 1, gesture.totalSteps))/\(gesture.totalSteps)
             currentPhase: \(phase)
@@ -199,16 +198,26 @@ private enum SyntheticSpaceGestureStream {
         guard let gesture = activeGesture, gesture.id == id else { return }
 
         let interval = SpaceHelper.linearGestureFrameInterval
-        let offset = UInt64(Double(frameIndex) * interval * 1_000_000_000)
+        let intervalNanoseconds = UInt64(interval * 1_000_000_000)
+        let durationNanoseconds = UInt64(gesture.targetDuration * 1_000_000_000)
+        let endTime = gesture.stepStartTime.uptimeNanoseconds + durationNanoseconds
+        let nominalOffset = min(Double(frameIndex) * interval, gesture.targetDuration)
+        let nominalDeadline = gesture.stepStartTime.uptimeNanoseconds
+            + UInt64(nominalOffset * 1_000_000_000)
+        let earliestDeadline = gesture.lastProgressTime.uptimeNanoseconds + intervalNanoseconds
+        // Skip missed ticks instead of posting catch-up events back-to-back.
         let deadline = DispatchTime(
-            uptimeNanoseconds: gesture.stepStartTime.uptimeNanoseconds + offset
+            uptimeNanoseconds: min(max(nominalDeadline, earliestDeadline), endTime)
         )
         let workItem = DispatchWorkItem {
             guard var currentGesture = activeGesture, currentGesture.id == id else { return }
 
             let callbackTime = DispatchTime.now()
             let deadlineSlip = seconds(from: deadline, to: callbackTime)
-            let progress = currentGesture.progressPerFrame * Double(frameIndex + 1)
+            let elapsed = seconds(from: currentGesture.stepStartTime, to: callbackTime)
+            // Derive progress from elapsed time so callback jitter does not alter velocity.
+            let progress = SpaceHelper.linearGestureProgressPerSpace
+                * min(elapsed / currentGesture.targetDuration, 1)
             let progressDelta = progress - currentGesture.progress
             guard SpaceHelper.postDockSwipe(
                 phase: 2,
@@ -235,10 +244,10 @@ private enum SyntheticSpaceGestureStream {
             DiagnosticEventLog.shared.recordDuringCollection(
                 subsystem: "SpaceGestureAnimation",
                 level: "debug",
-                "phase=changed id=\(id.uuidString) step=\(currentGesture.completedSteps + 1)/\(currentGesture.totalSteps) frame=\(frameIndex + 1)/\(currentGesture.frameCount) progress=\(progress) delta=\(progressDelta) scheduledIntervalMs=\(milliseconds(SpaceHelper.linearGestureFrameInterval)) actualIntervalMs=\(milliseconds(actualInterval)) deadlineSlipMs=\(milliseconds(deadlineSlip))"
+                "phase=changed id=\(id.uuidString) step=\(currentGesture.completedSteps + 1)/\(currentGesture.totalSteps) frame=\(frameIndex)/\(currentGesture.frameCount) progress=\(progress) delta=\(progressDelta) scheduledIntervalMs=\(milliseconds(SpaceHelper.linearGestureFrameInterval)) actualIntervalMs=\(milliseconds(actualInterval)) deadlineSlipMs=\(milliseconds(deadlineSlip))"
             )
 
-            if frameIndex < currentGesture.frameCount - 1 {
+            if progress < SpaceHelper.linearGestureProgressPerSpace {
                 activeGesture = currentGesture
                 scheduleFrame(id: id, frameIndex: frameIndex + 1)
                 return
@@ -249,8 +258,8 @@ private enum SyntheticSpaceGestureStream {
             guard SpaceHelper.postDockSwipe(
                 phase: 4,
                 directionRight: currentGesture.directionRight,
-                progress: currentGesture.progress,
-                velocity: currentGesture.exitVelocity
+                progress: SpaceHelper.dockSwipeMinimumProgress,
+                velocity: currentGesture.commitVelocity
             ) else {
                 cancelActiveGesture(reason: "failed to post ended phase")
                 return
@@ -265,7 +274,7 @@ private enum SyntheticSpaceGestureStream {
             DiagnosticEventLog.shared.recordDuringCollection(
                 subsystem: "SpaceGestureAnimation",
                 level: "debug",
-                "phase=ended id=\(id.uuidString) step=\(currentGesture.completedSteps)/\(currentGesture.totalSteps) progress=\(currentGesture.progress) exitVelocity=\(currentGesture.exitVelocity) swipeDurationMs=\(milliseconds(swipeDuration))"
+                "phase=ended id=\(id.uuidString) step=\(currentGesture.completedSteps)/\(currentGesture.totalSteps) finalProgress=\(currentGesture.progress) commitProgress=\(SpaceHelper.dockSwipeMinimumProgress) commitVelocity=\(currentGesture.commitVelocity) swipeDurationMs=\(milliseconds(swipeDuration))"
             )
             scheduleAfterSettle(id: id)
         }
@@ -278,21 +287,21 @@ private enum SyntheticSpaceGestureStream {
         guard SpaceHelper.postDockSwipe(
             phase: 1,
             directionRight: gesture.directionRight,
-            progress: gesture.progressPerFrame,
+            progress: SpaceHelper.dockSwipeMinimumProgress,
             velocity: 0
         ) else {
             return false
         }
         let eventTime = DispatchTime.now()
         gesture.swipeInProgress = true
-        gesture.progress = gesture.progressPerFrame
+        gesture.progress = 0
         gesture.stepStartTime = eventTime
         gesture.lastProgressTime = eventTime
         activeGesture = gesture
         DiagnosticEventLog.shared.recordDuringCollection(
             subsystem: "SpaceGestureAnimation",
             level: "debug",
-            "phase=began id=\(id.uuidString) step=\(gesture.completedSteps + 1)/\(gesture.totalSteps) progress=\(gesture.progress) frameCount=\(gesture.frameCount)"
+            "phase=began id=\(id.uuidString) step=\(gesture.completedSteps + 1)/\(gesture.totalSteps) eventProgress=\(SpaceHelper.dockSwipeMinimumProgress) frameCount=\(gesture.frameCount)"
         )
         return true
     }
@@ -338,7 +347,7 @@ private enum SyntheticSpaceGestureStream {
                 phase: 8,
                 directionRight: gesture.directionRight,
                 progress: gesture.progress,
-                velocity: gesture.exitVelocity
+                velocity: 0
             )
             DiagnosticEventLog.shared.recordDuringCollection(
                 subsystem: "SpaceGestureAnimation",
@@ -369,7 +378,7 @@ private enum SyntheticSpaceGestureStream {
 
         guard let gesture = activeGesture else { return }
         let finishedAt = DispatchTime.now()
-        let summary = "id=\(gesture.id.uuidString) generation=\(gesture.switchGeneration.map(String.init) ?? "nil") outcome=\(outcome) source=\(gesture.sourceSpaceID ?? "nil") target=\(gesture.targetSpaceID ?? "nil") display=\(gesture.targetDisplayID) layout=\(gesture.gestureLayout) direction=\(gesture.directionRight ? "right" : "left") steps=\(gesture.completedSteps)/\(gesture.totalSteps) targetDurationPerSpace=\(gesture.targetDuration) framesPerSwipe=\(gesture.frameCount) progressPerFrame=\(gesture.progressPerFrame) exitVelocity=\(gesture.exitVelocity) elapsedMs=\(milliseconds(seconds(from: gesture.startedAt, to: finishedAt))) changedFrameCount=\(gesture.changedFrameCount) frameIntervalMs=\(frameIntervalStatistics(gesture)) swipeDurationMs=\(durationStatistics(gesture.swipeDurations)) settleDurationMs=\(durationStatistics(gesture.settleDurations)) maximumDeadlineSlipMs=\(milliseconds(gesture.maxDeadlineSlip))"
+        let summary = "id=\(gesture.id.uuidString) generation=\(gesture.switchGeneration.map(String.init) ?? "nil") outcome=\(outcome) source=\(gesture.sourceSpaceID ?? "nil") target=\(gesture.targetSpaceID ?? "nil") display=\(gesture.targetDisplayID) layout=\(gesture.gestureLayout) direction=\(gesture.directionRight ? "right" : "left") steps=\(gesture.completedSteps)/\(gesture.totalSteps) targetDurationPerSpace=\(gesture.targetDuration) framesPerSwipe=\(gesture.frameCount) progressPerFrame=\(gesture.progressPerFrame) commitVelocity=\(gesture.commitVelocity) elapsedMs=\(milliseconds(seconds(from: gesture.startedAt, to: finishedAt))) changedFrameCount=\(gesture.changedFrameCount) frameIntervalMs=\(frameIntervalStatistics(gesture)) swipeDurationMs=\(durationStatistics(gesture.swipeDurations)) settleDurationMs=\(durationStatistics(gesture.settleDurations)) maximumDeadlineSlipMs=\(milliseconds(gesture.maxDeadlineSlip))"
         lastAnimationSummary = summary
         lastFinishedGestureID = gesture.id.uuidString
         lastFinishedSwitchGeneration = gesture.switchGeneration
@@ -557,8 +566,6 @@ extension SpaceHelper {
         progress: Double? = nil,
         velocity: Double
     ) -> Bool {
-        // Use Float.leastNonzeroMagnitude to precisely match FLT_TRUE_MIN used in ISS.c
-        // Double.leastNonzeroMagnitude is too small (e-324) and gets truncated to 0.0 by the OS when positive.
         let os = ProcessInfo.processInfo.operatingSystemVersion
         let usesModernDockSwipeProtocol = os.majorVersion >= 27
         let directionSign = directionRight ? 1.0 : -1.0
@@ -570,7 +577,7 @@ extension SpaceHelper {
         } else {
             progressSign = directionSign
         }
-        let progressMagnitude = progress ?? Double(Float.leastNonzeroMagnitude)
+        let progressMagnitude = progress ?? SpaceHelper.dockSwipeMinimumProgress
         let signedProgress = progressMagnitude * progressSign
         let signedVelocity = velocity * progressSign
         
@@ -590,7 +597,7 @@ extension SpaceHelper {
             }
         } else {
             ev.setDoubleValueField(CGEventField(rawValue: 129)!, value: signedVelocity)
-            ev.setDoubleValueField(CGEventField(rawValue: 130)!, value: signedVelocity)
+            ev.setDoubleValueField(CGEventField(rawValue: 130)!, value: 0)
             ev.setIntegerValueField(CGEventField(rawValue: 115)!, value: directionRight ? 8 : 4) // swipe mask: right=8, left=4
         }
         
@@ -622,7 +629,7 @@ extension SpaceHelper {
             DiagnosticEventLog.shared.recordDuringCollection(
                 subsystem: "SpaceGestureAnimation",
                 level: "debug",
-                "phase=\(phase == 4 ? "ended" : "cancelled") direction=\(directionRight ? "right" : "left") progress=\(signedProgress) exitVelocity=\(signedVelocity) naturalScrolling=\(naturalScrolling) modernProtocol=\(usesModernDockSwipeProtocol) os=\(os.majorVersion).\(os.minorVersion)"
+                "phase=\(phase == 4 ? "ended" : "cancelled") direction=\(directionRight ? "right" : "left") progress=\(signedProgress) commitVelocity=\(signedVelocity) naturalScrolling=\(naturalScrolling) modernProtocol=\(usesModernDockSwipeProtocol) os=\(os.majorVersion).\(os.minorVersion)"
             )
         }
         

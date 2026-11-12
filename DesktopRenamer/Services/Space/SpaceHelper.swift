@@ -219,12 +219,14 @@ class SpaceHelper {
     }
 
     // Synthetic Space swipes use evenly spaced progress updates so each
-    // neighboring Space takes the same configured amount of time. End at the
-    // adjacent Space; values beyond one Space over-travel and can make Dock
-    // rebound while it settles on the destination.
-    static let linearGestureFrameInterval: TimeInterval = 0.008
+    // neighboring Space takes the same configured amount of time. Commit at
+    // the boundary with minimal extra progress to avoid a second Dock settle.
+    static let linearGestureFrameInterval: TimeInterval = 1.0 / 120.0
     static let linearGestureProgressPerSpace = 1.0
-    static let linearGestureSettleInterval: TimeInterval = 0.20
+    // Smallest nonzero progress used by the augmented 16.16 gesture payload.
+    static let dockSwipeMinimumProgress = 0.000016
+    static let linearGestureCommitVelocity = 500.0
+    static let linearGestureSettleInterval: TimeInterval = 0.05
     static let targetDurationKey = "GestureManager.SwitchDuration"
     static let defaultTargetDuration: TimeInterval = 0.30
 
