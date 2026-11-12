@@ -249,6 +249,7 @@ extension SpaceHelper {
                     targetDisplayID: displayID,
                     sourceSpaceID: sourceSpaceID,
                     targetSpaceID: spaceID,
+                    switchGeneration: generation,
                     forceInstant: forceInstant,
                     gestureLayout: gestureLayout
                 )

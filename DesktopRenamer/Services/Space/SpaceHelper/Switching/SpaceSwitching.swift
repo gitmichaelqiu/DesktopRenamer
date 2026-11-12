@@ -347,6 +347,7 @@ extension SpaceHelper {
                 targetDisplayID: displayID,
                 sourceSpaceID: context.liveCurrentSpaceID,
                 targetSpaceID: spaceID,
+                switchGeneration: generation,
                 forceInstant: forceInstant,
                 gestureLayout: gestureLayout
             )
