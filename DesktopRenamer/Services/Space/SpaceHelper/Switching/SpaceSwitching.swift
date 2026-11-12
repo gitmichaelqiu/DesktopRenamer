@@ -316,13 +316,15 @@ extension SpaceHelper {
         if usesSyntheticGesture, let steps = context.steps, steps != 0 {
             let involvesFullscreen =
                 context.targetIsFullscreen || context.currentSpaceIsFullscreen
+            let isInstantGesture =
+                forceInstant || !targetDuration.isFinite || targetDuration <= 0
             let retryDelay = syntheticGestureRetryDelay(
                 stepCount: steps,
-                forceInstant: forceInstant,
+                isInstantGesture: isInstantGesture,
                 involvesFullscreen: involvesFullscreen
             )
             let maxAttempts = involvesFullscreen ? 3 : 2
-            let timeoutDuration = forceInstant
+            let timeoutDuration = isInstantGesture
                 ? 2.5
                 : max(2.5, retryDelay * Double(maxAttempts) + 1.0)
             let gestureLayout = gestureDirectionLayout()
@@ -454,10 +456,10 @@ extension SpaceHelper {
     /// unchanged WindowServer space as a dropped gesture.
     private static func syntheticGestureRetryDelay(
         stepCount: Int,
-        forceInstant: Bool,
+        isInstantGesture: Bool,
         involvesFullscreen: Bool
     ) -> TimeInterval {
-        guard !forceInstant else { return 0.75 }
+        guard !isInstantGesture else { return 0.75 }
 
         // Give non-instant slides time to finish even for a one-space move.
         // WindowServer can continue reporting the source for several seconds,
