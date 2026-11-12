@@ -13,8 +13,11 @@ private enum SyntheticSpaceGestureStream {
         let targetSpaceID: String?
         let switchGeneration: UInt64?
         let targetDisplayID: String
+        let displayRefreshRate: Double
+        let displayPixelSize: String
         let gestureLayout: String
         let targetDuration: TimeInterval
+        let frameInterval: TimeInterval
         let totalSteps: Int
         let frameCount: Int
         let progressPerFrame: Double
@@ -55,6 +58,9 @@ private enum SyntheticSpaceGestureStream {
         directionRight: Bool,
         targetDuration: TimeInterval,
         targetDisplayID: String,
+        displayRefreshRate: Double,
+        displayPixelSize: String,
+        frameInterval: TimeInterval,
         gestureLayout: String,
         warpLocation: CGPoint?
     ) {
@@ -67,16 +73,13 @@ private enum SyntheticSpaceGestureStream {
                 CGWarpMouseCursorPosition(warpLocation)
             }
 
-            let durationPerStep = max(
-                SpaceHelper.linearGestureFrameInterval,
-                targetDuration
-            )
+            let durationPerStep = max(0.001, targetDuration)
             let frameCount = max(
                 1,
-                Int(ceil(durationPerStep / SpaceHelper.linearGestureFrameInterval))
+                Int(ceil(durationPerStep / frameInterval))
             )
             let progressPerFrame = SpaceHelper.linearGestureProgressPerSpace
-                * SpaceHelper.linearGestureFrameInterval / durationPerStep
+                * frameInterval / durationPerStep
             let commitVelocity = SpaceHelper.linearGestureCommitVelocity
             let id = UUID()
             let now = DispatchTime.now()
@@ -93,8 +96,11 @@ private enum SyntheticSpaceGestureStream {
                 targetSpaceID: targetSpaceID,
                 switchGeneration: switchGeneration,
                 targetDisplayID: targetDisplayID,
+                displayRefreshRate: displayRefreshRate,
+                displayPixelSize: displayPixelSize,
                 gestureLayout: gestureLayout,
                 targetDuration: durationPerStep,
+                frameInterval: frameInterval,
                 totalSteps: steps,
                 frameCount: frameCount,
                 progressPerFrame: progressPerFrame,
@@ -120,7 +126,7 @@ private enum SyntheticSpaceGestureStream {
             DiagnosticEventLog.shared.record(
                 subsystem: "SpaceGestureAnimation",
                 level: "info",
-                "phase=start id=\(id.uuidString) generation=\(switchGeneration.map(String.init) ?? "nil") source=\(sourceSpaceID ?? "nil") target=\(targetSpaceID ?? "nil") display=\(targetDisplayID) layout=\(gestureLayout) direction=\(directionRight ? "right" : "left") steps=\(steps) targetDurationPerSpace=\(durationPerStep) frameInterval=\(SpaceHelper.linearGestureFrameInterval) progressPerSpace=\(SpaceHelper.linearGestureProgressPerSpace) settleInterval=\(SpaceHelper.linearGestureSettleInterval) framesPerSwipe=\(frameCount) progressPerFrame=\(progressPerFrame) commitVelocity=\(commitVelocity) os=\(osVersion) eventPath=\(eventPath) directionConvention=\(usesModernDockSwipeProtocol ? "natural-scroll-sign" : "legacy")"
+                "phase=start id=\(id.uuidString) generation=\(switchGeneration.map(String.init) ?? "nil") source=\(sourceSpaceID ?? "nil") target=\(targetSpaceID ?? "nil") display=\(targetDisplayID) displayPixelSize=\(displayPixelSize) displayRefreshRate=\(displayRefreshRate) layout=\(gestureLayout) direction=\(directionRight ? "right" : "left") steps=\(steps) targetDurationPerSpace=\(durationPerStep) frameInterval=\(frameInterval) progressPerSpace=\(SpaceHelper.linearGestureProgressPerSpace) settleInterval=\(SpaceHelper.linearGestureSettleInterval) framesPerSwipe=\(frameCount) progressPerFrame=\(progressPerFrame) commitVelocity=\(commitVelocity) os=\(osVersion) eventPath=\(eventPath) directionConvention=\(usesModernDockSwipeProtocol ? "natural-scroll-sign" : "legacy")"
             )
 
             guard postGestureBegan(id: id) else {
@@ -153,9 +159,12 @@ private enum SyntheticSpaceGestureStream {
             targetSpaceID: \(gesture.targetSpaceID ?? "nil")
             switchGeneration: \(gesture.switchGeneration.map(String.init) ?? "nil")
             targetDisplayID: \(gesture.targetDisplayID)
+            displayPixelSize: \(gesture.displayPixelSize)
+            displayRefreshRate: \(gesture.displayRefreshRate)
             gestureLayout: \(gesture.gestureLayout)
             direction: \(gesture.directionRight ? "right" : "left")
             targetDurationPerSpace: \(gesture.targetDuration)
+            targetFrameInterval: \(gesture.frameInterval)
             framesPerSwipe: \(gesture.frameCount)
             progressPerFrame: \(gesture.progressPerFrame)
             commitVelocity: \(gesture.commitVelocity)
@@ -197,7 +206,7 @@ private enum SyntheticSpaceGestureStream {
     private static func scheduleFrame(id: UUID, frameIndex: Int) {
         guard let gesture = activeGesture, gesture.id == id else { return }
 
-        let interval = SpaceHelper.linearGestureFrameInterval
+        let interval = gesture.frameInterval
         let intervalNanoseconds = UInt64(interval * 1_000_000_000)
         let durationNanoseconds = UInt64(gesture.targetDuration * 1_000_000_000)
         let endTime = gesture.stepStartTime.uptimeNanoseconds + durationNanoseconds
@@ -244,7 +253,7 @@ private enum SyntheticSpaceGestureStream {
             DiagnosticEventLog.shared.recordDuringCollection(
                 subsystem: "SpaceGestureAnimation",
                 level: "debug",
-                "phase=changed id=\(id.uuidString) step=\(currentGesture.completedSteps + 1)/\(currentGesture.totalSteps) frame=\(frameIndex)/\(currentGesture.frameCount) progress=\(progress) delta=\(progressDelta) scheduledIntervalMs=\(milliseconds(SpaceHelper.linearGestureFrameInterval)) actualIntervalMs=\(milliseconds(actualInterval)) deadlineSlipMs=\(milliseconds(deadlineSlip))"
+                "phase=changed id=\(id.uuidString) step=\(currentGesture.completedSteps + 1)/\(currentGesture.totalSteps) frame=\(frameIndex)/\(currentGesture.frameCount) progress=\(progress) delta=\(progressDelta) scheduledIntervalMs=\(milliseconds(currentGesture.frameInterval)) actualIntervalMs=\(milliseconds(actualInterval)) deadlineSlipMs=\(milliseconds(deadlineSlip))"
             )
 
             if progress < SpaceHelper.linearGestureProgressPerSpace {
@@ -378,7 +387,7 @@ private enum SyntheticSpaceGestureStream {
 
         guard let gesture = activeGesture else { return }
         let finishedAt = DispatchTime.now()
-        let summary = "id=\(gesture.id.uuidString) generation=\(gesture.switchGeneration.map(String.init) ?? "nil") outcome=\(outcome) source=\(gesture.sourceSpaceID ?? "nil") target=\(gesture.targetSpaceID ?? "nil") display=\(gesture.targetDisplayID) layout=\(gesture.gestureLayout) direction=\(gesture.directionRight ? "right" : "left") steps=\(gesture.completedSteps)/\(gesture.totalSteps) targetDurationPerSpace=\(gesture.targetDuration) framesPerSwipe=\(gesture.frameCount) progressPerFrame=\(gesture.progressPerFrame) commitVelocity=\(gesture.commitVelocity) elapsedMs=\(milliseconds(seconds(from: gesture.startedAt, to: finishedAt))) changedFrameCount=\(gesture.changedFrameCount) frameIntervalMs=\(frameIntervalStatistics(gesture)) swipeDurationMs=\(durationStatistics(gesture.swipeDurations)) settleDurationMs=\(durationStatistics(gesture.settleDurations)) maximumDeadlineSlipMs=\(milliseconds(gesture.maxDeadlineSlip))"
+        let summary = "id=\(gesture.id.uuidString) generation=\(gesture.switchGeneration.map(String.init) ?? "nil") outcome=\(outcome) source=\(gesture.sourceSpaceID ?? "nil") target=\(gesture.targetSpaceID ?? "nil") display=\(gesture.targetDisplayID) displayPixelSize=\(gesture.displayPixelSize) displayRefreshRate=\(gesture.displayRefreshRate) layout=\(gesture.gestureLayout) direction=\(gesture.directionRight ? "right" : "left") steps=\(gesture.completedSteps)/\(gesture.totalSteps) targetDurationPerSpace=\(gesture.targetDuration) framesPerSwipe=\(gesture.frameCount) progressPerFrame=\(gesture.progressPerFrame) commitVelocity=\(gesture.commitVelocity) elapsedMs=\(milliseconds(seconds(from: gesture.startedAt, to: finishedAt))) changedFrameCount=\(gesture.changedFrameCount) frameIntervalMs=\(frameIntervalStatistics(gesture)) swipeDurationMs=\(durationStatistics(gesture.swipeDurations)) settleDurationMs=\(durationStatistics(gesture.settleDurations)) maximumDeadlineSlipMs=\(milliseconds(gesture.maxDeadlineSlip))"
         lastAnimationSummary = summary
         lastFinishedGestureID = gesture.id.uuidString
         lastFinishedSwitchGeneration = gesture.switchGeneration
@@ -682,6 +691,9 @@ extension SpaceHelper {
         let target = targetDuration
         let isInstant = forceInstant || !target.isFinite || target <= 0
         let velocity = 2000.0 * Double(absSteps)
+        let usesLinearAnimation = UserDefaults.standard.object(
+            forKey: SpaceHelper.linearSwitchAnimationEnabledKey
+        ) as? Bool ?? true
 
         // Resolve target display via NSScreen.
         var targetScreen: NSScreen?
@@ -708,7 +720,23 @@ extension SpaceHelper {
             }
         }
 
-        if isInstant {
+        let displayRefreshRate = SpaceHelper.linearGestureRefreshRate(for: targetScreen)
+        let frameInterval = SpaceHelper.linearGestureFrameInterval(for: targetScreen)
+        let displayPixelSize: String
+        if let screenID = targetScreen?.deviceDescription[
+            NSDeviceDescriptionKey("NSScreenNumber")
+        ] as? CGDirectDisplayID,
+           let displayMode = CGDisplayCopyDisplayMode(screenID) {
+            displayPixelSize = "\(displayMode.pixelWidth)x\(displayMode.pixelHeight)"
+        } else if let targetScreen {
+            let width = Int(targetScreen.frame.width * targetScreen.backingScaleFactor)
+            let height = Int(targetScreen.frame.height * targetScreen.backingScaleFactor)
+            displayPixelSize = "\(width)x\(height)"
+        } else {
+            displayPixelSize = "unknown"
+        }
+
+        if isInstant || !usesLinearAnimation {
             let gestureID = UUID().uuidString
             SyntheticSpaceGestureStream.recordInstantGesture(
                 id: gestureID,
@@ -717,7 +745,7 @@ extension SpaceHelper {
             DiagnosticEventLog.shared.record(
                 subsystem: "SpaceGestureAnimation",
                 level: "info",
-                "phase=instant id=\(gestureID) generation=\(switchGeneration.map(String.init) ?? "nil") source=\(sourceSpaceID ?? "nil") target=\(targetSpaceID ?? "nil") display=\(targetDisplayID) steps=\(absSteps) direction=\(directionRight ? "right" : "left") forceInstant=\(forceInstant) configuredDuration=\(target)"
+                "phase=\(isInstant ? "instant" : "system-default") id=\(gestureID) generation=\(switchGeneration.map(String.init) ?? "nil") source=\(sourceSpaceID ?? "nil") target=\(targetSpaceID ?? "nil") display=\(targetDisplayID) displayPixelSize=\(displayPixelSize) displayRefreshRate=\(displayRefreshRate) steps=\(absSteps) direction=\(directionRight ? "right" : "left") forceInstant=\(forceInstant) linearAnimationEnabled=\(usesLinearAnimation) configuredDuration=\(target)"
             )
             let originalLocation = CGEvent(source: nil)?.location ?? .zero
             if let warpLocation {
@@ -738,7 +766,7 @@ extension SpaceHelper {
         DiagnosticEventLog.shared.record(
             subsystem: "SpaceHelper",
             level: "info",
-            "linear gesture durationPerSpace=\(duration), frameInterval=\(linearGestureFrameInterval), progressPerSpace=\(linearGestureProgressPerSpace)"
+            "linear gesture durationPerSpace=\(duration), displayPixelSize=\(displayPixelSize), displayRefreshRate=\(displayRefreshRate), frameInterval=\(frameInterval), progressPerSpace=\(linearGestureProgressPerSpace)"
         )
         SyntheticSpaceGestureStream.start(
             steps: absSteps,
@@ -748,6 +776,9 @@ extension SpaceHelper {
             directionRight: directionRight,
             targetDuration: duration,
             targetDisplayID: targetDisplayID,
+            displayRefreshRate: displayRefreshRate,
+            displayPixelSize: displayPixelSize,
+            frameInterval: frameInterval,
             gestureLayout: gestureLayout,
             warpLocation: warpLocation
         )

@@ -218,17 +218,39 @@ class SpaceHelper {
         """
     }
 
-    // Synthetic Space swipes use evenly spaced progress updates so each
-    // neighboring Space takes the same configured amount of time. Commit at
-    // the boundary with minimal extra progress to avoid a second Dock settle.
-    static let linearGestureFrameInterval: TimeInterval = 1.0 / 240.0
+    // Progress is sampled at the destination display's supported refresh rate;
+    // elapsed-time progress keeps each Space transition at the configured duration.
+    // Commit at the boundary with minimal extra progress to avoid a second Dock settle.
+    static let linearGestureFallbackRefreshRate: Double = 60.0
     static let linearGestureProgressPerSpace = 1.0
     // Smallest nonzero progress used by the augmented 16.16 gesture payload.
     static let dockSwipeMinimumProgress = 0.000016
     static let linearGestureCommitVelocity = 500.0
     static let linearGestureSettleInterval: TimeInterval = 0.05
     static let targetDurationKey = "GestureManager.SwitchDuration"
+    static let linearSwitchAnimationEnabledKey = "GestureManager.LinearSwitchAnimationEnabled"
     static let defaultTargetDuration: TimeInterval = 0.30
+
+    static func linearGestureRefreshRate(for screen: NSScreen?) -> Double {
+        if let displayID = screen?.deviceDescription[
+            NSDeviceDescriptionKey("NSScreenNumber")
+        ] as? CGDirectDisplayID,
+           let refreshRate = CGDisplayCopyDisplayMode(displayID)?.refreshRate,
+           refreshRate.isFinite,
+           refreshRate > 0 {
+            return refreshRate
+        }
+
+        guard let maximumFramesPerSecond = screen?.maximumFramesPerSecond,
+              maximumFramesPerSecond > 0 else {
+            return linearGestureFallbackRefreshRate
+        }
+        return Double(maximumFramesPerSecond)
+    }
+
+    static func linearGestureFrameInterval(for screen: NSScreen?) -> TimeInterval {
+        1.0 / linearGestureRefreshRate(for: screen)
+    }
 
     /// The user's target switch duration — 0 means instant mode.
     static var targetDuration: TimeInterval {

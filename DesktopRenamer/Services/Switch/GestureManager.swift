@@ -63,6 +63,7 @@ class GestureManager: ObservableObject {
     let kSwipeThreshold = "GestureManager.SwipeThreshold"
     let kMoveWindowOnOption = "GestureManager.MoveWindowOnOption"
     let kSwitchDuration = "GestureManager.SwitchDuration"
+    let kLinearSwitchAnimationEnabled = "GestureManager.LinearSwitchAnimationEnabled"
 
     public enum SwitchOverrideMode: String, CaseIterable, Identifiable, Equatable {
         case cursor = "Cursor"
@@ -108,6 +109,15 @@ class GestureManager: ObservableObject {
     @Published var switchDuration: TimeInterval {
         didSet {
             UserDefaults.standard.set(switchDuration, forKey: kSwitchDuration)
+        }
+    }
+
+    @Published var linearSwitchAnimationEnabled: Bool {
+        didSet {
+            UserDefaults.standard.set(
+                linearSwitchAnimationEnabled,
+                forKey: kLinearSwitchAnimationEnabled
+            )
         }
     }
 
@@ -203,6 +213,10 @@ class GestureManager: ObservableObject {
         self.switchDuration =
             UserDefaults.standard.object(forKey: kSwitchDuration) == nil
             ? 0.30 : UserDefaults.standard.double(forKey: kSwitchDuration)
+
+        self.linearSwitchAnimationEnabled =
+            UserDefaults.standard.object(forKey: kLinearSwitchAnimationEnabled) == nil
+            ? true : UserDefaults.standard.bool(forKey: kLinearSwitchAnimationEnabled)
 
         GestureManager.sharedManager = self
 

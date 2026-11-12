@@ -465,7 +465,7 @@ extension SpaceHelper {
         let expectedDurationPerSpace =
             max(targetDuration, defaultTargetDuration)
             + linearGestureSettleInterval
-            + linearGestureFrameInterval
+            + linearGestureFrameInterval(for: nil)
         let fullscreenAllowance: TimeInterval = involvesFullscreen ? 0.5 : 0
         return max(
             3.0,

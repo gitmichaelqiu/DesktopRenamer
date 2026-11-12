@@ -245,6 +245,7 @@ struct DiagnosticReportBuilder {
         s += "swipeThreshold: \(gm.swipeThreshold)\n"
         s += "moveWindowOnOption: \(gm.moveWindowOnOption)\n"
         s += "switchDuration: \(gm.switchDuration)\n"
+        s += "linearSwitchAnimationEnabled: \(gm.linearSwitchAnimationEnabled)\n"
         return s
     }
 
@@ -294,7 +295,8 @@ struct DiagnosticReportBuilder {
         var s = "─── Gesture Animation ───\n"
         s += "targetDuration: \(SpaceHelper.targetDuration)\n"
         s += "progressPerSpace: \(SpaceHelper.linearGestureProgressPerSpace)\n"
-        s += "frameInterval: \(SpaceHelper.linearGestureFrameInterval)\n"
+        s += "mainDisplayRefreshRate: \(SpaceHelper.linearGestureRefreshRate(for: NSScreen.main))\n"
+        s += "mainDisplayFrameInterval: \(SpaceHelper.linearGestureFrameInterval(for: NSScreen.main))\n"
         s += "settleInterval: \(SpaceHelper.linearGestureSettleInterval)\n"
         s += "animationState:\n\(SpaceHelper.syntheticGestureAnimationInfo)\n"
         return s
@@ -495,6 +497,7 @@ struct DiagnosticReportBuilder {
             "GestureManager.SwipeThreshold",
             "GestureManager.MoveWindowOnOption",
             "GestureManager.SwitchDuration",
+            "GestureManager.LinearSwitchAnimationEnabled",
             "kShowPreviewLabels", "kShowActiveLabels", "kShowOnDesktop", "kHideWhenSwitching",
             "kActiveFontScale", "kPreviewFontScale", "kActivePaddingScale", "kPreviewPaddingScale",
             "kGlobalIsDocked", "kGlobalDockEdge", "kGlobalCenterX", "kGlobalCenterY",
