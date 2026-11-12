@@ -75,6 +75,18 @@ struct SwitchSettingsView: View {
                         }
                         
                         Divider()
+                        
+                        SettingsRow(
+                            "Use linear animation",
+                            helperText:
+                                "Use evenly paced progress updates instead of the default macOS animation curve."
+                        ) {
+                            Toggle("", isOn: $gestureManager.linearSwitchAnimationEnabled)
+                                .toggleStyle(.switch)
+                                .labelsHidden()
+                        }
+
+                        Divider()
 
                         SliderSettingsRow(
                             "Switch duration",
@@ -85,18 +97,6 @@ struct SwitchSettingsView: View {
                             step: 0.05,
                             valueString: { String(format: "%.2fs", $0) }
                         )
-
-                        Divider()
-
-                        SettingsRow(
-                            "Use linear animation",
-                            helperText:
-                                "Use evenly paced progress updates instead of the default macOS animation curve."
-                        ) {
-                            Toggle("", isOn: $gestureManager.linearSwitchAnimationEnabled)
-                                .toggleStyle(.switch)
-                                .labelsHidden()
-                        }
 
                         Divider()
                         
