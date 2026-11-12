@@ -222,6 +222,7 @@ class SpaceHelper {
     // neighboring Space takes the same configured amount of time.
     static let linearGestureFrameInterval: TimeInterval = 0.008
     static let linearGestureProgressPerSpace = 1.5
+    static let linearGestureSettleInterval: TimeInterval = 0.20
     static let targetDurationKey = "GestureManager.SwitchDuration"
     static let defaultTargetDuration: TimeInterval = 0.30
 

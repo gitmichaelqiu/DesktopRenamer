@@ -459,7 +459,10 @@ extension SpaceHelper {
         // Give non-instant slides time to finish even for a one-space move.
         // WindowServer can continue reporting the source for several seconds,
         // so the configured gesture duration alone is not a safe retry signal.
-        let expectedDurationPerSpace = max(targetDuration, defaultTargetDuration) + 0.20
+        let expectedDurationPerSpace =
+            max(targetDuration, defaultTargetDuration)
+            + linearGestureSettleInterval
+            + linearGestureFrameInterval
         let fullscreenAllowance: TimeInterval = involvesFullscreen ? 0.5 : 0
         return max(
             3.0,

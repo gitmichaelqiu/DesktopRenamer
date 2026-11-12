@@ -295,6 +295,7 @@ struct DiagnosticReportBuilder {
         s += "targetDuration: \(SpaceHelper.targetDuration)\n"
         s += "progressPerSpace: \(SpaceHelper.linearGestureProgressPerSpace)\n"
         s += "frameInterval: \(SpaceHelper.linearGestureFrameInterval)\n"
+        s += "settleInterval: \(SpaceHelper.linearGestureSettleInterval)\n"
         return s
     }
 

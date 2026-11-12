@@ -7,12 +7,15 @@ private enum SyntheticSpaceGestureStream {
     private struct Gesture {
         let id: UUID
         let directionRight: Bool
+        let totalSteps: Int
         let frameCount: Int
         let progressPerFrame: Double
         let exitVelocity: Double
-        let startTime: DispatchTime
+        var stepStartTime: DispatchTime
         let originalMouseLocation: CGPoint?
         let shouldRestoreMouse: Bool
+        var completedSteps: Int
+        var swipeInProgress: Bool
         var progress: Double
     }
 
@@ -38,39 +41,34 @@ private enum SyntheticSpaceGestureStream {
                 CGWarpMouseCursorPosition(warpLocation)
             }
 
-            let duration = max(
+            let durationPerStep = max(
                 SpaceHelper.linearGestureFrameInterval,
-                targetDuration * Double(steps)
+                targetDuration
             )
             let frameCount = max(
-                1,
-                Int(ceil(duration / SpaceHelper.linearGestureFrameInterval))
+                2,
+                Int(ceil(durationPerStep / SpaceHelper.linearGestureFrameInterval)) + 1
             )
-            let progressPerFrame =
-                SpaceHelper.linearGestureProgressPerSpace * Double(steps)
-                / Double(frameCount)
+            let progressPerFrame = SpaceHelper.linearGestureProgressPerSpace / Double(frameCount)
             let exitVelocity = progressPerFrame * 100
             let id = UUID()
-            let startTime = DispatchTime.now()
 
             activeGesture = Gesture(
                 id: id,
                 directionRight: directionRight,
+                totalSteps: steps,
                 frameCount: frameCount,
                 progressPerFrame: progressPerFrame,
                 exitVelocity: exitVelocity,
-                startTime: startTime,
+                stepStartTime: DispatchTime.now(),
                 originalMouseLocation: originalMouseLocation,
                 shouldRestoreMouse: shouldRestoreMouse,
+                completedSteps: 0,
+                swipeInProgress: true,
                 progress: progressPerFrame
             )
 
-            guard SpaceHelper.postDockSwipe(
-                phase: 1,
-                directionRight: directionRight,
-                progress: progressPerFrame,
-                velocity: 0
-            ) else {
+            guard postGestureBegan(id: id) else {
                 finishActiveGesture()
                 return
             }
@@ -90,35 +88,79 @@ private enum SyntheticSpaceGestureStream {
 
         let interval = SpaceHelper.linearGestureFrameInterval
         let offset = UInt64(Double(frameIndex) * interval * 1_000_000_000)
-        let deadline = DispatchTime(uptimeNanoseconds: gesture.startTime.uptimeNanoseconds + offset)
+        let deadline = DispatchTime(
+            uptimeNanoseconds: gesture.stepStartTime.uptimeNanoseconds + offset
+        )
         let workItem = DispatchWorkItem {
             guard var currentGesture = activeGesture, currentGesture.id == id else { return }
 
-            if frameIndex < currentGesture.frameCount {
-                let progress = currentGesture.progressPerFrame * Double(frameIndex + 1)
-                guard SpaceHelper.postDockSwipe(
-                    phase: 2,
-                    directionRight: currentGesture.directionRight,
-                    progress: progress,
-                    velocity: 0
-                ) else {
-                    cancelActiveGesture()
-                    return
-                }
+            let progress = currentGesture.progressPerFrame * Double(frameIndex + 1)
+            guard SpaceHelper.postDockSwipe(
+                phase: 2,
+                directionRight: currentGesture.directionRight,
+                progress: progress,
+                velocity: 0
+            ) else {
+                cancelActiveGesture()
+                return
+            }
+            currentGesture.progress = progress
 
-                currentGesture.progress = progress
+            if frameIndex < currentGesture.frameCount - 1 {
                 activeGesture = currentGesture
                 scheduleFrame(id: id, frameIndex: frameIndex + 1)
                 return
             }
 
-            _ = SpaceHelper.postDockSwipe(
+            activeGesture = currentGesture
+            guard SpaceHelper.postDockSwipe(
                 phase: 4,
                 directionRight: currentGesture.directionRight,
                 progress: currentGesture.progress,
                 velocity: currentGesture.exitVelocity
-            )
-            finishActiveGesture()
+            ) else {
+                cancelActiveGesture()
+                return
+            }
+            currentGesture.completedSteps += 1
+            currentGesture.swipeInProgress = false
+            activeGesture = currentGesture
+            scheduleAfterSettle(id: id)
+        }
+        nextFrameWorkItem = workItem
+        queue.asyncAfter(deadline: deadline, execute: workItem)
+    }
+
+    private static func postGestureBegan(id: UUID) -> Bool {
+        guard var gesture = activeGesture, gesture.id == id else { return false }
+        guard SpaceHelper.postDockSwipe(
+            phase: 1,
+            directionRight: gesture.directionRight,
+            progress: gesture.progressPerFrame,
+            velocity: 0
+        ) else {
+            return false
+        }
+        gesture.swipeInProgress = true
+        gesture.progress = gesture.progressPerFrame
+        gesture.stepStartTime = DispatchTime.now()
+        activeGesture = gesture
+        return true
+    }
+
+    private static func scheduleAfterSettle(id: UUID) {
+        let deadline = DispatchTime.now() + SpaceHelper.linearGestureSettleInterval
+        let workItem = DispatchWorkItem {
+            guard let gesture = activeGesture, gesture.id == id else { return }
+            guard gesture.completedSteps < gesture.totalSteps else {
+                finishActiveGesture()
+                return
+            }
+            guard postGestureBegan(id: id) else {
+                cancelActiveGesture()
+                return
+            }
+            scheduleFrame(id: id, frameIndex: 1)
         }
         nextFrameWorkItem = workItem
         queue.asyncAfter(deadline: deadline, execute: workItem)
@@ -129,12 +171,14 @@ private enum SyntheticSpaceGestureStream {
         nextFrameWorkItem = nil
 
         guard let gesture = activeGesture else { return }
-        _ = SpaceHelper.postDockSwipe(
-            phase: 8,
-            directionRight: gesture.directionRight,
-            progress: gesture.progress,
-            velocity: gesture.exitVelocity
-        )
+        if gesture.swipeInProgress {
+            _ = SpaceHelper.postDockSwipe(
+                phase: 8,
+                directionRight: gesture.directionRight,
+                progress: gesture.progress,
+                velocity: gesture.exitVelocity
+            )
+        }
         finishActiveGesture()
     }
 
