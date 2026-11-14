@@ -63,6 +63,7 @@ class GestureManager: ObservableObject {
     let kSwipeThreshold = "GestureManager.SwipeThreshold"
     let kMoveWindowOnOption = "GestureManager.MoveWindowOnOption"
     let kSwitchDuration = "GestureManager.SwitchDuration"
+    let kLinearSwitchAnimationEnabled = "GestureManager.LinearSwitchAnimationEnabled"
 
     public enum SwitchOverrideMode: String, CaseIterable, Identifiable, Equatable {
         case cursor = "Cursor"
@@ -111,6 +112,15 @@ class GestureManager: ObservableObject {
         }
     }
 
+    @Published var linearSwitchAnimationEnabled: Bool {
+        didSet {
+            UserDefaults.standard.set(
+                linearSwitchAnimationEnabled,
+                forKey: kLinearSwitchAnimationEnabled
+            )
+        }
+    }
+
     weak var spaceManager: SpaceManager?
     var devices: [MTDeviceRef] = []
 
@@ -134,9 +144,8 @@ class GestureManager: ObservableObject {
 
     // The multitouch callback can outpace the main queue while WindowServer
     // is reconciling a space. Keep the callback lightweight and allow only
-    // one main-queue action at a time. Preserve every recognized contact
-    // session in order and resume the queue after each SpaceHelper transaction
-    // settles; coalescing here would silently discard real user swipes.
+    // one main-queue action at a time. Preserve queued swipe order, then resolve
+    // the sequence against the live space in one request.
     let gestureSwitchStateLock = NSLock()
     var isGestureSwitchActionScheduled = false
     var isGestureSwitchOperationInFlight = false
@@ -204,6 +213,10 @@ class GestureManager: ObservableObject {
         self.switchDuration =
             UserDefaults.standard.object(forKey: kSwitchDuration) == nil
             ? 0.30 : UserDefaults.standard.double(forKey: kSwitchDuration)
+
+        self.linearSwitchAnimationEnabled =
+            UserDefaults.standard.object(forKey: kLinearSwitchAnimationEnabled) == nil
+            ? false : UserDefaults.standard.bool(forKey: kLinearSwitchAnimationEnabled)
 
         GestureManager.sharedManager = self
 

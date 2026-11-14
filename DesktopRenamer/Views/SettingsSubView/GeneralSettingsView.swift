@@ -123,14 +123,6 @@ struct GeneralSettingsView: View {
                         }
                     }
 
-                    Divider()
-
-                    SettingsRow("Factory Reset") {
-                        Button("Reset") {
-                            performFactoryReset()
-                        }
-                        .foregroundStyle(.red)
-                    }
                 }
 
                 SettingsSection(nil) {
@@ -157,6 +149,15 @@ struct GeneralSettingsView: View {
                         Button("Settings.General.Import.Button") {
                             importSettings()
                         }
+                    }
+                }
+
+                SettingsSection(nil) {
+                    SettingsRow("Factory Reset") {
+                        Button("Reset") {
+                            performFactoryReset()
+                        }
+                        .foregroundStyle(.red)
                     }
                 }
                 Spacer()
@@ -476,6 +477,12 @@ struct GeneralSettingsView: View {
                             .font(.body)
                             .foregroundColor(.secondary)
                         .padding(.leading, 8)
+#if DEBUG
+                        Text("Debug builds also measure screen motion. Captured frames are discarded; the report contains motion measurements and capture status.")
+                            .font(.footnote)
+                            .foregroundColor(.secondary)
+                            .multilineTextAlignment(.center)
+#endif
                     }
                     .padding(.vertical, 10)
 

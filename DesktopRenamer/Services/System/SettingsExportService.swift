@@ -126,6 +126,7 @@ struct ExportedSettings: Codable {
         let gestureSwipeThreshold: Float
         let moveWindowOnOption: Bool
         let gestureSwitchDuration: TimeInterval
+        let linearSwitchAnimationEnabled: Bool?
 
         @MainActor
         init(spaceManager: SpaceManager, gestureManager: GestureManager) {
@@ -141,6 +142,7 @@ struct ExportedSettings: Codable {
             gestureSwipeThreshold = gestureManager.swipeThreshold
             moveWindowOnOption = gestureManager.moveWindowOnOption
             gestureSwitchDuration = gestureManager.switchDuration
+            linearSwitchAnimationEnabled = gestureManager.linearSwitchAnimationEnabled
         }
     }
 
@@ -368,6 +370,8 @@ enum SettingsImportService {
         gestureManager.swipeThreshold = settings.switching.gestureSwipeThreshold
         gestureManager.moveWindowOnOption = settings.switching.moveWindowOnOption
         gestureManager.switchDuration = settings.switching.gestureSwitchDuration
+        gestureManager.linearSwitchAnimationEnabled =
+            settings.switching.linearSwitchAnimationEnabled ?? false
 
         hotkeyManager.updateShortcuts {
             hotkeyManager.mainShortcut = settings.hotkeys.main

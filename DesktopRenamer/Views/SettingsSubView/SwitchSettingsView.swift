@@ -14,14 +14,6 @@ struct SwitchSettingsView: View {
     var body: some View {
         SettingsContainer(.sswitch) {
             VStack(alignment: .leading, spacing: 20) {
-                SettingsSection("Space Lock") {
-                    SettingsRow("Automatically restore windows when unlocking") {
-                        Toggle("", isOn: $spaceManager.autoRestoreWindowsOnUnlock)
-                            .toggleStyle(.switch)
-                            .labelsHidden()
-                    }
-                }
-
                 // Gesture-based switching configuration.
                 SettingsSection("Trackpad Switch Gesture Override") {
                     SettingsRow(
@@ -59,35 +51,9 @@ struct SwitchSettingsView: View {
                             }
                             .labelsHidden()
                         }
-                        
-                        Divider()
-                        
-                        SettingsRow(
-                            "Move window when holding Option",
-                            requirements: [
-                                .accessibility(isGranted: permissionManager.hasEventInjectionPermission),
-                                .screenRecording(isGranted: permissionManager.isScreenCaptureGranted)
-                            ]
-                        ) {
-                            Toggle("", isOn: $gestureManager.moveWindowOnOption)
-                                .toggleStyle(.switch)
-                                .labelsHidden()
-                        }
-                        
-                        Divider()
-
-                        SliderSettingsRow(
-                            "Switch duration",
-                            helperText: "Set to 0 to switch instantly without the macOS animation.",
-                            value: $gestureManager.switchDuration,
-                            range: 0...1.0,
-                            defaultValue: 0.30,
-                            step: 0.05,
-                            valueString: {String(format: "%.2fs", $0) }
-                        )
 
                         Divider()
-                        
+
                         SliderSettingsRow(
                             "Switch override threshold",
                             helperText: "Sets how far you need to move your fingers before switching.",
@@ -99,9 +65,50 @@ struct SwitchSettingsView: View {
                         )
                     }
                 }
-                
+
+                if gestureManager.isEnabled {
+                    SettingsSection(nil) {
+                        SliderSettingsRow(
+                            "Switch duration",
+                            helperText: "Set to 0 to switch instantly without the macOS animation.",
+                            value: $gestureManager.switchDuration,
+                            range: 0...1.0,
+                            defaultValue: 0.30,
+                            step: 0.05,
+                            valueString: { String(format: "%.2fs", $0) }
+                        )
+
+                        Divider()
+
+                        SettingsRow(
+                            "Use linear animation",
+                            helperText:
+                                "Use evenly paced progress updates instead of the default macOS animation curve."
+                        ) {
+                            Toggle("", isOn: $gestureManager.linearSwitchAnimationEnabled)
+                                .toggleStyle(.switch)
+                                .labelsHidden()
+                        }
+                    }
+                }
 
                 SettingsSection("Window Movement") {
+                    if gestureManager.isEnabled {
+                        SettingsRow(
+                            "Move window when holding Option",
+                            requirements: [
+                                .accessibility(isGranted: permissionManager.hasEventInjectionPermission),
+                                .screenRecording(isGranted: permissionManager.isScreenCaptureGranted)
+                            ]
+                        ) {
+                            Toggle("", isOn: $gestureManager.moveWindowOnOption)
+                                .toggleStyle(.switch)
+                                .labelsHidden()
+                        }
+
+                        Divider()
+                    }
+
                     SliderSettingsRow(
                         "Grab offset X",
                         helperText: "Adjust where the pointer grabs a window when moving it between spaces.",
@@ -169,8 +176,15 @@ struct SwitchSettingsView: View {
                     }
                 }
                 .animation(.easeInOut(duration: 0.2), value: spaceManager.appGrabExceptions)
-                
-}
+
+                SettingsSection("Space Lock") {
+                    SettingsRow("Automatically restore windows when unlocking") {
+                        Toggle("", isOn: $spaceManager.autoRestoreWindowsOnUnlock)
+                            .toggleStyle(.switch)
+                            .labelsHidden()
+                    }
+                }
+            }
             .frame(maxWidth: .infinity, alignment: .topLeading)
             .animation(.easeInOut(duration: 0.2), value: gestureManager.isEnabled)
             .environment(\.settingsTab, .sswitch)

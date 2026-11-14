@@ -87,10 +87,13 @@ extension SpaceHelper {
     }
 
     static func detectSpaceChange() {
-        DiagnosticEventLog.shared.record(subsystem: "SpaceHelper", level: "info", "detectSpaceChange")
-        // Record switch completion time for self-calibrating velocity.
+        let gestureID = syntheticGestureAnimationID ?? "none"
+        DiagnosticEventLog.shared.record(
+            subsystem: "SpaceHelper",
+            level: "info",
+            "detectSpaceChange gestureID=\(gestureID)"
+        )
         endGestureTiming()
-
         spaceDetectionGeneration += 1
         let generation = spaceDetectionGeneration
         let traceID = debugTraceID()

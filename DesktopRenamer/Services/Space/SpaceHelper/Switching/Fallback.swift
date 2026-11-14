@@ -133,6 +133,25 @@ extension SpaceHelper {
                 return
             }
 
+            if programmaticSwitchNotificationObserved {
+                // The native notification confirms the transition reached its
+                // destination. WindowServer's current-space read can lag that
+                // event, so keep probing instead of emitting another gesture.
+                scheduleSyntheticGestureSnapshotProbe(
+                    spaceID: spaceID,
+                    displayID: displayID,
+                    sourceSpaceID: sourceSpaceID,
+                    generation: generation,
+                    forceInstant: forceInstant,
+                    gestureLayout: gestureLayout,
+                    attempt: attempt,
+                    retryInterval: retryInterval,
+                    maxAttempts: maxAttempts,
+                    snapshotProbeAttempt: snapshotProbeAttempt
+                )
+                return
+            }
+
             guard let state = getSystemState() else {
                 scheduleSyntheticGestureSnapshotProbe(
                     spaceID: spaceID,
@@ -196,7 +215,8 @@ extension SpaceHelper {
                 movedInOppositeDirection = false
             }
             let isStillAtSource = directionFromSource.map { $0 == 0 } ?? true
-            let directionAnomaly = movedInOppositeDirection || isStillAtSource
+            let shouldRecoverStillSource = isStillAtSource && (forceInstant || attempt == 1)
+            let directionAnomaly = movedInOppositeDirection || shouldRecoverStillSource
             if directionAnomaly {
                 flipGestureDirection(for: displayID, layout: gestureLayout)
             }
@@ -227,8 +247,19 @@ extension SpaceHelper {
                 performSpaceSwitchGesture(
                     steps: steps,
                     targetDisplayID: displayID,
+                    sourceSpaceID: sourceSpaceID,
+                    targetSpaceID: spaceID,
+                    switchGeneration: generation,
                     forceInstant: forceInstant,
                     gestureLayout: gestureLayout
+                )
+            } else if isStillAtSource {
+                DiagnosticEventLog.shared.record(
+                    subsystem: "SpaceHelper",
+                    level: "info",
+                    "Synthetic gesture is still at its source for "
+                        + spaceID
+                        + "; keeping the recovered direction and waiting for confirmation"
                 )
             } else {
                 DiagnosticEventLog.shared.record(
@@ -275,7 +306,7 @@ extension SpaceHelper {
         maxAttempts: Int,
         snapshotProbeAttempt: Int
     ) {
-        let snapshotProbeLimit = 4
+        let snapshotProbeLimit = programmaticSwitchNotificationObserved ? 20 : 4
         guard snapshotProbeAttempt < snapshotProbeLimit else {
             print(
                 "SpaceHelper: Synthetic gesture watchdog could not obtain a stable snapshot for "
