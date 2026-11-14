@@ -24,7 +24,7 @@ struct DiagnosticReportBuilder {
         sections.append(makeGestureOverride())
         sections.append(makeHotkeys())
         sections.append(makeDragState())
-        sections.append(makeCalibration())
+        sections.append(makeGestureAnimation())
         sections.append(makeSpaceManagerInternals())
         sections.append(makeLauncherState())
         sections.append(makeSpaceAPIState())
@@ -245,6 +245,7 @@ struct DiagnosticReportBuilder {
         s += "swipeThreshold: \(gm.swipeThreshold)\n"
         s += "moveWindowOnOption: \(gm.moveWindowOnOption)\n"
         s += "switchDuration: \(gm.switchDuration)\n"
+        s += "linearSwitchAnimationEnabled: \(gm.linearSwitchAnimationEnabled)\n"
         return s
     }
 
@@ -290,13 +291,16 @@ struct DiagnosticReportBuilder {
         return s
     }
 
-    private static func makeCalibration() -> String {
-        var s = "─── Calibration ───\n"
+    private static func makeGestureAnimation() -> String {
+        var s = "─── Gesture Animation ───\n"
         s += "targetDuration: \(SpaceHelper.targetDuration)\n"
-        s += "Display Calibrations:\n"
-        s += SpaceHelper.displayCalibrationsInfo
-        s += "Phase Sample Counts:\n"
-        s += SpaceHelper.phaseSampleCountsInfo
+        s += "progressPerSpace: \(SpaceHelper.linearGestureProgressPerSpace)\n"
+        s += "mainDisplayRefreshRate: \(SpaceHelper.linearGestureRefreshRate(for: NSScreen.main))\n"
+        s += "mainDisplayFrameInterval: \(SpaceHelper.linearGestureFrameInterval(for: NSScreen.main))\n"
+        s += "settleInterval: \(SpaceHelper.linearGestureSettleInterval)\n"
+        s += "nativeCurveDisplayCalibrations:\n\(SpaceHelper.displayCalibrationsInfo)"
+        s += "nativeCurveCalibrationSamples:\n\(SpaceHelper.phaseSampleCountsInfo)"
+        s += "animationState:\n\(SpaceHelper.syntheticGestureAnimationInfo)\n"
         return s
     }
 
@@ -495,6 +499,7 @@ struct DiagnosticReportBuilder {
             "GestureManager.SwipeThreshold",
             "GestureManager.MoveWindowOnOption",
             "GestureManager.SwitchDuration",
+            "GestureManager.LinearSwitchAnimationEnabled",
             "GestureManager.CachedCalibrations",
             "kShowPreviewLabels", "kShowActiveLabels", "kShowOnDesktop", "kHideWhenSwitching",
             "kActiveFontScale", "kPreviewFontScale", "kActivePaddingScale", "kPreviewPaddingScale",

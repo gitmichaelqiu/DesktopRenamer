@@ -119,18 +119,19 @@ extension SpaceHelper {
         return disposition
     }
 
-    /// Resolves one adjacent space from a single managed-space snapshot. The
-    /// gesture override uses this path so it does not first ask SpaceManager
-    /// for the current space and then ask WindowServer for the same state again
-    /// before emitting the synthetic gesture.
+    /// Resolves an ordered relative-step sequence from one managed-space
+    /// snapshot, applying each step's boundary behavior before switching once.
+    /// The gesture override uses this path so it does not first ask
+    /// SpaceManager for the current space and then ask WindowServer for the
+    /// same state again before emitting the synthetic gesture.
     @discardableResult
-    static func switchToAdjacentSpace(
-        direction: Int,
+    static func switchByRelativeSteps(
+        stepSequence: [Int],
         onDisplayID requestedDisplayID: String? = nil,
         forceInstant: Bool = false,
         isManual: Bool = false
     ) -> SpaceSwitchRequestDisposition {
-        guard direction != 0,
+        guard !stepSequence.isEmpty,
               let state = getSystemState(includeFullscreenAppMetadata: false) else {
             return .unavailable
         }
@@ -154,18 +155,21 @@ extension SpaceHelper {
             DiagnosticEventLog.shared.record(
                 subsystem: "SpaceHelper",
                 level: "warning",
-                "adjacent switch unavailable: display="
+                "relative switch unavailable: display="
                     + displayID
                     + ", current="
                     + (liveCurrentSpaceID ?? "nil")
-                    + ", direction="
-                    + String(direction)
+                    + ", sequenceCount="
+                    + String(stepSequence.count)
             )
             return .unavailable
         }
 
-        let targetIndex = currentIndex + direction
-        guard displaySpaces.indices.contains(targetIndex) else {
+        var targetIndex = currentIndex
+        for step in stepSequence {
+            targetIndex = min(max(targetIndex + step, 0), displaySpaces.count - 1)
+        }
+        guard targetIndex != currentIndex else {
             return .unavailable
         }
         let targetSpace = displaySpaces[targetIndex]
@@ -310,12 +314,25 @@ extension SpaceHelper {
         // WindowServer accepts it in the normal case and preserves the
         // native animation.
         if usesSyntheticGesture, let steps = context.steps, steps != 0 {
+            let involvesFullscreen =
+                context.targetIsFullscreen || context.currentSpaceIsFullscreen
+            let isInstantGesture =
+                forceInstant || !targetDuration.isFinite || targetDuration <= 0
+            let retryDelay = syntheticGestureRetryDelay(
+                stepCount: steps,
+                isInstantGesture: isInstantGesture,
+                involvesFullscreen: involvesFullscreen
+            )
+            let maxAttempts = involvesFullscreen ? 3 : 2
+            let timeoutDuration = isInstantGesture
+                ? 2.5
+                : max(2.5, retryDelay * Double(maxAttempts) + 1.0)
             let gestureLayout = gestureDirectionLayout()
             if let generation {
                 DiagnosticEventLog.shared.record(
                     subsystem: "SpaceHelper",
                     level: "info",
-                    "emit synthetic gesture: generation=\(generation), target=\(spaceID), steps=\(steps), display=\(displayID)"
+                    "emit synthetic gesture: generation=\(generation), target=\(spaceID), steps=\(steps), display=\(displayID), retryDelay=\(retryDelay), timeout=\(timeoutDuration)"
                 )
             }
             markProgrammaticSwitchStarted(
@@ -324,20 +341,19 @@ extension SpaceHelper {
                 isManual: isManual,
                 forceInstant: forceInstant,
                 displayID: displayID,
-                isFullscreen: context.targetIsFullscreen
+                isFullscreen: context.targetIsFullscreen,
+                timeoutDuration: timeoutDuration
             )
             performSpaceSwitchGesture(
                 steps: steps,
                 targetDisplayID: displayID,
+                sourceSpaceID: context.liveCurrentSpaceID,
+                targetSpaceID: spaceID,
+                switchGeneration: generation,
                 forceInstant: forceInstant,
                 gestureLayout: gestureLayout
             )
             if let generation {
-                let involvesFullscreen =
-                    context.targetIsFullscreen || context.currentSpaceIsFullscreen
-                let retryDelay: TimeInterval = involvesFullscreen
-                    ? 0.75
-                    : max(0.75, min(targetDuration + 0.35, 1.35))
                 scheduleSyntheticGestureRetry(
                     spaceID: spaceID,
                     displayID: displayID,
@@ -348,7 +364,7 @@ extension SpaceHelper {
                     attempt: 1,
                     scheduledDelay: retryDelay,
                     retryInterval: retryDelay,
-                    maxAttempts: involvesFullscreen ? 3 : 2,
+                    maxAttempts: maxAttempts,
                     snapshotProbeAttempt: 0
                 )
             }
@@ -434,6 +450,29 @@ extension SpaceHelper {
             "switch request unavailable after transaction start: generation=\(generation.map(String.init) ?? "instant"), target=\(spaceID)"
         )
         return .unavailable
+    }
+
+    /// Gives a native slide time to finish before the watchdog interprets an
+    /// unchanged WindowServer space as a dropped gesture.
+    private static func syntheticGestureRetryDelay(
+        stepCount: Int,
+        isInstantGesture: Bool,
+        involvesFullscreen: Bool
+    ) -> TimeInterval {
+        guard !isInstantGesture else { return 0.75 }
+
+        // Give non-instant slides time to finish even for a one-space move.
+        // WindowServer can continue reporting the source for several seconds,
+        // so the configured gesture duration alone is not a safe retry signal.
+        let expectedDurationPerSpace =
+            max(targetDuration, defaultTargetDuration)
+            + linearGestureSettleInterval
+            + linearGestureFrameInterval(for: nil)
+        let fullscreenAllowance: TimeInterval = involvesFullscreen ? 0.5 : 0
+        return max(
+            3.0,
+            Double(abs(stepCount)) * expectedDurationPerSpace + fullscreenAllowance
+        )
     }
 
 }

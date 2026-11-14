@@ -4791,6 +4791,26 @@
         }
       }
     },
+    "Use evenly paced progress updates instead of the default macOS animation curve." : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "使用均匀节奏的进度更新，而不是 macOS 默认动画曲线。"
+          }
+        }
+      }
+    },
+    "Use linear animation" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "使用线性动画"
+          }
+        }
+      }
+    },
     "Use this for apps whose windows need a small drag before they can be moved, such as WeChat." : {
       "localizations" : {
         "zh-Hans" : {

@@ -218,20 +218,67 @@ class SpaceHelper {
         """
     }
 
-    // Velocity calibration — adjusts multiplier per display so measured switch
-    // time converges to the user-configured target duration (default 0.35s).
-    // Multipliers are cached in UserDefaults for persistence across restarts.
-    // Two-point calibration: measures switch time at velocity 52 (native) and
-    // at velocity 104 (2×), then computes the actual non-linear exponent p from
-    // the two data points.  This gives an accurate velocity multiplier for any
-    static var gestureTimingStart: TimeInterval = 0
-    static var gestureTimingDisplayID: String = ""
-
-    static let calibrationKey = "GestureManager.CachedCalibrations"
+    // Progress is sampled at the destination display's supported refresh rate;
+    // elapsed-time progress keeps each Space transition at the configured duration.
+    // Commit at the boundary with minimal extra progress to avoid a second Dock settle.
+    static let linearGestureFallbackRefreshRate: Double = 60.0
+    static let linearGestureProgressPerSpace = 1.0
+    // Smallest nonzero progress used by the augmented 16.16 gesture payload.
+    static let dockSwipeMinimumProgress = 0.000016
+    static let linearGestureCommitVelocity = 500.0
+    static let linearGestureSettleInterval: TimeInterval = 0.05
     static let targetDurationKey = "GestureManager.SwitchDuration"
+    static let linearSwitchAnimationEnabledKey = "GestureManager.LinearSwitchAnimationEnabled"
     static let defaultTargetDuration: TimeInterval = 0.30
+    static let calibrationKey = "GestureManager.CachedCalibrations"
     static let minMultiplier: Double = 0.1
     static let maxMultiplier: Double = 10.0
+
+    static var gestureTimingStart: TimeInterval = 0
+    static var gestureTimingDisplayID = ""
+
+    struct DisplayCalibration: Codable {
+        var avg52: Double
+        var avg104: Double
+    }
+
+    static var displayCalibrations: [String: DisplayCalibration] = {
+        guard let data = UserDefaults.standard.data(forKey: calibrationKey),
+              let calibrations = try? JSONDecoder().decode(
+                [String: DisplayCalibration].self,
+                from: data
+              ) else {
+            return [:]
+        }
+        return calibrations
+    }()
+
+    static var phase1Samples: [String: [TimeInterval]] = [:]
+    static var phase2Samples: [String: [TimeInterval]] = [:]
+    static let phaseSamplesNeeded = 3
+    static let phase1Velocity: Double = 52.0
+    static let phase2Velocity: Double = 104.0
+
+    static func linearGestureRefreshRate(for screen: NSScreen?) -> Double {
+        if let displayID = screen?.deviceDescription[
+            NSDeviceDescriptionKey("NSScreenNumber")
+        ] as? CGDirectDisplayID,
+           let refreshRate = CGDisplayCopyDisplayMode(displayID)?.refreshRate,
+           refreshRate.isFinite,
+           refreshRate > 0 {
+            return refreshRate
+        }
+
+        guard let maximumFramesPerSecond = screen?.maximumFramesPerSecond,
+              maximumFramesPerSecond > 0 else {
+            return linearGestureFallbackRefreshRate
+        }
+        return Double(maximumFramesPerSecond)
+    }
+
+    static func linearGestureFrameInterval(for screen: NSScreen?) -> TimeInterval {
+        1.0 / linearGestureRefreshRate(for: screen)
+    }
 
     /// The user's target switch duration — 0 means instant mode.
     static var targetDuration: TimeInterval {
@@ -241,76 +288,51 @@ class SpaceHelper {
         return UserDefaults.standard.double(forKey: targetDurationKey)
     }
 
-    struct DisplayCalibration: Codable {
-        var avg52: Double
-        var avg104: Double
-    }
-
-    // Cached calibrations keyed by display (direction-agnostic).
-    static var displayCalibrations: [String: DisplayCalibration] = {
-        guard let data = UserDefaults.standard.data(forKey: calibrationKey),
-              let dict = try? JSONDecoder().decode([String: DisplayCalibration].self, from: data)
-        else { return [:] }
-        return dict
-    }()
-
-    // Phase 1: 3 samples at velocity 52. Phase 2: 3 samples at velocity 104.
-    static var phase1Samples: [String: [TimeInterval]] = [:]
-    static var phase2Samples: [String: [TimeInterval]] = [:]
-    static let phaseSamplesNeeded = 3
-    static let phase1Velocity: Double = 52.0
-    static let phase2Velocity: Double = 104.0
-
-    /// Calibration state summary for diagnostic reports: per-display avg values.
     static var displayCalibrationsInfo: String {
         guard !displayCalibrations.isEmpty else { return "  (none)\n" }
-        var s = ""
-        for (displayID, cal) in displayCalibrations {
-            s += "  \(displayID): avg52=\(String(format: "%.4f", cal.avg52)) avg104=\(String(format: "%.4f", cal.avg104))\n"
-        }
-        return s
+        return displayCalibrations.keys.sorted().map { displayID in
+            guard let calibration = displayCalibrations[displayID] else { return "" }
+            let avg52 = String(format: "%.4f", calibration.avg52)
+            let avg104 = String(format: "%.4f", calibration.avg104)
+            return "  \(displayID): avg52=\(avg52) avg104=\(avg104)\n"
+        }.joined()
     }
 
-    /// Calibration phase sample counts for diagnostic reports.
     static var phaseSampleCountsInfo: String {
-        let allIDs = Set(phase1Samples.keys).union(phase2Samples.keys)
-        guard !allIDs.isEmpty else { return "  (no samples)\n" }
-        var s = ""
-        for did in allIDs.sorted() {
-            let p1 = phase1Samples[did]?.count ?? 0
-            let p2 = phase2Samples[did]?.count ?? 0
-            s += "  \(did): phase1=\(p1) phase2=\(p2)\n"
-        }
-        return s
+        let displayIDs = Set(phase1Samples.keys).union(phase2Samples.keys).sorted()
+        guard !displayIDs.isEmpty else { return "  (no samples)\n" }
+        return displayIDs.map { displayID in
+            let phase1Count = phase1Samples[displayID]?.count ?? 0
+            let phase2Count = phase2Samples[displayID]?.count ?? 0
+            return "  \(displayID): phase1=\(phase1Count) phase2=\(phase2Count)\n"
+        }.joined()
     }
 
-    /// Returns a stable velocity multiplier based on empirical curve.
+    /// Fits the Dock's native animation curve to the user's requested duration.
     static func multiplierForDisplay(_ displayID: String) -> Double {
-        let target = targetDuration
-        guard target > 0 else { return 1.0 }
-        
-        guard let cal = displayCalibrations[displayID] else { return 1.0 }
-        
-        let p = log(cal.avg52 / cal.avg104) / log(0.5)
-        let clampedP = min(-0.1, max(-3.0, p))
-        
-        let ratio = target / cal.avg52
-        let multiplier = pow(ratio, 1.0 / clampedP)
+        guard targetDuration > 0,
+              let calibration = displayCalibrations[displayID] else {
+            return 1.0
+        }
+
+        let exponent = log(calibration.avg52 / calibration.avg104) / log(0.5)
+        let clampedExponent = min(-0.1, max(-3.0, exponent))
+        let ratio = targetDuration / calibration.avg52
+        let multiplier = pow(ratio, 1.0 / clampedExponent)
         return max(minMultiplier, min(maxMultiplier, multiplier))
     }
 
-    /// Returns the velocity to use for the current calibration phase.
     static func velocityForPhase(displayID: String) -> Double {
         if displayCalibrations[displayID] != nil {
             return phase1Velocity * multiplierForDisplay(displayID)
         }
-        
-        let phase1Count = phase1Samples[displayID]?.count ?? 0
-        let phase2Count = phase2Samples[displayID]?.count ?? 0
-        
-        if phase1Count < phaseSamplesNeeded { return phase1Velocity }
-        if phase2Count < phaseSamplesNeeded { return phase2Velocity }
-        
+
+        if (phase1Samples[displayID]?.count ?? 0) < phaseSamplesNeeded {
+            return phase1Velocity
+        }
+        if (phase2Samples[displayID]?.count ?? 0) < phaseSamplesNeeded {
+            return phase2Velocity
+        }
         return phase1Velocity * multiplierForDisplay(displayID)
     }
 
@@ -319,33 +341,26 @@ class SpaceHelper {
         gestureTimingDisplayID = displayID
     }
 
+    /// Records the elapsed native Dock transition for the next calibration sample.
     static func endGestureTiming() {
         guard gestureTimingStart > 0, !gestureTimingDisplayID.isEmpty else { return }
-        
+
         let duration = Date().timeIntervalSince1970 - gestureTimingStart
         let displayID = gestureTimingDisplayID
-        
-        // Reset state
         gestureTimingStart = 0
         gestureTimingDisplayID = ""
-        
-        // Sanity check
-        guard duration > 0.05 && duration < 2.0 else { return }
 
-        // If already calibrated, no need to record samples
-        if displayCalibrations[displayID] != nil { return }
+        guard duration > 0.05, duration < 2.0,
+              displayCalibrations[displayID] == nil else {
+            return
+        }
 
         let phase1Count = phase1Samples[displayID]?.count ?? 0
         let phase2Count = phase2Samples[displayID]?.count ?? 0
-
         if phase1Count < phaseSamplesNeeded {
-            var s = phase1Samples[displayID, default: []]
-            s.append(duration)
-            phase1Samples[displayID] = s
+            phase1Samples[displayID, default: []].append(duration)
         } else if phase2Count < phaseSamplesNeeded {
-            var s = phase2Samples[displayID, default: []]
-            s.append(duration)
-            phase2Samples[displayID] = s
+            phase2Samples[displayID, default: []].append(duration)
         }
 
         tryLockCalibration(for: displayID)
@@ -353,13 +368,15 @@ class SpaceHelper {
 
     private static func tryLockCalibration(for displayID: String) {
         guard displayCalibrations[displayID] == nil else { return }
+        let phase1 = phase1Samples[displayID] ?? []
+        let phase2 = phase2Samples[displayID] ?? []
+        guard phase1.count >= phaseSamplesNeeded,
+              phase2.count >= phaseSamplesNeeded else {
+            return
+        }
 
-        let p1 = phase1Samples[displayID] ?? []
-        let p2 = phase2Samples[displayID] ?? []
-        guard p1.count >= phaseSamplesNeeded, p2.count >= phaseSamplesNeeded else { return }
-
-        let avg52 = p1.reduce(0, +) / Double(p1.count)
-        let avg104 = p2.reduce(0, +) / Double(p2.count)
+        let avg52 = phase1.reduce(0, +) / Double(phase1.count)
+        let avg104 = phase2.reduce(0, +) / Double(phase2.count)
         guard avg52 > 0, avg104 > 0 else { return }
 
         displayCalibrations[displayID] = DisplayCalibration(avg52: avg52, avg104: avg104)

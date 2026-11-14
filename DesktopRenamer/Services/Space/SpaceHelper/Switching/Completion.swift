@@ -5,7 +5,11 @@ import Foundation
 
 extension SpaceHelper {
 
-    static func scheduleProgrammaticSwitchTimeout(spaceID: String, generation: UInt64) {
+    static func scheduleProgrammaticSwitchTimeout(
+        spaceID: String,
+        generation: UInt64,
+        timeoutDuration: TimeInterval = 2.5
+    ) {
         let workItem = DispatchWorkItem {
             guard let active = switchTransactionCoordinator.active,
                   active.generation == generation,
@@ -13,6 +17,15 @@ extension SpaceHelper {
                 return
             }
             programmaticSwitchTimeoutWorkItem = nil
+            if isSpaceCurrentAndVisible(spaceID) {
+                DiagnosticEventLog.shared.record(
+                    subsystem: "SpaceHelper",
+                    level: "info",
+                    "programmatic switch timeout found the destination current and visible: generation=\(generation), target=\(spaceID); confirming instead of timing out"
+                )
+                markProgrammaticSwitchComplete(at: spaceID)
+                return
+            }
             finishProgrammaticSwitch(
                 at: spaceID,
                 generation: generation,
@@ -20,7 +33,7 @@ extension SpaceHelper {
             )
         }
         programmaticSwitchTimeoutWorkItem = workItem
-        DispatchQueue.main.asyncAfter(deadline: .now() + 2.5, execute: workItem)
+        DispatchQueue.main.asyncAfter(deadline: .now() + timeoutDuration, execute: workItem)
     }
 
     /// Records that SpaceManager has read the requested destination from live
