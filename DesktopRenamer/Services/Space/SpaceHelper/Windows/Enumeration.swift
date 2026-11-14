@@ -6,27 +6,15 @@ extension SpaceHelper {
 
     // MARK: - Window Enumeration
 
-    /// Filters a CGWindowList dictionary to user-facing top-level windows.
+    /// Filters plausible CGWindow candidates using their title and AX status.
     /// Accessibility-confirmed windows are trusted even when their title is
     /// empty. CG-only records need stronger evidence so helper windows do not
     /// leak into the launcher.
     private static func isValidWindow(
         _ window: [String: Any],
-        ourPID: Int32,
         activationPolicy: NSApplication.ActivationPolicy,
-        isAXWindow: Bool,
-        minSize: CGFloat = 50
+        isAXWindow: Bool
     ) -> Bool {
-        guard let layer = window[kCGWindowLayer as String] as? Int, layer == 0,
-              let pid = window[kCGWindowOwnerPID as String] as? Int, pid != Int(ourPID),
-              let bounds = window[kCGWindowBounds as String] as? [String: Any],
-              let w = bounds["Width"] as? CGFloat, let h = bounds["Height"] as? CGFloat,
-              w >= minSize, h >= minSize
-        else { return false }
-        // Core Graphics documents alpha as 0.0...1.0. Nearly transparent
-        // records are generally overlays or helper surfaces.
-        if let alpha = window[kCGWindowAlpha as String] as? Double, alpha <= 0.1 { return false }
-
         // Accessibility gives us the strongest signal for accessory apps and
         // for untitled/minimized windows. Without it, only regular apps with
         // a meaningful title are safe to expose as launcher targets.
@@ -46,6 +34,23 @@ extension SpaceHelper {
         return true
     }
 
+    private static func isPotentialWindowSurface(
+        _ window: [String: Any],
+        ourPID: Int32,
+        minSize: CGFloat = 50
+    ) -> Bool {
+        guard let layer = window[kCGWindowLayer as String] as? Int, layer == 0,
+              let pid = window[kCGWindowOwnerPID as String] as? Int, pid != Int(ourPID),
+              let bounds = window[kCGWindowBounds as String] as? [String: Any],
+              let w = bounds["Width"] as? CGFloat, let h = bounds["Height"] as? CGFloat,
+              w >= minSize, h >= minSize
+        else { return false }
+        // Core Graphics documents alpha as 0.0...1.0. Nearly transparent
+        // records are generally overlays or helper surfaces.
+        if let alpha = window[kCGWindowAlpha as String] as? Double, alpha <= 0.1 { return false }
+        return true
+    }
+
     private static let userWindowAXRoles: Set<String> = [
         "AXWindow", "AXDialog", "AXSheet", "AXDrawer", "AXPopover"
     ]
@@ -57,110 +62,231 @@ extension SpaceHelper {
         let spaceIDs: [String]
     }
 
+    private struct WindowCandidate {
+        let id: Int
+        let pid: Int32
+        let dictionary: [String: Any]
+        let activationPolicy: NSApplication.ActivationPolicy
+    }
+
+    private static let accessibilityMessageTimeout: Float = 0.25
+
     static func getWindowRecordsForAllSpaces(spaces: [DesktopSpace]) -> [SpaceAPIWindow] {
         getWindowRecordsForAllSpacesIfAvailable(spaces: spaces) ?? []
     }
 
     private static func getWindowRecordsForAllSpacesIfAvailable(spaces: [DesktopSpace]) -> [SpaceAPIWindow]? {
+        let enumerationStartedAt = ProcessInfo.processInfo.systemUptime
+        var runningApplicationCount = 0
+        var candidateApplicationCount = 0
+        var candidateWindowCount = 0
+        var validWindowCount = 0
+        var spaceFallbackCandidateCount = 0
+        var timedOutAccessibilityApplicationCount = 0
+        var timedOutMinimizedStateApplicationCount = 0
+        var applicationMetadataDuration: TimeInterval = 0
+        var coreGraphicsDiscoveryDuration: TimeInterval = 0
+        var accessibilityDuration: TimeInterval = 0
+        var spaceAssignmentDuration: TimeInterval = 0
+        var recordAssemblyDuration: TimeInterval = 0
+
+        defer {
+            let totalDuration = ProcessInfo.processInfo.systemUptime - enumerationStartedAt
+            DiagnosticEventLog.shared.recordDuringCollection(
+                subsystem: "SpaceAPI",
+                level: "debug",
+                "getWindows enumeration: total=\(String(format: "%.3f", totalDuration))s, " +
+                    "metadata=\(String(format: "%.3f", applicationMetadataDuration))s, " +
+                    "coreGraphics=\(String(format: "%.3f", coreGraphicsDiscoveryDuration))s, " +
+                    "accessibility=\(String(format: "%.3f", accessibilityDuration))s, " +
+                    "spaceAssignment=\(String(format: "%.3f", spaceAssignmentDuration))s, " +
+                    "recordAssembly=\(String(format: "%.3f", recordAssemblyDuration))s, " +
+                    "runningApps=\(runningApplicationCount), candidateApps=\(candidateApplicationCount), " +
+                    "candidateWindows=\(candidateWindowCount), validWindows=\(validWindowCount), " +
+                    "spaceFallbackCandidates=\(spaceFallbackCandidateCount), " +
+                    "timedOutAXApps=\(timedOutAccessibilityApplicationCount), " +
+                    "timedOutMinimizedStateApps=\(timedOutMinimizedStateApplicationCount)"
+            )
+        }
+
         let conn = _CGSDefaultConnection()
         let ourPID = ProcessInfo.processInfo.processIdentifier
 
         // Build PID → app bundle path cache from running applications. Include
         // accessory applications as well as regular applications because an
         // accessory app can still own user-facing windows.
+        let runningApplications = NSWorkspace.shared.runningApplications
+        runningApplicationCount = runningApplications.count
         var pidToAppPath: [Int32: String] = [:]
         var pidToAppName: [Int32: String] = [:]
         var pidToActivationPolicy: [Int32: NSApplication.ActivationPolicy] = [:]
-        var axWindowIDs = Set<Int>()
-        var minimizedAXWindowIDs = Set<Int>()
-        var axWindowEnumerationSucceededPIDs = Set<Int32>()
-        for app in NSWorkspace.shared.runningApplications {
+        for app in runningApplications {
             if app.activationPolicy != .prohibited, let path = app.bundleURL?.path {
-                pidToAppPath[app.processIdentifier] = path
+                let pid = app.processIdentifier
+                pidToAppPath[pid] = path
                 if let name = app.localizedName, !name.isEmpty {
-                    pidToAppName[app.processIdentifier] = name
+                    pidToAppName[pid] = name
                 }
-                pidToActivationPolicy[app.processIdentifier] = app.activationPolicy
-
-                // Get window IDs directly from the app's Accessibility hierarchy
-                // for validation and per-window minimized state.
-                let appElement = AXUIElementCreateApplication(app.processIdentifier)
-
-                let extractWID = { (element: AXUIElement, requireWindowRole: Bool) in
-                    if requireWindowRole {
-                        var roleRef: CFTypeRef?
-                        guard AXUIElementCopyAttributeValue(
-                            element,
-                            kAXRoleAttribute as CFString,
-                            &roleRef
-                        ) == .success,
-                        let role = roleRef as? String,
-                        userWindowAXRoles.contains(role) else { return }
-                    }
-
-                    var cgWID: CGWindowID = 0
-                    if _AXUIElementGetWindow(element, &cgWID) == 0, cgWID != 0 {
-                        let wid = Int(cgWID)
-                        axWindowIDs.insert(wid)
-                        // Check per-window AXMinimized attribute (boolean)
-                        var minimizedRef: CFTypeRef?
-                        if AXUIElementCopyAttributeValue(element, kAXMinimizedAttribute as CFString, &minimizedRef) == .success,
-                           let isMin = minimizedRef as? Bool, isMin {
-                            minimizedAXWindowIDs.insert(wid)
-                        }
-                    }
-                }
-
-                // 1. Check standard AXWindows attribute (open windows)
-                var windowsRef: CFTypeRef?
-                var didEnumerateWindows = false
-                if AXUIElementCopyAttributeValue(appElement, kAXWindowsAttribute as CFString, &windowsRef) == .success,
-                   let axWindows = windowsRef as? [AXUIElement] {
-                    axWindowEnumerationSucceededPIDs.insert(app.processIdentifier)
-                    axWindows.forEach { extractWID($0, false) }
-                    didEnumerateWindows = true
-                }
-
-                // 2. Some applications expose their windows as children
-                // instead of through AXWindows (e.g., Preview). Use this as
-                // a fallback for every app, not only known bundle IDs.
-                if !didEnumerateWindows || app.bundleIdentifier == "com.apple.Preview" {
-                    var childrenRef: CFTypeRef?
-                    if AXUIElementCopyAttributeValue(appElement, kAXChildrenAttribute as CFString, &childrenRef) == .success,
-                       let axChildren = childrenRef as? [AXUIElement] {
-                        axWindowEnumerationSucceededPIDs.insert(app.processIdentifier)
-                        axChildren.forEach { extractWID($0, true) }
-                    }
-                }
+                pidToActivationPolicy[pid] = app.activationPolicy
             }
         }
+        applicationMetadataDuration = ProcessInfo.processInfo.systemUptime - enumerationStartedAt
 
         // Get ALL windows, not just on-screen, to include off-screen spaces.
         let options = CGWindowListOption(arrayLiteral: .excludeDesktopElements)
+        let coreGraphicsDiscoveryStartedAt = ProcessInfo.processInfo.systemUptime
         guard let allWindows = CGWindowListCopyWindowInfo(options, kCGNullWindowID)
                 as? [[String: Any]]
-        else { return nil }
-
-        // Collect valid windows with their IDs.
-        var validWindows: [(wid: Int, pid: Int32, dict: [String: Any])] = []
-        for window in allWindows {
-            guard let wid = window[kCGWindowNumber as String] as? Int,
-                  let pid = window[kCGWindowOwnerPID as String] as? Int,
-                  let activationPolicy = pidToActivationPolicy[Int32(pid)],
-                  isValidWindow(
-                      window,
-                      ourPID: ourPID,
-                      activationPolicy: activationPolicy,
-                      isAXWindow: axWindowIDs.contains(wid)
-                  )
-            else { continue }
-            validWindows.append((wid: wid, pid: Int32(pid), dict: window))
+        else {
+            coreGraphicsDiscoveryDuration = ProcessInfo.processInfo.systemUptime - coreGraphicsDiscoveryStartedAt
+            return nil
         }
+
+        // Accessibility is only needed for apps that own a plausible window.
+        // Querying every running app makes this request wait on unrelated
+        // background processes that cannot contribute a window to the result.
+        let candidateWindows = allWindows.compactMap { window -> WindowCandidate? in
+            guard let wid = window[kCGWindowNumber as String] as? Int,
+                  let rawPID = window[kCGWindowOwnerPID as String] as? Int,
+                  let pid = Int32(exactly: rawPID),
+                  let activationPolicy = pidToActivationPolicy[pid],
+                  isPotentialWindowSurface(window, ourPID: ourPID)
+            else { return nil }
+
+            return WindowCandidate(
+                id: wid,
+                pid: pid,
+                dictionary: window,
+                activationPolicy: activationPolicy
+            )
+        }
+        let candidateWindowIDs = Set(candidateWindows.map(\.id))
+        let candidatePIDs = Set(candidateWindows.map(\.pid))
+        candidateWindowCount = candidateWindows.count
+        candidateApplicationCount = candidatePIDs.count
+        coreGraphicsDiscoveryDuration = ProcessInfo.processInfo.systemUptime - coreGraphicsDiscoveryStartedAt
+
+        var axWindowIDs = Set<Int>()
+        var minimizedAXWindowIDs = Set<Int>()
+        var axWindowEnumerationSucceededPIDs = Set<Int32>()
+
+        let accessibilityStartedAt = ProcessInfo.processInfo.systemUptime
+        for app in runningApplications where candidatePIDs.contains(app.processIdentifier) {
+            let pid = app.processIdentifier
+
+            // An unresponsive app must not hold the complete SpaceAPI window
+            // request beyond Raycast's short read timeout.
+            let appElement = AXUIElementCreateApplication(pid)
+            _ = AXUIElementSetMessagingTimeout(appElement, Self.accessibilityMessageTimeout)
+
+            var didAXMessagingTimeOut = false
+            var didMinimizedStateMessagingTimeOut = false
+            let extractWID = { (element: AXUIElement, requireWindowRole: Bool) in
+                guard !didAXMessagingTimeOut else { return }
+
+                if requireWindowRole {
+                    _ = AXUIElementSetMessagingTimeout(element, Self.accessibilityMessageTimeout)
+                    var roleRef: CFTypeRef?
+                    let roleResult = AXUIElementCopyAttributeValue(
+                        element,
+                        kAXRoleAttribute as CFString,
+                        &roleRef
+                    )
+                    guard roleResult == .success,
+                          let role = roleRef as? String,
+                          userWindowAXRoles.contains(role) else {
+                        if roleResult == .cannotComplete {
+                            didAXMessagingTimeOut = true
+                        }
+                        return
+                    }
+                }
+
+                var cgWID: CGWindowID = 0
+                guard _AXUIElementGetWindow(element, &cgWID) == 0, cgWID != 0 else { return }
+                let wid = Int(cgWID)
+                guard candidateWindowIDs.contains(wid) else { return }
+
+                axWindowIDs.insert(wid)
+                guard !didMinimizedStateMessagingTimeOut else { return }
+
+                _ = AXUIElementSetMessagingTimeout(element, Self.accessibilityMessageTimeout)
+                var minimizedRef: CFTypeRef?
+                let minimizedResult = AXUIElementCopyAttributeValue(
+                    element,
+                    kAXMinimizedAttribute as CFString,
+                    &minimizedRef
+                )
+                if minimizedResult == .success,
+                   let isMinimized = minimizedRef as? Bool,
+                   isMinimized {
+                    minimizedAXWindowIDs.insert(wid)
+                } else if minimizedResult == .cannotComplete {
+                    didMinimizedStateMessagingTimeOut = true
+                }
+            }
+
+            // 1. Check standard AXWindows attribute (open windows).
+            var windowsRef: CFTypeRef?
+            var didEnumerateWindows = false
+            let windowsResult = AXUIElementCopyAttributeValue(
+                appElement,
+                kAXWindowsAttribute as CFString,
+                &windowsRef
+            )
+            if windowsResult == .success, let axWindows = windowsRef as? [AXUIElement] {
+                axWindowEnumerationSucceededPIDs.insert(pid)
+                axWindows.forEach { extractWID($0, false) }
+                didEnumerateWindows = true
+            } else if windowsResult == .cannotComplete {
+                didAXMessagingTimeOut = true
+            }
+
+            // 2. Some applications expose their windows as children instead
+            // of through AXWindows (e.g., Preview). Use this as a fallback
+            // for every app, not only known bundle IDs.
+            if (!didEnumerateWindows || app.bundleIdentifier == "com.apple.Preview"),
+               !didAXMessagingTimeOut {
+                var childrenRef: CFTypeRef?
+                let childrenResult = AXUIElementCopyAttributeValue(
+                    appElement,
+                    kAXChildrenAttribute as CFString,
+                    &childrenRef
+                )
+                if childrenResult == .success, let axChildren = childrenRef as? [AXUIElement] {
+                    axChildren.forEach { extractWID($0, true) }
+                    if !didAXMessagingTimeOut {
+                        axWindowEnumerationSucceededPIDs.insert(pid)
+                    }
+                } else if childrenResult == .cannotComplete {
+                    didAXMessagingTimeOut = true
+                }
+            }
+
+            if didAXMessagingTimeOut {
+                timedOutAccessibilityApplicationCount += 1
+            }
+            if didMinimizedStateMessagingTimeOut {
+                timedOutMinimizedStateApplicationCount += 1
+            }
+        }
+        accessibilityDuration = ProcessInfo.processInfo.systemUptime - accessibilityStartedAt
+
+        // Collect valid windows after Accessibility IDs are known.
+        let validWindows = candidateWindows.filter { window in
+            isValidWindow(
+                window.dictionary,
+                activationPolicy: window.activationPolicy,
+                isAXWindow: axWindowIDs.contains(window.id)
+            )
+        }
+        validWindowCount = validWindows.count
 
         // Known space IDs.
         let knownSpaceIDs = Set(spaces.compactMap { Int($0.id) })
-        
+
         // Get active space IDs
+        let spaceAssignmentStartedAt = ProcessInfo.processInfo.systemUptime
         var activeSpaceIDs = Set<Int>()
         if let displays = CGSCopyManagedDisplaySpaces(conn) as? [NSDictionary] {
             for display in displays {
@@ -173,9 +299,12 @@ extension SpaceHelper {
 
         var windowsBySpaceID: [String: [EnumeratedWindow]] = [:]
         var windowsWithoutSpace: [(wid: Int, pid: Int32, dict: [String: Any])] = []
-        
+
         // Query each window individually for its space assignment.
-        for (wid, pid, dict) in validWindows {
+        for window in validWindows {
+            let wid = window.id
+            let pid = window.pid
+            let dict = window.dictionary
             let widArray = [wid as NSNumber] as CFArray
             guard let result = CGSCopySpacesForWindows(conn, 7, widArray),
                   let spaceIDs = result as? [NSNumber],
@@ -221,14 +350,22 @@ extension SpaceHelper {
         // window when the private assignment API is unavailable.
         if !windowsWithoutSpace.isEmpty {
             guard let displays = CGSCopyManagedDisplaySpaces(conn) as? [NSDictionary] else {
-                return windowsBySpaceID.isEmpty ? nil : makeWindowRecords(
+                guard !windowsBySpaceID.isEmpty else { return nil }
+                spaceFallbackCandidateCount = windowsWithoutSpace.count
+                spaceAssignmentDuration = ProcessInfo.processInfo.systemUptime - spaceAssignmentStartedAt
+
+                let recordAssemblyStartedAt = ProcessInfo.processInfo.systemUptime
+                let records = makeWindowRecords(
                     spaces: spaces,
                     windowsBySpaceID: windowsBySpaceID,
                     pidToAppPath: pidToAppPath,
                     pidToAppName: pidToAppName,
                     minimizedAXWindowIDs: minimizedAXWindowIDs
                 )
+                recordAssemblyDuration = ProcessInfo.processInfo.systemUptime - recordAssemblyStartedAt
+                return records
             }
+            spaceFallbackCandidateCount = windowsWithoutSpace.count
             let mainUUID = getMainDisplayUUID()
             var currentSpaceForDisplay: [String: String] = [:]
             var fullscreenPIDToSpace: [Int32: String] = [:]
@@ -287,13 +424,18 @@ extension SpaceHelper {
             }
         }
 
-        return makeWindowRecords(
+        spaceAssignmentDuration = ProcessInfo.processInfo.systemUptime - spaceAssignmentStartedAt
+
+        let recordAssemblyStartedAt = ProcessInfo.processInfo.systemUptime
+        let records = makeWindowRecords(
             spaces: spaces,
             windowsBySpaceID: windowsBySpaceID,
             pidToAppPath: pidToAppPath,
             pidToAppName: pidToAppName,
             minimizedAXWindowIDs: minimizedAXWindowIDs
         )
+        recordAssemblyDuration = ProcessInfo.processInfo.systemUptime - recordAssemblyStartedAt
+        return records
     }
 
     private static func makeWindowRecords(
@@ -303,7 +445,13 @@ extension SpaceHelper {
         pidToAppName: [Int32: String],
         minimizedAXWindowIDs: Set<Int>
     ) -> [SpaceAPIWindow] {
-        spaces
+        let windowPIDs = Set(windowsBySpaceID.values.flatMap { $0.map(\.pid) })
+        var pidToIsHidden: [Int32: Bool] = [:]
+        for pid in windowPIDs {
+            pidToIsHidden[pid] = NSRunningApplication(processIdentifier: pid)?.isHidden ?? false
+        }
+
+        return spaces
             .sorted {
                 if $0.displayID != $1.displayID { return $0.displayID < $1.displayID }
                 return $0.num < $1.num
@@ -336,7 +484,7 @@ extension SpaceHelper {
                         isMinimized: minimizedAXWindowIDs.contains(window.id),
                         // macOS exposes hidden state on the owning application,
                         // not as a per-window attribute.
-                        isHidden: NSRunningApplication(processIdentifier: window.pid)?.isHidden ?? false
+                        isHidden: pidToIsHidden[window.pid] ?? false
                     )
                 }
             }
