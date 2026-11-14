@@ -123,14 +123,6 @@ struct GeneralSettingsView: View {
                         }
                     }
 
-                    Divider()
-
-                    SettingsRow("Factory Reset") {
-                        Button("Reset") {
-                            performFactoryReset()
-                        }
-                        .foregroundStyle(.red)
-                    }
                 }
 
                 SettingsSection(nil) {
@@ -157,6 +149,15 @@ struct GeneralSettingsView: View {
                         Button("Settings.General.Import.Button") {
                             importSettings()
                         }
+                    }
+                }
+
+                SettingsSection(nil) {
+                    SettingsRow("Factory Reset") {
+                        Button("Reset") {
+                            performFactoryReset()
+                        }
+                        .foregroundStyle(.red)
                     }
                 }
                 Spacer()

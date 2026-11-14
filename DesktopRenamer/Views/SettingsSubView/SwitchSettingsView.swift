@@ -59,9 +59,21 @@ struct SwitchSettingsView: View {
                             }
                             .labelsHidden()
                         }
-                        
+
                         Divider()
-                        
+
+                        SliderSettingsRow(
+                            "Switch override threshold",
+                            helperText: "Sets how far you need to move your fingers before switching.",
+                            value: $gestureManager.swipeThreshold,
+                            range: 0.05...0.50,
+                            defaultValue: 0.10,
+                            step: 0.05,
+                            valueString: { String(format: "%.0f%%", $0 * 100) }
+                        )
+
+                        Divider()
+
                         SettingsRow(
                             "Move window when holding Option",
                             requirements: [
@@ -70,18 +82,6 @@ struct SwitchSettingsView: View {
                             ]
                         ) {
                             Toggle("", isOn: $gestureManager.moveWindowOnOption)
-                                .toggleStyle(.switch)
-                                .labelsHidden()
-                        }
-                        
-                        Divider()
-                        
-                        SettingsRow(
-                            "Use linear animation",
-                            helperText:
-                                "Use evenly paced progress updates instead of the default macOS animation curve."
-                        ) {
-                            Toggle("", isOn: $gestureManager.linearSwitchAnimationEnabled)
                                 .toggleStyle(.switch)
                                 .labelsHidden()
                         }
@@ -99,16 +99,16 @@ struct SwitchSettingsView: View {
                         )
 
                         Divider()
-                        
-                        SliderSettingsRow(
-                            "Switch override threshold",
-                            helperText: "Sets how far you need to move your fingers before switching.",
-                            value: $gestureManager.swipeThreshold,
-                            range: 0.05...0.50,
-                            defaultValue: 0.10,
-                            step: 0.05,
-                            valueString: { String(format: "%.0f%%", $0 * 100) }
-                        )
+
+                        SettingsRow(
+                            "Use linear animation",
+                            helperText:
+                                "Use evenly paced progress updates instead of the default macOS animation curve."
+                        ) {
+                            Toggle("", isOn: $gestureManager.linearSwitchAnimationEnabled)
+                                .toggleStyle(.switch)
+                                .labelsHidden()
+                        }
                     }
                 }
                 
